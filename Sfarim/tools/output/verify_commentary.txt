@@ -1,0 +1,74 @@
+=== books matching '% on Genesis' ===
+("Ba'al HaTurim on Genesis", '["Chapter", "Verse", "Comment"]')
+("Da'at Zekenim on Genesis", '["Chapter", "Verse", "Comment"]')
+('Harchev Davar on Genesis', '["Chapter", "Passuk"]')
+("Kitzur Ba'al HaTurim on Genesis", '["Chapter", "Verse", "Comment"]')
+('Malbim on Genesis', '["Chapter", "Verse", "Comment"]')
+('Rabbeinu Chananel on Genesis', '["Chapter", "Verse", "Comment"]')
+('Rashbam on Genesis', '["Chapter", "Verse", "Comment"]')
+('Rashi on Genesis', '["Chapter", "Verse", "Comment"]')
+('Shadal on Genesis', '["Chapter", "Verse", "Comment"]')
+('Targum Jonathan on Genesis', '["Chapter", "Verse"]')
+('Cassuto on Genesis', '[]')
+('Haamek Davar on Genesis', '[]')
+('Ibn Ezra on Genesis', '[]')
+('Kli Yakar on Genesis', '[]')
+('Or HaChaim on Genesis', '[]')
+
+=== books matching '% on Berakhot' (Talmud) ===
+('Benayahu on Berakhot', '["Daf", "Line"]')
+('Brief Commentary on Berakhot', '["Chapter", "Halakhah", "DH"]')
+('Chiddushei Anshei Shem on Berakhot', '["Daf", "Comment"]')
+('Chiddushei Rabbi Akiva Eiger on Berakhot', '["Daf", "Comment"]')
+('Chiddushei Ramban on Berakhot', '["Daf", "Comment"]')
+('Chidushei Agadot on Berakhot', '["Daf", "Comment"]')
+('Chidushei Halachot on Berakhot', '["Daf", "Comment"]')
+('Chokhmat Shlomo on Berakhot', '["Daf", "Comment"]')
+('Divrey Chamudot on Berakhot', '["Siman"]')
+('Gilyon HaShas on Berakhot', '["Daf", "Comment"]')
+('HaMaor HaKatan on Berakhot', '["Daf", "Comment"]')
+('Hagahot Chavot Yair on Berakhot', '["Daf", "Comment"]')
+('Hagahot MeAlfas Yashan on Berakhot', '["Daf", "Comment"]')
+("Haggahot Ya'avetz on Berakhot", '["Daf", "Comment"]')
+('Katuv Sham on Berakhot', '["Daf", "Comment"]')
+
+=== books matching '% on Mishnah Berakhot' ===
+('Bartenura on Mishnah Berakhot', '["Chapter", "Mishnah", "Comment"]')
+('Boaz on Mishnah Berakhot', '["Chapter", "comment"]')
+('Hon Ashir on Mishnah Berakhot', '["Chapter", "Mishnah", "Comment"]')
+('Ikar Tosafot Yom Tov on Mishnah Berakhot', '["Chapter", "Mishnah", "Comment"]')
+('Lechem Shamayim on Mishnah Berakhot', '["Chapter", "Mishnah", "Comment"]')
+('Melekhet Shelomoh on Mishnah Berakhot', '["Chapter", "Mishnah", "Comment"]')
+('Rambam on Mishnah Berakhot', '["Chapter", "Mishnah", "Comment"]')
+('Rashash on Mishnah Berakhot', '["Chapter", "Mishnah", "Comment"]')
+('Tosafot Rabbi Akiva Eiger on Mishnah Berakhot', '["Chapter", "Mishnah", "Comment"]')
+('Tosafot Yom Tov on Mishnah Berakhot', '["Chapter", "Mishnah", "Comment"]')
+('Yachin on Mishnah Berakhot', '["Chapter", "Seif", "Comment"]')
+('Yesh Seder LaMishnah on Mishnah Berakhot', '["Chapter", "Mishnah", "Comment"]')
+('Mishnat Eretz Yisrael on Mishnah Berakhot', '[]')
+
+Genesis sectionNames: ["Chapter", "Verse"]
+
+Rashi comments on Genesis path [1,1,*]: 3 found
+["רש\"י על בראשית פרק א, פסוק א, ביאור א", "[1, 1, 1]", "<b>בראשית.</b> אָמַר רַבִּי יִצְחָק לֹֹֹֹֹא הָיָה צָרִיךְ לְהַתְחִיל אֶת הַתּוֹרָה אֶלָּא מֵהַחֹדֶשׁ הַזֶּה לָכֶם, שֶׁהִיא מִצְוָה רִאשׁוֹנָה ש
+["רש\"י על בראשית פרק א, פסוק א, ביאור ב", "[1, 1, 2]", "<b>בראשית ברא</b> אֵין הַמִּקְרָא הַזֶּה אוֹמֵר אֶלָּא דָּרְשֵׁנִי, כְּמוֹ שֶׁדְּרָשׁוּהוּ רַבּוֹתֵינוּ בִּשְׁבִיל הַתּוֹרָה שֶׁנִקְרֵאת רֵאשִׁ
+["רש\"י על בראשית פרק א, פסוק א, ביאור ג", "[1, 1, 3]", "<b>ברא אלהים</b> וְלֹא נֶאֱמַר בָּרָא ה', שֶׁבַּתְּחִלָּה עָלָה בְמַחֲשָׁבָה לִבְרֹאתוֹ בְּמִדַּת הַדִּין, רָאָה שֶׁאֵין הָעוֹלָם מִתְקַיֵּם, ה
+
+total '% on %' titled books: 5102
+
+commentary-sectionNames books NOT matching '% on %' pattern: 15
+('Biur Halacha', '["Siman", "Seif", "Comment"]')
+('Ein Ayah', '["Chapter", "Section", "Comment"]')
+("Hasagot HaRa'avad Bava Kamma", '["Daf", "Comment"]')
+("Hasagot HaRa'avad Makkot", '["Daf", "Comment"]')
+("Hasagot HaRa'avad Shevuot", '["Daf", "Comment"]')
+("Hasagot HaRa'avad Bava Batra", '["Daf", "Comment"]')
+("Hasagot HaRa'avad Ketubot", '["Daf", "Comment"]')
+("Hasagot HaRa'avad Gittin", '["Daf", "Comment"]')
+('Introdution to HaMaor', '["Comment"]')
+('Introdution to Milchemet Hashem', '["Comment"]')
+('Midrash Tehillim', '["Psalm", "Comment"]')
+('Motar Kinnim', '["Chapter", "Mishnah", "Comment"]')
+('Rif Avodah Zarah', '["Daf", "Comment"]')
+('Rif Beitzah', '["Daf", "Comment"]')
+('Rif Chullin', '["Daf", "Comment"]')

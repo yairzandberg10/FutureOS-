@@ -1,0 +1,18 @@
+<resources>
+    <string name="app_name">מקלדת</string>
+    <string name="ime_label">מקלדת T9 חזויה</string>
+    <string name="settings_title">הגדרות מקלדת T9</string>
+    <string name="predictive_enabled">ניבוי טקסט</string>
+    <string name="predictive_enabled_summary">הצע מילים שלמות לפי רצף המקשים שנלחצו, בדומה לטלפונים ישנים</string>
+    <string name="language_hebrew">עברית</string>
+    <string name="language_english">אנגלית</string>
+    <string name="enable_in_settings">כדי להשתמש במקלדת יש להפעיל אותה בהגדרות המערכת ולבחור אותה כשיטת הקלט הפעילה</string>
+    <string name="open_input_method_settings">פתח הגדרות שיטות קלט</string>
+    <string name="voice_permission_title">תמלול קולי</string>
+    <string name="voice_permission_summary">כדי לתמלל טקסט בהחזקת מקש 0 יש לאשר גישה למיקרופון</string>
+    <string name="voice_permission_grant">אפשר גישה למיקרופון</string>
+    <string name="voice_permission_granted">גישה למיקרופון אושרה - החזק את מקש 0 כדי לתמלל</string>
+    <string name="voice_listening">מקשיב… דבר עכשיו</string>
+    <string name="voice_permission_missing">יש לאשר גישה למיקרופון באפליקציית המקלדת כדי לתמלל</string>
+    <string name="voice_unavailable">תמלול קולי אינו זמין במכשיר זה</string>
+</resources>

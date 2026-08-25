@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- מאנדרואיד 11 (API 30) ומעלה, PackageManager.getLaunchIntentForPackage() וכדומה
+         מחזירים null עבור חבילות אחרות אלא אם הן מוצהרות כאן - אחרת "מותקן" נראה כמו "לא מותקן". -->
+    <queries>
+        <package android:name="com.future.futurelauncher" />
+        <package android:name="com.future.futureui" />
+        <package android:name="com.future.dialer" />
+        <package android:name="com.future.messages" />
+        <package android:name="com.future.contact" />
+        <package android:name="com.future.files" />
+        <package android:name="com.future.gallery" />
+        <package android:name="com.future.terminal" />
+        <package android:name="com.future.tools" />
+        <package android:name="com.future.notes" />
+        <package android:name="com.future.gotitdone" />
+        <package android:name="com.future.mikdash" />
+        <package android:name="com.future.music" />
+        <package android:name="com.future.sfarim" />
+        <!-- Find My Device של גוגל - להעברה (pass-through) ממסך האבטחה, כמו שכבר
+             נעשה עם FutureUI; אם האפליקציה לא מותקנת, safeStartActivity תופס את זה. -->
+        <package android:name="com.google.android.apps.adm" />
+    </queries>
+
+    <uses-permission android:name="android.permission.WRITE_SETTINGS" tools:ignore="ProtectedPermissions" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions" />
+    <uses-permission android:name="android.permission.NFC" />
+    <!-- ניהול כרטיסי SIM, IMEI ומספר טלפון במסך "אודות" -->
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" tools:ignore="ProtectedPermissions" />
+    <uses-permission android:name="android.permission.READ_PHONE_NUMBERS" />
+    <!-- שליחת הודעת SOS ואיתור מיקום ידני למגע חירום -->
+    <uses-permission android:name="android.permission.SEND_SMS" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- הגדרת טפט בפועל (מסך בית + מסך נעילה) דרך WallpaperManager -->
+    <uses-permission android:name="android.permission.SET_WALLPAPER" />
+    <uses-permission android:name="android.permission.SET_WALLPAPER_HINTS" />
+
+    <application
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Settings">
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.Settings"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.settings.SETTINGS" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.settings.BLUETOOTH_SETTINGS" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <receiver
+            android:name=".receiver.FocusActionReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".receiver.AppTimerCheckReceiver"
+            android:exported="false" />
+        <receiver
+            android:name=".SettingsWidgetProvider"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/app_widget_info" />
+        </receiver>
+    </application>
+
+</manifest>

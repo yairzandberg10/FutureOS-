@@ -1,0 +1,6 @@
+- `[x]` Integrate bottom toggles into dynamic `sectionOrder` (remove hardcoded footer)
+- `[x]` Fix Grid UI: Increase separator visibility and ensure "Add" icons render correctly
+- `[x]` Refine long-press detection for Grid Card (Touch and D-pad Center/OK)
+- `[x]` Ensure Grid edit mode (red border) only activates on long press
+- `[x]` Verify short-click add/remove logic in Grid edit mode
+- `[ ]` Verify overall layout and movability with Compose Preview

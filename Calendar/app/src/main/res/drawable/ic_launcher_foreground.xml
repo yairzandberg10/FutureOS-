@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- שני "טבעות" קשירה עליונות -->
+    <path android:fillColor="#FFFFFFFF" android:pathData="M36,22h7v14h-7z" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M65,22h7v14h-7z" />
+    <!-- גוף היומן -->
+    <path android:fillColor="#FFFFFFFF" android:pathData="M23,30h62v58h-62z" />
+    <!-- כותרת (חודש) בגוון הרקע כדי ליצור הפרדה חזותית -->
+    <path android:fillColor="#FF121218" android:pathData="M23,30h62v14h-62z" />
+    <!-- רשת ימים 3x4 -->
+    <path android:fillColor="#FFFFFFFF" android:pathData="M32,52h8v8h-8z" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M50,52h8v8h-8z" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M68,52h8v8h-8z" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M32,68h8v8h-8z" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M50,68h8v8h-8z" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M68,68h8v8h-8z" />
+</vector>

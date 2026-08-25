@@ -1,0 +1,23 @@
+.claude/
+
+# Standard Android/Gradle build artifacts
+*.iml
+.gradle/
+.kotlin/
+**/build/
+/*/captures/
+.externalNativeBuild/
+.cxx/
+local.properties
+.DS_Store
+.idea/caches/
+.idea/libraries/
+.idea/modules.xml
+.idea/workspace.xml
+.idea/navEditor.xml
+.idea/assetWizardSettings.xml
+
+# sefaria.db (2.1GB) skipped: local disk was full (0.36GB free) when
+# splitting it into <100MB parts for GitHub. Add back once there's room.
+Sfarim/tools/output/sefaria.db
+Sfarim/tools/output/sefaria_db_parts/

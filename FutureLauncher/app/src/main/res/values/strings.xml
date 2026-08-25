@@ -1,0 +1,36 @@
+<resources>
+    <string name="app_name">FutureLauncher</string>
+    <string name="no_space_toast">אין מקום פנוי בעמוד זה</string>
+    <string name="widget_default_label">ווידג\'ט</string>
+    <string name="home">בית</string>
+    <string name="trash">סל מחזור</string>
+    <string name="settings">הגדרות</string>
+    <string name="widgets">ווידג\'טים</string>
+    <string name="wallpaper">טפט</string>
+    <string name="apps">אפליקציות</string>
+    <string name="options_for">אפשרויות עבור %1$s</string>
+    <string name="resize_widget">שינוי גודל ווידג\'ט</string>
+    <string name="width">רוחב: %1$d</string>
+    <string name="height">גובה: %1$d</string>
+    <string name="rename">שינוי שם</string>
+    <string name="save_new_name">שמור שם חדש</string>
+    <string name="folder_name">שם תיקייה</string>
+    <string name="add_to_folder">הוסף לתיקייה</string>
+    <string name="options">אפשרויות</string>
+    <string name="add_app">הוספת יישום</string>
+    <string name="add_folder_btn">הוספת תיקייה</string>
+    <string name="close">סגור</string>
+    <string name="cancel">ביטול</string>
+    <string name="select_widget_title">בחר ווידג\'ט להוספה למסך הבית</string>
+    <string name="select_widget_button">בחר ווידג\'ט</string>
+    <string name="select_app_title">בחר אפליקציה להוספה</string>
+    <string name="launcher_settings_title">הגדרות לאנצ\'ר</string>
+    <string name="launcher_settings_desc">טפט, ווידג\'טים והגדרות נוספות</string>
+    <string name="save">שמור</string>
+    <string name="reset_layout">איפוס פריסת מסך הבית</string>
+    <string name="reset_layout_confirm">כל העמודים, התיקיות והווידג\'טים יימחקו והאפליקציות יסודרו מחדש בסדר אלפביתי. בטוח?</string>
+    <string name="reset_layout_confirm_button">כן, אפס</string>
+    <string name="restrict_default_apps_title">רק אפליקציות ברירת מחדל</string>
+    <string name="restrict_default_apps_desc">כשמופעל, ניתן להוסיף למסך הבית רק אפליקציות וווידג\'טים מובנים של FutureOS</string>
+    <string name="app_no_longer_installed">האפליקציה כבר לא מותקנת</string>
+</resources>

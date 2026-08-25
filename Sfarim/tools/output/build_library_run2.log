@@ -1,0 +1,107 @@
+[1/4] loading table of contents (cached under C:\Users\yairz\Downloads\FutureOS-master\FutureOS-master\Sfarim\tools\output\_cache) ...
+[2/4] loading Hebrew text index (books.json, cached) ...
+      6211 titles have a Hebrew version available
+[3/4] building/verifying category tree (idempotent) ...
+[4/4] 6211 Hebrew books matched to the TOC; 4189 already imported, 2022 to fetch now
+  4200/6211 books | 1304911 segments | 9s elapsed | ETA 26.7min
+  4225/6211 books | 1304911 segments | 28s elapsed | ETA 25.6min
+  4250/6211 books | 1304911 segments | 65s elapsed | ETA 34.8min
+  4275/6211 books | 1304911 segments | 90s elapsed | ETA 33.6min
+  4300/6211 books | 1304911 segments | 102s elapsed | ETA 29.2min
+  4325/6211 books | 1304911 segments | 113s elapsed | ETA 26.2min
+  4350/6211 books | 1304911 segments | 122s elapsed | ETA 23.6min
+  4375/6211 books | 1304911 segments | 143s elapsed | ETA 23.6min
+  4400/6211 books | 1304911 segments | 152s elapsed | ETA 21.8min
+  4425/6211 books | 1304911 segments | 163s elapsed | ETA 20.6min
+  4450/6211 books | 1304911 segments | 189s elapsed | ETA 21.3min
+  4475/6211 books | 1304911 segments | 211s elapsed | ETA 21.4min
+  4500/6211 books | 1304911 segments | 226s elapsed | ETA 20.7min
+  4525/6211 books | 1304911 segments | 245s elapsed | ETA 20.5min
+  4550/6211 books | 1304911 segments | 255s elapsed | ETA 19.6min
+  4575/6211 books | 1304911 segments | 289s elapsed | ETA 20.4min
+  4600/6211 books | 1304911 segments | 303s elapsed | ETA 19.8min
+  4625/6211 books | 1304911 segments | 317s elapsed | ETA 19.2min
+  4650/6211 books | 1304911 segments | 328s elapsed | ETA 18.5min
+  4675/6211 books | 1304911 segments | 379s elapsed | ETA 20.0min
+  4700/6211 books | 1304911 segments | 425s elapsed | ETA 20.9min
+  4725/6211 books | 1304911 segments | 447s elapsed | ETA 20.6min
+  4750/6211 books | 1304911 segments | 461s elapsed | ETA 20.0min
+  4775/6211 books | 1304911 segments | 481s elapsed | ETA 19.6min
+  4800/6211 books | 1318746 segments | 508s elapsed | ETA 19.5min
+  4825/6211 books | 1318746 segments | 520s elapsed | ETA 18.9min
+  4850/6211 books | 1318746 segments | 539s elapsed | ETA 18.5min
+  4875/6211 books | 1323003 segments | 555s elapsed | ETA 18.0min
+  4900/6211 books | 1329179 segments | 569s elapsed | ETA 17.5min
+  4925/6211 books | 1338771 segments | 576s elapsed | ETA 16.8min
+  4950/6211 books | 1351405 segments | 605s elapsed | ETA 16.7min
+  4975/6211 books | 1354722 segments | 611s elapsed | ETA 16.0min
+  5000/6211 books | 1354867 segments | 614s elapsed | ETA 15.3min
+  5025/6211 books | 1355111 segments | 618s elapsed | ETA 14.6min
+  5050/6211 books | 1368831 segments | 643s elapsed | ETA 14.4min
+  5075/6211 books | 1402622 segments | 668s elapsed | ETA 14.3min
+  5100/6211 books | 1449351 segments | 685s elapsed | ETA 13.9min
+  5125/6211 books | 1475474 segments | 698s elapsed | ETA 13.5min
+  5150/6211 books | 1494287 segments | 702s elapsed | ETA 12.9min
+  5175/6211 books | 1502173 segments | 704s elapsed | ETA 12.3min
+  5200/6211 books | 1506387 segments | 706s elapsed | ETA 11.8min
+  5225/6211 books | 1514269 segments | 713s elapsed | ETA 11.3min
+  5250/6211 books | 1525819 segments | 732s elapsed | ETA 11.0min
+  5275/6211 books | 1531507 segments | 740s elapsed | ETA 10.6min
+  5300/6211 books | 1539607 segments | 749s elapsed | ETA 10.2min
+  5325/6211 books | 1540009 segments | 752s elapsed | ETA 9.8min
+  5350/6211 books | 1542953 segments | 757s elapsed | ETA 9.4min
+  5375/6211 books | 1543885 segments | 759s elapsed | ETA 8.9min
+  5400/6211 books | 1546293 segments | 761s elapsed | ETA 8.5min
+  5425/6211 books | 1550383 segments | 765s elapsed | ETA 8.1min
+  5450/6211 books | 1554657 segments | 767s elapsed | ETA 7.7min
+  5475/6211 books | 1554967 segments | 769s elapsed | ETA 7.3min
+  5500/6211 books | 1555861 segments | 772s elapsed | ETA 7.0min
+  5525/6211 books | 1569837 segments | 778s elapsed | ETA 6.7min
+  5550/6211 books | 1580162 segments | 782s elapsed | ETA 6.3min
+  5575/6211 books | 1583219 segments | 785s elapsed | ETA 6.0min
+  5600/6211 books | 1593141 segments | 791s elapsed | ETA 5.7min
+  5625/6211 books | 1598845 segments | 794s elapsed | ETA 5.4min
+  5650/6211 books | 1600745 segments | 795s elapsed | ETA 5.1min
+  5675/6211 books | 1602777 segments | 796s elapsed | ETA 4.8min
+  5700/6211 books | 1607231 segments | 801s elapsed | ETA 4.5min
+  5725/6211 books | 1608735 segments | 804s elapsed | ETA 4.2min
+  5750/6211 books | 1610076 segments | 805s elapsed | ETA 4.0min
+  5775/6211 books | 1613387 segments | 806s elapsed | ETA 3.7min
+  5800/6211 books | 1613490 segments | 808s elapsed | ETA 3.4min
+  5825/6211 books | 1619006 segments | 811s elapsed | ETA 3.2min
+  5850/6211 books | 1652654 segments | 815s elapsed | ETA 3.0min
+  5875/6211 books | 1678612 segments | 821s elapsed | ETA 2.7min
+  5900/6211 books | 1688710 segments | 827s elapsed | ETA 2.5min
+  5925/6211 books | 1703439 segments | 830s elapsed | ETA 2.3min
+  5950/6211 books | 1707668 segments | 832s elapsed | ETA 2.1min
+  5975/6211 books | 1708570 segments | 833s elapsed | ETA 1.8min
+  6000/6211 books | 1708722 segments | 834s elapsed | ETA 1.6min
+  6025/6211 books | 1709135 segments | 835s elapsed | ETA 1.4min
+  6050/6211 books | 1709654 segments | 840s elapsed | ETA 1.2min
+  6075/6211 books | 1716787 segments | 851s elapsed | ETA 1.0min
+  6100/6211 books | 1718394 segments | 853s elapsed | ETA 0.8min
+  6125/6211 books | 1721188 segments | 857s elapsed | ETA 0.6min
+  6150/6211 books | 1725594 segments | 860s elapsed | ETA 0.4min
+  6175/6211 books | 1726071 segments | 863s elapsed | ETA 0.3min
+  6200/6211 books | 1736601 segments | 867s elapsed | ETA 0.1min
+  6211/6211 books | 1746681 segments | 889s elapsed | ETA 0.0min
+building FTS5 title search index ...
+
+=== DONE ===
+categories: 1258 | books: 6211 | segments: 1746681
+db size: 1552.7 MB at C:\Users\yairz\Downloads\FutureOS-master\FutureOS-master\Sfarim\tools\output\sefaria.db
+BUILD_EXIT_CODE=0
+sample:
+  ('Berakhot', 'Talmud')
+  ('Genesis', 'Tanakh')
+  ('Mishnah Berakhot', 'Mishnah')
+  ('Rashi on Genesis', 'Tanakh')
+  ('Shulchan Arukh, Orach Chayim', 'Halakhah')
+books with NULL root_category: 0
+ADD_ROOT_CATEGORY_EXIT_CODE=0
+building segments_fts (full-text index over verse content) ...
+segments_fts built in 157.6s
+rebuilding search_fts (book titles) to make sure it's current ...
+segments_fts rows: 1746681
+db size now: 2051.5 MB
+ADD_FULLTEXT_SEARCH_EXIT_CODE=0

@@ -1,0 +1,40 @@
+--- root categories ---
+{'id': 1, 'parent_id': None, 'name_en': 'Tanakh', 'name_he': 'תנ"ך'}
+{'id': 126, 'parent_id': None, 'name_en': 'Mishnah', 'name_he': 'משנה'}
+{'id': 263, 'parent_id': None, 'name_en': 'Talmud', 'name_he': 'תלמוד'}
+{'id': 620, 'parent_id': None, 'name_en': 'Midrash', 'name_he': 'מדרש'}
+{'id': 643, 'parent_id': None, 'name_en': 'Halakhah', 'name_he': 'הלכה'}
+{'id': 1164, 'parent_id': None, 'name_en': 'Kabbalah', 'name_he': 'קבלה'}
+{'id': 1173, 'parent_id': None, 'name_en': 'Liturgy', 'name_he': 'סדר התפילה'}
+{'id': 1180, 'parent_id': None, 'name_en': 'Jewish Thought', 'name_he': 'מחשבת ישראל'}
+{'id': 1193, 'parent_id': None, 'name_en': 'Tosefta', 'name_he': 'תוספתא'}
+{'id': 1227, 'parent_id': None, 'name_en': 'Chasidut', 'name_he': 'חסידות'}
+{'id': 1235, 'parent_id': None, 'name_en': 'Musar', 'name_he': 'ספרי מוסר'}
+{'id': 1239, 'parent_id': None, 'name_en': 'Responsa', 'name_he': 'שו"ת'}
+{'id': 1250, 'parent_id': None, 'name_en': 'Second Temple', 'name_he': 'בית שני'}
+{'id': 1254, 'parent_id': None, 'name_en': 'Reference', 'name_he': 'מילונים וספרי יעץ'}
+
+Talmud id = 263
+
+--- children categories of Talmud ---
+{'id': 264, 'parent_id': 263, 'name_en': 'Bavli', 'name_he': 'בבלי'}
+{'id': 531, 'parent_id': 263, 'name_en': 'Yerushalmi', 'name_he': 'ירושלמי'}
+
+--- books directly under Talmud (category_id=talmud_id) ---
+
+--- orphaned segments (book_id not in books) ---
+orphan segment count: 0
+
+--- book zero-segment stats ---
+total books: 6211, zero-segment books: 875
+
+--- Genesis row ---
+{"id": 1251, "category_id": 2, "title_en": "Genesis", "title_he": "בראשית", "section_names": "[\"Chapter\", \"Verse\"]"}
+Genesis segment count (book_id=1251): 1533
+Genesis first chapters: [1, 2, 3, 4, 5]
+
+--- typeof checks ---
+<sqlite3.Row object at 0x0000017B35CAB340>
+<sqlite3.Row object at 0x0000017B35CAB370>
+<sqlite3.Row object at 0x0000017B35CAB3A0>
+<sqlite3.Row object at 0x0000017B35CAB400>

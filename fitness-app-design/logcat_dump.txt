@@ -1,0 +1,270 @@
+--------- beginning of system
+08-22 21:18:20.964  1133  9626 I ActivityTaskManager: START u0 {flg=0x10000000 cmp=com.future.fitness/.MainActivity} from uid 2000
+--------- beginning of main
+08-22 21:18:20.974   545   592 I mtkpower@impl: [setMode] type:5, enabled:1
+08-22 21:18:20.975   545   642 I libPowerHal: [perfLockAcq] idx:0 hdl:10175 hint:11 pid:545 duration:30000 lock_user:mtkpower@1.0-se => ret_hdl:10175
+08-22 21:18:20.975   545   642 I libPowerHal: LAUNCH: cpu_ctrl set cpu freq: 1800000 -1 2000000 -1
+08-22 21:18:20.975   545   642 I libPowerHal: [PE] LAUNCH update cmd:1000000, param:0
+08-22 21:18:20.976   545   642 I libPowerHal: [PE] LAUNCH update cmd:1408300, param:100
+08-22 21:18:20.976   545   642 I libPowerHal: [PE] LAUNCH update cmd:1000000 param:0
+08-22 21:18:20.977  1133  9626 I PowerHalWrapper: <amsBoostResume> last:com.teslacoilsw.launcher, next:com.future.fitness 
+08-22 21:18:20.978   519   525 E statsd  : Predicate 5980654721335871649 dropping data for dimension key (10)0x2010101->10155[I] (10)0x30000->*launch*[S] 
+08-22 21:18:20.978   545   642 I libPowerHal: [perfLockAcq] idx:1 hdl:10176 hint:22 pid:545 duration:10000 lock_user:mtkpower@1.0-se => ret_hdl:10176
+08-22 21:18:20.979   559   658 I SurfaceFlinger: [SF client] NEW(0xb400007bbb3ff110) for (1364:com.android.systemui)
+08-22 21:18:20.979   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:20.980   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:20.980   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:20.980   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:20.981   545   642 I libPowerHal: [perfLockRel] hdl:10174, idx:-1
+08-22 21:18:20.997   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:20.997   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:20.997   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:20.997   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:20.998  1133  3171 I PowerHalWrapper: amsBoostNotify pid:2329,activity:com.teslacoilsw.launcher.NovaLauncher, package:com.teslacoilsw.launcher, mProcessCreatePackcom.future.fitness 
+08-22 21:18:20.998  1133  3171 I PowerHalWrapper: state: 0 
+08-22 21:18:20.999  1133  3171 I PowerHalWrapper: amsBoostNotify AMS_BOOST_PROCESS_CREATE_BOOST:false 
+08-22 21:18:20.999   545   642 I libPowerHal: [perfNotifyAppState] pack:com.teslacoilsw.launcher, act:com.teslacoilsw.launcher.NovaLauncher, state:0, pid:2329, uid:10188, fps:-1
+08-22 21:18:21.002  1133  1153 I PowerHalWrapper: amsBoostProcessCreate package:com.future.fitness 
+08-22 21:18:21.004   545   642 I libPowerHal: [perfLockAcq] idx:2 hdl:10177 hint:21 pid:545 duration:10000 lock_user:mtkpower@1.0-se => ret_hdl:10177
+08-22 21:18:21.004   545   642 I libPowerHal: [PE] MTKPOWER_HINT_PROCESS_CREATE update cmd:2020000, param:15
+08-22 21:18:21.004   545   642 I libPowerHal: [PE] MTKPOWER_HINT_PROCESS_CREATE update cmd:1410000, param:1
+08-22 21:18:21.004   559   658 E BufferQueueDebug: [Splash Screen com.future.fitness#0](this:0xb400007cab56b610,id:-1,api:0,p:-1,c:-1) id info cannot be read from 'Splash Screen com.future.fitness#0'
+08-22 21:18:21.005   559   658 I BufferQueueDebug: [Splash Screen com.future.fitness#0](this:0xb400007cab56b610,id:-1,api:0,p:-1,c:-1) BufferQueue core=(559:/system/bin/surfaceflinger)
+08-22 21:18:21.005   545   642 I libPowerHal: [perfLockRel] hdl:10148, idx:-1
+08-22 21:18:21.009  1133  1342 W WindowManager: Changing focus from Window{f88d3f2 u0 com.teslacoilsw.launcher/com.teslacoilsw.launcher.NovaLauncher} to null displayId=0 Callers=com.android.server.wm.RootWindowContainer.updateFocusedWindowLocked:465 com.android.server.wm.WindowManagerService.updateFocusedWindowLocked:5751 com.android.server.wm.WindowManagerService.relayoutWindow:2476 com.android.server.wm.Session.relayout:235 
+08-22 21:18:21.010  1364  1461 I BufferQueueConsumer: [](id:554000000dd,api:0,p:-1,c:1364) connect: controlledByApp=false
+08-22 21:18:21.012  1364  1461 I BLASTBufferQueue: [ViewRootImpl[fitness]#221] constructor()
+08-22 21:18:21.013  1364  1543 I BufferQueueProducer: [ViewRootImpl[fitness]#221(BLAST Consumer)221](id:554000000dd,api:1,p:1364,c:1364) connect: api=1 producerControlledByApp=true
+08-22 21:18:21.016   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:21.016   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:21.016   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:21.016   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:21.018  1133  1163 I ActivityManager: Start proc 1416:com.future.fitness/u0a155 for pre-top-activity {com.future.fitness/com.future.fitness.MainActivity}
+08-22 21:18:21.030   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:21.030   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:21.030   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:21.030   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:21.033  1416  1416 I .future.fitnes: Late-enabling -Xcheck:jni
+08-22 21:18:21.049   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:21.049   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:21.049   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:21.049   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:21.058   559   559 I BufferQueueProducer: [com.teslacoilsw.launcher/com.teslacoilsw.launcher.NovaLauncher#0](this:0xb400007cab5d7970,id:-1,api:0,p:-1,c:559) queueBuffer: fps=0.05 dur=20777.63 max=20777.63 min=20777.63
+08-22 21:18:21.066   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:21.066   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:21.066   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:21.066   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:21.075   559   559 I BufferQueueProducer: [StatusBar#0](this:0xb400007cab53af80,id:-1,api:0,p:-1,c:559) queueBuffer: fps=2.50 dur=5601.54 max=5361.87 min=16.66
+08-22 21:18:21.083 29947 29952 I adbd    : jdwp connection from 1416
+08-22 21:18:21.111  1133  1342 I PowerHalWrapper: amsBoostNotify pid:1416,activity:com.future.fitness.MainActivity, package:com.future.fitness, mProcessCreatePackcom.future.fitness 
+08-22 21:18:21.111  1133  1342 I PowerHalWrapper: state: 1 
+08-22 21:18:21.111  1133  1342 I PowerHalWrapper: amsBoostNotify AMS_BOOST_PROCESS_CREATE_BOOST:true 
+08-22 21:18:21.114   545   642 I libPowerHal: [perfNotifyAppState] pack:com.future.fitness, act:com.future.fitness.MainActivity, state:1, pid:1416, uid:10155, fps:-1
+08-22 21:18:21.114   545   642 I libPowerHal: [perfNotifyAppState] foreground:com.future.fitness, pid:1416, uid:10155
+08-22 21:18:21.115   545   642 E UxUtility: notifyAppState error = NULL
+08-22 21:18:21.115   545   642 I TouchUtility: notifyAppState error = NULL
+08-22 21:18:21.115   545   591 I mtkpower@impl: [notifyAppState] pc:1, com.teslacoilsw.launcher => com.future.fitness
+08-22 21:18:21.328  2329  2528 I BufferQueueProducer: [ViewRootImpl[NovaLauncher]#110(BLAST Consumer)110](id:91900000090,api:1,p:2329,c:2329) disconnect: api 1
+08-22 21:18:21.334  2329  2329 I BLASTBufferQueue: [ViewRootImpl[NovaLauncher]#110] destructor()
+08-22 21:18:21.334  2329  2329 I BufferQueueConsumer: [ViewRootImpl[NovaLauncher]#110(BLAST Consumer)110](id:91900000090,api:0,p:-1,c:2329) disconnect
+08-22 21:18:21.526   545   620 I libPerfCtl: xgfGetFPS pid:1364 fps:63
+08-22 21:18:21.526   545   620 I libPerfCtl: xgfGetFPS pid:2329 fps:69
+08-22 21:18:21.526   545   620 I libPerfCtl: xgfGetFPS pid:13546 fps:-1
+08-22 21:18:21.823  1416  1416 I PowerHalWrapper: PowerHalWrapper.getInstance 
+08-22 21:18:21.833  1416  1438 E QT      : [QT]file does not exist
+08-22 21:18:21.984  1416  1416 I SurfaceFactory: [static] sSurfaceFactory = com.mediatek.view.impl.SurfaceFactoryImpl@71f7079
+08-22 21:18:21.985   559   658 I SurfaceFlinger: [SF client] NEW(0xb400007bbb40caf0) for (1416:com.future.fitness)
+08-22 21:18:21.986  1416  1416 I MsyncFactory: [static] sMsyncFactory = com.mediatek.view.impl.MsyncFactoryImpl@33df1be
+08-22 21:18:22.000   559   658 I SurfaceFlinger: [SF client] NEW(0xb400007bbb407290) for (1133:system_server)
+08-22 21:18:22.012   534   534 I hwcomposer: [HWCDisplay] [Display_0 (type:1)] fps:19.087757,dur:1309.74,max:650.16,min:11.56  
+08-22 21:18:22.088   755   755 I thermal_repeater: [recvMdThermalInfo] ret=28, strLen=127,  3, 58, 14, -28405, 32767, 0
+08-22 21:18:22.122   520 25413 I netd    : trafficSwapActiveStatsMap() <0.24ms>
+08-22 21:18:22.126   520 25413 I netd    : tetherGetStats() -> {[TetherStatsParcel{iface: ccmni0, rxBytes: 680539095, rxPackets: 368613, txBytes: 100623927, txPackets: 300893, ifIndex: 0}, TetherStatsParcel{iface: wlan0, rxBytes: 190710928, rxPackets: 148906, txBytes: 25370161, txPackets: 121851, ifIndex: 0}]} <2.29ms>
+08-22 21:18:22.139   520 25413 I netd    : bandwidthSetGlobalAlert(2097152) <0.45ms>
+08-22 21:18:22.147   520 25413 I netd    : bandwidthRemoveInterfaceQuota(ccmni0) <1.70ms>
+08-22 21:18:22.149   520 25413 I netd    : bandwidthSetInterfaceQuota(ccmni0, 9223372036854775807) <1.53ms>
+08-22 21:18:22.526   545   620 I libPerfCtl: xgfGetFPS pid:1364 fps:-1
+08-22 21:18:22.526   545   620 I libPerfCtl: xgfGetFPS pid:2329 fps:-1
+08-22 21:18:23.526   545   620 I libPerfCtl: xgfGetFPS pid:1364 fps:-1
+08-22 21:18:23.527   545   620 I libPerfCtl: xgfGetFPS pid:2329 fps:-1
+08-22 21:18:23.536   559   966 E BufferQueueDebug: [com.future.fitness/com.future.fitness.MainActivity#0](this:0xb400007cab60ad90,id:-1,api:0,p:-1,c:-1) id info cannot be read from 'com.future.fitness/com.future.fitness.MainActivity#0'
+08-22 21:18:23.536   559   966 I BufferQueueDebug: [com.future.fitness/com.future.fitness.MainActivity#0](this:0xb400007cab60ad90,id:-1,api:0,p:-1,c:-1) BufferQueue core=(559:/system/bin/surfaceflinger)
+08-22 21:18:23.540   534   534 I hwcomposer: [HWCDisplay] [Display_0 (type:1)] fps:1.309512,dur:1527.29,max:1509.86,min:17.43  
+08-22 21:18:23.540  1133  1342 W WindowManager: Changing focus from null to Window{1022f53 u0 com.future.fitness/com.future.fitness.MainActivity} displayId=0 Callers=com.android.server.wm.RootWindowContainer.updateFocusedWindowLocked:465 com.android.server.wm.WindowManagerService.updateFocusedWindowLocked:5751 com.android.server.wm.WindowManagerService.relayoutWindow:2476 com.android.server.wm.Session.relayout:235 
+08-22 21:18:23.542  1133  1342 I WindowManager: Relayout Window{1022f53 u0 com.future.fitness/com.future.fitness.MainActivity}: oldVis=4 newVis=0 focusMayChange = true requestedWidth = 640 requestedHeight = 960 outFrames = ClientWindowFrames{frame=[0,0][640,960] display=[0,0][640,960] backdrop=[0,0][640,960]} outSurfaceControl = Surface(name=com.future.fitness/com.future.fitness.MainActivity)/@0x98063a7
+08-22 21:18:23.545  1416  1416 I BufferQueueConsumer: [](id:58800000000,api:0,p:-1,c:1416) connect: controlledByApp=false
+08-22 21:18:23.547  1416  1416 I BLASTBufferQueue: [ViewRootImpl[MainActivity]#0] constructor()
+08-22 21:18:23.556   411   411 I hwservicemanager: getTransport: Cannot find entry android.hardware.configstore@1.0::ISurfaceFlingerConfigs/default in either framework or device VINTF manifest.
+08-22 21:18:23.556  1416  1436 E OpenGLRenderer: Device claims wide gamut support, cannot find matching config, error = EGL_SUCCESS
+08-22 21:18:23.556  1416  1436 W OpenGLRenderer: Failed to initialize 101010-2 format, error = EGL_SUCCESS
+08-22 21:18:23.567   559   658 E HWComposer: getSupportedContentTypes: getSupportedContentTypes failed for display 0: Unsupported (8)
+08-22 21:18:23.568  1416  1436 I BufferQueueProducer: [ViewRootImpl[MainActivity]#0(BLAST Consumer)0](id:58800000000,api:1,p:1416,c:1416) connect: api=1 producerControlledByApp=true
+08-22 21:18:23.572  1416  1457 E ion     : ioctl c0044901 failed with code -1: Invalid argument
+08-22 21:18:23.748  1416  1436 E OpenGLRenderer: fbcNotifyFrameComplete error: undefined symbol: fbcNotifyFrameComplete
+08-22 21:18:23.748  1416  1436 E OpenGLRenderer: fbcNotifyNoRender error: undefined symbol: fbcNotifyNoRender
+08-22 21:18:23.762   559   559 I ClientCache: add: Cache owner=0xb400007bab3e2610
+08-22 21:18:23.764  1133  1150 I ActivityTaskManager: Displayed com.future.fitness/.MainActivity: +2s797ms
+08-22 21:18:23.773   559   559 I BufferQueueProducer: [FramebufferSurface](this:0xb400007c5b3e3350,id:-1,api:1,p:559,c:559) queueBuffer: fps=7.49 dur=3070.95 max=2457.77 min=11.78
+08-22 21:18:23.775  1416  1429 I OpenGLRenderer: Davey! duration=1990ms; Flags=1, FrameTimelineVsyncId=2223977, IntendedVsync=91667181751463, Vsync=91667415084801, InputEventId=0, HandleInputStart=91667431086616, AnimationStart=91667431095232, PerformTraversalsStart=91667431467539, DrawStart=91669073886924, FrameDeadline=91667201751463, FrameInterval=91667431001463, FrameStartTime=16666667, SyncQueued=91669146381693, SyncStart=91669146524232, IssueDrawCommandsStart=91669147189386, SwapBuffers=91669168493155, FrameCompleted=91669172651540, DequeueBufferDuration=26154, QueueBufferDuration=1394693, GpuCompleted=91669172125155, SwapBuffersCompleted=91669172651540, DisplayPresentTime=0, 
+08-22 21:18:23.798   559   559 I BufferQueueProducer: [Splash Screen com.future.fitness#0](this:0xb400007cab56b610,id:-1,api:0,p:-1,c:559) queueBuffer: fps=0.36 dur=2773.06 max=2773.06 min=2773.06
+08-22 21:18:23.820   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:23.820   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:23.820   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:23.820   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:23.836   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:23.836   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:23.836   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:23.836   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:23.853   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:23.853   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:23.853   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:23.853   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:23.869   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:23.869   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:23.869   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:23.869   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:23.874  1416  1416 I Choreographer: Skipped 99 frames!  The application may be doing too much work on its main thread.
+08-22 21:18:23.886   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:23.886   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:23.886   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:23.886   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:23.902   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:23.903   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:23.903   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:23.903   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:23.920   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:23.920   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:23.920   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:23.920   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:23.945   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:23.945   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:23.945   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:23.945   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:23.946  1416  1429 I OpenGLRenderer: Davey! duration=1712ms; Flags=0, FrameTimelineVsyncId=2223987, IntendedVsync=91667638301984, Vsync=91669288302017, InputEventId=0, HandleInputStart=91669294521078, AnimationStart=91669294528155, PerformTraversalsStart=91669317129078, DrawStart=91669332376463, FrameDeadline=91667674968651, FrameInterval=91669294295309, FrameStartTime=16666667, SyncQueued=91669342060540, SyncStart=91669342223540, IssueDrawCommandsStart=91669342354386, SwapBuffers=91669346999540, FrameCompleted=91669350510693, DequeueBufferDuration=25000, QueueBufferDuration=1303000, GpuCompleted=91669350116155, SwapBuffersCompleted=91669350510693, DisplayPresentTime=0, 
+08-22 21:18:23.957 16299 16312 I FontLog : (REDACTED) Received query %s, URI %s
+08-22 21:18:23.958 16299 16312 I FontLog : (REDACTED) Query [%s] resolved to %s
+08-22 21:18:23.960 16299 16312 I FontLog : (REDACTED) Fetch %s end status %s
+08-22 21:18:23.961   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:23.961   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:23.961   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:23.961   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:23.965 16299 16312 I FontLog : (REDACTED) Pulling font file for id = %d, cache size = %d
+08-22 21:18:23.976 16299 16312 I FontLog : (REDACTED) Pulling font file for id = %d, cache size = %d
+08-22 21:18:23.978  2026  2026 I GoogleInputMethodService: GoogleInputMethodService.onFinishInput():2276 
+08-22 21:18:23.979  2026  2026 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1460 onStartInput(EditorInfo{EditorInfo{packageName=com.future.fitness, inputType=0, inputTypeString=NULL, enableLearning=false, autoCorrection=false, autoComplete=false, imeOptions=0, privateImeOptions=null, actionName=UNSPECIFIED, actionLabel=null, initialSelStart=-1, initialSelEnd=-1, initialCapsMode=0, label=null, fieldId=-1, fieldName=null, extras=null, hintText=null, hintLocales=[]}}, false)
+08-22 21:18:23.979  2026   501 I Module  : DeviceLockedStatusModuleProvider$Module.updateDeviceLockedStatusInternal():129 repeatCheckTimes = 0, locked = false
+08-22 21:18:23.980   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:23.980   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:23.980   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:23.980   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:23.981  2026  2026 I LatinIMEBase: LatinIMEBase.updateInputViewCoverNavigation():317 Update input view padding, isNavbarOverInputWindow=false, bottom inset=0
+08-22 21:18:23.982  2026   512 I Module  : DeviceLockedStatusModuleProvider$Module.updateDeviceLockedStatusInternal():129 repeatCheckTimes = 1, locked = false
+08-22 21:18:23.997   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:23.997   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:23.997   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:23.997   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.014   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.014   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.014   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.014   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.031   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.031   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.031   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.031   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.049   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.049   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.049   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.049   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.062  1364  1543 I BufferQueueProducer: [ViewRootImpl[fitness]#221(BLAST Consumer)221](id:554000000dd,api:1,p:1364,c:1364) disconnect: api 1
+08-22 21:18:24.067   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.067   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.067   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.067   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.074  1133  5529 W InputManager-JNI: Input channel object '34f4a30 Splash Screen com.future.fitness (client)' was disposed without first being removed with the input manager!
+08-22 21:18:24.080  1133  1153 I PowerHalWrapper: amsBoostNotify pid:2329,activity:com.teslacoilsw.launcher.NovaLauncher, package:com.teslacoilsw.launcher, mProcessCreatePackcom.future.fitness 
+08-22 21:18:24.080  1133  1153 I PowerHalWrapper: state: 0 
+08-22 21:18:24.081  1133  1153 I PowerHalWrapper: amsBoostNotify AMS_BOOST_PROCESS_CREATE_BOOST:true 
+08-22 21:18:24.082   545   642 I libPowerHal: [perfNotifyAppState] pack:com.teslacoilsw.launcher, act:com.teslacoilsw.launcher.NovaLauncher, state:0, pid:2329, uid:10188, fps:-1
+08-22 21:18:24.085   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.086   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.086   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.086   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.087  1364  1380 I BLASTBufferQueue: [ViewRootImpl[fitness]#221] destructor()
+08-22 21:18:24.087  1364  1380 I BufferQueueConsumer: [ViewRootImpl[fitness]#221(BLAST Consumer)221](id:554000000dd,api:0,p:-1,c:1364) disconnect
+08-22 21:18:24.103   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.103   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.103   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.103   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.115   559   559 I BufferQueueDebug: [com.teslacoilsw.launcher/com.teslacoilsw.launcher.NovaLauncher#0](this:0xb400007cab5d7970,id:-1,api:0,p:-1,c:559) onDestructor()
+08-22 21:18:24.115  2329  2436 I BLASTBufferQueue: releaseBufferCallbackThunk bufferId:10002978832963 framenumber:88 blastBufferQueue is dead
+08-22 21:18:24.121   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.122   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.122   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.122   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.138   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.138   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.138   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.138   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.154   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.154   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.154   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.154   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.163   545   592 I mtkpower@impl: [setMode] type:5, enabled:0
+08-22 21:18:24.164   545   642 I libPowerHal: [perfLockRel] hdl:10175, idx:0
+08-22 21:18:24.164   519   525 E statsd  : Predicate 5980654721335871649 dropping data for dimension key (10)0x2010101->10155[I] (10)0x30000->*launch*[S] 
+08-22 21:18:24.165  1133  1342 I PowerHalWrapper: amsBoostStop AMS_BOOST_PACK_SWITCH:true, AMS_BOOST_ACT_SWITCH:false, AMS_BOOST_PROCESS_CREATE:true 
+08-22 21:18:24.165   545   591 I mtkpower@impl: [mtkPowerHint] hint:22, hold:500, ext:0, ext_hold:0
+08-22 21:18:24.165   545   591 I mtkpower@impl: [mtkPowerHint] hint:21, hold:6000, ext:30, ext_hold:35000
+08-22 21:18:24.166   545   642 I libPowerHal: [perfLockAcq] idx:0 hdl:10178 hint:22 pid:545 duration:500 lock_user:mtkpower@1.0-se => ret_hdl:10178
+08-22 21:18:24.166   545   642 I libPowerHal: [perfLockRel] hdl:10176, idx:1
+08-22 21:18:24.167   545   642 I libPowerHal: [perfLockAcq] idx:3 hdl:10179 hint:21 pid:545 duration:6000 lock_user:mtkpower@1.0-se => ret_hdl:10179
+08-22 21:18:24.167   545   642 I libPowerHal: [perfLockRel] hdl:10177, idx:2
+08-22 21:18:24.168   545   642 I libPowerHal: [perfLockAcq] idx:1 hdl:10180 hint:30 pid:545 duration:35000 lock_user:mtkpower@1.0-se => ret_hdl:10180
+08-22 21:18:24.172   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.172   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.172   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.172   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.188   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.188   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.188   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.188   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.206   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.206   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.206   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.206   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.223   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.223   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.223   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.223   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.241   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.241   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.241   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.241   559   559 E CompositionEngine: Fence::merge return error: Timer expired (-62)
+08-22 21:18:24.257   559   559 I BufferQueueDebug: [Splash Screen com.future.fitness#0](this:0xb400007cab56b610,id:-1,api:0,p:-1,c:559) onDestructor()
+08-22 21:18:24.257  1364  1380 I BLASTBufferQueue: releaseBufferCallbackThunk bufferId:5858335393387 framenumber:18 blastBufferQueue is dead
+08-22 21:18:24.526   545   620 I libPerfCtl: xgfGetFPS pid:1364 fps:60
+08-22 21:18:24.527   545   620 I libPerfCtl: xgfGetFPS pid:1416 fps:-1
+08-22 21:18:24.527   545   620 I libPerfCtl: xgfGetFPS pid:2329 fps:-1
+08-22 21:18:24.667   545   642 I mtkpower@impl: [powerd_req] TIMER_MSG_PERF_LOCK_TIMEOUT hdl:10178
+08-22 21:18:24.667   545   642 I libPowerHal: [perfLockRel] hdl:10178, idx:0
+08-22 21:18:24.871 26068 26068 W ThreadPoolForeg: type=1400 audit(0.0:42932): avc: denied { write } for name="traced_producer" dev="tmpfs" ino=22633 scontext=u:r:gmscore_app:s0:c512,c768 tcontext=u:object_r:traced_producer_socket:s0 tclass=sock_file permissive=0 app=com.google.android.gms
+08-22 21:18:25.167  1133  1251 I mtkpower_client: perf_lock_acq, hdl:10150, dur:3000, num:2, tid:1251
+08-22 21:18:25.167  1133  1251 I mtkpower_client: ret_hdl:10181
+08-22 21:18:25.168  1133  1251 I mtkpower_client: perf_lock_rel, hdl:10181, tid:1251
+08-22 21:18:25.168   545   642 I libPowerHal: [perfLockAcq] idx:0 hdl:10181 hint:-1 pid:1133 duration:3000 lock_user:system_server => ret_hdl:10181
+08-22 21:18:25.168   545   642 I SbeHandle: end_default_hold_time HindID : 21
+08-22 21:18:25.168   545   642 I libPowerHal: [disableScenarioByHintId] Disable HindID : 21
+08-22 21:18:25.168   545   642 I libPowerHal: [disableScenarioByHintId] disableScenarioByHintId: HindID : 21
+08-22 21:18:25.168   545   642 I libPowerHal: MTKPOWER_HINT_PROCESS_CREATE: cpu_ctrl set cpu freq: -1 -1 -1 -1
+08-22 21:18:25.168   545   642 I libPowerHal: [PD] MTKPOWER_HINT_PROCESS_CREATE update cmd:1000000, param:1
+08-22 21:18:25.168   545   642 I libPowerHal: [PD] MTKPOWER_HINT_PROCESS_CREATE update cmd:1410000 param:0
+08-22 21:18:25.169   545   642 I libPowerHal: [PD] MTKPOWER_HINT_PROCESS_CREATE update cmd:1408300 param:40
+08-22 21:18:25.169   545   642 I libPowerHal: [PD] MTKPOWER_HINT_PROCESS_CREATE update cmd:1000000 param:1
+08-22 21:18:25.169   545   642 I libPowerHal: [PE] system_server update cmd:3410300 param:21
+08-22 21:18:25.170   545   642 I libPowerHal: [perfLockRel] hdl:10181, idx:0
+08-22 21:18:25.170   545   642 I SbeHandle: end_default_hold_time HindID : 21
+08-22 21:18:25.170   545   642 I libPowerHal: [disableScenarioByHintId] Disable HindID : 21
+08-22 21:18:25.170   545   642 I libPowerHal: [PD] system_server update ONESHOT cmd:3410300 param:21
+08-22 21:18:25.527   545   620 I libPerfCtl: xgfGetFPS pid:1364 fps:-1
+08-22 21:18:25.527   545   620 I libPerfCtl: xgfGetFPS pid:1416 fps:-1
+08-22 21:18:25.527   545   620 I libPerfCtl: xgfGetFPS pid:2329 fps:-1

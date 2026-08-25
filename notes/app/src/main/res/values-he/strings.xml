@@ -1,0 +1,21 @@
+<resources>
+    <string name="app_name">פתקים</string>
+    <string name="my_notes">הפתקים שלי</string>
+    <string name="search_notes">חיפוש פתקים…</string>
+    <string name="add_note">הוסף פתק</string>
+    <string name="no_notes_found">לא נמצאו פתקים</string>
+    <string name="untitled">ללא כותרת</string>
+    <string name="no_content">אין תוכן</string>
+    <string name="new_note">פתק חדש</string>
+    <string name="edit_note">ערוך פתק</string>
+    <string name="back">חזור</string>
+    <string name="pin">נעץ</string>
+    <string name="delete">מחק</string>
+    <string name="save">שמור</string>
+    <string name="title">כותרת</string>
+    <string name="content">תוכן</string>
+    <string name="delete_note_confirm_title">מחיקת פתק</string>
+    <string name="delete_note_confirm_message">האם למחוק את הפתק? לא ניתן לשחזר פעולה זו.</string>
+    <string name="delete_confirm">מחק</string>
+    <string name="cancel">ביטול</string>
+</resources>

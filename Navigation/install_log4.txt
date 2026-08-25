@@ -1,0 +1,130 @@
+Starting a Gradle Daemon, 1 incompatible and 33 stopped Daemons could not be reused, use --status for details
+Reusing configuration cache.
+> Task :app:preBuild UP-TO-DATE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :sharedkeypadnav:generateDebugAssets UP-TO-DATE
+> Task :sharedkeypadnav:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :sharedkeypadnav:preDebugBuild UP-TO-DATE
+> Task :app:generateDebugResources UP-TO-DATE
+> Task :app:desugarDebugFileDependencies UP-TO-DATE
+> Task :app:generateDebugGlobalSynthetics UP-TO-DATE
+> Task :app:javaPreCompileDebug UP-TO-DATE
+> Task :app:mapDebugSourceSetPaths UP-TO-DATE
+> Task :app:packageDebugResources UP-TO-DATE
+> Task :app:extractDeepLinksDebug UP-TO-DATE
+> Task :app:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :sharedkeypadnav:processDebugNavigationResources
+> Task :sharedkeypadnav:generateDebugResources
+> Task :sharedkeypadnav:extractDeepLinksDebug
+> Task :sharedkeypadnav:mapDebugSourceSetPaths
+> Task :app:mergeDebugJniLibFolders UP-TO-DATE
+> Task :sharedkeypadnav:packageDebugResources
+> Task :sharedkeypadnav:mergeDebugJniLibFolders
+> Task :app:checkDebugDuplicateClasses UP-TO-DATE
+> Task :app:processDebugNavigationResources UP-TO-DATE
+> Task :app:parseDebugLocalResources UP-TO-DATE
+> Task :app:generateDebugRFile UP-TO-DATE
+> Task :app:compileDebugNavigationResources UP-TO-DATE
+> Task :sharedkeypadnav:mergeDebugAssets
+> Task :sharedkeypadnav:parseDebugLocalResources
+> Task :sharedkeypadnav:compileDebugLibraryResources
+> Task :sharedkeypadnav:mergeDebugNativeLibs NO-SOURCE
+> Task :sharedkeypadnav:copyDebugJniLibsProjectOnly
+> Task :sharedkeypadnav:writeDebugAarMetadata
+> Task :app:mergeDebugResources UP-TO-DATE
+> Task :app:validateSigningDebug UP-TO-DATE
+> Task :app:writeDebugAppMetadata UP-TO-DATE
+> Task :app:writeDebugSigningConfigVersions UP-TO-DATE
+> Task :sharedkeypadnav:generateDebugRFile
+> Task :sharedkeypadnav:javaPreCompileDebug
+> Task :app:mergeDebugNativeLibs UP-TO-DATE
+> Task :app:stripDebugDebugSymbols UP-TO-DATE
+> Task :app:checkDebugAarMetadata UP-TO-DATE
+> Task :sharedkeypadnav:processDebugManifest
+> Task :app:processDebugMainManifest UP-TO-DATE
+> Task :app:processDebugManifest UP-TO-DATE
+> Task :app:processDebugManifestForPackage UP-TO-DATE
+> Task :app:mergeExtDexDebug
+> Task :app:mergeDebugAssets
+> Task :sharedkeypadnav:compileDebugKotlin
+> Task :app:processDebugResources
+> Task :sharedkeypadnav:processDebugJavaRes UP-TO-DATE
+> Task :sharedkeypadnav:compileDebugJavaWithJavac NO-SOURCE
+> Task :sharedkeypadnav:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :sharedkeypadnav:bundleLibRuntimeToDirDebug
+> Task :app:kspDebugKotlin UP-TO-DATE
+> Task :app:mergeLibDexDebug UP-TO-DATE
+> Task :app:compileDebugKotlin
+e: file:///C:/Users/yairz/Downloads/FutureOS-master/FutureOS-master/Navigation/app/src/main/java/com/future/navigation/ui/gtfs/GtfsSetupScreen.kt:19:19 Unresolved reference 'sharednav'.
+e: file:///C:/Users/yairz/Downloads/FutureOS-master/FutureOS-master/Navigation/app/src/main/java/com/future/navigation/ui/gtfs/GtfsSetupScreen.kt:20:19 Unresolved reference 'sharednav'.
+e: file:///C:/Users/yairz/Downloads/FutureOS-master/FutureOS-master/Navigation/app/src/main/java/com/future/navigation/ui/gtfs/GtfsSetupScreen.kt:27:9 Unresolved reference 'ScreenTopBar'.
+e: file:///C:/Users/yairz/Downloads/FutureOS-master/FutureOS-master/Navigation/app/src/main/java/com/future/navigation/ui/gtfs/GtfsSetupScreen.kt:62:13 Unresolved reference 'FocusableItem'.
+e: file:///C:/Users/yairz/Downloads/FutureOS-master/FutureOS-master/Navigation/app/src/main/java/com/future/navigation/ui/gtfs/GtfsSetupScreen.kt:71:17 @Composable invocations can only happen from the context of a @Composable function
+e: file:///C:/Users/yairz/Downloads/FutureOS-master/FutureOS-master/Navigation/app/src/main/java/com/future/navigation/ui/gtfs/GtfsSetupScreen.kt:72:21 @Composable invocations can only happen from the context of a @Composable function
+e: file:///C:/Users/yairz/Downloads/FutureOS-master/FutureOS-master/Navigation/app/src/main/java/com/future/navigation/ui/gtfs/GtfsSetupScreen.kt:75:43 @Composable invocations can only happen from the context of a @Composable function
+e: file:///C:/Users/yairz/Downloads/FutureOS-master/FutureOS-master/Navigation/app/src/main/java/com/future/navigation/ui/home/HomeScreen.kt:38:19 Unresolved reference 'sharednav'.
+e: file:///C:/Users/yairz/Downloads/FutureOS-master/FutureOS-master/Navigation/app/src/main/java/com/future/navigation/ui/home/HomeScreen.kt:70:13 Unresolved reference 'FocusableItem'.
+e: file:///C:/Users/yairz/Downloads/FutureOS-master/FutureOS-master/Navigation/app/src/main/java/com/future/navigation/ui/home/HomeScreen.kt:71:17 @Composable invocations can only happen from the context of a @Composable function
+e: file:///C:/Users/yairz/Downloads/FutureOS-master/FutureOS-master/Navigation/app/src/main/java/com/future/navigation/ui/home/HomeScreen.kt:71:64 @Composable invocations can only happen from the context of a @Composable function
+e: file:///C:/Users/yairz/Downloads/FutureOS-master/FutureOS-master/Navigation/app/src/main/java/com/future/navigation/ui/home/HomeScreen.kt:71:128 @Composable invocations can only happen from the context of a @Composable function
+e: file:///C:/Users/yairz/Downloads/FutureOS-master/FutureOS-master/Navigation/app/src/main/java/com/future/navigation/ui/home/HomeScreen.kt:116:21 Unresolved reference 'FocusableItem'.
+e: file:///C:/Users/yairz/Downloads/FutureOS-master/FutureOS-master/Navigation/app/src/main/java/com/future/navigation/ui/home/HomeScreen.kt:117:25 @Composable invocations can only happen from the context of a @Composable function
+e: file:///C:/Users/yairz/Downloads/FutureOS-master/FutureOS-master/Navigation/app/src/main/java/com/future/navigation/ui/home/HomeScreen.kt:154:25 Unresolved reference 'FocusableItem'.
+e: file:///C:/Users/yairz/Downloads/FutureOS-master/FutureOS-master/Navigation/app/src/main/java/com/future/navigation/ui/home/HomeScreen.kt:155:29 @Composable invocations can only happen from the context of a @Composable function
+e: file:///C:/Users/yairz/Downloads/FutureOS-master/FutureOS-master/Navigation/app/src/main/java/com/future/navigation/ui/home/HomeScreen.kt:174:5 Unresolved reference 'FocusableItem'.
+e: file:///C:/Users/yairz/Downloads/FutureOS-master/FutureOS-master/Navigation/app/src/main/java/com/future/navigation/ui/home/HomeScreen.kt:182:9 @Composable invocations can only happen from the context of a @Composable function
+e: file:///C:/Users/yairz/Downloads/FutureOS-master/FutureOS-master/Navigation/app/src/main/java/com/future/navigation/ui/home/HomeScreen.kt:186:49 @Composable invocations can only happen from the context of a @Composable function
+e: file:///C:/Users/yairz/Downloads/FutureOS-master/FutureOS-master/Navigation/app/src/main/java/com/future/navigation/ui/home/HomeScreen.kt:186:90 @Composable invocations can only happen from the context of a @Composable function
+e: file:///C:/Users/yairz/Downloads/FutureOS-master/FutureOS-master/Navigation/app/src/main/java/com/future/navigation/ui/home/HomeScreen.kt:188:35 @Composable invocations can only happen from the context of a @Composable function
+e: file:///C:/Users/yairz/Downloads/FutureOS-master/FutureOS-master/Navigation/app/src/main/java/com/future/navigation/ui/home/HomeScreen.kt:202:5 Unresolved reference 'FocusableItem'.
+e: file:///C:/Users/yairz/Downloads/FutureOS-master/FutureOS-master/Navigation/app/src/main/java/com/future/navigation/ui/home/HomeScreen.kt:203:9 @Composable invocations can only happen from the context of a @Composable function
+e: file:///C:/Users/yairz/Downloads/FutureOS-master/FutureOS-master/Navigation/app/src/main/java/com/future/navigation/ui/navigate/NavigateScreen.kt:43:19 Unresolved reference 'sharednav'.
+e: file:///C:/Users/yairz/Downloads/FutureOS-master/FutureOS-master/Navigation/app/src/main/java/com/future/navigation/ui/navigate/NavigateScreen.kt:135:5 Unresolved reference 'FocusableItem'.
+e: file:///C:/Users/yairz/Downloads/FutureOS-master/FutureOS-master/Navigation/app/src/main/java/com/future/navigation/ui/navigate/NavigateScreen.kt:136:9 @Composable invocations can only happen from the context of a @Composable function
+e: file:///C:/Users/yairz/Downloads/FutureOS-master/FutureOS-master/Navigation/app/src/main/java/com/future/navigation/ui/navigate/NavigateScreen.kt:136:99 @Composable invocations can only happen from the context of a @Composable function
+e: file:///C:/Users/yairz/Downloads/FutureOS-master/FutureOS-master/Navigation/app/src/main/java/com/future/navigation/ui/routes/RouteOptionsScreen.kt:32:19 Unresolved reference 'sharednav'.
+e: file:///C:/Users/yairz/Downloads/FutureOS-master/FutureOS-master/Navigation/app/src/main/java/com/future/navigation/ui/routes/RouteOptionsScreen.kt:33:19 Unresolved reference 'sharednav'.
+e: file:///C:/Users/yairz/Downloads/FutureOS-master/FutureOS-master/Navigation/app/src/main/java/com/future/navigation/ui/routes/RouteOptionsScreen.kt:54:9 Unresolved reference 'ScreenTopBar'.
+e: file:///C:/Users/yairz/Downloads/FutureOS-master/FutureOS-master/Navigation/app/src/main/java/com/future/navigation/ui/routes/RouteOptionsScreen.kt:131:5 Unresolved reference 'FocusableItem'.
+e: file:///C:/Users/yairz/Downloads/FutureOS-master/FutureOS-master/Navigation/app/src/main/java/com/future/navigation/ui/routes/RouteOptionsScreen.kt:132:9 @Composable invocations can only happen from the context of a @Composable function
+e: file:///C:/Users/yairz/Downloads/FutureOS-master/FutureOS-master/Navigation/app/src/main/java/com/future/navigation/ui/routes/RouteOptionsScreen.kt:162:5 Unresolved reference 'FocusableItem'.
+e: file:///C:/Users/yairz/Downloads/FutureOS-master/FutureOS-master/Navigation/app/src/main/java/com/future/navigation/ui/routes/RouteOptionsScreen.kt:171:9 @Composable invocations can only happen from the context of a @Composable function
+e: file:///C:/Users/yairz/Downloads/FutureOS-master/FutureOS-master/Navigation/app/src/main/java/com/future/navigation/ui/routes/RouteOptionsScreen.kt:175:35 @Composable invocations can only happen from the context of a @Composable function
+e: file:///C:/Users/yairz/Downloads/FutureOS-master/FutureOS-master/Navigation/app/src/main/java/com/future/navigation/ui/saved/SavedPlacesScreen.kt:38:19 Unresolved reference 'sharednav'.
+e: file:///C:/Users/yairz/Downloads/FutureOS-master/FutureOS-master/Navigation/app/src/main/java/com/future/navigation/ui/saved/SavedPlacesScreen.kt:39:19 Unresolved reference 'sharednav'.
+e: file:///C:/Users/yairz/Downloads/FutureOS-master/FutureOS-master/Navigation/app/src/main/java/com/future/navigation/ui/saved/SavedPlacesScreen.kt:56:9 Unresolved reference 'ScreenTopBar'.
+e: file:///C:/Users/yairz/Downloads/FutureOS-master/FutureOS-master/Navigation/app/src/main/java/com/future/navigation/ui/saved/SavedPlacesScreen.kt:97:21 Unresolved reference 'FocusableItem'.
+e: file:///C:/Users/yairz/Downloads/FutureOS-master/FutureOS-master/Navigation/app/src/main/java/com/future/navigation/ui/saved/SavedPlacesScreen.kt:98:25 @Composable invocations can only happen from the context of a @Composable function
+e: file:///C:/Users/yairz/Downloads/FutureOS-master/FutureOS-master/Navigation/app/src/main/java/com/future/navigation/ui/saved/SavedPlacesScreen.kt:132:5 Unresolved reference 'FocusableItem'.
+e: file:///C:/Users/yairz/Downloads/FutureOS-master/FutureOS-master/Navigation/app/src/main/java/com/future/navigation/ui/saved/SavedPlacesScreen.kt:133:9 @Composable invocations can only happen from the context of a @Composable function
+e: file:///C:/Users/yairz/Downloads/FutureOS-master/FutureOS-master/Navigation/app/src/main/java/com/future/navigation/ui/saved/SavedPlacesScreen.kt:160:9 Unresolved reference 'ScreenTopBar'.
+e: file:///C:/Users/yairz/Downloads/FutureOS-master/FutureOS-master/Navigation/app/src/main/java/com/future/navigation/ui/saved/SavedPlacesScreen.kt:174:17 Unresolved reference 'FocusableItem'.
+e: file:///C:/Users/yairz/Downloads/FutureOS-master/FutureOS-master/Navigation/app/src/main/java/com/future/navigation/ui/saved/SavedPlacesScreen.kt:175:21 @Composable invocations can only happen from the context of a @Composable function
+e: file:///C:/Users/yairz/Downloads/FutureOS-master/FutureOS-master/Navigation/app/src/main/java/com/future/navigation/ui/transit/TransitScreen.kt:35:19 Unresolved reference 'sharednav'.
+e: file:///C:/Users/yairz/Downloads/FutureOS-master/FutureOS-master/Navigation/app/src/main/java/com/future/navigation/ui/transit/TransitScreen.kt:36:19 Unresolved reference 'sharednav'.
+e: file:///C:/Users/yairz/Downloads/FutureOS-master/FutureOS-master/Navigation/app/src/main/java/com/future/navigation/ui/transit/TransitScreen.kt:43:9 Unresolved reference 'ScreenTopBar'.
+e: file:///C:/Users/yairz/Downloads/FutureOS-master/FutureOS-master/Navigation/app/src/main/java/com/future/navigation/ui/transit/TransitScreen.kt:123:17 Unresolved reference 'FocusableItem'.
+e: file:///C:/Users/yairz/Downloads/FutureOS-master/FutureOS-master/Navigation/app/src/main/java/com/future/navigation/ui/transit/TransitScreen.kt:124:21 @Composable invocations can only happen from the context of a @Composable function
+
+> Task :app:compileDebugKotlin FAILED
+> Task :app:mergeExtDexDebug UP-TO-DATE
+> Task :app:mergeDebugAssets UP-TO-DATE
+> Task :app:processDebugResources UP-TO-DATE
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':app:compileDebugKotlin' (registered by plugin 'com.android.internal.application').
+> A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
+   > Compilation error. See log for more details
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 2m 35s
+48 actionable tasks: 17 executed, 31 up-to-date
+Configuration cache entry reused.

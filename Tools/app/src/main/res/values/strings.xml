@@ -1,0 +1,25 @@
+<resources>
+    <string name="app_name">כלים</string>
+    <string name="tool_calculator">מחשבון</string>
+    <string name="tool_flashlight">פנס</string>
+    <string name="tool_stopwatch">שעון עצר</string>
+    <string name="tool_timer">טיימר</string>
+    <string name="tool_unit_converter">ממיר יחידות</string>
+    <string name="tool_compass">מצפן</string>
+    <string name="tool_level">פלס</string>
+    <string name="tool_noise_meter">מד רעש</string>
+    <string name="tool_lux_meter">מד אור</string>
+    <string name="tool_angle_ruler">סרגל וזווית</string>
+    <string name="tool_tip_split">טיפים ופיצול</string>
+    <string name="tool_quick_finance">מחשבון פיננסי</string>
+    <string name="tool_time_zone">ממיר אזורי זמן</string>
+    <string name="tool_qr_scanner">סורק קודים</string>
+    <string name="tool_pomodoro">פומודורו</string>
+    <string name="tool_password_generator">מחולל סיסמאות</string>
+    <string name="tool_quick_notes">רשימה מהירה</string>
+    <string name="tool_coin_dice">מטבע וקובייה</string>
+    <string name="tool_random_picker">בורר אקראי</string>
+    <string name="tool_random_number">מספר אקראי</string>
+    <string name="tool_text_scanner">סורק טקסט</string>
+    <string name="tool_voice_transcribe">תמלול קולי</string>
+</resources>

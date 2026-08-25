@@ -1,0 +1,5 @@
+- [x] Fix shadow color property names in `ControlCenter.kt`
+    - [x] Update `MediaControlButton`
+    - [x] Update `Modifier.focusEffect`
+    - [x] Update `HeaderActionButton`
+- [x] Verify build with `./gradlew :app:compileDebugKotlin`

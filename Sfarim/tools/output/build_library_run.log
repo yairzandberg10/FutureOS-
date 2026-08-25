@@ -1,0 +1,246 @@
+[1/4] loading table of contents (cached under C:\Users\yairz\Downloads\FutureOS-master\FutureOS-master\Sfarim\tools\output\_cache) ...
+[2/4] loading Hebrew text index (books.json, cached) ...
+      6211 titles have a Hebrew version available
+[3/4] building/verifying category tree (idempotent) ...
+[4/4] 6211 Hebrew books matched to the TOC; 0 already imported, 6211 to fetch now
+  25/6211 books | 1936 segments | 9s elapsed | ETA 38.5min
+  50/6211 books | 2768 segments | 14s elapsed | ETA 29.3min
+  75/6211 books | 3162 segments | 16s elapsed | ETA 21.7min
+  100/6211 books | 3268 segments | 17s elapsed | ETA 17.5min
+  125/6211 books | 3361 segments | 19s elapsed | ETA 15.2min
+  150/6211 books | 3446 segments | 20s elapsed | ETA 13.5min
+  175/6211 books | 6019 segments | 21s elapsed | ETA 12.3min
+  200/6211 books | 19444 segments | 30s elapsed | ETA 15.1min
+  225/6211 books | 41033 segments | 41s elapsed | ETA 18.1min
+  250/6211 books | 51093 segments | 45s elapsed | ETA 17.7min
+  275/6211 books | 58962 segments | 49s elapsed | ETA 17.7min
+  300/6211 books | 91225 segments | 58s elapsed | ETA 18.9min
+  325/6211 books | 110744 segments | 67s elapsed | ETA 20.1min
+  350/6211 books | 110889 segments | 71s elapsed | ETA 19.8min
+  375/6211 books | 111023 segments | 74s elapsed | ETA 19.3min
+  400/6211 books | 111202 segments | 77s elapsed | ETA 18.6min
+  425/6211 books | 114521 segments | 83s elapsed | ETA 18.8min
+  450/6211 books | 118240 segments | 88s elapsed | ETA 18.8min
+  475/6211 books | 119439 segments | 91s elapsed | ETA 18.2min
+  500/6211 books | 140803 segments | 98s elapsed | ETA 18.7min
+  525/6211 books | 142752 segments | 102s elapsed | ETA 18.4min
+  550/6211 books | 154169 segments | 106s elapsed | ETA 18.2min
+  575/6211 books | 158202 segments | 108s elapsed | ETA 17.7min
+  600/6211 books | 163271 segments | 110s elapsed | ETA 17.1min
+  625/6211 books | 167479 segments | 112s elapsed | ETA 16.7min
+  650/6211 books | 172985 segments | 121s elapsed | ETA 17.3min
+  675/6211 books | 173787 segments | 123s elapsed | ETA 16.9min
+  700/6211 books | 180045 segments | 128s elapsed | ETA 16.8min
+  725/6211 books | 183583 segments | 130s elapsed | ETA 16.4min
+  750/6211 books | 184532 segments | 131s elapsed | ETA 15.9min
+  775/6211 books | 188236 segments | 134s elapsed | ETA 15.7min
+  800/6211 books | 190019 segments | 135s elapsed | ETA 15.3min
+  825/6211 books | 193217 segments | 137s elapsed | ETA 14.9min
+  850/6211 books | 198803 segments | 139s elapsed | ETA 14.6min
+  875/6211 books | 199865 segments | 141s elapsed | ETA 14.3min
+  900/6211 books | 208685 segments | 144s elapsed | ETA 14.2min
+  925/6211 books | 218612 segments | 146s elapsed | ETA 13.9min
+  950/6211 books | 220384 segments | 147s elapsed | ETA 13.5min
+  975/6211 books | 220596 segments | 147s elapsed | ETA 13.2min
+  1000/6211 books | 230061 segments | 149s elapsed | ETA 13.0min
+  1025/6211 books | 235637 segments | 151s elapsed | ETA 12.7min
+  1050/6211 books | 237724 segments | 153s elapsed | ETA 12.5min
+  1075/6211 books | 248402 segments | 158s elapsed | ETA 12.6min
+  1100/6211 books | 250236 segments | 164s elapsed | ETA 12.7min
+  1125/6211 books | 254669 segments | 168s elapsed | ETA 12.7min
+  1150/6211 books | 255994 segments | 176s elapsed | ETA 12.9min
+  1175/6211 books | 297785 segments | 186s elapsed | ETA 13.3min
+  1200/6211 books | 298244 segments | 190s elapsed | ETA 13.2min
+  1225/6211 books | 299108 segments | 194s elapsed | ETA 13.2min
+  1250/6211 books | 304281 segments | 198s elapsed | ETA 13.1min
+  1275/6211 books | 306588 segments | 201s elapsed | ETA 13.0min
+  1300/6211 books | 309699 segments | 203s elapsed | ETA 12.8min
+  1325/6211 books | 318875 segments | 210s elapsed | ETA 12.9min
+  1350/6211 books | 319692 segments | 213s elapsed | ETA 12.8min
+  1375/6211 books | 321657 segments | 216s elapsed | ETA 12.6min
+  1400/6211 books | 329918 segments | 218s elapsed | ETA 12.5min
+  1425/6211 books | 336166 segments | 220s elapsed | ETA 12.3min
+  1450/6211 books | 337706 segments | 222s elapsed | ETA 12.1min
+  1475/6211 books | 339527 segments | 223s elapsed | ETA 12.0min
+  1500/6211 books | 341811 segments | 225s elapsed | ETA 11.8min
+  1525/6211 books | 343429 segments | 227s elapsed | ETA 11.6min
+  1550/6211 books | 348406 segments | 230s elapsed | ETA 11.5min
+  1575/6211 books | 350312 segments | 232s elapsed | ETA 11.4min
+  1600/6211 books | 351022 segments | 234s elapsed | ETA 11.2min
+  1625/6211 books | 351665 segments | 235s elapsed | ETA 11.1min
+  1650/6211 books | 352123 segments | 237s elapsed | ETA 10.9min
+  1675/6211 books | 353596 segments | 239s elapsed | ETA 10.8min
+  1700/6211 books | 357217 segments | 241s elapsed | ETA 10.6min
+  1725/6211 books | 359279 segments | 242s elapsed | ETA 10.5min
+  1750/6211 books | 371203 segments | 245s elapsed | ETA 10.4min
+  1775/6211 books | 377889 segments | 246s elapsed | ETA 10.3min
+  1800/6211 books | 381850 segments | 248s elapsed | ETA 10.1min
+  1825/6211 books | 386388 segments | 250s elapsed | ETA 10.0min
+  1850/6211 books | 391841 segments | 253s elapsed | ETA 9.9min
+  1875/6211 books | 398596 segments | 255s elapsed | ETA 9.8min
+  1900/6211 books | 406909 segments | 258s elapsed | ETA 9.7min
+  1925/6211 books | 413855 segments | 265s elapsed | ETA 9.8min
+  1950/6211 books | 419540 segments | 267s elapsed | ETA 9.7min
+  1975/6211 books | 424646 segments | 269s elapsed | ETA 9.6min
+  2000/6211 books | 430629 segments | 271s elapsed | ETA 9.5min
+  2025/6211 books | 445115 segments | 274s elapsed | ETA 9.4min
+  2050/6211 books | 448560 segments | 275s elapsed | ETA 9.3min
+  2075/6211 books | 450277 segments | 277s elapsed | ETA 9.2min
+  2100/6211 books | 451475 segments | 279s elapsed | ETA 9.1min
+  2125/6211 books | 455722 segments | 281s elapsed | ETA 9.0min
+  2150/6211 books | 479430 segments | 286s elapsed | ETA 9.0min
+  2175/6211 books | 515985 segments | 290s elapsed | ETA 9.0min
+  2200/6211 books | 517429 segments | 291s elapsed | ETA 8.8min
+  2225/6211 books | 520955 segments | 295s elapsed | ETA 8.8min
+  2250/6211 books | 522953 segments | 297s elapsed | ETA 8.7min
+  2275/6211 books | 525031 segments | 298s elapsed | ETA 8.6min
+  2300/6211 books | 527853 segments | 300s elapsed | ETA 8.5min
+  2325/6211 books | 531068 segments | 301s elapsed | ETA 8.4min
+  2350/6211 books | 533071 segments | 303s elapsed | ETA 8.3min
+  2375/6211 books | 535928 segments | 306s elapsed | ETA 8.2min
+  2400/6211 books | 543844 segments | 318s elapsed | ETA 8.4min
+  2425/6211 books | 547480 segments | 321s elapsed | ETA 8.4min
+  2450/6211 books | 551617 segments | 326s elapsed | ETA 8.3min
+  2475/6211 books | 555903 segments | 333s elapsed | ETA 8.4min
+  2500/6211 books | 561960 segments | 344s elapsed | ETA 8.5min
+  2525/6211 books | 570524 segments | 348s elapsed | ETA 8.5min
+  2550/6211 books | 572058 segments | 350s elapsed | ETA 8.4min
+  2575/6211 books | 576876 segments | 353s elapsed | ETA 8.3min
+  2600/6211 books | 587504 segments | 356s elapsed | ETA 8.2min
+  2625/6211 books | 597294 segments | 361s elapsed | ETA 8.2min
+  2650/6211 books | 602679 segments | 365s elapsed | ETA 8.2min
+  2675/6211 books | 606009 segments | 368s elapsed | ETA 8.1min
+  2700/6211 books | 606630 segments | 370s elapsed | ETA 8.0min
+  2725/6211 books | 607449 segments | 372s elapsed | ETA 7.9min
+  2750/6211 books | 611189 segments | 374s elapsed | ETA 7.8min
+  2775/6211 books | 623455 segments | 376s elapsed | ETA 7.8min
+  2800/6211 books | 643199 segments | 384s elapsed | ETA 7.8min
+  2825/6211 books | 643202 segments | 391s elapsed | ETA 7.8min
+  2850/6211 books | 643293 segments | 393s elapsed | ETA 7.7min
+  2875/6211 books | 643388 segments | 395s elapsed | ETA 7.6min
+  2900/6211 books | 644077 segments | 398s elapsed | ETA 7.6min
+  2925/6211 books | 651006 segments | 400s elapsed | ETA 7.5min
+  2950/6211 books | 657415 segments | 403s elapsed | ETA 7.4min
+  2975/6211 books | 660208 segments | 404s elapsed | ETA 7.3min
+  3000/6211 books | 660576 segments | 406s elapsed | ETA 7.2min
+  3025/6211 books | 661058 segments | 408s elapsed | ETA 7.2min
+  3050/6211 books | 686853 segments | 412s elapsed | ETA 7.1min
+  3075/6211 books | 699980 segments | 414s elapsed | ETA 7.0min
+  3100/6211 books | 711959 segments | 417s elapsed | ETA 7.0min
+  3125/6211 books | 719889 segments | 422s elapsed | ETA 6.9min
+  3150/6211 books | 723266 segments | 424s elapsed | ETA 6.9min
+  3175/6211 books | 725376 segments | 426s elapsed | ETA 6.8min
+  3200/6211 books | 729791 segments | 429s elapsed | ETA 6.7min
+  3225/6211 books | 744929 segments | 431s elapsed | ETA 6.7min
+  3250/6211 books | 777733 segments | 434s elapsed | ETA 6.6min
+  3275/6211 books | 779368 segments | 435s elapsed | ETA 6.5min
+  3300/6211 books | 780889 segments | 437s elapsed | ETA 6.4min
+  3325/6211 books | 780990 segments | 443s elapsed | ETA 6.4min
+  3350/6211 books | 780990 segments | 450s elapsed | ETA 6.4min
+  3375/6211 books | 781757 segments | 453s elapsed | ETA 6.3min
+  3400/6211 books | 782420 segments | 455s elapsed | ETA 6.3min
+  3425/6211 books | 783019 segments | 456s elapsed | ETA 6.2min
+  3450/6211 books | 783701 segments | 458s elapsed | ETA 6.1min
+  3475/6211 books | 788284 segments | 459s elapsed | ETA 6.0min
+  3500/6211 books | 792795 segments | 461s elapsed | ETA 6.0min
+  3525/6211 books | 797875 segments | 463s elapsed | ETA 5.9min
+  3550/6211 books | 802316 segments | 465s elapsed | ETA 5.8min
+  3575/6211 books | 802616 segments | 467s elapsed | ETA 5.7min
+  3600/6211 books | 808612 segments | 471s elapsed | ETA 5.7min
+  3625/6211 books | 829374 segments | 479s elapsed | ETA 5.7min
+  3650/6211 books | 832330 segments | 482s elapsed | ETA 5.6min
+  3675/6211 books | 838693 segments | 499s elapsed | ETA 5.7min
+  3700/6211 books | 838693 segments | 526s elapsed | ETA 5.9min
+  3725/6211 books | 839364 segments | 532s elapsed | ETA 5.9min
+  3750/6211 books | 840102 segments | 535s elapsed | ETA 5.9min
+  3775/6211 books | 841121 segments | 537s elapsed | ETA 5.8min
+  3800/6211 books | 848296 segments | 543s elapsed | ETA 5.7min
+  3825/6211 books | 854373 segments | 551s elapsed | ETA 5.7min
+  3850/6211 books | 879084 segments | 557s elapsed | ETA 5.7min
+  3875/6211 books | 911595 segments | 565s elapsed | ETA 5.7min
+  3900/6211 books | 919529 segments | 574s elapsed | ETA 5.7min
+  3925/6211 books | 939235 segments | 585s elapsed | ETA 5.7min
+  3950/6211 books | 944152 segments | 588s elapsed | ETA 5.6min
+  3975/6211 books | 944469 segments | 590s elapsed | ETA 5.5min
+  4000/6211 books | 948617 segments | 593s elapsed | ETA 5.5min
+  4025/6211 books | 953703 segments | 595s elapsed | ETA 5.4min
+  4050/6211 books | 957006 segments | 599s elapsed | ETA 5.3min
+  4075/6211 books | 964444 segments | 604s elapsed | ETA 5.3min
+  4100/6211 books | 991774 segments | 609s elapsed | ETA 5.2min
+  4125/6211 books | 1007375 segments | 615s elapsed | ETA 5.2min
+  4150/6211 books | 1017255 segments | 620s elapsed | ETA 5.1min
+  4175/6211 books | 1020490 segments | 624s elapsed | ETA 5.1min
+  4200/6211 books | 1022527 segments | 625s elapsed | ETA 5.0min
+  4225/6211 books | 1027891 segments | 630s elapsed | ETA 4.9min
+  4250/6211 books | 1042362 segments | 633s elapsed | ETA 4.9min
+  4275/6211 books | 1054921 segments | 635s elapsed | ETA 4.8min
+  4300/6211 books | 1058425 segments | 636s elapsed | ETA 4.7min
+  4325/6211 books | 1059665 segments | 637s elapsed | ETA 4.6min
+  4350/6211 books | 1062900 segments | 638s elapsed | ETA 4.5min
+  4375/6211 books | 1076951 segments | 643s elapsed | ETA 4.5min
+  4400/6211 books | 1113355 segments | 648s elapsed | ETA 4.4min
+  4425/6211 books | 1148060 segments | 651s elapsed | ETA 4.4min
+  4450/6211 books | 1186819 segments | 655s elapsed | ETA 4.3min
+  ERROR importing 'Rashi on Yevamot': 
+  ERROR importing 'Rashi on Shabbat': 
+  4475/6211 books | 1230194 segments | 664s elapsed | ETA 4.3min
+  ERROR importing 'Responsa of Rema': 
+  4500/6211 books | 1247514 segments | 677s elapsed | ETA 4.3min
+  4525/6211 books | 1251347 segments | 682s elapsed | ETA 4.2min
+  4550/6211 books | 1264809 segments | 691s elapsed | ETA 4.2min
+  4575/6211 books | 1271001 segments | 695s elapsed | ETA 4.1min
+  4600/6211 books | 1281643 segments | 699s elapsed | ETA 4.1min
+  4625/6211 books | 1286626 segments | 706s elapsed | ETA 4.0min
+  4650/6211 books | 1290677 segments | 720s elapsed | ETA 4.0min
+  4675/6211 books | 1291744 segments | 726s elapsed | ETA 4.0min
+  4700/6211 books | 1291986 segments | 729s elapsed | ETA 3.9min
+  4725/6211 books | 1292174 segments | 732s elapsed | ETA 3.8min
+  4750/6211 books | 1293423 segments | 737s elapsed | ETA 3.8min
+  4775/6211 books | 1294025 segments | 739s elapsed | ETA 3.7min
+  4800/6211 books | 1294701 segments | 740s elapsed | ETA 3.6min
+  4825/6211 books | 1296229 segments | 742s elapsed | ETA 3.6min
+  4850/6211 books | 1298697 segments | 743s elapsed | ETA 3.5min
+  ERROR importing 'Shabbat': database or disk is full
+  ERROR importing 'Sheiltot d'Rav Achai Gaon': database or disk is full
+  ERROR importing 'Shevuot': database or disk is full
+  4875/6211 books | 1304616 segments | 751s elapsed | ETA 3.4min
+  ERROR importing 'Sheyarei Korban on Jerusalem Talmud Kiddushin': database or disk is full
+  ERROR importing 'Sheyarei Korban on Jerusalem Talmud Makkot': database or disk is full
+  ERROR importing 'Sheyarei Korban on Jerusalem Talmud Moed Katan': database or disk is full
+  ERROR importing 'Sheyarei Korban on Jerusalem Talmud Ketubot': database or disk is full
+  ERROR importing 'Sheyarei Korban on Jerusalem Talmud Pesachim': database or disk is full
+  ERROR importing 'Sheyarei Korban on Jerusalem Talmud Gittin': database or disk is full
+  ERROR importing 'Sheyarei Korban on Jerusalem Talmud Nazir': database or disk is full
+  ERROR importing 'Sheyarei Korban on Jerusalem Talmud Shekalim': database or disk is full
+  ERROR importing 'Sheyarei Korban on Jerusalem Talmud Nedarim': database or disk is full
+  ERROR importing 'Sheyarei Korban on Jerusalem Talmud Shabbat': database or disk is full
+  ERROR importing 'Sheyarei Korban on Jerusalem Talmud Rosh Hashanah': database or disk is full
+  ERROR importing 'Sheyarei Korban on Jerusalem Talmud Taanit': database or disk is full
+  ERROR importing 'Sheyarei Korban on Jerusalem Talmud Sukkah': database or disk is full
+  ERROR importing 'Sheyarei Korban on Jerusalem Talmud Sanhedrin': database or disk is full
+  ERROR importing 'Sheyarei Korban on Jerusalem Talmud Sotah': database or disk is full
+  ERROR importing 'Sheyarei Korban on Jerusalem Talmud Yoma': database or disk is full
+  ERROR importing 'Sheyarei Korban on Jerusalem Talmud Yevamot': database or disk is full
+  ERROR importing 'Sheyarei Korban on Jerusalem Talmud Shevuot': database or disk is full
+  ERROR importing 'Shiltei HaGiborim on Avodah Zarah': database or disk is full
+  ERROR importing 'Shiltei HaGiborim on Bava Batra': database or disk is full
+  ERROR importing 'Shiltei HaGiborim on Bava Kamma': database or disk is full
+  ERROR importing 'Shiltei HaGiborim on Beitzah': database or disk is full
+  ERROR importing 'Shiltei HaGiborim on Berakhot': database or disk is full
+  ERROR importing 'Shiltei HaGiborim on Bava Metzia': database or disk is full
+  ERROR importing 'Shiltei HaGiborim on Chullin': database or disk is full
+  ERROR importing 'Shiltei HaGiborim on Eruvin': database or disk is full
+  ERROR importing 'Shiltei HaGiborim on Gittin': database or disk is full
+  ERROR importing 'Shiltei HaGiborim on Megillah': database or disk is full
+  ERROR importing 'Shiltei HaGiborim on Moed Katan': database or disk is full
+  ERROR importing 'Shiltei HaGiborim on Ketubot': database or disk is full
+  ERROR importing 'Shiltei HaGiborim on Menachot': database or disk is full
+  ERROR importing 'Shiltei HaGiborim on Makkot': database or disk is full
+  ERROR importing 'Shiltei HaGiborim on Kiddushin': database or disk is full
+  ERROR importing 'Shiltei HaGiborim on Rosh Hashanah': database or disk is full
+  ERROR importing 'Shiltei HaGiborim on Pesachim': database or disk is full
+BUILD_EXIT_CODE=1
+/usr/bin/bash: line 3: /c/Users/yairz/AppData/Local/Microsoft/WindowsApps/python: Permission denied
+ADD_ROOT_CATEGORY_EXIT_CODE=126
+Python was not found; run without arguments to install from the Microsoft Store, or disable this shortcut from Settings > Apps > Advanced app settings > App execution aliases.
+ADD_FULLTEXT_SEARCH_EXIT_CODE=49

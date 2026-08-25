@@ -1,0 +1,93 @@
+Reusing configuration cache.
+> Task :sharedkeypadnav:generateDebugAssets UP-TO-DATE
+> Task :sharedkeypadnav:preBuild UP-TO-DATE
+> Task :sharedkeypadnav:preDebugBuild UP-TO-DATE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :sharedkeypadnav:prepareLintJarForPublish UP-TO-DATE
+> Task :app:preBuild UP-TO-DATE
+> Task :sharedkeypadnav:processDebugNavigationResources
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :sharedkeypadnav:extractDeepLinksDebug
+> Task :sharedkeypadnav:javaPreCompileDebug
+> Task :sharedkeypadnav:mergeDebugAssets
+> Task :app:generateDebugResources
+> Task :sharedkeypadnav:generateDebugResources
+> Task :sharedkeypadnav:writeDebugAarMetadata
+> Task :sharedkeypadnav:mapDebugSourceSetPaths
+> Task :app:javaPreCompileDebug
+> Task :app:desugarDebugFileDependencies
+> Task :app:processDebugNavigationResources
+> Task :sharedkeypadnav:processDebugManifest
+> Task :app:createDebugCompatibleScreenManifests
+> Task :sharedkeypadnav:packageDebugResources
+> Task :app:mapDebugSourceSetPaths
+> Task :app:extractDeepLinksDebug
+> Task :app:compileDebugNavigationResources
+> Task :app:checkDebugAarMetadata
+> Task :sharedkeypadnav:parseDebugLocalResources
+> Task :sharedkeypadnav:compileDebugLibraryResources
+> Task :sharedkeypadnav:generateDebugRFile
+> Task :app:mergeDebugJniLibFolders
+> Task :sharedkeypadnav:mergeDebugJniLibFolders
+> Task :sharedkeypadnav:mergeDebugNativeLibs NO-SOURCE
+> Task :app:packageDebugResources
+> Task :sharedkeypadnav:copyDebugJniLibsProjectOnly
+> Task :app:parseDebugLocalResources
+> Task :app:mergeDebugAssets
+> Task :app:checkDebugDuplicateClasses
+> Task :app:compressDebugAssets
+> Task :app:generateDebugRFile
+> Task :app:validateSigningDebug
+> Task :app:writeDebugAppMetadata
+> Task :sharedkeypadnav:checkDebugAarMetadata
+> Task :sharedkeypadnav:stripDebugDebugSymbols NO-SOURCE
+> Task :app:writeDebugSigningConfigVersions
+> Task :sharedkeypadnav:copyDebugJniLibsProjectAndLocalJars
+> Task :sharedkeypadnav:extractDeepLinksForAarDebug UP-TO-DATE
+> Task :sharedkeypadnav:prepareDebugArtProfile UP-TO-DATE
+> Task :app:processDebugMainManifest
+> Task :app:processDebugManifest
+> Task :app:processDebugManifestForPackage
+> Task :sharedkeypadnav:extractDebugAnnotations
+> Task :app:generateDebugGlobalSynthetics
+> Task :app:mergeDebugNativeLibs
+
+> Task :app:stripDebugDebugSymbols
+Unable to strip the following libraries, packaging them as they are: libandroidx.graphics.path.so, libmaplibre.so. Run with --info option to learn more.
+
+> Task :sharedkeypadnav:compileDebugKotlin
+> Task :sharedkeypadnav:compileDebugJavaWithJavac NO-SOURCE
+> Task :sharedkeypadnav:mergeDebugGeneratedProguardFiles UP-TO-DATE
+> Task :sharedkeypadnav:mergeDebugConsumerProguardFiles UP-TO-DATE
+> Task :sharedkeypadnav:processDebugJavaRes
+> Task :sharedkeypadnav:bundleLibRuntimeToDirDebug
+> Task :sharedkeypadnav:bundleLibCompileToJarDebug
+> Task :sharedkeypadnav:mergeDebugJavaResource
+> Task :sharedkeypadnav:syncDebugLibJars
+> Task :sharedkeypadnav:bundleDebugAar
+> Task :sharedkeypadnav:assembleDebug
+> Task :app:mergeLibDexDebug
+> Task :app:mergeDebugResources
+> Task :app:kspDebugKotlin
+> Task :app:processDebugResources
+> Task :app:mergeExtDexDebug
+
+> Task :app:compileDebugKotlin
+w: file:///C:/Users/yairz/Downloads/FutureOS-master/FutureOS-master/Navigation/app/src/main/java/com/future/navigation/ui/home/HomeViewModel.kt:54:10 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///C:/Users/yairz/Downloads/FutureOS-master/FutureOS-master/Navigation/app/src/main/java/com/future/navigation/ui/map/NavMapView.kt:48:26 'val LocalLifecycleOwner: ProvidableCompositionLocal<LifecycleOwner>' is deprecated. Moved to lifecycle-runtime-compose library in androidx.lifecycle.compose package.
+w: file:///C:/Users/yairz/Downloads/FutureOS-master/FutureOS-master/Navigation/app/src/main/java/com/future/navigation/ui/navigate/NavigateScreen.kt:108:72 'val Icons.Filled.VolumeOff: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.VolumeOff.
+w: file:///C:/Users/yairz/Downloads/FutureOS-master/FutureOS-master/Navigation/app/src/main/java/com/future/navigation/ui/navigate/NavigateScreen.kt:108:101 'val Icons.Filled.VolumeUp: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.VolumeUp.
+
+> Task :app:compileDebugJavaWithJavac NO-SOURCE
+> Task :app:processDebugJavaRes
+> Task :app:dexBuilderDebug
+> Task :app:mergeProjectDexDebug
+> Task :app:mergeDebugJavaResource
+> Task :app:packageDebug
+> Task :app:assembleDebug
+> Task :app:createDebugApkListingFileRedirect
+
+BUILD SUCCESSFUL in 43s
+66 actionable tasks: 61 executed, 5 up-to-date
+Configuration cache entry reused.

@@ -1,0 +1,35 @@
+<resources>
+    <string name="app_name">טלפון</string>
+    <string name="nav_dial">חיוג</string>
+    <string name="nav_contacts">אנשי קשר</string>
+    <string name="enter_number">הקש מספר</string>
+    <string name="call">התקשר</string>
+    <string name="end_call">סיום שיחה</string>
+    <string name="mute">השתק</string>
+    <string name="unmute">בטל השתקה</string>
+    <string name="speaker">רמקול</string>
+    <string name="handset">שפורפרת</string>
+    <string name="search_contacts">חיפוש אנשי קשר…</string>
+    <string name="unknown">לא ידוע</string>
+    <string name="answer">ענה</string>
+    <string name="decline">דחה</string>
+    <string name="incoming_call">שיחה נכנסת</string>
+    <string name="dialing">מתקשר…</string>
+    <string name="set_as_default_dialer">הפוך לאפליקציית הטלפון הראשית</string>
+    <string name="default_dialer_required">כדי לחייג ולקבל שיחות, יש להגדיר את חייגן כאפליקציית הטלפון הראשית</string>
+    <string name="keypad">מקלדת</string>
+    <string name="record">הקלטה</string>
+    <string name="stop_recording">עצור הקלטה</string>
+    <string name="recording_in_progress">מקליט…</string>
+    <string name="recording_failed">ההקלטה נכשלה להתחיל</string>
+    <string name="recent_calls">שיחות אחרונות</string>
+    <string name="no_recent_calls">אין עדיין שיחות</string>
+    <string name="matching_contacts">אנשי קשר תואמים</string>
+    <string name="no_matching_contacts">לא נמצאו התאמות</string>
+    <string name="send_message">שלח הודעה</string>
+    <string name="close_message">סגור</string>
+    <string name="quick_message_sent">ההודעה נשלחה</string>
+    <string name="minimize_call">מזער שיחה</string>
+    <string name="ongoing_call">שיחה מתקיימת</string>
+    <string name="tap_to_return">חזרה לשיחה</string>
+</resources>
