@@ -21,3 +21,7 @@ local.properties
 # splitting it into <100MB parts for GitHub. Add back once there's room.
 Sfarim/tools/output/sefaria.db
 Sfarim/tools/output/sefaria_db_parts/
+
+# קבצי crash dump של JVM (hs_err_pid*.log) - נוצרים אוטומטית כשתהליך
+# Gradle/Kotlin daemon קורס, לא חלק מהפרויקט ולא אמורים להיכנס ל-git.
+hs_err_pid*.log
