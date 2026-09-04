@@ -227,7 +227,7 @@ fun SettingsScreen(
             }
 
             if (heartRateMonitor.state == HrConnectionState.SCANNING || heartRateMonitor.foundDevices.isNotEmpty()) {
-                items(heartRateMonitor.foundDevices) { device ->
+                items(heartRateMonitor.foundDevices, key = { it.address }) { device ->
                     FocusableItem(
                         onClick = {
                             heartRateMonitor.connect(device.address)

@@ -70,7 +70,7 @@ fun WorkoutsScreen(
                 }
             }
 
-            items(workouts.size) { index ->
+            items(workouts.size, key = { index -> workouts[index].id }) { index ->
                 val workout = workouts[index]
                 val subtitle = "${workout.exercises.size} תרגילים · ${workout.durationMin} דק׳ · ${workout.difficulty}" +
                     if (workout.isCustom) " · מותאם אישית" else ""

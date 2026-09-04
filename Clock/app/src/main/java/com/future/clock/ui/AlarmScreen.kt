@@ -101,7 +101,7 @@ fun AlarmScreen(theme: FutureTheme, onBack: () -> Unit) {
                             contentPadding = PaddingValues(16.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            items(alarms) { alarm ->
+                            items(alarms, key = { it.id }) { alarm ->
                                 AlarmRow(alarm, theme, 
                                     onToggle = { enabled ->
                                         val index = alarms.indexOf(alarm)

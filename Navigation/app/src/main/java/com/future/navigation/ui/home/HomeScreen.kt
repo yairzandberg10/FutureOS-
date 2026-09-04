@@ -151,7 +151,7 @@ fun HomeScreen(
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                     )
                 }
-                items(results) { result ->
+                items(results, key = { it }) { result ->
                     FocusableItem(
                         onClick = { onDestinationPicked(result) },
                         accentColor = MaterialTheme.colorScheme.primary,

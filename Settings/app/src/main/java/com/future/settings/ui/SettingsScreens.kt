@@ -2195,7 +2195,7 @@ fun SimManagerScreen(navController: NavController, theme: ThemeConfig, viewModel
                 }
             } else {
                 LazyColumn {
-                    items(sims) { sim ->
+                    items(sims, key = { it.subscriptionId }) { sim ->
                         SettingHeader(sim.displayName, theme)
                         SettingsCard(theme) {
                             Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {

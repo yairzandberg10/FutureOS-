@@ -46,7 +46,7 @@ fun HistoryScreen(
                 modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                items(history.size) { index ->
+                items(history.size, key = { index -> history[index].dateMillis }) { index ->
                     val entry = history[index]
                     val parts = mutableListOf("${relativeDay(entry.dateMillis)}", "${entry.minutes} דק׳", "${entry.calories} קלוריות")
                     entry.distanceKm?.let { parts.add("%.2f ק״מ".format(it)) }

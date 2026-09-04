@@ -55,7 +55,10 @@ class EspeakTts(private val context: Context) {
             AudioManager.AUDIO_SESSION_ID_GENERATE
         )
         try {
-            if (audioTrack.state != AudioTrack.STATE_INITIALIZED) return
+            // ב-MODE_STATIC, מיד אחרי הבנייה המצב הוא STATE_NO_STATIC_DATA (לא
+            // STATE_INITIALIZED) - המעבר ל-INITIALIZED קורה רק אחרי ה-write()
+            // הראשון. לכן בודקים רק שהבנייה עצמה לא נכשלה לגמרי.
+            if (audioTrack.state == AudioTrack.STATE_UNINITIALIZED) return
             audioTrack.write(samples, 0, samples.size)
             audioTrack.play()
             val durationMs = (samples.size.toLong() * 1000L) / sampleRate

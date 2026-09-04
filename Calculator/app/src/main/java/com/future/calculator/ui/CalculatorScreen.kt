@@ -13,6 +13,7 @@ import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ContentCopy
@@ -290,7 +291,7 @@ fun CalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    items(history) { entry ->
+                    itemsIndexed(history, key = { index, _ -> index }) { _, entry ->
                         CalcHistoryRow(entry, theme = theme, onClick = {
                             display = entry.result
                             pendingValue = null
