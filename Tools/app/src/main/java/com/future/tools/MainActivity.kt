@@ -11,9 +11,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.future.tools.data.ToolShortcuts
-import com.future.tools.theme.ThemeClient
+import com.future.sharednav.theme.ThemeClient
 import com.future.tools.ui.AngleRulerScreen
-import com.future.tools.ui.CalculatorScreen
 import com.future.tools.ui.CoinDiceScreen
 import com.future.tools.ui.CompassScreen
 import com.future.tools.ui.FlashlightScreen
@@ -27,16 +26,14 @@ import com.future.tools.ui.QuickFinanceCalculatorScreen
 import com.future.tools.ui.QuickNotesScreen
 import com.future.tools.ui.RandomNumberScreen
 import com.future.tools.ui.RandomPickerScreen
-import com.future.tools.ui.StopwatchScreen
 import com.future.tools.ui.TextScannerScreen
 import com.future.tools.ui.TimeZoneConverterScreen
-import com.future.tools.ui.TimerScreen
 import com.future.tools.ui.TipSplitCalculatorScreen
 import com.future.tools.ui.ToolRoute
 import com.future.tools.ui.ToolsHomeScreen
 import com.future.tools.ui.UnitConverterScreen
 import com.future.tools.ui.VoiceTranscribeScreen
-import com.future.tools.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 
 class MainActivity : ComponentActivity() {
     // המכשיר האמיתי הוא מקלדת T9 בלבד בלי מסך מגע - מבטלים קלט מגע לגמרי כדי
@@ -56,6 +53,9 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             var route by remember { mutableStateOf(launchedToolRoute ?: ToolRoute.Home) }
+            // נשמר גם אחרי route חוזר ל-Home - כדי שהפוקוס יחזור בדיוק לכלי
+            // שממנו נכנסנו, לא תמיד לשורה הראשונה במסך הבית.
+            var lastOpenedTool by remember { mutableStateOf<ToolRoute?>(null) }
             val goBack = { if (launchedAsShortcut) finish() else route = ToolRoute.Home }
             BackHandler(enabled = route != ToolRoute.Home || launchedAsShortcut) { goBack() }
 
@@ -83,11 +83,8 @@ class MainActivity : ComponentActivity() {
 
             Surface(modifier = Modifier.fillMaxSize(), color = theme.backgroundColor) {
                 when (route) {
-                    ToolRoute.Home -> ToolsHomeScreen(theme = theme, onOpen = { route = it })
-                    ToolRoute.Calculator -> CalculatorScreen(theme = theme, onBack = goBack)
+                    ToolRoute.Home -> ToolsHomeScreen(theme = theme, onOpen = { lastOpenedTool = it; route = it }, lastOpenedRoute = lastOpenedTool)
                     ToolRoute.Flashlight -> FlashlightScreen(theme = theme, onBack = goBack)
-                    ToolRoute.Stopwatch -> StopwatchScreen(theme = theme, onBack = goBack)
-                    ToolRoute.Timer -> TimerScreen(theme = theme, onBack = goBack)
                     ToolRoute.UnitConverter -> UnitConverterScreen(theme = theme, onBack = goBack)
                     ToolRoute.Compass -> CompassScreen(theme = theme, onBack = goBack)
                     ToolRoute.Level -> LevelScreen(theme = theme, onBack = goBack)

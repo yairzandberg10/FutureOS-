@@ -19,13 +19,13 @@ import com.future.files.data.FileCategory
 import com.future.files.data.FileEntry
 import com.future.files.data.FileRepository
 import com.future.files.data.categorize
-import com.future.files.theme.ThemeClient
+import com.future.sharednav.theme.ThemeClient
 import com.future.files.ui.AudioPlayerScreen
 import com.future.files.ui.FilesScreen
 import com.future.files.ui.ImageFileViewerScreen
 import com.future.files.ui.PdfViewerScreen
 import com.future.files.ui.TextViewerScreen
-import com.future.files.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -48,6 +48,10 @@ class MainActivity : ComponentActivity() {
             var currentDir by remember { mutableStateOf(root) }
             var entries by remember { mutableStateOf(listOf<FileEntry>()) }
             var viewingFile by remember { mutableStateOf<FileEntry?>(null) }
+            // הנתיב שנפתח לאחרונה מכל תיקייה (לפי נתיב התיקייה עצמה) - כך
+            // שכשחוזרים "אחורה" מקובץ שנפתח או מתת-תיקייה, הפוקוס חוזר בדיוק
+            // לפריט שממנו יצאנו, לא תמיד לפריט הראשון ברשימה.
+            var lastSelectedPathByDir by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
             var clipboardEntry by remember { mutableStateOf<FileEntry?>(null) }
             var clipboardIsMove by remember { mutableStateOf(false) }
             // מציין שפעולת קבצים כבדה (מחיקה/העתקה/העברה) רצה כרגע ברקע כדי
@@ -123,6 +127,7 @@ class MainActivity : ComponentActivity() {
                         }
                     },
                     onOpenFile = { entry ->
+                        lastSelectedPathByDir = lastSelectedPathByDir + (currentDir.absolutePath to entry.file.absolutePath)
                         if (entry.isDirectory) {
                             currentDir = entry.file
                         } else {
@@ -133,6 +138,7 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                     },
+                    lastSelectedPath = lastSelectedPathByDir[currentDir.absolutePath],
                     onBack = { goUp() },
                     onNewFolder = { name ->
                         if (repository.createFolder(currentDir, name)) {
@@ -198,6 +204,44 @@ class MainActivity : ComponentActivity() {
                                 clipboardEntry = null
                                 isBusy = false
                             }
+                        }
+                    },
+                    onDeleteMultiple = { selected ->
+                        if (!isBusy && selected.isNotEmpty()) {
+                            isBusy = true
+                            coroutineScope.launch {
+                                val allOk = withContext(Dispatchers.IO) {
+                                    selected.all { repository.deleteEntry(it.file) }
+                                }
+                                entries = repository.listDirectory(currentDir, isRootDir)
+                                if (!allOk) {
+                                    android.widget.Toast.makeText(this@MainActivity, "חלק מהפריטים לא נמחקו", android.widget.Toast.LENGTH_SHORT).show()
+                                }
+                                isBusy = false
+                            }
+                        }
+                    },
+                    onShareMultiple = { selected ->
+                        try {
+                            val uris = ArrayList<Uri>()
+                            selected.forEach { entry ->
+                                if (!entry.isDirectory) {
+                                    uris.add(FileProvider.getUriForFile(this@MainActivity, "$packageName.fileprovider", entry.file))
+                                }
+                            }
+                            if (uris.isEmpty()) {
+                                android.widget.Toast.makeText(this@MainActivity, "אין קבצים לשתף", android.widget.Toast.LENGTH_SHORT).show()
+                                return@FilesScreen
+                            }
+                            val shareIntent = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
+                                type = "*/*"
+                                putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris)
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            startActivity(Intent.createChooser(shareIntent, null).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                        } catch (e: Exception) {
+                            android.widget.Toast.makeText(this@MainActivity, "לא ניתן לשתף", android.widget.Toast.LENGTH_SHORT).show()
                         }
                     }
                 )

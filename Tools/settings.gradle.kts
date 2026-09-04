@@ -24,4 +24,10 @@ dependencyResolutionManagement {
 
 rootProject.name = "Tools"
 include(":app")
+
+// מודול קיט הפוקוס/T9 המשותף לסוויטה - חי כתיקייה אחות עצמאית
+// (../SharedKeypadNav), לא submodule של Tools, כדי ש-Tools יישאר
+// build/פרויקט אנדרואיד-סטודיו עצמאי לגמרי כמו שהיה.
+include(":sharedkeypadnav")
+project(":sharedkeypadnav").projectDir = File(rootDir, "../SharedKeypadNav/sharedkeypadnav")
  

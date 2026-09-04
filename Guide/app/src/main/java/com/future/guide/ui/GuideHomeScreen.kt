@@ -18,7 +18,7 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.future.guide.data.GUIDE_APPS
-import com.future.guide.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 
 @Composable
 fun GuideHomeScreen(theme: FutureTheme, onOpen: (String) -> Unit) {

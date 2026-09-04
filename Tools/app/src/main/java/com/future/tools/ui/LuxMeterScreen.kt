@@ -21,7 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.future.tools.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 import kotlin.math.roundToInt
 
 private data class LuxState(val lux: Float, val hasSensor: Boolean)
@@ -112,7 +112,7 @@ private fun LuxGauge(lux: Float, theme: FutureTheme) {
                 style = Stroke(width = strokeWidth, cap = androidx.compose.ui.graphics.StrokeCap.Round)
             )
             drawArc(
-                color = Color(0xFFFFD60A),
+                color = theme.warningColor,
                 startAngle = 135f, sweepAngle = 270f * fraction, useCenter = false,
                 topLeft = topLeft, size = arcSize,
                 style = Stroke(width = strokeWidth, cap = androidx.compose.ui.graphics.StrokeCap.Round)

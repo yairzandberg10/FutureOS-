@@ -23,7 +23,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.future.notes.theme.ThemeClient
+import com.future.sharednav.theme.ThemeClient
 import com.future.notes.ui.NoteViewModel
 import com.future.notes.ui.screens.EditorScreen
 import com.future.notes.ui.screens.ListScreen
@@ -62,6 +62,9 @@ class MainActivity : ComponentActivity() {
                     val app = application as NotesApp
                     val repository = app.repository
                     val navController = rememberNavController()
+                    // נשמר גם אחרי שחוזרים ל-list - כדי שהפוקוס יחזור לפתק
+                    // שממנו נכנסנו לעורך, לא תמיד לפתק הראשון ברשימה.
+                    var lastSelectedNoteId by remember { mutableStateOf<Int?>(null) }
                     val viewModel: NoteViewModel = viewModel(
                         factory = object : androidx.lifecycle.ViewModelProvider.Factory {
                             override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
@@ -78,9 +81,10 @@ class MainActivity : ComponentActivity() {
                                 notes = notes,
                                 searchQuery = query,
                                 onSearchChanged = { viewModel.onSearchQueryChanged(it) },
-                                onNoteClick = { note -> navController.navigate("editor/${note.id}") },
+                                onNoteClick = { note -> lastSelectedNoteId = note.id; navController.navigate("editor/${note.id}") },
                                 onAddNote = { navController.navigate("editor/0") },
-                                onTogglePin = { viewModel.togglePin(it) }
+                                onTogglePin = { viewModel.togglePin(it) },
+                                lastSelectedNoteId = lastSelectedNoteId,
                             )
                         }
                         composable(

@@ -42,7 +42,7 @@ import com.future.music.playback.PlayerUiState
 import com.future.music.ui.components.FocusableItem
 import com.future.music.ui.components.MiniPlayerBar
 import com.future.music.ui.digitForKey
-import com.future.music.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 
 private data class HomeItem(val digit: String, val icon: ImageVector, val label: String, val subtitle: String, val onClick: () -> Unit)
 
@@ -58,6 +58,9 @@ fun HomeScreen(
     onOpenSearch: () -> Unit,
     onOpenNowPlaying: () -> Unit,
     onTogglePlay: () -> Unit,
+    // הפריט שנפתח לאחרונה מהתפריט הזה (לפי digit) - כשחוזרים "אחורה", הפוקוס
+    // צריך לשוב אליו בדיוק, לא תמיד לפריט הראשון.
+    lastOpenedItemId: String? = null,
 ) {
     val items = listOf(
         HomeItem("1", Icons.Rounded.LibraryMusic, "כל השירים", "כל המוזיקה שבטלפון", onOpenAllSongs),
@@ -70,8 +73,11 @@ fun HomeScreen(
 
     // פוקוס אוטומטי ומלא על הפריט הראשון בתפריט מיד כשהוא נפתח - בלי צורך
     // בלחיצה כלשהי קודם (למשל OK) כדי שהפוקוס הראשון יופיע.
-    val firstItemFocusRequester = remember { FocusRequester() }
-    LaunchedEffect(Unit) { firstItemFocusRequester.requestFocus() }
+    val itemFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
+    LaunchedEffect(Unit) {
+        val target = items.firstOrNull { it.digit == lastOpenedItemId } ?: items.firstOrNull()
+        target?.let { itemFocusRequesters.getOrPut(it.digit) { FocusRequester() }.requestFocus() }
+    }
 
     Column(
         modifier = Modifier
@@ -96,12 +102,12 @@ fun HomeScreen(
             modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp),
             verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp),
         ) {
-            itemsIndexed(items) { index, item ->
+            itemsIndexed(items) { _, item ->
                 FocusableItem(
                     onClick = item.onClick,
                     theme = theme,
                     modifier = Modifier.fillMaxWidth(),
-                    focusRequester = if (index == 0) firstItemFocusRequester else null,
+                    focusRequester = itemFocusRequesters.getOrPut(item.digit) { FocusRequester() },
                 ) { isFocused ->
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(16.dp),

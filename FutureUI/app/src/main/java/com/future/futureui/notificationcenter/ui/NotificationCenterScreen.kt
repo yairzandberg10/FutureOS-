@@ -1,4 +1,5 @@
 package com.future.futureui.notificationcenter.ui
+import com.future.sharednav.focus.bringIntoViewOnFocus
 
 import android.app.Notification
 import android.app.PendingIntent
@@ -442,7 +443,7 @@ fun NotificationItem(
             .clickable(interactionSource = interactionSource, indication = null, onClick = {
                 if (showOptions) showOptions = false else isExpanded = !isExpanded
             })
-            .focusable(interactionSource = interactionSource)
+            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
             .padding(horizontal = 12.dp, vertical = 8.dp)
     ) {
         // מעבר חלק (fade צולב) בין תוכן ההתראה הרגיל לתפריט האפשרויות, במקום
@@ -559,7 +560,7 @@ fun NotificationCenterButton(
             )
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource),
+            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus(),
         contentAlignment = Alignment.Center
     ) {
         Row(

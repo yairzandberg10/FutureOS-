@@ -18,10 +18,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.future.contact.data.Contact
 import com.future.contact.data.ContactsRepository
-import com.future.contact.theme.ThemeClient
+import com.future.sharednav.theme.ThemeClient
 import com.future.contact.ui.ContactDetailScreen
 import com.future.contact.ui.ContactsListScreen
-import com.future.contact.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -40,6 +40,10 @@ class MainActivity : ComponentActivity() {
             var hasPermission by remember { mutableStateOf(repository.hasContactsPermission()) }
             var contacts by remember { mutableStateOf(listOf<Contact>()) }
             var selectedContact by remember { mutableStateOf<Contact?>(null) }
+            // נשמר גם אחרי selectedContact חוזר ל-null (בניגוד ל-selectedContact
+            // עצמו) - כדי שכשחוזרים "אחורה" מהפרטים, רשימת אנשי הקשר תדע איזו
+            // שורה למקד בחזרה, במקום תמיד לקפוץ לשורה הראשונה.
+            var lastSelectedContactId by remember { mutableStateOf<String?>(null) }
             var theme by remember {
                 mutableStateOf(
                     ThemeClient.getTheme(this@MainActivity).let {
@@ -106,7 +110,8 @@ class MainActivity : ComponentActivity() {
                                 arrayOf(android.Manifest.permission.READ_CONTACTS, android.Manifest.permission.WRITE_CONTACTS)
                             )
                         },
-                        onContactClick = { selectedContact = it },
+                        onContactClick = { selectedContact = it; lastSelectedContactId = it.id },
+                        lastSelectedContactId = lastSelectedContactId,
                         onAddContact = {
                             val intent = Intent(Intent.ACTION_INSERT, ContactsContract.Contacts.CONTENT_URI)
                             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

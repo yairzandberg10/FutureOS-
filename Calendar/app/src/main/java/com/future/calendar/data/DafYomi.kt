@@ -61,8 +61,14 @@ object DafYomi {
 
     private val CYCLE_LENGTH_DAYS = MASECHTOS.sumOf { it.second }
 
-    fun forDate(date: LocalDate): DafYomiEntry? {
-        val daysSinceStart = java.time.temporal.ChronoUnit.DAYS.between(CYCLE_START, date)
+    /**
+     * @param afterNightfall יום הדף היומי מתחלף בצאת הכוכבים, לא בחצות - אם
+     * ה"עכשיו" בפועל כבר אחרי צאת הכוכבים המחושב של date, יש להעביר true
+     * כדי לקבל את הדף של היום הבא (העברת day+1 ולא רק שינוי ה-date שנשלח).
+     */
+    fun forDate(date: LocalDate, afterNightfall: Boolean = false): DafYomiEntry? {
+        val effectiveDate = if (afterNightfall) date.plusDays(1) else date
+        val daysSinceStart = java.time.temporal.ChronoUnit.DAYS.between(CYCLE_START, effectiveDate)
         var dayInCycle = daysSinceStart % CYCLE_LENGTH_DAYS
         if (dayInCycle < 0) dayInCycle += CYCLE_LENGTH_DAYS
 

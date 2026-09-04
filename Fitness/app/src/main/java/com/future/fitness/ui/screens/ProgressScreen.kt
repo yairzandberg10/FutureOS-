@@ -28,7 +28,7 @@ import androidx.compose.ui.unit.sp
 import com.future.fitness.data.WorkoutHistoryEntry
 import com.future.fitness.ui.components.ScreenTopBar
 import com.future.fitness.ui.components.StatTile
-import com.future.fitness.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 import java.util.Calendar
 
 private data class DayBar(val label: String, val minutes: Int, val isToday: Boolean)

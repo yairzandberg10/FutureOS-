@@ -26,6 +26,10 @@
     <uses-permission android:name="android.permission.MANAGE_OWN_CALLS" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.SEND_RESPOND_VIA_MESSAGE" />
+    <!-- נדרש כדי שהתראת שיחה נכנסת (CATEGORY_CALL) תוכל להציג fullScreenIntent ולתפוס
+         את המסך במלואו כשהוא כבוי/נעול - ראו CallService.notifyCallRinging. -->
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <uses-feature android:name="android.hardware.telephony" android:required="false" />
 
@@ -37,13 +41,16 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
+        android:appCategory="social"
         android:theme="@style/Theme.Dialer">
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:label="@string/app_name"
             android:theme="@style/Theme.Dialer"
-            android:windowSoftInputMode="adjustResize">
+            android:windowSoftInputMode="adjustResize"
+            android:showOnLockScreen="true"
+            android:turnScreenOn="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -59,6 +66,17 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:scheme="tel" />
             </intent-filter>
+            <!-- ACTION_CALL (חיוג ישיר, לא רק פתיחת מסך חיוג) - נדרש הרשאת CALL_PHONE
+                 מהאפליקציה השולחת, כבר קיימת אצלנו למקרה שאפליקציה חיצונית תבקש. -->
+            <intent-filter>
+                <action android:name="android.intent.action.CALL" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="tel" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.APP_CONTACTS" />
+            </intent-filter>
         </activity>
 
         <service
@@ -70,6 +88,14 @@
                 <action android:name="android.telecom.InCallService" />
             </intent-filter>
         </service>
+        <receiver
+            android:name=".telecom.CallActionReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.future.dialer.ACTION_ANSWER_CALL" />
+                <action android:name="com.future.dialer.ACTION_REJECT_CALL" />
+            </intent-filter>
+        </receiver>
         <receiver
             android:name=".DialerWidgetProvider"
             android:exported="true">

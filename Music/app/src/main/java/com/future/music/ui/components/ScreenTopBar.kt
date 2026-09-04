@@ -2,7 +2,7 @@ package com.future.music.ui.components
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
-import com.future.music.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 import com.future.sharednav.components.ScreenTopBar as SharedScreenTopBar
 import com.future.sharednav.components.TopBarIconButton as SharedTopBarIconButton
 

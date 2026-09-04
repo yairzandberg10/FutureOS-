@@ -144,23 +144,53 @@ fun HeadsUpNotificationScreen(
                     }
                 }
                 Spacer(modifier = Modifier.width(12.dp))
-                Column {
-                    Text(
-                        text = if (title.isNotBlank()) "$appName: $title" else appName,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = textColor,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    if (text.isNotBlank()) {
+                // שיחה נכנסת (CATEGORY_CALL) היא ההתראה הכי דחופה שיכולה להופיע - במקום
+                // כותרת/טקסט קטנים כמו כל התראה אחרת, שם/מספר המתקשר גדול וברור, עם רמז
+                // מקשים מפורש (טלפון = מענה, ניתוק = דחייה), כי אין כאן זמן לקרוא פרטים.
+                if (n.category == Notification.CATEGORY_CALL) {
+                    Column {
                         Text(
-                            text = text,
+                            text = title.ifBlank { "שיחה נכנסת" },
                             fontSize = 12.sp,
-                            color = textColor.copy(alpha = 0.7f),
+                            color = textColor.copy(alpha = 0.65f),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
+                        Text(
+                            text = text.ifBlank { appName },
+                            fontSize = 19.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = textColor,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = "טלפון = מענה · ניתוק = דחייה",
+                            fontSize = 11.sp,
+                            color = textColor.copy(alpha = 0.55f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                } else {
+                    Column {
+                        Text(
+                            text = if (title.isNotBlank()) "$appName: $title" else appName,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = textColor,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        if (text.isNotBlank()) {
+                            Text(
+                                text = text,
+                                fontSize = 12.sp,
+                                color = textColor.copy(alpha = 0.7f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
                 }
             }

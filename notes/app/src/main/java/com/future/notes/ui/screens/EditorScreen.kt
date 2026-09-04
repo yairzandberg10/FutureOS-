@@ -20,7 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import com.future.notes.R
 import com.future.notes.data.Note
-import com.future.notes.ui.components.dpadFocusBorder
+import com.future.sharednav.focus.dpadFocusBorder
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

@@ -26,10 +26,10 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.future.music.data.PlaylistStore
 import com.future.music.data.SongRepository
 import com.future.music.playback.PlayerController
-import com.future.music.theme.ThemeClient
+import com.future.sharednav.theme.ThemeClient
 import com.future.music.ui.MusicNavHost
 import com.future.music.ui.screens.PermissionScreen
-import com.future.music.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext

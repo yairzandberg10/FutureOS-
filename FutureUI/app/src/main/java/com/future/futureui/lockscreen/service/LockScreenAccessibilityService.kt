@@ -14,6 +14,7 @@ import android.graphics.drawable.Drawable
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.util.Log
 import android.view.KeyEvent
 import android.view.WindowManager
@@ -103,14 +104,62 @@ class LockScreenAccessibilityService : AccessibilityService(), LifecycleOwner, S
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {}
     override fun onInterrupt() {}
 
+    // דאבל-קליק גלובלי על OK (בכל מסך במערכת, כל עוד השירות הזה פעיל) פותח
+    // את העוזר הקולי. ה-flag flagRequestFilterKeyEvents ב-accessibility_service_config
+    // הוא מה שמאפשר לקבל כאן אירועי מקש מכל אפליקציה, לא רק מ-FutureUI עצמה.
+    // כדי לא להוסיף השהיה לכל לחיצת OK בודדת (חוויה גרועה על מכשיר שמבוסס
+    // כולו על מקשים), הלחיצה הראשונה תמיד עוברת הלאה מיד בלי לחכות - רק אם
+    // מגיעה לחיצה שנייה בתוך החלון נבלע אותה (כדי שהאפליקציה מתחת לא תפעיל
+    // את הפעולה הרגילה שלה פעמיים) ופותחים את העוזר הקולי במקום.
+    private var lastOkDownTime = 0L
+    private var swallowNextOkUp = false
+
     override fun onKeyEvent(event: KeyEvent): Boolean {
         if (isVisible) {
             // Forward keys to the compose view
-            return false 
+            return false
         }
-        
-        // Example trigger: double press some key to lock for testing
+
+        // מקשי CALL/ENDCALL הפיזיים חייבים לענות/לדחות שיחה מצלצלת גם כשה-dialer אינו
+        // באפליקציה בחזית (רק הבאנר heads-up מוצג מעל אפליקציה אחרת) - onKeyDown של
+        // dialer מקבל את הלחיצה רק כשהוא בחזית, ולכן משדרים כאן במפורש בתור ערוץ צד
+        // אמין. לא consumed (מוחזר false בהמשך) כדי לא לשבור את הטיפול הישיר הקיים
+        // ב-dialer כשהוא כן בחזית - שני הנתיבים בטוחים להפעלה כפולה (answer/reject אידמפוטנטיים).
+        if (suppressForActiveCall && event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+            when (event.keyCode) {
+                KeyEvent.KEYCODE_CALL -> sendBroadcast(Intent(FutureUIActions.ACTION_ANSWER_CALL).setPackage("com.future.dialer"))
+                KeyEvent.KEYCODE_ENDCALL -> sendBroadcast(Intent(FutureUIActions.ACTION_REJECT_CALL).setPackage("com.future.dialer"))
+            }
+        }
+
+        val isOkKey = event.keyCode == KeyEvent.KEYCODE_DPAD_CENTER || event.keyCode == KeyEvent.KEYCODE_ENTER
+        if (isOkKey && !suppressForActiveCall) {
+            if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                val now = SystemClock.elapsedRealtime()
+                if (lastOkDownTime != 0L && now - lastOkDownTime < DOUBLE_CLICK_WINDOW_MS) {
+                    lastOkDownTime = 0L
+                    swallowNextOkUp = true
+                    launchVoiceAssistant()
+                    return true
+                }
+                lastOkDownTime = now
+            } else if (event.action == KeyEvent.ACTION_UP && swallowNextOkUp) {
+                swallowNextOkUp = false
+                return true
+            }
+        }
+
         return super.onKeyEvent(event)
+    }
+
+    private fun launchVoiceAssistant() {
+        try {
+            val intent = packageManager.getLaunchIntentForPackage(VOICE_ASSISTANT_PACKAGE) ?: return
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            startActivity(intent)
+        } catch (e: Exception) {
+            Log.e("LockScreen", "Failed to launch voice assistant", e)
+        }
     }
 
     private fun showLockScreen() {
@@ -203,5 +252,10 @@ class LockScreenAccessibilityService : AccessibilityService(), LifecycleOwner, S
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
         store.clear()
         super.onDestroy()
+    }
+
+    companion object {
+        private const val VOICE_ASSISTANT_PACKAGE = "com.future.assistant"
+        private const val DOUBLE_CLICK_WINDOW_MS = 300L
     }
 }

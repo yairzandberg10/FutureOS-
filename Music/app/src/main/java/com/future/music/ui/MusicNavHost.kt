@@ -41,7 +41,7 @@ import com.future.music.ui.screens.QueueScreen
 import com.future.music.ui.screens.SearchScreen
 import com.future.music.ui.screens.SongListScreen
 import com.future.music.ui.screens.SoundScreen
-import com.future.music.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 import kotlinx.coroutines.delay
 
 @Composable
@@ -55,6 +55,9 @@ fun MusicNavHost(
     val current = backStack.last()
     var dataVersion by remember { mutableIntStateOf(0) }
     var restoredLastQueue by remember { mutableStateOf(false) }
+    // הפריט (לפי digit) שנפתח לאחרונה מתפריט הבית - כשחוזרים "אחורה", הפוקוס
+    // צריך לשוב אליו בדיוק, לא תמיד לפריט הראשון בתפריט.
+    var lastOpenedHomeItemId by remember { mutableStateOf<String?>(null) }
 
     BackHandler(enabled = backStack.size > 1) { backStack.removeAt(backStack.lastIndex) }
     fun push(route: Route) = backStack.add(route)
@@ -164,14 +167,15 @@ fun MusicNavHost(
         is Route.Home -> HomeScreen(
             theme = theme,
             playerState = playerState,
-            onOpenAllSongs = { push(Route.AllSongs) },
-            onOpenArtists = { push(Route.Artists) },
-            onOpenAlbums = { push(Route.Albums) },
-            onOpenPlaylists = { push(Route.Playlists) },
-            onOpenFavorites = { push(Route.Favorites) },
-            onOpenSearch = { push(Route.Search) },
+            onOpenAllSongs = { lastOpenedHomeItemId = "1"; push(Route.AllSongs) },
+            onOpenArtists = { lastOpenedHomeItemId = "2"; push(Route.Artists) },
+            onOpenAlbums = { lastOpenedHomeItemId = "3"; push(Route.Albums) },
+            onOpenPlaylists = { lastOpenedHomeItemId = "4"; push(Route.Playlists) },
+            onOpenFavorites = { lastOpenedHomeItemId = "5"; push(Route.Favorites) },
+            onOpenSearch = { lastOpenedHomeItemId = "6"; push(Route.Search) },
             onOpenNowPlaying = { push(Route.NowPlaying) },
             onTogglePlay = playerController::togglePlayPause,
+            lastOpenedItemId = lastOpenedHomeItemId,
         )
 
         is Route.AllSongs -> SongListScreen(

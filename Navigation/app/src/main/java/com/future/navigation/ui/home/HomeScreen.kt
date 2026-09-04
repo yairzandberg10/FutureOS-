@@ -23,11 +23,22 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Work
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -53,6 +64,12 @@ fun HomeScreen(
     val workPlace by viewModel.workPlace.collectAsState(initial = null)
     val nearbyStops by viewModel.nearbyStops.collectAsState()
     val currentLocation by viewModel.currentLocation.collectAsState()
+    val searchFocusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
+
+    // פוקוס D-pad התחלתי על שדה החיפוש - בלי זה נחיתה על מסך הבית משאירה אותו
+    // בלי שום פריט מודגש (בדיוק כמו בשאר 5 המסכים באפליקציה הזו).
+    LaunchedEffect(Unit) { searchFocusRequester.requestFocus() }
 
     Column(modifier = Modifier.fillMaxSize()) {
         Row(
@@ -85,7 +102,19 @@ fun HomeScreen(
         OutlinedTextField(
             value = query,
             onValueChange = viewModel::onSearchQueryChanged,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .focusRequester(searchFocusRequester)
+                // בשדה טקסט, Compose "בולע" את מקש למטה פנימית ולא מזיז פוקוס -
+                // מכשיר עם מקלדת בלבד היה נשאר תקוע בשדה החיפוש בלי דרך לרדת
+                // הלאה במסך, כמו ב-Settings/dialer/Sfarim.
+                .onPreviewKeyEvent {
+                    if (it.type == KeyEventType.KeyDown && it.key == Key.DirectionDown) {
+                        focusManager.moveFocus(FocusDirection.Down)
+                        true
+                    } else false
+                },
             placeholder = { Text(stringResource(R.string.search_placeholder)) },
             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
             shape = RoundedCornerShape(16.dp),
@@ -174,7 +203,11 @@ fun HomeScreen(
                     }
                     items(nearbyStops) { nearby ->
                         FocusableItem(
-                            onClick = { },
+                            onClick = {
+                                onDestinationPicked(
+                                    GeocodeResult(nearby.stop.name, com.future.navigation.data.common.LatLng(nearby.stop.lat, nearby.stop.lon))
+                                )
+                            },
                             accentColor = MaterialTheme.colorScheme.primary,
                             idleBackgroundColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
                             focusedBackgroundColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.22f),

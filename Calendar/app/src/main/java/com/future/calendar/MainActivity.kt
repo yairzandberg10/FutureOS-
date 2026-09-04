@@ -16,12 +16,12 @@ import com.future.calendar.data.CalendarEvent
 import com.future.calendar.data.CalendarRepository
 import com.future.calendar.data.CalendarSettings
 import com.future.calendar.data.LocationHelper
-import com.future.calendar.theme.ThemeClient
+import com.future.sharednav.theme.ThemeClient
 import com.future.calendar.ui.CalendarHomeScreen
 import com.future.calendar.ui.CalendarSettingsScreen
 import com.future.calendar.ui.CalendarViewMode
 import com.future.calendar.ui.EventEditDialog
-import com.future.calendar.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.YearMonth
@@ -154,6 +154,8 @@ class MainActivity : ComponentActivity() {
                     val calendarId = repository.getDefaultWritableCalendarId()
                     if (calendarId != null) {
                         repository.addEvent(calendarId, title, description, location, startMillis, endMillis, allDay)
+                    } else {
+                        android.widget.Toast.makeText(this@MainActivity, "לא נמצא לוח שנה זמין לשמירה - האירוע לא נשמר", android.widget.Toast.LENGTH_SHORT).show()
                     }
                 }
                 editorState = null

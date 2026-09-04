@@ -28,7 +28,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.future.fitness.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 
 /** מסך סיכום גנרי לכל סוג פעילות שהסתיימה (אימון כוח או ריצה) - כותרת/כותרת
  * משנה, ורשימת סטטיסטיקות (ערך + תווית) שהמסך הקורא מרכיב לפי מה שרלוונטי

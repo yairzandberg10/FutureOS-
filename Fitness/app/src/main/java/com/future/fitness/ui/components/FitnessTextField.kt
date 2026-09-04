@@ -3,7 +3,7 @@ package com.future.fitness.ui.components
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.TextFieldColors
 import androidx.compose.runtime.Composable
-import com.future.fitness.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 
 /** צבעי שדה טקסט אחידים לכל מסכי האפליקציה (Settings, WorkoutBuilder) - היה
  * מוגדר בנפרד וזהה בשני המסכים. */

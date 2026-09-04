@@ -4,7 +4,7 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import com.future.sfarim.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 import com.future.sharednav.focus.FocusableItem as SharedFocusableItem
 
 /** עטיפה דקה סביב הרכיב המשותף (מודול SharedKeypadNav) ששומרת על חתימת

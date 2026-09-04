@@ -24,4 +24,10 @@ dependencyResolutionManagement {
 
 rootProject.name = "Messages"
 include(":app")
+
+// מודול קיט הפוקוס/T9 המשותף לסוויטה - חי כתיקייה אחות עצמאית
+// (../SharedKeypadNav), לא submodule של Messages, כדי ש-Messages יישאר
+// build/פרויקט אנדרואיד-סטודיו עצמאי לגמרי כמו שהיה.
+include(":sharedkeypadnav")
+project(":sharedkeypadnav").projectDir = File(rootDir, "../SharedKeypadNav/sharedkeypadnav")
  

@@ -19,12 +19,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -38,6 +40,12 @@ import com.future.sharednav.focus.FocusableItem
 @Composable
 fun TransitScreen(itinerary: TransitItinerary, onBack: () -> Unit) {
     var expandedLeg by remember { mutableStateOf(-1) }
+    val firstRideFocusRequester = remember { FocusRequester() }
+    val firstRideIndex = remember(itinerary) { itinerary.legs.indexOfFirst { it.type == LegType.RIDE } }
+
+    // פוקוס D-pad התחלתי על קטע הנסיעה הראשון (WALK אינו לחיץ) - בלי זה נחיתה
+    // על המסך משאירה אותו בלי שום פריט מודגש.
+    LaunchedEffect(Unit) { if (firstRideIndex >= 0) firstRideFocusRequester.requestFocus() }
 
     Column(modifier = Modifier.fillMaxSize()) {
         ScreenTopBar(
@@ -73,7 +81,8 @@ fun TransitScreen(itinerary: TransitItinerary, onBack: () -> Unit) {
                     leg = leg,
                     isLast = index == itinerary.legs.size - 1,
                     expanded = expandedLeg == index,
-                    onToggleExpand = { expandedLeg = if (expandedLeg == index) -1 else index }
+                    onToggleExpand = { expandedLeg = if (expandedLeg == index) -1 else index },
+                    focusRequester = if (index == firstRideIndex) firstRideFocusRequester else null
                 )
             }
         }
@@ -89,7 +98,7 @@ private fun Stat(label: String, value: String) {
 }
 
 @Composable
-private fun LegRow(leg: TransitLeg, isLast: Boolean, expanded: Boolean, onToggleExpand: () -> Unit) {
+private fun LegRow(leg: TransitLeg, isLast: Boolean, expanded: Boolean, onToggleExpand: () -> Unit, focusRequester: FocusRequester? = null) {
     Row(modifier = Modifier.fillMaxWidth()) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(38.dp)) {
             val badgeColor = when (leg.type) {
@@ -127,7 +136,8 @@ private fun LegRow(leg: TransitLeg, isLast: Boolean, expanded: Boolean, onToggle
                     idleBackgroundColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
                     focusedBackgroundColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.22f),
                     borderWidth = 2.dp,
-                    cornerRadius = 16.dp
+                    cornerRadius = 16.dp,
+                    focusRequester = focusRequester
                 ) {
                     Column(modifier = Modifier.fillMaxWidth().padding(4.dp)) {
                         Text(leg.routeLongName?.takeIf { it.isNotBlank() } ?: leg.routeShortName ?: "קו", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)

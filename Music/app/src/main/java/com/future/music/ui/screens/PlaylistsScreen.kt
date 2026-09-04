@@ -35,7 +35,7 @@ import com.future.music.data.Playlist
 import com.future.music.ui.components.FocusableItem
 import com.future.music.ui.components.NameInputDialog
 import com.future.music.ui.components.ScreenTopBar
-import com.future.music.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 
 @Composable
 fun PlaylistsScreen(

@@ -1,10 +1,13 @@
 package com.future.music.ui.screens
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -69,7 +72,7 @@ import com.future.music.ui.components.ScreenTopBar
 import com.future.music.ui.components.formatDuration
 import com.future.music.ui.components.rememberAlbumArt
 import com.future.music.ui.digitForKey
-import com.future.music.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 import kotlinx.coroutines.delay
 
 @Composable
@@ -103,7 +106,13 @@ fun NowPlayingScreen(
     }
 
     val focusRequester = remember { FocusRequester() }
-    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+    val playButtonFocusRequester = remember { FocusRequester() }
+    // כמה כפתורי ניגון ממוקדים כרגע (0 או 1, אבל מונה ולא בוליאני כדי לא
+    // להיתפס במרוץ בין "איבוד פוקוס בכפתור הישן" ל"קבלת פוקוס בכפתור החדש").
+    // כשאחד מהם ממוקד, שמאל/ימין אמורים לזוז בין הכפתורים הצמודים - לא
+    // "לחטוף" תמיד את הלחיצה ל-seek, אחרת אין דרך לזוז ביניהם ב-D-pad בכלל.
+    var focusedControlCount by remember { mutableStateOf(0) }
+    LaunchedEffect(Unit) { playButtonFocusRequester.requestFocus() }
 
     Column(
         modifier = Modifier
@@ -124,9 +133,11 @@ fun NowPlayingScreen(
                         "8" -> { onCycleRepeat(); return@onKeyEvent true }
                         "9" -> { onOpenQueue(); return@onKeyEvent true }
                     }
-                    when (event.key) {
-                        Key.DirectionLeft -> { onSeekRelative(-10_000); return@onKeyEvent true }
-                        Key.DirectionRight -> { onSeekRelative(10_000); return@onKeyEvent true }
+                    if (focusedControlCount <= 0) {
+                        when (event.key) {
+                            Key.DirectionLeft -> { onSeekRelative(-10_000); return@onKeyEvent true }
+                            Key.DirectionRight -> { onSeekRelative(10_000); return@onKeyEvent true }
+                        }
                     }
                 }
                 false
@@ -199,17 +210,20 @@ fun NowPlayingScreen(
                     Text(formatDuration(playerState.durationMs), color = theme.textColor.copy(alpha = 0.5f), fontSize = 10.sp)
                 }
 
+                val trackControlFocus: (Boolean) -> Unit = { focused -> focusedControlCount += if (focused) 1 else -1 }
+
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                    RoundIconButton(Icons.Rounded.SkipPrevious, "קודם (4)", theme, size = 42.dp, onClick = onPrevious)
+                    RoundIconButton(Icons.Rounded.SkipPrevious, "קודם (4)", theme, size = 42.dp, onClick = onPrevious, onFocusChanged = trackControlFocus)
                     Spacer(modifier = Modifier.width(14.dp))
                     RoundIconButton(
                         if (playerState.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                         if (playerState.isPlaying) "השהה (5)" else "נגן (5)",
                         theme, size = 54.dp, filled = true, onClick = onTogglePlay,
+                        focusRequester = playButtonFocusRequester, onFocusChanged = trackControlFocus,
                     )
                     Spacer(modifier = Modifier.width(14.dp))
-                    RoundIconButton(Icons.Rounded.SkipNext, "הבא (6)", theme, size = 42.dp, onClick = onNext)
+                    RoundIconButton(Icons.Rounded.SkipNext, "הבא (6)", theme, size = 42.dp, onClick = onNext, onFocusChanged = trackControlFocus)
                 }
 
                 Spacer(modifier = Modifier.height(10.dp))
@@ -219,21 +233,24 @@ fun NowPlayingScreen(
                         "מועדפים (1)", theme, size = 32.dp,
                         active = isFavorite,
                         onClick = onToggleFavorite,
+                        onFocusChanged = trackControlFocus,
                     )
-                    RoundIconButton(Icons.AutoMirrored.Rounded.PlaylistAdd, "הוסף לפלייליסט (2)", theme, size = 32.dp, onClick = { showPlaylistDialog = true })
-                    RoundIconButton(Icons.Rounded.Equalizer, "סאונד (3)", theme, size = 32.dp, onClick = onOpenSound)
+                    RoundIconButton(Icons.AutoMirrored.Rounded.PlaylistAdd, "הוסף לפלייליסט (2)", theme, size = 32.dp, onClick = { showPlaylistDialog = true }, onFocusChanged = trackControlFocus)
+                    RoundIconButton(Icons.Rounded.Equalizer, "סאונד (3)", theme, size = 32.dp, onClick = onOpenSound, onFocusChanged = trackControlFocus)
                     RoundIconButton(
                         Icons.Rounded.Shuffle, "ערבוב (7)", theme, size = 32.dp,
                         active = playerState.shuffleEnabled,
                         onClick = onToggleShuffle,
+                        onFocusChanged = trackControlFocus,
                     )
                     RoundIconButton(
                         if (playerState.repeatMode == Player.REPEAT_MODE_ONE) Icons.Rounded.RepeatOne else Icons.Rounded.Repeat,
                         "חזרה (8)", theme, size = 32.dp,
                         active = playerState.repeatMode != Player.REPEAT_MODE_OFF,
                         onClick = onCycleRepeat,
+                        onFocusChanged = trackControlFocus,
                     )
-                    RoundIconButton(Icons.AutoMirrored.Rounded.QueueMusic, "תור (9)", theme, size = 32.dp, onClick = onOpenQueue)
+                    RoundIconButton(Icons.AutoMirrored.Rounded.QueueMusic, "תור (9)", theme, size = 32.dp, onClick = onOpenQueue, onFocusChanged = trackControlFocus)
                 }
             }
             Spacer(modifier = Modifier.height(10.dp))
@@ -260,19 +277,30 @@ private fun RoundIconButton(
     filled: Boolean = false,
     active: Boolean = false,
     onClick: () -> Unit,
+    focusRequester: FocusRequester? = null,
+    onFocusChanged: (Boolean) -> Unit = {},
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
+    LaunchedEffect(isFocused) { onFocusChanged(isFocused) }
     val bg = when {
         filled -> theme.accentColor
         active -> theme.accentColor.copy(alpha = 0.3f)
         else -> theme.textColor.copy(alpha = 0.08f)
     }
     val tint = if (filled) theme.backgroundColor else if (active) theme.accentColor else theme.textColor
+    val focusBorderColor by animateColorAsState(
+        if (isFocused) theme.accentColor else androidx.compose.ui.graphics.Color.Transparent,
+        label = "roundIconBtnFocusBorder",
+    )
     Box(
         modifier = Modifier
             .size(size)
             .clip(CircleShape)
             .background(bg)
-            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onClick),
+            .border(width = 2.dp, color = focusBorderColor, shape = CircleShape)
+            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
+            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Icon(icon, contentDescription = contentDescription, tint = tint, modifier = Modifier.size(size * 0.45f))

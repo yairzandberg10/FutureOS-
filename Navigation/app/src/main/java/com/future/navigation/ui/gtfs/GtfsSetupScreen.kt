@@ -8,9 +8,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -22,6 +25,11 @@ import com.future.sharednav.focus.FocusableItem
 @Composable
 fun GtfsSetupScreen(viewModel: GtfsSetupViewModel, onBack: () -> Unit) {
     val progress by viewModel.progress.collectAsState()
+    val updateButtonFocusRequester = remember { FocusRequester() }
+
+    // פוקוס D-pad התחלתי על כפתור העדכון - בלי זה נחיתה על המסך משאירה אותו
+    // בלי שום פריט מודגש.
+    LaunchedEffect(Unit) { updateButtonFocusRequester.requestFocus() }
 
     Column(modifier = Modifier.fillMaxSize()) {
         ScreenTopBar(
@@ -66,7 +74,8 @@ fun GtfsSetupScreen(viewModel: GtfsSetupViewModel, onBack: () -> Unit) {
                 focusedBackgroundColor = MaterialTheme.colorScheme.primary,
                 cornerRadius = 16.dp,
                 scaleOnFocus = false,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                focusRequester = updateButtonFocusRequester
             ) {
                 Text(
                     stringResource(R.string.gtfs_update_button),

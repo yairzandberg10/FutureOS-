@@ -1,4 +1,5 @@
 package com.future.gallery.ui
+import com.future.sharednav.focus.bringIntoViewOnFocus
 
 import android.graphics.Bitmap
 import androidx.compose.animation.animateColorAsState
@@ -16,7 +17,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowForward
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Crop
 import androidx.compose.material.icons.rounded.Flip
@@ -58,7 +59,7 @@ import com.future.gallery.data.EditState
 import com.future.gallery.data.ImageEditor
 import com.future.gallery.data.MediaItem
 import com.future.gallery.data.PhotoFilter
-import com.future.gallery.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -170,7 +171,7 @@ fun PhotoEditorScreen(item: MediaItem, theme: FutureTheme, onBack: () -> Unit, o
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    EditorIconButton(Icons.AutoMirrored.Rounded.ArrowForward, "ביטול", theme) { onBack() }
+                    EditorIconButton(Icons.AutoMirrored.Rounded.ArrowBack, "ביטול", theme) { onBack() }
                     Text("עריכת תמונה", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.weight(1f).padding(start = 10.dp))
                     EditorSaveButton(theme = theme, enabled = state.hasEdits && !isSaving, isSaving = isSaving) { save() }
                 }
@@ -269,7 +270,7 @@ private fun AdjustRow(label: String, value: Float, theme: FutureTheme, onChange:
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .background(if (isFocused) theme.accentColor.copy(alpha = 0.15f) else Color.Transparent)
-            .focusable(interactionSource = interactionSource)
+            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
             .onKeyEvent { event ->
                 if (!isFocused || event.type != KeyEventType.KeyDown) return@onKeyEvent false
                 when (event.key) {
@@ -313,7 +314,7 @@ private fun EditorActionChip(label: String, theme: FutureTheme, isSelected: Bool
             .clip(RoundedCornerShape(14.dp))
             .background(bgColor)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource)
+            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
             .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
         Text(label, color = if (isFocused) Color.Black else theme.textColor, fontSize = 12.sp, fontWeight = FontWeight.Medium)
@@ -330,7 +331,7 @@ private fun EditorToolTab(tool: EditorTool, isSelected: Boolean, theme: FutureTh
         modifier = Modifier
             .clip(RoundedCornerShape(12.dp))
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource)
+            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
             .padding(8.dp)
     ) {
         Icon(tool.icon, contentDescription = tool.label, tint = tint, modifier = Modifier.size(22.dp))
@@ -350,7 +351,7 @@ private fun EditorIconButton(icon: ImageVector, contentDescription: String, them
             .clip(CircleShape)
             .background(bgColor)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource),
+            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus(),
         contentAlignment = Alignment.Center
     ) {
         Icon(icon, contentDescription = contentDescription, tint = Color.White, modifier = Modifier.size(18.dp))
@@ -375,7 +376,7 @@ private fun EditorSaveButton(theme: FutureTheme, enabled: Boolean, isSaving: Boo
             .clip(CircleShape)
             .background(bgColor)
             .clickable(interactionSource = interactionSource, indication = null, enabled = enabled, onClick = onClick)
-            .focusable(interactionSource = interactionSource, enabled = enabled),
+            .focusable(interactionSource = interactionSource, enabled = enabled).bringIntoViewOnFocus(),
         contentAlignment = Alignment.Center
     ) {
         if (isSaving) {

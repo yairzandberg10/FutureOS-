@@ -1,4 +1,5 @@
 package com.future.calendar.ui
+import com.future.sharednav.focus.bringIntoViewOnFocus
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -17,7 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowForward
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.ChevronLeft
 import androidx.compose.material.icons.rounded.ChevronRight
@@ -36,6 +37,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -47,6 +49,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -60,7 +63,7 @@ import com.future.calendar.data.DafYomi
 import com.future.calendar.data.DayZmanim
 import com.future.calendar.data.HebrewDateFormatter
 import com.future.calendar.data.HebrewNumerals
-import com.future.calendar.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.YearMonth
@@ -150,6 +153,8 @@ fun CalendarHomeScreen(
                             eventsByDate = eventsByDate,
                             theme = theme,
                             useHebrewCalendar = useHebrewCalendar,
+                            onPrevMonth = onPrevMonth,
+                            onNextMonth = onNextMonth,
                             onSelectDate = onSelectDate,
                             onOpenDay = onOpenDay
                         )
@@ -220,7 +225,7 @@ private fun ViewModeTabRow(current: CalendarViewMode, theme: FutureTheme, onSele
                     .clip(RoundedCornerShape(12.dp))
                     .background(bgColor)
                     .clickable(interactionSource = interactionSource, indication = null, onClick = { onSelect(mode) })
-                    .focusable(interactionSource = interactionSource)
+                    .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
                     .padding(vertical = 8.dp),
                 contentAlignment = Alignment.Center
             ) {
@@ -251,7 +256,7 @@ private fun PermissionRequiredMessage(theme: FutureTheme, onRequestPermission: (
                 .clip(RoundedCornerShape(20.dp))
                 .background(if (isFocused) theme.accentColor else theme.accentColor.copy(alpha = 0.7f))
                 .clickable(interactionSource = interactionSource, indication = null, onClick = onRequestPermission)
-                .focusable(interactionSource = interactionSource)
+                .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
                 .padding(horizontal = 24.dp, vertical = 12.dp)
         ) {
             Text("אשר הרשאה", color = Color.Black, fontWeight = FontWeight.Bold)
@@ -299,6 +304,8 @@ private fun MonthGrid(
     eventsByDate: Map<LocalDate, List<CalendarEvent>>,
     theme: FutureTheme,
     useHebrewCalendar: Boolean = false,
+    onPrevMonth: () -> Unit = {},
+    onNextMonth: () -> Unit = {},
     onSelectDate: (LocalDate) -> Unit,
     onOpenDay: (LocalDate) -> Unit
 ) {
@@ -325,26 +332,30 @@ private fun MonthGrid(
             .padding(horizontal = 8.dp)
             .focusRequester(focusRequester)
             .onFocusChanged { isGridFocused = it.isFocused }
-            .focusable()
+            .focusable().bringIntoViewOnFocus()
             .onKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
                 val current = focusedIndex
                 when (event.key) {
                     Key.DirectionRight -> {
                         val next = current - 1
-                        if (next in cells.indices) { focusedIndex = next; cells[next]?.let(onSelectDate); true } else false
+                        if (next in cells.indices) { focusedIndex = next; cells[next]?.let(onSelectDate); true }
+                        else { onNextMonth(); true }
                     }
                     Key.DirectionLeft -> {
                         val next = current + 1
-                        if (next in cells.indices) { focusedIndex = next; cells[next]?.let(onSelectDate); true } else false
+                        if (next in cells.indices) { focusedIndex = next; cells[next]?.let(onSelectDate); true }
+                        else { onPrevMonth(); true }
                     }
                     Key.DirectionDown -> {
                         val next = current + 7
-                        if (next in cells.indices) { focusedIndex = next; cells[next]?.let(onSelectDate); true } else false
+                        if (next in cells.indices) { focusedIndex = next; cells[next]?.let(onSelectDate); true }
+                        else { onNextMonth(); true }
                     }
                     Key.DirectionUp -> {
                         val next = current - 7
-                        if (next in cells.indices) { focusedIndex = next; cells[next]?.let(onSelectDate); true } else false
+                        if (next in cells.indices) { focusedIndex = next; cells[next]?.let(onSelectDate); true }
+                        else { onPrevMonth(); true }
                     }
                     Key.DirectionCenter, Key.Enter -> {
                         cells.getOrNull(current)?.let(onOpenDay)
@@ -435,6 +446,10 @@ private fun WeekView(
 ) {
     val start = selectedDate.weekStart()
     val days = (0..6).map { start.plusDays(it.toLong()) }
+    // בלי פוקוס התחלתי מפורש, המעבר לתצוגת שבוע (למשל מהגדרות או מתצוגת חודש)
+    // משאיר את המסך בלי שום פריט מודגש ב-D-pad - בדיוק כמו ב-MonthGrid.
+    val firstRowFocusRequester = remember(start) { FocusRequester() }
+    LaunchedEffect(start) { firstRowFocusRequester.requestFocus() }
 
     Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         FocusableIconButton(icon = Icons.Rounded.ChevronRight, theme = theme, onClick = onPrevWeek)
@@ -447,13 +462,20 @@ private fun WeekView(
 
     LazyColumn(contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         items(days, key = { it.toEpochDay() }) { date ->
-            WeekDayRow(date = date, isToday = date == today, events = eventsByDate[date] ?: emptyList(), theme = theme, onClick = { onOpenDay(date) })
+            WeekDayRow(
+                date = date,
+                isToday = date == today,
+                events = eventsByDate[date] ?: emptyList(),
+                theme = theme,
+                onClick = { onOpenDay(date) },
+                focusRequester = if (date == days.first()) firstRowFocusRequester else null
+            )
         }
     }
 }
 
 @Composable
-private fun WeekDayRow(date: LocalDate, isToday: Boolean, events: List<CalendarEvent>, theme: FutureTheme, onClick: () -> Unit) {
+private fun WeekDayRow(date: LocalDate, isToday: Boolean, events: List<CalendarEvent>, theme: FutureTheme, onClick: () -> Unit, focusRequester: FocusRequester? = null) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
     val shape = RoundedCornerShape(16.dp)
@@ -465,8 +487,9 @@ private fun WeekDayRow(date: LocalDate, isToday: Boolean, events: List<CalendarE
             .clip(shape)
             .background(bgColor)
             .then(if (isFocused) Modifier.border(width = 2.dp, color = theme.accentColor, shape = shape) else Modifier)
+            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource)
+            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
             .padding(14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -518,7 +541,13 @@ private fun DayView(
 
     val zmanim = remember(date, lat, lon) { com.future.calendar.data.ZmanimCalculator.calculate(date, lat, lon) }
     val hebrewDate = remember(date) { HebrewDateFormatter.format(date) }
-    val dafYomi = remember(date) { DafYomi.forDate(date) }
+    // הדף היומי מתחלף בצאת הכוכבים ולא בחצות - רק כשמציגים את היום האמיתי
+    // הנוכחי (לא יום עבר/עתיד שהמשתמש דפדף אליו) יש טעם להשוות לשעון בפועל.
+    val isViewingToday = date == java.time.LocalDate.now()
+    val nightfallPassed = isViewingToday && zmanim.sunset?.let {
+        java.time.LocalTime.now().isAfter(it.plusMinutes(40))
+    } == true
+    val dafYomi = remember(date, nightfallPassed) { DafYomi.forDate(date, afterNightfall = nightfallPassed) }
 
     var forecast by remember(lat, lon) { mutableStateOf<Map<LocalDate, com.future.calendar.data.DailyWeather>?>(null) }
     LaunchedEffect(lat, lon, showWeather) {
@@ -530,9 +559,14 @@ private fun DayView(
     }
     val todayWeather = forecast?.get(date)
 
+    // בלי פוקוס התחלתי מפורש, המסך הזה נשאר בלי שום פריט מודגש ב-D-pad עד
+    // שהמשתמש לוחץ כיוון כלשהו - בדיוק כמו ב-MonthGrid.
+    val prevDayFocusRequester = remember(date) { FocusRequester() }
+    LaunchedEffect(date) { prevDayFocusRequester.requestFocus() }
+
     Column(modifier = Modifier.fillMaxSize()) {
         Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            FocusableIconButton(icon = Icons.Rounded.ChevronRight, theme = theme, onClick = onPrevDay)
+            FocusableIconButton(icon = Icons.Rounded.ChevronRight, theme = theme, onClick = onPrevDay, focusRequester = prevDayFocusRequester)
             Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(date.dayOfWeek.getDisplayName(JavaTextStyle.FULL, HE_LOCALE), fontSize = 12.sp, color = theme.textColor.copy(alpha = 0.5f))
                 Text(
@@ -647,6 +681,10 @@ private fun YearView(
     val months = (1..12).map { YearMonth.of(year, it) }
     var focusedIndex by remember(year) { mutableIntStateOf(0) }
     var isGridFocused by remember(year) { mutableStateOf(false) }
+    // בלי פוקוס התחלתי מפורש, הרשת הזו נשארת בלי שום פריט מודגש ב-D-pad עד
+    // שהמשתמש לוחץ כיוון כלשהו - בדיוק כמו ב-MonthGrid.
+    val gridFocusRequester = remember(year) { FocusRequester() }
+    LaunchedEffect(year) { gridFocusRequester.requestFocus() }
 
     Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         FocusableIconButton(icon = Icons.Rounded.ChevronRight, theme = theme, onClick = onPrevYear)
@@ -658,8 +696,9 @@ private fun YearView(
         modifier = Modifier
             .fillMaxWidth()
             .padding(12.dp)
+            .focusRequester(gridFocusRequester)
             .onFocusChanged { isGridFocused = it.isFocused }
-            .focusable()
+            .focusable().bringIntoViewOnFocus()
             .onKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
                 val current = focusedIndex
@@ -731,7 +770,7 @@ private fun EventRow(event: CalendarEvent, theme: FutureTheme, onClick: () -> Un
             .background(bgColor)
             .then(if (isFocused) Modifier.border(width = 2.dp, color = theme.accentColor, shape = shape) else Modifier)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource)
+            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
             .onKeyEvent { event2 ->
                 if (isFocused && event2.type == KeyEventType.KeyUp && (event2.key == Key.Menu || event2.key == Key.Settings)) {
                     onMenu(); true
@@ -774,13 +813,13 @@ private fun MenuOptionRow(label: String, icon: androidx.compose.ui.graphics.vect
             .fillMaxWidth()
             .background(bgColor)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource)
+            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
             .padding(horizontal = 20.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, contentDescription = null, tint = if (isDestructive) Color(0xFFFF6B6B) else theme.textColor, modifier = Modifier.size(20.dp))
+        Icon(icon, contentDescription = null, tint = if (isDestructive) theme.dangerColor else theme.textColor, modifier = Modifier.size(20.dp))
         Spacer(modifier = Modifier.width(14.dp))
-        Text(label, color = if (isDestructive) Color(0xFFFF6B6B) else theme.textColor, fontSize = 15.sp)
+        Text(label, color = if (isDestructive) theme.dangerColor else theme.textColor, fontSize = 15.sp)
     }
 }
 
@@ -867,7 +906,7 @@ fun EventEditDialog(
                         onSave(title, description, location, startHour, startMinute, endHour, endMinute, allDay)
                     }
                     if (onDelete != null) {
-                        EditDialogButton("מחק", Color(0xFFFF6B6B).copy(alpha = 0.2f), Color(0xFFFF6B6B), onDelete)
+                        EditDialogButton("מחק", theme.dangerColor.copy(alpha = 0.2f), theme.dangerColor, onDelete)
                     }
                 }
             }
@@ -885,7 +924,7 @@ private fun AllDayToggleRow(allDay: Boolean, theme: FutureTheme, onToggle: () ->
             .clip(RoundedCornerShape(12.dp))
             .background(if (isFocused) theme.textColor.copy(alpha = 0.1f) else Color.Transparent)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onToggle)
-            .focusable(interactionSource = interactionSource)
+            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
             .padding(vertical = 10.dp, horizontal = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
@@ -907,13 +946,14 @@ private fun AllDayToggleRow(allDay: Boolean, theme: FutureTheme, onToggle: () ->
 private fun TimeStepperField(label: String, hour: Int, minute: Int, theme: FutureTheme, onHourChange: (Int) -> Unit, onMinuteChange: (Int) -> Unit) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
+    val focusManager = LocalFocusManager.current
     val shape = RoundedCornerShape(12.dp)
     Column(
         modifier = Modifier
             .clip(shape)
             .background(theme.textColor.copy(alpha = 0.06f))
             .then(if (isFocused) Modifier.background(theme.accentColor.copy(alpha = 0.12f)) else Modifier)
-            .focusable(interactionSource = interactionSource)
+            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
             .onKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
                 when (event.key) {
@@ -921,6 +961,13 @@ private fun TimeStepperField(label: String, hour: Int, minute: Int, theme: Futur
                     Key.DirectionDown -> { onMinuteChange(-15); true }
                     Key.DirectionRight -> { onHourChange(-1); true }
                     Key.DirectionLeft -> { onHourChange(1); true }
+                    // בלי זה השדה הזה "בולע" את כל ארבעת מקשי הכיוון לצמיתות ואין דרך
+                    // במקלדת לזוז הלאה ממנו לשדה הבא/לכפתורי שמור-מחק-ביטול - מקש
+                    // האישור המרכזי הוא הדרך המפורשת לצאת קדימה מעריכת השעה.
+                    Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> {
+                        focusManager.moveFocus(FocusDirection.Next)
+                        true
+                    }
                     else -> false
                 }
             }
@@ -957,7 +1004,7 @@ private fun EditDialogButton(text: String, bg: Color, fg: Color, onClick: () -> 
             .clip(RoundedCornerShape(16.dp))
             .background(bg)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource)
+            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
             .padding(horizontal = 20.dp, vertical = 10.dp)
     ) {
         Text(text, color = fg, fontWeight = FontWeight.Bold, fontSize = 13.sp)
@@ -965,26 +1012,15 @@ private fun EditDialogButton(text: String, bg: Color, fg: Color, onClick: () -> 
 }
 
 @Composable
-fun FocusableIconButton(icon: androidx.compose.ui.graphics.vector.ImageVector, theme: FutureTheme, onClick: () -> Unit) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val scale by animateFloatAsState(if (isFocused) 1.15f else 1f, label = "iconScale")
-    val bgColor by animateColorAsState(
-        if (isFocused) theme.accentColor.copy(alpha = 0.3f) else theme.textColor.copy(alpha = 0.08f),
-        label = "iconBg"
-    )
-
-    Box(
-        modifier = Modifier
-            .size(40.dp)
-            .graphicsLayer(scaleX = scale, scaleY = scale)
-            .clip(CircleShape)
-            .background(bgColor)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(icon, contentDescription = null, tint = theme.textColor, modifier = Modifier.size(20.dp))
+fun FocusableIconButton(icon: androidx.compose.ui.graphics.vector.ImageVector, theme: FutureTheme, onClick: () -> Unit, focusRequester: FocusRequester? = null) {
+    // עטיפה דקה סביב TopBarIconButton המשותף (מודול SharedKeypadNav) - חתימת
+    // הקריאה נשארת זהה כדי שקריאות קיימות ב-Calendar לא ישתנו.
+    if (focusRequester != null) {
+        Box(modifier = Modifier.focusRequester(focusRequester)) {
+            com.future.sharednav.components.TopBarIconButton(icon, "", theme.textColor, theme.accentColor, onClick)
+        }
+    } else {
+        com.future.sharednav.components.TopBarIconButton(icon, "", theme.textColor, theme.accentColor, onClick)
     }
 }
 
@@ -1002,10 +1038,17 @@ fun CalendarSettingsScreen(
     onToggleShowWeather: () -> Unit,
     onToggleHebrewCalendar: () -> Unit
 ) {
+    // בלי פוקוס התחלתי מפורש, מסך ההגדרות נשאר בלי שום פריט מודגש ב-D-pad -
+    // בשונה מ-MonthGrid שכן קובע פוקוס אוטומטי.
+    val backFocusRequester = remember { FocusRequester() }
+    LaunchedEffect(Unit) { backFocusRequester.requestFocus() }
+
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Column(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
             Row(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                FocusableIconButton(icon = Icons.AutoMirrored.Rounded.ArrowForward, theme = theme, onClick = onBack)
+                // Icons.AutoMirrored.Rounded.ArrowBack (לא ArrowForward!) - תחת
+                // LayoutDirection.Rtl הכפוי, AutoMirrored הופך אותו לחץ ימינה כראוי לכפתור "חזור".
+                FocusableIconButton(icon = Icons.AutoMirrored.Rounded.ArrowBack, theme = theme, onClick = onBack, focusRequester = backFocusRequester)
                 Text("הגדרות לוח שנה", modifier = Modifier.padding(start = 8.dp), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = theme.textColor)
             }
 
@@ -1073,7 +1116,7 @@ private fun SettingsToggleRow(icon: androidx.compose.ui.graphics.vector.ImageVec
             .background(bgColor)
             .then(if (isFocused) Modifier.border(width = 2.dp, color = theme.accentColor, shape = shape) else Modifier)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onToggle)
-            .focusable(interactionSource = interactionSource)
+            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
             .padding(14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -1115,7 +1158,7 @@ private fun RegionRow(region: com.future.calendar.data.Region, isSelected: Boole
             .background(bgColor)
             .then(if (isFocused) Modifier.border(width = 2.dp, color = theme.accentColor, shape = shape) else Modifier)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource)
+            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

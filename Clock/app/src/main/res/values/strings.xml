@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">שעון</string>
+    <string name="clock_stopwatch">שעון עצר</string>
+    <string name="clock_timer">טיימר</string>
+</resources>

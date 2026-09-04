@@ -1,4 +1,5 @@
 package com.future.gallery.ui
+import com.future.sharednav.focus.bringIntoViewOnFocus
 
 import android.graphics.Bitmap
 import android.util.Size
@@ -22,6 +23,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
@@ -32,17 +35,29 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.future.gallery.data.Album
-import com.future.gallery.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 @Composable
-fun AlbumsScreen(albums: List<Album>, theme: FutureTheme, onAlbumClick: (Album) -> Unit) {
+fun AlbumsScreen(
+    albums: List<Album>,
+    theme: FutureTheme,
+    onAlbumClick: (Album) -> Unit,
+    // האלבום שנפתח לאחרונה - כשחוזרים "אחורה" מתצוגת האלבום, הפוקוס צריך
+    // לשוב אליו בדיוק, לא תמיד לאלבום הראשון ברשת.
+    lastSelectedAlbumId: String? = null,
+) {
     if (albums.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text("אין אלבומים עדיין", color = theme.textColor.copy(alpha = 0.5f), fontSize = 15.sp)
         }
         return
+    }
+    val cardFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
+    LaunchedEffect(albums.map { it.bucketId }) {
+        val target = albums.firstOrNull { it.bucketId == lastSelectedAlbumId } ?: albums.firstOrNull()
+        target?.let { cardFocusRequesters.getOrPut(it.bucketId) { FocusRequester() }.requestFocus() }
     }
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
@@ -52,13 +67,18 @@ fun AlbumsScreen(albums: List<Album>, theme: FutureTheme, onAlbumClick: (Album) 
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         items(albums, key = { it.bucketId }) { album ->
-            AlbumCard(album, theme, onClick = { onAlbumClick(album) })
+            AlbumCard(
+                album,
+                theme,
+                onClick = { onAlbumClick(album) },
+                focusRequester = cardFocusRequesters.getOrPut(album.bucketId) { FocusRequester() },
+            )
         }
     }
 }
 
 @Composable
-private fun AlbumCard(album: Album, theme: FutureTheme, onClick: () -> Unit) {
+private fun AlbumCard(album: Album, theme: FutureTheme, onClick: () -> Unit, focusRequester: FocusRequester? = null) {
     val context = LocalContext.current
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
@@ -84,15 +104,16 @@ private fun AlbumCard(album: Album, theme: FutureTheme, onClick: () -> Unit) {
             .clip(shape)
             .background(theme.surfaceColor)
             .then(if (isFocused) Modifier.border(2.dp, theme.accentColor, shape) else Modifier)
+            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource)
+            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(1.3f)
                 .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-                .background(Color.White.copy(alpha = 0.06f))
+                .background(theme.textColor.copy(alpha = 0.06f))
         ) {
             bitmap?.let {
                 Image(

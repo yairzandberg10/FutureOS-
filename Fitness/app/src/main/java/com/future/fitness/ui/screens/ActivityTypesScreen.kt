@@ -17,7 +17,7 @@ import com.future.fitness.data.WorkoutActivityTypes
 import com.future.fitness.data.WorkoutStore
 import com.future.fitness.ui.components.IconListRow
 import com.future.fitness.ui.components.ScreenTopBar
-import com.future.fitness.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 
 /** קטלוג כל סוגי הפעילות הניתנים להתחלה - כמו מסך "אימון" בשעון חכם
  * (Apple Watch): מקובצים לפי קטגוריה, כל שורה מציגה הערכת קלוריות לשעה

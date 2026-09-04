@@ -52,7 +52,7 @@ import com.future.fitness.ui.components.SegmentedControl
 import com.future.fitness.ui.components.escapeTextFieldFocusTrap
 import com.future.fitness.ui.components.fitnessTextFieldColors
 import com.future.fitness.ui.components.ScreenTopBar
-import com.future.fitness.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 
 /** מצב כהה/בהיר וצבע הדגשה משותפים לכל אפליקציות FutureOS ונשלטים ממסך
  * ההגדרות המרכזי של המערכת (כמו בכל שאר אפליקציות הסוויטה - אף אחת מהן לא

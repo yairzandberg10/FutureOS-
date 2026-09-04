@@ -14,6 +14,8 @@ import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionResult
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 
 /**
  * Foreground service שמחזיק את ה-ExoPlayer האמיתי + MediaSession - כדי
@@ -84,6 +86,10 @@ class MusicPlaybackService : MediaSessionService() {
     private fun applyEqPreset(preset: Int) {
         val eq = equalizer ?: return
         try {
+            // עדכון המקור-האמת המשותף - כדי ש-SoundScreen יוכל לאתחל את הבחירה
+            // המודגשת לפי הפריסט האמיתי הפעיל, גם אחרי חזרה למסך מבלי לעבור
+            // דרך המסך הזה (בלי זה הוא תמיד אתחל בטעות ל"רגיל").
+            _currentEqPreset.value = preset
             val bands = eq.numberOfBands
             val maxLevel: Int = eq.bandLevelRange[1].toInt()
             val minLevel: Int = eq.bandLevelRange[0].toInt()
@@ -134,5 +140,9 @@ class MusicPlaybackService : MediaSessionService() {
         const val EQ_PRESET_BASS = 1
         const val EQ_PRESET_TREBLE = 2
         const val EQ_PRESET_VOCAL = 3
+
+        private val _currentEqPreset = MutableStateFlow(EQ_PRESET_NORMAL)
+        /** הפריסט האמיתי הפעיל כרגע ב-Equalizer - ראו applyEqPreset. */
+        val currentEqPreset: StateFlow<Int> = _currentEqPreset
     }
 }

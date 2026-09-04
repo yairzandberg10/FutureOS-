@@ -22,35 +22,15 @@ import androidx.compose.ui.zIndex
 
 @Composable
 fun HeaderActionButton(icon: ImageVector, color: Color, onClick: () -> Unit, isPower: Boolean = false) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val shape = CircleShape
-
-    Box(
-        modifier = Modifier
-            .size(36.dp)
-            .graphicsLayer {
-                scaleX = if (isFocused) 1.25f else 1f
-                scaleY = if (isFocused) 1.25f else 1f
-            }
-            .then(if (isFocused) Modifier.border(2.dp, Color.LightGray, shape) else Modifier)
-            .clip(shape)
-            .background(if (isFocused) Color.White.copy(alpha = 0.2f) else Color.Transparent)
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = onClick
-            )
-            .focusable(interactionSource = interactionSource),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = if (isPower) Color.Red else color,
-            modifier = Modifier.size(22.dp)
-        )
-    }
+    // עטיפה דקה סביב TopBarIconButton המשותף (מודול SharedKeypadNav) - חתימת
+    // הקריאה נשארת זהה כדי שקריאות קיימות ב-FutureUI לא ישתנו.
+    com.future.sharednav.components.TopBarIconButton(
+        icon = icon,
+        contentDescription = "",
+        textColor = if (isPower) Color.Red else color,
+        accentColor = Color.White,
+        onClick = onClick,
+    )
 }
 
 fun Modifier.focusEffect(isFocused: Boolean, shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(16.dp)): Modifier = this

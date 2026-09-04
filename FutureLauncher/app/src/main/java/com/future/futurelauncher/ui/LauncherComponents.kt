@@ -32,7 +32,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.graphics.drawable.toBitmap
-import com.future.futurelauncher.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 
 /**
  * מטמון גלובלי לאייקוני אפליקציות - לא תלוי ב-composition של דף ספציפי ב-

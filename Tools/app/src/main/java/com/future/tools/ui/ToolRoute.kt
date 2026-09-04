@@ -2,10 +2,7 @@ package com.future.tools.ui
 
 sealed class ToolRoute {
     object Home : ToolRoute()
-    object Calculator : ToolRoute()
     object Flashlight : ToolRoute()
-    object Stopwatch : ToolRoute()
-    object Timer : ToolRoute()
     object UnitConverter : ToolRoute()
     object Compass : ToolRoute()
     object Level : ToolRoute()

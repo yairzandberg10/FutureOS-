@@ -24,7 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.future.fitness.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 
 /** אריח סטטיסטיקה קטן - קלוריות/דקות/רצף בבית, ומספרי סיכום בהתקדמות. */
 @Composable

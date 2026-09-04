@@ -1,4 +1,5 @@
 package com.future.gallery.ui
+import com.future.sharednav.focus.bringIntoViewOnFocus
 
 import android.app.RecoverableSecurityException
 import android.content.Intent
@@ -25,12 +26,13 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowForward
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.PlayCircle
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Sort
+import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.VideocamOff
 import androidx.compose.material.icons.rounded.ZoomIn
 import androidx.compose.material3.Icon
@@ -39,6 +41,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
@@ -61,7 +64,7 @@ import com.future.gallery.data.Album
 import com.future.gallery.data.MediaItem
 import com.future.gallery.data.SortOption
 import com.future.gallery.data.sortedBy
-import com.future.gallery.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -84,7 +87,9 @@ fun GalleryHomeScreen(
     onRequestPermission: () -> Unit,
     onItemClick: (List<MediaItem>, MediaItem) -> Unit,
     onAlbumClick: (Album) -> Unit,
-    theme: FutureTheme
+    theme: FutureTheme,
+    lastSelectedItemId: Long? = null,
+    lastSelectedAlbumId: String? = null,
 ) {
     var tab by remember { mutableStateOf(GalleryTab.ALL) }
     var sortOption by remember { mutableStateOf(SortOption.DATE_NEWEST) }
@@ -126,13 +131,13 @@ fun GalleryHomeScreen(
                             FocusableTextButton("אשר הרשאה", onRequestPermission, theme)
                         }
                     }
-                    tab == GalleryTab.ALBUMS -> AlbumsScreen(albums, theme, onAlbumClick)
+                    tab == GalleryTab.ALBUMS -> AlbumsScreen(albums, theme, onAlbumClick, lastSelectedAlbumId = lastSelectedAlbumId)
                     sortedItems.isEmpty() -> {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             Text("אין תמונות או סרטונים במכשיר", color = theme.textColor.copy(alpha = 0.5f), fontSize = 15.sp)
                         }
                     }
-                    else -> MediaGrid(sortedItems, theme, onItemClick = { item -> onItemClick(sortedItems, item) })
+                    else -> MediaGrid(sortedItems, theme, onItemClick = { item -> onItemClick(sortedItems, item) }, lastSelectedId = lastSelectedItemId)
                 }
             }
 
@@ -149,7 +154,14 @@ fun GalleryHomeScreen(
 }
 
 @Composable
-fun AlbumDetailScreen(albumName: String, items: List<MediaItem>, theme: FutureTheme, onBack: () -> Unit, onItemClick: (List<MediaItem>, MediaItem) -> Unit) {
+fun AlbumDetailScreen(
+    albumName: String,
+    items: List<MediaItem>,
+    theme: FutureTheme,
+    onBack: () -> Unit,
+    onItemClick: (List<MediaItem>, MediaItem) -> Unit,
+    lastSelectedItemId: Long? = null,
+) {
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize()) {
@@ -157,7 +169,7 @@ fun AlbumDetailScreen(albumName: String, items: List<MediaItem>, theme: FutureTh
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    GalleryIconButton(Icons.AutoMirrored.Rounded.ArrowForward, "חזור", theme, onBack)
+                    GalleryIconButton(Icons.AutoMirrored.Rounded.ArrowBack, "חזור", theme, onBack)
                     Spacer(modifier = Modifier.width(10.dp))
                     Text(albumName, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = theme.textColor)
                 }
@@ -166,7 +178,7 @@ fun AlbumDetailScreen(albumName: String, items: List<MediaItem>, theme: FutureTh
                         Text("האלבום ריק", color = theme.textColor.copy(alpha = 0.5f), fontSize = 15.sp)
                     }
                 } else {
-                    MediaGrid(items, theme, onItemClick = { item -> onItemClick(items, item) })
+                    MediaGrid(items, theme, onItemClick = { item -> onItemClick(items, item) }, lastSelectedId = lastSelectedItemId)
                 }
             }
         }
@@ -174,8 +186,22 @@ fun AlbumDetailScreen(albumName: String, items: List<MediaItem>, theme: FutureTh
 }
 
 @Composable
-private fun MediaGrid(items: List<MediaItem>, theme: FutureTheme, onItemClick: (MediaItem) -> Unit) {
+private fun MediaGrid(
+    items: List<MediaItem>,
+    theme: FutureTheme,
+    onItemClick: (MediaItem) -> Unit,
+    // הפריט שנפתח לאחרונה מהרשת הזו - כשחוזרים "אחורה" מהצפייה, הפוקוס צריך
+    // לשוב אליו בדיוק, לא תמיד לפריט הראשון ברשת.
+    lastSelectedId: Long? = null,
+) {
     val gridState = rememberLazyGridState()
+    val thumbnailFocusRequesters = remember { mutableMapOf<Long, FocusRequester>() }
+    // בלי זה, אין שום פריט ממוקד כשנכנסים לרשת הזו (או חוזרים אליה) - dead
+    // end ב-D-pad בלי מסך מגע.
+    LaunchedEffect(items.map { it.id }) {
+        val target = items.firstOrNull { it.id == lastSelectedId } ?: items.firstOrNull()
+        target?.let { thumbnailFocusRequesters.getOrPut(it.id) { FocusRequester() }.requestFocus() }
+    }
     LazyVerticalGrid(
         columns = GridCells.Fixed(3),
         state = gridState,
@@ -190,7 +216,12 @@ private fun MediaGrid(items: List<MediaItem>, theme: FutureTheme, onItemClick: (
         verticalArrangement = Arrangement.spacedBy(3.dp)
     ) {
         items(items, key = { it.id }) { item ->
-            MediaThumbnail(item, onClick = { onItemClick(item) }, theme = theme)
+            MediaThumbnail(
+                item,
+                onClick = { onItemClick(item) },
+                theme = theme,
+                focusRequester = thumbnailFocusRequesters.getOrPut(item.id) { FocusRequester() },
+            )
         }
     }
 }
@@ -212,7 +243,7 @@ private fun GalleryTabChip(label: String, isSelected: Boolean, theme: FutureThem
             .clip(RoundedCornerShape(14.dp))
             .background(bgColor)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource)
+            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
             .padding(horizontal = 18.dp, vertical = 8.dp)
     ) {
         Text(label, color = if (isSelected) Color.Black else theme.textColor, fontSize = 13.sp, fontWeight = FontWeight.Medium)
@@ -221,20 +252,9 @@ private fun GalleryTabChip(label: String, isSelected: Boolean, theme: FutureThem
 
 @Composable
 private fun GalleryIconButton(icon: androidx.compose.ui.graphics.vector.ImageVector, contentDescription: String, theme: FutureTheme, onClick: () -> Unit) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val bgColor by animateColorAsState(if (isFocused) theme.accentColor.copy(alpha = 0.3f) else theme.textColor.copy(alpha = 0.08f), label = "galleryIconBtnBg")
-    Box(
-        modifier = Modifier
-            .size(36.dp)
-            .clip(RoundedCornerShape(18.dp))
-            .background(bgColor)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(icon, contentDescription = contentDescription, tint = theme.textColor, modifier = Modifier.size(18.dp))
-    }
+    // עטיפה דקה סביב TopBarIconButton המשותף (מודול SharedKeypadNav) - חתימת
+    // הקריאה נשארת זהה כדי שקריאות קיימות ב-Gallery לא ישתנו.
+    com.future.sharednav.components.TopBarIconButton(icon, contentDescription, theme.textColor, theme.accentColor, onClick)
 }
 
 @Composable
@@ -264,7 +284,7 @@ private fun SortRow(label: String, isSelected: Boolean, theme: FutureTheme, onCl
             .fillMaxWidth()
             .background(bgColor)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource)
+            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
             .padding(horizontal = 20.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -282,7 +302,7 @@ private fun FocusableTextButton(text: String, onClick: () -> Unit, theme: Future
             .clip(RoundedCornerShape(20.dp))
             .background(bgColor)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource)
+            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
             .padding(horizontal = 24.dp, vertical = 12.dp)
     ) {
         Text(text, color = Color.Black, fontWeight = FontWeight.Bold)
@@ -290,7 +310,7 @@ private fun FocusableTextButton(text: String, onClick: () -> Unit, theme: Future
 }
 
 @Composable
-private fun MediaThumbnail(item: MediaItem, onClick: () -> Unit, theme: FutureTheme) {
+private fun MediaThumbnail(item: MediaItem, onClick: () -> Unit, theme: FutureTheme, focusRequester: FocusRequester? = null) {
     val context = LocalContext.current
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
@@ -318,10 +338,11 @@ private fun MediaThumbnail(item: MediaItem, onClick: () -> Unit, theme: FutureTh
             .aspectRatio(1f)
             .graphicsLayer { scaleX = scale; scaleY = scale }
             .clip(shape)
-            .background(Color.White.copy(alpha = 0.08f))
+            .background(theme.textColor.copy(alpha = 0.08f))
             .then(if (isFocused) Modifier.border(width = 3.dp, color = theme.accentColor, shape = shape) else Modifier)
+            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource)
+            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
     ) {
         bitmap?.let {
             Image(
@@ -361,6 +382,9 @@ fun MediaViewerScreen(
     var panY by remember(item.id) { mutableStateOf(0f) }
     val focusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
     var boxSize by remember { mutableStateOf(IntSize.Zero) }
+    var videoView by remember(item.id) { mutableStateOf<android.widget.VideoView?>(null) }
+    var isVideoPlaying by remember(item.id) { mutableStateOf(true) }
+    var videoLoadFailed by remember(item.id) { mutableStateOf(false) }
 
     // אנימציה חלקה במקום קפיצה מיידית של הזום - לחיצה על כפתור הזום הייתה
     // "מטלפרת" את התמונה בין הרמות בלי שום מעבר, מה שהרגיש שבור/מקוטע.
@@ -442,9 +466,34 @@ fun MediaViewerScreen(
                     .fillMaxWidth()
                     .onSizeChanged { boxSize = it }
                     .focusRequester(focusRequester)
-                    .focusable()
+                    .focusable().bringIntoViewOnFocus()
                     .onKeyEvent { event ->
                         if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
+                        if (item.isVideo) {
+                            // בקרת וידאו: שמאל/ימין תמיד מכוונים הרצה אחורה/קדימה בציר
+                            // הזמן של הסרטון (המוסכמה האוניברסלית של נגני מדיה/שלטים -
+                            // לא תלוית כיוון RTL כמו ניווט בין פריטים), ולמעלה/למטה
+                            // עוברים לפריט הקודם/הבא כי אין זום להזיז בו במסך וידאו.
+                            return@onKeyEvent when (event.key) {
+                                Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> {
+                                    videoView?.let { vv ->
+                                        if (vv.isPlaying) { vv.pause(); isVideoPlaying = false } else { vv.start(); isVideoPlaying = true }
+                                    }
+                                    true
+                                }
+                                Key.DirectionRight -> {
+                                    videoView?.let { vv -> vv.seekTo((vv.currentPosition + 10_000).coerceAtMost(vv.duration)) }
+                                    true
+                                }
+                                Key.DirectionLeft -> {
+                                    videoView?.let { vv -> vv.seekTo((vv.currentPosition - 10_000).coerceAtLeast(0)) }
+                                    true
+                                }
+                                Key.DirectionUp -> { goTo(-1); true }
+                                Key.DirectionDown -> { goTo(1); true }
+                                else -> false
+                            }
+                        }
                         val panStep = 40f * zoomTarget
                         if (zoomTarget > 1f) {
                             val maxPanX = (renderedW * (zoomTarget - 1f) / 2f)
@@ -478,14 +527,38 @@ fun MediaViewerScreen(
             ) {
                 when {
                     item.isVideo -> {
-                        Column(
-                            modifier = Modifier.fillMaxSize(),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            Icon(Icons.Rounded.VideocamOff, contentDescription = null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(48.dp))
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Text("סרטונים לא נתמכים במערכת זו", color = Color.White.copy(alpha = 0.7f), fontSize = 14.sp)
+                        if (videoLoadFailed) {
+                            Column(
+                                modifier = Modifier.fillMaxSize(),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Icon(Icons.Rounded.VideocamOff, contentDescription = null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(48.dp))
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text("לא ניתן לנגן את הסרטון", color = Color.White.copy(alpha = 0.7f), fontSize = 14.sp)
+                            }
+                        } else {
+                            androidx.compose.ui.viewinterop.AndroidView(
+                                modifier = Modifier.fillMaxSize(),
+                                factory = { ctx ->
+                                    android.widget.VideoView(ctx).apply {
+                                        setOnErrorListener { _, _, _ -> videoLoadFailed = true; true }
+                                        setOnPreparedListener { player ->
+                                            player.isLooping = false
+                                            start()
+                                        }
+                                        setOnCompletionListener { isVideoPlaying = false }
+                                        setVideoURI(item.uri)
+                                        videoView = this
+                                    }
+                                },
+                                onRelease = { it.stopPlayback(); videoView = null },
+                            )
+                            if (!isVideoPlaying) {
+                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    Icon(Icons.Rounded.PlayArrow, contentDescription = null, tint = Color.White.copy(alpha = 0.85f), modifier = Modifier.size(56.dp))
+                                }
+                            }
                         }
                     }
                     loadFailed -> {
@@ -516,7 +589,7 @@ fun MediaViewerScreen(
                         .clickable { onBack() }
                         .padding(10.dp)
                 ) {
-                    Icon(Icons.AutoMirrored.Rounded.ArrowForward, contentDescription = "חזור", tint = Color.White)
+                    Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "חזור", tint = Color.White)
                 }
             }
 
@@ -634,7 +707,7 @@ private fun MediaViewerBarButton(
             .clip(RoundedCornerShape(14.dp))
             .background(bgColor)
             .clickable(interactionSource = interactionSource, indication = null, enabled = enabled, onClick = onClick)
-            .focusable(interactionSource = interactionSource, enabled = enabled)
+            .focusable(interactionSource = interactionSource, enabled = enabled).bringIntoViewOnFocus()
             .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
         Icon(icon, contentDescription = label, tint = tint, modifier = Modifier.size(22.dp))
@@ -673,7 +746,7 @@ private fun FocusableDestructiveButton(text: String, onClick: () -> Unit) {
             .clip(RoundedCornerShape(20.dp))
             .background(bgColor)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource)
+            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
             .padding(horizontal = 24.dp, vertical = 12.dp)
     ) {
         Text(text, color = Color.Black, fontWeight = FontWeight.Bold)

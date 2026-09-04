@@ -23,7 +23,7 @@ import com.future.music.ui.components.FocusableItem
 import com.future.music.ui.components.MiniPlayerBar
 import com.future.music.ui.components.ScreenTopBar
 import com.future.music.ui.components.SongRow
-import com.future.music.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 
 /** מסך רשימת שירים גנרי - משמש לכל השירים / שירי אמן / שירי אלבום / שירי
  * פלייליסט / מועדפים. OK על שורה מנגן את הרשימה הזו החל מהשיר הזה (הרשימה

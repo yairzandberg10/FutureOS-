@@ -24,3 +24,9 @@ dependencyResolutionManagement {
 
 rootProject.name = "FutureUI"
 include(":app")
+
+// מודול קיט הפוקוס/T9 המשותף לסוויטה - חי כתיקייה אחות עצמאית
+// (../SharedKeypadNav), לא submodule של FutureUI, כדי ש-FutureUI יישאר
+// build/פרויקט אנדרואיד-סטודיו עצמאי לגמרי כמו שהיה.
+include(":sharedkeypadnav")
+project(":sharedkeypadnav").projectDir = File(rootDir, "../SharedKeypadNav/sharedkeypadnav")

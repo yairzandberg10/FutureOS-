@@ -25,9 +25,9 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.future.fitness.bluetooth.HeartRateMonitor
 import com.future.fitness.data.WorkoutStore
-import com.future.fitness.theme.ThemeClient
+import com.future.sharednav.theme.ThemeClient
 import com.future.fitness.ui.FitnessNavHost
-import com.future.fitness.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 
 class MainActivity : ComponentActivity() {
     // המכשיר האמיתי הוא מקלדת T9 בלבד בלי מסך מגע - מבטלים קלט מגע לגמרי כדי

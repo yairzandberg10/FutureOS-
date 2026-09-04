@@ -24,3 +24,9 @@ dependencyResolutionManagement {
 
 rootProject.name = "Guide"
 include(":app")
+
+// מודול קיט הפוקוס/T9 המשותף לסוויטה - חי כתיקייה אחות עצמאית
+// (../SharedKeypadNav), לא submodule של Guide, כדי ש-Guide יישאר
+// build/פרויקט אנדרואיד-סטודיו עצמאי לגמרי כמו שהיה.
+include(":sharedkeypadnav")
+project(":sharedkeypadnav").projectDir = File(rootDir, "../SharedKeypadNav/sharedkeypadnav")

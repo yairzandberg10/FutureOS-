@@ -16,7 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.future.fitness.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 
 /** בורר פלחים (רמת קושי, יחידות משקל וכו') - היה מוכפל בנפרד (עם עיצוב זהה)
  * ב-WorkoutBuilderScreen וב-SettingsScreen, ובלי שום סימון פוקוס D-pad

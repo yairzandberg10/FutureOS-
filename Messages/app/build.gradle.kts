@@ -10,7 +10,7 @@ android {
     defaultConfig {
         applicationId = "com.future.messages"
         minSdk = 31
-        targetSdk = 36
+        targetSdk = 37
         versionCode = 1
         versionName = "1.0"
 
@@ -34,6 +34,7 @@ android {
 }
 
 dependencies {
+    implementation(project(":sharedkeypadnav"))
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)

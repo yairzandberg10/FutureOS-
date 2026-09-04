@@ -1,4 +1,5 @@
 package com.future.tools.ui
+import com.future.sharednav.focus.bringIntoViewOnFocus
 
 import android.widget.Toast
 import androidx.compose.animation.animateColorAsState
@@ -14,11 +15,10 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Architecture
-import androidx.compose.material.icons.rounded.Calculate
 import androidx.compose.material.icons.rounded.Casino
 import androidx.compose.material.icons.rounded.Checklist
 import androidx.compose.material.icons.rounded.DocumentScanner
@@ -35,36 +35,34 @@ import androidx.compose.material.icons.rounded.Receipt
 import androidx.compose.material.icons.rounded.RecordVoiceOver
 import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material.icons.rounded.SwapHoriz
-import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material.icons.rounded.Straighten
 import androidx.compose.material.icons.rounded.VpnKey
-import androidx.compose.material.icons.rounded.Watch
 import androidx.compose.material.icons.rounded.WbSunny
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.future.tools.data.ToolShortcuts
-import com.future.tools.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 
 data class ToolEntry(val icon: ImageVector, val label: String, val subtitle: String, val route: ToolRoute)
 
 val TOOL_ENTRIES = listOf(
-    // כלים קיימים
-    ToolEntry(Icons.Rounded.Calculate, "מחשבון", "חישובים והיסטוריה", ToolRoute.Calculator),
+    // כלים קיימים - המחשבון והשעון עצר/טיימר עברו לאפליקציות עצמאיות משלהם
+    // (Calculator, Clock) ואינם חלק מ-Tools יותר.
     ToolEntry(Icons.Rounded.FlashlightOn, "פנס", "הדלקה/כיבוי מהירים", ToolRoute.Flashlight),
-    ToolEntry(Icons.Rounded.Watch, "שעון עצר", "מדידת זמן עם הקפות", ToolRoute.Stopwatch),
-    ToolEntry(Icons.Rounded.Timer, "טיימר", "ספירה לאחור עם התראה", ToolRoute.Timer),
     ToolEntry(Icons.Rounded.SwapHoriz, "ממיר יחידות", "אורך, משקל, טמפרטורה, נפח", ToolRoute.UnitConverter),
     ToolEntry(Icons.Rounded.Explore, "מצפן וגובה", "כיוון מגנטי וגובה ברומטרי", ToolRoute.Compass),
     ToolEntry(Icons.Rounded.Straighten, "פלס", "איזון אופקי לפי חיישן תאוצה", ToolRoute.Level),
@@ -96,7 +94,17 @@ val TOOL_ENTRIES = listOf(
 )
 
 @Composable
-fun ToolsHomeScreen(theme: FutureTheme, onOpen: (ToolRoute) -> Unit) {
+fun ToolsHomeScreen(theme: FutureTheme, onOpen: (ToolRoute) -> Unit, lastOpenedRoute: ToolRoute? = null) {
+    // אותה תקלת "אין פוקוס" שתועדה ותוקנה במחשבון/ממיר יחידות - ראו שם. כאן
+    // מסך הבית של כל האפליקציה, כך שהתיקון קריטי במיוחד: בלעדיו נחיתה על המסך
+    // הזה משאירה D-pad בלי שום פריט מודגש. כשחוזרים "אחורה" מכלי שנפתח, הפוקוס
+    // חוזר בדיוק לשורה של אותו כלי, לא תמיד לשורה הראשונה.
+    val rowFocusRequesters = remember { mutableMapOf<ToolRoute, FocusRequester>() }
+    LaunchedEffect(Unit) {
+        val target = TOOL_ENTRIES.firstOrNull { it.route == lastOpenedRoute } ?: TOOL_ENTRIES.firstOrNull()
+        target?.let { rowFocusRequesters.getOrPut(it.route) { FocusRequester() }.requestFocus() }
+    }
+
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize()) {
@@ -105,11 +113,12 @@ fun ToolsHomeScreen(theme: FutureTheme, onOpen: (ToolRoute) -> Unit) {
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(TOOL_ENTRIES) { entry ->
+                    itemsIndexed(TOOL_ENTRIES) { _, entry ->
                         ToolRow(
                             entry.icon, entry.label, entry.subtitle, theme = theme,
                             onClick = { onOpen(entry.route) },
-                            trailing = { PinToHomeButton(entry = entry, theme = theme) }
+                            trailing = { PinToHomeButton(entry = entry, theme = theme) },
+                            focusRequester = rowFocusRequesters.getOrPut(entry.route) { FocusRequester() }
                         )
                     }
                 }
@@ -150,7 +159,7 @@ private fun PinToHomeButton(entry: ToolEntry, theme: FutureTheme) {
                     Toast.LENGTH_LONG
                 ).show()
             }
-            .focusable(interactionSource = interactionSource),
+            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus(),
         contentAlignment = androidx.compose.ui.Alignment.Center
     ) {
         Icon(Icons.Rounded.PushPin, contentDescription = "הוסף/הסר ממסך הבית", tint = tint, modifier = Modifier.size(18.dp))

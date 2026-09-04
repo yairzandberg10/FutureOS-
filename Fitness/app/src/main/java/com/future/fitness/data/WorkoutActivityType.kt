@@ -24,7 +24,6 @@ enum class ActivityCategory(val label: String) {
     RUNNING("ריצה"),
     WALKING("הליכה"),
     CYCLING("רכיבה על אופניים"),
-    SWIMMING("שחייה"),
     CARDIO("קרדיו וחדר כושר"),
     STRENGTH("כוח"),
     MIND_BODY("גוף ונפש"),
@@ -51,6 +50,29 @@ data class WorkoutActivityType(
     val usesGps: Boolean = false,
 )
 
+/**
+ * תבנית מסך האימון החי - איזה מדדים ומסכי-משנה מוצגים בזמן אימון (ניתן לדפדף
+ * ביניהם עם חצי שמאל/ימין), במקביל לארבע התבניות של אפליקציית "אימון" ב-
+ * Apple Watch: https://support.apple.com/guide/watch/workout-views-and-running-metrics-apd1f24d4d35/watchos
+ * אין כאן תבנית שחייה - מכשיר טלפון רגיל (בלי אטימות מים, בלי מסך מגע שאפשר
+ * לנעול נגד מים) לא מתאים למעקב אימון תוך כדי שחייה בפועל.
+ */
+enum class WorkoutTemplate {
+    RUN_WALK,
+    CYCLING,
+    GENERAL,
+}
+
+/** ריצה/הליכה/טיולי שטח/אתלטיקה מקבלים את תבנית הריצה (דינמיקת ריצה, גובה) -
+ * בדיוק כמו קיבוץ "ריצה והליכה" באפל ווטש. שאר הפעילויות מקבלות את התבנית
+ * הגנרית, פרט לרכיבה על אופניים שמקבלת תבנית ייעודית משלה. */
+fun WorkoutActivityType.template(): WorkoutTemplate = when {
+    category == ActivityCategory.CYCLING -> WorkoutTemplate.CYCLING
+    category == ActivityCategory.RUNNING || category == ActivityCategory.WALKING -> WorkoutTemplate.RUN_WALK
+    id == "hiking" || id == "track_and_field" -> WorkoutTemplate.RUN_WALK
+    else -> WorkoutTemplate.GENERAL
+}
+
 /** קטלוג סוגי האימון המלא - כל סוגי הפעילות שאפשר להתחיל דרך אפליקציית
  * "אימון" בשעון חכם (Apple Watch), מתורגם לעברית. כל סוג שנבחר במסך
  * ActivityTypesScreen מתחיל מעקב חי - GPS לסוגי חוץ (usesGps), או טיימר
@@ -69,10 +91,6 @@ object WorkoutActivityTypes {
         WorkoutActivityType("outdoor_cycle", "רכיבה בחוץ", ActivityCategory.CYCLING, 7.5, Icons.Rounded.DirectionsBike, usesGps = true),
         WorkoutActivityType("indoor_cycle", "רכיבה בחדר כושר", ActivityCategory.CYCLING, 6.8, Icons.Rounded.DirectionsBike),
         WorkoutActivityType("hand_cycling", "רכיבת יד", ActivityCategory.CYCLING, 5.0, Icons.Rounded.DirectionsBike),
-
-        // שחייה
-        WorkoutActivityType("pool_swim", "שחייה בבריכה", ActivityCategory.SWIMMING, 8.0, Icons.Rounded.Pool),
-        WorkoutActivityType("open_water_swim", "שחייה במים פתוחים", ActivityCategory.SWIMMING, 9.0, Icons.Rounded.Pool),
 
         // קרדיו וחדר כושר
         WorkoutActivityType("elliptical", "אליפטי", ActivityCategory.CARDIO, 5.0, Icons.Rounded.Whatshot),
@@ -127,7 +145,7 @@ object WorkoutActivityTypes {
         WorkoutActivityType("martial_arts", "אומנויות לחימה", ActivityCategory.INDIVIDUAL_SPORTS, 10.3, Icons.Rounded.EmojiEvents),
         WorkoutActivityType("wrestling", "היאבקות", ActivityCategory.INDIVIDUAL_SPORTS, 6.0, Icons.Rounded.EmojiEvents),
         WorkoutActivityType("fencing", "סיף", ActivityCategory.INDIVIDUAL_SPORTS, 6.0, Icons.Rounded.EmojiEvents),
-        WorkoutActivityType("track_and_field", "אתלטיקה קלה", ActivityCategory.INDIVIDUAL_SPORTS, 8.0, Icons.Rounded.EmojiEvents),
+        WorkoutActivityType("track_and_field", "אתלטיקה קלה", ActivityCategory.INDIVIDUAL_SPORTS, 8.0, Icons.Rounded.EmojiEvents, usesGps = true),
         WorkoutActivityType("climbing", "טיפוס", ActivityCategory.INDIVIDUAL_SPORTS, 8.0, Icons.Rounded.Terrain),
         WorkoutActivityType("gymnastics", "התעמלות", ActivityCategory.INDIVIDUAL_SPORTS, 4.0, Icons.Rounded.EmojiEvents),
 

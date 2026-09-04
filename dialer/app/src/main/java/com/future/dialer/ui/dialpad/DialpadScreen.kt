@@ -4,7 +4,10 @@ import android.text.format.DateUtils
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CallMade
@@ -25,6 +28,7 @@ import com.future.dialer.R
 import com.future.dialer.data.model.CallRecord
 import com.future.dialer.data.model.CallType
 import com.future.dialer.data.model.Contact
+import com.future.dialer.ui.theme.DialerCallColors
 import com.future.sharednav.focus.FocusableItem
 
 /**
@@ -40,6 +44,22 @@ fun DialpadScreen(
     val dialedNumber by viewModel.dialedNumber.collectAsState()
     val suggestions by viewModel.suggestedContacts.collectAsState()
     val recentCalls by viewModel.recentCalls.collectAsState()
+
+    // פוקוס D-pad התחלתי על הפריט הראשון ברשימה הרלוונטית (שיחות אחרונות/הצעות
+    // אנשי קשר) - בלי זה נחיתה על המסך משאירה אותו בלי שום פריט מודגש, בניגוד
+    // לדפוס העקבי ב-InCallScreen (מיקוד אוטומטי על כפתור המענה).
+    val firstRecentCallFocusRequester = remember { FocusRequester() }
+    val firstSuggestionFocusRequester = remember { FocusRequester() }
+    LaunchedEffect(dialedNumber.isEmpty(), recentCalls.isNotEmpty()) {
+        if (dialedNumber.isEmpty() && recentCalls.isNotEmpty()) {
+            firstRecentCallFocusRequester.requestFocus()
+        }
+    }
+    LaunchedEffect(dialedNumber.isEmpty(), suggestions.isNotEmpty()) {
+        if (dialedNumber.isNotEmpty() && suggestions.isNotEmpty()) {
+            firstSuggestionFocusRequester.requestFocus()
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -86,8 +106,8 @@ fun DialpadScreen(
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                     contentPadding = PaddingValues(bottom = 16.dp)
                 ) {
-                    items(recentCalls, key = { it.id }) { record ->
-                        CallHistoryItem(record, onCall)
+                    itemsIndexed(recentCalls, key = { _, it -> it.id }) { index, record ->
+                        CallHistoryItem(record, onCall, focusRequester = if (index == 0) firstRecentCallFocusRequester else null)
                     }
                 }
             }
@@ -107,8 +127,8 @@ fun DialpadScreen(
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                     contentPadding = PaddingValues(bottom = 16.dp)
                 ) {
-                    items(suggestions, key = { it.id }) { contact ->
-                        ContactSuggestionItem(contact, onCall)
+                    itemsIndexed(suggestions, key = { _, it -> it.id }) { index, contact ->
+                        ContactSuggestionItem(contact, onCall, focusRequester = if (index == 0) firstSuggestionFocusRequester else null)
                     }
                 }
             }
@@ -128,8 +148,8 @@ private fun EmptyState(text: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun ContactSuggestionItem(contact: Contact, onCall: (String, String) -> Unit) {
-    FocusableItem(onClick = { onCall(contact.name, contact.phoneNumber) }, accentColor = MaterialTheme.colorScheme.primary) {
+private fun ContactSuggestionItem(contact: Contact, onCall: (String, String) -> Unit, focusRequester: FocusRequester? = null) {
+    FocusableItem(onClick = { onCall(contact.name, contact.phoneNumber) }, accentColor = MaterialTheme.colorScheme.primary, focusRequester = focusRequester) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -167,8 +187,8 @@ private fun ContactSuggestionItem(contact: Contact, onCall: (String, String) -> 
 }
 
 @Composable
-fun CallHistoryItem(record: CallRecord, onCall: (String, String) -> Unit) {
-    FocusableItem(onClick = { onCall(record.name ?: record.phoneNumber, record.phoneNumber) }, accentColor = MaterialTheme.colorScheme.primary) {
+fun CallHistoryItem(record: CallRecord, onCall: (String, String) -> Unit, focusRequester: FocusRequester? = null) {
+    FocusableItem(onClick = { onCall(record.name ?: record.phoneNumber, record.phoneNumber) }, accentColor = MaterialTheme.colorScheme.primary, focusRequester = focusRequester) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -176,9 +196,9 @@ fun CallHistoryItem(record: CallRecord, onCall: (String, String) -> Unit) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             val (icon, color) = when (record.type) {
-                CallType.INCOMING -> Icons.Rounded.CallReceived to Color(0xFF4CAF50)
-                CallType.OUTGOING -> Icons.Rounded.CallMade to Color(0xFF2196F3)
-                CallType.MISSED -> Icons.Rounded.CallMissed to Color(0xFFF44336)
+                CallType.INCOMING -> Icons.Rounded.CallReceived to DialerCallColors.incoming
+                CallType.OUTGOING -> Icons.Rounded.CallMade to DialerCallColors.outgoing
+                CallType.MISSED -> Icons.Rounded.CallMissed to DialerCallColors.missed
                 CallType.REJECTED -> Icons.Rounded.CallMissed to MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
             }
 

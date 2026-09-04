@@ -48,7 +48,7 @@ import com.future.fitness.data.Workout
 import com.future.fitness.ui.components.IconListRow
 import com.future.fitness.ui.components.StatTile
 import com.future.fitness.ui.digitForKey
-import com.future.fitness.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 
 private data class MenuItem(val digit: String, val icon: androidx.compose.ui.graphics.vector.ImageVector, val label: String, val subtitle: String, val onClick: () -> Unit)
 

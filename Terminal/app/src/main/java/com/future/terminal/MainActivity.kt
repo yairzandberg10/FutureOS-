@@ -33,6 +33,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
@@ -50,8 +52,10 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import com.future.terminal.theme.ThemeClient
-import com.future.terminal.ui.theme.FutureTheme
+import com.future.sharednav.theme.ThemeClient
+import com.future.sharednav.theme.FutureTheme
+import com.future.sharednav.theme.inputBarColor
+import com.future.sharednav.theme.outputTextColor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -66,6 +70,14 @@ class MainActivity : ComponentActivity() {
 
     private val shell = ShellSession()
 
+    override fun onDestroy() {
+        // shell מריץ פקודות su -c אמיתיות עם הרשאות root. בלי הביטול הזה,
+        // פקודה ארוכה (sleep, tail -f וכו') שהמשתמש יצא ממנה בלי לבטל ידנית
+        // הייתה נשארת רצה ברקע ללא הגבלת זמן, בהרשאות root.
+        shell.cancelCurrent()
+        super.onDestroy()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -79,6 +91,11 @@ class MainActivity : ComponentActivity() {
             var isRunning by remember { mutableStateOf(false) }
             var showMenu by remember { mutableStateOf(false) }
             val context = LocalContext.current
+            // בלי אף קריאת FocusRequester באפליקציה, שדה הפקודה - הפעולה המרכזית
+            // של הטרמינל - לא מקבל פוקוס אוטומטי, ואין הבטחה שהקלדה תעבוד בכלל
+            // בלי לחיצת כיוון ידנית קודם.
+            val inputFocusRequester = remember { FocusRequester() }
+            LaunchedEffect(Unit) { inputFocusRequester.requestFocus() }
             var theme by remember {
                 mutableStateOf(
                     ThemeClient.getTheme(this@MainActivity).let {
@@ -132,7 +149,9 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+            // רק אזור פלט/קלט הפקודות (טקסט שורת-פקודה, בדרך כלל אנגלית/נתיבים)
+            // נשאר בכיוון LTR - הכותרת ותפריט האפשרויות העבריים נשארים ב-RTL הטבעי.
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
                 Surface(
                     modifier = Modifier
                         .fillMaxSize()
@@ -159,6 +178,7 @@ class MainActivity : ComponentActivity() {
                             )
                             TerminalIconButton(Icons.Rounded.MoreVert, "אפשרויות", { showMenu = true }, theme)
                         }
+                        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
                         LazyColumn(
                             state = listState,
                             modifier = Modifier
@@ -186,7 +206,7 @@ class MainActivity : ComponentActivity() {
                             items(lines) { line ->
                                 Text(
                                     text = line.text,
-                                    color = if (line.isCommand) theme.accentColor else Color(0xFFD0D0D0),
+                                    color = if (line.isCommand) theme.accentColor else theme.outputTextColor,
                                     fontFamily = FontFamily.Monospace,
                                     fontSize = 12.sp
                                 )
@@ -195,7 +215,7 @@ class MainActivity : ComponentActivity() {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(Color(0xFF111111))
+                                .background(theme.inputBarColor)
                                 .padding(8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -203,12 +223,14 @@ class MainActivity : ComponentActivity() {
                             TextField(
                                 value = input,
                                 onValueChange = { input = it },
-                                modifier = Modifier.weight(1f),
-                                textStyle = TextStyle(color = Color.White, fontFamily = FontFamily.Monospace, fontSize = 13.sp),
+                                modifier = Modifier.weight(1f).focusRequester(inputFocusRequester),
+                                textStyle = TextStyle(color = theme.textColor, fontFamily = FontFamily.Monospace, fontSize = 13.sp),
                                 colors = TextFieldDefaults.colors(
                                     focusedContainerColor = Color.Transparent,
                                     unfocusedContainerColor = Color.Transparent,
-                                    focusedIndicatorColor = Color.Transparent,
+                                    // אינדיקטור פוקוס אמיתי (קו תחתון בצבע ההדגשה) - בלי זה,
+                                    // כשהמסך כולו מבוסס D-pad, אין שום סימן ויזואלי שהשדה ממוקד.
+                                    focusedIndicatorColor = theme.accentColor,
                                     unfocusedIndicatorColor = Color.Transparent,
                                     cursorColor = theme.accentColor
                                 ),
@@ -225,7 +247,7 @@ class MainActivity : ComponentActivity() {
                                     contentDescription = "בטל",
                                     onClick = { shell.cancelCurrent() },
                                     theme = theme,
-                                    tint = Color(0xFFFF6B6B)
+                                    tint = theme.dangerColor
                                 )
                             } else {
                                 TerminalIconButton(
@@ -237,6 +259,7 @@ class MainActivity : ComponentActivity() {
                                     enabled = !isRunning
                                 )
                             }
+                        }
                         }
                     }
 
@@ -277,6 +300,8 @@ class MainActivity : ComponentActivity() {
 
 }
 
+/** עטיפה דקה סביב TopBarIconButton המשותף (מודול SharedKeypadNav) - חתימת
+ * הקריאה נשארת זהה כדי שקריאות קיימות ב-Terminal לא ישתנו. */
 @Composable
 private fun TerminalIconButton(
     icon: ImageVector,
@@ -286,22 +311,14 @@ private fun TerminalIconButton(
     tint: Color = theme.accentColor,
     enabled: Boolean = true
 ) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val bgColor by androidx.compose.animation.animateColorAsState(
-        if (isFocused) theme.accentColor.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.08f),
-        label = "termIconBtnBg"
-    )
-    Box(
-        modifier = Modifier
-            .size(32.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(bgColor)
-            .clickable(interactionSource = interactionSource, indication = null, enabled = enabled, onClick = onClick)
-            .focusable(interactionSource = interactionSource, enabled = enabled),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(icon, contentDescription = contentDescription, tint = tint, modifier = Modifier.size(18.dp))
+    // TopBarIconButton המשותף לא תומך ב-enabled - כשמנוטרל, פשוט לא מצמידים
+    // onClick אמיתי (הכפתור עדיין מוצג אך לא לחיץ/ממוקד).
+    if (enabled) {
+        com.future.sharednav.components.TopBarIconButton(icon, contentDescription, tint, tint, onClick)
+    } else {
+        Box(modifier = Modifier.size(32.dp), contentAlignment = Alignment.Center) {
+            Icon(icon, contentDescription = contentDescription, tint = tint.copy(alpha = 0.4f), modifier = Modifier.size(18.dp))
+        }
     }
 }
 
@@ -323,23 +340,24 @@ private fun TerminalOptionsMenu(theme: FutureTheme, onDismiss: () -> Unit, onCle
 
 @Composable
 private fun TerminalMenuRow(label: String, icon: ImageVector, onClick: () -> Unit, theme: FutureTheme, isDestructive: Boolean = false) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val bgColor by androidx.compose.animation.animateColorAsState(
-        if (isFocused) Color.White.copy(alpha = 0.12f) else Color.Transparent,
-        label = "termMenuRowBg"
-    )
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(bgColor)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource)
-            .padding(horizontal = 20.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically
+    com.future.sharednav.focus.FocusableItem(
+        onClick = onClick,
+        accentColor = theme.accentColor,
+        modifier = Modifier.fillMaxWidth(),
+        idleBackgroundColor = Color.Transparent,
+        focusedBackgroundColor = Color.White.copy(alpha = 0.12f),
+        showBorderOnFocus = false,
+        scaleOnFocus = false,
+        cornerRadius = 0.dp,
+        contentPadding = 0.dp,
     ) {
-        Icon(icon, contentDescription = null, tint = if (isDestructive) Color(0xFFFF6B6B) else theme.accentColor, modifier = Modifier.size(20.dp))
-        Spacer(modifier = Modifier.width(14.dp))
-        Text(label, color = if (isDestructive) Color(0xFFFF6B6B) else theme.textColor, fontSize = 15.sp)
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(icon, contentDescription = null, tint = if (isDestructive) theme.dangerColor else theme.accentColor, modifier = Modifier.size(20.dp))
+            Spacer(modifier = Modifier.width(14.dp))
+            Text(label, color = if (isDestructive) theme.dangerColor else theme.textColor, fontSize = 15.sp)
+        }
     }
 }

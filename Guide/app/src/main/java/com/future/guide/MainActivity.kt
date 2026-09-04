@@ -11,11 +11,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.future.guide.data.findGuideApp
-import com.future.guide.theme.ThemeClient
+import com.future.sharednav.theme.ThemeClient
 import com.future.guide.ui.GuideDetailScreen
 import com.future.guide.ui.GuideHomeScreen
 import com.future.guide.ui.GuideRoute
-import com.future.guide.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 
 class MainActivity : ComponentActivity() {
     // המכשיר האמיתי הוא מקלדת T9 בלבד בלי מסך מגע - מבטלים קלט מגע לגמרי כדי

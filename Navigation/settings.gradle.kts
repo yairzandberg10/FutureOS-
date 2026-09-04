@@ -22,7 +22,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "navigation"
+rootProject.name = "Navigation"
 include(":app")
 
 // מודול קיט הפוקוס/T9 המשותף לסוויטה - חי כתיקייה אחות עצמאית

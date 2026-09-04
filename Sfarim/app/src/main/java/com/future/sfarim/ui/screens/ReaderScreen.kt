@@ -1,7 +1,9 @@
 package com.future.sfarim.ui.screens
 
 import android.content.Intent
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.animateScrollBy
@@ -50,6 +52,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -66,7 +69,7 @@ import com.future.sfarim.data.CommentaryEntry
 import com.future.sfarim.data.LibraryBook
 import com.future.sfarim.data.LibrarySegment
 import com.future.sfarim.ui.components.ScreenTopBar
-import com.future.sfarim.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 import com.future.sfarim.util.HebrewNumerals
 import com.future.sfarim.util.stripHtmlTags
 import kotlinx.coroutines.launch
@@ -291,12 +294,18 @@ private fun SegmentRow(
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
     val cleanedText = remember(segment.id) { stripHtmlTags(segment.textHe) }
+    // בורדר + scale בפוקוס, כמו בשאר האפליקציה (FocusableItem המשותף) - בלי זה
+    // דווקא מסך הקריאה, המרכזי ביותר, נראה שונה מכל שאר המסכים.
+    val scale by animateFloatAsState(if (isFocused) 1.02f else 1f, label = "segmentRowScale")
+    val shape = RoundedCornerShape(10.dp)
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
+            .graphicsLayer { scaleX = scale; scaleY = scale }
+            .clip(shape)
             .background(if (isFocused) theme.accentColor.copy(alpha = 0.12f) else Color.Transparent)
+            .then(if (isFocused) Modifier.border(width = 1.5.dp, color = theme.accentColor, shape = shape) else Modifier)
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             // לחיצת OK/מרכז הייתה no-op בלי שום רמז על המסך - עכשיו פותחת את
             // אותו תפריט אפשרויות (סימניה/שיתוף/פרשנים) שמקש Menu כבר מספק,
@@ -433,10 +442,15 @@ private fun MenuRow(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
+    val scale by animateFloatAsState(if (isFocused) 1.02f else 1f, label = "menuRowScale")
+    val shape = RoundedCornerShape(10.dp)
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .graphicsLayer { scaleX = scale; scaleY = scale }
+            .clip(shape)
             .background(if (isFocused) theme.accentColor.copy(alpha = 0.12f) else Color.Transparent)
+            .then(if (isFocused) Modifier.border(width = 1.5.dp, color = theme.accentColor, shape = shape) else Modifier)
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
             .focusable(interactionSource = interactionSource)

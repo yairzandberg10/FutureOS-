@@ -717,6 +717,16 @@ class SystemInteractor(private val context: Context) {
         null
     }
 
+    // אין API ציבורי ישיר ל"מי הלאנצ'ר הנוכחי" (ROLE_HOME) - הדרך הפומבית לגלות
+    // את זה היא resolveActivity על CATEGORY_HOME עם MATCH_DEFAULT_ONLY, בדיוק כמו
+    // שהמערכת עצמה קובעת איזו אפליקציה תיפתח בלחיצה על מקש הבית.
+    fun getDefaultHomePackage(): String? = try {
+        val intent = android.content.Intent(android.content.Intent.ACTION_MAIN).addCategory(android.content.Intent.CATEGORY_HOME)
+        context.packageManager.resolveActivity(intent, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY)?.activityInfo?.packageName
+    } catch (e: Exception) {
+        null
+    }
+
     // --- הרשאות אפליקציה (Privacy) ---
 
     data class PermissionEntry(val name: String, val shortLabel: String, val granted: Boolean)

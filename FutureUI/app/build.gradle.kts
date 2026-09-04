@@ -9,7 +9,7 @@ android {
 
     defaultConfig {
         applicationId = "com.future.futureui"
-        minSdk = 26
+        minSdk = 31
         targetSdk = 31
         versionCode = 1
         versionName = "1.0"
@@ -34,6 +34,7 @@ android {
 }
 
 dependencies {
+    implementation(project(":sharedkeypadnav"))
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)
@@ -43,7 +44,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.0")
+    implementation(libs.androidx.lifecycle.runtime.compose)
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)

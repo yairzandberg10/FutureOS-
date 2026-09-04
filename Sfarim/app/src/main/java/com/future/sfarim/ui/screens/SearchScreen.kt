@@ -21,9 +21,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.LayoutDirection
@@ -33,7 +40,7 @@ import com.future.sfarim.data.BookSearchEntry
 import com.future.sfarim.data.SegmentSearchResult
 import com.future.sfarim.ui.components.FocusableItem
 import com.future.sfarim.ui.components.ScreenTopBar
-import com.future.sfarim.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 import com.future.sfarim.util.stripHtmlTags
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -52,6 +59,7 @@ fun SearchScreen(
     var bookResults by remember { mutableStateOf<List<BookSearchEntry>>(emptyList()) }
     var segmentResults by remember { mutableStateOf<List<SegmentSearchResult>>(emptyList()) }
     val focusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
 
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
 
@@ -88,7 +96,18 @@ fun SearchScreen(
                         textStyle = TextStyle(color = theme.textColor, fontSize = 16.sp, textDirection = androidx.compose.ui.text.style.TextDirection.Rtl),
                         cursorBrush = SolidColor(theme.accentColor),
                         singleLine = true,
-                        modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .focusRequester(focusRequester)
+                            // בשדה טקסט, Compose "בולע" את מקש למטה פנימית ולא מזיז פוקוס -
+                            // מכשיר עם מקלדת בלבד היה נשאר תקוע בשדה החיפוש בלי דרך לרדת
+                            // לתוצאות. מיירטים את המקש כאן ומזיזים פוקוס ידנית, כמו ב-Settings.
+                            .onPreviewKeyEvent {
+                                if (it.type == KeyEventType.KeyDown && it.key == Key.DirectionDown) {
+                                    focusManager.moveFocus(FocusDirection.Down)
+                                    true
+                                } else false
+                            },
                     )
                 }
 

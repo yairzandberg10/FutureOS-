@@ -30,7 +30,7 @@ import androidx.compose.ui.unit.sp
 import com.future.music.data.ArtistGroup
 import com.future.music.ui.components.FocusableItem
 import com.future.music.ui.components.ScreenTopBar
-import com.future.music.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 
 @Composable
 fun ArtistsScreen(artists: List<ArtistGroup>, theme: FutureTheme, onBack: () -> Unit, onOpenArtist: (String) -> Unit) {

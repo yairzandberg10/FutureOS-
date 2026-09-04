@@ -1,7 +1,9 @@
 package com.future.futurelauncher.ui
+import com.future.sharednav.focus.bringIntoViewOnFocus
 
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.provider.Settings
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Image
@@ -34,11 +36,13 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -50,9 +54,9 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.graphics.drawable.toBitmap
 import com.future.futurelauncher.DefaultApps
+import com.future.futurelauncher.DeveloperApps
 import com.future.futurelauncher.R
-import com.future.futurelauncher.ui.theme.FutureTheme
-import kotlinx.coroutines.delay
+import com.future.sharednav.theme.FutureTheme
 
 /**
  * מעטפת אחידה לכל תפריטי ה"אופציות" של הלאנצ'ר - זכוכית כהה/בהירה עקבית עם
@@ -134,6 +138,10 @@ private fun GlassButton(
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
     val shape = RoundedCornerShape(14.dp)
+    // Dialog() מריץ את החלון שלו במעטפת נפרדת - אם מבקשים פוקוס לפני שהחלון
+    // בכלל נדבק, הבקשה נבלעת בשקט. onGloballyPositioned מבטיח שהבקשה תקרה
+    // ברגע שהכפתור באמת נמדד/מוצג, במקום delay() קבוע ושביר.
+    var hasRequestedFocus by remember { mutableStateOf(false) }
 
     val background = when {
         isDestructive -> Color(0xFFCF4A4A).copy(alpha = if (isFocused) 0.9f else 0.75f)
@@ -149,6 +157,14 @@ private fun GlassButton(
     Box(
         modifier = modifier
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
+            .then(
+                if (focusRequester != null) Modifier.onGloballyPositioned {
+                    if (!hasRequestedFocus) {
+                        hasRequestedFocus = true
+                        focusRequester.requestFocus()
+                    }
+                } else Modifier
+            )
             .clip(shape)
             .background(background)
             .border(
@@ -157,7 +173,7 @@ private fun GlassButton(
                 shape = shape
             )
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource)
+            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
             .padding(horizontal = 16.dp, vertical = 10.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -222,7 +238,7 @@ private fun GlassSettingSwitch(
             .background(bgColor)
             .then(if (isFocused) Modifier.border(2.dp, theme.accentColor, shape) else Modifier)
             .clickable(interactionSource = interactionSource, indication = null) { onCheckedChange(!checked) }
-            .focusable(interactionSource = interactionSource)
+            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
             .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -310,11 +326,6 @@ fun AppOptionsDialog(
     var folderName by remember { mutableStateOf("") }
     var customName by remember { mutableStateOf(item.customLabel ?: item.label) }
     val focusRequester = remember { FocusRequester() }
-
-    LaunchedEffect(Unit) {
-        delay(100)
-        focusRequester.requestFocus()
-    }
 
     GlassDialog(
         onDismissRequest = onDismiss,
@@ -428,11 +439,6 @@ fun EmptySlotOptionsDialog(
     var folderName by remember { mutableStateOf("") }
     val focusRequester = remember { FocusRequester() }
 
-    LaunchedEffect(Unit) {
-        delay(100)
-        focusRequester.requestFocus()
-    }
-
     GlassDialog(
         onDismissRequest = onDismiss,
         theme = theme,
@@ -534,13 +540,23 @@ fun AppListDialog(
     // עוגן להתחיל ממנו. onKeyEvent על ה-Box עדיין תופס אירועים שעולים
     // (bubble) מהפריט הממוקד, בלי שה-Box עצמו יצטרך להיות focusable.
     val firstItemFocusRequester = remember { FocusRequester() }
+    // Dialog() מריץ את החלון שלו במעטפת נפרדת - אם מבקשים פוקוס לפני שהחלון
+    // בכלל נדבק, הבקשה נבלעת בשקט. onGloballyPositioned (למטה, על פריט האפליקציה
+    // הראשון) מבטיח שהבקשה תקרה ברגע שהפריט באמת נמדד/מוצג, במקום delay() קבוע ושביר.
+    var hasRequestedInitialFocus by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     LaunchedEffect(restrictToDefaultApps) {
         val intent = Intent(Intent.ACTION_MAIN, null).apply {
             addCategory(Intent.CATEGORY_LAUNCHER)
         }
+        // אותה בדיקה כמו SystemInteractor.isDeveloperModeEnabled ב-Settings - ציבורית,
+        // בלי הרשאה מיוחדת. גם קוד "פתח את כל האפליקציות" (5357) לא חושף טרמינל/
+        // לאנצ'ר/SystemUI - אלה שני מנגנוני הגבלה נפרדים.
+        val devModeEnabled = Settings.Global.getInt(context.contentResolver, Settings.Global.DEVELOPMENT_SETTINGS_ENABLED, 0) != 0
         apps = pm.queryIntentActivities(intent, 0)
             .filter { !restrictToDefaultApps || DefaultApps.isDefault(it.activityInfo.packageName) }
+            .filter { devModeEnabled || !DeveloperApps.isDeveloperOnly(it.activityInfo.packageName) }
             .map { resolveInfo ->
                 LauncherItem.App(
                     id = "app:${resolveInfo.activityInfo.packageName}/${resolveInfo.activityInfo.name}",
@@ -548,13 +564,6 @@ fun AppListDialog(
                     label = resolveInfo.loadLabel(pm).toString()
                 )
             }.sortedBy { it.label.lowercase() }
-        if (apps.isNotEmpty()) {
-            // Dialog() מריץ את החלון שלו במעטפת נפרדת - אם מבקשים פוקוס לפני
-            // שהחלון בכלל נדבק, הבקשה נבלעת בשקט (בלי חריגה, בלי אפקט), בדיוק
-            // כמו ב-EmptySlotOptionsDialog באותו קובץ.
-            delay(100)
-            firstItemFocusRequester.requestFocus()
-        }
     }
 
     GlassDialog(
@@ -610,6 +619,14 @@ fun AppListDialog(
                         modifier = Modifier
                             .size(40.dp)
                             .then(if (index == 0) Modifier.focusRequester(firstItemFocusRequester) else Modifier)
+                            .then(
+                                if (index == 0) Modifier.onGloballyPositioned {
+                                    if (!hasRequestedInitialFocus) {
+                                        hasRequestedInitialFocus = true
+                                        firstItemFocusRequester.requestFocus()
+                                    }
+                                } else Modifier
+                            )
                             .onFocusChanged { isAppFocused = it.isFocused },
                         shape = RoundedCornerShape(percent = 28),
                         color = if (isAppFocused) theme.accentColor.copy(alpha = 0.4f) else theme.textColor.copy(alpha = 0.1f),

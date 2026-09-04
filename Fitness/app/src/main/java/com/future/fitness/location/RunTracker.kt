@@ -22,6 +22,17 @@ class RunTracker(private val context: Context) {
         private set
     var hasFix by mutableStateOf(false)
         private set
+    // גובה נוכחי וסך העלייה המצטברת (מ-Location.altitude, כשה-GPS מספק אותו) -
+    // מבוסס אך ורק על GPS, בלי חיישן ברומטרי, ולכן רועש יחסית; מסוכם רק עליות
+    // (לא ירידות) בין קיבועים עוקבים, כמו "Elevation Gain" באפל ווטש.
+    var currentAltitudeMeters by mutableStateOf<Double?>(null)
+        private set
+    var elevationGainMeters by mutableDoubleStateOf(0.0)
+        private set
+    // מהירות רגעית (מ-Location.speed, קמ"ש) - למסך הרכיבה, שם קצב דקות-לק"מ
+    // לא רלוונטי.
+    var currentSpeedKmh by mutableStateOf<Double?>(null)
+        private set
 
     private val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
     private var lastLocation: Location? = null
@@ -33,6 +44,9 @@ class RunTracker(private val context: Context) {
         distanceMeters = 0.0
         lastLocation = null
         hasFix = false
+        currentAltitudeMeters = null
+        elevationGainMeters = 0.0
+        currentSpeedKmh = null
         isTracking = true
         try {
             val provider = when {
@@ -61,6 +75,15 @@ class RunTracker(private val context: Context) {
         if (last != null) {
             distanceMeters += last.distanceTo(location)
         }
+        if (location.hasAltitude()) {
+            val previousAltitude = if (last?.hasAltitude() == true) last.altitude else null
+            if (previousAltitude != null) {
+                val delta = location.altitude - previousAltitude
+                if (delta > 0) elevationGainMeters += delta
+            }
+            currentAltitudeMeters = location.altitude
+        }
+        currentSpeedKmh = if (location.hasSpeed()) (location.speed * 3.6) else null
         lastLocation = location
     }
 

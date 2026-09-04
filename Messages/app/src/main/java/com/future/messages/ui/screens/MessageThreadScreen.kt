@@ -1,4 +1,5 @@
 package com.future.messages.ui.screens
+import com.future.sharednav.focus.bringIntoViewOnFocus
 
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -7,15 +8,22 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowForward
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material.icons.rounded.AttachFile
 import androidx.compose.material.icons.rounded.Call
@@ -28,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
@@ -41,8 +50,9 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import com.future.messages.data.Conversation
 import com.future.messages.data.Message
-import com.future.messages.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.*
@@ -79,7 +89,7 @@ fun MessageThreadScreen(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                HeaderIconButton(Icons.AutoMirrored.Rounded.ArrowForward, "חזור", theme, onClick = onBack)
+                HeaderIconButton(Icons.AutoMirrored.Rounded.ArrowBack, "חזור", theme, onClick = onBack)
                 Text(
                     text = conversation.contact.name,
                     color = theme.textColor,
@@ -90,8 +100,28 @@ fun MessageThreadScreen(
                 HeaderIconButton(Icons.Rounded.Call, "התקשר", theme, onClick = onCall)
             }
 
+            val messageListState = rememberLazyListState()
+            val messageListScope = rememberCoroutineScope()
             LazyColumn(
-                modifier = Modifier.weight(1f).fillMaxWidth(),
+                state = messageListState,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .focusable().bringIntoViewOnFocus()
+                    .onKeyEvent { event ->
+                        if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
+                        when (event.key) {
+                            // reverseLayout=true: אינדקס 0 הוא ההודעה החדשה ביותר בתחתית -
+                            // "מעלה" (הודעות ישנות יותר) = גלילה לאינדקסים גבוהים יותר.
+                            Key.DirectionUp -> {
+                                messageListScope.launch { messageListState.animateScrollBy(150f) }; true
+                            }
+                            Key.DirectionDown -> {
+                                messageListScope.launch { messageListState.animateScrollBy(-150f) }; true
+                            }
+                            else -> false
+                        }
+                    },
                 reverseLayout = true,
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
             ) {
@@ -184,7 +214,7 @@ private fun AttachButton(theme: FutureTheme, onClick: () -> Unit) {
             .clip(CircleShape)
             .background(bgColor)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource),
+            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus(),
         contentAlignment = Alignment.Center
     ) {
         Icon(Icons.Rounded.AttachFile, contentDescription = "צרף תמונה", tint = tint, modifier = Modifier.size(22.dp))
@@ -198,22 +228,9 @@ private fun HeaderIconButton(
     theme: FutureTheme,
     onClick: () -> Unit
 ) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val bgColor by animateColorAsState(if (isFocused) theme.accentColor.copy(alpha = 0.25f) else Color.Transparent, label = "headerIconBg")
-    val tint by animateColorAsState(if (isFocused) theme.accentColor else theme.textColor, label = "headerIconTint")
-
-    Box(
-        modifier = Modifier
-            .size(40.dp)
-            .clip(CircleShape)
-            .background(bgColor)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(icon, contentDescription = contentDescription, tint = tint, modifier = Modifier.size(22.dp))
-    }
+    // עטיפה דקה סביב TopBarIconButton המשותף (מודול SharedKeypadNav) - חתימת
+    // הקריאה נשארת זהה כדי שקריאות קיימות ב-Messages לא ישתנו.
+    com.future.sharednav.components.TopBarIconButton(icon, contentDescription, theme.textColor, theme.accentColor, onClick)
 }
 
 @Composable
@@ -240,7 +257,7 @@ private fun AttachmentPreview(uri: Uri, theme: FutureTheme, onRemove: () -> Unit
             modifier = Modifier
                 .size(20.dp)
                 .clickable(interactionSource = interactionSource, indication = null, onClick = onRemove)
-                .focusable(interactionSource = interactionSource)
+                .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
         )
     }
 }
@@ -268,7 +285,7 @@ private fun SendButton(theme: FutureTheme, enabled: Boolean, onClick: () -> Unit
             .clip(CircleShape)
             .background(bgColor)
             .clickable(interactionSource = interactionSource, indication = null, enabled = enabled, onClick = onClick)
-            .focusable(interactionSource = interactionSource, enabled = enabled),
+            .focusable(interactionSource = interactionSource, enabled = enabled).bringIntoViewOnFocus(),
         contentAlignment = Alignment.Center
     ) {
         Icon(
@@ -311,7 +328,7 @@ private fun MessageBubble(message: Message, theme: FutureTheme, onClick: () -> U
                         else if (message.isFromMe) theme.accentColor else theme.textColor.copy(alpha = 0.12f)
                     )
                     .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-                    .focusable(interactionSource = interactionSource)
+                    .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
             ) {
                 Column(modifier = Modifier.padding(6.dp)) {
                     if (bitmap != null) {
@@ -346,6 +363,7 @@ private fun MessageBubble(message: Message, theme: FutureTheme, onClick: () -> U
 
 @Composable
 private fun MessageActionDialog(theme: FutureTheme, onForward: () -> Unit, onDelete: () -> Unit, onDismiss: () -> Unit) {
+    val firstRowFocusRequester = remember { FocusRequester() }
     Dialog(onDismissRequest = onDismiss) {
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
             Column(
@@ -355,7 +373,7 @@ private fun MessageActionDialog(theme: FutureTheme, onForward: () -> Unit, onDel
                     .background(theme.surfaceColor)
                     .padding(vertical = 8.dp)
             ) {
-                ActionDialogRow(theme, icon = Icons.AutoMirrored.Rounded.Send, label = "העבר הודעה", onClick = onForward)
+                ActionDialogRow(theme, icon = Icons.AutoMirrored.Rounded.Send, label = "העבר הודעה", onClick = onForward, focusRequester = firstRowFocusRequester)
                 ActionDialogRow(theme, icon = Icons.Rounded.Delete, label = "מחק הודעה", onClick = onDelete, isDestructive = true)
             }
         }
@@ -368,19 +386,33 @@ private fun ActionDialogRow(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
     onClick: () -> Unit,
-    isDestructive: Boolean = false
+    isDestructive: Boolean = false,
+    focusRequester: FocusRequester? = null,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
     val bgColor by animateColorAsState(if (isFocused) theme.accentColor.copy(alpha = 0.25f) else Color.Transparent, label = "actionRowBg")
-    val contentColor = if (isDestructive) Color(0xFFFF453A) else theme.textColor
+    val contentColor = if (isDestructive) theme.dangerColor else theme.textColor
+    // Dialog() מריץ את החלון שלו במעטפת נפרדת - אם מבקשים פוקוס לפני שהחלון
+    // בכלל נדבק, הבקשה נבלעת בשקט. onGloballyPositioned מבטיח שהבקשה תקרה
+    // ברגע שהשורה באמת נמדדת/מוצגת, בניגוד לדיאלוג הזה שלא ביקש פוקוס בכלל.
+    var hasRequestedFocus by remember { mutableStateOf(false) }
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .background(bgColor)
+            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
+            .then(
+                if (focusRequester != null) Modifier.onGloballyPositioned {
+                    if (!hasRequestedFocus) {
+                        hasRequestedFocus = true
+                        focusRequester.requestFocus()
+                    }
+                } else Modifier
+            )
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource)
+            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
             .padding(horizontal = 20.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

@@ -1,5 +1,8 @@
 package com.future.dialer.telecom
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Intent
 import android.media.MediaRecorder
 import android.os.Build
@@ -8,6 +11,7 @@ import android.telecom.CallAudioState
 import android.telecom.InCallService
 import android.telecom.VideoProfile
 import android.util.Log
+import androidx.core.app.NotificationCompat
 import com.future.dialer.MainActivity
 import java.io.File
 import java.text.SimpleDateFormat
@@ -66,17 +70,46 @@ class CallService : InCallService() {
         }
     }
 
+    /**
+     * שיחה נכנסת מוצגת דרך fullScreenIntent בהתראת CATEGORY_CALL בערוץ IMPORTANCE_HIGH -
+     * זו הדרך התקנית היחידה שגורמת למערכת להציג את המסך במלואו כשהמסך כבוי/נעול; כשהמשתמש
+     * כבר פעיל באפליקציה אחרת, אותה התראה מוצגת כ-heads-up בלבד במקום לקפוץ ולתפוס את המסך.
+     * startActivity ישיר (כפי שהיה כאן קודם) לא נותן את ההבחנה הזו - הוא תמיד "קופץ" קדימה.
+     */
     private fun notifyCallRinging() {
         if (ringingNotified) return
         ringingNotified = true
 
         val launchIntent = Intent(applicationContext, MainActivity::class.java).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
         }
+        val fullScreenPendingIntent = PendingIntent.getActivity(
+            applicationContext, 0, launchIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val manager = applicationContext.getSystemService(NotificationManager::class.java)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(CALL_CHANNEL_ID, "שיחות נכנסות", NotificationManager.IMPORTANCE_HIGH)
+            manager.createNotificationChannel(channel)
+        }
+
+        val number = _activeCall.value?.details?.handle?.schemeSpecificPart ?: "מספר לא ידוע"
+        val notification = NotificationCompat.Builder(applicationContext, CALL_CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.sym_call_incoming)
+            .setContentTitle("שיחה נכנסת")
+            .setContentText(number)
+            .setCategory(NotificationCompat.CATEGORY_CALL)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setOngoing(true)
+            .setAutoCancel(false)
+            .setContentIntent(fullScreenPendingIntent)
+            .setFullScreenIntent(fullScreenPendingIntent, true)
+            .build()
         try {
-            applicationContext.startActivity(launchIntent)
+            manager.notify(CALL_NOTIFICATION_ID, notification)
         } catch (e: Exception) {
-            Log.e(TAG, "failed to launch call UI for ringing call", e)
+            Log.e(TAG, "failed to post ringing-call notification", e)
         }
 
         // FutureUI (מסך הנעילה המותאם-אישית) לא בהכרח מותקן בכל build - אם השידור
@@ -92,6 +125,7 @@ class CallService : InCallService() {
     private fun notifyCallNoLongerRinging() {
         if (!ringingNotified) return
         ringingNotified = false
+        applicationContext.getSystemService(NotificationManager::class.java)?.cancel(CALL_NOTIFICATION_ID)
         try {
             val intent = Intent("com.future.futureui.ACTION_CALL_ENDED").setPackage("com.future.futureui")
             applicationContext.sendBroadcast(intent)
@@ -116,6 +150,8 @@ class CallService : InCallService() {
 
     companion object {
         private const val TAG = "CallService"
+        private const val CALL_CHANNEL_ID = "incoming_call"
+        private const val CALL_NOTIFICATION_ID = 7001
         private var instance: CallService? = null
 
         private val _activeCall = MutableStateFlow<Call?>(null)

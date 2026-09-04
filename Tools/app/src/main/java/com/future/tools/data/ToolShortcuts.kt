@@ -17,10 +17,7 @@ object ToolShortcuts {
     private const val PACKAGE = "com.future.tools"
 
     val ALIAS_BY_ROUTE: Map<ToolRoute, String> = mapOf(
-        ToolRoute.Calculator to "$PACKAGE.ToolShortcutCalculator",
         ToolRoute.Flashlight to "$PACKAGE.ToolShortcutFlashlight",
-        ToolRoute.Stopwatch to "$PACKAGE.ToolShortcutStopwatch",
-        ToolRoute.Timer to "$PACKAGE.ToolShortcutTimer",
         ToolRoute.UnitConverter to "$PACKAGE.ToolShortcutUnitConverter",
         ToolRoute.Compass to "$PACKAGE.ToolShortcutCompass",
         ToolRoute.Level to "$PACKAGE.ToolShortcutLevel",

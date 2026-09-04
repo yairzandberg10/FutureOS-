@@ -1,0 +1,11 @@
+- [x] עדכון `ClockRoute` להוספת מסכים חדשים (מעורר, שעון עולמי)
+- [x] עדכון `MainActivity` לתמיכה בניווט מורחב
+- [x] עיצוב מחדש של `ClockHomeScreen` כשעון מרכזי
+- [x] פיתוח מערכת השעון המעורר:
+    - [x] יצירת מודל נתונים ולוגיקה לשמירה (`AlarmLogic`)
+    - [x] בניית מסך ניהול שעונים מעוררים (`AlarmScreen`)
+    - [x] הוספת BroadcastReceiver לטיפול בצלצול
+- [x] פיתוח מסך שעון עולמי (`WorldClockScreen`)
+- [x] עדכון `AndroidManifest.xml` (הרשאות ורכיבים)
+- [x] הוספת רכיב ניווט (Tabs/Navbar) ב-`ToolsComponents`
+- [x] אימות ובדיקות

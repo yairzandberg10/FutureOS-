@@ -20,7 +20,7 @@ import com.future.music.playback.PlayerUiState
 import com.future.music.ui.components.FocusableItem
 import com.future.music.ui.components.ScreenTopBar
 import com.future.music.ui.components.SongRow
-import com.future.music.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 
 @Composable
 fun QueueScreen(playerState: PlayerUiState, theme: FutureTheme, onBack: () -> Unit, onPlayAt: (Int) -> Unit) {

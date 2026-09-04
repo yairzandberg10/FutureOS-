@@ -11,15 +11,17 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -46,9 +48,19 @@ fun RouteOptionsScreen(
     val error by viewModel.error.collectAsState()
     val drivingRoute by viewModel.drivingRoute.collectAsState()
     val itineraries by viewModel.itineraries.collectAsState()
+    val actionFocusRequester = remember { FocusRequester() }
 
     LaunchedEffect(destination, mode) {
         viewModel.search(mode, destination)
+    }
+
+    // פוקוס D-pad התחלתי על תוצאת המסלול ברגע שהיא מוכנה - בלי זה נחיתה על
+    // המסך משאירה אותו בלי שום פריט מודגש (כמו בשאר מסכי האפליקציה).
+    LaunchedEffect(loading, error, mode, drivingRoute, itineraries) {
+        if (!loading && error == null) {
+            if (mode == TravelMode.DRIVE && drivingRoute != null) actionFocusRequester.requestFocus()
+            else if (mode == TravelMode.TRANSIT && itineraries.isNotEmpty()) actionFocusRequester.requestFocus()
+        }
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -105,8 +117,12 @@ fun RouteOptionsScreen(
                 mode == TravelMode.DRIVE && drivingRoute != null -> DrivingRouteCard(drivingRoute!!)
                 mode == TravelMode.TRANSIT -> {
                     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        items(itineraries) { itinerary ->
-                            ItineraryCard(itinerary, onClick = { onStartTransit(itinerary) })
+                        itemsIndexed(itineraries) { index, itinerary ->
+                            ItineraryCard(
+                                itinerary,
+                                onClick = { onStartTransit(itinerary) },
+                                focusRequester = if (index == 0) actionFocusRequester else null
+                            )
                         }
                     }
                 }
@@ -115,7 +131,7 @@ fun RouteOptionsScreen(
 
         if (mode == TravelMode.DRIVE && drivingRoute != null) {
             Box(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                PrimaryButton(stringResource(R.string.start_navigation)) { onStartDriving(drivingRoute!!) }
+                PrimaryButton(stringResource(R.string.start_navigation), focusRequester = actionFocusRequester) { onStartDriving(drivingRoute!!) }
             }
         }
     }
@@ -144,14 +160,15 @@ private fun DrivingRouteCard(route: DrivingRoute) {
 }
 
 @Composable
-private fun ItineraryCard(itinerary: TransitItinerary, onClick: () -> Unit) {
+private fun ItineraryCard(itinerary: TransitItinerary, onClick: () -> Unit, focusRequester: FocusRequester? = null) {
     FocusableItem(
         onClick = onClick,
         accentColor = MaterialTheme.colorScheme.primary,
         idleBackgroundColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
         focusedBackgroundColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.22f),
         borderWidth = 2.dp,
-        cornerRadius = 16.dp
+        cornerRadius = 16.dp,
+        focusRequester = focusRequester
     ) {
         Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -182,7 +199,7 @@ private fun ItineraryCard(itinerary: TransitItinerary, onClick: () -> Unit) {
 }
 
 @Composable
-private fun PrimaryButton(label: String, onClick: () -> Unit) {
+private fun PrimaryButton(label: String, focusRequester: FocusRequester? = null, onClick: () -> Unit) {
     FocusableItem(
         onClick = onClick,
         accentColor = MaterialTheme.colorScheme.primary,
@@ -190,7 +207,8 @@ private fun PrimaryButton(label: String, onClick: () -> Unit) {
         focusedBackgroundColor = MaterialTheme.colorScheme.primary,
         cornerRadius = 16.dp,
         scaleOnFocus = false,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
+        focusRequester = focusRequester
     ) {
         Text(
             label,

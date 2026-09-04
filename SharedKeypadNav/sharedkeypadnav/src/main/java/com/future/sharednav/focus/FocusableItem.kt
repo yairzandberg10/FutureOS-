@@ -34,6 +34,10 @@ import androidx.compose.ui.unit.dp
  * 1.5dp, פינות 8dp, אנימציית scale ל-1.02, ריפוד 4dp). אפליקציות עם
  * מראה שונה (למשל Music: בלי scale, פינות 16dp, בורדר 2dp, בלי ריפוד)
  * דורסות את הפרמטרים המתאימים בקריאה שלהן - ראו קריאות ה-call site.
+ *
+ * כולל bringIntoViewOnFocus (ר' BringIntoViewOnFocus.kt) - כך שכל מקום
+ * שכבר משתמש ב-FocusableItem בתוך LazyColumn/LazyRow מקבל אוטומטית גלילה
+ * לפריט הממוקד, בלי שינוי בקריאה עצמה.
  */
 @Composable
 fun FocusableItem(
@@ -67,6 +71,7 @@ fun FocusableItem(
 
     Box(
         modifier = modifier
+            .bringIntoViewOnFocus()
             .scale(scale)
             .clip(shape)
             .background(backgroundColor)

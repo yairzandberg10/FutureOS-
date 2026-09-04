@@ -30,7 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.future.music.playback.PlayerUiState
-import com.future.music.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 
 /** מיני-נגן קבוע בתחתית מסכי הרשימה - מוצג כשמנגן שיר. לחיצה על השורה
  * פותחת את מסך הניגון המלא, כפתור נפרד להשהיה/המשך בלי לצאת מהרשימה. */

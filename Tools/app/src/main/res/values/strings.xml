@@ -1,9 +1,6 @@
 <resources>
     <string name="app_name">כלים</string>
-    <string name="tool_calculator">מחשבון</string>
     <string name="tool_flashlight">פנס</string>
-    <string name="tool_stopwatch">שעון עצר</string>
-    <string name="tool_timer">טיימר</string>
     <string name="tool_unit_converter">ממיר יחידות</string>
     <string name="tool_compass">מצפן</string>
     <string name="tool_level">פלס</string>

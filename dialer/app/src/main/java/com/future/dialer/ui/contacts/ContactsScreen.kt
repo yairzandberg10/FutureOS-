@@ -9,11 +9,22 @@ import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -27,6 +38,12 @@ fun ContactsScreen(
 ) {
     val contactList by viewModel.contacts.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
+    val focusManager = LocalFocusManager.current
+    val searchFocusRequester = remember { FocusRequester() }
+
+    // פוקוס D-pad התחלתי על שדה החיפוש - בלי זה נחיתה על טאב אנשי הקשר משאירה
+    // את המסך בלי שום פריט מודגש (בניגוד ל-InCallScreen שכן ממקד אוטומטית).
+    LaunchedEffect(Unit) { searchFocusRequester.requestFocus() }
 
     Column(modifier = Modifier.fillMaxSize()) {
         // צבעים מותאמים לזכוכית הכהה של המערכת (מילוי שקוף בגוון ההדגשה + בורדר
@@ -37,7 +54,17 @@ fun ContactsScreen(
             onValueChange = { viewModel.onSearchQueryChanged(it) },
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(16.dp)
+                .focusRequester(searchFocusRequester)
+                // בשדה טקסט, Compose "בולע" את מקש למטה פנימית ולא מזיז פוקוס -
+                // מכשיר עם מקלדת בלבד (בלי מגע) היה נשאר תקוע בשדה החיפוש בלי
+                // דרך לרדת לרשימת אנשי הקשר. מיירטים את המקש כאן ומזיזים פוקוס ידנית.
+                .onPreviewKeyEvent {
+                    if (it.type == KeyEventType.KeyDown && it.key == Key.DirectionDown) {
+                        focusManager.moveFocus(FocusDirection.Down)
+                        true
+                    } else false
+                },
             placeholder = { Text(stringResource(R.string.search_contacts)) },
             shape = RoundedCornerShape(16.dp),
             singleLine = true,

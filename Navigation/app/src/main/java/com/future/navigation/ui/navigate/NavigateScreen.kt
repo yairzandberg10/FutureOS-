@@ -43,7 +43,7 @@ import com.future.navigation.ui.map.NavMapView
 import com.future.sharednav.focus.FocusableItem
 
 @Composable
-fun NavigateScreen(viewModel: NavigateViewModel) {
+fun NavigateScreen(viewModel: NavigateViewModel, onClose: () -> Unit = {}) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val cameraController = remember { MapCameraController() }
     var followMode by remember { mutableStateOf(true) }
@@ -112,7 +112,13 @@ fun NavigateScreen(viewModel: NavigateViewModel) {
                             Text("·", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f))
                             Text("%.1f ק״מ".format(state.remainingDistanceMeters / 1000.0))
                         }
-                        RoundIconButton(Icons.Default.Close, tint = Color(0xFFEB4040), onClick = viewModel::endNavigation)
+                        RoundIconButton(Icons.Default.Close, tint = Color(0xFFEB4040), onClick = {
+                            // הכפתור הזה משמעו "בטל/צא מהניווט" - לא רק לסמן ended=true (זה
+                            // קורה גם אוטומטית בהגעה בפועל ליעד) אלא גם לצאת בפועל מהמסך,
+                            // אחרת המשתמש נשאר תקוע על מסך המפה עם באנר "הגעת ליעד" שגוי.
+                            viewModel.endNavigation()
+                            onClose()
+                        })
                     }
                 }
             } else {

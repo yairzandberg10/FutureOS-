@@ -4,7 +4,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -14,6 +14,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -21,7 +23,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.future.notes.R
 import com.future.notes.data.Note
-import com.future.notes.ui.components.dpadFocusBorder
+import com.future.sharednav.focus.dpadFocusBorder
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -31,8 +33,25 @@ fun ListScreen(
     onSearchChanged: (String) -> Unit,
     onNoteClick: (Note) -> Unit,
     onAddNote: () -> Unit,
-    onTogglePin: (Note) -> Unit
+    onTogglePin: (Note) -> Unit,
+    // הפתק שנפתח לאחרונה - כשחוזרים "אחורה" מהעורך, הפוקוס צריך לשוב אליו
+    // בדיוק, לא תמיד לפתק הראשון ברשימה.
+    lastSelectedNoteId: Int? = null,
 ) {
+    // בלי פוקוס D-pad התחלתי, המסך הראשי (כולל כפתור "הוסף פתק" היחיד) עלול
+    // להישאר לגמרי בלתי נגיש בהפעלה - אותה משפחת באג שתועדה ותוקנה במקום אחר
+    // בסוויטה (Tools/Calculator, dialer/InCallScreen).
+    val rowFocusRequesters = remember { mutableMapOf<Int, FocusRequester>() }
+    val fabFocusRequester = remember { FocusRequester() }
+    LaunchedEffect(notes.map { it.id }) {
+        if (notes.isEmpty()) {
+            fabFocusRequester.requestFocus()
+        } else {
+            val target = notes.firstOrNull { it.id == lastSelectedNoteId } ?: notes.first()
+            rowFocusRequesters.getOrPut(target.id) { FocusRequester() }.requestFocus()
+        }
+    }
+
     Scaffold(
         topBar = {
             Column(modifier = Modifier.padding(16.dp)) {
@@ -66,6 +85,7 @@ fun ListScreen(
             FloatingActionButton(
                 onClick = onAddNote,
                 modifier = Modifier
+                    .focusRequester(fabFocusRequester)
                     .onFocusChanged { isFocused = it.isFocused }
                     .dpadFocusBorder(isFocused, FloatingActionButtonDefaults.shape),
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -87,11 +107,12 @@ fun ListScreen(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(notes, key = { it.id }) { note ->
+                itemsIndexed(notes, key = { _, note -> note.id }) { _, note ->
                     NoteItem(
                         note = note,
                         onClick = { onNoteClick(note) },
-                        onTogglePin = { onTogglePin(note) }
+                        onTogglePin = { onTogglePin(note) },
+                        focusRequester = rowFocusRequesters.getOrPut(note.id) { FocusRequester() }
                     )
                 }
             }
@@ -100,11 +121,12 @@ fun ListScreen(
 }
 
 @Composable
-fun NoteItem(note: Note, onClick: () -> Unit, onTogglePin: () -> Unit = {}) {
+fun NoteItem(note: Note, onClick: () -> Unit, onTogglePin: () -> Unit = {}, focusRequester: FocusRequester? = null) {
     var isFocused by remember { mutableStateOf(false) }
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .onFocusChanged { isFocused = it.isFocused }
             .dpadFocusBorder(isFocused, RoundedCornerShape(16.dp))
             .clickable { onClick() },

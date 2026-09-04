@@ -18,14 +18,18 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
@@ -33,6 +37,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import com.future.sharednav.theme.ThemeClient
 
 class MainActivity : ComponentActivity() {
     // המכשיר האמיתי הוא מקלדת T9 בלבד בלי מסך מגע - מבטלים קלט מגע לגמרי כדי
@@ -45,7 +50,29 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         setContent {
-            MaterialTheme {
+            // בלי זה המסך היחיד שהמשתמש רואה מהאפליקציה נראה שונה לחלוטין (סגול
+            // ברירת מחדל של Material3) משאר FutureOS - כולל מ-KeyboardService
+            // עצמו, שכן טוען את אותו עיצוב משותף עבור סרגל ההצעות.
+            var sharedTheme by remember { mutableStateOf(ThemeClient.getTheme(this)) }
+            val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+            DisposableEffect(lifecycleOwner) {
+                val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+                    if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                        sharedTheme = ThemeClient.getTheme(this@MainActivity)
+                    }
+                }
+                lifecycleOwner.lifecycle.addObserver(observer)
+                onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+            }
+
+            val accentColor = Color(sharedTheme.primaryColor)
+            val colorScheme = if (sharedTheme.isDarkMode) {
+                darkColorScheme(primary = accentColor, background = Color(0xFF1C1C1E), surface = Color(0xFF1C1C1E))
+            } else {
+                lightColorScheme(primary = accentColor, background = Color(0xFFEFEFEF), surface = Color.White)
+            }
+
+            MaterialTheme(colorScheme = colorScheme) {
                 KeyboardSetupScreen(
                     onOpenInputMethodSettings = {
                         startActivity(Intent(Settings.ACTION_INPUT_METHOD_SETTINGS))

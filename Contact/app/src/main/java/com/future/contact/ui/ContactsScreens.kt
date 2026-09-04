@@ -1,4 +1,5 @@
 package com.future.contact.ui
+import com.future.sharednav.focus.bringIntoViewOnFocus
 
 import android.content.Intent
 import android.net.Uri
@@ -8,6 +9,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.*
@@ -18,9 +20,10 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowForward
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Call
 import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.PersonAdd
 import androidx.compose.material.icons.automirrored.rounded.Message
 import androidx.compose.foundation.text.BasicTextField
@@ -58,7 +61,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.future.contact.data.Contact
 import com.future.contact.data.ContactDetails
-import com.future.contact.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
+import com.future.sharednav.theme.favoriteColor
 import com.future.contact.util.T9Search
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -74,11 +78,18 @@ fun ContactsListScreen(
     onAddContact: () -> Unit,
     onEditContact: (Contact) -> Unit = {},
     onDeleteContact: (Contact) -> Unit = {},
-    onToggleFavorite: (Contact) -> Unit = {}
+    onToggleFavorite: (Contact) -> Unit = {},
+    // איש הקשר שממנו נכנסו למסך הפרטים לאחרונה - כשחוזרים "אחורה" הפוקוס
+    // צריך לשוב לשורה הזו בדיוק, לא תמיד לשורה הראשונה ברשימה.
+    lastSelectedContactId: String? = null,
 ) {
     val context = LocalContext.current
     var menuFor by remember { mutableStateOf<Contact?>(null) }
     var pendingDelete by remember { mutableStateOf<Contact?>(null) }
+    // גישה חלופית לתפריט מחיקה/מועדפים (זהה בדיוק לפתרון של Files.FilesScreen)
+    // עבור מכשירים בלי מקש Menu/Settings ייעודי - בלעדיה התפריט נגיש רק דרך
+    // מקש חומרה ספציפי שאולי לא קיים במכשיר בפועל.
+    var focusedContact by remember { mutableStateOf<Contact?>(null) }
 
     // T9: מקשי הספרות הפיזיים בונים רצף שמסנן חי את רשימת אנשי הקשר לפי
     // תחילת שם פרטי/משפחה (ראה T9Search) - זו התכונה הכי בסיסית שחסרה
@@ -116,12 +127,15 @@ fun ContactsListScreen(
     }
 
     val addContactFocusRequester = remember { FocusRequester() }
-    val firstRowFocusRequester = remember { FocusRequester() }
+    // FocusRequester לפי מזהה איש קשר (לא רק לשורה הראשונה) - כדי שאפשר יהיה
+    // למקד בחזרה בדיוק את השורה שממנה נכנסו למסך הפרטים.
+    val rowFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
     var initialFocusRequested by remember { mutableStateOf(false) }
     LaunchedEffect(hasPermission, contacts.isEmpty()) {
         if (!initialFocusRequested) {
             if (hasPermission && contacts.isNotEmpty()) {
-                firstRowFocusRequester.requestFocus()
+                val target = filteredContacts.firstOrNull { it.id == lastSelectedContactId } ?: filteredContacts.firstOrNull()
+                target?.let { rowFocusRequesters.getOrPut(it.id) { FocusRequester() }.requestFocus() }
                 initialFocusRequested = true
             } else if (!hasPermission) {
                 // אין עדיין רשימה שאפשר למקד אליה - נמקד את כפתור ההוספה כברירת
@@ -159,12 +173,21 @@ fun ContactsListScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text("אנשי קשר", fontSize = 26.sp, fontWeight = FontWeight.Bold, color = theme.textColor)
-                    FocusableIconButton(
-                        icon = Icons.Rounded.PersonAdd,
-                        theme = theme,
-                        onClick = onAddContact,
-                        focusRequester = addContactFocusRequester
-                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (focusedContact != null) {
+                            FocusableIconButton(
+                                icon = Icons.Rounded.MoreVert,
+                                theme = theme,
+                                onClick = { menuFor = focusedContact }
+                            )
+                        }
+                        FocusableIconButton(
+                            icon = Icons.Rounded.PersonAdd,
+                            theme = theme,
+                            onClick = onAddContact,
+                            focusRequester = addContactFocusRequester
+                        )
+                    }
                 }
 
                 if (t9Query.isNotEmpty()) {
@@ -202,13 +225,14 @@ fun ContactsListScreen(
                             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            itemsIndexed(filteredContacts, key = { _, contact -> contact.id }) { index, contact ->
+                            itemsIndexed(filteredContacts, key = { _, contact -> contact.id }) { _, contact ->
                                 ContactRow(
                                     contact,
                                     theme = theme,
                                     onClick = { onContactClick(contact) },
                                     onMenu = { menuFor = contact },
-                                    focusRequester = if (index == 0) firstRowFocusRequester else null
+                                    focusRequester = rowFocusRequesters.getOrPut(contact.id) { FocusRequester() },
+                                    onFocused = { focusedContact = contact }
                                 )
                             }
                         }
@@ -239,7 +263,7 @@ private fun PermissionRequiredMessage(theme: FutureTheme, onRequestPermission: (
                 .clip(RoundedCornerShape(20.dp))
                 .background(if (isFocused) theme.accentColor else theme.accentColor.copy(alpha = 0.7f))
                 .clickable(interactionSource = interactionSource, indication = null, onClick = onRequestPermission)
-                .focusable(interactionSource = interactionSource)
+                .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
                 .padding(horizontal = 24.dp, vertical = 12.dp)
         ) {
             Text("אשר הרשאה", color = Color.Black, fontWeight = FontWeight.Bold)
@@ -253,10 +277,12 @@ private fun ContactRow(
     theme: FutureTheme,
     onClick: () -> Unit,
     onMenu: () -> Unit,
-    focusRequester: FocusRequester? = null
+    focusRequester: FocusRequester? = null,
+    onFocused: () -> Unit = {}
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
+    LaunchedEffect(isFocused) { if (isFocused) onFocused() }
     val shape = RoundedCornerShape(16.dp)
     val bgColor by animateColorAsState(
         if (isFocused) theme.textColor.copy(alpha = 0.16f) else theme.textColor.copy(alpha = 0.06f),
@@ -273,7 +299,7 @@ private fun ContactRow(
             .then(if (isFocused) Modifier.border(2.dp, theme.accentColor, shape) else Modifier)
             .let { if (focusRequester != null) it.focusRequester(focusRequester) else it }
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource)
+            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
             .onKeyEvent { event ->
                 if (isFocused && event.type == KeyEventType.KeyUp && (event.key == Key.Menu || event.key == Key.Settings)) {
                     onMenu()
@@ -297,7 +323,7 @@ private fun ContactRow(
             }
         }
         if (contact.isFavorite) {
-            Icon(Icons.Rounded.Star, contentDescription = "מועדף", tint = Color(0xFFFFC107), modifier = Modifier.size(18.dp))
+            Icon(Icons.Rounded.Star, contentDescription = "מועדף", tint = theme.favoriteColor, modifier = Modifier.size(18.dp))
         }
     }
 }
@@ -324,7 +350,7 @@ fun ContactDetailScreen(contact: Contact, theme: FutureTheme, onBack: () -> Unit
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 FocusableIconButton(
-                    icon = Icons.AutoMirrored.Rounded.ArrowForward,
+                    icon = Icons.AutoMirrored.Rounded.ArrowBack,
                     theme = theme,
                     onClick = onBack,
                     focusRequester = backFocusRequester
@@ -332,8 +358,32 @@ fun ContactDetailScreen(contact: Contact, theme: FutureTheme, onBack: () -> Unit
                 Spacer(modifier = Modifier.weight(1f))
                 FocusableIconButton(icon = Icons.Rounded.Edit, theme = theme, onClick = { isEditing = true })
             }
+            val detailsScrollState = rememberScrollState()
             Column(
-                modifier = Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 24.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .verticalScroll(detailsScrollState)
+                    // בלי זה, איש קשר בלי מספרי טלפון (רק אימייל/ארגון/כתובת/הערות)
+                    // לא מכיל אף רכיב פוקוסבילי באזור הגלילה - ואין דרך במקלדת לגלול
+                    // אליו אם התוכן חורג מגובה המסך.
+                    .focusable().bringIntoViewOnFocus()
+                    .onKeyEvent { event ->
+                        if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
+                        val step = 300f
+                        when (event.key) {
+                            Key.DirectionDown -> {
+                                coroutineScope.launch { detailsScrollState.animateScrollBy(step) }
+                                true
+                            }
+                            Key.DirectionUp -> {
+                                coroutineScope.launch { detailsScrollState.animateScrollBy(-step) }
+                                true
+                            }
+                            else -> false
+                        }
+                    }
+                    .padding(horizontal = 24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Box(
@@ -486,7 +536,7 @@ private fun EditDialogButton(text: String, bg: Color, fg: Color, focusRequester:
             .background(bgColor)
             .let { if (focusRequester != null) it.focusRequester(focusRequester) else it }
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource)
+            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
             .padding(horizontal = 20.dp, vertical = 10.dp)
     ) {
         Text(text, color = fg, fontWeight = FontWeight.Bold, fontSize = 13.sp)
@@ -524,7 +574,7 @@ private fun DeleteConfirmationDialog(contactName: String, theme: FutureTheme, on
                     focusRequester = cancelFocusRequester,
                     onClick = onCancel
                 )
-                EditDialogButton("מחק", Color(0xFFFF6B6B), Color.White, onClick = onConfirm)
+                EditDialogButton("מחק", theme.dangerColor, Color.White, onClick = onConfirm)
             }
         }
     }
@@ -575,13 +625,13 @@ private fun MenuOptionRow(label: String, icon: androidx.compose.ui.graphics.vect
             .fillMaxWidth()
             .background(bgColor)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource)
+            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
             .padding(horizontal = 20.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, contentDescription = null, tint = if (isDestructive) Color(0xFFFF6B6B) else theme.textColor, modifier = Modifier.size(20.dp))
+        Icon(icon, contentDescription = null, tint = if (isDestructive) theme.dangerColor else theme.textColor, modifier = Modifier.size(20.dp))
         Spacer(modifier = Modifier.width(14.dp))
-        Text(label, color = if (isDestructive) Color(0xFFFF6B6B) else theme.textColor, fontSize = 15.sp)
+        Text(label, color = if (isDestructive) theme.dangerColor else theme.textColor, fontSize = 15.sp)
     }
 }
 
@@ -608,7 +658,7 @@ fun FocusableIconButton(
             .background(bgColor)
             .let { if (focusRequester != null) it.focusRequester(focusRequester) else it }
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource),
+            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus(),
         contentAlignment = Alignment.Center
     ) {
         Icon(icon, contentDescription = null, tint = theme.textColor, modifier = Modifier.size(20.dp))

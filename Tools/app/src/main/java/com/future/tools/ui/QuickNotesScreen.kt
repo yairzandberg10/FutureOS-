@@ -1,4 +1,5 @@
 package com.future.tools.ui
+import com.future.sharednav.focus.bringIntoViewOnFocus
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -28,7 +29,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.future.tools.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -149,7 +150,7 @@ private fun NoteAddButton(theme: FutureTheme, onClick: () -> Unit) {
             .clip(RoundedCornerShape(14.dp))
             .background(if (isFocused) theme.accentColor else theme.textColor.copy(alpha = 0.1f))
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource),
+            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus(),
         contentAlignment = Alignment.Center
     ) {
         Icon(Icons.Rounded.Add, contentDescription = "הוסף", tint = if (isFocused) Color.Black else theme.accentColor)
@@ -167,7 +168,7 @@ private fun NoteRow(item: NoteItem, theme: FutureTheme, onToggle: () -> Unit, on
             .clip(shape)
             .background(if (isFocused) theme.textColor.copy(alpha = 0.14f) else theme.textColor.copy(alpha = 0.05f))
             .clickable(interactionSource = interactionSource, indication = null, onClick = onToggle)
-            .focusable(interactionSource = interactionSource)
+            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -194,9 +195,9 @@ private fun NoteRow(item: NoteItem, theme: FutureTheme, onToggle: () -> Unit, on
             modifier = Modifier
                 .size(28.dp)
                 .clip(RoundedCornerShape(8.dp))
-                .background(if (deleteFocused) Color(0xFFFF6B6B).copy(alpha = 0.3f) else Color.Transparent)
+                .background(if (deleteFocused) theme.dangerColor.copy(alpha = 0.3f) else Color.Transparent)
                 .clickable(interactionSource = deleteInteraction, indication = null, onClick = onDelete)
-                .focusable(interactionSource = deleteInteraction),
+                .focusable(interactionSource = deleteInteraction).bringIntoViewOnFocus(),
             contentAlignment = Alignment.Center
         ) {
             Icon(Icons.Rounded.Close, contentDescription = "מחק", tint = theme.textColor.copy(alpha = 0.4f), modifier = Modifier.size(14.dp))

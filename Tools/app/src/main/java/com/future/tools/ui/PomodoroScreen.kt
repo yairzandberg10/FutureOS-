@@ -23,7 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.future.tools.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 import kotlinx.coroutines.delay
 
 private enum class PomodoroPhase(val label: String, val minutes: Int, val color: Color) {
@@ -112,7 +112,7 @@ fun PomodoroScreen(theme: FutureTheme, onBack: () -> Unit) {
                 ) {
                     PomodoroActionButton(
                         label = if (isRunning) "השהה" else "התחל",
-                        color = if (isRunning) Color(0xFFFFD60A) else Color(0xFF32D74B)
+                        color = if (isRunning) theme.warningColor else theme.successColor
                     ) { isRunning = !isRunning }
                     PomodoroActionButton(label = "דלג", color = theme.textColor.copy(alpha = 0.12f)) {
                         startNextPhase()

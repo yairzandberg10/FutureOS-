@@ -9,7 +9,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.AndroidViewModel
-import com.future.settings.theme.ThemeClient
+import com.future.sharednav.theme.ThemeClient
 import com.future.settings.ui.theme.ThemeConfig
 import com.future.settings.utils.SystemInteractor
 
@@ -132,6 +132,9 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     private val _defaultDialerPackage = mutableStateOf<String?>(null)
     val defaultDialerPackage: State<String?> = _defaultDialerPackage
+
+    private val _defaultHomePackage = mutableStateOf<String?>(null)
+    val defaultHomePackage: State<String?> = _defaultHomePackage
 
     private val _nfcEnabled = mutableStateOf(false)
     val nfcEnabled: State<Boolean> = _nfcEnabled
@@ -617,6 +620,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun loadDefaultApps() {
         _defaultSmsPackage.value = systemInteractor.getDefaultSmsPackage()
         _defaultDialerPackage.value = systemInteractor.getDefaultDialerPackage()
+        _defaultHomePackage.value = systemInteractor.getDefaultHomePackage()
     }
 
     fun toggleNfc() = applyRootToggle(_nfcEnabled, systemInteractor::setNfcEnabled)

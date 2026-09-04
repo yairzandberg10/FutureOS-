@@ -15,12 +15,12 @@ import androidx.compose.ui.graphics.Color
 import com.future.gallery.data.Album
 import com.future.gallery.data.MediaItem
 import com.future.gallery.data.MediaRepository
-import com.future.gallery.theme.ThemeClient
+import com.future.sharednav.theme.ThemeClient
 import com.future.gallery.ui.AlbumDetailScreen
 import com.future.gallery.ui.GalleryHomeScreen
 import com.future.gallery.ui.MediaViewerScreen
 import com.future.gallery.ui.PhotoEditorScreen
-import com.future.gallery.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 
 class MainActivity : ComponentActivity() {
     // המכשיר האמיתי הוא מקלדת T9 בלבד בלי מסך מגע - מבטלים קלט מגע לגמרי כדי
@@ -39,6 +39,10 @@ class MainActivity : ComponentActivity() {
             var selectedAlbum by remember { mutableStateOf<Album?>(null) }
             var selectedItem by remember { mutableStateOf<MediaItem?>(null) }
             var viewerList by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
+            // נשמרים גם אחרי selectedItem/selectedAlbum חוזרים ל-null - כדי
+            // שכשחוזרים "אחורה", הפוקוס ישוב בדיוק לפריט/לאלבום שממנו נכנסנו.
+            var lastSelectedItemId by remember { mutableStateOf<Long?>(null) }
+            var lastSelectedAlbumId by remember { mutableStateOf<String?>(null) }
             var editingItem by remember { mutableStateOf<MediaItem?>(null) }
             var theme by remember {
                 mutableStateOf(
@@ -108,7 +112,7 @@ class MainActivity : ComponentActivity() {
                         item = current,
                         items = viewerList,
                         onBack = { selectedItem = null },
-                        onNavigate = { selectedItem = it },
+                        onNavigate = { selectedItem = it; lastSelectedItemId = it.id },
                         onDeleted = {
                             selectedItem = null
                             items = repository.getAllMedia()
@@ -121,16 +125,19 @@ class MainActivity : ComponentActivity() {
                         items = items.filter { it.bucketId == album.bucketId },
                         theme = theme,
                         onBack = { selectedAlbum = null },
-                        onItemClick = { list, item -> viewerList = list; selectedItem = item }
+                        onItemClick = { list, item -> viewerList = list; selectedItem = item; lastSelectedItemId = item.id },
+                        lastSelectedItemId = lastSelectedItemId,
                     )
                     else -> GalleryHomeScreen(
                         items = items,
                         albums = albums,
                         hasPermission = hasPermission,
                         onRequestPermission = { permissionLauncher.launch(repository.requiredPermission()) },
-                        onItemClick = { list, item -> viewerList = list; selectedItem = item },
-                        onAlbumClick = { selectedAlbum = it },
-                        theme = theme
+                        onItemClick = { list, item -> viewerList = list; selectedItem = item; lastSelectedItemId = item.id },
+                        onAlbumClick = { selectedAlbum = it; lastSelectedAlbumId = it.bucketId },
+                        theme = theme,
+                        lastSelectedItemId = lastSelectedItemId,
+                        lastSelectedAlbumId = lastSelectedAlbumId,
                     )
                 }
             }

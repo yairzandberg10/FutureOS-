@@ -42,7 +42,7 @@ import com.future.fitness.ui.components.ScreenTopBar
 import com.future.fitness.ui.components.SegmentedControl
 import com.future.fitness.ui.components.escapeTextFieldFocusTrap
 import com.future.fitness.ui.components.fitnessTextFieldColors
-import com.future.fitness.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 
 private class DraftExercise(name: String = "", sets: String = "3", reps: String = "") {
     var name by mutableStateOf(name)

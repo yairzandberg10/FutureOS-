@@ -95,8 +95,13 @@ class HeadsUpNotificationService : Service(), LifecycleOwner, SavedStateRegistry
                 setViewTreeViewModelStoreOwner(this@HeadsUpNotificationService)
                 setContent {
                     FutureUITheme {
+                        // התראת שיחה נכנסת (CATEGORY_CALL) נשארת על המסך הרבה יותר זמן מבאנר
+                        // רגיל - שיחה ממשיכה לצלצל עשרות שניות, ובאנר שנעלם אחרי 4.5 שניות
+                        // בזמן שהיא עדיין מצלצלת נראה כאילו השיחה נגמרה.
+                        val autoDismissMillis = if (sbn.notification.category == android.app.Notification.CATEGORY_CALL) 30000L else 4500L
                         HeadsUpNotificationScreen(
                             sbn = sbn,
+                            autoDismissMillis = autoDismissMillis,
                             onDismissed = {
                                 removeBanner()
                                 stopSelf(startId)

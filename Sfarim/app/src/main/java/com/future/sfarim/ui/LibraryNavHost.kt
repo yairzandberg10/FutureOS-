@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -15,7 +16,7 @@ import com.future.sfarim.ui.screens.BrowseScreen
 import com.future.sfarim.ui.screens.HomeScreen
 import com.future.sfarim.ui.screens.ReaderScreen
 import com.future.sfarim.ui.screens.SearchScreen
-import com.future.sfarim.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -28,6 +29,11 @@ fun LibraryNavHost(repository: LibraryRepository, theme: FutureTheme) {
     // גרסת נתונים - מוגברת אחרי כל כתיבה (סימניה/התקדמות) כדי לאלץ רענון של
     // שאילתות שנשענות על מפתח שלא בהכרח משתנה (למשל אותו bookId+topIndex).
     var dataVersion by remember { mutableIntStateOf(0) }
+
+    // מפתח הפריט (ראו BrowseScreen.keyOf) שנפתח לאחרונה מכל מסך "עיון בקטגוריה"
+    // (categoryId -> מפתח) - כך שכשחוזרים "אחורה" מכל רמת קטגוריה, הפוקוס
+    // חוזר בדיוק לפריט שממנו יצאנו, לא תמיד לראשון ברשימה.
+    var lastBrowseSelection by remember { mutableStateOf<Map<Long?, String>>(emptyMap()) }
 
     BackHandler(enabled = backStack.size > 1) { backStack.removeAt(backStack.lastIndex) }
 
@@ -78,8 +84,15 @@ fun LibraryNavHost(repository: LibraryRepository, theme: FutureTheme) {
                 books = books,
                 theme = theme,
                 onBack = ::pop,
-                onOpenCategory = { push(Route.Browse(it.id, it.nameHe?.takeIf { n -> n.isNotBlank() } ?: it.nameEn)) },
-                onOpenBook = { openBook(it.id) },
+                onOpenCategory = {
+                    lastBrowseSelection = lastBrowseSelection + (route.categoryId to "c${it.id}")
+                    push(Route.Browse(it.id, it.nameHe?.takeIf { n -> n.isNotBlank() } ?: it.nameEn))
+                },
+                onOpenBook = {
+                    lastBrowseSelection = lastBrowseSelection + (route.categoryId to "b${it.id}")
+                    openBook(it.id)
+                },
+                lastSelectedKey = lastBrowseSelection[route.categoryId],
             )
         }
 

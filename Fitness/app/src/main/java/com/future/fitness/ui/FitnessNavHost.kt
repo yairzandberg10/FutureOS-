@@ -1,6 +1,7 @@
 package com.future.fitness.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.material.icons.automirrored.rounded.DirectionsRun
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -22,14 +23,12 @@ import com.future.fitness.ui.screens.HealthTipsScreen
 import com.future.fitness.ui.screens.HistoryScreen
 import com.future.fitness.ui.screens.HomeScreen
 import com.future.fitness.ui.screens.ProgressScreen
-import com.future.fitness.ui.screens.QuickStartScreen
-import com.future.fitness.ui.screens.RunScreen
 import com.future.fitness.ui.screens.SettingsScreen
 import com.future.fitness.ui.screens.SummaryScreen
 import com.future.fitness.ui.screens.WorkoutBuilderScreen
 import com.future.fitness.ui.screens.WorkoutDetailScreen
 import com.future.fitness.ui.screens.WorkoutsScreen
-import com.future.fitness.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 
 @Composable
 fun FitnessNavHost(store: WorkoutStore, heartRateMonitor: HeartRateMonitor, theme: FutureTheme) {
@@ -135,18 +134,33 @@ fun FitnessNavHost(store: WorkoutStore, heartRateMonitor: HeartRateMonitor, them
                 )
             }
 
-            is Route.Run -> RunScreen(
-                theme = theme,
-                heartRateMonitor = heartRateMonitor,
-                weightKg = weightKg,
-                onBack = ::pop,
-                onFinish = { minutes, distanceKm, calories ->
-                    store.recordCompletedWorkout("ריצה חופשית", minutes, calories, distanceKm = distanceKm)
-                    statsVersion++
-                    backStack.removeAt(backStack.lastIndex)
-                    push(Route.RunSummary(minutes, distanceKm, calories))
-                },
-            )
+            is Route.Run -> {
+                val freeRunType = remember {
+                    com.future.fitness.data.WorkoutActivityType(
+                        id = "free_run",
+                        displayName = "ריצה חופשית",
+                        category = com.future.fitness.data.ActivityCategory.RUNNING,
+                        met = 9.0,
+                        icon = androidx.compose.material.icons.Icons.AutoMirrored.Rounded.DirectionsRun,
+                        usesGps = true,
+                    )
+                }
+                com.future.fitness.ui.screens.WorkoutTemplateScreen(
+                    activityType = freeRunType,
+                    theme = theme,
+                    weightKg = weightKg,
+                    age = profile.age,
+                    heartRateMonitor = heartRateMonitor,
+                    finishLabel = "סיום ריצה",
+                    onBack = ::pop,
+                    onFinish = { minutes, distanceKm, calories, avgHr, maxHr ->
+                        store.recordCompletedWorkout("ריצה חופשית", minutes, calories, avgHr, maxHr, distanceKm)
+                        statsVersion++
+                        backStack.removeAt(backStack.lastIndex)
+                        push(Route.RunSummary(minutes, distanceKm ?: 0.0, calories))
+                    },
+                )
+            }
 
             is Route.RunSummary -> SummaryScreen(
                 title = "ריצה הושלמה!",
@@ -191,32 +205,33 @@ fun FitnessNavHost(store: WorkoutStore, heartRateMonitor: HeartRateMonitor, them
 
             is Route.GpsActivity -> {
                 val type = WorkoutActivityTypes.byId(route.activityTypeId) ?: WorkoutActivityTypes.all[0]
-                RunScreen(
+                com.future.fitness.ui.screens.WorkoutTemplateScreen(
+                    activityType = type,
                     theme = theme,
-                    heartRateMonitor = heartRateMonitor,
                     weightKg = weightKg,
-                    title = type.displayName,
-                    met = type.met,
+                    age = profile.age,
+                    heartRateMonitor = heartRateMonitor,
                     finishLabel = "סיום",
                     onBack = ::pop,
-                    onFinish = { minutes, distanceKm, calories ->
-                        store.recordCompletedWorkout(type.displayName, minutes, calories, distanceKm = distanceKm)
+                    onFinish = { minutes, distanceKm, calories, avgHr, maxHr ->
+                        store.recordCompletedWorkout(type.displayName, minutes, calories, avgHr, maxHr, distanceKm)
                         statsVersion++
                         backStack.removeAt(backStack.lastIndex)
-                        push(Route.RunSummary(minutes, distanceKm, calories))
+                        push(Route.RunSummary(minutes, distanceKm ?: 0.0, calories))
                     },
                 )
             }
 
             is Route.QuickStart -> {
                 val type = WorkoutActivityTypes.byId(route.activityTypeId) ?: WorkoutActivityTypes.all[0]
-                QuickStartScreen(
+                com.future.fitness.ui.screens.WorkoutTemplateScreen(
                     activityType = type,
                     theme = theme,
                     weightKg = weightKg,
+                    age = profile.age,
                     heartRateMonitor = heartRateMonitor,
                     onBack = ::pop,
-                    onFinish = { minutes, calories, avgHr, _ ->
+                    onFinish = { minutes, _, calories, avgHr, _ ->
                         store.recordCompletedWorkout(type.displayName, minutes, calories, avgHr)
                         statsVersion++
                         backStack.removeAt(backStack.lastIndex)

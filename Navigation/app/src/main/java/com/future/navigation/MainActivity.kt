@@ -26,6 +26,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -45,7 +47,7 @@ import com.future.navigation.data.gtfs.TransitJourneyPlanner
 import com.future.navigation.data.places.SavedPlaceRepository
 import com.future.navigation.data.routing.OsrmRoutingRepository
 import com.future.navigation.data.routing.RoutingRepository
-import com.future.navigation.theme.ThemeClient
+import com.future.sharednav.theme.ThemeClient
 import com.future.navigation.ui.gtfs.GtfsSetupScreen
 import com.future.navigation.ui.gtfs.GtfsSetupViewModel
 import com.future.navigation.ui.home.HomeScreen
@@ -236,6 +238,13 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun MissingLocationPermissionScreen(onRequest: () -> Unit) {
+    // מכשיר היעד חסר מסך מגע לחלוטין - כפתור בודד חייב לקבל פוקוס באופן
+    // יזום כדי שאפשר יהיה בכלל להפעיל אותו דרך ה-D-pad (ר' התבנית הזהה
+    // ב-Music/ui/screens/PermissionScreen.kt).
+    val buttonFocusRequester = remember { FocusRequester() }
+    LaunchedEffect(Unit) {
+        buttonFocusRequester.requestFocus()
+    }
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
             Text(
@@ -244,7 +253,10 @@ private fun MissingLocationPermissionScreen(onRequest: () -> Unit) {
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
             androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(16.dp))
-            Button(onClick = onRequest) { Text(androidx.compose.ui.res.stringResource(R.string.grant_permission)) }
+            Button(
+                onClick = onRequest,
+                modifier = Modifier.focusRequester(buttonFocusRequester)
+            ) { Text(androidx.compose.ui.res.stringResource(R.string.grant_permission)) }
         }
     }
 }
@@ -315,7 +327,7 @@ private fun AppNavHost(
                         }
                     }
                 )
-                NavigateScreen(viewModel)
+                NavigateScreen(viewModel, onClose = { navController.popBackStack(Screen.Home.route, inclusive = false) })
             }
         }
 
@@ -329,7 +341,17 @@ private fun AppNavHost(
         }
 
         composable(Screen.SavedPlaces.route) {
-            SavedPlacesScreen(viewModel = savedPlacesViewModel, onBack = { navController.popBackStack() })
+            SavedPlacesScreen(
+                viewModel = savedPlacesViewModel,
+                onBack = { navController.popBackStack() },
+                onNavigateToPlace = { place ->
+                    navSessionViewModel.setMode(homeViewModel.mode.value)
+                    navSessionViewModel.setDestination(
+                        Destination(name = place.label, address = place.address, location = LatLng(place.lat, place.lon))
+                    )
+                    navController.navigate(Screen.RouteOptions.route)
+                }
+            )
         }
 
         composable(Screen.GtfsSetup.route) {

@@ -24,10 +24,10 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.future.sfarim.data.LibraryDatabase
 import com.future.sfarim.data.LibraryRepository
-import com.future.sfarim.theme.ThemeClient
+import com.future.sharednav.theme.ThemeClient
 import com.future.sfarim.ui.LibraryNavHost
 import com.future.sfarim.ui.screens.LibraryNotInstalledScreen
-import com.future.sfarim.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -74,7 +74,11 @@ private fun SfarimApp() {
     // כדי שמסך "הספרייה לא מותקנת" יוצג רק אחרי שבאמת אימתנו שאין קובץ -
     // לא בזמן שהבדיקה עדיין רצה.
     var isLoadingDb by remember { mutableStateOf(true) }
-    val db by produceState<android.database.sqlite.SQLiteDatabase?>(initialValue = null, context) {
+    // מתגלגל בכל לחיצה על "נסה שוב" במסך "הספרייה לא הותקנה" - כדי שאפשר יהיה
+    // לבדוק מחדש אם sefaria.db כבר הועבר ב-adb push בלי לצאת ולפתוח את האפליקציה מחדש.
+    var dbRetryKey by remember { mutableStateOf(0) }
+    val db by produceState<android.database.sqlite.SQLiteDatabase?>(initialValue = null, context, dbRetryKey) {
+        isLoadingDb = true
         value = withContext(Dispatchers.IO) { LibraryDatabase.openOrNull(context) }
         isLoadingDb = false
     }
@@ -88,7 +92,11 @@ private fun SfarimApp() {
                 }
             }
             repository == null -> {
-                LibraryNotInstalledScreen(expectedPath = LibraryDatabase.expectedPath(context).path, theme = theme)
+                LibraryNotInstalledScreen(
+                    expectedPath = LibraryDatabase.expectedPath(context).path,
+                    theme = theme,
+                    onRetry = { dbRetryKey++ },
+                )
             }
             else -> {
                 LibraryNavHost(repository = repository, theme = theme)

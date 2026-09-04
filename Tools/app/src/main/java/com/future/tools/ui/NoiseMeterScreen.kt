@@ -20,7 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.future.tools.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 import kotlin.math.log10
 import kotlin.math.max
 import kotlin.math.roundToInt
@@ -128,9 +128,9 @@ private fun NoiseGauge(db: Float, theme: FutureTheme) {
     val size = 220.dp
     val fraction = (db / 120f).coerceIn(0f, 1f)
     val gaugeColor = when {
-        db < 50f -> Color(0xFF32D74B)
-        db < 80f -> Color(0xFFFFD60A)
-        else -> Color(0xFFFF6B6B)
+        db < 50f -> theme.successColor
+        db < 80f -> theme.warningColor
+        else -> theme.dangerColor
     }
     Box(modifier = Modifier.size(size), contentAlignment = Alignment.Center) {
         Canvas(modifier = Modifier.fillMaxSize()) {

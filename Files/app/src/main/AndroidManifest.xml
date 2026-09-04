@@ -20,6 +20,7 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
+        android:appCategory="productivity"
         android:theme="@style/Theme.Files">
 
         <provider
@@ -42,6 +43,31 @@
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- מזהה את Files כמועמד תקין לתפקיד "אפליקציית קבצים" של המערכת
+                 (ROLE_APP_FILES / query-activities לפי CATEGORY_APP_FILES). -->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.APP_FILES" />
+            </intent-filter>
+            <!-- מאפשר לאפליקציות אחרות לבקש "פתח קובץ"/"בחר קובץ" ולקבל את Files
+                 כאחת המועמדות, בדיוק כמו סייר קבצים אמיתי. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="*/*" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.GET_CONTENT" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.OPENABLE" />
+                <data android:mimeType="*/*" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.OPEN_DOCUMENT" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.OPENABLE" />
+                <data android:mimeType="*/*" />
             </intent-filter>
         </activity>
         <receiver

@@ -2,8 +2,10 @@ package com.future.dialer
 
 import android.Manifest
 import android.app.role.RoleManager
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
@@ -65,7 +67,7 @@ import com.future.dialer.ui.incall.InCallScreen
 import com.future.dialer.ui.incall.InCallViewModel
 import com.future.dialer.ui.navigation.Screen
 import com.future.dialer.ui.theme.DialerTheme
-import com.future.dialer.theme.ThemeClient
+import com.future.sharednav.theme.ThemeClient
 
 class MainActivity : ComponentActivity() {
     // המכשיר האמיתי הוא מקלדת T9 בלבד בלי מסך מגע - מבטלים קלט מגע לגמרי כדי
@@ -142,6 +144,28 @@ class MainActivity : ComponentActivity() {
                 onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
             }
 
+            // מקש MENU הפיזי תמיד נחסם ברמת המערכת (StatusBarAccessibilityService צורך
+            // אותו ללחיצה ארוכה) ומשודר מחדש כלחיצה קצרה - ראו ההערה המקבילה ב-
+            // Music/MusicNavHost.kt. בזמן שיחה מצלצלת, זו הדרך היחידה לפתוח "שליחת הודעה
+            // מהירה" בלי לענות/לדחות קודם.
+            DisposableEffect(Unit) {
+                val receiver = object : BroadcastReceiver() {
+                    override fun onReceive(ctx: Context?, intent: Intent?) {
+                        if (CallService.callState.value == android.telecom.Call.STATE_RINGING) {
+                            inCallViewModel.toggleQuickMessage()
+                        }
+                    }
+                }
+                val filter = IntentFilter("com.future.futureui.ACTION_OPTIONS_SHORT_PRESS")
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                    registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)
+                } else {
+                    @Suppress("UnspecifiedRegisterReceiverFlag")
+                    registerReceiver(receiver, filter)
+                }
+                onDispose { unregisterReceiver(receiver) }
+            }
+
             DialerTheme(isDarkMode = sharedTheme.isDarkMode, accentColor = Color(sharedTheme.primaryColor)) {
                 MainScreen(
                     dialpadViewModel = dialpadViewModel,
@@ -149,7 +173,8 @@ class MainActivity : ComponentActivity() {
                     inCallViewModel = inCallViewModel,
                     checkIsDefaultDialer = { isDefaultDialer() },
                     onRequestDefaultDialer = { requestDefaultDialerRole() },
-                    onMakeCall = { number -> makeRealCall(number) }
+                    onMakeCall = { number -> makeRealCall(number) },
+                    onRouteChanged = { route -> currentRoute = route }
                 )
             }
         }
@@ -190,6 +215,13 @@ class MainActivity : ComponentActivity() {
         }
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             permissionsToRequest.add(Manifest.permission.RECORD_AUDIO)
+        }
+        // בלי זה, החל מאנדרואיד 13, התראת השיחה הנכנסת (כולל ה-fullScreenIntent שמעיר
+        // את המסך) לא מוצגת בכלל - ראו CallService.notifyCallRinging.
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            permissionsToRequest.add(Manifest.permission.POST_NOTIFICATIONS)
         }
 
         if (permissionsToRequest.isNotEmpty()) {
@@ -244,6 +276,33 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+        // מקש הפעולה הפיזי (CALL) וניתוק/דחייה (ENDCALL) חייבים לעבוד גם כשמסך
+        // השיחה הוא זה שממוקד - בטלפון פיצ'ר אמיתי אלה המקשים האינסטינקטיביים
+        // למענה/ניתוק, ולא רק כפתור על המסך.
+        when (keyCode) {
+            KeyEvent.KEYCODE_CALL -> {
+                if (isCallRinging) {
+                    inCallViewModel.answer()
+                    return true
+                }
+            }
+            KeyEvent.KEYCODE_ENDCALL -> {
+                if (isCallRinging) {
+                    inCallViewModel.reject()
+                    return true
+                }
+                if (isCallActive) {
+                    inCallViewModel.hangUp()
+                    return true
+                }
+            }
+        }
+
+        // ספרות/כוכבית/סולמית/מחיקה מיועדות אך ורק לשדה החיוג של טאב החיוג עצמו -
+        // בטאב אנשי קשר (או כל מסך אחר) יש להן משמעות מקומית (חיפוש וכו') ואסור
+        // שהן "ידלפו" ברקע לתוך dialpadViewModel וייצרו מספר-רוח-רפאים.
+        val isOnDialpadTab = currentRoute == Screen.Dialpad.route
+
         when (keyCode) {
             KeyEvent.KEYCODE_BACK -> {
                 // אי אפשר "לצאת" ממסך שיחה מצלצלת בלי לענות/לדחות - בדיוק כמו בטלפון אמיתי.
@@ -251,28 +310,28 @@ class MainActivity : ComponentActivity() {
                 if (isCallRinging) {
                     return true
                 }
-                if (dialpadViewModel.dialedNumber.value.isNotEmpty()) {
+                if (isOnDialpadTab && dialpadViewModel.dialedNumber.value.isNotEmpty()) {
                     dialpadViewModel.onDeletePressed()
                     return true
                 }
             }
-            KeyEvent.KEYCODE_0 -> if (!isCallRinging) dialpadViewModel.onDigitPressed("0")
-            KeyEvent.KEYCODE_1 -> if (!isCallRinging) dialpadViewModel.onDigitPressed("1")
-            KeyEvent.KEYCODE_2 -> if (!isCallRinging) dialpadViewModel.onDigitPressed("2")
-            KeyEvent.KEYCODE_3 -> if (!isCallRinging) dialpadViewModel.onDigitPressed("3")
-            KeyEvent.KEYCODE_4 -> if (!isCallRinging) dialpadViewModel.onDigitPressed("4")
-            KeyEvent.KEYCODE_5 -> if (!isCallRinging) dialpadViewModel.onDigitPressed("5")
-            KeyEvent.KEYCODE_6 -> if (!isCallRinging) dialpadViewModel.onDigitPressed("6")
-            KeyEvent.KEYCODE_7 -> if (!isCallRinging) dialpadViewModel.onDigitPressed("7")
-            KeyEvent.KEYCODE_8 -> if (!isCallRinging) dialpadViewModel.onDigitPressed("8")
-            KeyEvent.KEYCODE_9 -> if (!isCallRinging) dialpadViewModel.onDigitPressed("9")
-            KeyEvent.KEYCODE_STAR -> if (!isCallRinging) dialpadViewModel.onDigitPressed("*")
-            KeyEvent.KEYCODE_POUND -> if (!isCallRinging) dialpadViewModel.onDigitPressed("#")
-            KeyEvent.KEYCODE_DEL -> if (!isCallRinging) dialpadViewModel.onDeletePressed()
+            KeyEvent.KEYCODE_0 -> if (isOnDialpadTab && !isCallRinging) dialpadViewModel.onDigitPressed("0")
+            KeyEvent.KEYCODE_1 -> if (isOnDialpadTab && !isCallRinging) dialpadViewModel.onDigitPressed("1")
+            KeyEvent.KEYCODE_2 -> if (isOnDialpadTab && !isCallRinging) dialpadViewModel.onDigitPressed("2")
+            KeyEvent.KEYCODE_3 -> if (isOnDialpadTab && !isCallRinging) dialpadViewModel.onDigitPressed("3")
+            KeyEvent.KEYCODE_4 -> if (isOnDialpadTab && !isCallRinging) dialpadViewModel.onDigitPressed("4")
+            KeyEvent.KEYCODE_5 -> if (isOnDialpadTab && !isCallRinging) dialpadViewModel.onDigitPressed("5")
+            KeyEvent.KEYCODE_6 -> if (isOnDialpadTab && !isCallRinging) dialpadViewModel.onDigitPressed("6")
+            KeyEvent.KEYCODE_7 -> if (isOnDialpadTab && !isCallRinging) dialpadViewModel.onDigitPressed("7")
+            KeyEvent.KEYCODE_8 -> if (isOnDialpadTab && !isCallRinging) dialpadViewModel.onDigitPressed("8")
+            KeyEvent.KEYCODE_9 -> if (isOnDialpadTab && !isCallRinging) dialpadViewModel.onDigitPressed("9")
+            KeyEvent.KEYCODE_STAR -> if (isOnDialpadTab && !isCallRinging) dialpadViewModel.onDigitPressed("*")
+            KeyEvent.KEYCODE_POUND -> if (isOnDialpadTab && !isCallRinging) dialpadViewModel.onDigitPressed("#")
+            KeyEvent.KEYCODE_DEL -> if (isOnDialpadTab && !isCallRinging) dialpadViewModel.onDeletePressed()
             KeyEvent.KEYCODE_CALL, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_DPAD_CENTER -> {
                 // הקיצור "חייג את המספר שבשדה" לא אמור לפעול כשיש שיחה מצלצלת/פעילה -
                 // אחרת הוא חוטף את לחיצת המענה למסך השיחה הנכנסת ומחייג בטעות.
-                if (!isCallRinging && !isCallActive) {
+                if (isOnDialpadTab && !isCallRinging && !isCallActive) {
                     val currentNumber = dialpadViewModel.dialedNumber.value
                     if (currentNumber.isNotEmpty()) {
                         makeRealCall(currentNumber)
@@ -300,7 +359,8 @@ fun MainScreen(
     inCallViewModel: InCallViewModel,
     checkIsDefaultDialer: () -> Boolean,
     onRequestDefaultDialer: () -> Unit,
-    onMakeCall: (String) -> Unit
+    onMakeCall: (String) -> Unit,
+    onRouteChanged: (String?) -> Unit = {}
 ) {
     // חוזרים מהדיאלוג של המערכת (בקשת ברירת מחדל) לא מפעילים מחדש את onCreate,
     // אז בלי לבדוק שוב ב-onResume נשארים תקועים במסך "הגדר כברירת מחדל" גם אחרי
@@ -328,6 +388,7 @@ fun MainScreen(
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+    LaunchedEffect(currentRoute) { onRouteChanged(currentRoute) }
 
     val activeCall by CallService.activeCall.collectAsState()
 

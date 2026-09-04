@@ -25,10 +25,13 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Work
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -39,7 +42,7 @@ import com.future.sharednav.components.ScreenTopBar
 import com.future.sharednav.focus.FocusableItem
 
 @Composable
-fun SavedPlacesScreen(viewModel: SavedPlacesViewModel, onBack: () -> Unit) {
+fun SavedPlacesScreen(viewModel: SavedPlacesViewModel, onBack: () -> Unit, onNavigateToPlace: (SavedPlaceEntity) -> Unit = {}) {
     val editingSlot by viewModel.editingSlot.collectAsState()
 
     if (editingSlot != EditingSlot.NONE) {
@@ -51,6 +54,11 @@ fun SavedPlacesScreen(viewModel: SavedPlacesViewModel, onBack: () -> Unit) {
     val workPlace by viewModel.workPlace.collectAsState(initial = null)
     val allPlaces by viewModel.allPlaces.collectAsState(initial = emptyList())
     val favorites = allPlaces.filter { it.isFavorite }
+    val homeCardFocusRequester = remember { FocusRequester() }
+
+    // פוקוס D-pad התחלתי על כרטיס "בית" - בלי זה נחיתה על המסך משאירה אותו
+    // בלי שום פריט מודגש.
+    LaunchedEffect(Unit) { homeCardFocusRequester.requestFocus() }
 
     Column(modifier = Modifier.fillMaxSize()) {
         ScreenTopBar(
@@ -70,7 +78,7 @@ fun SavedPlacesScreen(viewModel: SavedPlacesViewModel, onBack: () -> Unit) {
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    PinCard(Icons.Default.Home, stringResource(R.string.quick_home), homePlace, stringResource(R.string.add_home_address), modifier = Modifier.weight(1f)) {
+                    PinCard(Icons.Default.Home, stringResource(R.string.quick_home), homePlace, stringResource(R.string.add_home_address), modifier = Modifier.weight(1f), focusRequester = homeCardFocusRequester) {
                         viewModel.startEditing(EditingSlot.HOME)
                     }
                     PinCard(Icons.Default.Work, stringResource(R.string.quick_work), workPlace, stringResource(R.string.add_work_address), modifier = Modifier.weight(1f)) {
@@ -86,7 +94,15 @@ fun SavedPlacesScreen(viewModel: SavedPlacesViewModel, onBack: () -> Unit) {
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                         modifier = Modifier.weight(1f)
                     )
-                    IconButton(onClick = { viewModel.startEditing(EditingSlot.FAVORITE) }) {
+                    FocusableItem(
+                        onClick = { viewModel.startEditing(EditingSlot.FAVORITE) },
+                        accentColor = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(40.dp),
+                        idleBackgroundColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
+                        focusedBackgroundColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.22f),
+                        borderWidth = 2.dp,
+                        cornerRadius = 20.dp
+                    ) {
                         Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     }
                 }
@@ -95,7 +111,7 @@ fun SavedPlacesScreen(viewModel: SavedPlacesViewModel, onBack: () -> Unit) {
             items(favorites, key = { it.id }) { place ->
                 Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     FocusableItem(
-                        onClick = {},
+                        onClick = { onNavigateToPlace(place) },
                         accentColor = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.weight(1f),
                         idleBackgroundColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
@@ -116,10 +132,26 @@ fun SavedPlacesScreen(viewModel: SavedPlacesViewModel, onBack: () -> Unit) {
                             }
                         }
                     }
-                    IconButton(onClick = { viewModel.toggleFavorite(place) }) {
+                    FocusableItem(
+                        onClick = { viewModel.toggleFavorite(place) },
+                        accentColor = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(40.dp),
+                        idleBackgroundColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
+                        focusedBackgroundColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.22f),
+                        borderWidth = 2.dp,
+                        cornerRadius = 20.dp
+                    ) {
                         Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFFFFC107))
                     }
-                    IconButton(onClick = { viewModel.delete(place) }) {
+                    FocusableItem(
+                        onClick = { viewModel.delete(place) },
+                        accentColor = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(40.dp),
+                        idleBackgroundColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
+                        focusedBackgroundColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.22f),
+                        borderWidth = 2.dp,
+                        cornerRadius = 20.dp
+                    ) {
                         Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f))
                     }
                 }
@@ -135,6 +167,7 @@ private fun PinCard(
     place: SavedPlaceEntity?,
     emptyHint: String,
     modifier: Modifier = Modifier,
+    focusRequester: androidx.compose.ui.focus.FocusRequester? = null,
     onClick: () -> Unit
 ) {
     FocusableItem(
@@ -144,7 +177,8 @@ private fun PinCard(
         idleBackgroundColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
         focusedBackgroundColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.22f),
         borderWidth = 2.dp,
-        cornerRadius = 16.dp
+        cornerRadius = 16.dp,
+        focusRequester = focusRequester
     ) {
         Column(modifier = Modifier.fillMaxWidth().padding(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {

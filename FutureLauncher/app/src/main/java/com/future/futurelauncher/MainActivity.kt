@@ -1,4 +1,5 @@
 package com.future.futurelauncher
+import com.future.sharednav.focus.bringIntoViewOnFocus
 
 import android.appwidget.AppWidgetHost
 import android.appwidget.AppWidgetManager
@@ -50,7 +51,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.future.futurelauncher.ui.*
 import com.future.futurelauncher.ui.theme.FutureLauncherTheme
-import com.future.futurelauncher.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
@@ -75,6 +76,7 @@ class MainActivity : ComponentActivity() {
         
         appWidgetManager = AppWidgetManager.getInstance(this)
         appWidgetHost = AppWidgetHost(this, APPWIDGET_HOST_ID)
+        pruneOrphanedWidgetIds()
 
         pickWidgetLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode == RESULT_OK) {
@@ -117,11 +119,35 @@ class MainActivity : ComponentActivity() {
     fun getAppWidgetHost() = appWidgetHost
     fun getAppWidgetManager() = appWidgetManager
 
+    /**
+     * מוחק מהמארח (AppWidgetHost) כל widgetId ש-AppWidgetManager כבר לא מכיר
+     * (הספק שלו - App Widget Provider - הוסר או הושבת). "רפאים" כאלה נשארים
+     * רשומים בשירות המערכת גם אחרי שהספק נעלם, ו-AppWidgetHost.stopListening/
+     * startListening (שרצות בכל onStop/onStart, כלומר בכל פעם שנפתחת אפליקציה)
+     * מנסות לחשב UID עבור כל widget רשום כולל הרפאים - NPE בצד השרת שמתפרץ
+     * כ-RuntimeException לא-נתפסת וקורס את הלאנצ'ר (ראו onStop למטה).
+     */
+    private fun pruneOrphanedWidgetIds() {
+        appWidgetHost.appWidgetIds.forEach { id ->
+            if (appWidgetManager.getAppWidgetInfo(id) == null) {
+                appWidgetHost.deleteAppWidgetId(id)
+            }
+        }
+    }
+
     private var packageChangeReceiver: android.content.BroadcastReceiver? = null
 
     override fun onStart() {
         super.onStart()
-        appWidgetHost.startListening()
+        // הגנה משנית ל-pruneOrphanedWidgetIds (למקרה שספק נהיה "רפאים" בדיוק
+        // בזמן שהלאנצ'ר ברקע, בין ה-onCreate האחרון להפעלה הבאה) - לא אמורה
+        // לתפוס כלום בפועל, אבל startListening היא אותה קריאת בינדר בדיוק
+        // שיכולה לקרוס באותה צורה אם בכל זאת נותר widget רפאים.
+        try {
+            appWidgetHost.startListening()
+        } catch (e: Exception) {
+            pruneOrphanedWidgetIds()
+        }
 
         // אפליקציות שהותקנו/הוסרו/הוחלפו אחרי הטעינה הראשונית של הרשימה חייבות
         // לגרום לרענון שלה, אחרת אפליקציה חדשה לעולם לא תופיע ואפליקציה שהוסרה
@@ -149,7 +175,14 @@ class MainActivity : ComponentActivity() {
 
     override fun onStop() {
         super.onStop()
-        appWidgetHost.stopListening()
+        // ראו pruneOrphanedWidgetIds - זו הייתה נקודת הקריסה בפועל: stopListening
+        // רץ בכל onStop, כלומר כל פעם שנפתחת אפליקציה מהלאנצ'ר, ו-RemoteException
+        // מ-widget רפאים הופכת ל-"FutureLauncher stopped working" בלתי נתפסת.
+        try {
+            appWidgetHost.stopListening()
+        } catch (e: Exception) {
+            pruneOrphanedWidgetIds()
+        }
         packageChangeReceiver?.let { unregisterReceiver(it) }
         packageChangeReceiver = null
     }
@@ -291,7 +324,7 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
         modifier = Modifier
             .fillMaxSize()
             .focusRequester(focusRequester)
-            .focusable()
+            .focusable().bringIntoViewOnFocus()
             .onKeyEvent { keyEvent ->
                 val index = viewModel.focusedIndex
 
@@ -491,7 +524,15 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                                 viewModel.dialogState = LauncherDialog.None
                                 return@onKeyEvent true
                             }
-                            return@onKeyEvent false
+                            // הלאנצ'ר הוא "דף הבית" של המכשיר - אסור לצריכת המקש הזו
+                            // ליפול ל-fallback של המערכת (שעלול לסיים/למזער את ה-Activity
+                            // של הלאנצ'ר עצמו ולהשאיר את המשתמש בלי מסך בית). אם לא נמצאים
+                            // בדף הבית המוגדר, "חזור" מחזיר אליו - בדיוק כמו ברוב הלאנצ'רים;
+                            // אם כבר בדף הבית, המקש נבלע ולא עושה כלום.
+                            if (currentPage != viewModel.homePageIndex) {
+                                scope.launch { pagerState.animateScrollToPage(viewModel.homePageIndex) }
+                            }
+                            return@onKeyEvent true
                         }
                         AndroidKeyEvent.KEYCODE_DPAD_DOWN -> {
                             if (viewModel.isTopBarFocused) {

@@ -32,7 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.future.tools.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 import java.util.Locale
 
 @Composable
@@ -148,7 +148,7 @@ fun VoiceTranscribeScreen(theme: FutureTheme, onBack: () -> Unit) {
 private fun MicButton(isListening: Boolean, theme: FutureTheme, onClick: () -> Unit) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    val baseColor = if (isListening) Color(0xFFFF6B6B) else theme.accentColor
+    val baseColor = if (isListening) theme.dangerColor else theme.accentColor
     val bgColor = if (isFocused) baseColor else baseColor.copy(alpha = 0.85f)
     Box(
         modifier = Modifier

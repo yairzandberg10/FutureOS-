@@ -22,6 +22,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
@@ -31,7 +33,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.future.tools.data.FlashlightController
-import com.future.tools.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 
 @Composable
 fun FlashlightScreen(theme: FutureTheme, onBack: () -> Unit) {
@@ -51,6 +53,11 @@ fun FlashlightScreen(theme: FutureTheme, onBack: () -> Unit) {
         onDispose { if (isOn) controller.setTorch(false) }
     }
 
+    // אותה תקלת "אין פוקוס" שתועדה ותוקנה במחשבון/ממיר יחידות - ראו שם.
+    // מתעדכן גם כשההרשאה מתקבלת, כדי שהפוקוס יעבור לכפתור הפנס האמיתי.
+    val focusRequester = remember { FocusRequester() }
+    LaunchedEffect(hasPermission) { focusRequester.requestFocus() }
+
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize()) {
@@ -61,7 +68,7 @@ fun FlashlightScreen(theme: FutureTheme, onBack: () -> Unit) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("כדי להשתמש בפנס צריך לאשר הרשאת מצלמה", color = theme.textColor.copy(alpha = 0.7f), fontSize = 15.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                             Spacer(modifier = Modifier.height(16.dp))
-                            FlashlightPermissionButton(theme = theme) { permissionLauncher.launch(Manifest.permission.CAMERA) }
+                            FlashlightPermissionButton(theme = theme, focusRequester = focusRequester, onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) })
                         }
                     }
                 } else if (!controller.hasFlash()) {
@@ -71,7 +78,7 @@ fun FlashlightScreen(theme: FutureTheme, onBack: () -> Unit) {
                 } else {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            FlashlightToggle(isOn = isOn, theme = theme, onToggle = {
+                            FlashlightToggle(isOn = isOn, theme = theme, focusRequester = focusRequester, onToggle = {
                                 val target = !isOn
                                 if (controller.setTorch(target)) {
                                     isOn = target
@@ -84,7 +91,7 @@ fun FlashlightScreen(theme: FutureTheme, onBack: () -> Unit) {
                             Text(if (isOn) "דלוק" else "כבוי", color = theme.textColor.copy(alpha = 0.6f), fontSize = 14.sp)
                             errorMessage?.let {
                                 Spacer(modifier = Modifier.height(8.dp))
-                                Text(it, color = Color(0xFFFF6B6B), fontSize = 12.sp)
+                                Text(it, color = theme.dangerColor, fontSize = 12.sp)
                             }
                         }
                     }
@@ -95,11 +102,11 @@ fun FlashlightScreen(theme: FutureTheme, onBack: () -> Unit) {
 }
 
 @Composable
-private fun FlashlightToggle(isOn: Boolean, theme: FutureTheme, onToggle: () -> Unit) {
+private fun FlashlightToggle(isOn: Boolean, theme: FutureTheme, onToggle: () -> Unit, focusRequester: FocusRequester? = null) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
     val bgColor by animateColorAsState(
-        if (isOn) Color(0xFFFFD60A) else if (isFocused) theme.textColor.copy(alpha = 0.18f) else theme.textColor.copy(alpha = 0.08f),
+        if (isOn) theme.warningColor else if (isFocused) theme.textColor.copy(alpha = 0.18f) else theme.textColor.copy(alpha = 0.08f),
         label = "flashlightBg"
     )
     val scale by animateFloatAsState(if (isFocused) 1.06f else 1f, label = "flashlightScale")
@@ -111,9 +118,10 @@ private fun FlashlightToggle(isOn: Boolean, theme: FutureTheme, onToggle: () -> 
             .clip(CircleShape)
             .background(bgColor)
             .then(
-                if (isFocused) Modifier.border(3.dp, if (isOn) Color(0xFFFFD60A) else theme.textColor.copy(alpha = 0.4f), CircleShape)
+                if (isFocused) Modifier.border(3.dp, if (isOn) theme.warningColor else theme.textColor.copy(alpha = 0.4f), CircleShape)
                 else Modifier
             )
+            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onToggle)
             .focusable(interactionSource = interactionSource),
         contentAlignment = Alignment.Center
@@ -128,7 +136,7 @@ private fun FlashlightToggle(isOn: Boolean, theme: FutureTheme, onToggle: () -> 
 }
 
 @Composable
-private fun FlashlightPermissionButton(theme: FutureTheme, onClick: () -> Unit) {
+private fun FlashlightPermissionButton(theme: FutureTheme, onClick: () -> Unit, focusRequester: FocusRequester? = null) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
     val bgColor by animateColorAsState(if (isFocused) theme.accentColor else theme.accentColor.copy(alpha = 0.7f), label = "permBtnBg")
@@ -136,6 +144,7 @@ private fun FlashlightPermissionButton(theme: FutureTheme, onClick: () -> Unit) 
         modifier = Modifier
             .clip(androidx.compose.foundation.shape.RoundedCornerShape(20.dp))
             .background(bgColor)
+            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
             .focusable(interactionSource = interactionSource)
             .padding(horizontal = 24.dp, vertical = 12.dp)

@@ -19,10 +19,12 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
+import android.widget.GridLayout
+import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.content.ContextCompat
-import com.future.keyboard.theme.ThemeClient
+import com.future.sharednav.theme.ThemeClient
 
 /**
  * שירות שיטת קלט (IME) אמיתי: המכשיר הוא מקלדת T9 פיזית בלי מסך מגע (ראו
@@ -53,12 +55,40 @@ class KeyboardService : InputMethodService() {
         // רשימת סימני הפיסוק הזמינים בתפריט * - אין ייצוג ויזואלי שלהם על המקשים
         // עצמם, ולכן הם מרוכזים בתפריט אחד שנפתח בלחיצה קצרה על הכוכבית.
         private val PUNCTUATION_SYMBOLS = listOf(
-            '.', ',', '?', '!', '\'', '"', '-', '@', '/', ':', ';', '(', ')', '+', '=', '_', '%', '&'
+            '.', ',', '?', '!', '\'', '"', '-', '@', '/', ':', ';', '(', ')',
+            '+', '=', '_', '%', '&', '*', '#', '$', '€', '₪', '~', '\\', '|',
+            '<', '>', '[', ']', '{', '}', '^', '`'
         )
+        // מספר העמודות ברשת תפריט הפיסוק - קבוע כדי שהניווט האנכי (חצים
+        // למעלה/למטה) יוכל לחשב שורה/עמודה מהאינדקס השטוח ברשימה.
+        private const val PUNCTUATION_COLUMNS = 6
+
+        // תקרה על מספר המועמדות המוצגות בו-זמנית בשורת הניבוי - מילון שמחזיר
+        // עשרות התאמות לרצף ספרות קצר לא אמור לנפח את השורה לאינסוף. "חלון"
+        // נגלל סביב המועמדת הנבחרת (ראו updateCandidatesView) כדי שגם מועמדת
+        // מעבר לתקרה תמיד תהיה נגישה בלחיצת חץ.
+        private const val MAX_VISIBLE_CANDIDATES = 12
     }
 
     private lateinit var prefs: SharedPreferences
+
+    // מילון עברי מלא (ראו HebrewDictionaryDb) - נטען פעם אחת ב-onCreate ומוזן
+    // לכל T9Engine עברי שנוצר לאחר מכן (גם במעברי מצב), כדי שהעתקת/פתיחת
+    // ה-DB לא תקרה בכל לחיצת #. @Volatile כי ההקצאה קורית ב-thread ברקע
+    // (ראו onCreate) והקריאה ב-buildEngine קורית ב-thread הראשי.
+    @Volatile
+    private var hebrewDb: HebrewDictionaryDb? = null
     private var engine: T9Engine = T9Engine(T9Engine.Language.HEBREW)
+
+    // כשה-DB עוד לא מוכן (null) מחזירים null, לא רשימה ריקה - כדי ש-T9Engine
+    // ייפול חזרה למילון הפנימי הקטן במקום להציג "אין ניבוי" בחלון הקצר של
+    // ההעתקה הראשונית (ראו hebrewDb ו-externalCandidates).
+    private fun buildEngine(language: T9Engine.Language): T9Engine =
+        if (language == T9Engine.Language.HEBREW) {
+            T9Engine(language) { digits -> hebrewDb?.candidatesFor(digits) }
+        } else {
+            T9Engine(language)
+        }
 
     // רצף הספרות שנלחצו עד כה - מפתח החיפוש במילון (מיקום אחד לכל אות, בלי
     // תלות באיזו אות נבחרה בפועל בתוך אותו מקש).
@@ -85,8 +115,10 @@ class KeyboardService : InputMethodService() {
     private var punctuationIndex = 0
 
     private lateinit var hintView: TextView
+    private lateinit var candidatesScroll: HorizontalScrollView
     private lateinit var candidatesRow: LinearLayout
     private lateinit var nextHintChip: TextView
+    private lateinit var punctuationGrid: GridLayout
 
     private var textColor: Int = Color.BLACK
     private var mutedTextColor: Int = Color.DKGRAY
@@ -105,8 +137,12 @@ class KeyboardService : InputMethodService() {
     override fun onCreate() {
         super.onCreate()
         prefs = getSharedPreferences("t9_keyboard_prefs", MODE_PRIVATE)
-        engineLanguageFor(currentMode())?.let { engine = T9Engine(it) }
+        engineLanguageFor(currentMode())?.let { engine = buildEngine(it) }
         loadFrequencies()
+        // בפעם הראשונה בלבד, פתיחת HebrewDictionaryDb מעתיקה קובץ של מאות MB
+        // מה-assets לאחסון הפנימי - רצה ברקע כדי לא לחסום את onCreate. עד
+        // שהיא מסתיימת, buildEngine נופל חזרה למילון הפנימי הקטן.
+        Thread { hebrewDb = HebrewDictionaryDb(this) }.start()
     }
 
     private fun currentMode(): InputMode {
@@ -141,7 +177,7 @@ class KeyboardService : InputMethodService() {
         val order = InputMode.CYCLE_ORDER
         val next = order[(order.indexOf(currentMode()) + 1) % order.size]
         prefs.edit().putString("input_mode", next.name).apply()
-        engineLanguageFor(next)?.let { engine = T9Engine(it); loadFrequencies() }
+        engineLanguageFor(next)?.let { engine = buildEngine(it); loadFrequencies() }
         resetComposing()
         updateCandidatesView()
     }
@@ -190,6 +226,15 @@ class KeyboardService : InputMethodService() {
             gravity = Gravity.END
         }
 
+        // עוטפים את שורת המועמדות בגלילה אופקית - בלעדיה, מועמדות מעבר לרוחב
+        // המסך פשוט נחתכות ואי אפשר להגיע אליהן (ראו requestChildRectangleOnScreen
+        // ב-updateCandidatesView שגוללת אוטומטית אל המועמדת הנבחרת).
+        candidatesScroll = HorizontalScrollView(this).apply {
+            isHorizontalScrollBarEnabled = false
+            overScrollMode = View.OVER_SCROLL_NEVER
+            addView(candidatesRow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        }
+
         nextHintChip = TextView(this).apply {
             text = "◂ ▸"
             textSize = 13f
@@ -200,21 +245,38 @@ class KeyboardService : InputMethodService() {
         val candidatesWithHint = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            addView(candidatesRow, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            addView(candidatesScroll, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
             addView(nextHintChip)
+        }
+
+        punctuationGrid = GridLayout(this).apply {
+            columnCount = PUNCTUATION_COLUMNS
+            visibility = View.GONE
         }
 
         val container = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(backgroundColor)
             layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
-            setPadding(dp(24), dp(16), dp(24), dp(16))
+            // מוקטן לגובה מינימלי (היה 24/16dp) - פס המקלדת מוצג רק כשיש מה
+            // להציג (ראו onEvaluateInputViewShown), אז אין סיבה שיתפוס עוד שטח
+            // מהמסך ממה שהתוכן בפועל דורש.
+            setPadding(dp(16), dp(8), dp(16), dp(8))
             addView(hintView)
             addView(candidatesWithHint)
+            addView(punctuationGrid, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
         }
         updateCandidatesView()
         return container
     }
+
+    override fun onEvaluateFullscreenMode(): Boolean = false
+
+    // פס המקלדת מוצג רק כשיש בו תוכן של ממש - מועמדות ניבוי, תפריט פיסוק
+    // פתוח, או האזנה קולית פעילה. בכל מצב אחר הוא נשאר מוסתר לגמרי כדי שלא
+    // יחסום דיאלוגים/כפתורים במסכים שמעליו (ראו updateInputViewShown ב-updateCandidatesView).
+    override fun onEvaluateInputViewShown(): Boolean =
+        isPunctuationMenuOpen || isListening || candidates.isNotEmpty()
 
     private fun applyTheme() {
         val theme = ThemeClient.getTheme(this)
@@ -266,31 +328,47 @@ class KeyboardService : InputMethodService() {
         val label = modeLabel(mode)
 
         if (isListening) {
+            punctuationGrid.visibility = View.GONE
+            candidatesScroll.visibility = View.VISIBLE
             showStatus("[$label] 🎤 ${getString(R.string.voice_listening)}")
+            updateInputViewShown()
             return
         }
 
         if (isPunctuationMenuOpen) {
-            hintView.text = "[$label] סימני פיסוק - ◂/▸ לניווט, מרכז לבחירה"
-            candidatesRow.removeAllViews()
+            candidatesScroll.visibility = View.GONE
+            nextHintChip.visibility = View.GONE
+            punctuationGrid.visibility = View.VISIBLE
+            hintView.text = "סימני פיסוק - חצים לניווט, מרכז לבחירה, מחיקה/*/חזור לביטול"
+            punctuationGrid.removeAllViews()
             PUNCTUATION_SYMBOLS.forEachIndexed { index, symbol ->
                 val isSelected = index == punctuationIndex
                 val chip = TextView(this).apply {
                     text = symbol.toString()
-                    textSize = 15f
-                    setPadding(dp(20), dp(8), dp(20), dp(8))
+                    textSize = 16f
+                    gravity = Gravity.CENTER
+                    setPadding(dp(4), dp(10), dp(4), dp(10))
                     setTextColor(if (isSelected) Color.WHITE else textColor)
                     typeface = if (isSelected) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
                     background = chipDrawable(isSelected)
                     setOnClickListener { insertPunctuation(index) }
                 }
-                val params = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-                params.marginEnd = dp(8)
-                candidatesRow.addView(chip, params)
+                val params = GridLayout.LayoutParams(
+                    GridLayout.spec(index / PUNCTUATION_COLUMNS),
+                    GridLayout.spec(index % PUNCTUATION_COLUMNS, 1f)
+                ).apply {
+                    width = 0
+                    height = ViewGroup.LayoutParams.WRAP_CONTENT
+                    setMargins(dp(4), dp(4), dp(4), dp(4))
+                }
+                punctuationGrid.addView(chip, params)
             }
-            nextHintChip.visibility = View.GONE
+            updateInputViewShown()
             return
         }
+
+        candidatesScroll.visibility = View.VISIBLE
+        punctuationGrid.visibility = View.GONE
 
         val emptyHint = if (mode == InputMode.NUMERIC) "הקש ספרות" else "הקש ספרות כדי לכתוב מילים"
         hintView.text = when {
@@ -300,8 +378,22 @@ class KeyboardService : InputMethodService() {
         }
 
         candidatesRow.removeAllViews()
-        candidates.forEachIndexed { index, word ->
-            val isSelected = index == candidateIndex.coerceIn(0, (candidates.size - 1).coerceAtLeast(0))
+        val selectedIndex = candidateIndex.coerceIn(0, (candidates.size - 1).coerceAtLeast(0))
+        // "חלון" של עד MAX_VISIBLE_CANDIDATES מועמדות סביב המועמדת הנבחרת - כדי
+        // שהשורה לא תתפח כשהמילון מחזיר עשרות התאמות, בלי לאבד גישה למועמדות
+        // שנבחרו בעזרת החיצים מעבר לתקרה.
+        val total = candidates.size
+        val windowStart = if (total <= MAX_VISIBLE_CANDIDATES) 0
+            else (selectedIndex - MAX_VISIBLE_CANDIDATES / 2).coerceIn(0, total - MAX_VISIBLE_CANDIDATES)
+        val windowEnd = (windowStart + MAX_VISIBLE_CANDIDATES).coerceAtMost(total)
+
+        if (windowStart > 0) {
+            candidatesRow.addView(ellipsisChip(), ellipsisParams())
+        }
+        var selectedChip: View? = null
+        for (index in windowStart until windowEnd) {
+            val word = candidates[index]
+            val isSelected = index == selectedIndex
             val chip = TextView(this).apply {
                 text = applyCase(word, mode)
                 textSize = 15f
@@ -317,10 +409,33 @@ class KeyboardService : InputMethodService() {
             val params = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
             params.marginEnd = dp(8)
             candidatesRow.addView(chip, params)
+            if (isSelected) selectedChip = chip
+        }
+        if (windowEnd < total) {
+            candidatesRow.addView(ellipsisChip(), ellipsisParams())
         }
 
         nextHintChip.visibility = if (candidates.size > 1) View.VISIBLE else View.GONE
+
+        // גוללת את שורת המועמדות כדי שהמועמדת הנבחרת תמיד תהיה גלויה - בלעדיה,
+        // גלילה בין מועמדות בקצוות השורה (HorizontalScrollView) הייתה משאירה
+        // את הבחירה מחוץ לתצוגה.
+        selectedChip?.let { chip ->
+            candidatesRow.post { candidatesScroll.requestChildRectangleOnScreen(chip, android.graphics.Rect(0, 0, chip.width, chip.height), false) }
+        }
+
+        updateInputViewShown()
     }
+
+    private fun ellipsisChip(): TextView = TextView(this).apply {
+        text = "…"
+        textSize = 15f
+        setPadding(dp(8), dp(8), dp(8), dp(8))
+        setTextColor(mutedTextColor)
+    }
+
+    private fun ellipsisParams(): LinearLayout.LayoutParams =
+        LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(4) }
 
     /** ממיר ערך dp לפיקסלים לפי צפיפות המסך של המכשיר - כדי שריווח/מרווחים ייראו עקביים בכל רזולוציה. */
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
@@ -342,26 +457,42 @@ class KeyboardService : InputMethodService() {
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         val ic = currentInputConnection ?: return super.onKeyDown(keyCode, event)
 
-        if (!isPredictiveField) return super.onKeyDown(keyCode, event)
-
-        // כשתפריט הפיסוק פתוח, רק הניווט/האישור/הביטול פעילים - כל מקש אחר
-        // נבלע כדי שלא יקרו פעולות לא צפויות על טקסט שכבר הורכב לפני הפתיחה.
+        // # (מחליף שפה) ו-* (פותח תפריט פיסוק) חייבים לעבוד בכל שדה קלט - כולל
+        // שדות מספריים/טלפון (isPredictiveField=false) - בדיוק כמו בטלפון T9
+        // אמיתי. לכן מטופלים *לפני* הבדיקה למטה שחוסמת המשך טיפול בשדות
+        // לא-טקסטואליים. NUMPAD_MULTIPLY/MENU הם מיפויים חלופיים ל-fallback
+        // במקרה שהחומרה שולחת קוד שונה מ-KEYCODE_STAR/KEYCODE_POUND הצפויים
+        // (יש לאמת מול המכשיר עם adb shell getevent -l; אין קבוע KEYCODE_NUMPAD_POUND
+        // ב-Android - לוח מספרי לא כולל #).
         if (isPunctuationMenuOpen) {
+            // כשתפריט הפיסוק פתוח, רק הניווט/האישור/הביטול פעילים - כל מקש אחר
+            // נבלע כדי שלא יקרו פעולות לא צפויות על טקסט שכבר הורכב לפני הפתיחה.
             when (keyCode) {
-                KeyEvent.KEYCODE_DPAD_LEFT -> {
-                    punctuationIndex = (punctuationIndex - 1 + PUNCTUATION_SYMBOLS.size) % PUNCTUATION_SYMBOLS.size
-                    updateCandidatesView()
-                }
-                KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                    punctuationIndex = (punctuationIndex + 1) % PUNCTUATION_SYMBOLS.size
-                    updateCandidatesView()
-                }
+                KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT,
+                KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN -> movePunctuationSelection(keyCode)
                 KeyEvent.KEYCODE_DPAD_CENTER -> insertPunctuation(punctuationIndex)
-                KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_DEL, KeyEvent.KEYCODE_STAR -> closePunctuationMenu()
+                KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_DEL,
+                KeyEvent.KEYCODE_STAR, KeyEvent.KEYCODE_NUMPAD_MULTIPLY -> closePunctuationMenu()
                 else -> { /* נבלע - שום פעולה */ }
             }
             return true
         }
+
+        when (keyCode) {
+            KeyEvent.KEYCODE_STAR, KeyEvent.KEYCODE_NUMPAD_MULTIPLY, KeyEvent.KEYCODE_MENU -> {
+                if (event.repeatCount == 0) openPunctuationMenu(ic)
+                return true
+            }
+            KeyEvent.KEYCODE_POUND -> {
+                if (event.repeatCount == 0) {
+                    if (isPredictiveField && digitSequence.isNotEmpty()) commitCurrentWord(ic, appendSpace = false)
+                    advanceMode()
+                }
+                return true
+            }
+        }
+
+        if (!isPredictiveField) return super.onKeyDown(keyCode, event)
 
         val mode = currentMode()
 
@@ -382,17 +513,19 @@ class KeyboardService : InputMethodService() {
                 ic.commitText(digit.toString(), 1)
                 return true
             }
-            if (keyCode == KeyEvent.KEYCODE_POUND && event.repeatCount == 0) {
-                advanceMode()
-                return true
-            }
-            if (keyCode == KeyEvent.KEYCODE_STAR && event.repeatCount == 0) {
-                openPunctuationMenu(ic)
-                return true
-            }
             if (keyCode == KeyEvent.KEYCODE_DEL) {
                 ic.deleteSurroundingText(1, 0)
                 return true
+            }
+            // "חזור" (Back) פועל כמחיקה גם כאן - במכשירים בלי מקש DEL פיזי נפרד,
+            // זו הדרך היחידה בפועל למחוק תו. אם אין כלום למחוק, המקש לא נבלע
+            // כדי ש"חזור" עדיין יוכל לסגור את המקלדת כרגיל.
+            if (keyCode == KeyEvent.KEYCODE_BACK) {
+                if (!ic.getTextBeforeCursor(1, 0).isNullOrEmpty()) {
+                    ic.deleteSurroundingText(1, 0)
+                    return true
+                }
+                return super.onKeyDown(keyCode, event)
             }
             return super.onKeyDown(keyCode, event)
         }
@@ -404,11 +537,6 @@ class KeyboardService : InputMethodService() {
         }
 
         when (keyCode) {
-            // * קצר - פותח את תפריט סימני הפיסוק (ראו הטיפול למעלה כשהתפריט פתוח).
-            KeyEvent.KEYCODE_STAR -> {
-                if (event.repeatCount == 0) openPunctuationMenu(ic)
-                return true
-            }
             // חצים שמאלה/ימינה - מעבר בין מועמדות הניבוי כשיש יותר ממילה אחת
             // מתאימה; אם אין כמה מועמדות, מתנהג כניווט רגיל (ברירת המחדל של המערכת).
             KeyEvent.KEYCODE_DPAD_LEFT -> {
@@ -425,16 +553,6 @@ class KeyboardService : InputMethodService() {
                 }
                 return super.onKeyDown(keyCode, event)
             }
-            // # קצר - מאשר את המילה הנוכחית (אם יש) ועובר למצב הקלט הבא במחזור
-            // הקבוע (ראו [InputMode]). פועל רק על ה-DOWN הראשון כדי ש-repeat
-            // events נוספים בזמן החזקת המקש לא ימשיכו לקפוץ בין מצבים.
-            KeyEvent.KEYCODE_POUND -> {
-                if (event.repeatCount == 0) {
-                    if (digitSequence.isNotEmpty()) commitCurrentWord(ic, appendSpace = false)
-                    advanceMode()
-                }
-                return true
-            }
             KeyEvent.KEYCODE_DEL -> {
                 if (digitSequence.isNotEmpty()) {
                     digitSequence = digitSequence.dropLast(1)
@@ -449,6 +567,25 @@ class KeyboardService : InputMethodService() {
                 // עלול לא לעשות כלום ברגע שהסמן נמצא אחרי מילה שכבר אושרה.
                 ic.deleteSurroundingText(1, 0)
                 return true
+            }
+            // "חזור" (Back) פועל כמחיקה בדיוק כמו KEYCODE_DEL - במכשירים בלי מקש
+            // DEL פיזי נפרד, זו הדרך היחידה בפועל למחוק תו בזמן הקלדה. אם אין
+            // כלום למחוק (לא מילה בהרכבה, לא טקסט לפני הסמן), המקש לא נבלע כדי
+            // ש"חזור" עדיין יוכל לסגור את המקלדת כרגיל.
+            KeyEvent.KEYCODE_BACK -> {
+                if (digitSequence.isNotEmpty()) {
+                    digitSequence = digitSequence.dropLast(1)
+                    if (fallbackLetters.isNotEmpty()) fallbackLetters.deleteCharAt(fallbackLetters.length - 1)
+                    candidateIndex = 0
+                    lastTapDigit = null
+                    refreshComposing(ic)
+                    return true
+                }
+                if (!ic.getTextBeforeCursor(1, 0).isNullOrEmpty()) {
+                    ic.deleteSurroundingText(1, 0)
+                    return true
+                }
+                return super.onKeyDown(keyCode, event)
             }
             KeyEvent.KEYCODE_0 -> {
                 // לחיצה קצרה - כמו ברוב מכשירי T9, 0 לא ממופה לאותיות ומציב רווח.
@@ -541,6 +678,28 @@ class KeyboardService : InputMethodService() {
 
     private fun closePunctuationMenu() {
         isPunctuationMenuOpen = false
+        updateCandidatesView()
+    }
+
+    /** ניווט דו-מימדי (4 כיוונים) בתפריט הפיסוק - האינדקס השטוח ב-PUNCTUATION_SYMBOLS מתורגם לשורה/עמודה לפי PUNCTUATION_COLUMNS. */
+    private fun movePunctuationSelection(keyCode: Int) {
+        val count = PUNCTUATION_SYMBOLS.size
+        val columns = PUNCTUATION_COLUMNS
+        val rowCount = (count + columns - 1) / columns
+        val row = punctuationIndex / columns
+        val col = punctuationIndex % columns
+        var newRow = row
+        var newCol = col
+        when (keyCode) {
+            KeyEvent.KEYCODE_DPAD_LEFT -> newCol = (col - 1 + columns) % columns
+            KeyEvent.KEYCODE_DPAD_RIGHT -> newCol = (col + 1) % columns
+            KeyEvent.KEYCODE_DPAD_UP -> newRow = (row - 1 + rowCount) % rowCount
+            KeyEvent.KEYCODE_DPAD_DOWN -> newRow = (row + 1) % rowCount
+        }
+        var newIndex = newRow * columns + newCol
+        // השורה האחרונה עלולה להיות חלקית - נצמד לפריט האחרון הקיים במקום ליפול מחוץ לרשימה.
+        if (newIndex >= count) newIndex = count - 1
+        punctuationIndex = newIndex
         updateCandidatesView()
     }
 

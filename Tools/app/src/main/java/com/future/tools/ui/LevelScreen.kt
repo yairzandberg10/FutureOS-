@@ -20,7 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.future.tools.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -67,7 +67,7 @@ fun LevelScreen(theme: FutureTheme, onBack: () -> Unit) {
     val tilt = rememberTilt()
     val isLevel = abs(tilt.x) < LEVEL_THRESHOLD_DEG && abs(tilt.y) < LEVEL_THRESHOLD_DEG
     val bubbleColor by animateColorAsState(
-        if (isLevel) androidx.compose.ui.graphics.Color(0xFF32D74B) else theme.accentColor,
+        if (isLevel) theme.successColor else theme.accentColor,
         label = "levelBubbleColor"
     )
 

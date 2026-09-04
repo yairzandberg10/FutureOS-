@@ -17,6 +17,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.style.TextAlign
@@ -24,11 +26,11 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.future.messages.data.Conversation
 import com.future.messages.data.SmsRepository
-import com.future.messages.theme.ThemeClient
+import com.future.sharednav.theme.ThemeClient
 import com.future.messages.ui.screens.ComposeScreen
 import com.future.messages.ui.screens.ConversationListScreen
 import com.future.messages.ui.screens.MessageThreadScreen
-import com.future.messages.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 import com.future.messages.ui.theme.MessagesTheme
 
 // הרשאות ליבה - בלעדיהן האפליקציה לא יכולה לתפקד בכלל, ולכן חוסמות שימוש.
@@ -120,6 +122,9 @@ fun MessagesApp(theme: FutureTheme) {
     var screen by remember { mutableStateOf<MessagesScreen>(MessagesScreen.List) }
     var conversations by remember { mutableStateOf<List<Conversation>>(emptyList()) }
     var messages by remember { mutableStateOf<List<com.future.messages.data.Message>>(emptyList()) }
+    // נשמר גם אחרי שחוזרים ל-List - כדי שהפוקוס יחזור לשיחה שממנה נכנסנו,
+    // לא תמיד לשורה הראשונה ברשימה.
+    var lastSelectedThreadId by remember { mutableStateOf<Long?>(null) }
 
     BackHandler(enabled = screen !is MessagesScreen.List) {
         if (screen is MessagesScreen.Thread) {
@@ -150,9 +155,11 @@ fun MessagesApp(theme: FutureTheme) {
                 onConversationClick = { conversation ->
                     repository.markThreadRead(conversation.threadId)
                     messages = repository.getMessages(conversation.threadId)
+                    lastSelectedThreadId = conversation.threadId
                     screen = MessagesScreen.Thread(conversation)
                 },
-                onComposeClick = { screen = MessagesScreen.Compose() }
+                onComposeClick = { screen = MessagesScreen.Compose() },
+                lastSelectedThreadId = lastSelectedThreadId,
             )
             is MessagesScreen.Thread -> MessageThreadScreen(
                 conversation = current.conversation,
@@ -218,12 +225,18 @@ fun MessagesApp(theme: FutureTheme) {
 
 @Composable
 private fun PermissionRequiredScreen(theme: FutureTheme, onRequest: () -> Unit) {
+    val focusRequester = remember { FocusRequester() }
+    LaunchedEffect(Unit) { focusRequester.requestFocus() }
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
                 Text("כדי להשתמש בהודעות, יש לאשר הרשאות SMS ואנשי קשר", color = theme.textColor, textAlign = TextAlign.Center)
                 Spacer(modifier = Modifier.height(16.dp))
-                Button(onClick = onRequest) { Text("אשר הרשאות") }
+                Button(
+                    onClick = onRequest,
+                    modifier = Modifier.focusRequester(focusRequester),
+                    colors = ButtonDefaults.buttonColors(containerColor = theme.accentColor, contentColor = theme.backgroundColor),
+                ) { Text("אשר הרשאות") }
             }
         }
     }
@@ -231,12 +244,18 @@ private fun PermissionRequiredScreen(theme: FutureTheme, onRequest: () -> Unit) 
 
 @Composable
 private fun DefaultAppRequiredScreen(theme: FutureTheme, onRequest: () -> Unit) {
+    val focusRequester = remember { FocusRequester() }
+    LaunchedEffect(Unit) { focusRequester.requestFocus() }
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
                 Text("צריך להגדיר את Messages כאפליקציית ברירת המחדל למסרונים", color = theme.textColor, textAlign = TextAlign.Center)
                 Spacer(modifier = Modifier.height(16.dp))
-                Button(onClick = onRequest) { Text("הגדר כברירת מחדל") }
+                Button(
+                    onClick = onRequest,
+                    modifier = Modifier.focusRequester(focusRequester),
+                    colors = ButtonDefaults.buttonColors(containerColor = theme.accentColor, contentColor = theme.backgroundColor),
+                ) { Text("הגדר כברירת מחדל") }
             }
         }
     }

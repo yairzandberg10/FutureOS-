@@ -1,4 +1,5 @@
 package com.future.files.ui
+import com.future.sharednav.focus.bringIntoViewOnFocus
 
 import android.graphics.Bitmap
 import androidx.compose.animation.animateColorAsState
@@ -17,11 +18,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowForward
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Android
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.ContentPaste
 import androidx.compose.material.icons.rounded.CreateNewFolder
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.DriveFileMove
@@ -65,7 +68,7 @@ import com.future.files.data.FileRepository
 import com.future.files.data.ThumbnailCache
 import com.future.files.data.categorize
 import com.future.files.data.displayName
-import com.future.files.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -90,52 +93,109 @@ fun FilesScreen(
     onOpenExternally: (FileEntry) -> Unit = {},
     onCopy: (FileEntry) -> Unit = {},
     onMove: (FileEntry) -> Unit = {},
-    onPaste: () -> Unit = {}
+    onPaste: () -> Unit = {},
+    onDeleteMultiple: (List<FileEntry>) -> Unit = {},
+    onShareMultiple: (List<FileEntry>) -> Unit = {},
+    // הנתיב של הפריט שנפתח לאחרונה מהתיקייה הזו - כשחוזרים "אחורה" (מקובץ
+    // שנפתח, או מתת-תיקייה) הפוקוס צריך לשוב אליו בדיוק, לא תמיד לפריט הראשון.
+    lastSelectedPath: String? = null,
 ) {
     val repository = remember { FileRepository() }
+    var selectedEntries by remember { mutableStateOf(setOf<FileEntry>()) }
     var menuEntry by remember { mutableStateOf<FileEntry?>(null) }
     var renameEntry by remember { mutableStateOf<FileEntry?>(null) }
     var deleteEntryState by remember { mutableStateOf<FileEntry?>(null) }
+    var deleteMultipleState by remember { mutableStateOf<List<FileEntry>?>(null) }
     var detailsEntry by remember { mutableStateOf<FileEntry?>(null) }
     var showNewFolder by remember { mutableStateOf(false) }
     // עוקב אחר הפריט הממוקד כרגע ברשימה כדי לאפשר פתיחת התפריט גם דרך כפתור
     // ה-⋮ הממוקד בסרגל העליון (לא רק דרך מקש Menu/Settings בחומרה).
     var focusedEntry by remember { mutableStateOf<FileEntry?>(null) }
+    // FocusRequester לפי נתיב - מתאפס בכל מעבר תיקייה, כדי שגם הפוקוס ההתחלתי
+    // וגם השחזור אחרי חזרה "אחורה" יעבדו על אותה תבנית.
+    val rowFocusRequesters = remember(currentDir) { mutableMapOf<String, FocusRequester>() }
+    LaunchedEffect(currentDir, entries.map { it.file.absolutePath }) {
+        val target = entries.firstOrNull { it.file.absolutePath == lastSelectedPath } ?: entries.firstOrNull()
+        target?.let { rowFocusRequesters.getOrPut(it.file.absolutePath) { FocusRequester() }.requestFocus() }
+    }
+
+    fun toggleSelection(entry: FileEntry) {
+        selectedEntries = if (selectedEntries.contains(entry)) {
+            selectedEntries - entry
+        } else {
+            selectedEntries + entry
+        }
+    }
+
+    fun clearSelection() {
+        selectedEntries = emptySet()
+    }
+
+    // Reset selection when changing directory
+    LaunchedEffect(currentDir) {
+        clearSelection()
+    }
 
     fun displayNameOf(entry: FileEntry): String = entry.file.displayName(isRoot && entry.isDirectory)
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize()) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (!isRoot) {
-                        FocusableIconButton(Icons.AutoMirrored.Rounded.ArrowForward, "חזור", theme, onBack)
-                        Spacer(modifier = Modifier.width(8.dp))
+                if (selectedEntries.isEmpty()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (!isRoot) {
+                            FocusableIconButton(Icons.AutoMirrored.Rounded.ArrowBack, "חזור", theme, onBack)
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+                        Text(
+                            if (isRoot) "קבצים" else currentDir.displayName(currentDirIsTopLevelFolder),
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = theme.textColor,
+                            maxLines = 1,
+                            modifier = Modifier.weight(1f)
+                        )
+                        if (hasAccess && hasClipboard) {
+                            FocusableIconButton(Icons.Rounded.ContentPaste, "הדבק", theme, onPaste)
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+                        if (hasAccess && focusedEntry != null) {
+                            FocusableIconButton(Icons.Rounded.MoreVert, "אפשרויות", theme, { menuEntry = focusedEntry })
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+                        if (hasAccess) {
+                            FocusableIconButton(Icons.Rounded.CreateNewFolder, "תיקייה חדשה", theme, { showNewFolder = true })
+                        }
                     }
-                    Text(
-                        if (isRoot) "קבצים" else currentDir.displayName(currentDirIsTopLevelFolder),
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = theme.textColor,
-                        maxLines = 1,
-                        modifier = Modifier.weight(1f)
-                    )
-                    if (hasAccess && hasClipboard) {
-                        FocusableIconButton(Icons.Rounded.ContentPaste, "הדבק", theme, onPaste)
+                } else {
+                    // סרגל בחירה מרובה
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(theme.accentColor.copy(alpha = 0.15f))
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        FocusableIconButton(Icons.Rounded.Close, "בטל בחירה", theme, ::clearSelection)
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            "${selectedEntries.size} נבחרו",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = theme.textColor,
+                            modifier = Modifier.weight(1f)
+                        )
+                        FocusableIconButton(Icons.Rounded.Share, "שתף נבחרים", theme, {
+                            onShareMultiple(selectedEntries.toList())
+                            clearSelection()
+                        })
                         Spacer(modifier = Modifier.width(8.dp))
-                    }
-                    if (hasAccess && focusedEntry != null) {
-                        // גישה חלופית לתפריט האפשרויות (שינוי שם/מחיקה/העתקה/העברה/שיתוף)
-                        // עבור מכשירים בלי מקש Menu/Settings ייעודי - זהה בדיוק לתפריט
-                        // שנפתח דרך מקש החומרה.
-                        FocusableIconButton(Icons.Rounded.MoreVert, "אפשרויות לפריט הממוקד", theme, { menuEntry = focusedEntry })
-                        Spacer(modifier = Modifier.width(8.dp))
-                    }
-                    if (hasAccess) {
-                        FocusableIconButton(Icons.Rounded.CreateNewFolder, "תיקייה חדשה", theme, { showNewFolder = true })
+                        FocusableIconButton(Icons.Rounded.Delete, "מחק נבחרים", theme, {
+                            deleteMultipleState = selectedEntries.toList()
+                        })
                     }
                 }
 
@@ -155,7 +215,7 @@ fun FilesScreen(
                                 .clip(RoundedCornerShape(20.dp))
                                 .background(bgColor)
                                 .clickable(interactionSource = interactionSource, indication = null, onClick = onRequestAccess)
-                                .focusable(interactionSource = interactionSource)
+                                .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
                                 .padding(horizontal = 24.dp, vertical = 12.dp)
                         ) {
                             Text("אשר הרשאה", color = Color.Black, fontWeight = FontWeight.Bold)
@@ -176,9 +236,15 @@ fun FilesScreen(
                                 displayNameOf(entry),
                                 repository,
                                 theme,
-                                onClick = { onOpenFile(entry) },
+                                isSelected = selectedEntries.contains(entry),
+                                onClick = {
+                                    if (selectedEntries.isNotEmpty()) toggleSelection(entry)
+                                    else onOpenFile(entry)
+                                },
                                 onMenu = { menuEntry = entry },
-                                onFocusChanged = { isFocused -> if (isFocused) focusedEntry = entry }
+                                onToggleSelection = { toggleSelection(entry) },
+                                onFocusChanged = { isFocused -> if (isFocused) focusedEntry = entry },
+                                focusRequester = rowFocusRequesters.getOrPut(entry.file.absolutePath) { FocusRequester() },
                             )
                         }
                     }
@@ -227,6 +293,19 @@ fun FilesScreen(
                 )
             }
 
+            deleteMultipleState?.let { entriesToDelete ->
+                ConfirmDialog(
+                    message = "למחוק ${entriesToDelete.size} פריטים?",
+                    theme = theme,
+                    onCancel = { deleteMultipleState = null },
+                    onConfirm = {
+                        deleteMultipleState = null
+                        onDeleteMultiple(entriesToDelete)
+                        clearSelection()
+                    }
+                )
+            }
+
             if (showNewFolder) {
                 NameInputDialog(
                     title = "תיקייה חדשה",
@@ -258,20 +337,9 @@ fun FilesScreen(
 
 @Composable
 private fun FocusableIconButton(icon: ImageVector, contentDescription: String, theme: FutureTheme, onClick: () -> Unit) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val bgColor by animateColorAsState(if (isFocused) theme.accentColor.copy(alpha = 0.3f) else theme.textColor.copy(alpha = 0.08f), label = "iconBtnBg")
-    Box(
-        modifier = Modifier
-            .size(36.dp)
-            .clip(CircleShape)
-            .background(bgColor)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(icon, contentDescription = contentDescription, tint = theme.textColor, modifier = Modifier.size(18.dp))
-    }
+    // עטיפה דקה סביב TopBarIconButton המשותף (מודול SharedKeypadNav) - חתימת
+    // הקריאה נשארת זהה כדי שקריאות קיימות ב-Files לא ישתנו.
+    com.future.sharednav.components.TopBarIconButton(icon, contentDescription, theme.textColor, theme.accentColor, onClick)
 }
 
 @Composable
@@ -280,16 +348,21 @@ private fun FileRow(
     displayName: String,
     repository: FileRepository,
     theme: FutureTheme,
+    isSelected: Boolean,
     onClick: () -> Unit,
     onMenu: () -> Unit,
-    onFocusChanged: (Boolean) -> Unit = {}
+    onToggleSelection: () -> Unit,
+    onFocusChanged: (Boolean) -> Unit = {},
+    focusRequester: FocusRequester? = null,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
     LaunchedEffect(isFocused) { onFocusChanged(isFocused) }
     val shape = RoundedCornerShape(16.dp)
     val bgColor by animateColorAsState(
-        if (isFocused) theme.accentColor.copy(alpha = 0.22f) else theme.textColor.copy(alpha = 0.06f),
+        if (isSelected) theme.accentColor.copy(alpha = 0.35f)
+        else if (isFocused) theme.accentColor.copy(alpha = 0.22f)
+        else theme.textColor.copy(alpha = 0.06f),
         label = "rowBg"
     )
     val scale by animateFloatAsState(if (isFocused) 1.02f else 1f, label = "rowScale")
@@ -301,18 +374,24 @@ private fun FileRow(
             .clip(shape)
             .background(bgColor)
             .then(if (isFocused) Modifier.border(2.dp, theme.accentColor, shape) else Modifier)
+            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource)
+            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
             .onKeyEvent { event ->
-                if (isFocused && event.type == KeyEventType.KeyUp && (event.key == Key.Menu || event.key == Key.Settings)) {
-                    onMenu()
-                    true
+                if (isFocused && event.type == KeyEventType.KeyUp) {
+                    when (event.key) {
+                        Key.Menu, Key.Settings -> { onMenu(); true }
+                        Key.Pound -> { onToggleSelection(); true }
+                        else -> false
+                    }
                 } else false
             }
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        if (entry.isDirectory) {
+        if (isSelected) {
+            Icon(Icons.Rounded.CheckCircle, contentDescription = null, tint = theme.accentColor, modifier = Modifier.size(24.dp))
+        } else if (entry.isDirectory) {
             Icon(Icons.Rounded.Folder, contentDescription = null, tint = theme.accentColor, modifier = Modifier.size(24.dp))
         } else {
             FilePreviewIcon(entry, theme)
@@ -439,13 +518,13 @@ private fun MenuRow(label: String, icon: ImageVector, theme: FutureTheme, onClic
             .fillMaxWidth()
             .background(bgColor)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource)
+            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
             .padding(horizontal = 20.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, contentDescription = null, tint = if (isDestructive) Color(0xFFFF6B6B) else theme.textColor, modifier = Modifier.size(20.dp))
+        Icon(icon, contentDescription = null, tint = if (isDestructive) theme.dangerColor else theme.textColor, modifier = Modifier.size(20.dp))
         Spacer(modifier = Modifier.width(14.dp))
-        Text(label, color = if (isDestructive) Color(0xFFFF6B6B) else theme.textColor, fontSize = 15.sp)
+        Text(label, color = if (isDestructive) theme.dangerColor else theme.textColor, fontSize = 15.sp)
     }
 }
 
@@ -499,7 +578,7 @@ private fun ConfirmDialog(message: String, theme: FutureTheme, onCancel: () -> U
             Spacer(modifier = Modifier.height(16.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 DialogButton("ביטול", theme.textColor.copy(alpha = 0.7f), onCancel)
-                DialogButton("מחק", Color(0xFFFF6B6B), onConfirm)
+                DialogButton("מחק", theme.dangerColor, onConfirm)
             }
         }
     }
@@ -515,7 +594,7 @@ private fun DialogButton(text: String, color: Color, onClick: () -> Unit) {
             .clip(RoundedCornerShape(20.dp))
             .background(bgColor)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource)
+            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
             .padding(horizontal = 24.dp, vertical = 12.dp)
     ) {
         Text(text, color = Color.Black, fontWeight = FontWeight.Bold)

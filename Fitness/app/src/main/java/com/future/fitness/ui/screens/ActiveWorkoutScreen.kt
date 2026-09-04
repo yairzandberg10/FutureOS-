@@ -45,7 +45,7 @@ import com.future.fitness.data.WorkoutStore
 import com.future.fitness.ui.components.FocusableItem
 import com.future.fitness.ui.components.ScreenTopBar
 import com.future.fitness.ui.formatElapsed
-import com.future.fitness.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 import kotlinx.coroutines.delay
 
 private const val REST_SECONDS = 15

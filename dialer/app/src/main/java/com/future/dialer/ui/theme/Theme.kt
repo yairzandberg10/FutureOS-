@@ -6,6 +6,16 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
+/**
+ * צבעי כיוון שיחה (נכנסת/יוצאת/שלא נענתה) - קבועים סמנטיים אחידים, כדי שלא
+ * יוקלדו כ-hex גולמי בכל מקום שמציג רשומת שיחה (למשל CallHistoryItem).
+ */
+object DialerCallColors {
+    val incoming = Color(0xFF4CAF50)
+    val outgoing = Color(0xFF2196F3)
+    val missed = Color(0xFFF44336)
+}
+
 @Composable
 fun DialerTheme(isDarkMode: Boolean = true, accentColor: Color = Color.White, content: @Composable () -> Unit) {
     val colorScheme = if (isDarkMode) {

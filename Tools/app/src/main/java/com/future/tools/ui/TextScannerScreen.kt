@@ -1,4 +1,5 @@
 package com.future.tools.ui
+import com.future.sharednav.focus.bringIntoViewOnFocus
 
 import android.Manifest
 import android.content.ClipData
@@ -28,7 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.future.tools.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
@@ -130,7 +131,7 @@ private fun FreezeButton(isFrozen: Boolean, theme: FutureTheme, onClick: () -> U
             .clip(RoundedCornerShape(18.dp))
             .background(bgColor)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource)
+            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
             .padding(vertical = 16.dp),
         contentAlignment = Alignment.Center
     ) {

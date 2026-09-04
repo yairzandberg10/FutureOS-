@@ -26,7 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.future.tools.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 import java.security.SecureRandom
 
 private const val LOWER = "abcdefghijklmnopqrstuvwxyz"
@@ -43,13 +43,13 @@ private fun generatePassword(length: Int, useUpper: Boolean, useDigits: Boolean,
     return (1..length).map { pool[random.nextInt(pool.length)] }.joinToString("")
 }
 
-private fun passwordStrength(length: Int, useUpper: Boolean, useDigits: Boolean, useSymbols: Boolean): Pair<String, Color> {
+private fun passwordStrength(length: Int, useUpper: Boolean, useDigits: Boolean, useSymbols: Boolean, theme: FutureTheme): Pair<String, Color> {
     val variety = 1 + listOf(useUpper, useDigits, useSymbols).count { it }
     val score = length * variety
     return when {
-        score < 40 -> "חלשה" to Color(0xFFFF6B6B)
-        score < 70 -> "בינונית" to Color(0xFFFFD60A)
-        else -> "חזקה" to Color(0xFF32D74B)
+        score < 40 -> "חלשה" to theme.dangerColor
+        score < 70 -> "בינונית" to theme.warningColor
+        else -> "חזקה" to theme.successColor
     }
 }
 
@@ -66,7 +66,7 @@ fun PasswordGeneratorScreen(theme: FutureTheme, onBack: () -> Unit) {
         password = generatePassword(length, useUpper, useDigits, useSymbols)
     }
 
-    val (strengthLabel, strengthColor) = passwordStrength(length, useUpper, useDigits, useSymbols)
+    val (strengthLabel, strengthColor) = passwordStrength(length, useUpper, useDigits, useSymbols, theme)
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {

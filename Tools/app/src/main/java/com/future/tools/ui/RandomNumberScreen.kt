@@ -22,7 +22,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.future.tools.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 import kotlin.random.Random
 
 @Composable
@@ -99,7 +99,7 @@ fun RandomNumberScreen(theme: FutureTheme, onBack: () -> Unit) {
 
                 Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                     if (!isValidRange) {
-                        Text("המינימום חייב להיות קטן או שווה למקסימום", color = Color(0xFFFF6B6B), fontSize = 13.sp, modifier = Modifier.padding(horizontal = 32.dp), textAlign = TextAlign.Center)
+                        Text("המינימום חייב להיות קטן או שווה למקסימום", color = theme.dangerColor, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 32.dp), textAlign = TextAlign.Center)
                     } else {
                         Text(result?.toString() ?: "?", color = theme.textColor, fontSize = 64.sp, fontWeight = FontWeight.Light)
                     }

@@ -36,7 +36,7 @@ import androidx.compose.ui.unit.sp
 import com.future.sfarim.data.LibraryBookmark
 import com.future.sfarim.ui.components.FocusableItem
 import com.future.sfarim.ui.components.ScreenTopBar
-import com.future.sfarim.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 
 @Composable
 fun BookmarksScreen(

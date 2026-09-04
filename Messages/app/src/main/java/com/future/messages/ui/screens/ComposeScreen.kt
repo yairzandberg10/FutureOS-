@@ -4,7 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowForward
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,7 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.future.messages.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 
 /** מסך פשוט להתחלת שיחה חדשה - הזנת מספר טלפון. */
 @Composable
@@ -34,7 +34,7 @@ fun ComposeScreen(theme: FutureTheme, onCancel: () -> Unit, onStart: (String) ->
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = onCancel) {
-                    Icon(Icons.AutoMirrored.Rounded.ArrowForward, contentDescription = "ביטול", tint = theme.textColor)
+                    Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "ביטול", tint = theme.textColor)
                 }
                 Text("הודעה חדשה", color = theme.textColor, fontWeight = FontWeight.Bold, fontSize = 17.sp)
             }

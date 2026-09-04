@@ -35,7 +35,7 @@ import com.future.music.playback.MusicPlaybackService
 import com.future.music.ui.components.FocusableItem
 import com.future.music.ui.components.ScreenTopBar
 import com.future.music.ui.digitForKey
-import com.future.music.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 
 private data class EqPreset(val id: Int, val digit: String, val icon: ImageVector, val label: String, val subtitle: String)
 
@@ -43,7 +43,9 @@ private data class EqPreset(val id: Int, val digit: String, val icon: ImageVecto
  * שרץ בתוך MusicPlaybackService (קשור ל-audioSessionId האמיתי של הנגן). */
 @Composable
 fun SoundScreen(theme: FutureTheme, onBack: () -> Unit, onSelectPreset: (Int) -> Unit) {
-    var selected by remember { mutableIntStateOf(MusicPlaybackService.EQ_PRESET_NORMAL) }
+    // מאתחלים לפי הפריסט שבאמת פעיל כרגע ב-service, לא תמיד ל"רגיל" - אחרת
+    // המסך היה מציג "רגיל" מודגש גם כשפריסט אחר כבר פעיל בפועל.
+    var selected by remember { mutableIntStateOf(MusicPlaybackService.currentEqPreset.value) }
 
     val presets = listOf(
         EqPreset(MusicPlaybackService.EQ_PRESET_NORMAL, "1", Icons.Rounded.MusicNote, "רגיל", "בלי עיבוד"),

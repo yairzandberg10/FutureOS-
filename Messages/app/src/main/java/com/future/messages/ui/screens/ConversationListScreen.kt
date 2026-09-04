@@ -1,4 +1,5 @@
 package com.future.messages.ui.screens
+import com.future.sharednav.focus.bringIntoViewOnFocus
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -31,7 +32,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.future.messages.data.Conversation
-import com.future.messages.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -40,12 +41,20 @@ fun ConversationListScreen(
     conversations: List<Conversation>,
     theme: FutureTheme,
     onConversationClick: (Conversation) -> Unit,
-    onComposeClick: () -> Unit
+    onComposeClick: () -> Unit,
+    // השיחה שממנה נכנסנו לאחרונה למסך ה-thread - כשחוזרים "אחורה" הפוקוס
+    // צריך לשוב לשורה הזו בדיוק, לא תמיד לשורה הראשונה ברשימה.
+    lastSelectedThreadId: Long? = null,
 ) {
-    val firstRowFocusRequester = remember { FocusRequester() }
+    val rowFocusRequesters = remember { mutableMapOf<Long, FocusRequester>() }
     val composeButtonFocusRequester = remember { FocusRequester() }
     LaunchedEffect(conversations.isEmpty()) {
-        if (conversations.isEmpty()) composeButtonFocusRequester.requestFocus() else firstRowFocusRequester.requestFocus()
+        if (conversations.isEmpty()) {
+            composeButtonFocusRequester.requestFocus()
+        } else {
+            val target = conversations.firstOrNull { it.threadId == lastSelectedThreadId } ?: conversations.first()
+            rowFocusRequesters.getOrPut(target.threadId) { FocusRequester() }.requestFocus()
+        }
     }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
@@ -66,12 +75,12 @@ fun ConversationListScreen(
                     }
                 } else {
                     LazyColumn(modifier = Modifier.fillMaxSize()) {
-                        itemsIndexed(conversations, key = { _, it -> it.threadId }) { index, conversation ->
+                        itemsIndexed(conversations, key = { _, it -> it.threadId }) { _, conversation ->
                             ConversationRow(
                                 conversation,
                                 theme,
                                 onClick = { onConversationClick(conversation) },
-                                focusRequester = if (index == 0) firstRowFocusRequester else null
+                                focusRequester = rowFocusRequesters.getOrPut(conversation.threadId) { FocusRequester() }
                             )
                         }
                     }
@@ -103,7 +112,7 @@ private fun ConversationRow(conversation: Conversation, theme: FutureTheme, onCl
             .then(if (isFocused) Modifier.border(2.dp, theme.accentColor, shape) else Modifier)
             .let { if (focusRequester != null) it.focusRequester(focusRequester) else it }
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource)
+            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -177,7 +186,7 @@ private fun ComposeButton(theme: FutureTheme, onClick: () -> Unit, focusRequeste
             .background(bgColor)
             .let { if (focusRequester != null) it.focusRequester(focusRequester) else it }
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource),
+            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus(),
         contentAlignment = Alignment.Center
     ) {
         Icon(Icons.AutoMirrored.Rounded.Chat, contentDescription = "הודעה חדשה", tint = tint, modifier = Modifier.size(20.dp))

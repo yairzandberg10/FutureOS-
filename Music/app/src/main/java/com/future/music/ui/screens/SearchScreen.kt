@@ -38,7 +38,7 @@ import com.future.music.ui.components.MiniPlayerBar
 import com.future.music.ui.components.ScreenTopBar
 import com.future.music.ui.components.SongRow
 import com.future.music.ui.digitForKey
-import com.future.music.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 import com.future.music.util.T9Search
 
 /** חיפוש T9: מקשי הספרות הפיזיים בונים רצף, ומתאמים חי מול כותרת/אמן של

@@ -33,7 +33,7 @@ import com.future.fitness.data.Workout
 import com.future.fitness.ui.components.FocusableItem
 import com.future.fitness.ui.components.IconListRow
 import com.future.fitness.ui.components.ScreenTopBar
-import com.future.fitness.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 
 @Composable
 fun WorkoutsScreen(

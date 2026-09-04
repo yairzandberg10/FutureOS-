@@ -32,31 +32,37 @@ fun SettingItem(
     icon: ImageVector? = null,
     theme: ThemeConfig,
     showChevron: Boolean = true,
-    onClick: () -> Unit
+    onClick: (() -> Unit)? = null
 ) {
     var isFocused by remember { mutableStateOf(false) }
     val shape = RoundedCornerShape(16.dp)
+    // שורות מידע-בלבד (onClick == null) לא מקבלות אף אחד מהאפקטים של פוקוס/לחיצה
+    // למטה - בלעדי זה שורה שלחיצה עליה היא no-op הייתה מקבלת בדיוק אותה הדגשת
+    // פוקוס מלאה כמו פריט לחיץ אמיתי, ומטעה את המשתמש לחשוב שיש לה פעולה.
+    val isInteractive = onClick != null
     val bgColor by animateColorAsState(
-        if (isFocused) theme.primaryColor.copy(alpha = 0.18f) else theme.textColor.copy(alpha = 0.06f),
+        if (isInteractive && isFocused) theme.primaryColor.copy(alpha = 0.18f) else theme.textColor.copy(alpha = 0.06f),
         label = "settingItemBg"
     )
-    val scale by animateFloatAsState(if (isFocused) 1.02f else 1f, label = "settingItemScale")
+    val scale by animateFloatAsState(if (isInteractive && isFocused) 1.02f else 1f, label = "settingItemScale")
 
     Surface(
         modifier = Modifier
             .fillMaxWidth()
             .graphicsLayer { scaleX = scale; scaleY = scale }
-            .onFocusChanged { isFocused = it.isFocused }
-            .onKeyEvent {
-                if (it.type == KeyEventType.KeyDown && (it.key == Key.DirectionCenter || it.key == Key.Enter || it.key == Key.NumPadEnter)) {
-                    onClick()
-                    true
-                } else false
-            }
-            .focusable()
+            .then(if (isInteractive) Modifier.onFocusChanged { isFocused = it.isFocused } else Modifier)
+            .then(
+                if (isInteractive) Modifier.onKeyEvent {
+                    if (it.type == KeyEventType.KeyDown && (it.key == Key.DirectionCenter || it.key == Key.Enter || it.key == Key.NumPadEnter)) {
+                        onClick!!()
+                        true
+                    } else false
+                } else Modifier
+            )
+            .then(if (isInteractive) Modifier.focusable() else Modifier)
             .padding(horizontal = 4.dp, vertical = 2.dp)
-            .then(if (isFocused) Modifier.border(width = 2.dp, color = theme.primaryColor, shape = shape) else Modifier)
-            .clickable { onClick() },
+            .then(if (isInteractive && isFocused) Modifier.border(width = 2.dp, color = theme.primaryColor, shape = shape) else Modifier)
+            .then(if (isInteractive) Modifier.clickable { onClick!!() } else Modifier),
         color = bgColor,
         shape = shape
     ) {

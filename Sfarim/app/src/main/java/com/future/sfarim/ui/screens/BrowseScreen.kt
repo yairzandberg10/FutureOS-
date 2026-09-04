@@ -32,7 +32,7 @@ import com.future.sfarim.data.LibraryBook
 import com.future.sfarim.data.LibraryCategory
 import com.future.sfarim.ui.components.FocusableItem
 import com.future.sfarim.ui.components.ScreenTopBar
-import com.future.sfarim.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 
 sealed class BrowseEntry {
     abstract val sortOrder: Int
@@ -44,6 +44,11 @@ sealed class BrowseEntry {
     }
 }
 
+private fun keyOf(entry: BrowseEntry): String = when (entry) {
+    is BrowseEntry.Cat -> "c${entry.category.id}"
+    is BrowseEntry.Bk -> "b${entry.book.id}"
+}
+
 @Composable
 fun BrowseScreen(
     title: String,
@@ -53,13 +58,17 @@ fun BrowseScreen(
     onBack: () -> Unit,
     onOpenCategory: (LibraryCategory) -> Unit,
     onOpenBook: (LibraryBook) -> Unit,
+    // המפתח (ראו keyOf) של הפריט שנפתח לאחרונה מתוך המסך הזה - כשחוזרים
+    // "אחורה" הפוקוס צריך לשוב אליו בדיוק, לא תמיד לפריט הראשון ברשימה.
+    lastSelectedKey: String? = null,
 ) {
     val entries = (childCategories.map { BrowseEntry.Cat(it) } + books.map { BrowseEntry.Bk(it) })
         .sortedBy { it.sortOrder }
 
-    val firstFocusRequester = remember(entries.firstOrNull()) { FocusRequester() }
-    LaunchedEffect(entries.firstOrNull()) {
-        if (entries.isNotEmpty()) firstFocusRequester.requestFocus()
+    val rowFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
+    LaunchedEffect(entries.map { keyOf(it) }) {
+        val target = entries.firstOrNull { keyOf(it) == lastSelectedKey } ?: entries.firstOrNull()
+        target?.let { rowFocusRequesters.getOrPut(keyOf(it)) { FocusRequester() }.requestFocus() }
     }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
@@ -75,13 +84,8 @@ fun BrowseScreen(
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                         verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp),
                     ) {
-                        itemsIndexed(entries, key = { _, it ->
-                            when (it) {
-                                is BrowseEntry.Cat -> "c${it.category.id}"
-                                is BrowseEntry.Bk -> "b${it.book.id}"
-                            }
-                        }) { index, entry ->
-                            val rowFocusRequester = if (index == 0) firstFocusRequester else null
+                        itemsIndexed(entries, key = { _, it -> keyOf(it) }) { _, entry ->
+                            val rowFocusRequester = rowFocusRequesters.getOrPut(keyOf(entry)) { FocusRequester() }
                             when (entry) {
                                 is BrowseEntry.Cat -> BrowseRow(
                                     icon = Icons.AutoMirrored.Rounded.LibraryBooks,

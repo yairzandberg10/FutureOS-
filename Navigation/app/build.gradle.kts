@@ -30,6 +30,14 @@ android {
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21
     }
+    // מפורש כמו ב-3 הצרכנים האחרים של Java 21 (Fitness/Music/notes) - בלי
+    // זה jvmTarget נגזר משתמע מ-compileOptions, שעבד בפועל אבל היה חוסר
+    // עקביות (הפתעה אפשרית אם AGP ישנה את התנהגות ברירת המחדל בגרסה עתידית).
+    kotlin {
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
+        }
+    }
     buildFeatures {
         compose = true
     }
@@ -43,7 +51,7 @@ dependencies {
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.0")
+    implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)

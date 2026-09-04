@@ -35,7 +35,7 @@ import com.future.sfarim.data.LibraryBook
 import com.future.sfarim.ui.components.FocusableItem
 import com.future.sfarim.ui.components.ScreenTopBar
 import com.future.sfarim.ui.digitForKey
-import com.future.sfarim.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 
 @Composable
 fun BookChaptersScreen(

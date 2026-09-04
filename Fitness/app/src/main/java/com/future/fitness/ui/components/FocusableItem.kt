@@ -5,7 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.unit.dp
-import com.future.fitness.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 import com.future.sharednav.focus.FocusableItem as SharedFocusableItem
 
 /** עטיפה דקה סביב הרכיב המשותף (מודול SharedKeypadNav) - אותו מראה בדיוק כמו

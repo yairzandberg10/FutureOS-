@@ -1,0 +1,80 @@
+name: Build all apps
+
+# CI פשוט אחד לכל 23 האפליקציות - עד עכשיו לא היה שום CI בריפו הזה (ר'
+# CHANGELOG.md). מטריצה עם job נפרד לכל אפליקציה, במקום לולאה בתוך job
+# אחד, כדי שכשל באפליקציה אחת לא יעצור/יסתיר את השאר וכדי שגיטהאב יראה
+# סטטוס ברור פר-אפליקציה. כל job בונה debug ומריץ בדיקות יחידה (רק
+# באפליקציות שיש להן בדיקות אמיתיות - שאר האפליקציות עדיין נבנות, רק לא
+# מריצות test אם אין להן מה להריץ).
+#
+# JDK 21 בכל ה-jobs (לא רק ב-4 האפליקציות עם sourceCompatibility=21) -
+# JDK חדש יותר יכול לקמפל ליעד Java 11 בלי בעיה, אז אין צורך במטריצת JDK
+# נפרדת. ר' DEVICE_SETUP.md לפרטים על אילו אפליקציות דורשות בפועל 21.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  build-shared-module:
+    name: SharedKeypadNav (unit tests)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@v4
+      # אין gradlew משלו (ר' SharedKeypadNav/README.md) - נבנה/נבדק דרך
+      # אחד הצרכנים שלו (Terminal, הקטן ביותר).
+      - name: Run SharedKeypadNav unit tests via Terminal
+        working-directory: Terminal
+        run: ./gradlew :sharedkeypadnav:testDebugUnitTest --console=plain
+
+  build-app:
+    name: ${{ matrix.app }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app:
+          - Assistant
+          - Calculator
+          - Calendar
+          - Camera
+          - Clock
+          - Contact
+          - dialer
+          - Files
+          - Fitness
+          - FutureLauncher
+          - FutureUI
+          - Gallery
+          - Guide
+          - Keyboard
+          - Messages
+          - Music
+          - Navigation
+          - notes
+          - Remote
+          - Settings
+          - Sfarim
+          - Terminal
+          - Tools
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Assemble debug
+        working-directory: ${{ matrix.app }}
+        run: ./gradlew assembleDebug --console=plain
+      - name: Run unit tests (if any)
+        working-directory: ${{ matrix.app }}
+        run: ./gradlew testDebugUnitTest --console=plain

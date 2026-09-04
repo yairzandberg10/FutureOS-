@@ -34,7 +34,7 @@ import androidx.compose.ui.unit.sp
 import com.future.sfarim.data.LibraryCategory
 import com.future.sfarim.data.ReadingProgressEntry
 import com.future.sfarim.ui.components.FocusableItem
-import com.future.sfarim.ui.theme.FutureTheme
+import com.future.sharednav.theme.FutureTheme
 
 @Composable
 fun HomeScreen(

@@ -5,16 +5,21 @@ import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.provider.Settings
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.future.futurelauncher.DefaultApps
+import com.future.futurelauncher.DeveloperApps
 import com.future.futurelauncher.MainActivity
-import com.future.futurelauncher.theme.ThemeClient
-import com.future.futurelauncher.ui.theme.FutureTheme
+import com.future.sharednav.theme.ThemeClient
+import com.future.sharednav.theme.FutureTheme
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -25,6 +30,7 @@ import java.util.UUID
 class LauncherViewModel(application: Application) : AndroidViewModel(application) {
     private val context = application.applicationContext
     private val pm = context.packageManager
+    private val appWidgetManager = AppWidgetManager.getInstance(context)
     
     var pages by mutableStateOf<List<List<LauncherItem>>>(listOf(List(16) { LauncherItem.Empty() }))
     var homePageIndex by mutableStateOf(0)
@@ -42,6 +48,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     var theme by mutableStateOf(FutureTheme())
     var restrictToDefaultApps by mutableStateOf(true)
         private set
+    private var relockJob: Job? = null
 
     companion object {
         private const val PREFS_NAME = "launcher_prefs"
@@ -49,29 +56,30 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         private const val KEY_PAGE_PREFIX = "page_"
         private const val KEY_HOME_PAGE = "home_page"
         private const val KEY_REMOVED_APPS = "removed_app_ids"
-        private const val KEY_RESTRICT_DEFAULT_APPS = "restrict_default_apps"
+        private const val UNLOCK_DURATION_MS = 60_000L
     }
 
     init {
         loadData()
         loadTheme()
-        loadSettings()
-    }
-
-    private fun loadSettings() {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        restrictToDefaultApps = prefs.getBoolean(KEY_RESTRICT_DEFAULT_APPS, true)
     }
 
     /** אין הגדרה גלויה למשתמש להסרת ההגבלה - היא נפתחת רק דרך קוד סודי (5357)
-     *  בתוך בורר האפליקציות, ונשארת פתוחה לצמיתות ברגע שנפתחה, בדיוק כמו אפשרויות למפתחים. */
+     *  בתוך בורר האפליקציות, ונשארת פתוחה לדקה אחת בלבד ואז נסגרת שוב מעצמה -
+     *  אין שום פעולה להסיר את הנעילה מוקדם או "לחזור אחורה" מהמצב הזה, רק הטיימר. */
     fun unlockAllApps() {
-        if (restrictToDefaultApps) {
-            restrictToDefaultApps = false
-            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            prefs.edit().putBoolean(KEY_RESTRICT_DEFAULT_APPS, false).apply()
+        restrictToDefaultApps = false
+        relockJob?.cancel()
+        relockJob = viewModelScope.launch {
+            delay(UNLOCK_DURATION_MS)
+            restrictToDefaultApps = true
         }
     }
+
+    // אותה בדיקה בדיוק כמו SystemInteractor.isDeveloperModeEnabled ב-Settings - קריאה
+    // ציבורית שלא דורשת הרשאה מיוחדת, ולכן אפשר לבדוק אותה גם כאן בלי תלות מודול.
+    private fun isDeveloperModeEnabled(): Boolean =
+        Settings.Global.getInt(context.contentResolver, Settings.Global.DEVELOPMENT_SETTINGS_ENABLED, 0) != 0
 
     // מקור האמת לעיצוב (כהה/בהיר, צבע הדגשה) הוא ThemeProvider של FutureUI -
     // משותף בין כל אפליקציות FutureOS, לא רק תוך-אפליקציה.
@@ -93,6 +101,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 val intent = Intent(Intent.ACTION_MAIN, null).apply {
                     addCategory(Intent.CATEGORY_LAUNCHER)
                 }
+                val devModeEnabled = isDeveloperModeEnabled()
                 // אפליקציות שהוסרו במפורש ממסך הבית (removeItem) לא חוזרות אוטומטית -
                 // "הוסר" אומר הוסר, לא "עדיין לא מוצג". הן עדיין מותקנות ונגישות דרך
                 // "הוספת אפליקציה" בעריכה, פשוט לא נדחפות מחדש בכל טעינה.
@@ -101,6 +110,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                     val activityName = resolveInfo.activityInfo.name
                     val stableId = "app:$packageName/$activityName"
                     if (stableId in removedIds) return@mapNotNull null
+                    // טרמינל/לאנצ'ר/SystemUI לא מוצגים למשתמש רגיל - ראו DeveloperApps.
+                    if (!devModeEnabled && DeveloperApps.isDeveloperOnly(packageName)) return@mapNotNull null
                     LauncherItem.App(
                         id = stableId,
                         resolveInfo = resolveInfo,
@@ -151,13 +162,23 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                                 folder
                             }
                             "widget" -> {
-                                LauncherItem.Widget(
-                                    id = id,
-                                    widgetId = obj.getInt("widgetId"),
-                                    label = label,
-                                    spanX = obj.optInt("spanX", 1),
-                                    spanY = obj.optInt("spanY", 1)
-                                ).apply { this.customLabel = customLabel }
+                                val widgetId = obj.getInt("widgetId")
+                                // ספק שהוסר/הושבת מאז ההוספה משאיר widgetId "רפאים" -
+                                // getAppWidgetInfo מחזיר null עבורו, ובלי הבדיקה הזו
+                                // המשבצת הייתה נשארת ריבוע שבור לצמיתות (ראו גם
+                                // MainActivity.pruneOrphanedWidgetIds לתיקון המקביל
+                                // בצד ה-host).
+                                if (appWidgetManager.getAppWidgetInfo(widgetId) == null) {
+                                    LauncherItem.Empty(id = id)
+                                } else {
+                                    LauncherItem.Widget(
+                                        id = id,
+                                        widgetId = widgetId,
+                                        label = label,
+                                        spanX = obj.optInt("spanX", 1),
+                                        spanY = obj.optInt("spanY", 1)
+                                    ).apply { this.customLabel = customLabel }
+                                }
                             }
                             else -> {
                                 LauncherItem.Empty(id = id).apply {
@@ -171,8 +192,14 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                     reconstructedPages.add(pageItems)
                 }
 
-                if (remainingApps.isNotEmpty()) {
-                    val sortedRemaining = remainingApps.sortedBy { it.label.lowercase() }
+                // רק אפליקציות ברירת מחדל (+פיקוד העורף) נדחפות אוטומטית לעמוד חדש -
+                // אפליקציה שהותקנה ואינה בהיתר פשוט לא תופיע, בדיוק כמו שלא הייתה
+                // מותקנת; היא עדיין ניתנת להוספה ידנית דרך בורר האפליקציות בזמן
+                // שההגבלה פתוחה זמנית (קוד 5357). אפליקציה שכבר הוצבה בעבר בפריסה
+                // השמורה (למעלה) ממשיכה להיפתר בלי קשר להגבלה - היא לא "נעלמת".
+                val newDefaultApps = remainingApps.filter { DefaultApps.isDefault(it.resolveInfo.activityInfo.packageName) }
+                if (newDefaultApps.isNotEmpty()) {
+                    val sortedRemaining = newDefaultApps.sortedBy { it.label.lowercase() }
                     sortedRemaining.chunked(16).forEach { chunk ->
                         val newPage = chunk.toMutableList<LauncherItem>()
                         while (newPage.size < 16) newPage.add(LauncherItem.Empty())
@@ -181,7 +208,11 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 }
                 pages = reconstructedPages
             } else {
-                val sortedApps = apps.sortedBy { it.label.lowercase() }
+                // פריסת ברירת מחדל (מכשיר חדש / אחרי איפוס פריסה) - רק אפליקציות
+                // FutureOS ופיקוד העורף, לא כל אפליקציה עם סמל שמותקנת במכשיר.
+                val sortedApps = apps
+                    .filter { DefaultApps.isDefault(it.resolveInfo.activityInfo.packageName) }
+                    .sortedBy { it.label.lowercase() }
                 val initialPages = sortedApps.chunked(16).map { chunk ->
                     val page = chunk.toMutableList<LauncherItem>()
                     while (page.size < 16) page.add(LauncherItem.Empty())

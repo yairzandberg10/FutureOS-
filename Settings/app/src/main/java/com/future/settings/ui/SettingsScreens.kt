@@ -1,6 +1,9 @@
 package com.future.settings.ui
+import com.future.sharednav.focus.bringIntoViewOnFocus
 
 import android.Manifest
+import android.app.Activity
+import android.app.role.RoleManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
@@ -425,7 +428,7 @@ fun SmallHeader(title: String, theme: ThemeConfig, onBack: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         IconButton(onClick = onBack) {
-            Icon(Icons.AutoMirrored.Rounded.ArrowForward, contentDescription = "חזור", tint = theme.textColor)
+            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "חזור", tint = theme.textColor)
         }
         Text(title, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = theme.textColor)
     }
@@ -632,7 +635,7 @@ fun BluetoothScreen(navController: NavController, theme: ThemeConfig, viewModel:
                         val paired = viewModel.pairedBluetoothDevices.value
                         SettingsCard(theme) {
                             if (paired.isEmpty()) {
-                                SettingItem("אין עדיין מכשירים משויכים", null, null, theme, showChevron = false) { }
+                                SettingItem("אין עדיין מכשירים משויכים", null, null, theme, showChevron = false)
                             } else {
                                 paired.forEachIndexed { index, device ->
                                     SettingItem(
@@ -790,6 +793,22 @@ fun DisplayScreen(navController: NavController, theme: ThemeConfig, viewModel: S
                         ColorPicker(currentColor = theme.primaryColor, theme = theme) { viewModel.updatePrimaryColor(it) }
                     }
                 }
+                item { SettingHeader("ממשק המערכת", theme) }
+                item {
+                    val context = LocalContext.current
+                    SettingsCard(theme) {
+                        // FutureUI (מרכז בקרה, מסך נעילה, שורת מצב) הוא SystemUI בלי אייקון
+                        // ברשימת האפליקציות - בלי הפריט הזה אין דרך להגיע להגדרות שלו
+                        // מלבד קוד ה-PIN שקבור במסך "אבטחה" (ראו SecurityScreen).
+                        SettingItem("ממשק המערכת", "מרכז בקרה, מסך נעילה ושורת מצב", Icons.Rounded.Widgets, theme) {
+                            safeStartActivity(
+                                context,
+                                Intent().setClassName(FUTURE_UI_PACKAGE, FUTURE_UI_SETTINGS_ACTIVITY),
+                                "FutureUI לא מותקן על המכשיר"
+                            )
+                        }
+                    }
+                }
             }
         }
     }
@@ -899,7 +918,7 @@ fun ColorPicker(currentColor: Color, theme: ThemeConfig, onColorChange: (Color) 
                             }
                         )
                         .onFocusChanged { isFocused = it.isFocused }
-                        .focusable()
+                        .focusable().bringIntoViewOnFocus()
                         .clickable { onColorChange(color) }
                 )
             }
@@ -1042,7 +1061,7 @@ private fun WallpaperPresetTile(preset: WallpaperPreset, theme: ThemeConfig, onC
                     onClick(); true
                 } else false
             }
-            .focusable()
+            .focusable().bringIntoViewOnFocus()
             .clickable { onClick() }
     ) {
         Box(
@@ -1122,21 +1141,21 @@ fun BatteryScreen(navController: NavController, theme: ThemeConfig, viewModel: S
                 item {
                     SettingsCard(theme) {
                         val details = viewModel.batteryDetails.value
-                        SettingItem("טמפרטורה", "%.1f°C".format(details.tempCelsius), Icons.Rounded.Thermostat, theme, showChevron = false) { }
+                        SettingItem("טמפרטורה", "%.1f°C".format(details.tempCelsius), Icons.Rounded.Thermostat, theme, showChevron = false)
                         SettingDivider(theme)
-                        SettingItem("מתח", "%.2fV".format(details.voltageVolts), Icons.Rounded.Bolt, theme, showChevron = false) { }
+                        SettingItem("מתח", "%.2fV".format(details.voltageVolts), Icons.Rounded.Bolt, theme, showChevron = false)
                         SettingDivider(theme)
-                        SettingItem("תקינות", details.healthLabel, Icons.Rounded.HealthAndSafety, theme, showChevron = false) { }
+                        SettingItem("תקינות", details.healthLabel, Icons.Rounded.HealthAndSafety, theme, showChevron = false)
                     }
                 }
                 item { SettingHeader("מידע סוללה מפורט", theme) }
                 item {
                     SettingsCard(theme) {
-                        SettingItem("מחזורי טעינה", extended.cycleCount?.toString() ?: "לא זמין במכשיר זה", Icons.Rounded.Autorenew, theme, showChevron = false) { }
+                        SettingItem("מחזורי טעינה", extended.cycleCount?.toString() ?: "לא זמין במכשיר זה", Icons.Rounded.Autorenew, theme, showChevron = false)
                         SettingDivider(theme)
-                        SettingItem("קיבולת נטענת", extended.chargeCounterMah?.let { "$it mAh" } ?: "לא זמין", Icons.Rounded.BatteryChargingFull, theme, showChevron = false) { }
+                        SettingItem("קיבולת נטענת", extended.chargeCounterMah?.let { "$it mAh" } ?: "לא זמין", Icons.Rounded.BatteryChargingFull, theme, showChevron = false)
                         SettingDivider(theme)
-                        SettingItem("זרם נוכחי", extended.currentNowMa?.let { "$it mA" } ?: "לא זמין", Icons.Rounded.Bolt, theme, showChevron = false) { }
+                        SettingItem("זרם נוכחי", extended.currentNowMa?.let { "$it mA" } ?: "לא זמין", Icons.Rounded.Bolt, theme, showChevron = false)
                     }
                 }
             }
@@ -1531,10 +1550,10 @@ fun AppDetailScreen(navController: NavController, theme: ThemeConfig, viewModel:
                 }
                 item {
                     SettingsCard(theme) {
-                        SettingItem("סטטוס", if (installed) "מותקנת" else "לא מותקנת", if (installed) Icons.Rounded.CheckCircle else Icons.Rounded.Cancel, theme, showChevron = false) { }
+                        SettingItem("סטטוס", if (installed) "מותקנת" else "לא מותקנת", if (installed) Icons.Rounded.CheckCircle else Icons.Rounded.Cancel, theme, showChevron = false)
                         if (versionName != null) {
                             SettingDivider(theme)
-                            SettingItem("גרסה", versionName, Icons.Rounded.Info, theme, showChevron = false) { }
+                            SettingItem("גרסה", versionName, Icons.Rounded.Info, theme, showChevron = false)
                         }
                     }
                 }
@@ -1652,7 +1671,7 @@ fun PerformanceScreen(navController: NavController, theme: ThemeConfig, viewMode
                 }
                 item {
                     SettingsCard(theme) {
-                        SettingItem("מעבד", cpuInfo, Icons.Rounded.Memory, theme, showChevron = false) { }
+                        SettingItem("מעבד", cpuInfo, Icons.Rounded.Memory, theme, showChevron = false)
                     }
                 }
                 item { SettingHeader("תחזוקה", theme) }
@@ -1745,9 +1764,26 @@ fun ScreenTimeScreen(navController: NavController, theme: ThemeConfig, viewModel
 @Composable
 fun DefaultAppsScreen(navController: NavController, theme: ThemeConfig, viewModel: SettingsViewModel) {
     val context = LocalContext.current
+    val roleManager = remember { context.getSystemService(android.content.Context.ROLE_SERVICE) as? RoleManager }
     LaunchedEffect(Unit) { viewModel.loadDefaultApps() }
     val smsPackage = viewModel.defaultSmsPackage.value
     val dialerPackage = viewModel.defaultDialerPackage.value
+    val homePackage = viewModel.defaultHomePackage.value
+
+    // RoleManager.createRequestRoleIntent פותח דיאלוג מערכת אינטראקטיבי (אישור המשתמש
+    // חובה - אי אפשר להעניק תפקיד ברירת מחדל מקוד בלי זה). מרעננים את המצב בחזרה
+    // מהדיאלוג כדי שהמסך יראה מיד את הבחירה בפועל, לא רק מה שהיה לפני הבקשה.
+    val roleRequestLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        viewModel.loadDefaultApps()
+    }
+
+    fun requestRole(roleName: String) {
+        val rm = roleManager ?: return
+        if (!rm.isRoleAvailable(roleName) || rm.isRoleHeld(roleName)) return
+        try {
+            roleRequestLauncher.launch(rm.createRequestRoleIntent(roleName))
+        } catch (e: Exception) {}
+    }
 
     fun openApp(pkg: String?, notInstalledMessage: String) {
         val launchIntent = pkg?.let { context.packageManager.getLaunchIntentForPackage(it) }
@@ -1758,43 +1794,47 @@ fun DefaultAppsScreen(navController: NavController, theme: ThemeConfig, viewMode
         }
     }
 
+    @Composable
+    fun DefaultAppSection(title: String, icon: ImageVector, currentPackage: String?, ourPackage: String, ourLabel: String, roleName: String, notInstalledMessage: String) {
+        SettingHeader(title, theme)
+        SettingsCard(theme) {
+            val app = FUTURE_OS_APPS.find { it.packageName == currentPackage }
+            SettingItem(
+                app?.displayName ?: currentPackage ?: "לא הוגדר",
+                if (currentPackage == ourPackage) "אפליקציית FutureOS" else "אפליקציה אחרת",
+                icon,
+                theme,
+                showChevron = false
+            ) { openApp(ourPackage, notInstalledMessage) }
+            if (currentPackage != ourPackage) {
+                SettingDivider(theme)
+                SettingItem("הפוך את $ourLabel לברירת מחדל", null, Icons.Rounded.CheckCircle, theme, showChevron = false) {
+                    requestRole(roleName)
+                }
+            }
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
         Column {
             SmallHeader("ברירות מחדל", theme) { navController.popBackStack() }
             LazyColumn {
                 item {
                     Text(
-                        text = "כדי לשנות אפליקציית ברירת מחדל, פתח אותה - היא תבקש את זה בעצמה.",
+                        text = "לחיצה על \"הפוך לברירת מחדל\" פותחת אישור מערכת - האישור עצמו חייב להינתן על ידך.",
                         color = theme.textColor.copy(alpha = 0.6f),
                         fontSize = 12.sp,
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
                     )
                 }
-                item { SettingHeader("הודעות", theme) }
                 item {
-                    SettingsCard(theme) {
-                        val smsApp = FUTURE_OS_APPS.find { it.packageName == smsPackage }
-                        SettingItem(
-                            smsApp?.displayName ?: smsPackage ?: "לא הוגדר",
-                            if (smsPackage == "com.future.messages") "אפליקציית FutureOS" else "אפליקציה אחרת",
-                            Icons.AutoMirrored.Rounded.Message,
-                            theme,
-                            showChevron = false
-                        ) { openApp("com.future.messages", "הודעות לא מותקנת על המכשיר") }
-                    }
+                    DefaultAppSection("הודעות", Icons.AutoMirrored.Rounded.Message, smsPackage, "com.future.messages", "הודעות", RoleManager.ROLE_SMS, "הודעות לא מותקנת על המכשיר")
                 }
-                item { SettingHeader("חיוג", theme) }
                 item {
-                    SettingsCard(theme) {
-                        val dialerApp = FUTURE_OS_APPS.find { it.packageName == dialerPackage }
-                        SettingItem(
-                            dialerApp?.displayName ?: dialerPackage ?: "לא הוגדר",
-                            if (dialerPackage == "com.future.dialer") "אפליקציית FutureOS" else "אפליקציה אחרת",
-                            Icons.Rounded.Dialpad,
-                            theme,
-                            showChevron = false
-                        ) { openApp("com.future.dialer", "טלפון לא מותקנת על המכשיר") }
-                    }
+                    DefaultAppSection("חיוג", Icons.Rounded.Dialpad, dialerPackage, "com.future.dialer", "טלפון", RoleManager.ROLE_DIALER, "טלפון לא מותקנת על המכשיר")
+                }
+                item {
+                    DefaultAppSection("בית", Icons.Rounded.Home, homePackage, "com.future.futurelauncher", "FutureLauncher", RoleManager.ROLE_HOME, "FutureLauncher לא מותקן על המכשיר")
                 }
             }
         }
@@ -1998,23 +2038,23 @@ fun AboutScreen(navController: NavController, theme: ThemeConfig, viewModel: Set
                             }
                         }
                         SettingDivider(theme)
-                        SettingItem("גרסת קרנל", kernel, null, theme, showChevron = false) { }
+                        SettingItem("גרסת קרנל", kernel, null, theme, showChevron = false)
                     }
                 }
                 item { SettingHeader("סטטוס", theme) }
                 item {
                     SettingsCard(theme) {
-                        SettingItem("זמן פעולה", uptime, Icons.Rounded.Schedule, theme, showChevron = false) { }
+                        SettingItem("זמן פעולה", uptime, Icons.Rounded.Schedule, theme, showChevron = false)
                         SettingDivider(theme)
-                        SettingItem("זיכרון RAM", ram, Icons.Rounded.Memory, theme, showChevron = false) { }
+                        SettingItem("זיכרון RAM", ram, Icons.Rounded.Memory, theme, showChevron = false)
                     }
                 }
                 item { SettingHeader("זיהוי המכשיר", theme) }
                 item {
                     SettingsCard(theme) {
-                        SettingItem("IMEI", viewModel.imei.value ?: "לא זמין במכשיר זה", Icons.Rounded.Pin, theme, showChevron = false) { }
+                        SettingItem("IMEI", viewModel.imei.value ?: "לא זמין במכשיר זה", Icons.Rounded.Pin, theme, showChevron = false)
                         SettingDivider(theme)
-                        SettingItem("מספר טלפון", viewModel.phoneNumber.value ?: "לא זמין", Icons.Rounded.Phone, theme, showChevron = false) { }
+                        SettingItem("מספר טלפון", viewModel.phoneNumber.value ?: "לא זמין", Icons.Rounded.Phone, theme, showChevron = false)
                         SettingDivider(theme)
                         SettingItem("מידע רגולטורי ומשפטי", null, Icons.Rounded.Gavel, theme) { viewModel.openRegulatoryInfo() }
                     }
@@ -2046,7 +2086,7 @@ fun SoundModeItem(label: String, icon: ImageVector, selected: Boolean, theme: Th
                 .background(if (selected) theme.primaryColor else theme.surfaceColor)
                 .then(if (isFocused) Modifier.border(2.dp, theme.primaryColor.copy(alpha = 0.8f), CircleShape) else Modifier)
                 .onFocusChanged { isFocused = it.isFocused }
-                .focusable(),
+                .focusable().bringIntoViewOnFocus(),
             contentAlignment = Alignment.Center
         ) {
             Icon(icon, contentDescription = null, tint = if (selected) theme.backgroundColor else theme.textColor)
@@ -2080,7 +2120,7 @@ fun VolumeSlider(label: String, value: Float, theme: ThemeConfig, onValueChange:
                     else -> false
                 }
             }
-            .focusable()
+            .focusable().bringIntoViewOnFocus()
             .clip(shape)
             .background(bgColor)
             .then(if (isFocused) Modifier.border(width = 2.dp, color = theme.primaryColor, shape = shape) else Modifier)
@@ -2188,7 +2228,7 @@ fun SimManagerScreen(navController: NavController, theme: ThemeConfig, viewModel
                                                 }
                                             )
                                             .onFocusChanged { isFocused = it.isFocused }
-                                            .focusable()
+                                            .focusable().bringIntoViewOnFocus()
                                             .clickable { viewModel.recolorSim(sim.subscriptionId, color.toArgb()) }
                                     )
                                 }
@@ -2280,7 +2320,7 @@ fun AppTimersScreen(navController: NavController, theme: ThemeConfig, viewModel:
                     SettingsCard(theme) {
                         val available = installedApps.filter { app -> timers.none { it.packageName == app.packageName } }
                         if (available.isEmpty()) {
-                            SettingItem("לכל האפליקציות המותקנות כבר יש מכסה", null, null, theme, showChevron = false) { }
+                            SettingItem("לכל האפליקציות המותקנות כבר יש מכסה", null, null, theme, showChevron = false)
                         } else {
                             available.forEachIndexed { index, app ->
                                 SettingItem(app.displayName, null, app.icon, theme) {
@@ -2304,7 +2344,6 @@ fun DiagnosticsScreen(navController: NavController, theme: ThemeConfig, viewMode
     var accelText by remember { mutableStateOf("ממתין לנתונים...") }
     var lightText by remember { mutableStateOf("ממתין לנתונים...") }
     var proximityText by remember { mutableStateOf("ממתין לנתונים...") }
-    var touchPoints by remember { mutableStateOf(listOf<Offset>()) }
 
     DisposableEffect(Unit) {
         val accel = sensorManager.getDefaultSensor(android.hardware.Sensor.TYPE_ACCELEROMETER)
@@ -2349,49 +2388,16 @@ fun DiagnosticsScreen(navController: NavController, theme: ThemeConfig, viewMode
                 item { SettingHeader("חיישנים חיים", theme) }
                 item {
                     SettingsCard(theme) {
-                        SettingItem("תאוצה (Accelerometer)", accelText, Icons.Rounded.Speed, theme, showChevron = false) { }
+                        SettingItem("תאוצה (Accelerometer)", accelText, Icons.Rounded.Speed, theme, showChevron = false)
                         SettingDivider(theme)
-                        SettingItem("חיישן אור", lightText, Icons.Rounded.LightMode, theme, showChevron = false) { }
+                        SettingItem("חיישן אור", lightText, Icons.Rounded.LightMode, theme, showChevron = false)
                         SettingDivider(theme)
-                        SettingItem("חיישן קרבה", proximityText, Icons.Rounded.Sensors, theme, showChevron = false) { }
+                        SettingItem("חיישן קרבה", proximityText, Icons.Rounded.Sensors, theme, showChevron = false)
                     }
                 }
-                item { SettingHeader("מסך מגע", theme) }
-                item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(160.dp)
-                            .padding(horizontal = 16.dp, vertical = 6.dp)
-                            .clip(RoundedCornerShape(theme.borderRadius))
-                            .background(theme.surfaceColor)
-                            .pointerInput(Unit) {
-                                detectDragGestures(
-                                    onDragStart = { offset -> touchPoints = touchPoints + offset },
-                                    onDrag = { change, _ -> touchPoints = touchPoints + change.position }
-                                )
-                            }
-                    ) {
-                        Canvas(modifier = Modifier.fillMaxSize()) {
-                            touchPoints.takeLast(400).forEach { point ->
-                                drawCircle(color = theme.primaryColor, radius = 4f, center = point)
-                            }
-                        }
-                        Text(
-                            "גררו כדי לבדוק תגובת מגע",
-                            color = theme.textColor.copy(alpha = 0.35f),
-                            fontSize = 12.sp,
-                            modifier = Modifier.align(Alignment.Center)
-                        )
-                    }
-                }
-                if (touchPoints.isNotEmpty()) {
-                    item {
-                        SettingsCard(theme) {
-                            SettingItem("נקה בדיקת מגע", null, Icons.Rounded.ClearAll, theme, showChevron = false) { touchPoints = emptyList() }
-                        }
-                    }
-                }
+                // "מסך מגע" (בדיקת גרירה חיה) הוסרה - dispatchTouchEvent ב-MainActivity
+                // מבטל קלט מגע לחלוטין ברמת המערכת, כך שהבדיקה הזו הייתה מתה מלידה:
+                // שום MotionEvent לא היה מגיע אליה אף פעם על המכשיר האמיתי.
             }
         }
     }

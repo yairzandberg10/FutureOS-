@@ -9,7 +9,16 @@ import com.future.sharednav.t9.T9DigitMap
  * במילון, נופלים חזרה למצב "לחיצות מרובות" (multi-tap) - לחיצות חוזרות על
  * אותו מקש עוברות בין האותיות שלו, בדיוק כמו הקלדת SMS ישנה.
  */
-class T9Engine(private val language: Language) {
+class T9Engine(
+    private val language: Language,
+    // מקור מועמדים חיצוני (למשל [HebrewDictionaryDb]) - כשמסופק ומחזיר תוצאה
+    // לא-null, עוקף את המילון הפנימי הקטן בזיכרון עבור השפה הזו. החזרת null
+    // (להבדיל מרשימה ריקה) נופלת חזרה למילון הפנימי - כך KeyboardService יכול
+    // להזין כאן את מסד הנתונים העברי המלא (כ-8.6 מיליון מילים, גדול מכדי
+    // להיטען כולו לזיכרון על מכשיר חלש - ראו HebrewDictionaryDb.kt) ועדיין
+    // לקבל ניבוי סביר מהמילון הפנימי בחלון הקצר שבו ה-DB עוד לא מוכן.
+    private val externalCandidates: ((String) -> List<String>?)? = null,
+) {
 
     enum class Language { HEBREW, ENGLISH }
 
@@ -19,69 +28,26 @@ class T9Engine(private val language: Language) {
         private val ENGLISH_MAP = T9DigitMap.ENGLISH
         private val HEBREW_MAP = T9DigitMap.HEBREW
 
-        // מילון בכ-250 מילים נפוצות לכל שפה, ממוין מהנפוצה ביותר להכי פחות נפוצה בכל
-        // קבוצת ספרות - הרחבה ממשית מעבר לרשימת ה"הדגמה" המקורית של כ-60 מילים, כדי
-        // שהניבוי יהיה שימושי בפועל בהקלדה יומיומית ולא רק בהדגמה.
-        private val ENGLISH_WORDS = listOf(
-            "the", "of", "and", "to", "in", "is", "you", "that", "it", "he",
-            "was", "for", "on", "are", "as", "with", "his", "they", "at", "be",
-            "this", "have", "from", "or", "one", "had", "by", "word", "but", "not",
-            "what", "all", "were", "we", "when", "your", "can", "said", "there", "use",
-            "hi", "hello", "how", "good", "morning", "night", "yes", "no",
-            "ok", "call", "me", "back", "later", "today", "tomorrow", "home", "work", "love",
-            "thanks", "please", "sorry", "see", "soon", "time", "day", "week", "help", "need",
-            "a", "about", "after", "again", "air", "also", "an", "another", "any", "around",
-            "ask", "away", "because", "been", "before", "being", "below", "between", "big", "boy",
-            "came", "come", "could", "different", "does", "don't", "down", "each", "eat", "end",
-            "even", "every", "eyes", "face", "family", "far", "father", "few", "find", "first",
-            "follow", "form", "found", "four", "get", "girl", "give", "go", "got", "great",
-            "group", "grow", "hand", "hard", "has", "head", "hear", "her", "here", "high",
-            "him", "himself", "house", "i", "if", "important", "into", "its", "just", "keep",
-            "kind", "knew", "know", "land", "last", "learn", "leave", "left", "let", "life",
-            "light", "like", "line", "list", "little", "live", "long", "look", "made", "make",
-            "man", "many", "may", "mean", "men", "might", "more", "most", "mother", "move",
-            "much", "must", "my", "name", "near", "never", "new", "next", "now", "number",
-            "off", "often", "old", "only", "other", "our", "out", "over", "own", "page",
-            "part", "people", "picture", "place", "plant", "point", "put", "question", "read", "really",
-            "right", "run", "same", "saw", "say", "school", "sea", "seem", "sentence", "set",
-            "several", "she", "should", "show", "side", "since", "small", "so", "some", "something",
-            "sometimes", "sound", "spell", "start", "state", "still", "stop", "story", "study", "such",
-            "take", "tell", "than", "thank", "their", "them", "then", "thing", "think", "those",
-            "thought", "three", "through", "too", "took", "tree", "try", "turn", "two", "under",
-            "until", "up", "upon", "us", "very", "want", "water", "way", "well", "went",
-            "while", "who", "why", "will", "without", "women", "world", "would", "write", "year",
-            "yet", "mom", "dad", "friend", "phone", "money", "food", "drink", "coffee", "tea",
-            "car", "bus", "train", "office", "meeting", "busy", "free", "sure", "maybe", "okay",
-            "awesome", "birthday", "happy", "welcome", "bye", "goodbye", "talk", "chat", "text", "message",
-            "email", "address", "where", "know", "love", "great", "job", "team", "project", "sorry"
-        )
+        // מילון אנגלי אמיתי בכ-370,000 מילים (dwyl/english-words, words_alpha.txt) -
+        // נטען מתוך משאב חבוי, בדיוק כמו HEBREW_WORDS למטה. השורות הראשונות בקובץ
+        // הן רשימת "פופולריות שיחתית" משוערת שנשמרה מהמילון הקטן שהיה כאן קודם (כדי
+        // שרצפי ספרות נפוצים ימשיכו להציג את המילה השימושית קודם), ואחריה כל שאר
+        // המילון בסדר אלפביתי - למקור הזה אין נתוני תדירות אמיתיים כמו ל-cc100 העברי.
+        private val ENGLISH_WORDS: List<String> by lazy { loadWordList("dict_en.txt") }
 
-        private val HEBREW_WORDS = listOf(
-            "של", "את", "על", "לא", "זה", "עם", "יש", "אני", "הוא", "היא",
-            "אתה", "הם", "אנחנו", "כל", "גם", "אבל", "אם", "מה", "מי",
-            "איך", "כן", "טוב", "שלום", "היי", "בוקר", "ערב", "לילה", "תודה",
-            "בבקשה", "סליחה", "אוהב", "אוהבת", "בית", "עבודה", "מחר", "היום", "אתמול", "עכשיו",
-            "אחר", "כך", "לך", "לי", "לו", "לה", "פה", "שם", "רק", "עוד",
-            "צריך", "רוצה", "יכול", "אפשר", "בסדר", "מתי", "איפה", "למה", "כמה", "נשמע",
-            "אחד", "אחת", "שתי", "שני", "שלוש", "ארבע", "חמש", "שש", "שבע", "שמונה",
-            "תשע", "עשר", "מאה", "אלף", "ראשון", "אחרון", "גדול", "קטן", "חדש", "ישן",
-            "יפה", "טובה", "רע", "רעה", "חם", "קר", "מהר", "לאט", "הרבה", "מעט",
-            "כאן", "שם", "מעל", "מתחת", "לפני", "אחרי", "בין", "ליד", "רחוק", "קרוב",
-            "משפחה", "אמא", "אבא", "אח", "אחות", "ילד", "ילדה", "חבר", "חברה", "מכר",
-            "טלפון", "כסף", "אוכל", "שתייה", "קפה", "תה", "מים", "רכב", "אוטובוס", "רכבת",
-            "משרד", "פגישה", "עסוק", "פנוי", "בטוח", "אולי", "בסדר", "מזל", "טוב", "יום",
-            "הולדת", "שמח", "שמחה", "ברוך", "הבא", "ברוכה", "הבאה", "להתראות", "ביי", "דבר",
-            "לדבר", "לכתוב", "הודעה", "מייל", "כתובת", "מקום", "עיר", "רחוב", "בית", "ספר",
-            "עבודה", "פרויקט", "צוות", "מנהל", "לקוח", "פגישה", "זמן", "שעה", "דקה", "שנייה",
-            "שבוע", "חודש", "שנה", "היום", "מחר", "אתמול", "עכשיו", "תמיד", "אף", "פעם",
-            "כבר", "עדיין", "פתאום", "לאט", "מהר", "יחד", "לבד", "כולם", "אף", "אחד",
-            "משהו", "כלום", "הכל", "חלק", "רוב", "מעט", "יותר", "פחות", "מאוד", "בערך",
-            "בטח", "אולי", "כנראה", "ודאי", "תודה", "רבה", "בבקשה", "סליחה", "מצטער", "מצטערת",
-            "כיף", "נהדר", "מעולה", "יפה", "נכון", "לא", "נכון", "אמת", "שקר", "חשוב",
-            "לומד", "לומדת", "יודע", "יודעת", "חושב", "חושבת", "מרגיש", "מרגישה", "רואה", "שומע",
-            "מגיע", "מגיעה", "יוצא", "יוצאת", "נכנס", "נכנסת", "חוזר", "חוזרת", "נשאר", "נשארת",
-            "מקווה", "מבין", "מבינה", "זוכר", "זוכרת", "שוכח", "שוכחת", "מחכה", "מחכה", "בדרך"
-        )
+        // מילון עברי אמיתי בכ-20,000 מילים, ממוין לפי תדירות שימוש בפועל בעברית
+        // (קורפוס cc100) - נטען פעם אחת מתוך קובץ משאב חבוי בתוך ה-APK, במקום
+        // הרשימה הקטנה שהייתה כאן קודם (כ-230 מילות "הדגמה"). סדר השורות בקובץ
+        // הוא סדר הפופולריות, בדיוק כמו שההיגיון הקיים ב-digitIndex מצפה.
+        private val HEBREW_WORDS: List<String> by lazy { loadWordList("dict_he.txt") }
+
+        /** טוען רשימת מילים (שורה למילה) ממשאב חבוי ב-classpath - עובד גם בתוך
+         * ה-APK בזמן ריצה וגם בבדיקות יחידה מקומיות (שתיהן חולקות את אותו classpath). */
+        private fun loadWordList(resourceName: String): List<String> {
+            val stream = T9Engine::class.java.classLoader?.getResourceAsStream(resourceName)
+                ?: error("missing bundled word list resource: $resourceName")
+            return stream.bufferedReader(Charsets.UTF_8).useLines { lines -> lines.filter { it.isNotBlank() }.toList() }
+        }
 
         /** ממיר מילה לרצף הספרות שהיא הייתה מייצרת - המפתח לחיפוש מהיר במילון. */
         fun digitsFor(word: String, language: Language): String {
@@ -93,15 +59,22 @@ class T9Engine(private val language: Language) {
             }
             return builder.toString()
         }
+
+        // אינדקס: רצף ספרות -> רשימת מילים תואמות, ממוין לפי סדר הופעה במילון (=פופולריות).
+        // ברמת ה-companion (לא לכל מופע T9Engine) כי KeyboardService יוצר מופע T9Engine
+        // חדש בכל לחיצה קצרה על # (גם במעבר בין שני מצבי העברית) - עם מילון של כ-20,000
+        // מילים, בניית האינדקס מחדש בכל לחיצה כזו הייתה מורגשת במכשיר חלש.
+        private val hebrewDigitIndex: Map<String, List<String>> by lazy { buildDigitIndex(HEBREW_WORDS, Language.HEBREW) }
+        private val englishDigitIndex: Map<String, List<String>> by lazy { buildDigitIndex(ENGLISH_WORDS, Language.ENGLISH) }
+
+        private fun buildDigitIndex(words: List<String>, language: Language): Map<String, List<String>> =
+            // .distinct() שומר על סדר ההופעה הראשון (=פופולריות) אבל מסיר כפילויות
+            // ממשיות במילון - בלעדיו המשתמש רואה שני צ'יפים זהים לאותו רצף ספרות.
+            words.distinct().groupBy { digitsFor(it, language) }.filterKeys { it.isNotEmpty() }
     }
 
     private val keyMap = if (language == Language.HEBREW) HEBREW_MAP else ENGLISH_MAP
-    private val dictionary = if (language == Language.HEBREW) HEBREW_WORDS else ENGLISH_WORDS
-
-    // אינדקס: רצף ספרות -> רשימת מילים תואמות, ממוין לפי סדר הופעה במילון (=פופולריות)
-    private val digitIndex: Map<String, List<String>> by lazy {
-        dictionary.groupBy { digitsFor(it, language) }.filterKeys { it.isNotEmpty() }
-    }
+    private val digitIndex: Map<String, List<String>> = if (language == Language.HEBREW) hebrewDigitIndex else englishDigitIndex
 
     fun lettersFor(digit: Char): String = keyMap[digit] ?: ""
 
@@ -113,7 +86,7 @@ class T9Engine(private val language: Language) {
      */
     fun candidatesFor(digits: String, wordFrequency: (String) -> Int = { 0 }): List<String> {
         if (digits.isEmpty()) return emptyList()
-        val base = digitIndex[digits] ?: return emptyList()
+        val base = externalCandidates?.invoke(digits) ?: digitIndex[digits] ?: return emptyList()
         return base.sortedByDescending { wordFrequency(it) }
     }
 
