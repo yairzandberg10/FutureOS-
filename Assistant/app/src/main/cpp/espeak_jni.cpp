@@ -13,8 +13,20 @@
 
 namespace {
 std::vector<int16_t> g_samples;
+int g_sampleRate = 22050;
 
-int synthCallback(short *wav, int numsamples, espeak_EVENT * /*events*/) {
+int synthCallback(short *wav, int numsamples, espeak_EVENT *events) {
+    // espeak-ng יכול לדווח על קצב הדגימה בפועל דרך espeakEVENT_SAMPLERATE -
+    // הוא לא בהכרח זהה לערך שהתקבל מ-espeak_Initialize, ואם מתעלמים ממנו
+    // וממירים ל-AudioTrack בקצב השגוי, השמע נשמע מהיר/צווח ("chipmunk").
+    if (events != nullptr) {
+        for (espeak_EVENT *e = events; e->type != espeakEVENT_LIST_TERMINATED; e++) {
+            if (e->type == espeakEVENT_SAMPLERATE) {
+                g_sampleRate = e->id.number;
+                LOGD("espeakEVENT_SAMPLERATE -> %d", g_sampleRate);
+            }
+        }
+    }
     if (wav != nullptr && numsamples > 0) {
         g_samples.insert(g_samples.end(), wav, wav + numsamples);
     }
@@ -30,6 +42,7 @@ Java_com_future_assistant_asr_EspeakTts_nativeInit(JNIEnv *env, jobject /*thiz*/
     env->ReleaseStringUTFChars(dataPath, path);
     LOGD("espeak_Initialize -> sampleRate=%d", sampleRate);
     if (sampleRate <= 0) return -1;
+    g_sampleRate = sampleRate;
 
     espeak_SetSynthCallback(synthCallback);
     espeak_ERROR voiceErr = espeak_SetVoiceByName("he");
@@ -47,7 +60,7 @@ Java_com_future_assistant_asr_EspeakTts_nativeSynthesize(JNIEnv *env, jobject /*
     espeak_ERROR err = espeak_Synth(utf8, strlen(utf8) + 1, 0, POS_CHARACTER, 0,
                  espeakCHARS_UTF8, nullptr, nullptr);
     espeak_Synchronize();
-    LOGD("espeak_Synth(\"%s\") -> err=%d, samples=%zu", utf8, (int) err, g_samples.size());
+    LOGD("espeak_Synth(\"%s\") -> err=%d, samples=%zu, sampleRate=%d", utf8, (int) err, g_samples.size(), g_sampleRate);
 
     env->ReleaseStringUTFChars(text, utf8);
 
@@ -56,6 +69,11 @@ Java_com_future_assistant_asr_EspeakTts_nativeSynthesize(JNIEnv *env, jobject /*
         env->SetShortArrayRegion(result, 0, static_cast<jsize>(g_samples.size()), g_samples.data());
     }
     return result;
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_future_assistant_asr_EspeakTts_nativeGetSampleRate(JNIEnv * /*env*/, jobject /*thiz*/) {
+    return g_sampleRate;
 }
 
 extern "C" JNIEXPORT void JNICALL

@@ -33,12 +33,16 @@ class EspeakTts(private val context: Context) {
         if (!initialized || text.isBlank()) return
         val samples = nativeSynthesize(text)
         if (samples.isEmpty()) return
-        playAndWait(samples)
+        // espeak-ng יכול לדווח קצב דגימה שונה מזה שהתקבל מ-nativeInit (למשל
+        // בהתאם לקול/שפה) - צריך את הקצב האמיתי של הסינתוז הזה בדיוק, אחרת
+        // ההשמעה נשמעת מהירה ומצווצת מדי (chipmunk).
+        val actualRate = nativeGetSampleRate().takeIf { it > 0 } ?: sampleRate
+        playAndWait(samples, actualRate)
     }
 
-    private fun playAndWait(samples: ShortArray) {
+    private fun playAndWait(samples: ShortArray, rate: Int) {
         val minBufferSize = AudioTrack.getMinBufferSize(
-            sampleRate, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT
+            rate, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT
         )
         val audioTrack = AudioTrack(
             AudioAttributes.Builder()
@@ -46,7 +50,7 @@ class EspeakTts(private val context: Context) {
                 .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
                 .build(),
             AudioFormat.Builder()
-                .setSampleRate(sampleRate)
+                .setSampleRate(rate)
                 .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
                 .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
                 .build(),
@@ -61,7 +65,7 @@ class EspeakTts(private val context: Context) {
             if (audioTrack.state == AudioTrack.STATE_UNINITIALIZED) return
             audioTrack.write(samples, 0, samples.size)
             audioTrack.play()
-            val durationMs = (samples.size.toLong() * 1000L) / sampleRate
+            val durationMs = (samples.size.toLong() * 1000L) / rate
             Thread.sleep(durationMs + 100)
             audioTrack.stop()
         } finally {
@@ -101,6 +105,7 @@ class EspeakTts(private val context: Context) {
 
     private external fun nativeInit(dataPath: String): Int
     private external fun nativeSynthesize(text: String): ShortArray
+    private external fun nativeGetSampleRate(): Int
     private external fun nativeTerminate()
 
     companion object {

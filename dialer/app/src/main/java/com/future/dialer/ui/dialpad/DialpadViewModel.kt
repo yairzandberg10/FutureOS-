@@ -71,7 +71,7 @@ class DialpadViewModel(
             return
         }
         _suggestedContacts.value = allContacts.filter {
-            T9Search.matches(it.name, query) || it.phoneNumber.contains(query)
+            T9Search.matchesAnyWord(it.name, query) || it.phoneNumber.contains(query)
         }
     }
 }

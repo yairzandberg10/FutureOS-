@@ -26,4 +26,14 @@ object T9Search {
         }
         return true
     }
+
+    /** true אם query (רצף ספרות T9) תואם קידומת של מילה כלשהי בתוך name (לא
+     * רק תחילת המחרוזת כולה) - כי אנשי קשר נשמרים בדרך כלל כ"שם פרטי שם
+     * משפחה" והמשתמש עשוי לחפש לפי כל אחד מהם. זהה בדפוס למימוש המקביל
+     * ב-Contact/Music (ר' T9Search שם) - dialer היה חסר את זה, כך שחיפוש
+     * T9 בחייגן לא מצא אנשי קשר לפי שם משפחה. */
+    fun matchesAnyWord(name: String, query: String): Boolean {
+        if (query.isEmpty()) return true
+        return name.split(' ', '-', '"', '\'').any { word -> word.isNotEmpty() && matches(word, query) }
+    }
 }
