@@ -88,9 +88,13 @@ fun AlarmScreen(theme: FutureTheme, onBack: () -> Unit) {
                     )
                 } else {
                     if (alarms.isEmpty()) {
-                        Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            Text("אין שעונים מעוררים", color = theme.textColor.copy(alpha = 0.5f))
-                        }
+                        com.future.sharednav.components.EmptyState(
+                            icon = Icons.Rounded.AccessTime,
+                            title = "אין שעונים מעוררים",
+                            subtitle = "הקישו על + כדי להוסיף אחד",
+                            textColor = theme.textColor,
+                            modifier = Modifier.weight(1f).fillMaxWidth(),
+                        )
                     } else {
                         LazyColumn(
                             modifier = Modifier.weight(1f),

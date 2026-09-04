@@ -18,6 +18,8 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.PhotoAlbum
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -49,9 +51,11 @@ fun AlbumsScreen(
     lastSelectedAlbumId: String? = null,
 ) {
     if (albums.isEmpty()) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("אין אלבומים עדיין", color = theme.textColor.copy(alpha = 0.5f), fontSize = 15.sp)
-        }
+        com.future.sharednav.components.EmptyState(
+            icon = Icons.Rounded.PhotoAlbum,
+            title = "אין אלבומים עדיין",
+            textColor = theme.textColor,
+        )
         return
     }
     val cardFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }

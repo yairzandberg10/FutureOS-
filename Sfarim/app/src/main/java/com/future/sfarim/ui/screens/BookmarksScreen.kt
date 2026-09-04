@@ -20,7 +20,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import com.future.sharednav.components.ConfirmDialog
+import com.future.sharednav.components.EmptyState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -50,15 +55,20 @@ fun BookmarksScreen(
     LaunchedEffect(bookmarks.firstOrNull()) {
         if (bookmarks.isNotEmpty()) firstFocusRequester.requestFocus()
     }
+    // לפני התיקון, מקש Menu על שורת סימניה מחק אותה מיידית בלי שום אישור -
+    // לחיצה אחת בטעות ואיבדת סימניה שמורה לצמיתות.
+    var pendingDelete by remember { mutableStateOf<LibraryBookmark?>(null) }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize()) {
                 ScreenTopBar(title = "סימניות", theme = theme, onBack = onBack)
                 if (bookmarks.isEmpty()) {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("אין סימניות עדיין", color = theme.textColor.copy(alpha = 0.5f), fontSize = 15.sp)
-                    }
+                    EmptyState(
+                        icon = Icons.Rounded.Bookmark,
+                        title = "אין סימניות עדיין",
+                        textColor = theme.textColor,
+                    )
                 } else {
                     LazyColumn(
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
@@ -69,11 +79,25 @@ fun BookmarksScreen(
                                 bookmark, theme,
                                 focusRequester = if (index == 0) firstFocusRequester else null,
                                 onClick = { onOpenBookmark(bookmark) },
-                                onDelete = { onDeleteBookmark(bookmark) },
+                                onDelete = { pendingDelete = bookmark },
                             )
                         }
                     }
                 }
+            }
+
+            pendingDelete?.let { bookmark ->
+                ConfirmDialog(
+                    message = "למחוק את הסימניה \"${bookmark.bookTitle}\"?",
+                    surfaceColor = theme.surfaceColor,
+                    textColor = theme.textColor,
+                    dangerColor = theme.dangerColor,
+                    onCancel = { pendingDelete = null },
+                    onConfirm = {
+                        onDeleteBookmark(bookmark)
+                        pendingDelete = null
+                    },
+                )
             }
         }
     }

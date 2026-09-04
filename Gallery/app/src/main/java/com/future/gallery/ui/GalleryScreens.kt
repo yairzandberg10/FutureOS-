@@ -29,6 +29,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.PlayCircle
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Sort
@@ -133,9 +134,11 @@ fun GalleryHomeScreen(
                     }
                     tab == GalleryTab.ALBUMS -> AlbumsScreen(albums, theme, onAlbumClick, lastSelectedAlbumId = lastSelectedAlbumId)
                     sortedItems.isEmpty() -> {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text("אין תמונות או סרטונים במכשיר", color = theme.textColor.copy(alpha = 0.5f), fontSize = 15.sp)
-                        }
+                        com.future.sharednav.components.EmptyState(
+                            icon = Icons.Rounded.Image,
+                            title = "אין תמונות או סרטונים במכשיר",
+                            textColor = theme.textColor,
+                        )
                     }
                     else -> MediaGrid(sortedItems, theme, onItemClick = { item -> onItemClick(sortedItems, item) }, lastSelectedId = lastSelectedItemId)
                 }

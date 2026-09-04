@@ -211,14 +211,19 @@ fun ContactsListScreen(
                         PermissionRequiredMessage(theme = theme, onRequestPermission = onRequestPermission)
                     }
                     contacts.isEmpty() -> {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text("אין אנשי קשר עדיין", color = theme.textColor.copy(alpha = 0.5f), fontSize = 15.sp)
-                        }
+                        com.future.sharednav.components.EmptyState(
+                            icon = Icons.Rounded.Person,
+                            title = "אין אנשי קשר עדיין",
+                            subtitle = "הוסיפו איש קשר עם כפתור ההוספה",
+                            textColor = theme.textColor,
+                        )
                     }
                     filteredContacts.isEmpty() -> {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text("לא נמצאו אנשי קשר תואמים", color = theme.textColor.copy(alpha = 0.5f), fontSize = 15.sp)
-                        }
+                        com.future.sharednav.components.EmptyState(
+                            icon = Icons.Rounded.Person,
+                            title = "לא נמצאו אנשי קשר תואמים",
+                            textColor = theme.textColor,
+                        )
                     }
                     else -> {
                         LazyColumn(

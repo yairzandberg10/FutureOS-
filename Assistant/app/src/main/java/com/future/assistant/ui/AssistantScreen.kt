@@ -1,7 +1,6 @@
 package com.future.assistant.ui
 
 import android.Manifest
-import android.speech.tts.TextToSpeech
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -24,7 +23,6 @@ import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -42,6 +40,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.future.assistant.asr.EspeakTts
 import com.future.assistant.asr.LocalSpeechEngine
 import com.future.assistant.data.CommandProcessor
 import com.future.sharednav.theme.FutureTheme
@@ -49,7 +48,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
-import java.util.Locale
 
 private enum class AssistantState { IDLE, LISTENING, THINKING, SPEAKING }
 
@@ -71,12 +69,26 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
     val micFocus = remember { FocusRequester() }
     val scope = rememberCoroutineScope()
 
-    val tts = remember { arrayOfNulls<TextToSpeech>(1) }
+    // מנוע Text-to-Speech מקומי (eSpeak NG, native) - במכשירי הבדיקה אין
+    // בכלל מנוע TTS מותקן ברמת המערכת, אז android.speech.tts.TextToSpeech
+    // נכשל תמיד עם "not bound to TTS engine".
+    val espeakTts = remember { EspeakTts(context) }
 
     fun speak(text: String) {
         state = AssistantState.SPEAKING
         responseText = text
-        tts[0]?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "assistant_response")
+        scope.launch(Dispatchers.IO) {
+            espeakTts.speak(text)
+            withContext(Dispatchers.Main) {
+                state = AssistantState.IDLE
+                if (pendingClose) {
+                    delay(300)
+                    onExit()
+                } else {
+                    micFocus.requestFocus()
+                }
+            }
+        }
     }
 
     // מטפל אחיד לטקסט - בין אם הגיע מזיהוי דיבור מקומי ובין אם הוקלד ישירות.
@@ -103,21 +115,13 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
     // לאפליקציית המערכת שמבצעת את הזיהוי בפועל).
     val speechEngine = remember { LocalSpeechEngine(context) }
 
-    DisposableEffect(Unit) {
-        val engine = TextToSpeech(context) { status ->
-            if (status == TextToSpeech.SUCCESS) tts[0]?.language = Locale.getDefault()
-        }
-        tts[0] = engine
-        onDispose {
-            engine.stop()
-            engine.shutdown()
-        }
-    }
-
     LaunchedEffect(hasPermission) {
         if (!hasPermission) return@LaunchedEffect
         try {
-            withContext(Dispatchers.IO) { speechEngine.loadModel() }
+            withContext(Dispatchers.IO) {
+                speechEngine.loadModel()
+                espeakTts.init()
+            }
             modelReady = true
         } catch (e: Exception) {
             modelFailed = true
@@ -128,22 +132,6 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
     // הפתיחה לא עושה כלום (אין רכיב ממוקד לקבל את האירוע).
     LaunchedEffect(hasPermission, modelReady) {
         if (hasPermission && modelReady) micFocus.requestFocus()
-    }
-
-    LaunchedEffect(state) {
-        if (state == AssistantState.SPEAKING) {
-            // אין callback סינכרוני נוח כאן בלי UtteranceProgressListener מלא -
-            // מעריכים משך דיבור לפי אורך הטקסט כדי לדעת מתי לחזור להאזנה/לסגור.
-            val estimatedMillis = (responseText.length * 60L).coerceIn(700L, 4000L)
-            delay(estimatedMillis)
-            state = AssistantState.IDLE
-            if (pendingClose) {
-                delay(300)
-                onExit()
-            } else {
-                micFocus.requestFocus()
-            }
-        }
     }
 
     fun onMicClick() {
@@ -170,6 +158,13 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
         targetValue = if (state == AssistantState.LISTENING) 1.15f else 1f,
         animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
         label = "micPulseScale"
+    )
+    // אנימציית "מדבר" - פעימה קטנה על טקסט התשובה בזמן שהתשובה מושמעת בקול.
+    val speakPulse by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = if (state == AssistantState.SPEAKING) 1.06f else 1f,
+        animationSpec = infiniteRepeatable(tween(300), RepeatMode.Reverse),
+        label = "speakPulseScale"
     )
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
@@ -217,7 +212,8 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
                             },
                             color = theme.textColor,
                             fontSize = 20.sp,
-                            fontWeight = FontWeight.Medium
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.scale(speakPulse)
                         )
                     }
                 }
