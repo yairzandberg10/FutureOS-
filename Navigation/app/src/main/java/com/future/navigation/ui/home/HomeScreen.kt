@@ -1,5 +1,6 @@
 package com.future.navigation.ui.home
 
+import com.future.sharednav.theme.FutureShapes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,16 +30,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.type
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -48,6 +42,7 @@ import com.future.navigation.data.gtfs.SavedPlaceEntity
 import com.future.navigation.ui.map.LocationPreviewMap
 import com.future.navigation.ui.navigation.TravelMode
 import com.future.sharednav.focus.FocusableItem
+import com.future.sharednav.focus.escapeTextFieldFocusTrap
 
 @Composable
 fun HomeScreen(
@@ -65,7 +60,6 @@ fun HomeScreen(
     val nearbyStops by viewModel.nearbyStops.collectAsState()
     val currentLocation by viewModel.currentLocation.collectAsState()
     val searchFocusRequester = remember { FocusRequester() }
-    val focusManager = LocalFocusManager.current
 
     // פוקוס D-pad התחלתי על שדה החיפוש - בלי זה נחיתה על מסך הבית משאירה אותו
     // בלי שום פריט מודגש (בדיוק כמו בשאר 5 המסכים באפליקציה הזו).
@@ -85,14 +79,14 @@ fun HomeScreen(
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                 modifier = Modifier.weight(1f)
             )
-            FocusableItem(onClick = onOpenGtfsSetup, accentColor = MaterialTheme.colorScheme.primary, cornerRadius = 999.dp) {
+            FocusableItem(onClick = onOpenGtfsSetup, accentColor = MaterialTheme.colorScheme.primary, cornerRadius = FutureShapes.radiusXxl) {
                 Icon(Icons.Default.Place, contentDescription = stringResource(R.string.gtfs_setup_title), tint = MaterialTheme.colorScheme.primary)
             }
         }
 
         Surface(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).height(140.dp),
-            shape = RoundedCornerShape(16.dp)
+            shape = FutureShapes.lg
         ) {
             LocationPreviewMap(location = currentLocation)
         }
@@ -106,18 +100,10 @@ fun HomeScreen(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
                 .focusRequester(searchFocusRequester)
-                // בשדה טקסט, Compose "בולע" את מקש למטה פנימית ולא מזיז פוקוס -
-                // מכשיר עם מקלדת בלבד היה נשאר תקוע בשדה החיפוש בלי דרך לרדת
-                // הלאה במסך, כמו ב-Settings/dialer/Sfarim.
-                .onPreviewKeyEvent {
-                    if (it.type == KeyEventType.KeyDown && it.key == Key.DirectionDown) {
-                        focusManager.moveFocus(FocusDirection.Down)
-                        true
-                    } else false
-                },
+                .escapeTextFieldFocusTrap(),
             placeholder = { Text(stringResource(R.string.search_placeholder)) },
             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-            shape = RoundedCornerShape(16.dp),
+            shape = FutureShapes.lg,
             singleLine = true
         )
 
@@ -151,14 +137,19 @@ fun HomeScreen(
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                     )
                 }
-                items(results, key = { it }) { result ->
+                // המפתח חייב להיות טיפוס שאפשר לשמור ב-Bundle (Compose שומר דרכו
+                // את ה-state של השורה): key = { it } העביר את GeocodeResult עצמו
+                // והפיל את האפליקציה עם IllegalArgumentException ברגע שהופיעה
+                // תוצאת חיפוש ראשונה. המחרוזת יציבה לאותו מקום בין חיפושים,
+                // וייחודית כי GeocodingRepository מחזיר רשימה בלי כפילויות.
+                items(results, key = { "${it.location.lat},${it.location.lon}|${it.label}" }) { result ->
                     FocusableItem(
                         onClick = { onDestinationPicked(result) },
                         accentColor = MaterialTheme.colorScheme.primary,
                         idleBackgroundColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
                         focusedBackgroundColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.22f),
                         borderWidth = 2.dp,
-                        cornerRadius = 16.dp
+                        cornerRadius = FutureShapes.radiusLg
                     ) {
                         Row(modifier = Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Place, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
@@ -212,7 +203,7 @@ fun HomeScreen(
                             idleBackgroundColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
                             focusedBackgroundColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.22f),
                             borderWidth = 2.dp,
-                            cornerRadius = 16.dp
+                            cornerRadius = FutureShapes.radiusLg
                         ) {
                             Row(modifier = Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Box(Modifier.size(40.dp)) {
@@ -238,7 +229,7 @@ private fun SegmentButton(label: String, selected: Boolean, modifier: Modifier =
         accentColor = MaterialTheme.colorScheme.primary,
         modifier = modifier,
         idleBackgroundColor = if (selected) MaterialTheme.colorScheme.primary else Color.Transparent,
-        cornerRadius = 999.dp,
+        cornerRadius = FutureShapes.radiusXxl,
         scaleOnFocus = false
     ) {
         Text(
@@ -268,7 +259,7 @@ private fun QuickPlaceCard(
         idleBackgroundColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
         focusedBackgroundColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.22f),
         borderWidth = 2.dp,
-        cornerRadius = 16.dp
+        cornerRadius = FutureShapes.radiusLg
     ) {
         Row(modifier = Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
             Surface(

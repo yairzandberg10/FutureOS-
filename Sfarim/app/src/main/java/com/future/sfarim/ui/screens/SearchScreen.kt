@@ -1,5 +1,7 @@
 package com.future.sfarim.ui.screens
 
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,16 +23,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.type
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.LayoutDirection
@@ -40,6 +35,7 @@ import com.future.sfarim.data.BookSearchEntry
 import com.future.sfarim.data.SegmentSearchResult
 import com.future.sfarim.ui.components.FocusableItem
 import com.future.sfarim.ui.components.ScreenTopBar
+import com.future.sharednav.focus.escapeTextFieldFocusTrap
 import com.future.sharednav.theme.FutureTheme
 import com.future.sfarim.util.stripHtmlTags
 import kotlinx.coroutines.Dispatchers
@@ -58,8 +54,9 @@ fun SearchScreen(
     var query by remember { mutableStateOf("") }
     var bookResults by remember { mutableStateOf<List<BookSearchEntry>>(emptyList()) }
     var segmentResults by remember { mutableStateOf<List<SegmentSearchResult>>(emptyList()) }
+    var searching by remember { mutableStateOf(false) }
+    var failed by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
-    val focusManager = LocalFocusManager.current
 
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
 
@@ -67,13 +64,34 @@ fun SearchScreen(
         if (query.isBlank()) {
             bookResults = emptyList()
             segmentResults = emptyList()
+            searching = false
+            failed = false
             return@LaunchedEffect
         }
-        delay(200) // debounce - לא לשלוח שאילתה על כל הקשה
-        val books = withContext(Dispatchers.IO) { onSearchBooks(query) }
-        val segments = withContext(Dispatchers.IO) { onSearchSegments(query) }
-        bookResults = books
-        segmentResults = segments
+        failed = false
+        searching = true
+        delay(SEARCH_DEBOUNCE_MS) // debounce - לא לשלוח שאילתה על כל הקשה
+        // חיפוש כותרים ראשון (טבלה של אלפי שורות - מיידי) ומוצג מיד, ורק אחריו
+        // החיפוש בגוף הטקסט (אינדקס של מיליוני קטעים) - כך יש תוצאות על המסך
+        // בזמן שהחיפוש הכבד עדיין רץ.
+        try {
+            bookResults = withContext(Dispatchers.IO) { onSearchBooks(query) }
+            // אות בודדת = חיפוש קידומת שמתאים למיליוני קטעים; הוא לא מוסיף מידע
+            // למשתמש ועולה סדר גודל יותר מכל שאילתה אחרת, אז הוא לא נשלח בכלל.
+            segmentResults = if (query.trim().length >= MIN_FULLTEXT_QUERY_LENGTH) {
+                withContext(Dispatchers.IO) { onSearchSegments(query) }
+            } else {
+                emptyList()
+            }
+        } catch (e: Exception) {
+            // שאילתת חיפוש שנכשלת (טבלת אינדקס חסרה ב-sefaria.db, DB פגום וכו')
+            // לא מפילה את האפליקציה - מוצגת הודעה במקום.
+            android.util.Log.w("SearchScreen", "search failed for '$query'", e)
+            bookResults = emptyList()
+            segmentResults = emptyList()
+            failed = true
+        }
+        searching = false
     }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
@@ -84,36 +102,37 @@ fun SearchScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp)
-                        .background(theme.textColor.copy(alpha = 0.08f), RoundedCornerShape(10.dp))
+                        .background(theme.textColor.copy(alpha = 0.08f), FutureShapes.sm)
                         .padding(horizontal = 14.dp, vertical = 12.dp),
                 ) {
                     if (query.isEmpty()) {
-                        Text("הקלידו טקסט לחיפוש...", color = theme.textColor.copy(alpha = 0.4f), fontSize = 16.sp)
+                        Text("הקלידו טקסט לחיפוש...", color = theme.textColor.copy(alpha = 0.4f), fontSize = FutureTypography.bodyLarge)
                     }
                     BasicTextField(
                         value = query,
                         onValueChange = { query = it },
-                        textStyle = TextStyle(color = theme.textColor, fontSize = 16.sp, textDirection = androidx.compose.ui.text.style.TextDirection.Rtl),
+                        textStyle = TextStyle(color = theme.textColor, fontSize = FutureTypography.bodyLarge, textDirection = androidx.compose.ui.text.style.TextDirection.Rtl),
                         cursorBrush = SolidColor(theme.accentColor),
                         singleLine = true,
                         modifier = Modifier
                             .fillMaxWidth()
                             .focusRequester(focusRequester)
-                            // בשדה טקסט, Compose "בולע" את מקש למטה פנימית ולא מזיז פוקוס -
-                            // מכשיר עם מקלדת בלבד היה נשאר תקוע בשדה החיפוש בלי דרך לרדת
-                            // לתוצאות. מיירטים את המקש כאן ומזיזים פוקוס ידנית, כמו ב-Settings.
-                            .onPreviewKeyEvent {
-                                if (it.type == KeyEventType.KeyDown && it.key == Key.DirectionDown) {
-                                    focusManager.moveFocus(FocusDirection.Down)
-                                    true
-                                } else false
-                            },
+                            .escapeTextFieldFocusTrap(),
                     )
                 }
 
-                if (query.isNotBlank() && bookResults.isEmpty() && segmentResults.isEmpty()) {
+                val noResults = query.isNotBlank() && bookResults.isEmpty() && segmentResults.isEmpty()
+                if (noResults) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("לא נמצאו תוצאות", color = theme.textColor.copy(alpha = 0.5f), fontSize = 15.sp)
+                        Text(
+                            when {
+                                failed -> "החיפוש נכשל"
+                                searching -> "מחפש…"
+                                else -> "לא נמצאו תוצאות"
+                            },
+                            color = theme.textColor.copy(alpha = 0.5f),
+                            fontSize = FutureTypography.bodyLarge,
+                        )
                     }
                 } else {
                     LazyColumn(
@@ -125,7 +144,7 @@ fun SearchScreen(
                                 Text(
                                     "ספרים",
                                     color = theme.textColor.copy(alpha = 0.5f),
-                                    fontSize = 12.sp,
+                                    fontSize = FutureTypography.label,
                                     modifier = Modifier.padding(top = 4.dp, bottom = 2.dp),
                                 )
                             }
@@ -134,7 +153,7 @@ fun SearchScreen(
                                     Text(
                                         entry.displayTitle,
                                         color = theme.textColor,
-                                        fontSize = 15.sp,
+                                        fontSize = FutureTypography.bodyLarge,
                                         modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 13.dp),
                                     )
                                 }
@@ -145,7 +164,7 @@ fun SearchScreen(
                                 Text(
                                     "פסוקים",
                                     color = theme.textColor.copy(alpha = 0.5f),
-                                    fontSize = 12.sp,
+                                    fontSize = FutureTypography.label,
                                     modifier = Modifier.padding(top = 12.dp, bottom = 2.dp),
                                 )
                             }
@@ -155,9 +174,9 @@ fun SearchScreen(
                                         Text(
                                             "${result.bookTitle} · ${result.refDisplay}",
                                             color = theme.textColor.copy(alpha = 0.5f),
-                                            fontSize = 11.sp,
+                                            fontSize = FutureTypography.caption,
                                         )
-                                        Text(stripHtmlTags(result.snippet), color = theme.textColor, fontSize = 14.sp, maxLines = 2)
+                                        Text(stripHtmlTags(result.snippet), color = theme.textColor, fontSize = FutureTypography.body, maxLines = 2)
                                     }
                                 }
                             }
@@ -168,3 +187,10 @@ fun SearchScreen(
         }
     }
 }
+
+/** דיבאונס ארוך מ-200ms: במקלדת T9 כל תו דורש כמה הקשות, ושאילתת FTS על
+ * אינדקס של מיליוני קטעים היא הפעולה היקרה ביותר באפליקציה. */
+private const val SEARCH_DEBOUNCE_MS = 350L
+
+/** מתחת לזה מחפשים רק בשמות הספרים, לא בגוף הטקסט (ראו LaunchedEffect למעלה). */
+private const val MIN_FULLTEXT_QUERY_LENGTH = 2

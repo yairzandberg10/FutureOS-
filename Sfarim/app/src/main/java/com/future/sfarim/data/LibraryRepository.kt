@@ -20,15 +20,42 @@ class LibraryRepository(private val db: SQLiteDatabase) {
         return (0 until arr.length()).map { arr.getString(it) }
     }
 
+    companion object {
+        /** תנאי EXISTS על ספר בשם החלופי b - "יש לספר הזה טקסט בפועל". כ-14% מהספרים
+         * בסכמת ספריא (875 מתוך 6211) נוצרו מהתוכן העניינים אבל בלי שום קטע טקסט
+         * (אין להם גרסה עברית בייצוא), ובלי הסינון הזה הם מופיעים ברשימות ונפתחים
+         * למסך ריק עם "אין תוכן זמין בפרק זה". הבדיקה היא חיפוש באינדקס
+         * idx_segments_book - זולה גם על טבלה של ~1.75 מיליון שורות. */
+        private const val BOOK_HAS_SEGMENTS =
+            "EXISTS (SELECT 1 FROM segments s WHERE s.book_id = b.id)"
+    }
+
+    // חלק מהענפים בעץ הקטגוריות המקורי של ספריא הם פירוש שקיים רק באנגלית/גרמנית
+    // וכו' - צינור הבנייה (build_library.py) מייבא רק ספרים בעברית, אז ענפים כאלה
+    // נשארים בטבלת categories אבל בלי שום ספר מתחתם בכל התת-עץ (עד עלה). בלי הסינון
+    // הזה המשתמש רואה קטגוריה לחיצה שמובילה למסך ריק - "אין תוכן בקטגוריה זו" - בלי
+    // שום דרך לדעת מראש שהיא מתה. ה-CTE מתחיל מכל קטגוריה עם ספר ישיר ומטפס להורים
+    // כדי לסמן "יש תוכן איפשהו בתת-העץ" לכל אב בדרך.
+    private val hasContentSubquery = """
+        WITH RECURSIVE ancestors(id) AS (
+            SELECT DISTINCT category_id FROM books b WHERE category_id IS NOT NULL AND $BOOK_HAS_SEGMENTS
+            UNION
+            SELECT c.parent_id FROM categories c JOIN ancestors a ON c.id = a.id WHERE c.parent_id IS NOT NULL
+        )
+        SELECT id FROM ancestors
+    """.trimIndent()
+
     fun getChildCategories(parentId: Long?): List<LibraryCategory> {
         val cursor = if (parentId == null) {
             db.rawQuery(
-                "SELECT id, parent_id, name_en, name_he, sort_order FROM categories WHERE parent_id IS NULL ORDER BY sort_order",
+                "SELECT id, parent_id, name_en, name_he, sort_order FROM categories " +
+                    "WHERE parent_id IS NULL AND id IN ($hasContentSubquery) ORDER BY sort_order",
                 null,
             )
         } else {
             db.rawQuery(
-                "SELECT id, parent_id, name_en, name_he, sort_order FROM categories WHERE parent_id = ? ORDER BY sort_order",
+                "SELECT id, parent_id, name_en, name_he, sort_order FROM categories " +
+                    "WHERE parent_id = ? AND id IN ($hasContentSubquery) ORDER BY sort_order",
                 arrayOf(parentId.toString()),
             )
         }
@@ -53,7 +80,7 @@ class LibraryRepository(private val db: SQLiteDatabase) {
 
     fun getBooksInCategory(categoryId: Long): List<LibraryBook> {
         val cursor = db.rawQuery(
-            "SELECT $bookColumns FROM books WHERE category_id = ? ORDER BY sort_order",
+            "SELECT $bookColumns FROM books b WHERE category_id = ? AND $BOOK_HAS_SEGMENTS ORDER BY sort_order",
             arrayOf(categoryId.toString()),
         )
         return cursor.use { c -> buildList { while (c.moveToNext()) add(bookFromCursor(c)) } }
@@ -177,7 +204,7 @@ class LibraryRepository(private val db: SQLiteDatabase) {
         val cursor = db.rawQuery(
             "SELECT b.id, b.title_en, b.title_he FROM search_fts f " +
                 "JOIN books b ON b.id = f.rowid " +
-                "WHERE search_fts MATCH ? ORDER BY rank LIMIT ?",
+                "WHERE search_fts MATCH ? AND $BOOK_HAS_SEGMENTS ORDER BY rank LIMIT ?",
             arrayOf(ftsQuery, limit.toString()),
         )
         return cursor.use { c ->
@@ -189,7 +216,15 @@ class LibraryRepository(private val db: SQLiteDatabase) {
         }
     }
 
-    /** חיפוש מלא בתוך גוף הטקסט של כל הפסוקים/הקטעים בספרייה. */
+    /** חיפוש מלא בתוך גוף הטקסט של כל הפסוקים/הקטעים בספרייה.
+     *
+     * בלי ORDER BY rank בכוונה: דירוג BM25 מחייב את FTS5 לקרוא ולנקד את *כל*
+     * ההתאמות לפני שאפשר לבחור את ה-40 הראשונות, ובאינדקס של ~1.75 מיליון
+     * קטעים חיפוש קידומת קצר מתאים למיליוני שורות - על המכשיר זה עשרות שניות
+     * של קריאה מהאחסון בזמן שכל הקשה נוספת פותחת שאילתה כזו במקביל, עד
+     * שהמערכת הורגת את התהליך (מה שנראה למשתמש כקריסה). בלי הדירוג SQLite
+     * עוצר אחרי 40 ההתאמות הראשונות - מדידה על אותו DB: 5.2 שניות -> 1.4,
+     * ובשאילתה של שתי אותיות ומעלה 0.6 -> 0.07. */
     fun searchSegments(query: String, limit: Int = 40): List<SegmentSearchResult> {
         val ftsQuery = buildFtsQuery(query) ?: return emptyList()
         val cursor = db.rawQuery(
@@ -198,7 +233,7 @@ class LibraryRepository(private val db: SQLiteDatabase) {
                 "FROM segments_fts f " +
                 "JOIN segments s ON s.id = f.rowid " +
                 "JOIN books b ON b.id = s.book_id " +
-                "WHERE segments_fts MATCH ? ORDER BY rank LIMIT ?",
+                "WHERE segments_fts MATCH ? LIMIT ?",
             arrayOf(ftsQuery, limit.toString()),
         )
         return cursor.use { c ->

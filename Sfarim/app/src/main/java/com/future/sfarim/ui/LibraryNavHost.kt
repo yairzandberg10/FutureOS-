@@ -60,7 +60,9 @@ fun LibraryNavHost(repository: LibraryRepository, theme: FutureTheme) {
         }
     }
 
-    when (val route = current) {
+    // כל push/pop מחליק בכיוון הניווט; מעבר פרק (החלפת ראש המחסנית) הוא fade.
+    com.future.sharednav.components.AnimatedBackStackHost(backStack) { route ->
+    when (route) {
         is Route.Home -> {
             val categories = rememberIoState(Unit) { repository.getChildCategories(null) } ?: emptyList()
             val progress = rememberIoState(Unit) { repository.getLatestReadingProgress() }
@@ -76,12 +78,13 @@ fun LibraryNavHost(repository: LibraryRepository, theme: FutureTheme) {
         }
 
         is Route.Browse -> {
-            val childCategories = rememberIoState(route.categoryId) { repository.getChildCategories(route.categoryId) } ?: emptyList()
-            val books = rememberIoState(route.categoryId) { repository.getBooksInCategory(route.categoryId) } ?: emptyList()
+            val childCategoriesState = rememberIoState(route.categoryId) { repository.getChildCategories(route.categoryId) }
+            val booksState = rememberIoState(route.categoryId) { repository.getBooksInCategory(route.categoryId) }
             BrowseScreen(
                 title = route.title,
-                childCategories = childCategories,
-                books = books,
+                childCategories = childCategoriesState ?: emptyList(),
+                books = booksState ?: emptyList(),
+                isLoading = childCategoriesState == null || booksState == null,
                 theme = theme,
                 onBack = ::pop,
                 onOpenCategory = {
@@ -98,11 +101,12 @@ fun LibraryNavHost(repository: LibraryRepository, theme: FutureTheme) {
 
         is Route.BookChapters -> {
             val book = rememberIoState(route.bookId) { repository.getBook(route.bookId) }
-            val chapters = rememberIoState(route.bookId) { repository.getChapters(route.bookId) } ?: emptyList()
+            val chaptersState = rememberIoState(route.bookId) { repository.getChapters(route.bookId) }
             if (book != null) {
                 BookChaptersScreen(
                     book = book,
-                    chapters = chapters,
+                    chapters = chaptersState ?: emptyList(),
+                    isLoading = chaptersState == null,
                     theme = theme,
                     onBack = ::pop,
                     onOpenChapter = { topIndex -> push(Route.Reader(route.bookId, topIndex)) },
@@ -112,9 +116,10 @@ fun LibraryNavHost(repository: LibraryRepository, theme: FutureTheme) {
 
         is Route.Reader -> {
             val book = rememberIoState(route.bookId) { repository.getBook(route.bookId) }
-            val segments = rememberIoState(route.bookId to route.topIndex) {
+            val segmentsState = rememberIoState(route.bookId to route.topIndex) {
                 repository.getSegments(route.bookId, route.topIndex)
-            } ?: emptyList()
+            }
+            val segments = segmentsState ?: emptyList()
             val allChapterIndices = rememberIoState(route.bookId) {
                 repository.getChapters(route.bookId).map { c -> c.topIndex }
             } ?: emptyList()
@@ -128,6 +133,7 @@ fun LibraryNavHost(repository: LibraryRepository, theme: FutureTheme) {
                     book = book,
                     topIndex = route.topIndex,
                     segments = segments,
+                    isLoading = segmentsState == null,
                     hasPrevChapter = currentPos > 0,
                     hasNextChapter = currentPos in 0 until allChapterIndices.lastIndex,
                     bookmarkedSegmentIds = bookmarkedIds,
@@ -194,5 +200,6 @@ fun LibraryNavHost(repository: LibraryRepository, theme: FutureTheme) {
                 },
             )
         }
+    }
     }
 }

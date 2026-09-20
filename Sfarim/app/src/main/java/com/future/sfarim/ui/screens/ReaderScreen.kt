@@ -1,5 +1,7 @@
 package com.future.sfarim.ui.screens
 
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import android.content.Intent
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
@@ -64,7 +66,7 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
+import com.future.sharednav.components.AppDialog
 import com.future.sfarim.data.CommentaryEntry
 import com.future.sfarim.data.LibraryBook
 import com.future.sfarim.data.LibrarySegment
@@ -79,6 +81,10 @@ fun ReaderScreen(
     book: LibraryBook,
     topIndex: Int,
     segments: List<LibrarySegment>,
+    // true כל עוד שאילתת הקטעים עדיין רצה. בלי זה, "אין תוכן זמין בפרק זה"
+    // מוצג בכל כניסה לפרק בזמן הקריאה מה-DB (קובץ של ~2GB על אחסון של מכשיר
+    // בסיסי) - הודעת שגיאה על מצב תקין לגמרי.
+    isLoading: Boolean = false,
     hasPrevChapter: Boolean,
     hasNextChapter: Boolean,
     bookmarkedSegmentIds: Set<Long>,
@@ -91,9 +97,17 @@ fun ReaderScreen(
     onLoadCommentaries: suspend (List<Int>) -> List<CommentaryEntry>,
     onOpenCommentary: (CommentaryEntry) -> Unit,
 ) {
-    var fontSize by remember { mutableStateOf(18f) }
+    // גודל הגופן נשמר בין פתיחות ספר. קודם הוא היה remember בלבד, כלומר
+    // ההתאמה שהמשתמש עשה נעלמה בכל כניסה מחדש - באפליקציית קריאה זו בדיוק
+    // ההגדרה שאי אפשר לאבד.
+    val readerPrefs = LocalContext.current.getSharedPreferences("sfarim_reader_prefs", android.content.Context.MODE_PRIVATE)
+    var fontSize by remember { mutableStateOf(readerPrefs.getFloat("font_size", 18f)) }
+    LaunchedEffect(fontSize) { readerPrefs.edit().putFloat("font_size", fontSize).apply() }
     var menuSegment by remember { mutableStateOf<LibrarySegment?>(null) }
     var showPageMenu by remember { mutableStateOf(false) }
+    // מקש Options הפיזי נחסם ברמת המערכת ולעולם לא מגיע כ-Key.Menu לאפליקציה -
+    // בלי השורה הזו תפריט האפשרויות של המסך לא היה נגיש בכלל במכשיר אמיתי.
+    com.future.sharednav.nav.onOptionsKeyPress { showPageMenu = true }
     var commentaryPrefix by remember { mutableStateOf<List<Int>?>(null) }
     var commentaryResults by remember { mutableStateOf<List<CommentaryEntry>?>(null) }
     val listState = rememberLazyListState()
@@ -158,17 +172,21 @@ fun ReaderScreen(
                     Text(
                         if (hasPrevChapter) "* לפרק קודם" else "",
                         color = theme.textColor.copy(alpha = 0.4f),
-                        fontSize = 11.sp,
+                        fontSize = FutureTypography.caption,
                     )
                     Text(
                         if (hasNextChapter) "לפרק הבא #" else "",
                         color = theme.textColor.copy(alpha = 0.4f),
-                        fontSize = 11.sp,
+                        fontSize = FutureTypography.caption,
                     )
                 }
                 if (segments.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("אין תוכן זמין בפרק זה", color = theme.textColor.copy(alpha = 0.5f), fontSize = 15.sp)
+                        Text(
+                            if (isLoading) "טוען…" else "אין תוכן זמין בפרק זה",
+                            color = theme.textColor.copy(alpha = 0.5f),
+                            fontSize = FutureTypography.bodyLarge,
+                        )
                     }
                 } else if (book.isVerseStyle) {
                     LazyColumn(
@@ -297,7 +315,7 @@ private fun SegmentRow(
     // בורדר + scale בפוקוס, כמו בשאר האפליקציה (FocusableItem המשותף) - בלי זה
     // דווקא מסך הקריאה, המרכזי ביותר, נראה שונה מכל שאר המסכים.
     val scale by animateFloatAsState(if (isFocused) 1.02f else 1f, label = "segmentRowScale")
-    val shape = RoundedCornerShape(10.dp)
+    val shape = FutureShapes.sm
 
     Row(
         modifier = Modifier
@@ -327,7 +345,7 @@ private fun SegmentRow(
             Spacer(modifier = Modifier.width(6.dp))
         }
         Column {
-            Text(segment.refDisplay, color = theme.textColor.copy(alpha = 0.45f), fontSize = 11.sp)
+            Text(segment.refDisplay, color = theme.textColor.copy(alpha = 0.45f), fontSize = FutureTypography.caption)
             Text(cleanedText, color = theme.textColor, fontSize = fontSize.sp, lineHeight = (fontSize * 1.5f).sp)
         }
     }
@@ -349,14 +367,14 @@ private fun ContentOptionsMenu(
     val firstRowFocusRequester = remember { FocusRequester() }
     LaunchedEffect(Unit) { firstRowFocusRequester.requestFocus() }
 
-    Dialog(onDismissRequest = onDismiss) {
+    AppDialog(onDismissRequest = onDismiss) {
         Column(
-            modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(theme.surfaceColor).padding(vertical = 8.dp),
+            modifier = Modifier.clip(FutureShapes.xl).background(theme.surfaceColor).padding(vertical = 8.dp),
         ) {
             Text(
                 refDisplay,
                 color = theme.textColor.copy(alpha = 0.5f),
-                fontSize = 12.sp,
+                fontSize = FutureTypography.label,
                 maxLines = 1,
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp),
             )
@@ -383,17 +401,17 @@ private fun CommentariesDialog(
     onDismiss: () -> Unit,
     onOpen: (CommentaryEntry) -> Unit,
 ) {
-    Dialog(onDismissRequest = onDismiss) {
+    AppDialog(onDismissRequest = onDismiss) {
         Column(
             modifier = Modifier
-                .clip(RoundedCornerShape(20.dp))
+                .clip(FutureShapes.xl)
                 .background(theme.surfaceColor)
                 .padding(vertical = 8.dp),
         ) {
             Text(
                 "מפרשים על ה$contentLabel",
                 color = theme.textColor.copy(alpha = 0.5f),
-                fontSize = 12.sp,
+                fontSize = FutureTypography.label,
                 maxLines = 1,
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp),
             )
@@ -407,7 +425,7 @@ private fun CommentariesDialog(
                 results.isEmpty() -> Text(
                     "לא נמצאו מפרשים",
                     color = theme.textColor.copy(alpha = 0.5f),
-                    fontSize = 14.sp,
+                    fontSize = FutureTypography.body,
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
                 )
                 else -> LazyColumn(modifier = Modifier.padding(vertical = 4.dp)) {
@@ -422,8 +440,8 @@ private fun CommentariesDialog(
                                 .focusable(interactionSource = interactionSource)
                                 .padding(horizontal = 20.dp, vertical = 10.dp),
                         ) {
-                            Text(entry.bookTitle, color = theme.textColor, fontSize = 15.sp)
-                            Text(entry.preview, color = theme.textColor.copy(alpha = 0.5f), fontSize = 12.sp, maxLines = 1)
+                            Text(entry.bookTitle, color = theme.textColor, fontSize = FutureTypography.bodyLarge)
+                            Text(entry.preview, color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.label, maxLines = 1)
                         }
                     }
                 }
@@ -443,7 +461,7 @@ private fun MenuRow(
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
     val scale by animateFloatAsState(if (isFocused) 1.02f else 1f, label = "menuRowScale")
-    val shape = RoundedCornerShape(10.dp)
+    val shape = FutureShapes.sm
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -459,6 +477,6 @@ private fun MenuRow(
     ) {
         Icon(icon, contentDescription = null, tint = theme.textColor, modifier = Modifier.size(20.dp))
         Spacer(modifier = Modifier.width(14.dp))
-        Text(label, color = theme.textColor, fontSize = 15.sp)
+        Text(label, color = theme.textColor, fontSize = FutureTypography.bodyLarge)
     }
 }

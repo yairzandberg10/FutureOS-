@@ -1,5 +1,7 @@
 package com.future.sfarim.ui.screens
 
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,13 +36,16 @@ import com.future.sfarim.data.BookChapter
 import com.future.sfarim.data.LibraryBook
 import com.future.sfarim.ui.components.FocusableItem
 import com.future.sfarim.ui.components.ScreenTopBar
-import com.future.sfarim.ui.digitForKey
+
+import com.future.sharednav.nav.digitForKey
 import com.future.sharednav.theme.FutureTheme
 
 @Composable
 fun BookChaptersScreen(
     book: LibraryBook,
     chapters: List<BookChapter>,
+    // ראו ReaderScreen: מבדיל בין "עוד לא נטען" ל"באמת אין תוכן".
+    isLoading: Boolean = false,
     theme: FutureTheme,
     onBack: () -> Unit,
     onOpenChapter: (Int) -> Unit,
@@ -88,16 +93,20 @@ fun BookChaptersScreen(
                     ) {
                         Box(
                             modifier = Modifier
-                                .background(theme.accentColor.copy(alpha = 0.15f), RoundedCornerShape(10.dp))
+                                .background(theme.accentColor.copy(alpha = 0.15f), FutureShapes.sm)
                                 .padding(horizontal = 12.dp, vertical = 6.dp),
                         ) {
-                            Text("עבור אל $jumpBuffer  (# לאישור, * לניקוי)", color = theme.accentColor, fontSize = 13.sp)
+                            Text("עבור אל $jumpBuffer  (# לאישור, * לניקוי)", color = theme.accentColor, fontSize = FutureTypography.summary)
                         }
                     }
                 }
                 if (chapters.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("אין תוכן זמין", color = theme.textColor.copy(alpha = 0.5f), fontSize = 15.sp)
+                        Text(
+                            if (isLoading) "טוען…" else "אין תוכן זמין",
+                            color = theme.textColor.copy(alpha = 0.5f),
+                            fontSize = FutureTypography.bodyLarge,
+                        )
                     }
                 } else {
                     LazyColumn(
@@ -114,7 +123,7 @@ fun BookChaptersScreen(
                                 Text(
                                     chapter.label,
                                     color = theme.textColor,
-                                    fontSize = 16.sp,
+                                    fontSize = FutureTypography.bodyLarge,
                                     modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 14.dp),
                                 )
                             }

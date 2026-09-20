@@ -1,5 +1,6 @@
 package com.future.sfarim.ui.screens
 
+import com.future.sharednav.theme.FutureTypography
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -54,6 +55,8 @@ fun BrowseScreen(
     title: String,
     childCategories: List<LibraryCategory>,
     books: List<LibraryBook>,
+    // ראו ReaderScreen: מבדיל בין "עוד לא נטען" ל"באמת אין תוכן".
+    isLoading: Boolean = false,
     theme: FutureTheme,
     onBack: () -> Unit,
     onOpenCategory: (LibraryCategory) -> Unit,
@@ -77,7 +80,11 @@ fun BrowseScreen(
                 ScreenTopBar(title = title, theme = theme, onBack = onBack)
                 if (entries.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("אין תוכן בקטגוריה זו", color = theme.textColor.copy(alpha = 0.5f), fontSize = 15.sp)
+                        Text(
+                            if (isLoading) "טוען…" else "אין תוכן בקטגוריה זו",
+                            color = theme.textColor.copy(alpha = 0.5f),
+                            fontSize = FutureTypography.bodyLarge,
+                        )
                     }
                 } else {
                     LazyColumn(
@@ -125,7 +132,7 @@ private fun BrowseRow(
         ) {
             Icon(icon, contentDescription = null, tint = theme.textColor.copy(alpha = 0.7f))
             Spacer(modifier = Modifier.width(14.dp))
-            Text(label, color = theme.textColor, fontSize = 15.sp, maxLines = 2)
+            Text(label, color = theme.textColor, fontSize = FutureTypography.bodyLarge, maxLines = 2)
         }
     }
 }
