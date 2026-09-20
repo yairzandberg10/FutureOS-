@@ -5,4 +5,6 @@ plugins {
     alias(libs.plugins.kotlin.compose) apply false
     alias(libs.plugins.kotlin.serialization) apply false
     alias(libs.plugins.ksp) apply false
+    // מוחל בפועל רק אם app/google-services.json קיים - ראו app/build.gradle.kts.
+    alias(libs.plugins.google.services) apply false
 }

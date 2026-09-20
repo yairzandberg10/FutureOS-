@@ -1,6 +1,7 @@
 package com.future.navigation.data.gtfs
 
 import android.content.Context
+import com.future.navigation.data.backend.TransitBundleSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -33,8 +34,26 @@ data class ImportProgress(
  */
 class GtfsImporter(private val database: GtfsDatabase) {
     private val client = com.future.navigation.data.network.NetworkModule.okHttpClient
+    private val bundleSource by lazy { TransitBundleSource(database) }
 
     fun importFeed(context: Context, bbox: BoundingBox = GtfsConfig.TEL_AVIV_BBOX): Flow<ImportProgress> = flow {
+        // נתיב ראשי: חבילה מסוננת ומוכנה מראש מהשרת (ר' TransitBundleSource).
+        // רק אם אין שרת/אין חבילה לאזור הזה/ההורדה נכשלה, ממשיכים לייבוא
+        // המקומי של קובץ ה-GTFS הארצי - כך האפליקציה לא תלויה בשרת כדי לעבוד.
+        val bundle = try {
+            bundleSource.findBundle(bbox)
+        } catch (e: Exception) {
+            null
+        }
+        if (bundle != null) {
+            try {
+                bundleSource.import(bundle, this)
+                return@flow
+            } catch (e: Exception) {
+                android.util.Log.w("GtfsImporter", "server bundle import failed - falling back to the local GTFS import", e)
+            }
+        }
+
         val dao = database.gtfsDao()
         val zipFile: File
 

@@ -1,5 +1,6 @@
 package com.future.navigation.data.geocoding
 
+import com.future.navigation.data.backend.NavigationFunctions
 import com.future.navigation.data.common.LatLng
 import com.future.navigation.data.network.NetworkModule
 import kotlinx.coroutines.delay
@@ -31,6 +32,17 @@ class GeocodingRepository {
 
         val key = query.trim().lowercase()
         synchronized(cache) { cache[key] }?.let { return it }
+
+        // נתיב ראשי: Cloud Function שמחזיקה מטמון משותף לכל המכשירים ומכבדת
+        // את מדיניות Nominatim בצד אחד מרוכז, במקום שכל מכשיר ידבר מול שרת
+        // הדגמה ציבורי בעצמו. null = אין שרת/השרת נכשל -> ממשיכים ישירות.
+        NavigationFunctions.geocodeSearch(query)?.let { remote ->
+            val results = remote
+                .map { GeocodeResult(label = it.label, location = LatLng(it.lat, it.lon)) }
+                .distinct()
+            synchronized(cache) { cache[key] = results }
+            return results
+        }
 
         val elapsed = System.currentTimeMillis() - lastRequestAtMs
         if (elapsed < MIN_INTERVAL_MS) delay(MIN_INTERVAL_MS - elapsed)

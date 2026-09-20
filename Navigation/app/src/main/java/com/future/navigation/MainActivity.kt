@@ -36,6 +36,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.future.navigation.data.backend.FirebaseBackend
+import com.future.navigation.data.backend.RemoteKeys
 import com.future.navigation.data.common.LatLng
 import com.future.navigation.data.geocoding.GeocodingRepository
 import com.future.navigation.data.gtfs.GtfsConfig
@@ -45,8 +47,10 @@ import com.future.navigation.data.gtfs.GtfsImporter
 import com.future.navigation.data.gtfs.ImportPhase
 import com.future.navigation.data.gtfs.TransitJourneyPlanner
 import com.future.navigation.data.places.SavedPlaceRepository
-import com.future.navigation.data.routing.OsrmRoutingRepository
+import com.future.navigation.data.routing.HereRoutingRepository
 import com.future.navigation.data.routing.RoutingRepository
+import com.future.navigation.data.siri.SiriRealtimeRepository
+import com.future.navigation.data.siri.TransitRealtimeEnricher
 import com.future.sharednav.theme.ThemeClient
 import com.future.navigation.ui.gtfs.GtfsSetupScreen
 import com.future.navigation.ui.gtfs.GtfsSetupViewModel
@@ -75,9 +79,11 @@ class MainActivity : ComponentActivity() {
     private val gtfsDatabase by lazy { GtfsDatabase.getInstance(this) }
     private val savedPlaceRepository by lazy { SavedPlaceRepository(gtfsDatabase.savedPlaceDao()) }
     private val geocodingRepository by lazy { GeocodingRepository() }
-    private val routingRepository: RoutingRepository by lazy { OsrmRoutingRepository() }
+    private val routingRepository: RoutingRepository by lazy { HereRoutingRepository() }
     private val transitJourneyPlanner by lazy { TransitJourneyPlanner(gtfsDatabase.gtfsDao()) }
     private val gtfsImporter by lazy { GtfsImporter(gtfsDatabase) }
+    private val siriRealtimeRepository by lazy { SiriRealtimeRepository() }
+    private val transitRealtimeEnricher by lazy { TransitRealtimeEnricher(siriRealtimeRepository) }
 
     private val navSessionViewModel: NavSessionViewModel by viewModels()
 
@@ -94,7 +100,7 @@ class MainActivity : ComponentActivity() {
         object : ViewModelProvider.Factory {
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
                 @Suppress("UNCHECKED_CAST")
-                return RouteOptionsViewModel(applicationContext, routingRepository, transitJourneyPlanner, gtfsImporter) as T
+                return RouteOptionsViewModel(applicationContext, routingRepository, transitJourneyPlanner, gtfsImporter, transitRealtimeEnricher) as T
             }
         }
     }
@@ -133,6 +139,12 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // שכבת השרת. בלי app/google-services.json שתי השורות האלה לא עושות
+        // כלום, וכל הריפוזיטוריז ממשיכים לדבר ישירות מול השירותים החיצוניים
+        // בדיוק כמו קודם (ר' data/backend/FirebaseBackend).
+        FirebaseBackend.init(this)
+        RemoteKeys.refresh()
 
         setContent {
             var sharedTheme by remember { mutableStateOf(ThemeClient.getTheme(this)) }
@@ -272,7 +284,14 @@ private fun AppNavHost(
 ) {
     val navController = rememberNavController()
 
-    NavHost(navController = navController, startDestination = Screen.Home.route) {
+    NavHost(
+        navController = navController,
+        startDestination = Screen.Home.route,
+        enterTransition = { com.future.sharednav.theme.FutureTransitions.navEnter },
+        exitTransition = { com.future.sharednav.theme.FutureTransitions.navExit },
+        popEnterTransition = { com.future.sharednav.theme.FutureTransitions.navPopEnter },
+        popExitTransition = { com.future.sharednav.theme.FutureTransitions.navPopExit },
+    ) {
         composable(Screen.Home.route) {
             HomeScreen(
                 viewModel = homeViewModel,

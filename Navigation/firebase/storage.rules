@@ -1,0 +1,18 @@
+rules_version = '2';
+
+// The transit bundles are written by the scheduled Cloud Function (Admin
+// SDK, not subject to these rules) and only read by the app. Anonymous
+// sign-in is enough to read; nothing else in the bucket is reachable.
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    match /transit/{bundle} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

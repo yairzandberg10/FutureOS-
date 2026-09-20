@@ -1,0 +1,29 @@
+rules_version = '2';
+
+// The app only ever reads from Firestore; everything is written by Cloud
+// Functions, which go through the Admin SDK and bypass these rules entirely.
+// So: signed-in clients may read the two collections they actually need, and
+// nothing else, and no client may write anything anywhere.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Where each region's prepared transit bundle lives (path in Storage,
+    // version, bounding box). Read by TransitBundleSource on the device.
+    match /transit_bundles/{regionId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // Server-side geocoding cache. The device does not read it directly (it
+    // calls the geocodeSearch function), but leaving it readable costs
+    // nothing and helps when debugging from the console.
+    match /geocode_cache/{queryId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

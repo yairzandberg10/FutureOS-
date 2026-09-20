@@ -19,9 +19,31 @@ local.properties
 
 # sefaria.db (2.1GB) skipped: local disk was full (0.36GB free) when
 # splitting it into <100MB parts for GitHub. Add back once there's room.
-Sfarim/tools/output/sefaria.db
+# The glob covers SQLite's sidecar files too (-wal, -shm, -journal), not
+# just the DB itself: sefaria.db was ignored but sefaria.db-wal was not,
+# and that file grows to hundreds of MB mid-write during a
+# build_library.py run - so a `git add -A` while the DB was being built
+# would have staged it.
+Sfarim/tools/output/sefaria.db*
 Sfarim/tools/output/sefaria_db_parts/
 
 # קבצי crash dump של JVM (hs_err_pid*.log) - נוצרים אוטומטית כשתהליך
 # Gradle/Kotlin daemon קורס, לא חלק מהפרויקט ולא אמורים להיכנס ל-git.
 hs_err_pid*.log
+
+# מפתח החתימה של הרילייס - נקרא ב-app/build.gradle.kts, לא נכנס למאגר
+keystore.properties
+*.jks
+*.keystore
+
+# קונפיגורציית Firebase לפרויקט הפרטי (ר' Navigation/firebase/README.md) -
+# מזהי פרויקט ומפתחות לקוח, לא נכנסים למאגר. בלי הקובץ הזה האפליקציה
+# עובדת בדיוק כמו קודם, ישירות מול השירותים החיצוניים.
+google-services.json
+.firebaserc
+firebase-debug.log
+.firebase/
+
+# תלויות Node של ה-Cloud Functions ותוצרי הקומפילציה שלהן
+Navigation/firebase/functions/node_modules/
+Navigation/firebase/functions/lib/
