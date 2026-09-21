@@ -10,18 +10,17 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import com.future.contact.data.Contact
 import com.future.contact.data.ContactsRepository
-import com.future.sharednav.theme.ThemeClient
 import com.future.contact.ui.ContactDetailScreen
 import com.future.contact.ui.ContactsListScreen
-import com.future.sharednav.theme.FutureTheme
+import com.future.sharednav.components.AnimatedScreenHost
+import com.future.sharednav.theme.FutureMaterialTheme
+import com.future.sharednav.theme.rememberFutureTheme
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -44,13 +43,8 @@ class MainActivity : ComponentActivity() {
             // עצמו) - כדי שכשחוזרים "אחורה" מהפרטים, רשימת אנשי הקשר תדע איזו
             // שורה למקד בחזרה, במקום תמיד לקפוץ לשורה הראשונה.
             var lastSelectedContactId by remember { mutableStateOf<String?>(null) }
-            var theme by remember {
-                mutableStateOf(
-                    ThemeClient.getTheme(this@MainActivity).let {
-                        FutureTheme(isDarkMode = it.isDarkMode, accentColor = Color(it.primaryColor))
-                    }
-                )
-            }
+            // מתעדכן בזמן אמת כשמצב כהה/בהיר או צבע ההדגשה משתנים (ר' rememberFutureTheme).
+            val theme = rememberFutureTheme()
 
             val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
 
@@ -88,66 +82,73 @@ class MainActivity : ComponentActivity() {
                                 contacts = loaded
                             }
                         }
-                        val shared = ThemeClient.getTheme(this@MainActivity)
-                        theme = FutureTheme(isDarkMode = shared.isDarkMode, accentColor = Color(shared.primaryColor))
                     }
                 }
                 lifecycleOwner.lifecycle.addObserver(observer)
                 onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
             }
 
-            Surface(modifier = Modifier.fillMaxSize(), color = theme.backgroundColor) {
-                val current = selectedContact
-                if (current != null) {
-                    ContactDetailScreen(contact = current, onBack = { selectedContact = null }, theme = theme)
-                } else {
-                    ContactsListScreen(
-                        contacts = contacts,
-                        hasPermission = hasPermission,
-                        theme = theme,
-                        onRequestPermission = {
-                            permissionLauncher.launch(
-                                arrayOf(android.Manifest.permission.READ_CONTACTS, android.Manifest.permission.WRITE_CONTACTS)
-                            )
-                        },
-                        onContactClick = { selectedContact = it; lastSelectedContactId = it.id },
-                        lastSelectedContactId = lastSelectedContactId,
-                        onAddContact = {
-                            val intent = Intent(Intent.ACTION_INSERT, ContactsContract.Contacts.CONTENT_URI)
-                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            startActivity(intent)
-                        },
-                        onEditContact = { contact ->
-                            val uri = Uri.withAppendedPath(ContactsContract.Contacts.CONTENT_URI, contact.id)
-                            val intent = Intent(Intent.ACTION_EDIT)
-                            intent.setDataAndType(uri, ContactsContract.Contacts.CONTENT_ITEM_TYPE)
-                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            startActivity(intent)
-                        },
-                        onDeleteContact = { contact ->
-                            coroutineScope.launch {
-                                try {
-                                    val loaded = withContext(kotlinx.coroutines.Dispatchers.IO) {
-                                        val uri = Uri.withAppendedPath(ContactsContract.Contacts.CONTENT_URI, contact.id)
-                                        contentResolver.delete(uri, null, null)
-                                        repository.getAllContacts()
+            FutureMaterialTheme(theme) {
+                Surface(modifier = Modifier.fillMaxSize(), color = theme.backgroundColor) {
+                    // איש הקשר נמסר כמצב ולא נקרא מהמשתנה: מסך הפרטים שיוצא
+                    // באנימציה ממשיך לצייר את איש הקשר שלו אחרי שהמשתנה התאפס.
+                    AnimatedScreenHost(
+                        targetState = selectedContact,
+                        depthOf = { if (it == null) 0 else 1 },
+                        contentKey = { it?.id },
+                    ) { current ->
+                        if (current != null) {
+                            ContactDetailScreen(contact = current, onBack = { selectedContact = null }, theme = theme)
+                        } else {
+                            ContactsListScreen(
+                                contacts = contacts,
+                                hasPermission = hasPermission,
+                                theme = theme,
+                                onRequestPermission = {
+                                    permissionLauncher.launch(
+                                        arrayOf(android.Manifest.permission.READ_CONTACTS, android.Manifest.permission.WRITE_CONTACTS)
+                                    )
+                                },
+                                onContactClick = { selectedContact = it; lastSelectedContactId = it.id },
+                                lastSelectedContactId = lastSelectedContactId,
+                                onAddContact = {
+                                    val intent = Intent(Intent.ACTION_INSERT, ContactsContract.Contacts.CONTENT_URI)
+                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    startActivity(intent)
+                                },
+                                onEditContact = { contact ->
+                                    val uri = Uri.withAppendedPath(ContactsContract.Contacts.CONTENT_URI, contact.id)
+                                    val intent = Intent(Intent.ACTION_EDIT)
+                                    intent.setDataAndType(uri, ContactsContract.Contacts.CONTENT_ITEM_TYPE)
+                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    startActivity(intent)
+                                },
+                                onDeleteContact = { contact ->
+                                    coroutineScope.launch {
+                                        try {
+                                            val loaded = withContext(kotlinx.coroutines.Dispatchers.IO) {
+                                                val uri = Uri.withAppendedPath(ContactsContract.Contacts.CONTENT_URI, contact.id)
+                                                contentResolver.delete(uri, null, null)
+                                                repository.getAllContacts()
+                                            }
+                                            contacts = loaded
+                                        } catch (e: Exception) {
+                                            android.widget.Toast.makeText(this@MainActivity, "לא ניתן למחוק את איש הקשר", android.widget.Toast.LENGTH_SHORT).show()
+                                        }
                                     }
-                                    contacts = loaded
-                                } catch (e: Exception) {
-                                    android.widget.Toast.makeText(this@MainActivity, "לא ניתן למחוק את איש הקשר", android.widget.Toast.LENGTH_SHORT).show()
+                                },
+                                onToggleFavorite = { contact ->
+                                    coroutineScope.launch {
+                                        val loaded = withContext(kotlinx.coroutines.Dispatchers.IO) {
+                                            repository.setFavorite(contact.id, !contact.isFavorite)
+                                            repository.getAllContacts()
+                                        }
+                                        contacts = loaded
+                                    }
                                 }
-                            }
-                        },
-                        onToggleFavorite = { contact ->
-                            coroutineScope.launch {
-                                val loaded = withContext(kotlinx.coroutines.Dispatchers.IO) {
-                                    repository.setFavorite(contact.id, !contact.isFavorite)
-                                    repository.getAllContacts()
-                                }
-                                contacts = loaded
-                            }
+                            )
                         }
-                    )
+                    }
                 }
             }
         }

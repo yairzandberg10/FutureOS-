@@ -1,5 +1,7 @@
 package com.future.fitness.ui.screens
 
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -19,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FitnessCenter
+import androidx.compose.material.icons.rounded.LocalFireDepartment
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.Icon
@@ -35,6 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -45,6 +49,9 @@ import com.future.fitness.data.WorkoutStore
 import com.future.fitness.ui.components.FocusableItem
 import com.future.fitness.ui.components.ScreenTopBar
 import com.future.fitness.ui.formatElapsed
+import com.future.fitness.ui.theme.KineticDimens
+import com.future.fitness.ui.theme.kineticTertiary
+import androidx.compose.ui.graphics.Color
 import com.future.sharednav.theme.FutureTheme
 import kotlinx.coroutines.delay
 
@@ -146,16 +153,35 @@ fun ActiveWorkoutScreen(
             Text(
                 formatElapsed(state.elapsedSec),
                 color = theme.accentColor,
-                fontSize = 48.sp,
+                fontSize = FutureTypography.hero,
                 fontWeight = FontWeight.Bold,
             )
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 18.dp)) {
-                Text("זמן אימון כולל", color = theme.textColor.copy(alpha = 0.6f), fontSize = 12.sp)
-                if (isHrConnected && liveBpm != null) {
-                    Text(" · ", color = theme.textColor.copy(alpha = 0.3f), fontSize = 12.sp)
-                    Icon(Icons.Rounded.Favorite, contentDescription = null, tint = theme.accentColor, modifier = Modifier.size(12.dp))
-                    Spacer(Modifier.width(3.dp))
-                    Text("$liveBpm", color = theme.accentColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Text("זמן אימון כולל", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.label, modifier = Modifier.padding(bottom = 14.dp))
+
+            if (!state.resting) {
+                val liveCalories = remember(state.elapsedSec, workout.met, weightKg) {
+                    WorkoutStore.estimateCalories(workout.met, weightKg, maxOf(1, state.elapsedSec / 60))
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    BioTile(
+                        icon = Icons.Rounded.Favorite,
+                        value = if (isHrConnected && liveBpm != null) "$liveBpm" else "--",
+                        unit = "BPM",
+                        color = theme.kineticTertiary,
+                        theme = theme,
+                        modifier = Modifier.weight(1f),
+                    )
+                    BioTile(
+                        icon = Icons.Rounded.LocalFireDepartment,
+                        value = "$liveCalories",
+                        unit = "קק״ל",
+                        color = theme.accentColor,
+                        theme = theme,
+                        modifier = Modifier.weight(1f),
+                    )
                 }
             }
 
@@ -163,10 +189,10 @@ fun ActiveWorkoutScreen(
                 Text(
                     "תרגיל ${state.exerciseIndex + 1} מתוך ${workout.exercises.size}",
                     color = theme.textColor.copy(alpha = 0.6f),
-                    fontSize = 12.sp,
+                    fontSize = FutureTypography.label,
                     modifier = Modifier.weight(1f),
                 )
-                Text("${(overallProgress * 100).toInt()}%", color = theme.textColor.copy(alpha = 0.6f), fontSize = 12.sp)
+                Text("${(overallProgress * 100).toInt()}%", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.label)
             }
             LinearProgressIndicator(
                 progress = { overallProgress },
@@ -180,25 +206,25 @@ fun ActiveWorkoutScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(theme.accentColor.copy(alpha = 0.12f), RoundedCornerShape(20.dp))
+                        .background(theme.accentColor.copy(alpha = 0.12f), FutureShapes.xl)
                         .padding(26.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Text("מנוחה", color = theme.accentColor, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                    Text(state.restRemaining.toString(), color = theme.textColor, fontSize = 42.sp, fontWeight = FontWeight.Bold)
+                    Text("מנוחה", color = theme.accentColor, fontSize = FutureTypography.summary, fontWeight = FontWeight.Bold)
+                    Text(state.restRemaining.toString(), color = theme.textColor, fontSize = FutureTypography.hero, fontWeight = FontWeight.Bold)
                     TextButton(onClick = {
                         state.resting = false
                         state.exerciseIndex = state.pendingExerciseIndex
                         state.setIndex = state.pendingSetIndex
                     }) {
-                        Text("דלג על המנוחה", color = theme.textColor.copy(alpha = 0.6f), fontSize = 13.sp)
+                        Text("דלג על המנוחה", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.summary)
                     }
                 }
             } else {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(theme.surfaceColor, RoundedCornerShape(20.dp))
+                        .background(theme.surfaceColor, FutureShapes.xl)
                         .padding(22.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
@@ -209,11 +235,11 @@ fun ActiveWorkoutScreen(
                         Icon(Icons.Rounded.FitnessCenter, contentDescription = null, tint = theme.accentColor, modifier = Modifier.size(28.dp))
                     }
                     Spacer(Modifier.height(8.dp))
-                    Text(exercise.name, color = theme.textColor, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    Text(exercise.name, color = theme.textColor, fontSize = FutureTypography.screenTitle, fontWeight = FontWeight.Bold)
                     Text(
                         "סט ${state.setIndex + 1} מתוך ${exercise.sets} · ${exercise.repsLabel}",
                         color = theme.textColor.copy(alpha = 0.6f),
-                        fontSize = 13.sp,
+                        fontSize = FutureTypography.summary,
                     )
                     Spacer(Modifier.height(16.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -243,7 +269,7 @@ fun ActiveWorkoutScreen(
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .background(if (isFocused) theme.accentColor.copy(alpha = 0.22f) else theme.textColor.copy(alpha = 0.08f), RoundedCornerShape(16.dp)),
+                                .background(if (isFocused) theme.accentColor.copy(alpha = 0.22f) else theme.textColor.copy(alpha = 0.08f), FutureShapes.lg),
                             contentAlignment = Alignment.Center,
                         ) {
                             Icon(
@@ -277,18 +303,33 @@ fun ActiveWorkoutScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .background(theme.accentColor, RoundedCornerShape(16.dp))
-                                .then(if (isFocused) Modifier.border(3.dp, theme.textColor, RoundedCornerShape(16.dp)) else Modifier),
+                                .background(theme.accentColor, FutureShapes.lg)
+                                .then(if (isFocused) Modifier.border(3.dp, theme.textColor, FutureShapes.lg) else Modifier),
                             horizontalArrangement = Arrangement.Center,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Icon(Icons.Rounded.Check, contentDescription = null, tint = theme.backgroundColor, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
-                            Text("סיימתי סט", color = theme.backgroundColor, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                            Text("סיימתי סט", color = theme.backgroundColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun BioTile(icon: ImageVector, value: String, unit: String, color: Color, theme: FutureTheme, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .background(theme.surfaceColor, RoundedCornerShape(KineticDimens.subCardCorner))
+            .padding(12.dp),
+    ) {
+        Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(16.dp))
+        Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(top = 6.dp)) {
+            Text(value, color = theme.textColor, fontSize = FutureTypography.headline, fontWeight = FontWeight.ExtraBold)
+            Text(" $unit", color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.caption)
         }
     }
 }

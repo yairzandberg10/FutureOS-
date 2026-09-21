@@ -1,5 +1,8 @@
 package com.future.tools.ui
 
+import com.future.sharednav.theme.onAccentColor
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
@@ -22,6 +25,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.future.sharednav.nav.digitForKey
 import com.future.sharednav.theme.FutureTheme
 import java.text.DecimalFormat
 
@@ -72,11 +76,11 @@ fun TipSplitCalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
                 ToolsHeader(title = "טיפים ופיצול חשבון", theme = theme, onBack = onBack)
 
                 Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
-                    Text("סכום החשבון", color = theme.textColor.copy(alpha = 0.5f), fontSize = 12.sp)
+                    Text("סכום החשבון", color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.label)
                     Text(
                         billText,
                         color = theme.textColor,
-                        fontSize = 40.sp,
+                        fontSize = FutureTypography.display,
                         fontWeight = FontWeight.Light,
                         textAlign = TextAlign.End,
                         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
@@ -84,7 +88,7 @@ fun TipSplitCalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
-                Text("אחוז טיפ", color = theme.textColor.copy(alpha = 0.5f), fontSize = 12.sp, modifier = Modifier.padding(horizontal = 20.dp))
+                Text("אחוז טיפ", color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.label, modifier = Modifier.padding(horizontal = 20.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -99,14 +103,14 @@ fun TipSplitCalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
-                Text("מספר סועדים", color = theme.textColor.copy(alpha = 0.5f), fontSize = 12.sp, modifier = Modifier.padding(horizontal = 20.dp))
+                Text("מספר סועדים", color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.label, modifier = Modifier.padding(horizontal = 20.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     ToolsStepperButton("-", theme = theme) { people = (people - 1).coerceAtLeast(1) }
-                    Text("$people", color = theme.textColor, fontSize = 22.sp, fontWeight = FontWeight.Medium)
+                    Text("$people", color = theme.textColor, fontSize = FutureTypography.headline, fontWeight = FontWeight.Medium)
                     ToolsStepperButton("+", theme = theme) { people = (people + 1).coerceAtMost(99) }
                 }
 
@@ -136,7 +140,7 @@ private fun TipChip(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    val shape = RoundedCornerShape(14.dp)
+    val shape = FutureShapes.md
     val bgColor = when {
         isSelected -> theme.accentColor
         isFocused -> theme.textColor.copy(alpha = 0.18f)
@@ -152,14 +156,14 @@ private fun TipChip(
             .padding(vertical = 10.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(label, color = if (isSelected) Color.Black else theme.textColor, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+        Text(label, color = if (isSelected) theme.onAccentColor else theme.textColor, fontSize = FutureTypography.body, fontWeight = FontWeight.Medium)
     }
 }
 
 @Composable
 private fun ResultRow(label: String, value: String, theme: FutureTheme, isEmphasized: Boolean = false, isAccent: Boolean = false) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(label, color = theme.textColor.copy(alpha = 0.6f), fontSize = 14.sp)
+        Text(label, color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.body)
         Text(
             value,
             color = if (isAccent) theme.accentColor else theme.textColor,

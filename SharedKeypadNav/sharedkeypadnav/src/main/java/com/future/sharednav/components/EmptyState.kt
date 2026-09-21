@@ -14,12 +14,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.future.sharednav.focus.staggeredEntrance
+import com.future.sharednav.theme.FutureDimens
+import com.future.sharednav.theme.rememberFutureType
 
 /**
- * מצב ריק אחיד (אייקון + כותרת + הסבר) - נמצא חסר כמעט בכל רשימה במערכת;
- * רשימה ריקה הייתה פשוט מוצגת כמסך לבן/שחור ללא הסבר.
+ * מצב ריק אחיד (אייקון + כותרת + הסבר). האייקון, הכותרת וההסבר נכנסים
+ * בדירוג קצר - בלי זה, מצב ריק שמופיע אחרי טעינה (רשימה שחזרה ריקה)
+ * החליף את מסך הטעינה בבת אחת ונראה כמו הבהוב.
  */
 @Composable
 fun EmptyState(
@@ -29,27 +31,33 @@ fun EmptyState(
     modifier: Modifier = Modifier,
     subtitle: String? = null,
 ) {
+    val type = rememberFutureType()
     Column(
-        modifier = modifier.fillMaxSize().padding(32.dp),
+        modifier = modifier.fillMaxSize().padding(FutureDimens.spacingXxl),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Icon(icon, contentDescription = null, tint = textColor.copy(alpha = 0.4f), modifier = Modifier.size(56.dp))
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = textColor.copy(alpha = 0.4f),
+            modifier = Modifier.staggeredEntrance(0).size(FutureDimens.iconEmptyState),
+        )
         Text(
             title,
             color = textColor.copy(alpha = 0.7f),
-            fontSize = 17.sp,
+            fontSize = type.title,
             fontWeight = FontWeight.Medium,
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(top = 16.dp),
+            modifier = Modifier.staggeredEntrance(1).padding(top = FutureDimens.spacingLg),
         )
         if (subtitle != null) {
             Text(
                 subtitle,
                 color = textColor.copy(alpha = 0.4f),
-                fontSize = 14.sp,
+                fontSize = type.body,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.padding(top = 4.dp),
+                modifier = Modifier.staggeredEntrance(2).padding(top = FutureDimens.spacingXs),
             )
         }
     }

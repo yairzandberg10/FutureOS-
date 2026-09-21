@@ -1,0 +1,30 @@
+/* FutureOS spacing. Source: FutureDimens.kt (the two named tokens) plus the
+   paddings measured in each component. Device pixels = dp * 2. */
+:root {
+  --fos-space-item: 24px;    /* 12dp — itemSpacing, gap between list items */
+  --fos-space-screen: 32px;  /* 16dp — screenPadding, the screen's side gutter */
+
+  /* raw dp ladder that the components actually use */
+  --fos-space-1: 8px;   /* 4dp  — inner padding of a focusable row */
+  --fos-space-2: 12px;  /* 6dp  — day-chip gap, card vertical padding */
+  --fos-space-3: 16px;  /* 8dp  — chip gap, tab gap, top-bar gap */
+  --fos-space-4: 20px;  /* 10dp */
+  --fos-space-5: 24px;  /* 12dp */
+  --fos-space-6: 28px;  /* 14dp — menu row vertical, heads-up horizontal */
+  --fos-space-7: 32px;  /* 16dp */
+  --fos-space-8: 40px;  /* 20dp — dialog padding, menu row horizontal */
+  --fos-space-9: 48px;  /* 24dp — dialog button horizontal, section start */
+  --fos-space-10: 64px; /* 32dp — empty-state padding */
+
+  /* the one screen size: there are no breakpoints */
+  --fos-screen-w: 640px;
+  --fos-screen-h: 960px;
+  --fos-density: 2; /* @kind other */
+
+  /* focus target heights — there is no touch, so 48dp does not apply */
+  --fos-row-list: 112px;     /* FocusableItem */
+  --fos-row-setting: 108px;  /* SettingItem */
+  --fos-row-menu: 100px;     /* MenuRow */
+  --fos-row-topbar-btn: 72px;/* TopBarIconButton */
+  --fos-row-dialog-btn: 88px;/* ConfirmDialog button */
+}

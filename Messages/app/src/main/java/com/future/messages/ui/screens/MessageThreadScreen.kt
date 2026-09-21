@@ -100,7 +100,11 @@ fun MessageThreadScreen(
         // enableEdgeToEdge() מבטל את decorFitsSystemWindows, ואז
         // windowSoftInputMode="adjustResize" כבר לא מקטין את החלון כשהמקלדת עולה -
         // בלי imePadding שורת כתיבת ההודעה נשארת מתחת למקלדת ולא רואים מה מקלידים.
-        Column(modifier = Modifier.fillMaxSize().imePadding().background(theme.backgroundColor)) {
+        //
+        // הסדר כאן חשוב: background *לפני* imePadding. הפוך, הרקע צויר רק
+        // באזור שנשאר אחרי הריפוד, והשטח שמאחורי המקלדת - כולל מה שנראה דרך
+        // עיגול הפינות שלה - נשאר רקע החלון, שקבוע לשחור ב-themes.xml.
+        Column(modifier = Modifier.fillMaxSize().background(theme.backgroundColor).imePadding()) {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically

@@ -1,5 +1,8 @@
 package com.future.fitness.ui.screens
 
+import com.future.sharednav.theme.onAccentColor
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -40,7 +43,7 @@ import com.future.fitness.data.Workout
 import com.future.fitness.ui.components.FocusableItem
 import com.future.fitness.ui.components.ScreenTopBar
 import com.future.fitness.ui.components.SegmentedControl
-import com.future.fitness.ui.components.escapeTextFieldFocusTrap
+import com.future.sharednav.focus.escapeTextFieldFocusTrap
 import com.future.fitness.ui.components.fitnessTextFieldColors
 import com.future.sharednav.theme.FutureTheme
 
@@ -82,7 +85,7 @@ fun WorkoutBuilderScreen(
             }
 
             item {
-                Text("רמת קושי", color = theme.textColor.copy(alpha = 0.6f), fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
+                Text("רמת קושי", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.summary, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
                 SegmentedControl(
                     options = listOf("קל", "בינוני", "קשה"),
                     selected = difficulty,
@@ -105,7 +108,7 @@ fun WorkoutBuilderScreen(
             }
 
             item {
-                Text("תרגילים", color = theme.textColor.copy(alpha = 0.6f), fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
+                Text("תרגילים", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.summary, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
             }
 
             itemsIndexed(exercises) { index, ex ->
@@ -113,7 +116,7 @@ fun WorkoutBuilderScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 10.dp)
-                        .background(theme.surfaceColor, RoundedCornerShape(16.dp))
+                        .background(theme.surfaceColor, FutureShapes.lg)
                         .padding(14.dp),
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -134,7 +137,7 @@ fun WorkoutBuilderScreen(
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .background(theme.textColor.copy(alpha = 0.08f), RoundedCornerShape(10.dp))
+                                    .background(theme.textColor.copy(alpha = 0.08f), FutureShapes.sm)
                                     .padding(8.dp),
                                 contentAlignment = Alignment.Center,
                             ) {
@@ -175,14 +178,14 @@ fun WorkoutBuilderScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(theme.textColor.copy(alpha = 0.05f), RoundedCornerShape(16.dp))
+                            .background(theme.textColor.copy(alpha = 0.05f), FutureShapes.lg)
                             .padding(14.dp),
                         horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Icon(Icons.Rounded.Add, contentDescription = null, tint = theme.accentColor, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("הוסף תרגיל", color = theme.accentColor, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                        Text("הוסף תרגיל", color = theme.accentColor, fontSize = FutureTypography.body, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
@@ -207,10 +210,10 @@ fun WorkoutBuilderScreen(
                 },
                 enabled = canSave,
                 modifier = Modifier.fillMaxWidth().height(52.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = theme.accentColor, contentColor = theme.backgroundColor),
+                shape = FutureShapes.lg,
+                colors = ButtonDefaults.buttonColors(containerColor = theme.accentColor, contentColor = theme.onAccentColor),
             ) {
-                Text("שמור אימון", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text("שמור אימון", fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Bold)
             }
         }
     }

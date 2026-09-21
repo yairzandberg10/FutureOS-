@@ -1,5 +1,7 @@
 package com.future.futureui.recents.ui
 
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Image
@@ -99,12 +101,12 @@ fun RecentAppsScreen(
                 ) {
                     Icon(Icons.Rounded.Apps, contentDescription = null, tint = accentColor, modifier = Modifier.size(22.dp))
                     Spacer(modifier = Modifier.width(10.dp))
-                    Text("אפליקציות אחרונות", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text("אפליקציות אחרונות", color = Color.White, fontSize = FutureTypography.title, fontWeight = FontWeight.Bold)
                 }
 
                 if (apps.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("אין אפליקציות אחרונות", color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp)
+                        Text("אין אפליקציות אחרונות", color = Color.White.copy(alpha = 0.5f), fontSize = FutureTypography.body)
                     }
                 } else {
                     LazyColumn(
@@ -126,7 +128,7 @@ fun RecentAppsScreen(
                 Text(
                     "אישור לפתיחה · אפשרויות לסגירה · חזרה ליציאה",
                     color = Color.White.copy(alpha = 0.35f),
-                    fontSize = 11.sp,
+                    fontSize = FutureTypography.caption,
                     modifier = Modifier.fillMaxWidth().padding(16.dp),
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center
                 )
@@ -137,7 +139,7 @@ fun RecentAppsScreen(
 
 @Composable
 private fun RecentAppRow(app: RecentAppInfo, isFocused: Boolean, accentColor: Color, onClick: () -> Unit) {
-    val shape = RoundedCornerShape(16.dp)
+    val shape = FutureShapes.lg
     val bgColor by animateColorAsState(
         if (isFocused) Color.White.copy(alpha = 0.14f) else Color.White.copy(alpha = 0.05f),
         label = "recentRowBg"
@@ -161,6 +163,6 @@ private fun RecentAppRow(app: RecentAppInfo, isFocused: Boolean, accentColor: Co
             modifier = Modifier.size(if (isFocused) 44.dp else 40.dp).clip(RoundedCornerShape(percent = 28))
         )
         Spacer(modifier = Modifier.width(14.dp))
-        Text(app.label, color = Color.White, fontSize = 15.sp, maxLines = 1, modifier = Modifier.weight(1f))
+        Text(app.label, color = Color.White, fontSize = FutureTypography.bodyLarge, maxLines = 1, modifier = Modifier.weight(1f))
     }
 }

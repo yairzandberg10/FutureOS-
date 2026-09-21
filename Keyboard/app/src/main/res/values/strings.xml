@@ -12,7 +12,8 @@
     <string name="voice_permission_summary">כדי לתמלל טקסט בהחזקת מקש 0 יש לאשר גישה למיקרופון</string>
     <string name="voice_permission_grant">אפשר גישה למיקרופון</string>
     <string name="voice_permission_granted">גישה למיקרופון אושרה - החזק את מקש 0 כדי לתמלל</string>
-    <string name="voice_listening">מקשיב… דבר עכשיו</string>
+    <!-- כותרת מצב התמלול בפאנל. "דבר עכשיו" הוסר כי המקרא שמתחת כבר אומר מה לעשות. -->
+    <string name="voice_listening">מקשיב…</string>
     <string name="voice_permission_missing">יש לאשר גישה למיקרופון באפליקציית המקלדת כדי לתמלל</string>
     <string name="voice_unavailable">תמלול קולי אינו זמין במכשיר זה</string>
 </resources>

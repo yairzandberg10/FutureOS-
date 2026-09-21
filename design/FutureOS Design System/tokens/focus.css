@@ -1,0 +1,18 @@
+/* FutureOS focus. There is no touch and no pointer: focus IS the interaction model.
+   Source: FocusableItem, dpadFocusBorder, ConfirmDialog, SettingItem, MenuRow. */
+:root {
+  --fos-focus-border-item: 3px;    /* 1.5dp — list rows */
+  --fos-focus-border-control: 4px; /* 2dp  — dialogs, fields, chips, setting rows */
+  --fos-focus-scale: 1.02; /* @kind other */         /* list rows and dialogs only */
+
+  --fos-focus-bg-item: var(--fos-accent-14);   /* 14% accent behind a focused list row */
+  --fos-focus-bg-icon: var(--fos-accent-30);   /* 30% accent behind a focused icon button */
+  --fos-focus-bg-setting: var(--fos-text-06);  /* 6%  text behind a focused setting row */
+  --fos-focus-bg-menu: var(--fos-text-12);     /* 12% text behind a focused menu row */
+  --fos-focus-bg-chip: var(--fos-text-18);     /* 18% text behind a focused chip */
+  --fos-focus-bg-slider: var(--fos-text-18);   /* 18% text behind a focused slider row */
+  --fos-idle-bg-chip: var(--fos-text-06);
+  --fos-idle-bg-slider: var(--fos-text-06);
+  --fos-idle-bg-field: var(--fos-text-08);
+  --fos-idle-bg-icon: var(--fos-text-08);
+}

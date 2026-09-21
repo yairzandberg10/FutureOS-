@@ -1,0 +1,17 @@
+/* FutureOS corner radii. Source: FutureDimens.kt + per-component overrides.
+   Five steps plus full round. Device pixels = dp * 2. */
+:root {
+  --fos-radius-item: 16px;     /* 8dp  — list row */
+  --fos-radius-textfield: 20px;/* 10dp — BasicTextField */
+  --fos-radius-tab: 24px;      /* 12dp — ViewModeTabRow item */
+  --fos-radius-chip: 28px;     /* 14dp — GalleryTabChip */
+  --fos-radius-card: 32px;     /* 16dp — cardCornerRadius, slider row */
+  --fos-radius-dialog: 40px;   /* 20dp — ConfirmDialog, options menu */
+  --fos-radius-main: 44px;     /* 22dp — borderRadius / glassColorRadius, settings card */
+  --fos-radius-headsup: 56px;  /* 28dp — floating notification */
+  --fos-radius-full: 9999px;   /* buttons, switch track, day chip, nav indicator */
+
+  --fos-border-hairline: 2px;  /* 1dp */
+  --fos-border-divider-row: 2px; /* 0.8dp SettingDivider, rendered at 2px minimum */
+  --fos-border-headsup: 1px;   /* 0.5dp */
+}

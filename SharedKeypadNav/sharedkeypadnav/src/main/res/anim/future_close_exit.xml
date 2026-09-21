@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    אפליקציה/מסך שנסגר - אותה תנועה כמו FutureTransitions.backward: זז
+    שמינית רוחב שמאלה ונעלם, 140ms. נשאר מעל המסך שחוזרים אליו עד הסוף.
+-->
+<set xmlns:android="http://schemas.android.com/apk/res/android"
+    android:duration="@integer/future_motion_fast"
+    android:interpolator="@interpolator/future_accelerate"
+    android:shareInterpolator="true"
+    android:zAdjustment="top">
+    <alpha
+        android:fromAlpha="1.0"
+        android:toAlpha="0.0" />
+    <translate
+        android:fromXDelta="0"
+        android:toXDelta="-12.5%" />
+</set>

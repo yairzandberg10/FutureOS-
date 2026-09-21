@@ -13,6 +13,7 @@ import android.telecom.VideoProfile
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.future.dialer.MainActivity
+import com.future.sharednav.systemui.SystemUiTarget
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -115,10 +116,10 @@ class CallService : InCallService() {
         // FutureUI (מסך הנעילה המותאם-אישית) לא בהכרח מותקן בכל build - אם השידור
         // נכשל, שיחה עדיין תיענה, פשוט בלי לפנות אוטומטית את מסך הנעילה שלו.
         try {
-            val intent = Intent("com.future.futureui.ACTION_CALL_RINGING").setPackage("com.future.futureui")
+            val intent = Intent("${SystemUiTarget.PACKAGE}.ACTION_CALL_RINGING").setPackage(SystemUiTarget.PACKAGE)
             applicationContext.sendBroadcast(intent)
         } catch (e: Exception) {
-            Log.w(TAG, "failed to notify FutureUI of ringing call", e)
+            Log.w(TAG, "failed to notify System UI of ringing call", e)
         }
     }
 
@@ -127,10 +128,10 @@ class CallService : InCallService() {
         ringingNotified = false
         applicationContext.getSystemService(NotificationManager::class.java)?.cancel(CALL_NOTIFICATION_ID)
         try {
-            val intent = Intent("com.future.futureui.ACTION_CALL_ENDED").setPackage("com.future.futureui")
+            val intent = Intent("${SystemUiTarget.PACKAGE}.ACTION_CALL_ENDED").setPackage(SystemUiTarget.PACKAGE)
             applicationContext.sendBroadcast(intent)
         } catch (e: Exception) {
-            Log.w(TAG, "failed to notify FutureUI that ringing ended", e)
+            Log.w(TAG, "failed to notify System UI that ringing ended", e)
         }
     }
 

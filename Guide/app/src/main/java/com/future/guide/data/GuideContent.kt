@@ -5,15 +5,22 @@ import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.automirrored.rounded.Message
 import androidx.compose.material.icons.automirrored.rounded.Notes
 import androidx.compose.material.icons.rounded.Apps
+import androidx.compose.material.icons.rounded.Bluetooth
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.Call
+import androidx.compose.material.icons.rounded.Checklist
 import androidx.compose.material.icons.rounded.Contacts
+import androidx.compose.material.icons.rounded.FitnessCenter
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Keyboard
+import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.Navigation
 import androidx.compose.material.icons.rounded.PhoneAndroid
+import androidx.compose.material.icons.rounded.PhotoCamera
 import androidx.compose.material.icons.rounded.PhotoLibrary
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.SettingsRemote
 import androidx.compose.material.icons.rounded.Terminal
 import androidx.compose.material.icons.rounded.Build
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -110,7 +117,7 @@ val GUIDE_APPS = listOf(
         name = "אנשי קשר",
         subtitle = "ניהול אנשי קשר",
         steps = listOf(
-            "גללו את הרשימה עם ה-D-pad, או הקישו אות במקלדת כדי לקפוץ ישירות לאיש קשר שמתחיל בה.",
+            "גללו את הרשימה עם ה-D-pad, או הקישו את ספרות השם במקלדת T9 (מקש 2 = א/ב/ג וכן הלאה) כדי לסנן את הרשימה בזמן אמת.",
             "מקש הבחירה על איש קשר פותח את פרטיו - משם ניתן לחייג או לשלוח הודעה ישירות.",
             "ליצירת איש קשר חדש, נווטו לכפתור ההוספה בראש הרשימה.",
             "עריכה ומחיקה של איש קשר קיימים זמינות דרך תפריט הפרטים שלו."
@@ -189,13 +196,101 @@ val GUIDE_APPS = listOf(
         id = "tools",
         icon = Icons.Rounded.Build,
         name = "כלים",
-        subtitle = "מחשבון, פנס, שעון עצר, טיימר וממיר יחידות",
+        subtitle = "ממיר יחידות, סורק QR, פתקים מהירים וכלים קטנים נוספים",
         steps = listOf(
-            "ממסך הבית של האפליקציה, בחרו את הכלי הרצוי מהרשימה: מחשבון, פנס, שעון עצר, טיימר או ממיר יחידות.",
-            "במחשבון, הקלידו ספרות ופעולות עם המקלדת המספרית כרגיל.",
-            "בפנס, מקש הבחירה מדליק ומכבה את הפלאש של המצלמה.",
+            "ממסך הבית של האפליקציה, בחרו את הכלי הרצוי מהרשימה עם ה-D-pad ולחצו OK.",
+            "המחשבון, שעון העצר והפנס עברו לאפליקציות עצמאיות משלהם ואינם חלק מכלים יותר.",
+            "בסורק ה-QR, כוונו את המצלמה לקוד והתוצאה תוצג אוטומטית.",
             "מקש החזרה בכל כלי חוזר לרשימת הכלים הראשית."
         )
+    ),
+    GuideApp(
+        id = "tasks",
+        icon = Icons.Rounded.Checklist,
+        name = "משימות",
+        subtitle = "רשימת מטלות",
+        steps = listOf(
+            "גללו בין המשימות עם ה-D-pad; מקש הבחירה פותח משימה לעריכה.",
+            "בכפתור ההוספה שבראש המסך יוצרים משימה חדשה - כותרת, הערות ודרגת עדיפות.",
+            "שדה החיפוש שבראש הרשימה מסנן לפי כותרת בזמן הקלדה.",
+            "מקש החזרה שומר את המשימה הפתוחה ויוצא; משימה ריקה לגמרי לא נשמרת."
+        ),
+        tips = listOf("צבע הנקודה לצד כל משימה מציין את דרגת העדיפות שלה.")
+    ),
+    GuideApp(
+        id = "bluetooth",
+        icon = Icons.Rounded.Bluetooth,
+        name = "בלוטות'",
+        subtitle = "חיבור אוזניות ומכשירים",
+        steps = listOf(
+            "מקש הבחירה על מתג ההפעלה מדליק ומכבה את הבלוטות'.",
+            "לאחר ההדלקה מתחיל סריקה אוטומטית - המכשירים שנמצאו מופיעים ברשימה מתחת.",
+            "מקש הבחירה על מכשיר ברשימה מתחיל התאמה (pairing) איתו.",
+            "מכשיר שכבר מותאם מופיע בנפרד, ואפשר להתנתק ממנו או להסיר אותו דרך אותו מקש."
+        )
+    ),
+    GuideApp(
+        id = "navigation",
+        icon = Icons.Rounded.Navigation,
+        name = "ניווט",
+        subtitle = "מפות, מסלול ותחבורה ציבורית",
+        steps = listOf(
+            "הקלידו יעד בשדה החיפוש; מקש למטה מעביר מהשדה לרשימת התוצאות.",
+            "מקש הבחירה על תוצאה מציג את המסלול אליה ואת זמן ההגעה המשוער.",
+            "מקומות שמורים נגישים ממסך נפרד, כדי לא להקליד כתובת קבועה שוב ושוב.",
+            "מקש החזרה מבטל ניווט פעיל וחוזר למסך הראשי."
+        ),
+        tips = listOf("הניווט דורש חיבור לאינטרנט ומיקום פעיל - בלעדיהם אין חישוב מסלול.")
+    ),
+    GuideApp(
+        id = "camera",
+        icon = Icons.Rounded.PhotoCamera,
+        name = "מצלמה",
+        subtitle = "צילום תמונות ווידאו",
+        steps = listOf(
+            "מקש הבחירה מצלם תמונה.",
+            "מקשי החצים מחליפים בין מצב תמונה למצב וידאו ובין המצלמה הקדמית לאחורית.",
+            "התמונות נשמרות בגלריה ונגישות משם מיד אחרי הצילום.",
+            "מקש החזרה סוגר את המצלמה."
+        )
+    ),
+    GuideApp(
+        id = "fitness",
+        icon = Icons.Rounded.FitnessCenter,
+        name = "כושר",
+        subtitle = "צעדים, אימונים ודופק",
+        steps = listOf(
+            "המסך הראשי מציג את הצעדים של היום ואת ההתקדמות מול היעד.",
+            "בונה האימונים מאפשר להרכיב אימון מתרגילים ולשמור אותו לשימוש חוזר.",
+            "במסך ההגדרות מזינים גיל, משקל ויעד יומי - הם בסיס חישוב הקלוריות.",
+            "חיישן דופק חיצוני בבלוטות' מתחבר דרך אותו מסך הגדרות."
+        )
+    ),
+    GuideApp(
+        id = "remote",
+        icon = Icons.Rounded.SettingsRemote,
+        name = "שלט רחוק",
+        subtitle = "שליטה במזגן ובמכשירי אינפרא-אדום",
+        steps = listOf(
+            "הוסיפו מכשיר חדש ותנו לו שם - לדוגמה \"מזגן סלון\".",
+            "לכל מכשיר מוסיפים כפתורים; כל כפתור שומר קוד אינפרא-אדום (NEC או רצף גולמי).",
+            "מקש הבחירה על כפתור שולח את הקוד דרך משדר האינפרא-אדום של המכשיר.",
+            "מקש החזרה חוזר מרשימת הכפתורים לרשימת המכשירים."
+        ),
+        tips = listOf("נדרש משדר אינפרא-אדום מובנה במכשיר - בלעדיו הכפתורים לא ישדרו דבר.")
+    ),
+    GuideApp(
+        id = "assistant",
+        icon = Icons.Rounded.Mic,
+        name = "עוזר קולי",
+        subtitle = "זיהוי דיבור והקראה מקומיים",
+        steps = listOf(
+            "מקש הבחירה מתחיל האזנה; דברו ואז המתינו לסיום הזיהוי.",
+            "הטקסט שזוהה מוצג על המסך, ואפשר להקריא אותו בחזרה.",
+            "העיבוד מתבצע במכשיר עצמו - אין צורך בחיבור לאינטרנט.",
+            "מקש החזרה עוצר האזנה פעילה."
+        ),
+        tips = listOf("נדרשת הרשאת מיקרופון; בלעדיה ההאזנה לא תתחיל.")
     ),
     GuideApp(
         id = "settings",

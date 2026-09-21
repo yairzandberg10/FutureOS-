@@ -1,5 +1,8 @@
 package com.future.fitness.ui.screens
 
+import com.future.sharednav.theme.onAccentColor
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
@@ -254,7 +257,7 @@ fun WorkoutTemplateScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(if (isFocused) theme.accentColor.copy(alpha = 0.22f) else theme.textColor.copy(alpha = 0.08f), RoundedCornerShape(16.dp)),
+                        .background(if (isFocused) theme.accentColor.copy(alpha = 0.22f) else theme.textColor.copy(alpha = 0.08f), FutureShapes.lg),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
@@ -279,11 +282,11 @@ fun WorkoutTemplateScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(theme.accentColor, RoundedCornerShape(16.dp)),
+                        .background(theme.accentColor, FutureShapes.lg),
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(finishLabel, color = theme.backgroundColor, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text(finishLabel, color = theme.backgroundColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -313,20 +316,20 @@ private fun MainPage(
             Text(
                 "כדי למדוד מרחק וקצב צריך הרשאת מיקום",
                 color = theme.textColor.copy(alpha = 0.6f),
-                fontSize = 14.sp,
+                fontSize = FutureTypography.body,
                 modifier = Modifier.padding(top = 12.dp, bottom = 16.dp),
             )
             Button(
                 onClick = onRequestLocationPermission,
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = theme.accentColor, contentColor = theme.backgroundColor),
+                shape = FutureShapes.lg,
+                colors = ButtonDefaults.buttonColors(containerColor = theme.accentColor, contentColor = theme.onAccentColor),
             ) { Text("אפשר הרשאת מיקום") }
             return@Column
         }
 
-        Text(formatElapsed(elapsedSec), color = theme.accentColor, fontSize = 48.sp, fontWeight = FontWeight.Bold)
+        Text(formatElapsed(elapsedSec), color = theme.accentColor, fontSize = FutureTypography.hero, fontWeight = FontWeight.Bold)
         if (usesGps) {
-            Text(if (tracker.hasFix) "עוקב אחרי המיקום" else "מחפש GPS...", color = theme.textColor.copy(alpha = 0.5f), fontSize = 12.sp, modifier = Modifier.padding(bottom = 20.dp))
+            Text(if (tracker.hasFix) "עוקב אחרי המיקום" else "מחפש GPS...", color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.label, modifier = Modifier.padding(bottom = 20.dp))
         } else {
             Spacer(Modifier.height(24.dp))
         }
@@ -354,7 +357,7 @@ private fun MainPage(
 @Composable
 private fun RunningDynamicsPage(theme: FutureTheme, heartRateMonitor: HeartRateMonitor) {
     Column(modifier = Modifier.fillMaxSize().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-        Text("דינמיקת ריצה", color = theme.textColor.copy(alpha = 0.6f), fontSize = 13.sp, modifier = Modifier.padding(bottom = 16.dp))
+        Text("דינמיקת ריצה", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.summary, modifier = Modifier.padding(bottom = 16.dp))
         if (!heartRateMonitor.hasRunningCadenceSensor) {
             NoSensorMessage(theme, "אין חיישן קצב-צעדים מחובר (Running Speed and Cadence) - התחברו לשעון/חיישן תואם בהגדרות")
             return@Column
@@ -373,7 +376,7 @@ private fun RunningDynamicsPage(theme: FutureTheme, heartRateMonitor: HeartRateM
 @Composable
 private fun CyclingPowerPage(theme: FutureTheme, heartRateMonitor: HeartRateMonitor) {
     Column(modifier = Modifier.fillMaxSize().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-        Text("עוצמה וקצב דיווש", color = theme.textColor.copy(alpha = 0.6f), fontSize = 13.sp, modifier = Modifier.padding(bottom = 16.dp))
+        Text("עוצמה וקצב דיווש", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.summary, modifier = Modifier.padding(bottom = 16.dp))
         if (!heartRateMonitor.hasCyclingPowerSensor) {
             NoSensorMessage(theme, "אין מד-כוח מחובר (Cycling Power) - התחברו לשעון/מד-כוח תואם בהגדרות")
             return@Column
@@ -397,7 +400,7 @@ private fun ElevationPage(theme: FutureTheme, tracker: RunTracker) {
         Text(
             "מבוסס על GPS בלבד (בלי חיישן ברומטרי) - ייתכן רעש/אי-דיוק",
             color = theme.textColor.copy(alpha = 0.4f),
-            fontSize = 11.sp,
+            fontSize = FutureTypography.caption,
             modifier = Modifier.padding(top = 16.dp),
         )
     }
@@ -406,33 +409,33 @@ private fun ElevationPage(theme: FutureTheme, tracker: RunTracker) {
 @Composable
 private fun HeartRateZonesPage(theme: FutureTheme, estimatedMaxHr: Int?, zoneSeconds: List<Int>, currentBpm: Int?) {
     Column(modifier = Modifier.fillMaxSize().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text("אזורי דופק", color = theme.textColor.copy(alpha = 0.6f), fontSize = 13.sp, modifier = Modifier.padding(bottom = 12.dp))
+        Text("אזורי דופק", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.summary, modifier = Modifier.padding(bottom = 12.dp))
         if (estimatedMaxHr == null) {
             NoSensorMessage(theme, "הגדירו גיל בהגדרות כדי לחשב אזורי דופק (מבוסס על 220-גיל)")
             return@Column
         }
         if (currentBpm != null) {
-            Text("$currentBpm BPM כרגע", color = theme.accentColor, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 12.dp))
+            Text("$currentBpm BPM כרגע", color = theme.accentColor, fontSize = FutureTypography.headline, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 12.dp))
         }
         val zoneLabels = listOf("אזור 1 · חימום", "אזור 2 · קל", "אזור 3 · בינוני", "אזור 4 · קשה", "אזור 5 · מקסימלי")
         val totalSeconds = zoneSeconds.sum().coerceAtLeast(1)
         zoneLabels.forEachIndexed { index, label ->
             val seconds = zoneSeconds.getOrElse(index) { 0 }
             Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(label, color = theme.textColor, fontSize = 13.sp, modifier = Modifier.weight(1f))
-                Text(formatElapsed(seconds), color = theme.textColor.copy(alpha = 0.6f), fontSize = 13.sp)
+                Text(label, color = theme.textColor, fontSize = FutureTypography.summary, modifier = Modifier.weight(1f))
+                Text(formatElapsed(seconds), color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.summary)
             }
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(6.dp)
-                    .background(theme.textColor.copy(alpha = 0.08f), RoundedCornerShape(3.dp)),
+                    .background(theme.textColor.copy(alpha = 0.08f), FutureShapes.xs),
             ) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth(seconds.toFloat() / totalSeconds.toFloat())
                         .height(6.dp)
-                        .background(theme.accentColor, RoundedCornerShape(3.dp)),
+                        .background(theme.accentColor, FutureShapes.xs),
                 )
             }
             Spacer(Modifier.height(6.dp))
@@ -444,11 +447,11 @@ private fun HeartRateZonesPage(theme: FutureTheme, estimatedMaxHr: Int?, zoneSec
 private fun MusicControlPage(theme: FutureTheme) {
     val context = LocalContext.current
     Column(modifier = Modifier.fillMaxSize().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-        Text("בקרת מוזיקה", color = theme.textColor.copy(alpha = 0.6f), fontSize = 13.sp, modifier = Modifier.padding(bottom = 4.dp))
+        Text("בקרת מוזיקה", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.summary, modifier = Modifier.padding(bottom = 4.dp))
         Text(
             "שולט על נגן המדיה הפעיל כרגע במערכת",
             color = theme.textColor.copy(alpha = 0.4f),
-            fontSize = 11.sp,
+            fontSize = FutureTypography.caption,
             modifier = Modifier.padding(bottom = 20.dp),
         )
         Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -472,7 +475,7 @@ private fun MediaButton(theme: FutureTheme, icon: ImageVector, contentDescriptio
                 .fillMaxSize()
                 .background(
                     if (primary) theme.accentColor else if (isFocused) theme.accentColor.copy(alpha = 0.22f) else theme.textColor.copy(alpha = 0.08f),
-                    RoundedCornerShape(16.dp),
+                    FutureShapes.lg,
                 ),
             contentAlignment = Alignment.Center,
         ) {
@@ -483,7 +486,7 @@ private fun MediaButton(theme: FutureTheme, icon: ImageVector, contentDescriptio
 
 @Composable
 private fun NoSensorMessage(theme: FutureTheme, text: String) {
-    Text(text, color = theme.textColor.copy(alpha = 0.5f), fontSize = 13.sp, modifier = Modifier.padding(horizontal = 8.dp))
+    Text(text, color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.summary, modifier = Modifier.padding(horizontal = 8.dp))
 }
 
 @Composable
@@ -492,8 +495,8 @@ private fun StatColumn(value: String, label: String, theme: FutureTheme, icon: I
         if (icon != null) {
             Icon(icon, contentDescription = null, tint = theme.accentColor, modifier = Modifier.size(16.dp).padding(bottom = 4.dp))
         }
-        Text(value, color = theme.textColor, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-        Text(label, color = theme.textColor.copy(alpha = 0.5f), fontSize = 11.sp)
+        Text(value, color = theme.textColor, fontSize = FutureTypography.headline, fontWeight = FontWeight.Bold)
+        Text(label, color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.caption)
     }
 }
 

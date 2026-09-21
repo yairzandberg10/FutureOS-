@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<!-- @template name="FutureOS screen" description="A 640x960 keypad-phone screen: top bar, focus-scrolling list, options menu and confirm dialog." -->
+<helmet>
+<script src="./ds-base.js"></script>
+<style>html,body{margin:0;background:#0A0A0B}</style>
+</helmet>
+<div style="width:640px;height:960px;margin:0 auto;background:var(--fos-bg);color:var(--fos-text);font-family:var(--fos-font);direction:rtl;position:relative;overflow:hidden;display:flex;flex-direction:column">
+<x-import component-from-global-scope="FutureOSDesignSystem_3ab611.TopBar" title="אנשי קשר" onMenu="{{ openMenu }}" hint-size="640px,120px"></x-import>
+<div style="flex:1;min-height:0;overflow:hidden;padding:0 32px;display:flex;flex-direction:column;gap:24px">
+<sc-for list="{{ rows }}" as="row" hint-placeholder-count="5">
+<x-import component-from-global-scope="FutureOSDesignSystem_3ab611.ListItem" title="{{ row.title }}" summary="{{ row.summary }}" focused="{{ row.focused }}" hint-size="576px,112px"></x-import>
+</sc-for>
+</div>
+<div style="padding:16px;text-align:center;font-size:20px;color:var(--fos-text-30)">חיצים למעלה ולמטה · m לתפריט</div>
+<sc-if value="{{ menuOpen }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0">
+<x-import component-from-global-scope="FutureOSDesignSystem_3ab611.OptionsMenu" header="אנשי קשר" items="{{ menuItems }}" focusedIndex="{{ menuFocus }}" onSelect="{{ pickMenu }}" hint-size="640px,960px"></x-import>
+</div>
+</sc-if>
+<sc-if value="{{ dialogOpen }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0">
+<x-import component-from-global-scope="FutureOSDesignSystem_3ab611.ConfirmDialog" message="למחוק את איש הקשר?" confirmLabel="מחק" onConfirm="{{ closeDialog }}" onCancel="{{ closeDialog }}" hint-size="640px,960px"></x-import>
+</div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:640,&quot;height&quot;:960}}">
+class Component extends DCLogic {
+  state = { focus: 0, menuOpen: false, menuFocus: 0, dialogOpen: false };
+
+  items = [
+    { title: "אבי מזרחי", summary: "050-1112233" },
+    { title: "דני כהן", summary: "054-7778899" },
+    { title: "מיכל לוי", summary: "052-3334455" },
+    { title: "נועה ברק", summary: "053-9998877" },
+    { title: "שירה דהן", summary: "052-3334455" }
+  ];
+
+  menuItems = [
+    { label: "איש קשר חדש", icon: "person_add" },
+    { label: "חיפוש", icon: "search" },
+    { label: "מועדפים", icon: "star" },
+    { label: "פרטים", icon: "info" },
+    { label: "מחק", icon: "delete", destructive: true }
+  ];
+
+  componentDidMount() {
+    this.onKey = (e) => {
+      const s = this.state;
+      if (s.dialogOpen) {
+        if (["Enter", "Escape", "Backspace"].includes(e.key)) this.setState({ dialogOpen: false });
+        return;
+      }
+      if (s.menuOpen) {
+        if (e.key === "ArrowDown") this.setState({ menuFocus: (s.menuFocus + 1) % 5 });
+        else if (e.key === "ArrowUp") this.setState({ menuFocus: (s.menuFocus + 4) % 5 });
+        else if (e.key === "Enter") this.setState({ menuOpen: false, dialogOpen: s.menuFocus === 4, menuFocus: 0 });
+        else if (["Escape", "Backspace"].includes(e.key)) this.setState({ menuOpen: false, menuFocus: 0 });
+        return;
+      }
+      if (e.key === "ArrowDown") this.setState({ focus: Math.min(this.items.length - 1, s.focus + 1) });
+      else if (e.key === "ArrowUp") this.setState({ focus: Math.max(0, s.focus - 1) });
+      else if (e.key === "m") this.setState({ menuOpen: true, menuFocus: 0 });
+    };
+    window.addEventListener("keydown", this.onKey);
+  }
+
+  componentWillUnmount() { window.removeEventListener("keydown", this.onKey); }
+
+  renderVals() {
+    return {
+      rows: this.items.map((it, i) => ({ ...it, focused: i === this.state.focus })),
+      menuItems: this.menuItems,
+      menuOpen: this.state.menuOpen,
+      menuFocus: this.state.menuFocus,
+      dialogOpen: this.state.dialogOpen,
+      openMenu: () => this.setState({ menuOpen: true, menuFocus: 0 }),
+      pickMenu: (i) => this.setState({ menuOpen: false, dialogOpen: i === 4, menuFocus: 0 }),
+      closeDialog: () => this.setState({ dialogOpen: false })
+    };
+  }
+}
+</script>
+</body>
+</html>

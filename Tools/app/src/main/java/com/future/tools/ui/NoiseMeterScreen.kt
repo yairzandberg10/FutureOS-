@@ -1,5 +1,6 @@
 package com.future.tools.ui
 
+import com.future.sharednav.theme.FutureTypography
 import android.Manifest
 import android.media.AudioFormat
 import android.media.AudioRecord
@@ -66,7 +67,9 @@ private fun rememberDecibels(enabled: Boolean): Float {
             } catch (e: Exception) {
                 // אין הרשאה/מיקרופון תפוס - נשארים על 0
             } finally {
-                try { record?.stop() } catch (e: Exception) {}
+                try { record?.stop() } catch (e: Exception) {
+                    android.util.Log.w("NoiseMeterScreen", "rememberDecibels failed", e)
+                }
                 record?.release()
             }
         }
@@ -105,16 +108,16 @@ fun NoiseMeterScreen(theme: FutureTheme, onBack: () -> Unit) {
                         Text(
                             "נדרשת הרשאת מיקרופון כדי למדוד רעש",
                             color = theme.textColor.copy(alpha = 0.6f),
-                            fontSize = 14.sp,
+                            fontSize = FutureTypography.body,
                             modifier = Modifier.padding(horizontal = 32.dp)
                         )
                     } else {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             NoiseGauge(db = db, theme = theme)
                             Spacer(modifier = Modifier.height(20.dp))
-                            Text("${db.roundToInt()} dB", color = theme.textColor, fontSize = 40.sp, fontWeight = FontWeight.Light)
+                            Text("${db.roundToInt()} dB", color = theme.textColor, fontSize = FutureTypography.display, fontWeight = FontWeight.Light)
                             Spacer(modifier = Modifier.height(6.dp))
-                            Text(levelLabel(db), color = theme.accentColor, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                            Text(levelLabel(db), color = theme.accentColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Medium)
                         }
                     }
                 }

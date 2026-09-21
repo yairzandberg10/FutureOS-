@@ -1,5 +1,6 @@
 package com.future.futureui.statusbar.ui
 
+import com.future.sharednav.theme.FutureTypography
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -127,7 +128,7 @@ fun StatusBarScreen(
                 Text(
                     text = currentTime,
                     color = Color.White,
-                    fontSize = 13.sp,
+                    fontSize = FutureTypography.summary,
                     fontWeight = FontWeight.SemiBold,
                     letterSpacing = 0.2.sp
                 )
@@ -161,7 +162,7 @@ fun StatusBarScreen(
                     Icon(Icons.Rounded.BatterySaver, contentDescription = null, tint = Color(0xFFFFD60A), modifier = Modifier.size(13.dp))
                 }
                 if (showBattery) {
-                    Text(text = "$batteryPercent%", color = Color.White.copy(alpha = 0.9f), fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                    Text(text = "$batteryPercent%", color = Color.White.copy(alpha = 0.9f), fontSize = FutureTypography.caption, fontWeight = FontWeight.Medium)
                     BatteryPill(
                         percent = batteryPercent,
                         isCharging = isCharging,

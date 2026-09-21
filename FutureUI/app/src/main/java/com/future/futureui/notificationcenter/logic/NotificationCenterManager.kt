@@ -47,7 +47,9 @@ class NotificationCenterManager(private val context: Context) {
             val intent = Intent(android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             context.startActivity(intent)
-        } catch (e: Exception) {}
+        } catch (e: Exception) {
+            android.util.Log.w("NotificationCenterManag", "requestListenerAccessIfNeeded failed", e)
+        }
         return false
     }
 

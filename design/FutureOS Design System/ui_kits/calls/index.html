@@ -1,0 +1,177 @@
+<!-- @dsCard group="Calls" viewport="640x960" name="Calls" subtitle="Log, keypad, favorites, search, contact, incoming / active / ended" -->
+<!DOCTYPE html><html lang="he" dir="rtl"><head><meta charset="utf-8"><title>FutureOS · שיחות A</title>
+<link rel="stylesheet" href="../../styles.css">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<script src="data.js"></script>
+<style>html,body{margin:0;background:#0A0A0B}
+.device{width:640px;height:960px;background:var(--fos-bg);color:var(--fos-text);font-family:var(--fos-font);direction:rtl;position:relative;overflow:hidden;margin:0 auto;display:flex;flex-direction:column}
+.body{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;position:relative;scrollbar-width:none}
+.body::-webkit-scrollbar{display:none}
+.body>div{padding-bottom:20px}
+.hint{position:absolute;bottom:0;left:0;right:0;padding:8px 16px;font-size:20px;color:var(--fos-text-30);text-align:center;pointer-events:none;background:linear-gradient(to top,var(--fos-bg),transparent);z-index:8}
+.over{position:absolute;inset:0;z-index:5}
+a{color:var(--fos-accent)}a:hover{opacity:.7}</style>
+</head><body>
+<div id="root"></div>
+<script type="text/babel" src="ScreensA.jsx"></script>
+<script type="text/babel">
+const { BottomNav, OptionsMenu, ConfirmDialog } = window.FutureOSDesignSystem_3ab611;
+const TABS = [{ label: "יומן", icon: "call" }, { label: "מקלדת", icon: "dialpad" }, { label: "מועדפים", icon: "star" }];
+const MENU = [
+  { label: "חיפוש", icon: "search" },
+  { label: "שיחה נכנסת", icon: "ring_volume" },
+  { label: "אנשי קשר", icon: "contacts" },
+  { label: "הגדרות", icon: "settings" },
+  { label: "נקה יומן", icon: "delete", destructive: true }
+];
+const fmt = (s) => Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+
+function App() {
+  const [tab, setTab] = React.useState(0);
+  const [screen, setScreen] = React.useState(null);
+  const [focus, setFocus] = React.useState(0);
+  const [tabFocus, setTabFocus] = React.useState(0);
+  const [filter, setFilter] = React.useState("all");
+  const [digits, setDigits] = React.useState("");
+  const [query, setQuery] = React.useState("");
+  const [contact, setContact] = React.useState(window.FAVORITES[0]);
+  const [elapsed, setElapsed] = React.useState(0);
+  const [mute, setMute] = React.useState(false);
+  const [speaker, setSpeaker] = React.useState(false);
+  const [hold, setHold] = React.useState(false);
+  const [menu, setMenu] = React.useState(false);
+  const [dialog, setDialog] = React.useState(false);
+
+  const logRows = filter === "missed" ? window.flatLog().filter(c => c.dir === "missed") : window.flatLog();
+  const searchRows = window.CONTACTS_ALL.filter(c => c.name.includes(query) || c.phone.replace(/-/g, "").includes(query.replace(/-/g, "")));
+  const dialMatch = digits.length >= 3 ? window.CONTACTS_ALL.find(c => c.phone.replace(/-/g, "").includes(digits.replace(/-/g, ""))) : null;
+
+  const counts = { log: logRows.length, fav: window.FAVORITES.length, contact: 3, search: searchRows.length, incoming: 2, active: 5, ended: 2 };
+  const count = screen ? counts[screen] : [counts.log, 0, counts.fav][tab];
+
+  React.useEffect(() => {
+    if (screen !== "active") return;
+    const t = setInterval(() => setElapsed(e => e + 1), 1000);
+    return () => clearInterval(t);
+  }, [screen]);
+
+  const goCall = (c) => { setContact(c); setElapsed(0); setMute(false); setSpeaker(false); setHold(false); setFocus(0); setScreen("active"); };
+  const openContact = (c) => { setTabFocus(focus); setContact(c); setFocus(0); setScreen("contact"); };
+  const back = () => {
+    if (screen === "contact" || screen === "search") { setScreen(null); setFocus(tabFocus); }
+    else if (screen === "active") { setFocus(0); setScreen("ended"); }
+    else { setScreen(null); setFocus(0); }
+  };
+
+  React.useEffect(() => {
+    const onKey = (e) => {
+      const k = e.key;
+      if (dialog) { if (["Enter", "Escape", "Backspace"].includes(k)) setDialog(false); e.preventDefault(); return; }
+      if (menu) {
+        if (k === "ArrowDown") setFocus(f => (f + 1) % MENU.length);
+        else if (k === "ArrowUp") setFocus(f => (f + MENU.length - 1) % MENU.length);
+        else if (k === "Enter") { setMenu(false); pickMenu(focus); }
+        else if (["Escape", "Backspace"].includes(k)) { setMenu(false); setFocus(0); }
+        e.preventDefault(); return;
+      }
+      if (screen === "search") {
+        if (k === "Backspace") { if (query) setQuery(q => q.slice(0, -1)); else back(); }
+        else if (k === "ArrowDown") setFocus(f => Math.min(count - 1, f + 1));
+        else if (k === "ArrowUp") setFocus(f => Math.max(0, f - 1));
+        else if (k === "Enter") { if (searchRows[focus]) openContact(searchRows[focus]); }
+        else if (k === "Escape") back();
+        else if (k.length === 1) setQuery(q => (q + k).slice(0, 20));
+        e.preventDefault(); return;
+      }
+      if (!screen && tab === 1) {
+        if (/^[0-9*#+]$/.test(k)) setDigits(d => (d + k).slice(0, 14));
+        else if (k === "Backspace") { if (digits) setDigits(d => d.slice(0, -1)); else setTab(0); }
+        else if (k === "Enter" && digits) goCall(dialMatch || { name: digits, phone: digits });
+        else if (k === "ArrowLeft") { setTab(t => Math.min(2, t + 1)); setFocus(0); }
+        else if (k === "ArrowRight") { setTab(t => Math.max(0, t - 1)); setFocus(0); }
+        else if (k === "m") { setFocus(0); setMenu(true); }
+        else return;
+        e.preventDefault(); return;
+      }
+      if (k === "ArrowDown") setFocus(f => Math.min(count - 1, f + 1));
+      else if (k === "ArrowUp") setFocus(f => Math.max(0, f - 1));
+      else if (k === "ArrowLeft" && !screen) { setTab(t => Math.min(2, t + 1)); setFocus(0); }
+      else if (k === "ArrowRight" && !screen) { setTab(t => Math.max(0, t - 1)); setFocus(0); }
+      else if (k === "Enter") {
+        if (!screen && tab === 0) openContact(logRows[focus]);
+        else if (!screen && tab === 2) goCall(window.FAVORITES[focus]);
+        else if (screen === "contact") { if (focus === 0) goCall(contact); }
+        else if (screen === "incoming") { if (focus === 0) goCall(contact); else { setScreen(null); setFocus(0); } }
+        else if (screen === "active") {
+          if (focus === 0) setMute(v => !v);
+          else if (focus === 1) setSpeaker(v => !v);
+          else if (focus === 2) setHold(v => !v);
+          else if (focus === 4) { setFocus(0); setScreen("ended"); }
+        }
+        else if (screen === "ended") { if (focus === 0) goCall(contact); else { setScreen(null); setFocus(0); } }
+      }
+      else if (["Escape", "Backspace"].includes(k)) { if (screen) back(); }
+      else if (k === "f" && !screen && tab === 0) { setFilter(v => v === "all" ? "missed" : "all"); setFocus(0); }
+      else if (k === "s") { setQuery(""); setFocus(0); setScreen("search"); }
+      else if (k === "i") { setContact(window.FAVORITES[0]); setFocus(0); setScreen("incoming"); }
+      else if (k === "m") { setFocus(0); setMenu(true); }
+      else return;
+      e.preventDefault();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [screen, tab, focus, count, menu, dialog, digits, query, filter, contact, tabFocus, logRows.length]);
+
+  const pickMenu = (i) => {
+    setFocus(0);
+    if (i === 0) { setQuery(""); setScreen("search"); }
+    else if (i === 1) { setContact(window.FAVORITES[0]); setScreen("incoming"); }
+    else if (i === 4) setDialog(true);
+  };
+
+  const scrollRef = React.useRef(null);
+  React.useEffect(() => {
+    const c = scrollRef.current;
+    if (!c) return;
+    const el = c.querySelector('[data-f="' + focus + '"]');
+    if (!el) return;
+    const top = el.offsetTop, bottom = top + el.offsetHeight;
+    if (top < c.scrollTop + 120) c.scrollTop = Math.max(0, top - 120);
+    else if (bottom > c.scrollTop + c.clientHeight - 60) c.scrollTop = bottom - c.clientHeight + 60;
+  }, [focus, screen, tab, filter]);
+
+  const fullScreen = ["incoming", "active", "ended"].includes(screen);
+  let view;
+  if (screen === "contact") view = <window.AContact contact={contact} focus={focus} onCall={() => goCall(contact)} onBack={back} onMenu={() => { setFocus(0); setMenu(true); }} />;
+  else if (screen === "search") view = <window.ASearch query={query} rows={searchRows} focus={focus} onOpen={openContact} />;
+  else if (screen === "incoming") view = <window.AIncoming contact={contact} focus={focus} />;
+  else if (screen === "active") view = <window.AActive contact={contact} elapsed={fmt(elapsed)} focus={focus} mute={mute} speaker={speaker} hold={hold} />;
+  else if (screen === "ended") view = <window.AEnded contact={contact} duration={fmt(elapsed)} focus={focus} />;
+  else if (tab === 0) view = <window.ALog focus={focus} filter={filter} onOpen={openContact} onMenu={() => { setFocus(0); setMenu(true); }} />;
+  else if (tab === 1) view = <window.ADialer digits={digits} match={dialMatch} onCall={() => digits && goCall(dialMatch || { name: digits, phone: digits })} />;
+  else view = <window.AList title="מועדפים" rows={window.FAVORITES} focus={focus} onOpen={goCall}
+    onMenu={() => { setFocus(0); setMenu(true); }}
+    empty={{ icon: "star", title: "אין מועדפים", subtitle: "לחץ על מקש התפריט כדי להוסיף" }} />;
+
+  const hint = screen === "search" ? "הקלד לחיפוש · Backspace מוחק"
+    : screen === "active" ? "חיצים · Enter · Backspace לסיום"
+    : (!screen && tab === 1) ? "ספרות · Enter להתקשר · חיצים ללשוניות"
+    : "חיצים · Enter · m תפריט · s חיפוש · i שיחה נכנסת" + (!screen && tab === 0 ? " · f סינון" : "");
+
+  return (
+    <div className="device">
+      <div className="body" ref={scrollRef} style={{ height: fullScreen ? "100%" : undefined }}>
+        {view}
+        {menu && <div className="over"><OptionsMenu header="שיחות" focusedIndex={focus} items={MENU} onSelect={(i) => { setMenu(false); pickMenu(i); }} /></div>}
+        {dialog && <div className="over"><ConfirmDialog message="לנקות את יומן השיחות?" confirmLabel="נקה" destructive onConfirm={() => setDialog(false)} onCancel={() => setDialog(false)} /></div>}
+        <div className="hint">{hint}</div>
+      </div>
+      {!fullScreen && <BottomNav items={TABS} selected={tab} onSelect={(i) => { setTab(i); setFocus(0); }} />}
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script></body></html>

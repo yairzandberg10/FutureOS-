@@ -2,6 +2,8 @@ package com.future.sharednav.components
 
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import com.future.sharednav.theme.FutureMotion
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -12,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.unit.dp
+import com.future.sharednav.focus.staggeredEntrance
 import com.future.sharednav.nav.FocusListState
 import com.future.sharednav.nav.keypadListNav
 
@@ -55,7 +58,21 @@ fun <T> KeypadLazyColumn(
         verticalArrangement = verticalArrangement,
     ) {
         itemsIndexed(items, key = key?.let { k -> { index: Int, item: T -> k(index, item) } }) { index, item ->
-            itemContent(index, item, focusState.isFocused(index))
+            // הוספה/מחיקה/מיון מחדש מונפשים - אבל רק כשיש מפתח יציב. בלי
+            // מפתח, "הפריט" הוא בעצם האינדקס, ומחיקת שורה הייתה מנפישה את
+            // כל השורות שאחריה כאילו כל אחת מהן הוחלפה.
+            // השורות הראשונות עולות אחת אחרי השנייה כשהרשימה נפתחת.
+            Box(
+                modifier = (if (key != null) {
+                    Modifier.animateItem(
+                        fadeInSpec = FutureMotion.fast(),
+                        placementSpec = FutureMotion.listItemSpec,
+                        fadeOutSpec = FutureMotion.fast(),
+                    )
+                } else Modifier).staggeredEntrance(index),
+            ) {
+                itemContent(index, item, focusState.isFocused(index))
+            }
         }
     }
 }

@@ -1,5 +1,7 @@
 package com.future.tools.ui
 
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import android.Manifest
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -108,11 +110,11 @@ fun VoiceTranscribeScreen(theme: FutureTheme, onBack: () -> Unit) {
 
                 if (!hasPermission) {
                     Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        Text("נדרשת הרשאת מיקרופון כדי לתמלל", color = theme.textColor.copy(alpha = 0.6f), fontSize = 14.sp, modifier = Modifier.padding(horizontal = 32.dp))
+                        Text("נדרשת הרשאת מיקרופון כדי לתמלל", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.body, modifier = Modifier.padding(horizontal = 32.dp))
                     }
                 } else if (recognizer == null) {
                     Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        Text("זיהוי דיבור אינו זמין במכשיר הזה", color = theme.textColor.copy(alpha = 0.6f), fontSize = 14.sp, modifier = Modifier.padding(horizontal = 32.dp))
+                        Text("זיהוי דיבור אינו זמין במכשיר הזה", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.body, modifier = Modifier.padding(horizontal = 32.dp))
                     }
                 } else {
                     Box(
@@ -120,14 +122,14 @@ fun VoiceTranscribeScreen(theme: FutureTheme, onBack: () -> Unit) {
                             .weight(1f)
                             .fillMaxWidth()
                             .padding(horizontal = 20.dp, vertical = 12.dp)
-                            .clip(RoundedCornerShape(16.dp))
+                            .clip(FutureShapes.lg)
                             .background(theme.textColor.copy(alpha = 0.06f))
                             .padding(16.dp)
                     ) {
                         Text(
                             transcript.ifBlank { "הטקסט המתומלל יופיע כאן" },
                             color = if (transcript.isBlank()) theme.textColor.copy(alpha = 0.35f) else theme.textColor,
-                            fontSize = 16.sp
+                            fontSize = FutureTypography.bodyLarge
                         )
                     }
 
@@ -136,7 +138,7 @@ fun VoiceTranscribeScreen(theme: FutureTheme, onBack: () -> Unit) {
                             if (isListening) stopListening() else startListening()
                         }
                         Spacer(modifier = Modifier.height(10.dp))
-                        Text(statusText, color = theme.textColor.copy(alpha = 0.5f), fontSize = 13.sp)
+                        Text(statusText, color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.summary)
                     }
                 }
             }

@@ -14,6 +14,7 @@ import com.future.futureui.settings.ui.FutureUISettingsScreen
 import com.future.futureui.settings.ui.RemovePinConfirmScreen
 import com.future.futureui.settings.ui.SetPinScreen
 import com.future.futureui.ui.theme.FutureUITheme
+import com.future.sharednav.components.AnimatedScreenHost
 
 private enum class SettingsScreen { Main, SetPin, RemovePin }
 
@@ -29,25 +30,30 @@ class SettingsActivity : ComponentActivity() {
         setContent {
             FutureUITheme {
                 var screen by remember { mutableStateOf(SettingsScreen.Main) }
-                when (screen) {
-                    SettingsScreen.Main -> FutureUISettingsScreen(
-                        modifier = Modifier.fillMaxSize(),
-                        onSetPinClick = { screen = SettingsScreen.SetPin },
-                        onRemovePinClick = { screen = SettingsScreen.RemovePin }
-                    )
-                    SettingsScreen.SetPin -> SetPinScreen(
-                        onDone = { screen = SettingsScreen.Main },
-                        onCancel = { screen = SettingsScreen.Main }
-                    )
-                    SettingsScreen.RemovePin -> {
-                        val layoutManager = remember { com.future.futureui.lockscreen.logic.LockScreenLayoutManager(this) }
-                        RemovePinConfirmScreen(
-                            onConfirm = {
-                                layoutManager.clearPin()
-                                screen = SettingsScreen.Main
-                            },
+                AnimatedScreenHost(
+                    targetState = screen,
+                    depthOf = { if (it == SettingsScreen.Main) 0 else 1 },
+                ) { shown ->
+                    when (shown) {
+                        SettingsScreen.Main -> FutureUISettingsScreen(
+                            modifier = Modifier.fillMaxSize(),
+                            onSetPinClick = { screen = SettingsScreen.SetPin },
+                            onRemovePinClick = { screen = SettingsScreen.RemovePin }
+                        )
+                        SettingsScreen.SetPin -> SetPinScreen(
+                            onDone = { screen = SettingsScreen.Main },
                             onCancel = { screen = SettingsScreen.Main }
                         )
+                        SettingsScreen.RemovePin -> {
+                            val layoutManager = remember { com.future.futureui.lockscreen.logic.LockScreenLayoutManager(this) }
+                            RemovePinConfirmScreen(
+                                onConfirm = {
+                                    layoutManager.clearPin()
+                                    screen = SettingsScreen.Main
+                                },
+                                onCancel = { screen = SettingsScreen.Main }
+                            )
+                        }
                     }
                 }
             }

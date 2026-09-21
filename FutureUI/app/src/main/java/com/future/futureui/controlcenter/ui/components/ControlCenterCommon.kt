@@ -1,5 +1,6 @@
 package com.future.futureui.controlcenter.ui.components
 
+import com.future.sharednav.theme.FutureShapes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -33,7 +34,7 @@ fun HeaderActionButton(icon: ImageVector, color: Color, onClick: () -> Unit, isP
     )
 }
 
-fun Modifier.focusEffect(isFocused: Boolean, shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(16.dp)): Modifier = this
+fun Modifier.focusEffect(isFocused: Boolean, shape: androidx.compose.ui.graphics.Shape = FutureShapes.lg): Modifier = this
     .zIndex(if (isFocused) 1f else 0f)
     .then(
         if (isFocused) {

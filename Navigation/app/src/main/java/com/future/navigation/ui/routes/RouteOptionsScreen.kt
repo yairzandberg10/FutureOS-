@@ -1,5 +1,6 @@
 package com.future.navigation.ui.routes
 
+import com.future.sharednav.theme.FutureShapes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -73,7 +74,7 @@ fun RouteOptionsScreen(
 
         Surface(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-            shape = RoundedCornerShape(16.dp),
+            shape = FutureShapes.lg,
             color = MaterialTheme.colorScheme.surface
         ) {
             Text(
@@ -140,7 +141,7 @@ fun RouteOptionsScreen(
 @Composable
 private fun DrivingRouteCard(route: DrivingRoute) {
     Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-        Surface(shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxWidth()) {
+        Surface(shape = FutureShapes.lg, color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxWidth()) {
             Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
@@ -167,7 +168,7 @@ private fun ItineraryCard(itinerary: TransitItinerary, onClick: () -> Unit, focu
         idleBackgroundColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
         focusedBackgroundColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.22f),
         borderWidth = 2.dp,
-        cornerRadius = 16.dp,
+        cornerRadius = FutureShapes.radiusLg,
         focusRequester = focusRequester
     ) {
         Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
@@ -205,7 +206,7 @@ private fun PrimaryButton(label: String, focusRequester: FocusRequester? = null,
         accentColor = MaterialTheme.colorScheme.primary,
         idleBackgroundColor = MaterialTheme.colorScheme.primary,
         focusedBackgroundColor = MaterialTheme.colorScheme.primary,
-        cornerRadius = 16.dp,
+        cornerRadius = FutureShapes.radiusLg,
         scaleOnFocus = false,
         modifier = Modifier.fillMaxWidth(),
         focusRequester = focusRequester

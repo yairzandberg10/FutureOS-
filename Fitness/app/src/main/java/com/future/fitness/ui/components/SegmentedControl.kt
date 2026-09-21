@@ -1,5 +1,7 @@
 package com.future.fitness.ui.components
 
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -34,7 +36,7 @@ fun SegmentedControl(
 ) {
     Row(
         modifier = modifier
-            .background(theme.textColor.copy(alpha = 0.1f), RoundedCornerShape(12.dp))
+            .background(theme.textColor.copy(alpha = 0.1f), FutureShapes.md)
             .padding(3.dp),
     ) {
         options.forEach { option ->
@@ -47,14 +49,14 @@ fun SegmentedControl(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(if (isSelected) theme.surfaceColor else Color.Transparent, RoundedCornerShape(9.dp))
+                        .background(if (isSelected) theme.surfaceColor else Color.Transparent, FutureShapes.sm)
                         .padding(vertical = 8.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
                         option,
                         color = if (isSelected) theme.textColor else theme.textColor.copy(alpha = 0.6f),
-                        fontSize = 13.sp,
+                        fontSize = FutureTypography.summary,
                         fontWeight = FontWeight.SemiBold,
                     )
                 }

@@ -78,8 +78,9 @@ fun ComposeScreen(
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         // ראו MessageThreadScreen: edge-to-edge מנטרל את adjustResize, ובלי
-        // imePadding שדה החיפוש/הנמען נחבא מתחת למקלדת.
-        Column(modifier = Modifier.fillMaxSize().imePadding().background(theme.backgroundColor)) {
+        // imePadding שדה החיפוש/הנמען נחבא מתחת למקלדת. background לפני
+        // imePadding כדי שהרקע ימלא גם את השטח שמאחורי המקלדת.
+        Column(modifier = Modifier.fillMaxSize().background(theme.backgroundColor).imePadding()) {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically

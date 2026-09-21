@@ -1,0 +1,615 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700&amp;family=Roboto+Mono:wght@400;500&amp;display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #0B0B0C;
+      font-family: 'Heebo', 'Noto Sans Hebrew', 'Segoe UI', Roboto, system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    button { font: inherit; color: inherit; background: none; border: 0; padding: 0; margin: 0; text-align: inherit; cursor: pointer; }
+    a { color: #64D2FF; } a:hover { color: #9FE4FF; }
+    .mono { font-family: 'Roboto Mono', ui-monospace, Consolas, monospace; font-variant-numeric: tabular-nums; }
+
+    /* ערכת הצבעים של FutureOS - נלקחה מ-FutureTheme.kt ומ-KeyboardService.applyTheme */
+    .dark {
+      --screen: #000000;
+      --panel: #1C1C1E;
+      --chip: #2C2C2E;
+      --chip-2: #3A3A3C;
+      --ink: #FFFFFF;
+      --muted: #B0B0B0;
+      --faint: rgba(255,255,255,0.42);
+      --hair: rgba(255,255,255,0.10);
+      --bubble-in: #1C1C1E;
+    }
+    .light {
+      --screen: #F2F2F7;
+      --panel: #EFEFEF;
+      --chip: #FFFFFF;
+      --chip-2: #E5E5EA;
+      --ink: #000000;
+      --muted: #444444;
+      --faint: rgba(0,0,0,0.40);
+      --hair: rgba(0,0,0,0.12);
+      --bubble-in: #FFFFFF;
+    }
+  </style>
+</helmet>
+
+<div class="root {{themeClass}}" style="--accent: {{accent}}; --on-accent: {{onAccent}}; width: 640px; min-height: 1500px; display: flex; flex-direction: column; gap: 26px; padding: 0; background: #0B0B0C">
+
+  <!-- ======================= מסך המכשיר 640x960 ======================= -->
+  <div style="position: relative; width: 640px; height: 960px; overflow: hidden; background: var(--screen); direction: rtl; color: var(--ink); display: flex; flex-direction: column">
+
+    <!-- שוליים עליונים ריקים: שורת הסטטוס האמיתית של FutureUI מצוירת כאן על ידי המערכת -->
+    <div style="height: 48px; flex: none"></div>
+
+    <!-- כותרת שיחה (Messages) -->
+    <div style="flex: none; display: flex; align-items: center; gap: 16px; padding: 0 24px 16px 24px">
+      <div style="width: 72px; height: 72px; border-radius: 999px; background: var(--chip); display: flex; align-items: center; justify-content: center; font-size: 30px; font-weight: 500; color: var(--muted)">א</div>
+      <div style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1">
+        <div style="font-size: 34px; font-weight: 700; line-height: 1.15">אורי</div>
+        <div style="font-size: 22px; color: var(--faint)">054-000-0000</div>
+      </div>
+    </div>
+
+    <!-- גוף השיחה -->
+    <div style="flex-grow: 1; display: flex; flex-direction: column; justify-content: flex-end; gap: 16px; padding: 0 24px 16px 24px; overflow: hidden">
+      <div style="align-self: flex-start; max-width: 76%; background: var(--bubble-in); border-radius: 32px; padding: 20px 26px; font-size: 28px; line-height: 1.35">מתי אתה מגיע?</div>
+      <div style="align-self: flex-end; max-width: 76%; background: var(--chip-2); border-radius: 32px; padding: 20px 26px; font-size: 28px; line-height: 1.35">עוד רבע שעה</div>
+      <div style="align-self: flex-start; max-width: 76%; background: var(--bubble-in); border-radius: 32px; padding: 20px 26px; font-size: 28px; line-height: 1.35">מעולה, מחכה לך למטה</div>
+    </div>
+
+    <!-- שורת הקלט של האפליקציה המארחת -->
+    <div style="flex: none; display: flex; align-items: center; gap: 16px; padding: 0 24px 20px 24px">
+      <div style="flex-grow: 1; min-height: 84px; border-radius: 42px; border: 2px solid var(--accent); padding: 18px 28px; font-size: 28px; line-height: 1.3; display: flex; align-items: center; flex-wrap: wrap">
+        <span>{{draft.committed}}</span><span style="border-bottom: 3px solid {{draft.underline}}; padding-bottom: 2px">{{draft.composing}}</span><span style="display: inline-block; width: 3px; height: 34px; background: var(--accent); margin-right: 2px"></span>
+      </div>
+      <div style="width: 72px; height: 72px; flex: none; border-radius: 999px; background: var(--accent); display: flex; align-items: center; justify-content: center">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="{{onAccent}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 4 L3 11 l7 3 3 7 z"></path></svg>
+      </div>
+    </div>
+
+    <!-- ======================= פאנל המקלדת ======================= -->
+    <div style="flex: none; background: var(--panel); border-top: 2px solid var(--hair); border-radius: 32px 32px 0 0; padding: 18px 0 22px 0; display: flex; flex-direction: column; gap: 14px">
+
+      <!-- ---------- מצב: הקלדה וניבוי ---------- -->
+      <sc-if value="{{view.isType}}" hint-placeholder-val="{{ true }}">
+        <div style="display: flex; flex-direction: column; gap: 14px">
+
+          <!-- פס מצב: תג השפה מימין, רצף הספרות ומונה המועמדות משמאל -->
+          <div style="display: flex; align-items: center; gap: 12px; padding: 0 32px">
+            <button type="button" onClick="{{ openLang }}" style="display: flex; align-items: center; gap: 10px; background: {{mode.pillBg}}; border: 2px solid var(--accent); border-radius: 44px; padding: 8px 20px">
+              <span style="font-size: 24px; font-weight: 700; color: var(--accent); line-height: 1">{{mode.short}}</span>
+            </button>
+            <span style="font-size: 22px; color: var(--muted); line-height: 1">{{mode.tag}}</span>
+            <span style="flex-grow: 1"></span>
+            <span class="mono" style="font-size: 22px; color: var(--faint); letter-spacing: 3px">{{compose.digits}}</span>
+            <sc-if value="{{compose.hasCount}}">
+              <span class="mono" style="font-size: 22px; color: var(--muted); background: var(--chip); border-radius: 16px; padding: 4px 12px">{{compose.count}}</span>
+            </sc-if>
+          </div>
+
+          <!-- שורת המועמדות -->
+          <sc-if value="{{compose.hasCands}}">
+            <div style="position: relative; height: 84px">
+              <div style="position: absolute; inset: 0; display: flex; align-items: center; gap: 16px; padding: 0 32px; overflow: hidden">
+                <sc-for list="{{cands}}" as="c" hint-placeholder-count="4">
+                  <button type="button" onClick="{{ c.pick }}" style="flex: none; border-radius: 24px; padding: {{c.pad}}; font-size: {{c.size}}; font-weight: {{c.weight}}; line-height: 1.2; background: {{c.bg}}; color: {{c.fg}}">{{c.word}}</button>
+                </sc-for>
+              </div>
+              <div style="position: absolute; top: 0; bottom: 0; left: 0; width: 44px; background: {{fadeGrad}}"></div>
+            </div>
+          </sc-if>
+
+          <!-- מצב ריק: אין רצף ספרות עדיין -->
+          <sc-if value="{{compose.isEmpty}}">
+            <div style="height: 84px; display: flex; align-items: center; padding: 0 32px; font-size: 26px; color: var(--faint)">{{compose.emptyHint}}</div>
+          </sc-if>
+
+          <!-- מקרא המקשים - ההסבר היחיד על מכשיר בלי מסך מגע -->
+          <div style="display: flex; align-items: center; gap: 18px; padding: 14px 32px 0 32px; border-top: 2px solid var(--hair)">
+            <span style="display: flex; align-items: center; gap: 8px"><span style="min-width: 40px; height: 40px; border-radius: 12px; background: var(--chip); color: var(--ink); font-size: 22px; font-weight: 500; display: flex; align-items: center; justify-content: center">#</span><span style="font-size: 21px; color: var(--muted)">שפה</span></span>
+            <span style="display: flex; align-items: center; gap: 8px"><span style="min-width: 40px; height: 40px; border-radius: 12px; background: var(--chip); color: var(--ink); font-size: 22px; font-weight: 500; display: flex; align-items: center; justify-content: center">*</span><span style="font-size: 21px; color: var(--muted)">פיסוק</span></span>
+            <span style="display: flex; align-items: center; gap: 8px"><span style="min-width: 40px; height: 40px; border-radius: 12px; background: var(--chip); color: var(--ink); font-size: 22px; font-weight: 500; display: flex; align-items: center; justify-content: center">0</span><span style="font-size: 21px; color: var(--muted)">רווח</span></span>
+            <span style="display: flex; align-items: center; gap: 8px"><span style="min-width: 40px; height: 40px; border-radius: 12px; background: var(--chip); color: var(--ink); display: flex; align-items: center; justify-content: center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6 L4 12 l5 6"></path><path d="M15 6 l5 6 -5 6"></path></svg></span><span style="font-size: 21px; color: var(--muted)">מועמדות</span></span>
+            <span style="display: flex; align-items: center; gap: 8px"><span style="min-width: 40px; height: 40px; border-radius: 12px; border: 2px dashed var(--chip-2); color: var(--ink); font-size: 22px; font-weight: 500; display: flex; align-items: center; justify-content: center">0</span><span style="font-size: 21px; color: var(--muted)">קול</span></span>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ---------- מצב: תפריט סימני פיסוק ---------- -->
+      <sc-if value="{{view.isPunct}}">
+        <div style="display: flex; flex-direction: column; gap: 14px">
+          <div style="display: flex; align-items: center; gap: 14px; padding: 0 32px">
+            <span style="width: 56px; height: 56px; flex: none; border-radius: 20px; background: var(--accent); color: var(--on-accent); font-size: 30px; font-weight: 700; display: flex; align-items: center; justify-content: center">{{punct.preview}}</span>
+            <span style="font-size: 26px; font-weight: 500">סימני פיסוק</span>
+            <span style="flex-grow: 1"></span>
+            <span class="mono" style="font-size: 22px; color: var(--muted); background: var(--chip); border-radius: 16px; padding: 4px 12px">{{punct.count}}</span>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 16px; padding: 0 32px">
+            <sc-for list="{{punctCells}}" as="p" hint-placeholder-count="18">
+              <button type="button" onClick="{{ p.pick }}" style="height: 64px; border-radius: 16px; font-size: 28px; font-weight: {{p.weight}}; display: flex; align-items: center; justify-content: center; background: {{p.bg}}; color: {{p.fg}}">{{p.sym}}</button>
+            </sc-for>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 18px; padding: 14px 32px 0 32px; border-top: 2px solid var(--hair)">
+            <span style="display: flex; align-items: center; gap: 8px"><span style="min-width: 40px; height: 40px; border-radius: 12px; background: var(--chip); color: var(--ink); display: flex; align-items: center; justify-content: center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle></svg></span><span style="font-size: 21px; color: var(--muted)">הוסף</span></span>
+            <span style="display: flex; align-items: center; gap: 8px"><span style="min-width: 40px; height: 40px; border-radius: 12px; background: var(--chip); color: var(--ink); display: flex; align-items: center; justify-content: center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 v16"></path><path d="M4 12 h16"></path></svg></span><span style="font-size: 21px; color: var(--muted)">ניווט בחצים</span></span>
+            <span style="display: flex; align-items: center; gap: 8px"><span style="min-width: 40px; height: 40px; border-radius: 12px; background: var(--chip); color: var(--ink); font-size: 22px; font-weight: 500; display: flex; align-items: center; justify-content: center">*</span><span style="font-size: 21px; color: var(--muted)">סגור</span></span>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ---------- מצב: בחירת שפה ---------- -->
+      <sc-if value="{{view.isLang}}">
+        <div style="display: flex; flex-direction: column; gap: 14px">
+          <div style="display: flex; align-items: center; gap: 14px; padding: 0 32px">
+            <span style="font-size: 26px; font-weight: 500">שפת הקלדה</span>
+            <span style="flex-grow: 1"></span>
+            <span class="mono" style="font-size: 22px; color: var(--muted); background: var(--chip); border-radius: 16px; padding: 4px 12px">{{lang.count}}</span>
+          </div>
+
+          <div style="height: 356px; overflow: hidden; padding: 0 32px; display: flex; flex-direction: column; gap: 8px">
+            <sc-for list="{{langRows}}" as="l" hint-placeholder-count="5">
+              <button type="button" onClick="{{ l.pick }}" style="flex: none; height: 76px; border-radius: 24px; padding: 0 22px; display: flex; align-items: center; gap: 14px; background: {{l.bg}}; color: {{l.fg}}">
+                <span style="font-size: 26px; font-weight: {{l.weight}}">{{l.full}}</span>
+                <span style="flex-grow: 1"></span>
+                <span style="font-size: 20px; opacity: 0.7">{{l.dict}}</span>
+                <span class="mono" style="font-size: 22px; border-radius: 12px; padding: 4px 12px; background: {{l.badgeBg}}">{{l.short}}</span>
+              </button>
+            </sc-for>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 18px; padding: 14px 32px 0 32px; border-top: 2px solid var(--hair)">
+            <span style="display: flex; align-items: center; gap: 8px"><span style="min-width: 40px; height: 40px; border-radius: 12px; background: var(--chip); color: var(--ink); display: flex; align-items: center; justify-content: center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5 v14"></path><path d="M7 10 l5 -5 5 5"></path><path d="M7 14 l5 5 5 -5"></path></svg></span><span style="font-size: 21px; color: var(--muted)">ניווט</span></span>
+            <span style="display: flex; align-items: center; gap: 8px"><span style="min-width: 40px; height: 40px; border-radius: 12px; background: var(--chip); color: var(--ink); display: flex; align-items: center; justify-content: center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle></svg></span><span style="font-size: 21px; color: var(--muted)">בחר</span></span>
+            <span style="display: flex; align-items: center; gap: 8px"><span style="min-width: 40px; height: 40px; border-radius: 12px; background: var(--chip); color: var(--ink); display: flex; align-items: center; justify-content: center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5 l-5 7 5 7"></path><path d="M4 12 h16"></path></svg></span><span style="font-size: 21px; color: var(--muted)">ביטול</span></span>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ---------- מצב: תמלול קולי ---------- -->
+      <sc-if value="{{view.isVoice}}">
+        <div style="display: flex; flex-direction: column; gap: 18px; padding: 8px 32px 0 32px">
+          <div style="display: flex; align-items: center; gap: 20px">
+            <span style="width: 84px; height: 84px; flex: none; border-radius: 999px; background: {{mode.pillBg}}; border: 3px solid var(--accent); display: flex; align-items: center; justify-content: center">
+              <svg width="38" height="38" viewBox="0 0 24 24" fill="none" style="stroke: var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5 11 a7 7 0 0 0 14 0"></path><path d="M12 18 v3"></path></svg>
+            </span>
+            <div style="display: flex; flex-direction: column; gap: 6px; flex-grow: 1">
+              <span style="font-size: 30px; font-weight: 500">מקשיב…</span>
+              <span style="font-size: 22px; color: var(--muted)">{{voice.langName}}</span>
+            </div>
+            <span style="display: flex; align-items: flex-end; gap: 6px; height: 56px">
+              <sc-for list="{{voiceBars}}" as="b" hint-placeholder-count="6">
+                <span style="width: 8px; border-radius: 4px; background: var(--accent); height: {{b.h}}"></span>
+              </sc-for>
+            </span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px; padding-top: 14px; border-top: 2px solid var(--hair)">
+            <span style="min-width: 40px; height: 40px; border-radius: 12px; border: 2px dashed var(--chip-2); color: var(--ink); font-size: 22px; font-weight: 500; display: flex; align-items: center; justify-content: center">0</span>
+            <span style="font-size: 21px; color: var(--muted)">שחרר את המקש כדי לסיים</span>
+          </div>
+        </div>
+      </sc-if>
+
+    </div>
+  </div>
+
+  <!-- ======================= לוח המקשים הפיזי (מחוץ למסך) ======================= -->
+  <div style="direction: ltr; flex-grow: 1; display: flex; gap: 22px; padding: 0 24px 24px 24px; align-items: flex-start">
+
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; width: 356px; flex: none">
+      <sc-for list="{{keys}}" as="k" hint-placeholder-count="12">
+        <button type="button" onClick="{{ k.press }}" style="height: 84px; border-radius: 18px; background: #17171A; border: 2px solid #2C2C2E; color: #F2F2F7; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px">
+          <span style="font-size: 26px; font-weight: 500; line-height: 1">{{k.digit}}</span>
+          <span style="font-size: 16px; color: #7C7C82; line-height: 1">{{k.sub}}</span>
+        </button>
+      </sc-for>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 12px; flex-grow: 1">
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px">
+        <span></span>
+        <button type="button" onClick="{{ navUp }}" style="height: 64px; border-radius: 18px; background: #17171A; border: 2px solid #2C2C2E; color: #F2F2F7; display: flex; align-items: center; justify-content: center">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15 l6 -6 6 6"></path></svg>
+        </button>
+        <span></span>
+        <button type="button" onClick="{{ navLeft }}" style="height: 64px; border-radius: 18px; background: #17171A; border: 2px solid #2C2C2E; color: #F2F2F7; display: flex; align-items: center; justify-content: center">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6 l-6 6 6 6"></path></svg>
+        </button>
+        <button type="button" onClick="{{ center }}" style="height: 64px; border-radius: 18px; background: #2C2C2E; border: 2px solid #3A3A3C; color: #F2F2F7; font-size: 20px; font-weight: 500; display: flex; align-items: center; justify-content: center">OK</button>
+        <button type="button" onClick="{{ navRight }}" style="height: 64px; border-radius: 18px; background: #17171A; border: 2px solid #2C2C2E; color: #F2F2F7; display: flex; align-items: center; justify-content: center">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6 l6 6 -6 6"></path></svg>
+        </button>
+        <span></span>
+        <button type="button" onClick="{{ navDown }}" style="height: 64px; border-radius: 18px; background: #17171A; border: 2px solid #2C2C2E; color: #F2F2F7; display: flex; align-items: center; justify-content: center">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9 l6 6 6 -6"></path></svg>
+        </button>
+        <span></span>
+      </div>
+
+      <button type="button" onClick="{{ del }}" style="height: 64px; border-radius: 18px; background: #17171A; border: 2px solid #2C2C2E; color: #F2F2F7; font-size: 20px; display: flex; align-items: center; justify-content: center; gap: 10px">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 5 h9 a2 2 0 0 1 2 2 v10 a2 2 0 0 1 -2 2 h-9 l-7 -7 z"></path><path d="M14 9 l4 6"></path><path d="M18 9 l-4 6"></path></svg>
+        <span>מחיקה</span>
+      </button>
+      <button type="button" onClick="{{ holdPound }}" style="height: 60px; border-radius: 18px; background: #17171A; border: 2px dashed #3A3A3C; color: #A8A8AE; font-size: 19px; display: flex; align-items: center; justify-content: center">החזקת #</button>
+      <button type="button" onClick="{{ holdZero }}" style="height: 60px; border-radius: 18px; background: #17171A; border: 2px dashed #3A3A3C; color: #A8A8AE; font-size: 19px; display: flex; align-items: center; justify-content: center">החזקת 0</button>
+    </div>
+  </div>
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{
+  "accent": {"editor": "color", "default": "#FFFFFF", "options": ["#FFFFFF", "#64D2FF", "#32D74B", "#FFD60A"], "section": "עיצוב"},
+  "dark": {"editor": "boolean", "default": true, "section": "עיצוב"},
+  "$preview": {"width": 640, "height": 1440}
+}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      modeIndex: 1,
+      digits: '255',
+      mtLetters: 'דיי',
+      candIndex: 0,
+      committed: 'היי אורי, ',
+      view: 'type',
+      punctIndex: 0,
+      langIndex: 1,
+      tapKey: null,
+      tapCount: 0,
+    };
+  }
+
+  // --- נתוני מקור: T9DigitMap.kt, T9Engine.kt, KeyboardService.kt ---
+
+  maps() {
+    return {
+      HEBREW:  {'2':'דהו','3':'אבג','4':'מנםן','5':'יכלך','6':'זחט','7':'רשת','8':'צקץ','9':'סעפף'},
+      ENGLISH: {'2':'abc','3':'def','4':'ghi','5':'jkl','6':'mno','7':'pqrs','8':'tuv','9':'wxyz'},
+      SPANISH: {'2':'abcá','3':'defé','4':'ghií','5':'jkl','6':'mnoñó','7':'pqrs','8':'tuvú','9':'wxyzü'},
+      FRENCH:  {'2':'abcàâæç','3':'deféèêë','4':'ghiîï','5':'jkl','6':'mnoôœ','7':'pqrs','8':'tuvùûü','9':'wxyzÿ'},
+      GERMAN:  {'2':'abcä','3':'def','4':'ghi','5':'jkl','6':'mnoö','7':'pqrsß','8':'tuvü','9':'wxyz'},
+      ITALIAN: {'2':'abcà','3':'defèé','4':'ghiì','5':'jkl','6':'mnoò','7':'pqrs','8':'tuvù','9':'wxyz'},
+      PORTUGUESE: {'2':'abcãáàâç','3':'deféê','4':'ghií','5':'jkl','6':'mnoóôõ','7':'pqrs','8':'tuvúü','9':'wxyz'},
+      DUTCH:   {'2':'abc','3':'defé','4':'ghiï','5':'jkl','6':'mnoö','7':'pqrs','8':'tuvü','9':'wxyz'},
+      POLISH:  {'2':'abcą','3':'defę','4':'ghi','5':'jklł','6':'mnońó','7':'pqrsś','8':'tuv','9':'wxyzźż'},
+      TURKISH: {'2':'abcç','3':'def','4':'ghiığ','5':'jkl','6':'mnoö','7':'pqrsş','8':'tuvü','9':'wxyz'},
+      ROMANIAN:{'2':'abcăâ','3':'def','4':'ghiî','5':'jkl','6':'mno','7':'pqrsș','8':'tuvț','9':'wxyz'},
+      CZECH:   {'2':'abcáč','3':'defďéě','4':'ghií','5':'jkl','6':'mnoňó','7':'pqrsřš','8':'tuvťúů','9':'wxyzýž'},
+      SWEDISH: {'2':'abcåä','3':'def','4':'ghi','5':'jkl','6':'mnoö','7':'pqrs','8':'tuv','9':'wxyz'},
+      NORWEGIAN:{'2':'abcå','3':'defæ','4':'ghi','5':'jkl','6':'mnoø','7':'pqrs','8':'tuv','9':'wxyz'},
+      DANISH:  {'2':'abcå','3':'defæ','4':'ghi','5':'jkl','6':'mnoø','7':'pqrs','8':'tuv','9':'wxyz'},
+      FINNISH: {'2':'abcäå','3':'def','4':'ghi','5':'jkl','6':'mnoö','7':'pqrs','8':'tuv','9':'wxyz'},
+      RUSSIAN: {'2':'абвг','3':'дежз','4':'ийкл','5':'мноп','6':'рсту','7':'фхцч','8':'шщъы','9':'ьэюя'},
+    };
+  }
+
+  modes() {
+    return [
+      { short: 'עב',  full: 'עברית',           lang: 'HEBREW',  tag: 'אות-אות', dict: 'מילון מלא' },
+      { short: 'עב',  full: 'עברית (ניבוי)',   lang: 'HEBREW',  tag: 'ניבוי', pred: true, dict: 'מילון מלא' },
+      { short: 'ABC', full: 'English (ABC)',   lang: 'ENGLISH', tag: 'ניבוי', pred: true, caseMode: 'upper', dict: 'מילון מלא' },
+      { short: 'Abc', full: 'English (Abc)',   lang: 'ENGLISH', tag: 'ניבוי', pred: true, caseMode: 'cap', dict: 'מילון מלא' },
+      { short: 'abc', full: 'English (abc)',   lang: 'ENGLISH', tag: 'ניבוי', pred: true, dict: 'מילון מלא' },
+      { short: 'ES',  full: 'Español',    lang: 'SPANISH',    tag: 'ניבוי', pred: true, dict: 'מילון בסיסי' },
+      { short: 'FR',  full: 'Français',   lang: 'FRENCH',     tag: 'ניבוי', pred: true, dict: 'מילון בסיסי' },
+      { short: 'DE',  full: 'Deutsch',    lang: 'GERMAN',     tag: 'ניבוי', pred: true, dict: 'מילון בסיסי' },
+      { short: 'IT',  full: 'Italiano',   lang: 'ITALIAN',    tag: 'ניבוי', pred: true, dict: 'מילון בסיסי' },
+      { short: 'PT',  full: 'Português',  lang: 'PORTUGUESE', tag: 'ניבוי', pred: true, dict: 'מילון בסיסי' },
+      { short: 'NL',  full: 'Nederlands', lang: 'DUTCH',      tag: 'ניבוי', pred: true, dict: 'מילון בסיסי' },
+      { short: 'PL',  full: 'Polski',     lang: 'POLISH',     tag: 'ניבוי', pred: true, dict: 'מילון בסיסי' },
+      { short: 'TR',  full: 'Türkçe',     lang: 'TURKISH',    tag: 'ניבוי', pred: true, dict: 'מילון בסיסי' },
+      { short: 'RO',  full: 'Română',     lang: 'ROMANIAN',   tag: 'ניבוי', pred: true, dict: 'מילון בסיסי' },
+      { short: 'CS',  full: 'Čeština',    lang: 'CZECH',      tag: 'ניבוי', pred: true, dict: 'מילון בסיסי' },
+      { short: 'SV',  full: 'Svenska',    lang: 'SWEDISH',    tag: 'ניבוי', pred: true, dict: 'מילון בסיסי' },
+      { short: 'NO',  full: 'Norsk',      lang: 'NORWEGIAN',  tag: 'ניבוי', pred: true, dict: 'מילון בסיסי' },
+      { short: 'DA',  full: 'Dansk',      lang: 'DANISH',     tag: 'ניבוי', pred: true, dict: 'מילון בסיסי' },
+      { short: 'FI',  full: 'Suomi',      lang: 'FINNISH',    tag: 'ניבוי', pred: true, dict: 'מילון בסיסי' },
+      { short: 'RU',  full: 'Русский',    lang: 'RUSSIAN',    tag: 'ניבוי', pred: true, dict: 'מילון בסיסי' },
+      { short: '123', full: 'מספרים',     lang: null,         tag: 'ספרות', dict: '' },
+    ];
+  }
+
+  punctSymbols() {
+    return ['.', ',', '?', '!', "'", '"', '-', '@', '/', ':', ';', '(', ')',
+            '+', '=', '_', '%', '&', '*', '#', '$', '€', '₪', '~', '\\', '|',
+            '<', '>', '[', ']', '{', '}', '^', '`'];
+  }
+
+  // מילון הדגמה קצר, מסודר לפי שכיחות - במכשיר עצמו זה dict_he.txt / dict_en.txt
+  words(lang) {
+    if (lang === 'HEBREW') {
+      return ['הכל','היי','של','את','לא','הוא','על','זה','עם','כל','אני','יש','מה','אבל','גם','רק',
+        'כמו','אם','היא','הם','כי','אז','טוב','יום','שנה','בית','איש','ילד','אמא','אבא','אח','חבר',
+        'עבודה','כסף','אוכל','מים','לחם','רחוב','עיר','ספר','גדול','קטן','חדש','ישן','מהר','לאט',
+        'עכשיו','מחר','אתמול','היום','שבוע','חודש','שעה','דקה','רגע','בבקשה','סליחה','תודה','שלום',
+        'שבת','ערב','בוקר','לילה','מתי','איפה','למה','איך','כן','פה','שם','נכון','בסדר','יופי',
+        'מצוין','נהדר','שמח','עייף','רעב','חם','קר','יפה','נחמד','חכם','חזק','אמת','אהבה','משפחה',
+        'חיים','דרך','זמן','מקום','דבר','שאלה','תשובה','בעיה','פתרון','סיפור','שיר','סרט','טלפון',
+        'מחשב','מכונית','אוטובוס','רכבת','ים','הר','עץ','כלב','חתול','שמש','ירח','גשם','רוח','ענן',
+        'אין','בין','אכן','בלם','גלם','אלם','דלי','וכל','הלל','מלון','שלח','נפגש','נדבר','מגיע','יוצא'];
+    }
+    if (lang === 'ENGLISH') {
+      return ['the','and','you','are','for','not','but','all','can','her','was','one','our','out',
+        'day','get','has','him','his','how','man','new','now','old','see','two','way','who','boy',
+        'did','its','let','put','say','she','too','use','hello','home','good','time','work','call',
+        'back','come','give','hand','here','just','know','like','look','make','most','move','much',
+        'name','need','next','only','open','over','part','play','same','seem','show','side','take',
+        'talk','tell','than','that','them','then','they','this','turn','want','week','well','what',
+        'when','will','with','word','year','your'];
+    }
+    return ['aa','ab','ba','be','bo','de','do','en','er','es','et','ja','je','la','le','lo','me',
+      'mi','na','ne','no','om','op','pa','se','si','te','ti','to','un','va','ve','vi','wa','we'];
+  }
+
+  index(lang) {
+    this._idx = this._idx || {};
+    if (this._idx[lang]) return this._idx[lang];
+    const map = this.maps()[lang] || this.maps().ENGLISH;
+    const letterToDigit = {};
+    Object.keys(map).forEach((d) => { for (const ch of map[d]) if (!(ch in letterToDigit)) letterToDigit[ch] = d; });
+    const out = {};
+    this.words(lang).forEach((w) => {
+      let seq = '';
+      for (const ch of w) { const d = letterToDigit[ch]; if (!d) { seq = ''; break; } seq += d; }
+      if (!seq) return;
+      out[seq] = out[seq] || [];
+      if (out[seq].indexOf(w) === -1) out[seq].push(w);
+    });
+    this._idx[lang] = out;
+    return out;
+  }
+
+  mode() { return this.modes()[this.state.modeIndex]; }
+
+  candidateList() {
+    const m = this.mode();
+    if (!m.lang || !m.pred || !this.state.digits) return [];
+    return (this.index(m.lang)[this.state.digits] || []).slice(0, 12);
+  }
+
+  applyCase(text) {
+    const m = this.mode();
+    if (m.caseMode === 'upper') return text.toUpperCase();
+    if (m.caseMode === 'cap') return text.charAt(0).toUpperCase() + text.slice(1);
+    return text;
+  }
+
+  composingText() {
+    const list = this.candidateList();
+    if (list.length) return this.applyCase(list[Math.min(this.state.candIndex, list.length - 1)]);
+    return this.applyCase(this.state.mtLetters);
+  }
+
+  // --- צבעים ---
+
+  luminance(hex) {
+    const h = (hex || '#FFFFFF').replace('#', '');
+    const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
+    const r = parseInt(full.slice(0, 2), 16) / 255;
+    const g = parseInt(full.slice(2, 4), 16) / 255;
+    const b = parseInt(full.slice(4, 6), 16) / 255;
+    const f = (c) => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+    return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+  }
+
+  // הטקסט על גבי צבע ההדגשה נקבע לפי בהירותו - זה מה שמונע "לבן על לבן"
+  // כשצבע ההדגשה של המערכת הוא ברירת המחדל (Color.WHITE).
+  onAccent() { return this.luminance(this.props.accent ?? '#FFFFFF') > 0.45 ? '#101012' : '#FFFFFF'; }
+
+  tint(alpha) {
+    const h = (this.props.accent ?? '#FFFFFF').replace('#', '');
+    const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
+    return 'rgba(' + parseInt(full.slice(0, 2), 16) + ',' + parseInt(full.slice(2, 4), 16) + ',' + parseInt(full.slice(4, 6), 16) + ',' + alpha + ')';
+  }
+
+  // --- פעולות מקשים ---
+
+  press(d) {
+    const m = this.mode();
+    if (this.state.view === 'punct' || this.state.view === 'lang' || this.state.view === 'voice') return;
+    if (!m.lang) { this.setState({ committed: this.state.committed + d }); return; }
+    if (d === '0') { this.space(); return; }
+    if (d === '1') { this.setState({ committed: this.state.committed + this.composingText() + '1', digits: '', mtLetters: '', candIndex: 0, tapKey: null }); return; }
+    const map = this.maps()[m.lang];
+    const letters = map[d] || '';
+    if (m.pred) {
+      this.setState({ digits: this.state.digits + d, mtLetters: this.state.mtLetters + (letters.charAt(0) || ''), candIndex: 0, tapKey: null });
+    } else if (this.state.tapKey === d) {
+      const n = (this.state.tapCount + 1) % Math.max(letters.length, 1);
+      this.setState({ tapCount: n, mtLetters: this.state.mtLetters.slice(0, -1) + letters.charAt(n) });
+    } else {
+      this.setState({ tapKey: d, tapCount: 0, digits: this.state.digits + d, mtLetters: this.state.mtLetters + letters.charAt(0) });
+    }
+  }
+
+  space() {
+    const text = this.composingText();
+    this.setState({ committed: this.state.committed + text + ' ', digits: '', mtLetters: '', candIndex: 0, tapKey: null });
+  }
+
+  del() {
+    const s = this.state;
+    if (s.view === 'punct' || s.view === 'lang') { this.setState({ view: 'type' }); return; }
+    if (s.digits) {
+      this.setState({ digits: s.digits.slice(0, -1), mtLetters: s.mtLetters.slice(0, -1), candIndex: 0, tapKey: null });
+    } else {
+      this.setState({ committed: s.committed.slice(0, -1) });
+    }
+  }
+
+  star() {
+    if (this.state.view === 'punct') { this.setState({ view: 'type' }); return; }
+    this.setState({ view: 'punct', punctIndex: 0 });
+  }
+
+  pound() {
+    if (this.state.view === 'lang') { this.setState({ view: 'type' }); return; }
+    const next = (this.state.modeIndex + 1) % this.modes().length;
+    this.setState({ modeIndex: next, digits: '', mtLetters: '', candIndex: 0, tapKey: null, view: 'type' });
+  }
+
+  move(step) {
+    const s = this.state;
+    if (s.view === 'lang') {
+      const n = this.modes().length;
+      this.setState({ langIndex: (s.langIndex + step + n) % n });
+      return;
+    }
+    if (s.view === 'punct') {
+      const n = this.punctSymbols().length;
+      this.setState({ punctIndex: (s.punctIndex + step + n) % n });
+      return;
+    }
+    const list = this.candidateList();
+    if (list.length > 1) this.setState({ candIndex: (s.candIndex + step + list.length) % list.length });
+  }
+
+  center() {
+    const s = this.state;
+    if (s.view === 'lang') { this.pickLang(s.langIndex); return; }
+    if (s.view === 'punct') { this.pickPunct(s.punctIndex); return; }
+    this.space();
+  }
+
+  pickLang(i) {
+    this.setState({ modeIndex: i, langIndex: i, view: 'type', digits: '', mtLetters: '', candIndex: 0, tapKey: null });
+  }
+
+  pickPunct(i) {
+    const sym = this.punctSymbols()[i];
+    this.setState({ committed: this.state.committed + this.composingText() + sym, digits: '', mtLetters: '', candIndex: 0, view: 'type', punctIndex: i });
+  }
+
+  // --- ערכי התבנית ---
+
+  renderVals() {
+    const s = this.state;
+    const m = this.mode();
+    const accent = this.props.accent ?? '#FFFFFF';
+    const onAccent = this.onAccent();
+    const dark = this.props.dark ?? true;
+    const ink = dark ? '#FFFFFF' : '#000000';
+    const chip = dark ? '#2C2C2E' : '#FFFFFF';
+    const list = this.candidateList();
+    const sel = Math.min(s.candIndex, Math.max(list.length - 1, 0));
+    const syms = this.punctSymbols();
+    const modes = this.modes();
+
+    // חלון גלילה של 5 שורות סביב הבחירה - כמו ההגבלה על גובה תפריט השפה במקור
+    const start = Math.max(0, Math.min(s.langIndex - 2, modes.length - 5));
+
+    return {
+      themeClass: dark ? 'dark' : 'light',
+      accent,
+      onAccent,
+      fadeGrad: dark ? 'linear-gradient(to left, rgba(28,28,30,0), #1C1C1E)' : 'linear-gradient(to left, rgba(239,239,239,0), #EFEFEF)',
+
+      view: {
+        isType: s.view === 'type',
+        isPunct: s.view === 'punct',
+        isLang: s.view === 'lang',
+        isVoice: s.view === 'voice',
+      },
+
+      mode: { short: m.short, tag: m.tag, pillBg: this.tint(0.16) },
+
+      draft: {
+        committed: s.committed,
+        composing: this.composingText(),
+        underline: list.length ? accent : (dark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.4)'),
+      },
+
+      compose: {
+        digits: s.digits.split('').join(' '),
+        count: list.length ? (sel + 1) + '/' + list.length : '',
+        hasCount: list.length > 1,
+        hasCands: list.length > 0 || !!s.mtLetters,
+        isEmpty: list.length === 0 && !s.mtLetters,
+        emptyHint: m.lang ? 'הקש ספרות כדי לכתוב' : 'הקש ספרות',
+      },
+
+      cands: (list.length ? list : (s.mtLetters ? [s.mtLetters] : [])).map((w, i) => {
+        const on = i === sel && list.length > 0;
+        return {
+          word: this.applyCase(w),
+          bg: on ? accent : chip,
+          fg: on ? onAccent : ink,
+          size: on ? '32px' : '30px',
+          weight: on ? '700' : '400',
+          pad: on ? '14px 30px' : '12px 26px',
+          pick: () => this.setState({ candIndex: i }),
+        };
+      }),
+
+      punct: { preview: syms[s.punctIndex], count: (s.punctIndex + 1) + '/' + syms.length },
+      punctCells: syms.map((sym, i) => ({
+        sym,
+        bg: i === s.punctIndex ? accent : chip,
+        fg: i === s.punctIndex ? onAccent : ink,
+        weight: i === s.punctIndex ? '700' : '400',
+        pick: () => this.pickPunct(i),
+      })),
+
+      lang: { count: (s.langIndex + 1) + '/' + modes.length },
+      langRows: modes.slice(start, start + 5).map((mm, k) => {
+        const i = start + k;
+        const on = i === s.langIndex;
+        return {
+          full: mm.full,
+          short: mm.short,
+          dict: mm.dict,
+          bg: on ? accent : chip,
+          fg: on ? onAccent : ink,
+          weight: on ? '700' : '400',
+          badgeBg: on ? 'rgba(0,0,0,0.14)' : (dark ? '#3A3A3C' : '#E5E5EA'),
+          pick: () => this.pickLang(i),
+        };
+      }),
+
+      voice: { langName: m.full },
+      voiceBars: [18, 34, 52, 40, 26, 44].map((h) => ({ h: h + 'px' })),
+
+      keys: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#'].map((d) => {
+        const map = m.lang ? this.maps()[m.lang] : null;
+        let sub = '';
+        if (d === '*') sub = 'פיסוק';
+        else if (d === '#') sub = 'שפה';
+        else if (d === '0') sub = 'רווח';
+        else if (d === '1') sub = '';
+        else if (map) sub = (map[d] || '').slice(0, 4);
+        return {
+          digit: d,
+          sub,
+          press: () => { if (d === '*') this.star(); else if (d === '#') this.pound(); else this.press(d); },
+        };
+      }),
+
+      openLang: () => this.setState({ view: 'lang', langIndex: s.modeIndex }),
+      holdPound: () => this.setState({ view: 'lang', langIndex: s.modeIndex }),
+      holdZero: () => this.setState({ view: s.view === 'voice' ? 'type' : 'voice' }),
+      navUp: () => this.move(-1),
+      navDown: () => this.move(1),
+      navLeft: () => this.move(-1),
+      navRight: () => this.move(1),
+      center: () => this.center(),
+      del: () => this.del(),
+    };
+  }
+}
+</script>
+</body>
+</html>

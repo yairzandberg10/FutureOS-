@@ -1,17 +1,11 @@
 package com.future.music.ui
 
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
-import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -25,7 +19,6 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.platform.LocalContext
 import com.future.music.data.AlbumGroup
 import com.future.music.data.ArtistGroup
 import com.future.music.data.PlaylistStore
@@ -132,24 +125,10 @@ fun MusicNavHost(
     }
 
     // מקש Options הפיזי תמיד נחסם ברמת המערכת (FutureUI's StatusBarAccessibilityService
-    // צורך אותו ללחיצה ארוכה ל"אפליקציות אחרונות") - שום Key.Menu לא באמת מגיע
-    // לאפליקציה. לחיצה קצרה על אותו מקש משודרת בשידור גלובלי, ואנחנו מאזינים
-    // לו כאן כדי לפתוח את התפריט הראשי - זו הדרך האמיתית שהמקש הפיזי עובד.
-    val context = LocalContext.current
-    DisposableEffect(Unit) {
-        val receiver = object : BroadcastReceiver() {
-            override fun onReceive(ctx: Context?, intent: Intent?) {
-                openMainMenu()
-            }
-        }
-        val filter = IntentFilter("com.future.futureui.ACTION_OPTIONS_SHORT_PRESS")
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            context.registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)
-        } else {
-            context.registerReceiver(receiver, filter)
-        }
-        onDispose { context.unregisterReceiver(receiver) }
-    }
+    // צורך אותו ללחיצה ארוכה ל"אפליקציות אחרונות") ומשודר כשידור גלובלי.
+    // הרכיב המשותף onOptionsKeyPress הוא הדרך שכל שאר האפליקציות מאזינות לו;
+    // כאן היה במקומו BroadcastReceiver ידני - אותה לוגיקה, בעותק נפרד.
+    com.future.sharednav.nav.onOptionsKeyPress { openMainMenu() }
 
     Box(
         modifier = Modifier
@@ -163,7 +142,9 @@ fun MusicNavHost(
                 }
             }
     ) {
-    when (val route = current) {
+    // כל push/pop מחליק בכיוון הניווט (ר' AnimatedBackStackHost).
+    com.future.sharednav.components.AnimatedBackStackHost(backStack) { route ->
+    when (route) {
         is Route.Home -> HomeScreen(
             theme = theme,
             playerState = playerState,
@@ -336,6 +317,7 @@ fun MusicNavHost(
             onBack = ::pop,
             onSelectPreset = playerController::setEqPreset,
         )
+    }
     }
     }
 }

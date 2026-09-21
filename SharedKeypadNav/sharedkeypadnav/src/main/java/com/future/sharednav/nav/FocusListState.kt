@@ -1,11 +1,13 @@
 package com.future.sharednav.nav
 
+import android.os.SystemClock
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 
@@ -66,10 +68,25 @@ fun rememberFocusListState(itemCount: Int, initialIndex: Int = 0): FocusListStat
             state.focusedIndex = itemCount - 1
         }
     }
+    // בהחזקת חץ, אנדרואיד שולח KeyDown חוזר כל כמה עשרות מילישניות. עם
+    // animateScrollToItem בלבד, כל אירוע כזה ביטל את האנימציה הקודמת והתחיל
+    // אחת חדשה - הגלילה נראתה תקועה במקום להאיץ. לכן: תזוזה בודדת עדיין
+    // מונפשת, ורצף מהיר (מקש מוחזק) גולל מיידית, כך שהרשימה עוקבת אחרי
+    // הפוקוס בזמן אמת.
+    val lastMoveAt = remember(listState) { mutableLongStateOf(0L) }
     LaunchedEffect(state.focusedIndex, itemCount) {
-        if (itemCount > 0) {
+        if (itemCount <= 0) return@LaunchedEffect
+        val now = SystemClock.uptimeMillis()
+        val isRepeat = now - lastMoveAt.longValue < REPEAT_MOVE_WINDOW_MS
+        lastMoveAt.longValue = now
+        if (isRepeat) {
+            listState.scrollToItem(state.focusedIndex)
+        } else {
             listState.animateScrollToItem(state.focusedIndex)
         }
     }
     return state
 }
+
+/** מתחת לסף הזה בין שתי תזוזות מניחים שהמקש מוחזק, לא שנלחץ פעמיים. */
+private const val REPEAT_MOVE_WINDOW_MS = 150L

@@ -1,5 +1,7 @@
 package com.future.futureui.settings.ui
 
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -86,12 +88,12 @@ fun SetPinScreen(onDone: () -> Unit, onCancel: () -> Unit) {
                     Stage.ConfirmNew -> "הזן שוב לאישור"
                 },
                 color = Color.White,
-                fontSize = 18.sp,
+                fontSize = FutureTypography.title,
                 fontWeight = FontWeight.Bold
             )
             if (errorMessage != null) {
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(errorMessage!!, color = Color(0xFFFF6B6B), fontSize = 13.sp)
+                Text(errorMessage!!, color = Color(0xFFFF6B6B), fontSize = FutureTypography.summary)
             }
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -129,8 +131,8 @@ fun RemovePinConfirmScreen(onConfirm: () -> Unit, onCancel: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text("לבטל את קוד הנעילה?", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-            Text("מסך הנעילה יפתח בלחיצת OK בלבד, בלי קוד.", color = Color.White.copy(alpha = 0.6f), fontSize = 13.sp)
+            Text("לבטל את קוד הנעילה?", color = Color.White, fontSize = FutureTypography.title, fontWeight = FontWeight.Bold)
+            Text("מסך הנעילה יפתח בלחיצת OK בלבד, בלי קוד.", color = Color.White.copy(alpha = 0.6f), fontSize = FutureTypography.summary)
             Spacer(modifier = Modifier.height(24.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 FocusableTextButton("ביטול", onCancel)
@@ -150,7 +152,7 @@ private fun FocusableTextButton(text: String, onClick: () -> Unit, isDestructive
     val bgColor by animateColorAsState(if (isFocused) base else base.copy(alpha = 0.7f), label = "btnBg")
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(20.dp))
+            .clip(FutureShapes.xl)
             .background(bgColor)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
             .focusable(interactionSource = interactionSource)

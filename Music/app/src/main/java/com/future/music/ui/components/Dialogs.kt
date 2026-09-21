@@ -13,6 +13,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import com.future.sharednav.focus.escapeTextFieldFocusTrap
 import com.future.sharednav.theme.FutureTheme
 
 @Composable
@@ -36,7 +37,7 @@ fun NameInputDialog(
                 value = text,
                 onValueChange = { text = it },
                 singleLine = true,
-                modifier = androidx.compose.ui.Modifier.focusRequester(fieldFocusRequester),
+                modifier = androidx.compose.ui.Modifier.escapeTextFieldFocusTrap().focusRequester(fieldFocusRequester),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedTextColor = theme.textColor,
                     unfocusedTextColor = theme.textColor,

@@ -6,19 +6,40 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AccessTime
+import androidx.compose.material.icons.rounded.Alarm
+import androidx.compose.material.icons.rounded.AvTimer
+import androidx.compose.material.icons.rounded.Public
+import androidx.compose.material.icons.rounded.Timer
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
 import com.future.clock.data.ClockShortcuts
-import com.future.sharednav.theme.ThemeClient
+import com.future.sharednav.components.FutureBottomNav
+import com.future.sharednav.components.FutureNavItem
+import com.future.clock.ui.AlarmScreen
 import com.future.clock.ui.ClockHomeScreen
 import com.future.clock.ui.ClockRoute
 import com.future.clock.ui.StopwatchScreen
 import com.future.clock.ui.TimerScreen
-import com.future.clock.ui.AlarmScreen
 import com.future.clock.ui.WorldClockScreen
-import com.future.sharednav.theme.FutureTheme
+import com.future.sharednav.components.AnimatedScreenHost
+import com.future.sharednav.theme.FutureAppTheme
+import com.future.sharednav.theme.mutedTextColor
+import com.future.sharednav.theme.onReadableAccentColor
+import com.future.sharednav.theme.readableAccentColor
+import com.future.sharednav.theme.rememberFutureTheme
 
 class MainActivity : ComponentActivity() {
     // המכשיר האמיתי הוא מקלדת T9 בלבד בלי מסך מגע - מבטלים קלט מגע לגמרי כדי
@@ -41,35 +62,67 @@ class MainActivity : ComponentActivity() {
             val goBack = { if (launchedAsShortcut) finish() else route = ClockRoute.Home }
             BackHandler(enabled = route != ClockRoute.Home || launchedAsShortcut) { goBack() }
 
-            var theme by remember {
-                mutableStateOf(
-                    ThemeClient.getTheme(this@MainActivity).let {
-                        FutureTheme(isDarkMode = it.isDarkMode, accentColor = Color(it.primaryColor))
-                    }
-                )
-            }
+            // מתעדכן בזמן אמת כשמצב כהה/בהיר או צבע ההדגשה משתנים (ר' rememberFutureTheme).
+            val theme = rememberFutureTheme()
 
-            // מרענן את העיצוב בכל חזרה למסך (למשל אחרי שינוי מצב כהה/בהיר או
-            // צבע הדגשה באפליקציית ההגדרות) בלי לבנות מחדש את כל ה-Activity.
-            val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
-            DisposableEffect(lifecycleOwner) {
-                val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
-                    if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
-                        val shared = ThemeClient.getTheme(this@MainActivity)
-                        theme = FutureTheme(isDarkMode = shared.isDarkMode, accentColor = Color(shared.primaryColor))
-                    }
-                }
-                lifecycleOwner.lifecycle.addObserver(observer)
-                onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-            }
+            // 5 טאבים קבועים בסרגל תחתון (בדיוק כמו בחייגן/במוזיקה) במקום מסך
+            // הבית הישן שהיה רשימה גוללת בלבד - ניווט בין שעונים מעוררים/עולמי/
+            // עצר/טיימר לא דרש בעבר יותר מלחיצה אחת חזרה להום ואז שוב פנימה.
+            val tabs = listOf(
+                Triple(ClockRoute.Home, "שעון", Icons.Rounded.AccessTime),
+                Triple(ClockRoute.Alarms, "מעוררים", Icons.Rounded.Alarm),
+                Triple(ClockRoute.WorldClock, "עולמי", Icons.Rounded.Public),
+                Triple(ClockRoute.Stopwatch, "עצר", Icons.Rounded.AvTimer),
+                Triple(ClockRoute.Timer, "טיימר", Icons.Rounded.Timer),
+            )
+            val currentTabIndex = tabs.indexOfFirst { it.first == route }.coerceAtLeast(0)
 
-            Surface(modifier = Modifier.fillMaxSize(), color = theme.backgroundColor) {
-                when (route) {
-                    ClockRoute.Home -> ClockHomeScreen(theme = theme, onOpen = { route = it })
-                    ClockRoute.Alarms -> AlarmScreen(theme = theme, onBack = goBack)
-                    ClockRoute.WorldClock -> WorldClockScreen(theme = theme, onBack = goBack)
-                    ClockRoute.Stopwatch -> StopwatchScreen(theme = theme, onBack = goBack)
-                    ClockRoute.Timer -> TimerScreen(theme = theme, onBack = goBack)
+            FutureAppTheme(theme) {
+                Scaffold(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        // חצים ימינה/שמאלה עוברים בין הטאבים מכל מקום במסך (בדיוק
+                        // כמו בחייגן) - לא רק כשהסרגל התחתון עצמו ממוקד, כי אין
+                        // מסך מגע ומעבר טאבים הוא פעולה תכופה שכדאי שתהיה נגישה מיד.
+                        .onKeyEvent { event ->
+                            if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
+                            val nextIndex = when (event.key) {
+                                Key.DirectionRight -> currentTabIndex - 1
+                                Key.DirectionLeft -> currentTabIndex + 1
+                                else -> return@onKeyEvent false
+                            }
+                            if (nextIndex !in tabs.indices) return@onKeyEvent false
+                            route = tabs[nextIndex].first
+                            true
+                        },
+                    containerColor = theme.backgroundColor,
+                    bottomBar = {
+                        // הסרגל המשותף (FutureBottomNav) ולא NavigationBar של
+                        // Material3: פס מרחף בצורת גלולה, ותווית רק על הנבחר.
+                        FutureBottomNav(
+                            items = tabs.map { (_, label, icon) ->
+                                FutureNavItem(label = label, icon = icon)
+                            },
+                            selectedIndex = currentTabIndex,
+                            theme = theme,
+                        )
+                    }
+                ) { innerPadding ->
+                    Surface(
+                        modifier = Modifier.fillMaxSize().padding(innerPadding),
+                        color = theme.backgroundColor,
+                    ) {
+                        // כל הטאבים באותה רמה - המעבר ביניהם הוא fade ולא החלקה.
+                        AnimatedScreenHost(targetState = route, depthOf = { 0 }) { shown ->
+                            when (shown) {
+                                ClockRoute.Home -> ClockHomeScreen(theme = theme, onOpen = { route = it })
+                                ClockRoute.Alarms -> AlarmScreen(theme = theme, onBack = goBack)
+                                ClockRoute.WorldClock -> WorldClockScreen(theme = theme, onBack = goBack)
+                                ClockRoute.Stopwatch -> StopwatchScreen(theme = theme, onBack = goBack)
+                                ClockRoute.Timer -> TimerScreen(theme = theme, onBack = goBack)
+                            }
+                        }
+                    }
                 }
             }
         }

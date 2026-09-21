@@ -26,3 +26,20 @@ fun rememberRuntimePermission(permission: String): MutableState<Boolean> {
     }
     return granted
 }
+
+/** כמו rememberRuntimePermission, אבל לא מבקש מיד ב-LaunchedEffect - נועד
+ * להרשאת מיקרופון שנחוצה רק במעבר למצב וידאו, לא בכניסה הרגילה לאפליקציה
+ * (בקשת הרשאה לא-קשורה מיד עם הכניסה למסך היא חוויה גרועה וגם מבלבלת -
+ * "למה מצלמה צריכה מיקרופון?" - אם המשתמש אף פעם לא נכנס למצב וידאו). קריאה
+ * ל-request() בזמן אמת (ר' onEnterVideoMode) מפעילה את הבקשה בפועל. */
+@Composable
+fun rememberLazyRuntimePermission(permission: String): Pair<MutableState<Boolean>, () -> Unit> {
+    val context = LocalContext.current
+    val granted = remember {
+        mutableStateOf(ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED)
+    }
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { result ->
+        granted.value = result
+    }
+    return granted to { if (!granted.value) launcher.launch(permission) }
+}

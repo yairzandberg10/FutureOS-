@@ -1,0 +1,84 @@
+<!-- @dsCard group="Communication" viewport="640x960" name="Dialer, contacts, messages" subtitle="Bottom-nav tabs, list rows, badges, options menu, heads-up" -->
+<!DOCTYPE html><html lang="he" dir="rtl"><head><meta charset="utf-8"><title>FutureOS · שיחות</title>
+<link rel="stylesheet" href="../../styles.css">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>html,body{margin:0;background:#0A0A0B}
+.device{width:640px;height:960px;background:var(--fos-bg);color:var(--fos-text);font-family:var(--fos-font);direction:rtl;position:relative;overflow:hidden;margin:0 auto;display:flex;flex-direction:column}
+.body{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;position:relative;scrollbar-width:none}
+.body::-webkit-scrollbar{display:none}
+.hint{position:absolute;bottom:0;left:0;right:0;padding:10px 16px;font-size:20px;color:var(--fos-text-30);text-align:center;pointer-events:none;background:linear-gradient(to top,var(--fos-bg),transparent)}
+.over{position:absolute;inset:0;z-index:5}
+a{color:var(--fos-accent)}a:hover{opacity:.7}
+</style></head><body>
+<div id="root"></div>
+<script type="text/babel" src="CommScreens.jsx"></script>
+<script type="text/babel">
+const { BottomNav, OptionsMenu, ConfirmDialog, HeadsUpNotification } = window.FutureOSDesignSystem_3ab611;
+const TABS = [{ label: "שיחות", icon: "call" }, { label: "אנשי קשר", icon: "contacts" }, { label: "הודעות", icon: "chat" }];
+
+function App() {
+  const [tab, setTab] = React.useState(0);
+  const [focus, setFocus] = React.useState(0);
+  const [menu, setMenu] = React.useState(false);
+  const [dialog, setDialog] = React.useState(false);
+  const [notif, setNotif] = React.useState(false);
+  const [empty, setEmpty] = React.useState(false);
+  const counts = [window.RECENTS.length, empty ? 0 : window.CONTACTS.length, window.THREADS.length];
+
+  React.useEffect(() => {
+    const onKey = (e) => {
+      if (menu) {
+        if (e.key === "ArrowDown") setFocus(f => (f + 1) % 5);
+        else if (e.key === "ArrowUp") setFocus(f => (f + 4) % 5);
+        else if (e.key === "Enter") { setMenu(false); if (focus === 4) setDialog(true); else setFocus(0); }
+        else if (e.key === "Escape" || e.key === "Backspace") { setMenu(false); setFocus(0); }
+        e.preventDefault(); return;
+      }
+      if (dialog) { if (["Enter","Escape","Backspace"].includes(e.key)) setDialog(false); e.preventDefault(); return; }
+      const n = counts[tab];
+      if (e.key === "ArrowDown") setFocus(f => Math.min(n - 1, f + 1));
+      else if (e.key === "ArrowUp") setFocus(f => Math.max(0, f - 1));
+      else if (e.key === "ArrowLeft") { setTab(t => Math.min(TABS.length - 1, t + 1)); setFocus(0); }
+      else if (e.key === "ArrowRight") { setTab(t => Math.max(0, t - 1)); setFocus(0); }
+      else if (e.key === "m") { setFocus(0); setMenu(true); }
+      else if (e.key === "n") { setNotif(true); setTimeout(() => setNotif(false), 3200); }
+      else if (e.key === "e") { setEmpty(v => !v); setFocus(0); }
+      else return;
+      e.preventDefault();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [tab, focus, menu, dialog, empty]);
+
+  const screen = [
+    <window.RecentsScreen focus={focus} onMenu={() => setMenu(true)} />,
+    <window.ContactsScreen focus={focus} empty={empty} onMenu={() => setMenu(true)} />,
+    <window.MessagesScreen focus={focus} onMenu={() => setMenu(true)} />
+  ][tab];
+
+  const menuItems = [
+    [{ label: "התקשר", icon: "call" }, { label: "שלח הודעה", icon: "chat" }, { label: "הוסף לאנשי קשר", icon: "person_add" }, { label: "פרטים", icon: "info" }, { label: "מחק מהיומן", icon: "delete", destructive: true }],
+    [{ label: "איש קשר חדש", icon: "person_add" }, { label: "חיפוש", icon: "search" }, { label: "מועדפים", icon: "star" }, { label: "פרטים", icon: "info" }, { label: "מחק", icon: "delete", destructive: true }],
+    [{ label: "הודעה חדשה", icon: "add" }, { label: "סמן כנקרא", icon: "mark_email_read" }, { label: "חיפוש", icon: "search" }, { label: "פרטים", icon: "info" }, { label: "מחק שרשור", icon: "delete", destructive: true }]
+  ][tab];
+
+  return (
+    <div className="device">
+      <div className="body">
+        {screen}
+        {notif && <div style={{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 9 }}>
+          <HeadsUpNotification appName="הודעות" title="מיכל לוי" body="נתראה בערב" icon="chat" />
+        </div>}
+        {menu && <div className="over"><OptionsMenu header={TABS[tab].label} focusedIndex={focus} items={menuItems} onSelect={(i) => { setMenu(false); if (i === 4) setDialog(true); else setFocus(0); }} /></div>}
+        {dialog && <div className="over"><ConfirmDialog message="למחוק את איש הקשר?" confirmLabel="מחק" onConfirm={() => setDialog(false)} onCancel={() => setDialog(false)} /></div>}
+        <div className="hint">חיצים · m תפריט · n התראה · e מצב ריק</div>
+      </div>
+      <BottomNav items={TABS} selected={tab} onSelect={(i) => { setTab(i); setFocus(0); }} />
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script></body></html>

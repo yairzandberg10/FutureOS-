@@ -1,5 +1,9 @@
 package com.future.dialer.ui.incall
 
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.elevatedSurfaceColor
+import com.future.sharednav.theme.mutedTextColor
+import com.future.sharednav.theme.FutureShapes
 import android.app.WallpaperManager
 import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
@@ -78,6 +82,9 @@ fun InCallScreen(
     val isQuickMessageVisible by viewModel.isQuickMessageVisible.collectAsState()
     val context = LocalContext.current
 
+    // צבעי הסטטוס מגיעים מהערכה ולא מלוח Material: האדום/הירוק שהיו כאן
+    // (F44336 / 4CAF50) אינם בפלטה של המערכת ולא הגיבו למצב כהה/בהיר.
+    val futureTheme = com.future.sharednav.theme.LocalFutureTheme.current
     val onSurfaceColor = MaterialTheme.colorScheme.onBackground
     val onSurfaceMuted = onSurfaceColor.copy(alpha = 0.65f)
     // ה-scrim מעל טפט הרקע המטושטש חייב להיות בניגוד ל-onBackground (הצבע שבו כתוב
@@ -135,32 +142,32 @@ fun InCallScreen(
                     isPulsing = isRinging
                 )
                 Spacer(modifier = Modifier.height(28.dp))
-                Text(name, fontSize = 28.sp, fontWeight = FontWeight.Bold, color = onSurfaceColor)
-                Text(phoneNumber, fontSize = 18.sp, color = onSurfaceMuted)
+                Text(name, fontSize = FutureTypography.display, fontWeight = FontWeight.Bold, color = onSurfaceColor)
+                Text(phoneNumber, fontSize = FutureTypography.title, color = onSurfaceMuted)
                 Spacer(modifier = Modifier.height(24.dp))
                 Text(
                     text = if (isRinging) stringResource(R.string.incoming_call) else formatDuration(duration),
-                    fontSize = 24.sp,
+                    fontSize = FutureTypography.headline,
                     fontWeight = FontWeight.Medium,
                     color = onSurfaceColor.copy(alpha = 0.85f)
                 )
                 if (isRecording) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Rounded.FiberManualRecord, contentDescription = null, tint = Color(0xFFF44336), modifier = Modifier.size(14.dp))
+                        Icon(Icons.Rounded.FiberManualRecord, contentDescription = null, tint = futureTheme.dangerColor, modifier = Modifier.size(14.dp))
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text(stringResource(R.string.recording_in_progress), fontSize = 14.sp, color = Color(0xFFF44336))
+                        Text(stringResource(R.string.recording_in_progress), fontSize = FutureTypography.body, color = futureTheme.dangerColor)
                     }
                 }
                 if (!isRinging && isDialpadVisible) {
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
                         text = dtmfDigits.ifEmpty { "•" },
-                        fontSize = 22.sp,
+                        fontSize = FutureTypography.headline,
                         fontWeight = FontWeight.Medium,
                         color = onSurfaceColor,
                         modifier = Modifier
-                            .background(onSurfaceColor.copy(alpha = 0.08f), RoundedCornerShape(12.dp))
+                            .background(onSurfaceColor.copy(alpha = 0.08f), FutureShapes.md)
                             .padding(horizontal = 16.dp, vertical = 8.dp)
                     )
                     Spacer(modifier = Modifier.height(16.dp))
@@ -185,8 +192,8 @@ fun InCallScreen(
                     modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    RoundCallButton(icon = Icons.Rounded.CallEnd, background = Color(0xFFF44336), onClick = { viewModel.reject() })
-                    RoundCallButton(icon = Icons.Rounded.Call, background = Color(0xFF4CAF50), onClick = { viewModel.answer() }, focusRequester = answerFocusRequester)
+                    RoundCallButton(icon = Icons.Rounded.CallEnd, background = futureTheme.dangerColor, onClick = { viewModel.reject() })
+                    RoundCallButton(icon = Icons.Rounded.Call, background = futureTheme.successColor, onClick = { viewModel.answer() }, focusRequester = answerFocusRequester)
                 }
             } else {
                 Column(
@@ -194,15 +201,16 @@ fun InCallScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(24.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly
-                    ) {
+                    // ארבעה-חמישה אריחים בשתי עמודות, ולא שורה של עיגולים
+                    // (ui_kits/calls). בשורה אחת התוויות נחתכו, והאריח נותן
+                    // לכל פקד שטח פוקוס גדול מספיק במכשיר בלי מגע.
+                    CallControlGrid {
                         CallActionIcon(
                             icon = if (isMuted) Icons.Rounded.MicOff else Icons.Rounded.Mic,
                             label = if (isMuted) stringResource(R.string.unmute) else stringResource(R.string.mute),
                             onClick = { viewModel.toggleMute() },
                             tint = onSurfaceColor,
+                            modifier = Modifier.weight(1f),
                             isActive = isMuted
                         )
                         CallActionIcon(
@@ -210,6 +218,7 @@ fun InCallScreen(
                             label = if (isSpeakerOn) stringResource(R.string.handset) else stringResource(R.string.speaker),
                             onClick = { viewModel.toggleSpeaker() },
                             tint = onSurfaceColor,
+                            modifier = Modifier.weight(1f),
                             isActive = isSpeakerOn
                         )
                         CallActionIcon(
@@ -217,13 +226,15 @@ fun InCallScreen(
                             label = stringResource(R.string.keypad),
                             onClick = { viewModel.toggleDialpad() },
                             tint = onSurfaceColor,
+                            modifier = Modifier.weight(1f),
                             isActive = isDialpadVisible
                         )
                         CallActionIcon(
                             icon = Icons.Rounded.FiberManualRecord,
                             label = if (isRecording) stringResource(R.string.stop_recording) else stringResource(R.string.record),
                             onClick = { viewModel.toggleRecording(context) },
-                            tint = if (isRecording) Color(0xFFF44336) else onSurfaceColor,
+                            tint = if (isRecording) futureTheme.dangerColor else onSurfaceColor,
+                            modifier = Modifier.weight(1f),
                             isActive = isRecording
                         )
                         CallActionIcon(
@@ -231,10 +242,18 @@ fun InCallScreen(
                             label = if (isQuickMessageVisible) stringResource(R.string.close_message) else stringResource(R.string.send_message),
                             onClick = { viewModel.toggleQuickMessage() },
                             tint = onSurfaceColor,
+                            modifier = Modifier.weight(1f),
                             isActive = isQuickMessageVisible
                         )
                     }
-                    RoundCallButton(icon = Icons.Rounded.CallEnd, background = Color(0xFFF44336), size = 80.dp, onClick = { viewModel.hangUp() })
+                    com.future.sharednav.components.FutureButton(
+                        text = stringResource(R.string.end_call),
+                        theme = futureTheme,
+                        variant = com.future.sharednav.components.FutureButtonVariant.Destructive,
+                        fillMaxWidth = true,
+                        onClick = { viewModel.hangUp() },
+                        modifier = Modifier.padding(horizontal = 24.dp),
+                    )
                 }
             }
             }
@@ -275,7 +294,7 @@ private fun CallerAvatar(initial: String, accentColor: Color, onSurfaceColor: Co
                 .border(1.dp, accentColor.copy(alpha = 0.35f), CircleShape),
             contentAlignment = Alignment.Center
         ) {
-            Text(initial, fontSize = 52.sp, fontWeight = FontWeight.Bold, color = onSurfaceColor)
+            Text(initial, fontSize = FutureTypography.hero, fontWeight = FontWeight.Bold, color = onSurfaceColor)
         }
     }
 }
@@ -366,9 +385,9 @@ private fun DtmfKey(digit: Char, onSurfaceColor: Color, onClick: () -> Unit) {
             contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(digit.toString(), fontSize = 20.sp, fontWeight = FontWeight.Medium, color = onSurfaceColor)
+                Text(digit.toString(), fontSize = FutureTypography.screenTitle, fontWeight = FontWeight.Medium, color = onSurfaceColor)
                 if (letters.isNotEmpty()) {
-                    Text(letters, fontSize = 9.sp, color = onSurfaceColor.copy(alpha = 0.6f))
+                    Text(letters, fontSize = FutureTypography.caption, color = onSurfaceColor.copy(alpha = 0.6f))
                 }
             }
         }
@@ -379,7 +398,7 @@ private fun DtmfKey(digit: Char, onSurfaceColor: Color, onClick: () -> Unit) {
 private fun QuickMessagePanel(onSurfaceColor: Color, onSend: (String) -> Unit) {
     Surface(
         modifier = Modifier.widthIn(max = 320.dp),
-        shape = RoundedCornerShape(16.dp),
+        shape = FutureShapes.lg,
         color = onSurfaceColor.copy(alpha = 0.08f)
     ) {
         Column(modifier = Modifier.padding(8.dp)) {
@@ -387,7 +406,7 @@ private fun QuickMessagePanel(onSurfaceColor: Color, onSend: (String) -> Unit) {
                 FocusableItem(onClick = { onSend(message) }, accentColor = MaterialTheme.colorScheme.primary) {
                     Text(
                         text = message,
-                        fontSize = 15.sp,
+                        fontSize = FutureTypography.bodyLarge,
                         color = onSurfaceColor,
                         maxLines = 1,
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp)
@@ -419,26 +438,57 @@ private fun RoundCallButton(icon: ImageVector, background: Color, onClick: () ->
  * מצב פעיל (isActive) ממלא את העיגול בצבע ההדגשה, בדיוק כמו מסכי שיחה אמיתיים.
  */
 @Composable
-fun CallActionIcon(icon: ImageVector, label: String, onClick: () -> Unit, tint: Color = MaterialTheme.colorScheme.onSurface, isActive: Boolean = false) {
+fun CallActionIcon(icon: ImageVector, label: String, onClick: () -> Unit, tint: Color = MaterialTheme.colorScheme.onSurface, isActive: Boolean = false, modifier: Modifier = Modifier) {
     val accent = MaterialTheme.colorScheme.primary
     // tint/onPrimary נגזרים מה-theme במקום Color.White/Black קשיחים - בלי זה
     // האייקונים היו נעלמים על רקע בהיר (מצב לא-כהה) והניגוד במצב פעיל (isActive)
     // לא היה מובטח לצבע הדגשה שהמשתמש בחר.
-    FocusableItem(onClick = onClick, accentColor = accent) {
+    val theme = com.future.sharednav.theme.LocalFutureTheme.current
+    // אריח: 66dp, רדיוס 16dp, רקע "זכוכית" - או 20% מההדגשה כשהפקד דלוק.
+    FocusableItem(
+        onClick = onClick,
+        accentColor = accent,
+        idleBackgroundColor = if (isActive) accent.copy(alpha = 0.20f) else theme.elevatedSurfaceColor,
+        focusedBackgroundColor = if (isActive) accent.copy(alpha = 0.20f) else theme.elevatedSurfaceColor,
+        cornerRadius = com.future.sharednav.theme.FutureShapes.radiusLg,
+        scaleOnFocus = false,
+        modifier = modifier.height(66.dp),
+    ) {
         Column(
-            modifier = Modifier.padding(4.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
         ) {
-            Box(
-                modifier = Modifier
-                    .size(56.dp)
-                    .background(if (isActive) accent else tint.copy(alpha = 0.12f), CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(icon, contentDescription = label, tint = if (isActive) MaterialTheme.colorScheme.onPrimary else tint, modifier = Modifier.size(26.dp))
-            }
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(label, color = tint.copy(alpha = 0.8f), style = MaterialTheme.typography.labelMedium)
+            Icon(
+                icon,
+                contentDescription = label,
+                tint = if (isActive) accent else tint.copy(alpha = 0.7f),
+                modifier = Modifier.size(20.dp),
+            )
+            Spacer(modifier = Modifier.height(3.dp))
+            Text(
+                label,
+                color = theme.mutedTextColor,
+                fontSize = FutureTypography.summary,
+                maxLines = 1,
+            )
+        }
+    }
+}
+
+/** שתי עמודות של אריחי פקד, במרווח של 8dp (ui_kits/calls). */
+@Composable
+private fun CallControlGrid(content: @Composable androidx.compose.foundation.layout.FlowRowScope.() -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        androidx.compose.foundation.layout.FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            maxItemsInEachRow = 2,
+        ) {
+            content()
         }
     }
 }

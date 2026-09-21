@@ -19,7 +19,13 @@ data class TransitLeg(
     val intermediateStopNames: List<String> = emptyList(),
     /** רלוונטי רק לרגלי הליכה (WALK) - למשל "4 דק' · 300 מ'". */
     val walkDistanceMeters: Double? = null,
-    val walkDurationSeconds: Int? = null
+    val walkDurationSeconds: Int? = null,
+    /** stop_id של תחנת העלייה - רק ל-RIDE, נחוץ כדי לשאול SIRI על זמן אמת (ר' TransitRealtimeEnricher). */
+    val fromStopId: String? = null,
+    /** true אם departureSeconds/arrivalSeconds עודכנו מנתון SIRI חי, לא רק מהלו"ז הסטטי. */
+    val isRealtime: Boolean = false,
+    /** שניות איחור לעומת הלו"ז המתוכנן (שלילי = מוקדם) - תקף רק כש-isRealtime. */
+    val delaySeconds: Int? = null
 )
 
 data class TransitItinerary(
@@ -162,7 +168,8 @@ class TransitJourneyPlanner(private val dao: GtfsDao) {
             toStopName = dest.stop.name,
             departureSeconds = dep.departureSeconds,
             arrivalSeconds = arrival.arrivalSeconds,
-            intermediateStopNames = intermediate
+            intermediateStopNames = intermediate,
+            fromStopId = origin.stop.stopId
         )
         legs += walkLeg(dest.stop.name, "היעד שלך", dest.distanceMeters)
 
@@ -206,7 +213,8 @@ class TransitJourneyPlanner(private val dao: GtfsDao) {
             toStopName = transferStopEntityName,
             departureSeconds = firstLegDep.departureSeconds,
             arrivalSeconds = transferStop.arrivalSeconds,
-            intermediateStopNames = firstIntermediate
+            intermediateStopNames = firstIntermediate,
+            fromStopId = origin.stop.stopId
         )
         legs += TransitLeg(
             type = LegType.RIDE,
@@ -216,7 +224,8 @@ class TransitJourneyPlanner(private val dao: GtfsDao) {
             toStopName = dest.stop.name,
             departureSeconds = secondLegDep.departureSeconds,
             arrivalSeconds = secondLegArrival.arrivalSeconds,
-            intermediateStopNames = secondIntermediate
+            intermediateStopNames = secondIntermediate,
+            fromStopId = transferStop.stopId
         )
         legs += walkLeg(dest.stop.name, "היעד שלך", dest.distanceMeters)
 

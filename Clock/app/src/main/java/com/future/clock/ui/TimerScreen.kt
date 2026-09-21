@@ -1,5 +1,6 @@
 package com.future.clock.ui
 
+import com.future.sharednav.theme.FutureTypography
 import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -31,6 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.future.sharednav.nav.digitForKey
 import com.future.sharednav.theme.FutureTheme
 import kotlinx.coroutines.delay
 
@@ -45,7 +47,9 @@ private fun vibrate(context: android.content.Context) {
             context.getSystemService(android.content.Context.VIBRATOR_SERVICE) as Vibrator
         }
         vibrator.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 400, 200, 400, 200, 400), -1))
-    } catch (e: Exception) {}
+    } catch (e: Exception) {
+        android.util.Log.w("TimerScreen", "vibrate failed", e)
+    }
 }
 
 @Composable
@@ -131,8 +135,9 @@ fun TimerScreen(theme: FutureTheme, onBack: () -> Unit) {
                             "%02d:%02d".format(totalSeconds / 60, totalSeconds % 60)
                         } else mmssToText(mmss),
                         color = if (isFinished) theme.dangerColor else theme.textColor,
-                        fontSize = 48.sp,
-                        fontWeight = FontWeight.Light
+                        fontSize = FutureTypography.hero,
+                        fontWeight = FontWeight.Light,
+                        fontFamily = FutureTypography.monoFamily
                     )
                 }
 
@@ -140,7 +145,7 @@ fun TimerScreen(theme: FutureTheme, onBack: () -> Unit) {
                     Text(
                         "הקלד דקות ושניות במקלדת",
                         color = theme.textColor.copy(alpha = 0.4f),
-                        fontSize = 13.sp,
+                        fontSize = FutureTypography.summary,
                         modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center
                     )
@@ -150,7 +155,7 @@ fun TimerScreen(theme: FutureTheme, onBack: () -> Unit) {
                     Text(
                         "הזמן נגמר!",
                         color = theme.dangerColor,
-                        fontSize = 16.sp,
+                        fontSize = FutureTypography.bodyLarge,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -200,6 +205,6 @@ private fun TimerActionButton(label: String, color: Color, focusRequester: Focus
             .focusable(interactionSource = interactionSource),
         contentAlignment = Alignment.Center
     ) {
-        Text(label, color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+        Text(label, color = Color.Black, fontSize = FutureTypography.summary, fontWeight = FontWeight.Bold)
     }
 }

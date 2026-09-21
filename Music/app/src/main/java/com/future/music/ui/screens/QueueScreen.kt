@@ -1,5 +1,6 @@
 package com.future.music.ui.screens
 
+import com.future.sharednav.theme.FutureTypography
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -32,7 +33,7 @@ fun QueueScreen(playerState: PlayerUiState, theme: FutureTheme, onBack: () -> Un
 
         if (playerState.queue.isEmpty()) {
             Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Text("התור ריק", color = theme.textColor.copy(alpha = 0.5f), fontSize = 14.sp)
+                Text("התור ריק", color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.body)
             }
         } else {
             LazyColumn(

@@ -1,0 +1,45 @@
+<!-- @dsCard group="Core" viewport="1280x900" name="Icon set" subtitle="Future Glyphs — the custom 24-grid set, with Material Symbols as fallback" -->
+<!DOCTYPE html><html lang="he" dir="rtl"><head><meta charset="utf-8"><title>Future Glyphs</title>
+<link rel="stylesheet" href="../../styles.css">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>html,body{margin:0;background:var(--fos-bg);color:var(--fos-text);font-family:var(--fos-font)}
+.wrap{padding:40px 44px;direction:rtl}
+h1{font-family:var(--fos-font-display);font-size:34px;font-weight:700;margin:0 0 6px}
+p.sub{margin:0 0 32px;color:var(--fos-text-55);font-size:17px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:10px}
+.cell{display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 6px;border-radius:14px;background:var(--fos-text-08)}
+.cell span{font-size:11px;color:var(--fos-text-40);text-align:center;direction:ltr;word-break:break-all;line-height:1.3}
+.row{display:flex;align-items:center;gap:28px;margin:0 0 30px;padding:20px 24px;border-radius:18px;background:var(--fos-surface-card)}
+.row div{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:11px;color:var(--fos-text-40)}
+a{color:var(--fos-accent)}a:hover{opacity:.7}</style>
+</head><body><div id="root"></div>
+<script type="text/babel">
+const DS = window.FutureOSDesignSystem_3ab611;
+const FosIcon = DS.FosIcon || DS.Icon;
+const NAMES = DS.FOS_ICON_NAMES || (FosIcon && FosIcon.names) || [];
+function App(){
+  return (
+    <div className="wrap">
+      <h1>Future Glyphs</h1>
+      <p className="sub">סט מותאם אישית על רשת 24, קו 1.6, קצוות מעוגלים. שם שלא מצויר נופל חזרה ל-Material Symbols.</p>
+      <div className="row">
+        {[20,24,32,40,56].map(s => (
+          <div key={s}><FosIcon name="call" size={s} color="var(--fos-text)" />{s}px</div>
+        ))}
+        <div><FosIcon name="star" size={40} color="var(--fos-favorite)" fill={1} />fill</div>
+        <div><FosIcon name="home" size={40} color="var(--fos-accent)" />accent</div>
+        <div><FosIcon name="fingerprint" size={40} color="var(--fos-text-40)" />fallback</div>
+      </div>
+      <div className="grid">
+        {NAMES.map(n => (
+          <div className="cell" key={n}><FosIcon name={n} size={30} color="var(--fos-text)" /><span>{n}</span></div>
+        ))}
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script></body></html>

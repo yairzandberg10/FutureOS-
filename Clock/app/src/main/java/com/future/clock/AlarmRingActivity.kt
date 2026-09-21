@@ -1,5 +1,6 @@
 package com.future.clock
 
+import com.future.sharednav.theme.FutureTypography
 import android.media.AudioAttributes
 import android.media.Ringtone
 import android.media.RingtoneManager
@@ -113,7 +114,7 @@ class AlarmRingActivity : ComponentActivity() {
                             Text(
                                 "השעון המעורר מצלצל",
                                 color = theme.accentColor,
-                                fontSize = 20.sp,
+                                fontSize = FutureTypography.screenTitle,
                                 fontWeight = FontWeight.Bold,
                             )
                             Spacer(modifier = Modifier.height(24.dp))
@@ -125,14 +126,14 @@ class AlarmRingActivity : ComponentActivity() {
                             )
                             if (label.isNotBlank()) {
                                 Spacer(modifier = Modifier.height(8.dp))
-                                Text(label, color = theme.textColor.copy(alpha = 0.7f), fontSize = 18.sp)
+                                Text(label, color = theme.textColor.copy(alpha = 0.7f), fontSize = FutureTypography.title)
                             }
                             Spacer(modifier = Modifier.height(48.dp))
-                            Text("OK - ביטול", color = theme.textColor.copy(alpha = 0.6f), fontSize = 14.sp)
+                            Text("OK - ביטול", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.body)
                             Text(
                                 "כל מקש אחר - נודניק ($SNOOZE_MINUTES דקות)",
                                 color = theme.textColor.copy(alpha = 0.6f),
-                                fontSize = 14.sp,
+                                fontSize = FutureTypography.body,
                             )
                         }
                     }
@@ -176,11 +177,13 @@ class AlarmRingActivity : ComponentActivity() {
         try {
             ringtone?.stop()
         } catch (e: Exception) {
+            android.util.Log.w("AlarmRingActivity", "stopRinging failed", e)
         }
         ringtone = null
         try {
             vibratorManager?.cancel()
         } catch (e: Exception) {
+            android.util.Log.w("AlarmRingActivity", "stopRinging failed", e)
         }
     }
 

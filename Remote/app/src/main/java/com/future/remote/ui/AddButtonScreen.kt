@@ -1,5 +1,8 @@
 package com.future.remote.ui
 
+import com.future.sharednav.theme.onAccentColor
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -47,6 +50,7 @@ import com.future.remote.data.IrTransmitter
 import com.future.remote.data.NecEncoder
 import com.future.remote.data.RemoteButton
 import com.future.remote.data.RemoteRepository
+import com.future.sharednav.focus.escapeTextFieldFocusTrap
 import com.future.sharednav.theme.FutureTheme
 
 @Composable
@@ -79,7 +83,7 @@ fun AddButtonScreen(theme: FutureTheme, deviceId: String, onBack: () -> Unit, on
     }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-        Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
+        Box(modifier = Modifier.escapeTextFieldFocusTrap().fillMaxSize().background(theme.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize()) {
                 RemoteHeader(title = "כפתור חדש", theme = theme, onBack = onBack)
 
@@ -106,7 +110,7 @@ fun AddButtonScreen(theme: FutureTheme, deviceId: String, onBack: () -> Unit, on
                         Text(
                             "הקודים האלה בדרך כלל מתפרסמים באתרי היצרן או בפורומים של שלטים אוניברסליים, לפי דגם המכשיר.",
                             color = theme.textColor.copy(alpha = 0.5f),
-                            fontSize = 12.sp,
+                            fontSize = FutureTypography.label,
                             modifier = Modifier.padding(top = 8.dp)
                         )
                     } else {
@@ -164,7 +168,7 @@ fun AddButtonScreen(theme: FutureTheme, deviceId: String, onBack: () -> Unit, on
 
 @Composable
 private fun FieldLabel(text: String, theme: FutureTheme, topPadding: androidx.compose.ui.unit.Dp = 0.dp) {
-    Text(text, color = theme.textColor.copy(alpha = 0.6f), fontSize = 13.sp, modifier = Modifier.padding(top = topPadding, bottom = 6.dp))
+    Text(text, color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.summary, modifier = Modifier.padding(top = topPadding, bottom = 6.dp))
 }
 
 @Composable
@@ -197,9 +201,9 @@ private fun RemoteTextField(
 private fun EncodingChip(text: String, selected: Boolean, theme: FutureTheme, onClick: () -> Unit) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    val shape = RoundedCornerShape(14.dp)
+    val shape = FutureShapes.md
     val bg = if (selected) theme.accentColor.copy(alpha = 0.85f) else theme.textColor.copy(alpha = 0.08f)
-    val textColor = if (selected) Color.Black else theme.textColor
+    val textColor = if (selected) theme.onAccentColor else theme.textColor
 
     Box(
         modifier = Modifier
@@ -210,6 +214,6 @@ private fun EncodingChip(text: String, selected: Boolean, theme: FutureTheme, on
             .focusable(interactionSource = interactionSource)
             .padding(horizontal = 14.dp)
     ) {
-        Text(text, color = textColor, fontSize = 13.sp, fontWeight = FontWeight.Medium, modifier = Modifier.align(Alignment.Center))
+        Text(text, color = textColor, fontSize = FutureTypography.summary, fontWeight = FontWeight.Medium, modifier = Modifier.align(Alignment.Center))
     }
 }

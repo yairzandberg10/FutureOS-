@@ -1,4 +1,7 @@
 package com.future.tools.ui
+import com.future.sharednav.theme.onAccentColor
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.focus.bringIntoViewOnFocus
 
 import android.Manifest
@@ -64,7 +67,7 @@ fun TextScannerScreen(theme: FutureTheme, onBack: () -> Unit) {
 
                 if (!hasPermission) {
                     Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        Text("נדרשת הרשאת מצלמה כדי לסרוק טקסט", color = theme.textColor.copy(alpha = 0.6f), fontSize = 14.sp, modifier = Modifier.padding(horizontal = 32.dp))
+                        Text("נדרשת הרשאת מצלמה כדי לסרוק טקסט", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.body, modifier = Modifier.padding(horizontal = 32.dp))
                     }
                 } else {
                     Box(
@@ -72,7 +75,7 @@ fun TextScannerScreen(theme: FutureTheme, onBack: () -> Unit) {
                             .weight(1f)
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 8.dp)
-                            .clip(RoundedCornerShape(16.dp))
+                            .clip(FutureShapes.lg)
                     ) {
                         if (!isFrozen) {
                             CameraAnalyzerView(modifier = Modifier.fillMaxSize()) { proxy ->
@@ -96,7 +99,7 @@ fun TextScannerScreen(theme: FutureTheme, onBack: () -> Unit) {
                             Box(modifier = Modifier.fillMaxSize().background(theme.textColor.copy(alpha = 0.06f))) {
                                 LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp)) {
                                     item {
-                                        Text(liveText.ifBlank { "לא זוהה טקסט" }, color = theme.textColor, fontSize = 16.sp)
+                                        Text(liveText.ifBlank { "לא זוהה טקסט" }, color = theme.textColor, fontSize = FutureTypography.bodyLarge)
                                     }
                                 }
                             }
@@ -106,7 +109,7 @@ fun TextScannerScreen(theme: FutureTheme, onBack: () -> Unit) {
                     Text(
                         "התמיכה כרגע היא לטקסט לטיני וספרות (לא עברית) · הפניה למצלמה",
                         color = theme.textColor.copy(alpha = 0.35f),
-                        fontSize = 11.sp,
+                        fontSize = FutureTypography.caption,
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center
                     )
@@ -128,13 +131,13 @@ private fun FreezeButton(isFrozen: Boolean, theme: FutureTheme, onClick: () -> U
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
+            .clip(FutureShapes.lg)
             .background(bgColor)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
             .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
             .padding(vertical = 16.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(if (isFrozen) "חזור לסריקה חיה" else "הקפא ועיין בטקסט", color = if (isFocused) Color.Black else theme.textColor, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        Text(if (isFrozen) "חזור לסריקה חיה" else "הקפא ועיין בטקסט", color = if (isFocused) theme.onAccentColor else theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Bold)
     }
 }

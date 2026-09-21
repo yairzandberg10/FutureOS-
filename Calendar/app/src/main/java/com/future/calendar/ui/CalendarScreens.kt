@@ -1,4 +1,7 @@
 package com.future.calendar.ui
+import com.future.sharednav.theme.onAccentColor
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.focus.bringIntoViewOnFocus
 
 import androidx.compose.animation.animateColorAsState
@@ -57,12 +60,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
+import com.future.sharednav.components.AppDialog
 import com.future.calendar.data.CalendarEvent
 import com.future.calendar.data.DafYomi
 import com.future.calendar.data.DayZmanim
 import com.future.calendar.data.HebrewDateFormatter
 import com.future.calendar.data.HebrewNumerals
+import com.future.sharednav.focus.escapeTextFieldFocusTrap
 import com.future.sharednav.theme.FutureTheme
 import java.time.LocalDate
 import java.time.LocalTime
@@ -130,7 +134,7 @@ fun CalendarHomeScreen(
                     Text(
                         "אין מיקום GPS זמין - הזמנים מוצגים לפי עיר ברירת המחדל",
                         color = theme.textColor.copy(alpha = 0.55f),
-                        fontSize = 11.sp,
+                        fontSize = FutureTypography.caption,
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 2.dp)
                     )
                 }
@@ -222,7 +226,7 @@ private fun ViewModeTabRow(current: CalendarViewMode, theme: FutureTheme, onSele
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(FutureShapes.md)
                     .background(bgColor)
                     .clickable(interactionSource = interactionSource, indication = null, onClick = { onSelect(mode) })
                     .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
@@ -231,9 +235,9 @@ private fun ViewModeTabRow(current: CalendarViewMode, theme: FutureTheme, onSele
             ) {
                 Text(
                     label,
-                    fontSize = 13.sp,
+                    fontSize = FutureTypography.summary,
                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                    color = if (isSelected) Color.Black else theme.textColor
+                    color = if (isSelected) theme.onAccentColor else theme.textColor
                 )
             }
         }
@@ -247,13 +251,13 @@ private fun PermissionRequiredMessage(theme: FutureTheme, onRequestPermission: (
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text("כדי להציג את לוח השנה צריך לאשר הרשאה", color = theme.textColor.copy(alpha = 0.7f), fontSize = 15.sp, textAlign = TextAlign.Center)
+        Text("כדי להציג את לוח השנה צריך לאשר הרשאה", color = theme.textColor.copy(alpha = 0.7f), fontSize = FutureTypography.bodyLarge, textAlign = TextAlign.Center)
         Spacer(modifier = Modifier.height(16.dp))
         val interactionSource = remember { MutableInteractionSource() }
         val isFocused by interactionSource.collectIsFocusedAsState()
         Box(
             modifier = Modifier
-                .clip(RoundedCornerShape(20.dp))
+                .clip(FutureShapes.xl)
                 .background(if (isFocused) theme.accentColor else theme.accentColor.copy(alpha = 0.7f))
                 .clickable(interactionSource = interactionSource, indication = null, onClick = onRequestPermission)
                 .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
@@ -278,9 +282,9 @@ private fun MonthNavigationRow(month: YearMonth, theme: FutureTheme, useHebrewCa
     ) {
         FocusableIconButton(icon = Icons.Rounded.ChevronRight, theme = theme, onClick = onPrevMonth)
         Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(primaryLabel, textAlign = TextAlign.Center, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = theme.textColor)
+            Text(primaryLabel, textAlign = TextAlign.Center, fontSize = FutureTypography.title, fontWeight = FontWeight.SemiBold, color = theme.textColor)
             if (secondaryLabel.isNotBlank()) {
-                Text(secondaryLabel, textAlign = TextAlign.Center, fontSize = 11.sp, color = theme.textColor.copy(alpha = 0.5f))
+                Text(secondaryLabel, textAlign = TextAlign.Center, fontSize = FutureTypography.caption, color = theme.textColor.copy(alpha = 0.5f))
             }
         }
         FocusableIconButton(icon = Icons.Rounded.ChevronLeft, theme = theme, onClick = onNextMonth)
@@ -291,7 +295,7 @@ private fun MonthNavigationRow(month: YearMonth, theme: FutureTheme, useHebrewCa
 private fun WeekDayHeaderRow(theme: FutureTheme) {
     Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)) {
         HEBREW_WEEKDAY_LABELS.forEach { label ->
-            Text(label, modifier = Modifier.weight(1f), textAlign = TextAlign.Center, fontSize = 12.sp, color = theme.textColor.copy(alpha = 0.5f))
+            Text(label, modifier = Modifier.weight(1f), textAlign = TextAlign.Center, fontSize = FutureTypography.label, color = theme.textColor.copy(alpha = 0.5f))
         }
     }
 }
@@ -355,7 +359,9 @@ private fun MonthGrid(
                     Key.DirectionUp -> {
                         val next = current - 7
                         if (next in cells.indices) { focusedIndex = next; cells[next]?.let(onSelectDate); true }
-                        else { onPrevMonth(); true }
+                        // בשורה העליונה משאירים את מקש למעלה לצאת מהרשת, כדי שאפשר יהיה להגיע
+                        // לכפתורים מעל (הגדרות/היום/הוספה, טאבים, ניווט חודש) - לא "בולעים" אותו כמו שאר הכיוונים
+                        else false
                     }
                     Key.DirectionCenter, Key.Enter -> {
                         cells.getOrNull(current)?.let(onOpenDay)
@@ -391,7 +397,7 @@ private fun MonthGrid(
 
 @Composable
 private fun DayCell(date: LocalDate, isToday: Boolean, isSelected: Boolean, isFocused: Boolean, hasEvents: Boolean, theme: FutureTheme, useHebrewCalendar: Boolean = false) {
-    val shape = RoundedCornerShape(14.dp)
+    val shape = FutureShapes.md
     // ספרור עברי (ט״ו וכו') במקום מספר גרגוריאני לועזי - זה בדיוק ה"אותיות
     // עבריות" שהמשתמש ביקש, לא רק שם חודש עברי בתת-כותרת כמו שהיה קודם.
     val dayLabel = if (useHebrewCalendar) {
@@ -420,14 +426,14 @@ private fun DayCell(date: LocalDate, isToday: Boolean, isSelected: Boolean, isFo
                     dayLabel,
                     fontSize = if (useHebrewCalendar) 11.sp else 14.sp,
                     fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
-                    color = if (isToday) Color.Black else theme.textColor
+                    color = if (isToday) theme.onAccentColor else theme.textColor
                 )
             }
             Box(
                 modifier = Modifier
                     .padding(top = 3.dp)
                     .size(width = 12.dp, height = 3.dp)
-                    .clip(RoundedCornerShape(1.5.dp))
+                    .clip(FutureShapes.xs)
                     .background(if (hasEvents) theme.accentColor.copy(alpha = 0.85f) else Color.Transparent)
             )
         }
@@ -455,7 +461,7 @@ private fun WeekView(
         FocusableIconButton(icon = Icons.Rounded.ChevronRight, theme = theme, onClick = onPrevWeek)
         Text(
             "${start.dayOfMonth} ${start.month.getDisplayName(JavaTextStyle.SHORT, HE_LOCALE)} – ${days.last().dayOfMonth} ${days.last().month.getDisplayName(JavaTextStyle.SHORT, HE_LOCALE)}",
-            modifier = Modifier.weight(1f), textAlign = TextAlign.Center, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = theme.textColor
+            modifier = Modifier.weight(1f), textAlign = TextAlign.Center, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.SemiBold, color = theme.textColor
         )
         FocusableIconButton(icon = Icons.Rounded.ChevronLeft, theme = theme, onClick = onNextWeek)
     }
@@ -478,7 +484,7 @@ private fun WeekView(
 private fun WeekDayRow(date: LocalDate, isToday: Boolean, events: List<CalendarEvent>, theme: FutureTheme, onClick: () -> Unit, focusRequester: FocusRequester? = null) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    val shape = RoundedCornerShape(16.dp)
+    val shape = FutureShapes.lg
     val bgColor by animateColorAsState(if (isFocused) theme.textColor.copy(alpha = 0.16f) else theme.textColor.copy(alpha = 0.06f), label = "weekRowBg")
 
     Row(
@@ -497,18 +503,18 @@ private fun WeekDayRow(date: LocalDate, isToday: Boolean, events: List<CalendarE
             modifier = Modifier.size(38.dp).clip(CircleShape).then(if (isToday) Modifier.background(theme.accentColor) else Modifier.background(theme.textColor.copy(alpha = 0.08f))),
             contentAlignment = Alignment.Center
         ) {
-            Text(date.dayOfMonth.toString(), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = if (isToday) Color.Black else theme.textColor)
+            Text(date.dayOfMonth.toString(), fontSize = FutureTypography.body, fontWeight = FontWeight.Bold, color = if (isToday) theme.onAccentColor else theme.textColor)
         }
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(date.dayOfWeek.getDisplayName(JavaTextStyle.FULL, HE_LOCALE), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = theme.textColor)
+            Text(date.dayOfWeek.getDisplayName(JavaTextStyle.FULL, HE_LOCALE), fontSize = FutureTypography.summary, fontWeight = FontWeight.SemiBold, color = theme.textColor)
             if (events.isEmpty()) {
-                Text("אין אירועים", fontSize = 11.sp, color = theme.textColor.copy(alpha = 0.4f))
+                Text("אין אירועים", fontSize = FutureTypography.caption, color = theme.textColor.copy(alpha = 0.4f))
             } else {
                 val shown = events.take(2)
-                shown.forEach { Text("• ${it.title}", fontSize = 11.sp, color = theme.textColor.copy(alpha = 0.7f)) }
+                shown.forEach { Text("• ${it.title}", fontSize = FutureTypography.caption, color = theme.textColor.copy(alpha = 0.7f)) }
                 if (events.size > shown.size) {
-                    Text("+${events.size - shown.size} נוספים", fontSize = 11.sp, color = theme.textColor.copy(alpha = 0.4f))
+                    Text("+${events.size - shown.size} נוספים", fontSize = FutureTypography.caption, color = theme.textColor.copy(alpha = 0.4f))
                 }
             }
         }
@@ -530,6 +536,11 @@ private fun DayView(
     showWeather: Boolean
 ) {
     var menuFor by remember { mutableStateOf<CalendarEvent?>(null) }
+    // עוקב אחרי האירוע הממוקד כרגע ברשימת היום, כדי שמקש Options יוכל לפתוח
+    // את תפריט העריכה/מחיקה שלו - בלי זה התפריט לא נגיש בכלל במכשיר אמיתי,
+    // כי מקש Options הפיזי נחסם ברמת המערכת ולעולם לא מגיע כ-Key.Menu לאפליקציה.
+    var focusedEvent by remember { mutableStateOf<CalendarEvent?>(null) }
+    com.future.sharednav.nav.onOptionsKeyPress { if (focusedEvent != null) menuFor = focusedEvent }
     menuFor?.let { event ->
         EventOptionsMenu(
             event = event, theme = theme,
@@ -568,12 +579,12 @@ private fun DayView(
         Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             FocusableIconButton(icon = Icons.Rounded.ChevronRight, theme = theme, onClick = onPrevDay, focusRequester = prevDayFocusRequester)
             Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(date.dayOfWeek.getDisplayName(JavaTextStyle.FULL, HE_LOCALE), fontSize = 12.sp, color = theme.textColor.copy(alpha = 0.5f))
+                Text(date.dayOfWeek.getDisplayName(JavaTextStyle.FULL, HE_LOCALE), fontSize = FutureTypography.label, color = theme.textColor.copy(alpha = 0.5f))
                 Text(
                     "${date.dayOfMonth} ב${date.month.getDisplayName(JavaTextStyle.FULL, HE_LOCALE)}",
-                    fontSize = 16.sp, fontWeight = FontWeight.Bold, color = theme.textColor
+                    fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Bold, color = theme.textColor
                 )
-                if (hebrewDate.isNotBlank()) Text(hebrewDate, fontSize = 11.sp, color = theme.accentColor)
+                if (hebrewDate.isNotBlank()) Text(hebrewDate, fontSize = FutureTypography.caption, color = theme.accentColor)
             }
             FocusableIconButton(icon = Icons.Rounded.ChevronLeft, theme = theme, onClick = onNextDay)
         }
@@ -589,12 +600,12 @@ private fun DayView(
             if (events.isEmpty()) {
                 item {
                     Box(modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp), contentAlignment = Alignment.Center) {
-                        Text("אין אירועים ביום זה", color = theme.textColor.copy(alpha = 0.5f), fontSize = 14.sp)
+                        Text("אין אירועים ביום זה", color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.body)
                     }
                 }
             } else {
                 items(events, key = { it.id }) { event ->
-                    EventRow(event = event, theme = theme, onClick = { onEditEvent(event) }, onMenu = { menuFor = event })
+                    EventRow(event = event, theme = theme, onClick = { onEditEvent(event) }, onMenu = { menuFor = event }, onFocusChanged = { isFocused -> if (isFocused) focusedEvent = event })
                 }
             }
         }
@@ -604,12 +615,12 @@ private fun DayView(
 @Composable
 private fun ZmanimPanel(zmanim: DayZmanim, theme: FutureTheme) {
     Column(
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(theme.textColor.copy(alpha = 0.06f)).padding(14.dp)
+        modifier = Modifier.fillMaxWidth().clip(FutureShapes.lg).background(theme.textColor.copy(alpha = 0.06f)).padding(14.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Rounded.WbTwilight, contentDescription = null, tint = theme.accentColor, modifier = Modifier.size(16.dp))
             Spacer(modifier = Modifier.width(6.dp))
-            Text("זמני היום", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = theme.textColor.copy(alpha = 0.7f))
+            Text("זמני היום", fontSize = FutureTypography.label, fontWeight = FontWeight.SemiBold, color = theme.textColor.copy(alpha = 0.7f))
         }
         Spacer(modifier = Modifier.height(8.dp))
         val rows = buildList {
@@ -624,8 +635,8 @@ private fun ZmanimPanel(zmanim: DayZmanim, theme: FutureTheme) {
             Row(modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
                 rowPair.forEach { (label, time) ->
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(label, fontSize = 10.sp, color = theme.textColor.copy(alpha = 0.5f))
-                        Text("%02d:%02d".format(time.hour, time.minute), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = theme.textColor)
+                        Text(label, fontSize = FutureTypography.caption, color = theme.textColor.copy(alpha = 0.5f))
+                        Text("%02d:%02d".format(time.hour, time.minute), fontSize = FutureTypography.body, fontWeight = FontWeight.SemiBold, color = theme.textColor)
                     }
                 }
                 if (rowPair.size == 1) Spacer(modifier = Modifier.weight(1f))
@@ -637,14 +648,14 @@ private fun ZmanimPanel(zmanim: DayZmanim, theme: FutureTheme) {
 @Composable
 private fun DafYomiPanel(masechet: String, daf: Int, theme: FutureTheme) {
     Row(
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(theme.accentColor.copy(alpha = 0.12f)).padding(14.dp),
+        modifier = Modifier.fillMaxWidth().clip(FutureShapes.lg).background(theme.accentColor.copy(alpha = 0.12f)).padding(14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(Icons.Rounded.MenuBook, contentDescription = null, tint = theme.accentColor, modifier = Modifier.size(18.dp))
         Spacer(modifier = Modifier.width(10.dp))
         Column {
-            Text("דף יומי", fontSize = 10.sp, color = theme.textColor.copy(alpha = 0.5f))
-            Text("$masechet דף ${com.future.calendar.data.HebrewNumerals.toHebrew(daf)}", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = theme.textColor)
+            Text("דף יומי", fontSize = FutureTypography.caption, color = theme.textColor.copy(alpha = 0.5f))
+            Text("$masechet דף ${com.future.calendar.data.HebrewNumerals.toHebrew(daf)}", fontSize = FutureTypography.body, fontWeight = FontWeight.Bold, color = theme.textColor)
         }
     }
 }
@@ -652,19 +663,19 @@ private fun DafYomiPanel(masechet: String, daf: Int, theme: FutureTheme) {
 @Composable
 private fun WeatherPanel(weather: com.future.calendar.data.DailyWeather, theme: FutureTheme) {
     Row(
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(theme.textColor.copy(alpha = 0.06f)).padding(14.dp),
+        modifier = Modifier.fillMaxWidth().clip(FutureShapes.lg).background(theme.textColor.copy(alpha = 0.06f)).padding(14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(weather.emoji, fontSize = 26.sp)
+        Text(weather.emoji, fontSize = FutureTypography.headline)
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(weather.description, fontSize = 12.sp, color = theme.textColor.copy(alpha = 0.6f))
+            Text(weather.description, fontSize = FutureTypography.label, color = theme.textColor.copy(alpha = 0.6f))
             val tempLabel = if (weather.currentTemp != null) {
                 "${weather.currentTemp.toInt()}° (מקסימום ${weather.maxTemp.toInt()}° · מינימום ${weather.minTemp.toInt()}°)"
             } else {
                 "מקסימום ${weather.maxTemp.toInt()}° · מינימום ${weather.minTemp.toInt()}°"
             }
-            Text(tempLabel, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = theme.textColor)
+            Text(tempLabel, fontSize = FutureTypography.body, fontWeight = FontWeight.SemiBold, color = theme.textColor)
         }
     }
 }
@@ -688,7 +699,7 @@ private fun YearView(
 
     Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         FocusableIconButton(icon = Icons.Rounded.ChevronRight, theme = theme, onClick = onPrevYear)
-        Text(year.toString(), modifier = Modifier.weight(1f), textAlign = TextAlign.Center, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = theme.textColor)
+        Text(year.toString(), modifier = Modifier.weight(1f), textAlign = TextAlign.Center, fontSize = FutureTypography.title, fontWeight = FontWeight.SemiBold, color = theme.textColor)
         FocusableIconButton(icon = Icons.Rounded.ChevronLeft, theme = theme, onClick = onNextYear)
     }
 
@@ -733,7 +744,7 @@ private fun YearView(
 
 @Composable
 private fun MonthMiniCard(month: YearMonth, eventDayCount: Int, isFocused: Boolean, theme: FutureTheme, modifier: Modifier, onClick: () -> Unit) {
-    val shape = RoundedCornerShape(14.dp)
+    val shape = FutureShapes.md
     Column(
         modifier = modifier
             .clip(shape)
@@ -743,19 +754,20 @@ private fun MonthMiniCard(month: YearMonth, eventDayCount: Int, isFocused: Boole
             .padding(vertical = 14.dp, horizontal = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(month.month.getDisplayName(JavaTextStyle.SHORT, HE_LOCALE), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = theme.textColor)
+        Text(month.month.getDisplayName(JavaTextStyle.SHORT, HE_LOCALE), fontSize = FutureTypography.summary, fontWeight = FontWeight.SemiBold, color = theme.textColor)
         if (eventDayCount > 0) {
             Spacer(modifier = Modifier.height(4.dp))
-            Text("$eventDayCount ימים עם אירועים", fontSize = 9.sp, color = theme.textColor.copy(alpha = 0.5f))
+            Text("$eventDayCount ימים עם אירועים", fontSize = FutureTypography.caption, color = theme.textColor.copy(alpha = 0.5f))
         }
     }
 }
 
 @Composable
-private fun EventRow(event: CalendarEvent, theme: FutureTheme, onClick: () -> Unit, onMenu: () -> Unit) {
+private fun EventRow(event: CalendarEvent, theme: FutureTheme, onClick: () -> Unit, onMenu: () -> Unit, onFocusChanged: (Boolean) -> Unit = {}) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    val shape = RoundedCornerShape(16.dp)
+    LaunchedEffect(isFocused) { onFocusChanged(isFocused) }
+    val shape = FutureShapes.lg
     val bgColor by animateColorAsState(if (isFocused) theme.textColor.copy(alpha = 0.16f) else theme.textColor.copy(alpha = 0.06f), label = "eventRowBg")
     val timeLabel = if (event.allDay) "כל היום" else {
         val start = java.time.Instant.ofEpochMilli(event.startMillis).atZone(java.time.ZoneId.systemDefault()).toLocalTime()
@@ -780,13 +792,13 @@ private fun EventRow(event: CalendarEvent, theme: FutureTheme, onClick: () -> Un
         verticalAlignment = Alignment.CenterVertically
     ) {
         val stripeColor = if (event.color != 0) Color(event.color) else theme.accentColor
-        Box(modifier = Modifier.width(4.dp).height(36.dp).clip(RoundedCornerShape(2.dp)).background(stripeColor))
+        Box(modifier = Modifier.width(4.dp).height(36.dp).clip(FutureShapes.xs).background(stripeColor))
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(event.title, color = theme.textColor, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
-            Text(timeLabel, color = theme.textColor.copy(alpha = 0.5f), fontSize = 12.sp)
+            Text(event.title, color = theme.textColor, fontWeight = FontWeight.SemiBold, fontSize = FutureTypography.bodyLarge)
+            Text(timeLabel, color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.label)
             if (event.location.isNotBlank()) {
-                Text(event.location, color = theme.textColor.copy(alpha = 0.4f), fontSize = 12.sp)
+                Text(event.location, color = theme.textColor.copy(alpha = 0.4f), fontSize = FutureTypography.label)
             }
         }
     }
@@ -794,9 +806,9 @@ private fun EventRow(event: CalendarEvent, theme: FutureTheme, onClick: () -> Un
 
 @Composable
 private fun EventOptionsMenu(event: CalendarEvent, theme: FutureTheme, onDismiss: () -> Unit, onEdit: () -> Unit, onDelete: () -> Unit) {
-    Dialog(onDismissRequest = onDismiss) {
-        Column(modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(theme.surfaceColor).padding(vertical = 8.dp)) {
-            Text(event.title, color = theme.textColor.copy(alpha = 0.5f), fontSize = 12.sp, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
+    AppDialog(onDismissRequest = onDismiss) {
+        Column(modifier = Modifier.clip(FutureShapes.xl).background(theme.surfaceColor).padding(vertical = 8.dp)) {
+            Text(event.title, color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.label, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
             MenuOptionRow("ערוך אירוע", Icons.Rounded.Edit, theme = theme, onClick = onEdit)
             MenuOptionRow("מחק אירוע", Icons.Rounded.Delete, theme = theme, onClick = onDelete, isDestructive = true)
         }
@@ -819,7 +831,7 @@ private fun MenuOptionRow(label: String, icon: androidx.compose.ui.graphics.vect
     ) {
         Icon(icon, contentDescription = null, tint = if (isDestructive) theme.dangerColor else theme.textColor, modifier = Modifier.size(20.dp))
         Spacer(modifier = Modifier.width(14.dp))
-        Text(label, color = if (isDestructive) theme.dangerColor else theme.textColor, fontSize = 15.sp)
+        Text(label, color = if (isDestructive) theme.dangerColor else theme.textColor, fontSize = FutureTypography.bodyLarge)
     }
 }
 
@@ -849,21 +861,21 @@ fun EventEditDialog(
     var endHour by remember { mutableIntStateOf(initialEnd.hour) }
     var endMinute by remember { mutableIntStateOf(initialEnd.minute) }
 
-    Dialog(onDismissRequest = onDismiss) {
+    AppDialog(onDismissRequest = onDismiss) {
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
             Column(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(20.dp))
+                    .clip(FutureShapes.xl)
                     .background(theme.surfaceColor)
                     .verticalScroll(rememberScrollState())
                     .padding(20.dp)
             ) {
-                Text(if (editingEvent != null) "עריכת אירוע" else "אירוע חדש", color = theme.textColor, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text(if (editingEvent != null) "עריכת אירוע" else "אירוע חדש", color = theme.textColor, fontWeight = FontWeight.Bold, fontSize = FutureTypography.bodyLarge)
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     "${initialDate.dayOfMonth} ב${initialDate.month.getDisplayName(JavaTextStyle.FULL, HE_LOCALE)}",
                     color = theme.textColor.copy(alpha = 0.5f),
-                    fontSize = 12.sp
+                    fontSize = FutureTypography.label
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 EditField("כותרת", title, theme) { title = it }
@@ -921,7 +933,7 @@ private fun AllDayToggleRow(allDay: Boolean, theme: FutureTheme, onToggle: () ->
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(FutureShapes.md)
             .background(if (isFocused) theme.textColor.copy(alpha = 0.1f) else Color.Transparent)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onToggle)
             .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
@@ -929,15 +941,15 @@ private fun AllDayToggleRow(allDay: Boolean, theme: FutureTheme, onToggle: () ->
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text("כל היום", color = theme.textColor, fontSize = 14.sp)
+        Text("כל היום", color = theme.textColor, fontSize = FutureTypography.body)
         Box(
             modifier = Modifier
                 .size(width = 44.dp, height = 24.dp)
-                .clip(RoundedCornerShape(12.dp))
+                .clip(FutureShapes.md)
                 .background(if (allDay) theme.accentColor else theme.textColor.copy(alpha = 0.2f)),
             contentAlignment = if (allDay) Alignment.CenterEnd else Alignment.CenterStart
         ) {
-            Box(modifier = Modifier.padding(3.dp).size(18.dp).clip(CircleShape).background(if (allDay) Color.Black else theme.textColor))
+            Box(modifier = Modifier.padding(3.dp).size(18.dp).clip(CircleShape).background(if (allDay) theme.onAccentColor else theme.textColor))
         }
     }
 }
@@ -947,7 +959,7 @@ private fun TimeStepperField(label: String, hour: Int, minute: Int, theme: Futur
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
     val focusManager = LocalFocusManager.current
-    val shape = RoundedCornerShape(12.dp)
+    val shape = FutureShapes.md
     Column(
         modifier = Modifier
             .clip(shape)
@@ -973,24 +985,25 @@ private fun TimeStepperField(label: String, hour: Int, minute: Int, theme: Futur
             }
             .padding(horizontal = 16.dp, vertical = 10.dp)
     ) {
-        Text(label, color = theme.textColor.copy(alpha = 0.5f), fontSize = 11.sp)
-        Text("%02d:%02d".format(hour, minute), color = theme.textColor, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+        Text(label, color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.caption)
+        Text("%02d:%02d".format(hour, minute), color = theme.textColor, fontSize = FutureTypography.title, fontWeight = FontWeight.SemiBold)
     }
 }
 
 @Composable
 private fun EditField(label: String, value: String, theme: FutureTheme, onValueChange: (String) -> Unit) {
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
-        Text(label, color = theme.textColor.copy(alpha = 0.5f), fontSize = 11.sp)
+        Text(label, color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.caption)
         BasicTextField(
             value = value,
             onValueChange = onValueChange,
-            textStyle = TextStyle(color = theme.textColor, fontSize = 14.sp),
+            textStyle = TextStyle(color = theme.textColor, fontSize = FutureTypography.body),
             cursorBrush = SolidColor(theme.accentColor),
             singleLine = true,
             modifier = Modifier
+                .escapeTextFieldFocusTrap()
                 .fillMaxWidth()
-                .background(theme.textColor.copy(alpha = 0.06f), RoundedCornerShape(10.dp))
+                .background(theme.textColor.copy(alpha = 0.06f), FutureShapes.sm)
                 .padding(10.dp)
         )
     }
@@ -1001,13 +1014,13 @@ private fun EditDialogButton(text: String, bg: Color, fg: Color, onClick: () -> 
     val interactionSource = remember { MutableInteractionSource() }
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(16.dp))
+            .clip(FutureShapes.lg)
             .background(bg)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
             .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
             .padding(horizontal = 20.dp, vertical = 10.dp)
     ) {
-        Text(text, color = fg, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+        Text(text, color = fg, fontWeight = FontWeight.Bold, fontSize = FutureTypography.summary)
     }
 }
 
@@ -1049,7 +1062,7 @@ fun CalendarSettingsScreen(
                 // Icons.AutoMirrored.Rounded.ArrowBack (לא ArrowForward!) - תחת
                 // LayoutDirection.Rtl הכפוי, AutoMirrored הופך אותו לחץ ימינה כראוי לכפתור "חזור".
                 FocusableIconButton(icon = Icons.AutoMirrored.Rounded.ArrowBack, theme = theme, onClick = onBack, focusRequester = backFocusRequester)
-                Text("הגדרות לוח שנה", modifier = Modifier.padding(start = 8.dp), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = theme.textColor)
+                Text("הגדרות לוח שנה", modifier = Modifier.padding(start = 8.dp), fontSize = FutureTypography.title, fontWeight = FontWeight.Bold, color = theme.textColor)
             }
 
             LazyColumn(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -1099,14 +1112,14 @@ fun CalendarSettingsScreen(
 
 @Composable
 private fun SettingsSectionLabel(text: String, theme: FutureTheme) {
-    Text(text, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = theme.textColor.copy(alpha = 0.5f), modifier = Modifier.padding(vertical = 6.dp, horizontal = 4.dp))
+    Text(text, fontSize = FutureTypography.label, fontWeight = FontWeight.SemiBold, color = theme.textColor.copy(alpha = 0.5f), modifier = Modifier.padding(vertical = 6.dp, horizontal = 4.dp))
 }
 
 @Composable
 private fun SettingsToggleRow(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, sublabel: String, checked: Boolean, theme: FutureTheme, onToggle: () -> Unit) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    val shape = RoundedCornerShape(16.dp)
+    val shape = FutureShapes.lg
     val bgColor by animateColorAsState(if (isFocused) theme.textColor.copy(alpha = 0.16f) else theme.textColor.copy(alpha = 0.06f), label = "settingsRowBg")
 
     Row(
@@ -1123,17 +1136,17 @@ private fun SettingsToggleRow(icon: androidx.compose.ui.graphics.vector.ImageVec
         Icon(icon, contentDescription = null, tint = theme.textColor.copy(alpha = 0.7f), modifier = Modifier.size(20.dp))
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(label, fontSize = 14.sp, color = theme.textColor)
-            Text(sublabel, fontSize = 11.sp, color = theme.textColor.copy(alpha = 0.5f))
+            Text(label, fontSize = FutureTypography.body, color = theme.textColor)
+            Text(sublabel, fontSize = FutureTypography.caption, color = theme.textColor.copy(alpha = 0.5f))
         }
         Box(
             modifier = Modifier
                 .size(width = 44.dp, height = 24.dp)
-                .clip(RoundedCornerShape(12.dp))
+                .clip(FutureShapes.md)
                 .background(if (checked) theme.accentColor else theme.textColor.copy(alpha = 0.2f)),
             contentAlignment = if (checked) Alignment.CenterEnd else Alignment.CenterStart
         ) {
-            Box(modifier = Modifier.padding(3.dp).size(18.dp).clip(CircleShape).background(if (checked) Color.Black else theme.textColor))
+            Box(modifier = Modifier.padding(3.dp).size(18.dp).clip(CircleShape).background(if (checked) theme.onAccentColor else theme.textColor))
         }
     }
 }
@@ -1150,7 +1163,7 @@ private fun RegionRow(region: com.future.calendar.data.Region, isSelected: Boole
         },
         label = "regionRowBg"
     )
-    val shape = RoundedCornerShape(14.dp)
+    val shape = FutureShapes.md
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -1164,6 +1177,6 @@ private fun RegionRow(region: com.future.calendar.data.Region, isSelected: Boole
     ) {
         Icon(Icons.Rounded.LocationOn, contentDescription = null, tint = if (isSelected) theme.accentColor else theme.textColor.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
         Spacer(modifier = Modifier.width(10.dp))
-        Text(region.displayName, fontSize = 14.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal, color = theme.textColor)
+        Text(region.displayName, fontSize = FutureTypography.body, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal, color = theme.textColor)
     }
 }

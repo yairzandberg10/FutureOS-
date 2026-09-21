@@ -1,4 +1,5 @@
 package com.future.tools.ui
+import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.focus.bringIntoViewOnFocus
 
 import android.widget.Toast
@@ -23,7 +24,6 @@ import androidx.compose.material.icons.rounded.Casino
 import androidx.compose.material.icons.rounded.Checklist
 import androidx.compose.material.icons.rounded.DocumentScanner
 import androidx.compose.material.icons.rounded.Explore
-import androidx.compose.material.icons.rounded.FlashlightOn
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.LocalCafe
 import androidx.compose.material.icons.rounded.Numbers
@@ -60,9 +60,8 @@ import com.future.sharednav.theme.FutureTheme
 data class ToolEntry(val icon: ImageVector, val label: String, val subtitle: String, val route: ToolRoute)
 
 val TOOL_ENTRIES = listOf(
-    // כלים קיימים - המחשבון והשעון עצר/טיימר עברו לאפליקציות עצמאיות משלהם
-    // (Calculator, Clock) ואינם חלק מ-Tools יותר.
-    ToolEntry(Icons.Rounded.FlashlightOn, "פנס", "הדלקה/כיבוי מהירים", ToolRoute.Flashlight),
+    // כלים קיימים - המחשבון, השעון עצר/טיימר והפנס עברו לאפליקציות עצמאיות
+    // משלהם (Calculator, Clock, Flashlight) ואינם חלק מ-Tools יותר.
     ToolEntry(Icons.Rounded.SwapHoriz, "ממיר יחידות", "אורך, משקל, טמפרטורה, נפח", ToolRoute.UnitConverter),
     ToolEntry(Icons.Rounded.Explore, "מצפן וגובה", "כיוון מגנטי וגובה ברומטרי", ToolRoute.Compass),
     ToolEntry(Icons.Rounded.Straighten, "פלס", "איזון אופקי לפי חיישן תאוצה", ToolRoute.Level),
@@ -146,7 +145,7 @@ private fun PinToHomeButton(entry: ToolEntry, theme: FutureTheme) {
     Box(
         modifier = Modifier
             .size(36.dp)
-            .clip(RoundedCornerShape(18.dp))
+            .clip(FutureShapes.lg)
             .background(bgColor)
             .clickable(interactionSource = interactionSource, indication = null) {
                 val next = !isPinned

@@ -1,4 +1,6 @@
 package com.future.files.ui
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.focus.bringIntoViewOnFocus
 
 import android.graphics.Bitmap
@@ -120,7 +122,7 @@ fun TextViewerScreen(file: File, theme: FutureTheme, onBack: () -> Unit) {
                 Text(
                     text = content ?: "טוען...",
                     color = theme.textColor,
-                    fontSize = 13.sp,
+                    fontSize = FutureTypography.summary,
                     fontFamily = FontFamily.Monospace,
                     modifier = Modifier.align(Alignment.TopStart)
                 )
@@ -227,7 +229,7 @@ fun AudioPlayerScreen(file: File, theme: FutureTheme, onBack: () -> Unit) {
                 verticalArrangement = Arrangement.Center
             ) {
                 Box(
-                    modifier = Modifier.size(140.dp).clip(RoundedCornerShape(28.dp)).background(theme.accentColor.copy(alpha = 0.15f)),
+                    modifier = Modifier.size(140.dp).clip(FutureShapes.xxl).background(theme.accentColor.copy(alpha = 0.15f)),
                     contentAlignment = Alignment.Center
                 ) {
                     val interactionSource = remember { MutableInteractionSource() }
@@ -254,18 +256,18 @@ fun AudioPlayerScreen(file: File, theme: FutureTheme, onBack: () -> Unit) {
                     }
                 }
                 Spacer(modifier = Modifier.height(24.dp))
-                Text(file.name, color = theme.textColor, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 2)
+                Text(file.name, color = theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.SemiBold, maxLines = 2)
                 Spacer(modifier = Modifier.height(12.dp))
                 if (loadFailed) {
-                    Text("לא ניתן לנגן קובץ זה", color = theme.dangerColor, fontSize = 13.sp)
+                    Text("לא ניתן לנגן קובץ זה", color = theme.dangerColor, fontSize = FutureTypography.summary)
                 }
                 if (durationMs > 0) {
                     val progress = (positionMs.toFloat() / durationMs).coerceIn(0f, 1f)
-                    Box(modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)).background(theme.textColor.copy(alpha = 0.15f))) {
-                        Box(modifier = Modifier.fillMaxHeight().fillMaxWidth(progress).background(theme.accentColor, RoundedCornerShape(2.dp)))
+                    Box(modifier = Modifier.fillMaxWidth().height(4.dp).clip(FutureShapes.xs).background(theme.textColor.copy(alpha = 0.15f))) {
+                        Box(modifier = Modifier.fillMaxHeight().fillMaxWidth(progress).background(theme.accentColor, FutureShapes.xs))
                     }
                     Spacer(modifier = Modifier.height(6.dp))
-                    Text("${formatMs(positionMs)} / ${formatMs(durationMs)}", color = theme.textColor.copy(alpha = 0.5f), fontSize = 12.sp)
+                    Text("${formatMs(positionMs)} / ${formatMs(durationMs)}", color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.label)
                 }
             }
         }
@@ -343,10 +345,10 @@ fun PdfViewerScreen(file: File, theme: FutureTheme, onBack: () -> Unit) {
             ViewerHeader(file.name, theme, onBack)
             when {
                 isLoading -> Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    Text("טוען PDF...", color = theme.textColor.copy(alpha = 0.6f), fontSize = 13.sp)
+                    Text("טוען PDF...", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.summary)
                 }
                 loadFailed || pageCount == 0 -> Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    Text("לא ניתן להציג את הקובץ", color = theme.textColor.copy(alpha = 0.6f), fontSize = 13.sp)
+                    Text("לא ניתן להציג את הקובץ", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.summary)
                 }
                 else -> LazyColumn(
                     state = listState,

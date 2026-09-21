@@ -1,4 +1,6 @@
 package com.future.gallery.ui
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.focus.bringIntoViewOnFocus
 
 import android.graphics.Bitmap
@@ -101,7 +103,7 @@ private fun AlbumCard(album: Album, theme: FutureTheme, onClick: () -> Unit, foc
     }
 
     val scale by animateFloatAsState(if (isFocused) 0.97f else 1f, label = "albumScale")
-    val shape = RoundedCornerShape(16.dp)
+    val shape = FutureShapes.lg
 
     Column(
         modifier = Modifier
@@ -133,11 +135,11 @@ private fun AlbumCard(album: Album, theme: FutureTheme, onClick: () -> Unit, foc
                 album.bucketName,
                 color = theme.textColor,
                 fontWeight = FontWeight.SemiBold,
-                fontSize = 13.sp,
+                fontSize = FutureTypography.summary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            Text("${album.count} פריטים", color = theme.textColor.copy(alpha = 0.5f), fontSize = 11.sp)
+            Text("${album.count} פריטים", color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.caption)
         }
     }
 }

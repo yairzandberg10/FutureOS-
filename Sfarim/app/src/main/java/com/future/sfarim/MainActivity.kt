@@ -77,7 +77,7 @@ private fun SfarimApp() {
     // מתגלגל בכל לחיצה על "נסה שוב" במסך "הספרייה לא הותקנה" - כדי שאפשר יהיה
     // לבדוק מחדש אם sefaria.db כבר הועבר ב-adb push בלי לצאת ולפתוח את האפליקציה מחדש.
     var dbRetryKey by remember { mutableStateOf(0) }
-    val db by produceState<android.database.sqlite.SQLiteDatabase?>(initialValue = null, context, dbRetryKey) {
+    val db by produceState<org.sqlite.database.sqlite.SQLiteDatabase?>(initialValue = null, context, dbRetryKey) {
         isLoadingDb = true
         value = withContext(Dispatchers.IO) { LibraryDatabase.openOrNull(context) }
         isLoadingDb = false

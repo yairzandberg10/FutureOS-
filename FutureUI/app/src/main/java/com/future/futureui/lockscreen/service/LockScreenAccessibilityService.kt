@@ -31,6 +31,7 @@ import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.future.futureui.lockscreen.ui.LockScreenScreen
 import com.future.futureui.ui.theme.FutureUITheme
 import com.future.futureui.utils.FutureUIActions
+import com.future.futureui.utils.FutureUIState
 
 class LockScreenAccessibilityService : AccessibilityService(), LifecycleOwner, SavedStateRegistryOwner, ViewModelStoreOwner {
 
@@ -65,6 +66,15 @@ class LockScreenAccessibilityService : AccessibilityService(), LifecycleOwner, S
                 FutureUIActions.ACTION_CALL_RINGING -> {
                     suppressForActiveCall = true
                     if (isVisible) hideLockScreen()
+                    // ה-fullScreenIntent הרגיל של ההתראה מופעל אוטומטית ע"י המערכת רק
+                    // כשהמסך כבוי/נעול (מסך הנעילה כבר מטופל למעלה) - כשמסך הבית עצמו
+                    // הוא האפליקציה בחזית צריך לפתוח את מסך השיחה במפורש כדי שגם שם
+                    // השיחה תתקבל במסך מלא, לא רק כהתראה.
+                    if (FutureUIState.foregroundPackage == HOME_PACKAGE) {
+                        val launchIntent = Intent(FutureUIActions.ACTION_LAUNCH_CALL_UI)
+                        launchIntent.setPackage("com.future.dialer")
+                        sendBroadcast(launchIntent)
+                    }
                 }
                 FutureUIActions.ACTION_CALL_ENDED -> {
                     suppressForActiveCall = false
@@ -101,7 +111,11 @@ class LockScreenAccessibilityService : AccessibilityService(), LifecycleOwner, S
         // For testing, show it immediately or on a key
     }
 
-    override fun onAccessibilityEvent(event: AccessibilityEvent?) {}
+    override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        if (event?.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+            event.packageName?.toString()?.let { com.future.futureui.utils.FutureUIState.foregroundPackage = it }
+        }
+    }
     override fun onInterrupt() {}
 
     // דאבל-קליק גלובלי על OK (בכל מסך במערכת, כל עוד השירות הזה פעיל) פותח
@@ -257,5 +271,6 @@ class LockScreenAccessibilityService : AccessibilityService(), LifecycleOwner, S
     companion object {
         private const val VOICE_ASSISTANT_PACKAGE = "com.future.assistant"
         private const val DOUBLE_CLICK_WINDOW_MS = 300L
+        private const val HOME_PACKAGE = "com.future.futurelauncher"
     }
 }

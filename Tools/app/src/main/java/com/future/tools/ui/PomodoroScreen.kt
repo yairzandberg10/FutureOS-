@@ -1,5 +1,6 @@
 package com.future.tools.ui
 
+import com.future.sharednav.theme.FutureTypography
 import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -41,7 +42,9 @@ private fun vibrate(context: android.content.Context) {
             context.getSystemService(android.content.Context.VIBRATOR_SERVICE) as Vibrator
         }
         vibrator.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 300, 150, 300), -1))
-    } catch (e: Exception) {}
+    } catch (e: Exception) {
+        android.util.Log.w("PomodoroScreen", "vibrate failed", e)
+    }
 }
 
 @Composable
@@ -93,7 +96,7 @@ fun PomodoroScreen(theme: FutureTheme, onBack: () -> Unit) {
 
                 Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(phase.label, color = phase.color, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        Text(phase.label, color = phase.color, fontSize = FutureTypography.title, fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
                             "%02d:%02d".format(minutesText, secondsText),
@@ -102,7 +105,7 @@ fun PomodoroScreen(theme: FutureTheme, onBack: () -> Unit) {
                             fontWeight = FontWeight.Light
                         )
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text("מחזורי מיקוד שהושלמו: $completedFocusCycles", color = theme.textColor.copy(alpha = 0.5f), fontSize = 13.sp)
+                        Text("מחזורי מיקוד שהושלמו: $completedFocusCycles", color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.summary)
                     }
                 }
 
@@ -140,6 +143,6 @@ private fun PomodoroActionButton(label: String, color: Color, onClick: () -> Uni
             .focusable(interactionSource = interactionSource),
         contentAlignment = Alignment.Center
     ) {
-        Text(label, color = Color.Black, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Text(label, color = Color.Black, fontSize = FutureTypography.label, fontWeight = FontWeight.Bold)
     }
 }

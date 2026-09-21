@@ -4,6 +4,365 @@ This repo has no carried-over git history (see root [README](README.md)), so thi
 
 ## Unreleased
 
+### Reconciled the shared tokens with the FutureOS Design System
+
+`design/futureos-ds/` (extracted from `design/FutureOS Design System.zip`) is now
+the source of truth for the token layer. It was derived from this codebase
+through a Figma-export pipeline, so most values already agreed; the entries
+below are the places where they did not. Everything here is in `SharedKeypadNav`,
+so all 28 apps pick it up without an app-side change.
+
+#### Fixed
+
+- **The divider was inverted between themes.** `dividerColor` was white at 10%
+  in dark and black at 12% in light. `tokens/colors.css` and
+  `guidelines/colors-alpha-ladder.html` both put the divider at **12% dark /
+  10% light**. Every card hairline in the suite was one step off in both modes.
+- **`Clock`'s world-clock row did not compile.** An earlier find/replace turned
+  `androidx.compose.foundation.shape.RoundedCornerShape(12.dp)` into
+  `androidx.compose.foundation.shape.FutureShapes.md`, which is not a real name.
+  Restored to `FutureShapes.md` and moved its off-ladder 5% background onto
+  `idleChipColor` (6%).
+
+#### Added
+
+- **Three radius steps that were being collapsed.** `radiusTextField` (10dp),
+  `radiusChip` (14dp) and `radiusDialog` (20dp). Code asking for them landed on
+  the neighbouring step, so a text field rounded like a key, a chip like a
+  button, and a dialog like the glass surface. `snap()` now routes each to its
+  own step, and `ConfirmDialog` uses the 20dp it was specified at rather than 22.
+- **The full text alpha ladder**, as `textAlpha(percent)` plus the named roles
+  `guidelines/colors-alpha-ladder.html` assigns: `secondaryTextColor` (70%),
+  `sectionHeaderColor` (55%), `chevronColor` (30%), the focus and idle
+  backgrounds (`focusFillIconColor`, `focusFillSettingColor`, `focusFillMenuColor`,
+  `focusFillChipColor`, `idleChipColor`, `idleFieldColor`), and the fixed
+  heads-up and switch-track colors. Depth in this system is alpha over the text
+  color, and the ladder is a closed table rather than a per-screen choice.
+- **Both focus border widths.** `guidelines/focus-spec.html` separates them on
+  purpose: **1.5dp on a list row, 2dp on a control**. They had been unified to
+  2dp. `focusBorderWidth` stays as an alias for the control width, so no call
+  site broke, and `FocusableItem` now defaults to the list width.
+- **Focus row heights** (`rowHeightList` 56dp, `rowHeightSetting` 54dp,
+  `rowHeightMenu` 50dp, `rowHeightDialogButton` 44dp, `rowHeightTopBarButton`
+  36dp), the `focusScale` constant (1.02), and the fixed screen size
+  (320×480dp = 640×960px at density 2.0). There is no touch here, so Material's
+  48dp rule does not apply; what applies is that the focused row is unmistakable.
+- **`FutureElevation`** — the six levels, of which only the card carries a real
+  shadow (4dp dark / 1dp light). Glass is tone with no shadow and dialogs are
+  separated by the scrim, which is what the code already did without saying so.
+- **Type tokens the scale was missing**: `dialog` (15sp) and `badge` (10sp),
+  plus weight, line-height (1.3) and section letter-spacing (1sp) tokens.
+
+#### Changed
+
+- **`dialogFontSize` is 15sp again.** It had been folded into `bodyLarge` (16sp)
+  as an orphan value; `tokens/typography.css` counts it as one of the seven
+  sizes, carrying dialog content, menu rows and fields.
+- **`mutedTextColor` is the text color at 60%**, not a fixed `#B0B0B0`/`#444444`.
+  Both remain above the AA threshold on their surfaces.
+- **`scrimColor` is 60% black in both themes**, not 62%/42%. The design system
+  states it as a theme-independent value.
+- **The top-bar icon button is focused by a 30% accent fill and no border.** It
+  was 22% plus a border; the focus spec gives it the stronger fill precisely so
+  it needs no ring. `raisedSurfaceColor`'s light value moved to `#D1D1D6` to
+  match the token.
+
+#### Not changed, and why
+
+- **Motion.** `tokens/motion.css` proposes 0/150/200/300/450ms and the four
+  stock Android easing curves. `FutureMotion` is 90/140/200/280ms with three
+  custom curves, and the reason is written into it: on a keypad device every
+  transition is a key press, and animation time accumulates into lag. The two
+  agree on the one that matters most (200ms standard). The design system labels
+  its own scale "the proposed unification", so this is a live decision rather
+  than a deviation, and it would change the feel of all 28 apps.
+- **The component gap.** The design system documents 25 components;
+  `SharedKeypadNav` ships 8. `ListItem`, `SettingItem`, `Switch`, `Slider`,
+  `TextField`, `Chip`, `TimePicker`, `OptionsMenu`, `BottomNav`, `TabRow`,
+  `Badge`, `ProgressBar`, `HeadsUpNotification`, `Card`, `SectionHeader`,
+  `Divider` and `Button` are still re-implemented per app.
+- **`SystemUI` is outside the design system.** It depends on `SharedKeypadNav`
+  for navigation and actions but never imports `com.future.sharednav.theme`:
+  40 hand-written colors, 23 literal radii and 61 literal font sizes. Its
+  control centre, power menu and lock screen therefore do not respond to
+  dark/light mode or to the user's accent color. `Frixa` has a smaller version
+  of the same problem (14/4/20).
+
+### Design system completion and system-wide motion
+
+The suite had partial tokens that almost nothing used, and no motion. A survey
+before this change found 18 different corner radii, 29 different font sizes,
+20 hand-written animation durations, 119 raw hex colors, seven separately
+maintained Material themes, and screen changes that swapped content in a single
+frame in every app except `Settings` (a 120ms fade). Everything below lives in
+`SharedKeypadNav` and is documented in its README.
+
+#### Tokens
+
+- **`FutureShapes`** — six radius steps (4/8/12/16/22/28dp) plus `pill`. 16, 8
+  and 22 were already `FutureDimens` tokens and the 22 is in
+  `design/keyboard-panel/Tokens.dc.html`; the others are the clusters the code
+  already used. `FutureDimens`' radius names are now aliases onto this scale.
+- **`FutureTypography`** — ten size roles (11/12/13/14/16/17/20/24/34/48sp).
+  13, 17, 20 and 34 are the sizes already approved on the device in `Settings`,
+  so those screens don't move. `FutureType(multiplier)` is now the same scale
+  times the font-size slider, with its old property names kept. Sizes above 48sp
+  (clock faces, calculator display) stay literal.
+- **Color roles** — `mutedTextColor`, `subtleTextColor`, `dividerColor`,
+  `elevatedSurfaceColor`, `raisedSurfaceColor`, `focusFillColor`,
+  `readableAccentColor`, `onAccentColor`, `onReadableAccentColor`, `scrimColor`,
+  as extension properties so `FutureTheme`'s constructor is unchanged.
+- **`FutureContrast`** — the WCAG math that fixed the keyboard's white-on-white
+  candidate, moved out of `Keyboard` (`KeyboardPalette` now delegates to it and
+  its tests still pass) because the same bug class existed everywhere.
+- **Spacing** — a 4dp-based `spacingXxs`…`spacingXxl` scale and one
+  `focusBorderWidth` (2dp; it was 1.5dp in `FocusableItem` and 2dp elsewhere).
+- **`FutureMotion`** — four durations (90/140/200/280ms), three easings, focus
+  color/scale specs and a list-placement spec. Deliberately shorter than Material
+  defaults, following the reasoning already written in `Settings`: on a keypad
+  every screen change is a key press, and animation time accumulates into lag.
+- **`FutureTransitions`** — `forward`/`backward` (RTL: inward slides in from the
+  left), `fadeThrough` for same-level tabs, `appear`, dialog enter/exit, and the
+  same motion as `NavHost` values.
+
+#### One Material theme
+
+`FutureMaterialTheme(theme)` maps the tokens onto `ColorScheme`, `Typography`
+and `Shapes`. `DialerTheme`, `MessagesTheme`, `NotesTheme`, `NavigationTheme`,
+`SettingsTheme`, `FutureLauncherTheme` and `FutureUITheme` are now thin wrappers
+around it, so stock Material components look the same in every app. Two of them
+had been disconnected from the shared theme entirely: **`FutureUI` — the system
+shell itself — ran on dynamic Material You colors from `isSystemInDarkTheme`**,
+ignoring the dark/light mode and accent the user picks inside that same shell,
+and `Settings` defaulted to a hardcoded iOS blue. The Launcher stays dark (it
+draws over the wallpaper) but now takes the user's accent.
+
+`rememberFutureTheme()` replaces the `ThemeClient.getTheme` + `ON_RESUME`
+observer block copied into ~20 activities with a `ContentObserver` on
+`ThemeProvider`, which already called `notifyChange`. The old block only
+refreshed when returning to an app, so a mode change from the control center,
+opened over the app without pausing it, didn't show until leaving and coming back.
+
+#### Motion
+
+- **Screen transitions in 19 apps.** `AnimatedScreenHost` / `AnimatedBackStackHost`
+  replace the `when (route)` switches in `Tools`, `Clock`, `Frixa`, `Guide`,
+  `Remote`, `Gallery`, `Contact`, `Tasks` (list ↔ editor), `Files` (viewer ↔ list),
+  `Calendar` (settings), `Messages`, `Music`, `Sfarim`, `Fitness` and `FutureUI`'s
+  settings; `Settings`,
+  `notes`, `Navigation` and `dialer` got the shared `NavHost` transitions (dialer
+  fades between its two tabs and slides only into the call screen). Screens are
+  handed to the host as a snapshot, so an outgoing screen keeps drawing its own
+  photo/contact/conversation while it animates out.
+- **Focus and press.** `FocusableItem`, `dpadFocusBorder`, `TopBarIconButton` and
+  the `ConfirmDialog` buttons share one motion: the fill *and* the ring fade in
+  (the ring used to pop in), the item scales up on focus with a spring (so a held
+  arrow key doesn't restart it on each row), and shrinks briefly on OK — the only
+  press feedback a device with no touchscreen has. `clickable` already turns
+  DPAD_CENTER into a `PressInteraction`, so no key handling changed.
+- **Dialogs** open with a short scale-and-fade (`AppDialog`), **empty states**
+  stagger in, **top-bar titles** crossfade when they change, and
+  `KeypadLazyColumn` animates insert/delete when given keys and staggers its
+  first rows in when the list opens.
+- **Opening and closing apps.** Every app used to inherit the ROM's window
+  animation, so launching an app looked nothing like moving inside it.
+  `@style/FutureActivityAnimation` (SharedKeypadNav `res/values/future_motion.xml`)
+  applies the same motion as `forward`/`backward`: the incoming app slides in from
+  1/8 of the width on the left and fades in over 200ms, a closing app slides left
+  and fades out over 140ms, and the window underneath stays put so no black edge
+  shows. It covers activity, task and wallpaper (home screen) transitions and is set
+  in the `themes.xml` of 26 apps; `FutureUI` and `SystemUI` are left out because the
+  lock screen and control center are overlay windows with their own motion.
+
+#### Migration across the apps
+
+A scripted pass over 157 files in 26 apps replaced 252 corner radii and 641 font
+sizes with the nearest token, moved 27 animation durations in `FutureUI` and
+`Gallery` onto `FutureMotion` (deliberate effects — the coin spin, the pulsing
+mic, the call-timer pulse, the easter eggs — kept their own timing), and replaced
+36 places that drew `Color.Black` or the background color on top of the accent
+with `onAccentColor`. `SystemUI` was excluded, as in earlier passes.
+
+#### Bugs fixed on the way
+
+- `ConfirmDialog` in light mode wrote black text on its black-70% cancel button
+  and drew a white focus ring on a white dialog.
+- The bottom-bar indicator in `Clock` and `Frixa` drew a fixed black icon on the
+  accent; with a dark accent the selected tab's icon was invisible.
+- `TopBarIconButton` marked focus only with a 30%-accent fill, invisible in light
+  mode with the default white accent.
+
+#### Visible changes to check
+
+Snapping to the scale moves some values by a step: list rows that used the old
+8dp `FocusableItem` default (dialer, Sfarim) are now 16dp; the control-center and
+notification tiles went from 35dp to 28dp; 15sp text (69 places) is now 16sp;
+dialog text is 16sp instead of 15sp.
+
+Fixes for the findings raised in the 2026-09-08 system review. Every app touched
+below compiles (`compileDebugKotlin`, run per app); `:sharedkeypadnav` unit tests
+pass; `Tasks` also produced a minified release APK end to end. Nothing here has
+been run on the `F22 Pro` device yet.
+
+#### Blocking
+
+- **`Messages` read the entire SMS inbox on the main thread.** `getConversations()`
+  scans all of `content://sms` and then ran `resolveContact()` — another
+  `ContentResolver` query — once per conversation (N+1). All three call sites
+  (`LaunchedEffect`, the conversation-click callback, the `BackHandler`) were on
+  the main dispatcher, which is a guaranteed ANR on an inbox of a few thousand
+  messages. Every provider call in the app now goes through `Dispatchers.IO` with
+  only the state assignment back on main, and `SmsRepository` memoizes contact
+  lookups in a `ConcurrentHashMap` (cleared through `clearContactCache()`), which
+  removes the N+1 entirely. The conversation list also distinguishes "loading"
+  from "empty" for the first time.
+- **`DefaultApps.PACKAGES` named a package that does not exist.** It listed
+  `com.future.acremote` while the remote app's real `applicationId` is
+  `com.future.remote`, so with home-screen restriction on, the remote could never
+  be added to the home screen and failed silently. `com.future.assistant`,
+  `com.future.flashlight` and `com.future.frixa` were missing from the same list
+  and were added.
+- **Text fields trapped keyboard focus across eleven apps.** Compose text fields
+  consume DPAD up/down internally for cursor movement, so on a device with no
+  touchscreen a user who arrowed into a field could not leave it. `Fitness` had
+  solved this locally in `ui/components/FocusUtils.kt`; that modifier moved to
+  `com.future.sharednav.focus.escapeTextFieldFocusTrap` and is now applied in
+  `Tasks`, `notes`, `Tools`, `Remote`, `Files`, `Contact`, `Calendar`, `Messages`,
+  `Music` and `Terminal`. Four apps (`dialer`, `Navigation`, `Settings`, `Sfarim`)
+  each carried a down-only copy of the same hack inline; all four now call the
+  shared modifier, which also handles up — so it is possible to get back *to* the
+  search field from the results, not only away from it. Applied at the text field
+  rather than at the screen root wherever the screen has its own arrow-key
+  handling (`Calendar`'s month grid, `Contact`'s list), so nothing is intercepted
+  in the capture phase that a screen was already handling.
+- **`targetSdk` was 37 on 25 apps and 31 on `FutureUI` and `Settings`** — two
+  different system behaviors on the same Android 12 device. All 28 are now on
+  `targetSdk = 31` (`compileSdk` stays 37), matching the hardware and what
+  `README.md` and `DEVICE_SETUP.md` already describe. Raising the whole suite to
+  37 instead would mean opting every app into edge-to-edge, foreground-service
+  and broadcast behaviors that have never been tested on this ROM.
+
+#### Reliability and security
+
+- **The lock-screen PIN was `SHA-256(salt + pin)` in a plain preferences file,
+  with no attempt limiting and a `==` comparison.** Four digits is 10,000
+  possibilities and a single hash round breaks offline instantly. New `PinStore`
+  signs the PIN with an HMAC key generated in the Android Keystore and marked
+  non-exportable, so the file alone is useless without the device's hardware;
+  comparison is `MessageDigest.isEqual`; five failures start a lockout that
+  doubles from 30s to a 5-minute ceiling, surfaced on the lock screen as a
+  countdown rather than a silently rejected correct code. Existing PINs keep
+  working and are upgraded to the new scheme on the next successful unlock.
+- **Two root-shell implementations, one of which always reported success.**
+  `FutureUI/ControlManager.executeRoot` wrote to a long-lived pipe and returned
+  `true` unconditionally — no wait, no exit code, and `stdout`/`stderr` never
+  read, so the pipe could fill and block the process; every toggle showed "on"
+  even when the command failed. `Settings/SystemInteractor` returned a real
+  success flag but its fallback ran `Runtime.exec(cmd)` with no shell, splitting
+  the command on spaces. Both now call one shared `com.future.sharednav.root.RootShell`,
+  which drains both pipes on parallel threads (the deadlock `Terminal/ShellSession`
+  already avoided), enforces a timeout, returns a real exit code, and falls back
+  through `sh -c` so quoting and pipes survive. `ControlManager`'s toggles moved
+  onto its IO scope since the call now blocks, and the accessibility services use
+  a new non-blocking `runRootCommandAsync`.
+- **A failed dictionary copy took down the whole IME.** `HebrewDictionaryDb`'s
+  345MB `assets` copy ran in a bare `Thread` with no `try/catch`, so a full disk
+  or a corrupt asset killed the input method process — on a device with no
+  touchscreen, that is the loss of all text input. The copy now writes to a temp
+  file and renames only on completion (an interrupted copy no longer leaves a
+  file that looks valid and fails forever after), and the caller catches, logs,
+  and shows a message in the candidate row while prediction falls back to the
+  small built-in dictionary.
+- **The font-size slider in `Settings` affected only the settings screen.**
+  `FutureType` existed in the shared module but no shared component used it —
+  `ScreenTopBar` hardcoded `20.sp`, `EmptyState` `17.sp`, `ConfirmDialog` `15.sp`.
+  The multiplier now lives in `ThemeProvider` alongside the rest of the theme,
+  `ThemeClient` reads and writes it, and the shared components resolve it through
+  `rememberFutureType()`; `ScreenScaffold` provides it once per screen so nested
+  components do not each query the provider. Old `FutureUI` builds that do not
+  return the column degrade to 1.0 rather than throwing.
+
+#### Consistency and hardening
+
+- **Three `ContentProvider`s were `exported` with no permission.** `ThemeProvider`,
+  `SystemUiSettingsProvider` and `KeyboardSettingsProvider` let any installed APK
+  change the system theme, the status-bar configuration and the prediction toggle.
+  `FutureUI` and `Keyboard` now each declare a `signature`-level permission and
+  guard their own providers with it; all 28 manifests request both.
+- **There was no release build path.** All 28 apps disabled R8, no
+  `proguard-rules.pro` existed anywhere, and no app had a `signingConfig` — there
+  was no way to produce a shrunk, signed APK for a device whose storage is already
+  under pressure. R8 and resource shrinking are now on for `release`, each app has
+  a `proguard-rules.pro` (crash-report line numbers, manifest-instantiated
+  components, Room, Compose), and signing reads `keystore.properties` from the
+  repo root (gitignored) or CI environment, falling back to an unsigned build
+  rather than a failed one. **Release builds have not been run on the device and
+  the minified output is unverified beyond assembling.**
+- **`keypadListNav(horizontal = true)` mapped the arrows backwards for RTL.** It
+  bound right to "next", but the whole system forces `LayoutDirection.Rtl`, where
+  the next item is to the left. There is still no caller, which is exactly why it
+  was worth fixing now.
+- **Holding an arrow key made list scrolling stall.** `rememberFocusListState` ran
+  `animateScrollToItem` on every index change, and Android's key repeat cancelled
+  each animation to start another. A single press still animates; a repeat within
+  150ms scrolls instantly, so a held key tracks the focus in real time.
+- **29 empty `catch` blocks, now 54 across 19 files, all log.** Silent failure is
+  the one thing that cannot be diagnosed from the device on a system built on `su`
+  and non-public APIs. `SystemUI` was left alone deliberately — it is the parallel
+  implementation that is not installed on the test device.
+- **`Navigation` re-queried Nominatim for repeated searches.** Its usage policy
+  allows one request per second; T9 typing regenerates the same query constantly.
+  Added a 50-entry LRU cache and a log on failure where the result was previously
+  an empty list with no explanation.
+
+#### Experience
+
+- **`MarqueeText` had zero users.** Wired into `Files`' file names and `Messages`'
+  conversation previews, the two places where a 640px row cuts text with no way to
+  read the rest.
+- **Five delete paths had no confirmation.** `ConfirmDialog` now guards alarm
+  deletion in `Clock`, custom workouts in `Fitness`, events in `Calendar` (both the
+  options menu and the edit dialog, through one shared confirmation) and messages
+  in `Messages`. `notes` already had one.
+- **`digitForKey` existed in seven byte-identical copies** (`Calculator`, `Clock`,
+  `Contact`, `Fitness`, `Music`, `Sfarim`, `Tools`), plus a private copy in
+  `FutureUI`'s lock screen. One shared `com.future.sharednav.nav.digitForKey`, the
+  seven files deleted, with a unit test covering both key rows.
+- **Touch language on a device with no touchscreen.** "הקישו על +", "הקש כדי
+  לשכוח", "לחץ כאן" and five more now name the OK key and the navigation that
+  actually exists.
+- **The guide covered 15 topics for 28 apps** and described a Contact feature that
+  does not exist (jump-to-letter; `Contact` filters by T9 digits). Added tasks,
+  bluetooth, navigation, camera, fitness, remote and assistant, and corrected the
+  contact instructions.
+- **`Music` registered its own `BroadcastReceiver` for the Options key** instead of
+  the shared `onOptionsKeyPress`, duplicating the logic in the one place the shared
+  constant was meant to centralize.
+- **`Sfarim`'s reader font size reset on every book.** It is now persisted.
+
+#### Known gaps from the same review
+
+Not addressed here, and still open: 3,347 hardcoded Hebrew strings versus empty
+`strings.xml` files; the 21 apps holding state in `remember` rather than a
+`ViewModel`; the four accessibility services' parallel polling loops; the 394MB of
+`.idea/` and debug output in git history; and the 127 uncommitted files in the
+working tree, 60 of them `ic_launcher*.webp` changes that contradict the explicit
+rule in `CLAUDE.md` — that one needs a decision, not a patch.
+
+### Keyboard panel and Settings main screen redesign
+
+Both screens were rebuilt to the designs in `design/keyboard-panel` (the four panel states in `Panel.dc.html`, the measurement and color table in `Tokens.dc.html`). Verified on the `F22 Pro` device, all four panel states and the new Settings sections captured live.
+
+- **`Keyboard`: the IME input view is now a real panel instead of a hint line and a chip row.** `KeyboardService.onCreateInputView` built one `TextView` of status text plus a candidate row, and every mode (punctuation grid, language list, voice) reused that same hint line for a sentence of instructions — the language menu's was "בחירת שפה - חצים למעלה/למטה, מרכז לבחירה, חזור לביטול". The panel now has four built-once states swapped by visibility (`showOnly`), each with a title rail, a content area and a key legend along the bottom: typing shows the language badge, the mode tag, the digit sequence and a `1/9` candidate counter; punctuation shows the selected symbol, a `3/34` counter and the 6-column grid; the language list shows each mode's full name, dictionary scope and short code; voice shows a mic ring, the recognition language and a level meter. The legend replaces the instruction sentences with the keys themselves — the only place the bindings are visible on a device with no on-screen keyboard.
+- **`Keyboard`: the selected candidate could be invisible.** The text on a selected item was hardcoded `Color.WHITE` while its background was the system accent, and `ThemeClient`'s accent defaults to `Color.WHITE` — so on a default install the selected word was white on white, and the accent was also unreadable against the light theme's own light panel. New `KeyboardPalette` (unit-tested, pure `Int` math so it runs without a device) derives the ink from the background's WCAG luminance, and falls back to the theme's text color when the accent has less than 1.6:1 contrast against the panel. The four accent colors in the design's contrast table are covered by `KeyboardPaletteTest`.
+- **`Keyboard`: releasing `0` now ends voice transcription**, which is what the panel's legend says it does ("שחרר את המקש כדי לסיים"). `onKeyUp` previously only cleared the long-press latch and left the recognizer running until it timed out on its own. It now calls `SpeechRecognizer.stopListening()`, which transcribes what was captured — as opposed to the service's own `stopListening()`, which destroys the recognizer and discards the result. `onRmsChanged`, previously an empty override, drives the level meter.
+- **`Keyboard`: `*` and `#` never reached the keyboard at all on the device.** `ControlCenterAccessibilityService` (STAR) and `NotificationCenterAccessibilityService` (POUND) each return `true` for every event on their key — DOWN, UP and repeats — so both keys are consumed system-wide, and their own comment says no short-press action is defined. A long press opens the control center / notification center; a short press did nothing anywhere. The punctuation menu and the language switch were therefore unreachable with real hardware keys, which the new panel legend made obvious by advertising them. Both services now broadcast the short press (`ACTION_STAR_SHORT_PRESS` / `ACTION_POUND_SHORT_PRESS`, added to `FutureUIActions`), exactly as `StatusBarAccessibilityService` already does for the Options key, and `KeyboardService` listens for both. The long presses are untouched. Mirrored into the `SystemUI` copies of both services so the two implementations don't drift. Verified on the device: the broadcast opens and closes the punctuation menu and steps the input mode. Note this explains a class of bug beyond the keyboard — `dialer`, `Calculator`, `Sfarim`, `Tools` and `Navigation` all bind `KEYCODE_STAR`/`KEYCODE_POUND` as key events and are subject to the same interception.
+- **`Settings`: rows were drawn as separate filled pills inside a shared card.** Each `SettingItem` painted its own 6%-fill rounded rectangle, so one card holding three rows read as three cards and the dividers between them were lost in the gaps. Rows are now transparent on the card with the divider doing the separating, and the focus state carries the fill plus the ring — matching the design.
+- **`Settings`: the main screen is grouped into named sections.** It was six anonymous cards whose grouping was never stated, so "חיבורים" sat alone in one card while "צלילים" and "תצוגה" shared the next. Now: עיקרי (connections, sounds, display), מכשיר (lock screen, battery, storage, performance), שימוש (notifications, screen time), מערכת (general, apps, about). Only the first two names come from the design image; the other two are ours. The three subtitles in the design were also shortened to keep every row one line high — a two-line row is twice as tall and pushes items off a 960px screen.
+- **`Settings`: the disclosure chevron pointed the wrong way.** `SettingItem` used `Icons.AutoMirrored.Rounded.KeyboardArrowLeft`, and the auto-mirrored variant flips to point *right* under the app's RTL layout — away from where tapping the row goes. Now the plain `Icons.Rounded.KeyboardArrowLeft`. Affects every settings row in the app.
+- **`Settings`: section headers are no longer painted in the accent color.** `SettingHeader` used `theme.primaryColor`, which made the label above a card louder than the items inside it; it is now muted text, as in the design. Affects the sub-screens that already used it as well as the new main-screen sections.
+- **`Settings`: "שורת מצב, מסך נעילה ורקע" is now "מסך נעילה ורקע"** on the main screen, in the search catalog and in its own screen title, with "שורת מצב" moved into the subtitle and kept as a search keyword.
+
 ### Added
 - `Keyboard/README.md` — documents the previously-unlisted `Keyboard` app (system-wide T9 predictive IME) and registers it in the root README's app table.
 - This `CHANGELOG.md`.
@@ -17,6 +376,14 @@ This repo has no carried-over git history (see root [README](README.md)), so thi
 - **Sfarim's `sefaria.db` rebuilt from scratch** (~1.55GB, 6,211 books / ~1.75M segments / 1,258 categories) via `Sfarim/tools/build_library.py` (Sefaria API + Sefaria-Export GCS bucket) + `add_root_category.py` + `add_fulltext_search.py`. The old split/reassemble plan (`reassemble_sefaria_db.sh`) is superseded — see `Sfarim/README.md` for the rebuild command. Integrity-checked (`PRAGMA integrity_check` = ok); one book (`Penei Moshe on Jerusalem Talmud Sanhedrin`) failed on the first pass due to a network error and succeeded on retry (the script is resumable/idempotent by design).
 
 ### Fixed
+- **CI never built 5 of the 28 apps, so a break in any of them could land on `main` with every job green.** `.github/workflows/build.yml`'s `build-app` matrix carried a hardcoded 23-name list; `Bluetooth`, `Flashlight`, `Frixa`, `SystemUI` and `Tasks` were missing from it. This is the third instance of the same hardcoded-app-list drift found in one pass (after `build-all.sh` and `DEVICE_SETUP.md`) and by far the most damaging, since CI is the one place specifically meant to catch regressions. Fixed by generating the matrix at run time: a new `discover-apps` job finds every top-level directory containing a `settings.gradle.kts`, emits the list as JSON, and `build-app` consumes it via `fromJSON(needs.discover-apps.outputs.apps)`, so a newly added app gets a CI job with no workflow edit. The discovery job also fails loudly if it finds zero apps, so a future layout change surfaces as a red build instead of silently shrinking the matrix to nothing. Verified: the `find`/`jq` pipeline emits all 28 app names as a valid JSON array, and the workflow parses as valid YAML.
+- **`Settings`: removed an unused `detectDragGestures` import.** Dead code — it was the only mention of the symbol in the file, and nothing in the app uses drag gestures (correctly so, since this is a keypad-only device with no touchscreen). Confirmed `Settings` still compiles after removal.
+- **`build-all.sh` silently skipped 3 of the 28 apps.** The script carried a hardcoded 25-name `APPS` array, and while the repo grew to 28 standalone Gradle projects, `Flashlight`, `Frixa` and `SystemUI` were never added to it — so "builds all apps" quietly meant 25, with no error and no missing-folder warning (the script's existing `-d` guard only fires for a *listed* app whose folder is gone, which is the opposite failure). This is the same drift the script's own header comment was written to complain about in `DEVICE_SETUP.md` §5/§6. Fixed by deriving the list from the filesystem instead: every top-level directory containing a `settings.gradle.kts` is a standalone Gradle project and is therefore an app, so a newly added app is picked up automatically and the list cannot go stale again. `SharedKeypadNav` is correctly excluded by that criterion — it is a `com.android.library` module with no `settings.gradle.kts` of its own.
+- **`build-all.sh --install` would fail only after every build had finished.** `adb` is not on `PATH` in Git Bash on Windows (the usual shell for this repo), so the first `adb install -r` failed, and it failed once per app rather than up front. The script now resolves `adb` once before the build loop — via `ANDROID_HOME`, `ANDROID_SDK_ROOT`, and the default SDK locations for Windows, macOS and Linux — and exits immediately with an actionable message if `--install` was requested and no `adb` can be found.
+- **The root `README.md` app table was missing `Flashlight`, `Frixa` and `SystemUI`**, and still said `SharedKeypadNav` is depended on by "all 25" apps. Verified by grep that all 28 apps do depend on it; the table now lists all 28 and the count is corrected.
+- **`README.md` did not record that `FutureUI` and `SystemUI` are two implementations of the same role.** Both declare the same six services (`StatusBarAccessibilityService`, `LockScreenAccessibilityService`, `NotificationCenterAccessibilityService`, `ControlCenterAccessibilityService`, `MediaControlService`, `HeadsUpNotificationService`) under different application ids — `com.future.futureui` and `com.android.sistemui`, the latter spelled "sistemui" because `com.android.systemui` is a reserved system package that cannot be installed. Enabling both sets of `AccessibilityService`s would put two overlay stacks in competition for the same key events, and since the status bar service swallows `KEYCODE_MENU`/`KEYCODE_SETTINGS` system-wide, a duplicate would break the Options key everywhere. Confirmed against the `F22 Pro` test device: only `com.future.futureui` is installed and only its four overlay services are in `enabled_accessibility_services`. Documented as a note in the README; **which of the two is meant to win long-term is still not recorded anywhere in this repo.**
+- **`DEVICE_SETUP.md` said "23 apps" in four places** (the JDK requirement in §2, the `SharedKeypadNav` warning in §5, and the `build-all.sh` description and its code comment) — now 28, matching reality. Its Java 21 list was also incomplete: it named `Fitness`, `Music`, `Navigation` and `notes`, but `Tasks` also sets `sourceCompatibility`/`jvmTarget` to 21, so a JDK-17-only machine would fail on `Tasks` without the doc explaining why. Verified by reading `jvmTarget`/`sourceCompatibility` out of all 28 apps' `build.gradle.kts`: those 5 are on Java 21, the other 23 on Java 11.
+- **Verified that all 28 apps build end to end** — `./gradlew assembleDebug` per app, run for real, one app at a time, each confirmed to have produced an `app/build/outputs/apk/debug/app-debug.apk`. This covers resource merging, manifest merging, dexing and packaging, not just Kotlin compilation, so it is the real check that `compileDebugKotlin` alone would not have given. All 5 apps that have real unit tests (`Clock`, `dialer`, `Fitness`, `Keyboard`, plus `:sharedkeypadnav` via `Terminal`) also pass `testDebugUnitTest`. No app is broken; the stale build list, the stale CI matrix and the stale docs above were the actual defects.
 - **`dialer`: incoming calls were completely invisible unless the app was already open.** `CallService.onCallAdded`/`onStateChanged` only ever updated in-memory `StateFlow`s — nothing launched an `Activity`, turned the screen on, or asked `FutureUI`'s custom lock-screen overlay to step aside. Fixed by: `CallService` now starts `MainActivity` (`FLAG_ACTIVITY_NEW_TASK`) the moment a call reaches `STATE_RINGING`; `MainActivity.onCreate` calls `setShowWhenLocked(true)`/`setTurnScreenOn(true)` so it can actually appear over a locked/asleep screen; and `CallService` broadcasts new `com.future.futureui.ACTION_CALL_RINGING`/`ACTION_CALL_ENDED` actions (added to `FutureUIActions`) that `FutureUI`'s `LockScreenAccessibilityService` now listens for, hiding its own overlay (and skipping its next `ACTION_SCREEN_ON`-triggered show) while a call is ringing — otherwise that overlay, being the topmost focusable window, would keep grabbing key input away from the in-call screen underneath it even after `dialer`'s side was fixed. All broadcasts are best-effort/try-caught since `FutureUI` isn't guaranteed to be installed in every build.
 - **`dialer`: the in-call "keypad" toggle showed a passive digit readout with nothing to actually press.** `InCallScreen` now renders a real 3x4 DTMF grid (0-9, `*`, `#`) of focusable keys above the readout, wired to the existing `onDtmfDigitPressed`/`onDtmfDigitReleased`.
 - **`dialer`: a failed call recording looked identical to a successful one.** `InCallViewModel.toggleRecording` now surfaces `CallService.startRecording`'s failure return value as a `Toast` instead of discarding it silently.
@@ -44,8 +411,11 @@ Large cross-app pass, verified with real `./gradlew compileDebugKotlin`/`assembl
 - Root README and `DEVICE_SETUP.md` updated to match the state above: the app table now lists `Calculator`, `Clock`, and `Fitness` (previously present in the repo but missing from the table); `DEVICE_SETUP.md`'s build/install loops now cover all 23 apps instead of 19; its JDK requirement now mentions the 4 apps needing Java 21; its `SharedKeypadNav` dependency warning now says "all 23 apps," not "`dialer`, `Music`, `Sfarim`, `Keyboard`"; and it now points at `hardware/openscad/qin_f22_pro_case_keyboard.scad` instead of saying no device model is documented.
 
 ### Known issues / open work
-- **Test coverage is still thin.** Beyond the two new shared-module test files above, only `Fitness` (`HeartRateMonitorTest`, `WorkoutTemplateMappingTest`, `WorkoutStoreCalculationsTest`) and `Keyboard` (`T9EngineTest`) have real tests; every other app still ships only the Android Studio default `ExampleUnitTest`/`ExampleInstrumentedTest` boilerplate, and there is no CI.
-- **R8/minify is off in all 23 apps' release builds**, and there is no `proguard-rules.pro` anywhere in the repo.
+- **`FutureUI`, `Settings` and `SystemUI` sit at `targetSdk = 31` while the other 25 apps are at 37, and nothing records whether that is deliberate.** `compileSdk = 37` and `minSdk = 31` are uniform across all 28 apps, so `targetSdk` is the only axis that diverges — and it diverges on exactly the three apps that do the most privileged work (accessibility overlays, system-settings writes, root operations). That is consistent with a deliberate choice to stay below the API 33/34 behavior changes those apps would be subject to: the runtime notification permission, restricted context-registered receivers, mandatory foreground-service types, and restricted implicit intents. It is equally consistent with the three simply having been missed by the "align build config" pass. There is no comment in any of the three `build.gradle.kts` files either way. **Left unchanged deliberately** — bumping the system shell's `targetSdk` on a guess could break the overlays that the whole OS depends on, and the test device is API 31 so the higher target buys nothing today. Needs a decision, and once made, a comment in those three files so the next config-alignment pass does not silently "fix" it.
+- **Two packages are installed on the `F22 Pro` test device with no corresponding folder in this repo: `com.future.gotitdone` and `com.future.mikdash`.** Neither appears in `enabled_accessibility_services`, so they are inert leftovers rather than active components, but they most likely still occupy launcher entries. They look like apps that were renamed or dropped during the repo consolidation (`gotitdone` plausibly predates `Tasks`). Not uninstalled — that is a device-state change, and it is worth confirming they hold no data worth keeping first.
+- **Test coverage is still thin — 8 real test files across 4 of 28 apps.** `Fitness` (`HeartRateMonitorTest`, `WorkoutTemplateMappingTest`, `WorkoutStoreCalculationsTest`), `Keyboard` (`T9EngineTest`), `Clock` (`AlarmLogicTest`) and `dialer` (`T9SearchTest`), plus the shared module's `FocusListStateTest` and `T9DigitMapTest`. The other 24 apps still ship only the Android Studio default `ExampleUnitTest`/`ExampleInstrumentedTest` boilerplate. CI now exists (`.github/workflows/build.yml`) and runs `testDebugUnitTest` on every app, so those 24 apps' CI test steps pass without asserting anything real.
+- **The 28 debug APKs total about 2.0GB installed**, on a feature phone. Four apps dominate: `Assistant` (189MB, the native speech/TTS libraries), `Keyboard` (173MB, the bundled dictionaries), `Tools` (129MB) and `Navigation` (117MB); the other 24 sit near a ~60MB floor, which is itself high for apps this small and points at unstripped native ABIs and the un-minified Compose runtime being packaged whole. Release builds would be smaller, but with R8 off everywhere (next item) that gap is currently unrealised, and no app sets `abiFilters` or an ABI split.
+- **R8/minify is off in all 28 apps' release builds**, and there is no `proguard-rules.pro` anywhere in the repo. Note the mechanism: `isMinifyEnabled` is not set to `false` in any app, it is absent entirely, so all 28 rely on the AGP default. Turning it on would need real keep rules per app — reflection-driven code (Room entities, `AccessibilityService` subclasses named in XML, the `KeyboardService` IME) is exactly what R8 strips without them.
 - `dialer`'s and `Terminal`'s theme choices (a Material3 alpha-based `surface` tonal system in `dialer`, a green `accentColor` default in `Terminal`) look like coherent, self-consistent design decisions on inspection, not drift — left as-is rather than force-aligned to the majority's flat colors, per this project's "don't invent new designs" rule.
 
 ## History (reconstructed from existing docs)

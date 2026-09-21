@@ -13,6 +13,7 @@ import com.future.navigation.data.gtfs.TransitJourneyPlanner
 import com.future.navigation.data.location.LocationHelper
 import com.future.navigation.data.routing.DrivingRoute
 import com.future.navigation.data.routing.RoutingRepository
+import com.future.navigation.data.siri.TransitRealtimeEnricher
 import com.future.navigation.ui.navigation.Destination
 import com.future.navigation.ui.navigation.TravelMode
 import kotlinx.coroutines.Job
@@ -24,7 +25,8 @@ class RouteOptionsViewModel(
     private val appContext: Context,
     private val routingRepository: RoutingRepository,
     private val transitJourneyPlanner: TransitJourneyPlanner,
-    private val gtfsImporter: GtfsImporter
+    private val gtfsImporter: GtfsImporter,
+    private val transitRealtimeEnricher: TransitRealtimeEnricher
 ) : ViewModel() {
 
     private val _loading = MutableStateFlow(false)
@@ -69,7 +71,9 @@ class RouteOptionsViewModel(
                         ensureTransitDataFor(origin, destination.location)
                         val now = System.currentTimeMillis() / 1000
                         val results = transitJourneyPlanner.findJourneys(origin, destination.location, now)
-                        _itineraries.value = results
+                        // שכבת זמן אמת (SIRI) - "best effort" בעיצוב (ר' TransitRealtimeEnricher),
+                        // אף פעם לא זורקת ולא יכולה להפוך תוצאה תקינה לריקה.
+                        _itineraries.value = transitRealtimeEnricher.enrich(results)
                         if (results.isEmpty()) _error.value = "לא נמצא מסלול תחבורה ציבורית ליעד הזה"
                     }
                 }

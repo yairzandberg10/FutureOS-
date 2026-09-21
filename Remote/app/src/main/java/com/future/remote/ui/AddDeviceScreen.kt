@@ -1,4 +1,7 @@
 package com.future.remote.ui
+import com.future.sharednav.theme.onAccentColor
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.focus.bringIntoViewOnFocus
 
 import androidx.compose.foundation.background
@@ -40,6 +43,7 @@ import androidx.compose.ui.unit.sp
 import com.future.remote.data.DeviceCategory
 import com.future.remote.data.RemoteDevice
 import com.future.remote.data.RemoteRepository
+import com.future.sharednav.focus.escapeTextFieldFocusTrap
 import com.future.sharednav.theme.FutureTheme
 
 @Composable
@@ -50,12 +54,12 @@ fun AddDeviceScreen(theme: FutureTheme, onBack: () -> Unit, onSaved: () -> Unit)
     var category by remember { mutableStateOf(DeviceCategory.AC) }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-        Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
+        Box(modifier = Modifier.escapeTextFieldFocusTrap().fillMaxSize().background(theme.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize()) {
                 RemoteHeader(title = "מכשיר חדש", theme = theme, onBack = onBack)
 
                 Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    Text("שם המכשיר", color = theme.textColor.copy(alpha = 0.6f), fontSize = 13.sp, modifier = Modifier.padding(bottom = 6.dp))
+                    Text("שם המכשיר", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.summary, modifier = Modifier.padding(bottom = 6.dp))
                     TextField(
                         value = name,
                         onValueChange = { name = it },
@@ -73,7 +77,7 @@ fun AddDeviceScreen(theme: FutureTheme, onBack: () -> Unit, onSaved: () -> Unit)
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    Text("סוג המכשיר", color = theme.textColor.copy(alpha = 0.6f), fontSize = 13.sp, modifier = Modifier.padding(top = 20.dp, bottom = 6.dp))
+                    Text("סוג המכשיר", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.summary, modifier = Modifier.padding(top = 20.dp, bottom = 6.dp))
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         items(DeviceCategory.entries) { entry ->
                             CategoryChip(category = entry, selected = entry == category, theme = theme, onClick = { category = entry })
@@ -106,9 +110,9 @@ fun AddDeviceScreen(theme: FutureTheme, onBack: () -> Unit, onSaved: () -> Unit)
 private fun CategoryChip(category: DeviceCategory, selected: Boolean, theme: FutureTheme, onClick: () -> Unit) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    val shape = RoundedCornerShape(14.dp)
+    val shape = FutureShapes.md
     val bg = if (selected) theme.accentColor.copy(alpha = 0.85f) else theme.textColor.copy(alpha = 0.08f)
-    val textColor = if (selected) Color.Black else theme.textColor
+    val textColor = if (selected) theme.onAccentColor else theme.textColor
 
     Box(
         modifier = Modifier
@@ -119,6 +123,6 @@ private fun CategoryChip(category: DeviceCategory, selected: Boolean, theme: Fut
             .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
             .padding(horizontal = 16.dp),
     ) {
-        Text(category.label, color = textColor, fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.align(androidx.compose.ui.Alignment.Center))
+        Text(category.label, color = textColor, fontSize = FutureTypography.body, fontWeight = FontWeight.Medium, modifier = Modifier.align(androidx.compose.ui.Alignment.Center))
     }
 }

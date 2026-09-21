@@ -1,5 +1,8 @@
 package com.future.tools.ui
 
+import com.future.sharednav.theme.onAccentColor
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -29,6 +32,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.future.sharednav.nav.digitForKey
 import com.future.sharednav.theme.FutureTheme
 import java.text.DecimalFormat
 
@@ -145,7 +149,7 @@ fun UnitConverterScreen(theme: FutureTheme, onBack: () -> Unit) {
                     Text(
                         inputText,
                         color = theme.textColor,
-                        fontSize = 40.sp,
+                        fontSize = FutureTypography.display,
                         fontWeight = FontWeight.Light,
                         textAlign = TextAlign.End,
                         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
@@ -165,7 +169,7 @@ fun UnitConverterScreen(theme: FutureTheme, onBack: () -> Unit) {
                     Text(
                         resultFormat.format(resultValue),
                         color = theme.accentColor,
-                        fontSize = 40.sp,
+                        fontSize = FutureTypography.display,
                         fontWeight = FontWeight.Medium,
                         textAlign = TextAlign.End,
                         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
@@ -175,7 +179,7 @@ fun UnitConverterScreen(theme: FutureTheme, onBack: () -> Unit) {
                 Text(
                     "הקלד ערך במקלדת · אישור על יחידה כדי להחליף",
                     color = theme.textColor.copy(alpha = 0.35f),
-                    fontSize = 11.sp,
+                    fontSize = FutureTypography.caption,
                     modifier = Modifier.fillMaxWidth().padding(20.dp),
                     textAlign = TextAlign.Center
                 )
@@ -195,7 +199,7 @@ private fun CategoryChip(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    val shape = RoundedCornerShape(14.dp)
+    val shape = FutureShapes.md
     val bgColor by animateColorAsState(
         when {
             isSelected -> theme.accentColor
@@ -214,7 +218,7 @@ private fun CategoryChip(
             .padding(vertical = 10.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(label, color = if (isSelected) Color.Black else theme.textColor, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+        Text(label, color = if (isSelected) theme.onAccentColor else theme.textColor, fontSize = FutureTypography.summary, fontWeight = FontWeight.Medium)
     }
 }
 
@@ -222,7 +226,7 @@ private fun CategoryChip(
 private fun UnitChip(label: String, theme: FutureTheme, onClick: () -> Unit) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    val shape = RoundedCornerShape(12.dp)
+    val shape = FutureShapes.md
     val bgColor by animateColorAsState(if (isFocused) theme.textColor.copy(alpha = 0.16f) else theme.textColor.copy(alpha = 0.06f), label = "unitChipBg")
     Box(
         modifier = Modifier
@@ -233,7 +237,7 @@ private fun UnitChip(label: String, theme: FutureTheme, onClick: () -> Unit) {
             .focusable(interactionSource = interactionSource)
             .padding(horizontal = 14.dp, vertical = 6.dp)
     ) {
-        Text(label, color = theme.textColor.copy(alpha = 0.8f), fontSize = 13.sp)
+        Text(label, color = theme.textColor.copy(alpha = 0.8f), fontSize = FutureTypography.summary)
     }
 }
 

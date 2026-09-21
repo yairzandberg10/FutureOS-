@@ -1,5 +1,6 @@
 package com.future.assistant.ui
 
+import com.future.sharednav.theme.FutureTypography
 import android.Manifest
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -40,8 +41,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.future.assistant.asr.EspeakTts
 import com.future.assistant.asr.LocalSpeechEngine
+import com.future.assistant.asr.PiperTts
 import com.future.assistant.data.CommandProcessor
 import com.future.sharednav.theme.FutureTheme
 import kotlinx.coroutines.Dispatchers
@@ -69,16 +70,16 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
     val micFocus = remember { FocusRequester() }
     val scope = rememberCoroutineScope()
 
-    // מנוע Text-to-Speech מקומי (eSpeak NG, native) - במכשירי הבדיקה אין
-    // בכלל מנוע TTS מותקן ברמת המערכת, אז android.speech.tts.TextToSpeech
-    // נכשל תמיד עם "not bound to TTS engine".
-    val espeakTts = remember { EspeakTts(context) }
+    // מנוע Text-to-Speech נוירוני מקומי (Piper, דרך sherpa-onnx) - במכשירי
+    // הבדיקה אין בכלל מנוע TTS מותקן ברמת המערכת, אז
+    // android.speech.tts.TextToSpeech נכשל תמיד עם "not bound to TTS engine".
+    val piperTts = remember { PiperTts(context) }
 
     fun speak(text: String) {
         state = AssistantState.SPEAKING
         responseText = text
         scope.launch(Dispatchers.IO) {
-            espeakTts.speak(text)
+            piperTts.speak(text)
             withContext(Dispatchers.Main) {
                 state = AssistantState.IDLE
                 if (pendingClose) {
@@ -118,11 +119,11 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
     LaunchedEffect(hasPermission) {
         if (!hasPermission) return@LaunchedEffect
         try {
-            withContext(Dispatchers.IO) {
+            val ttsOk = withContext(Dispatchers.IO) {
                 speechEngine.loadModel()
-                espeakTts.init()
+                piperTts.init()
             }
-            modelReady = true
+            if (ttsOk) modelReady = true else modelFailed = true
         } catch (e: Exception) {
             modelFailed = true
         }
@@ -174,7 +175,7 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Box(modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp)) {
-                    Text("עוזר קולי", color = theme.textColor, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text("עוזר קולי", color = theme.textColor, fontSize = FutureTypography.title, fontWeight = FontWeight.Bold)
                 }
 
                 Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
@@ -183,26 +184,26 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
                             Text(
                                 "נדרשת הרשאת מיקרופון כדי להשתמש בזיהוי דיבור",
                                 color = theme.textColor.copy(alpha = 0.6f),
-                                fontSize = 14.sp,
+                                fontSize = FutureTypography.body,
                                 modifier = Modifier.padding(bottom = 16.dp)
                             )
                         } else if (modelFailed) {
                             Text(
                                 "טעינת מנוע זיהוי הדיבור נכשלה",
                                 color = theme.textColor.copy(alpha = 0.6f),
-                                fontSize = 14.sp,
+                                fontSize = FutureTypography.body,
                                 modifier = Modifier.padding(bottom = 16.dp)
                             )
                         } else if (!modelReady) {
                             Text(
                                 "טוען מנוע זיהוי דיבור...",
                                 color = theme.textColor.copy(alpha = 0.6f),
-                                fontSize = 14.sp,
+                                fontSize = FutureTypography.body,
                                 modifier = Modifier.padding(bottom = 16.dp)
                             )
                         }
                         if (heardText.isNotBlank()) {
-                            Text("“$heardText”", color = theme.textColor.copy(alpha = 0.5f), fontSize = 14.sp, modifier = Modifier.padding(bottom = 16.dp))
+                            Text("“$heardText”", color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.body, modifier = Modifier.padding(bottom = 16.dp))
                         }
                         Text(
                             when (state) {
@@ -211,7 +212,7 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
                                 else -> responseText
                             },
                             color = theme.textColor,
-                            fontSize = 20.sp,
+                            fontSize = FutureTypography.screenTitle,
                             fontWeight = FontWeight.Medium,
                             modifier = Modifier.scale(speakPulse)
                         )
@@ -230,7 +231,7 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
                         if (state == AssistantState.LISTENING) "לחצו על OK כדי לסיים ולשלוח"
                         else "לחצו על OK כדי להתחיל להקליט",
                         color = theme.textColor.copy(alpha = 0.4f),
-                        fontSize = 12.sp,
+                        fontSize = FutureTypography.label,
                         modifier = Modifier.padding(top = 10.dp)
                     )
                 }

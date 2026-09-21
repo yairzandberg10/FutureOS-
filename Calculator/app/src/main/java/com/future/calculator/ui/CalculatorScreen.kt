@@ -1,4 +1,7 @@
 package com.future.calculator.ui
+import com.future.sharednav.theme.onAccentColor
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.focus.bringIntoViewOnFocus
 
 import android.content.ClipData
@@ -29,6 +32,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.*
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
@@ -36,7 +40,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
+import com.future.sharednav.components.AppDialog
+import com.future.sharednav.nav.digitForKey
 import com.future.sharednav.theme.FutureTheme
 import com.future.sharednav.theme.calcButtonColor
 import com.future.sharednav.theme.calcButtonFocusedColor
@@ -44,14 +49,21 @@ import com.future.sharednav.theme.calcMutedButtonColor
 import java.math.BigDecimal
 import java.math.MathContext
 
-private enum class CalcOp { ADD, SUB, MUL, DIV }
+private enum class CalcOp { ADD, SUB, MUL, DIV, POW }
 
 private fun CalcOp.symbol(): String = when (this) {
     CalcOp.ADD -> "+"
     CalcOp.SUB -> "−"
     CalcOp.MUL -> "×"
     CalcOp.DIV -> "÷"
+    CalcOp.POW -> "^"
 }
+
+/** שני "סוגי מחשבון" זמינים - הקיים (רגיל, 4 פעולות) ומדעי חדש (טריגונומטריה/
+ * לוגריתמים/חזקות) - נבחר בסרגל פלחים מתחת לכותרת. אותו state machine
+ * (display/pendingValue/pendingOp) משרת את שניהם: פונקציות מדעיות חד-איבריות
+ * (sin/cos/... ) מוחלות ישירות על הערך המוצג, בדיוק כמו במחשבון מדעי כיס אמיתי. */
+private enum class CalculatorMode { STANDARD, SCIENTIFIC }
 
 private data class CalcHistoryEntry(val expression: String, val result: String)
 
@@ -72,9 +84,13 @@ fun CalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
     var startFresh by remember { mutableStateOf(true) }
     val history = remember { mutableStateListOf<CalcHistoryEntry>() }
     var showMenu by remember { mutableStateOf(false) }
+    var calcMode by remember { mutableStateOf(CalculatorMode.STANDARD) }
     val context = LocalContext.current
     val focusRequester = remember { FocusRequester() }
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
+    // מקש Options הפיזי נחסם ברמת המערכת ולעולם לא מגיע כ-Key.Menu לאפליקציה -
+    // התפריט נפתח באמת רק דרך השידור הגלובלי (ר' onOptionsKeyPress).
+    com.future.sharednav.nav.onOptionsKeyPress { showMenu = true }
 
     fun currentValue(): BigDecimal = try { BigDecimal(display) } catch (e: Exception) { BigDecimal.ZERO }
 
@@ -114,6 +130,9 @@ fun CalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
                     CalcOp.SUB -> pv.subtract(cur, CALC_PRECISION)
                     CalcOp.MUL -> pv.multiply(cur, CALC_PRECISION)
                     CalcOp.DIV -> if (cur.signum() == 0) throw ArithmeticException("Division by zero") else pv.divide(cur, CALC_PRECISION)
+                    // חזקה לא-שלמה (חיובית/שברית) היא מחוץ ליכולות BigDecimal הבסיסיות -
+                    // ממירים ל-Double כמו בכל פונקציה מדעית אחרת כאן (ר' applyUnaryFunction).
+                    CalcOp.POW -> BigDecimal(Math.pow(pv.toDouble(), cur.toDouble()), CALC_PRECISION)
                 }
                 result.stripTrailingZeros().toPlainString()
             } catch (e: Exception) {
@@ -170,6 +189,42 @@ fun CalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
         startFresh = false
     }
 
+    // פונקציות מדעיות חד-איבריות (sin/cos/.../√ וכו') מוחלות מיד על הערך המוצג,
+    // בדיוק כמו לחיצה על אותו כפתור במחשבון מדעי כיס אמיתי - לא צריך = כדי
+    // לראות תוצאה. startFresh=true אחרי כל אחת כי התוצאה היא "מספר סגור" חדש,
+    // בדיוק כמו אחרי =, לא המשך הקלדה של הספרות הקודמות.
+    fun applyUnaryFunction(fn: (Double) -> Double) {
+        display = try {
+            val result = fn(currentValue().toDouble())
+            if (result.isNaN() || result.isInfinite()) "שגיאה"
+            else BigDecimal(result, CALC_PRECISION).stripTrailingZeros().toPlainString()
+        } catch (e: Exception) {
+            "שגיאה"
+        }
+        startFresh = true
+    }
+
+    fun onFactorial() {
+        display = try {
+            val n = currentValue().toDouble()
+            if (n < 0 || n != Math.floor(n) || n > 170) {
+                "שגיאה"
+            } else {
+                var result = BigDecimal.ONE
+                for (i in 2..n.toInt()) result = result.multiply(BigDecimal(i))
+                result.toPlainString()
+            }
+        } catch (e: Exception) {
+            "שגיאה"
+        }
+        startFresh = true
+    }
+
+    fun onConstant(value: Double) {
+        display = BigDecimal(value, CALC_PRECISION).stripTrailingZeros().toPlainString()
+        startFresh = true
+    }
+
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
     // הפוקוס ההתחלתי צריך לנחות על כפתור אמיתי (למשל "C"), לא על ה-Box החיצוני
     // עצמו: Box עם .focusable() משלו "בולע" את הפוקוס לצמיתות ומונע ניווט D-pad
@@ -192,7 +247,6 @@ fun CalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
                     else -> when (event.key) {
                         Key.Enter, Key.NumPadEnter, Key.DirectionCenter -> { onEquals(); true }
                         Key.Backspace, Key.Delete -> { onBackspace(); true }
-                        Key.Menu, Key.Settings -> { showMenu = true; true }
                         else -> false
                     }
                 }
@@ -206,6 +260,13 @@ fun CalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
                 trailing = { ToolsIconButton(Icons.Rounded.MoreVert, "אפשרויות", theme = theme) { showMenu = true } }
             )
 
+            CalcModeSelector(
+                selected = calcMode,
+                theme = theme,
+                onSelect = { calcMode = it },
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+            )
+
             // הביטוי והתוצאה חייבים להישאר קריאים משמאל-לימין (ספרות + סימני
             // פעולה) גם כשכל שאר המסך ב-RTL: בלי לכפות כאן LTR מקומי, מחרוזת
             // בלי תו-חוזק חזק (כמו "5 ×") הייתה מקבלת את כיוון הפריסה הסביבתי
@@ -216,7 +277,7 @@ fun CalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
                         Text(
                             expressionLine,
                             color = theme.textColor.copy(alpha = 0.5f),
-                            fontSize = 16.sp,
+                            fontSize = FutureTypography.bodyLarge,
                             textAlign = TextAlign.End,
                             maxLines = 1,
                             modifier = Modifier.fillMaxWidth()
@@ -248,10 +309,31 @@ fun CalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
             // אין מסך מגע - ספרות מוקלדות ישירות דרך המקלדת הפיזית, אז השורה
             // העליונה כאן היא רק פעולות בלי מקש חומרה מקביל (במקום רשת ספרות
             // שממילא כפולה למקלדת הפיזית ותופסת מקום לשווא).
-            val actionRows = listOf(
+            val scientificRows = listOf(
+                listOf(
+                    Triple("sin", true) { applyUnaryFunction { x -> Math.sin(Math.toRadians(x)) } },
+                    Triple("cos", true) { applyUnaryFunction { x -> Math.cos(Math.toRadians(x)) } },
+                    Triple("tan", true) { applyUnaryFunction { x -> Math.tan(Math.toRadians(x)) } },
+                    Triple("xʸ", true) { onOperator(CalcOp.POW) },
+                ),
+                listOf(
+                    Triple("log", true) { applyUnaryFunction { x -> Math.log10(x) } },
+                    Triple("ln", true) { applyUnaryFunction { x -> Math.log(x) } },
+                    Triple("√", true) { applyUnaryFunction { x -> Math.sqrt(x) } },
+                    Triple("x²", true) { applyUnaryFunction { x -> x * x } },
+                ),
+                listOf(
+                    Triple("1/x", true) { applyUnaryFunction { x -> 1.0 / x } },
+                    Triple("x!", true) { onFactorial() },
+                    Triple("π", true) { onConstant(Math.PI) },
+                    Triple("e", true) { onConstant(Math.E) },
+                ),
+            )
+            val standardRows = listOf(
                 listOf(Triple("C", true) { onClear() }, Triple("⌫", true) { onBackspace() }, Triple("%", true) { onPercent() }, Triple("÷", false) { onOperator(CalcOp.DIV) }),
                 listOf(Triple("×", false) { onOperator(CalcOp.MUL) }, Triple("−", false) { onOperator(CalcOp.SUB) }, Triple("+", false) { onOperator(CalcOp.ADD) }, Triple("=", false) { onEquals() })
             )
+            val actionRows = if (calcMode == CalculatorMode.SCIENTIFIC) scientificRows + standardRows else standardRows
 
             Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)) {
                 actionRows.forEachIndexed { rowIndex, row ->
@@ -277,13 +359,13 @@ fun CalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
             Text(
                 "היסטוריה",
                 color = theme.textColor.copy(alpha = 0.4f),
-                fontSize = 12.sp,
+                fontSize = FutureTypography.label,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
             )
             if (history.isEmpty()) {
                 Box(modifier = Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
-                    Text("עדיין אין חישובים", color = theme.textColor.copy(alpha = 0.35f), fontSize = 13.sp)
+                    Text("עדיין אין חישובים", color = theme.textColor.copy(alpha = 0.35f), fontSize = FutureTypography.summary)
                 }
             } else {
                 LazyColumn(
@@ -323,6 +405,45 @@ fun CalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
     }
 }
 
+/** בורר בין "רגיל" (4 פעולות) ל"מדעי" (טריגונומטריה/לוגריתמים/חזקות) - ר'
+ * CalculatorMode. שני הפלחים ניווטים ב-D-pad בדיוק כמו כל כפתור אחר במסך. */
+@Composable
+private fun CalcModeSelector(selected: CalculatorMode, theme: FutureTheme, onSelect: (CalculatorMode) -> Unit, modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier
+            .clip(FutureShapes.md)
+            .background(theme.textColor.copy(alpha = 0.08f))
+            .padding(3.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        CalcModeSegment("רגיל", isSelected = selected == CalculatorMode.STANDARD, theme = theme, modifier = Modifier.weight(1f)) { onSelect(CalculatorMode.STANDARD) }
+        CalcModeSegment("מדעי", isSelected = selected == CalculatorMode.SCIENTIFIC, theme = theme, modifier = Modifier.weight(1f)) { onSelect(CalculatorMode.SCIENTIFIC) }
+    }
+}
+
+@Composable
+private fun CalcModeSegment(label: String, isSelected: Boolean, theme: FutureTheme, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
+    val shape = FutureShapes.sm
+    val bgColor by animateColorAsState(
+        if (isSelected) theme.accentColor else if (isFocused) theme.textColor.copy(alpha = 0.16f) else Color.Transparent,
+        label = "calcModeSegmentBg",
+    )
+    Box(
+        modifier = modifier
+            .clip(shape)
+            .background(bgColor)
+            .then(if (isFocused && !isSelected) Modifier.border(2.dp, theme.accentColor, shape) else Modifier)
+            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
+            .focusable(interactionSource = interactionSource)
+            .padding(vertical = 8.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(label, color = if (isSelected) theme.onAccentColor else theme.textColor, fontSize = FutureTypography.summary, fontWeight = FontWeight.SemiBold)
+    }
+}
+
 @Composable
 private fun CalcActionButton(
     label: String,
@@ -344,19 +465,19 @@ private fun CalcActionButton(
         if (isFocused) (if (isAccent) Color(0xFFFFB84D) else theme.calcButtonFocusedColor) else baseColor,
         label = "calcActionBg"
     )
-    val textColor = if (isAccent) Color.Black else theme.textColor
+    val textColor = if (isAccent) theme.onAccentColor else theme.textColor
 
     Box(
         modifier = modifier
             .height(52.dp)
-            .clip(RoundedCornerShape(16.dp))
+            .clip(FutureShapes.lg)
             .background(bgColor)
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
             .focusable(interactionSource = interactionSource).bringIntoViewOnFocus(),
         contentAlignment = Alignment.Center
     ) {
-        Text(label, color = textColor, fontSize = 20.sp, fontWeight = FontWeight.Medium)
+        Text(label, color = textColor, fontSize = FutureTypography.screenTitle, fontWeight = FontWeight.Medium)
     }
 }
 
@@ -364,7 +485,7 @@ private fun CalcActionButton(
 private fun CalcHistoryRow(entry: CalcHistoryEntry, theme: FutureTheme, onClick: () -> Unit) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    val shape = RoundedCornerShape(16.dp)
+    val shape = FutureShapes.lg
     val bgColor by animateColorAsState(
         if (isFocused) theme.textColor.copy(alpha = 0.14f) else theme.textColor.copy(alpha = 0.05f),
         label = "calcHistoryRowBg"
@@ -380,38 +501,58 @@ private fun CalcHistoryRow(entry: CalcHistoryEntry, theme: FutureTheme, onClick:
             .padding(horizontal = 14.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(entry.expression, color = theme.textColor.copy(alpha = 0.5f), fontSize = 13.sp)
-        Text(entry.result, color = theme.textColor, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+        Text(entry.expression, color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.summary)
+        Text(entry.result, color = theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Medium)
     }
 }
 
 @Composable
 private fun CalculatorOptionsMenu(theme: FutureTheme, onDismiss: () -> Unit, onCopyResult: () -> Unit, onClearHistory: () -> Unit) {
-    Dialog(onDismissRequest = onDismiss) {
+    val firstRowFocusRequester = remember { FocusRequester() }
+    AppDialog(onDismissRequest = onDismiss) {
         Column(
             modifier = Modifier
-                .clip(RoundedCornerShape(20.dp))
+                .clip(FutureShapes.xl)
                 .background(theme.surfaceColor)
                 .padding(vertical = 8.dp)
         ) {
-            CalcMenuRow("העתק תוצאה", Icons.Rounded.ContentCopy, theme = theme, onClick = onCopyResult)
+            CalcMenuRow("העתק תוצאה", Icons.Rounded.ContentCopy, theme = theme, onClick = onCopyResult, focusRequester = firstRowFocusRequester)
             CalcMenuRow("נקה היסטוריה", Icons.Rounded.DeleteSweep, theme = theme, onClick = onClearHistory, isDestructive = true)
         }
     }
 }
 
 @Composable
-private fun CalcMenuRow(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, theme: FutureTheme, onClick: () -> Unit, isDestructive: Boolean = false) {
+private fun CalcMenuRow(
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    theme: FutureTheme,
+    onClick: () -> Unit,
+    isDestructive: Boolean = false,
+    focusRequester: FocusRequester? = null,
+) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
     val bgColor by animateColorAsState(
         if (isFocused) theme.textColor.copy(alpha = 0.12f) else Color.Transparent,
         label = "calcMenuRowBg"
     )
+    // Dialog() רץ בחלון נפרד - בקשת פוקוס לפני שהשורה נדבקת נבלעת בשקט,
+    // אז מבקשים ברגע ש-onGloballyPositioned מאשר שהיא באמת נמדדה.
+    var hasRequestedFocus by remember { mutableStateOf(false) }
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .background(bgColor)
+            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
+            .then(
+                if (focusRequester != null) Modifier.onGloballyPositioned {
+                    if (!hasRequestedFocus) {
+                        hasRequestedFocus = true
+                        focusRequester.requestFocus()
+                    }
+                } else Modifier
+            )
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
             .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
             .padding(horizontal = 20.dp, vertical = 14.dp),
@@ -419,6 +560,6 @@ private fun CalcMenuRow(label: String, icon: androidx.compose.ui.graphics.vector
     ) {
         Icon(icon, contentDescription = null, tint = if (isDestructive) theme.dangerColor else theme.accentColor, modifier = Modifier.size(20.dp))
         Spacer(modifier = Modifier.width(14.dp))
-        Text(label, color = if (isDestructive) theme.dangerColor else theme.textColor, fontSize = 15.sp)
+        Text(label, color = if (isDestructive) theme.dangerColor else theme.textColor, fontSize = FutureTypography.bodyLarge)
     }
 }

@@ -1,0 +1,23 @@
+/* FutureOS webfonts.
+   The device itself renders in the Android system font (Roboto). No font binaries
+   ship with the source; the source's own Figma pipeline substitutes Heebo, which is
+   metrically close to Roboto and covers Hebrew. Roboto Mono carries numeric values.
+   Material Symbols Rounded is the icon font (Icons.Rounded.* in the Kotlin source). */
+@import url("https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800&family=Rubik:wght@400;500;600;700&family=Roboto+Mono:wght@300;400;500&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..700,0..1,0&display=swap");
+
+.fos-icon {
+  font-family: "Material Symbols Rounded";
+  font-weight: 400;
+  font-style: normal;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+.fos-icon[data-fill="1"] { font-variation-settings: "FILL" 1, "wght" 400, "GRAD" 0, "opsz" 24; }

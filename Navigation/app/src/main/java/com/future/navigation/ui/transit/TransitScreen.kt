@@ -1,5 +1,6 @@
 package com.future.navigation.ui.transit
 
+import com.future.sharednav.theme.FutureShapes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -27,6 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -57,7 +59,7 @@ fun TransitScreen(itinerary: TransitItinerary, onBack: () -> Unit) {
 
         Surface(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-            shape = RoundedCornerShape(16.dp),
+            shape = FutureShapes.lg,
             color = MaterialTheme.colorScheme.surface
         ) {
             Row(modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
@@ -68,8 +70,9 @@ fun TransitScreen(itinerary: TransitItinerary, onBack: () -> Unit) {
         }
 
         Spacer(modifier = Modifier.height(4.dp))
+        val hasRealtimeLeg = remember(itinerary) { itinerary.legs.any { it.isRealtime } }
         Text(
-            text = stringResource(R.string.schedule_disclaimer),
+            text = stringResource(if (hasRealtimeLeg) R.string.schedule_disclaimer_partial_realtime else R.string.schedule_disclaimer),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f),
             modifier = Modifier.padding(horizontal = 16.dp)
@@ -136,11 +139,17 @@ private fun LegRow(leg: TransitLeg, isLast: Boolean, expanded: Boolean, onToggle
                     idleBackgroundColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
                     focusedBackgroundColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.22f),
                     borderWidth = 2.dp,
-                    cornerRadius = 16.dp,
+                    cornerRadius = FutureShapes.radiusLg,
                     focusRequester = focusRequester
                 ) {
                     Column(modifier = Modifier.fillMaxWidth().padding(4.dp)) {
-                        Text(leg.routeLongName?.takeIf { it.isNotBlank() } ?: leg.routeShortName ?: "קו", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(leg.routeLongName?.takeIf { it.isNotBlank() } ?: leg.routeShortName ?: "קו", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
+                            if (leg.isRealtime) {
+                                Spacer(modifier = Modifier.width(8.dp))
+                                RealtimeBadge(delaySeconds = leg.delaySeconds)
+                            }
+                        }
                         Text(
                             "מ${leg.fromStopName} · אל ${leg.toStopName}",
                             style = MaterialTheme.typography.bodySmall,
@@ -160,6 +169,23 @@ private fun LegRow(leg: TransitLeg, isLast: Boolean, expanded: Boolean, onToggle
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun RealtimeBadge(delaySeconds: Int?) {
+    val delayMinutes = (delaySeconds ?: 0) / 60
+    val label = when {
+        delaySeconds == null || kotlin.math.abs(delaySeconds) < 60 -> stringResource(R.string.realtime_on_time)
+        delayMinutes > 0 -> stringResource(R.string.realtime_delayed, delayMinutes)
+        else -> stringResource(R.string.realtime_early, -delayMinutes)
+    }
+    Surface(shape = FutureShapes.sm, color = Color(0xFF2ECC71).copy(alpha = 0.18f)) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)) {
+            Box(modifier = Modifier.size(6.dp).background(Color(0xFF2ECC71), CircleShape))
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(label, style = MaterialTheme.typography.labelSmall, color = Color(0xFF1C8A4B), fontWeight = FontWeight.Bold)
         }
     }
 }

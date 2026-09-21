@@ -10,6 +10,7 @@ import com.future.navigation.data.location.LocationHelper
 import com.future.navigation.data.routing.DrivingRoute
 import com.future.navigation.data.routing.Maneuver
 import com.future.navigation.data.routing.RoutingRepository
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
@@ -55,6 +56,20 @@ class NavigateViewModel(
         LocationHelper.observeLocation(appContext)
             .onEach { location -> onLocationUpdate(LatLng(location.latitude, location.longitude)) }
             .launchIn(viewModelScope)
+
+        // בדיקה תקופתית של עומס פתאומי בכביש שכבר עליו המשתמש (Dynamic Rerouting) -
+        // בנוסף לסטייה פיזית מהמסלול שכבר מטופלת ב-onLocationUpdate/triggerReroute.
+        // HERE כבר מחשב כל מסלול עם פקקים בזמן אמת (ר' HereApi.kt), אז די לבקש
+        // מסלול טרי מהמיקום הנוכחי מדי פעם ולהשוות משך.
+        viewModelScope.launch {
+            while (!_uiState.value.ended) {
+                delay(TRAFFIC_RECHECK_INTERVAL_MS)
+                val location = _uiState.value.currentLocation
+                if (location != null && !_uiState.value.ended) {
+                    checkForFasterRouteDueToTraffic(location)
+                }
+            }
+        }
     }
 
     private fun onLocationUpdate(location: LatLng) {
@@ -108,6 +123,32 @@ class NavigateViewModel(
         }
     }
 
+    /**
+     * גרסה "עדינה" יותר של triggerReroute: לא מוחלפת בכל בדיקה, רק כשהמסלול
+     * הטרי מהיר משמעותית (לא רק תנודת ETA זניחה) ממה שנשאר על המסלול הנוכחי -
+     * כדי שעומס שהצטבר פתאום יגרום להחלפה בפועל, בלי "קפיצות" מסלול על הבדלים
+     * של כמה שניות.
+     */
+    private suspend fun checkForFasterRouteDueToTraffic(from: LatLng) {
+        if (rerouting || _uiState.value.ended) return
+        rerouting = true
+        try {
+            val candidate = routingRepository.getDrivingRoute(from, destination) ?: return
+            val state = _uiState.value
+            if (state.ended) return
+            if (candidate.durationSeconds < state.remainingDurationSeconds * TRAFFIC_REROUTE_IMPROVEMENT_FACTOR) {
+                _uiState.value = state.copy(
+                    route = candidate,
+                    currentStepIndex = 0,
+                    remainingDistanceMeters = candidate.distanceMeters,
+                    remainingDurationSeconds = candidate.durationSeconds
+                )
+            }
+        } finally {
+            rerouting = false
+        }
+    }
+
     fun toggleMute() {
         _uiState.value = _uiState.value.copy(muted = !_uiState.value.muted)
     }
@@ -119,5 +160,7 @@ class NavigateViewModel(
     companion object {
         private const val ARRIVAL_THRESHOLD_METERS = 25.0
         private const val REROUTE_THRESHOLD_METERS = 40.0
+        private const val TRAFFIC_RECHECK_INTERVAL_MS = 90_000L
+        private const val TRAFFIC_REROUTE_IMPROVEMENT_FACTOR = 0.9
     }
 }

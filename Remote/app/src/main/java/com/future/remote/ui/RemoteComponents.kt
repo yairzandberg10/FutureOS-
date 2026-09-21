@@ -1,4 +1,6 @@
 package com.future.remote.ui
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.focus.bringIntoViewOnFocus
 
 import androidx.compose.animation.animateColorAsState
@@ -48,7 +50,7 @@ fun RemoteIconButton(icon: ImageVector, contentDescription: String, theme: Futur
     Box(
         modifier = Modifier
             .size(36.dp)
-            .clip(RoundedCornerShape(18.dp))
+            .clip(FutureShapes.lg)
             .background(bgColor)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
             .focusable(interactionSource = interactionSource).bringIntoViewOnFocus(),
@@ -68,7 +70,7 @@ fun RemoteHeader(title: String, theme: FutureTheme, onBack: (() -> Unit)? = null
             RemoteIconButton(Icons.AutoMirrored.Rounded.ArrowBack, "חזור", theme = theme, onClick = onBack)
             Spacer(modifier = Modifier.width(10.dp))
         }
-        Text(title, color = theme.textColor, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f, fill = true))
+        Text(title, color = theme.textColor, fontSize = FutureTypography.title, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f, fill = true))
         trailing?.invoke()
     }
 }
@@ -85,7 +87,7 @@ fun RemoteRow(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    val shape = RoundedCornerShape(16.dp)
+    val shape = FutureShapes.lg
     val bgColor by animateColorAsState(
         if (isFocused) theme.textColor.copy(alpha = 0.14f) else theme.textColor.copy(alpha = 0.055f),
         label = "remoteRowBg"
@@ -111,8 +113,8 @@ fun RemoteRow(
         }
         Spacer(modifier = Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f, fill = true)) {
-            Text(label, color = theme.textColor, fontSize = 16.sp, fontWeight = FontWeight.Medium)
-            if (subtitle.isNotEmpty()) Text(subtitle, color = theme.textColor.copy(alpha = 0.5f), fontSize = 12.sp)
+            Text(label, color = theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Medium)
+            if (subtitle.isNotEmpty()) Text(subtitle, color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.label)
         }
         trailing?.invoke()
     }

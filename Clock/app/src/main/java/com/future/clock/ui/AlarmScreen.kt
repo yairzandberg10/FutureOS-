@@ -1,4 +1,7 @@
 package com.future.clock.ui
+import com.future.sharednav.theme.onAccentColor
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.components.ConfirmDialog
 import com.future.sharednav.focus.bringIntoViewOnFocus
 
 import androidx.compose.foundation.background
@@ -8,7 +11,15 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import com.future.sharednav.components.FutureCard
+import com.future.sharednav.components.FutureDayChip
+import com.future.sharednav.components.FutureDivider
+import com.future.sharednav.components.FutureSettingItem
+import com.future.sharednav.components.FutureSwitch
+import com.future.sharednav.theme.FutureDimens
+import com.future.sharednav.theme.subtleTextColor
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -45,6 +56,9 @@ fun AlarmScreen(theme: FutureTheme, onBack: () -> Unit) {
     val context = LocalContext.current
     val alarms = remember { mutableStateListOf<Alarm>() }
     var editingAlarm by remember { mutableStateOf<Alarm?>(null) }
+    // מחיקה היא בלתי הפיכה, ומקש OK הוא מקש בודד - בלי אישור, לחיצה בשוגג
+    // על שורת השעון מוחקת אותו.
+    var pendingDelete by remember { mutableStateOf<Alarm?>(null) }
     
     LaunchedEffect(Unit) {
         alarms.addAll(AlarmLogic.getAlarms(context))
@@ -52,6 +66,21 @@ fun AlarmScreen(theme: FutureTheme, onBack: () -> Unit) {
 
     fun updateAlarms() {
         AlarmLogic.saveAlarms(context, alarms.toList())
+    }
+
+    pendingDelete?.let { alarm ->
+        ConfirmDialog(
+            message = "למחוק את השעון %02d:%02d?".format(alarm.hour, alarm.minute),
+            surfaceColor = theme.surfaceColor,
+            textColor = theme.textColor,
+            dangerColor = theme.dangerColor,
+            onCancel = { pendingDelete = null },
+            onConfirm = {
+                alarms.remove(alarm)
+                updateAlarms()
+                pendingDelete = null
+            },
+        )
     }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
@@ -91,32 +120,44 @@ fun AlarmScreen(theme: FutureTheme, onBack: () -> Unit) {
                         com.future.sharednav.components.EmptyState(
                             icon = Icons.Rounded.AccessTime,
                             title = "אין שעונים מעוררים",
-                            subtitle = "הקישו על + כדי להוסיף אחד",
+                            subtitle = "נווטו לכפתור ההוספה למעלה ולחצו OK כדי להוסיף אחד",
                             textColor = theme.textColor,
                             modifier = Modifier.weight(1f).fillMaxWidth(),
                         )
                     } else {
-                        LazyColumn(
-                            modifier = Modifier.weight(1f),
-                            contentPadding = PaddingValues(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        // רשימת המעוררים היא כרטיס אחד של שורות שקופות
+                        // המופרדות בקו שיער, ולא שורות נפרדות עם מרווח
+                        // ביניהן (ui_kits/clock).
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .verticalScroll(rememberScrollState())
                         ) {
-                            items(alarms, key = { it.id }) { alarm ->
-                                AlarmRow(alarm, theme, 
-                                    onToggle = { enabled ->
-                                        val index = alarms.indexOf(alarm)
-                                        if (index != -1) {
-                                            alarms[index] = alarm.copy(isEnabled = enabled)
-                                            updateAlarms()
-                                        }
-                                    },
-                                    onDelete = {
-                                        alarms.remove(alarm)
-                                        updateAlarms()
-                                    },
-                                    onClick = { editingAlarm = alarm }
-                                )
+                            FutureCard(theme = theme) {
+                                alarms.forEachIndexed { index, alarm ->
+                                    if (index > 0) FutureDivider(theme = theme)
+                                    AlarmRow(alarm, theme,
+                                        onToggle = { enabled ->
+                                            val at = alarms.indexOf(alarm)
+                                            if (at != -1) {
+                                                alarms[at] = alarm.copy(isEnabled = enabled)
+                                                updateAlarms()
+                                            }
+                                        },
+                                        onDelete = { pendingDelete = alarm },
+                                        onClick = { editingAlarm = alarm }
+                                    )
+                                }
                             }
+                            Text(
+                                "אישור פותח את בורר השעה. מקש ההוספה למעלה מוסיף מעורר חדש.",
+                                color = theme.subtleTextColor,
+                                fontSize = FutureTypography.summary,
+                                modifier = Modifier.padding(
+                                    horizontal = FutureDimens.spacingXl,
+                                    vertical = 20.dp,
+                                ),
+                            )
                         }
                     }
                 }
@@ -134,28 +175,24 @@ private fun recurrenceSummary(alarm: Alarm): String {
     return "$state · $days"
 }
 
+/**
+ * שורת מעורר. בעיצוב היא [FutureSettingItem] עם מתג בלבד בסוף השורה;
+ * כפתור המחיקה נשאר כאן כתוספת, כי הוא הדרך היחידה למחוק מעורר - בעיצוב
+ * המחיקה יושבת בתפריט האפשרויות, שאינו קיים במסך הזה.
+ */
 @Composable
 fun AlarmRow(alarm: Alarm, theme: FutureTheme, onToggle: (Boolean) -> Unit, onDelete: () -> Unit, onClick: () -> Unit) {
-    ToolRow(
+    FutureSettingItem(
+        title = "%02d:%02d".format(alarm.hour, alarm.minute),
+        summary = recurrenceSummary(alarm),
         icon = Icons.Rounded.AccessTime,
-        label = "%02d:%02d".format(alarm.hour, alarm.minute),
-        subtitle = recurrenceSummary(alarm),
         theme = theme,
         onClick = onClick,
         trailing = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Switch(
-                    checked = alarm.isEnabled,
-                    onCheckedChange = onToggle,
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = theme.accentColor,
-                        checkedTrackColor = theme.accentColor.copy(alpha = 0.5f)
-                    )
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                ToolsIconButton(Icons.Rounded.Delete, "מחק", theme, tint = theme.dangerColor, onClick = onDelete)
-            }
-        }
+            FutureSwitch(checked = alarm.isEnabled, theme = theme)
+            Spacer(modifier = Modifier.width(FutureDimens.spacingSm))
+            ToolsIconButton(Icons.Rounded.Delete, "מחק", theme, tint = theme.dangerColor, onClick = onDelete)
+        },
     )
 }
 
@@ -175,12 +212,12 @@ fun TimePickerOverlay(alarm: Alarm, theme: FutureTheme, onSave: (Alarm) -> Unit,
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text("ערוך שעה", color = theme.textColor, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        Text("ערוך שעה", color = theme.textColor, fontSize = FutureTypography.screenTitle, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(24.dp))
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             TimeUnitPicker("שעות", hour, 0..23, theme) { hour = it }
-            Text(":", color = theme.textColor, fontSize = 48.sp, modifier = Modifier.padding(horizontal = 16.dp))
+            Text(":", color = theme.textColor, fontSize = FutureTypography.hero, fontFamily = FutureTypography.monoFamily, modifier = Modifier.padding(horizontal = 16.dp))
             TimeUnitPicker("דקות", minute, 0..59, theme) { minute = it }
         }
 
@@ -188,7 +225,7 @@ fun TimePickerOverlay(alarm: Alarm, theme: FutureTheme, onSave: (Alarm) -> Unit,
         Text(
             if (days.isEmpty()) "חד-פעמית" else "חוזרת",
             color = theme.textColor.copy(alpha = 0.6f),
-            fontSize = 13.sp
+            fontSize = FutureTypography.summary
         )
         Spacer(modifier = Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -225,27 +262,13 @@ fun TimePickerOverlay(alarm: Alarm, theme: FutureTheme, onSave: (Alarm) -> Unit,
     }
 }
 
+/**
+ * עיגול של יום בשבוע. מאציל ל-[FutureDayChip] המשותף - העיצוב שהיה כאן
+ * צבע את המצב הנבחר בהדגשה הגולמית, שנעלמת במצב בהיר עם הדגשה לבנה.
+ */
 @Composable
 fun DayToggleChip(label: String, selected: Boolean, theme: FutureTheme, onToggle: () -> Unit) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val bgColor = when {
-        selected -> theme.accentColor
-        isFocused -> theme.textColor.copy(alpha = 0.2f)
-        else -> theme.textColor.copy(alpha = 0.08f)
-    }
-    Box(
-        modifier = Modifier
-            .size(36.dp)
-            .clip(CircleShape)
-            .background(bgColor)
-            .then(if (isFocused) Modifier.border(width = 2.dp, color = theme.accentColor, shape = CircleShape) else Modifier)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onToggle)
-            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus(),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(label, color = if (selected) Color.Black else theme.textColor, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-    }
+    FutureDayChip(text = label, theme = theme, selected = selected, onClick = onToggle)
 }
 
 @Composable
@@ -257,13 +280,14 @@ fun TimeUnitPicker(label: String, value: Int, range: IntRange, theme: FutureThem
         Text(
             "%02d".format(value),
             color = theme.textColor,
-            fontSize = 48.sp,
+            fontSize = FutureTypography.hero,
             fontWeight = FontWeight.Light,
+            fontFamily = FutureTypography.monoFamily,
             modifier = Modifier.padding(vertical = 8.dp)
         )
         ToolsIconButton(Icons.Rounded.KeyboardArrowDown, "למטה", theme) {
             onValueChange(if (value == range.first) range.last else value - 1)
         }
-        Text(label, color = theme.textColor.copy(alpha = 0.5f), fontSize = 12.sp)
+        Text(label, color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.label)
     }
 }

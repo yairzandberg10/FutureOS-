@@ -1,5 +1,7 @@
 package com.future.music.ui.screens
 
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
@@ -37,7 +39,8 @@ import com.future.music.ui.components.FocusableItem
 import com.future.music.ui.components.MiniPlayerBar
 import com.future.music.ui.components.ScreenTopBar
 import com.future.music.ui.components.SongRow
-import com.future.music.ui.digitForKey
+
+import com.future.sharednav.nav.digitForKey
 import com.future.sharednav.theme.FutureTheme
 import com.future.music.util.T9Search
 
@@ -92,7 +95,7 @@ fun SearchScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 4.dp)
-                .clip(RoundedCornerShape(12.dp))
+                .clip(FutureShapes.md)
                 .background(theme.textColor.copy(alpha = 0.08f))
                 .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -100,22 +103,22 @@ fun SearchScreen(
             Text(
                 if (query.isEmpty()) "הקלידו ספרות לחיפוש (T9)..." else query,
                 color = if (query.isEmpty()) theme.textColor.copy(alpha = 0.4f) else theme.textColor,
-                fontSize = 18.sp,
+                fontSize = FutureTypography.title,
                 fontWeight = FontWeight.Medium,
                 modifier = Modifier.weight(1f),
             )
             if (query.isNotEmpty()) {
-                Text("${results.size} תוצאות", color = theme.textColor.copy(alpha = 0.4f), fontSize = 12.sp)
+                Text("${results.size} תוצאות", color = theme.textColor.copy(alpha = 0.4f), fontSize = FutureTypography.label)
             }
         }
 
         if (query.isEmpty()) {
             Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Text("לחצו על מקשי הספרות כדי לחפש", color = theme.textColor.copy(alpha = 0.4f), fontSize = 13.sp)
+                Text("לחצו על מקשי הספרות כדי לחפש", color = theme.textColor.copy(alpha = 0.4f), fontSize = FutureTypography.summary)
             }
         } else if (results.isEmpty()) {
             Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Text("לא נמצאו שירים", color = theme.textColor.copy(alpha = 0.4f), fontSize = 13.sp)
+                Text("לא נמצאו שירים", color = theme.textColor.copy(alpha = 0.4f), fontSize = FutureTypography.summary)
             }
         } else {
             LazyColumn(

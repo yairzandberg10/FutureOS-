@@ -22,6 +22,11 @@
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
 
+    <permission
+        android:name="com.future.futureui.permission.SYSTEM_SETTINGS"
+        android:protectionLevel="signature" />
+
+    <uses-permission android:name="com.future.keyboard.permission.SETTINGS" />
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -34,14 +39,20 @@
         android:isGame="false"
         android:theme="@style/Theme.FutureUI">
 
+        <!-- שני הספקים היו exported בלי הרשאה כלל: כל APK שהותקן על המכשיר
+             יכול היה לשנות את עיצוב המערכת ואת תצורת שורת המצב. protectionLevel
+             signature מגביל אותם לאפליקציות שחתומות באותו מפתח, כלומר לסוויטת
+             FutureOS בלבד. -->
         <provider
             android:name=".theme.ThemeProvider"
             android:authorities="com.future.futureui.theme"
+            android:permission="com.future.futureui.permission.SYSTEM_SETTINGS"
             android:exported="true" />
 
         <provider
             android:name=".systemui.SystemUiSettingsProvider"
             android:authorities="com.future.futureui.systemui"
+            android:permission="com.future.futureui.permission.SYSTEM_SETTINGS"
             android:exported="true" />
 
         <service

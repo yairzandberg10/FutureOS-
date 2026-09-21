@@ -1,5 +1,6 @@
 package com.future.music.ui.components
 
+import com.future.sharednav.theme.FutureTypography
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -58,13 +59,13 @@ fun SongRow(song: Song, isCurrent: Boolean, isPlaying: Boolean, isFocused: Boole
             Text(
                 song.title,
                 color = if (isCurrent) theme.accentColor else theme.textColor,
-                fontSize = 15.sp,
+                fontSize = FutureTypography.bodyLarge,
                 fontWeight = FontWeight.Medium,
                 maxLines = 1,
             )
-            Text(song.artist, color = theme.textColor.copy(alpha = 0.55f), fontSize = 12.sp, maxLines = 1)
+            Text(song.artist, color = theme.textColor.copy(alpha = 0.55f), fontSize = FutureTypography.label, maxLines = 1)
         }
         Spacer(modifier = Modifier.width(8.dp))
-        Text(formatDuration(song.durationMs), color = theme.textColor.copy(alpha = 0.4f), fontSize = 12.sp)
+        Text(formatDuration(song.durationMs), color = theme.textColor.copy(alpha = 0.4f), fontSize = FutureTypography.label)
     }
 }

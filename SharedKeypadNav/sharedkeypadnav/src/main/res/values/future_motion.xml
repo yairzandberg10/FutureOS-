@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- חייבים להיות זהים ל-FutureMotion.DurationStandard / DurationFast. -->
+    <integer name="future_motion_standard">200</integer>
+    <integer name="future_motion_fast">140</integer>
+
+    <!--
+        מעבר בין אפליקציות (פתיחה מהמסך הראשי, חזרה אליו, מעבר לאפליקציה
+        אחרת). עד עכשיו כל האפליקציות ירשו את האנימציה של ה-ROM, כך שפתיחת
+        אפליקציה נראתה אחרת לגמרי מהמעברים שבתוכה.
+        כל אפליקציה מחילה את זה ב-themes.xml שלה:
+        <item name="android:windowAnimationStyle">@style/FutureActivityAnimation</item>
+        לא מוחל ב-FutureUI וב-SystemUI: מסך הנעילה ומרכז הבקרה הם חלונות-על
+        עם תנועה משלהם.
+    -->
+    <style name="FutureActivityAnimation" parent="@android:style/Animation.Activity">
+        <item name="android:activityOpenEnterAnimation">@anim/future_open_enter</item>
+        <item name="android:activityOpenExitAnimation">@anim/future_open_exit</item>
+        <item name="android:activityCloseEnterAnimation">@anim/future_close_enter</item>
+        <item name="android:activityCloseExitAnimation">@anim/future_close_exit</item>
+        <item name="android:taskOpenEnterAnimation">@anim/future_open_enter</item>
+        <item name="android:taskOpenExitAnimation">@anim/future_open_exit</item>
+        <item name="android:taskCloseEnterAnimation">@anim/future_close_enter</item>
+        <item name="android:taskCloseExitAnimation">@anim/future_close_exit</item>
+        <item name="android:taskToFrontEnterAnimation">@anim/future_open_enter</item>
+        <item name="android:taskToFrontExitAnimation">@anim/future_open_exit</item>
+        <!-- "wallpaper close" = אפליקציה נפתחת מעל המסך הראשי; "open" = חוזרים אליו. -->
+        <item name="android:wallpaperCloseEnterAnimation">@anim/future_open_enter</item>
+        <item name="android:wallpaperCloseExitAnimation">@anim/future_open_exit</item>
+        <item name="android:wallpaperOpenEnterAnimation">@anim/future_close_enter</item>
+        <item name="android:wallpaperOpenExitAnimation">@anim/future_close_exit</item>
+    </style>
+</resources>

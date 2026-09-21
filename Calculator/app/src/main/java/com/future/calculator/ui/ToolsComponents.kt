@@ -1,4 +1,6 @@
 package com.future.calculator.ui
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.focus.bringIntoViewOnFocus
 
 import androidx.compose.animation.animateColorAsState
@@ -43,7 +45,7 @@ fun ToolsIconButton(icon: ImageVector, contentDescription: String, theme: Future
     Box(
         modifier = Modifier
             .size(36.dp)
-            .clip(RoundedCornerShape(18.dp))
+            .clip(FutureShapes.lg)
             .background(bgColor)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
             .focusable(interactionSource = interactionSource).bringIntoViewOnFocus(),
@@ -63,7 +65,7 @@ fun ToolsHeader(title: String, theme: FutureTheme, onBack: (() -> Unit)? = null,
             ToolsIconButton(Icons.AutoMirrored.Rounded.ArrowBack, "חזור", theme = theme, onClick = onBack)
             Spacer(modifier = Modifier.width(10.dp))
         }
-        Text(title, color = theme.textColor, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f, fill = true))
+        Text(title, color = theme.textColor, fontSize = FutureTypography.title, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f, fill = true))
         trailing?.invoke()
     }
 }

@@ -231,7 +231,9 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         return ThemeConfig(
             primaryColor = Color(shared.primaryColor),
             isDarkMode = shared.isDarkMode,
-            fontSizeMultiplier = prefs.getFloat("font_size_multiplier", 1.0f)
+            // המכפיל חי עכשיו ב-ThemeProvider כמו שאר העיצוב, כדי שהמחוון
+            // ישפיע על כל המערכת ולא רק על מסך ההגדרות (ראו FutureType).
+            fontSizeMultiplier = shared.fontSizeMultiplier
         )
     }
 
@@ -430,7 +432,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     fun updateFontSize(multiplier: Float) {
         _themeConfig.value = _themeConfig.value.copy(fontSizeMultiplier = multiplier)
-        prefs.edit().putFloat("font_size_multiplier", multiplier).apply()
+        ThemeClient.setFontSizeMultiplier(app, multiplier)
     }
 
     fun toggleSoundEffects() {
@@ -480,7 +482,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         _themeConfig.value = _themeConfig.value.copy(primaryColor = Color.White, isDarkMode = true, fontSizeMultiplier = 1.0f)
         ThemeClient.setDarkMode(app, true)
         ThemeClient.setPrimaryColor(app, Color.White.toArgb())
-        prefs.edit().putFloat("font_size_multiplier", 1.0f).apply()
+        ThemeClient.setFontSizeMultiplier(app, 1.0f)
         // מאפס גם את "חלון מרובה" כדי שאיפוס ההגדרות יספק דרך חזרה אמיתית למי שהפעיל
         // אותו ונתקע במסך מפוצל בלי מגע - ר' תיקון: המתג הזה חייב "דלת יציאה".
         viewModelScope.launch(Dispatchers.IO) {

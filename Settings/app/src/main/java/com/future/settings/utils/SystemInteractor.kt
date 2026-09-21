@@ -23,9 +23,7 @@ import android.telephony.SmsManager
 import android.location.Location
 import android.location.LocationManager
 import android.media.ToneGenerator
-import java.io.DataOutputStream
-import java.io.BufferedReader
-import java.io.InputStreamReader
+import com.future.sharednav.root.RootShell
 
 class SystemInteractor(private val context: Context) {
     private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
@@ -44,7 +42,9 @@ class SystemInteractor(private val context: Context) {
             val intent = Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             context.startActivity(intent)
-        } catch (e: Exception) {}
+        } catch (e: Exception) {
+            android.util.Log.w("SystemInteractor", "openNotificationPolicyAccessSettings failed", e)
+        }
     }
 
     fun getPairedBluetoothDevices(): Set<android.bluetooth.BluetoothDevice> {
@@ -150,37 +150,19 @@ class SystemInteractor(private val context: Context) {
     }
 
     fun runRootCommands(commands: List<String>): RootCommandResult {
-        var output = ""
-        var success = false
-        try {
-            val process = Runtime.getRuntime().exec("su")
-            val os = DataOutputStream(process.outputStream)
-            val reader = BufferedReader(InputStreamReader(process.inputStream))
-
-            for (cmd in commands) {
-                os.writeBytes(cmd + "\n")
-            }
-            os.writeBytes("exit\n")
-            os.flush()
-
-            output = reader.readText()
-            val exitCode = process.waitFor()
-            success = exitCode == 0
-        } catch (e: Exception) {
-            // Fallback for non-root environments or individual failures - if we had to
-            // fall back here it means "su" itself couldn't be executed (e.g. non-rooted
-            // device), so this can never be reported as a genuine root-command success.
-            for (cmd in commands) {
-                try {
-                    val process = Runtime.getRuntime().exec(cmd)
-                    process.waitFor()
-                } catch (e2: Exception) {
-                    e2.printStackTrace()
-                }
-            }
-            success = false
+        val result = RootShell.run(commands)
+        if (!result.isShellUnavailable) {
+            return RootCommandResult(result.output, result.success)
         }
-        return RootCommandResult(output, success)
+        // מסלול fallback: אם הגענו לכאן, "su" עצמו לא ניתן להרצה (מכשיר לא
+        // rooted). מנסים את אותן פקודות בלי הרשאות - דרך sh -c, כדי
+        // שמשמעות הפקודה (ציטוטים, צינורות) תישמר. בכל מקרה לא
+        // מדווחים על כך success אמיתי של פקודת root.
+        val fallbackOutput = StringBuilder()
+        for (cmd in commands) {
+            fallbackOutput.append(RootShell.runWithoutRoot(cmd).output)
+        }
+        return RootCommandResult(fallbackOutput.toString(), false)
     }
 
     fun setAirplaneMode(enabled: Boolean): Boolean {
@@ -225,7 +207,9 @@ class SystemInteractor(private val context: Context) {
         try { bluetoothAdapter?.name ?: Build.MODEL } catch (e: SecurityException) { Build.MODEL }
 
     fun setBluetoothDeviceName(name: String) {
-        try { bluetoothAdapter?.name = name } catch (e: SecurityException) {}
+        try { bluetoothAdapter?.name = name } catch (e: SecurityException) {
+            android.util.Log.w("SystemInteractor", "setBluetoothDeviceName failed", e)
+        }
     }
 
     /** אין API ציבורי ל"מחובר בפועל" (לעומת "משויך/paired") - BluetoothDevice.isConnected()
@@ -261,7 +245,9 @@ class SystemInteractor(private val context: Context) {
     }
 
     fun cancelBluetoothDiscovery() {
-        try { bluetoothAdapter?.cancelDiscovery() } catch (e: SecurityException) {}
+        try { bluetoothAdapter?.cancelDiscovery() } catch (e: SecurityException) {
+            android.util.Log.w("SystemInteractor", "cancelBluetoothDiscovery failed", e)
+        }
     }
 
     fun pairBluetoothDevice(device: android.bluetooth.BluetoothDevice): Boolean =
@@ -308,7 +294,9 @@ class SystemInteractor(private val context: Context) {
     fun setSoundEffectsEnabled(enabled: Boolean) {
         try {
             Settings.System.putInt(contentResolver, Settings.System.SOUND_EFFECTS_ENABLED, if (enabled) 1 else 0)
-        } catch (e: Exception) {}
+        } catch (e: Exception) {
+            android.util.Log.w("SystemInteractor", "setSoundEffectsEnabled failed", e)
+        }
     }
 
     fun isHapticFeedbackEnabled(): Boolean =
@@ -317,7 +305,9 @@ class SystemInteractor(private val context: Context) {
     fun setHapticFeedbackEnabled(enabled: Boolean) {
         try {
             Settings.System.putInt(contentResolver, Settings.System.HAPTIC_FEEDBACK_ENABLED, if (enabled) 1 else 0)
-        } catch (e: Exception) {}
+        } catch (e: Exception) {
+            android.util.Log.w("SystemInteractor", "setHapticFeedbackEnabled failed", e)
+        }
     }
 
     /** מילישניות עד כיבוי מסך אוטומטי. */
@@ -327,7 +317,9 @@ class SystemInteractor(private val context: Context) {
     fun setScreenTimeout(millis: Int) {
         try {
             Settings.System.putInt(contentResolver, Settings.System.SCREEN_OFF_TIMEOUT, millis)
-        } catch (e: Exception) {}
+        } catch (e: Exception) {
+            android.util.Log.w("SystemInteractor", "setScreenTimeout failed", e)
+        }
     }
 
     // --- רינגטונים/צלילי התראה/אזעקה אמיתיים דרך RingtoneManager - בלי לקפוץ להגדרות אנדרואיד ---
@@ -360,7 +352,9 @@ class SystemInteractor(private val context: Context) {
     fun setDefaultRingtone(uri: Uri, type: Int = RingtoneManager.TYPE_RINGTONE) {
         try {
             RingtoneManager.setActualDefaultRingtoneUri(context, type, uri)
-        } catch (e: Exception) {}
+        } catch (e: Exception) {
+            android.util.Log.w("SystemInteractor", "setDefaultRingtone failed", e)
+        }
     }
 
     // --- צלילי מערכת נוספים ---
@@ -371,7 +365,9 @@ class SystemInteractor(private val context: Context) {
     fun setDialPadTonesEnabled(enabled: Boolean) {
         try {
             Settings.System.putInt(contentResolver, Settings.System.DTMF_TONE_WHEN_DIALING, if (enabled) 1 else 0)
-        } catch (e: Exception) {}
+        } catch (e: Exception) {
+            android.util.Log.w("SystemInteractor", "setDialPadTonesEnabled failed", e)
+        }
     }
 
     fun isLockSoundEnabled(): Boolean =
@@ -406,7 +402,9 @@ class SystemInteractor(private val context: Context) {
         try {
             val mode = if (enabled) Settings.System.SCREEN_BRIGHTNESS_MODE_AUTOMATIC else Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL
             Settings.System.putInt(contentResolver, Settings.System.SCREEN_BRIGHTNESS_MODE, mode)
-        } catch (e: Exception) {}
+        } catch (e: Exception) {
+            android.util.Log.w("SystemInteractor", "setAdaptiveBrightnessEnabled failed", e)
+        }
     }
 
     /** מכבה/מדליק את שלושת מקדמי האנימציה של המערכת (חלון/מעבר/אנימטור) יחד -
@@ -539,13 +537,17 @@ class SystemInteractor(private val context: Context) {
             previewRingtone?.stop()
             previewRingtone = RingtoneManager.getRingtone(context, uri)
             previewRingtone?.play()
-        } catch (e: Exception) {}
+        } catch (e: Exception) {
+            android.util.Log.w("SystemInteractor", "previewRingtone failed", e)
+        }
     }
 
     fun stopRingtonePreview() {
         try {
             previewRingtone?.stop()
-        } catch (e: Exception) {}
+        } catch (e: Exception) {
+            android.util.Log.w("SystemInteractor", "stopRingtonePreview failed", e)
+        }
     }
 
     // --- תאריך ושעה ---
@@ -1022,7 +1024,9 @@ class SystemInteractor(private val context: Context) {
             val intent = Intent(Settings.ACTION_SHOW_REGULATORY_INFO)
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             context.startActivity(intent)
-        } catch (e: Exception) {}
+        } catch (e: Exception) {
+            android.util.Log.w("SystemInteractor", "openRegulatoryInfo failed", e)
+        }
     }
 
     // --- מידע סוללה מורחב (בריאות ארוכת-טווח) ---
@@ -1190,7 +1194,9 @@ class SystemInteractor(private val context: Context) {
             } else {
                 @Suppress("DEPRECATION") vibrator.vibrate(300)
             }
-        } catch (e: Exception) {}
+        } catch (e: Exception) {
+            android.util.Log.w("SystemInteractor", "testVibration failed", e)
+        }
     }
 
     private var toneGenerator: ToneGenerator? = null
@@ -1200,7 +1206,9 @@ class SystemInteractor(private val context: Context) {
             toneGenerator?.release()
             toneGenerator = ToneGenerator(AudioManager.STREAM_MUSIC, 90)
             toneGenerator?.startTone(ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, 700)
-        } catch (e: Exception) {}
+        } catch (e: Exception) {
+            android.util.Log.w("SystemInteractor", "testSpeakerTone failed", e)
+        }
     }
 
     fun getSensorManager(): android.hardware.SensorManager =

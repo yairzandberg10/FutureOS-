@@ -1,5 +1,6 @@
 package com.future.tools.ui
 
+import com.future.sharednav.theme.FutureTypography
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -77,16 +78,16 @@ fun LuxMeterScreen(theme: FutureTheme, onBack: () -> Unit) {
                         Text(
                             "לא נמצא חיישן אור במכשיר הזה",
                             color = theme.textColor.copy(alpha = 0.6f),
-                            fontSize = 14.sp,
+                            fontSize = FutureTypography.body,
                             modifier = Modifier.padding(horizontal = 32.dp)
                         )
                     } else {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             LuxGauge(lux = state.lux, theme = theme)
                             Spacer(modifier = Modifier.height(20.dp))
-                            Text("${state.lux.roundToInt()} lux", color = theme.textColor, fontSize = 40.sp, fontWeight = FontWeight.Light)
+                            Text("${state.lux.roundToInt()} lux", color = theme.textColor, fontSize = FutureTypography.display, fontWeight = FontWeight.Light)
                             Spacer(modifier = Modifier.height(6.dp))
-                            Text(lightingLabel(state.lux), color = theme.accentColor, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                            Text(lightingLabel(state.lux), color = theme.accentColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Medium)
                         }
                     }
                 }

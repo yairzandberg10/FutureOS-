@@ -1,5 +1,6 @@
 package com.future.futureui.statusbar.ui
 
+import com.future.sharednav.theme.FutureShapes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -23,7 +24,7 @@ import androidx.compose.ui.unit.dp
  */
 @Composable
 fun VolumeOverlay(level: Float, modifier: Modifier = Modifier) {
-    val shape = RoundedCornerShape(30.dp)
+    val shape = FutureShapes.xxl
 
     Box(
         modifier = modifier.fillMaxWidth(),

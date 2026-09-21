@@ -1,53 +1,31 @@
 package com.future.dialer.ui.theme
 
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import com.future.sharednav.theme.FutureMaterialTheme
+import com.future.sharednav.theme.FutureTheme
+import com.future.sharednav.theme.mutedTextColor
 
 /**
- * צבעי כיוון שיחה (נכנסת/יוצאת/שלא נענתה) - קבועים סמנטיים אחידים, כדי שלא
- * יוקלדו כ-hex גולמי בכל מקום שמציג רשומת שיחה (למשל CallHistoryItem).
+ * צבעי כיוון שיחה (נכנסת/יוצאת/שלא נענתה). היו שלושה hex גולמיים מלוח
+ * הצבעים של Material (ירוק/כחול/אדום), כלומר צבעים שאינם קיימים בפלטה של
+ * המערכת ואינם מגיבים למצב כהה/בהיר. הפלטה כולה היא שבעה צבעים לערכה,
+ * ואין בה כחול: שיחה יוצאת אינה סטטוס אלא ברירת מחדל, ולכן היא מקבלת את
+ * צבע הטקסט המשני ולא צבע משלה ("An icon never carries its own brand
+ * color", README של הדיזיין סיסטם).
  */
 object DialerCallColors {
-    val incoming = Color(0xFF4CAF50)
-    val outgoing = Color(0xFF2196F3)
-    val missed = Color(0xFFF44336)
+    val FutureTheme.incoming: Color get() = successColor
+    val FutureTheme.outgoing: Color get() = mutedTextColor
+    val FutureTheme.missed: Color get() = dangerColor
 }
 
+/**
+ * מעטפת דקה סביב FutureMaterialTheme של המודול המשותף. הערכה הייתה כאן
+ * העתק ידני של אותו ColorScheme שהופיע גם ב-Messages/notes/Navigation, עם
+ * onPrimary=Color.Black קבוע (בלתי קריא על הדגשה כהה).
+ */
 @Composable
 fun DialerTheme(isDarkMode: Boolean = true, accentColor: Color = Color.White, content: @Composable () -> Unit) {
-    val colorScheme = if (isDarkMode) {
-        darkColorScheme(
-            primary = accentColor,
-            onPrimary = Color.Black,
-            secondary = accentColor,
-            background = Color.Black,
-            onBackground = Color.White,
-            surface = Color.White.copy(alpha = 0.08f),
-            onSurface = Color.White,
-            surfaceVariant = Color.White.copy(alpha = 0.16f),
-            onSurfaceVariant = Color.White,
-            outline = Color.White.copy(alpha = 0.3f)
-        )
-    } else {
-        lightColorScheme(
-            primary = accentColor,
-            onPrimary = Color.White,
-            secondary = accentColor,
-            background = Color(0xFFF2F2F7),
-            onBackground = Color.Black,
-            surface = Color.White,
-            onSurface = Color.Black,
-            surfaceVariant = Color.Black.copy(alpha = 0.06f),
-            onSurfaceVariant = Color.Black,
-            outline = Color.Black.copy(alpha = 0.2f)
-        )
-    }
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content
-    )
+    FutureMaterialTheme(theme = FutureTheme(isDarkMode = isDarkMode, accentColor = accentColor), content = content)
 }

@@ -1,7 +1,9 @@
 package com.future.fitness.ui.screens
 
+import com.future.sharednav.theme.FutureTypography
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -18,6 +20,7 @@ import com.future.fitness.data.UserProfile
 import com.future.fitness.data.WorkoutStore
 import com.future.fitness.ui.components.FocusableItem
 import com.future.fitness.ui.components.ScreenTopBar
+import com.future.fitness.ui.theme.KineticDimens
 import com.future.sharednav.theme.FutureTheme
 
 private data class HealthTip(val title: String, val body: String)
@@ -64,7 +67,12 @@ fun HealthTipsScreen(theme: FutureTheme, store: WorkoutStore, onBack: () -> Unit
         // כל כרטיס עטוף ב-FocusableItem (onClick={} - מידעי בלבד, לא פעולה) כדי
         // שיהיה focusable ואפשר יהיה לגלול אליו עם D-pad; בלי זה תוכן שגולש
         // מחוץ למסך היה בלתי-נגיש במכשיר בלי מסך מגע.
-        LazyColumn(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+        LazyColumn(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            // ריפוד עליון קטן - ר' ההסבר המלא ב-HomeScreen.kt (בלעדיו הפריט
+            // הראשון לא מצטייר בקומפוזיציה הראשונה תחת enableEdgeToEdge).
+            contentPadding = PaddingValues(top = 4.dp),
+        ) {
             if (profile.age != null) {
                 item {
                     val maxHr = WorkoutStore.estimateMaxHr(profile.age)
@@ -72,11 +80,11 @@ fun HealthTipsScreen(theme: FutureTheme, store: WorkoutStore, onBack: () -> Unit
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(theme.accentColor.copy(alpha = 0.12f), RoundedCornerShape(16.dp))
+                                .background(theme.accentColor.copy(alpha = 0.12f), RoundedCornerShape(KineticDimens.cardCorner))
                                 .padding(16.dp),
                         ) {
-                            Text("דופק מקסימלי משוער עבורך", color = theme.accentColor, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                            Text("$maxHr פעימות לדקה (לפי גיל ${profile.age}, הערכה גסה)", color = theme.textColor, fontSize = 14.sp, modifier = Modifier.padding(top = 4.dp))
+                            Text("דופק מקסימלי משוער עבורך", color = theme.accentColor, fontSize = FutureTypography.summary, fontWeight = FontWeight.Bold)
+                            Text("$maxHr פעימות לדקה (לפי גיל ${profile.age}, הערכה גסה)", color = theme.textColor, fontSize = FutureTypography.body, modifier = Modifier.padding(top = 4.dp))
                         }
                     }
                 }
@@ -87,11 +95,11 @@ fun HealthTipsScreen(theme: FutureTheme, store: WorkoutStore, onBack: () -> Unit
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(theme.surfaceColor, RoundedCornerShape(16.dp))
+                            .background(theme.surfaceColor, RoundedCornerShape(KineticDimens.cardCorner))
                             .padding(16.dp),
                     ) {
-                        Text(tip.title, color = theme.textColor, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                        Text(tip.body, color = theme.textColor.copy(alpha = 0.7f), fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+                        Text(tip.title, color = theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Bold)
+                        Text(tip.body, color = theme.textColor.copy(alpha = 0.7f), fontSize = FutureTypography.summary, modifier = Modifier.padding(top = 6.dp))
                     }
                 }
             }
@@ -100,7 +108,7 @@ fun HealthTipsScreen(theme: FutureTheme, store: WorkoutStore, onBack: () -> Unit
                 Text(
                     DISCLAIMER,
                     color = theme.textColor.copy(alpha = 0.4f),
-                    fontSize = 11.sp,
+                    fontSize = FutureTypography.caption,
                     modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
                 )
             }

@@ -1,5 +1,6 @@
 package com.future.tools.ui
 
+import com.future.sharednav.theme.FutureTypography
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -152,16 +153,16 @@ fun CompassScreen(theme: FutureTheme, onBack: () -> Unit) {
                         Text(
                             "לא נמצא חיישן מצפן (תאוצה/מגנטומטר) במכשיר הזה",
                             color = theme.textColor.copy(alpha = 0.6f),
-                            fontSize = 14.sp,
+                            fontSize = FutureTypography.body,
                             modifier = Modifier.padding(horizontal = 32.dp)
                         )
                     } else {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             CompassRose(azimuth = azimuth, theme = theme)
                             Spacer(modifier = Modifier.height(24.dp))
-                            Text("${azimuth.roundToInt()}°", color = theme.textColor, fontSize = 32.sp, fontWeight = FontWeight.Light)
+                            Text("${azimuth.roundToInt()}°", color = theme.textColor, fontSize = FutureTypography.display, fontWeight = FontWeight.Light)
                             Spacer(modifier = Modifier.height(4.dp))
-                            Text(cardinalFor(azimuth), color = theme.textColor.copy(alpha = 0.6f), fontSize = 15.sp)
+                            Text(cardinalFor(azimuth), color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.bodyLarge)
                             Spacer(modifier = Modifier.height(20.dp))
                             AltitudeRow(altitudeState = altitudeState, theme = theme)
                         }
@@ -178,7 +179,7 @@ private fun AltitudeRow(altitudeState: AltitudeState, theme: FutureTheme) {
         Text(
             "אין חיישן לחץ ברומטרי - לא ניתן למדוד גובה",
             color = theme.textColor.copy(alpha = 0.35f),
-            fontSize = 12.sp
+            fontSize = FutureTypography.label
         )
         return
     }
@@ -187,11 +188,11 @@ private fun AltitudeRow(altitudeState: AltitudeState, theme: FutureTheme) {
         Text(
             if (meters != null) "${meters.roundToInt()} מ' מעל פני הים" else "מודד גובה...",
             color = theme.textColor,
-            fontSize = 18.sp,
+            fontSize = FutureTypography.title,
             fontWeight = FontWeight.Medium
         )
         Spacer(modifier = Modifier.height(2.dp))
-        Text("גובה משוער לפי לחץ אטמוספרי", color = theme.textColor.copy(alpha = 0.35f), fontSize = 11.sp)
+        Text("גובה משוער לפי לחץ אטמוספרי", color = theme.textColor.copy(alpha = 0.35f), fontSize = FutureTypography.caption)
     }
 }
 

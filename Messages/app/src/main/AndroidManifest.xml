@@ -16,7 +16,12 @@
     <uses-permission android:name="android.permission.RECEIVE_MMS" />
     <uses-permission android:name="android.permission.READ_CONTACTS" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- חיוג ישיר (ACTION_CALL) לאיש קשר ממוקד ברשימת השיחות באמצעות מקש
+         החיוג הפיזי - אם לא תאושר, נופלים חזרה ל-ACTION_DIAL (פתיחת מסך חיוג). -->
+    <uses-permission android:name="android.permission.CALL_PHONE" />
 
+    <uses-permission android:name="com.future.futureui.permission.SYSTEM_SETTINGS" />
+    <uses-permission android:name="com.future.keyboard.permission.SETTINGS" />
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -102,6 +107,17 @@
              intent-filter כי הוא מופעל תמיד ב-Intent מפורש (component). -->
         <receiver
             android:name=".receiver.MmsSentReceiver"
+            android:exported="false" />
+
+        <!-- מקבלים את sentIntent/deliveryIntent מ-SmsManager.sendMultipartTextMessage;
+             כמו MmsSentReceiver, לא צריכים intent-filter כי הם מופעלים תמיד
+             ב-Intent מפורש (component). -->
+        <receiver
+            android:name=".receiver.SmsSentReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".receiver.SmsDeliveredReceiver"
             android:exported="false" />
 
         <!-- חושף את קובץ ה-PDU הזמני שנכתב ל-cache כ-content:// URI, כדי שנוכל

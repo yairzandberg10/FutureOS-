@@ -1,0 +1,75 @@
+<!-- @dsCard group="Components" viewport="700x2000" name="Core" subtitle="Top bar, list rows, buttons, card, empty state, avatar, hero, mono value, action grid" -->
+<!DOCTYPE html><html lang="he" dir="rtl"><head>
+<meta charset="utf-8">
+<title>FutureOS · Core</title>
+<link rel="stylesheet" href="../../styles.css">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>html,body{margin:0}body{background:var(--fos-bg);color:var(--fos-text);font-family:var(--fos-font);direction:rtl}
+.wrap{padding:28px 20px;display:flex;flex-direction:column;gap:22px}
+.lbl{font-size:22px;color:var(--fos-text-40);letter-spacing:1px}
+.row{display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+a{color:var(--fos-accent)}a:hover{opacity:.7}</style>
+</head><body><div id="root"></div>
+<script type="text/babel">
+const { TopBar, IconButton, ListItem, Button, Card, SectionHeader, Divider, EmptyState, FosIcon: Icon, Avatar, ScreenHero, MonoValue, ActionGrid } = window.FutureOSDesignSystem_3ab611;
+const L = ({children}) => <div className="lbl">{children}</div>;
+function App(){return <div className="wrap">
+  <L>TopBar</L>
+  <div style={{background:"var(--fos-surface)",borderRadius:"var(--fos-radius-card)"}}>
+    <TopBar title="אנשי קשר" onBack={()=>{}} onMenu={()=>{}} />
+  </div>
+  <L>IconButton · idle / focused</L>
+  <div className="row"><IconButton icon="arrow_forward" /><IconButton icon="arrow_forward" focused /><IconButton icon="more_vert" /><IconButton icon="search" focused /></div>
+  <L>ListItem · focused / idle</L>
+  <div>
+    <ListItem title="מיכל לוי" summary="052-3334455" focused />
+    <div style={{height:24}}></div>
+    <ListItem title="דני כהן" summary="054-7778899" trailing={<Icon name="star" size={36} fill={1} color="var(--fos-favorite)" />} />
+  </div>
+  <L>Button · primary / destructive / secondary / quiet, idle then focused</L>
+  <div className="row"><Button variant="primary">אישור</Button><Button variant="primary" focused>אישור</Button><Button variant="destructive">מחק</Button><Button variant="destructive" focused>מחק</Button></div>
+  <div className="row"><Button variant="secondary">ביטול</Button><Button variant="secondary" focused>ביטול</Button><Button variant="quiet">ביטול</Button></div>
+  <L>SectionHeader · Card · Divider</L>
+  <div style={{margin:"0 -20px"}}>
+    <SectionHeader>תצוגה</SectionHeader>
+    <Card>
+      <ListItem title="בהירות" summary="אוטומטית" style={{height:"var(--fos-row-setting)"}} />
+      <Divider />
+      <ListItem title="שפה" summary="עברית" style={{height:"var(--fos-row-setting)"}} />
+    </Card>
+  </div>
+  <L>EmptyState</L>
+  <EmptyState icon="person" title="אין אנשי קשר" subtitle="לחץ על מקש התפריט כדי להוסיף" />
+  <L>Avatar · initials / glyph, list size then hero size</L>
+  <div className="row"><Avatar name="מיכל לוי" /><Avatar name="דני כהן" /><Avatar icon="headphones" /><Avatar name="מיכל לוי" size={176} /></div>
+  <L>ScreenHero · with eyebrow / with live status</L>
+  <div className="row" style={{alignItems:"flex-start",gap:0}}>
+    <ScreenHero name="מיכל לוי" eyebrow="שיחה נכנסת" status="052-333-4455" style={{flex:1}} />
+    <ScreenHero name="אוזניות" icon="headphones" status="מחובר · 80%" statusColor="var(--fos-success)" size={160} style={{flex:1}} />
+  </div>
+  <L>MonoValue · timer / stopwatch / world clock</L>
+  <div className="row" style={{gap:40}}>
+    <MonoValue color="var(--fos-success)">01:24</MonoValue>
+    <MonoValue size="var(--fos-size-clock)">00:09.4</MonoValue>
+    <MonoValue size="var(--fos-size-screen-title)" label="לונדון">12:38</MonoValue>
+  </div>
+  <L>ActionGrid · 2 columns, one active, one focused</L>
+  <ActionGrid columns={2} focusedIndex={1} items={[
+    {icon:"mic_off",label:"בטל השתקה",active:true},
+    {icon:"volume_up",label:"רמקול"},
+    {icon:"pause",label:"המתנה"},
+    {icon:"dialpad",label:"מקלדת"}
+  ]} />
+  <L>ActionGrid · 4 columns, action strip</L>
+  <ActionGrid columns={4} height={110} focusedIndex={0} items={[
+    {icon:"volume_up",label:"השמע"},
+    {icon:"content_copy",label:"העתק"},
+    {icon:"star",label:"שמור",color:"var(--fos-favorite)"},
+    {icon:"share",label:"שתף"}
+  ]} />
+</div>}
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script></body></html>

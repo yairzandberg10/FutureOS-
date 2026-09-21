@@ -1,4 +1,7 @@
 package com.future.clock.ui
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.mutedTextColor
+import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.focus.bringIntoViewOnFocus
 
 import android.widget.Toast
@@ -117,18 +120,22 @@ private fun CurrentTimeDisplay(theme: FutureTheme) {
         modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // פני השעון: 48sp במשקל דק ובגופן חד-רווח, לפי ui_kits/clock.
+        // קודם 64sp בגופן פרופורציונלי - הספרות זזו בכל שנייה.
         Text(
             timeText,
             color = theme.textColor,
-            fontSize = 64.sp,
-            fontWeight = FontWeight.Light,
+            fontSize = FutureTypography.hero,
+            fontWeight = FutureTypography.weightLight,
+            fontFamily = FutureTypography.monoFamily,
+            lineHeight = FutureTypography.hero,
             textAlign = TextAlign.Center
         )
         Text(
             dateText,
-            color = theme.textColor.copy(alpha = 0.6f),
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Medium,
+            color = theme.mutedTextColor,
+            fontSize = FutureTypography.bodyLarge,
+            fontWeight = FutureTypography.weightRegular,
             textAlign = TextAlign.Center
         )
     }
@@ -153,7 +160,7 @@ private fun PinToHomeButton(entry: ClockEntry, theme: FutureTheme) {
     Box(
         modifier = Modifier
             .size(36.dp)
-            .clip(RoundedCornerShape(18.dp))
+            .clip(FutureShapes.lg)
             .background(bgColor)
             .clickable(interactionSource = interactionSource, indication = null) {
                 val next = !isPinned

@@ -16,6 +16,7 @@ import com.future.calendar.data.CalendarEvent
 import com.future.calendar.data.CalendarRepository
 import com.future.calendar.data.CalendarSettings
 import com.future.calendar.data.LocationHelper
+import com.future.sharednav.components.ConfirmDialog
 import com.future.sharednav.theme.ThemeClient
 import com.future.calendar.ui.CalendarHomeScreen
 import com.future.calendar.ui.CalendarSettingsScreen
@@ -47,6 +48,7 @@ class MainActivity : ComponentActivity() {
             var selectedDate by remember { mutableStateOf(today) }
             var events by remember { mutableStateOf<List<CalendarEvent>>(emptyList()) }
             var editorState by remember { mutableStateOf<Pair<LocalDate, CalendarEvent?>?>(null) }
+            var pendingDelete by remember { mutableStateOf<CalendarEvent?>(null) }
             var showSettings by remember { mutableStateOf(false) }
 
             var useGps by remember { mutableStateOf(CalendarSettings.getUseGps(this@MainActivity)) }
@@ -163,7 +165,12 @@ class MainActivity : ComponentActivity() {
             }
 
             Surface(modifier = Modifier.fillMaxSize(), color = theme.backgroundColor) {
-                if (showSettings) {
+                // הגדרות לוח השנה עמוקות ממסך הבית - החלקה פנימה/החוצה.
+                com.future.sharednav.components.AnimatedScreenHost(
+                    targetState = showSettings,
+                    depthOf = { if (it) 1 else 0 },
+                ) { settingsShown ->
+                if (settingsShown) {
                     CalendarSettingsScreen(
                         useGps = useGps,
                         hasLocationPermission = hasLocationPermission,
@@ -221,10 +228,7 @@ class MainActivity : ComponentActivity() {
                         onOpenMonth = { currentMonth = it; viewMode = CalendarViewMode.MONTH },
                         onAddEvent = { editorState = selectedDate to null },
                         onEditEvent = { editorState = selectedDate to it },
-                        onDeleteEvent = {
-                            repository.deleteEvent(it.id)
-                            refreshEvents()
-                        },
+                        onDeleteEvent = { pendingDelete = it },
                         onGoToday = {
                             currentMonth = YearMonth.from(today)
                             selectedDate = today
@@ -238,6 +242,25 @@ class MainActivity : ComponentActivity() {
                         usingFallbackLocation = usingFallbackLocation
                     )
                 }
+                }
+            }
+
+            // מחיקת אירוע היא בלתי הפיכה, ומגיעה משני מסלולים (תפריט האפשרויות
+            // של אירוע ודיאלוג העריכה) - שניהם עוברים דרך אישור אחד כאן.
+            pendingDelete?.let { event ->
+                ConfirmDialog(
+                    message = "למחוק את האירוע \"${event.title}\"?",
+                    surfaceColor = theme.surfaceColor,
+                    textColor = theme.textColor,
+                    dangerColor = theme.dangerColor,
+                    onCancel = { pendingDelete = null },
+                    onConfirm = {
+                        repository.deleteEvent(event.id)
+                        pendingDelete = null
+                        editorState = null
+                        refreshEvents()
+                    },
+                )
             }
 
             editorState?.let { (date, editing) ->
@@ -250,11 +273,7 @@ class MainActivity : ComponentActivity() {
                         saveEvent(date, editing, title, description, location, startHour, startMinute, endHour, endMinute, allDay)
                     },
                     onDelete = if (editing != null) {
-                        {
-                            repository.deleteEvent(editing.id)
-                            editorState = null
-                            refreshEvents()
-                        }
+                        { pendingDelete = editing }
                     } else null
                 )
             }

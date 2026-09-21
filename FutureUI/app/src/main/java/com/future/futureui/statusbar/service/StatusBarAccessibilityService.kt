@@ -117,7 +117,6 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
 
     override fun onServiceConnected() {
         super.onServiceConnected()
-        controlManager?.startRootShell()
         if (layoutManager?.getSuppressSystemBars() == true) {
             suppressSystemBars()
         }
@@ -315,7 +314,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
         if (recentsVisible) return
         try {
             if (!recentAppsManager.hasUsageAccess()) {
-                controlManager?.runRootCommand("appops set $packageName GET_USAGE_STATS allow")
+                controlManager?.runRootCommandAsync("appops set $packageName GET_USAGE_STATS allow")
             }
             recentAppsList.clear()
             recentAppsList.addAll(recentAppsManager.getRecentApps())
@@ -349,7 +348,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
                                 hideRecentApps()
                             },
                             onClose = { app ->
-                                controlManager?.runRootCommand("am force-stop ${app.packageName}")
+                                controlManager?.runRootCommandAsync("am force-stop ${app.packageName}")
                                 recentAppsList.remove(app)
                             },
                             onDismiss = { hideRecentApps() }
@@ -385,11 +384,11 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
      * לוודא שהפקודה עובדת על ה-ROM הספציפי (יאיר: תבדוק על המכשיר בפועל).
      */
     private fun suppressSystemBars() {
-        controlManager?.runRootCommand("settings put global policy_control immersive.full=*")
+        controlManager?.runRootCommandAsync("settings put global policy_control immersive.full=*")
     }
 
     private fun restoreSystemBars() {
-        controlManager?.runRootCommand("settings put global policy_control immersive.none=*")
+        controlManager?.runRootCommandAsync("settings put global policy_control immersive.none=*")
     }
 
     override fun onDestroy() {
@@ -402,14 +401,17 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
             Log.e("FutureUI", "Error tearing down status bar", e)
         }
         restoreSystemBars()
-        controlManager?.stopRootShell()
         controlManager?.dispose()
         try {
             unregisterReceiver(bringToFrontReceiver)
-        } catch (e: Exception) {}
+        } catch (e: Exception) {
+            android.util.Log.w("StatusBarAccessibilityS", "onDestroy failed", e)
+        }
         try {
             themePrefs.unregisterOnSharedPreferenceChangeListener(themePrefsListener)
-        } catch (e: Exception) {}
+        } catch (e: Exception) {
+            android.util.Log.w("StatusBarAccessibilityS", "onDestroy failed", e)
+        }
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
         store.clear()
         super.onDestroy()

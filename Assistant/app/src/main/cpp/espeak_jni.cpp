@@ -49,6 +49,10 @@ Java_com_future_assistant_asr_EspeakTts_nativeInit(JNIEnv *env, jobject /*thiz*/
     LOGD("espeak_SetVoiceByName(he) -> %d", (int) voiceErr);
     if (voiceErr != EE_OK) return -1;
 
+    // ברירת המחדל של espeak-ng (175 מילים לדקה) נשמעת מהירה ומעט "מרוסקת" -
+    // מאט קצת לקצב נעים ומובן יותר.
+    espeak_SetParameter(espeakRATE, 140, 0);
+
     return sampleRate;
 }
 

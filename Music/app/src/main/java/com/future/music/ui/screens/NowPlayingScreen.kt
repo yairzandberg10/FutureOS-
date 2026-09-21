@@ -1,5 +1,7 @@
 package com.future.music.ui.screens
 
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -60,6 +62,7 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
+import com.future.sharednav.focus.bringIntoViewOnFocus
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -71,7 +74,8 @@ import com.future.music.playback.PlayerUiState
 import com.future.music.ui.components.ScreenTopBar
 import com.future.music.ui.components.formatDuration
 import com.future.music.ui.components.rememberAlbumArt
-import com.future.music.ui.digitForKey
+
+import com.future.sharednav.nav.digitForKey
 import com.future.sharednav.theme.FutureTheme
 import kotlinx.coroutines.delay
 
@@ -167,7 +171,7 @@ fun NowPlayingScreen(
                 modifier = Modifier
                     .fillMaxWidth(0.5f)
                     .aspectRatio(1f)
-                    .clip(RoundedCornerShape(20.dp))
+                    .clip(FutureShapes.xl)
                     .background(theme.accentColor.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center,
             ) {
@@ -182,7 +186,7 @@ fun NowPlayingScreen(
             Text(
                 song?.title ?: "נגן",
                 color = theme.textColor,
-                fontSize = 16.sp,
+                fontSize = FutureTypography.bodyLarge,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
                 textAlign = TextAlign.Center,
@@ -191,7 +195,7 @@ fun NowPlayingScreen(
             Text(
                 song?.artist ?: "לחצו על מקש Options לבחירת שיר",
                 color = theme.textColor.copy(alpha = 0.6f),
-                fontSize = 12.sp,
+                fontSize = FutureTypography.label,
                 maxLines = 1,
                 textAlign = TextAlign.Center,
             )
@@ -201,13 +205,13 @@ fun NowPlayingScreen(
                 val progress = if (playerState.durationMs > 0) (playerState.positionMs.toFloat() / playerState.durationMs.toFloat()).coerceIn(0f, 1f) else 0f
                 LinearProgressIndicator(
                     progress = { progress },
-                    modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)),
+                    modifier = Modifier.fillMaxWidth().height(4.dp).clip(FutureShapes.xs),
                     color = theme.accentColor,
                     trackColor = theme.textColor.copy(alpha = 0.12f),
                 )
                 Row(modifier = Modifier.fillMaxWidth().padding(top = 2.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(formatDuration(playerState.positionMs), color = theme.textColor.copy(alpha = 0.5f), fontSize = 10.sp)
-                    Text(formatDuration(playerState.durationMs), color = theme.textColor.copy(alpha = 0.5f), fontSize = 10.sp)
+                    Text(formatDuration(playerState.positionMs), color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.caption)
+                    Text(formatDuration(playerState.durationMs), color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.caption)
                 }
 
                 val trackControlFocus: (Boolean) -> Unit = { focused -> focusedControlCount += if (focused) 1 else -1 }
@@ -282,7 +286,16 @@ private fun RoundIconButton(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    LaunchedEffect(isFocused) { onFocusChanged(isFocused) }
+    // LaunchedEffect(isFocused) יורה גם בקומפוזיציה הראשונה (עם הערך ההתחלתי
+    // false, לפני שהכפתור קיבל בכלל פוקוס אמיתי) - בלי השמירה הזו, כל כפתור
+    // לא-ממוקד "מדווח" false פעם אחת סתם, ומוריד את focusedControlCount
+    // שבמסך ההורה מתחת ל-0 (במקום להישאר על 0), כך שהתנאי focusedControlCount
+    // <= 0 תמיד מתקיים - ואז ימין/שמאל תמיד עושים seek, גם כשכפתור כן ממוקד.
+    var hasEmittedFocusChange by remember { mutableStateOf(false) }
+    LaunchedEffect(isFocused) {
+        if (hasEmittedFocusChange || isFocused) onFocusChanged(isFocused)
+        hasEmittedFocusChange = true
+    }
     val bg = when {
         filled -> theme.accentColor
         active -> theme.accentColor.copy(alpha = 0.3f)
@@ -300,7 +313,8 @@ private fun RoundIconButton(
             .background(bg)
             .border(width = 2.dp, color = focusBorderColor, shape = CircleShape)
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick),
+            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
+            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus(),
         contentAlignment = Alignment.Center,
     ) {
         Icon(icon, contentDescription = contentDescription, tint = tint, modifier = Modifier.size(size * 0.45f))
@@ -321,7 +335,7 @@ private fun AddToPlaylistDialog(
         title = { Text("הוספה לפלייליסט", color = theme.textColor) },
         text = {
             if (playlists.isEmpty()) {
-                Text("אין עדיין פלייליסטים - צרו אחד ממסך הפלייליסטים", color = theme.textColor.copy(alpha = 0.6f), fontSize = 13.sp)
+                Text("אין עדיין פלייליסטים - צרו אחד ממסך הפלייליסטים", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.summary)
             } else {
                 Column {
                     playlists.forEach { playlist ->
@@ -338,7 +352,7 @@ private fun AddToPlaylistDialog(
                                 onCheckedChange = { onToggle(playlist.id) },
                                 colors = CheckboxDefaults.colors(checkedColor = theme.accentColor),
                             )
-                            Text(playlist.name, color = theme.textColor, fontSize = 14.sp)
+                            Text(playlist.name, color = theme.textColor, fontSize = FutureTypography.body)
                         }
                     }
                 }

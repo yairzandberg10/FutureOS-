@@ -1,4 +1,7 @@
 package com.future.clock.ui
+import com.future.sharednav.theme.onAccentColor
+import com.future.sharednav.components.FutureProgressBar
+import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.focus.bringIntoViewOnFocus
 
 import androidx.compose.animation.animateColorAsState
@@ -63,8 +66,19 @@ fun StopwatchScreen(theme: FutureTheme, onBack: () -> Unit) {
                     Text(
                         formatElapsed(displayedElapsed),
                         color = theme.textColor,
-                        fontSize = 48.sp,
-                        fontWeight = FontWeight.Light
+                        fontSize = FutureTypography.hero,
+                        fontWeight = FontWeight.Light,
+                        fontFamily = FutureTypography.monoFamily
+                    )
+                }
+
+                // סיבוב השניות מתחת לשעון (ui_kits/clock). המספרים הגדולים
+                // משתנים לאט מכדי למסור "רץ" במבט חטוף; הפס עושה את זה.
+                if (isRunning) {
+                    FutureProgressBar(
+                        progress = (displayedElapsed % 60_000L) / 60_000f,
+                        theme = theme,
+                        modifier = Modifier.padding(horizontal = 32.dp, vertical = 8.dp),
                     )
                 }
 
@@ -116,8 +130,8 @@ fun StopwatchScreen(theme: FutureTheme, onBack: () -> Unit) {
                                 modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text("הקפה ${laps.size - index}", color = theme.textColor.copy(alpha = 0.5f), fontSize = 13.sp)
-                                Text(formatElapsed(lap), color = theme.textColor, fontSize = 15.sp)
+                                Text("הקפה ${laps.size - index}", color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.summary)
+                                Text(formatElapsed(lap), color = theme.textColor, fontSize = FutureTypography.bodyLarge)
                             }
                         }
                     }
@@ -145,6 +159,6 @@ private fun StopwatchActionButton(label: String, isPrimary: Boolean, color: Colo
             .focusable(interactionSource = interactionSource).bringIntoViewOnFocus(),
         contentAlignment = Alignment.Center
     ) {
-        Text(label, color = if (isPrimary) Color.Black else theme.textColor, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+        Text(label, color = if (isPrimary) theme.onAccentColor else theme.textColor, fontSize = FutureTypography.summary, fontWeight = FontWeight.Bold)
     }
 }

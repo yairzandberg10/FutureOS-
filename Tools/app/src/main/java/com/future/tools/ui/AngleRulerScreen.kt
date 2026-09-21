@@ -1,5 +1,8 @@
 package com.future.tools.ui
 
+import com.future.sharednav.theme.onAccentColor
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -101,7 +104,7 @@ fun AngleRulerScreen(theme: FutureTheme, onBack: () -> Unit) {
 private fun ModeChip(label: String, isSelected: Boolean, theme: FutureTheme, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    val shape = RoundedCornerShape(14.dp)
+    val shape = FutureShapes.md
     val bgColor = when {
         isSelected -> theme.accentColor
         isFocused -> theme.textColor.copy(alpha = 0.18f)
@@ -116,7 +119,7 @@ private fun ModeChip(label: String, isSelected: Boolean, theme: FutureTheme, mod
             .padding(vertical = 10.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(label, color = if (isSelected) Color.Black else theme.textColor, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+        Text(label, color = if (isSelected) theme.onAccentColor else theme.textColor, fontSize = FutureTypography.body, fontWeight = FontWeight.Medium)
     }
 }
 
@@ -168,7 +171,7 @@ private fun RulerView(theme: FutureTheme) {
         Text(
             "הצמד חפץ לקצה המסך ומדוד לפי הסימונים (ס\"מ)",
             color = theme.textColor.copy(alpha = 0.4f),
-            fontSize = 12.sp,
+            fontSize = FutureTypography.label,
             modifier = Modifier.padding(horizontal = 24.dp)
         )
     }
@@ -210,8 +213,8 @@ private fun AngleView(angle: Float, theme: FutureTheme) {
             }
         }
         Spacer(modifier = Modifier.height(16.dp))
-        Text("${displayAngle.roundToInt()}°", color = theme.textColor, fontSize = 40.sp, fontWeight = FontWeight.Light)
+        Text("${displayAngle.roundToInt()}°", color = theme.textColor, fontSize = FutureTypography.display, fontWeight = FontWeight.Light)
         Spacer(modifier = Modifier.height(4.dp))
-        Text("הטה את המכשיר לאורך המשטח הנמדד", color = theme.textColor.copy(alpha = 0.4f), fontSize = 12.sp)
+        Text("הטה את המכשיר לאורך המשטח הנמדד", color = theme.textColor.copy(alpha = 0.4f), fontSize = FutureTypography.label)
     }
 }

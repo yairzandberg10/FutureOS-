@@ -73,7 +73,14 @@ class MainActivity : ComponentActivity() {
                         }
                     )
 
-                    NavHost(navController = navController, startDestination = "list") {
+                    NavHost(
+                        navController = navController,
+                        startDestination = "list",
+                        enterTransition = { com.future.sharednav.theme.FutureTransitions.navEnter },
+                        exitTransition = { com.future.sharednav.theme.FutureTransitions.navExit },
+                        popEnterTransition = { com.future.sharednav.theme.FutureTransitions.navPopEnter },
+                        popExitTransition = { com.future.sharednav.theme.FutureTransitions.navPopExit },
+                    ) {
                         composable("list") {
                             val notes by viewModel.notes.collectAsState()
                             val query by viewModel.searchQuery.collectAsState()

@@ -1,5 +1,7 @@
 package com.future.tools.ui
 
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -77,7 +79,7 @@ fun TimeZoneConverterScreen(theme: FutureTheme, onBack: () -> Unit) {
 
 @Composable
 private fun CityTimeRow(city: WorldCity, zoned: ZonedDateTime, dayDiff: Long, theme: FutureTheme) {
-    val shape = RoundedCornerShape(16.dp)
+    val shape = FutureShapes.lg
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -88,7 +90,7 @@ private fun CityTimeRow(city: WorldCity, zoned: ZonedDateTime, dayDiff: Long, th
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Column {
-            Text(city.label, color = theme.textColor, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+            Text(city.label, color = theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Medium)
             Text(
                 zoned.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale("he")) + " · " + zoned.format(dateFormatter) +
                     when {
@@ -97,9 +99,9 @@ private fun CityTimeRow(city: WorldCity, zoned: ZonedDateTime, dayDiff: Long, th
                         else -> ""
                     },
                 color = theme.textColor.copy(alpha = 0.5f),
-                fontSize = 12.sp
+                fontSize = FutureTypography.label
             )
         }
-        Text(zoned.format(timeFormatter), color = theme.accentColor, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        Text(zoned.format(timeFormatter), color = theme.accentColor, fontSize = FutureTypography.screenTitle, fontWeight = FontWeight.Bold)
     }
 }

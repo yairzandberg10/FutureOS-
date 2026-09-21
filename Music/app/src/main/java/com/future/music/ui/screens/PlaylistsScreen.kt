@@ -1,5 +1,7 @@
 package com.future.music.ui.screens
 
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -61,7 +63,7 @@ fun PlaylistsScreen(
 
         if (playlists.isEmpty()) {
             Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Text("אין עדיין פלייליסטים - לחצו + כדי ליצור", color = theme.textColor.copy(alpha = 0.5f), fontSize = 14.sp)
+                Text("אין עדיין פלייליסטים - לחצו + כדי ליצור", color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.body)
             }
         } else {
             LazyColumn(
@@ -80,14 +82,14 @@ fun PlaylistsScreen(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Box(
-                                modifier = Modifier.size(36.dp).clip(RoundedCornerShape(8.dp)).background(theme.accentColor.copy(alpha = 0.18f)),
+                                modifier = Modifier.size(36.dp).clip(FutureShapes.sm).background(theme.accentColor.copy(alpha = 0.18f)),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Icon(Icons.AutoMirrored.Rounded.QueueMusic, contentDescription = null, tint = theme.accentColor, modifier = Modifier.size(18.dp))
                             }
                             Spacer(modifier = Modifier.width(12.dp))
-                            Text(playlist.name, color = theme.textColor, fontSize = 15.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f), maxLines = 1)
-                            Text("${playlist.songIds.size} שירים", color = theme.textColor.copy(alpha = 0.4f), fontSize = 12.sp)
+                            Text(playlist.name, color = theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f), maxLines = 1)
+                            Text("${playlist.songIds.size} שירים", color = theme.textColor.copy(alpha = 0.4f), fontSize = FutureTypography.label)
                         }
                     }
                 }

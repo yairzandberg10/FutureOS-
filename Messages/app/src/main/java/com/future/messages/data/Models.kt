@@ -7,6 +7,10 @@ data class Contact(
     val phoneNumber: String
 )
 
+/** סטטוס שליחה של הודעה יוצאת - מוצג למשתמש כמשוב אמיתי אם ההודעה יצאה
+ * מהמכשיר בפועל, ולא רק "נשלחה" באופן אופטימי. לא רלוונטי להודעות נכנסות. */
+enum class MessageStatus { SENDING, SENT, DELIVERED, FAILED }
+
 data class Message(
     val id: Long,
     val text: String,
@@ -14,7 +18,8 @@ data class Message(
     val isFromMe: Boolean,
     val isRead: Boolean,
     val isMms: Boolean = false,
-    val imageUri: Uri? = null
+    val imageUri: Uri? = null,
+    val status: MessageStatus? = null
 )
 
 data class Conversation(

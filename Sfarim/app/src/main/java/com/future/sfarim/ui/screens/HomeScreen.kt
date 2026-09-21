@@ -1,5 +1,6 @@
 package com.future.sfarim.ui.screens
 
+import com.future.sharednav.theme.FutureTypography
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -57,7 +58,7 @@ fun HomeScreen(
             item {
                 Text(
                     "בלכתך בדרך",
-                    fontSize = 26.sp,
+                    fontSize = FutureTypography.headline,
                     fontWeight = FontWeight.Bold,
                     color = theme.textColor,
                     modifier = Modifier.padding(bottom = 8.dp),
@@ -78,11 +79,11 @@ fun HomeScreen(
                             Icon(Icons.Rounded.AutoStories, contentDescription = null, tint = theme.accentColor)
                             Spacer(modifier = Modifier.width(14.dp))
                             Column {
-                                Text("המשך קריאה", color = theme.textColor.copy(alpha = 0.6f), fontSize = 12.sp)
+                                Text("המשך קריאה", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.label)
                                 Text(
                                     "${continueReading.bookTitle} — ${continueReading.segmentRef}",
                                     color = theme.textColor,
-                                    fontSize = 15.sp,
+                                    fontSize = FutureTypography.bodyLarge,
                                     maxLines = 1,
                                 )
                             }
@@ -103,7 +104,7 @@ fun HomeScreen(
             item {
                 Text(
                     "קטגוריות",
-                    fontSize = 14.sp,
+                    fontSize = FutureTypography.body,
                     fontWeight = FontWeight.Bold,
                     color = theme.textColor.copy(alpha = 0.6f),
                     modifier = Modifier.padding(top = 12.dp, bottom = 4.dp),
@@ -124,7 +125,7 @@ fun HomeScreen(
                         Text(
                             category.nameHe?.takeIf { it.isNotBlank() } ?: category.nameEn,
                             color = theme.textColor,
-                            fontSize = 16.sp,
+                            fontSize = FutureTypography.bodyLarge,
                         )
                     }
                 }
@@ -149,7 +150,7 @@ private fun HomeShortcut(
         ) {
             Icon(icon, contentDescription = null, tint = theme.accentColor)
             Spacer(modifier = Modifier.height(6.dp))
-            Text(label, color = theme.textColor, fontSize = 13.sp)
+            Text(label, color = theme.textColor, fontSize = FutureTypography.summary)
         }
     }
 }

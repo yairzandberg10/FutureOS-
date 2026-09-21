@@ -1,4 +1,6 @@
 package com.future.settings.ui
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.focus.bringIntoViewOnFocus
 
 import android.Manifest
@@ -17,7 +19,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
@@ -36,16 +37,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.input.key.Key
@@ -66,6 +64,7 @@ import androidx.navigation.compose.rememberNavController
 import com.future.settings.ui.components.*
 import com.future.settings.ui.theme.ThemeConfig
 import com.future.settings.viewmodel.SettingsViewModel
+import com.future.sharednav.focus.escapeTextFieldFocusTrap
 
 sealed class Screen(val route: String) {
     object Main : Screen("main")
@@ -181,17 +180,16 @@ fun SettingsApp(viewModel: SettingsViewModel) {
     // מעברים ברירת מחדל של Navigation Compose לוקחים כ-300ms; במסך שמנווטים בו
     // הרבה עם מקלדת פיזית (בלי מגע) זה מצטבר ומרגיש איטי - קיצור ל-120ms הופך
     // את הניווט בין תפריטים למיידי בהרבה בלי לוותר על אנימציה לגמרי.
-    val fastFade = androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(120))
-    val fastFadeOut = androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(100))
-
+    // המעברים המשותפים של המערכת (FutureTransitions) - אותו עיקרון בדיוק
+    // (קצר, 200ms), אבל עם כיוון: פנימה מחליק משמאל, חזרה מימין.
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         NavHost(
             navController = navController,
             startDestination = Screen.Main.route,
-            enterTransition = { fastFade },
-            exitTransition = { fastFadeOut },
-            popEnterTransition = { fastFade },
-            popExitTransition = { fastFadeOut }
+            enterTransition = { com.future.sharednav.theme.FutureTransitions.navEnter },
+            exitTransition = { com.future.sharednav.theme.FutureTransitions.navExit },
+            popEnterTransition = { com.future.sharednav.theme.FutureTransitions.navPopEnter },
+            popExitTransition = { com.future.sharednav.theme.FutureTransitions.navPopExit }
         ) {
             composable(Screen.Main.route) { MainMenu(navController, theme, viewModel) }
             composable(Screen.Connections.route) { ConnectionsScreen(navController, theme, viewModel) }
@@ -246,10 +244,10 @@ fun SettingsApp(viewModel: SettingsViewModel) {
 private data class SearchableSetting(val title: String, val keywords: String, val icon: ImageVector, val route: String)
 
 private val SEARCHABLE_SETTINGS = listOf(
-    SearchableSetting("חיבורים", "bluetooth בלוטות' מצב טיסה נתונים סלולריים sim מיקום location airplane", Icons.Rounded.SettingsInputAntenna, Screen.Connections.route),
+    SearchableSetting("חיבורים", "bluetooth בלוטות' מצב טיסה נתונים סלולריים sim מיקום location airplane", Icons.Rounded.Hub, Screen.Connections.route),
     SearchableSetting("צלילים", "עוצמת שמע צליל רינגטון volume sound ringtone", Icons.AutoMirrored.Rounded.VolumeUp, Screen.Sound.route),
     SearchableSetting("תצוגה", "בהירות מסך עיצוב brightness display", Icons.Rounded.Brightness6, Screen.Display.route),
-    SearchableSetting("שורת מצב, מסך נעילה ורקע", "סטטוס בר שעון lockscreen status bar clock טפט wallpaper", Icons.Rounded.Widgets, Screen.SystemUi.route),
+    SearchableSetting("מסך נעילה ורקע", "שורת מצב סטטוס בר שעון lockscreen status bar clock טפט wallpaper", Icons.Rounded.Widgets, Screen.SystemUi.route),
     SearchableSetting("סוללה", "battery חיסכון טעינה אחוז", Icons.Rounded.BatteryFull, Screen.Battery.route),
     SearchableSetting("אחסון", "storage זיכרון פנוי מקום", Icons.Rounded.Storage, Screen.Storage.route),
     SearchableSetting("ביצועים ותחזוקה", "performance מעבד ram ניקוי אופטימיזציה", Icons.Rounded.Speed, Screen.Performance.route),
@@ -265,7 +263,6 @@ fun MainMenu(navController: NavController, theme: ThemeConfig, viewModel: Settin
     var konamiBuffer by remember { mutableStateOf(listOf<Int>()) }
     var confettiTrigger by remember { mutableStateOf(0) }
     var searchQuery by remember { mutableStateOf("") }
-    val focusManager = LocalFocusManager.current
 
     // מצב חגיגה זמני ל-5 דקות בלבד - הטיימר הזה מסמן מחדש כל שנייה כל עוד המצב
     // פעיל, כדי שהכרטיס "יתחבא" לבד ברגע שהזמן נגמר בלי צורך לצאת ולהיכנס שוב.
@@ -328,41 +325,32 @@ fun MainMenu(navController: NavController, theme: ThemeConfig, viewModel: Settin
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp)
-                        // בשדה טקסט, Compose "בולע" את מקש למטה פנימית ולא מזיז פוקוס -
-                        // מכשיר עם מקלדת בלבד (בלי מגע) היה נשאר תקוע בשדה החיפוש בלי
-                        // דרך לרדת לרשימת התוצאות. יורטים את המקש כאן ומזיזים פוקוס ידנית.
-                        .onPreviewKeyEvent {
-                            if (it.type == KeyEventType.KeyDown && it.key == Key.DirectionDown) {
-                                focusManager.moveFocus(FocusDirection.Down)
-                                true
-                            } else false
-                        }
+                        .escapeTextFieldFocusTrap()
                 )
             }
 
             if (searchQuery.isBlank()) {
+                // המסך מחולק לקטעים בעלי שם (ר' העיצוב): עד כה היו כאן שישה
+                // כרטיסים אנונימיים שהחלוקה ביניהם לא נאמרה בשום מקום, כך
+                // שהמשתמש היה צריך לקרוא את כל השורות כדי להבין למה דווקא הן
+                // מקובצות יחד. תקצור כותרות המשנה נועד להשאיר כל שורה בשורת
+                // טקסט אחת - שתי שורות הכפילו את גובה הפריט ופחות פריטים נכנסו למסך.
+                item { SettingHeader("עיקרי", theme) }
                 item {
                     SettingsCard(theme) {
-                        SettingItem("חיבורים", "Bluetooth, מצב טיסה, נתונים סלולריים, מיקום", Icons.Rounded.SettingsInputAntenna, theme) { navController.navigate(Screen.Connections.route) }
-                    }
-                }
-
-                item {
-                    SettingsCard(theme) {
-                        SettingItem("צלילים", "עוצמת שמע, רינגטון, רטט", Icons.AutoMirrored.Rounded.VolumeUp, theme) { navController.navigate(Screen.Sound.route) }
+                        SettingItem("חיבורים", "Bluetooth, רשת, מיקום", Icons.Rounded.Hub, theme) { navController.navigate(Screen.Connections.route) }
                         SettingDivider(theme)
-                        SettingItem("תצוגה", "בהירות, מצב כהה, גודל טקסט", Icons.Rounded.Brightness6, theme) { navController.navigate(Screen.Display.route) }
+                        SettingItem("צלילים", "עוצמה, רינגטון, רטט", Icons.AutoMirrored.Rounded.VolumeUp, theme) { navController.navigate(Screen.Sound.route) }
+                        SettingDivider(theme)
+                        SettingItem("תצוגה", "בהירות, מצב כהה, טקסט", Icons.Rounded.Brightness6, theme) { navController.navigate(Screen.Display.route) }
                     }
                 }
 
+                item { SettingHeader("מכשיר", theme) }
                 item {
                     SettingsCard(theme) {
-                        SettingItem("שורת מצב, מסך נעילה ורקע", "סוללה, Bluetooth, שעון, טפט", Icons.Rounded.Widgets, theme) { navController.navigate(Screen.SystemUi.route) }
-                    }
-                }
-
-                item {
-                    SettingsCard(theme) {
+                        SettingItem("מסך נעילה ורקע", "שורת מצב, שעון, טפט", Icons.Rounded.Widgets, theme) { navController.navigate(Screen.SystemUi.route) }
+                        SettingDivider(theme)
                         SettingItem("סוללה", "חיסכון בחשמל, אחוז טעינה", Icons.Rounded.BatteryFull, theme) { navController.navigate(Screen.Battery.route) }
                         SettingDivider(theme)
                         SettingItem("אחסון", "מקום פנוי בזיכרון", Icons.Rounded.Storage, theme) { navController.navigate(Screen.Storage.route) }
@@ -371,6 +359,7 @@ fun MainMenu(navController: NavController, theme: ThemeConfig, viewModel: Settin
                     }
                 }
 
+                item { SettingHeader("שימוש", theme) }
                 item {
                     SettingsCard(theme) {
                         SettingItem("התראות ומיקוד", "מצב מיקוד, שעות שינה", Icons.Rounded.NotificationsActive, theme) { navController.navigate(Screen.NotificationsFocus.route) }
@@ -379,6 +368,7 @@ fun MainMenu(navController: NavController, theme: ThemeConfig, viewModel: Settin
                     }
                 }
 
+                item { SettingHeader("מערכת", theme) }
                 item {
                     SettingsCard(theme) {
                         SettingItem("כללי", "תאריך, שעה, שפה, נגישות", Icons.Rounded.Language, theme) { navController.navigate(Screen.General.route) }
@@ -394,7 +384,7 @@ fun MainMenu(navController: NavController, theme: ThemeConfig, viewModel: Settin
                 if (matches.isEmpty()) {
                     item {
                         Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                            Text("לא נמצאו הגדרות תואמות", color = theme.textColor.copy(alpha = 0.5f), fontSize = 14.sp)
+                            Text("לא נמצאו הגדרות תואמות", color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.body)
                         }
                     }
                 } else {
@@ -430,7 +420,7 @@ fun SmallHeader(title: String, theme: ThemeConfig, onBack: () -> Unit) {
         IconButton(onClick = onBack) {
             Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "חזור", tint = theme.textColor)
         }
-        Text(title, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = theme.textColor)
+        Text(title, fontSize = FutureTypography.screenTitle, fontWeight = FontWeight.Bold, color = theme.textColor)
     }
 }
 
@@ -640,7 +630,7 @@ fun BluetoothScreen(navController: NavController, theme: ThemeConfig, viewModel:
                                 paired.forEachIndexed { index, device ->
                                     SettingItem(
                                         device.name,
-                                        (if (device.isConnected) "מחובר כעת" else "משויך") + " - הקש כדי לשכוח",
+                                        (if (device.isConnected) "מחובר כעת" else "משויך") + " - לחצו OK כדי לשכוח",
                                         if (device.isConnected) Icons.Rounded.BluetoothConnected else Icons.Rounded.Bluetooth,
                                         theme,
                                         showChevron = false
@@ -667,7 +657,7 @@ fun BluetoothScreen(navController: NavController, theme: ThemeConfig, viewModel:
                                 SettingDivider(theme)
                                 discovered.forEachIndexed { index, device ->
                                     val name = try { device.name ?: device.address } catch (e: SecurityException) { device.address }
-                                    SettingItem(name, "הקש כדי להתאים", Icons.Rounded.BluetoothSearching, theme, showChevron = false) {
+                                    SettingItem(name, "לחצו OK כדי להתאים", Icons.Rounded.BluetoothSearching, theme, showChevron = false) {
                                         val started = interactor.pairBluetoothDevice(device)
                                         if (!started) android.widget.Toast.makeText(context, "לא ניתן היה להתחיל התאמה עם $name", android.widget.Toast.LENGTH_SHORT).show()
                                     }
@@ -831,7 +821,7 @@ fun SoundPickerScreen(navController: NavController, theme: ThemeConfig, title: S
             SmallHeader(title, theme) { navController.popBackStack() }
             if (ringtones.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("לא נמצאו צלילים במכשיר", color = theme.textColor.copy(alpha = 0.5f), fontSize = 14.sp)
+                    Text("לא נמצאו צלילים במכשיר", color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.body)
                 }
             } else {
                 LazyColumn {
@@ -944,7 +934,7 @@ fun SystemUiScreen(navController: NavController, theme: ThemeConfig, viewModel: 
 
     Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
         Column {
-            SmallHeader("שורת מצב, מסך נעילה ורקע", theme) { navController.popBackStack() }
+            SmallHeader("מסך נעילה ורקע", theme) { navController.popBackStack() }
             LazyColumn {
                 item { SettingHeader("שורת מצב", theme) }
                 item {
@@ -1002,7 +992,7 @@ fun SystemUiScreen(navController: NavController, theme: ThemeConfig, viewModel: 
                     Text(
                         text = "כדי לסדר, להוסיף או להסיר סמלים ממסך הבית - לחצו פעמיים על מקש האפשרויות במסך הבית עצמו כדי להיכנס למצב עריכה.",
                         color = theme.textColor.copy(alpha = 0.6f),
-                        fontSize = 12.sp,
+                        fontSize = FutureTypography.label,
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
                     )
                 }
@@ -1068,16 +1058,16 @@ private fun WallpaperPresetTile(preset: WallpaperPreset, theme: ThemeConfig, onC
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(0.62f)
-                .clip(RoundedCornerShape(16.dp))
+                .clip(FutureShapes.lg)
                 .background(Brush.linearGradient(preset.colors))
                 .then(
-                    if (isFocused) Modifier.border(width = 2.dp, color = theme.primaryColor, shape = RoundedCornerShape(16.dp))
+                    if (isFocused) Modifier.border(width = 2.dp, color = theme.primaryColor, shape = FutureShapes.lg)
                     else Modifier
                 )
         )
         Text(
             text = preset.name,
-            fontSize = 12.sp,
+            fontSize = FutureTypography.label,
             color = theme.textColor.copy(alpha = 0.8f),
             modifier = Modifier.padding(top = 4.dp).fillMaxWidth(),
             textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -1118,10 +1108,10 @@ fun BatteryScreen(navController: NavController, theme: ThemeConfig, viewModel: S
                             },
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text("${viewModel.batteryPercent.value}%", fontSize = 52.sp, fontWeight = FontWeight.Bold, color = theme.textColor)
+                        Text("${viewModel.batteryPercent.value}%", fontSize = FutureTypography.hero, fontWeight = FontWeight.Bold, color = theme.textColor)
                         Text(
                             if (viewModel.isCharging.value) "בטעינה" else "לא בטעינה",
-                            fontSize = 14.sp,
+                            fontSize = FutureTypography.body,
                             color = theme.textColor.copy(alpha = 0.6f)
                         )
                     }
@@ -1206,14 +1196,14 @@ fun StorageScreen(navController: NavController, theme: ThemeConfig, viewModel: S
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(10.dp)
-                                .clip(RoundedCornerShape(5.dp))
+                                .clip(FutureShapes.xs)
                                 .background(theme.surfaceColor)
                         ) {
                             Box(
                                 modifier = Modifier
                                     .fillMaxHeight()
                                     .fillMaxWidth(fraction.coerceIn(0f, 1f))
-                                    .clip(RoundedCornerShape(5.dp))
+                                    .clip(FutureShapes.xs)
                                     .background(theme.primaryColor)
                             )
                         }
@@ -1373,7 +1363,7 @@ fun LanguageScreen(navController: NavController, theme: ThemeConfig, viewModel: 
                     Text(
                         text = "שינוי שפת המערכת דורש הרשאת root ועשוי לדרוש הפעלה מחדש של אפליקציות פתוחות.",
                         color = theme.textColor.copy(alpha = 0.6f),
-                        fontSize = 12.sp,
+                        fontSize = FutureTypography.label,
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
                     )
                 }
@@ -1545,7 +1535,7 @@ fun AppDetailScreen(navController: NavController, theme: ThemeConfig, viewModel:
                             Icon(app.icon, contentDescription = null, modifier = Modifier.size(64.dp), tint = theme.primaryColor)
                             Spacer(modifier = Modifier.height(12.dp))
                         }
-                        Text(packageName, fontSize = 12.sp, color = theme.textColor.copy(alpha = 0.5f))
+                        Text(packageName, fontSize = FutureTypography.label, color = theme.textColor.copy(alpha = 0.5f))
                     }
                 }
                 item {
@@ -1654,18 +1644,18 @@ fun PerformanceScreen(navController: NavController, theme: ThemeConfig, viewMode
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Box(
-                            modifier = Modifier.fillMaxWidth().height(10.dp).clip(RoundedCornerShape(5.dp)).background(theme.surfaceColor)
+                            modifier = Modifier.fillMaxWidth().height(10.dp).clip(FutureShapes.xs).background(theme.surfaceColor)
                         ) {
                             Box(
                                 modifier = Modifier
                                     .fillMaxHeight()
                                     .fillMaxWidth(fraction.coerceIn(0f, 1f))
-                                    .clip(RoundedCornerShape(5.dp))
+                                    .clip(FutureShapes.xs)
                                     .background(if (ram.lowMemory) Color(0xFFFF453A) else theme.primaryColor)
                             )
                         }
                         if (ram.lowMemory) {
-                            Text("זיכרון נמוך - מומלץ לבצע אופטימיזציה", fontSize = 12.sp, color = Color(0xFFFF453A), modifier = Modifier.padding(top = 6.dp))
+                            Text("זיכרון נמוך - מומלץ לבצע אופטימיזציה", fontSize = FutureTypography.label, color = Color(0xFFFF453A), modifier = Modifier.padding(top = 6.dp))
                         }
                     }
                 }
@@ -1726,14 +1716,14 @@ fun ScreenTimeScreen(navController: NavController, theme: ThemeConfig, viewModel
                     Column(modifier = Modifier.fillMaxWidth().padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(Icons.Rounded.HourglassBottom, contentDescription = null, modifier = Modifier.size(48.dp), tint = theme.primaryColor)
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text(formatDuration(summary.totalMillis), fontSize = 28.sp, fontWeight = FontWeight.Bold, color = theme.textColor)
-                        Text("שימוש היום", fontSize = 13.sp, color = theme.textColor.copy(alpha = 0.6f))
+                        Text(formatDuration(summary.totalMillis), fontSize = FutureTypography.display, fontWeight = FontWeight.Bold, color = theme.textColor)
+                        Text("שימוש היום", fontSize = FutureTypography.summary, color = theme.textColor.copy(alpha = 0.6f))
                     }
                 }
                 if (summary.topApps.isEmpty()) {
                     item {
                         Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                            Text("עדיין אין מספיק נתוני שימוש היום", color = theme.textColor.copy(alpha = 0.5f), fontSize = 13.sp)
+                            Text("עדיין אין מספיק נתוני שימוש היום", color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.summary)
                         }
                     }
                 } else {
@@ -1782,7 +1772,9 @@ fun DefaultAppsScreen(navController: NavController, theme: ThemeConfig, viewMode
         if (!rm.isRoleAvailable(roleName) || rm.isRoleHeld(roleName)) return
         try {
             roleRequestLauncher.launch(rm.createRequestRoleIntent(roleName))
-        } catch (e: Exception) {}
+        } catch (e: Exception) {
+            android.util.Log.w("SettingsScreens", "requestRole failed", e)
+        }
     }
 
     fun openApp(pkg: String?, notInstalledMessage: String) {
@@ -1823,7 +1815,7 @@ fun DefaultAppsScreen(navController: NavController, theme: ThemeConfig, viewMode
                     Text(
                         text = "לחיצה על \"הפוך לברירת מחדל\" פותחת אישור מערכת - האישור עצמו חייב להינתן על ידך.",
                         color = theme.textColor.copy(alpha = 0.6f),
-                        fontSize = 12.sp,
+                        fontSize = FutureTypography.label,
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
                     )
                 }
@@ -1881,7 +1873,7 @@ fun AppPermissionsScreen(navController: NavController, theme: ThemeConfig, viewM
             SmallHeader(app?.displayName ?: packageName, theme) { navController.popBackStack() }
             if (permissions.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("לא נמצאו הרשאות רגישות לאפליקציה זו", color = theme.textColor.copy(alpha = 0.5f), fontSize = 14.sp)
+                    Text("לא נמצאו הרשאות רגישות לאפליקציה זו", color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.body)
                 }
             } else {
                 LazyColumn {
@@ -2007,8 +1999,8 @@ fun AboutScreen(navController: NavController, theme: ThemeConfig, viewModel: Set
                     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(Icons.Rounded.PhoneAndroid, contentDescription = null, modifier = Modifier.size(80.dp), tint = theme.primaryColor)
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text("Future Phone", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = theme.textColor)
-                        Text("FutureOS", fontSize = 14.sp, color = theme.textColor.copy(alpha = 0.6f))
+                        Text("Future Phone", fontSize = FutureTypography.display, fontWeight = FontWeight.Bold, color = theme.textColor)
+                        Text("FutureOS", fontSize = FutureTypography.body, color = theme.textColor.copy(alpha = 0.6f))
                     }
                 }
                 item { Spacer(modifier = Modifier.height(16.dp)) }
@@ -2091,7 +2083,7 @@ fun SoundModeItem(label: String, icon: ImageVector, selected: Boolean, theme: Th
         ) {
             Icon(icon, contentDescription = null, tint = if (selected) theme.backgroundColor else theme.textColor)
         }
-        Text(label, fontSize = 12.sp, color = theme.textColor, modifier = Modifier.padding(top = 4.dp))
+        Text(label, fontSize = FutureTypography.label, color = theme.textColor, modifier = Modifier.padding(top = 4.dp))
     }
 }
 
@@ -2102,7 +2094,7 @@ fun SoundModeItem(label: String, icon: ImageVector, selected: Boolean, theme: Th
 @Composable
 fun VolumeSlider(label: String, value: Float, theme: ThemeConfig, onValueChange: (Float) -> Unit) {
     var isFocused by remember { mutableStateOf(false) }
-    val shape = RoundedCornerShape(16.dp)
+    val shape = FutureShapes.lg
     val bgColor by animateColorAsState(
         if (isFocused) theme.primaryColor.copy(alpha = 0.18f) else theme.textColor.copy(alpha = 0.06f),
         label = "volumeSliderBg"
@@ -2126,20 +2118,20 @@ fun VolumeSlider(label: String, value: Float, theme: ThemeConfig, onValueChange:
             .then(if (isFocused) Modifier.border(width = 2.dp, color = theme.primaryColor, shape = shape) else Modifier)
             .padding(16.dp)
     ) {
-        Text(label, fontSize = 14.sp, color = theme.textColor.copy(alpha = 0.6f))
+        Text(label, fontSize = FutureTypography.body, color = theme.textColor.copy(alpha = 0.6f))
         Spacer(modifier = Modifier.height(10.dp))
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(6.dp)
-                .clip(RoundedCornerShape(3.dp))
+                .clip(FutureShapes.xs)
                 .background(theme.textColor.copy(alpha = 0.15f))
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxHeight()
                     .fillMaxWidth(value.coerceIn(0f, 1f))
-                    .clip(RoundedCornerShape(3.dp))
+                    .clip(FutureShapes.xs)
                     .background(theme.primaryColor)
             )
         }
@@ -2191,7 +2183,7 @@ fun SimManagerScreen(navController: NavController, theme: ThemeConfig, viewModel
             SmallHeader("ניהול כרטיסי SIM", theme) { navController.popBackStack() }
             if (sims.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("לא נמצאו כרטיסי SIM פעילים", color = theme.textColor.copy(alpha = 0.5f), fontSize = 14.sp)
+                    Text("לא נמצאו כרטיסי SIM פעילים", color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.body)
                 }
             } else {
                 LazyColumn {
@@ -2203,7 +2195,7 @@ fun SimManagerScreen(navController: NavController, theme: ThemeConfig, viewModel
                                 Spacer(modifier = Modifier.width(10.dp))
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(sim.carrierName, color = theme.textColor, fontWeight = FontWeight.SemiBold)
-                                    Text(sim.phoneNumber ?: "מספר לא זמין", color = theme.textColor.copy(alpha = 0.6f), fontSize = 12.sp)
+                                    Text(sim.phoneNumber ?: "מספר לא זמין", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.label)
                                 }
                             }
                             SettingDivider(theme)
@@ -2305,7 +2297,7 @@ fun AppTimersScreen(navController: NavController, theme: ThemeConfig, viewModel:
                                 val app = FUTURE_OS_APPS.find { it.packageName == timer.packageName }
                                 SettingItem(
                                     app?.displayName ?: timer.packageName,
-                                    "${timer.dailyLimitMinutes} דקות ליום - הקש כדי להסיר",
+                                    "${timer.dailyLimitMinutes} דקות ליום - לחצו OK כדי להסיר",
                                     app?.icon ?: Icons.Rounded.Apps,
                                     theme,
                                     showChevron = false
@@ -2494,7 +2486,7 @@ fun SosScreen(navController: NavController, theme: ThemeConfig, viewModel: Setti
                     Text(
                         text = "הפעלה כאן היא ידנית מתוך המסך - טריגר פיזי (למשל 3 לחיצות על כפתור הצד) דורש הרשאת נגישות ברמת FutureUI ולא קיים כרגע.",
                         color = theme.textColor.copy(alpha = 0.5f),
-                        fontSize = 12.sp,
+                        fontSize = FutureTypography.label,
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
                     )
                 }

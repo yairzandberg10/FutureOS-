@@ -1,5 +1,7 @@
 package com.future.futureui.controlcenter.ui
 
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -46,7 +48,9 @@ fun PowerMenuScreen(
     val focusRequester = remember { FocusRequester() }
     LaunchedEffect(Unit) {
         delay(100)
-        try { focusRequester.requestFocus() } catch (t: Throwable) {}
+        try { focusRequester.requestFocus() } catch (t: Throwable) {
+            android.util.Log.w("PowerMenuScreen", "PowerMenuScreen failed", t)
+        }
     }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
@@ -59,15 +63,15 @@ fun PowerMenuScreen(
             Column(
                 modifier = Modifier
                     .widthIn(min = 230.dp)
-                    .clip(RoundedCornerShape(28.dp))
+                    .clip(FutureShapes.xxl)
                     .background(Color(0xEE1C1C1E))
-                    .border(0.5.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(28.dp))
+                    .border(0.5.dp, Color.White.copy(alpha = 0.15f), FutureShapes.xxl)
                     .padding(vertical = 10.dp)
             ) {
                 Text(
                     text = "אפשרויות כיבוי",
                     color = Color.White.copy(alpha = 0.55f),
-                    fontSize = 12.sp,
+                    fontSize = FutureTypography.label,
                     fontWeight = FontWeight.Medium,
                     modifier = Modifier.padding(horizontal = 22.dp, vertical = 8.dp)
                 )
@@ -105,7 +109,7 @@ private fun PowerMenuRow(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    val shape = RoundedCornerShape(18.dp)
+    val shape = FutureShapes.lg
 
     Row(
         modifier = modifier
@@ -121,6 +125,6 @@ private fun PowerMenuRow(
     ) {
         Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
         Spacer(modifier = Modifier.width(14.dp))
-        Text(label, color = tint, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+        Text(label, color = tint, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Medium)
     }
 }

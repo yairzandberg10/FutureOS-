@@ -1,4 +1,5 @@
 package com.future.futurelauncher
+import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.focus.bringIntoViewOnFocus
 
 import android.appwidget.AppWidgetHost
@@ -758,8 +759,8 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                         .then(
                             if (viewModel.isEditMode) {
                                 Modifier
-                                    .background(Color.Black.copy(alpha = 0.2f), RoundedCornerShape(24.dp))
-                                    .border(2.dp, OnWallpaperColor.copy(alpha = 0.3f), RoundedCornerShape(24.dp))
+                                    .background(Color.Black.copy(alpha = 0.2f), FutureShapes.xl)
+                                    .border(2.dp, OnWallpaperColor.copy(alpha = 0.3f), FutureShapes.xl)
                             } else Modifier
                         )
                 ) {

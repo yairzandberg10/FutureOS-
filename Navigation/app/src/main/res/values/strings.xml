@@ -34,6 +34,10 @@
     <string name="arrival_time">שעת הגעה</string>
     <string name="walk_time">הליכה</string>
     <string name="schedule_disclaimer">לוח זמנים מתוכנן - לא מיקום חי של הרכב</string>
+    <string name="schedule_disclaimer_partial_realtime">קטע היציאה הקרוב מעודכן בזמן אמת - שאר הקטעים לפי לוח זמנים מתוכנן</string>
+    <string name="realtime_on_time">בזמן</string>
+    <string name="realtime_delayed">איחור %d דק׳</string>
+    <string name="realtime_early">הקדמה %d דק׳</string>
 
     <!-- מקומות שמורים -->
     <string name="saved_places_title">מקומות שמורים</string>

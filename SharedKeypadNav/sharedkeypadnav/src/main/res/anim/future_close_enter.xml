@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- המסך שחוזרים אליו כבר מתחת לזה שנסגר - נשאר במקומו (ר' future_open_exit). -->
+<alpha xmlns:android="http://schemas.android.com/apk/res/android"
+    android:duration="@integer/future_motion_fast"
+    android:fromAlpha="1.0"
+    android:toAlpha="1.0" />

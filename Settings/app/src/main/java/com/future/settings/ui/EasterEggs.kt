@@ -1,5 +1,7 @@
 package com.future.settings.ui
 
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -137,12 +139,12 @@ fun FutureOsRevealScreen(navController: NavController) {
                         )
                 )
                 Spacer(modifier = Modifier.height(28.dp))
-                Text("FutureOS", fontSize = 40.sp, fontWeight = FontWeight.Black, color = Color.White)
-                Text("תמיד קדימה", fontSize = 14.sp, color = Color.White.copy(alpha = 0.6f))
+                Text("FutureOS", fontSize = FutureTypography.display, fontWeight = FontWeight.Black, color = Color.White)
+                Text("תמיד קדימה", fontSize = FutureTypography.body, color = Color.White.copy(alpha = 0.6f))
                 Spacer(modifier = Modifier.height(40.dp))
                 Text(
                     "החזק OK למשחק חבוי",
-                    fontSize = 12.sp,
+                    fontSize = FutureTypography.label,
                     color = Color.White.copy(alpha = 0.4f)
                 )
             }
@@ -263,15 +265,15 @@ fun T9GameScreen(navController: NavController, viewModel: SettingsViewModel) {
         }
 
         Column(modifier = Modifier.fillMaxWidth().padding(20.dp)) {
-            Text("ניקוד: $score", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-            Text("שיא: $highScore", color = Color.White.copy(alpha = 0.6f), fontSize = 13.sp)
+            Text("ניקוד: $score", color = Color.White, fontSize = FutureTypography.title, fontWeight = FontWeight.Bold)
+            Text("שיא: $highScore", color = Color.White.copy(alpha = 0.6f), fontSize = FutureTypography.summary)
         }
 
         if (gameState == T9GameState.Playing) {
             Text(
                 "4 / 6 או ←→ לתזוזה",
                 color = Color.White.copy(alpha = 0.4f),
-                fontSize = 12.sp,
+                fontSize = FutureTypography.label,
                 modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 12.dp)
             )
         }
@@ -279,12 +281,12 @@ fun T9GameScreen(navController: NavController, viewModel: SettingsViewModel) {
         if (gameState == T9GameState.GameOver) {
             Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.65f)), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("המשחק נגמר", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+                    Text("המשחק נגמר", color = Color.White, fontSize = FutureTypography.headline, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("ניקוד: $score", color = Color.White, fontSize = 16.sp)
+                    Text("ניקוד: $score", color = Color.White, fontSize = FutureTypography.bodyLarge)
                     Text(
                         if (score >= highScore && score > 0) "שיא חדש! 🎉" else "שיא: ${viewModel.t9HighScore.value}",
-                        color = EggAmber, fontSize = 14.sp
+                        color = EggAmber, fontSize = FutureTypography.body
                     )
                     Spacer(modifier = Modifier.height(24.dp))
                     Button(
@@ -400,13 +402,13 @@ fun PartyModeScreen(navController: NavController, theme: ThemeConfig, viewModel:
                 Text(
                     "מצאת קוד סודי! זו תודה קטנה על שאתה חוקר את המכשיר שלך לעומק.",
                     color = theme.textColor.copy(alpha = 0.7f),
-                    fontSize = 14.sp
+                    fontSize = FutureTypography.body
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     "נגמר בעוד %d:%02d".format(minutes, seconds),
                     color = theme.primaryColor,
-                    fontSize = 13.sp,
+                    fontSize = FutureTypography.summary,
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(24.dp))
@@ -469,7 +471,7 @@ fun AsciiFlexScreen(navController: NavController, viewModel: SettingsViewModel) 
             .padding(20.dp)
     ) {
         Column {
-            Text(ascii, color = Color(0xFF39FF6A), fontFamily = FontFamily.Monospace, fontSize = 13.sp, lineHeight = 15.sp)
+            Text(ascii, color = Color(0xFF39FF6A), fontFamily = FontFamily.Monospace, fontSize = FutureTypography.summary, lineHeight = 15.sp)
             Spacer(modifier = Modifier.height(16.dp))
             val lines = listOf(
                 "דגם" to android.os.Build.MODEL,
@@ -485,7 +487,7 @@ fun AsciiFlexScreen(navController: NavController, viewModel: SettingsViewModel) 
                     "$label: $value",
                     color = Color(0xFF39FF6A),
                     fontFamily = FontFamily.Monospace,
-                    fontSize = 14.sp
+                    fontSize = FutureTypography.body
                 )
             }
             Spacer(modifier = Modifier.height(20.dp))
@@ -493,7 +495,7 @@ fun AsciiFlexScreen(navController: NavController, viewModel: SettingsViewModel) 
                 "← Back לחזרה",
                 color = Color(0xFF39FF6A).copy(alpha = 0.5f),
                 fontFamily = FontFamily.Monospace,
-                fontSize = 12.sp
+                fontSize = FutureTypography.label
             )
         }
     }
@@ -530,7 +532,7 @@ fun EasterEggMessage(icon: String, title: String, message: String, onDismiss: ()
             modifier = Modifier
                 .align(Alignment.Center)
                 .padding(32.dp)
-                .clip(RoundedCornerShape(20.dp))
+                .clip(FutureShapes.xl)
                 .background(Color(0xFF1C1C1E))
                 .focusRequester(focusRequester)
                 .focusable()
@@ -540,9 +542,9 @@ fun EasterEggMessage(icon: String, title: String, message: String, onDismiss: ()
                 .padding(24.dp)
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("$icon $title", color = EggAmber, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                Text("$icon $title", color = EggAmber, fontSize = FutureTypography.body, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(12.dp))
-                Text(message, color = Color.White, fontSize = 15.sp, textAlign = TextAlign.Center)
+                Text(message, color = Color.White, fontSize = FutureTypography.bodyLarge, textAlign = TextAlign.Center)
             }
         }
     }

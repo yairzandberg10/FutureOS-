@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- ברק קינטי - עיגול הילה חיצוני עמום + חץ ברק במרכז, בצבע הלימה
+         הניאון של ה-Kinetic Obsidian design system. -->
+    <path
+        android:fillColor="#22c55e"
+        android:fillAlpha="0.16"
+        android:pathData="M54,20 m-33,0 a33,33 0 1,0 66,0 a33,33 0 1,0 -66,0" />
+    <path
+        android:fillColor="#4be277"
+        android:pathData="M60,18 L38,60 L52,60 L48,90 L74,50 L58,50 Z" />
+</vector>

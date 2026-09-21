@@ -1,5 +1,6 @@
 package com.future.futurelauncher.ui.theme
 
+import com.future.sharednav.theme.FutureTypography
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -11,7 +12,7 @@ val Typography = Typography(
     bodyLarge = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Normal,
-        fontSize = 16.sp,
+        fontSize = FutureTypography.bodyLarge,
         lineHeight = 24.sp,
         letterSpacing = 0.5.sp
     )
@@ -19,14 +20,14 @@ val Typography = Typography(
     titleLarge = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Normal,
-        fontSize = 22.sp,
+        fontSize = FutureTypography.headline,
         lineHeight = 28.sp,
         letterSpacing = 0.sp
     ),
     labelSmall = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Medium,
-        fontSize = 11.sp,
+        fontSize = FutureTypography.caption,
         lineHeight = 16.sp,
         letterSpacing = 0.5.sp
     )

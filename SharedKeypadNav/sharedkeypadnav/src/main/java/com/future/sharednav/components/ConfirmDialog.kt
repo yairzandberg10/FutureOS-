@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -24,17 +23,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
+import com.future.sharednav.focus.focusMotion
+import com.future.sharednav.theme.FutureContrast
+import com.future.sharednav.theme.FutureDimens
+import com.future.sharednav.theme.FutureMotion
+import com.future.sharednav.theme.FutureShapes
+import com.future.sharednav.theme.rememberFutureType
 
 /**
- * דיאלוג אישור אחיד לפעולות הרסניות (מחיקת קובץ/איש קשר/הודעה/התראה) -
- * מבוסס על ה-ConfirmDialog הפרטי שהיה קיים רק ב-Files/FilesScreen.kt
- * ומועתק/מפוזר מחדש ידנית בכל אפליקציה שצריכה דיאלוג כזה (Contact,
- * Messages, Clock). מנווט לגמרי במקלדת: כפתור ה-cancel/confirm שממוקד
- * מסומן גם בצבע וגם במסגרת (לא רק בצבע - כדי שאפשר יהיה להבחין בפוקוס גם
- * בלי תלות בניגודיות הצבע הספציפי).
+ * דיאלוג אישור אחיד לפעולות הרסניות (מחיקת קובץ/איש קשר/הודעה/התראה).
+ * מנווט לגמרי במקלדת: הכפתור הממוקד מסומן גם בצבע וגם בטבעת.
+ *
+ * שני באגים של מצב בהיר תוקנו כאן: הטקסט על הכפתורים היה Color.Black
+ * קבוע, ובמצב בהיר כפתור הביטול הוא שחור-70% - כלומר "ביטול" בשחור על
+ * שחור. וטבעת הפוקוס הייתה Color.White קבוע על דיאלוג לבן. עכשיו שניהם
+ * נגזרים מהניגודיות ([FutureContrast]).
  */
 @Composable
 fun ConfirmDialog(
@@ -47,38 +50,50 @@ fun ConfirmDialog(
     cancelLabel: String = "ביטול",
     confirmLabel: String = "מחק",
 ) {
-    Dialog(onDismissRequest = onCancel) {
+    val type = rememberFutureType()
+    AppDialog(onDismissRequest = onCancel) {
         Column(
-            modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(surfaceColor).padding(20.dp),
+            modifier = Modifier
+                .clip(FutureShapes.dialog)
+                .background(surfaceColor)
+                .padding(FutureDimens.spacingXl),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text(message, color = textColor, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-            Spacer(modifier = Modifier.height(16.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                ConfirmDialogButton(cancelLabel, textColor.copy(alpha = 0.7f), onCancel)
-                ConfirmDialogButton(confirmLabel, dangerColor, onConfirm)
+            Text(message, color = textColor, fontWeight = FontWeight.Bold, fontSize = type.dialog)
+            Spacer(modifier = Modifier.height(FutureDimens.spacingLg))
+            Row(horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingMd)) {
+                ConfirmDialogButton(cancelLabel, textColor.copy(alpha = 0.7f), textColor, onCancel)
+                ConfirmDialogButton(confirmLabel, dangerColor, textColor, onConfirm)
             }
         }
     }
 }
 
 @Composable
-private fun ConfirmDialogButton(text: String, color: Color, onClick: () -> Unit) {
+private fun ConfirmDialogButton(text: String, color: Color, ringColor: Color, onClick: () -> Unit) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    val bgColor by animateColorAsState(if (isFocused) color else color.copy(alpha = 0.7f), label = "confirmDialogBtnBg")
+    val bgColor by animateColorAsState(
+        if (isFocused) color else color.copy(alpha = color.alpha * 0.7f),
+        FutureMotion.focusColorSpec,
+        label = "confirmDialogBtnBg",
+    )
+    val ring by animateColorAsState(
+        if (isFocused) ringColor else ringColor.copy(alpha = 0f),
+        FutureMotion.focusColorSpec,
+        label = "confirmDialogBtnRing",
+    )
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(20.dp))
+            .focusMotion(interactionSource, focusedScale = 1.04f)
+            .clip(FutureShapes.pill)
             .background(bgColor)
-            .then(
-                if (isFocused) Modifier.border(width = 2.dp, color = Color.White, shape = RoundedCornerShape(20.dp))
-                else Modifier
-            )
+            .border(width = FutureDimens.focusBorderWidth, color = ring, shape = FutureShapes.pill)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
             .focusable(interactionSource = interactionSource)
-            .padding(horizontal = 24.dp, vertical = 12.dp),
+            .padding(horizontal = FutureDimens.spacingXl, vertical = FutureDimens.spacingMd),
     ) {
-        Text(text, color = Color.Black, fontWeight = FontWeight.Bold)
+        // הצבע מחושב מהכפתור כפי שהוא נראה בפוקוס (אטום), לא מהגרסה השקופה.
+        Text(text, color = FutureContrast.onColor(color.copy(alpha = 1f)), fontWeight = FontWeight.Bold)
     }
 }

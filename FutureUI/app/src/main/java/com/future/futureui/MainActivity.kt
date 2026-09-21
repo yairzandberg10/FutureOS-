@@ -1,5 +1,6 @@
 package com.future.futureui
 
+import com.future.sharednav.theme.FutureTypography
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.Context
@@ -84,7 +85,7 @@ class MainActivity : ComponentActivity() {
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        Text(text = "ניהול FutureUI", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                        Text(text = "ניהול FutureUI", fontSize = FutureTypography.headline, fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.height(24.dp))
                         
                         ServiceStatusRow("שורת מצב", isStatusBarEnabled)

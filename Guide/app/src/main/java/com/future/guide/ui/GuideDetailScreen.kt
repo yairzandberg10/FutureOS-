@@ -1,5 +1,6 @@
 package com.future.guide.ui
 
+import com.future.sharednav.theme.FutureTypography
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.animateScrollBy
@@ -90,8 +91,8 @@ fun GuideDetailScreen(app: GuideApp, theme: FutureTheme, onBack: () -> Unit) {
                             Icon(app.icon, contentDescription = null, tint = theme.accentColor, modifier = Modifier.size(26.dp))
                         }
                         Column(modifier = Modifier.padding(start = 14.dp)) {
-                            Text(app.name, color = theme.textColor, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                            Text(app.subtitle, color = theme.textColor.copy(alpha = 0.6f), fontSize = 13.sp)
+                            Text(app.name, color = theme.textColor, fontSize = FutureTypography.title, fontWeight = FontWeight.Bold)
+                            Text(app.subtitle, color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.summary)
                         }
                     }
 
@@ -124,12 +125,12 @@ private fun GuideStepRow(number: Int, text: String, theme: FutureTheme) {
                 .background(theme.accentColor.copy(alpha = 0.22f)),
             contentAlignment = Alignment.Center
         ) {
-            Text("$number", color = theme.accentColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Text("$number", color = theme.accentColor, fontSize = FutureTypography.label, fontWeight = FontWeight.Bold)
         }
         Text(
             text,
             color = theme.textColor.copy(alpha = 0.9f),
-            fontSize = 14.sp,
+            fontSize = FutureTypography.body,
             lineHeight = 20.sp,
             modifier = Modifier.padding(start = 12.dp).weight(1f, fill = true)
         )

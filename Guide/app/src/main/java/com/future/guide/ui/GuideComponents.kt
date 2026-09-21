@@ -1,5 +1,7 @@
 package com.future.guide.ui
 
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Column
@@ -54,7 +56,7 @@ fun GuideHeader(title: String, theme: FutureTheme, onBack: (() -> Unit)? = null,
                 GuideIconButton(Icons.AutoMirrored.Rounded.ArrowBack, "חזור", theme = theme, onClick = onBack)
                 Spacer(modifier = Modifier.width(10.dp))
             }
-            Text(title, color = theme.textColor, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f, fill = true))
+            Text(title, color = theme.textColor, fontSize = FutureTypography.title, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f, fill = true))
             trailing.invoke()
         }
     }
@@ -68,7 +70,7 @@ fun GuideAppRow(icon: ImageVector, label: String, subtitle: String, theme: Futur
         modifier = Modifier.fillMaxWidth(),
         idleBackgroundColor = theme.textColor.copy(alpha = 0.055f),
         focusedBackgroundColor = theme.textColor.copy(alpha = 0.14f),
-        cornerRadius = 16.dp,
+        cornerRadius = FutureShapes.radiusLg,
         focusRequester = focusRequester,
     ) {
         Row(
@@ -86,8 +88,8 @@ fun GuideAppRow(icon: ImageVector, label: String, subtitle: String, theme: Futur
             }
             Spacer(modifier = Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(label, color = theme.textColor, fontSize = 16.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(subtitle, color = theme.textColor.copy(alpha = 0.5f), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(label, color = theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(subtitle, color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.label, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
     }
@@ -98,7 +100,7 @@ fun GuideSectionTitle(text: String, theme: FutureTheme) {
     Text(
         text,
         color = theme.accentColor,
-        fontSize = 14.sp,
+        fontSize = FutureTypography.body,
         fontWeight = FontWeight.Bold,
         modifier = Modifier.padding(top = 18.dp, bottom = 6.dp)
     )
@@ -109,14 +111,14 @@ fun GuideTip(text: String, theme: FutureTheme) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
+            .clip(FutureShapes.md)
             .background(theme.textColor.copy(alpha = 0.055f))
             .padding(horizontal = 14.dp, vertical = 12.dp)
     ) {
         Text(
             text,
             color = theme.textColor.copy(alpha = 0.85f),
-            fontSize = 14.sp,
+            fontSize = FutureTypography.body,
             lineHeight = 20.sp
         )
     }

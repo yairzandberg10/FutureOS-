@@ -57,8 +57,11 @@ class MediaControlService : NotificationListenerService() {
      * התראות "מתמשכות" (למשל התקדמות נגן מוזיקה, שירותים ברקע), והכל כשה-DND פעיל. */
     private fun shouldShowHeadsUp(sbn: StatusBarNotification): Boolean {
         if (sbn.packageName == packageName) return false
-        if (sbn.isOngoing) return false
         val n = sbn.notification
+        // שיחה נכנסת היא "מתמשכת" (isOngoing) לכל אורך הצלצול, אבל היא בדיוק ההפך
+        // מהתראות מתמשכות רגילות (התקדמות נגן וכו') שהמסנן הזה נועד לחסום - היא
+        // חייבת להופיע כבאנר, אחרת אין שום אינדיקציה לשיחה נכנסת מעל אפליקציה אחרת.
+        if (sbn.isOngoing && n.category != android.app.Notification.CATEGORY_CALL) return false
         val title = n.extras.getCharSequence(android.app.Notification.EXTRA_TITLE)
         val text = n.extras.getCharSequence(android.app.Notification.EXTRA_TEXT)
         if (title.isNullOrBlank() && text.isNullOrBlank()) return false

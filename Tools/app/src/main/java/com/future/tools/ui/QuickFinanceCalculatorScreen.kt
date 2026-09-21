@@ -1,5 +1,8 @@
 package com.future.tools.ui
 
+import com.future.sharednav.theme.onAccentColor
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
@@ -22,6 +25,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.future.sharednav.nav.digitForKey
 import com.future.sharednav.theme.FutureTheme
 import java.text.DecimalFormat
 import kotlin.math.pow
@@ -139,9 +143,9 @@ fun QuickFinanceCalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        Text("תקופה (חודשים)", color = theme.textColor.copy(alpha = 0.5f), fontSize = 12.sp, modifier = Modifier.weight(1f))
+                        Text("תקופה (חודשים)", color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.label, modifier = Modifier.weight(1f))
                         ToolsStepperButton("-", theme = theme) { months = (months - 1).coerceAtLeast(1) }
-                        Text("$months", color = theme.textColor, fontSize = 18.sp, fontWeight = FontWeight.Medium)
+                        Text("$months", color = theme.textColor, fontSize = FutureTypography.title, fontWeight = FontWeight.Medium)
                         ToolsStepperButton("+", theme = theme) { months = (months + 1).coerceAtMost(480) }
                     }
                 }
@@ -149,7 +153,7 @@ fun QuickFinanceCalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
                 Text(
                     "# להחלפת שדה קלט · הקלד ספרות מהמקלדת",
                     color = theme.textColor.copy(alpha = 0.35f),
-                    fontSize = 11.sp,
+                    fontSize = FutureTypography.caption,
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
                     textAlign = TextAlign.Center
                 )
@@ -193,11 +197,11 @@ fun QuickFinanceCalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
 @Composable
 private fun FinanceField(label: String, value: String, isActive: Boolean, theme: FutureTheme) {
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
-        Text(label, color = if (isActive) theme.accentColor else theme.textColor.copy(alpha = 0.5f), fontSize = 12.sp, fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal)
+        Text(label, color = if (isActive) theme.accentColor else theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.label, fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal)
         Text(
             value,
             color = theme.textColor,
-            fontSize = 32.sp,
+            fontSize = FutureTypography.display,
             fontWeight = FontWeight.Light,
             textAlign = TextAlign.End,
             modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)
@@ -216,7 +220,7 @@ private fun FinanceChip(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    val shape = RoundedCornerShape(14.dp)
+    val shape = FutureShapes.md
     val bgColor = when {
         isSelected -> theme.accentColor
         isFocused -> theme.textColor.copy(alpha = 0.18f)
@@ -232,14 +236,14 @@ private fun FinanceChip(
             .padding(vertical = 10.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(label, color = if (isSelected) Color.Black else theme.textColor, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+        Text(label, color = if (isSelected) theme.onAccentColor else theme.textColor, fontSize = FutureTypography.body, fontWeight = FontWeight.Medium)
     }
 }
 
 @Composable
 private fun FinanceResultRow(label: String, value: String, theme: FutureTheme, isAccent: Boolean = false) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(label, color = theme.textColor.copy(alpha = 0.6f), fontSize = 14.sp)
+        Text(label, color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.body)
         Text(
             value,
             color = if (isAccent) theme.accentColor else theme.textColor,

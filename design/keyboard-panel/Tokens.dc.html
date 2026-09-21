@@ -1,0 +1,93 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700&amp;family=Roboto+Mono:wght@400;500&amp;display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #0B0B0C; font-family: 'Heebo', 'Noto Sans Hebrew', 'Segoe UI', Roboto, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #64D2FF; } a:hover { color: #9FE4FF; }
+    .mono { font-family: 'Roboto Mono', ui-monospace, Consolas, monospace; font-variant-numeric: tabular-nums; }
+    .h2 { font-size: 24px; font-weight: 700; color: #FFFFFF; }
+    .r { display: grid; grid-template-columns: 210px 130px 110px 1fr; gap: 14px; align-items: center; padding: 11px 0; border-bottom: 1px solid rgba(255,255,255,0.07); }
+    .k { font-size: 19px; color: #E4E4E9; }
+    .v { font-size: 19px; color: #FFFFFF; }
+    .s { font-size: 17px; color: #7E7E86; }
+    .sw { width: 34px; height: 34px; border-radius: 9px; border: 1px solid rgba(255,255,255,0.14); flex: none; }
+  </style>
+</helmet>
+
+<div style="width: 780px; min-height: 1500px; background: #0B0B0C; color: #FFFFFF; direction: rtl; padding: 34px 36px; display: flex; flex-direction: column; gap: 30px">
+
+  <div style="display: flex; flex-direction: column; gap: 8px">
+    <div style="font-size: 34px; font-weight: 700; line-height: 1.1">מפרט פאנל המקלדת</div>
+    <div style="font-size: 20px; color: #8A8A90; line-height: 1.5">ערכים בפיקסלים של המכשיר (640×960). בסוגריים המקבילה ב-dp/sp בצפיפות 2.0, ומקור הטוקן בקוד.</div>
+  </div>
+
+  <!-- ---------- צבעים ---------- -->
+  <div style="display: flex; flex-direction: column; gap: 4px">
+    <div class="h2">צבעים</div>
+    <div class="r" style="border-bottom: 1px solid rgba(255,255,255,0.16); padding-bottom: 8px">
+      <span class="s">תפקיד</span><span class="s">כהה</span><span class="s">בהיר</span><span class="s">מקור</span>
+    </div>
+    <div class="r"><span class="k">רקע הפאנל</span><span class="mono v">#1C1C1E</span><span class="mono v">#EFEFEF</span><span class="s">KeyboardService.applyTheme</span></div>
+    <div class="r"><span class="k">צ'יפ ומקש</span><span class="mono v">#2C2C2E</span><span class="mono v">#FFFFFF</span><span class="s">KeyboardService.applyTheme</span></div>
+    <div class="r"><span class="k">משטח מוגבה</span><span class="mono v">#3A3A3C</span><span class="mono v">#E5E5EA</span><span class="s">FutureTheme (calcMutedButtonColor)</span></div>
+    <div class="r"><span class="k">טקסט ראשי</span><span class="mono v">#FFFFFF</span><span class="mono v">#000000</span><span class="s">FutureTheme.textColor</span></div>
+    <div class="r"><span class="k">טקסט משני</span><span class="mono v">#B0B0B0</span><span class="mono v">#444444</span><span class="s">KeyboardService.mutedTextColor</span></div>
+    <div class="r"><span class="k">קו מפריד</span><span class="mono v">לבן 10%</span><span class="mono v">שחור 12%</span><span class="s">חדש בפאנל</span></div>
+    <div class="r" style="border-bottom: 0"><span class="k">צבע הדגשה</span><span class="mono v" style="grid-column: span 2">primary_color</span><span class="s">ThemeProvider · ברירת מחדל לבן</span></div>
+  </div>
+
+  <!-- ---------- מידות ---------- -->
+  <div style="display: flex; flex-direction: column; gap: 4px">
+    <div class="h2">מידות</div>
+    <div class="r" style="border-bottom: 1px solid rgba(255,255,255,0.16); padding-bottom: 8px">
+      <span class="s">רכיב</span><span class="s">פיקסלים</span><span class="s">dp / sp</span><span class="s">מקור</span>
+    </div>
+    <div class="r"><span class="k">ריפוד אופקי של הפאנל</span><span class="mono v">32</span><span class="mono v">16dp</span><span class="s">FutureDimens.screenPadding</span></div>
+    <div class="r"><span class="k">פינות עליונות של הפאנל</span><span class="mono v">32</span><span class="mono v">16dp</span><span class="s">FutureDimens.cardCornerRadius</span></div>
+    <div class="r"><span class="k">תג השפה</span><span class="mono v">44</span><span class="mono v">22dp</span><span class="s">FutureDimens.borderRadius</span></div>
+    <div class="r"><span class="k">צ'יפ מועמדת ושורת שפה</span><span class="mono v">24</span><span class="mono v">—</span><span class="s">chipDrawable הקיים</span></div>
+    <div class="r"><span class="k">מקש פיסוק</span><span class="mono v">16</span><span class="mono v">8dp</span><span class="s">FutureDimens.itemCornerRadius</span></div>
+    <div class="r"><span class="k">מרווח בין צ'יפים</span><span class="mono v">16</span><span class="mono v">8dp</span><span class="s">marginEnd הקיים</span></div>
+    <div class="r"><span class="k">גובה פס המצב</span><span class="mono v">56</span><span class="mono v">28dp</span><span class="s">חדש בפאנל</span></div>
+    <div class="r"><span class="k">גובה שורת המועמדות</span><span class="mono v">84</span><span class="mono v">42dp</span><span class="s">חדש בפאנל</span></div>
+    <div class="r"><span class="k">מילה נבחרת / מילה</span><span class="mono v">32 / 30</span><span class="mono v">16 / 15sp</span><span class="s">15sp קיים</span></div>
+    <div class="r"><span class="k">שם שפה</span><span class="mono v">26</span><span class="mono v">13sp</span><span class="s">FutureType.summaryFontSize</span></div>
+    <div class="r" style="border-bottom: 0"><span class="k">מונה, ספרות, תווית מקרא</span><span class="mono v">22 / 21</span><span class="mono v">11 / 10.5sp</span><span class="s">חדש בפאנל</span></div>
+  </div>
+
+  <!-- ---------- ניגודיות ---------- -->
+  <div style="display: flex; flex-direction: column; gap: 14px">
+    <div class="h2">צבע הטקסט על גבי ההדגשה</div>
+    <div style="font-size: 20px; color: #B0B0B0; line-height: 1.55">היום הטקסט על הפריט הנבחר קבוע על לבן. ברירת המחדל של primary_color היא לבן, ולכן הפריט הנבחר יוצא לבן על לבן. הכלל בעיצוב הזה: הטקסט נגזר מבהירות ההדגשה, ולכן כל צבע שהמשתמש יבחר עובד.</div>
+    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px">
+      <div style="display: flex; flex-direction: column; gap: 8px; align-items: center">
+        <span style="border-radius: 24px; padding: 14px 26px; font-size: 28px; font-weight: 700; background: #FFFFFF; color: #101012">הכל</span>
+        <span class="mono s">#FFFFFF</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px; align-items: center">
+        <span style="border-radius: 24px; padding: 14px 26px; font-size: 28px; font-weight: 700; background: #64D2FF; color: #101012">הכל</span>
+        <span class="mono s">#64D2FF</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px; align-items: center">
+        <span style="border-radius: 24px; padding: 14px 26px; font-size: 28px; font-weight: 700; background: #FFD60A; color: #101012">הכל</span>
+        <span class="mono s">#FFD60A</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px; align-items: center">
+        <span style="border-radius: 24px; padding: 14px 26px; font-size: 28px; font-weight: 700; background: #1E8E3E; color: #FFFFFF">הכל</span>
+        <span class="mono s">#1E8E3E</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

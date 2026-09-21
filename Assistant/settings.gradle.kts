@@ -19,6 +19,9 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // sherpa-onnx (Piper TTS) מגיע כ-AAR מוכן מ-GitHub Releases, לא ממאגר
+        // Maven - נטען כקובץ מקומי מ-app/libs.
+        flatDir { dirs("app/libs") }
     }
 }
 rootProject.name = "Assistant"

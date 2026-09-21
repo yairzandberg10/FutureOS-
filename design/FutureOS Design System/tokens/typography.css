@@ -1,0 +1,32 @@
+/* FutureOS typography. Source: FutureType.kt — seven sizes, no more.
+   All px values are device pixels: sp * 2 (density 2.0).
+   The settings "text size" slider multiplies the whole scale, 0.8 to 1.4. */
+:root {
+  --fos-font: "Heebo", "Roboto", system-ui, -apple-system, sans-serif;
+  --fos-font-display: "Rubik", "Heebo", "Roboto", system-ui, sans-serif; /* headings only */
+  --fos-font-mono: "Roboto Mono", ui-monospace, monospace;
+
+  --fos-font-scale: 1;
+  --fos-line-height: 1.3;
+
+  /* seven text styles: px (sp) / weight */
+  --fos-size-header: calc(68px * var(--fos-font-scale));        /* 34sp / 700 */
+  --fos-size-screen-title: calc(40px * var(--fos-font-scale));  /* 20sp / 700 */
+  --fos-size-title: calc(34px * var(--fos-font-scale));         /* 17sp / 500 */
+  --fos-size-base: calc(32px * var(--fos-font-scale));          /* 16sp / 400 */
+  --fos-size-dialog: calc(30px * var(--fos-font-scale));        /* 15sp / 700 */
+  --fos-size-body: calc(28px * var(--fos-font-scale));          /* 14sp / 400 */
+  --fos-size-summary: calc(26px * var(--fos-font-scale));       /* 13sp / 400 */
+  /* sub-scale sizes that recur in chrome */
+  --fos-size-label: calc(24px * var(--fos-font-scale));         /* 12sp — nav label, app name */
+  --fos-size-badge: calc(20px * var(--fos-font-scale));         /* 10sp / 700 — unread count */
+  --fos-size-clock: calc(96px * var(--fos-font-scale));         /* 48sp / 300 — time picker value */
+
+  --fos-weight-regular: 400;
+  --fos-weight-medium: 500;
+  --fos-weight-semibold: 600;
+  --fos-weight-bold: 700;
+  --fos-weight-light: 300;
+
+  --fos-tracking-section: 2px; /* 1sp letter-spacing, section headers only */
+}

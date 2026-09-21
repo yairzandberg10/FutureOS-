@@ -1,5 +1,8 @@
 package com.future.tools.ui
 
+import com.future.sharednav.theme.onAccentColor
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.widget.Toast
@@ -77,16 +80,16 @@ fun PasswordGeneratorScreen(theme: FutureTheme, onBack: () -> Unit) {
                     Text(
                         password,
                         color = theme.textColor,
-                        fontSize = 22.sp,
+                        fontSize = FutureTypography.headline,
                         fontWeight = FontWeight.Medium,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(14.dp))
+                            .clip(FutureShapes.md)
                             .background(theme.textColor.copy(alpha = 0.06f))
                             .padding(16.dp)
                     )
                     Spacer(modifier = Modifier.height(6.dp))
-                    Text("חוזק: $strengthLabel", color = strengthColor, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Text("חוזק: $strengthLabel", color = strengthColor, fontSize = FutureTypography.summary, fontWeight = FontWeight.Bold)
                 }
 
                 Row(
@@ -108,9 +111,9 @@ fun PasswordGeneratorScreen(theme: FutureTheme, onBack: () -> Unit) {
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Text("אורך", color = theme.textColor.copy(alpha = 0.5f), fontSize = 13.sp, modifier = Modifier.weight(1f))
+                    Text("אורך", color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.summary, modifier = Modifier.weight(1f))
                     ToolsStepperButton("-", theme = theme) { length = (length - 1).coerceAtLeast(4); regenerate() }
-                    Text("$length", color = theme.textColor, fontSize = 18.sp, fontWeight = FontWeight.Medium)
+                    Text("$length", color = theme.textColor, fontSize = FutureTypography.title, fontWeight = FontWeight.Medium)
                     ToolsStepperButton("+", theme = theme) { length = (length + 1).coerceAtMost(32); regenerate() }
                 }
 
@@ -128,7 +131,7 @@ fun PasswordGeneratorScreen(theme: FutureTheme, onBack: () -> Unit) {
 private fun PwActionButton(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, theme: FutureTheme, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    val shape = RoundedCornerShape(14.dp)
+    val shape = FutureShapes.md
     val bgColor = if (isFocused) theme.accentColor else theme.textColor.copy(alpha = 0.08f)
     Row(
         modifier = modifier
@@ -140,9 +143,9 @@ private fun PwActionButton(icon: androidx.compose.ui.graphics.vector.ImageVector
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, contentDescription = null, tint = if (isFocused) Color.Black else theme.accentColor, modifier = Modifier.size(18.dp))
+        Icon(icon, contentDescription = null, tint = if (isFocused) theme.onAccentColor else theme.accentColor, modifier = Modifier.size(18.dp))
         Spacer(modifier = Modifier.width(8.dp))
-        Text(label, color = if (isFocused) Color.Black else theme.textColor, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+        Text(label, color = if (isFocused) theme.onAccentColor else theme.textColor, fontSize = FutureTypography.body, fontWeight = FontWeight.Medium)
     }
 }
 
@@ -150,7 +153,7 @@ private fun PwActionButton(icon: androidx.compose.ui.graphics.vector.ImageVector
 private fun PwToggleRow(label: String, checked: Boolean, theme: FutureTheme, onToggle: (Boolean) -> Unit) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    val shape = RoundedCornerShape(14.dp)
+    val shape = FutureShapes.md
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -163,15 +166,15 @@ private fun PwToggleRow(label: String, checked: Boolean, theme: FutureTheme, onT
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(label, color = theme.textColor, fontSize = 14.sp, modifier = Modifier.weight(1f))
+        Text(label, color = theme.textColor, fontSize = FutureTypography.body, modifier = Modifier.weight(1f))
         Box(
             modifier = Modifier
                 .size(22.dp)
-                .clip(RoundedCornerShape(6.dp))
+                .clip(FutureShapes.sm)
                 .background(if (checked) theme.accentColor else theme.textColor.copy(alpha = 0.15f)),
             contentAlignment = Alignment.Center
         ) {
-            if (checked) Text("✓", color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            if (checked) Text("✓", color = Color.Black, fontSize = FutureTypography.body, fontWeight = FontWeight.Bold)
         }
     }
 }

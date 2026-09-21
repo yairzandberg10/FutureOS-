@@ -7,22 +7,31 @@ import android.content.Intent
 import android.telephony.SmsManager
 import android.util.Log
 import android.widget.Toast
+import com.future.messages.data.SmsRepository
 import java.io.File
 
 /**
- * מקבל את תוצאת שליחת ה-MMS. תפקידו היחיד: להודיע למשתמש אם השליחה בפועל
- * נכשלה (לרוב בגלל שאין חבילת נתונים סלולרית/MMS פעילה), ולנקות את קובץ ה-PDU
- * הזמני מה-cache בכל מקרה. רישום ההודעה כ"נשלחה" ב-content://mms כבר קרה
- * מיידית ב-SmsRepository - זה תואם את הדפוס הקיים לגבי SMS.
+ * מקבל את תוצאת שליחת ה-MMS בפועל ומעדכן את שורת ה-MMS ב-content://mms
+ * מ-OUTBOX ("שולח...") ל-SENT/FAILED בהתאם - זה מה שנותן למשתמש משוב אמיתי
+ * בבועת ההודעה עצמה, לא רק Toast חד-פעמי. גם מציג Toast עם סיבת הכישלון
+ * (לרוב אין חבילת נתונים סלולרית/MMS פעילה), ומנקה את קובץ ה-PDU הזמני
+ * מה-cache בכל מקרה.
  */
 class MmsSentReceiver : BroadcastReceiver() {
     companion object {
         const val ACTION_MMS_SENT = "com.future.messages.action.MMS_SENT"
         const val EXTRA_FILE_PATH = "file_path"
+        const val EXTRA_MMS_ID = "mms_id"
         private const val TAG = "MmsSentReceiver"
     }
 
     override fun onReceive(context: Context, intent: Intent) {
+        val succeeded = resultCode == Activity.RESULT_OK
+        val mmsId = intent.getLongExtra(EXTRA_MMS_ID, -1L)
+        if (mmsId != -1L) {
+            SmsRepository(context.applicationContext).updateMmsStatus(mmsId, success = succeeded)
+        }
+
         if (resultCode != Activity.RESULT_OK) {
             val reason = when (resultCode) {
                 SmsManager.MMS_ERROR_UNSPECIFIED -> "שגיאה לא מזוהה"

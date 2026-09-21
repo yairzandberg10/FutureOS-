@@ -1,5 +1,7 @@
 package com.future.terminal
 
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Intent
@@ -51,7 +53,8 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
+import com.future.sharednav.components.AppDialog
+import com.future.sharednav.focus.escapeTextFieldFocusTrap
 import com.future.sharednav.theme.ThemeClient
 import com.future.sharednav.theme.FutureTheme
 import com.future.sharednav.theme.inputBarColor
@@ -91,6 +94,9 @@ class MainActivity : ComponentActivity() {
             var isRunning by remember { mutableStateOf(false) }
             var showMenu by remember { mutableStateOf(false) }
             val context = LocalContext.current
+            // מקש Options הפיזי נחסם ברמת המערכת ולעולם לא מגיע כ-Key.Menu לאפליקציה -
+            // זו הדרך האמיתית שהוא פותח את התפריט.
+            com.future.sharednav.nav.onOptionsKeyPress { showMenu = true }
             // בלי אף קריאת FocusRequester באפליקציה, שדה הפקודה - הפעולה המרכזית
             // של הטרמינל - לא מקבל פוקוס אוטומטי, ואין הבטחה שהקלדה תעבוד בכלל
             // בלי לחיצת כיוון ידנית קודם.
@@ -171,7 +177,7 @@ class MainActivity : ComponentActivity() {
                         ) {
                             Text(
                                 "טרמינל",
-                                fontSize = 18.sp,
+                                fontSize = FutureTypography.title,
                                 fontWeight = FontWeight.Bold,
                                 color = theme.accentColor,
                                 modifier = Modifier.weight(1f)
@@ -208,7 +214,7 @@ class MainActivity : ComponentActivity() {
                                     text = line.text,
                                     color = if (line.isCommand) theme.accentColor else theme.outputTextColor,
                                     fontFamily = FontFamily.Monospace,
-                                    fontSize = 12.sp
+                                    fontSize = FutureTypography.label
                                 )
                             }
                         }
@@ -223,8 +229,8 @@ class MainActivity : ComponentActivity() {
                             TextField(
                                 value = input,
                                 onValueChange = { input = it },
-                                modifier = Modifier.weight(1f).focusRequester(inputFocusRequester),
-                                textStyle = TextStyle(color = theme.textColor, fontFamily = FontFamily.Monospace, fontSize = 13.sp),
+                                modifier = Modifier.escapeTextFieldFocusTrap().weight(1f).focusRequester(inputFocusRequester),
+                                textStyle = TextStyle(color = theme.textColor, fontFamily = FontFamily.Monospace, fontSize = FutureTypography.summary),
                                 colors = TextFieldDefaults.colors(
                                     focusedContainerColor = Color.Transparent,
                                     unfocusedContainerColor = Color.Transparent,
@@ -324,10 +330,10 @@ private fun TerminalIconButton(
 
 @Composable
 private fun TerminalOptionsMenu(theme: FutureTheme, onDismiss: () -> Unit, onClear: () -> Unit, onCopyLastOutput: () -> Unit, onShareHistory: () -> Unit) {
-    Dialog(onDismissRequest = onDismiss) {
+    AppDialog(onDismissRequest = onDismiss) {
         Column(
             modifier = Modifier
-                .clip(RoundedCornerShape(20.dp))
+                .clip(FutureShapes.xl)
                 .background(theme.surfaceColor)
                 .padding(vertical = 8.dp)
         ) {
@@ -357,7 +363,7 @@ private fun TerminalMenuRow(label: String, icon: ImageVector, onClick: () -> Uni
         ) {
             Icon(icon, contentDescription = null, tint = if (isDestructive) theme.dangerColor else theme.accentColor, modifier = Modifier.size(20.dp))
             Spacer(modifier = Modifier.width(14.dp))
-            Text(label, color = if (isDestructive) theme.dangerColor else theme.textColor, fontSize = 15.sp)
+            Text(label, color = if (isDestructive) theme.dangerColor else theme.textColor, fontSize = FutureTypography.bodyLarge)
         }
     }
 }

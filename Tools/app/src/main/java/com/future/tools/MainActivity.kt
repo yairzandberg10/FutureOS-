@@ -9,13 +9,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import com.future.sharednav.components.AnimatedScreenHost
+import com.future.sharednav.theme.FutureMaterialTheme
+import com.future.sharednav.theme.rememberFutureTheme
 import com.future.tools.data.ToolShortcuts
-import com.future.sharednav.theme.ThemeClient
 import com.future.tools.ui.AngleRulerScreen
 import com.future.tools.ui.CoinDiceScreen
 import com.future.tools.ui.CompassScreen
-import com.future.tools.ui.FlashlightScreen
 import com.future.tools.ui.LevelScreen
 import com.future.tools.ui.LuxMeterScreen
 import com.future.tools.ui.NoiseMeterScreen
@@ -33,7 +33,6 @@ import com.future.tools.ui.ToolRoute
 import com.future.tools.ui.ToolsHomeScreen
 import com.future.tools.ui.UnitConverterScreen
 import com.future.tools.ui.VoiceTranscribeScreen
-import com.future.sharednav.theme.FutureTheme
 
 class MainActivity : ComponentActivity() {
     // המכשיר האמיתי הוא מקלדת T9 בלבד בלי מסך מגע - מבטלים קלט מגע לגמרי כדי
@@ -59,50 +58,34 @@ class MainActivity : ComponentActivity() {
             val goBack = { if (launchedAsShortcut) finish() else route = ToolRoute.Home }
             BackHandler(enabled = route != ToolRoute.Home || launchedAsShortcut) { goBack() }
 
-            var theme by remember {
-                mutableStateOf(
-                    ThemeClient.getTheme(this@MainActivity).let {
-                        FutureTheme(isDarkMode = it.isDarkMode, accentColor = Color(it.primaryColor))
-                    }
-                )
-            }
+            // מתעדכן בזמן אמת כשמצב כהה/בהיר או צבע ההדגשה משתנים (ר' rememberFutureTheme).
+            val theme = rememberFutureTheme()
 
-            // מרענן את העיצוב בכל חזרה למסך (למשל אחרי שינוי מצב כהה/בהיר או
-            // צבע הדגשה באפליקציית ההגדרות) בלי לבנות מחדש את כל ה-Activity.
-            val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
-            DisposableEffect(lifecycleOwner) {
-                val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
-                    if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
-                        val shared = ThemeClient.getTheme(this@MainActivity)
-                        theme = FutureTheme(isDarkMode = shared.isDarkMode, accentColor = Color(shared.primaryColor))
+            FutureMaterialTheme(theme) {
+                Surface(modifier = Modifier.fillMaxSize(), color = theme.backgroundColor) {
+                    AnimatedScreenHost(targetState = route, depthOf = { if (it == ToolRoute.Home) 0 else 1 }) { shown ->
+                        when (shown) {
+                            ToolRoute.Home -> ToolsHomeScreen(theme = theme, onOpen = { lastOpenedTool = it; route = it }, lastOpenedRoute = lastOpenedTool)
+                            ToolRoute.UnitConverter -> UnitConverterScreen(theme = theme, onBack = goBack)
+                            ToolRoute.Compass -> CompassScreen(theme = theme, onBack = goBack)
+                            ToolRoute.Level -> LevelScreen(theme = theme, onBack = goBack)
+                            ToolRoute.NoiseMeter -> NoiseMeterScreen(theme = theme, onBack = goBack)
+                            ToolRoute.LuxMeter -> LuxMeterScreen(theme = theme, onBack = goBack)
+                            ToolRoute.AngleRuler -> AngleRulerScreen(theme = theme, onBack = goBack)
+                            ToolRoute.TipSplitCalculator -> TipSplitCalculatorScreen(theme = theme, onBack = goBack)
+                            ToolRoute.QuickFinanceCalculator -> QuickFinanceCalculatorScreen(theme = theme, onBack = goBack)
+                            ToolRoute.TimeZoneConverter -> TimeZoneConverterScreen(theme = theme, onBack = goBack)
+                            ToolRoute.QrScanner -> QrScannerScreen(theme = theme, onBack = goBack)
+                            ToolRoute.Pomodoro -> PomodoroScreen(theme = theme, onBack = goBack)
+                            ToolRoute.PasswordGenerator -> PasswordGeneratorScreen(theme = theme, onBack = goBack)
+                            ToolRoute.QuickNotes -> QuickNotesScreen(theme = theme, onBack = goBack)
+                            ToolRoute.CoinDice -> CoinDiceScreen(theme = theme, onBack = goBack)
+                            ToolRoute.RandomPicker -> RandomPickerScreen(theme = theme, onBack = goBack)
+                            ToolRoute.RandomNumber -> RandomNumberScreen(theme = theme, onBack = goBack)
+                            ToolRoute.TextScanner -> TextScannerScreen(theme = theme, onBack = goBack)
+                            ToolRoute.VoiceTranscribe -> VoiceTranscribeScreen(theme = theme, onBack = goBack)
+                        }
                     }
-                }
-                lifecycleOwner.lifecycle.addObserver(observer)
-                onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-            }
-
-            Surface(modifier = Modifier.fillMaxSize(), color = theme.backgroundColor) {
-                when (route) {
-                    ToolRoute.Home -> ToolsHomeScreen(theme = theme, onOpen = { lastOpenedTool = it; route = it }, lastOpenedRoute = lastOpenedTool)
-                    ToolRoute.Flashlight -> FlashlightScreen(theme = theme, onBack = goBack)
-                    ToolRoute.UnitConverter -> UnitConverterScreen(theme = theme, onBack = goBack)
-                    ToolRoute.Compass -> CompassScreen(theme = theme, onBack = goBack)
-                    ToolRoute.Level -> LevelScreen(theme = theme, onBack = goBack)
-                    ToolRoute.NoiseMeter -> NoiseMeterScreen(theme = theme, onBack = goBack)
-                    ToolRoute.LuxMeter -> LuxMeterScreen(theme = theme, onBack = goBack)
-                    ToolRoute.AngleRuler -> AngleRulerScreen(theme = theme, onBack = goBack)
-                    ToolRoute.TipSplitCalculator -> TipSplitCalculatorScreen(theme = theme, onBack = goBack)
-                    ToolRoute.QuickFinanceCalculator -> QuickFinanceCalculatorScreen(theme = theme, onBack = goBack)
-                    ToolRoute.TimeZoneConverter -> TimeZoneConverterScreen(theme = theme, onBack = goBack)
-                    ToolRoute.QrScanner -> QrScannerScreen(theme = theme, onBack = goBack)
-                    ToolRoute.Pomodoro -> PomodoroScreen(theme = theme, onBack = goBack)
-                    ToolRoute.PasswordGenerator -> PasswordGeneratorScreen(theme = theme, onBack = goBack)
-                    ToolRoute.QuickNotes -> QuickNotesScreen(theme = theme, onBack = goBack)
-                    ToolRoute.CoinDice -> CoinDiceScreen(theme = theme, onBack = goBack)
-                    ToolRoute.RandomPicker -> RandomPickerScreen(theme = theme, onBack = goBack)
-                    ToolRoute.RandomNumber -> RandomNumberScreen(theme = theme, onBack = goBack)
-                    ToolRoute.TextScanner -> TextScannerScreen(theme = theme, onBack = goBack)
-                    ToolRoute.VoiceTranscribe -> VoiceTranscribeScreen(theme = theme, onBack = goBack)
                 }
             }
         }

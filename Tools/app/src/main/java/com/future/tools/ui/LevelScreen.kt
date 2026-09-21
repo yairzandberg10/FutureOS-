@@ -1,5 +1,6 @@
 package com.future.tools.ui
 
+import com.future.sharednav.theme.FutureTypography
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -83,14 +84,14 @@ fun LevelScreen(theme: FutureTheme, onBack: () -> Unit) {
                         Text(
                             "%.1f° / %.1f°".format(tilt.x, tilt.y),
                             color = theme.textColor,
-                            fontSize = 22.sp,
+                            fontSize = FutureTypography.headline,
                             fontWeight = FontWeight.Light
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             if (isLevel) "מאוזן" else "הטה עד לאיזון",
                             color = if (isLevel) bubbleColor else theme.textColor.copy(alpha = 0.5f),
-                            fontSize = 14.sp,
+                            fontSize = FutureTypography.body,
                             fontWeight = if (isLevel) FontWeight.Bold else FontWeight.Normal
                         )
                     }

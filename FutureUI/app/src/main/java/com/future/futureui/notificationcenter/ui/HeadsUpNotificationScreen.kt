@@ -1,5 +1,8 @@
 package com.future.futureui.notificationcenter.ui
 
+import com.future.sharednav.theme.FutureMotion
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import android.app.Notification
 import android.content.Context
 import android.service.notification.StatusBarNotification
@@ -93,7 +96,9 @@ fun HeadsUpNotificationScreen(
         try {
             val icon = context.packageManager.getApplicationIcon(sbn.packageName)
             appIcon = icon.toBitmap(width = 64, height = 64).asImageBitmap()
-        } catch (e: Exception) {}
+        } catch (e: Exception) {
+            android.util.Log.w("HeadsUpNotificationScre", "HeadsUpNotificationScreen failed", e)
+        }
     }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
@@ -107,15 +112,15 @@ fun HeadsUpNotificationScreen(
             visible = isVisible,
             enter = slideInVertically(
                 initialOffsetY = { -it },
-                animationSpec = tween(durationMillis = 250, easing = LinearOutSlowInEasing)
-            ) + fadeIn(animationSpec = tween(250)),
-            exit = slideOutVertically(targetOffsetY = { -it }, animationSpec = tween(200)) + fadeOut(animationSpec = tween(200)),
+                animationSpec = tween(FutureMotion.DurationSlow, easing = FutureMotion.EasingDecelerate)
+            ) + fadeIn(animationSpec = tween(FutureMotion.DurationSlow)),
+            exit = slideOutVertically(targetOffsetY = { -it }, animationSpec = tween(FutureMotion.DurationStandard)) + fadeOut(animationSpec = tween(FutureMotion.DurationStandard)),
             modifier = Modifier
                 .fillMaxWidth()
                 .statusBarsPadding()
                 .padding(top = 8.dp, start = 12.dp, end = 12.dp)
         ) {
-            val shape = RoundedCornerShape(28.dp)
+            val shape = FutureShapes.xxl
             // אותה שפת עיצוב "זכוכית כהה" כמו שאר חלקי FutureUI (Control Center,
             // Notification Center, תפריט הכיבוי) - לא MaterialTheme.colorScheme, כדי
             // שהבאנר לא יבלוט ככתם בהיר/לא עקבי מעל שאר המערכת.
@@ -151,14 +156,14 @@ fun HeadsUpNotificationScreen(
                     Column {
                         Text(
                             text = title.ifBlank { "שיחה נכנסת" },
-                            fontSize = 12.sp,
+                            fontSize = FutureTypography.label,
                             color = textColor.copy(alpha = 0.65f),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                         Text(
                             text = text.ifBlank { appName },
-                            fontSize = 19.sp,
+                            fontSize = FutureTypography.screenTitle,
                             fontWeight = FontWeight.Bold,
                             color = textColor,
                             maxLines = 1,
@@ -166,7 +171,7 @@ fun HeadsUpNotificationScreen(
                         )
                         Text(
                             text = "טלפון = מענה · ניתוק = דחייה",
-                            fontSize = 11.sp,
+                            fontSize = FutureTypography.caption,
                             color = textColor.copy(alpha = 0.55f),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
@@ -176,7 +181,7 @@ fun HeadsUpNotificationScreen(
                     Column {
                         Text(
                             text = if (title.isNotBlank()) "$appName: $title" else appName,
-                            fontSize = 13.sp,
+                            fontSize = FutureTypography.summary,
                             fontWeight = FontWeight.Bold,
                             color = textColor,
                             maxLines = 1,
@@ -185,7 +190,7 @@ fun HeadsUpNotificationScreen(
                         if (text.isNotBlank()) {
                             Text(
                                 text = text,
-                                fontSize = 12.sp,
+                                fontSize = FutureTypography.label,
                                 color = textColor.copy(alpha = 0.7f),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis

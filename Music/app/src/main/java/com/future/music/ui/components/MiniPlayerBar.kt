@@ -1,5 +1,6 @@
 package com.future.music.ui.components
 
+import com.future.sharednav.theme.FutureTypography
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -68,8 +69,8 @@ fun MiniPlayerBar(playerState: PlayerUiState, theme: FutureTheme, onClick: () ->
             }
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(song.title, color = theme.textColor, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1)
-                Text(song.artist, color = theme.textColor.copy(alpha = 0.6f), fontSize = 12.sp, maxLines = 1)
+                Text(song.title, color = theme.textColor, fontSize = FutureTypography.body, fontWeight = FontWeight.Medium, maxLines = 1)
+                Text(song.artist, color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.label, maxLines = 1)
             }
             Spacer(modifier = Modifier.width(8.dp))
             Box(

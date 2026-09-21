@@ -1,7 +1,7 @@
 package com.future.sfarim.data
 
 import android.database.Cursor
-import android.database.sqlite.SQLiteDatabase
+import org.sqlite.database.sqlite.SQLiteDatabase
 import org.json.JSONArray
 import com.future.sfarim.util.HebrewNumerals
 import com.future.sfarim.util.stripHtmlTags

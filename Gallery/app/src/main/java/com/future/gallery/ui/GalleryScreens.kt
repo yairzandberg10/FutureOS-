@@ -1,4 +1,8 @@
 package com.future.gallery.ui
+import com.future.sharednav.theme.onAccentColor
+import com.future.sharednav.theme.FutureMotion
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.focus.bringIntoViewOnFocus
 
 import android.app.RecoverableSecurityException
@@ -104,7 +108,7 @@ fun GalleryHomeScreen(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("גלריה", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = theme.textColor, modifier = Modifier.weight(1f))
+                    Text("גלריה", fontSize = FutureTypography.headline, fontWeight = FontWeight.Bold, color = theme.textColor, modifier = Modifier.weight(1f))
                     if (tab == GalleryTab.ALL && hasPermission) {
                         GalleryIconButton(Icons.Rounded.Sort, "מיון", theme) { showSortMenu = true }
                     }
@@ -127,7 +131,7 @@ fun GalleryHomeScreen(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center
                         ) {
-                            Text("כדי להציג תמונות צריך לאשר הרשאה", color = theme.textColor.copy(alpha = 0.7f), fontSize = 15.sp)
+                            Text("כדי להציג תמונות צריך לאשר הרשאה", color = theme.textColor.copy(alpha = 0.7f), fontSize = FutureTypography.bodyLarge)
                             Spacer(modifier = Modifier.height(16.dp))
                             FocusableTextButton("אשר הרשאה", onRequestPermission, theme)
                         }
@@ -174,11 +178,11 @@ fun AlbumDetailScreen(
                 ) {
                     GalleryIconButton(Icons.AutoMirrored.Rounded.ArrowBack, "חזור", theme, onBack)
                     Spacer(modifier = Modifier.width(10.dp))
-                    Text(albumName, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = theme.textColor)
+                    Text(albumName, fontSize = FutureTypography.screenTitle, fontWeight = FontWeight.Bold, color = theme.textColor)
                 }
                 if (items.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("האלבום ריק", color = theme.textColor.copy(alpha = 0.5f), fontSize = 15.sp)
+                        Text("האלבום ריק", color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.bodyLarge)
                     }
                 } else {
                     MediaGrid(items, theme, onItemClick = { item -> onItemClick(items, item) }, lastSelectedId = lastSelectedItemId)
@@ -243,13 +247,13 @@ private fun GalleryTabChip(label: String, isSelected: Boolean, theme: FutureThem
     )
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(14.dp))
+            .clip(FutureShapes.md)
             .background(bgColor)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
             .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
             .padding(horizontal = 18.dp, vertical = 8.dp)
     ) {
-        Text(label, color = if (isSelected) Color.Black else theme.textColor, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+        Text(label, color = if (isSelected) theme.onAccentColor else theme.textColor, fontSize = FutureTypography.summary, fontWeight = FontWeight.Medium)
     }
 }
 
@@ -262,14 +266,14 @@ private fun GalleryIconButton(icon: androidx.compose.ui.graphics.vector.ImageVec
 
 @Composable
 private fun SortMenu(current: SortOption, theme: FutureTheme, onDismiss: () -> Unit, onSelect: (SortOption) -> Unit) {
-    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+    com.future.sharednav.components.AppDialog(onDismissRequest = onDismiss) {
         Column(
             modifier = Modifier
-                .clip(RoundedCornerShape(20.dp))
+                .clip(FutureShapes.xl)
                 .background(theme.surfaceColor)
                 .padding(vertical = 8.dp)
         ) {
-            Text("מיין לפי", color = theme.textColor.copy(alpha = 0.5f), fontSize = 12.sp, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
+            Text("מיין לפי", color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.label, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
             SortOption.entries.forEach { option ->
                 SortRow(SORT_LABELS.getValue(option), isSelected = option == current, theme = theme) { onSelect(option) }
             }
@@ -291,7 +295,7 @@ private fun SortRow(label: String, isSelected: Boolean, theme: FutureTheme, onCl
             .padding(horizontal = 20.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(label, color = if (isSelected) theme.accentColor else theme.textColor, fontSize = 14.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
+        Text(label, color = if (isSelected) theme.accentColor else theme.textColor, fontSize = FutureTypography.body, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
     }
 }
 
@@ -302,7 +306,7 @@ private fun FocusableTextButton(text: String, onClick: () -> Unit, theme: Future
     val bgColor by animateColorAsState(if (isFocused) theme.accentColor else theme.accentColor.copy(alpha = 0.7f), label = "btnBg")
     androidx.compose.foundation.layout.Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(20.dp))
+            .clip(FutureShapes.xl)
             .background(bgColor)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
             .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
@@ -334,7 +338,7 @@ private fun MediaThumbnail(item: MediaItem, onClick: () -> Unit, theme: FutureTh
     }
 
     val scale by animateFloatAsState(if (isFocused) 0.94f else 1f, label = "thumbScale")
-    val shape = if (isFocused) RoundedCornerShape(10.dp) else RoundedCornerShape(4.dp)
+    val shape = if (isFocused) FutureShapes.sm else FutureShapes.xs
 
     Box(
         modifier = Modifier
@@ -393,17 +397,17 @@ fun MediaViewerScreen(
     // "מטלפרת" את התמונה בין הרמות בלי שום מעבר, מה שהרגיש שבור/מקוטע.
     val zoom by androidx.compose.animation.core.animateFloatAsState(
         targetValue = zoomTarget,
-        animationSpec = androidx.compose.animation.core.tween(220),
+        animationSpec = androidx.compose.animation.core.tween(FutureMotion.DurationStandard),
         label = "mediaZoom"
     )
     val animatedPanX by androidx.compose.animation.core.animateFloatAsState(
         targetValue = panX,
-        animationSpec = androidx.compose.animation.core.tween(160),
+        animationSpec = androidx.compose.animation.core.tween(FutureMotion.DurationFast),
         label = "mediaPanX"
     )
     val animatedPanY by androidx.compose.animation.core.animateFloatAsState(
         targetValue = panY,
-        animationSpec = androidx.compose.animation.core.tween(160),
+        animationSpec = androidx.compose.animation.core.tween(FutureMotion.DurationFast),
         label = "mediaPanY"
     )
 
@@ -538,7 +542,7 @@ fun MediaViewerScreen(
                             ) {
                                 Icon(Icons.Rounded.VideocamOff, contentDescription = null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(48.dp))
                                 Spacer(modifier = Modifier.height(12.dp))
-                                Text("לא ניתן לנגן את הסרטון", color = Color.White.copy(alpha = 0.7f), fontSize = 14.sp)
+                                Text("לא ניתן לנגן את הסרטון", color = Color.White.copy(alpha = 0.7f), fontSize = FutureTypography.body)
                             }
                         } else {
                             androidx.compose.ui.viewinterop.AndroidView(
@@ -566,7 +570,7 @@ fun MediaViewerScreen(
                     }
                     loadFailed -> {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text("לא ניתן לטעון את התמונה", color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp)
+                            Text("לא ניתן לטעון את התמונה", color = Color.White.copy(alpha = 0.5f), fontSize = FutureTypography.body)
                         }
                     }
                     else -> {
@@ -611,7 +615,9 @@ fun MediaViewerScreen(
                             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         }
                         context.startActivity(Intent.createChooser(shareIntent, null).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                    } catch (e: Exception) {}
+                    } catch (e: Exception) {
+                        android.util.Log.w("GalleryScreens", "goTo failed", e)
+                    }
                 },
                 onEdit = onEdit,
                 onDelete = { showDeleteConfirm = true }
@@ -707,7 +713,7 @@ private fun MediaViewerBarButton(
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
-            .clip(RoundedCornerShape(14.dp))
+            .clip(FutureShapes.md)
             .background(bgColor)
             .clickable(interactionSource = interactionSource, indication = null, enabled = enabled, onClick = onClick)
             .focusable(interactionSource = interactionSource, enabled = enabled).bringIntoViewOnFocus()
@@ -715,21 +721,21 @@ private fun MediaViewerBarButton(
     ) {
         Icon(icon, contentDescription = label, tint = tint, modifier = Modifier.size(22.dp))
         Spacer(modifier = Modifier.height(4.dp))
-        Text(label, color = tint, fontSize = 10.sp)
+        Text(label, color = tint, fontSize = FutureTypography.caption)
     }
 }
 
 @Composable
 private fun DeleteConfirmDialog(onCancel: () -> Unit, onConfirm: () -> Unit, theme: FutureTheme) {
-    androidx.compose.ui.window.Dialog(onDismissRequest = onCancel) {
+    com.future.sharednav.components.AppDialog(onDismissRequest = onCancel) {
         Column(
             modifier = Modifier
-                .clip(RoundedCornerShape(20.dp))
+                .clip(FutureShapes.xl)
                 .background(theme.surfaceColor)
                 .padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text("למחוק את הפריט הזה?", color = theme.textColor, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            Text("למחוק את הפריט הזה?", color = theme.textColor, fontWeight = FontWeight.Bold, fontSize = FutureTypography.bodyLarge)
             Spacer(modifier = Modifier.height(16.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 FocusableTextButton("ביטול", onCancel, theme)
@@ -746,7 +752,7 @@ private fun FocusableDestructiveButton(text: String, onClick: () -> Unit) {
     val bgColor by animateColorAsState(if (isFocused) Color(0xFFFF6B6B) else Color(0xFFFF6B6B).copy(alpha = 0.7f), label = "delBtnBg")
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(20.dp))
+            .clip(FutureShapes.xl)
             .background(bgColor)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
             .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()

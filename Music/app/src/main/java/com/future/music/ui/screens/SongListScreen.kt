@@ -1,5 +1,6 @@
 package com.future.music.ui.screens
 
+import com.future.sharednav.theme.FutureTypography
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -43,8 +44,34 @@ fun SongListScreen(
     topBarTrailingDescription: String? = null,
     onTopBarTrailingClick: (() -> Unit)? = null,
 ) {
-    val firstItemFocusRequester = remember { FocusRequester() }
-    LaunchedEffect(Unit) { firstItemFocusRequester.requestFocus() }
+    // פוקוס-בפתיחה חוזר לשיר שמתנגן כרגע (אם הוא ברשימה הזו) ולא תמיד לשיר
+    // הראשון - כדי שחזרה ממסך "מתנגן עכשיו" לא תאבד את המיקום ברשימה. אם
+    // השיר המתנגן גלל מחוץ לתחום הנראה של ה-LazyColumn, השורה שלו לא
+    // קיימת בקומפוזיציה עדיין ו-requestFocus זורק - במקרה כזה נופלים חזרה
+    // לשיר הראשון (תמיד קיים, כי הוא באזור הנראה הראשוני).
+    val rowFocusRequesters = remember { mutableMapOf<Long, FocusRequester>() }
+    val initialFocusSongId = remember(songs, playerState.currentSong?.id) {
+        songs.firstOrNull { it.id == playerState.currentSong?.id }?.id ?: songs.firstOrNull()?.id
+    }
+    LaunchedEffect(Unit) {
+        val focusedTarget = initialFocusSongId?.let {
+            try {
+                rowFocusRequesters.getOrPut(it) { FocusRequester() }.requestFocus()
+                true
+            } catch (e: IllegalStateException) {
+                false
+            }
+        } ?: false
+        if (!focusedTarget) {
+            songs.firstOrNull()?.let {
+                try {
+                    rowFocusRequesters.getOrPut(it.id) { FocusRequester() }.requestFocus()
+                } catch (e: IllegalStateException) {
+                    // הרשימה ריקה מתוכן ממורכב כרגע - אין מה לעשות פוקוס עליו.
+                }
+            }
+        }
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         ScreenTopBar(
@@ -58,7 +85,7 @@ fun SongListScreen(
 
         if (songs.isEmpty()) {
             Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Text(emptyMessage, color = theme.textColor.copy(alpha = 0.5f), fontSize = 14.sp)
+                Text(emptyMessage, color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.body)
             }
         } else {
             LazyColumn(
@@ -71,7 +98,7 @@ fun SongListScreen(
                         onClick = { onPlaySong(index) },
                         theme = theme,
                         modifier = Modifier.fillMaxWidth(),
-                        focusRequester = if (index == 0) firstItemFocusRequester else null,
+                        focusRequester = rowFocusRequesters.getOrPut(song.id) { FocusRequester() },
                     ) { isFocused ->
                         SongRow(song = song, isCurrent = isCurrent, isPlaying = playerState.isPlaying, isFocused = isFocused, theme = theme)
                     }

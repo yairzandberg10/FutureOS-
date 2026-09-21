@@ -1,4 +1,6 @@
 package com.future.futurelauncher.ui
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.focus.bringIntoViewOnFocus
 
 import android.content.Intent
@@ -90,9 +92,9 @@ private fun GlassDialog(
                     modifier = Modifier
                         .fillMaxWidth(widthFraction)
                         .heightIn(max = maxDialogHeight)
-                        .clip(RoundedCornerShape(28.dp))
+                        .clip(FutureShapes.xxl)
                         .background(theme.surfaceColor.copy(alpha = if (theme.isDarkMode) 0.92f else 0.97f))
-                        .border(1.dp, theme.accentColor.copy(alpha = 0.3f), RoundedCornerShape(28.dp))
+                        .border(1.dp, theme.accentColor.copy(alpha = 0.3f), FutureShapes.xxl)
                         .padding(20.dp)
                 ) {
                     Row(
@@ -104,7 +106,7 @@ private fun GlassDialog(
                             text = title,
                             color = theme.textColor,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp,
+                            fontSize = FutureTypography.title,
                             modifier = Modifier.weight(1f)
                         )
                         trailingTitleContent?.invoke()
@@ -137,7 +139,7 @@ private fun GlassButton(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    val shape = RoundedCornerShape(14.dp)
+    val shape = FutureShapes.md
     // Dialog() מריץ את החלון שלו במעטפת נפרדת - אם מבקשים פוקוס לפני שהחלון
     // בכלל נדבק, הבקשה נבלעת בשקט. onGloballyPositioned מבטיח שהבקשה תקרה
     // ברגע שהכפתור באמת נמדד/מוצג, במקום delay() קבוע ושביר.
@@ -177,7 +179,7 @@ private fun GlassButton(
             .padding(horizontal = 16.dp, vertical = 10.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(text = text, color = contentColor, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+        Text(text = text, color = contentColor, fontSize = FutureTypography.body, fontWeight = FontWeight.SemiBold)
     }
 }
 
@@ -195,11 +197,11 @@ private fun GlassTextField(
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        label = { Text(label, fontSize = 12.sp, color = theme.textColor.copy(alpha = 0.6f)) },
+        label = { Text(label, fontSize = FutureTypography.label, color = theme.textColor.copy(alpha = 0.6f)) },
         modifier = modifier,
         singleLine = true,
-        shape = RoundedCornerShape(12.dp),
-        textStyle = LocalTextStyle.current.copy(fontSize = 14.sp, color = theme.textColor),
+        shape = FutureShapes.md,
+        textStyle = LocalTextStyle.current.copy(fontSize = FutureTypography.body, color = theme.textColor),
         colors = OutlinedTextFieldDefaults.colors(
             focusedTextColor = theme.textColor,
             unfocusedTextColor = theme.textColor,
@@ -223,7 +225,7 @@ private fun GlassSettingSwitch(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    val shape = RoundedCornerShape(16.dp)
+    val shape = FutureShapes.lg
     val bgColor by animateColorAsState(
         if (isFocused) theme.accentColor.copy(alpha = 0.18f) else theme.textColor.copy(alpha = 0.05f),
         label = "settingSwitchBg"
@@ -243,8 +245,8 @@ private fun GlassSettingSwitch(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(title, color = theme.textColor, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-            Text(description, color = theme.textColor.copy(alpha = 0.6f), fontSize = 11.sp)
+            Text(title, color = theme.textColor, fontSize = FutureTypography.body, fontWeight = FontWeight.Medium)
+            Text(description, color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.caption)
         }
         Spacer(modifier = Modifier.width(10.dp))
         // המתג מוצג בלבד (הריבוע כולו כבר clickable דרך ה-Row למעלה) - לכן הוא
@@ -306,7 +308,7 @@ fun FolderDialog(
                         Image(bitmap = icon, contentDescription = null, modifier = Modifier.fillMaxSize())
                     }
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text(text = app.label, color = theme.textColor, fontSize = 9.sp, maxLines = 1, textAlign = TextAlign.Center)
+                    Text(text = app.label, color = theme.textColor, fontSize = FutureTypography.caption, maxLines = 1, textAlign = TextAlign.Center)
                 }
             }
         }
@@ -357,27 +359,27 @@ fun AppOptionsDialog(
             Text(
                 stringResource(R.string.options_for, item.label),
                 color = theme.textColor.copy(alpha = 0.6f),
-                fontSize = 12.sp
+                fontSize = FutureTypography.label
             )
 
             Spacer(modifier = Modifier.height(10.dp))
 
             if (item is LauncherItem.Widget) {
-                Text(stringResource(R.string.resize_widget), color = theme.textColor, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Text(stringResource(R.string.resize_widget), color = theme.textColor, fontWeight = FontWeight.Bold, fontSize = FutureTypography.body)
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(stringResource(R.string.width, item.spanX), color = theme.textColor, fontSize = 12.sp)
+                        Text(stringResource(R.string.width, item.spanX), color = theme.textColor, fontSize = FutureTypography.label)
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             GlassButton("−", { if (item.spanX > 1) onResize(item.spanX - 1, item.spanY) }, theme, isPrimary = false, modifier = Modifier.size(40.dp, 34.dp))
                             GlassButton("+", { if (item.spanX < 4) onResize(item.spanX + 1, item.spanY) }, theme, isPrimary = false, modifier = Modifier.size(40.dp, 34.dp))
                         }
                     }
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(stringResource(R.string.height, item.spanY), color = theme.textColor, fontSize = 12.sp)
+                        Text(stringResource(R.string.height, item.spanY), color = theme.textColor, fontSize = FutureTypography.label)
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             GlassButton("−", { if (item.spanY > 1) onResize(item.spanX, item.spanY - 1) }, theme, isPrimary = false, modifier = Modifier.size(40.dp, 34.dp))
                             GlassButton("+", { if (item.spanY < 4) onResize(item.spanX, item.spanY + 1) }, theme, isPrimary = false, modifier = Modifier.size(40.dp, 34.dp))
@@ -495,7 +497,7 @@ fun WidgetsDialog(onSelectWidget: () -> Unit, onDismiss: () -> Unit, theme: Futu
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(stringResource(R.string.select_widget_title), color = theme.textColor.copy(alpha = 0.8f), textAlign = TextAlign.Center, fontSize = 14.sp)
+            Text(stringResource(R.string.select_widget_title), color = theme.textColor.copy(alpha = 0.8f), textAlign = TextAlign.Center, fontSize = FutureTypography.body)
             Spacer(modifier = Modifier.height(12.dp))
             GlassButton(
                 text = stringResource(R.string.select_widget_button),
@@ -595,7 +597,7 @@ fun AppListDialog(
                         Text(
                             stringResource(R.string.restrict_default_apps_desc),
                             color = theme.textColor.copy(alpha = 0.6f),
-                            fontSize = 13.sp,
+                            fontSize = FutureTypography.summary,
                             textAlign = TextAlign.Center
                         )
                     }
@@ -641,7 +643,7 @@ fun AppListDialog(
                     Text(
                         text = app.label,
                         color = if (isAppFocused) theme.accentColor else theme.textColor,
-                        fontSize = 7.sp,
+                        fontSize = FutureTypography.caption,
                         maxLines = 1,
                         textAlign = TextAlign.Center,
                         fontWeight = if (isAppFocused) FontWeight.Bold else FontWeight.Normal
@@ -671,14 +673,14 @@ fun LauncherSettingsDialog(
         }
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(stringResource(R.string.launcher_settings_desc), color = theme.textColor.copy(alpha = 0.6f), fontSize = 13.sp)
+            Text(stringResource(R.string.launcher_settings_desc), color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.summary)
             Spacer(modifier = Modifier.height(14.dp))
 
             if (confirmingReset) {
                 Text(
                     stringResource(R.string.reset_layout_confirm),
                     color = Color(0xFFCF4A4A),
-                    fontSize = 13.sp,
+                    fontSize = FutureTypography.summary,
                     textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(10.dp))

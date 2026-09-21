@@ -1,5 +1,6 @@
 package com.future.sharednav.components
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -27,13 +28,19 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.future.sharednav.focus.focusMotion
+import com.future.sharednav.theme.FutureContrast
+import com.future.sharednav.theme.FutureDimens
+import com.future.sharednav.theme.FutureMotion
+import com.future.sharednav.theme.FutureTransitions
+import com.future.sharednav.theme.rememberFutureType
 
 /**
  * שורת כותרת משותפת למסכי רשימה - כפתור חזור (RTL: חץ ימינה) + כותרת +
- * כפתור פעולה אופציונלי בצד ההפוך. היה קיים זהה כמעט לחלוטין (רק סוג
- * ה-theme היה שונה) גם ב-Music וגם ב-Sfarim - כאן הגרסה המשותפת, עם
- * textColor/accentColor כפרמטרים פרימיטיביים במקום FutureTheme.
+ * כפתור פעולה אופציונלי בצד ההפוך.
+ *
+ * כשהכותרת משתנה בתוך אותו מסך (מעבר תיקייה בקבצים, החלפת פרק בספרים)
+ * היא מתחלפת ב-crossfade ולא קופצת.
  */
 @Composable
 fun ScreenTopBar(
@@ -45,28 +52,42 @@ fun ScreenTopBar(
     trailingContentDescription: String? = null,
     onTrailingClick: (() -> Unit)? = null,
 ) {
+    val type = rememberFutureType()
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = FutureDimens.spacingLg, vertical = FutureDimens.spacingMd),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (onBack != null) {
             TopBarIconButton(Icons.AutoMirrored.Rounded.ArrowBack, "חזור", textColor, accentColor, onBack)
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(FutureDimens.spacingSm))
         }
-        Text(
-            title,
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold,
-            color = textColor,
-            maxLines = 1,
+        AnimatedContent(
+            targetState = title,
+            transitionSpec = { FutureTransitions.appear() },
             modifier = Modifier.weight(1f),
-        )
+            label = "topBarTitle",
+        ) { shownTitle ->
+            Text(
+                shownTitle,
+                fontSize = type.screenTitle,
+                fontWeight = FontWeight.Bold,
+                color = textColor,
+                maxLines = 1,
+            )
+        }
         if (trailingIcon != null && onTrailingClick != null) {
             TopBarIconButton(trailingIcon, trailingContentDescription ?: "", textColor, accentColor, onTrailingClick)
         }
     }
 }
 
+/**
+ * כפתור אייקון עגול. הפוקוס מסומן במילוי *ובטבעת* - קודם הוא סומן רק
+ * בשינוי צבע רקע של 30% מצבע ההדגשה, שבמצב בהיר עם ההדגשה הלבנה של ברירת
+ * המחדל פשוט לא נראה.
+ */
 @Composable
 fun TopBarIconButton(
     icon: ImageVector,
@@ -77,18 +98,25 @@ fun TopBarIconButton(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
+    val ring = FutureContrast.accentForText(accentColor, textColor)
+
+    // כפתור אייקון הוא החריג השני בפירוט הפוקוס (guidelines/focus-spec.html):
+    // הסימון שלו הוא רקע ב-30% מההדגשה ובלי מסגרת כלל. ב-22% שהיה כאן
+    // הרקע לא נשא את הסימון לבדו, ולכן נוספה לו מסגרת שאינה בעיצוב.
     val bgColor by animateColorAsState(
-        if (isFocused) accentColor.copy(alpha = 0.3f) else textColor.copy(alpha = 0.08f),
+        if (isFocused) ring.copy(alpha = 0.30f) else textColor.copy(alpha = 0.08f),
+        FutureMotion.focusColorSpec,
         label = "topBarIconBtnBg",
     )
     Box(
         modifier = Modifier
-            .size(36.dp)
+            .size(FutureDimens.rowHeightTopBarButton)
+            .focusMotion(interactionSource, focusedScale = 1.08f, pressedScale = 0.92f)
             .clip(CircleShape)
             .background(bgColor)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(icon, contentDescription = contentDescription, tint = textColor, modifier = Modifier.size(18.dp))
+        Icon(icon, contentDescription = contentDescription, tint = textColor, modifier = Modifier.size(FutureDimens.iconTopBar))
     }
 }

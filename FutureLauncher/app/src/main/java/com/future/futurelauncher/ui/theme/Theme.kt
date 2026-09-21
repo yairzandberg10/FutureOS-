@@ -1,29 +1,21 @@
 package com.future.futurelauncher.ui.theme
 
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
+import com.future.sharednav.theme.FutureMaterialTheme
+import com.future.sharednav.theme.FutureTheme
+import com.future.sharednav.theme.rememberFutureTheme
 
-/** FutureOS משתמשת תמיד בשפה עיצובית כהה/זכוכית אחידה בכל האפליקציות - אין מצב בהיר. */
-private val FutureOsColorScheme = darkColorScheme(
-    primary = Color.White,
-    onPrimary = Color.Black,
-    secondary = Color.White,
-    background = Color.Black,
-    onBackground = Color.White,
-    surface = Color.White.copy(alpha = 0.08f),
-    onSurface = Color.White,
-    surfaceVariant = Color.White.copy(alpha = 0.16f),
-    onSurfaceVariant = Color.White,
-    error = Color(0xFFFF6B6B)
-)
-
+/**
+ * מסך הבית נשאר תמיד כהה בכוונה - הוא מצויר מעל טפט, והטקסט עליו
+ * (OnWallpaperColor) מניח רקע כהה. אבל צבע ההדגשה, הצורות והטיפוגרפיה
+ * מגיעים עכשיו מהערכה המשותפת, כמו בכל אפליקציה אחרת; קודם ההדגשה כאן
+ * הייתה לבן קבוע והתעלמה מבחירת המשתמש.
+ */
 @Composable
 fun FutureLauncherTheme(content: @Composable () -> Unit) {
-    MaterialTheme(
-        colorScheme = FutureOsColorScheme,
-        typography = Typography,
-        content = content
+    val shared = rememberFutureTheme()
+    FutureMaterialTheme(
+        theme = FutureTheme(isDarkMode = true, accentColor = shared.accentColor),
+        content = content,
     )
 }

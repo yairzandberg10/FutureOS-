@@ -1,5 +1,7 @@
 package com.future.dialer.ui.dialpad
 
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import android.text.format.DateUtils
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
@@ -29,6 +31,7 @@ import com.future.dialer.data.model.CallRecord
 import com.future.dialer.data.model.CallType
 import com.future.dialer.data.model.Contact
 import com.future.dialer.ui.theme.DialerCallColors
+import com.future.sharednav.theme.mutedTextColor
 import com.future.sharednav.focus.FocusableItem
 
 /**
@@ -72,7 +75,7 @@ fun DialpadScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 24.dp, bottom = 16.dp),
-            shape = RoundedCornerShape(16.dp),
+            shape = FutureShapes.lg,
             color = MaterialTheme.colorScheme.primary.copy(alpha = if (dialedNumber.isEmpty()) 0.06f else 0.12f),
             border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = if (dialedNumber.isEmpty()) 0.25f else 0.5f))
         ) {
@@ -82,7 +85,7 @@ fun DialpadScreen(
             ) {
                 Text(
                     text = dialedNumber.ifEmpty { stringResource(R.string.enter_number) },
-                    fontSize = 36.sp,
+                    fontSize = FutureTypography.display,
                     fontWeight = FontWeight.Normal,
                     color = if (dialedNumber.isEmpty()) MaterialTheme.colorScheme.primary.copy(alpha = 0.55f) else MaterialTheme.colorScheme.onSurface,
                     maxLines = 1
@@ -158,7 +161,7 @@ private fun ContactSuggestionItem(contact: Contact, onCall: (String, String) -> 
         ) {
             Surface(
                 modifier = Modifier.size(48.dp),
-                shape = RoundedCornerShape(12.dp),
+                shape = FutureShapes.md,
                 color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
             ) {
                 Box(contentAlignment = Alignment.Center) {
@@ -195,16 +198,19 @@ fun CallHistoryItem(record: CallRecord, onCall: (String, String) -> Unit, focusR
                 .padding(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            val (icon, color) = when (record.type) {
-                CallType.INCOMING -> Icons.Rounded.CallReceived to DialerCallColors.incoming
-                CallType.OUTGOING -> Icons.Rounded.CallMade to DialerCallColors.outgoing
-                CallType.MISSED -> Icons.Rounded.CallMissed to DialerCallColors.missed
-                CallType.REJECTED -> Icons.Rounded.CallMissed to MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+            val theme = com.future.sharednav.theme.LocalFutureTheme.current
+            val (icon, color) = with(DialerCallColors) {
+                when (record.type) {
+                    CallType.INCOMING -> Icons.Rounded.CallReceived to theme.incoming
+                    CallType.OUTGOING -> Icons.Rounded.CallMade to theme.outgoing
+                    CallType.MISSED -> Icons.Rounded.CallMissed to theme.missed
+                    CallType.REJECTED -> Icons.Rounded.CallMissed to theme.mutedTextColor
+                }
             }
 
             Surface(
                 modifier = Modifier.size(40.dp),
-                shape = RoundedCornerShape(12.dp),
+                shape = FutureShapes.md,
                 color = color.copy(alpha = 0.14f)
             ) {
                 Box(contentAlignment = Alignment.Center) {

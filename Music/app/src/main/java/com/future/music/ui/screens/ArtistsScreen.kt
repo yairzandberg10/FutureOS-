@@ -1,5 +1,6 @@
 package com.future.music.ui.screens
 
+import com.future.sharednav.theme.FutureTypography
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -41,7 +42,7 @@ fun ArtistsScreen(artists: List<ArtistGroup>, theme: FutureTheme, onBack: () -> 
         ScreenTopBar(title = "אמנים", theme = theme, onBack = onBack)
         if (artists.isEmpty()) {
             Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Text("לא נמצאו אמנים", color = theme.textColor.copy(alpha = 0.5f), fontSize = 14.sp)
+                Text("לא נמצאו אמנים", color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.body)
             }
         } else {
             LazyColumn(
@@ -66,8 +67,8 @@ fun ArtistsScreen(artists: List<ArtistGroup>, theme: FutureTheme, onBack: () -> 
                                 Icon(Icons.Rounded.Person, contentDescription = null, tint = theme.accentColor, modifier = Modifier.size(18.dp))
                             }
                             Spacer(modifier = Modifier.width(12.dp))
-                            Text(artist.name, color = theme.textColor, fontSize = 15.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f), maxLines = 1)
-                            Text("${artist.songCount} שירים", color = theme.textColor.copy(alpha = 0.4f), fontSize = 12.sp)
+                            Text(artist.name, color = theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f), maxLines = 1)
+                            Text("${artist.songCount} שירים", color = theme.textColor.copy(alpha = 0.4f), fontSize = FutureTypography.label)
                         }
                     }
                 }

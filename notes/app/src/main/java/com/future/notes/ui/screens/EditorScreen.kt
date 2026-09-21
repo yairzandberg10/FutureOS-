@@ -1,5 +1,6 @@
 package com.future.notes.ui.screens
 
+import com.future.sharednav.theme.FutureShapes
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -21,6 +22,7 @@ import androidx.compose.ui.res.stringResource
 import com.future.notes.R
 import com.future.notes.data.Note
 import com.future.sharednav.focus.dpadFocusBorder
+import com.future.sharednav.focus.escapeTextFieldFocusTrap
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,6 +58,7 @@ fun EditorScreen(
     }
 
     Scaffold(
+        modifier = Modifier.escapeTextFieldFocusTrap(),
         topBar = {
             TopAppBar(
                 title = { Text(if (note == null) stringResource(R.string.new_note) else stringResource(R.string.edit_note), fontWeight = FontWeight.Bold) },
@@ -123,8 +126,8 @@ fun EditorScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .onFocusChanged { titleFocused = it.isFocused }
-                    .dpadFocusBorder(titleFocused, RoundedCornerShape(12.dp)),
-                shape = RoundedCornerShape(12.dp),
+                    .dpadFocusBorder(titleFocused, FutureShapes.md),
+                shape = FutureShapes.md,
                 textStyle = MaterialTheme.typography.titleLarge,
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = Color.Transparent
@@ -140,8 +143,8 @@ fun EditorScreen(
                     .fillMaxWidth()
                     .weight(1f)
                     .onFocusChanged { contentFocused = it.isFocused }
-                    .dpadFocusBorder(contentFocused, RoundedCornerShape(12.dp)),
-                shape = RoundedCornerShape(12.dp),
+                    .dpadFocusBorder(contentFocused, FutureShapes.md),
+                shape = FutureShapes.md,
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = Color.Transparent
                 )

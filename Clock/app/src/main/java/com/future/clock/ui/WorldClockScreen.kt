@@ -1,5 +1,8 @@
 package com.future.clock.ui
 
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
+import com.future.sharednav.theme.idleChipColor
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -65,12 +68,12 @@ fun CityClockRow(city: CityClock, theme: FutureTheme) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(theme.textColor.copy(alpha = 0.05f), shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+            .background(theme.idleChipColor, shape = FutureShapes.md)
             .padding(16.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(city.name, color = theme.textColor, fontSize = 18.sp, fontWeight = FontWeight.Medium)
-        Text(timeText, color = theme.accentColor, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        Text(city.name, color = theme.textColor, fontSize = FutureTypography.title, fontWeight = FontWeight.Medium)
+        Text(timeText, color = theme.accentColor, fontSize = FutureTypography.headline, fontWeight = FontWeight.Bold)
     }
 }

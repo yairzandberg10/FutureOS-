@@ -25,13 +25,14 @@ class ControlLayoutManager(context: Context) {
         ControlInfo("music", "מוזיקה", Icons.Rounded.MusicNote),
         ControlInfo("account", "חשבון", Icons.Rounded.Person),
         ControlInfo("calendar", "יומן", Icons.Rounded.CalendarMonth),
-        ControlInfo("security", "אבטחה", Icons.Rounded.Security)
+        ControlInfo("security", "אבטחה", Icons.Rounded.Security),
+        ControlInfo("predictive_text", "ניבוי טקסט", Icons.Rounded.Spellcheck)
     )
 
     private val defaultLayout = listOf(
         "wifi", "bluetooth", "flashlight", "airplane", "data", "dnd", "location",
         "rotation", "battery", "night", "settings", "camera",
-        "search", "music", "account", "calendar", "security"
+        "search", "music", "account", "calendar", "security", "predictive_text"
     )
 
     private val defaultSectionOrder = listOf("toggles", "media", "grid", "sliders", "bottom_toggles")

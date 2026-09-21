@@ -1,5 +1,6 @@
 package com.future.remote.ui
 
+import com.future.sharednav.theme.FutureTypography
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -40,7 +41,7 @@ fun AcPresetsScreen(theme: FutureTheme, onBack: () -> Unit, onDeviceCreated: (St
                     "כפתורי הפעלה/כיבוי, קירור וחימום בטמפרטורות נפוצות - כבר מוכנים לשידור. " +
                         "בלי גישה למזגן אמיתי לבדיקה, ייתכן שיידרש כיוונון - אם כפתור לא עובד, נסי מקרוב לחיישן של המזגן.",
                     color = theme.textColor.copy(alpha = 0.55f),
-                    fontSize = 13.sp,
+                    fontSize = FutureTypography.summary,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
                 )
 

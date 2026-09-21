@@ -1,5 +1,6 @@
 package com.future.gallery
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -11,22 +12,37 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import com.future.gallery.data.Album
 import com.future.gallery.data.MediaItem
 import com.future.gallery.data.MediaRepository
-import com.future.sharednav.theme.ThemeClient
 import com.future.gallery.ui.AlbumDetailScreen
 import com.future.gallery.ui.GalleryHomeScreen
 import com.future.gallery.ui.MediaViewerScreen
 import com.future.gallery.ui.PhotoEditorScreen
-import com.future.sharednav.theme.FutureTheme
+import com.future.sharednav.components.AnimatedScreenHost
+import com.future.sharednav.theme.FutureMaterialTheme
+import com.future.sharednav.theme.rememberFutureTheme
 
 class MainActivity : ComponentActivity() {
     // המכשיר האמיתי הוא מקלדת T9 בלבד בלי מסך מגע - מבטלים קלט מגע לגמרי כדי
     // שההתנהגות תישאר תואמת לחומרה האמיתית. לא פוגע בניווט/הפעלה במקשים -
     // dispatchKeyEvent הוא נתיב נפרד לגמרי מ-dispatchTouchEvent.
     override fun dispatchTouchEvent(ev: android.view.MotionEvent): Boolean = true
+
+    // GET_CONTENT/PICK - Gallery נקראת ע"י אפליקציה אחרת (כמו Messages) כדי
+    // לבחור תמונה/וידאו בודדים, לא נפתחת כאפליקציה עצמאית. במצב הזה לחיצה על
+    // פריט לא פותחת אותו בצפייה אלא מחזירה אותו כתוצאה לאפליקציה הקוראת.
+    private val isPickMode: Boolean
+        get() = intent?.action == Intent.ACTION_GET_CONTENT || intent?.action == Intent.ACTION_PICK
+
+    private fun finishWithPickedItem(uri: android.net.Uri) {
+        val result = Intent().apply {
+            data = uri
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        setResult(RESULT_OK, result)
+        finish()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -44,13 +60,8 @@ class MainActivity : ComponentActivity() {
             var lastSelectedItemId by remember { mutableStateOf<Long?>(null) }
             var lastSelectedAlbumId by remember { mutableStateOf<String?>(null) }
             var editingItem by remember { mutableStateOf<MediaItem?>(null) }
-            var theme by remember {
-                mutableStateOf(
-                    ThemeClient.getTheme(this@MainActivity).let {
-                        FutureTheme(isDarkMode = it.isDarkMode, accentColor = Color(it.primaryColor))
-                    }
-                )
-            }
+            // מתעדכן בזמן אמת כשמצב כהה/בהיר או צבע ההדגשה משתנים (ר' rememberFutureTheme).
+            val theme = rememberFutureTheme()
 
             val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
                 hasPermission = granted
@@ -78,69 +89,93 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            // מרענן את העיצוב המשותף בכל חזרה למסך (למשל אחרי שינוי מצב כהה/בהיר
-            // או צבע הדגשה באפליקציית ההגדרות) בלי לבנות מחדש את כל ה-Activity.
-            val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
-            DisposableEffect(lifecycleOwner) {
-                val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
-                    if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
-                        theme = ThemeClient.getTheme(this@MainActivity).let {
-                            FutureTheme(isDarkMode = it.isDarkMode, accentColor = Color(it.primaryColor))
+            FutureMaterialTheme(theme) {
+                Surface(modifier = Modifier.fillMaxSize(), color = theme.backgroundColor) {
+                    // המסך נמסר כצילום מצב ולא נקרא מהמשתנים ישירות: המסך שיוצא
+                    // באנימציה ממשיך לצייר את הפריט/האלבום שלו גם אחרי שהמשתנים
+                    // כבר התאפסו ל-null. המפתח הוא העומק בלבד, כך שדפדוף בין
+                    // תמונות בתוך המציג לא מנפיש את כל המסך מחדש.
+                    AnimatedScreenHost(
+                        targetState = GalleryScreenState(editingItem, selectedItem, selectedAlbum),
+                        depthOf = { it.depth },
+                        contentKey = { it.depth },
+                    ) { shown ->
+                        val editing = shown.editing
+                        val current = shown.current
+                        val album = shown.album
+
+                        when {
+                            editing != null -> PhotoEditorScreen(
+                                item = editing,
+                                theme = theme,
+                                onBack = { editingItem = null },
+                                onSaved = {
+                                    editingItem = null
+                                    items = repository.getAllMedia()
+                                }
+                            )
+                            current != null -> MediaViewerScreen(
+                                item = current,
+                                items = viewerList,
+                                onBack = { selectedItem = null },
+                                onNavigate = { selectedItem = it; lastSelectedItemId = it.id },
+                                onDeleted = {
+                                    selectedItem = null
+                                    items = repository.getAllMedia()
+                                },
+                                onEdit = { editingItem = current },
+                                theme = theme
+                            )
+                            album != null -> AlbumDetailScreen(
+                                albumName = album.bucketName,
+                                items = items.filter { it.bucketId == album.bucketId },
+                                theme = theme,
+                                onBack = { selectedAlbum = null },
+                                onItemClick = { list, item ->
+                                    if (isPickMode) {
+                                        finishWithPickedItem(item.uri)
+                                    } else {
+                                        viewerList = list; selectedItem = item; lastSelectedItemId = item.id
+                                    }
+                                },
+                                lastSelectedItemId = lastSelectedItemId,
+                            )
+                            else -> GalleryHomeScreen(
+                                items = items,
+                                albums = albums,
+                                hasPermission = hasPermission,
+                                onRequestPermission = { permissionLauncher.launch(repository.requiredPermission()) },
+                                onItemClick = { list, item ->
+                                    if (isPickMode) {
+                                        finishWithPickedItem(item.uri)
+                                    } else {
+                                        viewerList = list; selectedItem = item; lastSelectedItemId = item.id
+                                    }
+                                },
+                                onAlbumClick = { selectedAlbum = it; lastSelectedAlbumId = it.bucketId },
+                                theme = theme,
+                                lastSelectedItemId = lastSelectedItemId,
+                                lastSelectedAlbumId = lastSelectedAlbumId,
+                            )
                         }
                     }
-                }
-                lifecycleOwner.lifecycle.addObserver(observer)
-                onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-            }
-
-            Surface(modifier = Modifier.fillMaxSize(), color = theme.backgroundColor) {
-                val editing = editingItem
-                val current = selectedItem
-                val album = selectedAlbum
-
-                when {
-                    editing != null -> PhotoEditorScreen(
-                        item = editing,
-                        theme = theme,
-                        onBack = { editingItem = null },
-                        onSaved = {
-                            editingItem = null
-                            items = repository.getAllMedia()
-                        }
-                    )
-                    current != null -> MediaViewerScreen(
-                        item = current,
-                        items = viewerList,
-                        onBack = { selectedItem = null },
-                        onNavigate = { selectedItem = it; lastSelectedItemId = it.id },
-                        onDeleted = {
-                            selectedItem = null
-                            items = repository.getAllMedia()
-                        },
-                        onEdit = { editingItem = current },
-                        theme = theme
-                    )
-                    album != null -> AlbumDetailScreen(
-                        albumName = album.bucketName,
-                        items = items.filter { it.bucketId == album.bucketId },
-                        theme = theme,
-                        onBack = { selectedAlbum = null },
-                        onItemClick = { list, item -> viewerList = list; selectedItem = item; lastSelectedItemId = item.id },
-                        lastSelectedItemId = lastSelectedItemId,
-                    )
-                    else -> GalleryHomeScreen(
-                        items = items,
-                        albums = albums,
-                        hasPermission = hasPermission,
-                        onRequestPermission = { permissionLauncher.launch(repository.requiredPermission()) },
-                        onItemClick = { list, item -> viewerList = list; selectedItem = item; lastSelectedItemId = item.id },
-                        onAlbumClick = { selectedAlbum = it; lastSelectedAlbumId = it.bucketId },
-                        theme = theme,
-                        lastSelectedItemId = lastSelectedItemId,
-                        lastSelectedAlbumId = lastSelectedAlbumId,
-                    )
                 }
             }
         }
     }
+}
+
+/** המסך הנוכחי של הגלריה כערך אחד - עומק 0 בית, 1 אלבום, 2 מציג, 3 עורך. */
+private data class GalleryScreenState(
+    val editing: MediaItem?,
+    val current: MediaItem?,
+    val album: Album?,
+) {
+    val depth: Int
+        get() = when {
+            editing != null -> 3
+            current != null -> 2
+            album != null -> 1
+            else -> 0
+        }
 }

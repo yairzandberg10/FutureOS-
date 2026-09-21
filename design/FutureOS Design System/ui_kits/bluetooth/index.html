@@ -1,0 +1,188 @@
+<!-- @dsCard group="Bluetooth" viewport="640x960" name="Bluetooth" subtitle="Radio toggle, paired and nearby lists, device screen, pairing and forget dialogs" -->
+<!DOCTYPE html><html lang="he" dir="rtl"><head><meta charset="utf-8"><title>FutureOS · בלוטות'</title>
+<link rel="stylesheet" href="../../styles.css">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>html,body{margin:0;background:#0A0A0B}
+.device{width:640px;height:960px;background:var(--fos-bg);color:var(--fos-text);font-family:var(--fos-font);direction:rtl;position:relative;overflow:hidden;margin:0 auto}
+.scroll{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:none}
+.scroll::-webkit-scrollbar{display:none}
+.scroll>div{padding-bottom:72px}
+.hint{position:absolute;bottom:0;left:0;right:0;padding:10px 16px;font-size:20px;color:var(--fos-text-30);text-align:center;pointer-events:none;background:linear-gradient(to top,var(--fos-bg),transparent)}
+a{color:var(--fos-accent)}a:hover{opacity:.7}</style>
+</head><body>
+<div id="root"></div>
+<script type="text/babel" src="BluetoothScreens.jsx"></script>
+<script type="text/babel">
+const { OptionsMenu, ConfirmDialog, InputDialog, HeadsUpNotification } = window.FutureOSDesignSystem_3ab611;
+
+function App() {
+  const [screen, setScreen] = React.useState("root");
+  const [on, setOn] = React.useState(true);
+  const [name, setName] = React.useState("FutureOS");
+  const [devices, setDevices] = React.useState(window.PAIRED.map(d => ({ ...d, calls: true, media: true, state: null })));
+  const [nearby, setNearby] = React.useState(window.NEARBY);
+  const [scanning, setScanning] = React.useState(true);
+  const [openId, setOpenId] = React.useState(null);
+  const [focus, setFocus] = React.useState(0);
+  const [rootFocus, setRootFocus] = React.useState(0);
+  const [menu, setMenu] = React.useState(false);
+  const [dialog, setDialog] = React.useState(null);
+  const [draft, setDraft] = React.useState("");
+  const [toast, setToast] = React.useState(null);
+
+  const device = devices.find(d => d.id === openId);
+  const rootCount = on ? 2 + devices.length + nearby.length : 2;
+  const count = screen === "root" ? rootCount : 5;
+
+  const flash = (t, icon) => { setToast({ title: t, icon: icon || "bluetooth" }); window.clearTimeout(flash._t); flash._t = window.setTimeout(() => setToast(null), 1800); };
+  const patch = (id, p) => setDevices(ds => ds.map(d => d.id === id ? { ...d, ...p } : d));
+
+  const connect = (id, label) => {
+    patch(id, { state: "connecting" });
+    window.setTimeout(() => {
+      setDevices(ds => ds.map(d => d.id === id ? { ...d, state: null, connected: true } : d));
+      flash(label ? "מחובר · " + label : "מחובר", "bluetooth_connected");
+    }, 1500);
+  };
+
+  const pair = (d) => {
+    setNearby(ns => ns.filter(n => n.id !== d.id));
+    setDevices(ds => [...ds, { ...d, battery: null, connected: false, calls: true, media: true, state: "connecting" }]);
+    connect(d.id, d.name);
+    setFocus(2 + devices.length);
+  };
+
+  const toggleRadio = () => {
+    setOn(v => {
+      if (v) setDevices(ds => ds.map(d => ({ ...d, connected: false, state: null })));
+      else setScanning(true);
+      return !v;
+    });
+    setFocus(0);
+  };
+
+  const openRename = (kind) => { setDraft(kind === "phone" ? name : (device ? device.name : "")); setDialog("rename-" + kind); };
+
+  const openDevice = (d) => { setRootFocus(focus); setOpenId(d.id); setScreen("device"); setFocus(0); };
+  const back = () => { setScreen("root"); setOpenId(null); setFocus(rootFocus); };
+
+  const pickRoot = (i) => {
+    if (i === 0) toggleRadio();
+    else if (i === 1) openRename("phone");
+    else if (i < 2 + devices.length) openDevice(devices[i - 2]);
+    else setDialog({ kind: "pair", device: nearby[i - 2 - devices.length] });
+  };
+
+  const pickDevice = (i) => {
+    if (i === 0) patch(device.id, { calls: !device.calls });
+    else if (i === 1) patch(device.id, { media: !device.media });
+    else if (i === 2) openRename("device");
+    else if (i === 3) {
+      if (device.connected) { patch(device.id, { connected: false }); flash("נותק · " + device.name, "bluetooth_disabled"); }
+      else connect(device.id, device.name);
+    }
+    else setDialog("forget");
+  };
+
+  const pickMenu = (i) => {
+    if (i === 0) { setScanning(true); flash("מחפש מכשירים"); }
+    else if (i === 1) openRename("phone");
+    else if (i === 2) flash("אין קבצים שהתקבלו");
+    else if (i === 4) { setDevices(ds => ds.map(d => ({ ...d, connected: false, state: null }))); flash("כל המכשירים נותקו", "bluetooth_disabled"); }
+  };
+
+  React.useEffect(() => {
+    if (!scanning) return;
+    const t = window.setTimeout(() => setScanning(false), 4000);
+    return () => window.clearTimeout(t);
+  }, [scanning]);
+
+  React.useEffect(() => {
+    const onKey = (e) => {
+      const k = e.key;
+      if (dialog) {
+        const d = typeof dialog === "object" ? dialog : { kind: dialog };
+        const renaming = d.kind === "rename-phone" || d.kind === "rename-device";
+        if (k === "Enter") {
+          setDialog(null);
+          if (d.kind === "pair") pair(d.device);
+          else if (d.kind === "forget") { const id = device.id; back(); setDevices(ds => ds.filter(x => x.id !== id)); flash("המכשיר נשכח"); }
+          else if (d.kind === "rename-phone") { if (draft) setName(draft); flash("שם המכשיר עודכן"); }
+          else { if (draft) patch(device.id, { name: draft }); flash("השם עודכן"); }
+        } else if (renaming && k === "Backspace") setDraft(v => v.slice(0, -1));
+        else if (renaming && k.length === 1) setDraft(v => v + k);
+        else if (k === "Escape" || k === "Backspace") setDialog(null);
+        else return;
+        e.preventDefault(); return;
+      }
+      if (menu) {
+        if (k === "ArrowDown") setFocus(f => (f + 1) % window.MENU.length);
+        else if (k === "ArrowUp") setFocus(f => (f + window.MENU.length - 1) % window.MENU.length);
+        else if (k === "Enter") { const i = focus; setMenu(false); setFocus(rootFocus); pickMenu(i); }
+        else if (k === "Escape" || k === "Backspace") { setMenu(false); setFocus(rootFocus); }
+        else return;
+        e.preventDefault(); return;
+      }
+      if (k === "ArrowDown") setFocus(f => Math.min(count - 1, f + 1));
+      else if (k === "ArrowUp") setFocus(f => Math.max(0, f - 1));
+      else if (k === "Enter") { screen === "root" ? pickRoot(focus) : pickDevice(focus); }
+      else if (k === "Escape" || k === "Backspace") { if (screen !== "root") back(); }
+      else if (k === "m") { setRootFocus(focus); setFocus(0); setMenu(true); }
+      else return;
+      e.preventDefault();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [screen, focus, count, menu, dialog, draft, on, devices, nearby, device, rootFocus]);
+
+  const scrollRef = React.useRef(null);
+  React.useEffect(() => {
+    const c = scrollRef.current;
+    if (!c) return;
+    const el = c.querySelector('[data-f="' + focus + '"]');
+    if (!el) return;
+    const top = el.offsetTop, bottom = top + el.offsetHeight;
+    if (top < c.scrollTop + 130) c.scrollTop = Math.max(0, top - 130);
+    else if (bottom > c.scrollTop + c.clientHeight - 90) c.scrollTop = bottom - c.clientHeight + 90;
+  }, [focus, screen, on, devices.length]);
+
+  const dlg = typeof dialog === "object" && dialog ? dialog : { kind: dialog };
+
+  return (
+    <div className="device">
+      <div className="scroll" ref={scrollRef}>
+        {screen === "root" && <window.RootScreen on={on} devices={devices} nearby={nearby} scanning={scanning}
+          name={name} focus={focus} onToggle={toggleRadio} onName={() => openRename("phone")}
+          onOpen={openDevice} onPair={(d) => setDialog({ kind: "pair", device: d })} />}
+        {screen === "device" && device && <window.DeviceScreen device={device} focus={focus} onBack={back}
+          onProfile={(p) => patch(device.id, { [p]: !device[p] })}
+          onConnect={() => pickDevice(3)} onRename={() => openRename("device")}
+          onForget={() => setDialog("forget")} />}
+      </div>
+
+      {toast && <div style={{ position: "absolute", top: 0, left: 0, right: 0 }}>
+        <HeadsUpNotification appName="בלוטות'" icon={toast.icon} title={toast.title} />
+      </div>}
+
+      {menu && <OptionsMenu header="בלוטות'" items={window.MENU} focusedIndex={focus}
+        onSelect={(i) => { setMenu(false); setFocus(rootFocus); pickMenu(i); }} />}
+
+      {dlg.kind === "pair" && <ConfirmDialog message={"להתאים את " + dlg.device.name + "?"} confirmLabel="התאם"
+        onConfirm={() => { setDialog(null); pair(dlg.device); }} onCancel={() => setDialog(null)} />}
+      {dlg.kind === "forget" && <ConfirmDialog message={"לשכוח את " + (device ? device.name : "") + "?"} confirmLabel="שכח" destructive
+        onConfirm={() => { const id = device.id; setDialog(null); back(); setDevices(ds => ds.filter(x => x.id !== id)); flash("המכשיר נשכח"); }}
+        onCancel={() => setDialog(null)} />}
+      {dlg.kind === "rename-phone" && <InputDialog title="שם המכשיר" value={draft} confirmLabel="שמור"
+        onConfirm={() => { setDialog(null); if (draft) setName(draft); flash("שם המכשיר עודכן"); }} onCancel={() => setDialog(null)} />}
+      {dlg.kind === "rename-device" && device && <InputDialog title="שנה שם" value={draft} confirmLabel="שמור"
+        onConfirm={() => { setDialog(null); if (draft) patch(device.id, { name: draft }); flash("השם עודכן"); }} onCancel={() => setDialog(null)} />}
+
+      <div className="hint">חיצים · Enter · Backspace · m לתפריט</div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script></body></html>

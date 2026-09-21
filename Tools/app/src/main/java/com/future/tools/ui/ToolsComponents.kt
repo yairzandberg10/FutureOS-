@@ -1,4 +1,7 @@
 package com.future.tools.ui
+import com.future.sharednav.theme.onAccentColor
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.focus.bringIntoViewOnFocus
 
 import androidx.compose.animation.animateColorAsState
@@ -61,7 +64,7 @@ fun ToolsHeader(title: String, theme: FutureTheme, onBack: (() -> Unit)? = null,
                 ToolsIconButton(Icons.AutoMirrored.Rounded.ArrowBack, "חזור", theme = theme, onClick = onBack)
                 Spacer(modifier = Modifier.width(10.dp))
             }
-            Text(title, color = theme.textColor, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f, fill = true))
+            Text(title, color = theme.textColor, fontSize = FutureTypography.title, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f, fill = true))
             trailing.invoke()
         }
     }
@@ -83,7 +86,7 @@ fun ToolRow(
         modifier = Modifier.fillMaxWidth(),
         idleBackgroundColor = theme.textColor.copy(alpha = 0.055f),
         focusedBackgroundColor = theme.textColor.copy(alpha = 0.14f),
-        cornerRadius = 16.dp,
+        cornerRadius = FutureShapes.radiusLg,
         focusRequester = focusRequester,
     ) {
         Row(
@@ -101,8 +104,8 @@ fun ToolRow(
             }
             Spacer(modifier = Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f, fill = true)) {
-                Text(label, color = theme.textColor, fontSize = 16.sp, fontWeight = FontWeight.Medium)
-                Text(subtitle, color = theme.textColor.copy(alpha = 0.5f), fontSize = 12.sp)
+                Text(label, color = theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Medium)
+                Text(subtitle, color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.label)
             }
             trailing?.invoke()
         }
@@ -126,6 +129,6 @@ fun ToolsStepperButton(label: String, theme: FutureTheme, onClick: () -> Unit) {
             .focusable(interactionSource = interactionSource).bringIntoViewOnFocus(),
         contentAlignment = Alignment.Center
     ) {
-        Text(label, color = if (isFocused) Color.Black else theme.textColor, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        Text(label, color = if (isFocused) theme.onAccentColor else theme.textColor, fontSize = FutureTypography.screenTitle, fontWeight = FontWeight.Bold)
     }
 }

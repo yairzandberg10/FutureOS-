@@ -1,5 +1,8 @@
 package com.future.futureui.controlcenter.ui
 
+import com.future.sharednav.theme.FutureMotion
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
@@ -106,7 +109,9 @@ fun ControlCenterScreen(
     LaunchedEffect(isVisible) {
         if (isVisible) {
             delay(150)
-            try { initialFocusRequester.requestFocus() } catch (t: Throwable) {}
+            try { initialFocusRequester.requestFocus() } catch (t: Throwable) {
+                android.util.Log.w("ControlCenterScreen", "ControlCenterScreen failed", t)
+            }
         }
     }
 
@@ -120,12 +125,12 @@ fun ControlCenterScreen(
             visible = isVisible,
             enter = slideInVertically(
                 initialOffsetY = { -it },
-                animationSpec = tween(durationMillis = 300, easing = LinearOutSlowInEasing)
-            ) + fadeIn(animationSpec = tween(durationMillis = 300)),
+                animationSpec = tween(FutureMotion.DurationSlow, easing = FutureMotion.EasingDecelerate)
+            ) + fadeIn(animationSpec = tween(FutureMotion.DurationSlow)),
             exit = slideOutVertically(
                 targetOffsetY = { -it },
-                animationSpec = tween(durationMillis = 250, easing = FastOutLinearInEasing)
-            ) + fadeOut(animationSpec = tween(durationMillis = 250))
+                animationSpec = tween(FutureMotion.DurationSlow, easing = FutureMotion.EasingAccelerate)
+            ) + fadeOut(animationSpec = tween(FutureMotion.DurationSlow))
         ) {
             Box(
                 modifier = modifier
@@ -177,7 +182,7 @@ fun ControlCenterScreen(
                         Column(horizontalAlignment = Alignment.Start) {
                             Text(
                                 text = currentTime,
-                                fontSize = 28.sp,
+                                fontSize = FutureTypography.display,
                                 fontWeight = FontWeight.Bold,
                                 color = clockColor,
                                 style = androidx.compose.ui.text.TextStyle(
@@ -186,7 +191,7 @@ fun ControlCenterScreen(
                             )
                             Text(
                                 text = currentDate,
-                                fontSize = 11.sp,
+                                fontSize = FutureTypography.caption,
                                 color = dateColor,
                                 style = androidx.compose.ui.text.TextStyle(
                                     shadow = androidx.compose.ui.graphics.Shadow(color = Color.Black.copy(alpha = 0.3f), blurRadius = 8f)
@@ -281,13 +286,13 @@ fun ControlCenterScreen(
                                     Column(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .animateContentSize(animationSpec = tween(durationMillis = 300))
-                                            .clip(RoundedCornerShape(35.dp))
+                                            .animateContentSize(animationSpec = tween(FutureMotion.DurationSlow))
+                                            .clip(FutureShapes.xxl)
                                             .background(Color(0x80E0E0E0))
                                             .border(
                                                 width = if (isGridEditing) 2.dp else 0.5.dp, 
                                                 color = if (isGridEditing) Color.Red else Color.White.copy(alpha = 0.5f), 
-                                                shape = RoundedCornerShape(35.dp)
+                                                shape = FutureShapes.xxl
                                             )
                                             .onKeyEvent { event ->
                                                 if (isEditMode && (event.key == Key.DirectionCenter || event.key == Key.Enter)) {
@@ -310,7 +315,7 @@ fun ControlCenterScreen(
                                                 Text(
                                                     text = "הוספת כפתורים",
                                                     color = clockColor.copy(alpha = 0.7f),
-                                                    fontSize = 12.sp,
+                                                    fontSize = FutureTypography.label,
                                                     fontWeight = FontWeight.Bold,
                                                     modifier = Modifier.padding(bottom = 8.dp)
                                                 )
@@ -407,7 +412,7 @@ fun ControlCenterScreen(
                                         if (!isEditMode) {
                                             val indicatorInteractionSource = remember { MutableInteractionSource() }
                                             val isIndicatorFocused by indicatorInteractionSource.collectIsFocusedAsState()
-                                            val indicatorShape = RoundedCornerShape(12.dp)
+                                            val indicatorShape = FutureShapes.md
                                             Box(
                                                 modifier = Modifier.width(80.dp).height(20.dp).focusEffect(isIndicatorFocused, indicatorShape)
                                                     .clip(indicatorShape)

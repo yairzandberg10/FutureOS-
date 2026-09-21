@@ -112,9 +112,18 @@ class ControlCenterAccessibilityService : AccessibilityService(), LifecycleOwner
             } else if (action == KeyEvent.ACTION_UP) {
                 if (longPressPending) {
                     // Timer never fired: this was a short press. Cancel the pending
-                    // long-press toggle. (No short-press action is defined for STAR here.)
+                    // long-press toggle and hand the press on to whoever is in front.
                     mainHandler.removeCallbacks(longPressRunnable)
                     longPressPending = false
+                    // המקש נצרך כאן לגמרי (ה-return true למטה חוסם אותו גם בלחיצה קצרה),
+                    // ולכן מקלדת ה-T9 לא ראתה מעולם לחיצה על * ותפריט הפיסוק שלה פשוט לא
+                    // נפתח. הלחיצה הקצרה משודרת גלובלית, בדיוק כמו מקש Options (ר'
+                    // FutureUIActions), כדי שהאפליקציה שבחזית תוכל להגיב - בלי לגעת בהחזקה הארוכה.
+                    try {
+                        sendBroadcast(Intent(FutureUIActions.ACTION_STAR_SHORT_PRESS))
+                    } catch (e: Exception) {
+                        Log.w("FutureUI", "star short-press broadcast failed", e)
+                    }
                 }
                 return true
             }
@@ -149,7 +158,6 @@ class ControlCenterAccessibilityService : AccessibilityService(), LifecycleOwner
             if (controlManager == null) {
                 controlManager = ControlManager(this)
             }
-            controlManager?.startRootShell()
 
             val wallpaperManager = WallpaperManager.getInstance(this)
             val wallpaperDrawable = wallpaperManager.drawable
@@ -205,7 +213,7 @@ class ControlCenterAccessibilityService : AccessibilityService(), LifecycleOwner
                                     onPowerOff = {
                                         powerMenuVisible.value = false
                                         Toast.makeText(this@ControlCenterAccessibilityService, "מכבה את המכשיר...", Toast.LENGTH_SHORT).show()
-                                        controlManager?.runRootCommand("reboot -p")
+                                        controlManager?.runRootCommandAsync("reboot -p")
                                         // hideControlCenter() עוצר את מעטפת ה-root (stopRootShell, כותבת "exit")
                                         // - צריך רגע כדי שפקודת ה-reboot תספיק להיכתב ולהתבצע קודם, אחרת
                                         // ה-exit עלול "לרוץ" לפניה ולבטל את הכיבוי בפועל.
@@ -214,7 +222,7 @@ class ControlCenterAccessibilityService : AccessibilityService(), LifecycleOwner
                                     onRestart = {
                                         powerMenuVisible.value = false
                                         Toast.makeText(this@ControlCenterAccessibilityService, "מפעיל מחדש...", Toast.LENGTH_SHORT).show()
-                                        controlManager?.runRootCommand("reboot")
+                                        controlManager?.runRootCommandAsync("reboot")
                                         mainHandler.postDelayed({ hideControlCenter() }, 400)
                                     },
                                     onCancel = { powerMenuVisible.value = false }
@@ -259,7 +267,6 @@ class ControlCenterAccessibilityService : AccessibilityService(), LifecycleOwner
         if (!isVisible) return
         try {
             powerMenuVisible.value = false
-            controlManager?.stopRootShell()
             lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
             lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
             windowManager.removeView(composeView)
@@ -274,7 +281,9 @@ class ControlCenterAccessibilityService : AccessibilityService(), LifecycleOwner
         hideControlCenter()
         try {
             unregisterReceiver(receiver)
-        } catch (e: Exception) {}
+        } catch (e: Exception) {
+            android.util.Log.w("ControlCenterAccessibil", "onDestroy failed", e)
+        }
         controlManager?.dispose()
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
         store.clear()

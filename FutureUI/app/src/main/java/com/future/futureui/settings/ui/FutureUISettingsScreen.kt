@@ -1,5 +1,7 @@
 package com.future.futureui.settings.ui
 
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
@@ -85,7 +87,7 @@ fun FutureUISettingsScreen(
             Text(
                 text = "התאמה אישית",
                 color = Color.White,
-                fontSize = 24.sp,
+                fontSize = FutureTypography.headline,
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(24.dp))
@@ -143,7 +145,7 @@ fun FutureUISettingsScreen(
             Text(
                 text = "מרכז הבקרה ניתן לעריכה ישירות בתוכו - לחיצה ארוכה על כפתור העריכה מאפשרת להוסיף, להסיר ולסדר מחדש כפתורים.",
                 color = Color.White.copy(alpha = 0.6f),
-                fontSize = 12.sp
+                fontSize = FutureTypography.label
             )
         }
     }
@@ -159,14 +161,14 @@ private fun SettingsSection(title: String, content: @Composable ColumnScope.() -
     Text(
         text = title,
         color = Color.White.copy(alpha = 0.6f),
-        fontSize = 13.sp,
+        fontSize = FutureTypography.summary,
         fontWeight = FontWeight.Bold
     )
     Spacer(modifier = Modifier.height(8.dp))
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
+            .clip(FutureShapes.xl)
             .background(Color.White.copy(alpha = 0.08f))
     ) {
         content()
@@ -177,7 +179,7 @@ private fun SettingsSection(title: String, content: @Composable ColumnScope.() -
 private fun SettingsToggleRow(label: String, value: Boolean, onChange: (Boolean) -> Unit) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    val shape = RoundedCornerShape(16.dp)
+    val shape = FutureShapes.lg
 
     Row(
         modifier = Modifier
@@ -194,7 +196,7 @@ private fun SettingsToggleRow(label: String, value: Boolean, onChange: (Boolean)
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(text = label, color = Color.White, fontSize = 14.sp, modifier = Modifier.weight(1f))
+        Text(text = label, color = Color.White, fontSize = FutureTypography.body, modifier = Modifier.weight(1f))
         Switch(
             checked = value,
             onCheckedChange = onChange,
@@ -207,7 +209,7 @@ private fun SettingsToggleRow(label: String, value: Boolean, onChange: (Boolean)
 private fun SettingsCycleRow(label: String, value: String, onNext: () -> Unit) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    val shape = RoundedCornerShape(16.dp)
+    val shape = FutureShapes.lg
 
     Row(
         modifier = Modifier
@@ -224,7 +226,7 @@ private fun SettingsCycleRow(label: String, value: String, onNext: () -> Unit) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(text = label, color = Color.White, fontSize = 14.sp, modifier = Modifier.weight(1f))
-        Text(text = value, color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp)
+        Text(text = label, color = Color.White, fontSize = FutureTypography.body, modifier = Modifier.weight(1f))
+        Text(text = value, color = Color.White.copy(alpha = 0.7f), fontSize = FutureTypography.summary)
     }
 }

@@ -1,0 +1,102 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700&amp;family=Roboto+Mono:wght@400;500&amp;display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #0B0B0C;
+      font-family: 'Heebo', 'Noto Sans Hebrew', 'Segoe UI', Roboto, system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: #64D2FF; } a:hover { color: #9FE4FF; }
+    .cap { font-size: 22px; font-weight: 500; color: #8A8A90; letter-spacing: 0.04em; }
+    .note { font-size: 20px; color: #6E6E76; line-height: 1.5; }
+    /* הפאנל כפי שהוא היום: LinearLayout אנכי, רקע 1C1C1E, ריפוד 16dp/8dp */
+    .panel { background: #1C1C1E; padding: 16px 32px; display: flex; flex-direction: column; }
+    .hint { font-size: 24px; color: #B0B0B0; text-align: right; }
+    /* chipDrawable: cornerRadius 24px; נבחר = accentColor, טקסט Color.WHITE תמיד */
+    .chip { border-radius: 24px; background: #2C2C2E; color: #FFFFFF; font-size: 30px; padding: 16px 40px; }
+    .chip-on { border-radius: 24px; background: #FFFFFF; color: #FFFFFF; font-size: 30px; font-weight: 700; padding: 16px 40px; }
+    .pchip { border-radius: 24px; background: #2C2C2E; color: #FFFFFF; font-size: 32px; padding: 20px 8px; display: flex; align-items: center; justify-content: center; }
+    .pchip-on { border-radius: 24px; background: #FFFFFF; color: #FFFFFF; font-size: 32px; font-weight: 700; padding: 20px 8px; display: flex; align-items: center; justify-content: center; }
+    .lrow { border-radius: 24px; background: #2C2C2E; color: #FFFFFF; font-size: 30px; padding: 20px 32px; }
+    .lrow-on { border-radius: 24px; background: #FFFFFF; color: #FFFFFF; font-size: 30px; font-weight: 700; padding: 20px 32px; }
+  </style>
+</helmet>
+
+<div style="width: 640px; min-height: 2080px; background: #0B0B0C; color: #FFFFFF; direction: rtl; padding: 26px 0 0 0; display: flex; flex-direction: column; gap: 30px">
+
+  <div class="cap" style="padding: 0 24px">הפאנל הקיים היום · שוחזר מ-KeyboardService.kt, ברירת מחדל כהה וצבע הדגשה לבן</div>
+
+  <!-- 1. הקלדה -->
+  <div style="display: flex; flex-direction: column; gap: 12px">
+    <div class="cap" style="padding: 0 24px">1 · הקלדה וניבוי</div>
+    <div class="panel" style="gap: 0">
+      <div class="hint">[עב-ניבוי]</div>
+      <div style="display: flex; align-items: center; gap: 0; margin-top: 8px">
+        <div style="flex-grow: 1; display: flex; justify-content: flex-start; gap: 16px; overflow: hidden">
+          <span class="chip-on">הכל</span>
+          <span class="chip">היי</span>
+          <span class="chip">וכל</span>
+          <span class="chip">דלי</span>
+        </div>
+        <span style="font-size: 26px; color: #FFFFFF; padding: 16px 32px; flex: none">◂ ▸</span>
+      </div>
+    </div>
+    <div class="note" style="padding: 0 24px">המילה הנבחרת מקבלת רקע בצבע ההדגשה וטקסט לבן קבוע. ברירת המחדל של צבע ההדגשה במערכת היא לבן, ולכן הצ'יפ הנבחר יוצא לבן על לבן.</div>
+  </div>
+
+  <!-- 2. פיסוק -->
+  <div style="display: flex; flex-direction: column; gap: 12px">
+    <div class="cap" style="padding: 0 24px">2 · סימני פיסוק · מקש *</div>
+    <div class="panel" style="gap: 0">
+      <div class="hint">סימני פיסוק - חצים לניווט, מרכז לבחירה, מחיקה/*/חזור לביטול</div>
+      <div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 16px; margin-top: 8px">
+        <span class="pchip">.</span><span class="pchip">,</span><span class="pchip-on">?</span><span class="pchip">!</span><span class="pchip">'</span><span class="pchip">"</span>
+        <span class="pchip">-</span><span class="pchip">@</span><span class="pchip">/</span><span class="pchip">:</span><span class="pchip">;</span><span class="pchip">(</span>
+        <span class="pchip">)</span><span class="pchip">+</span><span class="pchip">=</span><span class="pchip">_</span><span class="pchip">%</span><span class="pchip">&amp;</span>
+        <span class="pchip">*</span><span class="pchip">#</span><span class="pchip">$</span><span class="pchip">€</span><span class="pchip">₪</span><span class="pchip">~</span>
+        <span class="pchip">\</span><span class="pchip">|</span><span class="pchip">&lt;</span><span class="pchip">&gt;</span><span class="pchip">[</span><span class="pchip">]</span>
+        <span class="pchip">{</span><span class="pchip">}</span><span class="pchip">^</span><span class="pchip">`</span>
+      </div>
+    </div>
+    <div class="note" style="padding: 0 24px">הוראות ההפעלה נכתבות כמשפט אחד בגודל 12sp בצבע מעומעם - אותו מקום שבו מוצג גם מצב השפה.</div>
+  </div>
+
+  <!-- 3. שפה -->
+  <div style="display: flex; flex-direction: column; gap: 12px">
+    <div class="cap" style="padding: 0 24px">3 · בחירת שפה · החזקת #</div>
+    <div class="panel" style="gap: 0">
+      <div class="hint">בחירת שפה - חצים למעלה/למטה, מרכז לבחירה, חזור לביטול</div>
+      <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px; max-height: 440px; overflow: hidden">
+        <span class="lrow">עברית</span>
+        <span class="lrow-on">עברית (ניבוי)</span>
+        <span class="lrow">English (ABC)</span>
+        <span class="lrow">English (Abc)</span>
+        <span class="lrow">English (abc)</span>
+      </div>
+    </div>
+    <div class="note" style="padding: 0 24px">21 שפות ברשימה נגללת ללא מונה מיקום, ללא קוד שפה קצר וללא סימון של היקף המילון.</div>
+  </div>
+
+  <!-- 4. קול -->
+  <div style="display: flex; flex-direction: column; gap: 12px">
+    <div class="cap" style="padding: 0 24px">4 · תמלול קולי · החזקת 0</div>
+    <div class="panel" style="gap: 0">
+      <div class="hint">[עב-ניבוי] 🎤 מקשיב… דבר עכשיו</div>
+    </div>
+    <div class="note" style="padding: 0 24px">מצב ההקלטה כולו הוא שורת טקסט אחת בגודל 12sp עם אימוג'י, בלי חיווי קליטה ובלי רמז איך לסיים.</div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

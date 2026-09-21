@@ -1,5 +1,6 @@
 package com.future.navigation.ui.gtfs
 
+import com.future.sharednav.theme.FutureShapes
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -72,7 +73,7 @@ fun GtfsSetupScreen(viewModel: GtfsSetupViewModel, onBack: () -> Unit) {
                 accentColor = MaterialTheme.colorScheme.primary,
                 idleBackgroundColor = MaterialTheme.colorScheme.primary,
                 focusedBackgroundColor = MaterialTheme.colorScheme.primary,
-                cornerRadius = 16.dp,
+                cornerRadius = FutureShapes.radiusLg,
                 scaleOnFocus = false,
                 modifier = Modifier.fillMaxWidth(),
                 focusRequester = updateButtonFocusRequester

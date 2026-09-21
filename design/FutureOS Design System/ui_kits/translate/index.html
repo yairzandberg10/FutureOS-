@@ -1,0 +1,195 @@
+<!-- @dsCard group="Translate" viewport="640x960" name="Translate" subtitle="Language bar, keypad text entry, result actions, language picker, history, conversation" -->
+<!DOCTYPE html><html lang="he" dir="rtl"><head><meta charset="utf-8"><title>FutureOS · תרגום</title>
+<link rel="stylesheet" href="../../styles.css">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>html,body{margin:0;background:#0A0A0B}
+.device{width:640px;height:960px;background:var(--fos-bg);color:var(--fos-text);font-family:var(--fos-font);direction:rtl;position:relative;overflow:hidden;margin:0 auto}
+.scroll{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:none}
+.scroll::-webkit-scrollbar{display:none}
+.scroll>div{padding-bottom:72px}
+.hint{position:absolute;bottom:0;left:0;right:0;padding:10px 16px;font-size:20px;color:var(--fos-text-30);text-align:center;pointer-events:none;background:linear-gradient(to top,var(--fos-bg),transparent)}
+a{color:var(--fos-accent)}a:hover{opacity:.7}</style>
+</head><body>
+<div id="root"></div>
+<script type="text/babel" src="TranslateScreens.jsx"></script>
+<script type="text/babel">
+const { OptionsMenu, ConfirmDialog, HeadsUpNotification } = window.FutureOSDesignSystem_3ab611;
+
+/* canned translations; anything else shows the in-flight state */
+const DICT = {
+  "he>en": { "איפה תחנת הרכבת?": "Where is the train station?", "כמה זה עולה": "How much does it cost", "תודה רבה": "Thank you very much", "אני צריך רופא": "I need a doctor" },
+  "he>fr": { "איפה תחנת הרכבת?": "Où est la gare ?", "תודה רבה": "Merci beaucoup", "אני צריך רופא": "J'ai besoin d'un médecin" },
+  "he>ar": { "איפה תחנת הרכבת?": "أين محطة القطار؟", "תודה רבה": "شكرا جزيلا" },
+  "ar>he": { "شكرا جزيلا": "תודה רבה" },
+  "en>he": { "Where is the train station?": "איפה תחנת הרכבת?" }
+};
+
+const MENU = [
+  { label: "שיחה", icon: "forum" },
+  { label: "היסטוריה", icon: "history" },
+  { label: "הורדת שפה", icon: "download" },
+  { label: "הגדרות", icon: "settings" },
+  { label: "נקה היסטוריה", icon: "delete", destructive: true }
+];
+
+function App() {
+  const [screen, setScreen] = React.useState("root");
+  const [from, setFrom] = React.useState("he");
+  const [to, setTo] = React.useState("en");
+  const [text, setText] = React.useState("איפה תחנת הרכבת?");
+  const [typing, setTyping] = React.useState(false);
+  const [saved, setSaved] = React.useState(false);
+  const [speaking, setSpeaking] = React.useState(false);
+  const [role, setRole] = React.useState("from");
+  const [query, setQuery] = React.useState("");
+  const [tab, setTab] = React.useState(0);
+  const [listening, setListening] = React.useState(false);
+  const [focus, setFocus] = React.useState(0);
+  const [sub, setSub] = React.useState(0);
+  const [rootFocus, setRootFocus] = React.useState(0);
+  const [menu, setMenu] = React.useState(false);
+  const [dialog, setDialog] = React.useState(null);
+  const [toast, setToast] = React.useState(null);
+
+  const fromL = window.byCode(from), toL = window.byCode(to);
+  const pair = (from === "auto" ? "he" : from) + ">" + to;
+  const out = (DICT[pair] || {})[text.trim()] || "מתרגם";
+
+  const langCount = (() => {
+    const q = query.trim();
+    const list = window.LANGS.filter(l => l.name.includes(q) && (role === "from" || l.code !== "auto"));
+    return 1 + list.length + (q ? 0 : 3);
+  })();
+  const histCount = 1 + (tab === 1 ? window.HISTORY.filter(h => h.saved).length : window.HISTORY.length);
+  const rootCount = text ? 5 : 3;
+  const counts = { root: rootCount, lang: langCount, history: histCount, talk: 1 };
+  const count = counts[screen];
+  const subCount = screen === "root" ? (focus === 0 ? 3 : focus === 2 ? 4 : 1) : 1;
+
+  const flash = (t) => { setToast(t); window.clearTimeout(flash._t); flash._t = window.setTimeout(() => setToast(null), 1800); };
+  const go = (s) => { setRootFocus(screen === "root" ? focus : rootFocus); setScreen(s); setFocus(0); setSub(0); };
+  const back = () => { setScreen("root"); setFocus(rootFocus); setSub(0); setTyping(false); setQuery(""); };
+
+  const openPicker = (r) => { setRole(r); setQuery(""); go("lang"); };
+  const swap = () => { setFrom(to === "auto" ? "he" : to); setTo(from === "auto" ? "he" : from); flash("השפות הוחלפו"); };
+
+  const doAction = (i) => {
+    if (i === 0) { setSpeaking(true); window.setTimeout(() => setSpeaking(false), 1600); }
+    else if (i === 1) flash("הועתק");
+    else if (i === 2) flash("שותף");
+    else { setSaved(s => !s); flash(saved ? "הוסר מהשמורים" : "נשמר"); }
+  };
+
+  const pickMenu = (i) => {
+    if (i === 0) go("talk");
+    else if (i === 1) go("history");
+    else if (i === 2) flash("אנגלית הורדה למצב לא מקוון");
+    else if (i === 4) setDialog("clear");
+  };
+
+  React.useEffect(() => {
+    const onKey = (e) => {
+      const k = e.key;
+      if (dialog) {
+        if (k === "Enter") { setDialog(null); flash("ההיסטוריה נוקתה"); }
+        else if (k === "Escape" || k === "Backspace") setDialog(null);
+        else return;
+        e.preventDefault(); return;
+      }
+      if (menu) {
+        if (k === "ArrowDown") setFocus(f => (f + 1) % MENU.length);
+        else if (k === "ArrowUp") setFocus(f => (f + MENU.length - 1) % MENU.length);
+        else if (k === "Enter") { const i = focus; setMenu(false); setFocus(0); pickMenu(i); }
+        else if (k === "Escape" || k === "Backspace") { setMenu(false); setFocus(rootFocus); }
+        else return;
+        e.preventDefault(); return;
+      }
+      if (typing) {
+        const set = screen === "lang" ? setQuery : setText;
+        if (k === "Enter" || k === "Escape") { setTyping(false); if (screen === "root") setFocus(2); }
+        else if (k === "Backspace") set(v => v.slice(0, -1));
+        else if (k.length === 1) set(v => v + k);
+        else return;
+        e.preventDefault(); return;
+      }
+      if (k === "ArrowDown") { setFocus(f => Math.min(count - 1, f + 1)); setSub(0); }
+      else if (k === "ArrowUp") { setFocus(f => Math.max(0, f - 1)); setSub(0); }
+      else if (k === "ArrowLeft" || k === "ArrowRight") {
+        if (screen === "history" && focus === 0) setTab(t => (t + 1) % 2);
+        else if (subCount > 1) setSub(s => (s + (k === "ArrowLeft" ? 1 : subCount - 1)) % subCount);
+        else return;
+      }
+      else if (k === "Enter") {
+        if (screen === "root") {
+          if (focus === 0) { if (sub === 0) openPicker("from"); else if (sub === 1) swap(); else openPicker("to"); }
+          else if (focus === 1) setTyping(true);
+          else if (focus === 2 && text) doAction(sub);
+          else go("history");
+        } else if (screen === "lang") {
+          if (focus === 0) setTyping(true);
+          else {
+            const q = query.trim();
+            const list = window.LANGS.filter(l => l.name.includes(q) && (role === "from" || l.code !== "auto"));
+            const rec = q ? [] : ["en", "ar", "ru"].map(window.byCode);
+            const l = focus - 1 < rec.length ? rec[focus - 1] : list[focus - 1 - rec.length];
+            if (l) { role === "from" ? setFrom(l.code) : setTo(l.code); back(); }
+          }
+        } else if (screen === "history") {
+          if (focus > 0) {
+            const list = tab === 1 ? window.HISTORY.filter(h => h.saved) : window.HISTORY;
+            const h = list[focus - 1];
+            setFrom(h.from); setTo(h.to); setText(h.src); setSaved(h.saved); back();
+          }
+        } else if (screen === "talk") setListening(v => !v);
+      }
+      else if (k === "Escape" || k === "Backspace") { if (screen !== "root") back(); }
+      else if (k === "m") { setRootFocus(focus); setFocus(0); setMenu(true); }
+      else return;
+      e.preventDefault();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [screen, focus, sub, subCount, count, menu, dialog, typing, text, query, tab, from, to, role, saved, rootFocus]);
+
+  const scrollRef = React.useRef(null);
+  React.useEffect(() => {
+    const c = scrollRef.current;
+    if (!c) return;
+    const el = c.querySelector('[data-f="' + focus + '"]');
+    if (!el) return;
+    const top = el.offsetTop, bottom = top + el.offsetHeight;
+    if (top < c.scrollTop + 130) c.scrollTop = Math.max(0, top - 130);
+    else if (bottom > c.scrollTop + c.clientHeight - 90) c.scrollTop = bottom - c.clientHeight + 90;
+  }, [focus, screen, text]);
+
+  return (
+    <div className="device">
+      <div className="scroll" ref={scrollRef}>
+        {screen === "root" && <window.TranslateScreen from={fromL} to={toL} text={text} out={out}
+          focus={focus} sub={sub} typing={typing} speaking={speaking} saved={saved}
+          onPick={openPicker} onSwap={swap} onFocusInput={() => { setFocus(1); setTyping(true); }}
+          onAction={doAction} onOpenHistory={() => go("history")} />}
+        {screen === "lang" && <window.LangPickerScreen role={role} query={query} focus={focus} typing={typing}
+          current={role === "from" ? from : to} onBack={back}
+          onSelect={(c) => { role === "from" ? setFrom(c) : setTo(c); back(); }} />}
+        {screen === "history" && <window.HistoryScreen tab={tab} focus={focus} onBack={back} onTab={setTab}
+          onOpen={(h) => { setFrom(h.from); setTo(h.to); setText(h.src); setSaved(h.saved); back(); }} />}
+        {screen === "talk" && <window.TalkScreen listening={listening} focus={focus} onBack={back}
+          onToggle={() => setListening(v => !v)} />}
+      </div>
+      {toast && <div style={{ position: "absolute", top: 0, left: 0, right: 0 }}>
+        <HeadsUpNotification appName="תרגום" icon="translate" title={toast} />
+      </div>}
+      {menu && <OptionsMenu header="תרגום" items={MENU} focusedIndex={focus}
+        onSelect={(i) => { setMenu(false); setFocus(0); pickMenu(i); }} />}
+      {dialog === "clear" && <ConfirmDialog message="לנקות את היסטוריית התרגומים?" confirmLabel="נקה" destructive
+        onConfirm={() => { setDialog(null); flash("ההיסטוריה נוקתה"); }} onCancel={() => setDialog(null)} />}
+      <div className="hint">חיצים · Enter · Backspace · m לתפריט</div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script></body></html>

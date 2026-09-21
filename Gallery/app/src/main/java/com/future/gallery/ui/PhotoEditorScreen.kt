@@ -1,4 +1,7 @@
 package com.future.gallery.ui
+import com.future.sharednav.theme.onAccentColor
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.focus.bringIntoViewOnFocus
 
 import android.graphics.Bitmap
@@ -172,7 +175,7 @@ fun PhotoEditorScreen(item: MediaItem, theme: FutureTheme, onBack: () -> Unit, o
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     EditorIconButton(Icons.AutoMirrored.Rounded.ArrowBack, "ביטול", theme) { onBack() }
-                    Text("עריכת תמונה", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.weight(1f).padding(start = 10.dp))
+                    Text("עריכת תמונה", color = Color.White, fontWeight = FontWeight.Bold, fontSize = FutureTypography.bodyLarge, modifier = Modifier.weight(1f).padding(start = 10.dp))
                     EditorSaveButton(theme = theme, enabled = state.hasEdits && !isSaving, isSaving = isSaving) { save() }
                 }
 
@@ -199,7 +202,7 @@ fun PhotoEditorScreen(item: MediaItem, theme: FutureTheme, onBack: () -> Unit, o
                         }
                     }
                     if (sourceBitmap == null) {
-                        Text("טוען תמונה...", color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp)
+                        Text("טוען תמונה...", color = Color.White.copy(alpha = 0.5f), fontSize = FutureTypography.summary)
                     }
                 }
 
@@ -241,7 +244,7 @@ private fun EditorToolPanel(tool: EditorTool, state: EditState, theme: FutureThe
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     EditorActionChip("−", theme) { onStateChange(state.copy(cropZoom = (state.cropZoom - 0.1f).coerceAtLeast(1f))) }
-                    Text("זום ${"%.1f".format(state.cropZoom)}x · חצים למיקום", color = theme.textColor.copy(alpha = 0.6f), fontSize = 11.sp)
+                    Text("זום ${"%.1f".format(state.cropZoom)}x · חצים למיקום", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.caption)
                     EditorActionChip("+", theme) { onStateChange(state.copy(cropZoom = (state.cropZoom + 0.1f).coerceAtMost(3f))) }
                 }
             }
@@ -268,7 +271,7 @@ private fun AdjustRow(label: String, value: Float, theme: FutureTheme, onChange:
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(FutureShapes.md)
             .background(if (isFocused) theme.accentColor.copy(alpha = 0.15f) else Color.Transparent)
             .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
             .onKeyEvent { event ->
@@ -282,16 +285,16 @@ private fun AdjustRow(label: String, value: Float, theme: FutureTheme, onChange:
             .padding(horizontal = 10.dp, vertical = 6.dp)
     ) {
         Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-            Text(label, color = theme.textColor, fontSize = 13.sp)
-            Text(value.toInt().toString(), color = theme.textColor.copy(alpha = 0.6f), fontSize = 12.sp)
+            Text(label, color = theme.textColor, fontSize = FutureTypography.summary)
+            Text(value.toInt().toString(), color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.label)
         }
         Spacer(modifier = Modifier.height(6.dp))
-        Box(modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)).background(theme.textColor.copy(alpha = 0.15f))) {
+        Box(modifier = Modifier.fillMaxWidth().height(4.dp).clip(FutureShapes.xs).background(theme.textColor.copy(alpha = 0.15f))) {
             Box(
                 modifier = Modifier
                     .fillMaxHeight()
                     .fillMaxWidth(((value + 100f) / 200f).coerceIn(0f, 1f))
-                    .background(theme.accentColor, RoundedCornerShape(2.dp))
+                    .background(theme.accentColor, FutureShapes.xs)
             )
         }
     }
@@ -311,13 +314,13 @@ private fun EditorActionChip(label: String, theme: FutureTheme, isSelected: Bool
     )
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(14.dp))
+            .clip(FutureShapes.md)
             .background(bgColor)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
             .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
             .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
-        Text(label, color = if (isFocused) Color.Black else theme.textColor, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+        Text(label, color = if (isFocused) theme.onAccentColor else theme.textColor, fontSize = FutureTypography.label, fontWeight = FontWeight.Medium)
     }
 }
 
@@ -329,14 +332,14 @@ private fun EditorToolTab(tool: EditorTool, isSelected: Boolean, theme: FutureTh
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
-            .clip(RoundedCornerShape(12.dp))
+            .clip(FutureShapes.md)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
             .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
             .padding(8.dp)
     ) {
         Icon(tool.icon, contentDescription = tool.label, tint = tint, modifier = Modifier.size(22.dp))
         Spacer(modifier = Modifier.height(2.dp))
-        Text(tool.label, color = tint, fontSize = 10.sp)
+        Text(tool.label, color = tint, fontSize = FutureTypography.caption)
     }
 }
 

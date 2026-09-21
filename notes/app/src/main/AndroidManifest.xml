@@ -9,6 +9,8 @@
         <package android:name="com.future.futureui" />
     </queries>
 
+    <uses-permission android:name="com.future.futureui.permission.SYSTEM_SETTINGS" />
+    <uses-permission android:name="com.future.keyboard.permission.SETTINGS" />
     <application
         android:name=".NotesApp"
         android:allowBackup="true"

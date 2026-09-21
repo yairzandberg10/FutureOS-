@@ -108,6 +108,13 @@ class NotificationCenterAccessibilityService : AccessibilityService(), Lifecycle
                 if (longPressPending) {
                     mainHandler.removeCallbacks(longPressRunnable)
                     longPressPending = false
+                    // אותה סיבה כמו ב-* (ר' ControlCenterAccessibilityService): המקש נצרך כאן
+                    // גם בלחיצה קצרה, ולכן החלפת שפת ההקלדה במקלדת לא עבדה בפועל.
+                    try {
+                        sendBroadcast(Intent(FutureUIActions.ACTION_POUND_SHORT_PRESS))
+                    } catch (e: Exception) {
+                        Log.w("FutureUI", "pound short-press broadcast failed", e)
+                    }
                 }
                 return true
             }
@@ -137,7 +144,6 @@ class NotificationCenterAccessibilityService : AccessibilityService(), Lifecycle
             if (notificationManager == null) {
                 notificationManager = NotificationCenterManager(this)
             }
-            notificationManager?.controlManager?.startRootShell()
 
             val wallpaperManager = WallpaperManager.getInstance(this)
             val wallpaperDrawable = wallpaperManager.drawable
@@ -214,7 +220,6 @@ class NotificationCenterAccessibilityService : AccessibilityService(), Lifecycle
     private fun hideNotificationCenter() {
         if (!isVisible) return
         try {
-            notificationManager?.controlManager?.stopRootShell()
             lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
             lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
             windowManager.removeView(composeView)
@@ -229,7 +234,9 @@ class NotificationCenterAccessibilityService : AccessibilityService(), Lifecycle
         hideNotificationCenter()
         try {
             unregisterReceiver(receiver)
-        } catch (e: Exception) {}
+        } catch (e: Exception) {
+            android.util.Log.w("NotificationCenterAcces", "onDestroy failed", e)
+        }
         notificationManager?.dispose()
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
         store.clear()

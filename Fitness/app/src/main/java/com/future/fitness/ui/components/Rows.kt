@@ -1,5 +1,7 @@
 package com.future.fitness.ui.components
 
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,12 +33,12 @@ import com.future.sharednav.theme.FutureTheme
 fun StatTile(icon: ImageVector, value: String, label: String, theme: FutureTheme, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
-            .background(theme.surfaceColor, RoundedCornerShape(16.dp))
+            .background(theme.surfaceColor, FutureShapes.lg)
             .padding(14.dp),
     ) {
         Icon(icon, contentDescription = null, tint = theme.accentColor, modifier = Modifier.size(18.dp))
-        Text(value, color = theme.textColor, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
-        Text(label, color = theme.textColor.copy(alpha = 0.6f), fontSize = 11.sp)
+        Text(value, color = theme.textColor, fontSize = FutureTypography.screenTitle, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
+        Text(label, color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.caption)
     }
 }
 
@@ -67,11 +69,11 @@ fun IconListRow(
             }
             Spacer(Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(title, color = theme.textColor, fontSize = 17.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(subtitle, color = theme.textColor.copy(alpha = 0.55f), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(title, color = theme.textColor, fontSize = FutureTypography.title, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(subtitle, color = theme.textColor.copy(alpha = 0.55f), fontSize = FutureTypography.label, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             if (digit != null) {
-                Text(digit, color = theme.textColor.copy(alpha = 0.35f), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                Text(digit, color = theme.textColor.copy(alpha = 0.35f), fontSize = FutureTypography.body, fontWeight = FontWeight.Bold)
             }
             if (showChevron) {
                 Icon(
@@ -89,7 +91,7 @@ fun IconListRow(
             rowContent()
         }
     } else {
-        Box(modifier = modifier.fillMaxWidth().background(theme.textColor.copy(alpha = 0.05f), RoundedCornerShape(16.dp))) {
+        Box(modifier = modifier.fillMaxWidth().background(theme.textColor.copy(alpha = 0.05f), FutureShapes.lg)) {
             rowContent()
         }
     }

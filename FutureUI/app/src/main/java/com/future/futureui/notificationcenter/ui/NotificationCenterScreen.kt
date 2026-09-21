@@ -1,4 +1,7 @@
 package com.future.futureui.notificationcenter.ui
+import com.future.sharednav.theme.FutureMotion
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.focus.bringIntoViewOnFocus
 
 import android.app.Notification
@@ -104,13 +107,17 @@ fun NotificationCenterScreen(
     LaunchedEffect(isVisible, ncManager.notifications.size) {
         if (isVisible && ncManager.notifications.isNotEmpty()) {
             delay(150)
-            try { initialFocusRequester.requestFocus() } catch (e: Exception) {}
+            try { initialFocusRequester.requestFocus() } catch (e: Exception) {
+                android.util.Log.w("NotificationCenterScree", "NotificationCenterScreen failed", e)
+            }
         }
     }
     LaunchedEffect(isVisible, ncManager.notifications.size) {
         if (isVisible && ncManager.notifications.isEmpty()) {
             delay(150)
-            try { clearAllFocusRequester.requestFocus() } catch (e: Exception) {}
+            try { clearAllFocusRequester.requestFocus() } catch (e: Exception) {
+                android.util.Log.w("NotificationCenterScree", "NotificationCenterScreen failed", e)
+            }
         }
     }
 
@@ -122,11 +129,11 @@ fun NotificationCenterScreen(
             enter = slideInVertically(
                 initialOffsetY = { -it },
                 animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
-            ) + fadeIn(animationSpec = tween(durationMillis = 220)),
+            ) + fadeIn(animationSpec = tween(FutureMotion.DurationStandard)),
             exit = slideOutVertically(
                 targetOffsetY = { -it },
-                animationSpec = tween(durationMillis = 220, easing = FastOutLinearInEasing)
-            ) + fadeOut(animationSpec = tween(durationMillis = 180))
+                animationSpec = tween(FutureMotion.DurationStandard, easing = FutureMotion.EasingAccelerate)
+            ) + fadeOut(animationSpec = tween(FutureMotion.DurationStandard))
         ) {
             Box(modifier = modifier.fillMaxSize()) {
                 // רקע עם טשטוש (Blur) אם קיימת תמונת רקע
@@ -165,7 +172,7 @@ fun NotificationCenterScreen(
                         Column(horizontalAlignment = Alignment.Start) {
                             Text(
                                 text = currentTime,
-                                fontSize = 32.sp,
+                                fontSize = FutureTypography.display,
                                 fontWeight = FontWeight.Bold,
                                 color = textColor,
                                 style = androidx.compose.ui.text.TextStyle(
@@ -174,7 +181,7 @@ fun NotificationCenterScreen(
                             )
                             Text(
                                 text = currentDate,
-                                fontSize = 12.sp,
+                                fontSize = FutureTypography.label,
                                 color = subTextColor,
                                 style = androidx.compose.ui.text.TextStyle(
                                     shadow = androidx.compose.ui.graphics.Shadow(color = Color.Black.copy(alpha = 0.3f), blurRadius = 8f)
@@ -201,7 +208,7 @@ fun NotificationCenterScreen(
                                     Text(
                                         text = "אין התראות חדשות",
                                         color = subTextColor,
-                                        fontSize = 16.sp
+                                        fontSize = FutureTypography.bodyLarge
                                     )
                                 }
                             }
@@ -228,15 +235,15 @@ fun NotificationCenterScreen(
 
                             AnimatedVisibility(
                                 visibleState = visibleState,
-                                enter = fadeIn(animationSpec = tween(220)) +
+                                enter = fadeIn(animationSpec = tween(FutureMotion.DurationStandard)) +
                                     slideInVertically(
                                         initialOffsetY = { -it / 3 },
                                         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow)
                                     ) +
                                     expandVertically(animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow)),
-                                exit = fadeOut(animationSpec = tween(180)) +
-                                    slideOutHorizontally(targetOffsetX = { it / 4 }, animationSpec = tween(200)) +
-                                    shrinkVertically(animationSpec = tween(200))
+                                exit = fadeOut(animationSpec = tween(FutureMotion.DurationStandard)) +
+                                    slideOutHorizontally(targetOffsetX = { it / 4 }, animationSpec = tween(FutureMotion.DurationStandard)) +
+                                    shrinkVertically(animationSpec = tween(FutureMotion.DurationStandard))
                             ) {
                                 NotificationItem(
                                     sbn = sbn,
@@ -320,7 +327,9 @@ fun NotificationItem(
         buildList {
             notificationActions.forEach { act ->
                 add(NotificationOption(label = act.title?.toString() ?: "") {
-                    try { act.actionIntent?.send() } catch (e: PendingIntent.CanceledException) {}
+                    try { act.actionIntent?.send() } catch (e: PendingIntent.CanceledException) {
+                        android.util.Log.w("NotificationCenterScree", "NotificationItem failed", e)
+                    }
                 })
             }
             add(NotificationOption(label = "כבה התראות", isDestructive = true) { onMuteApp() })
@@ -328,7 +337,14 @@ fun NotificationItem(
         }
     }
     LaunchedEffect(showOptions) { if (showOptions) selectedOptionIndex = 0 }
-    
+
+    // מקש Options הפיזי נחסם ברמת המערכת (StatusBarAccessibilityService) ולעולם לא
+    // מגיע כ-Key.Menu לכאן - זו הדרך האמיתית שהוא פותח/סוגר את תפריט האפשרויות של
+    // ההתראה הממוקדת. משודר גלובלית, אז כל שורה בודקת את הפוקוס שלה בעצמה.
+    com.future.sharednav.nav.onOptionsKeyPress {
+        if (isFocused) showOptions = if (showOptions) false else true
+    }
+
     // שליפת שם האפליקציה לפי Package Name
     val appName = remember(sbn.packageName) {
         try {
@@ -345,10 +361,12 @@ fun NotificationItem(
         try {
             val icon = context.packageManager.getApplicationIcon(sbn.packageName)
             appIcon = icon.toBitmap(width = 64, height = 64).asImageBitmap()
-        } catch (e: Exception) {}
+        } catch (e: Exception) {
+            android.util.Log.w("NotificationCenterScree", "NotificationItem failed", e)
+        }
     }
 
-    val shape = RoundedCornerShape(35.dp)
+    val shape = FutureShapes.xxl
     // הרקע של הכרטיס נגזר מכיוון הטקסט (isDarkBackground) ולא מהטפט עצמו, כדי
     // שהניגודיות טקסט-מול-כרטיס תישמר גם כשהטפט שמתחת בהיר או כהה באופן בלתי צפוי.
     val cardBackground = if (isDarkBackground) {
@@ -361,7 +379,7 @@ fun NotificationItem(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .animateContentSize(animationSpec = tween(durationMillis = 200))
+            .animateContentSize(animationSpec = tween(FutureMotion.DurationStandard))
             .focusEffect(isFocused, shape)
             .clip(shape)
             .background(cardBackground)
@@ -449,7 +467,7 @@ fun NotificationItem(
         // מעבר חלק (fade צולב) בין תוכן ההתראה הרגיל לתפריט האפשרויות, במקום
         // חיתוך קשה - כך שפתיחת/סגירת התפריט מרגישה כמו טרנזישן מכוון ולא כמו
         // "קפיצה" של הממשק.
-        Crossfade(targetState = showOptions, animationSpec = tween(180), label = "notificationItemContent") { optionsVisible ->
+        Crossfade(targetState = showOptions, animationSpec = tween(FutureMotion.DurationStandard), label = "notificationItemContent") { optionsVisible ->
             if (optionsVisible) {
                 // תפריט אפשרויות (Overlay) - פעולות אמיתיות מההתראה + השתקה/חזרה,
                 // ניתנות לניווט בין הכפתורים עם חצי כיוון ובחירה עם OK.
@@ -464,7 +482,7 @@ fun NotificationItem(
                         Text(
                             text = option.label,
                             color = textColor,
-                            fontSize = 13.sp,
+                            fontSize = FutureTypography.summary,
                             fontWeight = FontWeight.Bold,
                             style = androidx.compose.ui.text.TextStyle(shadow = legibilityShadow),
                             modifier = Modifier
@@ -511,7 +529,7 @@ fun NotificationItem(
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = if (title.isNotBlank()) "$appName: $title" else appName,
-                            fontSize = 13.sp,
+                            fontSize = FutureTypography.summary,
                             fontWeight = FontWeight.Bold,
                             color = textColor,
                             maxLines = 1,
@@ -520,7 +538,7 @@ fun NotificationItem(
                         )
                         Text(
                             text = if (isExpanded) text else if (text.length > 40) text.take(40) + "..." else text,
-                            fontSize = 11.sp,
+                            fontSize = FutureTypography.caption,
                             color = subTextColor,
                             maxLines = if (isExpanded) Int.MAX_VALUE else 1,
                             overflow = TextOverflow.Ellipsis,
@@ -569,7 +587,7 @@ fun NotificationCenterButton(
         ) {
             Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(6.dp))
-            Text(text = text, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+            Text(text = text, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = FutureTypography.label)
         }
     }
 }

@@ -1,5 +1,7 @@
 package com.future.music.ui.screens
 
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -49,7 +51,7 @@ fun PermissionScreen(theme: FutureTheme, onRequestPermission: () -> Unit) {
             Text(
                 "גישה לספריית המוזיקה",
                 color = theme.textColor,
-                fontSize = 19.sp,
+                fontSize = FutureTypography.screenTitle,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
             )
@@ -57,13 +59,13 @@ fun PermissionScreen(theme: FutureTheme, onRequestPermission: () -> Unit) {
             Text(
                 "כדי להציג ולנגן את השירים שכבר נמצאים בטלפון, האפליקציה צריכה הרשאת גישה למוזיקה.",
                 color = theme.textColor.copy(alpha = 0.6f),
-                fontSize = 14.sp,
+                fontSize = FutureTypography.body,
                 textAlign = TextAlign.Center,
             )
             androidx.compose.foundation.layout.Spacer(modifier = Modifier.padding(top = 24.dp))
             val interactionSource = remember { MutableInteractionSource() }
             val isFocused by interactionSource.collectIsFocusedAsState()
-            val shape = RoundedCornerShape(16.dp)
+            val shape = FutureShapes.lg
             Box(
                 modifier = Modifier
                     .clip(shape)
@@ -74,7 +76,7 @@ fun PermissionScreen(theme: FutureTheme, onRequestPermission: () -> Unit) {
                     .focusable(interactionSource = interactionSource)
                     .padding(horizontal = 28.dp, vertical = 14.dp),
             ) {
-                Text("אפשר גישה", color = theme.backgroundColor, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text("אפשר גישה", color = theme.backgroundColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Bold)
             }
         }
     }

@@ -1,7 +1,6 @@
 package com.future.sharednav.focus
 
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -16,28 +15,33 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
+import com.future.sharednav.theme.FutureDimens
+import com.future.sharednav.theme.LocalFutureAccent
+import com.future.sharednav.theme.FutureMotion
+import com.future.sharednav.theme.FutureShapes
 
 /**
  * שורת רשימה עם פוקוס D-pad אמיתי - הגרסה המשותפת של רכיב שהיה קיים
  * בנפרד (ושונה מעט) בשלוש אפליקציות (dialer, Music, Sfarim). כל הקלט
  * הצבעוני/צורני הוא פרמטרים פרימיטיביים (Color/Dp/Boolean) ולא תלוי בשום
- * FutureTheme ספציפי-לאפליקציה, כדי שהמודול הזה יישאר ללא תלות בחבילת
- * theme של אף צרכן. כל אפליקציה מעבירה את צבעי ה-theme שלה עצמה.
+ * FutureTheme ספציפי-לאפליקציה, כדי שכל אפליקציה תעביר את צבעיה.
  *
- * ברירות המחדל משמרות בדיוק את ההתנהגות הקודמת של dialer/Sfarim (בורדר
- * 1.5dp, פינות 8dp, אנימציית scale ל-1.02, ריפוד 4dp). אפליקציות עם
- * מראה שונה (למשל Music: בלי scale, פינות 16dp, בורדר 2dp, בלי ריפוד)
- * דורסות את הפרמטרים המתאימים בקריאה שלהן - ראו קריאות ה-call site.
+ * ברירות המחדל הן הטוקנים של המערכת: פינות [FutureShapes.radiusLg] (כמו
+ * שורות ההגדרות, הכלים והמוזיקה), ומסגרת [FutureDimens.focusBorderItem] -
+ * 1.5dp, העובי שמפרט הפוקוס מייחד לשורת רשימה להבדיל מפקד.
+ * קודם ברירות המחדל היו 8dp ו-1.5dp, ששימרו את המראה של dialer ו-Sfarim
+ * בלבד - ולכן אותה שורה נראתה אחרת בכל אפליקציה.
  *
- * כולל bringIntoViewOnFocus (ר' BringIntoViewOnFocus.kt) - כך שכל מקום
- * שכבר משתמש ב-FocusableItem בתוך LazyColumn/LazyRow מקבל אוטומטית גלילה
- * לפריט הממוקד, בלי שינוי בקריאה עצמה.
+ * תנועה: הרקע והמסגרת נצבעים פנימה ב-[FutureMotion.focusColorSpec] (קודם
+ * המסגרת קפצה בבת אחת, רק הרקע הונפש), הפריט גדל מעט בפוקוס ומתכווץ לרגע
+ * בלחיצת OK (ר' [focusMotion]).
+ *
+ * כולל bringIntoViewOnFocus - כל מקום שמשתמש ב-FocusableItem בתוך
+ * LazyColumn/LazyRow מקבל אוטומטית גלילה לפריט הממוקד.
  */
 @Composable
 fun FocusableItem(
@@ -47,12 +51,12 @@ fun FocusableItem(
     idleBackgroundColor: Color = Color.Transparent,
     focusedBackgroundColor: Color = accentColor.copy(alpha = 0.14f),
     borderColor: Color = accentColor,
-    borderWidth: Dp = 1.5.dp,
-    cornerRadius: Dp = 8.dp,
+    borderWidth: Dp = FutureDimens.focusBorderItem,
+    cornerRadius: Dp = FutureShapes.radiusLg,
     scaleOnFocus: Boolean = true,
-    focusedScale: Float = 1.02f,
+    focusedScale: Float = FutureDimens.focusScale,
     showBorderOnFocus: Boolean = true,
-    contentPadding: Dp = 4.dp,
+    contentPadding: Dp = FutureDimens.spacingXs,
     focusRequester: FocusRequester? = null,
     content: @Composable BoxScope.(isFocused: Boolean) -> Unit,
 ) {
@@ -60,26 +64,36 @@ fun FocusableItem(
     val isFocused by interactionSource.collectIsFocusedAsState()
     val shape = RoundedCornerShape(cornerRadius)
 
-    val scale by animateFloatAsState(
-        if (scaleOnFocus && isFocused) focusedScale else 1.0f,
-        label = "focusableItemScale",
-    )
+    // ההדגשה המתוקנת של המסך, אם יש כזו. בלעדיה שורה ממוקדת במצב בהיר עם
+    // הדגשה לבנה (ברירת המחדל) מקבלת מילוי לבן ומסגרת לבנה על כרטיס לבן -
+    // כלומר שום סימון. מי שמעביר צבע מתוקן בעצמו מקבל אותו כמו שהוא, ומי
+    // שקורא מחוץ ל-ScreenScaffold מקבל את ההתנהגות הקודמת בדיוק.
+    val screenAccent = LocalFutureAccent.current
+    val fill = if (screenAccent != null && focusedBackgroundColor == accentColor.copy(alpha = 0.14f)) {
+        screenAccent.copy(alpha = 0.14f)
+    } else {
+        focusedBackgroundColor
+    }
+    val ring = if (screenAccent != null && borderColor == accentColor) screenAccent else borderColor
+
     val backgroundColor by animateColorAsState(
-        if (isFocused) focusedBackgroundColor else idleBackgroundColor,
+        if (isFocused) fill else idleBackgroundColor,
+        FutureMotion.focusColorSpec,
         label = "focusableItemBg",
+    )
+    val ringColor by animateColorAsState(
+        if (showBorderOnFocus && isFocused) ring else ring.copy(alpha = 0f),
+        FutureMotion.focusColorSpec,
+        label = "focusableItemRing",
     )
 
     Box(
         modifier = modifier
             .bringIntoViewOnFocus()
-            .scale(scale)
+            .focusMotion(interactionSource, focusedScale = if (scaleOnFocus) focusedScale else 1f)
             .clip(shape)
             .background(backgroundColor)
-            .then(
-                if (showBorderOnFocus && isFocused) {
-                    Modifier.border(width = borderWidth, color = borderColor, shape = shape)
-                } else Modifier
-            )
+            .border(width = borderWidth, color = ringColor, shape = shape)
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
             .padding(contentPadding),

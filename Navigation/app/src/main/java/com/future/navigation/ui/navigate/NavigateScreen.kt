@@ -1,5 +1,6 @@
 package com.future.navigation.ui.navigate
 
+import com.future.sharednav.theme.FutureShapes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -70,13 +71,13 @@ fun NavigateScreen(viewModel: NavigateViewModel, onClose: () -> Unit = {}) {
 
         Surface(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).offset(y = (-30).dp),
-            shape = RoundedCornerShape(20.dp),
+            shape = FutureShapes.xl,
             color = MaterialTheme.colorScheme.primary,
             shadowElevation = 8.dp
         ) {
             Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(
-                    modifier = Modifier.size(52.dp).clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.15f)),
+                    modifier = Modifier.size(52.dp).clip(FutureShapes.md).background(MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.15f)),
                     contentAlignment = Alignment.Center
                 ) {
                     ManeuverIcon(state.currentStep)
@@ -103,7 +104,7 @@ fun NavigateScreen(viewModel: NavigateViewModel, onClose: () -> Unit = {}) {
 
         Column(modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)) {
             if (!state.ended) {
-                Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxWidth()) {
+                Surface(shape = FutureShapes.lg, color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxWidth()) {
                     Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                         RoundIconButton(if (state.muted) Icons.Default.VolumeOff else Icons.Default.VolumeUp, onClick = viewModel::toggleMute)
                         Spacer(modifier = Modifier.width(12.dp))
@@ -122,7 +123,7 @@ fun NavigateScreen(viewModel: NavigateViewModel, onClose: () -> Unit = {}) {
                     }
                 }
             } else {
-                Surface(shape = RoundedCornerShape(16.dp), color = Color(0xFF2ECC71).copy(alpha = 0.16f), modifier = Modifier.fillMaxWidth()) {
+                Surface(shape = FutureShapes.lg, color = Color(0xFF2ECC71).copy(alpha = 0.16f), modifier = Modifier.fillMaxWidth()) {
                     Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                         Box(modifier = Modifier.size(38.dp).clip(CircleShape).background(Color(0xFF2ECC71)), contentAlignment = Alignment.Center) {
                             Icon(Icons.Default.Check, contentDescription = null, tint = Color(0xFF04180D))
@@ -138,7 +139,7 @@ fun NavigateScreen(viewModel: NavigateViewModel, onClose: () -> Unit = {}) {
 
 @Composable
 private fun RoundIconButton(icon: androidx.compose.ui.graphics.vector.ImageVector, tint: Color = Color.Unspecified, onClick: () -> Unit) {
-    FocusableItem(onClick = onClick, accentColor = MaterialTheme.colorScheme.primary, cornerRadius = 999.dp, modifier = Modifier.size(40.dp)) {
+    FocusableItem(onClick = onClick, accentColor = MaterialTheme.colorScheme.primary, cornerRadius = FutureShapes.radiusXxl, modifier = Modifier.size(40.dp)) {
         Icon(icon, contentDescription = null, tint = if (tint == Color.Unspecified) MaterialTheme.colorScheme.onSurface else tint)
     }
 }

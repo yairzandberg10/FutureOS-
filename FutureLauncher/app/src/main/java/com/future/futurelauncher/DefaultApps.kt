@@ -19,6 +19,8 @@ object DefaultApps {
         "com.future.dialer",
         "com.future.messages",
         "com.future.notes",
+        "com.future.tasks",
+        "com.future.bluetooth",
         "com.future.calendar",
         "com.future.contact",
         "com.future.files",
@@ -34,7 +36,10 @@ object DefaultApps {
         "com.future.calculator",
         "com.future.clock",
         "com.future.camera",
-        "com.future.acremote",
+        "com.future.remote",
+        "com.future.assistant",
+        "com.future.flashlight",
+        "com.future.frixa",
         "com.alert.meserhadash"
     )
 

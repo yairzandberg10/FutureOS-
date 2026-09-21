@@ -17,6 +17,11 @@
         </intent>
     </queries>
 
+    <permission
+        android:name="com.future.keyboard.permission.SETTINGS"
+        android:protectionLevel="signature" />
+
+    <uses-permission android:name="com.future.futureui.permission.SYSTEM_SETTINGS" />
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -52,6 +57,13 @@
                 android:name="android.view.im"
                 android:resource="@xml/method" />
         </service>
+        <!-- ראו ההערה על אותה בעיה במניפסט של FutureUI: exported בלי הרשאה
+             אפשר לכל APK על המכשיר לשנות את מתג הניבוי של המקלדת. -->
+        <provider
+            android:name=".KeyboardSettingsProvider"
+            android:authorities="com.future.keyboard.settings"
+            android:permission="com.future.keyboard.permission.SETTINGS"
+            android:exported="true" />
         <receiver
             android:name=".KeyboardWidgetProvider"
             android:exported="true">

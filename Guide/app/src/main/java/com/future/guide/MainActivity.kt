@@ -9,13 +9,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import com.future.guide.data.findGuideApp
-import com.future.sharednav.theme.ThemeClient
 import com.future.guide.ui.GuideDetailScreen
 import com.future.guide.ui.GuideHomeScreen
 import com.future.guide.ui.GuideRoute
-import com.future.sharednav.theme.FutureTheme
+import com.future.sharednav.components.AnimatedScreenHost
+import com.future.sharednav.theme.FutureMaterialTheme
+import com.future.sharednav.theme.rememberFutureTheme
 
 class MainActivity : ComponentActivity() {
     // המכשיר האמיתי הוא מקלדת T9 בלבד בלי מסך מגע - מבטלים קלט מגע לגמרי כדי
@@ -31,37 +31,25 @@ class MainActivity : ComponentActivity() {
             var route by remember { mutableStateOf<GuideRoute>(GuideRoute.Home) }
             BackHandler(enabled = route != GuideRoute.Home) { route = GuideRoute.Home }
 
-            var theme by remember {
-                mutableStateOf(
-                    ThemeClient.getTheme(this@MainActivity).let {
-                        FutureTheme(isDarkMode = it.isDarkMode, accentColor = Color(it.primaryColor))
-                    }
-                )
-            }
+            // מתעדכן בזמן אמת כשמצב כהה/בהיר או צבע ההדגשה משתנים (ר' rememberFutureTheme).
+            val theme = rememberFutureTheme()
 
-            // מרענן את העיצוב בכל חזרה למסך (למשל אחרי שינוי מצב כהה/בהיר או
-            // צבע הדגשה באפליקציית ההגדרות) בלי לבנות מחדש את כל ה-Activity.
-            val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
-            DisposableEffect(lifecycleOwner) {
-                val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
-                    if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
-                        val shared = ThemeClient.getTheme(this@MainActivity)
-                        theme = FutureTheme(isDarkMode = shared.isDarkMode, accentColor = Color(shared.primaryColor))
-                    }
-                }
-                lifecycleOwner.lifecycle.addObserver(observer)
-                onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-            }
-
-            Surface(modifier = Modifier.fillMaxSize(), color = theme.backgroundColor) {
-                when (val currentRoute = route) {
-                    GuideRoute.Home -> GuideHomeScreen(theme = theme, onOpen = { route = GuideRoute.Detail(it) })
-                    is GuideRoute.Detail -> {
-                        val app = findGuideApp(currentRoute.appId)
-                        if (app != null) {
-                            GuideDetailScreen(app = app, theme = theme, onBack = { route = GuideRoute.Home })
-                        } else {
-                            route = GuideRoute.Home
+            FutureMaterialTheme(theme) {
+                Surface(modifier = Modifier.fillMaxSize(), color = theme.backgroundColor) {
+                    AnimatedScreenHost(
+                        targetState = route,
+                        depthOf = { if (it is GuideRoute.Detail) 1 else 0 },
+                    ) { currentRoute ->
+                        when (currentRoute) {
+                            GuideRoute.Home -> GuideHomeScreen(theme = theme, onOpen = { route = GuideRoute.Detail(it) })
+                            is GuideRoute.Detail -> {
+                                val app = findGuideApp(currentRoute.appId)
+                                if (app != null) {
+                                    GuideDetailScreen(app = app, theme = theme, onBack = { route = GuideRoute.Home })
+                                } else {
+                                    route = GuideRoute.Home
+                                }
+                            }
                         }
                     }
                 }

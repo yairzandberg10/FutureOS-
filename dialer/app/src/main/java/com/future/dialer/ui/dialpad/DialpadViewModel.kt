@@ -63,6 +63,14 @@ class DialpadViewModel(
         filterContacts()
     }
 
+    // ממלא את שדה החיוג במספר קיים (למשל מ-"חיוג" באנשי קשר או משיחה אחרונה) בלי
+    // לחייג מיד - המשתמש צריך עדיין ללחוץ על כפתור/מקש החיוג בעצמו כדי להתקשר,
+    // בדיוק כמו כניסה מ-ACTION_DIAL חיצוני (ר' MainActivity.intentDialNumber).
+    fun setNumber(number: String) {
+        _dialedNumber.value = number
+        filterContacts()
+    }
+
 
     private fun filterContacts() {
         val query = _dialedNumber.value

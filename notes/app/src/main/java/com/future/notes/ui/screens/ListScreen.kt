@@ -1,5 +1,6 @@
 package com.future.notes.ui.screens
 
+import com.future.sharednav.theme.FutureShapes
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -24,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import com.future.notes.R
 import com.future.notes.data.Note
 import com.future.sharednav.focus.dpadFocusBorder
+import com.future.sharednav.focus.escapeTextFieldFocusTrap
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,6 +55,7 @@ fun ListScreen(
     }
 
     Scaffold(
+        modifier = Modifier.escapeTextFieldFocusTrap(),
         topBar = {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
@@ -69,10 +72,10 @@ fun ListScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .onFocusChanged { isFocused = it.isFocused }
-                        .dpadFocusBorder(isFocused, RoundedCornerShape(12.dp)),
+                        .dpadFocusBorder(isFocused, FutureShapes.md),
                     placeholder = { Text(stringResource(R.string.search_notes)) },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                    shape = RoundedCornerShape(12.dp),
+                    shape = FutureShapes.md,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = Color.Transparent,
                         unfocusedBorderColor = MaterialTheme.colorScheme.outline
@@ -128,9 +131,9 @@ fun NoteItem(note: Note, onClick: () -> Unit, onTogglePin: () -> Unit = {}, focu
             .fillMaxWidth()
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .onFocusChanged { isFocused = it.isFocused }
-            .dpadFocusBorder(isFocused, RoundedCornerShape(16.dp))
+            .dpadFocusBorder(isFocused, FutureShapes.lg)
             .clickable { onClick() },
-        shape = RoundedCornerShape(16.dp),
+        shape = FutureShapes.lg,
         colors = CardDefaults.cardColors(
             containerColor = if (note.isPinned)
                 MaterialTheme.colorScheme.secondaryContainer

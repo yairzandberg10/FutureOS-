@@ -2,6 +2,8 @@ package com.future.keyboard
 
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
+import java.io.File
+import java.io.IOException
 
 /**
  * מילון עברי מלא (כ-8.6 מיליון מילים - כל הקורפוס cc100, כל בסיס המילון
@@ -22,8 +24,22 @@ class HebrewDictionaryDb(context: Context) {
         val dbFile = context.getDatabasePath(DB_NAME)
         if (!dbFile.exists()) {
             dbFile.parentFile?.mkdirs()
-            context.assets.open(DB_NAME).use { input ->
-                dbFile.outputStream().use { output -> input.copyTo(output) }
+            // מעתיקים לקובץ זמני ומשנים שם רק אחרי שההעתקה הושלמה:
+            // הקובץ שוקל כ-345MB, והעתקה שנקטעת באמצע (דיסק מלא,
+            // התהליך נהרג) הייתה משאירה קובץ חלקי שנראה תקין - ומאז ואילך
+            // כל פתיחה נכשלת בלי שום ניסיון להעתיק שוב.
+            val tempFile = File(dbFile.parentFile, "$DB_NAME.tmp")
+            try {
+                context.assets.open(DB_NAME).use { input ->
+                    tempFile.outputStream().use { output -> input.copyTo(output) }
+                }
+                if (!tempFile.renameTo(dbFile)) {
+                    throw IOException("Failed to move dictionary into place: ${dbFile.path}")
+                }
+            } catch (e: Throwable) {
+                tempFile.delete()
+                dbFile.delete()
+                throw e
             }
         }
         db = SQLiteDatabase.openDatabase(dbFile.path, null, SQLiteDatabase.OPEN_READONLY)

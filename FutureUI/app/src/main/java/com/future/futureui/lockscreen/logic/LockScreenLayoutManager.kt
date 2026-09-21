@@ -2,45 +2,26 @@ package com.future.futureui.lockscreen.logic
 
 import android.content.Context
 import android.content.SharedPreferences
-import java.security.MessageDigest
 
 class LockScreenLayoutManager(context: Context) {
     private val prefs: SharedPreferences = context.getSharedPreferences("lock_screen_prefs", Context.MODE_PRIVATE)
 
     // --- נעילת קוד PIN ---
-    // לא שומרים את הקוד עצמו - רק hash (SHA-256 + salt אקראי שנוצר פעם אחת
-    // למכשיר), כדי שגם מי שקורא את קובץ ההעדפות לא יראה את הקוד בגלוי.
+    // כל הלוגיקה יושבת ב-PinStore: HMAC במפתח Android Keystore שלא ניתן
+    // לייצוא (במקום SHA-256 בסיבוב אחד שנשבר offline מיידית), השוואה בזמן
+    // קבוע, וחסימה מצטברת אחרי חמישה ניסיונות כושלים.
+    private val pinStore = PinStore(prefs)
 
-    fun hasPin(): Boolean = prefs.getString("pin_hash", null) != null
+    fun hasPin(): Boolean = pinStore.hasPin()
 
-    fun setPin(pin: String) {
-        val salt = getOrCreateSalt()
-        prefs.edit().putString("pin_hash", hashPin(pin, salt)).apply()
-    }
+    fun setPin(pin: String) = pinStore.setPin(pin)
 
-    fun clearPin() {
-        prefs.edit().remove("pin_hash").apply()
-    }
+    fun clearPin() = pinStore.clearPin()
 
-    fun verifyPin(pin: String): Boolean {
-        val stored = prefs.getString("pin_hash", null) ?: return false
-        val salt = getOrCreateSalt()
-        return stored == hashPin(pin, salt)
-    }
+    fun verifyPin(pin: String): Boolean = pinStore.verifyPin(pin)
 
-    private fun getOrCreateSalt(): String {
-        val existing = prefs.getString("pin_salt", null)
-        if (existing != null) return existing
-        val salt = java.util.UUID.randomUUID().toString()
-        prefs.edit().putString("pin_salt", salt).apply()
-        return salt
-    }
-
-    private fun hashPin(pin: String, salt: String): String {
-        val digest = MessageDigest.getInstance("SHA-256")
-        val bytes = digest.digest((salt + pin).toByteArray(Charsets.UTF_8))
-        return bytes.joinToString("") { "%02x".format(it) }
-    }
+    /** כמה מילישניות נותרו עד שמותר לנסות קוד שוב; 0 כשאין חסימה פעילה. */
+    fun remainingPinLockoutMs(): Long = pinStore.remainingLockoutMs()
 
     fun getClockStyle(): Int = prefs.getInt("clock_style", 0)
     fun saveClockStyle(style: Int) = prefs.edit().putInt("clock_style", style).apply()

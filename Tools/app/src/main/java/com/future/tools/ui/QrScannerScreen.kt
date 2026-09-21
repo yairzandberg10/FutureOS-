@@ -1,5 +1,8 @@
 package com.future.tools.ui
 
+import com.future.sharednav.theme.onAccentColor
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import android.Manifest
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -49,7 +52,7 @@ fun QrScannerScreen(theme: FutureTheme, onBack: () -> Unit) {
 
                 if (!hasPermission) {
                     Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        Text("נדרשת הרשאת מצלמה כדי לסרוק קודים", color = theme.textColor.copy(alpha = 0.6f), fontSize = 14.sp, modifier = Modifier.padding(horizontal = 32.dp))
+                        Text("נדרשת הרשאת מצלמה כדי לסרוק קודים", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.body, modifier = Modifier.padding(horizontal = 32.dp))
                     }
                 } else {
                     Box(
@@ -57,7 +60,7 @@ fun QrScannerScreen(theme: FutureTheme, onBack: () -> Unit) {
                             .weight(1f)
                             .fillMaxWidth()
                             .padding(16.dp)
-                            .clip(RoundedCornerShape(20.dp))
+                            .clip(FutureShapes.xl)
                     ) {
                         if (scannedValue == null) {
                             CameraAnalyzerView(modifier = Modifier.fillMaxSize()) { proxy ->
@@ -82,7 +85,7 @@ fun QrScannerScreen(theme: FutureTheme, onBack: () -> Unit) {
                                 modifier = Modifier
                                     .align(Alignment.Center)
                                     .size(200.dp)
-                                    .border(width = 2.dp, color = theme.accentColor.copy(alpha = 0.7f), shape = RoundedCornerShape(16.dp))
+                                    .border(width = 2.dp, color = theme.accentColor.copy(alpha = 0.7f), shape = FutureShapes.lg)
                             )
                         } else {
                             QrResultView(value = scannedValue!!, theme = theme, onScanAgain = { scannedValue = null })
@@ -107,9 +110,9 @@ private fun QrResultView(value: String, theme: FutureTheme, onScanAgain: () -> U
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("נסרק בהצלחה", color = theme.accentColor, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+        Text("נסרק בהצלחה", color = theme.accentColor, fontSize = FutureTypography.body, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(8.dp))
-        Text(value, color = theme.textColor, fontSize = 17.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        Text(value, color = theme.textColor, fontSize = FutureTypography.title, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
         Spacer(modifier = Modifier.height(20.dp))
 
         QrActionButton("העתק", theme = theme) {
@@ -122,7 +125,9 @@ private fun QrResultView(value: String, theme: FutureTheme, onScanAgain: () -> U
             QrActionButton("פתח קישור", theme = theme) {
                 try {
                     context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(value)))
-                } catch (e: Exception) {}
+                } catch (e: Exception) {
+                    android.util.Log.w("QrScannerScreen", "QrResultView failed", e)
+                }
             }
             Spacer(modifier = Modifier.height(10.dp))
         }
@@ -139,13 +144,13 @@ private fun QrActionButton(label: String, theme: FutureTheme, isPrimary: Boolean
     Box(
         modifier = Modifier
             .fillMaxWidth(0.8f)
-            .clip(RoundedCornerShape(16.dp))
+            .clip(FutureShapes.lg)
             .background(bgColor)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
             .focusable(interactionSource = interactionSource)
             .padding(vertical = 14.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(label, color = if (isPrimary) Color.Black else theme.textColor, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+        Text(label, color = if (isPrimary) theme.onAccentColor else theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Bold)
     }
 }

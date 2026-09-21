@@ -1,5 +1,6 @@
 package com.future.futureui.controlcenter.ui.components
 
+import com.future.sharednav.theme.FutureShapes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
@@ -26,7 +27,7 @@ fun SliderBar(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    val shape = RoundedCornerShape(30.dp)
+    val shape = FutureShapes.xxl
 
     Box(
         modifier = Modifier

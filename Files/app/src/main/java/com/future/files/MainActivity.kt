@@ -98,7 +98,14 @@ class MainActivity : ComponentActivity() {
             }
 
             Surface(modifier = Modifier.fillMaxSize(), color = theme.backgroundColor) {
-                val viewing = viewingFile
+                // המציג והרשימה מחליקים זה מול זה. מעבר בין תיקיות נשאר בתוך
+                // אותו מסך בכוונה (FilesScreen שומר מצב בחירה/חיפוש פנימי), והשם
+                // בכותרת מתחלף ב-crossfade של ScreenTopBar.
+                com.future.sharednav.components.AnimatedScreenHost(
+                    targetState = viewingFile,
+                    depthOf = { if (it == null) 0 else 1 },
+                    contentKey = { it?.file?.absolutePath },
+                ) { viewing ->
                 if (viewing != null) {
                     when (categorize(viewing.file)) {
                         FileCategory.TEXT -> TextViewerScreen(viewing.file, theme, onBack = { viewingFile = null })
@@ -245,6 +252,7 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 )
+                }
             }
         }
     }

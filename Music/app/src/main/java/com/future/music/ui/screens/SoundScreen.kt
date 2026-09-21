@@ -1,5 +1,6 @@
 package com.future.music.ui.screens
 
+import com.future.sharednav.theme.FutureTypography
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -34,7 +35,8 @@ import androidx.compose.ui.unit.sp
 import com.future.music.playback.MusicPlaybackService
 import com.future.music.ui.components.FocusableItem
 import com.future.music.ui.components.ScreenTopBar
-import com.future.music.ui.digitForKey
+
+import com.future.sharednav.nav.digitForKey
 import com.future.sharednav.theme.FutureTheme
 
 private data class EqPreset(val id: Int, val digit: String, val icon: ImageVector, val label: String, val subtitle: String)
@@ -73,7 +75,7 @@ fun SoundScreen(theme: FutureTheme, onBack: () -> Unit, onSelectPreset: (Int) ->
         Text(
             "בחרו פריסט אקולייזר - הבחירה חלה מיד על הניגון",
             color = theme.textColor.copy(alpha = 0.5f),
-            fontSize = 12.sp,
+            fontSize = FutureTypography.label,
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp),
         )
         Spacer(modifier = Modifier.height(6.dp))
@@ -98,10 +100,10 @@ fun SoundScreen(theme: FutureTheme, onBack: () -> Unit, onSelectPreset: (Int) ->
                             modifier = Modifier.padding(end = 12.dp),
                         )
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(preset.label, color = theme.textColor, fontSize = 16.sp, fontWeight = FontWeight.Medium)
-                            Text(preset.subtitle, color = theme.textColor.copy(alpha = 0.5f), fontSize = 12.sp)
+                            Text(preset.label, color = theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Medium)
+                            Text(preset.subtitle, color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.label)
                         }
-                        Text(preset.digit, color = theme.textColor.copy(alpha = 0.35f), fontSize = 13.sp)
+                        Text(preset.digit, color = theme.textColor.copy(alpha = 0.35f), fontSize = FutureTypography.summary)
                     }
                 }
             }

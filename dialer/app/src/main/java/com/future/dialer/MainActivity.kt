@@ -1,5 +1,6 @@
 package com.future.dialer
 
+import com.future.sharednav.theme.FutureShapes
 import android.Manifest
 import android.app.role.RoleManager
 import android.content.BroadcastReceiver
@@ -34,6 +35,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Call
 import androidx.compose.material.icons.rounded.Contacts
 import androidx.compose.material.icons.rounded.Dialpad
+import androidx.compose.material.icons.rounded.History
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -65,6 +67,7 @@ import com.future.dialer.ui.dialpad.DialpadScreen
 import com.future.dialer.ui.dialpad.DialpadViewModel
 import com.future.dialer.ui.incall.InCallScreen
 import com.future.dialer.ui.incall.InCallViewModel
+import com.future.dialer.ui.calllog.CallLogScreen
 import com.future.dialer.ui.navigation.Screen
 import com.future.dialer.ui.theme.DialerTheme
 import com.future.sharednav.theme.ThemeClient
@@ -173,7 +176,6 @@ class MainActivity : ComponentActivity() {
                     inCallViewModel = inCallViewModel,
                     checkIsDefaultDialer = { isDefaultDialer() },
                     onRequestDefaultDialer = { requestDefaultDialerRole() },
-                    onMakeCall = { number -> makeRealCall(number) },
                     onRouteChanged = { route -> currentRoute = route }
                 )
             }
@@ -359,7 +361,6 @@ fun MainScreen(
     inCallViewModel: InCallViewModel,
     checkIsDefaultDialer: () -> Boolean,
     onRequestDefaultDialer: () -> Unit,
-    onMakeCall: (String) -> Unit,
     onRouteChanged: (String?) -> Unit = {}
 ) {
     // חוזרים מהדיאלוג של המערכת (בקשת ברירת מחדל) לא מפעילים מחדש את onCreate,
@@ -405,10 +406,16 @@ fun MainScreen(
         }
     }
 
+    // שלושה טאבים, היומן ראשון (ui_kits/calls). קודם היו שניים, והיומן
+    // היה רשימה שטוחה בתוך מסך החיוג.
     val navItems = listOf(
+        Triple(Screen.CallLog, "יומן", Icons.Rounded.History),
         Triple(Screen.Dialpad, stringResource(R.string.nav_dial), Icons.Rounded.Dialpad),
         Triple(Screen.Contacts, stringResource(R.string.nav_contacts), Icons.Rounded.Contacts)
     )
+
+    // מקש f מחליף בין "הכל" ל"לא נענו" ביומן - אין מסך מגע ללחוץ על הצ'יפ.
+    var showMissedOnly by remember { mutableStateOf(false) }
 
     val showBottomBar = currentRoute != null && !currentRoute.startsWith("incall")
     val isOnCallScreen = currentRoute?.startsWith("incall") == true
@@ -433,35 +440,17 @@ fun MainScreen(
         },
         bottomBar = {
             if (showBottomBar) {
-                // עיצוב מותאם לשפת הזכוכית הכהה של המערכת (רקע שקוף לגמרי + מסמן
-                // בצבע ההדגשה) במקום ברירת המחדל של NavigationBar - שם עם surface
-                // אטום וצבעי M3 גנריים היה בולט כ"אנדרואיד סטנדרטי" על רקע שאר
-                // האפליקציה.
-                NavigationBar(
-                    containerColor = androidx.compose.ui.graphics.Color.Transparent,
-                    contentColor = MaterialTheme.colorScheme.onBackground,
-                ) {
-                    navItems.forEach { (screen, label, icon) ->
-                        NavigationBarItem(
-                            icon = { Icon(icon, contentDescription = label) },
-                            label = { Text(label) },
-                            selected = currentRoute == screen.route,
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = MaterialTheme.colorScheme.onPrimary,
-                                selectedTextColor = MaterialTheme.colorScheme.primary,
-                                indicatorColor = MaterialTheme.colorScheme.primary,
-                                unselectedIconColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
-                                unselectedTextColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
-                            ),
-                            onClick = {
-                                navController.navigate(screen.route) {
-                                    popUpTo(navController.graph.startDestinationId)
-                                    launchSingleTop = true
-                                }
-                            }
-                        )
-                    }
-                }
+                // הסרגל המשותף (FutureBottomNav) - פס מרחף בצורת גלולה, ותווית
+                // רק על הפריט הנבחר. קודם היה כאן NavigationBar של Material3
+                // עם צבעים מותאמים, כלומר גיאומטריה של Material ולא של המערכת.
+                com.future.sharednav.components.FutureBottomNav(
+                    items = navItems.map { (_, label, icon) ->
+                        com.future.sharednav.components.FutureNavItem(label = label, icon = icon)
+                    },
+                    selectedIndex = navItems.indexOfFirst { it.first.route == currentRoute }
+                        .coerceAtLeast(0),
+                    theme = com.future.sharednav.theme.LocalFutureTheme.current,
+                )
             }
         }
     ) { innerPadding ->
@@ -473,6 +462,12 @@ fun MainScreen(
                         Modifier
                             .onKeyEvent { event ->
                                 if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
+                                // f מסנן את היומן ל"לא נענו" וחזרה. רק שם -
+                                // בשאר הטאבים המקש נשאר פנוי להקלדה.
+                                if (event.key == Key.F && currentRoute == Screen.CallLog.route) {
+                                    showMissedOnly = !showMissedOnly
+                                    return@onKeyEvent true
+                                }
                                 val currentIndex = navItems.indexOfFirst { it.first.route == currentRoute }
                                 if (currentIndex < 0) return@onKeyEvent false
                                 val nextIndex = when (event.key) {
@@ -490,15 +485,53 @@ fun MainScreen(
                     } else Modifier
                 )
         ) {
-            NavHost(navController, startDestination = Screen.Dialpad.route) {
+            // בין שני הטאבים (חיוג/אנשי קשר) אין "פנימה" - fade; מסך השיחה מחליק.
+            val tabRoutes = remember(navItems) { navItems.map { it.first.route }.toSet() }
+            fun isTabSwitch(from: String?, to: String?) = from in tabRoutes && to in tabRoutes
+            NavHost(
+                navController,
+                startDestination = Screen.CallLog.route,
+                enterTransition = {
+                    if (isTabSwitch(initialState.destination.route, targetState.destination.route)) {
+                        com.future.sharednav.theme.FutureTransitions.fadeThrough().targetContentEnter
+                    } else com.future.sharednav.theme.FutureTransitions.navEnter
+                },
+                exitTransition = {
+                    if (isTabSwitch(initialState.destination.route, targetState.destination.route)) {
+                        com.future.sharednav.theme.FutureTransitions.fadeThrough().initialContentExit
+                    } else com.future.sharednav.theme.FutureTransitions.navExit
+                },
+                popEnterTransition = { com.future.sharednav.theme.FutureTransitions.navPopEnter },
+                popExitTransition = { com.future.sharednav.theme.FutureTransitions.navPopExit },
+            ) {
+                composable(Screen.CallLog.route) {
+                    CallLogScreen(
+                        viewModel = dialpadViewModel,
+                        showMissedOnly = showMissedOnly,
+                        onOpen = { _, number ->
+                            dialpadViewModel.setNumber(number)
+                            navController.navigate(Screen.Dialpad.route) {
+                                popUpTo(navController.graph.startDestinationId)
+                                launchSingleTop = true
+                            }
+                        },
+                    )
+                }
                 composable(Screen.Dialpad.route) {
+                    // בחירת שיחה אחרונה/הצעת T9 רק ממלאת את שדה החיוג - היא לא מחייגת
+                    // מיד, בדיוק כמו כפתור "חיוג" באנשי קשר (ר' Contacts.route למטה).
+                    // המשתמש עדיין צריך ללחוץ על כפתור/מקש החיוג בעצמו.
                     DialpadScreen(dialpadViewModel) { _, number ->
-                        onMakeCall(number)
+                        dialpadViewModel.setNumber(number)
                     }
                 }
                 composable(Screen.Contacts.route) {
                     ContactsScreen(contactsViewModel) { _, number ->
-                        onMakeCall(number)
+                        dialpadViewModel.setNumber(number)
+                        navController.navigate(Screen.Dialpad.route) {
+                            popUpTo(navController.graph.startDestinationId)
+                            launchSingleTop = true
+                        }
                     }
                 }
 
@@ -585,7 +618,7 @@ private fun DefaultDialerRequiredScreen(onRequest: () -> Unit) {
             Spacer(modifier = Modifier.height(16.dp))
             Button(
                 onClick = onRequest,
-                shape = RoundedCornerShape(16.dp),
+                shape = FutureShapes.lg,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary,

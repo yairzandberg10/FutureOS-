@@ -29,12 +29,15 @@ class LocalSpeechEngine(private val context: Context) {
         recorder.start()
     }
 
-    /** עוצר את ההקלטה ומתמלל בעברית. חוסם - יש לקרוא מ-thread ברקע. מחזיר טקסט ריק אם נכשל. */
-    fun stopRecordingAndTranscribe(): String {
+    /** עוצר את ההקלטה ומתמלל. חוסם - יש לקרוא מ-thread ברקע. מחזיר טקסט ריק אם נכשל.
+     * [language] הוא קוד ISO 639-1 דו-אותי (כמו "he"/"en"/"es") - המודל
+     * (ggml-tiny, בלי סיומת ".en") רב-לשוני, לא רק עברית (ר' AssistantRecognitionService
+     * שמעביר כאן את שפת המקלדת הנוכחית כשמקלדת T9 מבקשת תמלול). */
+    fun stopRecordingAndTranscribe(language: String = "he"): String {
         recorder.stop()
         val samples = WaveUtil.getSamples(wavFile.absolutePath)
         if (samples.isEmpty()) return ""
-        return whisper.transcribe(samples, "he")
+        return whisper.transcribe(samples, language)
     }
 
     private fun copyAssetIfNeeded(name: String): File {

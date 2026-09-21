@@ -1,5 +1,8 @@
 package com.future.tools.ui
 
+import com.future.sharednav.theme.onAccentColor
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -68,9 +71,9 @@ fun CoinDiceScreen(theme: FutureTheme, onBack: () -> Unit) {
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        Text("מספר קוביות", color = theme.textColor.copy(alpha = 0.5f), fontSize = 13.sp, modifier = Modifier.weight(1f))
+                        Text("מספר קוביות", color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.summary, modifier = Modifier.weight(1f))
                         ToolsStepperButton("-", theme = theme) { diceCount = (diceCount - 1).coerceAtLeast(1) }
-                        Text("$diceCount", color = theme.textColor, fontSize = 18.sp, fontWeight = FontWeight.Medium)
+                        Text("$diceCount", color = theme.textColor, fontSize = FutureTypography.title, fontWeight = FontWeight.Medium)
                         ToolsStepperButton("+", theme = theme) { diceCount = (diceCount + 1).coerceAtMost(6) }
                     }
                 }
@@ -94,7 +97,7 @@ fun CoinDiceScreen(theme: FutureTheme, onBack: () -> Unit) {
 private fun ModeChip(label: String, isSelected: Boolean, theme: FutureTheme, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    val shape = RoundedCornerShape(14.dp)
+    val shape = FutureShapes.md
     val bgColor = when {
         isSelected -> theme.accentColor
         isFocused -> theme.textColor.copy(alpha = 0.18f)
@@ -109,7 +112,7 @@ private fun ModeChip(label: String, isSelected: Boolean, theme: FutureTheme, mod
             .padding(vertical = 10.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(label, color = if (isSelected) Color.Black else theme.textColor, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+        Text(label, color = if (isSelected) theme.onAccentColor else theme.textColor, fontSize = FutureTypography.body, fontWeight = FontWeight.Medium)
     }
 }
 
@@ -130,7 +133,7 @@ private fun CoinFace(result: Boolean?, rotationDeg: Float, theme: FutureTheme) {
                     false -> "פלי"
                     null -> "?"
                 },
-                color = Color.Black, fontSize = 28.sp, fontWeight = FontWeight.Bold
+                color = Color.Black, fontSize = FutureTypography.display, fontWeight = FontWeight.Bold
             )
         }
         Spacer(modifier = Modifier.height(16.dp))
@@ -140,7 +143,7 @@ private fun CoinFace(result: Boolean?, rotationDeg: Float, theme: FutureTheme) {
                 false -> "יצא פלי"
                 null -> "לחץ על \"הטל\" כדי להתחיל"
             },
-            color = theme.textColor.copy(alpha = 0.6f), fontSize = 14.sp
+            color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.body
         )
     }
 }
@@ -157,9 +160,9 @@ private fun DiceRow(results: List<Int>, rotationDeg: Float, theme: FutureTheme) 
         }
         Spacer(modifier = Modifier.height(16.dp))
         if (results.isNotEmpty()) {
-            Text("סה\"כ: ${results.sum()}", color = theme.accentColor, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Text("סה\"כ: ${results.sum()}", color = theme.accentColor, fontSize = FutureTypography.title, fontWeight = FontWeight.Bold)
         } else {
-            Text("לחץ על \"הטל\" כדי להתחיל", color = theme.textColor.copy(alpha = 0.6f), fontSize = 14.sp)
+            Text("לחץ על \"הטל\" כדי להתחיל", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.body)
         }
     }
 }
@@ -170,11 +173,11 @@ private fun DiceFace(value: Int?, rotationDeg: Float, theme: FutureTheme) {
         modifier = Modifier
             .size(56.dp)
             .rotate(rotationDeg)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(FutureShapes.md)
             .background(theme.textColor.copy(alpha = 0.12f)),
         contentAlignment = Alignment.Center
     ) {
-        Text(value?.toString() ?: "?", color = theme.textColor, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+        Text(value?.toString() ?: "?", color = theme.textColor, fontSize = FutureTypography.headline, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -186,13 +189,13 @@ private fun RollButton(theme: FutureTheme, onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
+            .clip(FutureShapes.lg)
             .background(bgColor)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
             .focusable(interactionSource = interactionSource)
             .padding(vertical = 16.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text("הטל", color = if (isFocused) Color.Black else theme.textColor, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        Text("הטל", color = if (isFocused) theme.onAccentColor else theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Bold)
     }
 }

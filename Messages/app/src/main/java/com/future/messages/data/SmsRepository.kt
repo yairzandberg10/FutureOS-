@@ -20,6 +20,8 @@ import com.future.messages.mms.pdu_alt.PduHeaders
 import com.future.messages.mms.pdu_alt.PduPart
 import com.future.messages.mms.pdu_alt.SendReq
 import com.future.messages.receiver.MmsSentReceiver
+import com.future.messages.receiver.SmsDeliveredReceiver
+import com.future.messages.receiver.SmsSentReceiver
 import java.io.File
 
 /**
@@ -27,6 +29,18 @@ import java.io.File
  * נקרא/נכתב דרך content://sms ו-content://mms-sms/conversations בפועל.
  */
 class SmsRepository(private val context: Context) {
+
+    /**
+     * מטמון שם איש קשר לפי מספר. בלעדיו getConversations ביצעה שאילתת
+     * ContentResolver נפרדת לכל שיחה (N+1) - בתיבה עם מאות שיחות זה היה
+     * הרכיב היקר ביותר בטעינה. המפה נשארת חיה לכל אורך חיי ה-repository,
+     * ומתרוקנת מפורשות כשרשימת אנשי הקשר יכולה היה להשתנות (ראו
+     * clearContactCache).
+     */
+    private val contactCache = java.util.concurrent.ConcurrentHashMap<String, Contact>()
+
+    /** לקרוא אחרי הוספה/עריכה של איש קשר, כדי ששם חדש יופיע בשיחות. */
+    fun clearContactCache() = contactCache.clear()
 
     /**
      * רשימת השיחות, ממוינת מהחדש לישן. שולפת ישירות מ-content://sms ומקבצת
@@ -98,7 +112,10 @@ class SmsRepository(private val context: Context) {
     fun getMessages(threadId: Long): List<Message> {
         val messages = mutableListOf<Message>()
         val uri = Telephony.Sms.CONTENT_URI
-        val projection = arrayOf(Telephony.Sms._ID, Telephony.Sms.BODY, Telephony.Sms.DATE, Telephony.Sms.TYPE, Telephony.Sms.READ)
+        val projection = arrayOf(
+            Telephony.Sms._ID, Telephony.Sms.BODY, Telephony.Sms.DATE, Telephony.Sms.TYPE,
+            Telephony.Sms.READ, Telephony.Sms.STATUS
+        )
         try {
             context.contentResolver.query(
                 uri, projection, "${Telephony.Sms.THREAD_ID} = ?", arrayOf(threadId.toString()), "${Telephony.Sms.DATE} ASC"
@@ -108,14 +125,17 @@ class SmsRepository(private val context: Context) {
                 val dateCol = cursor.getColumnIndex(Telephony.Sms.DATE)
                 val typeCol = cursor.getColumnIndex(Telephony.Sms.TYPE)
                 val readCol = cursor.getColumnIndex(Telephony.Sms.READ)
+                val statusCol = cursor.getColumnIndex(Telephony.Sms.STATUS)
                 while (cursor.moveToNext()) {
+                    val type = cursor.getInt(typeCol)
                     messages.add(
                         Message(
                             id = cursor.getLong(idCol),
                             text = cursor.getString(bodyCol) ?: "",
                             timestamp = cursor.getLong(dateCol),
-                            isFromMe = cursor.getInt(typeCol) == Telephony.Sms.MESSAGE_TYPE_SENT,
-                            isRead = cursor.getInt(readCol) == 1
+                            isFromMe = type != Telephony.Sms.MESSAGE_TYPE_INBOX,
+                            isRead = cursor.getInt(readCol) == 1,
+                            status = smsStatusFor(type, cursor.getInt(statusCol))
                         )
                     )
                 }
@@ -138,16 +158,18 @@ class SmsRepository(private val context: Context) {
                 val readCol = cursor.getColumnIndex(Telephony.Mms.READ)
                 while (cursor.moveToNext()) {
                     val mmsId = cursor.getLong(idCol)
+                    val box = cursor.getInt(boxCol)
                     val (text, imageUri) = readMmsParts(mmsId)
                     messages.add(
                         Message(
                             id = mmsId,
                             text = text,
                             timestamp = cursor.getLong(dateCol) * 1000L,
-                            isFromMe = cursor.getInt(boxCol) == Telephony.Mms.MESSAGE_BOX_SENT,
+                            isFromMe = box != Telephony.Mms.MESSAGE_BOX_INBOX,
                             isRead = cursor.getInt(readCol) == 1,
                             isMms = true,
-                            imageUri = imageUri
+                            imageUri = imageUri,
+                            status = mmsStatusFor(box)
                         )
                     )
                 }
@@ -191,6 +213,25 @@ class SmsRepository(private val context: Context) {
         return text to imageUri
     }
 
+    /** ממפה TYPE+STATUS של שורת SMS למצב תצוגה - null להודעות נכנסות, שאין
+     * להן "סטטוס שליחה" בכלל. */
+    private fun smsStatusFor(type: Int, smsStatus: Int): MessageStatus? = when (type) {
+        Telephony.Sms.MESSAGE_TYPE_OUTBOX, Telephony.Sms.MESSAGE_TYPE_QUEUED -> MessageStatus.SENDING
+        Telephony.Sms.MESSAGE_TYPE_FAILED -> MessageStatus.FAILED
+        Telephony.Sms.MESSAGE_TYPE_SENT ->
+            if (smsStatus == Telephony.Sms.STATUS_COMPLETE) MessageStatus.DELIVERED else MessageStatus.SENT
+        else -> null
+    }
+
+    /** ממפה MESSAGE_BOX של שורת MMS למצב תצוגה - אין ל-MMS דיווח מסירה כמו
+     * ל-SMS, אז אין מצב DELIVERED כאן. */
+    private fun mmsStatusFor(box: Int): MessageStatus? = when (box) {
+        Telephony.Mms.MESSAGE_BOX_OUTBOX -> MessageStatus.SENDING
+        Telephony.Mms.MESSAGE_BOX_FAILED -> MessageStatus.FAILED
+        Telephony.Mms.MESSAGE_BOX_SENT -> MessageStatus.SENT
+        else -> null
+    }
+
     /** מוחק הודעה בודדת - SMS או MMS - לפי המזהה שלה. */
     fun deleteMessage(message: Message): Boolean {
         return try {
@@ -207,17 +248,15 @@ class SmsRepository(private val context: Context) {
     }
 
     /**
-     * שולח הודעת SMS אמיתית (מפוצלת אוטומטית אם ארוכה) ורושם אותה כ"נשלחה" בספק
-     * רק אם השליחה בפועל לא זרקה חריגה (למשל: אין סים, אין כיסוי, אין הרשאה) -
-     * כדי שהמשתמש לא יראה "נשלח" על הודעה שבפועל מעולם לא יצאה מהמכשיר.
-     * מחזירה true אם ההודעה נשלחה ונרשמה בהצלחה, false אחרת.
+     * שולח הודעת SMS אמיתית (מפוצלת אוטומטית אם ארוכה). ההודעה נרשמת מיד
+     * בספק במצב MESSAGE_TYPE_OUTBOX ("שולח...") - לא כ"נשלחה" - ורק
+     * SmsSentReceiver, שמקבל את תוצאת השליחה האמיתית מהמערכת (sentIntent
+     * לכל חלק), מעדכן אותה בפועל ל-SENT/FAILED. כך למשתמש יש משוב אמיתי אם
+     * ההודעה באמת יצאה מהמכשיר, לא רק ש-SmsManager הסכים לקבל אותה.
+     * מחזירה את מזהה השורה שנוצרה, או null אם אפילו הרישום/הקריאה ל-SmsManager נכשלו.
      */
-    fun sendMessage(address: String, text: String): Boolean {
+    fun sendMessage(address: String, text: String): Long? {
         return try {
-            val smsManager = context.getSystemService(SmsManager::class.java)
-            val parts = smsManager.divideMessage(text)
-            smsManager.sendMultipartTextMessage(address, null, parts, null, null)
-
             val threadId = Telephony.Threads.getOrCreateThreadId(context, address)
             val values = ContentValues().apply {
                 put(Telephony.Sms.THREAD_ID, threadId)
@@ -225,13 +264,81 @@ class SmsRepository(private val context: Context) {
                 put(Telephony.Sms.BODY, text)
                 put(Telephony.Sms.DATE, System.currentTimeMillis())
                 put(Telephony.Sms.READ, 1)
-                put(Telephony.Sms.TYPE, Telephony.Sms.MESSAGE_TYPE_SENT)
+                put(Telephony.Sms.TYPE, Telephony.Sms.MESSAGE_TYPE_OUTBOX)
             }
-            context.contentResolver.insert(Telephony.Sms.CONTENT_URI, values)
-            true
+            val insertedUri = context.contentResolver.insert(Telephony.Sms.CONTENT_URI, values) ?: return null
+            val messageId = ContentUris.parseId(insertedUri)
+
+            val smsManager = context.getSystemService(SmsManager::class.java)
+            val parts = smsManager.divideMessage(text)
+            val sentIntents = ArrayList(parts.indices.map { index ->
+                sentPendingIntent(messageId, index, parts.size)
+            })
+            val deliveryIntents = ArrayList(parts.indices.map { index ->
+                deliveryPendingIntent(messageId, index)
+            })
+            smsManager.sendMultipartTextMessage(address, null, parts, sentIntents, deliveryIntents)
+            messageId
         } catch (e: Exception) {
             Log.e("SmsRepository", "Error sending message to $address", e)
-            false
+            null
+        }
+    }
+
+    private fun sentPendingIntent(messageId: Long, partIndex: Int, partCount: Int): PendingIntent {
+        val intent = Intent(context, SmsSentReceiver::class.java).apply {
+            action = SmsSentReceiver.ACTION_SMS_SENT
+            putExtra(SmsSentReceiver.EXTRA_MESSAGE_ID, messageId)
+            putExtra(SmsSentReceiver.EXTRA_PART_COUNT, partCount)
+        }
+        // requestCode חייב להיות שונה לכל (הודעה, חלק) כדי ש-PendingIntent.getBroadcast
+        // לא יחזיר מופע ממוחזר עם extras של שליחה קודמת (FLAG_UPDATE_CURRENT מחליף
+        // extras על אותו requestCode - בלי הפרדה כזו חלקים/הודעות שונות "יתבלבלו").
+        val requestCode = (messageId * 16 + partIndex).toInt()
+        return PendingIntent.getBroadcast(
+            context, requestCode, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+    }
+
+    private fun deliveryPendingIntent(messageId: Long, partIndex: Int): PendingIntent {
+        val intent = Intent(context, SmsDeliveredReceiver::class.java).apply {
+            action = SmsDeliveredReceiver.ACTION_SMS_DELIVERED
+            putExtra(SmsDeliveredReceiver.EXTRA_MESSAGE_ID, messageId)
+        }
+        val requestCode = (messageId * 16 + partIndex).toInt()
+        return PendingIntent.getBroadcast(
+            context, requestCode, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+    }
+
+    /** נקראת מ-SmsSentReceiver ברגע שידוע אם החלק/החלקים האחרונים של ההודעה
+     * באמת נשלחו או לא - מעדכנת את שורת ה-SMS בספק מ-OUTBOX ל-SENT/FAILED. */
+    fun updateSentMessageStatus(messageId: Long, success: Boolean) {
+        try {
+            val values = ContentValues().apply {
+                put(
+                    Telephony.Sms.TYPE,
+                    if (success) Telephony.Sms.MESSAGE_TYPE_SENT else Telephony.Sms.MESSAGE_TYPE_FAILED
+                )
+            }
+            context.contentResolver.update(ContentUris.withAppendedId(Telephony.Sms.CONTENT_URI, messageId), values, null, null)
+        } catch (e: Exception) {
+            Log.e("SmsRepository", "Error updating sent status for message $messageId", e)
+        }
+    }
+
+    /** נקראת מ-SmsDeliveredReceiver כשמגיע דיווח מסירה מהרשת (לא כל הספקים/
+     * מכשירים שולחים כזה - אם הוא לא מגיע, ההודעה פשוט נשארת ב-SENT). */
+    fun updateDeliveryStatus(messageId: Long, delivered: Boolean) {
+        try {
+            val values = ContentValues().apply {
+                put(Telephony.Sms.STATUS, if (delivered) Telephony.Sms.STATUS_COMPLETE else Telephony.Sms.STATUS_FAILED)
+            }
+            context.contentResolver.update(ContentUris.withAppendedId(Telephony.Sms.CONTENT_URI, messageId), values, null, null)
+        } catch (e: Exception) {
+            Log.e("SmsRepository", "Error updating delivery status for message $messageId", e)
         }
     }
 
@@ -316,9 +423,15 @@ class SmsRepository(private val context: Context) {
                 Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
             )
 
+            // נרשם מיד כ-OUTBOX ("שולח...") - לא כ-SENT - כדי שהמשתמש יראה
+            // משוב אמיתי; MmsSentReceiver מעדכן ל-SENT/FAILED לפי תוצאת השליחה
+            // בפועל שמגיעה אסינכרונית מהמערכת.
+            val mmsId = insertPendingMms(threadId, address, text, imageUri, imageMime) ?: return false
+
             val sentIntent = Intent(context, MmsSentReceiver::class.java).apply {
                 action = MmsSentReceiver.ACTION_MMS_SENT
                 putExtra(MmsSentReceiver.EXTRA_FILE_PATH, file.absolutePath)
+                putExtra(MmsSentReceiver.EXTRA_MMS_ID, mmsId)
             }
             val pendingIntent = PendingIntent.getBroadcast(
                 context, file.name.hashCode(), sentIntent,
@@ -327,12 +440,26 @@ class SmsRepository(private val context: Context) {
 
             val smsManager = context.getSystemService(SmsManager::class.java)
             smsManager.sendMultimediaMessage(context, contentUri, null, null, pendingIntent)
-
-            insertSentMms(threadId, address, text, imageUri, imageMime)
             true
         } catch (e: Exception) {
             Log.e("SmsRepository", "Error sending MMS to $address", e)
             false
+        }
+    }
+
+    /** נקראת מ-MmsSentReceiver ברגע שידועה תוצאת שליחת ה-MMS בפועל - מעדכנת
+     * את שורת ה-MMS בספק מ-OUTBOX ל-SENT/FAILED. */
+    fun updateMmsStatus(mmsId: Long, success: Boolean) {
+        try {
+            val values = ContentValues().apply {
+                put(
+                    Telephony.Mms.MESSAGE_BOX,
+                    if (success) Telephony.Mms.MESSAGE_BOX_SENT else Telephony.Mms.MESSAGE_BOX_FAILED
+                )
+            }
+            context.contentResolver.update(ContentUris.withAppendedId(Telephony.Mms.CONTENT_URI, mmsId), values, null, null)
+        } catch (e: Exception) {
+            Log.e("SmsRepository", "Error updating MMS status for $mmsId", e)
         }
     }
 
@@ -351,13 +478,15 @@ class SmsRepository(private val context: Context) {
             "</layout></head><body>$body</body></smil>"
     }
 
-    /** רושם את ה-MMS שנשלח ב-content://mms כדי שיופיע מיד בהיסטוריית השיחה. */
-    private fun insertSentMms(threadId: Long, address: String, text: String, imageUri: Uri?, imageMimeType: String?) {
+    /** רושם את ה-MMS ב-content://mms במצב OUTBOX ("שולח...") כדי שיופיע מיד
+     * בהיסטוריית השיחה, עוד לפני שידועה תוצאת השליחה בפועל. מחזירה את מזהה
+     * השורה שנוצרה כדי ש-sendMmsMessage יוכל להעביר אותו ל-MmsSentReceiver. */
+    private fun insertPendingMms(threadId: Long, address: String, text: String, imageUri: Uri?, imageMimeType: String?): Long? {
         try {
             val mmsValues = ContentValues().apply {
                 put(Telephony.Mms.THREAD_ID, threadId)
                 put(Telephony.Mms.DATE, System.currentTimeMillis() / 1000)
-                put(Telephony.Mms.MESSAGE_BOX, Telephony.Mms.MESSAGE_BOX_SENT)
+                put(Telephony.Mms.MESSAGE_BOX, Telephony.Mms.MESSAGE_BOX_OUTBOX)
                 put(Telephony.Mms.READ, 1)
                 put(Telephony.Mms.MESSAGE_TYPE, PduHeaders.MESSAGE_TYPE_SEND_REQ)
                 put(Telephony.Mms.MMS_VERSION, PduHeaders.CURRENT_MMS_VERSION)
@@ -365,8 +494,8 @@ class SmsRepository(private val context: Context) {
                 put(Telephony.Mms.TEXT_ONLY, if (imageUri == null) 1 else 0)
             }
             val mmsUri = context.contentResolver.insert(Telephony.Mms.CONTENT_URI, mmsValues) ?: run {
-                Log.e("SmsRepository", "Failed to insert sent MMS record")
-                return
+                Log.e("SmsRepository", "Failed to insert pending MMS record")
+                return null
             }
             val mmsId = ContentUris.parseId(mmsUri)
             val partsUri = Uri.withAppendedPath(mmsUri, "part")
@@ -401,8 +530,10 @@ class SmsRepository(private val context: Context) {
                 put(Telephony.Mms.Addr.TYPE, PduHeaders.TO)
             }
             context.contentResolver.insert(Uri.withAppendedPath(mmsUri, "addr"), addrValues)
+            return mmsId
         } catch (e: Exception) {
-            Log.e("SmsRepository", "Error persisting sent MMS", e)
+            Log.e("SmsRepository", "Error persisting pending MMS", e)
+            return null
         }
     }
 
@@ -420,6 +551,13 @@ class SmsRepository(private val context: Context) {
 
     /** מזהה שם איש קשר אמיתי לפי מספר טלפון; אם לא נמצא, מציג את המספר עצמו. */
     fun resolveContact(address: String): Contact {
+        contactCache[address]?.let { return it }
+        val resolved = lookupContact(address)
+        contactCache[address] = resolved
+        return resolved
+    }
+
+    private fun lookupContact(address: String): Contact {
         try {
             val uri = Uri.withAppendedPath(ContactsContract.PhoneLookup.CONTENT_FILTER_URI, Uri.encode(address))
             context.contentResolver.query(uri, arrayOf(ContactsContract.PhoneLookup.DISPLAY_NAME), null, null, null)?.use { cursor ->
@@ -432,5 +570,74 @@ class SmsRepository(private val context: Context) {
             Log.e("SmsRepository", "Error resolving contact for $address", e)
         }
         return Contact(name = address, phoneNumber = address)
+    }
+
+    /** חיפוש אנשי קשר לפי שם/מספר בזמן הקלדה - להתחלת שיחה חדשה בלי לזכור מספר
+     * בעל-פה. CONTENT_FILTER_URI של Phone (לא של Contacts) מחזיר כבר את שם + מספר
+     * בשורה אחת לכל תוצאה, כולל התאמה חלקית על שם. */
+    fun searchContacts(query: String, limit: Int = 20): List<Contact> {
+        if (query.isBlank()) return emptyList()
+        val results = mutableListOf<Contact>()
+        try {
+            val uri = Uri.withAppendedPath(ContactsContract.CommonDataKinds.Phone.CONTENT_FILTER_URI, Uri.encode(query))
+            context.contentResolver.query(
+                uri,
+                arrayOf(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME, ContactsContract.CommonDataKinds.Phone.NUMBER),
+                null, null, null,
+            )?.use { cursor ->
+                val seenNumbers = mutableSetOf<String>()
+                while (cursor.moveToNext() && results.size < limit) {
+                    val name = cursor.getString(0) ?: continue
+                    val number = cursor.getString(1) ?: continue
+                    if (seenNumbers.add(number)) {
+                        results.add(Contact(name = name, phoneNumber = number))
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("SmsRepository", "Error searching contacts for '$query'", e)
+        }
+        return results
+    }
+
+    /** כל אנשי הקשר עם מספר טלפון, ממוינים לפי שם - לבחירת נמענים במסך
+     * הודעה קבוצתית (לא שאילתת חיפוש חלקי כמו searchContacts, אלא הרשימה
+     * המלאה שהמשתמש מסמן ממנה). */
+    fun getAllContacts(): List<Contact> {
+        val results = mutableListOf<Contact>()
+        try {
+            context.contentResolver.query(
+                ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                arrayOf(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME, ContactsContract.CommonDataKinds.Phone.NUMBER),
+                null, null,
+                "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME} ASC",
+            )?.use { cursor ->
+                val seenNumbers = mutableSetOf<String>()
+                while (cursor.moveToNext()) {
+                    val name = cursor.getString(0) ?: continue
+                    val number = cursor.getString(1) ?: continue
+                    if (seenNumbers.add(number)) {
+                        results.add(Contact(name = name, phoneNumber = number))
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("SmsRepository", "Error loading all contacts", e)
+        }
+        return results
+    }
+
+    /** מוחקת שיחה שלמה (כל ה-SMS/MMS שלה) לפי thread_id - אותו URI תקני
+     * (content://mms-sms/conversations/<id>) שאפליקציות מסרונים סטנדרטיות
+     * משתמשות בו למחיקת שיחה שלמה בבת אחת. */
+    fun deleteThread(threadId: Long): Boolean {
+        return try {
+            context.contentResolver.delete(
+                ContentUris.withAppendedId(Telephony.Threads.CONTENT_URI, threadId), null, null
+            ) >= 0
+        } catch (e: Exception) {
+            Log.e("SmsRepository", "Error deleting thread $threadId", e)
+            false
+        }
     }
 }

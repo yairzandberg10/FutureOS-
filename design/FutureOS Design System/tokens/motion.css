@@ -1,0 +1,27 @@
+/* FutureOS motion. The shared components declare no animationSpec, so Compose's
+   default spring (no bounce, medium stiffness) drives focus. Fifteen distinct tween
+   durations were counted across the apps; the scale below is the proposed unification,
+   clustered on what is actually in the code (200ms is by far the most common). */
+:root {
+  /* user turned animations off */
+  --fos-duration-instant: 0ms; /* @kind other */
+  /* colour or alpha change in place */
+  --fos-duration-fast: 150ms; /* @kind other */
+  /* focus move, menu open — the system default */
+  --fos-duration-standard: 200ms; /* @kind other */
+  /* screen transition */
+  --fos-duration-emphasized: 300ms; /* @kind other */
+  /* long content animation */
+  --fos-duration-slow: 450ms; /* @kind other */
+
+  /* FastOutSlowInEasing */
+  --fos-ease-standard: cubic-bezier(0.4, 0, 0.2, 1); /* @kind other */
+  /* LinearOutSlowInEasing */
+  --fos-ease-enter: cubic-bezier(0, 0, 0.2, 1); /* @kind other */
+  /* FastOutLinearInEasing */
+  --fos-ease-exit: cubic-bezier(0.4, 0, 1, 1); /* @kind other */
+  /* LinearEasing — progress bars, timers */
+  --fos-ease-linear: cubic-bezier(0, 0, 1, 1); /* @kind other */
+
+  --fos-transition-focus: 200ms cubic-bezier(0.4, 0, 0.2, 1); /* @kind other */
+}

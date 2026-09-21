@@ -1,7 +1,8 @@
 package com.future.settings.ui.components
 
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -9,7 +10,7 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
+import androidx.compose.material.icons.rounded.KeyboardArrowLeft
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,7 +18,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.*
 import androidx.compose.ui.text.font.FontWeight
@@ -35,21 +35,24 @@ fun SettingItem(
     onClick: (() -> Unit)? = null
 ) {
     var isFocused by remember { mutableStateOf(false) }
-    val shape = RoundedCornerShape(16.dp)
+    val shape = FutureShapes.lg
     // שורות מידע-בלבד (onClick == null) לא מקבלות אף אחד מהאפקטים של פוקוס/לחיצה
     // למטה - בלעדי זה שורה שלחיצה עליה היא no-op הייתה מקבלת בדיוק אותה הדגשת
     // פוקוס מלאה כמו פריט לחיץ אמיתי, ומטעה את המשתמש לחשוב שיש לה פעולה.
     val isInteractive = onClick != null
+    // שורה רגילה שקופה ויושבת ישירות על הכרטיס, ורק קו מפריד דק מפריד בינה
+    // לבין הבאה אחריה (ר' העיצוב). קודם היה הפוך - לכל שורה היה מילוי אפור
+    // משלה, מה שהפך כרטיס אחד עם שלוש שורות לשלוש גלולות נפרדות שנראות כמו
+    // שלושה כרטיסים, והקווים המפרידים נבלעו ביניהן. הפוקוס הוא זה שמוסיף
+    // מילוי עדין ומסגרת, בלי הגדלה - עקבי עם הפוקוס בשאר המערכת.
     val bgColor by animateColorAsState(
-        if (isInteractive && isFocused) theme.primaryColor.copy(alpha = 0.18f) else theme.textColor.copy(alpha = 0.06f),
+        if (isInteractive && isFocused) theme.textColor.copy(alpha = 0.06f) else Color.Transparent,
         label = "settingItemBg"
     )
-    val scale by animateFloatAsState(if (isInteractive && isFocused) 1.02f else 1f, label = "settingItemScale")
 
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .graphicsLayer { scaleX = scale; scaleY = scale }
             .then(if (isInteractive) Modifier.onFocusChanged { isFocused = it.isFocused } else Modifier)
             .then(
                 if (isInteractive) Modifier.onKeyEvent {
@@ -97,8 +100,11 @@ fun SettingItem(
                 }
             }
             if (showChevron) {
+                // חץ שמצביע שמאלה, *לא* הגרסה ה-AutoMirrored: הממשק כולו בעברית
+                // (RTL), ושם כיוון ההתקדמות פנימה הוא שמאלה. הווריאנט המשקף הפך
+                // את החץ ימינה, כלומר לכיוון ההפוך מזה שהלחיצה על השורה מובילה אליו.
                 Icon(
-                    imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowLeft,
+                    imageVector = Icons.Rounded.KeyboardArrowLeft,
                     contentDescription = null,
                     tint = theme.textColor.copy(alpha = 0.3f),
                     modifier = Modifier.size(18.dp)
@@ -117,17 +123,16 @@ fun SettingSwitch(
     theme: ThemeConfig
 ) {
     var isFocused by remember { mutableStateOf(false) }
-    val shape = RoundedCornerShape(16.dp)
+    val shape = FutureShapes.lg
+    // אותה לוגיקה כמו ב-SettingItem: השורה שקופה על הכרטיס, והפוקוס מוסיף מילוי ומסגרת.
     val bgColor by animateColorAsState(
-        if (isFocused) theme.primaryColor.copy(alpha = 0.18f) else theme.textColor.copy(alpha = 0.06f),
+        if (isFocused) theme.textColor.copy(alpha = 0.06f) else Color.Transparent,
         label = "settingSwitchBg"
     )
-    val scale by animateFloatAsState(if (isFocused) 1.02f else 1f, label = "settingSwitchScale")
 
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .graphicsLayer { scaleX = scale; scaleY = scale }
             .onFocusChanged { isFocused = it.isFocused }
             .onKeyEvent {
                 if (it.type == KeyEventType.KeyDown && (it.key == Key.DirectionCenter || it.key == Key.Enter || it.key == Key.NumPadEnter)) {
@@ -226,9 +231,11 @@ fun SettingHeader(title: String, theme: ThemeConfig) {
         modifier = Modifier
             .padding(start = 24.dp, top = 20.dp, bottom = 8.dp)
             .fillMaxWidth(),
-        color = theme.primaryColor,
+        // כותרת קטע היא תווית ולא פריט - היא מודפסת בטקסט מעומעם ולא בצבע
+        // ההדגשה, כדי שהמבט ייפול על שמות הפריטים שבכרטיס ולא על הכותרת שמעליו.
+        color = theme.textColor.copy(alpha = 0.55f),
         fontWeight = FontWeight.Bold,
-        fontSize = 13.sp,
+        fontSize = FutureTypography.summary,
         letterSpacing = 1.sp
     )
 }

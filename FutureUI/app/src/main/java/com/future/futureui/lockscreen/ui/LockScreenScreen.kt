@@ -1,6 +1,9 @@
 package com.future.futureui.lockscreen.ui
 
 // ייבוא ספריות נדרשות של אנדרואיד וקומפוז (Jetpack Compose)
+import com.future.sharednav.theme.FutureMotion
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import android.content.Context
 import android.content.Intent
 import android.provider.Settings
@@ -49,6 +52,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.Dp
 import com.future.futureui.lockscreen.logic.LockScreenLayoutManager
 import com.future.futureui.notificationcenter.logic.NotificationCenterManager
+import com.future.sharednav.nav.digitForKey
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.*
@@ -116,6 +120,9 @@ fun LockScreenScreen(
     var isPinMode by remember { mutableStateOf(false) }
     var enteredPin by remember { mutableStateOf("") }
     var pinError by remember { mutableStateOf(false) }
+    // שניות שנותרו לחסימה אחרי ניסיונות כושלים (ראו PinStore) - בלי חיווי
+    // כזה, מסך שמסרב לקוד הנכון נראה למשתמש כמו תקלה.
+    var pinLockoutSeconds by remember { mutableIntStateOf(0) }
     val pinLength = 4
     // הפעולה שתתבצע לאחר הזנת קוד PIN נכון (למשל פתיחת קיצור-דרך) - null פירושו פתיחת נעילה רגילה בלבד
     var pendingUnlockAction by remember { mutableStateOf<(() -> Unit)?>(null) }
@@ -154,15 +161,23 @@ fun LockScreenScreen(
                                     val next = (enteredPin + digit).take(pinLength)
                                     enteredPin = next
                                     if (next.length == pinLength) {
-                                        if (layoutManager.verifyPin(next)) {
+                                        val lockoutMs = layoutManager.remainingPinLockoutMs()
+                                        if (lockoutMs > 0) {
+                                            pinError = true
+                                            pinLockoutSeconds = ((lockoutMs + 999) / 1000).toInt()
+                                            enteredPin = ""
+                                        } else if (layoutManager.verifyPin(next)) {
                                             isPinMode = false
                                             enteredPin = ""
+                                            pinLockoutSeconds = 0
                                             val action = pendingUnlockAction
                                             pendingUnlockAction = null
                                             if (action != null) action() else performUnlock()
                                         } else {
                                             pinError = true
                                             enteredPin = ""
+                                            pinLockoutSeconds =
+                                                ((layoutManager.remainingPinLockoutMs() + 999) / 1000).toInt()
                                         }
                                     }
                                 }
@@ -293,7 +308,7 @@ fun LockScreenScreen(
                     isVisible -> 0f
                     else -> entrySlidePx
                 },
-                animationSpec = if (isUnlocking) tween(320, easing = FastOutLinearInEasing) else tween(450, easing = FastOutSlowInEasing),
+                animationSpec = if (isUnlocking) tween(FutureMotion.DurationSlow, easing = FutureMotion.EasingAccelerate) else tween(FutureMotion.DurationSlow, easing = FutureMotion.EasingStandard),
                 label = "lockScreenSlide"
             )
             val screenAlpha by animateFloatAsState(
@@ -330,7 +345,7 @@ fun LockScreenScreen(
                 // התוכן הראשי של המסך (שעון, התראות וקיצורים) עם אנימציית כניסה
                 AnimatedVisibility(
                     visible = isVisible,
-                    enter = fadeIn(tween(600)) + expandVertically(tween(600)),
+                    enter = fadeIn(tween(FutureMotion.DurationSlow)) + expandVertically(tween(FutureMotion.DurationSlow)),
                     modifier = Modifier.fillMaxSize()
                 ) {
                 // עמודה יחידה שמחלקת את הגובה בצורה מכוונת: שעון למעלה (מתחת לשורת
@@ -387,7 +402,13 @@ fun LockScreenScreen(
                 }
 
                 // שכבת הזנת קוד PIN - מכסה את כל המסך כשמוזן קוד
-                PinEntryOverlay(visible = isPinMode, enteredLength = enteredPin.length, pinLength = pinLength, isError = pinError)
+                PinEntryOverlay(
+                    visible = isPinMode,
+                    enteredLength = enteredPin.length,
+                    pinLength = pinLength,
+                    isError = pinError,
+                    lockoutSeconds = pinLockoutSeconds,
+                )
             }
         }
     }
@@ -398,7 +419,13 @@ fun LockScreenScreen(
  * לחשוף את הקוד עצמו), ומטלטלת קלות אם הוזן קוד שגוי.
  */
 @Composable
-fun PinEntryOverlay(visible: Boolean, enteredLength: Int, pinLength: Int, isError: Boolean) {
+fun PinEntryOverlay(
+    visible: Boolean,
+    enteredLength: Int,
+    pinLength: Int,
+    isError: Boolean,
+    lockoutSeconds: Int = 0,
+) {
     val shake by animateFloatAsState(
         targetValue = if (isError) 1f else 0f,
         animationSpec = if (isError) repeatable(iterations = 3, animation = tween(60), repeatMode = RepeatMode.Reverse) else tween(0),
@@ -407,8 +434,8 @@ fun PinEntryOverlay(visible: Boolean, enteredLength: Int, pinLength: Int, isErro
 
     AnimatedVisibility(
         visible = visible,
-        enter = fadeIn(tween(200)),
-        exit = fadeOut(tween(150)),
+        enter = fadeIn(tween(FutureMotion.DurationStandard)),
+        exit = fadeOut(tween(FutureMotion.DurationFast)),
         modifier = Modifier.fillMaxSize()
     ) {
         Box(
@@ -422,9 +449,13 @@ fun PinEntryOverlay(visible: Boolean, enteredLength: Int, pinLength: Int, isErro
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = if (isError) "קוד שגוי, נסה שוב" else "הזן קוד נעילה",
+                    text = when {
+                        lockoutSeconds > 0 -> "יותר מדי ניסיונות - נסה שוב בעוד $lockoutSeconds שניות"
+                        isError -> "קוד שגוי, נסה שוב"
+                        else -> "הזן קוד נעילה"
+                    },
                     color = if (isError) Color(0xFFFF6B6B) else Color.White,
-                    fontSize = 16.sp,
+                    fontSize = FutureTypography.bodyLarge,
                     fontWeight = FontWeight.Medium
                 )
                 Spacer(modifier = Modifier.height(24.dp))
@@ -446,19 +477,6 @@ fun PinEntryOverlay(visible: Boolean, enteredLength: Int, pinLength: Int, isErro
 }
 
 /** ממיר מקש מספרי (0-9, מקלדת רגילה או NumPad) לספרה כמחרוזת - לצורך הזנת PIN. */
-private fun digitForKey(key: Key): String? = when (key) {
-    Key.Zero, Key.NumPad0 -> "0"
-    Key.One, Key.NumPad1 -> "1"
-    Key.Two, Key.NumPad2 -> "2"
-    Key.Three, Key.NumPad3 -> "3"
-    Key.Four, Key.NumPad4 -> "4"
-    Key.Five, Key.NumPad5 -> "5"
-    Key.Six, Key.NumPad6 -> "6"
-    Key.Seven, Key.NumPad7 -> "7"
-    Key.Eight, Key.NumPad8 -> "8"
-    Key.Nine, Key.NumPad9 -> "9"
-    else -> null
-}
 
 /**
  * פונקציה להפעלת קיצור דרך (Intent) לפי מזהה.
@@ -492,7 +510,7 @@ fun UnlockPrompt(modifier: Modifier = Modifier) {
         Text(
             text = "לחץ OK",
             color = Color.White.copy(alpha = 0.6f),
-            fontSize = 11.sp,
+            fontSize = FutureTypography.caption,
             fontWeight = FontWeight.Light,
             textAlign = TextAlign.Center
         )
@@ -520,7 +538,7 @@ fun AnimatedClock(
             .padding(16.dp)
             .then(
                 // אם בפוקוס - הוסף מסגרת לבנה מעוגלת
-                if (isFocused) Modifier.border(2.dp, Color.White, RoundedCornerShape(20.dp)).padding(10.dp)
+                if (isFocused) Modifier.border(2.dp, Color.White, FutureShapes.xl).padding(10.dp)
                 else Modifier
             ),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -535,13 +553,13 @@ fun AnimatedClock(
                 0 -> { // סגנון עבה ובולט
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(text = time, fontSize = 70.sp, fontWeight = FontWeight.Black, color = Color.White, lineHeight = 82.sp)
-                        Text(text = date, fontSize = 24.sp, color = Color.White.copy(alpha = 0.8f))
+                        Text(text = date, fontSize = FutureTypography.headline, color = Color.White.copy(alpha = 0.8f))
                     }
                 }
                 1 -> { // סגנון דק ואלגנטי
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(text = time, fontSize = 80.sp, fontWeight = FontWeight.ExtraLight, color = Color.White)
-                        Text(text = date, fontSize = 20.sp, fontWeight = FontWeight.Light, color = Color.White.copy(alpha = 0.9f))
+                        Text(text = date, fontSize = FutureTypography.screenTitle, fontWeight = FontWeight.Light, color = Color.White.copy(alpha = 0.9f))
                     }
                 }
                 2 -> { // סגנון "קוביה" (שעות מעל דקות)
@@ -550,7 +568,7 @@ fun AnimatedClock(
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(text = parts[0], fontSize = 80.sp, fontWeight = FontWeight.Bold, color = Color.White, lineHeight = 0.7.em)
                             Text(text = parts[1], fontSize = 80.sp, fontWeight = FontWeight.Bold, color = Color.White, lineHeight = 0.7.em)
-                            Text(text = date, fontSize = 18.sp, color = Color.White.copy(alpha = 0.7f))
+                            Text(text = date, fontSize = FutureTypography.title, color = Color.White.copy(alpha = 0.7f))
                         }
                     }
                 }
@@ -558,7 +576,7 @@ fun AnimatedClock(
 
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(text = time, fontSize = 70.sp, fontWeight = FontWeight.SemiBold, color = Color.White, lineHeight = 82.sp)
-                        Text(text = date, fontSize = 15.sp, color = Color.White.copy(alpha = 0.8f))
+                        Text(text = date, fontSize = FutureTypography.bodyLarge, color = Color.White.copy(alpha = 0.8f))
                     }
                 }
             }
@@ -584,11 +602,11 @@ fun NotificationSummary(
             Box(
                 modifier = Modifier
                     .padding(vertical = 4.dp)
-                    .clip(RoundedCornerShape(30.dp))
+                    .clip(FutureShapes.xxl)
                     .background(Color.White.copy(alpha = 0.1f)) // רקע שקוף למחצה
                     .padding(horizontal = 20.dp, vertical = 10.dp)
             ) {
-                Text(text = title, color = Color.White, fontSize = 14.sp, maxLines = 1)
+                Text(text = title, color = Color.White, fontSize = FutureTypography.body, maxLines = 1)
             }
         }
     }

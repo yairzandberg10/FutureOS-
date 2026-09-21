@@ -1,5 +1,7 @@
 package com.future.futurelauncher.ui
 
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import android.appwidget.AppWidgetHost
 import android.content.pm.PackageManager
 import androidx.compose.animation.animateColorAsState
@@ -161,11 +163,11 @@ fun ItemPanel(
                 // אינדיקציה חזותית שהפוקוס בכלל נמצא שם.
                 alpha = if (isMoving) 0.7f else if (item is LauncherItem.Empty && !isEditMode && !isFocused) 0f else 1f
             }
-            .clip(RoundedCornerShape(12.dp))
+            .clip(FutureShapes.md)
             .border(
                 width = if (item is LauncherItem.Empty && isEditMode) 1.dp else 2.5.dp,
                 color = borderColor,
-                shape = RoundedCornerShape(12.dp)
+                shape = FutureShapes.md
             )
             .padding(4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -222,14 +224,14 @@ fun ItemPanel(
                         )
                     } else {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text(text = "🧩", fontSize = 24.sp)
+                            Text(text = "🧩", fontSize = FutureTypography.headline)
                         }
                     }
                 }
                 is LauncherItem.Empty -> {
                     if (isEditMode) {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text(text = "+", color = OnWallpaperColor.copy(alpha = 0.2f), fontSize = 20.sp)
+                            Text(text = "+", color = OnWallpaperColor.copy(alpha = 0.2f), fontSize = FutureTypography.screenTitle)
                         }
                     } else if (isFocused) {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -248,7 +250,7 @@ fun ItemPanel(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Center,
-                fontSize = 10.sp
+                fontSize = FutureTypography.caption
             )
         }
     }
@@ -272,7 +274,7 @@ fun EditModeButton(label: String, icon: ImageVector, isSelected: Boolean, theme:
     ) {
         Surface(
             modifier = Modifier.size(44.dp),
-            shape = RoundedCornerShape(14.dp),
+            shape = FutureShapes.md,
             color = bgColor,
             border = androidx.compose.foundation.BorderStroke(1.5.dp, OnWallpaperColor.copy(alpha = borderAlpha)),
             onClick = onClick
@@ -290,7 +292,7 @@ fun EditModeButton(label: String, icon: ImageVector, isSelected: Boolean, theme:
         Text(
             text = label,
             color = fgColor,
-            fontSize = 10.sp,
+            fontSize = FutureTypography.caption,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
             style = MaterialTheme.typography.labelSmall.copy(
                 shadow = Shadow(color = Color.Black, offset = Offset(0.5f, 0.5f), blurRadius = 1f)

@@ -3,7 +3,8 @@ package com.future.dialer.ui.navigation
 import java.net.URLEncoder
 
 sealed class Screen(val route: String) {
-    /** מסך מאוחד: חיוג + היסטוריית שיחות. */
+    /** יומן השיחות - הטאב הראשון, לפי ui_kits/calls ("log first"). */
+    object CallLog : Screen("calllog")
     object Dialpad : Screen("dialpad")
     object Contacts : Screen("contacts")
     object InCall : Screen("incall/{name}/{number}") {

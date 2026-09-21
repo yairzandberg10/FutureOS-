@@ -1,0 +1,98 @@
+/* FutureOS colors. Source: FutureTheme.kt (core + app extensions),
+   ThemeConfig.kt (glassColor, dividerColor), SettingsScreens.kt:894 (accent choices).
+   Dark is the default theme; .fos-light scopes the light theme. */
+:root {
+  /* --- accent palette: the only user-selectable color in the whole system --- */
+  --fos-accent-white: #FFFFFF;
+  --fos-accent-cyan: #64D2FF;
+  --fos-accent-orange: #FF9F0A;
+  --fos-accent-green: #30D158;
+  --fos-accent-purple: #BF5AF2;
+  --fos-accent: var(--fos-accent-white);
+
+  /* --- dark core (default) --- */
+  --fos-bg: #000000;
+  --fos-surface: #1C1C1E;
+  --fos-glass: #2C2C2E;
+  --fos-text: #FFFFFF;
+  --fos-danger: #FF6B6B;
+  --fos-success: #32D74B;
+  --fos-warning: #FFD60A;
+  --fos-divider: #FFFFFF1F;
+
+  /* --- text alpha ladder (all observed alphas of textColor) --- */
+  --fos-text-70: #FFFFFFB2;
+  --fos-text-60: #FFFFFF99;
+  --fos-text-55: #FFFFFF8C;
+  --fos-text-50: #FFFFFF80;
+  --fos-text-40: #FFFFFF66;
+  --fos-text-30: #FFFFFF4D;
+  --fos-text-20: #FFFFFF33;
+  --fos-text-18: #FFFFFF2E;
+  --fos-text-15: #FFFFFF26;
+  --fos-text-12: #FFFFFF1F;
+  --fos-text-10: #FFFFFF1A;
+  --fos-text-08: #FFFFFF14;
+  --fos-text-06: #FFFFFF0F;
+
+  /* --- accent alphas, used for focus backgrounds only --- */
+  --fos-accent-30: color-mix(in srgb, var(--fos-accent) 30%, transparent);
+  --fos-accent-20: color-mix(in srgb, var(--fos-accent) 20%, transparent);
+  --fos-accent-14: color-mix(in srgb, var(--fos-accent) 14%, transparent);
+
+  /* --- app-specific extensions --- */
+  --fos-calc-button: #2C2C2E;
+  --fos-calc-button-muted: #3A3A3C;
+  --fos-calc-button-focused: #5A5A5C;
+  --fos-input-bar: #111111;
+  --fos-output-text: #D0D0D0;
+  --fos-favorite: #FFC107;
+
+  /* --- fixed, theme-independent --- */
+  --fos-scrim: rgba(0, 0, 0, 0.6);
+  --fos-on-accent: #000000;
+  --fos-switch-track-off: #C8C8CC;
+  --fos-headsup-bg: #E61C1C1E;
+
+  /* --- semantic aliases --- */
+  --fos-text-primary: var(--fos-text);
+  --fos-text-secondary: var(--fos-text-60);
+  --fos-text-tertiary: var(--fos-text-40);
+  --fos-surface-screen: var(--fos-bg);
+  --fos-surface-card: var(--fos-surface);
+  --fos-surface-raised: var(--fos-glass);
+  --fos-border-divider: var(--fos-divider);
+  --fos-border-focus: var(--fos-accent);
+}
+
+.fos-light {
+  --fos-bg: #F2F2F7;
+  --fos-surface: #FFFFFF;
+  --fos-glass: #EDEDF2;
+  --fos-text: #000000;
+  --fos-danger: #D32F2F;
+  --fos-success: #1E8E3E;
+  --fos-warning: #B8860B;
+  --fos-divider: #0000001A;
+
+  --fos-text-70: #000000B2;
+  --fos-text-60: #00000099;
+  --fos-text-55: #0000008C;
+  --fos-text-50: #00000080;
+  --fos-text-40: #00000066;
+  --fos-text-30: #0000004D;
+  --fos-text-20: #00000033;
+  --fos-text-18: #0000002E;
+  --fos-text-15: #00000026;
+  --fos-text-12: #0000001F;
+  --fos-text-10: #0000001A;
+  --fos-text-08: #00000014;
+  --fos-text-06: #0000000F;
+
+  --fos-calc-button: #E5E5EA;
+  --fos-calc-button-muted: #D1D1D6;
+  --fos-calc-button-focused: #B8B8BE;
+  --fos-input-bar: #E5E5EA;
+  --fos-output-text: #3A3A3C;
+  --fos-favorite: #FFC107;
+}

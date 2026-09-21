@@ -131,7 +131,9 @@ class HeadsUpNotificationService : Service(), LifecycleOwner, SavedStateRegistry
         val view = composeView ?: return
         try {
             windowManager.removeView(view)
-        } catch (e: Exception) {}
+        } catch (e: Exception) {
+            android.util.Log.w("HeadsUpNotificationServ", "removeBanner failed", e)
+        }
         composeView = null
     }
 

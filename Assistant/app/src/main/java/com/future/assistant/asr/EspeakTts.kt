@@ -1,18 +1,13 @@
 package com.future.assistant.asr
 
 import android.content.Context
-import android.media.AudioAttributes
-import android.media.AudioFormat
-import android.media.AudioManager
-import android.media.AudioTrack
 import java.io.File
 import java.io.FileOutputStream
 
 /**
- * מנוע Text-to-Speech מקומי (eSpeak NG, native) - כי במכשירי הבדיקה אין
- * שום מנוע TTS מותקן ברמת המערכת (android.speech.tts.TextToSpeech נכשל
- * עם "not bound to TTS engine"). קול רובוטי אבל תומך בעברית ופועל לגמרי
- * offline.
+ * מנוע Text-to-Speech מקומי (eSpeak NG, native) - שימש כפתרון ראשוני לכך
+ * שבמכשירי הבדיקה אין שום מנוע TTS מותקן ברמת המערכת, לפני המעבר ל-Piper
+ * (PiperTts, קול נוירוני טבעי יותר). נשאר כאן כגיבוי, לא בשימוש כרגע.
  */
 class EspeakTts(private val context: Context) {
     private var sampleRate = 22050
@@ -37,40 +32,7 @@ class EspeakTts(private val context: Context) {
         // בהתאם לקול/שפה) - צריך את הקצב האמיתי של הסינתוז הזה בדיוק, אחרת
         // ההשמעה נשמעת מהירה ומצווצת מדי (chipmunk).
         val actualRate = nativeGetSampleRate().takeIf { it > 0 } ?: sampleRate
-        playAndWait(samples, actualRate)
-    }
-
-    private fun playAndWait(samples: ShortArray, rate: Int) {
-        val minBufferSize = AudioTrack.getMinBufferSize(
-            rate, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT
-        )
-        val audioTrack = AudioTrack(
-            AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_ASSISTANT)
-                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                .build(),
-            AudioFormat.Builder()
-                .setSampleRate(rate)
-                .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-                .build(),
-            maxOf(minBufferSize, samples.size * 2),
-            AudioTrack.MODE_STATIC,
-            AudioManager.AUDIO_SESSION_ID_GENERATE
-        )
-        try {
-            // ב-MODE_STATIC, מיד אחרי הבנייה המצב הוא STATE_NO_STATIC_DATA (לא
-            // STATE_INITIALIZED) - המעבר ל-INITIALIZED קורה רק אחרי ה-write()
-            // הראשון. לכן בודקים רק שהבנייה עצמה לא נכשלה לגמרי.
-            if (audioTrack.state == AudioTrack.STATE_UNINITIALIZED) return
-            audioTrack.write(samples, 0, samples.size)
-            audioTrack.play()
-            val durationMs = (samples.size.toLong() * 1000L) / rate
-            Thread.sleep(durationMs + 100)
-            audioTrack.stop()
-        } finally {
-            audioTrack.release()
-        }
+        PcmPlayback.playAndWait(samples, actualRate)
     }
 
     private fun copyDataDirIfNeeded(): File {

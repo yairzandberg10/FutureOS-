@@ -1,5 +1,6 @@
 package com.future.fitness.ui.screens
 
+import com.future.sharednav.theme.FutureTypography
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -40,7 +41,7 @@ fun ActivityTypesScreen(
                     Text(
                         category.label,
                         color = theme.textColor.copy(alpha = 0.6f),
-                        fontSize = 13.sp,
+                        fontSize = FutureTypography.summary,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(top = 14.dp, bottom = 6.dp),
                     )

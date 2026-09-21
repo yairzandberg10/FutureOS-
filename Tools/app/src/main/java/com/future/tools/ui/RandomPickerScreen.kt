@@ -1,4 +1,7 @@
 package com.future.tools.ui
+import com.future.sharednav.theme.onAccentColor
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.focus.bringIntoViewOnFocus
 
 import androidx.compose.foundation.background
@@ -28,6 +31,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.future.sharednav.focus.escapeTextFieldFocusTrap
 import com.future.sharednav.theme.FutureTheme
 import kotlin.random.Random
 
@@ -42,7 +46,7 @@ fun RandomPickerScreen(theme: FutureTheme, onBack: () -> Unit) {
     }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-        Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
+        Box(modifier = Modifier.escapeTextFieldFocusTrap().fillMaxSize().background(theme.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize()) {
                 ToolsHeader(title = "בורר אקראי", theme = theme, onBack = onBack)
 
@@ -55,16 +59,16 @@ fun RandomPickerScreen(theme: FutureTheme, onBack: () -> Unit) {
                         value = draft,
                         onValueChange = { draft = it },
                         singleLine = true,
-                        textStyle = TextStyle(color = theme.textColor, fontSize = 15.sp),
+                        textStyle = TextStyle(color = theme.textColor, fontSize = FutureTypography.bodyLarge),
                         cursorBrush = SolidColor(theme.accentColor),
                         modifier = Modifier
                             .weight(1f)
-                            .clip(RoundedCornerShape(14.dp))
+                            .clip(FutureShapes.md)
                             .background(theme.textColor.copy(alpha = 0.08f))
                             .padding(horizontal = 14.dp, vertical = 12.dp),
                         decorationBox = { inner ->
                             if (draft.isEmpty()) {
-                                Text("הוסף אפשרות...", color = theme.textColor.copy(alpha = 0.35f), fontSize = 15.sp)
+                                Text("הוסף אפשרות...", color = theme.textColor.copy(alpha = 0.35f), fontSize = FutureTypography.bodyLarge)
                             }
                             inner()
                         }
@@ -80,7 +84,7 @@ fun RandomPickerScreen(theme: FutureTheme, onBack: () -> Unit) {
 
                 if (options.isEmpty()) {
                     Box(modifier = Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
-                        Text("הוסף לפחות אפשרות אחת", color = theme.textColor.copy(alpha = 0.35f), fontSize = 13.sp)
+                        Text("הוסף לפחות אפשרות אחת", color = theme.textColor.copy(alpha = 0.35f), fontSize = FutureTypography.summary)
                     }
                 } else {
                     LazyColumn(
@@ -117,19 +121,19 @@ private fun RpAddButton(theme: FutureTheme, onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .size(44.dp)
-            .clip(RoundedCornerShape(14.dp))
+            .clip(FutureShapes.md)
             .background(if (isFocused) theme.accentColor else theme.textColor.copy(alpha = 0.1f))
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
             .focusable(interactionSource = interactionSource).bringIntoViewOnFocus(),
         contentAlignment = Alignment.Center
     ) {
-        Icon(Icons.Rounded.Add, contentDescription = "הוסף", tint = if (isFocused) Color.Black else theme.accentColor)
+        Icon(Icons.Rounded.Add, contentDescription = "הוסף", tint = if (isFocused) theme.onAccentColor else theme.accentColor)
     }
 }
 
 @Composable
 private fun RpOptionRow(text: String, isChosen: Boolean, theme: FutureTheme, onDelete: () -> Unit) {
-    val shape = RoundedCornerShape(14.dp)
+    val shape = FutureShapes.md
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -141,7 +145,7 @@ private fun RpOptionRow(text: String, isChosen: Boolean, theme: FutureTheme, onD
         Text(
             text,
             color = if (isChosen) theme.accentColor else theme.textColor,
-            fontSize = 15.sp,
+            fontSize = FutureTypography.bodyLarge,
             fontWeight = if (isChosen) FontWeight.Bold else FontWeight.Normal,
             modifier = Modifier.weight(1f)
         )
@@ -150,7 +154,7 @@ private fun RpOptionRow(text: String, isChosen: Boolean, theme: FutureTheme, onD
         Box(
             modifier = Modifier
                 .size(28.dp)
-                .clip(RoundedCornerShape(8.dp))
+                .clip(FutureShapes.sm)
                 .background(if (deleteFocused) theme.dangerColor.copy(alpha = 0.3f) else Color.Transparent)
                 .clickable(interactionSource = deleteInteraction, indication = null, onClick = onDelete)
                 .focusable(interactionSource = deleteInteraction).bringIntoViewOnFocus(),
@@ -169,13 +173,13 @@ private fun RpPickButton(theme: FutureTheme, enabled: Boolean, onClick: () -> Un
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
+            .clip(FutureShapes.lg)
             .background(bgColor)
             .clickable(interactionSource = interactionSource, indication = null, enabled = enabled, onClick = onClick)
             .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
             .padding(vertical = 16.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text("בחר אקראית", color = if (isFocused && enabled) Color.Black else theme.textColor.copy(alpha = if (enabled) 1f else 0.4f), fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        Text("בחר אקראית", color = if (isFocused && enabled) Color.Black else theme.textColor.copy(alpha = if (enabled) 1f else 0.4f), fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Bold)
     }
 }

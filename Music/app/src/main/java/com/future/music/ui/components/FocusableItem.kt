@@ -1,5 +1,6 @@
 package com.future.music.ui.components
 
+import com.future.sharednav.theme.FutureShapes
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -29,7 +30,7 @@ fun FocusableItem(
         focusedBackgroundColor = theme.textColor.copy(alpha = 0.14f),
         borderColor = theme.accentColor,
         borderWidth = 2.dp,
-        cornerRadius = 16.dp,
+        cornerRadius = FutureShapes.radiusLg,
         scaleOnFocus = false,
         contentPadding = 0.dp,
         focusRequester = focusRequester,

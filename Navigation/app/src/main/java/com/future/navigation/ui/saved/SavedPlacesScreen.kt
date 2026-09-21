@@ -1,5 +1,6 @@
 package com.future.navigation.ui.saved
 
+import com.future.sharednav.theme.FutureShapes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -101,7 +102,7 @@ fun SavedPlacesScreen(viewModel: SavedPlacesViewModel, onBack: () -> Unit, onNav
                         idleBackgroundColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
                         focusedBackgroundColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.22f),
                         borderWidth = 2.dp,
-                        cornerRadius = 20.dp
+                        cornerRadius = FutureShapes.radiusXl
                     ) {
                         Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     }
@@ -117,7 +118,7 @@ fun SavedPlacesScreen(viewModel: SavedPlacesViewModel, onBack: () -> Unit, onNav
                         idleBackgroundColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
                         focusedBackgroundColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.22f),
                         borderWidth = 2.dp,
-                        cornerRadius = 16.dp
+                        cornerRadius = FutureShapes.radiusLg
                     ) {
                         Row(modifier = Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
                             Surface(modifier = Modifier.size(40.dp), shape = CircleShape, color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)) {
@@ -139,7 +140,7 @@ fun SavedPlacesScreen(viewModel: SavedPlacesViewModel, onBack: () -> Unit, onNav
                         idleBackgroundColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
                         focusedBackgroundColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.22f),
                         borderWidth = 2.dp,
-                        cornerRadius = 20.dp
+                        cornerRadius = FutureShapes.radiusXl
                     ) {
                         Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFFFFC107))
                     }
@@ -150,7 +151,7 @@ fun SavedPlacesScreen(viewModel: SavedPlacesViewModel, onBack: () -> Unit, onNav
                         idleBackgroundColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
                         focusedBackgroundColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.22f),
                         borderWidth = 2.dp,
-                        cornerRadius = 20.dp
+                        cornerRadius = FutureShapes.radiusXl
                     ) {
                         Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f))
                     }
@@ -177,7 +178,7 @@ private fun PinCard(
         idleBackgroundColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
         focusedBackgroundColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.22f),
         borderWidth = 2.dp,
-        cornerRadius = 16.dp,
+        cornerRadius = FutureShapes.radiusLg,
         focusRequester = focusRequester
     ) {
         Column(modifier = Modifier.fillMaxWidth().padding(10.dp)) {
@@ -227,7 +228,7 @@ private fun AddressSearchScreen(viewModel: SavedPlacesViewModel, onBack: () -> U
                     idleBackgroundColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
                     focusedBackgroundColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.22f),
                     borderWidth = 2.dp,
-                    cornerRadius = 16.dp
+                    cornerRadius = FutureShapes.radiusLg
                 ) {
                     Text(result.label, modifier = Modifier.padding(12.dp), maxLines = 2)
                 }

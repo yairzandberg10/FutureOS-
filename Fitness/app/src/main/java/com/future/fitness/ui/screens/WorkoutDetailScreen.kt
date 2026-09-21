@@ -1,5 +1,8 @@
 package com.future.fitness.ui.screens
 
+import com.future.sharednav.theme.onAccentColor
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -66,14 +69,14 @@ fun WorkoutDetailScreen(
         Text(
             "~$estimatedCalories קלוריות משוער",
             color = theme.textColor.copy(alpha = 0.45f),
-            fontSize = 11.sp,
+            fontSize = FutureTypography.caption,
             modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 4.dp),
         )
 
         Text(
             "תרגילים",
             color = theme.textColor.copy(alpha = 0.6f),
-            fontSize = 13.sp,
+            fontSize = FutureTypography.summary,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 8.dp),
         )
@@ -91,7 +94,7 @@ fun WorkoutDetailScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(theme.textColor.copy(alpha = 0.04f), RoundedCornerShape(14.dp))
+                            .background(theme.textColor.copy(alpha = 0.04f), FutureShapes.md)
                             .padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -99,15 +102,15 @@ fun WorkoutDetailScreen(
                             modifier = Modifier.size(26.dp).background(theme.textColor.copy(alpha = 0.08f), CircleShape),
                             contentAlignment = Alignment.Center,
                         ) {
-                            Text((index + 1).toString(), color = theme.textColor.copy(alpha = 0.6f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text((index + 1).toString(), color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.label, fontWeight = FontWeight.Bold)
                         }
                         Spacer(Modifier.width(12.dp))
                         Column {
-                            Text(exercise.name, color = theme.textColor, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                            Text(exercise.name, color = theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Medium)
                             Text(
                                 "${exercise.sets} סטים · ${exercise.repsLabel}",
                                 color = theme.textColor.copy(alpha = 0.6f),
-                                fontSize = 12.sp,
+                                fontSize = FutureTypography.label,
                             )
                         }
                     }
@@ -122,12 +125,12 @@ fun WorkoutDetailScreen(
             Button(
                 onClick = onStart,
                 modifier = Modifier.fillMaxWidth().height(52.dp).focusRequester(startButtonFocusRequester),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = theme.accentColor, contentColor = theme.backgroundColor),
+                shape = FutureShapes.lg,
+                colors = ButtonDefaults.buttonColors(containerColor = theme.accentColor, contentColor = theme.onAccentColor),
             ) {
                 Icon(Icons.Rounded.PlayArrow, contentDescription = null, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("התחל אימון", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text("התחל אימון", fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -138,6 +141,6 @@ private fun MetaChip(icon: androidx.compose.ui.graphics.vector.ImageVector, text
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(icon, contentDescription = null, tint = theme.textColor.copy(alpha = 0.4f), modifier = Modifier.size(14.dp))
         Spacer(Modifier.width(6.dp))
-        Text(text, color = theme.textColor.copy(alpha = 0.6f), fontSize = 12.sp)
+        Text(text, color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.label)
     }
 }

@@ -20,13 +20,52 @@ class T9Engine(
     private val externalCandidates: ((String) -> List<String>?)? = null,
 ) {
 
-    enum class Language { HEBREW, ENGLISH }
+    enum class Language {
+        HEBREW, ENGLISH,
+        SPANISH, FRENCH, GERMAN, ITALIAN, PORTUGUESE, DUTCH, POLISH, TURKISH,
+        ROMANIAN, CZECH, SWEDISH, NORWEGIAN, DANISH, FINNISH, RUSSIAN,
+    }
 
     companion object {
-        // מיפוי אנגלי/עברי משותף לכל הסוויטה - חי ב-SharedKeypadNav (T9DigitMap),
+        // מיפוי לכל שפה משותף לכל הסוויטה - חי ב-SharedKeypadNav (T9DigitMap),
         // כדי שלא יידרש יותר לשמור אותו מסונכרן ידנית מול T9Search.kt של החייגן/המוזיקה.
         private val ENGLISH_MAP = T9DigitMap.ENGLISH
         private val HEBREW_MAP = T9DigitMap.HEBREW
+        private val SPANISH_MAP = T9DigitMap.SPANISH
+        private val FRENCH_MAP = T9DigitMap.FRENCH
+        private val GERMAN_MAP = T9DigitMap.GERMAN
+        private val ITALIAN_MAP = T9DigitMap.ITALIAN
+        private val PORTUGUESE_MAP = T9DigitMap.PORTUGUESE
+        private val DUTCH_MAP = T9DigitMap.DUTCH
+        private val POLISH_MAP = T9DigitMap.POLISH
+        private val TURKISH_MAP = T9DigitMap.TURKISH
+        private val ROMANIAN_MAP = T9DigitMap.ROMANIAN
+        private val CZECH_MAP = T9DigitMap.CZECH
+        private val SWEDISH_MAP = T9DigitMap.SWEDISH
+        private val NORWEGIAN_MAP = T9DigitMap.NORWEGIAN
+        private val DANISH_MAP = T9DigitMap.DANISH
+        private val FINNISH_MAP = T9DigitMap.FINNISH
+        private val RUSSIAN_MAP = T9DigitMap.RUSSIAN
+
+        private fun keyMapFor(language: Language): Map<Char, String> = when (language) {
+            Language.HEBREW -> HEBREW_MAP
+            Language.ENGLISH -> ENGLISH_MAP
+            Language.SPANISH -> SPANISH_MAP
+            Language.FRENCH -> FRENCH_MAP
+            Language.GERMAN -> GERMAN_MAP
+            Language.ITALIAN -> ITALIAN_MAP
+            Language.PORTUGUESE -> PORTUGUESE_MAP
+            Language.DUTCH -> DUTCH_MAP
+            Language.POLISH -> POLISH_MAP
+            Language.TURKISH -> TURKISH_MAP
+            Language.ROMANIAN -> ROMANIAN_MAP
+            Language.CZECH -> CZECH_MAP
+            Language.SWEDISH -> SWEDISH_MAP
+            Language.NORWEGIAN -> NORWEGIAN_MAP
+            Language.DANISH -> DANISH_MAP
+            Language.FINNISH -> FINNISH_MAP
+            Language.RUSSIAN -> RUSSIAN_MAP
+        }
 
         // מילון אנגלי אמיתי בכ-370,000 מילים (dwyl/english-words, words_alpha.txt) -
         // נטען מתוך משאב חבוי, בדיוק כמו HEBREW_WORDS למטה. השורות הראשונות בקובץ
@@ -41,6 +80,46 @@ class T9Engine(
         // הוא סדר הפופולריות, בדיוק כמו שההיגיון הקיים ב-digitIndex מצפה.
         private val HEBREW_WORDS: List<String> by lazy { loadWordList("dict_he.txt") }
 
+        // מילוני "התחלה" ל-15 השפות הנוספות - כמה מאות מילות הפונקציה/פעלים
+        // הכי נפוצות בכל שפה (לא קורפוס תדירות אמיתי כמו עברית/אנגלית למעלה) -
+        // מספיקות כדי שהניבוי יעבוד באמת על מילים נפוצות, אבל קטנות בהרבה.
+        // הקלדת multi-tap עצמה עובדת בכל מקרה גם בלי התאמה במילון (ר' KeyboardService).
+        private val SPANISH_WORDS: List<String> by lazy { loadWordList("dict_es.txt") }
+        private val FRENCH_WORDS: List<String> by lazy { loadWordList("dict_fr.txt") }
+        private val GERMAN_WORDS: List<String> by lazy { loadWordList("dict_de.txt") }
+        private val ITALIAN_WORDS: List<String> by lazy { loadWordList("dict_it.txt") }
+        private val PORTUGUESE_WORDS: List<String> by lazy { loadWordList("dict_pt.txt") }
+        private val DUTCH_WORDS: List<String> by lazy { loadWordList("dict_nl.txt") }
+        private val POLISH_WORDS: List<String> by lazy { loadWordList("dict_pl.txt") }
+        private val TURKISH_WORDS: List<String> by lazy { loadWordList("dict_tr.txt") }
+        private val ROMANIAN_WORDS: List<String> by lazy { loadWordList("dict_ro.txt") }
+        private val CZECH_WORDS: List<String> by lazy { loadWordList("dict_cs.txt") }
+        private val SWEDISH_WORDS: List<String> by lazy { loadWordList("dict_sv.txt") }
+        private val NORWEGIAN_WORDS: List<String> by lazy { loadWordList("dict_no.txt") }
+        private val DANISH_WORDS: List<String> by lazy { loadWordList("dict_da.txt") }
+        private val FINNISH_WORDS: List<String> by lazy { loadWordList("dict_fi.txt") }
+        private val RUSSIAN_WORDS: List<String> by lazy { loadWordList("dict_ru.txt") }
+
+        private fun wordsFor(language: Language): List<String> = when (language) {
+            Language.HEBREW -> HEBREW_WORDS
+            Language.ENGLISH -> ENGLISH_WORDS
+            Language.SPANISH -> SPANISH_WORDS
+            Language.FRENCH -> FRENCH_WORDS
+            Language.GERMAN -> GERMAN_WORDS
+            Language.ITALIAN -> ITALIAN_WORDS
+            Language.PORTUGUESE -> PORTUGUESE_WORDS
+            Language.DUTCH -> DUTCH_WORDS
+            Language.POLISH -> POLISH_WORDS
+            Language.TURKISH -> TURKISH_WORDS
+            Language.ROMANIAN -> ROMANIAN_WORDS
+            Language.CZECH -> CZECH_WORDS
+            Language.SWEDISH -> SWEDISH_WORDS
+            Language.NORWEGIAN -> NORWEGIAN_WORDS
+            Language.DANISH -> DANISH_WORDS
+            Language.FINNISH -> FINNISH_WORDS
+            Language.RUSSIAN -> RUSSIAN_WORDS
+        }
+
         /** טוען רשימת מילים (שורה למילה) ממשאב חבוי ב-classpath - עובד גם בתוך
          * ה-APK בזמן ריצה וגם בבדיקות יחידה מקומיות (שתיהן חולקות את אותו classpath). */
         private fun loadWordList(resourceName: String): List<String> {
@@ -51,7 +130,7 @@ class T9Engine(
 
         /** ממיר מילה לרצף הספרות שהיא הייתה מייצרת - המפתח לחיפוש מהיר במילון. */
         fun digitsFor(word: String, language: Language): String {
-            val map = if (language == Language.HEBREW) HEBREW_MAP else ENGLISH_MAP
+            val map = keyMapFor(language)
             val builder = StringBuilder()
             for (ch in word) {
                 val digit = map.entries.firstOrNull { ch in it.value }?.key ?: return ""
@@ -62,19 +141,22 @@ class T9Engine(
 
         // אינדקס: רצף ספרות -> רשימת מילים תואמות, ממוין לפי סדר הופעה במילון (=פופולריות).
         // ברמת ה-companion (לא לכל מופע T9Engine) כי KeyboardService יוצר מופע T9Engine
-        // חדש בכל לחיצה קצרה על # (גם במעבר בין שני מצבי העברית) - עם מילון של כ-20,000
-        // מילים, בניית האינדקס מחדש בכל לחיצה כזו הייתה מורגשת במכשיר חלש.
-        private val hebrewDigitIndex: Map<String, List<String>> by lazy { buildDigitIndex(HEBREW_WORDS, Language.HEBREW) }
-        private val englishDigitIndex: Map<String, List<String>> by lazy { buildDigitIndex(ENGLISH_WORDS, Language.ENGLISH) }
+        // חדש בכל לחיצה קצרה על # (גם במעבר בין מצבי שפה) - עם מילון של כ-20,000
+        // מילים, בניית האינדקס מחדש בכל לחיצה כזו הייתה מורגשת במכשיר חלש. נבנה פעם
+        // אחת לכל שפה ונשמר במטמון - ConcurrentHashMap כי כמה מופעי T9Engine עשויים
+        // להיבנות ולגשת לכאן בו-זמנית (buildEngine נקרא גם מ-thread הרקע של onCreate).
+        private val digitIndexCache = java.util.concurrent.ConcurrentHashMap<Language, Map<String, List<String>>>()
 
-        private fun buildDigitIndex(words: List<String>, language: Language): Map<String, List<String>> =
-            // .distinct() שומר על סדר ההופעה הראשון (=פופולריות) אבל מסיר כפילויות
-            // ממשיות במילון - בלעדיו המשתמש רואה שני צ'יפים זהים לאותו רצף ספרות.
-            words.distinct().groupBy { digitsFor(it, language) }.filterKeys { it.isNotEmpty() }
+        private fun digitIndexFor(language: Language): Map<String, List<String>> =
+            digitIndexCache.computeIfAbsent(language) { lang ->
+                // .distinct() שומר על סדר ההופעה הראשון (=פופולריות) אבל מסיר כפילויות
+                // ממשיות במילון - בלעדיו המשתמש רואה שני צ'יפים זהים לאותו רצף ספרות.
+                wordsFor(lang).distinct().groupBy { digitsFor(it, lang) }.filterKeys { it.isNotEmpty() }
+            }
     }
 
-    private val keyMap = if (language == Language.HEBREW) HEBREW_MAP else ENGLISH_MAP
-    private val digitIndex: Map<String, List<String>> = if (language == Language.HEBREW) hebrewDigitIndex else englishDigitIndex
+    private val keyMap = keyMapFor(language)
+    private val digitIndex: Map<String, List<String>> = digitIndexFor(language)
 
     fun lettersFor(digit: Char): String = keyMap[digit] ?: ""
 

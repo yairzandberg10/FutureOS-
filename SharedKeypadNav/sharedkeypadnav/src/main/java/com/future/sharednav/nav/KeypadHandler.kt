@@ -30,8 +30,11 @@ fun Modifier.keypadListNav(
     when (event.key) {
         Key.DirectionDown -> { if (!horizontal) { state.moveDown(); true } else false }
         Key.DirectionUp -> { if (!horizontal) { state.moveUp(); true } else false }
-        Key.DirectionRight -> { if (horizontal) { state.moveDown(); true } else false }
-        Key.DirectionLeft -> { if (horizontal) { state.moveUp(); true } else false }
+        // RTL: כל המערכת כופה LayoutDirection.Rtl (ראו ScreenScaffold), ובעברית
+        // "הפריט הבא" נמצא שמאלה - לכן שמאלה=moveDown וימינה=moveUp. המיפוי
+        // ההפוך היה מלכודת שהייתה מתפוצצת אצל הקורא הראשון של horizontal=true.
+        Key.DirectionLeft -> { if (horizontal) { state.moveDown(); true } else false }
+        Key.DirectionRight -> { if (horizontal) { state.moveUp(); true } else false }
         Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> {
             if (state.itemCount > 0) onSelect(state.focusedIndex)
             true

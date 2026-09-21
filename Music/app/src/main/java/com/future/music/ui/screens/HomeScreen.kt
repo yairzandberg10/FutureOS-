@@ -1,5 +1,6 @@
 package com.future.music.ui.screens
 
+import com.future.sharednav.theme.FutureTypography
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -41,7 +42,8 @@ import androidx.compose.ui.unit.sp
 import com.future.music.playback.PlayerUiState
 import com.future.music.ui.components.FocusableItem
 import com.future.music.ui.components.MiniPlayerBar
-import com.future.music.ui.digitForKey
+
+import com.future.sharednav.nav.digitForKey
 import com.future.sharednav.theme.FutureTheme
 
 private data class HomeItem(val digit: String, val icon: ImageVector, val label: String, val subtitle: String, val onClick: () -> Unit)
@@ -93,7 +95,7 @@ fun HomeScreen(
         Text(
             "מוזיקה",
             color = theme.textColor,
-            fontSize = 26.sp,
+            fontSize = FutureTypography.headline,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp),
         )
@@ -124,10 +126,10 @@ fun HomeScreen(
                         }
                         Spacer(modifier = Modifier.width(14.dp))
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(item.label, color = theme.textColor, fontSize = 17.sp, fontWeight = FontWeight.Medium)
-                            Text(item.subtitle, color = theme.textColor.copy(alpha = 0.55f), fontSize = 12.sp)
+                            Text(item.label, color = theme.textColor, fontSize = FutureTypography.title, fontWeight = FontWeight.Medium)
+                            Text(item.subtitle, color = theme.textColor.copy(alpha = 0.55f), fontSize = FutureTypography.label)
                         }
-                        Text(item.digit, color = theme.textColor.copy(alpha = 0.35f), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        Text(item.digit, color = theme.textColor.copy(alpha = 0.35f), fontSize = FutureTypography.body, fontWeight = FontWeight.Bold)
                     }
                 }
             }

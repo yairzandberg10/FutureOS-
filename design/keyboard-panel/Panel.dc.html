@@ -1,0 +1,204 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700&amp;family=Roboto+Mono:wght@400;500&amp;display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #0B0B0C;
+      font-family: 'Heebo', 'Noto Sans Hebrew', 'Segoe UI', Roboto, system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: #64D2FF; } a:hover { color: #9FE4FF; }
+    .mono { font-family: 'Roboto Mono', ui-monospace, Consolas, monospace; font-variant-numeric: tabular-nums; }
+    .cap { font-size: 22px; font-weight: 500; color: #8A8A90; letter-spacing: 0.04em; }
+    .key { min-width: 40px; height: 40px; border-radius: 12px; background: #2C2C2E; color: #FFFFFF; font-size: 22px; font-weight: 500; display: flex; align-items: center; justify-content: center; }
+    .leg { display: flex; align-items: center; gap: 8px; }
+    .leg span:last-child { font-size: 21px; color: #B0B0B0; }
+    .legbar { display: flex; align-items: center; gap: 18px; padding: 14px 32px 0 32px; border-top: 2px solid rgba(255,255,255,0.10); }
+    .panel { background: #1C1C1E; border-top: 2px solid rgba(255,255,255,0.10); border-radius: 32px 32px 0 0; padding: 18px 0 22px 0; display: flex; flex-direction: column; gap: 14px; }
+    .rail { display: flex; align-items: center; gap: 12px; padding: 0 32px; }
+    .count { font-size: 22px; color: #B0B0B0; background: #2C2C2E; border-radius: 16px; padding: 4px 12px; }
+    .chip { flex: none; border-radius: 24px; padding: 12px 26px; font-size: 30px; line-height: 1.2; background: #2C2C2E; color: #FFFFFF; }
+    .chip-on { flex: none; border-radius: 24px; padding: 14px 30px; font-size: 32px; font-weight: 700; line-height: 1.2; background: #FFFFFF; color: #101012; }
+  </style>
+</helmet>
+
+<div style="width: 640px; min-height: 2000px; background: #0B0B0C; color: #FFFFFF; direction: rtl; padding: 26px 0 0 0; display: flex; flex-direction: column; gap: 30px">
+
+  <!-- ============ 1. הקלדה וניבוי ============ -->
+  <div style="display: flex; flex-direction: column; gap: 12px">
+    <div class="cap" style="padding: 0 24px">1 · הקלדה וניבוי</div>
+    <div class="panel">
+      <div class="rail">
+        <span style="display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.16); border: 2px solid #FFFFFF; border-radius: 44px; padding: 8px 20px">
+          <span style="font-size: 24px; font-weight: 700; color: #FFFFFF; line-height: 1">עב</span>
+        </span>
+        <span style="font-size: 22px; color: #B0B0B0; line-height: 1">ניבוי</span>
+        <span style="flex-grow: 1"></span>
+        <span class="mono" style="font-size: 22px; color: rgba(255,255,255,0.42); letter-spacing: 3px">2 5 5</span>
+        <span class="mono count">1/5</span>
+      </div>
+
+      <div style="position: relative; height: 84px">
+        <div style="position: absolute; inset: 0; display: flex; align-items: center; gap: 16px; padding: 0 32px; overflow: hidden">
+          <span class="chip-on">הכל</span>
+          <span class="chip">היי</span>
+          <span class="chip">וכל</span>
+          <span class="chip">דלי</span>
+          <span class="chip">הלל</span>
+        </div>
+        <div style="position: absolute; top: 0; bottom: 0; left: 0; width: 44px; background: linear-gradient(to left, rgba(28,28,30,0), #1C1C1E)"></div>
+      </div>
+
+      <div class="legbar">
+        <span class="leg"><span class="key">#</span><span>שפה</span></span>
+        <span class="leg"><span class="key">*</span><span>פיסוק</span></span>
+        <span class="leg"><span class="key">0</span><span>רווח</span></span>
+        <span class="leg"><span class="key"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6 L4 12 l5 6"></path><path d="M15 6 l5 6 -5 6"></path></svg></span><span>מועמדות</span></span>
+        <span class="leg"><span class="key" style="background: none; border: 2px dashed #3A3A3C">0</span><span>קול</span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 2. סימני פיסוק ============ -->
+  <div style="display: flex; flex-direction: column; gap: 12px">
+    <div class="cap" style="padding: 0 24px">2 · סימני פיסוק · מקש *</div>
+    <div class="panel">
+      <div class="rail">
+        <span style="width: 56px; height: 56px; flex: none; border-radius: 20px; background: #FFFFFF; color: #101012; font-size: 30px; font-weight: 700; display: flex; align-items: center; justify-content: center">?</span>
+        <span style="font-size: 26px; font-weight: 500">סימני פיסוק</span>
+        <span style="flex-grow: 1"></span>
+        <span class="mono count">3/34</span>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 16px; padding: 0 32px">
+        <span style="height: 64px; border-radius: 16px; font-size: 28px; display: flex; align-items: center; justify-content: center; background: #2C2C2E; color: #FFFFFF">.</span>
+        <span style="height: 64px; border-radius: 16px; font-size: 28px; display: flex; align-items: center; justify-content: center; background: #2C2C2E; color: #FFFFFF">,</span>
+        <span style="height: 64px; border-radius: 16px; font-size: 28px; font-weight: 700; display: flex; align-items: center; justify-content: center; background: #FFFFFF; color: #101012">?</span>
+        <span style="height: 64px; border-radius: 16px; font-size: 28px; display: flex; align-items: center; justify-content: center; background: #2C2C2E; color: #FFFFFF">!</span>
+        <span style="height: 64px; border-radius: 16px; font-size: 28px; display: flex; align-items: center; justify-content: center; background: #2C2C2E; color: #FFFFFF">'</span>
+        <span style="height: 64px; border-radius: 16px; font-size: 28px; display: flex; align-items: center; justify-content: center; background: #2C2C2E; color: #FFFFFF">"</span>
+        <span style="height: 64px; border-radius: 16px; font-size: 28px; display: flex; align-items: center; justify-content: center; background: #2C2C2E; color: #FFFFFF">-</span>
+        <span style="height: 64px; border-radius: 16px; font-size: 28px; display: flex; align-items: center; justify-content: center; background: #2C2C2E; color: #FFFFFF">@</span>
+        <span style="height: 64px; border-radius: 16px; font-size: 28px; display: flex; align-items: center; justify-content: center; background: #2C2C2E; color: #FFFFFF">/</span>
+        <span style="height: 64px; border-radius: 16px; font-size: 28px; display: flex; align-items: center; justify-content: center; background: #2C2C2E; color: #FFFFFF">:</span>
+        <span style="height: 64px; border-radius: 16px; font-size: 28px; display: flex; align-items: center; justify-content: center; background: #2C2C2E; color: #FFFFFF">;</span>
+        <span style="height: 64px; border-radius: 16px; font-size: 28px; display: flex; align-items: center; justify-content: center; background: #2C2C2E; color: #FFFFFF">(</span>
+        <span style="height: 64px; border-radius: 16px; font-size: 28px; display: flex; align-items: center; justify-content: center; background: #2C2C2E; color: #FFFFFF">)</span>
+        <span style="height: 64px; border-radius: 16px; font-size: 28px; display: flex; align-items: center; justify-content: center; background: #2C2C2E; color: #FFFFFF">+</span>
+        <span style="height: 64px; border-radius: 16px; font-size: 28px; display: flex; align-items: center; justify-content: center; background: #2C2C2E; color: #FFFFFF">=</span>
+        <span style="height: 64px; border-radius: 16px; font-size: 28px; display: flex; align-items: center; justify-content: center; background: #2C2C2E; color: #FFFFFF">_</span>
+        <span style="height: 64px; border-radius: 16px; font-size: 28px; display: flex; align-items: center; justify-content: center; background: #2C2C2E; color: #FFFFFF">%</span>
+        <span style="height: 64px; border-radius: 16px; font-size: 28px; display: flex; align-items: center; justify-content: center; background: #2C2C2E; color: #FFFFFF">&amp;</span>
+        <span style="height: 64px; border-radius: 16px; font-size: 28px; display: flex; align-items: center; justify-content: center; background: #2C2C2E; color: #FFFFFF">*</span>
+        <span style="height: 64px; border-radius: 16px; font-size: 28px; display: flex; align-items: center; justify-content: center; background: #2C2C2E; color: #FFFFFF">#</span>
+        <span style="height: 64px; border-radius: 16px; font-size: 28px; display: flex; align-items: center; justify-content: center; background: #2C2C2E; color: #FFFFFF">$</span>
+        <span style="height: 64px; border-radius: 16px; font-size: 28px; display: flex; align-items: center; justify-content: center; background: #2C2C2E; color: #FFFFFF">€</span>
+        <span style="height: 64px; border-radius: 16px; font-size: 28px; display: flex; align-items: center; justify-content: center; background: #2C2C2E; color: #FFFFFF">₪</span>
+        <span style="height: 64px; border-radius: 16px; font-size: 28px; display: flex; align-items: center; justify-content: center; background: #2C2C2E; color: #FFFFFF">~</span>
+        <span style="height: 64px; border-radius: 16px; font-size: 28px; display: flex; align-items: center; justify-content: center; background: #2C2C2E; color: #FFFFFF">\</span>
+        <span style="height: 64px; border-radius: 16px; font-size: 28px; display: flex; align-items: center; justify-content: center; background: #2C2C2E; color: #FFFFFF">|</span>
+        <span style="height: 64px; border-radius: 16px; font-size: 28px; display: flex; align-items: center; justify-content: center; background: #2C2C2E; color: #FFFFFF">&lt;</span>
+        <span style="height: 64px; border-radius: 16px; font-size: 28px; display: flex; align-items: center; justify-content: center; background: #2C2C2E; color: #FFFFFF">&gt;</span>
+        <span style="height: 64px; border-radius: 16px; font-size: 28px; display: flex; align-items: center; justify-content: center; background: #2C2C2E; color: #FFFFFF">[</span>
+        <span style="height: 64px; border-radius: 16px; font-size: 28px; display: flex; align-items: center; justify-content: center; background: #2C2C2E; color: #FFFFFF">]</span>
+        <span style="height: 64px; border-radius: 16px; font-size: 28px; display: flex; align-items: center; justify-content: center; background: #2C2C2E; color: #FFFFFF">{</span>
+        <span style="height: 64px; border-radius: 16px; font-size: 28px; display: flex; align-items: center; justify-content: center; background: #2C2C2E; color: #FFFFFF">}</span>
+        <span style="height: 64px; border-radius: 16px; font-size: 28px; display: flex; align-items: center; justify-content: center; background: #2C2C2E; color: #FFFFFF">^</span>
+        <span style="height: 64px; border-radius: 16px; font-size: 28px; display: flex; align-items: center; justify-content: center; background: #2C2C2E; color: #FFFFFF">`</span>
+      </div>
+
+      <div class="legbar">
+        <span class="leg"><span class="key"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"></circle></svg></span><span>הוסף</span></span>
+        <span class="leg"><span class="key"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 4 v16"></path><path d="M4 12 h16"></path></svg></span><span>ניווט בחצים</span></span>
+        <span class="leg"><span class="key">*</span><span>סגור</span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 3. בחירת שפה ============ -->
+  <div style="display: flex; flex-direction: column; gap: 12px">
+    <div class="cap" style="padding: 0 24px">3 · שפת הקלדה · החזקת #</div>
+    <div class="panel">
+      <div class="rail">
+        <span style="font-size: 26px; font-weight: 500">שפת הקלדה</span>
+        <span style="flex-grow: 1"></span>
+        <span class="mono count">2/21</span>
+      </div>
+
+      <div style="padding: 0 32px; display: flex; flex-direction: column; gap: 8px">
+        <span style="height: 76px; border-radius: 24px; padding: 0 22px; display: flex; align-items: center; gap: 14px; background: #2C2C2E; color: #FFFFFF">
+          <span style="font-size: 26px">עברית</span><span style="flex-grow: 1"></span>
+          <span style="font-size: 20px; opacity: 0.7">מילון מלא</span>
+          <span class="mono" style="font-size: 22px; border-radius: 12px; padding: 4px 12px; background: #3A3A3C">עב</span>
+        </span>
+        <span style="height: 76px; border-radius: 24px; padding: 0 22px; display: flex; align-items: center; gap: 14px; background: #FFFFFF; color: #101012">
+          <span style="font-size: 26px; font-weight: 700">עברית (ניבוי)</span><span style="flex-grow: 1"></span>
+          <span style="font-size: 20px; opacity: 0.7">מילון מלא</span>
+          <span class="mono" style="font-size: 22px; border-radius: 12px; padding: 4px 12px; background: rgba(0,0,0,0.14)">עב</span>
+        </span>
+        <span style="height: 76px; border-radius: 24px; padding: 0 22px; display: flex; align-items: center; gap: 14px; background: #2C2C2E; color: #FFFFFF">
+          <span style="font-size: 26px">English (ABC)</span><span style="flex-grow: 1"></span>
+          <span style="font-size: 20px; opacity: 0.7">מילון מלא</span>
+          <span class="mono" style="font-size: 22px; border-radius: 12px; padding: 4px 12px; background: #3A3A3C">ABC</span>
+        </span>
+        <span style="height: 76px; border-radius: 24px; padding: 0 22px; display: flex; align-items: center; gap: 14px; background: #2C2C2E; color: #FFFFFF">
+          <span style="font-size: 26px">English (Abc)</span><span style="flex-grow: 1"></span>
+          <span style="font-size: 20px; opacity: 0.7">מילון מלא</span>
+          <span class="mono" style="font-size: 22px; border-radius: 12px; padding: 4px 12px; background: #3A3A3C">Abc</span>
+        </span>
+        <span style="height: 76px; border-radius: 24px; padding: 0 22px; display: flex; align-items: center; gap: 14px; background: #2C2C2E; color: #FFFFFF">
+          <span style="font-size: 26px">Español</span><span style="flex-grow: 1"></span>
+          <span style="font-size: 20px; opacity: 0.7">מילון בסיסי</span>
+          <span class="mono" style="font-size: 22px; border-radius: 12px; padding: 4px 12px; background: #3A3A3C">ES</span>
+        </span>
+      </div>
+
+      <div class="legbar">
+        <span class="leg"><span class="key"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5 v14"></path><path d="M7 10 l5 -5 5 5"></path><path d="M7 14 l5 5 5 -5"></path></svg></span><span>ניווט</span></span>
+        <span class="leg"><span class="key"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"></circle></svg></span><span>בחר</span></span>
+        <span class="leg"><span class="key"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5 l-5 7 5 7"></path><path d="M4 12 h16"></path></svg></span><span>ביטול</span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 4. תמלול קולי ============ -->
+  <div style="display: flex; flex-direction: column; gap: 12px">
+    <div class="cap" style="padding: 0 24px">4 · תמלול קולי · החזקת 0</div>
+    <div class="panel">
+      <div style="display: flex; align-items: center; gap: 20px; padding: 8px 32px 0 32px">
+        <span style="width: 84px; height: 84px; flex: none; border-radius: 999px; background: rgba(255,255,255,0.16); border: 3px solid #FFFFFF; display: flex; align-items: center; justify-content: center">
+          <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5 11 a7 7 0 0 0 14 0"></path><path d="M12 18 v3"></path></svg>
+        </span>
+        <span style="display: flex; flex-direction: column; gap: 6px; flex-grow: 1">
+          <span style="font-size: 30px; font-weight: 500">מקשיב…</span>
+          <span style="font-size: 22px; color: #B0B0B0">עברית (ניבוי)</span>
+        </span>
+        <span style="display: flex; align-items: flex-end; gap: 6px; height: 56px">
+          <span style="width: 8px; height: 18px; border-radius: 4px; background: #FFFFFF"></span>
+          <span style="width: 8px; height: 34px; border-radius: 4px; background: #FFFFFF"></span>
+          <span style="width: 8px; height: 52px; border-radius: 4px; background: #FFFFFF"></span>
+          <span style="width: 8px; height: 40px; border-radius: 4px; background: #FFFFFF"></span>
+          <span style="width: 8px; height: 26px; border-radius: 4px; background: #FFFFFF"></span>
+          <span style="width: 8px; height: 44px; border-radius: 4px; background: #FFFFFF"></span>
+        </span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px; margin: 4px 32px 0 32px; padding-top: 14px; border-top: 2px solid rgba(255,255,255,0.10)">
+        <span class="key" style="background: none; border: 2px dashed #3A3A3C">0</span>
+        <span style="font-size: 21px; color: #B0B0B0">שחרר את המקש כדי לסיים</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

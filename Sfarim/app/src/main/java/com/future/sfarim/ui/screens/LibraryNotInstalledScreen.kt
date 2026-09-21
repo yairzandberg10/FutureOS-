@@ -1,5 +1,7 @@
 package com.future.sfarim.ui.screens
 
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,23 +37,23 @@ fun LibraryNotInstalledScreen(expectedPath: String, theme: FutureTheme, onRetry:
                 "ספריית הטקסטים לא הותקנה",
                 color = theme.textColor,
                 fontWeight = FontWeight.Bold,
-                fontSize = 18.sp,
+                fontSize = FutureTypography.title,
                 textAlign = TextAlign.Center,
             )
             androidx.compose.foundation.layout.Spacer(modifier = Modifier.padding(6.dp))
             Text(
                 "יש להעביר את הקובץ sefaria.db למכשיר:",
                 color = theme.textColor.copy(alpha = 0.6f),
-                fontSize = 13.sp,
+                fontSize = FutureTypography.summary,
                 textAlign = TextAlign.Center,
             )
             Box(
                 modifier = Modifier
                     .padding(top = 12.dp)
-                    .background(theme.textColor.copy(alpha = 0.08f), RoundedCornerShape(10.dp))
+                    .background(theme.textColor.copy(alpha = 0.08f), FutureShapes.sm)
                     .padding(horizontal = 14.dp, vertical = 10.dp),
             ) {
-                Text(expectedPath, color = theme.accentColor, fontSize = 12.sp, textAlign = TextAlign.Center)
+                Text(expectedPath, color = theme.accentColor, fontSize = FutureTypography.label, textAlign = TextAlign.Center)
             }
 
             // בלי כפתור ניסיון-חוזר, אחרי adb push של הקובץ תוך כדי שהמסך הזה כבר
@@ -64,12 +66,12 @@ fun LibraryNotInstalledScreen(expectedPath: String, theme: FutureTheme, onRetry:
             ) { isFocused ->
                 Box(
                     modifier = Modifier
-                        .background(theme.accentColor.copy(alpha = if (isFocused) 0.28f else 0.14f), RoundedCornerShape(10.dp))
+                        .background(theme.accentColor.copy(alpha = if (isFocused) 0.28f else 0.14f), FutureShapes.sm)
                         .padding(horizontal = 20.dp, vertical = 12.dp),
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(Icons.Rounded.Refresh, contentDescription = null, tint = theme.accentColor)
-                        Text("נסה שוב", color = theme.accentColor, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        Text("נסה שוב", color = theme.accentColor, fontWeight = FontWeight.Bold, fontSize = FutureTypography.body)
                     }
                 }
             }

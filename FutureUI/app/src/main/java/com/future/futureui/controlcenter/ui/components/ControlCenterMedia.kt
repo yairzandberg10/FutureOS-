@@ -1,5 +1,7 @@
 package com.future.futureui.controlcenter.ui.components
 
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -33,7 +35,7 @@ import com.future.futureui.controlcenter.logic.ControlManager
 fun MusicPlayerCard(manager: ControlManager, labelColor: Color = Color.Black) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    val shape = RoundedCornerShape(35.dp)
+    val shape = FutureShapes.xxl
     val legibilityShadow = androidx.compose.ui.graphics.Shadow(color = Color.Black.copy(alpha = 0.35f), blurRadius = 6f)
 
     if (!manager.isMediaServiceEnabled) {
@@ -53,9 +55,9 @@ fun MusicPlayerCard(manager: ControlManager, labelColor: Color = Color.Black) {
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = "לחץ כאן לאישור גישה למוזיקה",
+                text = "לחצו OK לאישור גישה למוזיקה",
                 color = labelColor,
-                fontSize = 14.sp,
+                fontSize = FutureTypography.body,
                 fontWeight = FontWeight.Bold,
                 style = androidx.compose.ui.text.TextStyle(shadow = legibilityShadow)
             )
@@ -100,7 +102,7 @@ fun MusicPlayerCard(manager: ControlManager, labelColor: Color = Color.Black) {
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
                     text = "אין מוזיקה מתנגנת",
-                    fontSize = 13.sp,
+                    fontSize = FutureTypography.summary,
                     color = labelColor,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
@@ -144,14 +146,14 @@ fun MusicPlayerCard(manager: ControlManager, labelColor: Color = Color.Black) {
                 Column {
                     Text(
                         text = manager.currentSongTitle,
-                        fontSize = 20.sp,
+                        fontSize = FutureTypography.screenTitle,
                         fontWeight = FontWeight.Bold,
                         color = Color.White,
                         maxLines = 1
                     )
                     Text(
                         text = manager.currentArtist,
-                        fontSize = 14.sp,
+                        fontSize = FutureTypography.body,
                         color = Color.White.copy(alpha = 0.8f),
                         maxLines = 1
                     )
@@ -181,12 +183,12 @@ fun MusicPlayerCard(manager: ControlManager, labelColor: Color = Color.Black) {
                     ) {
                         Text(
                             text = formatMillis(manager.mediaPosition),
-                            fontSize = 10.sp,
+                            fontSize = FutureTypography.caption,
                             color = Color.White.copy(alpha = 0.7f)
                         )
                         Text(
                             text = formatMillis(manager.mediaDuration),
-                            fontSize = 10.sp,
+                            fontSize = FutureTypography.caption,
                             color = Color.White.copy(alpha = 0.7f)
                         )
                     }

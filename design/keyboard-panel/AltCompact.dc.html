@@ -1,0 +1,51 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700&amp;family=Roboto+Mono:wght@400;500&amp;display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #0B0B0C; font-family: 'Heebo', 'Noto Sans Hebrew', 'Segoe UI', Roboto, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #64D2FF; } a:hover { color: #9FE4FF; }
+    .mono { font-family: 'Roboto Mono', ui-monospace, Consolas, monospace; font-variant-numeric: tabular-nums; }
+  </style>
+</helmet>
+
+<div style="width: 640px; min-height: 480px; background: #0B0B0C; color: #FFFFFF; direction: rtl; padding: 26px 24px; display: flex; flex-direction: column; gap: 18px">
+
+  <div style="display: flex; flex-direction: column; gap: 6px">
+    <div style="font-size: 26px; font-weight: 700">כיוון ב · מינימלי</div>
+    <div style="font-size: 21px; color: #8A8A90; line-height: 1.5">שורה אחת בלבד. תג השפה והמועמדות חולקים את אותה שורה, בלי מקרא מקשים.</div>
+  </div>
+
+  <div style="background: #1C1C1E; border-top: 2px solid rgba(255,255,255,0.10); border-radius: 26px; padding: 16px 22px; display: flex; align-items: center; gap: 14px; margin: 0 -24px 0 -24px; border-radius: 26px 26px 0 0">
+    <span style="display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.16); border: 2px solid #FFFFFF; border-radius: 44px; padding: 6px 16px; flex: none">
+      <span style="font-size: 22px; font-weight: 700; line-height: 1">עב</span>
+    </span>
+    <span style="flex: none; border-radius: 22px; padding: 10px 22px; font-size: 28px; font-weight: 700; background: #FFFFFF; color: #101012">הכל</span>
+    <span style="flex: none; border-radius: 22px; padding: 10px 22px; font-size: 28px; background: #2C2C2E">היי</span>
+    <span style="flex: none; border-radius: 22px; padding: 10px 22px; font-size: 28px; background: #2C2C2E">וכל</span>
+    <span style="flex-grow: 1"></span>
+    <span class="mono" style="font-size: 20px; color: #B0B0B0; flex: none">1/5</span>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 10px; padding-top: 6px">
+    <div style="display: flex; gap: 12px; align-items: flex-start">
+      <span style="font-size: 21px; color: #32D74B; flex: none; width: 76px">בעד</span>
+      <span style="font-size: 21px; color: #C8C8CE; line-height: 1.5">גוזל כ-110 פיקסלים מהמסך במקום 250. נשאר מקום להודעות עצמן.</span>
+    </div>
+    <div style="display: flex; gap: 12px; align-items: flex-start">
+      <span style="font-size: 21px; color: #FF6B6B; flex: none; width: 76px">נגד</span>
+      <span style="font-size: 21px; color: #C8C8CE; line-height: 1.5">אין שום מקום להסביר מה עושים המקשים # ו-* - בדיוק הבעיה שקיימת היום.</span>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

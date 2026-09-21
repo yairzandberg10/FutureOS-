@@ -3,6 +3,7 @@ package com.future.settings.theme
 import android.content.ContentValues
 import android.content.Context
 import android.net.Uri
+import com.future.sharednav.systemui.SystemUiTarget
 
 /**
  * לקוח ל-SystemUiSettingsProvider של FutureUI - שולט ישירות בהגדרות שורת
@@ -18,7 +19,7 @@ data class SystemUiSettings(
 )
 
 object SystemUiSettingsClient {
-    private val URI = Uri.parse("content://com.future.futureui.systemui/settings")
+    private val URI = Uri.parse("content://${SystemUiTarget.SETTINGS_AUTHORITY}/settings")
 
     fun get(context: Context): SystemUiSettings {
         return try {
@@ -48,6 +49,8 @@ object SystemUiSettingsClient {
         try {
             val values = ContentValues().apply { put(key, value) }
             context.contentResolver.update(URI, values, null, null)
-        } catch (e: Exception) {}
+        } catch (e: Exception) {
+            android.util.Log.w("SystemUiSettingsClient", "update failed", e)
+        }
     }
 }

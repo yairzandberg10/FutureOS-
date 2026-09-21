@@ -1,5 +1,7 @@
 package com.future.music.ui.screens
 
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -41,7 +43,7 @@ fun AlbumsScreen(albums: List<AlbumGroup>, theme: FutureTheme, onBack: () -> Uni
         ScreenTopBar(title = "אלבומים", theme = theme, onBack = onBack)
         if (albums.isEmpty()) {
             Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Text("לא נמצאו אלבומים", color = theme.textColor.copy(alpha = 0.5f), fontSize = 14.sp)
+                Text("לא נמצאו אלבומים", color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.body)
             }
         } else {
             LazyColumn(
@@ -60,17 +62,17 @@ fun AlbumsScreen(albums: List<AlbumGroup>, theme: FutureTheme, onBack: () -> Uni
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Box(
-                                modifier = Modifier.size(40.dp).clip(RoundedCornerShape(8.dp)).background(theme.accentColor.copy(alpha = 0.18f)),
+                                modifier = Modifier.size(40.dp).clip(FutureShapes.sm).background(theme.accentColor.copy(alpha = 0.18f)),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Icon(Icons.Rounded.Album, contentDescription = null, tint = theme.accentColor, modifier = Modifier.size(20.dp))
                             }
                             Spacer(modifier = Modifier.width(12.dp))
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(album.name, color = theme.textColor, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1)
-                                Text(album.artist, color = theme.textColor.copy(alpha = 0.55f), fontSize = 12.sp, maxLines = 1)
+                                Text(album.name, color = theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Medium, maxLines = 1)
+                                Text(album.artist, color = theme.textColor.copy(alpha = 0.55f), fontSize = FutureTypography.label, maxLines = 1)
                             }
-                            Text("${album.songCount}", color = theme.textColor.copy(alpha = 0.4f), fontSize = 12.sp)
+                            Text("${album.songCount}", color = theme.textColor.copy(alpha = 0.4f), fontSize = FutureTypography.label)
                         }
                     }
                 }

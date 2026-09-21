@@ -1,5 +1,6 @@
 package com.future.sfarim.ui.screens
 
+import com.future.sharednav.theme.FutureTypography
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -128,8 +129,8 @@ private fun BookmarkRow(
             Icon(Icons.Rounded.Bookmark, contentDescription = null, tint = theme.accentColor)
             Spacer(modifier = Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(bookmark.bookTitle, color = theme.textColor, fontSize = 15.sp, maxLines = 1)
-                Text(bookmark.segmentRef, color = theme.textColor.copy(alpha = 0.5f), fontSize = 12.sp, maxLines = 1)
+                Text(bookmark.bookTitle, color = theme.textColor, fontSize = FutureTypography.bodyLarge, maxLines = 1)
+                Text(bookmark.segmentRef, color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.label, maxLines = 1)
             }
             // אייקון תצוגתי בלבד (לא focusable) - המחיקה כבר זמינה דרך מקש
             // Menu על השורה עצמה (למעלה). לפני התיקון האייקון היה עטוף

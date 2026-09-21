@@ -1,50 +1,29 @@
 package com.future.settings.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import com.future.sharednav.theme.FutureMaterialTheme
+import com.future.sharednav.theme.FutureTheme
 
-private val DarkColorScheme = darkColorScheme(
-    primary = Color(0xFF007AFF),
-    background = Color.Black,
-    surface = Color(0xFF1C1C1E),
-    onBackground = Color.White,
-    onSurface = Color.White
-)
-
-private val LightColorScheme = lightColorScheme(
-    primary = Color(0xFF007AFF),
-    background = Color.White,
-    surface = Color.White,
-    onBackground = Color.Black,
-    onSurface = Color.Black
-)
-
+/**
+ * מעטפת דקה סביב FutureMaterialTheme של המודול המשותף. הערכה כאן הייתה
+ * עם primary כחול-iOS קבוע (0xFF007AFF) כברירת מחדל ורקע לבן במצב בהיר -
+ * שני ערכים שלא הופיעו באף אפליקציה אחרת, כך שרכיבי Material בהגדרות
+ * (Switch, Slider, AlertDialog) נראו שונה מכל השאר.
+ *
+ * [backgroundColor] נשאר בחתימה כדי שהקריאה ב-MainActivity לא תשתנה; הוא
+ * תמיד שווה לרקע ש-ThemeConfig גוזר מאותו isDarkMode, ולכן אין צורך בו.
+ */
 @Composable
 fun SettingsTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     primaryColor: Color? = null,
-    backgroundColor: Color? = null,
+    @Suppress("UNUSED_PARAMETER") backgroundColor: Color? = null,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = if (darkTheme) {
-        DarkColorScheme.copy(
-            primary = primaryColor ?: DarkColorScheme.primary,
-            background = backgroundColor ?: Color.Black
-        )
-    } else {
-        LightColorScheme.copy(
-            primary = primaryColor ?: LightColorScheme.primary,
-            background = backgroundColor ?: Color.White
-        )
-    }
-
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content
+    FutureMaterialTheme(
+        theme = FutureTheme(isDarkMode = darkTheme, accentColor = primaryColor ?: Color.White),
+        content = content,
     )
 }

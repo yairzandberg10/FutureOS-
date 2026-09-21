@@ -1,6 +1,17 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+}
+
+// מפתח החתימה של הרילייס לא נמצא במאגר. הערכים נקראים מ-keystore.properties
+// בשורש המאגר (ראו .gitignore) או ממשתני סביבה ב-CI. בלי הקובץ,
+// בניית release עדיין רצה - היא פשוט יוצאת לא חתומה, במקום להיכשל.
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("../keystore.properties")
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
 }
 
 android {
@@ -10,18 +21,43 @@ android {
     defaultConfig {
         applicationId = "com.future.sfarim"
         minSdk = 31
-        targetSdk = 37
+        targetSdk = 31
         versionCode = 1
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // רק שני ה-ABI שהמכשירים האמיתיים בסוויטה משתמשים בהם (המכשיר מדווח
+        // arm64-v8a,armeabi-v7a) - בלי זה ה-APK נושא ארבע גרסאות של
+        // libsqliteX.so, כולל x86 שאין לו שום צרכן כאן.
+        ndk {
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
+        }
+    }
+
+    signingConfigs {
+        if (keystoreProperties.getProperty("storeFile") != null) {
+            create("release") {
+                storeFile = rootProject.file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
     }
 
     buildTypes {
         release {
-            optimization {
-                enable = false
-            }
+            // R8 היה מכובה בכל 27 האפליקציות ולא היה שום proguard-rules.pro
+            // במאגר - כלומר לא הייתה דרך לייצר APK מוקטן וחתום להפצה, על
+            // מכשיר שהאחסון בו כבר עמוס.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
+            signingConfig = signingConfigs.findByName("release")
         }
     }
     compileOptions {
@@ -45,6 +81,15 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+
+    // SQLite משלנו, ולא זה של המערכת: ה-SQLite המובנה באנדרואיד נבנה בלי
+    // מודול FTS5 (זו גם הסיבה ש-Room מציע רק @Fts3/@Fts4), ולכן *כל* שאילתת
+    // חיפוש מול search_fts/segments_fts ב-sefaria.db נכשלה על המכשיר עם
+    // "no such module: fts5" - כלומר החיפוש מעולם לא עבד, בשום מכשיר.
+    // הספרייה הזו היא ה-SQLite Android Bindings הרשמיים (org.sqlite.database)
+    // ארוזים מחדש, כוללים FTS5, עם אותו API בדיוק של android.database.sqlite.
+    implementation(libs.sqlite.android)
+
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
