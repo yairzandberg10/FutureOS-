@@ -1,4 +1,5 @@
 package com.future.futureui.recents.ui
+import com.future.sharednav.theme.FutureMotion
 import com.future.sharednav.theme.readableAccentColor
 import com.future.sharednav.theme.idleChipColor
 import com.future.sharednav.theme.FutureDimens
@@ -146,6 +147,7 @@ private fun RecentAppRow(app: RecentAppInfo, isFocused: Boolean, accentColor: Co
     val shape = FutureShapes.lg
     val bgColor by animateColorAsState(
         if (isFocused) shellTheme.readableAccentColor.copy(alpha = 0.14f) else shellTheme.idleChipColor,
+        FutureMotion.focusColorSpec,
         label = "recentRowBg"
     )
     val scale by animateFloatAsState(if (isFocused) 1.02f else 1f, label = "recentRowScale")

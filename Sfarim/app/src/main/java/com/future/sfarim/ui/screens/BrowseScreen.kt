@@ -81,7 +81,7 @@ fun BrowseScreen(
                 if (entries.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text(
-                            if (isLoading) "טוען…" else "אין תוכן בקטגוריה זו",
+                            if (isLoading) "טוען" else "אין תוכן בקטגוריה זו",
                             color = theme.textColor.copy(alpha = 0.5f),
                             fontSize = FutureTypography.bodyLarge,
                         )

@@ -129,8 +129,8 @@ class MainActivity : ComponentActivity() {
         ) {
             Text(text = label)
             Text(
-                text = if (isEnabled) "✅ פעיל" else "❌ כבוי",
-                color = if (isEnabled) androidx.compose.material3.MaterialTheme.colorScheme.primary else androidx.compose.material3.MaterialTheme.colorScheme.error
+                text = if (isEnabled) "פעיל" else "כבוי",
+                color = if (isEnabled) LocalFutureTheme.current.successColor else LocalFutureTheme.current.dangerColor
             )
         }
     }

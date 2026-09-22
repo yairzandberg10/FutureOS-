@@ -67,11 +67,11 @@ for the keyboard panel only.)
 | Token | Radius | Use for |
 |---|---|---|
 | `xs` / `radiusXs` | 4dp | progress bars, tiny tags |
-| `sm` / `radiusSm` | 8dp | keys, grid cells |
+| `sm` / `radiusSm` | 8dp | list rows (`FocusableItem`, `--fos-radius-item`), keys, grid cells |
 | `textField` / `radiusTextField` | 10dp | text fields |
-| `md` / `radiusMd` | 12dp | buttons, compact rows, tab items |
+| `md` / `radiusMd` | 12dp | tab items (`--fos-radius-tab`) |
 | `chip` / `radiusChip` | 14dp | chips |
-| `lg` / `radiusLg` | 16dp | list rows, cards, panels |
+| `lg` / `radiusLg` | 16dp | cards, panels, slider rows (`--fos-radius-card`) |
 | `dialog` / `radiusDialog` | 20dp | dialogs, options menu |
 | `xl` / `radiusXl` | 22dp | central surfaces, the settings card, "glass" |
 | `xxl` / `radiusXxl` | 28dp | heads-up notification, system-shell glass |
@@ -220,10 +220,42 @@ FutureScreen.HEIGHT_DP)`.
   cancel button, and a white ring on a white dialog, in light mode).
 - **`MarqueeText`** — single-line text that scrolls while focused.
 
+Components the FutureOS Design System defines and every app used to hand-roll
+(each app had its own options menu, dialog buttons, text field, list row and
+tab chips, each slightly off the spec). Use these instead of Material's
+`AlertDialog`, `OutlinedTextField`, `Button`, `Switch`, `Checkbox`,
+`CircularProgressIndicator`, `NavigationBar` or `TopAppBar`:
+
+- **`FutureOptionsMenu`** + **`FutureMenuRow`** (`OptionsMenu.jsx`) — the menu
+  the hardware menu key opens: top-anchored 40dp, 20dp radius, optional 12sp
+  header, 50dp rows, 20dp icon, 15sp label, 12% text focus fill with no border
+  and no scale; destructive rows in `dangerColor`. The first row takes focus.
+- **`FutureDialog`**, **`FutureDialogButtons`**, **`FutureDetailRow`**,
+  **`InputDialog`** (`ConfirmDialog.jsx`, `InputDialog.jsx`) — 20dp surface,
+  20dp padding, 15sp bold centered title, 12dp between buttons.
+- **`FutureButton`** (`Button.jsx`) — Primary / Destructive / Secondary /
+  Quiet; `enabled = false` also removes focus (the DS rule: what cannot be
+  activated cannot be focused). `ConfirmDialog` is built from the same button.
+- **`FutureTextField`** (`TextField.jsx`) — 8% fill, 10dp radius, 15sp, 2dp
+  accent ring; `leading`/`trailing` slots, `autoFocus` that works inside a
+  Dialog. **`FutureFormField`** adds a 12sp label row for multi-field forms.
+- **`FutureListItem`** (`ListItem.jsx`) — 56dp row, title 17sp/500, summary
+  13sp/60%, `leading`/`trailing` slots, list-row focus.
+- **`FutureAvatar`** (`Avatar.jsx`) — glass circle, icon at 44% or initials at
+  30%; 44dp in a list. **`FutureBadge`** (`Badge.jsx`) — unread count.
+- **`FutureTabRow`** / **`FutureTabItem`** (`TabRow.jsx`), **`FutureChip`**
+  (tracks its own focus), **`FutureCheckbox`**, **`FutureSwitch`**
+  (`Switch.jsx`: on = accent track + thumb in the background color, off =
+  empty track with a 30% border — never a white thumb), **`FutureSpinner`**,
+  **`FutureProgressBar`**, **`FutureCard`**, **`FutureDivider`**,
+  **`FutureSectionHeader`** (`inset = false` inside an already-padded list),
+  **`FutureSettingItem`**, **`FutureBottomNav`**.
+
 ## Focus utilities (`focus/`)
 
 - **`FocusableItem`** — a focus-highlighted `Box` around arbitrary content.
-  Defaults are the tokens (`radiusLg`, `focusBorderWidth`); the fill and ring
+  Defaults are the list-row tokens (`radiusSm` = `--fos-radius-item`,
+  `focusBorderItem` 1.5dp, 14% accent fill); the fill and ring
   fade in with `focusColorSpec`, the item scales up on focus and down on an OK
   press.
 - **`Modifier.focusMotion(interactionSource)`** — just that scale-on-focus /

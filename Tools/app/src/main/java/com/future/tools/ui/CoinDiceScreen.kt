@@ -5,7 +5,6 @@ import com.future.sharednav.components.FutureTabItem
 import com.future.sharednav.theme.subtleTextColor
 import com.future.sharednav.theme.mutedTextColor
 
-import com.future.sharednav.theme.onAccentColor
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
 import androidx.compose.animation.core.Animatable
@@ -48,7 +47,7 @@ fun CoinDiceScreen(theme: FutureTheme, onBack: () -> Unit) {
     fun roll() {
         scope.launch {
             rotation.snapTo(0f)
-            rotation.animateTo(360f * 3, animationSpec = tween(500))
+            rotation.animateTo(360f * 3, animationSpec = tween(FlipMillis))
         }
         when (mode) {
             CoinDiceMode.COIN -> coinResult = Random.nextBoolean()
@@ -172,3 +171,6 @@ private fun DiceFace(value: Int?, rotationDeg: Float, theme: FutureTheme) {
 private fun RollButton(theme: FutureTheme, onClick: () -> Unit) {
     FutureButton("הטל", theme, onClick, fillMaxWidth = true)
 }
+
+/** סיבוב ההטלה - אנימציה של התוכן (המטבע מסתובב), לא מעבר של ממשק, ולכן מחוץ לסקאלת התנועה. */
+private const val FlipMillis = 500

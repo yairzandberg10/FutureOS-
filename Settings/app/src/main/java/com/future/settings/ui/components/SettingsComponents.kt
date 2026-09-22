@@ -1,4 +1,5 @@
 package com.future.settings.ui.components
+import com.future.sharednav.theme.FutureMotion
 import com.future.sharednav.components.FutureSwitch
 import com.future.sharednav.components.FutureDivider
 
@@ -49,6 +50,7 @@ fun SettingItem(
     // מילוי עדין ומסגרת, בלי הגדלה - עקבי עם הפוקוס בשאר המערכת.
     val bgColor by animateColorAsState(
         if (isInteractive && isFocused) theme.textColor.copy(alpha = 0.06f) else Color.Transparent,
+        FutureMotion.focusColorSpec,
         label = "settingItemBg"
     )
 
@@ -129,6 +131,7 @@ fun SettingSwitch(
     // אותה לוגיקה כמו ב-SettingItem: השורה שקופה על הכרטיס, והפוקוס מוסיף מילוי ומסגרת.
     val bgColor by animateColorAsState(
         if (isFocused) theme.textColor.copy(alpha = 0.06f) else Color.Transparent,
+        FutureMotion.focusColorSpec,
         label = "settingSwitchBg"
     )
 

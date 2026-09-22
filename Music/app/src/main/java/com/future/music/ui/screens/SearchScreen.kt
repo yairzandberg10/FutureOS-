@@ -101,7 +101,7 @@ fun SearchScreen(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                if (query.isEmpty()) "הקלידו ספרות לחיפוש (T9)..." else query,
+                if (query.isEmpty()) "הקלד ספרות לחיפוש" else query,
                 color = if (query.isEmpty()) theme.textColor.copy(alpha = 0.4f) else theme.textColor,
                 fontSize = FutureTypography.title,
                 fontWeight = FontWeight.Medium,

@@ -106,7 +106,7 @@ fun SearchScreen(
                         .padding(horizontal = 14.dp, vertical = 12.dp),
                 ) {
                     if (query.isEmpty()) {
-                        Text("הקלידו טקסט לחיפוש...", color = theme.textColor.copy(alpha = 0.4f), fontSize = FutureTypography.bodyLarge)
+                        Text("הקלד טקסט לחיפוש", color = theme.textColor.copy(alpha = 0.4f), fontSize = FutureTypography.bodyLarge)
                     }
                     BasicTextField(
                         value = query,
@@ -127,7 +127,7 @@ fun SearchScreen(
                         Text(
                             when {
                                 failed -> "החיפוש נכשל"
-                                searching -> "מחפש…"
+                                searching -> "מחפש"
                                 else -> "לא נמצאו תוצאות"
                             },
                             color = theme.textColor.copy(alpha = 0.5f),

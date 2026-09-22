@@ -4,6 +4,61 @@ This repo has no carried-over git history (see root [README](README.md)), so thi
 
 ## Unreleased
 
+### Design-system audit: every app moved onto the shared components
+
+A suite-wide audit against `design/FutureOS Design System` found that most
+screens used the token values but not the components: each app had its own
+options menu, dialog, dialog button, text field, list row, tab chip and icon
+button, each slightly off the spec (22dp dialogs instead of 20dp, 16sp menu
+labels instead of 15sp, `Color.Black` text on the accent, a light-grey focus
+ring in the system shell, Material `OutlinedTextField`/`AlertDialog`/`Switch`
+with their own geometry).
+
+#### Added to SharedKeypadNav
+
+`FutureOptionsMenu`/`FutureMenuRow`, `FutureDialog`, `InputDialog`,
+`FutureTextField`, `FutureFormField`, `FutureListItem`, `FutureAvatar`,
+`FutureBadge`, `FutureTabRow`/`FutureTabItem`, `FutureCheckbox`,
+`FutureSpinner`, `FutureAccents`. See `SharedKeypadNav/README.md`.
+
+#### Fixed in SharedKeypadNav
+
+- `FocusableItem` defaults to 8dp corners again - `--fos-radius-item` is the
+  list-row radius; 16dp is the card radius.
+- `FutureSwitch` follows `Switch.jsx`: the thumb was fixed white, which with
+  the default white accent is the white-on-white switch the DS calls a defect.
+- `ConfirmDialog` uses the DS button (20dp radius) instead of a pill button
+  that existed nowhere else, and 20dp dialog padding.
+- `FutureChip` tracks its own focus; `FutureButton` and `TopBarIconButton`
+  gained `enabled` (not focusable when they cannot act).
+
+#### Per app
+
+- **No blur, no protection gradients** (DS: "there is no blur in this
+  system", "no protection gradients"): FutureUI control/notification center,
+  lock screen edit mode, dialer call screen, Gallery crop overlay, Camera.
+- **Accent means focus or selection only**: decorative accent (icon circles,
+  headings, value text, filled banners) replaced with neutral tokens in
+  Navigation, Fitness, Tools, Messages, Music, Guide, Frixa, dialer.
+- **Readable accent**: selected/primary fills use `readableAccentColor` with
+  matching ink, instead of the raw accent with `Color.Black`/`onAccentColor`.
+- **Private palettes removed**: Fitness "Kinetic Obsidian" (24dp corners,
+  lerped surfaces), Settings `ThemeConfig` hex copy, Keyboard setup
+  ColorScheme, Pomodoro/Navigation/Launcher/Status-bar hex colors, Set PIN's
+  fixed cyan accent, Navigation's blue default accent.
+- **Copy**: no emoji (Calendar weather now uses icons), no ellipses in UI
+  strings. The hidden Settings easter eggs are left as they are.
+- Filled Material icons in notes and Navigation -> Rounded.
+
+#### Not changed
+
+- `SystemUI/` (the parallel, uninstalled System UI implementation) was not
+  migrated.
+- Wallpaper presets in Settings keep their gradients - they are wallpaper
+  content, not interface.
+- Clock faces and the camera countdown keep sizes above `hero`; the DS
+  treats them as graphics.
+
 ### Reconciled the shared tokens with the FutureOS Design System
 
 `design/futureos-ds/` (extracted from `design/FutureOS Design System.zip`) is now

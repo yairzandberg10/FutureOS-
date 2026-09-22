@@ -1,4 +1,7 @@
 package com.future.futurelauncher.ui
+import androidx.compose.material.icons.rounded.Widgets
+import androidx.compose.material.icons.Icons
+import androidx.compose.material3.Icon
 
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
@@ -224,7 +227,7 @@ fun ItemPanel(
                         )
                     } else {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text(text = "🧩", fontSize = FutureTypography.headline)
+                            Icon(Icons.Rounded.Widgets, contentDescription = null, tint = OnWallpaperColor.copy(alpha = 0.6f), modifier = Modifier.size(24.dp))
                         }
                     }
                 }

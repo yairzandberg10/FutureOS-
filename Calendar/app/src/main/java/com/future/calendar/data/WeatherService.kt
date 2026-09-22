@@ -1,4 +1,13 @@
 package com.future.calendar.data
+import androidx.compose.material.icons.rounded.WbSunny
+import androidx.compose.material.icons.rounded.WbCloudy
+import androidx.compose.material.icons.rounded.Cloud
+import androidx.compose.material.icons.rounded.Dehaze
+import androidx.compose.material.icons.rounded.Grain
+import androidx.compose.material.icons.rounded.Umbrella
+import androidx.compose.material.icons.rounded.AcUnit
+import androidx.compose.material.icons.rounded.FlashOn
+import androidx.compose.material.icons.rounded.Thermostat
 
 import org.json.JSONObject
 import java.net.HttpURLConnection
@@ -6,20 +15,21 @@ import java.net.URL
 import java.time.LocalDate
 
 data class DailyWeather(val date: LocalDate, val maxTemp: Double, val minTemp: Double, val weatherCode: Int, val currentTemp: Double? = null) {
-    val emoji: String get() = weatherEmoji(weatherCode)
+    /** אייקון מזג האוויר - אייקון של המערכת (Rounded), לא אימוג'י: "No emoji. Anywhere." */
+    val icon: androidx.compose.ui.graphics.vector.ImageVector get() = weatherIcon(weatherCode)
     val description: String get() = weatherDescription(weatherCode)
 }
 
-private fun weatherEmoji(code: Int): String = when (code) {
-    0 -> "☀️"
-    1, 2 -> "🌤️"
-    3 -> "☁️"
-    45, 48 -> "🌫️"
-    51, 53, 55, 56, 57 -> "🌦️"
-    61, 63, 65, 66, 67, 80, 81, 82 -> "🌧️"
-    71, 73, 75, 77, 85, 86 -> "❄️"
-    95, 96, 99 -> "⛈️"
-    else -> "🌡️"
+private fun weatherIcon(code: Int): androidx.compose.ui.graphics.vector.ImageVector = when (code) {
+    0 -> androidx.compose.material.icons.Icons.Rounded.WbSunny
+    1, 2 -> androidx.compose.material.icons.Icons.Rounded.WbCloudy
+    3 -> androidx.compose.material.icons.Icons.Rounded.Cloud
+    45, 48 -> androidx.compose.material.icons.Icons.Rounded.Dehaze
+    51, 53, 55, 56, 57 -> androidx.compose.material.icons.Icons.Rounded.Grain
+    61, 63, 65, 66, 67, 80, 81, 82 -> androidx.compose.material.icons.Icons.Rounded.Umbrella
+    71, 73, 75, 77, 85, 86 -> androidx.compose.material.icons.Icons.Rounded.AcUnit
+    95, 96, 99 -> androidx.compose.material.icons.Icons.Rounded.FlashOn
+    else -> androidx.compose.material.icons.Icons.Rounded.Thermostat
 }
 
 private fun weatherDescription(code: Int): String = when (code) {

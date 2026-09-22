@@ -132,7 +132,7 @@ fun TextViewerScreen(file: File, theme: FutureTheme, onBack: () -> Unit) {
                     .padding(16.dp)
             ) {
                 Text(
-                    text = content ?: "טוען...",
+                    text = content ?: "טוען",
                     color = theme.textColor,
                     fontSize = FutureTypography.summary,
                     fontFamily = FontFamily.Monospace,

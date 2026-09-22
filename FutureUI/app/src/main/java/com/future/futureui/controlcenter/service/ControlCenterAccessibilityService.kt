@@ -212,7 +212,7 @@ class ControlCenterAccessibilityService : AccessibilityService(), LifecycleOwner
                                 PowerMenuScreen(
                                     onPowerOff = {
                                         powerMenuVisible.value = false
-                                        Toast.makeText(this@ControlCenterAccessibilityService, "מכבה את המכשיר...", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(this@ControlCenterAccessibilityService, "מכבה את המכשיר", Toast.LENGTH_SHORT).show()
                                         controlManager?.runRootCommandAsync("reboot -p")
                                         // hideControlCenter() עוצר את מעטפת ה-root (stopRootShell, כותבת "exit")
                                         // - צריך רגע כדי שפקודת ה-reboot תספיק להיכתב ולהתבצע קודם, אחרת
@@ -221,7 +221,7 @@ class ControlCenterAccessibilityService : AccessibilityService(), LifecycleOwner
                                     },
                                     onRestart = {
                                         powerMenuVisible.value = false
-                                        Toast.makeText(this@ControlCenterAccessibilityService, "מפעיל מחדש...", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(this@ControlCenterAccessibilityService, "מפעיל מחדש", Toast.LENGTH_SHORT).show()
                                         controlManager?.runRootCommandAsync("reboot")
                                         mainHandler.postDelayed({ hideControlCenter() }, 400)
                                     },

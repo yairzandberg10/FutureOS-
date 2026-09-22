@@ -1,4 +1,7 @@
 package com.future.settings.ui
+import com.future.sharednav.theme.FutureMotion
+import com.future.sharednav.theme.readableAccentColor
+import com.future.sharednav.theme.onReadableAccentColor
 import com.future.sharednav.components.FutureTextField
 import com.future.sharednav.components.TopBarIconButton
 import com.future.sharednav.components.ScreenTopBar
@@ -627,7 +630,7 @@ fun BluetoothScreen(navController: NavController, theme: ThemeConfig, viewModel:
                     item {
                         SettingsCard(theme) {
                             SettingItem(
-                                if (isScanning) "סורק מכשירים בסביבה..." else "סרוק מכשירים חדשים",
+                                if (isScanning) "סורק מכשירים בסביבה" else "סרוק מכשירים חדשים",
                                 if (discovered.isEmpty()) null else "${discovered.size} נמצאו",
                                 Icons.Rounded.Search,
                                 theme,
@@ -1043,14 +1046,14 @@ private fun WallpaperPresetTile(preset: WallpaperPreset, theme: ThemeConfig, onC
                 .clip(FutureShapes.lg)
                 .background(Brush.linearGradient(preset.colors))
                 .then(
-                    if (isFocused) Modifier.border(width = 2.dp, color = theme.primaryColor, shape = FutureShapes.lg)
+                    if (isFocused) Modifier.border(width = FutureDimens.focusBorderControl, color = theme.futureTheme.readableAccentColor, shape = FutureShapes.lg)
                     else Modifier
                 )
         )
         Text(
             text = preset.name,
             fontSize = FutureTypography.label,
-            color = theme.textColor.copy(alpha = 0.8f),
+            color = theme.textColor.copy(alpha = 0.7f),
             modifier = Modifier.padding(top = 4.dp).fillMaxWidth(),
             textAlign = androidx.compose.ui.text.style.TextAlign.Center
         )
@@ -1195,7 +1198,7 @@ fun StorageScreen(navController: NavController, theme: ThemeConfig, viewModel: S
                     SettingsCard(theme) {
                         val freeing = viewModel.isFreeingSpace.value
                         SettingItem(
-                            if (freeing) "מפנה מקום..." else "פינוי מקום עכשיו",
+                            if (freeing) "מפנה מקום" else "פינוי מקום עכשיו",
                             "ניקוי קבצי מטמון של המערכת",
                             Icons.Rounded.CleaningServices,
                             theme,
@@ -1653,7 +1656,7 @@ fun PerformanceScreen(navController: NavController, theme: ThemeConfig, viewMode
                     SettingsCard(theme) {
                         val optimizing = viewModel.isOptimizing.value
                         SettingItem(
-                            if (optimizing) "מבצע אופטימיזציה..." else "אופטימיזציה מהירה",
+                            if (optimizing) "מבצע אופטימיזציה" else "אופטימיזציה מהירה",
                             "ניקוי זיכרון וקבצי מטמון",
                             Icons.Rounded.Speed,
                             theme,
@@ -2059,13 +2062,15 @@ fun SoundModeItem(label: String, icon: ImageVector, selected: Boolean, theme: Th
             modifier = Modifier
                 .size(56.dp)
                 .clip(CircleShape)
-                .background(if (selected) theme.primaryColor else theme.surfaceColor)
-                .then(if (isFocused) Modifier.border(2.dp, theme.primaryColor.copy(alpha = 0.8f), CircleShape) else Modifier)
+                // נבחר = ההדגשה המתוקנת (ההדגשה הגולמית הלבנה נעלמת על משטח לבן במצב בהיר);
+                // טבעת הפוקוס בצבע הטקסט כשהעיגול כבר מלא בהדגשה, אחרת בהדגשה.
+                .background(if (selected) theme.futureTheme.readableAccentColor else theme.surfaceColor)
+                .then(if (isFocused) Modifier.border(FutureDimens.focusBorderControl, if (selected) theme.textColor else theme.futureTheme.readableAccentColor, CircleShape) else Modifier)
                 .onFocusChanged { isFocused = it.isFocused }
                 .focusable().bringIntoViewOnFocus(),
             contentAlignment = Alignment.Center
         ) {
-            Icon(icon, contentDescription = null, tint = if (selected) theme.backgroundColor else theme.textColor)
+            Icon(icon, contentDescription = null, tint = if (selected) theme.futureTheme.onReadableAccentColor else theme.textColor)
         }
         Text(label, fontSize = FutureTypography.label, color = theme.textColor, modifier = Modifier.padding(top = 4.dp))
     }
@@ -2081,6 +2086,7 @@ fun VolumeSlider(label: String, value: Float, theme: ThemeConfig, onValueChange:
     val shape = FutureShapes.lg
     val bgColor by animateColorAsState(
         if (isFocused) theme.primaryColor.copy(alpha = 0.18f) else theme.textColor.copy(alpha = 0.06f),
+        FutureMotion.focusColorSpec,
         label = "volumeSliderBg"
     )
 
@@ -2284,9 +2290,9 @@ fun AppTimersScreen(navController: NavController, theme: ThemeConfig, viewModel:
 fun DiagnosticsScreen(navController: NavController, theme: ThemeConfig, viewModel: SettingsViewModel) {
     val context = LocalContext.current
     val sensorManager = remember { viewModel.getSystemInteractor().getSensorManager() }
-    var accelText by remember { mutableStateOf("ממתין לנתונים...") }
-    var lightText by remember { mutableStateOf("ממתין לנתונים...") }
-    var proximityText by remember { mutableStateOf("ממתין לנתונים...") }
+    var accelText by remember { mutableStateOf("ממתין לנתונים") }
+    var lightText by remember { mutableStateOf("ממתין לנתונים") }
+    var proximityText by remember { mutableStateOf("ממתין לנתונים") }
 
     DisposableEffect(Unit) {
         val accel = sensorManager.getDefaultSensor(android.hardware.Sensor.TYPE_ACCELEROMETER)
@@ -2422,7 +2428,7 @@ fun SosScreen(navController: NavController, theme: ThemeConfig, viewModel: Setti
                     SettingsCard(theme) {
                         val sending = viewModel.sosSending.value
                         SettingItem(
-                            if (sending) "שולח..." else "שלח הודעת SOS עכשיו",
+                            if (sending) "שולח" else "שלח הודעת SOS עכשיו",
                             "שולח מיקום נוכחי ל-SMS לאיש הקשר",
                             Icons.Rounded.Sos,
                             theme,

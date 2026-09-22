@@ -149,7 +149,7 @@ private fun BluetoothDeviceList(
         item { Spacer(modifier = Modifier.height(8.dp)) }
         item { SectionHeader("מכשירים זמינים", theme) }
         if (discovered.isEmpty()) {
-            item { MutedHint(if (isScanning) "מחפש מכשירים..." else "לא נמצאו מכשירים - נווטו ל\"סרוק\" ולחצו OK", theme) }
+            item { MutedHint(if (isScanning) "מחפש מכשירים" else "לא נמצאו מכשירים - נווט ל\"סרוק\" ולחץ OK", theme) }
         } else {
             items(discovered, key = { "discovered:${it.address}" }) { device ->
                 DeviceRow(device, theme, rowFocusRequesters.getOrPut(device.address) { FocusRequester() }) { onDeviceClick(device) }

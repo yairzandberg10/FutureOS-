@@ -81,7 +81,7 @@ fun StoresScreen(theme: FutureTheme) {
     Column(modifier = Modifier.fillMaxSize()) {
         if (myLocation == null) {
             Text(
-                if (locationGranted.value) "מאתר את מיקומכם..." else "הציגו הרשאת מיקום כדי לראות מרחקים",
+                if (locationGranted.value) "מאתר את מיקומך" else "אשר הרשאת מיקום כדי לראות מרחקים",
                 color = theme.textColor.copy(alpha = 0.6f),
                 fontSize = FutureTypography.summary,
                 modifier = Modifier.padding(16.dp),

@@ -1,4 +1,5 @@
 package com.future.tools.ui
+import com.future.sharednav.theme.FutureMotion
 import com.future.sharednav.theme.textAlpha
 import com.future.sharednav.theme.subtleTextColor
 import com.future.sharednav.theme.mutedTextColor
@@ -72,6 +73,7 @@ fun LevelScreen(theme: FutureTheme, onBack: () -> Unit) {
     val isLevel = abs(tilt.x) < LEVEL_THRESHOLD_DEG && abs(tilt.y) < LEVEL_THRESHOLD_DEG
     val bubbleColor by animateColorAsState(
         if (isLevel) theme.successColor else theme.accentColor,
+        FutureMotion.focusColorSpec,
         label = "levelBubbleColor"
     )
 
@@ -123,7 +125,7 @@ private fun LevelBubble(tilt: Offset, bubbleColor: androidx.compose.ui.graphics.
             val offsetY = (-tilt.x * degToPx).coerceIn(-maxOffsetPx, maxOffsetPx)
             val bubbleCenter = Offset(center.x + offsetX, center.y + offsetY)
 
-            drawCircle(color = bubbleColor.copy(alpha = 0.25f), radius = 22.dp.toPx(), center = bubbleCenter)
+            drawCircle(color = bubbleColor.copy(alpha = 0.3f), radius = 22.dp.toPx(), center = bubbleCenter)
             drawCircle(color = bubbleColor, radius = 12.dp.toPx(), center = bubbleCenter)
         }
     }

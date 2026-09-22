@@ -7,7 +7,6 @@ import com.future.sharednav.theme.FutureDimens
 import com.future.sharednav.theme.subtleTextColor
 import com.future.sharednav.theme.mutedTextColor
 
-import com.future.sharednav.theme.onAccentColor
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
 import android.content.ClipData
@@ -128,7 +127,7 @@ fun PasswordGeneratorScreen(theme: FutureTheme, onBack: () -> Unit) {
 
                 PwToggleRow("אותיות גדולות (A-Z)", useUpper, theme = theme) { useUpper = it; regenerate() }
                 PwToggleRow("ספרות (0-9)", useDigits, theme = theme) { useDigits = it; regenerate() }
-                PwToggleRow("סימנים מיוחדים (!@#\$...)", useSymbols, theme = theme) { useSymbols = it; regenerate() }
+                PwToggleRow("סימנים מיוחדים !@#\$", useSymbols, theme = theme) { useSymbols = it; regenerate() }
             }
         }
     }

@@ -192,7 +192,7 @@ fun ReaderScreen(
                 if (segments.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text(
-                            if (isLoading) "טוען…" else "אין תוכן זמין בפרק זה",
+                            if (isLoading) "טוען" else "אין תוכן זמין בפרק זה",
                             color = theme.textColor.copy(alpha = 0.5f),
                             fontSize = FutureTypography.bodyLarge,
                         )

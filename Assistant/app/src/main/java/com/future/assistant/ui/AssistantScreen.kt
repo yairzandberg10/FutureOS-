@@ -201,7 +201,7 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
                             )
                         } else if (!modelReady) {
                             Text(
-                                "טוען מנוע זיהוי דיבור...",
+                                "טוען מנוע זיהוי דיבור",
                                 color = theme.textColor.copy(alpha = 0.6f),
                                 fontSize = FutureTypography.body,
                                 modifier = Modifier.padding(bottom = 16.dp)
@@ -212,8 +212,8 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
                         }
                         Text(
                             when (state) {
-                                AssistantState.LISTENING -> "מקליט... לחצו שוב כדי לסיים"
-                                AssistantState.THINKING -> "רגע, מתמלל..."
+                                AssistantState.LISTENING -> "מקליט - לחץ שוב כדי לסיים"
+                                AssistantState.THINKING -> "מתמלל"
                                 else -> responseText
                             },
                             color = theme.textColor,

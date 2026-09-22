@@ -671,7 +671,7 @@ private fun WeatherPanel(weather: com.future.calendar.data.DailyWeather, theme: 
         modifier = Modifier.fillMaxWidth().clip(FutureShapes.lg).background(theme.textColor.copy(alpha = 0.06f)).padding(14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(weather.emoji, fontSize = FutureTypography.headline)
+        Icon(weather.icon, contentDescription = weather.description, tint = theme.textColor, modifier = Modifier.size(24.dp))
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(weather.description, fontSize = FutureTypography.label, color = theme.textColor.copy(alpha = 0.6f))

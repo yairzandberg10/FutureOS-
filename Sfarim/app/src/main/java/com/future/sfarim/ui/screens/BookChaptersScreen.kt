@@ -103,7 +103,7 @@ fun BookChaptersScreen(
                 if (chapters.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text(
-                            if (isLoading) "טוען…" else "אין תוכן זמין",
+                            if (isLoading) "טוען" else "אין תוכן זמין",
                             color = theme.textColor.copy(alpha = 0.5f),
                             fontSize = FutureTypography.bodyLarge,
                         )

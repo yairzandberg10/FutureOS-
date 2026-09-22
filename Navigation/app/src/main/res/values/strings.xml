@@ -9,7 +9,7 @@
     <string name="quick_work">עבודה</string>
     <string name="recent_destinations">יעדים אחרונים</string>
     <string name="nearby_stops">תחנות קרובות אליי</string>
-    <string name="current_location_unknown">מאתר מיקום…</string>
+    <string name="current_location_unknown">מאתר מיקום</string>
     <string name="location_permission_required">האפליקציה צריכה הרשאת מיקום כדי לנווט</string>
     <string name="grant_permission">אשר הרשאה</string>
 
@@ -19,7 +19,7 @@
     <string name="transit_options">אפשרויות תחבורה ציבורית</string>
     <string name="start_navigation">התחל ניווט</string>
     <string name="start_trip">התחל נסיעה</string>
-    <string name="calculating_route">מחשב מסלול…</string>
+    <string name="calculating_route">מחשב מסלול</string>
     <string name="no_route_found">לא נמצא מסלול</string>
 
     <!-- ניווט חי -->
@@ -49,8 +49,8 @@
     <!-- ייבוא נתוני תחבורה -->
     <string name="gtfs_setup_title">עדכון נתוני תחבורה ציבורית</string>
     <string name="gtfs_update_button">עדכן נתוני תחבורה</string>
-    <string name="gtfs_downloading">מוריד נתונים ממשרד התחבורה…</string>
-    <string name="gtfs_parsing">מעבד נתוני תחנות וקווים…</string>
+    <string name="gtfs_downloading">מוריד נתונים ממשרד התחבורה</string>
+    <string name="gtfs_parsing">מעבד נתוני תחנות וקווים</string>
     <string name="gtfs_done">הנתונים עודכנו</string>
     <string name="gtfs_wifi_hint">מומלץ להתחבר לרשת Wi-Fi - זהו קובץ גדול</string>
 </resources>
