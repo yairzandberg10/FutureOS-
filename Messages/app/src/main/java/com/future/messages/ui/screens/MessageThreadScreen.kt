@@ -1,4 +1,18 @@
 package com.future.messages.ui.screens
+import com.future.sharednav.components.ScreenTopBar
+import com.future.sharednav.components.TopBarIconButton
+import com.future.sharednav.components.FutureTextField
+import com.future.sharednav.components.FutureOptionsMenu
+import com.future.sharednav.components.FutureMenuRow
+import com.future.sharednav.theme.FutureDimens
+import com.future.sharednav.theme.FutureMotion
+import com.future.sharednav.theme.idleFieldColor
+import com.future.sharednav.theme.secondaryTextColor
+import com.future.sharednav.theme.subtleTextColor
+import com.future.sharednav.theme.readableAccentColor
+import com.future.sharednav.theme.onReadableAccentColor
+import com.future.sharednav.theme.textAlpha
+import androidx.compose.foundation.border
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.components.ConfirmDialog
@@ -105,20 +119,15 @@ fun MessageThreadScreen(
         // באזור שנשאר אחרי הריפוד, והשטח שמאחורי המקלדת - כולל מה שנראה דרך
         // עיגול הפינות שלה - נשאר רקע החלון, שקבוע לשחור ב-themes.xml.
         Column(modifier = Modifier.fillMaxSize().background(theme.backgroundColor).imePadding()) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                HeaderIconButton(Icons.AutoMirrored.Rounded.ArrowBack, "חזור", theme, onClick = onBack)
-                Text(
-                    text = conversation.contact.name,
-                    color = theme.textColor,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = FutureTypography.title,
-                    modifier = Modifier.weight(1f)
-                )
-                HeaderIconButton(Icons.Rounded.Call, "התקשר", theme, onClick = onCall)
-            }
+            ScreenTopBar(
+                title = conversation.contact.name,
+                textColor = theme.textColor,
+                accentColor = theme.accentColor,
+                onBack = onBack,
+                trailingIcon = Icons.Rounded.Call,
+                trailingContentDescription = "התקשר",
+                onTrailingClick = onCall,
+            )
 
             val messageListState = rememberLazyListState()
             val messageListScope = rememberCoroutineScope()
@@ -152,7 +161,7 @@ fun MessageThreadScreen(
                         }
                     },
                 reverseLayout = true,
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+                contentPadding = PaddingValues(horizontal = FutureDimens.spacingMd, vertical = FutureDimens.spacingSm)
             ) {
                 items(messages.reversed(), key = { "${it.isMms}_${it.id}" }) { message ->
                     MessageBubble(
@@ -174,33 +183,24 @@ fun MessageThreadScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.Bottom
+                    .padding(horizontal = FutureDimens.spacingMd, vertical = FutureDimens.spacingSm)
+                    .escapeTextFieldFocusTrap(),
+                verticalAlignment = Alignment.Bottom,
+                horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm),
             ) {
-                AttachButton(theme = theme, onClick = { imagePicker.launch("image/*") })
+                TopBarIconButton(Icons.Rounded.AttachFile, "צרף תמונה", theme.textColor, theme.accentColor, { imagePicker.launch("image/*") })
 
-                Spacer(modifier = Modifier.width(4.dp))
-
-                OutlinedTextField(
+                FutureTextField(
                     value = textState,
                     onValueChange = { textState = it },
-                    modifier = Modifier
-                        .escapeTextFieldFocusTrap()
-                        .weight(1f)
-                        .focusRequester(textFieldFocusRequester),
-                    placeholder = { Text("הודעה...", color = theme.textColor.copy(alpha = 0.4f)) },
+                    theme = theme,
+                    placeholder = "הודעה",
+                    singleLine = false,
                     maxLines = 4,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = theme.textColor,
-                        unfocusedTextColor = theme.textColor,
-                        focusedBorderColor = theme.accentColor,
-                        unfocusedBorderColor = theme.textColor.copy(alpha = 0.3f),
-                        cursorColor = theme.accentColor
-                    ),
-                    shape = FutureShapes.xl
+                    focusRequester = textFieldFocusRequester,
+                    modifier = Modifier.weight(1f),
                 )
 
-                Spacer(modifier = Modifier.width(8.dp))
 
                 SendButton(
                     theme = theme,
@@ -248,114 +248,67 @@ fun MessageThreadScreen(
     }
 }
 
-@Composable
-private fun AttachButton(theme: FutureTheme, onClick: () -> Unit) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val bgColor by animateColorAsState(if (isFocused) theme.accentColor.copy(alpha = 0.25f) else Color.Transparent, label = "attachBg")
-    val tint by animateColorAsState(if (isFocused) theme.accentColor else theme.textColor.copy(alpha = 0.6f), label = "attachTint")
 
-    Box(
-        modifier = Modifier
-            .padding(bottom = 2.dp)
-            .size(44.dp)
-            .clip(CircleShape)
-            .background(bgColor)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus(),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(Icons.Rounded.AttachFile, contentDescription = "צרף תמונה", tint = tint, modifier = Modifier.size(22.dp))
-    }
-}
 
-@Composable
-private fun HeaderIconButton(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    contentDescription: String,
-    theme: FutureTheme,
-    onClick: () -> Unit
-) {
-    // עטיפה דקה סביב TopBarIconButton המשותף (מודול SharedKeypadNav) - חתימת
-    // הקריאה נשארת זהה כדי שקריאות קיימות ב-Messages לא ישתנו.
-    com.future.sharednav.components.TopBarIconButton(icon, contentDescription, theme.textColor, theme.accentColor, onClick)
-}
+
 
 @Composable
 private fun AttachmentPreview(uri: Uri, theme: FutureTheme, onRemove: () -> Unit) {
     val bitmap = rememberMmsBitmap(uri)
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
+        modifier = Modifier.fillMaxWidth().padding(horizontal = FutureDimens.spacingMd, vertical = FutureDimens.spacingXs),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingMd),
     ) {
         Box(
-            modifier = Modifier.size(56.dp).clip(FutureShapes.md).background(theme.textColor.copy(alpha = 0.1f))
+            modifier = Modifier.size(56.dp).clip(FutureShapes.sm).background(theme.idleFieldColor)
         ) {
             if (bitmap != null) {
                 Image(bitmap = bitmap, contentDescription = "תמונה מצורפת", modifier = Modifier.fillMaxSize())
             }
         }
-        Spacer(modifier = Modifier.width(10.dp))
-        Text("תמונה מצורפת (MMS)", color = theme.textColor.copy(alpha = 0.7f), fontSize = FutureTypography.summary, modifier = Modifier.weight(1f))
-        val interactionSource = remember { MutableInteractionSource() }
-        Icon(
-            Icons.Rounded.Close,
-            contentDescription = "הסר תמונה",
-            tint = theme.textColor.copy(alpha = 0.6f),
-            modifier = Modifier
-                .size(20.dp)
-                .clickable(interactionSource = interactionSource, indication = null, onClick = onRemove)
-                .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
-        )
+        Text("תמונה מצורפת MMS", color = theme.secondaryTextColor, fontSize = FutureTypography.summary, modifier = Modifier.weight(1f))
+        TopBarIconButton(Icons.Rounded.Close, "הסר תמונה", theme.textColor, theme.accentColor, onRemove)
     }
 }
 
+/** שליחה - כפתור אייקון; בלי טקסט ובלי צירוף הוא לא מקבל פוקוס (אין מה לשלוח). */
 @Composable
 private fun SendButton(theme: FutureTheme, enabled: Boolean, onClick: () -> Unit) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val bgColor by animateColorAsState(
-        when {
-            !enabled -> theme.textColor.copy(alpha = 0.1f)
-            isFocused -> theme.accentColor
-            else -> theme.textColor.copy(alpha = 0.25f)
-        },
-        label = "sendBg"
-    )
-    val tint by animateColorAsState(
-        if (isFocused && enabled) Color.Black else theme.textColor.copy(alpha = if (enabled) 1f else 0.4f),
-        label = "sendTint"
-    )
-
-    Box(
-        modifier = Modifier
-            .size(48.dp)
-            .clip(CircleShape)
-            .background(bgColor)
-            .clickable(interactionSource = interactionSource, indication = null, enabled = enabled, onClick = onClick)
-            .focusable(interactionSource = interactionSource, enabled = enabled).bringIntoViewOnFocus(),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            Icons.AutoMirrored.Rounded.Send,
-            contentDescription = "שלח",
-            tint = tint,
-            modifier = Modifier.size(20.dp)
-        )
-    }
+    TopBarIconButton(Icons.AutoMirrored.Rounded.Send, "שלח", theme.textColor, theme.accentColor, onClick, enabled = enabled)
 }
 
+/**
+ * בועת הודעה. שלי = ההדגשה המתוקנת עם הדיו שמתאים לה (היה Color.Black קבוע,
+ * בלתי קריא על הדגשה כהה); של הצד השני = 12% מהטקסט. פוקוס = מסגרת 1.5dp של
+ * שורת רשימה - קודם הוא סומן רק בהחלשת המילוי ל-70%, שכמעט לא נראתה.
+ * הפינות על הסקאלה: 16dp, והפינה ה"זנב" 4dp.
+ */
 @Composable
 private fun MessageBubble(message: Message, theme: FutureTheme, onClick: () -> Unit, onFocused: () -> Unit = {}) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
     LaunchedEffect(isFocused) { if (isFocused) onFocused() }
     val bitmap = message.imageUri?.let { rememberMmsBitmap(it) }
+    val accent = theme.readableAccentColor
+    val fill = if (message.isFromMe) accent else theme.textAlpha(12)
+    val ink = if (message.isFromMe) theme.onReadableAccentColor else theme.textColor
+    val ring by animateColorAsState(
+        if (isFocused) (if (message.isFromMe) theme.textColor else accent) else Color.Transparent,
+        FutureMotion.focusColorSpec,
+        label = "bubbleRing",
+    )
+    val shape = RoundedCornerShape(
+        topStart = FutureShapes.radiusLg,
+        topEnd = FutureShapes.radiusLg,
+        bottomStart = if (message.isFromMe) FutureShapes.radiusLg else FutureShapes.radiusXs,
+        bottomEnd = if (message.isFromMe) FutureShapes.radiusXs else FutureShapes.radiusLg,
+    )
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 3.dp),
+            .padding(vertical = FutureDimens.spacingXs),
         contentAlignment = if (message.isFromMe) Alignment.CenterEnd else Alignment.CenterStart
     ) {
         Column(
@@ -364,18 +317,9 @@ private fun MessageBubble(message: Message, theme: FutureTheme, onClick: () -> U
         ) {
             Box(
                 modifier = Modifier
-                    .clip(
-                        RoundedCornerShape(
-                            topStart = 18.dp,
-                            topEnd = 18.dp,
-                            bottomStart = if (message.isFromMe) 18.dp else 4.dp,
-                            bottomEnd = if (message.isFromMe) 4.dp else 18.dp
-                        )
-                    )
-                    .background(
-                        if (isFocused) theme.accentColor.copy(alpha = 0.7f)
-                        else if (message.isFromMe) theme.accentColor else theme.textColor.copy(alpha = 0.12f)
-                    )
+                    .clip(shape)
+                    .background(fill)
+                    .border(FutureDimens.focusBorderItem, ring, shape)
                     .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
                     .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
             ) {
@@ -393,30 +337,28 @@ private fun MessageBubble(message: Message, theme: FutureTheme, onClick: () -> U
                     if (message.text.isNotBlank()) {
                         Text(
                             text = message.text,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            color = if (message.isFromMe) Color.Black else theme.textColor,
+                            modifier = Modifier.padding(horizontal = FutureDimens.spacingSm, vertical = FutureDimens.spacingXs),
+                            color = ink,
                             fontSize = FutureTypography.body
                         )
                     }
                 }
             }
             Row(
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingXs),
+                modifier = Modifier.padding(horizontal = 6.dp, vertical = FutureDimens.spacingXxs)
             ) {
                 Text(
                     text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(message.timestamp)),
-                    color = theme.textColor.copy(alpha = 0.4f),
+                    color = theme.subtleTextColor,
                     fontSize = FutureTypography.caption,
                 )
                 // סטטוס שליחה אמיתי - משוב אם ההודעה יצאה מהמכשיר בפועל, ולא רק
-                // ש"נשלחה" באופן אופטימי (ראו MessageStatus/SmsSentReceiver). צבעים
-                // אך ורק מה-theme הקיים - דגני/הצלחה עם accentColor, כישלון עם
-                // dangerColor - בלי להמציא צבעים חדשים מחוץ למערכת העיצוב.
+                // ש"נשלחה" באופן אופטימי (ראו MessageStatus/SmsSentReceiver).
                 messageStatusLabel(message.status)?.let { (label, isFailure) ->
                     Text(
                         text = label,
-                        color = if (isFailure) theme.dangerColor else theme.textColor.copy(alpha = 0.4f),
+                        color = if (isFailure) theme.dangerColor else theme.subtleTextColor,
                         fontSize = FutureTypography.caption
                     )
                 }
@@ -428,73 +370,22 @@ private fun MessageBubble(message: Message, theme: FutureTheme, onClick: () -> U
 /** תווית לסטטוס שליחה + האם זו כשל (לצביעה) - null להודעות נכנסות (status == null),
  * שאין להן משמעות "האם נשלחה". */
 private fun messageStatusLabel(status: com.future.messages.data.MessageStatus?): Pair<String, Boolean>? = when (status) {
-    com.future.messages.data.MessageStatus.SENDING -> "שולח..." to false
-    com.future.messages.data.MessageStatus.SENT -> "✓ נשלח" to false
-    com.future.messages.data.MessageStatus.DELIVERED -> "✓✓ נמסר" to false
-    com.future.messages.data.MessageStatus.FAILED -> "⚠ השליחה נכשלה" to true
+    com.future.messages.data.MessageStatus.SENDING -> "שולח" to false
+    com.future.messages.data.MessageStatus.SENT -> "נשלח" to false
+    com.future.messages.data.MessageStatus.DELIVERED -> "נמסר" to false
+    com.future.messages.data.MessageStatus.FAILED -> "השליחה נכשלה" to true
     null -> null
 }
 
 @Composable
 private fun MessageActionDialog(theme: FutureTheme, onForward: () -> Unit, onDelete: () -> Unit, onDismiss: () -> Unit) {
-    val firstRowFocusRequester = remember { FocusRequester() }
-    AppDialog(onDismissRequest = onDismiss) {
-        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(FutureShapes.xl)
-                    .background(theme.surfaceColor)
-                    .padding(vertical = 8.dp)
-            ) {
-                ActionDialogRow(theme, icon = Icons.AutoMirrored.Rounded.Send, label = "העבר הודעה", onClick = onForward, focusRequester = firstRowFocusRequester)
-                ActionDialogRow(theme, icon = Icons.Rounded.Delete, label = "מחק הודעה", onClick = onDelete, isDestructive = true)
-            }
-        }
+    FutureOptionsMenu(theme = theme, onDismissRequest = onDismiss, header = "הודעה") {
+        FutureMenuRow("העבר הודעה", Icons.AutoMirrored.Rounded.Send, theme, onForward)
+        FutureMenuRow("מחק הודעה", Icons.Rounded.Delete, theme, onDelete, destructive = true)
     }
 }
 
-@Composable
-private fun ActionDialogRow(
-    theme: FutureTheme,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String,
-    onClick: () -> Unit,
-    isDestructive: Boolean = false,
-    focusRequester: FocusRequester? = null,
-) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val bgColor by animateColorAsState(if (isFocused) theme.accentColor.copy(alpha = 0.25f) else Color.Transparent, label = "actionRowBg")
-    val contentColor = if (isDestructive) theme.dangerColor else theme.textColor
-    // Dialog() מריץ את החלון שלו במעטפת נפרדת - אם מבקשים פוקוס לפני שהחלון
-    // בכלל נדבק, הבקשה נבלעת בשקט. onGloballyPositioned מבטיח שהבקשה תקרה
-    // ברגע שהשורה באמת נמדדת/מוצגת, בניגוד לדיאלוג הזה שלא ביקש פוקוס בכלל.
-    var hasRequestedFocus by remember { mutableStateOf(false) }
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(bgColor)
-            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
-            .then(
-                if (focusRequester != null) Modifier.onGloballyPositioned {
-                    if (!hasRequestedFocus) {
-                        hasRequestedFocus = true
-                        focusRequester.requestFocus()
-                    }
-                } else Modifier
-            )
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
-            .padding(horizontal = 20.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(icon, contentDescription = null, tint = contentColor, modifier = Modifier.size(20.dp))
-        Spacer(modifier = Modifier.width(14.dp))
-        Text(label, color = contentColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Medium)
-    }
-}
 
 /** טוען Bitmap מ-content Uri בלי ספריית טעינת תמונות חיצונית - אין כזו תלות בפרויקט. */
 @Composable

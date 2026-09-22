@@ -1,4 +1,5 @@
 package com.future.sharednav.components
+import androidx.compose.foundation.focusable
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.style.TextOverflow
@@ -101,6 +102,7 @@ fun TopBarIconButton(
     accentColor: Color,
     onClick: () -> Unit,
     focusRequester: FocusRequester? = null,
+    enabled: Boolean = true,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
@@ -121,9 +123,12 @@ fun TopBarIconButton(
             .clip(CircleShape)
             .background(bgColor)
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick),
+            // כפתור שאי אפשר להפעיל (שליחה בלי טקסט) לא מקבל פוקוס בכלל, והאייקון
+            // שלו יורד ל-40% - אותו כלל של FutureButton.
+            .focusable(enabled = enabled, interactionSource = interactionSource)
+            .clickable(interactionSource = interactionSource, indication = null, enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(icon, contentDescription = contentDescription, tint = textColor, modifier = Modifier.size(FutureDimens.iconTopBar))
+        Icon(icon, contentDescription = contentDescription, tint = if (enabled) textColor else textColor.copy(alpha = 0.4f), modifier = Modifier.size(FutureDimens.iconTopBar))
     }
 }

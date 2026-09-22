@@ -1,4 +1,17 @@
 package com.future.settings.ui
+import com.future.sharednav.components.FutureTextField
+import com.future.sharednav.components.TopBarIconButton
+import com.future.sharednav.components.ScreenTopBar
+import com.future.sharednav.components.InputDialog
+import com.future.sharednav.components.FutureDialog
+import com.future.sharednav.components.FutureButton
+import com.future.sharednav.components.FutureButtonVariant
+import com.future.sharednav.components.FutureSpinner
+import com.future.sharednav.theme.FutureDimens
+import com.future.sharednav.theme.FutureAccents
+import com.future.sharednav.theme.mutedTextColor
+import com.future.sharednav.theme.scrimColor
+import androidx.compose.ui.text.style.TextAlign
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.focus.bringIntoViewOnFocus
@@ -302,29 +315,22 @@ fun MainMenu(navController: NavController, theme: ThemeConfig, viewModel: Settin
             item { LargeHeader("הגדרות", theme) }
 
             item {
-                OutlinedTextField(
+                FutureTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
-                    singleLine = true,
-                    placeholder = { Text("חיפוש בהגדרות") },
-                    leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null, tint = theme.textColor.copy(alpha = 0.6f)) },
-                    trailingIcon = {
+                    theme = theme.futureTheme,
+                    placeholder = "חיפוש בהגדרות",
+                    leading = {
+                        Icon(Icons.Rounded.Search, contentDescription = null, tint = theme.textColor.copy(alpha = 0.6f), modifier = Modifier.size(FutureDimens.iconTopBar))
+                    },
+                    trailing = {
                         if (searchQuery.isNotEmpty()) {
-                            IconButton(onClick = { searchQuery = "" }) {
-                                Icon(Icons.Rounded.Close, contentDescription = "נקה חיפוש", tint = theme.textColor.copy(alpha = 0.6f))
-                            }
+                            TopBarIconButton(Icons.Rounded.Close, "נקה חיפוש", theme.textColor, theme.primaryColor, { searchQuery = "" })
                         }
                     },
-                    shape = RoundedCornerShape(theme.borderRadius),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = theme.textColor,
-                        unfocusedTextColor = theme.textColor,
-                        focusedBorderColor = theme.primaryColor,
-                        unfocusedBorderColor = theme.textColor.copy(alpha = 0.3f)
-                    ),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp)
+                        .padding(horizontal = FutureDimens.screenPadding, vertical = FutureDimens.spacingXs)
                         .escapeTextFieldFocusTrap()
                 )
             }
@@ -402,7 +408,7 @@ fun MainMenu(navController: NavController, theme: ThemeConfig, viewModel: Settin
             if (partyActive) {
                 item {
                     SettingsCard(theme) {
-                        SettingItem("🎉 מצב חגיגה", "עוד ${((viewModel.partyModeExpiresAt.value - now) / 60000L).coerceAtLeast(0L)} דקות", Icons.Rounded.Celebration, theme) { navController.navigate(Screen.PartyMode.route) }
+                        SettingItem("מצב חגיגה", "עוד ${((viewModel.partyModeExpiresAt.value - now) / 60000L).coerceAtLeast(0L)} דקות", Icons.Rounded.Celebration, theme) { navController.navigate(Screen.PartyMode.route) }
                     }
                 }
             }
@@ -411,17 +417,10 @@ fun MainMenu(navController: NavController, theme: ThemeConfig, viewModel: Settin
     }
 }
 
+/** השורה העליונה של מסך פנימי - ScreenTopBar של הדיזיין סיסטם (היה IconButton של Material). */
 @Composable
 fun SmallHeader(title: String, theme: ThemeConfig, onBack: () -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        IconButton(onClick = onBack) {
-            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "חזור", tint = theme.textColor)
-        }
-        Text(title, fontSize = FutureTypography.screenTitle, fontWeight = FontWeight.Bold, color = theme.textColor)
-    }
+    ScreenTopBar(title = title, textColor = theme.textColor, accentColor = theme.primaryColor, onBack = onBack)
 }
 
 @Composable
@@ -553,32 +552,15 @@ fun BluetoothScreen(navController: NavController, theme: ThemeConfig, viewModel:
     }
 
     if (isRenaming) {
-        AlertDialog(
-            onDismissRequest = { isRenaming = false },
-            containerColor = theme.surfaceColor,
-            titleContentColor = theme.textColor,
-            title = { Text("שם המכשיר", fontWeight = FontWeight.Bold) },
-            text = {
-                OutlinedTextField(
-                    value = deviceNameText,
-                    onValueChange = { deviceNameText = it },
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = theme.textColor,
-                        unfocusedTextColor = theme.textColor,
-                        focusedBorderColor = theme.primaryColor
-                    )
-                )
+        InputDialog(
+            title = "שם המכשיר",
+            theme = theme.futureTheme,
+            initialValue = deviceNameText,
+            onDismiss = { isRenaming = false },
+            onConfirm = { name ->
+                viewModel.renameBluetoothDevice(name)
+                isRenaming = false
             },
-            confirmButton = {
-                TextButton(onClick = {
-                    if (deviceNameText.isNotBlank()) viewModel.renameBluetoothDevice(deviceNameText.trim())
-                    isRenaming = false
-                }) { Text("שמור", color = theme.primaryColor, fontWeight = FontWeight.Bold) }
-            },
-            dismissButton = {
-                TextButton(onClick = { isRenaming = false }) { Text("ביטול", color = theme.textColor.copy(alpha = 0.6f)) }
-            }
         )
     }
 
@@ -892,7 +874,7 @@ fun ColorPicker(currentColor: Color, theme: ThemeConfig, onColorChange: (Color) 
 
         Spacer(modifier = Modifier.height(4.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-            val presets = listOf(Color.White, Color(0xFF64D2FF), Color(0xFFFF9F0A), Color(0xFF30D158), Color(0xFFBF5AF2))
+            val presets = FutureAccents.presets
             presets.forEach { color ->
                 var isFocused by remember { mutableStateOf(false) }
                 Box(
@@ -999,8 +981,8 @@ fun SystemUiScreen(navController: NavController, theme: ThemeConfig, viewModel: 
             }
         }
         if (viewModel.isApplyingWallpaper.value) {
-            Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = theme.primaryColor)
+            Box(modifier = Modifier.fillMaxSize().background(theme.futureTheme.scrimColor), contentAlignment = Alignment.Center) {
+                FutureSpinner(theme = theme.futureTheme)
             }
         }
     }
@@ -1592,6 +1574,9 @@ fun AppDetailScreen(navController: NavController, theme: ThemeConfig, viewModel:
 
 /** דיאלוג אישור גנרי לפעולות הרסניות/בלתי-הפיכות (מחיקת נתונים, אתחול, כיבוי) -
  *  צעד ביניים חובה לפני שקוראים לפעולה בפועל. */
+/** דיאלוג אישור לפעולות הרסניות/בלתי-הפיכות (מחיקת נתונים, אתחול, כיבוי) - צעד ביניים
+ *  חובה לפני שקוראים לפעולה בפועל. המשטח והכפתורים של הדיזיין סיסטם (היה AlertDialog
+ *  של Material עם אדום #FF453A שאינו בפלטה); כאן יש גם שורת הסבר מתחת לכותרת. */
 @Composable
 fun ConfirmDialog(
     theme: ThemeConfig,
@@ -1601,24 +1586,23 @@ fun ConfirmDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    AlertDialog(
+    FutureDialog(
+        theme = theme.futureTheme,
         onDismissRequest = onDismiss,
-        containerColor = theme.surfaceColor,
-        titleContentColor = theme.textColor,
-        textContentColor = theme.textColor.copy(alpha = 0.8f),
-        title = { Text(title, fontWeight = FontWeight.Bold) },
-        text = { Text(message) },
-        confirmButton = {
-            TextButton(onClick = onConfirm) {
-                Text(confirmLabel, color = Color(0xFFFF453A), fontWeight = FontWeight.Bold)
-            }
+        title = title,
+        buttons = {
+            FutureButton("ביטול", theme.futureTheme, onDismiss, variant = FutureButtonVariant.Secondary)
+            FutureButton(confirmLabel, theme.futureTheme, onConfirm, variant = FutureButtonVariant.Destructive)
         },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("ביטול", color = theme.primaryColor)
-            }
-        }
-    )
+    ) {
+        Text(
+            message,
+            color = theme.futureTheme.mutedTextColor,
+            fontSize = FutureTypography.body,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
 }
 
 @Composable
@@ -1651,11 +1635,11 @@ fun PerformanceScreen(navController: NavController, theme: ThemeConfig, viewMode
                                     .fillMaxHeight()
                                     .fillMaxWidth(fraction.coerceIn(0f, 1f))
                                     .clip(FutureShapes.xs)
-                                    .background(if (ram.lowMemory) Color(0xFFFF453A) else theme.primaryColor)
+                                    .background(if (ram.lowMemory) theme.dangerColor else theme.primaryColor)
                             )
                         }
                         if (ram.lowMemory) {
-                            Text("זיכרון נמוך - מומלץ לבצע אופטימיזציה", fontSize = FutureTypography.label, color = Color(0xFFFF453A), modifier = Modifier.padding(top = 6.dp))
+                            Text("זיכרון נמוך - מומלץ לבצע אופטימיזציה", fontSize = FutureTypography.label, color = theme.dangerColor, modifier = Modifier.padding(top = 6.dp))
                         }
                     }
                 }
@@ -2145,36 +2129,19 @@ fun SimManagerScreen(navController: NavController, theme: ThemeConfig, viewModel
     var renamingSubId by remember { mutableStateOf<Int?>(null) }
     var renameText by remember { mutableStateOf("") }
 
-    val simColors = listOf(Color(0xFF64D2FF), Color(0xFFFF9F0A), Color(0xFF30D158), Color(0xFFBF5AF2), Color(0xFFFF453A))
+    val simColors = FutureAccents.presets.drop(1) + theme.dangerColor
 
     if (renamingSubId != null) {
-        AlertDialog(
-            onDismissRequest = { renamingSubId = null },
-            containerColor = theme.surfaceColor,
-            titleContentColor = theme.textColor,
-            title = { Text("שם תצוגה לקו", fontWeight = FontWeight.Bold) },
-            text = {
-                OutlinedTextField(
-                    value = renameText,
-                    onValueChange = { renameText = it },
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = theme.textColor,
-                        unfocusedTextColor = theme.textColor,
-                        focusedBorderColor = theme.primaryColor
-                    )
-                )
+        InputDialog(
+            title = "שם תצוגה לקו",
+            theme = theme.futureTheme,
+            initialValue = renameText,
+            onDismiss = { renamingSubId = null },
+            onConfirm = { name ->
+                val subId = renamingSubId
+                if (subId != null) viewModel.renameSim(subId, name)
+                renamingSubId = null
             },
-            confirmButton = {
-                TextButton(onClick = {
-                    val subId = renamingSubId
-                    if (subId != null && renameText.isNotBlank()) viewModel.renameSim(subId, renameText.trim())
-                    renamingSubId = null
-                }) { Text("שמור", color = theme.primaryColor, fontWeight = FontWeight.Bold) }
-            },
-            dismissButton = {
-                TextButton(onClick = { renamingSubId = null }) { Text("ביטול", color = theme.textColor.copy(alpha = 0.6f)) }
-            }
         )
     }
 
@@ -2252,36 +2219,20 @@ fun AppTimersScreen(navController: NavController, theme: ThemeConfig, viewModel:
     }
 
     if (pickingApp != null) {
-        AlertDialog(
-            onDismissRequest = { pickingApp = null },
-            containerColor = theme.surfaceColor,
-            titleContentColor = theme.textColor,
-            title = { Text("מכסה יומית ל-${pickingApp?.displayName}", fontWeight = FontWeight.Bold) },
-            text = {
-                OutlinedTextField(
-                    value = minutesText,
-                    onValueChange = { new -> if (new.all { it.isDigit() }) minutesText = new },
-                    singleLine = true,
-                    label = { Text("דקות ליום") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = theme.textColor,
-                        unfocusedTextColor = theme.textColor,
-                        focusedBorderColor = theme.primaryColor
-                    )
-                )
+        InputDialog(
+            title = "מכסה יומית ל-${pickingApp?.displayName}",
+            theme = theme.futureTheme,
+            initialValue = minutesText,
+            placeholder = "דקות ליום",
+            confirmLabel = "הגדר",
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            onDismiss = { pickingApp = null },
+            onConfirm = { value ->
+                val minutes = value.filter { it.isDigit() }.toIntOrNull()
+                val pkg = pickingApp?.packageName
+                if (minutes != null && minutes > 0 && pkg != null) viewModel.setAppTimer(pkg, minutes)
+                pickingApp = null
             },
-            confirmButton = {
-                TextButton(onClick = {
-                    val minutes = minutesText.toIntOrNull()
-                    val pkg = pickingApp?.packageName
-                    if (minutes != null && minutes > 0 && pkg != null) viewModel.setAppTimer(pkg, minutes)
-                    pickingApp = null
-                }) { Text("הגדר", color = theme.primaryColor, fontWeight = FontWeight.Bold) }
-            },
-            dismissButton = {
-                TextButton(onClick = { pickingApp = null }) { Text("ביטול", color = theme.textColor.copy(alpha = 0.6f)) }
-            }
         )
     }
 
@@ -2404,43 +2355,42 @@ fun SosScreen(navController: NavController, theme: ThemeConfig, viewModel: Setti
     var phoneField by remember { mutableStateOf(contact?.second ?: "") }
 
     if (showEditDialog) {
-        AlertDialog(
+        FutureDialog(
+            theme = theme.futureTheme,
             onDismissRequest = { showEditDialog = false },
-            containerColor = theme.surfaceColor,
-            titleContentColor = theme.textColor,
-            title = { Text("איש קשר לחירום", fontWeight = FontWeight.Bold) },
-            text = {
-                Column {
-                    OutlinedTextField(
-                        value = nameField,
-                        onValueChange = { nameField = it },
-                        singleLine = true,
-                        label = { Text("שם") },
-                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = theme.textColor, unfocusedTextColor = theme.textColor, focusedBorderColor = theme.primaryColor)
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = phoneField,
-                        onValueChange = { phoneField = it },
-                        singleLine = true,
-                        label = { Text("מספר טלפון") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = theme.textColor, unfocusedTextColor = theme.textColor, focusedBorderColor = theme.primaryColor)
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
+            title = "איש קשר לחירום",
+            buttons = {
+                FutureButton("ביטול", theme.futureTheme, { showEditDialog = false }, variant = FutureButtonVariant.Secondary)
+                FutureButton("שמור", theme.futureTheme, {
                     if (nameField.isNotBlank() && phoneField.isNotBlank()) {
                         viewModel.saveEmergencyContact(nameField.trim(), phoneField.trim())
                         showEditDialog = false
                     }
-                }) { Text("שמור", color = theme.primaryColor, fontWeight = FontWeight.Bold) }
+                })
             },
-            dismissButton = {
-                TextButton(onClick = { showEditDialog = false }) { Text("ביטול", color = theme.textColor.copy(alpha = 0.6f)) }
+        ) {
+            Column(
+                modifier = Modifier.escapeTextFieldFocusTrap(),
+                verticalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm),
+            ) {
+                FutureTextField(
+                    value = nameField,
+                    onValueChange = { nameField = it },
+                    theme = theme.futureTheme,
+                    placeholder = "שם",
+                    autoFocus = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                FutureTextField(
+                    value = phoneField,
+                    onValueChange = { phoneField = it },
+                    theme = theme.futureTheme,
+                    placeholder = "מספר טלפון",
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
-        )
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {

@@ -1,4 +1,6 @@
 package com.future.tools.ui
+import com.future.sharednav.components.FutureAvatar
+import com.future.sharednav.components.AvatarListSize
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -117,15 +119,10 @@ fun ToolRow(
     )
 }
 
-/** אייקון בתחילת שורה: עיגול 36dp ב-8% מהטקסט, האייקון בצבע הטקסט. */
+/** אייקון בתחילת שורה - האווטאר של הדיזיין סיסטם (Avatar.jsx), עם אייקון. */
 @Composable
-fun ToolIcon(icon: ImageVector, theme: FutureTheme, size: Dp = FutureDimens.rowHeightTopBarButton) {
-    Box(
-        modifier = Modifier.size(size).clip(CircleShape).background(theme.idleFieldColor),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(icon, contentDescription = null, tint = theme.textColor, modifier = Modifier.size(FutureDimens.iconTopBar))
-    }
+fun ToolIcon(icon: ImageVector, theme: FutureTheme, size: Dp = AvatarListSize) {
+    FutureAvatar(theme = theme, icon = icon, size = size)
 }
 
 /** כפתור +/- ליד ערך מספרי - כפתור אייקון רגיל (8% במנוחה, 30% הדגשה בפוקוס). */

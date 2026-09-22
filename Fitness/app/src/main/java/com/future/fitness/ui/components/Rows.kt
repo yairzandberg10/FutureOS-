@@ -1,4 +1,5 @@
 package com.future.fitness.ui.components
+import com.future.sharednav.components.FutureAvatar
 import com.future.sharednav.components.FutureListItem
 import com.future.sharednav.theme.FutureDimens
 import com.future.sharednav.theme.mutedTextColor
@@ -71,14 +72,7 @@ fun IconListRow(
     showChevron: Boolean = false,
     focusRequester: FocusRequester? = null,
 ) {
-    val leading: @Composable () -> Unit = {
-        Box(
-            modifier = Modifier.size(FutureDimens.rowHeightTopBarButton).background(theme.idleFieldColor, CircleShape),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(icon, contentDescription = null, tint = theme.textColor, modifier = Modifier.size(FutureDimens.iconTopBar))
-        }
-    }
+    val leading: @Composable () -> Unit = { FutureAvatar(theme = theme, icon = icon) }
     val trailing: @Composable RowScope.() -> Unit = {
         if (digit != null) {
             Text(digit, color = theme.subtleTextColor, fontSize = FutureTypography.body, fontWeight = FontWeight.Bold)

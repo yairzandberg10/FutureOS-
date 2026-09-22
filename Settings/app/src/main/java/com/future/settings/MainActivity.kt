@@ -72,7 +72,7 @@ class MainActivity : ComponentActivity() {
                             modifier = Modifier.fillMaxSize().background(theme.backgroundColor),
                             contentAlignment = Alignment.Center
                         ) {
-                            CircularProgressIndicator(color = theme.primaryColor, strokeWidth = 3.dp)
+                            com.future.sharednav.components.FutureSpinner(theme = theme.futureTheme)
                         }
                     }
                 }

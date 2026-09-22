@@ -30,6 +30,20 @@ data class FutureTheme(
     val warningColor: Color = if (isDarkMode) Color(0xFFFFD60A) else Color(0xFFB8860B)
 }
 
+/**
+ * חמש ההדגשות שהמשתמש יכול לבחור בהגדרות - הצבע היחיד במערכת שבשליטתו
+ * (guidelines/colors-accent.html). לבן הוא ברירת המחדל, ולכן שום רכיב לא
+ * רשאי להניח שההדגשה צבעונית.
+ */
+object FutureAccents {
+    val White: Color = Color.White
+    val Cyan: Color = Color(0xFF64D2FF)
+    val Orange: Color = Color(0xFFFF9F0A)
+    val Green: Color = Color(0xFF30D158)
+    val Purple: Color = Color(0xFFBF5AF2)
+    val presets: List<Color> = listOf(White, Cyan, Orange, Green, Purple)
+}
+
 // ---- הרחבות ספציפיות-לאפליקציה (היו משוכפלות בקוד לפני האיחוד) ----
 
 /** שלושת צבעי כפתורי המחשבון (Calculator) - ספרה/פעולה/פוקוס. */

@@ -1,6 +1,6 @@
 package com.future.messages
+import com.future.sharednav.components.FutureButton
 
-import com.future.sharednav.theme.onAccentColor
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -362,11 +362,7 @@ private fun PermissionRequiredScreen(theme: FutureTheme, onRequest: () -> Unit) 
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
                 Text("כדי להשתמש בהודעות, יש לאשר הרשאות SMS ואנשי קשר", color = theme.textColor, textAlign = TextAlign.Center)
                 Spacer(modifier = Modifier.height(16.dp))
-                Button(
-                    onClick = onRequest,
-                    modifier = Modifier.focusRequester(focusRequester),
-                    colors = ButtonDefaults.buttonColors(containerColor = theme.accentColor, contentColor = theme.onAccentColor),
-                ) { Text("אשר הרשאות") }
+                FutureButton("אשר הרשאות", theme, onRequest, focusRequester = focusRequester)
             }
         }
     }
@@ -381,11 +377,7 @@ private fun DefaultAppRequiredScreen(theme: FutureTheme, onRequest: () -> Unit) 
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
                 Text("צריך להגדיר את Messages כאפליקציית ברירת המחדל למסרונים", color = theme.textColor, textAlign = TextAlign.Center)
                 Spacer(modifier = Modifier.height(16.dp))
-                Button(
-                    onClick = onRequest,
-                    modifier = Modifier.focusRequester(focusRequester),
-                    colors = ButtonDefaults.buttonColors(containerColor = theme.accentColor, contentColor = theme.onAccentColor),
-                ) { Text("הגדר כברירת מחדל") }
+                FutureButton("הגדר כברירת מחדל", theme, onRequest, focusRequester = focusRequester)
             }
         }
     }

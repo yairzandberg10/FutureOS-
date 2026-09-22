@@ -60,12 +60,14 @@ import com.future.sharednav.theme.textAlpha
 import com.future.sharednav.theme.rememberFutureType
 
 /**
- * מתג. מסילה 52×32dp וכפתור 24dp דלוק / 16dp כבוי - הגיאומטריה של
- * Material 3, שהיא מה שהמערכת השתמשה בו מלכתחילה.
+ * מתג (components/forms/Switch.jsx). מסילה 52×30dp עם מסגרת 2dp.
+ * כבוי = מסילה ריקה, מסגרת ב-30% מהטקסט וכפתור 14dp ב-40%.
+ * דלוק = מסילה מלאה בהדגשה, וכפתור 18dp בצבע הרקע של המסך.
  *
- * הכפתור לבן תמיד. בקוד המקור זה יצר מתג דלוק שנקרא כמסילה לבנה ריקה
- * כשההדגשה לבנה (ברירת המחדל), והעיצוב מסמן את זה כפגם. כאן המסילה
- * נצבעת בהדגשה **המתוקנת**, כך שבמצב בהיר היא נשארת מובחנת.
+ * הכפתור *אינו* לבן קבוע: עם ההדגשה הלבנה של ברירת המחדל, כפתור לבן על
+ * מסילה לבנה הוא בדיוק הפגם שהדיזיין סיסטם מסמן ("a white-on-white switch
+ * thumb is a real defect"). כאן שום דבר לא תלוי בכך שההדגשה צבעונית.
+ * המיקום לוגי - ב-RTL הכפתור נח מימין ונוסע שמאלה.
  */
 @Composable
 fun FutureSwitch(
@@ -75,37 +77,57 @@ fun FutureSwitch(
 ) {
     val accent = LocalFutureAccent.current ?: theme.readableAccentColor
     val track by animateColorAsState(
-        if (checked) accent else theme.switchTrackOffColor,
+        if (checked) accent else Color.Transparent,
         FutureMotion.focusColorSpec,
         label = "switchTrack",
     )
+    val border by animateColorAsState(
+        if (checked) accent else theme.textAlpha(30),
+        FutureMotion.focusColorSpec,
+        label = "switchBorder",
+    )
+    val thumb by animateColorAsState(
+        if (checked) theme.backgroundColor else theme.textAlpha(40),
+        FutureMotion.focusColorSpec,
+        label = "switchThumb",
+    )
     val thumbSize by animateDpAsState(
-        if (checked) 24.dp else 16.dp,
+        if (checked) SwitchThumbOn else SwitchThumbOff,
         FutureMotion.fast(),
         label = "switchThumbSize",
     )
-    val thumbOffset by animateDpAsState(
-        if (checked) 12.dp else 4.dp,
+    val thumbStart by animateDpAsState(
+        if (checked) SwitchTrackInner - SwitchThumbOn - SwitchThumbInset else SwitchThumbInset,
         FutureMotion.fast(),
-        label = "switchThumbOffset",
+        label = "switchThumbStart",
     )
     Box(
         modifier = modifier
-            .size(width = 52.dp, height = 32.dp)
+            .size(width = SwitchTrackWidth, height = SwitchTrackHeight)
             .clip(FutureShapes.pill)
-            .background(track),
-        // הממשק RTL, ולכן "דלוק" מזיז את הכפתור שמאלה.
-        contentAlignment = Alignment.CenterEnd,
+            .background(track)
+            .border(FutureDimens.focusBorderControl, border, FutureShapes.pill)
+            .padding(FutureDimens.focusBorderControl),
+        contentAlignment = Alignment.CenterStart,
     ) {
         Box(
             modifier = Modifier
-                .padding(end = thumbOffset)
+                .padding(start = thumbStart)
                 .size(thumbSize)
                 .clip(FutureShapes.pill)
-                .background(Color.White),
+                .background(thumb),
         )
     }
 }
+
+// הגיאומטריה של Switch.jsx, בחצי מהפיקסלים: מסילה 104×60px, כפתור 28/36px,
+// מרווח 8px מהשפה הפנימית.
+private val SwitchTrackWidth = 52.dp
+private val SwitchTrackHeight = 30.dp
+private val SwitchTrackInner = SwitchTrackWidth - 4.dp
+private val SwitchThumbOff = 14.dp
+private val SwitchThumbOn = 18.dp
+private val SwitchThumbInset = 4.dp
 
 /**
  * צ'יפ - מסנן או לשונית. רדיוס 14dp, 13sp בינוני.

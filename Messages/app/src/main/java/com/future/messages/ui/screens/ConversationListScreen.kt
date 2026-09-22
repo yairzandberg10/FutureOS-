@@ -1,5 +1,16 @@
 package com.future.messages.ui.screens
-import com.future.sharednav.theme.onAccentColor
+import com.future.sharednav.components.TopBarIconButton
+import com.future.sharednav.components.FutureSpinner
+import com.future.sharednav.components.EmptyState
+import com.future.sharednav.components.FutureAvatar
+import com.future.sharednav.components.FutureBadge
+import com.future.sharednav.components.FutureOptionsMenu
+import com.future.sharednav.components.FutureMenuRow
+import com.future.sharednav.focus.FocusableItem
+import com.future.sharednav.theme.FutureDimens
+import com.future.sharednav.theme.mutedTextColor
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.heightIn
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.components.MarqueeText
@@ -133,30 +144,36 @@ fun ConversationListScreen(
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize()) {
+                // השורה העליונה של הדיזיין סיסטם (TopBar: 16/12dp, כותרת 20sp) עם שני
+                // כפתורי אייקון. הכותרת הייתה 24sp בריפוד 20dp - אחרת מכל מסך אחר.
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 20.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = FutureDimens.spacingLg, vertical = FutureDimens.spacingMd),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("הודעות", fontSize = FutureTypography.headline, fontWeight = FontWeight.Bold, color = theme.textColor)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        com.future.sharednav.components.TopBarIconButton(
-                            Icons.Rounded.Groups, "הודעה קבוצתית", theme.textColor, theme.accentColor, onGroupComposeClick
-                        )
-                        ComposeButton(theme, onClick = onComposeClick, focusRequester = composeButtonFocusRequester)
+                    Text("הודעות", fontSize = FutureTypography.screenTitle, fontWeight = FontWeight.Bold, color = theme.textColor, modifier = Modifier.weight(1f))
+                    Row(horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm)) {
+                        TopBarIconButton(Icons.Rounded.Groups, "הודעה קבוצתית", theme.textColor, theme.accentColor, onGroupComposeClick)
+                        TopBarIconButton(Icons.AutoMirrored.Rounded.Chat, "הודעה חדשה", theme.textColor, theme.accentColor, onComposeClick, composeButtonFocusRequester)
                     }
                 }
 
                 if (isLoading && conversations.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = theme.accentColor)
+                        FutureSpinner(theme = theme)
                     }
                 } else if (conversations.isEmpty()) {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("אין הודעות עדיין", color = theme.textColor.copy(alpha = 0.5f))
-                    }
+                    EmptyState(
+                        icon = Icons.AutoMirrored.Rounded.Chat,
+                        title = "אין הודעות",
+                        subtitle = "כפתור ההודעה החדשה נמצא בראש המסך",
+                        textColor = theme.textColor,
+                    )
                 } else {
-                    LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(horizontal = FutureDimens.screenPadding, vertical = FutureDimens.spacingSm),
+                        verticalArrangement = Arrangement.spacedBy(FutureDimens.itemSpacing),
+                    ) {
                         itemsIndexed(conversations, key = { _, it -> it.threadId }) { index, conversation ->
                             ConversationRow(
                                 conversation,
@@ -178,6 +195,11 @@ fun ConversationListScreen(
     }
 }
 
+/**
+ * שורת שיחה - שורת הרשימה של הדיזיין סיסטם (FocusableItem: 14% הדגשה, מסגרת
+ * 1.5dp, 1.02) עם אווטאר ראשי תיבות ותג מונה (Badge.jsx). קודם הפוקוס כאן היה
+ * 18% מהטקסט עם מסגרת 2dp, והאווטאר היה ב-20% מההדגשה.
+ */
 @Composable
 private fun ConversationRow(
     conversation: Conversation,
@@ -187,28 +209,14 @@ private fun ConversationRow(
     focusRequester: FocusRequester? = null,
     onNavigateUpFromTop: (() -> Unit)? = null,
 ) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    LaunchedEffect(isFocused) { if (isFocused) onFocused() }
-    val shape = FutureShapes.lg
     val hasUnread = conversation.unreadCount > 0
-    val bgColor by animateColorAsState(
-        if (isFocused) theme.textColor.copy(alpha = 0.18f) else theme.textColor.copy(alpha = 0.06f),
-        label = "rowBg"
-    )
-    val scale by animateFloatAsState(if (isFocused) 1.02f else 1f, label = "rowScale")
-
-    Row(
+    FocusableItem(
+        onClick = onClick,
+        accentColor = theme.accentColor,
+        contentPadding = 0.dp,
+        focusRequester = focusRequester,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 4.dp)
-            .graphicsLayer { scaleX = scale; scaleY = scale }
-            .clip(shape)
-            .background(bgColor)
-            .then(if (isFocused) Modifier.border(2.dp, theme.accentColor, shape) else Modifier)
-            .let { if (focusRequester != null) it.focusRequester(focusRequester) else it }
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
             .then(
                 if (onNavigateUpFromTop != null) {
                     Modifier.onKeyEvent { event ->
@@ -218,85 +226,49 @@ private fun ConversationRow(
                         } else false
                     }
                 } else Modifier
-            )
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier.size(44.dp).clip(CircleShape).background(theme.accentColor.copy(alpha = 0.2f)),
-            contentAlignment = Alignment.Center
+            ),
+    ) { isFocused ->
+        LaunchedEffect(isFocused) { if (isFocused) onFocused() }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = FutureDimens.rowHeightList)
+                .padding(horizontal = FutureDimens.spacingMd, vertical = FutureDimens.spacingSm),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingMd),
         ) {
-            Text(
-                text = conversation.contact.name.take(1).uppercase(),
-                color = theme.accentColor,
-                fontWeight = FontWeight.Bold
-            )
-        }
-
-        Spacer(modifier = Modifier.width(14.dp))
-
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = conversation.contact.name,
-                color = theme.textColor,
-                fontWeight = if (hasUnread) FontWeight.Bold else FontWeight.SemiBold,
-                fontSize = FutureTypography.bodyLarge
-            )
-            MarqueeText(
-                text = conversation.lastMessageText,
-                color = theme.textColor.copy(alpha = if (hasUnread) 0.9f else 0.55f),
-                isFocused = isFocused,
-                style = androidx.compose.ui.text.TextStyle(fontSize = FutureTypography.summary),
-            )
-        }
-
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = formatTime(conversation.lastMessageTimestamp),
-                color = theme.textColor.copy(alpha = 0.5f),
-                fontSize = FutureTypography.caption
-            )
-            if (hasUnread) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Box(
-                    modifier = Modifier
-                        .size(18.dp)
-                        .clip(CircleShape)
-                        .background(theme.accentColor),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = conversation.unreadCount.toString(),
-                        color = Color.Black,
-                        fontSize = FutureTypography.caption,
-                        fontWeight = FontWeight.Bold
-                    )
+            FutureAvatar(theme = theme, name = conversation.contact.name)
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = conversation.contact.name,
+                    color = theme.textColor,
+                    fontWeight = if (hasUnread) FontWeight.Bold else FontWeight.Medium,
+                    fontSize = FutureTypography.title,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                MarqueeText(
+                    text = conversation.lastMessageText,
+                    color = if (hasUnread) theme.textColor else theme.mutedTextColor,
+                    isFocused = isFocused,
+                    style = androidx.compose.ui.text.TextStyle(fontSize = FutureTypography.summary),
+                )
+            }
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(FutureDimens.spacingXs)) {
+                Text(
+                    text = formatTime(conversation.lastMessageTimestamp),
+                    color = theme.mutedTextColor,
+                    fontSize = FutureTypography.caption
+                )
+                if (hasUnread) {
+                    FutureBadge(conversation.unreadCount, theme)
                 }
             }
         }
     }
 }
 
-@Composable
-private fun ComposeButton(theme: FutureTheme, onClick: () -> Unit, focusRequester: FocusRequester? = null) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val bgColor by animateColorAsState(if (isFocused) theme.accentColor else theme.textColor.copy(alpha = 0.15f), label = "composeBg")
-    val tint by animateColorAsState(if (isFocused) theme.onAccentColor else theme.textColor, label = "composeTint")
 
-    Box(
-        modifier = Modifier
-            .size(44.dp)
-            .clip(CircleShape)
-            .background(bgColor)
-            .let { if (focusRequester != null) it.focusRequester(focusRequester) else it }
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus(),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(Icons.AutoMirrored.Rounded.Chat, contentDescription = "הודעה חדשה", tint = tint, modifier = Modifier.size(20.dp))
-    }
-}
 
 /** תפריט אפשרויות לשיחה - נפתח במקש Options כשהשורה ממוקדת (ראו onOptionsKeyPress
  * למעלה). "הוסף לאנשי קשר" מוצג רק כשהמספר לא זוהה כאיש קשר קיים (onAddToContacts == null אחרת). */
@@ -309,57 +281,16 @@ private fun ConversationOptionsMenu(
     onAddToContacts: (() -> Unit)?,
     onDelete: () -> Unit,
 ) {
-    AppDialog(onDismissRequest = onDismiss) {
-        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(FutureShapes.xl)
-                    .background(theme.surfaceColor)
-                    .padding(vertical = 8.dp)
-            ) {
-                Text(
-                    conversation.contact.name,
-                    color = theme.textColor.copy(alpha = 0.5f),
-                    fontSize = FutureTypography.label,
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
-                )
-                ConversationMenuRow("התקשר", Icons.Rounded.Call, theme, onClick = onCall)
-                if (onAddToContacts != null) {
-                    ConversationMenuRow("הוסף לאנשי קשר", Icons.Rounded.PersonAdd, theme, onClick = onAddToContacts)
-                }
-                ConversationMenuRow("מחק שיחה", Icons.Rounded.Delete, theme, onClick = onDelete, isDestructive = true)
-            }
+    FutureOptionsMenu(theme = theme, onDismissRequest = onDismiss, header = conversation.contact.name) {
+        FutureMenuRow("התקשר", Icons.Rounded.Call, theme, onCall)
+        if (onAddToContacts != null) {
+            FutureMenuRow("הוסף לאנשי קשר", Icons.Rounded.PersonAdd, theme, onAddToContacts)
         }
+        FutureMenuRow("מחק שיחה", Icons.Rounded.Delete, theme, onDelete, destructive = true)
     }
 }
 
-@Composable
-private fun ConversationMenuRow(
-    label: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    theme: FutureTheme,
-    onClick: () -> Unit,
-    isDestructive: Boolean = false,
-) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val bgColor by animateColorAsState(if (isFocused) theme.accentColor.copy(alpha = 0.25f) else Color.Transparent, label = "convMenuRowBg")
-    val contentColor = if (isDestructive) theme.dangerColor else theme.textColor
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(bgColor)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
-            .padding(horizontal = 20.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(icon, contentDescription = null, tint = contentColor, modifier = Modifier.size(20.dp))
-        Spacer(modifier = Modifier.width(14.dp))
-        Text(label, color = contentColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Medium)
-    }
-}
+
 
 private fun formatTime(timestamp: Long): String {
     if (timestamp <= 0L) return ""

@@ -1,4 +1,10 @@
 package com.future.settings.ui.theme
+import com.future.sharednav.theme.FutureTheme
+import com.future.sharednav.theme.FutureType
+import com.future.sharednav.theme.FutureDimens
+import com.future.sharednav.theme.FutureShapes
+import com.future.sharednav.theme.elevatedSurfaceColor
+import com.future.sharednav.theme.dividerColor
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
@@ -10,19 +16,25 @@ data class ThemeConfig(
     val primaryColor: Color = Color.White,
     val isDarkMode: Boolean = true,
     val fontSizeMultiplier: Float = 1.0f,
-    val itemSpacing: Dp = 12.dp,
-    val borderRadius: Dp = 22.dp
+    val itemSpacing: Dp = FutureDimens.itemSpacing,
+    val borderRadius: Dp = FutureShapes.radiusXl
 ) {
-    // הרקע וה"כרטיסים" חייבים להיות שני גוונים שונים בבירור זה מזה (לא שני
-    // גוונים כמעט-זהים על שקיפות) כדי שאפשר יהיה להבדיל בין פאנל לפאנל.
-    val backgroundColor: Color = if (isDarkMode) Color.Black else Color(0xFFF2F2F7)
-    val surfaceColor: Color = if (isDarkMode) Color(0xFF1C1C1E) else Color.White
-    val glassColor: Color = if (isDarkMode) Color(0xFF2C2C2E) else Color(0xFFEDEDF2)
-    val textColor: Color = if (isDarkMode) Color.White else Color.Black
-    val dividerColor: Color = if (isDarkMode) Color.White.copy(alpha = 0.12f) else Color.Black.copy(alpha = 0.1f)
+    /**
+     * אותה ערכה בדיוק כמו בשאר המערכת. הצבעים למטה היו העתק hex ידני של
+     * FutureTheme - שני מקורות אמת שהיו צריכים להישאר מסונכרנים ידנית.
+     */
+    val futureTheme: FutureTheme = FutureTheme(isDarkMode = isDarkMode, accentColor = primaryColor)
+    private val type = FutureType(fontSizeMultiplier)
 
-    val baseFontSize: TextUnit = (16 * fontSizeMultiplier).sp
-    val titleFontSize: TextUnit = (17 * fontSizeMultiplier).sp
-    val summaryFontSize: TextUnit = (13 * fontSizeMultiplier).sp
-    val headerFontSize: TextUnit = (34 * fontSizeMultiplier).sp
+    val backgroundColor: Color = futureTheme.backgroundColor
+    val surfaceColor: Color = futureTheme.surfaceColor
+    val glassColor: Color = futureTheme.elevatedSurfaceColor
+    val textColor: Color = futureTheme.textColor
+    val dividerColor: Color = futureTheme.dividerColor
+    val dangerColor: Color = futureTheme.dangerColor
+
+    val baseFontSize: TextUnit = type.bodyLarge
+    val titleFontSize: TextUnit = type.title
+    val summaryFontSize: TextUnit = type.summary
+    val headerFontSize: TextUnit = type.display
 }

@@ -1,4 +1,14 @@
 package com.future.messages.ui.screens
+import com.future.sharednav.components.TopBarIconButton
+import com.future.sharednav.components.FutureTextField
+import com.future.sharednav.components.FutureListItem
+import com.future.sharednav.components.FutureAvatar
+import com.future.sharednav.components.FutureCheckbox
+import com.future.sharednav.components.EmptyState
+import com.future.sharednav.theme.FutureDimens
+import com.future.sharednav.theme.mutedTextColor
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Arrangement
 
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
@@ -83,7 +93,7 @@ fun GroupComposeScreen(
         // imePadding כדי שהרקע ימלא גם את השטח שמאחורי המקלדת.
         Column(modifier = Modifier.fillMaxSize().background(theme.backgroundColor).imePadding()) {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = FutureDimens.spacingLg, vertical = FutureDimens.spacingMd),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 com.future.sharednav.components.TopBarIconButton(
@@ -91,45 +101,41 @@ fun GroupComposeScreen(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("הודעה קבוצתית", color = theme.textColor, fontWeight = FontWeight.Bold, fontSize = FutureTypography.title)
+                    Text("הודעה קבוצתית", color = theme.textColor, fontWeight = FontWeight.Bold, fontSize = FutureTypography.screenTitle)
                     if (selectedContacts.isNotEmpty()) {
                         Text(
                             "${selectedContacts.size} נבחרו",
-                            color = theme.accentColor,
-                            fontSize = FutureTypography.label
+                            color = theme.mutedTextColor,
+                            fontSize = FutureTypography.summary
                         )
                     }
                 }
             }
 
-            OutlinedTextField(
+            FutureTextField(
                 value = query,
                 onValueChange = { query = it },
-                modifier = Modifier
-                    .escapeTextFieldFocusTrap()
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp)
-                    .focusRequester(queryFocusRequester),
-                placeholder = { Text("חיפוש איש קשר", color = theme.textColor.copy(alpha = 0.4f)) },
-                singleLine = true,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = theme.textColor,
-                    unfocusedTextColor = theme.textColor,
-                    focusedBorderColor = theme.accentColor,
-                    unfocusedBorderColor = theme.textColor.copy(alpha = 0.3f),
-                    cursorColor = theme.accentColor
-                ),
-                shape = FutureShapes.xl
+                theme = theme,
+                placeholder = "חיפוש איש קשר",
+                focusRequester = queryFocusRequester,
+                modifier = Modifier.escapeTextFieldFocusTrap().fillMaxWidth().padding(horizontal = FutureDimens.screenPadding),
             )
 
             Spacer(modifier = Modifier.height(8.dp))
 
             if (filteredContacts.isEmpty()) {
-                Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    Text("אין אנשי קשר", color = theme.textColor.copy(alpha = 0.5f))
-                }
+                EmptyState(
+                    icon = Icons.Rounded.Person,
+                    title = "אין אנשי קשר",
+                    textColor = theme.textColor,
+                    modifier = Modifier.weight(1f),
+                )
             } else {
-                LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                LazyColumn(
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    contentPadding = PaddingValues(horizontal = FutureDimens.screenPadding, vertical = FutureDimens.spacingXs),
+                    verticalArrangement = Arrangement.spacedBy(FutureDimens.spacingXs),
+                ) {
                     items(filteredContacts, key = { it.phoneNumber }) { contact ->
                         GroupContactRow(
                             contact = contact,
@@ -144,26 +150,20 @@ fun GroupComposeScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.Bottom
+                    .padding(horizontal = FutureDimens.spacingMd, vertical = FutureDimens.spacingSm)
+                    .escapeTextFieldFocusTrap(),
+                verticalAlignment = Alignment.Bottom,
+                horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm),
             ) {
-                OutlinedTextField(
+                FutureTextField(
                     value = messageText,
                     onValueChange = { messageText = it },
-                    modifier = Modifier.escapeTextFieldFocusTrap().weight(1f),
-                    placeholder = { Text("הודעה לכל הנבחרים...", color = theme.textColor.copy(alpha = 0.4f)) },
+                    theme = theme,
+                    placeholder = "הודעה לכל הנבחרים",
+                    singleLine = false,
                     maxLines = 4,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = theme.textColor,
-                        unfocusedTextColor = theme.textColor,
-                        focusedBorderColor = theme.accentColor,
-                        unfocusedBorderColor = theme.textColor.copy(alpha = 0.3f),
-                        cursorColor = theme.accentColor
-                    ),
-                    shape = FutureShapes.xl
+                    modifier = Modifier.weight(1f),
                 )
-
-                Spacer(modifier = Modifier.width(8.dp))
 
                 GroupSendButton(
                     theme = theme,
@@ -175,71 +175,20 @@ fun GroupComposeScreen(
     }
 }
 
+/** בחירת נמען - שורת רשימה עם אווטאר, ותיבת סימון בסופה (Checkbox.jsx). */
 @Composable
 private fun GroupContactRow(contact: Contact, isSelected: Boolean, theme: FutureTheme, onToggle: () -> Unit) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val bgColor by animateColorAsState(
-        if (isFocused) theme.accentColor.copy(alpha = 0.18f) else Color.Transparent,
-        label = "groupContactRowBg"
+    FutureListItem(
+        title = contact.name,
+        summary = contact.phoneNumber,
+        theme = theme,
+        onClick = onToggle,
+        leading = { FutureAvatar(theme = theme, name = contact.name) },
+        trailing = { FutureCheckbox(isSelected, theme) },
     )
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(FutureShapes.md)
-            .background(bgColor)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onToggle)
-            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(24.dp)
-                .clip(CircleShape)
-                .background(if (isSelected) theme.accentColor else theme.textColor.copy(alpha = 0.12f)),
-            contentAlignment = Alignment.Center
-        ) {
-            if (isSelected) {
-                Icon(Icons.Rounded.Check, contentDescription = null, tint = Color.Black, modifier = Modifier.size(16.dp))
-            }
-        }
-        Spacer(modifier = Modifier.width(12.dp))
-        Icon(Icons.Rounded.Person, contentDescription = null, tint = theme.accentColor, modifier = Modifier.size(20.dp))
-        Spacer(modifier = Modifier.width(10.dp))
-        Column {
-            Text(contact.name, color = theme.textColor, fontWeight = FontWeight.Medium, fontSize = FutureTypography.bodyLarge)
-            Text(contact.phoneNumber, color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.label)
-        }
-    }
 }
 
 @Composable
 private fun GroupSendButton(theme: FutureTheme, enabled: Boolean, onClick: () -> Unit) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val bgColor by animateColorAsState(
-        when {
-            !enabled -> theme.textColor.copy(alpha = 0.1f)
-            isFocused -> theme.accentColor
-            else -> theme.textColor.copy(alpha = 0.25f)
-        },
-        label = "groupSendBg"
-    )
-    val tint by animateColorAsState(
-        if (isFocused && enabled) Color.Black else theme.textColor.copy(alpha = if (enabled) 1f else 0.4f),
-        label = "groupSendTint"
-    )
-
-    Box(
-        modifier = Modifier
-            .size(48.dp)
-            .clip(CircleShape)
-            .background(bgColor)
-            .clickable(interactionSource = interactionSource, indication = null, enabled = enabled, onClick = onClick)
-            .focusable(interactionSource = interactionSource, enabled = enabled).bringIntoViewOnFocus(),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(Icons.AutoMirrored.Rounded.Send, contentDescription = "שלח לכולם", tint = tint, modifier = Modifier.size(20.dp))
-    }
+    TopBarIconButton(Icons.AutoMirrored.Rounded.Send, "שלח לכולם", theme.textColor, theme.accentColor, onClick, enabled = enabled)
 }

@@ -1,4 +1,6 @@
 package com.future.settings.ui.components
+import com.future.sharednav.components.FutureSwitch
+import com.future.sharednav.components.FutureDivider
 
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
@@ -168,16 +170,9 @@ fun SettingSwitch(
                     )
                 }
             }
-            Switch(
-                checked = checked,
-                onCheckedChange = null,
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = Color.White,
-                    checkedTrackColor = theme.primaryColor,
-                    uncheckedThumbColor = Color.White,
-                    uncheckedTrackColor = Color.LightGray
-                )
-            )
+            // המתג של הדיזיין סיסטם: הכפתור בצבע הרקע כשדלוק, ולא לבן קבוע -
+            // עם ההדגשה הלבנה של ברירת המחדל Switch של Material היה לבן על לבן.
+            FutureSwitch(checked = checked, theme = theme.futureTheme)
         }
     }
 }
@@ -201,11 +196,7 @@ fun SettingsCard(theme: ThemeConfig, content: @Composable ColumnScope.() -> Unit
 
 @Composable
 fun SettingDivider(theme: ThemeConfig? = null) {
-    HorizontalDivider(
-        modifier = Modifier.padding(horizontal = 16.dp),
-        thickness = 0.8.dp,
-        color = theme?.dividerColor ?: Color.LightGray.copy(alpha = 0.4f)
-    )
+    FutureDivider(theme = theme?.futureTheme ?: com.future.sharednav.theme.FutureTheme())
 }
 
 @Composable
@@ -236,6 +227,6 @@ fun SettingHeader(title: String, theme: ThemeConfig) {
         color = theme.textColor.copy(alpha = 0.55f),
         fontWeight = FontWeight.Bold,
         fontSize = FutureTypography.summary,
-        letterSpacing = 1.sp
+        letterSpacing = FutureTypography.trackingSection
     )
 }

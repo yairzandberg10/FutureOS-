@@ -1,4 +1,14 @@
 package com.future.messages.ui.screens
+import com.future.sharednav.components.FutureAvatar
+import com.future.sharednav.components.ScreenTopBar
+import com.future.sharednav.components.TopBarIconButton
+import com.future.sharednav.components.FutureTextField
+import com.future.sharednav.components.FutureButton
+import com.future.sharednav.components.FutureButtonVariant
+import com.future.sharednav.components.FutureListItem
+import com.future.sharednav.theme.FutureDimens
+import com.future.sharednav.theme.idleFieldColor
+import androidx.compose.foundation.layout.Arrangement
 
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
@@ -80,89 +90,83 @@ fun ComposeScreen(
         // ראו MessageThreadScreen: edge-to-edge מנטרל את adjustResize, ובלי
         // imePadding שדה החיפוש/הנמען נחבא מתחת למקלדת. background לפני
         // imePadding כדי שהרקע ימלא גם את השטח שמאחורי המקלדת.
-        Column(modifier = Modifier.fillMaxSize().background(theme.backgroundColor).imePadding()) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = onCancel) {
-                    Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "ביטול", tint = theme.textColor)
-                }
-                Text("הודעה חדשה", color = theme.textColor, fontWeight = FontWeight.Bold, fontSize = FutureTypography.title, modifier = Modifier.weight(1f))
-                IconButton(onClick = { imagePicker.launch("image/*") }) {
-                    Icon(Icons.Rounded.AttachFile, contentDescription = "צרף קובץ", tint = theme.textColor)
-                }
-            }
+        Column(modifier = Modifier.fillMaxSize().background(theme.backgroundColor).imePadding().escapeTextFieldFocusTrap()) {
+            ScreenTopBar(
+                title = "הודעה חדשה",
+                textColor = theme.textColor,
+                accentColor = theme.accentColor,
+                onBack = onCancel,
+                trailingIcon = Icons.Rounded.AttachFile,
+                trailingContentDescription = "צרף קובץ",
+                onTrailingClick = { imagePicker.launch("image/*") },
+            )
 
-            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)) {
-                OutlinedTextField(
+            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = FutureDimens.screenPadding, vertical = FutureDimens.spacingSm)) {
+                FutureTextField(
                     value = query,
                     onValueChange = { query = it },
-                    modifier = Modifier.escapeTextFieldFocusTrap().fillMaxWidth().focusRequester(focusRequester),
-                    placeholder = { Text("שם איש קשר או מספר טלפון", color = theme.textColor.copy(alpha = 0.4f)) },
-                    singleLine = true,
+                    theme = theme,
+                    placeholder = "שם איש קשר או מספר טלפון",
+                    focusRequester = focusRequester,
                     keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Phone),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = theme.textColor,
-                        unfocusedTextColor = theme.textColor,
-                        focusedBorderColor = theme.accentColor,
-                        unfocusedBorderColor = theme.textColor.copy(alpha = 0.3f),
-                        cursorColor = theme.accentColor
-                    ),
-                    shape = FutureShapes.xl
+                    modifier = Modifier.fillMaxWidth(),
                 )
 
                 val currentImageUri = attachedImageUri
                 if (currentImageUri != null) {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    val bitmap = rememberMmsBitmap(currentImageUri)
-                    Box(modifier = Modifier.size(64.dp).clip(FutureShapes.md).background(theme.textColor.copy(alpha = 0.1f))) {
-                        if (bitmap != null) {
-                            Image(bitmap = bitmap, contentDescription = null, modifier = Modifier.fillMaxSize())
+                    Row(
+                        modifier = Modifier.padding(top = FutureDimens.spacingMd),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingMd),
+                    ) {
+                        val bitmap = rememberMmsBitmap(currentImageUri)
+                        Box(modifier = Modifier.size(64.dp).clip(FutureShapes.sm).background(theme.idleFieldColor)) {
+                            if (bitmap != null) {
+                                Image(bitmap = bitmap, contentDescription = null, modifier = Modifier.fillMaxSize())
+                            }
                         }
-                        IconButton(
-                            onClick = { attachedImageUri = null },
-                            modifier = Modifier.align(Alignment.TopEnd).size(22.dp).background(theme.backgroundColor.copy(alpha = 0.8f), CircleShape)
-                        ) {
-                            Icon(Icons.Rounded.Close, contentDescription = "הסר צירוף", tint = theme.textColor, modifier = Modifier.size(14.dp))
-                        }
+                        TopBarIconButton(Icons.Rounded.Close, "הסר צירוף", theme.textColor, theme.accentColor, { attachedImageUri = null })
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(FutureDimens.spacingLg))
 
                 if (suggestions.isNotEmpty()) {
-                    LazyColumn(modifier = Modifier.fillMaxWidth().weight(1f, fill = false)) {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxWidth().weight(1f, fill = false),
+                        verticalArrangement = Arrangement.spacedBy(FutureDimens.spacingXs),
+                    ) {
                         items(suggestions, key = { it.phoneNumber }) { contact ->
                             ContactSuggestionRow(contact = contact, theme = theme, onClick = { startWith(contact) })
                         }
                     }
                 } else {
-                    Button(
-                        onClick = { if (query.isNotBlank()) startWith(repository.resolveContact(query.trim())) },
+                    FutureButton(
+                        "המשך",
+                        theme,
+                        { if (query.isNotBlank()) startWith(repository.resolveContact(query.trim())) },
+                        fillMaxWidth = true,
                         enabled = query.isNotBlank(),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("המשך")
-                    }
+                    )
                     // מוצג רק כשהוקלד מספר בלי איש קשר תואם (לא כשהוקלד שם שלא
                     // נמצאה לו התאמה) - כדי שאפשר יהיה לשמור אותו לפני שממשיכים לשיחה.
                     if (query.any { it.isDigit() }) {
-                        Spacer(modifier = Modifier.height(10.dp))
+                        Spacer(modifier = Modifier.height(FutureDimens.spacingMd))
                         val context = androidx.compose.ui.platform.LocalContext.current
-                        OutlinedButton(
-                            onClick = {
+                        FutureButton(
+                            "הוסף לאנשי קשר",
+                            theme,
+                            {
                                 val intent = android.content.Intent(android.content.Intent.ACTION_INSERT).apply {
                                     type = android.provider.ContactsContract.Contacts.CONTENT_TYPE
                                     putExtra(android.provider.ContactsContract.Intents.Insert.PHONE, query.trim())
                                 }
                                 context.startActivity(intent)
                             },
+                            fillMaxWidth = true,
+                            variant = FutureButtonVariant.Secondary,
                             enabled = query.isNotBlank(),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("הוסף לאנשי קשר")
-                        }
+                        )
                     }
                 }
             }
@@ -170,25 +174,14 @@ fun ComposeScreen(
     }
 }
 
+/** הצעת איש קשר - שורת רשימה של הדיזיין סיסטם, עם אייקון בעיגול בתחילתה. */
 @Composable
 private fun ContactSuggestionRow(contact: Contact, theme: FutureTheme, onClick: () -> Unit) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(FutureShapes.md)
-            .background(if (isFocused) theme.accentColor.copy(alpha = 0.18f) else Color.Transparent)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(Icons.Rounded.Person, contentDescription = null, tint = theme.accentColor, modifier = Modifier.size(20.dp))
-        Spacer(modifier = Modifier.width(12.dp))
-        Column {
-            Text(contact.name, color = theme.textColor, fontWeight = FontWeight.Medium, fontSize = FutureTypography.bodyLarge)
-            Text(contact.phoneNumber, color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.label)
-        }
-    }
+    FutureListItem(
+        title = contact.name,
+        summary = contact.phoneNumber,
+        theme = theme,
+        onClick = onClick,
+        leading = { FutureAvatar(theme = theme, name = contact.name) },
+    )
 }

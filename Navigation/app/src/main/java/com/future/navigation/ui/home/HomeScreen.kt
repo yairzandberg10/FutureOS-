@@ -1,4 +1,5 @@
 package com.future.navigation.ui.home
+import com.future.sharednav.components.FutureAvatar
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -234,17 +235,10 @@ fun HomeScreen(
 }
 
 /** אייקון בתחילת שורה: עיגול 36dp ב-8% מהטקסט, האייקון עצמו בצבע הטקסט. */
+/** אייקון בתחילת שורה - האווטאר של הדיזיין סיסטם (Avatar.jsx), עם אייקון. */
 @Composable
 internal fun RowIcon(icon: ImageVector, theme: FutureTheme) {
-    Box(
-        modifier = Modifier
-            .size(FutureDimens.rowHeightTopBarButton)
-            .clip(CircleShape)
-            .background(theme.idleFieldColor),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(icon, contentDescription = null, tint = theme.textColor, modifier = Modifier.size(FutureDimens.iconTopBar))
-    }
+    FutureAvatar(theme = theme, icon = icon)
 }
 
 /**
