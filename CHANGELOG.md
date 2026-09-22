@@ -4,6 +4,33 @@ This repo has no carried-over git history (see root [README](README.md)), so thi
 
 ## Unreleased
 
+### `build-apps.bat`: build everything except the apps you tick
+
+Double-clicking `build-apps.bat` at the repo root opens a Windows dialog listing
+every app, discovered the same way as `build-all.sh` (each top-level folder with
+a `settings.gradle.kts`). Ticked apps are skipped; the rest build one at a time
+with `assembleDebug`, or `installDebug` when "install on the device" is ticked,
+and if no device is connected the script offers to build without installing.
+The last selection is remembered in `.build-apps-selection.json` and the full
+output of the last run goes to `build-apps.log`, both git-ignored. A summary
+dialog lists what failed, and the console stays open only on failure.
+
+- **Build output is not read through a PowerShell pipeline.** A daemon started
+  during the build (Gradle, Kotlin, adb) can inherit the output pipe and hold it
+  open for hours, so `& cmd | ForEach-Object` would wait for an EOF that never
+  comes and hang after the first app. A small C# helper returns when the process
+  exits instead. Tested with a child that holds the pipe for 20s: the helper
+  returns in 0.6s with the right exit code and the output in the log.
+- **The adb device check had the same hang, observed directly:** `adb devices`
+  starts the adb server when it is not running (for example after a reboot), and
+  the server keeps the pipe. The check now starts the server first and runs adb
+  through `Process` with a timeout.
+- `.\gradlew.bat`, not `gradlew.bat`: with `NoDefaultCurrentDirectoryInExePath`
+  set, cmd does not search the current folder and the bare name is not found.
+- `build-apps.ps1` is saved as UTF-8 with a BOM: Windows PowerShell 5.1 reads
+  BOM-less files in the ANSI code page, which garbles the Hebrew in the dialog.
+  `.gitattributes` now pins `*.bat` and `*.ps1` to CRLF.
+
 ### Design-system audit: every app moved onto the shared components
 
 A suite-wide audit against `design/FutureOS Design System` found that most

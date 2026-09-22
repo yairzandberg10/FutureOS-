@@ -47,3 +47,8 @@ firebase-debug.log
 # תלויות Node של ה-Cloud Functions ותוצרי הקומפילציה שלהן
 Navigation/firebase/functions/node_modules/
 Navigation/firebase/functions/lib/
+
+# build-apps.bat: הבחירה האחרונה בחלון (מה לא לבנות) והלוג של הריצה האחרונה -
+# מקומיים למחשב הזה, לא חלק מהפרויקט
+.build-apps-selection.json
+build-apps.log

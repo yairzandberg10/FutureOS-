@@ -1,1 +1,5 @@
 *.db filter=lfs diff=lfs merge=lfs -text
+# build-apps.bat/.ps1 run from a Windows double-click; LF-only would
+# risk cmd misparsing the .bat. The .ps1 also keeps its UTF-8 BOM (see its header).
+*.bat text eol=crlf
+*.ps1 text eol=crlf
