@@ -1,4 +1,7 @@
 package com.future.tools.ui
+import com.future.sharednav.theme.textAlpha
+import com.future.sharednav.theme.subtleTextColor
+import com.future.sharednav.theme.mutedTextColor
 
 import com.future.sharednav.theme.FutureTypography
 import android.hardware.Sensor
@@ -90,7 +93,7 @@ fun LevelScreen(theme: FutureTheme, onBack: () -> Unit) {
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             if (isLevel) "מאוזן" else "הטה עד לאיזון",
-                            color = if (isLevel) bubbleColor else theme.textColor.copy(alpha = 0.5f),
+                            color = if (isLevel) bubbleColor else theme.mutedTextColor,
                             fontSize = FutureTypography.body,
                             fontWeight = if (isLevel) FontWeight.Bold else FontWeight.Normal
                         )
@@ -108,7 +111,7 @@ private fun LevelBubble(tilt: Offset, bubbleColor: androidx.compose.ui.graphics.
         Canvas(modifier = Modifier.fillMaxSize()) {
             val radius = this.size.minDimension / 2f
             drawCircle(color = theme.textColor.copy(alpha = 0.06f), radius = radius)
-            drawCircle(color = theme.textColor.copy(alpha = 0.25f), radius = radius, style = Stroke(width = 2.dp.toPx()))
+            drawCircle(color = theme.textAlpha(30), radius = radius, style = Stroke(width = 2.dp.toPx()))
             drawCircle(color = theme.textColor.copy(alpha = 0.4f), radius = radius * 0.25f, style = Stroke(width = 1.5.dp.toPx()))
             drawLine(theme.textColor.copy(alpha = 0.15f), Offset(center.x - radius, center.y), Offset(center.x + radius, center.y), strokeWidth = 1.dp.toPx())
             drawLine(theme.textColor.copy(alpha = 0.15f), Offset(center.x, center.y - radius), Offset(center.x, center.y + radius), strokeWidth = 1.dp.toPx())

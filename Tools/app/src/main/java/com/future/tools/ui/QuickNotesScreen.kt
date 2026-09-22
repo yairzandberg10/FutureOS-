@@ -1,4 +1,9 @@
 package com.future.tools.ui
+import com.future.sharednav.components.FutureListItem
+import com.future.sharednav.components.FutureCheckbox
+import com.future.sharednav.components.FutureTextField
+import com.future.sharednav.theme.subtleTextColor
+import com.future.sharednav.theme.mutedTextColor
 import com.future.sharednav.theme.onAccentColor
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
@@ -86,23 +91,12 @@ fun QuickNotesScreen(theme: FutureTheme, onBack: () -> Unit) {
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    BasicTextField(
+                    FutureTextField(
                         value = draft,
                         onValueChange = { draft = it },
-                        singleLine = true,
-                        textStyle = TextStyle(color = theme.textColor, fontSize = FutureTypography.bodyLarge),
-                        cursorBrush = androidx.compose.ui.graphics.SolidColor(theme.accentColor),
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(FutureShapes.md)
-                            .background(theme.textColor.copy(alpha = 0.08f))
-                            .padding(horizontal = 14.dp, vertical = 12.dp),
-                        decorationBox = { inner ->
-                            if (draft.isEmpty()) {
-                                Text("הוסף פריט חדש...", color = theme.textColor.copy(alpha = 0.35f), fontSize = FutureTypography.bodyLarge)
-                            }
-                            inner()
-                        }
+                        theme = theme,
+                        placeholder = "הוסף פריט",
+                        modifier = Modifier.weight(1f),
                     )
                     NoteAddButton(theme = theme) {
                         if (draft.isNotBlank()) {
@@ -115,7 +109,7 @@ fun QuickNotesScreen(theme: FutureTheme, onBack: () -> Unit) {
 
                 if (items.isEmpty()) {
                     Box(modifier = Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
-                        Text("הרשימה ריקה", color = theme.textColor.copy(alpha = 0.35f), fontSize = FutureTypography.summary)
+                        Text("הרשימה ריקה", color = theme.subtleTextColor, fontSize = FutureTypography.summary)
                     }
                 } else {
                     LazyColumn(
@@ -146,65 +140,19 @@ fun QuickNotesScreen(theme: FutureTheme, onBack: () -> Unit) {
 
 @Composable
 private fun NoteAddButton(theme: FutureTheme, onClick: () -> Unit) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    Box(
-        modifier = Modifier
-            .size(44.dp)
-            .clip(FutureShapes.md)
-            .background(if (isFocused) theme.accentColor else theme.textColor.copy(alpha = 0.1f))
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus(),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(Icons.Rounded.Add, contentDescription = "הוסף", tint = if (isFocused) theme.onAccentColor else theme.accentColor)
-    }
+    ToolsIconButton(Icons.Rounded.Add, "הוסף", theme, onClick = onClick)
 }
 
+/** פריט ברשימה: OK מסמן/מבטל, תיבת הסימון בתחילת השורה, מחיקה בכפתור אייקון בסופה. */
 @Composable
 private fun NoteRow(item: NoteItem, theme: FutureTheme, onToggle: () -> Unit, onDelete: () -> Unit) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val shape = FutureShapes.md
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(shape)
-            .background(if (isFocused) theme.textColor.copy(alpha = 0.14f) else theme.textColor.copy(alpha = 0.05f))
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onToggle)
-            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
-            .padding(horizontal = 14.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(20.dp)
-                .clip(FutureShapes.sm)
-                .background(if (item.done) theme.accentColor else theme.textColor.copy(alpha = 0.15f)),
-            contentAlignment = Alignment.Center
-        ) {
-            if (item.done) Text("✓", color = Color.Black, fontSize = FutureTypography.label, fontWeight = FontWeight.Bold)
-        }
-        Spacer(modifier = Modifier.width(12.dp))
-        Text(
-            item.text,
-            color = if (item.done) theme.textColor.copy(alpha = 0.4f) else theme.textColor,
-            fontSize = FutureTypography.bodyLarge,
-            textDecoration = if (item.done) TextDecoration.LineThrough else null,
-            modifier = Modifier.weight(1f)
-        )
-        val deleteInteraction = remember { MutableInteractionSource() }
-        val deleteFocused by deleteInteraction.collectIsFocusedAsState()
-        Box(
-            modifier = Modifier
-                .size(28.dp)
-                .clip(FutureShapes.sm)
-                .background(if (deleteFocused) theme.dangerColor.copy(alpha = 0.3f) else Color.Transparent)
-                .clickable(interactionSource = deleteInteraction, indication = null, onClick = onDelete)
-                .focusable(interactionSource = deleteInteraction).bringIntoViewOnFocus(),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(Icons.Rounded.Close, contentDescription = "מחק", tint = theme.textColor.copy(alpha = 0.4f), modifier = Modifier.size(14.dp))
-        }
-    }
+    FutureListItem(
+        title = item.text,
+        theme = theme,
+        onClick = onToggle,
+        titleColor = if (item.done) theme.subtleTextColor else theme.textColor,
+        titleDecoration = if (item.done) TextDecoration.LineThrough else null,
+        leading = { FutureCheckbox(item.done, theme) },
+        trailing = { ToolsIconButton(Icons.Rounded.Close, "מחק", theme, onClick = onDelete) },
+    )
 }

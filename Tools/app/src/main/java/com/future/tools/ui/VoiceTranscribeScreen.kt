@@ -1,4 +1,6 @@
 package com.future.tools.ui
+import com.future.sharednav.theme.subtleTextColor
+import com.future.sharednav.theme.mutedTextColor
 
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
@@ -51,11 +53,11 @@ fun VoiceTranscribeScreen(theme: FutureTheme, onBack: () -> Unit) {
 
     DisposableEffect(recognizer) {
         recognizer?.setRecognitionListener(object : RecognitionListener {
-            override fun onReadyForSpeech(params: android.os.Bundle?) { statusText = "מקשיב..." }
-            override fun onBeginningOfSpeech() { statusText = "שומע דיבור..." }
+            override fun onReadyForSpeech(params: android.os.Bundle?) { statusText = "מקשיב" }
+            override fun onBeginningOfSpeech() { statusText = "שומע דיבור" }
             override fun onRmsChanged(rmsdB: Float) {}
             override fun onBufferReceived(buffer: ByteArray?) {}
-            override fun onEndOfSpeech() { statusText = "מעבד..." }
+            override fun onEndOfSpeech() { statusText = "מעבד" }
             override fun onError(error: Int) {
                 isListening = false
                 statusText = "לא זוהה דיבור - נסה שוב"
@@ -110,11 +112,11 @@ fun VoiceTranscribeScreen(theme: FutureTheme, onBack: () -> Unit) {
 
                 if (!hasPermission) {
                     Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        Text("נדרשת הרשאת מיקרופון כדי לתמלל", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.body, modifier = Modifier.padding(horizontal = 32.dp))
+                        Text("נדרשת הרשאת מיקרופון כדי לתמלל", color = theme.mutedTextColor, fontSize = FutureTypography.body, modifier = Modifier.padding(horizontal = 32.dp))
                     }
                 } else if (recognizer == null) {
                     Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        Text("זיהוי דיבור אינו זמין במכשיר הזה", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.body, modifier = Modifier.padding(horizontal = 32.dp))
+                        Text("זיהוי דיבור אינו זמין במכשיר הזה", color = theme.mutedTextColor, fontSize = FutureTypography.body, modifier = Modifier.padding(horizontal = 32.dp))
                     }
                 } else {
                     Box(
@@ -128,7 +130,7 @@ fun VoiceTranscribeScreen(theme: FutureTheme, onBack: () -> Unit) {
                     ) {
                         Text(
                             transcript.ifBlank { "הטקסט המתומלל יופיע כאן" },
-                            color = if (transcript.isBlank()) theme.textColor.copy(alpha = 0.35f) else theme.textColor,
+                            color = if (transcript.isBlank()) theme.subtleTextColor else theme.textColor,
                             fontSize = FutureTypography.bodyLarge
                         )
                     }
@@ -138,7 +140,7 @@ fun VoiceTranscribeScreen(theme: FutureTheme, onBack: () -> Unit) {
                             if (isListening) stopListening() else startListening()
                         }
                         Spacer(modifier = Modifier.height(10.dp))
-                        Text(statusText, color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.summary)
+                        Text(statusText, color = theme.mutedTextColor, fontSize = FutureTypography.summary)
                     }
                 }
             }
@@ -148,19 +150,12 @@ fun VoiceTranscribeScreen(theme: FutureTheme, onBack: () -> Unit) {
 
 @Composable
 private fun MicButton(isListening: Boolean, theme: FutureTheme, onClick: () -> Unit) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val baseColor = if (isListening) theme.dangerColor else theme.accentColor
-    val bgColor = if (isFocused) baseColor else baseColor.copy(alpha = 0.85f)
-    Box(
-        modifier = Modifier
-            .size(84.dp)
-            .clip(CircleShape)
-            .background(bgColor)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(Icons.Rounded.Mic, contentDescription = if (isListening) "עצור הקלטה" else "התחל הקלטה", tint = Color.Black, modifier = Modifier.size(32.dp))
+    ToolsRoundActionButton(
+        theme = theme,
+        size = 84.dp,
+        fill = if (isListening) theme.dangerColor else theme.toolsPrimaryFill,
+        onClick = onClick,
+    ) { contentColor ->
+        Icon(Icons.Rounded.Mic, contentDescription = if (isListening) "עצור הקלטה" else "התחל הקלטה", tint = contentColor, modifier = Modifier.size(32.dp))
     }
 }

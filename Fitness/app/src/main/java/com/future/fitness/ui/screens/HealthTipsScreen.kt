@@ -1,4 +1,18 @@
 package com.future.fitness.ui.screens
+import com.future.sharednav.theme.FutureShapes
+import com.future.sharednav.theme.elevatedSurfaceColor
+import com.future.sharednav.theme.idleFieldColor
+import com.future.sharednav.theme.idleChipColor
+import com.future.sharednav.theme.focusFillChipColor
+import com.future.sharednav.theme.readableAccentColor
+import com.future.sharednav.theme.onReadableAccentColor
+import com.future.sharednav.theme.mutedTextColor
+import com.future.sharednav.theme.subtleTextColor
+import com.future.sharednav.theme.sectionHeaderColor
+import com.future.sharednav.theme.textAlpha
+import com.future.sharednav.components.FutureButton
+import com.future.sharednav.components.FutureButtonVariant
+import com.future.fitness.ui.components.FitnessTextField
 
 import com.future.sharednav.theme.FutureTypography
 import androidx.compose.foundation.background
@@ -20,7 +34,6 @@ import com.future.fitness.data.UserProfile
 import com.future.fitness.data.WorkoutStore
 import com.future.fitness.ui.components.FocusableItem
 import com.future.fitness.ui.components.ScreenTopBar
-import com.future.fitness.ui.theme.KineticDimens
 import com.future.sharednav.theme.FutureTheme
 
 private data class HealthTip(val title: String, val body: String)
@@ -80,10 +93,10 @@ fun HealthTipsScreen(theme: FutureTheme, store: WorkoutStore, onBack: () -> Unit
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(theme.accentColor.copy(alpha = 0.12f), RoundedCornerShape(KineticDimens.cardCorner))
+                                .background(theme.elevatedSurfaceColor, FutureShapes.xl)
                                 .padding(16.dp),
                         ) {
-                            Text("דופק מקסימלי משוער עבורך", color = theme.accentColor, fontSize = FutureTypography.summary, fontWeight = FontWeight.Bold)
+                            Text("דופק מקסימלי משוער עבורך", color = theme.textColor, fontSize = FutureTypography.summary, fontWeight = FontWeight.Bold)
                             Text("$maxHr פעימות לדקה (לפי גיל ${profile.age}, הערכה גסה)", color = theme.textColor, fontSize = FutureTypography.body, modifier = Modifier.padding(top = 4.dp))
                         }
                     }
@@ -95,7 +108,7 @@ fun HealthTipsScreen(theme: FutureTheme, store: WorkoutStore, onBack: () -> Unit
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(theme.surfaceColor, RoundedCornerShape(KineticDimens.cardCorner))
+                            .background(theme.surfaceColor, FutureShapes.xl)
                             .padding(16.dp),
                     ) {
                         Text(tip.title, color = theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Bold)

@@ -1,6 +1,18 @@
 package com.future.fitness.ui.screens
+import com.future.sharednav.theme.elevatedSurfaceColor
+import com.future.sharednav.theme.idleFieldColor
+import com.future.sharednav.theme.idleChipColor
+import com.future.sharednav.theme.focusFillChipColor
+import com.future.sharednav.theme.readableAccentColor
+import com.future.sharednav.theme.mutedTextColor
+import com.future.sharednav.theme.subtleTextColor
+import com.future.sharednav.theme.sectionHeaderColor
+import com.future.sharednav.theme.textAlpha
+import com.future.sharednav.components.FutureButton
+import com.future.sharednav.components.FutureButtonVariant
+import com.future.fitness.ui.components.FitnessTextField
 
-import com.future.sharednav.theme.onAccentColor
+import com.future.sharednav.theme.onReadableAccentColor
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
 import android.Manifest
@@ -196,7 +208,7 @@ fun WorkoutTemplateScreen(
                             .padding(horizontal = 3.dp)
                             .size(if (index == pagerState.currentPage) 7.dp else 5.dp)
                             .background(
-                                if (index == pagerState.currentPage) theme.accentColor else theme.textColor.copy(alpha = 0.25f),
+                                if (index == pagerState.currentPage) theme.readableAccentColor else theme.textAlpha(30),
                                 CircleShape,
                             ),
                     )
@@ -257,7 +269,7 @@ fun WorkoutTemplateScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(if (isFocused) theme.accentColor.copy(alpha = 0.22f) else theme.textColor.copy(alpha = 0.08f), FutureShapes.lg),
+                        .background(if (isFocused) theme.focusFillChipColor else theme.textColor.copy(alpha = 0.08f), FutureShapes.lg),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
@@ -282,7 +294,7 @@ fun WorkoutTemplateScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(theme.accentColor, FutureShapes.lg),
+                        .background(theme.readableAccentColor, FutureShapes.lg),
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -319,17 +331,13 @@ private fun MainPage(
                 fontSize = FutureTypography.body,
                 modifier = Modifier.padding(top = 12.dp, bottom = 16.dp),
             )
-            Button(
-                onClick = onRequestLocationPermission,
-                shape = FutureShapes.lg,
-                colors = ButtonDefaults.buttonColors(containerColor = theme.accentColor, contentColor = theme.onAccentColor),
-            ) { Text("אפשר הרשאת מיקום") }
+            FutureButton("אפשר הרשאת מיקום", theme, onRequestLocationPermission)
             return@Column
         }
 
-        Text(formatElapsed(elapsedSec), color = theme.accentColor, fontSize = FutureTypography.hero, fontWeight = FontWeight.Bold)
+        Text(formatElapsed(elapsedSec), color = theme.textColor, fontSize = FutureTypography.hero, fontWeight = FontWeight.Bold)
         if (usesGps) {
-            Text(if (tracker.hasFix) "עוקב אחרי המיקום" else "מחפש GPS...", color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.label, modifier = Modifier.padding(bottom = 20.dp))
+            Text(if (tracker.hasFix) "עוקב אחרי המיקום" else "מחפש GPS", color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.label, modifier = Modifier.padding(bottom = 20.dp))
         } else {
             Spacer(Modifier.height(24.dp))
         }
@@ -391,7 +399,7 @@ private fun CyclingPowerPage(theme: FutureTheme, heartRateMonitor: HeartRateMoni
 @Composable
 private fun ElevationPage(theme: FutureTheme, tracker: RunTracker) {
     Column(modifier = Modifier.fillMaxSize().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-        Icon(Icons.Rounded.Terrain, contentDescription = null, tint = theme.accentColor, modifier = Modifier.size(32.dp))
+        Icon(Icons.Rounded.Terrain, contentDescription = null, tint = theme.textColor, modifier = Modifier.size(32.dp))
         Spacer(Modifier.height(12.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
             StatColumn(tracker.currentAltitudeMeters?.let { "%.0f".format(it) } ?: "--", "מ' גובה", theme)
@@ -415,7 +423,7 @@ private fun HeartRateZonesPage(theme: FutureTheme, estimatedMaxHr: Int?, zoneSec
             return@Column
         }
         if (currentBpm != null) {
-            Text("$currentBpm BPM כרגע", color = theme.accentColor, fontSize = FutureTypography.headline, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 12.dp))
+            Text("$currentBpm BPM כרגע", color = theme.textColor, fontSize = FutureTypography.headline, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 12.dp))
         }
         val zoneLabels = listOf("אזור 1 · חימום", "אזור 2 · קל", "אזור 3 · בינוני", "אזור 4 · קשה", "אזור 5 · מקסימלי")
         val totalSeconds = zoneSeconds.sum().coerceAtLeast(1)
@@ -435,7 +443,7 @@ private fun HeartRateZonesPage(theme: FutureTheme, estimatedMaxHr: Int?, zoneSec
                     modifier = Modifier
                         .fillMaxWidth(seconds.toFloat() / totalSeconds.toFloat())
                         .height(6.dp)
-                        .background(theme.accentColor, FutureShapes.xs),
+                        .background(theme.readableAccentColor, FutureShapes.xs),
                 )
             }
             Spacer(Modifier.height(6.dp))
@@ -474,7 +482,7 @@ private fun MediaButton(theme: FutureTheme, icon: ImageVector, contentDescriptio
             modifier = Modifier
                 .fillMaxSize()
                 .background(
-                    if (primary) theme.accentColor else if (isFocused) theme.accentColor.copy(alpha = 0.22f) else theme.textColor.copy(alpha = 0.08f),
+                    if (primary) theme.readableAccentColor else if (isFocused) theme.focusFillChipColor else theme.textColor.copy(alpha = 0.08f),
                     FutureShapes.lg,
                 ),
             contentAlignment = Alignment.Center,
@@ -493,7 +501,7 @@ private fun NoSensorMessage(theme: FutureTheme, text: String) {
 private fun StatColumn(value: String, label: String, theme: FutureTheme, icon: ImageVector? = null) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         if (icon != null) {
-            Icon(icon, contentDescription = null, tint = theme.accentColor, modifier = Modifier.size(16.dp).padding(bottom = 4.dp))
+            Icon(icon, contentDescription = null, tint = theme.textColor, modifier = Modifier.size(16.dp).padding(bottom = 4.dp))
         }
         Text(value, color = theme.textColor, fontSize = FutureTypography.headline, fontWeight = FontWeight.Bold)
         Text(label, color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.caption)

@@ -1,4 +1,6 @@
 package com.future.tools.ui
+import com.future.sharednav.theme.subtleTextColor
+import com.future.sharednav.theme.mutedTextColor
 
 import com.future.sharednav.theme.FutureTypography
 import android.Manifest
@@ -107,7 +109,7 @@ fun NoiseMeterScreen(theme: FutureTheme, onBack: () -> Unit) {
                     if (!hasPermission) {
                         Text(
                             "נדרשת הרשאת מיקרופון כדי למדוד רעש",
-                            color = theme.textColor.copy(alpha = 0.6f),
+                            color = theme.mutedTextColor,
                             fontSize = FutureTypography.body,
                             modifier = Modifier.padding(horizontal = 32.dp)
                         )

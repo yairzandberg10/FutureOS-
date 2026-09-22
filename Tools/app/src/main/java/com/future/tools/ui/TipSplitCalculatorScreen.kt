@@ -1,4 +1,7 @@
 package com.future.tools.ui
+import com.future.sharednav.components.FutureTabItem
+import com.future.sharednav.theme.subtleTextColor
+import com.future.sharednav.theme.mutedTextColor
 
 import com.future.sharednav.theme.onAccentColor
 import com.future.sharednav.theme.FutureTypography
@@ -24,7 +27,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.future.sharednav.nav.digitForKey
 import com.future.sharednav.theme.FutureTheme
 import java.text.DecimalFormat
@@ -76,7 +78,7 @@ fun TipSplitCalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
                 ToolsHeader(title = "טיפים ופיצול חשבון", theme = theme, onBack = onBack)
 
                 Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
-                    Text("סכום החשבון", color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.label)
+                    Text("סכום החשבון", color = theme.mutedTextColor, fontSize = FutureTypography.label)
                     Text(
                         billText,
                         color = theme.textColor,
@@ -88,7 +90,7 @@ fun TipSplitCalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
-                Text("אחוז טיפ", color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.label, modifier = Modifier.padding(horizontal = 20.dp))
+                Text("אחוז טיפ", color = theme.mutedTextColor, fontSize = FutureTypography.label, modifier = Modifier.padding(horizontal = 20.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -103,7 +105,7 @@ fun TipSplitCalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
-                Text("מספר סועדים", color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.label, modifier = Modifier.padding(horizontal = 20.dp))
+                Text("מספר סועדים", color = theme.mutedTextColor, fontSize = FutureTypography.label, modifier = Modifier.padding(horizontal = 20.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -138,36 +140,17 @@ private fun TipChip(
     focusRequester: FocusRequester? = null,
     onClick: () -> Unit
 ) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val shape = FutureShapes.md
-    val bgColor = when {
-        isSelected -> theme.accentColor
-        isFocused -> theme.textColor.copy(alpha = 0.18f)
-        else -> theme.textColor.copy(alpha = 0.06f)
-    }
-    Box(
-        modifier = modifier
-            .clip(shape)
-            .background(bgColor)
-            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource)
-            .padding(vertical = 10.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(label, color = if (isSelected) theme.onAccentColor else theme.textColor, fontSize = FutureTypography.body, fontWeight = FontWeight.Medium)
-    }
+    FutureTabItem(label, isSelected, theme, onClick, modifier, focusRequester)
 }
 
 @Composable
 private fun ResultRow(label: String, value: String, theme: FutureTheme, isEmphasized: Boolean = false, isAccent: Boolean = false) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(label, color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.body)
+        Text(label, color = theme.mutedTextColor, fontSize = FutureTypography.body)
         Text(
             value,
-            color = if (isAccent) theme.accentColor else theme.textColor,
-            fontSize = if (isEmphasized || isAccent) 20.sp else 15.sp,
+            color = theme.textColor,
+            fontSize = if (isEmphasized || isAccent) FutureTypography.screenTitle else FutureTypography.dialog,
             fontWeight = if (isEmphasized || isAccent) FontWeight.Bold else FontWeight.Medium
         )
     }

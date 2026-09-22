@@ -1,4 +1,11 @@
 package com.future.tools.ui
+import com.future.sharednav.components.FutureButton
+import com.future.sharednav.theme.FutureDimens
+import com.future.sharednav.theme.idleFieldColor
+import com.future.sharednav.theme.readableAccentColor
+import androidx.compose.foundation.border
+import com.future.sharednav.theme.subtleTextColor
+import com.future.sharednav.theme.mutedTextColor
 
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
@@ -23,7 +30,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.future.sharednav.nav.digitForKey
 import com.future.sharednav.theme.FutureTheme
 import kotlin.random.Random
@@ -94,7 +100,7 @@ fun RandomNumberScreen(theme: FutureTheme, onBack: () -> Unit) {
 
                 Text(
                     "# למעבר בין שדות · הקלד מהמקלדת",
-                    color = theme.textColor.copy(alpha = 0.35f),
+                    color = theme.subtleTextColor,
                     fontSize = FutureTypography.caption,
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
                     textAlign = TextAlign.Center
@@ -104,7 +110,7 @@ fun RandomNumberScreen(theme: FutureTheme, onBack: () -> Unit) {
                     if (!isValidRange) {
                         Text("המינימום חייב להיות קטן או שווה למקסימום", color = theme.dangerColor, fontSize = FutureTypography.summary, modifier = Modifier.padding(horizontal = 32.dp), textAlign = TextAlign.Center)
                     } else {
-                        Text(result?.toString() ?: "?", color = theme.textColor, fontSize = 64.sp, fontWeight = FontWeight.Light)
+                        Text(result?.toString() ?: "?", color = theme.textColor, fontSize = FutureTypography.hero, fontWeight = FutureTypography.weightLight, fontFamily = FutureTypography.monoFamily)
                     }
                 }
 
@@ -116,41 +122,29 @@ fun RandomNumberScreen(theme: FutureTheme, onBack: () -> Unit) {
     }
 }
 
+/** שדה מספרי שמקבל ספרות מהמקלדת. השדה הפעיל מסומן כמו שדה ממוקד: מסגרת 2dp בהדגשה. */
 @Composable
 private fun RangeField(label: String, value: String, isActive: Boolean, theme: FutureTheme, modifier: Modifier = Modifier) {
+    val accent = theme.readableAccentColor
     Column(modifier = modifier) {
-        Text(label, color = if (isActive) theme.accentColor else theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.label, fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal)
+        Text(label, color = if (isActive) accent else theme.mutedTextColor, fontSize = FutureTypography.label, fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal)
         Text(
             value,
             color = theme.textColor,
             fontSize = FutureTypography.display,
-            fontWeight = FontWeight.Light,
+            fontWeight = FutureTypography.weightLight,
             textAlign = TextAlign.Center,
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(FutureShapes.md)
-                .background(theme.textColor.copy(alpha = if (isActive) 0.12f else 0.05f))
-                .padding(vertical = 10.dp)
+                .clip(FutureShapes.textField)
+                .background(theme.idleFieldColor)
+                .border(FutureDimens.focusBorderControl, if (isActive) accent else Color.Transparent, FutureShapes.textField)
+                .padding(vertical = FutureDimens.spacingSm)
         )
     }
 }
 
 @Composable
 private fun RollNumberButton(theme: FutureTheme, enabled: Boolean, focusRequester: FocusRequester, onClick: () -> Unit) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val bgColor = if (!enabled) theme.textColor.copy(alpha = 0.08f) else if (isFocused) theme.accentColor else theme.textColor.copy(alpha = 0.12f)
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(FutureShapes.lg)
-            .focusRequester(focusRequester)
-            .background(bgColor)
-            .clickable(interactionSource = interactionSource, indication = null, enabled = enabled, onClick = onClick)
-            .focusable(interactionSource = interactionSource)
-            .padding(vertical = 16.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text("הגרל", color = if (isFocused && enabled) Color.Black else theme.textColor.copy(alpha = if (enabled) 1f else 0.4f), fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Bold)
-    }
+    FutureButton("הגרל", theme, onClick, fillMaxWidth = true, focusRequester = focusRequester, enabled = enabled)
 }

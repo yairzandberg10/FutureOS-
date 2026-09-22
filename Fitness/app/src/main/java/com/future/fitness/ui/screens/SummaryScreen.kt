@@ -1,6 +1,18 @@
 package com.future.fitness.ui.screens
+import com.future.sharednav.theme.elevatedSurfaceColor
+import com.future.sharednav.theme.idleFieldColor
+import com.future.sharednav.theme.idleChipColor
+import com.future.sharednav.theme.focusFillChipColor
+import com.future.sharednav.theme.readableAccentColor
+import com.future.sharednav.theme.mutedTextColor
+import com.future.sharednav.theme.subtleTextColor
+import com.future.sharednav.theme.sectionHeaderColor
+import com.future.sharednav.theme.textAlpha
+import com.future.sharednav.components.FutureButton
+import com.future.sharednav.components.FutureButtonVariant
+import com.future.fitness.ui.components.FitnessTextField
 
-import com.future.sharednav.theme.onAccentColor
+import com.future.sharednav.theme.onReadableAccentColor
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
 import androidx.compose.foundation.background
@@ -53,10 +65,10 @@ fun SummaryScreen(
         verticalArrangement = Arrangement.Center,
     ) {
         Box(
-            modifier = Modifier.size(76.dp).background(theme.accentColor.copy(alpha = 0.18f), CircleShape),
+            modifier = Modifier.size(76.dp).background(theme.idleFieldColor, CircleShape),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(Icons.Rounded.Check, contentDescription = null, tint = theme.accentColor, modifier = Modifier.size(34.dp))
+            Icon(Icons.Rounded.Check, contentDescription = null, tint = theme.textColor, modifier = Modifier.size(34.dp))
         }
         Spacer(Modifier.height(16.dp))
         Text(title, color = theme.textColor, fontSize = FutureTypography.headline, fontWeight = FontWeight.Bold)
@@ -66,14 +78,7 @@ fun SummaryScreen(
             stats.forEach { (value, label) -> SummaryStat(value, label, theme) }
         }
 
-        Button(
-            onClick = onDone,
-            modifier = Modifier.focusRequester(doneButtonFocusRequester),
-            shape = FutureShapes.lg,
-            colors = ButtonDefaults.buttonColors(containerColor = theme.accentColor, contentColor = theme.onAccentColor),
-        ) {
-            Text("חזרה לבית", fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 24.dp, vertical = 6.dp))
-        }
+        FutureButton("חזרה לבית", theme, onDone, focusRequester = doneButtonFocusRequester)
     }
 }
 

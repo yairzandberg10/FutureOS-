@@ -1,4 +1,13 @@
 package com.future.tools.ui
+import com.future.sharednav.components.FutureButton
+import com.future.sharednav.theme.FutureDimens
+import com.future.sharednav.theme.idleChipColor
+import com.future.sharednav.theme.readableAccentColor
+import com.future.sharednav.theme.onReadableAccentColor
+import com.future.sharednav.theme.rememberFutureType
+import com.future.sharednav.components.FutureTextField
+import com.future.sharednav.theme.subtleTextColor
+import com.future.sharednav.theme.mutedTextColor
 import com.future.sharednav.theme.onAccentColor
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
@@ -55,23 +64,12 @@ fun RandomPickerScreen(theme: FutureTheme, onBack: () -> Unit) {
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    BasicTextField(
+                    FutureTextField(
                         value = draft,
                         onValueChange = { draft = it },
-                        singleLine = true,
-                        textStyle = TextStyle(color = theme.textColor, fontSize = FutureTypography.bodyLarge),
-                        cursorBrush = SolidColor(theme.accentColor),
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(FutureShapes.md)
-                            .background(theme.textColor.copy(alpha = 0.08f))
-                            .padding(horizontal = 14.dp, vertical = 12.dp),
-                        decorationBox = { inner ->
-                            if (draft.isEmpty()) {
-                                Text("הוסף אפשרות...", color = theme.textColor.copy(alpha = 0.35f), fontSize = FutureTypography.bodyLarge)
-                            }
-                            inner()
-                        }
+                        theme = theme,
+                        placeholder = "הוסף אפשרות",
+                        modifier = Modifier.weight(1f),
                     )
                     RpAddButton(theme = theme) {
                         if (draft.isNotBlank()) {
@@ -84,7 +82,7 @@ fun RandomPickerScreen(theme: FutureTheme, onBack: () -> Unit) {
 
                 if (options.isEmpty()) {
                     Box(modifier = Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
-                        Text("הוסף לפחות אפשרות אחת", color = theme.textColor.copy(alpha = 0.35f), fontSize = FutureTypography.summary)
+                        Text("הוסף לפחות אפשרות אחת", color = theme.subtleTextColor, fontSize = FutureTypography.summary)
                     }
                 } else {
                     LazyColumn(
@@ -116,70 +114,38 @@ fun RandomPickerScreen(theme: FutureTheme, onBack: () -> Unit) {
 
 @Composable
 private fun RpAddButton(theme: FutureTheme, onClick: () -> Unit) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    Box(
-        modifier = Modifier
-            .size(44.dp)
-            .clip(FutureShapes.md)
-            .background(if (isFocused) theme.accentColor else theme.textColor.copy(alpha = 0.1f))
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus(),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(Icons.Rounded.Add, contentDescription = "הוסף", tint = if (isFocused) theme.onAccentColor else theme.accentColor)
-    }
+    ToolsIconButton(Icons.Rounded.Add, "הוסף", theme, onClick = onClick)
 }
 
+/**
+ * אפשרות ברשימה. האפשרות שנבחרה בהגרלה מסומנת כ"נבחר" של הדיזיין סיסטם -
+ * מילוי מלא בהדגשה עם הדיו שמעליה (states.html: "Selected always beats
+ * focused"). קודם זה היה 25% הדגשה, דרגה שאינה בסולם.
+ */
 @Composable
 private fun RpOptionRow(text: String, isChosen: Boolean, theme: FutureTheme, onDelete: () -> Unit) {
-    val shape = FutureShapes.md
+    val type = rememberFutureType()
+    val accent = theme.readableAccentColor
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(shape)
-            .background(if (isChosen) theme.accentColor.copy(alpha = 0.25f) else theme.textColor.copy(alpha = 0.05f))
-            .padding(horizontal = 14.dp, vertical = 12.dp),
+            .clip(FutureShapes.sm)
+            .background(if (isChosen) accent else theme.idleChipColor)
+            .padding(start = FutureDimens.spacingMd, end = FutureDimens.spacingXs, top = FutureDimens.spacingXs, bottom = FutureDimens.spacingXs),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text,
-            color = if (isChosen) theme.accentColor else theme.textColor,
-            fontSize = FutureTypography.bodyLarge,
-            fontWeight = if (isChosen) FontWeight.Bold else FontWeight.Normal,
+            color = if (isChosen) theme.onReadableAccentColor else theme.textColor,
+            fontSize = type.title,
+            fontWeight = if (isChosen) FutureTypography.weightBold else FutureTypography.weightMedium,
             modifier = Modifier.weight(1f)
         )
-        val deleteInteraction = remember { MutableInteractionSource() }
-        val deleteFocused by deleteInteraction.collectIsFocusedAsState()
-        Box(
-            modifier = Modifier
-                .size(28.dp)
-                .clip(FutureShapes.sm)
-                .background(if (deleteFocused) theme.dangerColor.copy(alpha = 0.3f) else Color.Transparent)
-                .clickable(interactionSource = deleteInteraction, indication = null, onClick = onDelete)
-                .focusable(interactionSource = deleteInteraction).bringIntoViewOnFocus(),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(Icons.Rounded.Close, contentDescription = "מחק", tint = theme.textColor.copy(alpha = 0.4f), modifier = Modifier.size(14.dp))
-        }
+        ToolsIconButton(Icons.Rounded.Close, "מחק", theme, tint = if (isChosen) theme.onReadableAccentColor else theme.textColor, onClick = onDelete)
     }
 }
 
 @Composable
 private fun RpPickButton(theme: FutureTheme, enabled: Boolean, onClick: () -> Unit) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val bgColor = if (!enabled) theme.textColor.copy(alpha = 0.08f) else if (isFocused) theme.accentColor else theme.textColor.copy(alpha = 0.12f)
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(FutureShapes.lg)
-            .background(bgColor)
-            .clickable(interactionSource = interactionSource, indication = null, enabled = enabled, onClick = onClick)
-            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
-            .padding(vertical = 16.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text("בחר אקראית", color = if (isFocused && enabled) Color.Black else theme.textColor.copy(alpha = if (enabled) 1f else 0.4f), fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Bold)
-    }
+    FutureButton("בחר אקראית", theme, onClick, fillMaxWidth = true, enabled = enabled)
 }

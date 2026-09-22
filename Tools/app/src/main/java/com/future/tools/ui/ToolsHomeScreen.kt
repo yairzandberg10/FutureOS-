@@ -1,4 +1,11 @@
 package com.future.tools.ui
+import com.future.sharednav.theme.FutureDimens
+import com.future.sharednav.theme.FutureMotion
+import com.future.sharednav.theme.readableAccentColor
+import com.future.sharednav.theme.idleFieldColor
+import androidx.compose.foundation.shape.CircleShape
+import com.future.sharednav.theme.subtleTextColor
+import com.future.sharednav.theme.mutedTextColor
 import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.focus.bringIntoViewOnFocus
 
@@ -109,8 +116,8 @@ fun ToolsHomeScreen(theme: FutureTheme, onOpen: (ToolRoute) -> Unit, lastOpenedR
             Column(modifier = Modifier.fillMaxSize()) {
                 ToolsHeader(title = "כלים", theme = theme)
                 LazyColumn(
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    contentPadding = PaddingValues(horizontal = FutureDimens.screenPadding, vertical = FutureDimens.spacingXs),
+                    verticalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm)
                 ) {
                     itemsIndexed(TOOL_ENTRIES) { _, entry ->
                         ToolRow(
@@ -133,19 +140,20 @@ private fun PinToHomeButton(entry: ToolEntry, theme: FutureTheme) {
     var isPinned by remember(entry.route) { mutableStateOf(ToolShortcuts.isPinnedToHome(context, entry.route)) }
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    val tint by animateColorAsState(
-        if (isPinned) theme.accentColor else theme.textColor.copy(alpha = if (isFocused) 0.6f else 0.3f),
-        label = "pinTint"
-    )
+    val accent = theme.readableAccentColor
+    // כפתור אייקון (IconButton.jsx): 8% במנוחה, 30% הדגשה בפוקוס. נעוץ = נבחר,
+    // ולכן האייקון בהדגשה; לא נעוץ = צבע הטקסט.
+    val tint = if (isPinned) accent else theme.textColor
     val bgColor by animateColorAsState(
-        if (isFocused) theme.textColor.copy(alpha = 0.14f) else theme.textColor.copy(alpha = 0f),
+        if (isFocused) accent.copy(alpha = 0.30f) else theme.idleFieldColor,
+        FutureMotion.focusColorSpec,
         label = "pinBg"
     )
 
     Box(
         modifier = Modifier
-            .size(36.dp)
-            .clip(FutureShapes.lg)
+            .size(FutureDimens.rowHeightTopBarButton)
+            .clip(CircleShape)
             .background(bgColor)
             .clickable(interactionSource = interactionSource, indication = null) {
                 val next = !isPinned
@@ -161,6 +169,6 @@ private fun PinToHomeButton(entry: ToolEntry, theme: FutureTheme) {
             .focusable(interactionSource = interactionSource).bringIntoViewOnFocus(),
         contentAlignment = androidx.compose.ui.Alignment.Center
     ) {
-        Icon(Icons.Rounded.PushPin, contentDescription = "הוסף/הסר ממסך הבית", tint = tint, modifier = Modifier.size(18.dp))
+        Icon(Icons.Rounded.PushPin, contentDescription = "הוסף/הסר ממסך הבית", tint = tint, modifier = Modifier.size(FutureDimens.iconTopBar))
     }
 }

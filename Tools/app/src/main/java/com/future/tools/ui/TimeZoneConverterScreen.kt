@@ -1,4 +1,6 @@
 package com.future.tools.ui
+import com.future.sharednav.theme.subtleTextColor
+import com.future.sharednav.theme.mutedTextColor
 
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
@@ -98,7 +100,7 @@ private fun CityTimeRow(city: WorldCity, zoned: ZonedDateTime, dayDiff: Long, th
                         dayDiff < 0 -> " (אתמול)"
                         else -> ""
                     },
-                color = theme.textColor.copy(alpha = 0.5f),
+                color = theme.mutedTextColor,
                 fontSize = FutureTypography.label
             )
         }

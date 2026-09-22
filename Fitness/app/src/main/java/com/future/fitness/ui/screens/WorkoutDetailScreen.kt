@@ -1,6 +1,18 @@
 package com.future.fitness.ui.screens
+import com.future.sharednav.theme.elevatedSurfaceColor
+import com.future.sharednav.theme.idleFieldColor
+import com.future.sharednav.theme.idleChipColor
+import com.future.sharednav.theme.focusFillChipColor
+import com.future.sharednav.theme.readableAccentColor
+import com.future.sharednav.theme.mutedTextColor
+import com.future.sharednav.theme.subtleTextColor
+import com.future.sharednav.theme.sectionHeaderColor
+import com.future.sharednav.theme.textAlpha
+import com.future.sharednav.components.FutureButton
+import com.future.sharednav.components.FutureButtonVariant
+import com.future.fitness.ui.components.FitnessTextField
 
-import com.future.sharednav.theme.onAccentColor
+import com.future.sharednav.theme.onReadableAccentColor
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
 import androidx.compose.foundation.background
@@ -68,7 +80,7 @@ fun WorkoutDetailScreen(
         }
         Text(
             "~$estimatedCalories קלוריות משוער",
-            color = theme.textColor.copy(alpha = 0.45f),
+            color = theme.mutedTextColor,
             fontSize = FutureTypography.caption,
             modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 4.dp),
         )
@@ -94,7 +106,7 @@ fun WorkoutDetailScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(theme.textColor.copy(alpha = 0.04f), FutureShapes.md)
+                            .background(theme.idleChipColor, FutureShapes.md)
                             .padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -122,16 +134,7 @@ fun WorkoutDetailScreen(
         Row(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
         ) {
-            Button(
-                onClick = onStart,
-                modifier = Modifier.fillMaxWidth().height(52.dp).focusRequester(startButtonFocusRequester),
-                shape = FutureShapes.lg,
-                colors = ButtonDefaults.buttonColors(containerColor = theme.accentColor, contentColor = theme.onAccentColor),
-            ) {
-                Icon(Icons.Rounded.PlayArrow, contentDescription = null, modifier = Modifier.size(20.dp))
-                Spacer(Modifier.width(8.dp))
-                Text("התחל אימון", fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Bold)
-            }
+            FutureButton("התחל אימון", theme, onStart, fillMaxWidth = true, focusRequester = startButtonFocusRequester)
         }
     }
 }

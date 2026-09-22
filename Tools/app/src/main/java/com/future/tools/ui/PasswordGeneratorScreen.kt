@@ -1,4 +1,11 @@
 package com.future.tools.ui
+import com.future.sharednav.components.FutureButton
+import com.future.sharednav.components.FutureButtonVariant
+import com.future.sharednav.components.FutureListItem
+import com.future.sharednav.components.FutureCheckbox
+import com.future.sharednav.theme.FutureDimens
+import com.future.sharednav.theme.subtleTextColor
+import com.future.sharednav.theme.mutedTextColor
 
 import com.future.sharednav.theme.onAccentColor
 import com.future.sharednav.theme.FutureTypography
@@ -96,7 +103,7 @@ fun PasswordGeneratorScreen(theme: FutureTheme, onBack: () -> Unit) {
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    PwActionButton(Icons.Rounded.Refresh, "חדש", theme = theme, modifier = Modifier.weight(1f)) { regenerate() }
+                    PwActionButton(Icons.Rounded.Refresh, "חדש", theme = theme, modifier = Modifier.weight(1f), primary = false) { regenerate() }
                     PwActionButton(Icons.Rounded.ContentCopy, "העתק", theme = theme, modifier = Modifier.weight(1f)) {
                         val clipboard = context.getSystemService(ClipboardManager::class.java)
                         clipboard.setPrimaryClip(ClipData.newPlainText("password", password))
@@ -111,7 +118,7 @@ fun PasswordGeneratorScreen(theme: FutureTheme, onBack: () -> Unit) {
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Text("אורך", color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.summary, modifier = Modifier.weight(1f))
+                    Text("אורך", color = theme.mutedTextColor, fontSize = FutureTypography.summary, modifier = Modifier.weight(1f))
                     ToolsStepperButton("-", theme = theme) { length = (length - 1).coerceAtLeast(4); regenerate() }
                     Text("$length", color = theme.textColor, fontSize = FutureTypography.title, fontWeight = FontWeight.Medium)
                     ToolsStepperButton("+", theme = theme) { length = (length + 1).coerceAtMost(32); regenerate() }
@@ -128,53 +135,28 @@ fun PasswordGeneratorScreen(theme: FutureTheme, onBack: () -> Unit) {
 }
 
 @Composable
-private fun PwActionButton(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, theme: FutureTheme, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val shape = FutureShapes.md
-    val bgColor = if (isFocused) theme.accentColor else theme.textColor.copy(alpha = 0.08f)
-    Row(
-        modifier = modifier
-            .clip(shape)
-            .background(bgColor)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource)
-            .padding(vertical = 12.dp),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(icon, contentDescription = null, tint = if (isFocused) theme.onAccentColor else theme.accentColor, modifier = Modifier.size(18.dp))
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(label, color = if (isFocused) theme.onAccentColor else theme.textColor, fontSize = FutureTypography.body, fontWeight = FontWeight.Medium)
-    }
+private fun PwActionButton(
+    @Suppress("UNUSED_PARAMETER") icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    theme: FutureTheme,
+    modifier: Modifier = Modifier,
+    primary: Boolean = true,
+    onClick: () -> Unit,
+) {
+    FutureButton(
+        label, theme, onClick, modifier,
+        variant = if (primary) FutureButtonVariant.Primary else FutureButtonVariant.Secondary,
+    )
 }
 
+/** בחירה מרובה - שורת רשימה עם תיבת סימון בסופה (components/forms/Checkbox.jsx). */
 @Composable
 private fun PwToggleRow(label: String, checked: Boolean, theme: FutureTheme, onToggle: (Boolean) -> Unit) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val shape = FutureShapes.md
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 4.dp)
-            .clip(shape)
-            .background(if (isFocused) theme.textColor.copy(alpha = 0.1f) else Color.Transparent)
-            .clickable(interactionSource = interactionSource, indication = null) { onToggle(!checked) }
-            .focusable(interactionSource = interactionSource)
-            .padding(horizontal = 12.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(label, color = theme.textColor, fontSize = FutureTypography.body, modifier = Modifier.weight(1f))
-        Box(
-            modifier = Modifier
-                .size(22.dp)
-                .clip(FutureShapes.sm)
-                .background(if (checked) theme.accentColor else theme.textColor.copy(alpha = 0.15f)),
-            contentAlignment = Alignment.Center
-        ) {
-            if (checked) Text("✓", color = Color.Black, fontSize = FutureTypography.body, fontWeight = FontWeight.Bold)
-        }
-    }
+    FutureListItem(
+        title = label,
+        theme = theme,
+        onClick = { onToggle(!checked) },
+        modifier = Modifier.padding(horizontal = FutureDimens.screenPadding, vertical = FutureDimens.spacingXxs),
+        trailing = { FutureCheckbox(checked, theme) },
+    )
 }

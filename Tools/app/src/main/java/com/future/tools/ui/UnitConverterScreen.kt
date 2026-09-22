@@ -1,4 +1,8 @@
 package com.future.tools.ui
+import com.future.sharednav.components.FutureChip
+import com.future.sharednav.components.FutureTabItem
+import com.future.sharednav.theme.subtleTextColor
+import com.future.sharednav.theme.mutedTextColor
 
 import com.future.sharednav.theme.onAccentColor
 import com.future.sharednav.theme.FutureTypography
@@ -178,7 +182,7 @@ fun UnitConverterScreen(theme: FutureTheme, onBack: () -> Unit) {
 
                 Text(
                     "הקלד ערך במקלדת · אישור על יחידה כדי להחליף",
-                    color = theme.textColor.copy(alpha = 0.35f),
+                    color = theme.subtleTextColor,
                     fontSize = FutureTypography.caption,
                     modifier = Modifier.fillMaxWidth().padding(20.dp),
                     textAlign = TextAlign.Center
@@ -197,64 +201,16 @@ private fun CategoryChip(
     focusRequester: FocusRequester? = null,
     onClick: () -> Unit
 ) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val shape = FutureShapes.md
-    val bgColor by animateColorAsState(
-        when {
-            isSelected -> theme.accentColor
-            isFocused -> theme.textColor.copy(alpha = 0.18f)
-            else -> theme.textColor.copy(alpha = 0.06f)
-        },
-        label = "categoryChipBg"
-    )
-    Box(
-        modifier = modifier
-            .clip(shape)
-            .background(bgColor)
-            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource)
-            .padding(vertical = 10.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(label, color = if (isSelected) theme.onAccentColor else theme.textColor, fontSize = FutureTypography.summary, fontWeight = FontWeight.Medium)
-    }
+    FutureTabItem(label, isSelected, theme, onClick, modifier, focusRequester)
 }
 
+/** בורר יחידה - לחיצה מחליפה ליחידה הבאה. צ'יפ של הדיזיין סיסטם. */
 @Composable
 private fun UnitChip(label: String, theme: FutureTheme, onClick: () -> Unit) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val shape = FutureShapes.md
-    val bgColor by animateColorAsState(if (isFocused) theme.textColor.copy(alpha = 0.16f) else theme.textColor.copy(alpha = 0.06f), label = "unitChipBg")
-    Box(
-        modifier = Modifier
-            .clip(shape)
-            .background(bgColor)
-            .then(if (isFocused) Modifier.border(width = 2.dp, color = theme.accentColor, shape = shape) else Modifier)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource)
-            .padding(horizontal = 14.dp, vertical = 6.dp)
-    ) {
-        Text(label, color = theme.textColor.copy(alpha = 0.8f), fontSize = FutureTypography.summary)
-    }
+    FutureChip(label, theme, onClick = onClick)
 }
 
 @Composable
 private fun SwapButton(theme: FutureTheme, onClick: () -> Unit) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val bgColor by animateColorAsState(if (isFocused) theme.accentColor.copy(alpha = 0.35f) else theme.textColor.copy(alpha = 0.08f), label = "swapBg")
-    Box(
-        modifier = Modifier
-            .size(38.dp)
-            .clip(CircleShape)
-            .background(bgColor)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(Icons.Rounded.SwapVert, contentDescription = "החלף כיוון", tint = theme.accentColor, modifier = Modifier.size(18.dp))
-    }
+    ToolsIconButton(Icons.Rounded.SwapVert, "החלף כיוון", theme, onClick = onClick)
 }

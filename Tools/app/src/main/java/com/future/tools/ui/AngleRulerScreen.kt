@@ -1,4 +1,8 @@
 package com.future.tools.ui
+import com.future.sharednav.theme.textAlpha
+import com.future.sharednav.components.FutureTabItem
+import com.future.sharednav.theme.subtleTextColor
+import com.future.sharednav.theme.mutedTextColor
 
 import com.future.sharednav.theme.onAccentColor
 import com.future.sharednav.theme.FutureTypography
@@ -102,25 +106,7 @@ fun AngleRulerScreen(theme: FutureTheme, onBack: () -> Unit) {
 
 @Composable
 private fun ModeChip(label: String, isSelected: Boolean, theme: FutureTheme, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val shape = FutureShapes.md
-    val bgColor = when {
-        isSelected -> theme.accentColor
-        isFocused -> theme.textColor.copy(alpha = 0.18f)
-        else -> theme.textColor.copy(alpha = 0.06f)
-    }
-    Box(
-        modifier = modifier
-            .clip(shape)
-            .background(bgColor)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource)
-            .padding(vertical = 10.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(label, color = if (isSelected) theme.onAccentColor else theme.textColor, fontSize = FutureTypography.body, fontWeight = FontWeight.Medium)
-    }
+    FutureTabItem(label, isSelected, theme, onClick, modifier)
 }
 
 /** סרגל מדויק על גבי המסך - מכויל לפי צפיפות המסך האמיתית (xdpi/ydpi) כך
@@ -150,7 +136,7 @@ private fun RulerView(theme: FutureTheme) {
                     drawContext.canvas.nativeCanvas.apply {
                         val paint = android.graphics.Paint().apply {
                             color = theme.textColor.copy(alpha = 0.7f).toArgb()
-                            textSize = 12.sp.toPx()
+                            textSize = FutureTypography.label.toPx()
                         }
                         drawText("$cm", lineLength + 8.dp.toPx(), y + paint.textSize / 3, paint)
                     }
@@ -197,7 +183,7 @@ private fun AngleView(angle: Float, theme: FutureTheme) {
                     val inner = if (tick % 90 == 0) radius * 0.82f else radius * 0.9f
                     val p1 = Offset(center.x + (outer * kotlin.math.cos(rad)).toFloat(), center.y - (outer * kotlin.math.sin(rad)).toFloat())
                     val p2 = Offset(center.x + (inner * kotlin.math.cos(rad)).toFloat(), center.y - (inner * kotlin.math.sin(rad)).toFloat())
-                    drawLine(theme.textColor.copy(alpha = 0.35f), p1, p2, strokeWidth = 1.5.dp.toPx())
+                    drawLine(theme.subtleTextColor, p1, p2, strokeWidth = 1.5.dp.toPx())
                 }
                 val needleAngleDeg = 180 - (angle + 90f).coerceIn(0f, 180f)
                 val rad = Math.toRadians(needleAngleDeg.toDouble())

@@ -1,4 +1,18 @@
 package com.future.fitness.ui.screens
+import com.future.sharednav.theme.FutureShapes
+import com.future.sharednav.theme.elevatedSurfaceColor
+import com.future.sharednav.theme.idleFieldColor
+import com.future.sharednav.theme.idleChipColor
+import com.future.sharednav.theme.focusFillChipColor
+import com.future.sharednav.theme.readableAccentColor
+import com.future.sharednav.theme.onReadableAccentColor
+import com.future.sharednav.theme.mutedTextColor
+import com.future.sharednav.theme.subtleTextColor
+import com.future.sharednav.theme.sectionHeaderColor
+import com.future.sharednav.theme.textAlpha
+import com.future.sharednav.components.FutureButton
+import com.future.sharednav.components.FutureButtonVariant
+import com.future.fitness.ui.components.FitnessTextField
 
 import com.future.sharednav.theme.FutureTypography
 import androidx.compose.foundation.background
@@ -50,9 +64,6 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import com.future.fitness.data.DailyStats
 import com.future.fitness.data.WorkoutHistoryEntry
-import com.future.fitness.ui.theme.KineticDimens
-import com.future.fitness.ui.theme.kineticSecondary
-import com.future.fitness.ui.theme.kineticTertiary
 import com.future.sharednav.theme.FutureTheme
 import java.util.Calendar
 
@@ -93,7 +104,7 @@ fun ProgressScreen(
 
     Column(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 20.dp)) {
-            Text("סקירה ואנליטיקה", color = theme.accentColor, fontSize = FutureTypography.label, fontWeight = FontWeight.Bold)
+            Text("סקירה ואנליטיקה", color = theme.sectionHeaderColor, fontSize = FutureTypography.label, fontWeight = FontWeight.Bold)
             Text("התקדמות", color = theme.textColor, fontSize = FutureTypography.headline, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 2.dp))
         }
 
@@ -121,7 +132,7 @@ fun ProgressScreen(
             item {
                 // כרטיס סיכום בנטו - 3 מדדים אמיתיים מהחודש הנוכחי
                 Row(
-                    modifier = Modifier.fillMaxWidth().background(theme.surfaceColor, RoundedCornerShape(KineticDimens.cardCorner)).padding(16.dp),
+                    modifier = Modifier.fillMaxWidth().background(theme.surfaceColor, FutureShapes.xl).padding(16.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     SummaryStat(monthWorkouts.toString(), "אימונים החודש", theme)
@@ -134,7 +145,7 @@ fun ProgressScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(theme.surfaceColor, RoundedCornerShape(KineticDimens.cardCorner))
+                        .background(theme.surfaceColor, FutureShapes.xl)
                         .padding(18.dp),
                 ) {
                     Text("עומס שבועי (דקות)", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.summary, fontWeight = FontWeight.Bold)
@@ -149,7 +160,7 @@ fun ProgressScreen(
                                             .fillMaxWidth()
                                             .fillMaxHeight(heightFraction)
                                             .background(
-                                                if (bar.isToday) theme.accentColor else theme.accentColor.copy(alpha = 0.3f),
+                                                if (bar.isToday) theme.readableAccentColor else theme.readableAccentColor.copy(alpha = 0.3f),
                                                 RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp, bottomStart = 2.dp, bottomEnd = 2.dp),
                                             ),
                                     )
@@ -168,7 +179,7 @@ fun ProgressScreen(
                 item {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Row {
-                            Icon(Icons.Rounded.EmojiEvents, contentDescription = null, tint = theme.kineticTertiary, modifier = Modifier.size(20.dp))
+                            Icon(Icons.Rounded.EmojiEvents, contentDescription = null, tint = theme.dangerColor, modifier = Modifier.size(20.dp))
                             Spacer(Modifier.width(6.dp))
                             Text("שיאים אישיים", color = theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Bold)
                         }
@@ -178,7 +189,7 @@ fun ProgressScreen(
                 items(records.size) { index ->
                     val record = records[index]
                     Row(
-                        modifier = Modifier.fillMaxWidth().background(theme.surfaceColor, RoundedCornerShape(KineticDimens.cardCorner)).padding(14.dp),
+                        modifier = Modifier.fillMaxWidth().background(theme.surfaceColor, FutureShapes.xl).padding(14.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Box(
@@ -202,14 +213,14 @@ fun ProgressScreen(
 
             item {
                 Row(
-                    modifier = Modifier.fillMaxWidth().background(theme.surfaceColor, RoundedCornerShape(KineticDimens.cardCorner)).padding(16.dp),
+                    modifier = Modifier.fillMaxWidth().background(theme.surfaceColor, FutureShapes.xl).padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Box(
-                        modifier = Modifier.size(44.dp).background(theme.kineticSecondary.copy(alpha = 0.18f), CircleShape),
+                        modifier = Modifier.size(44.dp).background(theme.successColor.copy(alpha = 0.18f), CircleShape),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Icon(Icons.Rounded.MilitaryTech, contentDescription = null, tint = theme.kineticSecondary, modifier = Modifier.size(22.dp))
+                        Icon(Icons.Rounded.MilitaryTech, contentDescription = null, tint = theme.successColor, modifier = Modifier.size(22.dp))
                     }
                     Spacer(Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
@@ -218,7 +229,7 @@ fun ProgressScreen(
                     }
                     Text(
                         "${((history.size.toFloat() / nextMilestone) * 100).toInt()}%",
-                        color = theme.kineticSecondary,
+                        color = theme.successColor,
                         fontSize = FutureTypography.bodyLarge,
                         fontWeight = FontWeight.ExtraBold,
                     )
@@ -244,17 +255,17 @@ private fun buildPersonalRecords(history: List<WorkoutHistoryEntry>, theme: Futu
 
     val longest = history.maxByOrNull { it.minutes }
     if (longest != null) {
-        records.add(PersonalRecord(Icons.Rounded.Timer, "האימון הארוך ביותר", longest.name, longest.minutes.toString(), "דקות", theme.accentColor))
+        records.add(PersonalRecord(Icons.Rounded.Timer, "האימון הארוך ביותר", longest.name, longest.minutes.toString(), "דקות", theme.readableAccentColor))
     }
 
     val mostCalories = history.maxByOrNull { it.calories }
     if (mostCalories != null) {
-        records.add(PersonalRecord(Icons.Rounded.LocalFireDepartment, "שריפת הקלוריות הגדולה ביותר", mostCalories.name, mostCalories.calories.toString(), "קק״ל", theme.kineticTertiary))
+        records.add(PersonalRecord(Icons.Rounded.LocalFireDepartment, "שריפת הקלוריות הגדולה ביותר", mostCalories.name, mostCalories.calories.toString(), "קק״ל", theme.dangerColor))
     }
 
     val longestRun = history.filter { it.distanceKm != null }.maxByOrNull { it.distanceKm!! }
     if (longestRun?.distanceKm != null) {
-        records.add(PersonalRecord(Icons.Rounded.Route, "המרחק הארוך ביותר", longestRun.name, "%.2f".format(longestRun.distanceKm), "ק״מ", theme.kineticSecondary))
+        records.add(PersonalRecord(Icons.Rounded.Route, "המרחק הארוך ביותר", longestRun.name, "%.2f".format(longestRun.distanceKm), "ק״מ", theme.successColor))
     }
 
     return records

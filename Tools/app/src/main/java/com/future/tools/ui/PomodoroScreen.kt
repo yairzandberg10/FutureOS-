@@ -1,4 +1,9 @@
 package com.future.tools.ui
+import com.future.sharednav.components.FutureButton
+import com.future.sharednav.components.FutureButtonVariant
+import com.future.sharednav.theme.FutureDimens
+import com.future.sharednav.theme.subtleTextColor
+import com.future.sharednav.theme.mutedTextColor
 
 import com.future.sharednav.theme.FutureTypography
 import android.os.Build
@@ -23,14 +28,22 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.future.sharednav.theme.FutureTheme
 import kotlinx.coroutines.delay
 
-private enum class PomodoroPhase(val label: String, val minutes: Int, val color: Color) {
-    FOCUS("מיקוד", 25, Color(0xFFFF6B6B)),
-    SHORT_BREAK("הפסקה קצרה", 5, Color(0xFF32D74B)),
-    LONG_BREAK("הפסקה ארוכה", 15, Color(0xFF64D2FF))
+private enum class PomodoroPhase(val label: String, val minutes: Int) {
+    FOCUS("מיקוד", 25),
+    SHORT_BREAK("הפסקה קצרה", 5),
+    LONG_BREAK("הפסקה ארוכה", 15)
+}
+
+/**
+ * צבע השלב מתוך פלטת הסטטוס של המערכת (היו שלושה hex, אחד מהם תכלת שאינו
+ * בפלטה בכלל): מיקוד = סכנה, הפסקה = הצלחה.
+ */
+private fun PomodoroPhase.color(theme: FutureTheme): Color = when (this) {
+    PomodoroPhase.FOCUS -> theme.dangerColor
+    PomodoroPhase.SHORT_BREAK, PomodoroPhase.LONG_BREAK -> theme.successColor
 }
 
 private fun vibrate(context: android.content.Context) {
@@ -96,53 +109,34 @@ fun PomodoroScreen(theme: FutureTheme, onBack: () -> Unit) {
 
                 Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(phase.label, color = phase.color, fontSize = FutureTypography.title, fontWeight = FontWeight.Bold)
+                        Text(phase.label, color = phase.color(theme), fontSize = FutureTypography.title, fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
                             "%02d:%02d".format(minutesText, secondsText),
                             color = theme.textColor,
-                            fontSize = 56.sp,
-                            fontWeight = FontWeight.Light
+                            fontSize = FutureTypography.hero,
+                            fontWeight = FutureTypography.weightLight,
+                            fontFamily = FutureTypography.monoFamily
                         )
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text("מחזורי מיקוד שהושלמו: $completedFocusCycles", color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.summary)
+                        Text("מחזורי מיקוד שהושלמו: $completedFocusCycles", color = theme.mutedTextColor, fontSize = FutureTypography.summary)
                     }
                 }
 
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 24.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = FutureDimens.screenPadding, vertical = FutureDimens.spacingXl),
+                    horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm)
                 ) {
-                    PomodoroActionButton(
-                        label = if (isRunning) "השהה" else "התחל",
-                        color = if (isRunning) theme.warningColor else theme.successColor
-                    ) { isRunning = !isRunning }
-                    PomodoroActionButton(label = "דלג", color = theme.textColor.copy(alpha = 0.12f)) {
-                        startNextPhase()
-                    }
-                    PomodoroActionButton(label = "איפוס", color = theme.textColor.copy(alpha = 0.12f)) {
-                        resetAll()
-                    }
+                    FutureButton(
+                        if (isRunning) "השהה" else "התחל", theme, { isRunning = !isRunning },
+                        modifier = Modifier.weight(1f),
+                    )
+                    FutureButton("דלג", theme, { startNextPhase() }, modifier = Modifier.weight(1f), variant = FutureButtonVariant.Secondary)
+                    FutureButton("איפוס", theme, { resetAll() }, modifier = Modifier.weight(1f), variant = FutureButtonVariant.Secondary)
                 }
             }
         }
     }
 }
 
-@Composable
-private fun PomodoroActionButton(label: String, color: Color, onClick: () -> Unit) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val bgColor = if (isFocused) color.copy(alpha = 1f) else color.copy(alpha = 0.8f)
-    Box(
-        modifier = Modifier
-            .size(76.dp)
-            .clip(CircleShape)
-            .background(bgColor)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(label, color = Color.Black, fontSize = FutureTypography.label, fontWeight = FontWeight.Bold)
-    }
-}
+

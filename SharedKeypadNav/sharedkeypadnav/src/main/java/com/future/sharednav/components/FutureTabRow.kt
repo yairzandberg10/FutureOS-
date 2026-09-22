@@ -66,7 +66,7 @@ fun FutureTabRow(
         horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm),
     ) {
         items.forEachIndexed { index, label ->
-            FutureTab(
+            FutureTabItem(
                 label = label,
                 selected = index == selectedIndex,
                 theme = theme,
@@ -78,14 +78,18 @@ fun FutureTabRow(
     }
 }
 
+/**
+ * פריט בודד של [FutureTabRow], למי שמסדר את הפריטים בעצמו (שתי שורות של
+ * אפשרויות, פריטים ברוחב לא שווה). אותו מראה בדיוק.
+ */
 @Composable
-private fun FutureTab(
+fun FutureTabItem(
     label: String,
     selected: Boolean,
     theme: FutureTheme,
     onClick: () -> Unit,
-    focusRequester: FocusRequester?,
     modifier: Modifier = Modifier,
+    focusRequester: FocusRequester? = null,
 ) {
     val type = rememberFutureType()
     val accent = LocalFutureAccent.current ?: theme.readableAccentColor

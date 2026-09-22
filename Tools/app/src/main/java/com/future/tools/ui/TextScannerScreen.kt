@@ -1,4 +1,7 @@
 package com.future.tools.ui
+import com.future.sharednav.components.FutureButton
+import com.future.sharednav.theme.subtleTextColor
+import com.future.sharednav.theme.mutedTextColor
 import com.future.sharednav.theme.onAccentColor
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
@@ -67,7 +70,7 @@ fun TextScannerScreen(theme: FutureTheme, onBack: () -> Unit) {
 
                 if (!hasPermission) {
                     Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        Text("נדרשת הרשאת מצלמה כדי לסרוק טקסט", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.body, modifier = Modifier.padding(horizontal = 32.dp))
+                        Text("נדרשת הרשאת מצלמה כדי לסרוק טקסט", color = theme.mutedTextColor, fontSize = FutureTypography.body, modifier = Modifier.padding(horizontal = 32.dp))
                     }
                 } else {
                     Box(
@@ -108,7 +111,7 @@ fun TextScannerScreen(theme: FutureTheme, onBack: () -> Unit) {
 
                     Text(
                         "התמיכה כרגע היא לטקסט לטיני וספרות (לא עברית) · הפניה למצלמה",
-                        color = theme.textColor.copy(alpha = 0.35f),
+                        color = theme.subtleTextColor,
                         fontSize = FutureTypography.caption,
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -125,19 +128,5 @@ fun TextScannerScreen(theme: FutureTheme, onBack: () -> Unit) {
 
 @Composable
 private fun FreezeButton(isFrozen: Boolean, theme: FutureTheme, onClick: () -> Unit) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val bgColor = if (isFocused) theme.accentColor else theme.textColor.copy(alpha = 0.12f)
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(FutureShapes.lg)
-            .background(bgColor)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
-            .padding(vertical = 16.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(if (isFrozen) "חזור לסריקה חיה" else "הקפא ועיין בטקסט", color = if (isFocused) theme.onAccentColor else theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Bold)
-    }
+    FutureButton(if (isFrozen) "חזור לסריקה חיה" else "הקפא ועיין בטקסט", theme, onClick, fillMaxWidth = true)
 }

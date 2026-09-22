@@ -1,4 +1,7 @@
 package com.future.fitness.ui.components
+import com.future.sharednav.components.FutureTabItem
+import com.future.sharednav.theme.FutureDimens
+import androidx.compose.foundation.layout.Arrangement
 
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
@@ -20,11 +23,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.future.sharednav.theme.FutureTheme
 
-/** בורר פלחים (רמת קושי, יחידות משקל וכו') - היה מוכפל בנפרד (עם עיצוב זהה)
- * ב-WorkoutBuilderScreen וב-SettingsScreen, ובלי שום סימון פוקוס D-pad
- * (Box.clickable רגיל) - כאן עטוף ב-FocusableItem כדי שיהיה ברור אילו פלח
- * ממוקד עכשיו, קריטי במכשיר בלי מסך מגע. segmentWidth null = כל הפלחים
- * מתחלקים באותו רוחב (weight); אחרת רוחב קבוע לכל פלח. */
+/**
+ * בורר פלחים (רמת קושי, יחידות משקל) - שורת הלשוניות של הדיזיין סיסטם
+ * (components/navigation/TabRow.jsx). segmentWidth null = כל הפלחים
+ * מתחלקים באותו רוחב; אחרת רוחב קבוע לכל פלח.
+ */
 @Composable
 fun SegmentedControl(
     options: List<String>,
@@ -34,33 +37,15 @@ fun SegmentedControl(
     modifier: Modifier = Modifier,
     segmentWidth: Dp? = null,
 ) {
-    Row(
-        modifier = modifier
-            .background(theme.textColor.copy(alpha = 0.1f), FutureShapes.md)
-            .padding(3.dp),
-    ) {
+    Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm)) {
         options.forEach { option ->
-            val isSelected = option == selected
-            FocusableItem(
-                onClick = { onSelect(option) },
+            FutureTabItem(
+                label = option,
+                selected = option == selected,
                 theme = theme,
+                onClick = { onSelect(option) },
                 modifier = if (segmentWidth != null) Modifier.width(segmentWidth) else Modifier.weight(1f),
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(if (isSelected) theme.surfaceColor else Color.Transparent, FutureShapes.sm)
-                        .padding(vertical = 8.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        option,
-                        color = if (isSelected) theme.textColor else theme.textColor.copy(alpha = 0.6f),
-                        fontSize = FutureTypography.summary,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                }
-            }
+            )
         }
     }
 }

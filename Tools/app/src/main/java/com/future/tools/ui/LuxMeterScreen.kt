@@ -1,4 +1,6 @@
 package com.future.tools.ui
+import com.future.sharednav.theme.subtleTextColor
+import com.future.sharednav.theme.mutedTextColor
 
 import com.future.sharednav.theme.FutureTypography
 import android.hardware.Sensor
@@ -77,7 +79,7 @@ fun LuxMeterScreen(theme: FutureTheme, onBack: () -> Unit) {
                     if (!state.hasSensor) {
                         Text(
                             "לא נמצא חיישן אור במכשיר הזה",
-                            color = theme.textColor.copy(alpha = 0.6f),
+                            color = theme.mutedTextColor,
                             fontSize = FutureTypography.body,
                             modifier = Modifier.padding(horizontal = 32.dp)
                         )

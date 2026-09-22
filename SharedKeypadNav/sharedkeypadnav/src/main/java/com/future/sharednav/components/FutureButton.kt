@@ -57,6 +57,7 @@ fun FutureButton(
     variant: FutureButtonVariant = FutureButtonVariant.Primary,
     fillMaxWidth: Boolean = false,
     focusRequester: FocusRequester? = null,
+    enabled: Boolean = true,
 ) {
     val accent = LocalFutureAccent.current ?: theme.readableAccentColor
     val fill = when (variant) {
@@ -84,6 +85,7 @@ fun FutureButton(
         quiet = variant == FutureButtonVariant.Quiet,
         fillMaxWidth = fillMaxWidth,
         focusRequester = focusRequester,
+        enabled = enabled,
     )
 }
 
@@ -104,6 +106,7 @@ internal fun FutureButtonCore(
     quiet: Boolean = false,
     fillMaxWidth: Boolean = false,
     focusRequester: FocusRequester? = null,
+    enabled: Boolean = true,
 ) {
     val type = rememberFutureType()
     val interactionSource = remember { MutableInteractionSource() }
@@ -130,9 +133,12 @@ internal fun FutureButtonCore(
             .background(fill)
             .border(FutureDimens.focusBorderControl, ring, shape)
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
-            .focusable(interactionSource = interactionSource)
+            // כפתור שאי אפשר להפעיל גם לא מקבל פוקוס - "Anything that cannot
+            // receive focus cannot be activated at all" (README של הדיזיין סיסטם).
+            // הוא נשאר באטימות המנוחה (70%), ולא מקבל עיצוב "מושבת" נפרד.
+            .focusable(enabled = enabled, interactionSource = interactionSource)
             .bringIntoViewOnFocus()
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
+            .clickable(interactionSource = interactionSource, indication = null, enabled = enabled, onClick = onClick)
             .padding(
                 horizontal = FutureDimens.spacingXl,
                 vertical = if (quiet) 0.dp else FutureDimens.spacingMd,

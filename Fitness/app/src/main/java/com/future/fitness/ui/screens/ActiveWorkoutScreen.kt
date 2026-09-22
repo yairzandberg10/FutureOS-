@@ -1,4 +1,18 @@
 package com.future.fitness.ui.screens
+import com.future.sharednav.components.FutureProgressBar
+import com.future.sharednav.theme.elevatedSurfaceColor
+import com.future.sharednav.theme.idleFieldColor
+import com.future.sharednav.theme.idleChipColor
+import com.future.sharednav.theme.focusFillChipColor
+import com.future.sharednav.theme.readableAccentColor
+import com.future.sharednav.theme.onReadableAccentColor
+import com.future.sharednav.theme.mutedTextColor
+import com.future.sharednav.theme.subtleTextColor
+import com.future.sharednav.theme.sectionHeaderColor
+import com.future.sharednav.theme.textAlpha
+import com.future.sharednav.components.FutureButton
+import com.future.sharednav.components.FutureButtonVariant
+import com.future.fitness.ui.components.FitnessTextField
 
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
@@ -49,8 +63,6 @@ import com.future.fitness.data.WorkoutStore
 import com.future.fitness.ui.components.FocusableItem
 import com.future.fitness.ui.components.ScreenTopBar
 import com.future.fitness.ui.formatElapsed
-import com.future.fitness.ui.theme.KineticDimens
-import com.future.fitness.ui.theme.kineticTertiary
 import androidx.compose.ui.graphics.Color
 import com.future.sharednav.theme.FutureTheme
 import kotlinx.coroutines.delay
@@ -152,7 +164,7 @@ fun ActiveWorkoutScreen(
         ) {
             Text(
                 formatElapsed(state.elapsedSec),
-                color = theme.accentColor,
+                color = theme.textColor,
                 fontSize = FutureTypography.hero,
                 fontWeight = FontWeight.Bold,
             )
@@ -170,7 +182,7 @@ fun ActiveWorkoutScreen(
                         icon = Icons.Rounded.Favorite,
                         value = if (isHrConnected && liveBpm != null) "$liveBpm" else "--",
                         unit = "BPM",
-                        color = theme.kineticTertiary,
+                        color = theme.dangerColor,
                         theme = theme,
                         modifier = Modifier.weight(1f),
                     )
@@ -178,7 +190,7 @@ fun ActiveWorkoutScreen(
                         icon = Icons.Rounded.LocalFireDepartment,
                         value = "$liveCalories",
                         unit = "קק״ל",
-                        color = theme.accentColor,
+                        color = theme.textColor,
                         theme = theme,
                         modifier = Modifier.weight(1f),
                     )
@@ -194,31 +206,24 @@ fun ActiveWorkoutScreen(
                 )
                 Text("${(overallProgress * 100).toInt()}%", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.label)
             }
-            LinearProgressIndicator(
-                progress = { overallProgress },
-                modifier = Modifier.fillMaxWidth().height(4.dp),
-                color = theme.accentColor,
-                trackColor = theme.textColor.copy(alpha = 0.1f),
-            )
+            FutureProgressBar(progress = overallProgress, theme = theme)
             Spacer(Modifier.height(18.dp))
 
             if (state.resting) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(theme.accentColor.copy(alpha = 0.12f), FutureShapes.xl)
+                        .background(theme.elevatedSurfaceColor, FutureShapes.xl)
                         .padding(26.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Text("מנוחה", color = theme.accentColor, fontSize = FutureTypography.summary, fontWeight = FontWeight.Bold)
+                    Text("מנוחה", color = theme.textColor, fontSize = FutureTypography.summary, fontWeight = FontWeight.Bold)
                     Text(state.restRemaining.toString(), color = theme.textColor, fontSize = FutureTypography.hero, fontWeight = FontWeight.Bold)
-                    TextButton(onClick = {
+                    FutureButton("דלג על המנוחה", theme, {
                         state.resting = false
                         state.exerciseIndex = state.pendingExerciseIndex
                         state.setIndex = state.pendingSetIndex
-                    }) {
-                        Text("דלג על המנוחה", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.summary)
-                    }
+                    }, variant = FutureButtonVariant.Quiet)
                 }
             } else {
                 Column(
@@ -229,10 +234,10 @@ fun ActiveWorkoutScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Box(
-                        modifier = Modifier.size(56.dp).background(theme.accentColor.copy(alpha = 0.18f), CircleShape),
+                        modifier = Modifier.size(56.dp).background(theme.idleFieldColor, CircleShape),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Icon(Icons.Rounded.FitnessCenter, contentDescription = null, tint = theme.accentColor, modifier = Modifier.size(28.dp))
+                        Icon(Icons.Rounded.FitnessCenter, contentDescription = null, tint = theme.textColor, modifier = Modifier.size(28.dp))
                     }
                     Spacer(Modifier.height(8.dp))
                     Text(exercise.name, color = theme.textColor, fontSize = FutureTypography.screenTitle, fontWeight = FontWeight.Bold)
@@ -246,11 +251,11 @@ fun ActiveWorkoutScreen(
                         for (i in 0 until exercise.sets) {
                             val done = state.isSetDone(state.exerciseIndex, i)
                             val current = i == state.setIndex && !done
-                            val borderColor = if (done || current) theme.accentColor else theme.textColor.copy(alpha = 0.35f)
+                            val borderColor = if (done || current) theme.readableAccentColor else theme.subtleTextColor
                             Box(
                                 modifier = Modifier
                                     .size(14.dp)
-                                    .background(if (done) theme.accentColor else androidx.compose.ui.graphics.Color.Transparent, CircleShape)
+                                    .background(if (done) theme.readableAccentColor else androidx.compose.ui.graphics.Color.Transparent, CircleShape)
                                     .border(1.5.dp, borderColor, CircleShape)
                             )
                         }
@@ -269,7 +274,7 @@ fun ActiveWorkoutScreen(
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .background(if (isFocused) theme.accentColor.copy(alpha = 0.22f) else theme.textColor.copy(alpha = 0.08f), FutureShapes.lg),
+                                .background(if (isFocused) theme.focusFillChipColor else theme.textColor.copy(alpha = 0.08f), FutureShapes.lg),
                             contentAlignment = Alignment.Center,
                         ) {
                             Icon(
@@ -303,7 +308,7 @@ fun ActiveWorkoutScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .background(theme.accentColor, FutureShapes.lg)
+                                .background(theme.readableAccentColor, FutureShapes.lg)
                                 .then(if (isFocused) Modifier.border(3.dp, theme.textColor, FutureShapes.lg) else Modifier),
                             horizontalArrangement = Arrangement.Center,
                             verticalAlignment = Alignment.CenterVertically,
@@ -323,7 +328,7 @@ fun ActiveWorkoutScreen(
 private fun BioTile(icon: ImageVector, value: String, unit: String, color: Color, theme: FutureTheme, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
-            .background(theme.surfaceColor, RoundedCornerShape(KineticDimens.subCardCorner))
+            .background(theme.surfaceColor, FutureShapes.lg)
             .padding(12.dp),
     ) {
         Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(16.dp))

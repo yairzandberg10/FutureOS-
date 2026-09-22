@@ -1,4 +1,9 @@
 package com.future.tools.ui
+import com.future.sharednav.components.FutureButton
+import com.future.sharednav.theme.textAlpha
+import com.future.sharednav.components.FutureTabItem
+import com.future.sharednav.theme.subtleTextColor
+import com.future.sharednav.theme.mutedTextColor
 
 import com.future.sharednav.theme.onAccentColor
 import com.future.sharednav.theme.FutureTypography
@@ -71,7 +76,7 @@ fun CoinDiceScreen(theme: FutureTheme, onBack: () -> Unit) {
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        Text("מספר קוביות", color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.summary, modifier = Modifier.weight(1f))
+                        Text("מספר קוביות", color = theme.mutedTextColor, fontSize = FutureTypography.summary, modifier = Modifier.weight(1f))
                         ToolsStepperButton("-", theme = theme) { diceCount = (diceCount - 1).coerceAtLeast(1) }
                         Text("$diceCount", color = theme.textColor, fontSize = FutureTypography.title, fontWeight = FontWeight.Medium)
                         ToolsStepperButton("+", theme = theme) { diceCount = (diceCount + 1).coerceAtMost(6) }
@@ -95,25 +100,7 @@ fun CoinDiceScreen(theme: FutureTheme, onBack: () -> Unit) {
 
 @Composable
 private fun ModeChip(label: String, isSelected: Boolean, theme: FutureTheme, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val shape = FutureShapes.md
-    val bgColor = when {
-        isSelected -> theme.accentColor
-        isFocused -> theme.textColor.copy(alpha = 0.18f)
-        else -> theme.textColor.copy(alpha = 0.06f)
-    }
-    Box(
-        modifier = modifier
-            .clip(shape)
-            .background(bgColor)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource)
-            .padding(vertical = 10.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(label, color = if (isSelected) theme.onAccentColor else theme.textColor, fontSize = FutureTypography.body, fontWeight = FontWeight.Medium)
-    }
+    FutureTabItem(label, isSelected, theme, onClick, modifier)
 }
 
 @Composable
@@ -124,7 +111,7 @@ private fun CoinFace(result: Boolean?, rotationDeg: Float, theme: FutureTheme) {
                 .size(140.dp)
                 .rotate(rotationDeg)
                 .clip(CircleShape)
-                .background(theme.accentColor),
+                .background(theme.textAlpha(12)),
             contentAlignment = Alignment.Center
         ) {
             Text(
@@ -133,7 +120,7 @@ private fun CoinFace(result: Boolean?, rotationDeg: Float, theme: FutureTheme) {
                     false -> "פלי"
                     null -> "?"
                 },
-                color = Color.Black, fontSize = FutureTypography.display, fontWeight = FontWeight.Bold
+                color = theme.textColor, fontSize = FutureTypography.display, fontWeight = FontWeight.Bold
             )
         }
         Spacer(modifier = Modifier.height(16.dp))
@@ -143,7 +130,7 @@ private fun CoinFace(result: Boolean?, rotationDeg: Float, theme: FutureTheme) {
                 false -> "יצא פלי"
                 null -> "לחץ על \"הטל\" כדי להתחיל"
             },
-            color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.body
+            color = theme.mutedTextColor, fontSize = FutureTypography.body
         )
     }
 }
@@ -160,9 +147,9 @@ private fun DiceRow(results: List<Int>, rotationDeg: Float, theme: FutureTheme) 
         }
         Spacer(modifier = Modifier.height(16.dp))
         if (results.isNotEmpty()) {
-            Text("סה\"כ: ${results.sum()}", color = theme.accentColor, fontSize = FutureTypography.title, fontWeight = FontWeight.Bold)
+            Text("סה\"כ: ${results.sum()}", color = theme.textColor, fontSize = FutureTypography.title, fontWeight = FontWeight.Bold)
         } else {
-            Text("לחץ על \"הטל\" כדי להתחיל", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.body)
+            Text("לחץ על \"הטל\" כדי להתחיל", color = theme.mutedTextColor, fontSize = FutureTypography.body)
         }
     }
 }
@@ -183,19 +170,5 @@ private fun DiceFace(value: Int?, rotationDeg: Float, theme: FutureTheme) {
 
 @Composable
 private fun RollButton(theme: FutureTheme, onClick: () -> Unit) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val bgColor = if (isFocused) theme.accentColor else theme.textColor.copy(alpha = 0.12f)
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(FutureShapes.lg)
-            .background(bgColor)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource)
-            .padding(vertical = 16.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text("הטל", color = if (isFocused) theme.onAccentColor else theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Bold)
-    }
+    FutureButton("הטל", theme, onClick, fillMaxWidth = true)
 }

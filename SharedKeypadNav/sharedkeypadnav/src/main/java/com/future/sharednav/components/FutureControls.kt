@@ -122,19 +122,22 @@ fun FutureChip(
 ) {
     val type = rememberFutureType()
     val accent = LocalFutureAccent.current ?: theme.readableAccentColor
+    // צ'יפ לחיץ מקבל פוקוס בעצמו ויודע מתי הוא ממוקד; [focused] נשאר בשביל
+    // צ'יפ לא-לחיץ שהפוקוס שלו מנוהל מבחוץ (רשימה עם keypadListNav).
+    val interactionSource = remember { MutableInteractionSource() }
+    val ownFocus by interactionSource.collectIsFocusedAsState()
     val background by animateColorAsState(
         when {
             selected -> accent
-            focused -> theme.focusFillChipColor
+            focused || ownFocus -> theme.focusFillChipColor
             else -> theme.idleChipColor
         },
         FutureMotion.focusColorSpec,
         label = "chipBg",
     )
-    val interactionSource = remember { MutableInteractionSource() }
     Text(
         text,
-        color = if (selected) theme.onReadableAccentColor else theme.textColor,
+        color = if (selected) FutureContrast.onColor(accent) else theme.textColor,
         fontSize = type.summary,
         fontWeight = FutureTypography.weightMedium,
         modifier = modifier
@@ -142,16 +145,22 @@ fun FutureChip(
             .background(background)
             .then(
                 if (onClick != null) {
-                    Modifier.clickable(
-                        interactionSource = interactionSource,
-                        indication = null,
-                        onClick = onClick,
-                    )
+                    Modifier
+                        .clickable(
+                            interactionSource = interactionSource,
+                            indication = null,
+                            onClick = onClick,
+                        )
+                        .focusable(interactionSource = interactionSource)
+                        .bringIntoViewOnFocus()
                 } else Modifier
             )
-            .padding(horizontal = 18.dp, vertical = FutureDimens.spacingSm),
+            .padding(horizontal = ChipHorizontalPadding, vertical = FutureDimens.spacingSm),
     )
 }
+
+/** 18dp - הריפוד האופקי של צ'יפ (GalleryTabChip). */
+private val ChipHorizontalPadding = 18.dp
 
 /**
  * עיגול של יום בשבוע, בבורר השעה של המעורר. 36dp, 14sp מודגש.

@@ -1,4 +1,18 @@
 package com.future.fitness.ui.screens
+import com.future.sharednav.theme.FutureShapes
+import com.future.sharednav.theme.elevatedSurfaceColor
+import com.future.sharednav.theme.idleFieldColor
+import com.future.sharednav.theme.idleChipColor
+import com.future.sharednav.theme.focusFillChipColor
+import com.future.sharednav.theme.readableAccentColor
+import com.future.sharednav.theme.onReadableAccentColor
+import com.future.sharednav.theme.mutedTextColor
+import com.future.sharednav.theme.subtleTextColor
+import com.future.sharednav.theme.sectionHeaderColor
+import com.future.sharednav.theme.textAlpha
+import com.future.sharednav.components.FutureButton
+import com.future.sharednav.components.FutureButtonVariant
+import com.future.fitness.ui.components.FitnessTextField
 
 import com.future.sharednav.theme.FutureTypography
 import androidx.compose.foundation.background
@@ -57,8 +71,6 @@ import com.future.fitness.ui.components.IconListRow
 import com.future.fitness.ui.components.RingSpec
 import com.future.fitness.ui.components.StatTile
 
-import com.future.fitness.ui.theme.KineticDimens
-import com.future.fitness.ui.theme.kineticTertiary
 import com.future.sharednav.theme.FutureTheme
 import java.util.Calendar
 
@@ -150,12 +162,12 @@ fun HomeScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp)
-                        .background(theme.surfaceColor, RoundedCornerShape(KineticDimens.cardCorner))
+                        .background(theme.surfaceColor, FutureShapes.xl)
                         .padding(vertical = 14.dp, horizontal = 14.dp),
                 ) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text("רצף אימונים שבועי", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.label, fontWeight = FontWeight.Bold)
-                        Text("$doneCount מתוך 7 ימים", color = theme.accentColor, fontSize = FutureTypography.label, fontWeight = FontWeight.Bold)
+                        Text("$doneCount מתוך 7 ימים", color = theme.sectionHeaderColor, fontSize = FutureTypography.label, fontWeight = FontWeight.Bold)
                     }
                     Spacer(Modifier.height(10.dp))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -168,8 +180,8 @@ fun HomeScreen(
                                         .size(28.dp)
                                         .background(
                                             when {
-                                                day.isToday -> theme.accentColor.copy(alpha = 0.25f)
-                                                day.done -> theme.accentColor.copy(alpha = 0.18f)
+                                                day.isToday -> theme.focusFillChipColor
+                                                day.done -> theme.idleFieldColor
                                                 else -> theme.textColor.copy(alpha = 0.06f)
                                             },
                                             CircleShape,
@@ -177,7 +189,7 @@ fun HomeScreen(
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     if (day.done) {
-                                        Icon(Icons.Rounded.Check, contentDescription = null, tint = theme.accentColor, modifier = Modifier.size(14.dp))
+                                        Icon(Icons.Rounded.Check, contentDescription = null, tint = theme.textColor, modifier = Modifier.size(14.dp))
                                     }
                                 }
                             }
@@ -189,11 +201,11 @@ fun HomeScreen(
 
             item {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).background(theme.surfaceColor, RoundedCornerShape(KineticDimens.cardCorner)).padding(18.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).background(theme.surfaceColor, FutureShapes.xl).padding(18.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     ActivityRings(
-                        rings = listOf(RingSpec(minutesFraction, theme.accentColor)),
+                        rings = listOf(RingSpec(minutesFraction, theme.readableAccentColor)),
                         trackColor = theme.textColor.copy(alpha = 0.08f),
                         size = 96.dp,
                         strokeWidth = 9.dp,
@@ -205,11 +217,11 @@ fun HomeScreen(
                     }
                     Spacer(Modifier.width(16.dp))
                     Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        MiniStatRow(Icons.Rounded.LocalFireDepartment, "${stats.caloriesToday} קק״ל היום", theme.kineticTertiary, theme)
-                        MiniStatRow(Icons.Rounded.LocalFireDepartment, "${stats.streakDays} ימי רצף", theme.accentColor, theme)
+                        MiniStatRow(Icons.Rounded.LocalFireDepartment, "${stats.caloriesToday} קק״ל היום", theme.dangerColor, theme)
+                        MiniStatRow(Icons.Rounded.LocalFireDepartment, "${stats.streakDays} ימי רצף", theme.readableAccentColor, theme)
                         Text(
                             "יעד יומי מומלץ (WHO): $WHO_DAILY_ACTIVE_MINUTES_TARGET דק׳ פעילות",
-                            color = theme.textColor.copy(alpha = 0.45f),
+                            color = theme.mutedTextColor,
                             fontSize = FutureTypography.caption,
                         )
                     }
@@ -226,19 +238,19 @@ fun HomeScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(theme.surfaceColor, RoundedCornerShape(KineticDimens.cardCorner))
+                            .background(theme.surfaceColor, FutureShapes.xl)
                             .padding(18.dp),
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(
-                                modifier = Modifier.size(48.dp).background(theme.accentColor.copy(alpha = 0.18f), CircleShape),
+                                modifier = Modifier.size(48.dp).background(theme.idleFieldColor, CircleShape),
                                 contentAlignment = Alignment.Center,
                             ) {
-                                Icon(Icons.Rounded.FitnessCenter, contentDescription = null, tint = theme.accentColor, modifier = Modifier.size(24.dp))
+                                Icon(Icons.Rounded.FitnessCenter, contentDescription = null, tint = theme.textColor, modifier = Modifier.size(24.dp))
                             }
                             Spacer(Modifier.width(14.dp))
                             Column(modifier = Modifier.weight(1f)) {
-                                Text("האימון המומלץ הבא", color = theme.accentColor, fontSize = FutureTypography.caption, fontWeight = FontWeight.Bold)
+                                Text("האימון המומלץ הבא", color = theme.sectionHeaderColor, fontSize = FutureTypography.caption, fontWeight = FontWeight.Bold)
                                 Text(nextWorkout.name, color = theme.textColor, fontSize = FutureTypography.title, fontWeight = FontWeight.Bold)
                                 Text(
                                     "${nextWorkout.exercises.size} תרגילים · ${nextWorkout.durationMin} דקות · ${nextWorkout.difficulty}",
@@ -252,7 +264,7 @@ fun HomeScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(46.dp)
-                                .background(theme.accentColor, RoundedCornerShape(KineticDimens.chipCorner)),
+                                .background(theme.readableAccentColor, FutureShapes.pill),
                             horizontalArrangement = Arrangement.Center,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {

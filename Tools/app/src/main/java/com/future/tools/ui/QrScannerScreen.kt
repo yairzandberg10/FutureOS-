@@ -1,4 +1,8 @@
 package com.future.tools.ui
+import com.future.sharednav.components.FutureButton
+import com.future.sharednav.components.FutureButtonVariant
+import com.future.sharednav.theme.subtleTextColor
+import com.future.sharednav.theme.mutedTextColor
 
 import com.future.sharednav.theme.onAccentColor
 import com.future.sharednav.theme.FutureTypography
@@ -52,7 +56,7 @@ fun QrScannerScreen(theme: FutureTheme, onBack: () -> Unit) {
 
                 if (!hasPermission) {
                     Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        Text("נדרשת הרשאת מצלמה כדי לסרוק קודים", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.body, modifier = Modifier.padding(horizontal = 32.dp))
+                        Text("נדרשת הרשאת מצלמה כדי לסרוק קודים", color = theme.mutedTextColor, fontSize = FutureTypography.body, modifier = Modifier.padding(horizontal = 32.dp))
                     }
                 } else {
                     Box(
@@ -137,20 +141,8 @@ private fun QrResultView(value: String, theme: FutureTheme, onScanAgain: () -> U
 
 @Composable
 private fun QrActionButton(label: String, theme: FutureTheme, isPrimary: Boolean = true, onClick: () -> Unit) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val baseColor = if (isPrimary) theme.accentColor else theme.textColor.copy(alpha = 0.12f)
-    val bgColor = if (isFocused) baseColor.copy(alpha = 1f) else baseColor.copy(alpha = if (isPrimary) 0.85f else 1f)
-    Box(
-        modifier = Modifier
-            .fillMaxWidth(0.8f)
-            .clip(FutureShapes.lg)
-            .background(bgColor)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource)
-            .padding(vertical = 14.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(label, color = if (isPrimary) theme.onAccentColor else theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Bold)
-    }
+    FutureButton(
+        label, theme, onClick, Modifier.fillMaxWidth(0.8f),
+        variant = if (isPrimary) FutureButtonVariant.Primary else FutureButtonVariant.Secondary,
+    )
 }

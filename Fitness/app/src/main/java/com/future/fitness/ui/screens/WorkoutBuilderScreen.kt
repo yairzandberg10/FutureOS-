@@ -1,6 +1,18 @@
 package com.future.fitness.ui.screens
+import com.future.sharednav.theme.elevatedSurfaceColor
+import com.future.sharednav.theme.idleFieldColor
+import com.future.sharednav.theme.idleChipColor
+import com.future.sharednav.theme.focusFillChipColor
+import com.future.sharednav.theme.readableAccentColor
+import com.future.sharednav.theme.mutedTextColor
+import com.future.sharednav.theme.subtleTextColor
+import com.future.sharednav.theme.sectionHeaderColor
+import com.future.sharednav.theme.textAlpha
+import com.future.sharednav.components.FutureButton
+import com.future.sharednav.components.FutureButtonVariant
+import com.future.fitness.ui.components.FitnessTextField
 
-import com.future.sharednav.theme.onAccentColor
+import com.future.sharednav.theme.onReadableAccentColor
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
 import androidx.compose.foundation.background
@@ -44,7 +56,6 @@ import com.future.fitness.ui.components.FocusableItem
 import com.future.fitness.ui.components.ScreenTopBar
 import com.future.fitness.ui.components.SegmentedControl
 import com.future.sharednav.focus.escapeTextFieldFocusTrap
-import com.future.fitness.ui.components.fitnessTextFieldColors
 import com.future.sharednav.theme.FutureTheme
 
 private class DraftExercise(name: String = "", sets: String = "3", reps: String = "") {
@@ -67,20 +78,19 @@ fun WorkoutBuilderScreen(
     val exercises = remember { mutableStateListOf(DraftExercise()) }
 
     val canSave = name.isNotBlank() && exercises.any { it.name.isNotBlank() }
-    val fieldColors = fitnessTextFieldColors(theme)
 
     Column(modifier = Modifier.fillMaxSize()) {
         ScreenTopBar(title = "אימון חדש", theme = theme, onBack = onBack)
 
         LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp).escapeTextFieldFocusTrap()) {
             item {
-                OutlinedTextField(
+                FitnessTextField(
+                        theme = theme,
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("שם האימון") },
+                    label = "שם האימון",
                     modifier = Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 12.dp),
                     singleLine = true,
-                    colors = fieldColors,
                 )
             }
 
@@ -96,14 +106,14 @@ fun WorkoutBuilderScreen(
             }
 
             item {
-                OutlinedTextField(
+                FitnessTextField(
+                        theme = theme,
                     value = durationMin,
                     onValueChange = { v -> if (v.length <= 3 && v.all { it.isDigit() }) durationMin = v },
-                    label = { Text("משך משוער (דקות)") },
+                    label = "משך משוער (דקות)",
                     keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth().padding(bottom = 18.dp),
                     singleLine = true,
-                    colors = fieldColors,
                 )
             }
 
@@ -120,13 +130,13 @@ fun WorkoutBuilderScreen(
                         .padding(14.dp),
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        OutlinedTextField(
+                        FitnessTextField(
+                        theme = theme,
                             value = ex.name,
                             onValueChange = { ex.name = it },
-                            label = { Text("תרגיל ${index + 1}") },
+                            label = "תרגיל ${index + 1}",
                             modifier = Modifier.weight(1f),
                             singleLine = true,
-                            colors = fieldColors,
                         )
                         Spacer(Modifier.width(8.dp))
                         FocusableItem(
@@ -147,23 +157,23 @@ fun WorkoutBuilderScreen(
                     }
                     Spacer(Modifier.height(8.dp))
                     Row {
-                        OutlinedTextField(
+                        FitnessTextField(
+                        theme = theme,
                             value = ex.sets,
                             onValueChange = { v -> if (v.length <= 2 && v.all { it.isDigit() }) ex.sets = v },
-                            label = { Text("סטים") },
+                            label = "סטים",
                             keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Number),
                             modifier = Modifier.width(90.dp),
                             singleLine = true,
-                            colors = fieldColors,
                         )
                         Spacer(Modifier.width(8.dp))
-                        OutlinedTextField(
+                        FitnessTextField(
+                        theme = theme,
                             value = ex.reps,
                             onValueChange = { ex.reps = it },
-                            label = { Text("חזרות/משך") },
+                            label = "חזרות/משך",
                             modifier = Modifier.weight(1f),
                             singleLine = true,
-                            colors = fieldColors,
                         )
                     }
                 }
@@ -178,22 +188,24 @@ fun WorkoutBuilderScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(theme.textColor.copy(alpha = 0.05f), FutureShapes.lg)
+                            .background(theme.idleChipColor, FutureShapes.lg)
                             .padding(14.dp),
                         horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Icon(Icons.Rounded.Add, contentDescription = null, tint = theme.accentColor, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Rounded.Add, contentDescription = null, tint = theme.textColor, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("הוסף תרגיל", color = theme.accentColor, fontSize = FutureTypography.body, fontWeight = FontWeight.SemiBold)
+                        Text("הוסף תרגיל", color = theme.textColor, fontSize = FutureTypography.body, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
         }
 
         Box(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-            Button(
-                onClick = {
+            FutureButton(
+                "שמור אימון",
+                theme,
+                {
                     val met = when (difficulty) { "קל" -> 3.5; "קשה" -> 6.5; else -> 5.0 }
                     val workout = Workout(
                         id = "custom_${System.currentTimeMillis()}",
@@ -208,13 +220,9 @@ fun WorkoutBuilderScreen(
                     )
                     onSave(workout)
                 },
+                fillMaxWidth = true,
                 enabled = canSave,
-                modifier = Modifier.fillMaxWidth().height(52.dp),
-                shape = FutureShapes.lg,
-                colors = ButtonDefaults.buttonColors(containerColor = theme.accentColor, contentColor = theme.onAccentColor),
-            ) {
-                Text("שמור אימון", fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Bold)
-            }
+            )
         }
     }
 }

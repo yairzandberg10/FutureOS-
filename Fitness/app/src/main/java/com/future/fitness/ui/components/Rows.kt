@@ -1,4 +1,15 @@
 package com.future.fitness.ui.components
+import com.future.sharednav.components.FutureListItem
+import com.future.sharednav.theme.FutureDimens
+import com.future.sharednav.theme.mutedTextColor
+import com.future.sharednav.theme.subtleTextColor
+import com.future.sharednav.theme.chevronColor
+import com.future.sharednav.theme.idleChipColor
+import com.future.sharednav.theme.idleFieldColor
+import androidx.compose.material.icons.rounded.KeyboardArrowLeft
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.Arrangement
 
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
@@ -28,22 +39,26 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.future.sharednav.theme.FutureTheme
 
-/** אריח סטטיסטיקה קטן - קלוריות/דקות/רצף בבית, ומספרי סיכום בהתקדמות. */
+/** אריח סטטיסטיקה קטן - קלוריות/דקות/רצף בבית, ומספרי סיכום בהתקדמות. כרטיס (16dp). */
 @Composable
 fun StatTile(icon: ImageVector, value: String, label: String, theme: FutureTheme, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
             .background(theme.surfaceColor, FutureShapes.lg)
-            .padding(14.dp),
+            .padding(FutureDimens.spacingMd),
     ) {
-        Icon(icon, contentDescription = null, tint = theme.accentColor, modifier = Modifier.size(18.dp))
-        Text(value, color = theme.textColor, fontSize = FutureTypography.screenTitle, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
-        Text(label, color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.caption)
+        Icon(icon, contentDescription = null, tint = theme.mutedTextColor, modifier = Modifier.size(FutureDimens.iconTopBar))
+        Text(value, color = theme.textColor, fontSize = FutureTypography.screenTitle, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = FutureDimens.spacingSm))
+        Text(label, color = theme.mutedTextColor, fontSize = FutureTypography.caption)
     }
 }
 
-/** שורת רשימה עם באדג' אייקון עגול, כותרת/כותרת-משנה, וספרת קיצור-דרך
- * אופציונלית או חץ - הפריט החוזר בתפריט הבית, ברשימת אימונים, ובהיסטוריה. */
+/**
+ * שורת רשימה עם אייקון בעיגול, כותרת/סיכום, וספרת קיצור-דרך או חץ -
+ * הפריט החוזר בתפריט הבית, ברשימת אימונים ובהיסטוריה. זו שורת הרשימה של
+ * הדיזיין סיסטם (FutureListItem); החץ הוא חץ הכניסה של המערכת - מצביע
+ * שמאלה, לא מתהפך, ב-30%.
+ */
 @Composable
 fun IconListRow(
     icon: ImageVector,
@@ -56,43 +71,56 @@ fun IconListRow(
     showChevron: Boolean = false,
     focusRequester: FocusRequester? = null,
 ) {
-    val rowContent: @Composable () -> Unit = {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically,
+    val leading: @Composable () -> Unit = {
+        Box(
+            modifier = Modifier.size(FutureDimens.rowHeightTopBarButton).background(theme.idleFieldColor, CircleShape),
+            contentAlignment = Alignment.Center,
         ) {
-            Box(
-                modifier = Modifier.size(44.dp).background(theme.accentColor.copy(alpha = 0.18f), CircleShape),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(icon, contentDescription = null, tint = theme.accentColor, modifier = Modifier.size(22.dp))
-            }
-            Spacer(Modifier.width(14.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(title, color = theme.textColor, fontSize = FutureTypography.title, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(subtitle, color = theme.textColor.copy(alpha = 0.55f), fontSize = FutureTypography.label, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
-            if (digit != null) {
-                Text(digit, color = theme.textColor.copy(alpha = 0.35f), fontSize = FutureTypography.body, fontWeight = FontWeight.Bold)
-            }
-            if (showChevron) {
-                Icon(
-                    Icons.AutoMirrored.Rounded.KeyboardArrowRight,
-                    contentDescription = null,
-                    tint = theme.textColor.copy(alpha = 0.35f),
-                    modifier = Modifier.size(20.dp),
-                )
-            }
+            Icon(icon, contentDescription = null, tint = theme.textColor, modifier = Modifier.size(FutureDimens.iconTopBar))
+        }
+    }
+    val trailing: @Composable RowScope.() -> Unit = {
+        if (digit != null) {
+            Text(digit, color = theme.subtleTextColor, fontSize = FutureTypography.body, fontWeight = FontWeight.Bold)
+        }
+        if (showChevron) {
+            Icon(
+                Icons.Rounded.KeyboardArrowLeft,
+                contentDescription = null,
+                tint = theme.chevronColor,
+                modifier = Modifier.size(FutureDimens.iconTopBar),
+            )
         }
     }
 
     if (onClick != null) {
-        FocusableItem(onClick = onClick, theme = theme, modifier = modifier.fillMaxWidth(), focusRequester = focusRequester) {
-            rowContent()
-        }
+        FutureListItem(
+            title = title,
+            summary = subtitle,
+            theme = theme,
+            onClick = onClick,
+            modifier = modifier,
+            idleBackgroundColor = theme.idleChipColor,
+            focusRequester = focusRequester,
+            leading = leading,
+            trailing = trailing,
+        )
     } else {
-        Box(modifier = modifier.fillMaxWidth().background(theme.textColor.copy(alpha = 0.05f), FutureShapes.lg)) {
-            rowContent()
+        Row(
+            modifier = modifier
+                .fillMaxWidth()
+                .background(theme.idleChipColor, FutureShapes.sm)
+                .heightIn(min = FutureDimens.rowHeightList)
+                .padding(horizontal = FutureDimens.spacingMd, vertical = FutureDimens.spacingSm),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingMd),
+        ) {
+            leading()
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, color = theme.textColor, fontSize = FutureTypography.title, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(subtitle, color = theme.mutedTextColor, fontSize = FutureTypography.summary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            trailing()
         }
     }
 }

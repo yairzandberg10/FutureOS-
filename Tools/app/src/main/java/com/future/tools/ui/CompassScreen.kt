@@ -1,4 +1,7 @@
 package com.future.tools.ui
+import com.future.sharednav.theme.textAlpha
+import com.future.sharednav.theme.subtleTextColor
+import com.future.sharednav.theme.mutedTextColor
 
 import com.future.sharednav.theme.FutureTypography
 import android.hardware.Sensor
@@ -152,7 +155,7 @@ fun CompassScreen(theme: FutureTheme, onBack: () -> Unit) {
                     if (!compassState.hasSensors) {
                         Text(
                             "לא נמצא חיישן מצפן (תאוצה/מגנטומטר) במכשיר הזה",
-                            color = theme.textColor.copy(alpha = 0.6f),
+                            color = theme.mutedTextColor,
                             fontSize = FutureTypography.body,
                             modifier = Modifier.padding(horizontal = 32.dp)
                         )
@@ -162,7 +165,7 @@ fun CompassScreen(theme: FutureTheme, onBack: () -> Unit) {
                             Spacer(modifier = Modifier.height(24.dp))
                             Text("${azimuth.roundToInt()}°", color = theme.textColor, fontSize = FutureTypography.display, fontWeight = FontWeight.Light)
                             Spacer(modifier = Modifier.height(4.dp))
-                            Text(cardinalFor(azimuth), color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.bodyLarge)
+                            Text(cardinalFor(azimuth), color = theme.mutedTextColor, fontSize = FutureTypography.bodyLarge)
                             Spacer(modifier = Modifier.height(20.dp))
                             AltitudeRow(altitudeState = altitudeState, theme = theme)
                         }
@@ -178,7 +181,7 @@ private fun AltitudeRow(altitudeState: AltitudeState, theme: FutureTheme) {
     if (!altitudeState.hasSensor) {
         Text(
             "אין חיישן לחץ ברומטרי - לא ניתן למדוד גובה",
-            color = theme.textColor.copy(alpha = 0.35f),
+            color = theme.subtleTextColor,
             fontSize = FutureTypography.label
         )
         return
@@ -186,13 +189,13 @@ private fun AltitudeRow(altitudeState: AltitudeState, theme: FutureTheme) {
     val meters = altitudeState.meters
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
-            if (meters != null) "${meters.roundToInt()} מ' מעל פני הים" else "מודד גובה...",
+            if (meters != null) "${meters.roundToInt()} מ' מעל פני הים" else "מודד גובה",
             color = theme.textColor,
             fontSize = FutureTypography.title,
             fontWeight = FontWeight.Medium
         )
         Spacer(modifier = Modifier.height(2.dp))
-        Text("גובה משוער לפי לחץ אטמוספרי", color = theme.textColor.copy(alpha = 0.35f), fontSize = FutureTypography.caption)
+        Text("גובה משוער לפי לחץ אטמוספרי", color = theme.subtleTextColor, fontSize = FutureTypography.caption)
     }
 }
 
@@ -203,7 +206,7 @@ private fun CompassRose(azimuth: Float, theme: FutureTheme) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val radius = this.size.minDimension / 2f
             drawCircle(color = theme.textColor.copy(alpha = 0.08f), radius = radius)
-            drawCircle(color = theme.textColor.copy(alpha = 0.25f), radius = radius, style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx()))
+            drawCircle(color = theme.textAlpha(30), radius = radius, style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx()))
 
             // הכיוונים מסתובבים נגד כיוון האזימוט כך שהתו "N" תמיד מצביע צפון אמיתי
             rotate(degrees = -azimuth) {
@@ -216,7 +219,7 @@ private fun CompassRose(azimuth: Float, theme: FutureTheme) {
                     drawContext.canvas.nativeCanvas.apply {
                         val paint = android.graphics.Paint().apply {
                             color = if (label == "N") theme.accentColor.toArgb() else theme.textColor.copy(alpha = 0.55f).toArgb()
-                            textSize = 15.sp.toPx()
+                            textSize = FutureTypography.dialog.toPx()
                             textAlign = android.graphics.Paint.Align.CENTER
                             isFakeBoldText = label == "N"
                         }

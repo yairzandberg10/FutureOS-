@@ -1,4 +1,17 @@
 package com.future.fitness.ui.screens
+import com.future.sharednav.theme.elevatedSurfaceColor
+import com.future.sharednav.theme.idleFieldColor
+import com.future.sharednav.theme.idleChipColor
+import com.future.sharednav.theme.focusFillChipColor
+import com.future.sharednav.theme.readableAccentColor
+import com.future.sharednav.theme.onReadableAccentColor
+import com.future.sharednav.theme.mutedTextColor
+import com.future.sharednav.theme.subtleTextColor
+import com.future.sharednav.theme.sectionHeaderColor
+import com.future.sharednav.theme.textAlpha
+import com.future.sharednav.components.FutureButton
+import com.future.sharednav.components.FutureButtonVariant
+import com.future.fitness.ui.components.FitnessTextField
 
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
@@ -47,8 +60,6 @@ import androidx.compose.ui.unit.sp
 import com.future.fitness.data.Workout
 import com.future.fitness.data.WorkoutStore
 import com.future.fitness.ui.components.FocusableItem
-import com.future.fitness.ui.theme.KineticDimens
-import com.future.fitness.ui.theme.kineticTertiary
 import com.future.sharednav.components.ConfirmDialog
 import com.future.sharednav.theme.FutureTheme
 
@@ -92,7 +103,7 @@ fun WorkoutsScreen(
 
     Column(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 20.dp)) {
-            Text("ספריית התוכן שלך", color = theme.accentColor, fontSize = FutureTypography.label, fontWeight = FontWeight.Bold)
+            Text("ספריית התוכן שלך", color = theme.sectionHeaderColor, fontSize = FutureTypography.label, fontWeight = FontWeight.Bold)
             Text("אימונים", color = theme.textColor, fontSize = FutureTypography.headline, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 2.dp))
         }
 
@@ -106,8 +117,8 @@ fun WorkoutsScreen(
                     Box(
                         modifier = Modifier
                             .background(
-                                if (selected) theme.accentColor else theme.surfaceColor,
-                                RoundedCornerShape(KineticDimens.chipCorner),
+                                if (selected) theme.readableAccentColor else theme.surfaceColor,
+                                FutureShapes.pill,
                             )
                             .padding(horizontal = 18.dp, vertical = 9.dp),
                     ) {
@@ -141,14 +152,14 @@ fun WorkoutsScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(theme.accentColor.copy(alpha = if (isFocused) 0.22f else 0.14f), RoundedCornerShape(KineticDimens.chipCorner))
+                            .background(if (isFocused) theme.focusFillChipColor else theme.idleFieldColor, FutureShapes.pill)
                             .padding(14.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center,
                     ) {
-                        Icon(Icons.Rounded.Add, contentDescription = null, tint = theme.accentColor, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Rounded.Add, contentDescription = null, tint = theme.textColor, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("אימון חדש", color = theme.accentColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Bold)
+                        Text("אימון חדש", color = theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -193,15 +204,15 @@ private fun QuickActionCard(icon: androidx.compose.ui.graphics.vector.ImageVecto
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(theme.surfaceColor, RoundedCornerShape(KineticDimens.cardCorner))
+                .background(theme.surfaceColor, FutureShapes.xl)
                 .padding(14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
-                modifier = Modifier.size(52.dp).background(theme.accentColor.copy(alpha = 0.16f), CircleShape),
+                modifier = Modifier.size(52.dp).background(theme.idleFieldColor, CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(icon, contentDescription = null, tint = theme.accentColor, modifier = Modifier.size(26.dp))
+                Icon(icon, contentDescription = null, tint = theme.textColor, modifier = Modifier.size(26.dp))
             }
             Spacer(Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
@@ -221,27 +232,27 @@ private fun WorkoutCard(workout: Workout, weightKg: Int, theme: FutureTheme, onC
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(theme.surfaceColor, RoundedCornerShape(KineticDimens.cardCorner))
+                    .background(theme.surfaceColor, FutureShapes.xl)
                     .padding(14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Box(
-                    modifier = Modifier.size(52.dp).background(theme.accentColor.copy(alpha = 0.16f), CircleShape),
+                    modifier = Modifier.size(52.dp).background(theme.idleFieldColor, CircleShape),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(Icons.Rounded.FitnessCenter, contentDescription = null, tint = theme.accentColor, modifier = Modifier.size(26.dp))
+                    Icon(Icons.Rounded.FitnessCenter, contentDescription = null, tint = theme.textColor, modifier = Modifier.size(26.dp))
                 }
                 Spacer(Modifier.width(14.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(workout.name, color = theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Bold, maxLines = 1)
                     Spacer(Modifier.height(4.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(workout.difficulty, color = theme.accentColor, fontSize = FutureTypography.label, fontWeight = FontWeight.SemiBold)
+                        Text(workout.difficulty, color = theme.sectionHeaderColor, fontSize = FutureTypography.label, fontWeight = FontWeight.SemiBold)
                         Text(" · ", color = theme.textColor.copy(alpha = 0.4f), fontSize = FutureTypography.label)
                         Icon(Icons.Rounded.Schedule, contentDescription = null, tint = theme.textColor.copy(alpha = 0.5f), modifier = Modifier.size(13.dp))
                         Text(" ${workout.durationMin} דק׳", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.label)
                         Text(" · ", color = theme.textColor.copy(alpha = 0.4f), fontSize = FutureTypography.label)
-                        Icon(Icons.Rounded.LocalFireDepartment, contentDescription = null, tint = theme.kineticTertiary, modifier = Modifier.size(13.dp))
+                        Icon(Icons.Rounded.LocalFireDepartment, contentDescription = null, tint = theme.dangerColor, modifier = Modifier.size(13.dp))
                         Text(" $calories קק״ל", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.label)
                     }
                     if (workout.isCustom) {
@@ -249,7 +260,7 @@ private fun WorkoutCard(workout: Workout, weightKg: Int, theme: FutureTheme, onC
                     }
                 }
                 Box(
-                    modifier = Modifier.size(36.dp).background(theme.accentColor, CircleShape),
+                    modifier = Modifier.size(36.dp).background(theme.readableAccentColor, CircleShape),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(Icons.Rounded.PlayArrow, contentDescription = null, tint = theme.backgroundColor, modifier = Modifier.size(18.dp))
