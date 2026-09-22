@@ -5,14 +5,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Surface
-import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import com.future.sharednav.theme.ThemeClient
 import com.future.calculator.ui.CalculatorScreen
-import com.future.sharednav.theme.FutureTheme
+import com.future.sharednav.theme.FutureAppTheme
+import com.future.sharednav.theme.rememberFutureTheme
 
 class MainActivity : ComponentActivity() {
     // המכשיר האמיתי הוא מקלדת T9 בלבד בלי מסך מגע - מבטלים קלט מגע לגמרי כדי
@@ -25,31 +20,13 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         setContent {
-            var theme by remember {
-                mutableStateOf(
-                    ThemeClient.getTheme(this@MainActivity).let {
-                        FutureTheme(isDarkMode = it.isDarkMode, accentColor = Color(it.primaryColor))
-                    }
-                )
-            }
-
-            // מרענן את העיצוב בכל חזרה למסך (למשל אחרי שינוי מצב כהה/בהיר או
-            // צבע הדגשה באפליקציית ההגדרות) בלי לבנות מחדש את כל ה-Activity.
-            val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
-            DisposableEffect(lifecycleOwner) {
-                val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
-                    if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
-                        val shared = ThemeClient.getTheme(this@MainActivity)
-                        theme = FutureTheme(isDarkMode = shared.isDarkMode, accentColor = Color(shared.primaryColor))
-                    }
-                }
-                lifecycleOwner.lifecycle.addObserver(observer)
-                onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-            }
+            // מתעדכן בזמן אמת כשמצב כהה/בהיר או צבע ההדגשה משתנים - גם כשהשינוי
+            // נעשה מהקונטרול סנטר שנפתח מעל המחשבון, בלי לצאת ממנו.
+            val theme = rememberFutureTheme()
 
             BackHandler { finish() }
 
-            Surface(modifier = Modifier.fillMaxSize(), color = theme.backgroundColor) {
+            FutureAppTheme(theme) {
                 CalculatorScreen(theme = theme, onBack = { finish() })
             }
         }

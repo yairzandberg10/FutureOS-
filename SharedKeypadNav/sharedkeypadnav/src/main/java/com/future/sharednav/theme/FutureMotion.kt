@@ -87,4 +87,11 @@ object FutureMotion {
 
     /** מעבר לא מדורג מעבר לפריט הזה - רשימה ארוכה לא אמורה "להיבנות" לאט. */
     const val StaggerMaxItems: Int = 8
+
+    /**
+     * סיבוב אחד של הספינר - הרכיב המסתובב היחיד במערכת, בקצב לינארי
+     * (components/feedback/Spinner.jsx). לא נגזר מהסקאלה כי הוא לולאה
+     * ולא מעבר.
+     */
+    const val SpinnerRotationMillis: Int = 900
 }

@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -33,6 +35,7 @@ fun AppDialog(
     onDismissRequest: () -> Unit,
     widthFraction: Float = 0.85f,
     maxHeightFraction: Float = 0.86f,
+    anchorTop: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Dialog(
@@ -41,7 +44,15 @@ fun AppDialog(
     ) {
         val visibility = remember { MutableTransitionState(false) }
         visibility.targetState = true
-        BoxWithConstraints(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        // תפריט האפשרויות לא ממורכז כמו דיאלוג אלא תלוי 40dp מראש המסך
+        // (components/navigation/OptionsMenu.jsx) - כך הוא נפתח תמיד באותו
+        // מקום, ולא "קופץ" לגובה אחר לפי מספר השורות שבו.
+        BoxWithConstraints(
+            modifier = Modifier
+                .fillMaxSize()
+                .then(if (anchorTop) Modifier.padding(top = MenuTopOffset) else Modifier),
+            contentAlignment = if (anchorTop) Alignment.TopCenter else Alignment.Center,
+        ) {
             val maxContentHeight = maxHeight * maxHeightFraction
             AnimatedVisibility(
                 visibleState = visibility,
@@ -58,3 +69,6 @@ fun AppDialog(
         }
     }
 }
+
+/** 40dp - המרחק של תפריט האפשרויות מראש המסך (80px ב-OptionsMenu.jsx). */
+private val MenuTopOffset = 40.dp

@@ -1,4 +1,11 @@
 package com.future.navigation.ui.navigate
+import com.future.sharednav.components.TopBarIconButton
+import com.future.sharednav.theme.FutureDimens
+import com.future.sharednav.theme.FutureElevation
+import com.future.sharednav.theme.LocalFutureTheme
+import com.future.sharednav.theme.elevatedSurfaceColor
+import com.future.sharednav.theme.mutedTextColor
+import com.future.sharednav.theme.onStatusColor
 
 import com.future.sharednav.theme.FutureShapes
 import androidx.compose.foundation.background
@@ -17,11 +24,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.VolumeOff
-import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material.icons.rounded.ArrowUpward
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.automirrored.rounded.VolumeOff
+import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -32,7 +39,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -41,10 +47,10 @@ import com.future.navigation.R
 import com.future.navigation.data.routing.Maneuver
 import com.future.navigation.ui.map.MapCameraController
 import com.future.navigation.ui.map.NavMapView
-import com.future.sharednav.focus.FocusableItem
 
 @Composable
 fun NavigateScreen(viewModel: NavigateViewModel, onClose: () -> Unit = {}) {
+    val theme = LocalFutureTheme.current
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val cameraController = remember { MapCameraController() }
     var followMode by remember { mutableStateOf(true) }
@@ -69,15 +75,17 @@ fun NavigateScreen(viewModel: NavigateViewModel, onClose: () -> Unit = {}) {
             )
         }
 
+        // כרטיס ההוראה הבאה. היה מלא בצבע ההדגשה עם צל של 8dp - אבל ההדגשה
+        // אינה מילוי מותג, והצל היחיד במערכת הוא של כרטיס (FutureElevation.card).
         Surface(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).offset(y = (-30).dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = FutureDimens.screenPadding).offset(y = (-30).dp),
             shape = FutureShapes.xl,
-            color = MaterialTheme.colorScheme.primary,
-            shadowElevation = 8.dp
+            color = MaterialTheme.colorScheme.surface,
+            shadowElevation = FutureElevation.card(theme.isDarkMode)
         ) {
             Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(
-                    modifier = Modifier.size(52.dp).clip(FutureShapes.md).background(MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.15f)),
+                    modifier = Modifier.size(52.dp).clip(FutureShapes.md).background(theme.elevatedSurfaceColor),
                     contentAlignment = Alignment.Center
                 ) {
                     ManeuverIcon(state.currentStep)
@@ -86,9 +94,9 @@ fun NavigateScreen(viewModel: NavigateViewModel, onClose: () -> Unit = {}) {
                 Column {
                     Text(
                         text = maneuverText(state.currentStep),
-                        fontWeight = FontWeight.ExtraBold,
+                        fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onPrimary
+                        color = theme.textColor
                     )
                     Text(
                         text = "בעוד %d מ׳%s".format(
@@ -96,24 +104,24 @@ fun NavigateScreen(viewModel: NavigateViewModel, onClose: () -> Unit = {}) {
                             state.currentStep.streetName.takeIf { it.isNotBlank() }?.let { " · ל$it" } ?: ""
                         ),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f)
+                        color = theme.mutedTextColor
                     )
                 }
             }
         }
 
-        Column(modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)) {
+        Column(modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = FutureDimens.screenPadding, vertical = FutureDimens.spacingSm)) {
             if (!state.ended) {
                 Surface(shape = FutureShapes.lg, color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxWidth()) {
                     Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        RoundIconButton(if (state.muted) Icons.Default.VolumeOff else Icons.Default.VolumeUp, onClick = viewModel::toggleMute)
+                        TopBarIconButton(if (state.muted) Icons.AutoMirrored.Rounded.VolumeOff else Icons.AutoMirrored.Rounded.VolumeUp, "השתק", theme.textColor, theme.accentColor, viewModel::toggleMute)
                         Spacer(modifier = Modifier.width(12.dp))
                         Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("%d דק׳".format((state.remainingDurationSeconds / 60).toInt()), fontWeight = FontWeight.ExtraBold)
+                            Text("%d דק׳".format((state.remainingDurationSeconds / 60).toInt()), fontWeight = FontWeight.Bold)
                             Text("·", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f))
                             Text("%.1f ק״מ".format(state.remainingDistanceMeters / 1000.0))
                         }
-                        RoundIconButton(Icons.Default.Close, tint = Color(0xFFEB4040), onClick = {
+                        TopBarIconButton(Icons.Rounded.Close, "סיים ניווט", theme.dangerColor, theme.accentColor, onClick = {
                             // הכפתור הזה משמעו "בטל/צא מהניווט" - לא רק לסמן ended=true (זה
                             // קורה גם אוטומטית בהגעה בפועל ליעד) אלא גם לצאת בפועל מהמסך,
                             // אחרת המשתמש נשאר תקוע על מסך המפה עם באנר "הגעת ליעד" שגוי.
@@ -123,10 +131,10 @@ fun NavigateScreen(viewModel: NavigateViewModel, onClose: () -> Unit = {}) {
                     }
                 }
             } else {
-                Surface(shape = FutureShapes.lg, color = Color(0xFF2ECC71).copy(alpha = 0.16f), modifier = Modifier.fillMaxWidth()) {
-                    Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Box(modifier = Modifier.size(38.dp).clip(CircleShape).background(Color(0xFF2ECC71)), contentAlignment = Alignment.Center) {
-                            Icon(Icons.Default.Check, contentDescription = null, tint = Color(0xFF04180D))
+                Surface(shape = FutureShapes.lg, color = theme.successColor.copy(alpha = 0.15f), modifier = Modifier.fillMaxWidth()) {
+                    Row(modifier = Modifier.padding(FutureDimens.spacingMd), verticalAlignment = Alignment.CenterVertically) {
+                        Box(modifier = Modifier.size(FutureDimens.rowHeightTopBarButton).clip(CircleShape).background(theme.successColor), contentAlignment = Alignment.Center) {
+                            Icon(Icons.Rounded.Check, contentDescription = null, tint = theme.onStatusColor(theme.successColor))
                         }
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(stringResource(R.string.arrived_at_destination), fontWeight = FontWeight.Bold)
@@ -134,13 +142,6 @@ fun NavigateScreen(viewModel: NavigateViewModel, onClose: () -> Unit = {}) {
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun RoundIconButton(icon: androidx.compose.ui.graphics.vector.ImageVector, tint: Color = Color.Unspecified, onClick: () -> Unit) {
-    FocusableItem(onClick = onClick, accentColor = MaterialTheme.colorScheme.primary, cornerRadius = FutureShapes.radiusXxl, modifier = Modifier.size(40.dp)) {
-        Icon(icon, contentDescription = null, tint = if (tint == Color.Unspecified) MaterialTheme.colorScheme.onSurface else tint)
     }
 }
 
@@ -157,9 +158,9 @@ private fun ManeuverIcon(step: Maneuver) {
         else -> 0f
     }
     Icon(
-        Icons.Default.ArrowUpward,
+        Icons.Rounded.ArrowUpward,
         contentDescription = null,
-        tint = MaterialTheme.colorScheme.onPrimary,
+        tint = MaterialTheme.colorScheme.onSurface,
         modifier = Modifier.rotate(angle)
     )
 }

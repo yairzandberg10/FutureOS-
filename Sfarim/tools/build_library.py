@@ -8,11 +8,28 @@ text content (best available Hebrew "merged" version per title) from the
 public Sefaria-Export GCS bucket. Resumable: re-running skips books already
 fully imported (checked via segment count in the existing DB).
 
+Two kinds of books come out of the export. Simple ones have `text` as a nested
+list, numbered by the book's sectionNames (Chapter/Verse, Siman/Seif...).
+Complex ones (about 875 titles, mostly Jewish Thought, Chasidut, Liturgy,
+Kabbalah and the big halakhic works) have `text` as a dict of named parts,
+e.g. Arukh HaShulchan -> Orach Chaim / Yoreh De'ah / ..., possibly nested
+several levels (Siddur -> Weekday -> Shacharit -> Modeh Ani). The export's
+schema lists those parts by title only, so their sectionNames come from the
+Sefaria index API. Each numbered unit of a part becomes one chapter with a
+book-wide sequential top_index, and its display label plus the part titles
+leading to it go into the `chapters` table - the app can't derive either from
+section_names the way it does for simple books.
+
+Texts licensed "Copyright: ..." (the Koren Steinsaltz Tanakh and Mishneh
+Torah, Urim titles) are left out of the public export on purpose and are not
+fetched from anywhere else.
+
 Usage:
     python build_library.py [--out PATH] [--workers N] [--limit N] [--with-fts]
 """
 
 import argparse
+import hashlib
 import json
 import re
 import sqlite3
@@ -26,6 +43,7 @@ from pathlib import Path
 
 TOC_URL = "https://www.sefaria.org/api/index"
 BOOKS_JSON_URL = "https://raw.githubusercontent.com/Sefaria/Sefaria-Export/master/books.json"
+RAW_INDEX_URL = "https://www.sefaria.org/api/v2/raw/index/"
 REQUEST_TIMEOUT = 20
 MAX_RETRIES = 3
 
@@ -123,6 +141,18 @@ def init_schema(conn: sqlite3.Connection):
             segment_id INTEGER NOT NULL REFERENCES segments(id),
             updated_at INTEGER NOT NULL
         );
+        -- Only complex books have rows here. group_path is a JSON list of the
+        -- Hebrew part titles above the chapter (outermost first); number is the
+        -- chapter's own section number inside its part, for jump-by-number, and
+        -- NULL when the chapter is a whole named part.
+        CREATE TABLE IF NOT EXISTS chapters (
+            book_id INTEGER NOT NULL REFERENCES books(id),
+            top_index INTEGER NOT NULL,
+            group_path TEXT NOT NULL,
+            label TEXT NOT NULL,
+            number INTEGER,
+            PRIMARY KEY (book_id, top_index)
+        ) WITHOUT ROWID;
     """)
     conn.commit()
 
@@ -189,27 +219,133 @@ def flatten_text(node, section_names, path, out):
             out.append((path, cleaned))
 
 
-def make_ref_display(title_he: str, section_names: list, path: list) -> str:
-    parts = []
-    for depth_idx, idx in enumerate(path):
-        label = HEBREW_SECTION_NAMES.get(
-            section_names[depth_idx] if depth_idx < len(section_names) else "", None
-        )
-        numeral = to_hebrew_numeral(idx)
-        parts.append(f"{label} {numeral}" if label else numeral)
+def section_label(section_names: list, depth_idx: int, idx: int) -> str:
+    label = HEBREW_SECTION_NAMES.get(
+        section_names[depth_idx] if depth_idx < len(section_names) else "", None
+    )
+    numeral = to_hebrew_numeral(idx)
+    return f"{label} {numeral}" if label else numeral
+
+
+def make_ref_display(title_he: str, section_names: list, path: list, part_titles: list = ()) -> str:
+    parts = list(part_titles) + [section_label(section_names, d, idx) for d, idx in enumerate(path)]
     return f"{title_he} " + ", ".join(parts) if title_he else ", ".join(parts)
 
 
-def fetch_book_text(title: str, json_url: str):
+def fetch_raw_index(title: str, cache_dir: Path):
+    """The Sefaria index record for one title (cached). Needed only for complex
+    books, whose export schema lacks each part's sectionNames. None on failure -
+    the book is still imported, just with bare numerals as chapter labels."""
+    cache_path = cache_dir / (hashlib.sha1(title.encode("utf-8")).hexdigest() + ".json")
+    if cache_path.exists():
+        return json.loads(cache_path.read_text(encoding="utf-8"))
+    try:
+        data = fetch_json(RAW_INDEX_URL + urllib.parse.quote(title, safe=""))
+    except RuntimeError:
+        return None
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    cache_path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+    return data
+
+
+def match_index_node(index_children: list, en_title: str, position: int):
+    """The index node for an export schema node: the export names the default
+    (untitled) part "" where the index marks it default=True."""
+    for node in index_children:
+        if (en_title == "" and node.get("default")) or (en_title and node.get("key") == en_title):
+            return node
+    return index_children[position] if position < len(index_children) else None
+
+
+def collect_parts(export_node, index_node, text, part_titles: list, out: list):
+    """Depth-first over the named parts of a complex text, in schema order.
+    Appends (part_titles_he, section_names, jagged_text) for every leaf part."""
+    if isinstance(text, dict):
+        children = (export_node or {}).get("nodes") or [{"enTitle": k, "heTitle": k} for k in text]
+        index_children = (index_node or {}).get("nodes") or []
+        for position, child in enumerate(children):
+            en_title = child.get("enTitle", "")
+            if en_title not in text:
+                continue
+            child_titles = part_titles + [child.get("heTitle") or en_title] if en_title else part_titles
+            collect_parts(
+                child, match_index_node(index_children, en_title, position), text[en_title], child_titles, out
+            )
+    else:
+        out.append((part_titles, (index_node or {}).get("sectionNames") or [], text))
+
+
+def is_numbered_part(section_names: list, node) -> bool:
+    if section_names:
+        return len(section_names) >= 2
+    return isinstance(node, list) and any(isinstance(child, list) for child in node)
+
+
+def split_complex_book(title_he: str, parts: list):
+    """Turns the leaf parts of a complex book into chapters. A part with numbered
+    units (Siman, Gate, Chapter...) gives one chapter per unit, grouped under the
+    part's titles; any other part is a single chapter named after the part."""
+    segments, chapters = [], []
+    segment_count_by_names = {}
+    top_index = 0
+    for part_titles, section_names, node in parts:
+        if is_numbered_part(section_names, node):
+            units = []
+            for i, child in enumerate(node):
+                leaves = []
+                flatten_text(child, section_names, [i + 1], leaves)
+                if leaves:
+                    units.append((i + 1, leaves))
+            whole_part = len(units) == 1 and bool(part_titles)
+        else:
+            leaves = []
+            flatten_text(node, section_names, [], leaves)
+            units = [(None, leaves)] if leaves else []
+            whole_part = True
+        for number, leaves in units:
+            top_index += 1
+            if whole_part:
+                chapters.append((top_index, part_titles[:-1], part_titles[-1] if part_titles else (title_he or ""), None))
+            else:
+                chapters.append((top_index, part_titles, section_label(section_names, 0, number), number))
+            for path, text in leaves:
+                segments.append(
+                    (top_index, path, make_ref_display(title_he, section_names, path, part_titles), text)
+                )
+            key = json.dumps(section_names)
+            segment_count_by_names[key] = segment_count_by_names.get(key, 0) + len(leaves)
+    # books.section_names drives isCommentary/contentLabel in the app - take the
+    # numbering of the part that holds most of the text.
+    book_section_names = (
+        json.loads(max(segment_count_by_names, key=segment_count_by_names.get)) if segment_count_by_names else []
+    )
+    return segments, chapters, book_section_names
+
+
+def fetch_book_text(title: str, json_url: str, index_cache_dir: Path):
     data = fetch_json(json_url)
-    section_names = data.get("sectionNames") or []
-    leaves = []
-    flatten_text(data.get("text"), section_names, [], leaves)
+    title_he = data.get("heTitle")
+    text = data.get("text")
+    if isinstance(text, dict):
+        index = fetch_raw_index(title, index_cache_dir) or {}
+        parts = []
+        collect_parts(data.get("schema"), index.get("schema"), text, [], parts)
+        segments, chapters, section_names = split_complex_book(title_he, parts)
+    else:
+        section_names = data.get("sectionNames") or []
+        leaves = []
+        flatten_text(text, section_names, [], leaves)
+        segments = [
+            (path[0] if path else 0, path, make_ref_display(title_he, section_names, path), leaf_text)
+            for path, leaf_text in leaves
+        ]
+        chapters = None
     return {
         "title": title,
-        "title_he": data.get("heTitle"),
+        "title_he": title_he,
         "section_names": section_names,
-        "leaves": leaves,
+        "segments": segments,
+        "chapters": chapters,
     }
 
 
@@ -223,26 +359,50 @@ def already_imported(conn: sqlite3.Connection, title: str) -> bool:
 
 def insert_book(conn: sqlite3.Connection, title_en, category_id, order, book_data):
     cur = conn.cursor()
+    # An upsert, not INSERT OR REPLACE: a book already in the table (a complex
+    # one an older build left with no text) keeps its id, and with it the
+    # root_category that add_root_category.py filled in.
     cur.execute(
-        "INSERT OR REPLACE INTO books (category_id, title_en, title_he, section_names, sort_order) "
-        "VALUES (?, ?, ?, ?, ?)",
+        "INSERT INTO books (category_id, title_en, title_he, section_names, sort_order) VALUES (?, ?, ?, ?, ?) "
+        "ON CONFLICT(title_en) DO UPDATE SET category_id = excluded.category_id, title_he = excluded.title_he, "
+        "section_names = excluded.section_names, sort_order = excluded.sort_order",
         (category_id, title_en, book_data["title_he"], json.dumps(book_data["section_names"], ensure_ascii=False), order),
     )
-    book_id = cur.lastrowid
-    section_names = book_data["section_names"]
-    title_he = book_data["title_he"]
-    rows = []
-    for sort_order, (path, text) in enumerate(book_data["leaves"]):
-        ref_display = make_ref_display(title_he, section_names, path)
-        top_index = path[0] if path else 0
-        rows.append((book_id, top_index, json.dumps(path), len(path), ref_display, text, sort_order))
+    book_id = cur.execute("SELECT id FROM books WHERE title_en = ?", (title_en,)).fetchone()[0]
+    rows = [
+        (book_id, top_index, json.dumps(path), len(path), ref_display, text, sort_order)
+        for sort_order, (top_index, path, ref_display, text) in enumerate(book_data["segments"])
+    ]
     cur.executemany(
         "INSERT INTO segments (book_id, top_index, path, depth, ref_display, text_he, sort_order) "
         "VALUES (?, ?, ?, ?, ?, ?, ?)",
         rows,
     )
+    cur.execute("DELETE FROM chapters WHERE book_id = ?", (book_id,))
+    if book_data["chapters"]:
+        cur.executemany(
+            "INSERT INTO chapters (book_id, top_index, group_path, label, number) VALUES (?, ?, ?, ?, ?)",
+            [
+                (book_id, top_index, json.dumps(group_path, ensure_ascii=False), label, number)
+                for top_index, group_path, label, number in book_data["chapters"]
+            ],
+        )
     conn.commit()
     return len(rows)
+
+
+def index_new_segments(conn: sqlite3.Connection, after_id: int):
+    """Adds segments imported by this run to segments_fts, if the DB already has
+    it (add_fulltext_search.py). Incremental on purpose: rebuilding the whole
+    index means rewriting ~500MB on a disk that is usually nearly full."""
+    if not conn.execute("SELECT 1 FROM sqlite_master WHERE name = 'segments_fts'").fetchone():
+        return 0
+    cur = conn.execute(
+        "INSERT INTO segments_fts(rowid, text_he, ref_display) SELECT id, text_he, ref_display FROM segments WHERE id > ?",
+        (after_id,),
+    )
+    conn.commit()
+    return cur.rowcount
 
 
 def build_fts(conn: sqlite3.Connection):
@@ -304,11 +464,13 @@ def main():
     start = time.time()
     done = len(to_import) - len(pending)
     total_segments = conn.execute("SELECT COUNT(*) FROM segments").fetchone()[0]
+    last_segment_id = conn.execute("SELECT COALESCE(MAX(id), 0) FROM segments").fetchone()[0]
+    index_cache_dir = cache_dir / "index"
     errors = []
 
     with ThreadPoolExecutor(max_workers=args.workers) as pool:
         future_to_title = {
-            pool.submit(fetch_book_text, title, url): title for title, url in pending
+            pool.submit(fetch_book_text, title, url, index_cache_dir): title for title, url in pending
         }
         for future in as_completed(future_to_title):
             title = future_to_title[future]
@@ -332,17 +494,24 @@ def main():
                 errors.append((title, str(e)))
                 print(f"  ERROR importing '{title}': {e}", flush=True)
 
+    n_indexed = index_new_segments(conn, last_segment_id)
+    if n_indexed:
+        print(f"added {n_indexed} new segments to segments_fts", flush=True)
+
     if args.with_fts:
         print("building FTS5 title search index ...", flush=True)
         build_fts(conn)
 
     n_books = conn.execute("SELECT COUNT(*) FROM books").fetchone()[0]
+    n_empty = conn.execute(
+        "SELECT COUNT(*) FROM books b WHERE NOT EXISTS (SELECT 1 FROM segments s WHERE s.book_id = b.id)"
+    ).fetchone()[0]
     n_segments = conn.execute("SELECT COUNT(*) FROM segments").fetchone()[0]
     n_categories = conn.execute("SELECT COUNT(*) FROM categories").fetchone()[0]
     conn.close()
 
     print("\n=== DONE ===")
-    print(f"categories: {n_categories} | books: {n_books} | segments: {n_segments}")
+    print(f"categories: {n_categories} | books: {n_books} ({n_empty} with no text) | segments: {n_segments}")
     print(f"db size: {out_path.stat().st_size / 1024 / 1024:.1f} MB at {out_path}")
     if errors:
         print(f"{len(errors)} books failed (re-run the script to retry them, it's resumable):")

@@ -1,8 +1,25 @@
 package com.future.sharednav.components
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Row
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material3.Icon
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.unit.Dp
+import com.future.sharednav.theme.FutureContrast
+import com.future.sharednav.theme.mutedTextColor
+import com.future.sharednav.theme.subtleTextColor
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -195,6 +212,97 @@ fun FutureDayChip(
         )
     }
 }
+
+/**
+ * ספינר - ההמתנה בלי אורך ידוע (סריקה, התחברות, שליחה). המקבילה העגולה של
+ * [FutureProgressBar]: מסילה ב-10% מהטקסט, קשת של רבע עיגול בהדגשה, סיבוב
+ * אחד ב-900ms (components/feedback/Spinner.jsx). מחליף את
+ * CircularProgressIndicator של Material, שקשת שלו מתארכת ומתקצרת ואין לו
+ * מסילה.
+ */
+@Composable
+fun FutureSpinner(
+    theme: FutureTheme,
+    modifier: Modifier = Modifier,
+    size: Dp = SpinnerSize,
+    label: String? = null,
+) {
+    val type = rememberFutureType()
+    val accent = LocalFutureAccent.current ?: theme.readableAccentColor
+    val track = theme.textAlpha(10)
+    val rotation by rememberInfiniteTransition(label = "spinner").animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(tween(FutureMotion.SpinnerRotationMillis, easing = LinearEasing)),
+        label = "spinnerRotation",
+    )
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(FutureDimens.spacingMd),
+    ) {
+        Canvas(modifier = Modifier.size(size)) {
+            val stroke = SpinnerThickness.toPx()
+            val inset = stroke / 2
+            val arcSize = Size(this.size.width - stroke, this.size.height - stroke)
+            val topLeft = Offset(inset, inset)
+            drawArc(track, 0f, 360f, false, topLeft, arcSize, style = Stroke(stroke))
+            drawArc(accent, rotation - 135f, 90f, false, topLeft, arcSize, style = Stroke(stroke))
+        }
+        if (label != null) {
+            Text(label, color = theme.mutedTextColor, fontSize = type.body)
+        }
+    }
+}
+
+/** 36dp / 4dp - הגודל והעובי של הספינר (72px / 8px ב-Spinner.jsx). */
+private val SpinnerSize = 36.dp
+private val SpinnerThickness = 4.dp
+
+/**
+ * תיבת סימון לבחירה מרובה, לחלק האחרון של שורת הגדרה או שורת רשימה
+ * (components/forms/Checkbox.jsx). מסומנת = מילוי מלא בהדגשה עם סימן
+ * בצבע הדיו שעליה - אותו זוג של הצ'יפ הנבחר. לא מסומנת = ריבוע ריק עם
+ * מסגרת של 40% מהטקסט, שנשאר גלוי גם כשההדגשה לבנה.
+ */
+@Composable
+fun FutureCheckbox(
+    checked: Boolean,
+    theme: FutureTheme,
+    modifier: Modifier = Modifier,
+) {
+    val accent = LocalFutureAccent.current ?: theme.readableAccentColor
+    val fill by animateColorAsState(
+        if (checked) accent else Color.Transparent,
+        FutureMotion.focusColorSpec,
+        label = "checkboxFill",
+    )
+    val border by animateColorAsState(
+        if (checked) accent else theme.subtleTextColor,
+        FutureMotion.focusColorSpec,
+        label = "checkboxBorder",
+    )
+    Box(
+        modifier = modifier
+            .size(CheckboxSize)
+            .clip(FutureShapes.sm)
+            .background(fill)
+            .border(FutureDimens.focusBorderControl, border, FutureShapes.sm),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (checked) {
+            Icon(
+                Icons.Rounded.Check,
+                contentDescription = null,
+                tint = FutureContrast.onColor(accent),
+                modifier = Modifier.size(CheckboxSize * 0.72f),
+            )
+        }
+    }
+}
+
+/** 24dp - הצלע של תיבת הסימון (48px ב-Checkbox.jsx). */
+private val CheckboxSize = 24.dp
 
 /**
  * פס התקדמות. 4dp (2dp בנגן), מסילה ב-10% מצבע הטקסט, והמילוי גדל

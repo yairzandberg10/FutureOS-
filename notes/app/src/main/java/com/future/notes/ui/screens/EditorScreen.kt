@@ -1,33 +1,44 @@
 package com.future.notes.ui.screens
 
-import com.future.sharednav.theme.FutureShapes
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.PushPin
-import androidx.compose.material.icons.filled.Save
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.PushPin
+import androidx.compose.material.icons.rounded.Save
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import com.future.notes.R
 import com.future.notes.data.Note
-import com.future.sharednav.focus.dpadFocusBorder
+import com.future.sharednav.components.ConfirmDialog
+import com.future.sharednav.components.FutureMenuRow
+import com.future.sharednav.components.FutureOptionsMenu
+import com.future.sharednav.components.FutureTextField
+import com.future.sharednav.components.ScreenScaffold
 import com.future.sharednav.focus.escapeTextFieldFocusTrap
+import com.future.sharednav.nav.onOptionsKeyPress
+import com.future.sharednav.theme.FutureDimens
+import com.future.sharednav.theme.FutureTheme
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * עורך פתק. השורה העליונה היא ScreenTopBar (חזרה שומרת, ושמירה מפורשת
+ * כפעולה בצד השני); נעיצה ומחיקה יושבות בתפריט האפשרויות, כמו שהמדריך
+ * כבר מתאר ("מחיקת פתק מתבצעת מתוך תפריט האפשרויות של הפתק הפתוח").
+ * קודם הן היו ארבעה IconButton של Material בתוך TopAppBar.
+ */
 @Composable
 fun EditorScreen(
     note: Note?,
+    theme: FutureTheme,
     onSave: (String, String, Boolean) -> Unit,
     onDelete: () -> Unit,
     onBack: () -> Unit
@@ -42,6 +53,8 @@ fun EditorScreen(
     var isPinned by remember(noteKey) { mutableStateOf(note?.isPinned ?: false) }
 
     var showDeleteConfirm by remember { mutableStateOf(false) }
+    var showMenu by remember { mutableStateOf(false) }
+    onOptionsKeyPress { showMenu = true }
 
     fun saveIfNeeded() {
         if (title.isNotBlank() || content.isNotBlank()) {
@@ -57,128 +70,74 @@ fun EditorScreen(
         saveIfNeeded()
     }
 
-    Scaffold(
+    ScreenScaffold(
         modifier = Modifier.escapeTextFieldFocusTrap(),
-        topBar = {
-            TopAppBar(
-                title = { Text(if (note == null) stringResource(R.string.new_note) else stringResource(R.string.edit_note), fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    var isFocused by remember { mutableStateOf(false) }
-                    IconButton(
-                        onClick = { saveIfNeeded() },
-                        modifier = Modifier
-                            .onFocusChanged { isFocused = it.isFocused }
-                            .dpadFocusBorder(isFocused, RoundedCornerShape(50))
-                    ) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
-                    }
-                },
-                actions = {
-                    var pinFocused by remember { mutableStateOf(false) }
-                    IconButton(
-                        onClick = { isPinned = !isPinned },
-                        modifier = Modifier
-                            .onFocusChanged { pinFocused = it.isFocused }
-                            .dpadFocusBorder(pinFocused, RoundedCornerShape(50))
-                    ) {
-                        Icon(
-                            Icons.Default.PushPin,
-                            contentDescription = stringResource(R.string.pin),
-                            tint = if (isPinned) MaterialTheme.colorScheme.primary else LocalContentColor.current
-                        )
-                    }
-                    if (note != null) {
-                        var deleteFocused by remember { mutableStateOf(false) }
-                        IconButton(
-                            onClick = { showDeleteConfirm = true },
-                            modifier = Modifier
-                                .onFocusChanged { deleteFocused = it.isFocused }
-                                .dpadFocusBorder(deleteFocused, RoundedCornerShape(50))
-                        ) {
-                            Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.delete))
-                        }
-                    }
-                    var saveFocused by remember { mutableStateOf(false) }
-                    IconButton(
-                        onClick = { onSave(title, content, isPinned) },
-                        modifier = Modifier
-                            .onFocusChanged { saveFocused = it.isFocused }
-                            .dpadFocusBorder(saveFocused, RoundedCornerShape(50))
-                    ) {
-                        Icon(Icons.Default.Save, contentDescription = stringResource(R.string.save))
-                    }
-                }
-            )
-        }
-    ) { padding ->
+        backgroundColor = theme.backgroundColor,
+        title = stringResource(if (note == null) R.string.new_note else R.string.edit_note),
+        textColor = theme.textColor,
+        accentColor = theme.accentColor,
+        onBack = { saveIfNeeded() },
+        trailingIcon = Icons.Rounded.Save,
+        trailingContentDescription = stringResource(R.string.save),
+        onTrailingClick = { onSave(title, content, isPinned) },
+    ) {
         Column(
             modifier = Modifier
-                .padding(padding)
-                .padding(16.dp)
-                .fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .fillMaxSize()
+                .padding(horizontal = FutureDimens.screenPadding, vertical = FutureDimens.spacingSm),
+            verticalArrangement = Arrangement.spacedBy(FutureDimens.itemSpacing),
         ) {
-            var titleFocused by remember { mutableStateOf(false) }
-            OutlinedTextField(
+            FutureTextField(
                 value = title,
                 onValueChange = { title = it },
-                label = { Text(stringResource(R.string.title)) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .onFocusChanged { titleFocused = it.isFocused }
-                    .dpadFocusBorder(titleFocused, FutureShapes.md),
-                shape = FutureShapes.md,
-                textStyle = MaterialTheme.typography.titleLarge,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color.Transparent
-                )
+                theme = theme,
+                placeholder = stringResource(R.string.title),
+                autoFocus = note == null,
+                modifier = Modifier.fillMaxWidth(),
             )
-
-            var contentFocused by remember { mutableStateOf(false) }
-            OutlinedTextField(
+            FutureTextField(
                 value = content,
                 onValueChange = { content = it },
-                label = { Text(stringResource(R.string.content)) },
+                theme = theme,
+                placeholder = stringResource(R.string.content),
+                singleLine = false,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f)
-                    .onFocusChanged { contentFocused = it.isFocused }
-                    .dpadFocusBorder(contentFocused, FutureShapes.md),
-                shape = FutureShapes.md,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color.Transparent
-                )
+                    .weight(1f),
             )
         }
     }
 
-    if (showDeleteConfirm) {
-        val cancelFocusRequester = remember { FocusRequester() }
-        AlertDialog(
-            onDismissRequest = { showDeleteConfirm = false },
-            title = { Text(stringResource(R.string.delete_note_confirm_title)) },
-            text = { Text(stringResource(R.string.delete_note_confirm_message)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    showDeleteConfirm = false
-                    onDelete()
-                }) {
-                    Text(stringResource(R.string.delete_confirm))
-                }
-            },
-            dismissButton = {
-                // ברירת מחדל בטוחה: הפוקוס הראשוני על "ביטול" ולא על "מחק", כדי
-                // שלחיצה מהירה/בטעות על מרכז ה-D-pad לא תמחק את הפתק בטעות.
-                TextButton(
-                    onClick = { showDeleteConfirm = false },
-                    modifier = Modifier.focusRequester(cancelFocusRequester)
-                ) {
-                    Text(stringResource(R.string.cancel))
-                }
+    if (showMenu) {
+        FutureOptionsMenu(
+            theme = theme,
+            onDismissRequest = { showMenu = false },
+            header = title.ifBlank { stringResource(R.string.untitled) },
+        ) {
+            FutureMenuRow(stringResource(if (isPinned) R.string.unpin else R.string.pin), Icons.Rounded.PushPin, theme, {
+                showMenu = false
+                isPinned = !isPinned
+            })
+            if (note != null) {
+                FutureMenuRow(stringResource(R.string.delete), Icons.Rounded.Delete, theme, {
+                    showMenu = false
+                    showDeleteConfirm = true
+                }, destructive = true)
             }
-        )
-        LaunchedEffect(Unit) {
-            cancelFocusRequester.requestFocus()
         }
+    }
+
+    if (showDeleteConfirm) {
+        ConfirmDialog(
+            message = stringResource(R.string.delete_note_confirm_message),
+            theme = theme,
+            onCancel = { showDeleteConfirm = false },
+            onConfirm = {
+                showDeleteConfirm = false
+                onDelete()
+            },
+            confirmLabel = stringResource(R.string.delete_confirm),
+            cancelLabel = stringResource(R.string.cancel),
+        )
     }
 }

@@ -1,4 +1,5 @@
 package com.future.sharednav.components
+import androidx.compose.ui.focus.FocusRequester
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -40,6 +41,7 @@ fun ScreenScaffold(
     trailingIcon: ImageVector? = null,
     trailingContentDescription: String? = null,
     onTrailingClick: (() -> Unit)? = null,
+    trailingFocusRequester: FocusRequester? = null,
     content: @Composable () -> Unit,
 ) {
     // קוראים את מכפיל הגופן פעם אחת לכל מסך ומספקים אותו הלאה, כך שכל רכיב
@@ -67,6 +69,7 @@ fun ScreenScaffold(
                         trailingIcon = trailingIcon,
                         trailingContentDescription = trailingContentDescription,
                         onTrailingClick = onTrailingClick,
+                        trailingFocusRequester = trailingFocusRequester,
                     )
                     Box(modifier = Modifier.fillMaxSize()) { content() }
                 }

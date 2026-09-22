@@ -1,37 +1,60 @@
 package com.future.notes.ui.screens
 
-import com.future.sharednav.theme.FutureShapes
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.PushPin
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.material.icons.automirrored.rounded.Notes
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.PushPin
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material3.Icon
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import com.future.notes.R
 import com.future.notes.data.Note
-import com.future.sharednav.focus.dpadFocusBorder
+import com.future.sharednav.components.EmptyState
+import com.future.sharednav.components.FutureListItem
+import com.future.sharednav.components.FutureMenuRow
+import com.future.sharednav.components.FutureOptionsMenu
+import com.future.sharednav.components.FutureTextField
+import com.future.sharednav.components.ScreenScaffold
 import com.future.sharednav.focus.escapeTextFieldFocusTrap
+import com.future.sharednav.nav.onOptionsKeyPress
+import com.future.sharednav.theme.FutureDimens
+import com.future.sharednav.theme.FutureTheme
+import com.future.sharednav.theme.mutedTextColor
+import com.future.sharednav.theme.subtleTextColor
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * רשימת הפתקים. שלד המסך, שדה החיפוש והשורות הם הרכיבים של הדיזיין
+ * סיסטם (ScreenScaffold / FutureTextField / FutureListItem) - קודם זה היה
+ * Scaffold של Material עם כותרת 24sp בצבע ההדגשה, OutlinedTextField, כרטיס
+ * לכל פתק וכפתור צף, כלומר ארבעה רכיבים שאין להם מקבילה בעיצוב.
+ *
+ * נעיצה עברה מכפתור שני בתוך כל שורה אל תפריט האפשרויות: "כל פעולה של
+ * מסך יושבת בתפריט" (components/navigation/OptionsMenu.prompt.md). פתק
+ * נעוץ מסומן בסיכה בסוף השורה.
+ */
 @Composable
 fun ListScreen(
     notes: List<Note>,
     searchQuery: String,
+    theme: FutureTheme,
     onSearchChanged: (String) -> Unit,
     onNoteClick: (Note) -> Unit,
     onAddNote: () -> Unit,
@@ -40,137 +63,115 @@ fun ListScreen(
     // בדיוק, לא תמיד לפתק הראשון ברשימה.
     lastSelectedNoteId: Int? = null,
 ) {
-    // בלי פוקוס D-pad התחלתי, המסך הראשי (כולל כפתור "הוסף פתק" היחיד) עלול
-    // להישאר לגמרי בלתי נגיש בהפעלה - אותה משפחת באג שתועדה ותוקנה במקום אחר
-    // בסוויטה (Tools/Calculator, dialer/InCallScreen).
+    // בלי פוקוס D-pad התחלתי, המסך הראשי עלול להישאר לגמרי בלתי נגיש
+    // בהפעלה. ברשימה ריקה הפוקוס עובר לכפתור ההוספה שבשורה העליונה.
     val rowFocusRequesters = remember { mutableMapOf<Int, FocusRequester>() }
-    val fabFocusRequester = remember { FocusRequester() }
+    val addFocusRequester = remember { FocusRequester() }
     LaunchedEffect(notes.map { it.id }) {
-        if (notes.isEmpty()) {
-            fabFocusRequester.requestFocus()
-        } else {
-            val target = notes.firstOrNull { it.id == lastSelectedNoteId } ?: notes.first()
-            rowFocusRequesters.getOrPut(target.id) { FocusRequester() }.requestFocus()
+        runCatching {
+            if (notes.isEmpty()) {
+                addFocusRequester.requestFocus()
+            } else {
+                val target = notes.firstOrNull { it.id == lastSelectedNoteId } ?: notes.first()
+                rowFocusRequesters.getOrPut(target.id) { FocusRequester() }.requestFocus()
+            }
         }
     }
 
-    Scaffold(
+    var focusedNote by remember { mutableStateOf<Note?>(null) }
+    var showMenu by remember { mutableStateOf(false) }
+    onOptionsKeyPress { showMenu = true }
+
+    ScreenScaffold(
         modifier = Modifier.escapeTextFieldFocusTrap(),
-        topBar = {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    stringResource(R.string.my_notes),
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                var isFocused by remember { mutableStateOf(false) }
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = onSearchChanged,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .onFocusChanged { isFocused = it.isFocused }
-                        .dpadFocusBorder(isFocused, FutureShapes.md),
-                    placeholder = { Text(stringResource(R.string.search_notes)) },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                    shape = FutureShapes.md,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color.Transparent,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outline
+        backgroundColor = theme.backgroundColor,
+        title = stringResource(R.string.my_notes),
+        textColor = theme.textColor,
+        accentColor = theme.accentColor,
+        trailingIcon = Icons.Rounded.Add,
+        trailingContentDescription = stringResource(R.string.add_note),
+        onTrailingClick = onAddNote,
+        trailingFocusRequester = addFocusRequester,
+    ) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            FutureTextField(
+                value = searchQuery,
+                onValueChange = onSearchChanged,
+                theme = theme,
+                placeholder = stringResource(R.string.search_notes),
+                leading = {
+                    Icon(
+                        Icons.Rounded.Search,
+                        contentDescription = null,
+                        tint = theme.mutedTextColor,
+                        modifier = Modifier.size(FutureDimens.iconTopBar),
                     )
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = FutureDimens.screenPadding, vertical = FutureDimens.spacingSm),
+            )
+
+            if (notes.isEmpty()) {
+                EmptyState(
+                    icon = Icons.AutoMirrored.Rounded.Notes,
+                    title = stringResource(if (searchQuery.isBlank()) R.string.no_notes else R.string.no_notes_found),
+                    subtitle = if (searchQuery.isBlank()) stringResource(R.string.no_notes_hint) else null,
+                    textColor = theme.textColor,
+                    modifier = Modifier.weight(1f),
                 )
-            }
-        },
-        floatingActionButton = {
-            var isFocused by remember { mutableStateOf(false) }
-            FloatingActionButton(
-                onClick = onAddNote,
-                modifier = Modifier
-                    .focusRequester(fabFocusRequester)
-                    .onFocusChanged { isFocused = it.isFocused }
-                    .dpadFocusBorder(isFocused, FloatingActionButtonDefaults.shape),
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-            ) {
-                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_note))
-            }
-        }
-    ) { padding ->
-        if (notes.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(stringResource(R.string.no_notes_found), style = MaterialTheme.typography.bodyLarge)
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .padding(padding)
-                    .fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                itemsIndexed(notes, key = { _, note -> note.id }) { _, note ->
-                    NoteItem(
-                        note = note,
-                        onClick = { onNoteClick(note) },
-                        onTogglePin = { onTogglePin(note) },
-                        focusRequester = rowFocusRequesters.getOrPut(note.id) { FocusRequester() }
-                    )
+            } else {
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(horizontal = FutureDimens.screenPadding, vertical = FutureDimens.spacingSm),
+                    verticalArrangement = Arrangement.spacedBy(FutureDimens.itemSpacing),
+                ) {
+                    itemsIndexed(notes, key = { _, note -> note.id }) { _, note ->
+                        FutureListItem(
+                            title = note.title.ifEmpty { stringResource(R.string.untitled) },
+                            summary = note.content.ifEmpty { stringResource(R.string.no_content) },
+                            summaryMaxLines = 2,
+                            theme = theme,
+                            onClick = { onNoteClick(note) },
+                            focusRequester = rowFocusRequesters.getOrPut(note.id) { FocusRequester() },
+                            modifier = Modifier.onFocusChanged { if (it.hasFocus) focusedNote = note },
+                            trailing = if (note.isPinned) {
+                                {
+                                    Icon(
+                                        Icons.Rounded.PushPin,
+                                        contentDescription = stringResource(R.string.pinned),
+                                        tint = theme.subtleTextColor,
+                                        modifier = Modifier.size(FutureDimens.iconTopBar),
+                                    )
+                                }
+                            } else null,
+                        )
+                    }
                 }
             }
         }
     }
-}
 
-@Composable
-fun NoteItem(note: Note, onClick: () -> Unit, onTogglePin: () -> Unit = {}, focusRequester: FocusRequester? = null) {
-    var isFocused by remember { mutableStateOf(false) }
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
-            .onFocusChanged { isFocused = it.isFocused }
-            .dpadFocusBorder(isFocused, FutureShapes.lg)
-            .clickable { onClick() },
-        shape = FutureShapes.lg,
-        colors = CardDefaults.cardColors(
-            containerColor = if (note.isPinned)
-                MaterialTheme.colorScheme.secondaryContainer
-            else
-                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-        )
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+    if (showMenu) {
+        val note = focusedNote?.takeIf { focused -> notes.any { it.id == focused.id } }
+        FutureOptionsMenu(
+            theme = theme,
+            onDismissRequest = { showMenu = false },
+            header = note?.title?.ifEmpty { stringResource(R.string.untitled) },
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    note.title.ifEmpty { stringResource(R.string.untitled) },
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    note.content.ifEmpty { stringResource(R.string.no_content) },
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 2,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            var pinFocused by remember { mutableStateOf(false) }
-            IconButton(
-                onClick = onTogglePin,
-                modifier = Modifier
-                    .onFocusChanged { pinFocused = it.isFocused }
-                    .dpadFocusBorder(pinFocused, RoundedCornerShape(50))
-            ) {
-                Icon(
-                    Icons.Default.PushPin,
-                    contentDescription = stringResource(R.string.pin),
-                    tint = if (note.isPinned) MaterialTheme.colorScheme.primary else LocalContentColor.current
+            FutureMenuRow(stringResource(R.string.new_note), Icons.Rounded.Add, theme, {
+                showMenu = false
+                onAddNote()
+            })
+            if (note != null) {
+                FutureMenuRow(
+                    stringResource(if (note.isPinned) R.string.unpin else R.string.pin),
+                    Icons.Rounded.PushPin,
+                    theme,
+                    {
+                        showMenu = false
+                        onTogglePin(note)
+                    },
                 )
             }
         }

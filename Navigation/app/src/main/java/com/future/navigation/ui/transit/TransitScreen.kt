@@ -1,4 +1,6 @@
 package com.future.navigation.ui.transit
+import com.future.sharednav.theme.FutureDimens
+import com.future.sharednav.theme.LocalFutureTheme
 
 import com.future.sharednav.theme.FutureShapes
 import androidx.compose.foundation.background
@@ -28,7 +30,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -74,7 +75,7 @@ fun TransitScreen(itinerary: TransitItinerary, onBack: () -> Unit) {
         Text(
             text = stringResource(if (hasRealtimeLeg) R.string.schedule_disclaimer_partial_realtime else R.string.schedule_disclaimer),
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f),
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
             modifier = Modifier.padding(horizontal = 16.dp)
         )
 
@@ -95,7 +96,7 @@ fun TransitScreen(itinerary: TransitItinerary, onBack: () -> Unit) {
 @Composable
 private fun Stat(label: String, value: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, fontWeight = FontWeight.ExtraBold, style = MaterialTheme.typography.titleMedium)
+        Text(value, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
         Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
     }
 }
@@ -106,20 +107,22 @@ private fun LegRow(leg: TransitLeg, isLast: Boolean, expanded: Boolean, onToggle
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(38.dp)) {
             val badgeColor = when (leg.type) {
                 LegType.WALK -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
-                LegType.RIDE -> MaterialTheme.colorScheme.primary
+                // מספר הקו אינו בחירה ולא פוקוס, ולכן לא בצבע ההדגשה: הוא "מודגש"
+                // בהיפוך - צבע הטקסט כרקע.
+                LegType.RIDE -> MaterialTheme.colorScheme.onSurface
             }
             Surface(modifier = Modifier.size(38.dp), shape = CircleShape, color = badgeColor) {
                 Box(contentAlignment = Alignment.Center) {
                     Text(
                         text = if (leg.type == LegType.RIDE) (leg.routeShortName?.takeIf { it.isNotBlank() } ?: "?") else "",
-                        color = if (leg.type == LegType.RIDE) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                        color = if (leg.type == LegType.RIDE) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.labelSmall
                     )
                 }
             }
             if (!isLast) {
-                Box(modifier = Modifier.width(2.dp).height(28.dp).background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f)))
+                Box(modifier = Modifier.width(2.dp).height(28.dp).background(MaterialTheme.colorScheme.outlineVariant))
             }
         }
         Spacer(modifier = Modifier.width(12.dp))
@@ -136,10 +139,6 @@ private fun LegRow(leg: TransitLeg, isLast: Boolean, expanded: Boolean, onToggle
                     onClick = onToggleExpand,
                     accentColor = MaterialTheme.colorScheme.primary,
                     contentPadding = 0.dp,
-                    idleBackgroundColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
-                    focusedBackgroundColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.22f),
-                    borderWidth = 2.dp,
-                    cornerRadius = FutureShapes.radiusLg,
                     focusRequester = focusRequester
                 ) {
                     Column(modifier = Modifier.fillMaxWidth().padding(4.dp)) {
@@ -163,7 +162,7 @@ private fun LegRow(leg: TransitLeg, isLast: Boolean, expanded: Boolean, onToggle
                             Text(
                                 "· $stopName",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
                             )
                         }
                     }
@@ -181,11 +180,12 @@ private fun RealtimeBadge(delaySeconds: Int?) {
         delayMinutes > 0 -> stringResource(R.string.realtime_delayed, delayMinutes)
         else -> stringResource(R.string.realtime_early, -delayMinutes)
     }
-    Surface(shape = FutureShapes.sm, color = Color(0xFF2ECC71).copy(alpha = 0.18f)) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)) {
-            Box(modifier = Modifier.size(6.dp).background(Color(0xFF2ECC71), CircleShape))
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(label, style = MaterialTheme.typography.labelSmall, color = Color(0xFF1C8A4B), fontWeight = FontWeight.Bold)
+    val success = LocalFutureTheme.current.successColor
+    Surface(shape = FutureShapes.xs, color = success.copy(alpha = 0.15f)) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 6.dp, vertical = FutureDimens.spacingXxs)) {
+            Box(modifier = Modifier.size(6.dp).background(success, CircleShape))
+            Spacer(modifier = Modifier.width(FutureDimens.spacingXs))
+            Text(label, style = MaterialTheme.typography.labelSmall, color = success, fontWeight = FontWeight.Bold)
         }
     }
 }

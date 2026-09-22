@@ -78,6 +78,7 @@ fun FutureSectionHeader(
     text: String,
     theme: FutureTheme,
     modifier: Modifier = Modifier,
+    inset: Boolean = true,
 ) {
     val type = rememberFutureType()
     Text(
@@ -86,11 +87,13 @@ fun FutureSectionHeader(
         fontSize = type.summary,
         fontWeight = FutureTypography.weightBold,
         letterSpacing = FutureTypography.trackingSection,
+        // inset = false - בתוך רשימה שכבר מרופדת מהשוליים (contentPadding),
+        // שם הריפוד האופקי של הכותרת היה מזיז אותה פנימה פעמיים.
         modifier = modifier.padding(
-            start = FutureDimens.spacingXl,
-            end = FutureDimens.spacingXl,
-            top = 20.dp,
-            bottom = FutureDimens.spacingSm,
+            start = if (inset) FutureDimens.spacingXl else 0.dp,
+            end = if (inset) FutureDimens.spacingXl else 0.dp,
+            top = if (inset) 20.dp else FutureDimens.spacingSm,
+            bottom = if (inset) FutureDimens.spacingSm else FutureDimens.spacingXs,
         ),
     )
 }

@@ -1,4 +1,7 @@
 package com.future.sharednav.components
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.text.style.TextOverflow
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
@@ -51,6 +54,7 @@ fun ScreenTopBar(
     trailingIcon: ImageVector? = null,
     trailingContentDescription: String? = null,
     onTrailingClick: (() -> Unit)? = null,
+    trailingFocusRequester: FocusRequester? = null,
 ) {
     val type = rememberFutureType()
     Row(
@@ -75,10 +79,11 @@ fun ScreenTopBar(
                 fontWeight = FontWeight.Bold,
                 color = textColor,
                 maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
         if (trailingIcon != null && onTrailingClick != null) {
-            TopBarIconButton(trailingIcon, trailingContentDescription ?: "", textColor, accentColor, onTrailingClick)
+            TopBarIconButton(trailingIcon, trailingContentDescription ?: "", textColor, accentColor, onTrailingClick, trailingFocusRequester)
         }
     }
 }
@@ -95,6 +100,7 @@ fun TopBarIconButton(
     textColor: Color,
     accentColor: Color,
     onClick: () -> Unit,
+    focusRequester: FocusRequester? = null,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
@@ -114,6 +120,7 @@ fun TopBarIconButton(
             .focusMotion(interactionSource, focusedScale = 1.08f, pressedScale = 0.92f)
             .clip(CircleShape)
             .background(bgColor)
+            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {

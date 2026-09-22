@@ -1,5 +1,17 @@
 package com.future.calculator.ui
-import com.future.sharednav.theme.onAccentColor
+import com.future.sharednav.components.ScreenTopBar
+import com.future.sharednav.components.FutureTabRow
+import com.future.sharednav.components.FutureSectionHeader
+import com.future.sharednav.components.FutureOptionsMenu
+import com.future.sharednav.components.FutureMenuRow
+import com.future.sharednav.focus.FocusableItem
+import com.future.sharednav.theme.FutureDimens
+import com.future.sharednav.theme.FutureMotion
+import com.future.sharednav.theme.textAlpha
+import com.future.sharednav.theme.subtleTextColor
+import com.future.sharednav.theme.idleChipColor
+import com.future.sharednav.theme.readableAccentColor
+import com.future.sharednav.theme.onReadableAccentColor
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.focus.bringIntoViewOnFocus
@@ -17,7 +29,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.DeleteSweep
@@ -32,15 +43,12 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.*
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.future.sharednav.components.AppDialog
 import com.future.sharednav.nav.digitForKey
 import com.future.sharednav.theme.FutureTheme
 import com.future.sharednav.theme.calcButtonColor
@@ -253,18 +261,21 @@ fun CalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
             }
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            ToolsHeader(
+            ScreenTopBar(
                 title = "מחשבון",
-                theme = theme,
+                textColor = theme.textColor,
+                accentColor = theme.accentColor,
                 onBack = onBack,
-                trailing = { ToolsIconButton(Icons.Rounded.MoreVert, "אפשרויות", theme = theme) { showMenu = true } }
+                trailingIcon = Icons.Rounded.MoreVert,
+                trailingContentDescription = "אפשרויות",
+                onTrailingClick = { showMenu = true },
             )
 
-            CalcModeSelector(
-                selected = calcMode,
+            FutureTabRow(
+                items = listOf("רגיל", "מדעי"),
+                selectedIndex = calcMode.ordinal,
                 theme = theme,
-                onSelect = { calcMode = it },
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                onSelect = { calcMode = CalculatorMode.entries[it] },
             )
 
             // הביטוי והתוצאה חייבים להישאר קריאים משמאל-לימין (ספרות + סימני
@@ -272,11 +283,11 @@ fun CalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
             // בלי תו-חוזק חזק (כמו "5 ×") הייתה מקבלת את כיוון הפריסה הסביבתי
             // (RTL) ומוצגת הפוך ("× 5") - הבאג הקלאסי של מחשבון ב-RTL.
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-                Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)) {
+                Column(modifier = Modifier.fillMaxWidth().padding(horizontal = FutureDimens.screenPadding, vertical = FutureDimens.spacingSm)) {
                     if (expressionLine.isNotEmpty()) {
                         Text(
                             expressionLine,
-                            color = theme.textColor.copy(alpha = 0.5f),
+                            color = theme.textAlpha(50),
                             fontSize = FutureTypography.bodyLarge,
                             textAlign = TextAlign.End,
                             maxLines = 1,
@@ -288,17 +299,17 @@ fun CalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
                     // CALC_PRECISION למעלה), עדיף גופן שממשיך להצטמצם על פני חיתוך
                     // שקט של התוצאה בקצה המסך הקבוע (הבאג הישן מ-Tools).
                     val displayFontSize = when {
-                        display.length <= 9 -> 44.sp
-                        display.length <= 12 -> 32.sp
-                        display.length <= 16 -> 24.sp
-                        display.length <= 20 -> 18.sp
-                        else -> 14.sp
+                        display.length <= 9 -> FutureTypography.hero
+                        display.length <= 12 -> FutureTypography.display
+                        display.length <= 16 -> FutureTypography.headline
+                        display.length <= 20 -> FutureTypography.title
+                        else -> FutureTypography.body
                     }
                     Text(
                         text = display,
                         color = theme.textColor,
                         fontSize = displayFontSize,
-                        fontWeight = FontWeight.Light,
+                        fontWeight = FutureTypography.weightLight,
                         textAlign = TextAlign.End,
                         maxLines = 1,
                         modifier = Modifier.fillMaxWidth()
@@ -335,11 +346,14 @@ fun CalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
             )
             val actionRows = if (calcMode == CalculatorMode.SCIENTIFIC) scientificRows + standardRows else standardRows
 
-            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = FutureDimens.spacingMd, vertical = FutureDimens.spacingXs),
+                verticalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm),
+            ) {
                 actionRows.forEachIndexed { rowIndex, row ->
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm)
                     ) {
                         row.forEachIndexed { colIndex, (label, isMuted, onClick) ->
                             CalcActionButton(
@@ -356,22 +370,16 @@ fun CalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
                 }
             }
 
-            Text(
-                "היסטוריה",
-                color = theme.textColor.copy(alpha = 0.4f),
-                fontSize = FutureTypography.label,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
-            )
+            FutureSectionHeader("היסטוריה", theme)
             if (history.isEmpty()) {
                 Box(modifier = Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
-                    Text("עדיין אין חישובים", color = theme.textColor.copy(alpha = 0.35f), fontSize = FutureTypography.summary)
+                    Text("אין חישובים", color = theme.subtleTextColor, fontSize = FutureTypography.body)
                 }
             } else {
                 LazyColumn(
                     modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                    contentPadding = PaddingValues(horizontal = FutureDimens.screenPadding, vertical = FutureDimens.spacingXs),
+                    verticalArrangement = Arrangement.spacedBy(FutureDimens.spacingXs)
                 ) {
                     itemsIndexed(history, key = { index, _ -> index }) { _, entry ->
                         CalcHistoryRow(entry, theme = theme, onClick = {
@@ -405,45 +413,13 @@ fun CalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
     }
 }
 
-/** בורר בין "רגיל" (4 פעולות) ל"מדעי" (טריגונומטריה/לוגריתמים/חזקות) - ר'
- * CalculatorMode. שני הפלחים ניווטים ב-D-pad בדיוק כמו כל כפתור אחר במסך. */
-@Composable
-private fun CalcModeSelector(selected: CalculatorMode, theme: FutureTheme, onSelect: (CalculatorMode) -> Unit, modifier: Modifier = Modifier) {
-    Row(
-        modifier = modifier
-            .clip(FutureShapes.md)
-            .background(theme.textColor.copy(alpha = 0.08f))
-            .padding(3.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        CalcModeSegment("רגיל", isSelected = selected == CalculatorMode.STANDARD, theme = theme, modifier = Modifier.weight(1f)) { onSelect(CalculatorMode.STANDARD) }
-        CalcModeSegment("מדעי", isSelected = selected == CalculatorMode.SCIENTIFIC, theme = theme, modifier = Modifier.weight(1f)) { onSelect(CalculatorMode.SCIENTIFIC) }
-    }
-}
-
-@Composable
-private fun CalcModeSegment(label: String, isSelected: Boolean, theme: FutureTheme, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val shape = FutureShapes.sm
-    val bgColor by animateColorAsState(
-        if (isSelected) theme.accentColor else if (isFocused) theme.textColor.copy(alpha = 0.16f) else Color.Transparent,
-        label = "calcModeSegmentBg",
-    )
-    Box(
-        modifier = modifier
-            .clip(shape)
-            .background(bgColor)
-            .then(if (isFocused && !isSelected) Modifier.border(2.dp, theme.accentColor, shape) else Modifier)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource)
-            .padding(vertical = 8.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(label, color = if (isSelected) theme.onAccentColor else theme.textColor, fontSize = FutureTypography.summary, fontWeight = FontWeight.SemiBold)
-    }
-}
-
+/**
+ * מקש במחשבון. הצבעים הם של הדיזיין סיסטם (guidelines/colors-app.html):
+ * מקש רגיל / מקש משני / מקש ממוקד. מקש פעולה נצבע בהדגשה *המתוקנת* - קודם
+ * הוא נצבע בהדגשה הגולמית, ובפוקוס בכתום קבוע (#FFB84D) שהניח שההדגשה
+ * כתומה. עכשיו מקש פעולה ממוקד מסומן כמו כל פקד: מסגרת 2dp בצבע הטקסט.
+ * רדיוס 8dp - הדרגה של מקשים ופריטי רשת.
+ */
 @Composable
 private fun CalcActionButton(
     label: String,
@@ -456,110 +432,72 @@ private fun CalcActionButton(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
+    val accent = theme.readableAccentColor
     val baseColor = when {
-        isAccent -> theme.accentColor
+        isAccent -> accent
         isMuted -> theme.calcMutedButtonColor
         else -> theme.calcButtonColor
     }
     val bgColor by animateColorAsState(
-        if (isFocused) (if (isAccent) Color(0xFFFFB84D) else theme.calcButtonFocusedColor) else baseColor,
+        if (isFocused && !isAccent) theme.calcButtonFocusedColor else baseColor,
+        FutureMotion.focusColorSpec,
         label = "calcActionBg"
     )
-    val textColor = if (isAccent) theme.onAccentColor else theme.textColor
+    val ring by animateColorAsState(
+        if (isFocused && isAccent) theme.textColor else Color.Transparent,
+        FutureMotion.focusColorSpec,
+        label = "calcActionRing"
+    )
+    val textColor = if (isAccent) theme.onReadableAccentColor else theme.textColor
 
     Box(
         modifier = modifier
-            .height(52.dp)
-            .clip(FutureShapes.lg)
+            .height(CalcKeyHeight)
+            .clip(FutureShapes.sm)
             .background(bgColor)
+            .border(FutureDimens.focusBorderControl, ring, FutureShapes.sm)
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
             .focusable(interactionSource = interactionSource).bringIntoViewOnFocus(),
         contentAlignment = Alignment.Center
     ) {
-        Text(label, color = textColor, fontSize = FutureTypography.screenTitle, fontWeight = FontWeight.Medium)
+        Text(label, color = textColor, fontSize = FutureTypography.screenTitle, fontWeight = FutureTypography.weightMedium)
     }
 }
 
+/** 52dp - גובה מקש במחשבון. */
+private val CalcKeyHeight = 52.dp
+
+/** שורת היסטוריה - שורת רשימה רגילה (FocusableItem): 14% הדגשה ומסגרת 1.5dp בפוקוס. */
 @Composable
 private fun CalcHistoryRow(entry: CalcHistoryEntry, theme: FutureTheme, onClick: () -> Unit) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val shape = FutureShapes.lg
-    val bgColor by animateColorAsState(
-        if (isFocused) theme.textColor.copy(alpha = 0.14f) else theme.textColor.copy(alpha = 0.05f),
-        label = "calcHistoryRowBg"
-    )
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(shape)
-            .background(bgColor)
-            .then(if (isFocused) Modifier.border(width = 2.dp, color = theme.accentColor, shape = shape) else Modifier)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
-            .padding(horizontal = 14.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
+    FocusableItem(
+        onClick = onClick,
+        accentColor = theme.accentColor,
+        idleBackgroundColor = theme.idleChipColor,
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = 0.dp,
     ) {
-        Text(entry.expression, color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.summary)
-        Text(entry.result, color = theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Medium)
-    }
-}
-
-@Composable
-private fun CalculatorOptionsMenu(theme: FutureTheme, onDismiss: () -> Unit, onCopyResult: () -> Unit, onClearHistory: () -> Unit) {
-    val firstRowFocusRequester = remember { FocusRequester() }
-    AppDialog(onDismissRequest = onDismiss) {
-        Column(
-            modifier = Modifier
-                .clip(FutureShapes.xl)
-                .background(theme.surfaceColor)
-                .padding(vertical = 8.dp)
-        ) {
-            CalcMenuRow("העתק תוצאה", Icons.Rounded.ContentCopy, theme = theme, onClick = onCopyResult, focusRequester = firstRowFocusRequester)
-            CalcMenuRow("נקה היסטוריה", Icons.Rounded.DeleteSweep, theme = theme, onClick = onClearHistory, isDestructive = true)
+        // הביטוי והתוצאה נקראים משמאל לימין גם בתוך מסך RTL.
+        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = FutureDimens.spacingMd, vertical = FutureDimens.spacingSm),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(entry.expression, color = theme.textAlpha(50), fontSize = FutureTypography.summary)
+                Text(entry.result, color = theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FutureTypography.weightMedium)
+            }
         }
     }
 }
 
 @Composable
-private fun CalcMenuRow(
-    label: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    theme: FutureTheme,
-    onClick: () -> Unit,
-    isDestructive: Boolean = false,
-    focusRequester: FocusRequester? = null,
-) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val bgColor by animateColorAsState(
-        if (isFocused) theme.textColor.copy(alpha = 0.12f) else Color.Transparent,
-        label = "calcMenuRowBg"
-    )
-    // Dialog() רץ בחלון נפרד - בקשת פוקוס לפני שהשורה נדבקת נבלעת בשקט,
-    // אז מבקשים ברגע ש-onGloballyPositioned מאשר שהיא באמת נמדדה.
-    var hasRequestedFocus by remember { mutableStateOf(false) }
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(bgColor)
-            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
-            .then(
-                if (focusRequester != null) Modifier.onGloballyPositioned {
-                    if (!hasRequestedFocus) {
-                        hasRequestedFocus = true
-                        focusRequester.requestFocus()
-                    }
-                } else Modifier
-            )
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
-            .padding(horizontal = 20.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(icon, contentDescription = null, tint = if (isDestructive) theme.dangerColor else theme.accentColor, modifier = Modifier.size(20.dp))
-        Spacer(modifier = Modifier.width(14.dp))
-        Text(label, color = if (isDestructive) theme.dangerColor else theme.textColor, fontSize = FutureTypography.bodyLarge)
+private fun CalculatorOptionsMenu(theme: FutureTheme, onDismiss: () -> Unit, onCopyResult: () -> Unit, onClearHistory: () -> Unit) {
+    FutureOptionsMenu(theme = theme, onDismissRequest = onDismiss, header = "מחשבון") {
+        FutureMenuRow("העתק תוצאה", Icons.Rounded.ContentCopy, theme, onCopyResult)
+        FutureMenuRow("נקה היסטוריה", Icons.Rounded.DeleteSweep, theme, onClearHistory, destructive = true)
     }
 }

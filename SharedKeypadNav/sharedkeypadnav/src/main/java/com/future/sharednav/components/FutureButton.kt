@@ -25,13 +25,13 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.future.sharednav.focus.bringIntoViewOnFocus
+import com.future.sharednav.theme.FutureContrast
 import com.future.sharednav.theme.FutureDimens
 import com.future.sharednav.theme.FutureMotion
 import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.theme.FutureTheme
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.LocalFutureAccent
-import com.future.sharednav.theme.onReadableAccentColor
 import com.future.sharednav.theme.onStatusColor
 import com.future.sharednav.theme.readableAccentColor
 import com.future.sharednav.theme.textAlpha
@@ -58,12 +58,7 @@ fun FutureButton(
     fillMaxWidth: Boolean = false,
     focusRequester: FocusRequester? = null,
 ) {
-    val type = rememberFutureType()
     val accent = LocalFutureAccent.current ?: theme.readableAccentColor
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val quiet = variant == FutureButtonVariant.Quiet
-
     val fill = when (variant) {
         FutureButtonVariant.Primary -> accent
         FutureButtonVariant.Destructive -> theme.dangerColor
@@ -71,12 +66,48 @@ fun FutureButton(
         FutureButtonVariant.Quiet -> theme.textAlpha(10)
     }
     val content = when (variant) {
-        FutureButtonVariant.Primary -> theme.onReadableAccentColor
+        // נגזר מהמילוי שבאמת מצויר - ההדגשה של המסך אם יש כזו - ולא מההדגשה
+        // של הערכה, כדי שהטקסט יתאים לרקע שמתחתיו גם כששתיהן שונות.
+        FutureButtonVariant.Primary -> FutureContrast.onColor(accent)
         FutureButtonVariant.Destructive -> theme.onStatusColor(theme.dangerColor)
         FutureButtonVariant.Secondary -> theme.onStatusColor(theme.textColor)
         FutureButtonVariant.Quiet -> theme.textColor
     }
-    val baseAlpha = if (variant == FutureButtonVariant.Secondary) 0.7f else 1f
+    FutureButtonCore(
+        text = text,
+        fill = fill,
+        contentColor = content,
+        ringColor = theme.textColor,
+        onClick = onClick,
+        modifier = modifier,
+        baseAlpha = if (variant == FutureButtonVariant.Secondary) 0.7f else 1f,
+        quiet = variant == FutureButtonVariant.Quiet,
+        fillMaxWidth = fillMaxWidth,
+        focusRequester = focusRequester,
+    )
+}
+
+/**
+ * הגוף של [FutureButton], בצבעים גולמיים - בשביל רכיבים משותפים שמקבלים
+ * צבעים בודדים ולא [FutureTheme] שלם (למשל [ConfirmDialog]). כך יש בדיוק
+ * כפתור אחד במערכת, גם כשהקורא לא מחזיק ערכה.
+ */
+@Composable
+internal fun FutureButtonCore(
+    text: String,
+    fill: Color,
+    contentColor: Color,
+    ringColor: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    baseAlpha: Float = 1f,
+    quiet: Boolean = false,
+    fillMaxWidth: Boolean = false,
+    focusRequester: FocusRequester? = null,
+) {
+    val type = rememberFutureType()
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
 
     val opacity by animateFloatAsState(
         if (quiet) 1f else if (isFocused) baseAlpha else baseAlpha * 0.7f,
@@ -84,7 +115,7 @@ fun FutureButton(
         label = "buttonOpacity",
     )
     val ring by animateColorAsState(
-        if (isFocused && !quiet) theme.textColor else Color.Transparent,
+        if (isFocused && !quiet) ringColor else Color.Transparent,
         FutureMotion.focusColorSpec,
         label = "buttonRing",
     )
@@ -93,7 +124,7 @@ fun FutureButton(
     Box(
         modifier = modifier
             .then(if (fillMaxWidth) Modifier.fillMaxWidth() else Modifier)
-            .defaultMinSize(minHeight = if (quiet) 40.dp else FutureDimens.rowHeightDialogButton)
+            .defaultMinSize(minHeight = if (quiet) QuietButtonHeight else FutureDimens.rowHeightDialogButton)
             .clip(shape)
             .alpha(opacity)
             .background(fill)
@@ -110,9 +141,12 @@ fun FutureButton(
     ) {
         Text(
             text,
-            color = content,
+            color = contentColor,
             fontSize = if (quiet) type.body else type.bodyLarge,
             fontWeight = if (quiet) FutureTypography.weightMedium else FutureTypography.weightBold,
         )
     }
 }
+
+/** 40dp - הגובה של הכפתור השקט (80px ב-components/core/Button.jsx). */
+private val QuietButtonHeight = 40.dp

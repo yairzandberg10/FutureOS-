@@ -1,4 +1,7 @@
 package com.future.navigation.ui.gtfs
+import com.future.sharednav.components.FutureButton
+import com.future.sharednav.components.FutureProgressBar
+import com.future.sharednav.theme.LocalFutureTheme
 
 import com.future.sharednav.theme.FutureShapes
 import androidx.compose.foundation.layout.Column
@@ -21,7 +24,6 @@ import androidx.compose.ui.unit.dp
 import com.future.navigation.R
 import com.future.navigation.data.gtfs.ImportPhase
 import com.future.sharednav.components.ScreenTopBar
-import com.future.sharednav.focus.FocusableItem
 
 @Composable
 fun GtfsSetupScreen(viewModel: GtfsSetupViewModel, onBack: () -> Unit) {
@@ -60,32 +62,17 @@ fun GtfsSetupScreen(viewModel: GtfsSetupViewModel, onBack: () -> Unit) {
             if (label != null) {
                 Text(label, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
                 Spacer(modifier = Modifier.height(8.dp))
-                LinearProgressIndicator(
-                    progress = { progress?.fraction ?: 0f },
-                    modifier = Modifier.fillMaxWidth(),
-                    color = MaterialTheme.colorScheme.primary
-                )
+                FutureProgressBar(progress = progress?.fraction ?: 0f, theme = LocalFutureTheme.current)
                 Spacer(modifier = Modifier.height(20.dp))
             }
 
-            FocusableItem(
+            FutureButton(
+                text = stringResource(R.string.gtfs_update_button),
+                theme = LocalFutureTheme.current,
                 onClick = viewModel::startImport,
-                accentColor = MaterialTheme.colorScheme.primary,
-                idleBackgroundColor = MaterialTheme.colorScheme.primary,
-                focusedBackgroundColor = MaterialTheme.colorScheme.primary,
-                cornerRadius = FutureShapes.radiusLg,
-                scaleOnFocus = false,
-                modifier = Modifier.fillMaxWidth(),
-                focusRequester = updateButtonFocusRequester
-            ) {
-                Text(
-                    stringResource(R.string.gtfs_update_button),
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    fontWeight = FontWeight.Bold
-                )
-            }
+                fillMaxWidth = true,
+                focusRequester = updateButtonFocusRequester,
+            )
         }
     }
 }

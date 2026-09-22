@@ -265,10 +265,12 @@ private fun MissingLocationPermissionScreen(onRequest: () -> Unit) {
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
             androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(16.dp))
-            Button(
+            com.future.sharednav.components.FutureButton(
+                text = androidx.compose.ui.res.stringResource(R.string.grant_permission),
+                theme = com.future.sharednav.theme.LocalFutureTheme.current,
                 onClick = onRequest,
-                modifier = Modifier.focusRequester(buttonFocusRequester)
-            ) { Text(androidx.compose.ui.res.stringResource(R.string.grant_permission)) }
+                focusRequester = buttonFocusRequester,
+            )
         }
     }
 }

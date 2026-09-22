@@ -1,4 +1,10 @@
 package com.future.navigation.ui.routes
+import com.future.sharednav.components.FutureButton
+import com.future.sharednav.components.FutureProgressBar
+import com.future.sharednav.components.FutureSpinner
+import com.future.sharednav.theme.FutureDimens
+import com.future.sharednav.theme.LocalFutureTheme
+import com.future.sharednav.theme.mutedTextColor
 
 import com.future.sharednav.theme.FutureShapes
 import androidx.compose.foundation.layout.Arrangement
@@ -50,6 +56,7 @@ fun RouteOptionsScreen(
     val drivingRoute by viewModel.drivingRoute.collectAsState()
     val itineraries by viewModel.itineraries.collectAsState()
     val actionFocusRequester = remember { FocusRequester() }
+    val theme = LocalFutureTheme.current
 
     LaunchedEffect(destination, mode) {
         viewModel.search(mode, destination)
@@ -73,13 +80,13 @@ fun RouteOptionsScreen(
         )
 
         Surface(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = FutureDimens.screenPadding),
             shape = FutureShapes.lg,
             color = MaterialTheme.colorScheme.surface
         ) {
             Text(
                 text = destination.address.ifBlank { destination.name },
-                modifier = Modifier.padding(14.dp),
+                modifier = Modifier.padding(FutureDimens.spacingMd),
                 style = MaterialTheme.typography.bodyMedium,
                 maxLines = 2
             )
@@ -93,21 +100,16 @@ fun RouteOptionsScreen(
                     modifier = Modifier.align(Alignment.Center).padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text(
-                        text = if (downloadFraction != null) {
-                            "מוריד נתוני תחבורה ציבורית לאזור הזה… %d%%".format((downloadFraction!! * 100).toInt())
-                        } else {
-                            stringResource(R.string.calculating_route)
-                        },
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                    )
+                    // אורך ידוע (הורדה) = פס התקדמות; אורך לא ידוע (חישוב) = ספינר.
                     if (downloadFraction != null) {
-                        Spacer(modifier = Modifier.height(12.dp))
-                        LinearProgressIndicator(
-                            progress = { downloadFraction!! },
-                            modifier = Modifier.fillMaxWidth(),
-                            color = MaterialTheme.colorScheme.primary
+                        Text(
+                            text = "מוריד נתוני תחבורה ציבורית לאזור הזה %d%%".format((downloadFraction!! * 100).toInt()),
+                            color = theme.mutedTextColor
                         )
+                        Spacer(modifier = Modifier.height(FutureDimens.spacingMd))
+                        FutureProgressBar(progress = downloadFraction!!, theme = theme)
+                    } else {
+                        FutureSpinner(theme = theme, label = stringResource(R.string.calculating_route))
                     }
                 }
                 error != null -> Text(
@@ -131,7 +133,7 @@ fun RouteOptionsScreen(
         }
 
         if (mode == TravelMode.DRIVE && drivingRoute != null) {
-            Box(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+            Box(modifier = Modifier.fillMaxWidth().padding(FutureDimens.screenPadding)) {
                 PrimaryButton(stringResource(R.string.start_navigation), focusRequester = actionFocusRequester) { onStartDriving(drivingRoute!!) }
             }
         }
@@ -165,13 +167,9 @@ private fun ItineraryCard(itinerary: TransitItinerary, onClick: () -> Unit, focu
     FocusableItem(
         onClick = onClick,
         accentColor = MaterialTheme.colorScheme.primary,
-        idleBackgroundColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
-        focusedBackgroundColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.22f),
-        borderWidth = 2.dp,
-        cornerRadius = FutureShapes.radiusLg,
         focusRequester = focusRequester
     ) {
-        Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
+        Column(modifier = Modifier.fillMaxWidth().padding(FutureDimens.spacingSm)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = "%d דק׳".format((itinerary.totalDurationSeconds / 60)),
@@ -182,7 +180,7 @@ private fun ItineraryCard(itinerary: TransitItinerary, onClick: () -> Unit, focu
                 Text(
                     text = "הגעה " + secondsToClock(itinerary.arrivalSeconds),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             Spacer(modifier = Modifier.height(4.dp))
@@ -193,7 +191,7 @@ private fun ItineraryCard(itinerary: TransitItinerary, onClick: () -> Unit, focu
             Text(
                 text = stringResource(R.string.schedule_disclaimer),
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
             )
         }
     }
@@ -201,24 +199,7 @@ private fun ItineraryCard(itinerary: TransitItinerary, onClick: () -> Unit, focu
 
 @Composable
 private fun PrimaryButton(label: String, focusRequester: FocusRequester? = null, onClick: () -> Unit) {
-    FocusableItem(
-        onClick = onClick,
-        accentColor = MaterialTheme.colorScheme.primary,
-        idleBackgroundColor = MaterialTheme.colorScheme.primary,
-        focusedBackgroundColor = MaterialTheme.colorScheme.primary,
-        cornerRadius = FutureShapes.radiusLg,
-        scaleOnFocus = false,
-        modifier = Modifier.fillMaxWidth(),
-        focusRequester = focusRequester
-    ) {
-        Text(
-            label,
-            modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-            color = MaterialTheme.colorScheme.onPrimary,
-            fontWeight = FontWeight.Bold
-        )
-    }
+    FutureButton(label, LocalFutureTheme.current, onClick, fillMaxWidth = true, focusRequester = focusRequester)
 }
 
 private fun secondsToClock(seconds: Int): String {

@@ -21,19 +21,19 @@ object FutureShapes {
     /** פסי התקדמות, מדדים דקים, תגיות זעירות. */
     val radiusXs: Dp = 4.dp
 
-    /** מקשים ופריטי רשת קטנים. */
+    /** שורת רשימה (FocusableItem), מקשים ופריטי רשת קטנים (--fos-radius-item). */
     val radiusSm: Dp = 8.dp
 
     /** שדה קלט (BasicTextField). */
     val radiusTextField: Dp = 10.dp
 
-    /** כפתורים, שורות רשימה, פריט בשורת לשוניות. */
+    /** פריט בשורת לשוניות (--fos-radius-tab). */
     val radiusMd: Dp = 12.dp
 
     /** צ'יפ (GalleryTabChip). */
     val radiusChip: Dp = 14.dp
 
-    /** כרטיסים ופאנלים. */
+    /** כרטיסים, פאנלים, שורת מחוון (--fos-radius-card). */
     val radiusLg: Dp = 16.dp
 
     /** דיאלוג ותפריט אפשרויות. */
