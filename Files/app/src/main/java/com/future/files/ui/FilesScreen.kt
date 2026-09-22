@@ -1,4 +1,20 @@
 package com.future.files.ui
+import com.future.sharednav.components.FutureButton
+import com.future.sharednav.components.EmptyState
+import com.future.sharednav.components.FutureSpinner
+import com.future.sharednav.components.FutureOptionsMenu
+import com.future.sharednav.components.FutureMenuRow
+import com.future.sharednav.components.FutureDialog
+import com.future.sharednav.components.FutureDetailRow
+import com.future.sharednav.components.InputDialog
+import com.future.sharednav.components.FutureAvatar
+import com.future.sharednav.components.AvatarListSize
+import com.future.sharednav.components.FutureCheckbox
+import com.future.sharednav.focus.FocusableItem
+import com.future.sharednav.theme.FutureDimens
+import com.future.sharednav.theme.scrimColor
+import com.future.sharednav.theme.mutedTextColor
+import androidx.compose.foundation.layout.heightIn
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.components.MarqueeText
@@ -214,24 +230,14 @@ fun FilesScreen(
                     ) {
                         Text("כדי לגשת לקבצים צריך לאשר הרשאת ניהול קבצים", color = theme.textColor.copy(alpha = 0.7f), fontSize = FutureTypography.bodyLarge)
                         Spacer(modifier = Modifier.height(16.dp))
-                        val interactionSource = remember { MutableInteractionSource() }
-                        val isFocused by interactionSource.collectIsFocusedAsState()
-                        val bgColor by animateColorAsState(if (isFocused) theme.accentColor else theme.accentColor.copy(alpha = 0.7f), label = "btnBg")
-                        Box(
-                            modifier = Modifier
-                                .clip(FutureShapes.xl)
-                                .background(bgColor)
-                                .clickable(interactionSource = interactionSource, indication = null, onClick = onRequestAccess)
-                                .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
-                                .padding(horizontal = 24.dp, vertical = 12.dp)
-                        ) {
-                            Text("אשר הרשאה", color = Color.Black, fontWeight = FontWeight.Bold)
-                        }
+                        FutureButton("אשר הרשאה", theme, onRequestAccess)
                     }
                 } else if (entries.isEmpty()) {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("התיקייה ריקה", color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.bodyLarge)
-                    }
+                    EmptyState(
+                        icon = Icons.Rounded.Folder,
+                        title = "התיקייה ריקה",
+                        textColor = theme.textColor,
+                    )
                 } else {
                     LazyColumn(
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
@@ -327,14 +333,15 @@ fun FilesScreen(
             }
 
             if (isBusy) {
-                Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)), contentAlignment = Alignment.Center) {
+                // המתנה בלי אורך ידוע: ההכהיה של הדיאלוג (60%) וספינר, על משטח של דיאלוג.
+                Box(modifier = Modifier.fillMaxSize().background(theme.scrimColor), contentAlignment = Alignment.Center) {
                     Box(
                         modifier = Modifier
-                            .clip(FutureShapes.lg)
+                            .clip(FutureShapes.dialog)
                             .background(theme.surfaceColor)
-                            .padding(horizontal = 24.dp, vertical = 16.dp)
+                            .padding(horizontal = FutureDimens.spacingXl, vertical = FutureDimens.spacingLg)
                     ) {
-                        Text("מבצע פעולה...", color = theme.textColor, fontSize = FutureTypography.body)
+                        FutureSpinner(theme = theme, label = "מבצע פעולה")
                     }
                 }
             }
@@ -349,6 +356,12 @@ private fun FocusableIconButton(icon: ImageVector, contentDescription: String, t
     com.future.sharednav.components.TopBarIconButton(icon, contentDescription, theme.textColor, theme.accentColor, onClick)
 }
 
+/**
+ * שורת קובץ - שורת הרשימה של הדיזיין סיסטם (FocusableItem: 14% הדגשה, מסגרת
+ * 1.5dp, 1.02). בחירה מרובה מסומנת בתיבת סימון בתחילת השורה (Checkbox.jsx -
+ * "bulk-delete"), ולא ב-35% הדגשה על כל השורה. אייקון תיקייה/סוג בצבע
+ * הטקסט, לא בהדגשה.
+ */
 @Composable
 private fun FileRow(
     entry: FileEntry,
@@ -362,28 +375,15 @@ private fun FileRow(
     onFocusChanged: (Boolean) -> Unit = {},
     focusRequester: FocusRequester? = null,
 ) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
+    var isFocused by remember { mutableStateOf(false) }
     LaunchedEffect(isFocused) { onFocusChanged(isFocused) }
-    val shape = FutureShapes.lg
-    val bgColor by animateColorAsState(
-        if (isSelected) theme.accentColor.copy(alpha = 0.35f)
-        else if (isFocused) theme.accentColor.copy(alpha = 0.22f)
-        else theme.textColor.copy(alpha = 0.06f),
-        label = "rowBg"
-    )
-    val scale by animateFloatAsState(if (isFocused) 1.02f else 1f, label = "rowScale")
-
-    Row(
+    FocusableItem(
+        onClick = onClick,
+        accentColor = theme.accentColor,
+        contentPadding = 0.dp,
+        focusRequester = focusRequester,
         modifier = Modifier
             .fillMaxWidth()
-            .graphicsLayer { scaleX = scale; scaleY = scale }
-            .clip(shape)
-            .background(bgColor)
-            .then(if (isFocused) Modifier.border(2.dp, theme.accentColor, shape) else Modifier)
-            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
             .onKeyEvent { event ->
                 if (isFocused && event.type == KeyEventType.KeyUp) {
                     when (event.key) {
@@ -392,27 +392,34 @@ private fun FileRow(
                         else -> false
                     }
                 } else false
+            },
+    ) { focused ->
+        LaunchedEffect(focused) { isFocused = focused }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = FutureDimens.rowHeightList)
+                .padding(horizontal = FutureDimens.spacingMd, vertical = FutureDimens.spacingSm),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingMd),
+        ) {
+            when {
+                isSelected -> Box(modifier = Modifier.size(AvatarListSize), contentAlignment = Alignment.Center) {
+                    FutureCheckbox(checked = true, theme = theme)
+                }
+                entry.isDirectory -> FutureAvatar(theme = theme, icon = Icons.Rounded.Folder)
+                else -> FilePreviewIcon(entry, theme)
             }
-            .padding(horizontal = 14.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        if (isSelected) {
-            Icon(Icons.Rounded.CheckCircle, contentDescription = null, tint = theme.accentColor, modifier = Modifier.size(24.dp))
-        } else if (entry.isDirectory) {
-            Icon(Icons.Rounded.Folder, contentDescription = null, tint = theme.accentColor, modifier = Modifier.size(24.dp))
-        } else {
-            FilePreviewIcon(entry, theme)
-        }
-        Spacer(modifier = Modifier.width(14.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            MarqueeText(
-                text = displayName,
-                color = theme.textColor,
-                isFocused = isFocused,
-                style = androidx.compose.ui.text.TextStyle(fontSize = FutureTypography.body),
-            )
-            if (!entry.isDirectory) {
-                Text(repository.formatSize(entry.sizeBytes), color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.caption)
+            Column(modifier = Modifier.weight(1f)) {
+                MarqueeText(
+                    text = displayName,
+                    color = theme.textColor,
+                    isFocused = focused,
+                    style = androidx.compose.ui.text.TextStyle(fontSize = FutureTypography.title, fontWeight = FutureTypography.weightMedium),
+                )
+                if (!entry.isDirectory) {
+                    Text(repository.formatSize(entry.sizeBytes), color = theme.mutedTextColor, fontSize = FutureTypography.summary)
+                }
             }
         }
     }
@@ -433,10 +440,10 @@ private fun FilePreviewIcon(entry: FileEntry, theme: FutureTheme) {
                 bitmap = bitmap.asImageBitmap(),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
-                modifier = Modifier.size(36.dp).clip(FutureShapes.sm)
+                modifier = Modifier.size(AvatarListSize).clip(FutureShapes.sm)
             )
         } else {
-            Icon(Icons.Rounded.Image, contentDescription = null, tint = theme.textColor.copy(alpha = 0.7f), modifier = Modifier.size(24.dp))
+            FutureAvatar(theme = theme, icon = Icons.Rounded.Image)
         }
     } else {
         val icon = when (category) {
@@ -446,7 +453,7 @@ private fun FilePreviewIcon(entry: FileEntry, theme: FutureTheme) {
             FileCategory.APK -> Icons.Rounded.Android
             else -> Icons.Rounded.Description
         }
-        Icon(icon, contentDescription = null, tint = theme.textColor.copy(alpha = 0.7f), modifier = Modifier.size(24.dp))
+        FutureAvatar(theme = theme, icon = icon)
     }
 }
 
@@ -464,152 +471,52 @@ private fun FileOptionsMenu(
     onDetails: () -> Unit,
     onDelete: () -> Unit
 ) {
-    AppDialog(onDismissRequest = onDismiss) {
-        Column(
-            modifier = Modifier
-                .clip(FutureShapes.xl)
-                .background(theme.surfaceColor)
-                .padding(vertical = 8.dp)
-        ) {
-            Text(entryName, color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.label, maxLines = 1, modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp))
-            if (!isDirectory) {
-                MenuRow("שתף", Icons.Rounded.Share, theme, onShare)
-                MenuRow("פתח באפליקציה חיצונית", Icons.Rounded.OpenInNew, theme, onOpenExternally)
-            }
-            MenuRow("שנה שם", Icons.Rounded.DriveFileRenameOutline, theme, onRename)
-            MenuRow("העתק", Icons.Rounded.ContentCopy, theme, onCopy)
-            MenuRow("העבר", Icons.Rounded.DriveFileMove, theme, onMove)
-            MenuRow("פרטים", Icons.Rounded.Info, theme, onDetails)
-            MenuRow("מחק", Icons.Rounded.Delete, theme, onDelete, isDestructive = true)
+    FutureOptionsMenu(theme = theme, onDismissRequest = onDismiss, header = entryName) {
+        if (!isDirectory) {
+            FutureMenuRow("שתף", Icons.Rounded.Share, theme, onShare)
+            FutureMenuRow("פתח באפליקציה חיצונית", Icons.Rounded.OpenInNew, theme, onOpenExternally)
         }
+        FutureMenuRow("שנה שם", Icons.Rounded.DriveFileRenameOutline, theme, onRename)
+        FutureMenuRow("העתק", Icons.Rounded.ContentCopy, theme, onCopy)
+        FutureMenuRow("העבר", Icons.Rounded.DriveFileMove, theme, onMove)
+        FutureMenuRow("פרטים", Icons.Rounded.Info, theme, onDetails)
+        FutureMenuRow("מחק", Icons.Rounded.Delete, theme, onDelete, destructive = true)
     }
 }
 
 @Composable
 private fun FileDetailsDialog(entry: FileEntry, displayName: String, repository: FileRepository, theme: FutureTheme, onDismiss: () -> Unit) {
-    AppDialog(onDismissRequest = onDismiss) {
-        Column(
-            modifier = Modifier
-                .clip(FutureShapes.xl)
-                .background(theme.surfaceColor)
-                .padding(20.dp)
-        ) {
-            Text(displayName, color = theme.textColor, fontWeight = FontWeight.Bold, fontSize = FutureTypography.bodyLarge, maxLines = 2)
-            Spacer(modifier = Modifier.height(14.dp))
-            DetailRow("סוג", if (entry.isDirectory) "תיקייה" else "קובץ", theme)
-            if (!entry.isDirectory) {
-                DetailRow("גודל", repository.formatSize(entry.sizeBytes), theme)
-            }
-            DetailRow("נתיב", entry.file.absolutePath, theme)
-            DetailRow(
-                "שונה לאחרונה",
-                android.text.format.DateFormat.format("dd/MM/yyyy HH:mm", entry.file.lastModified()).toString(),
-                theme
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            DialogButton("סגור", theme.accentColor, onDismiss)
-        }
-    }
-}
-
-@Composable
-private fun DetailRow(label: String, value: String, theme: FutureTheme) {
-    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
-        Text(label, color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.caption)
-        Text(value, color = theme.textColor, fontSize = FutureTypography.summary)
-    }
-}
-
-@Composable
-private fun MenuRow(label: String, icon: ImageVector, theme: FutureTheme, onClick: () -> Unit, isDestructive: Boolean = false) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val bgColor by animateColorAsState(if (isFocused) theme.textColor.copy(alpha = 0.12f) else Color.Transparent, label = "menuRowBg")
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(bgColor)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
-            .padding(horizontal = 20.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically
+    FutureDialog(
+        theme = theme,
+        onDismissRequest = onDismiss,
+        title = displayName,
+        buttons = { FutureButton("סגור", theme, onDismiss) },
     ) {
-        Icon(icon, contentDescription = null, tint = if (isDestructive) theme.dangerColor else theme.textColor, modifier = Modifier.size(20.dp))
-        Spacer(modifier = Modifier.width(14.dp))
-        Text(label, color = if (isDestructive) theme.dangerColor else theme.textColor, fontSize = FutureTypography.bodyLarge)
+        FutureDetailRow("סוג", if (entry.isDirectory) "תיקייה" else "קובץ", theme)
+        if (!entry.isDirectory) {
+            FutureDetailRow("גודל", repository.formatSize(entry.sizeBytes), theme)
+        }
+        FutureDetailRow("נתיב", entry.file.absolutePath, theme)
+        FutureDetailRow(
+            "שונה לאחרונה",
+            android.text.format.DateFormat.format("dd/MM/yyyy HH:mm", entry.file.lastModified()).toString(),
+            theme
+        )
     }
 }
+
+
+
+
 
 @Composable
 private fun NameInputDialog(title: String, initialValue: String, theme: FutureTheme, onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
-    var text by remember { mutableStateOf(initialValue) }
-    val focusRequester = remember { FocusRequester() }
-    LaunchedEffect(Unit) { focusRequester.requestFocus() }
-
-    AppDialog(onDismissRequest = onDismiss) {
-        Column(
-            modifier = Modifier
-                .clip(FutureShapes.xl)
-                .background(theme.surfaceColor)
-                .padding(20.dp)
-        ) {
-            Text(title, color = theme.textColor, fontWeight = FontWeight.Bold, fontSize = FutureTypography.bodyLarge)
-            Spacer(modifier = Modifier.height(12.dp))
-            BasicTextField(
-                value = text,
-                onValueChange = { text = it },
-                textStyle = androidx.compose.ui.text.TextStyle(color = theme.textColor, fontSize = FutureTypography.bodyLarge),
-                cursorBrush = androidx.compose.ui.graphics.SolidColor(theme.accentColor),
-                singleLine = true,
-                modifier = Modifier
-                    .escapeTextFieldFocusTrap()
-                    .fillMaxWidth()
-                    .focusRequester(focusRequester)
-                    .background(theme.textColor.copy(alpha = 0.08f), FutureShapes.sm)
-                    .padding(12.dp)
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                DialogButton("ביטול", theme.textColor.copy(alpha = 0.7f), onDismiss)
-                DialogButton("אישור", theme.accentColor, { onConfirm(text) })
-            }
-        }
-    }
+    InputDialog(title = title, theme = theme, initialValue = initialValue, onDismiss = onDismiss, onConfirm = onConfirm)
 }
 
 @Composable
 private fun ConfirmDialog(message: String, theme: FutureTheme, onCancel: () -> Unit, onConfirm: () -> Unit) {
-    AppDialog(onDismissRequest = onCancel) {
-        Column(
-            modifier = Modifier
-                .clip(FutureShapes.xl)
-                .background(theme.surfaceColor)
-                .padding(20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(message, color = theme.textColor, fontWeight = FontWeight.Bold, fontSize = FutureTypography.bodyLarge)
-            Spacer(modifier = Modifier.height(16.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                DialogButton("ביטול", theme.textColor.copy(alpha = 0.7f), onCancel)
-                DialogButton("מחק", theme.dangerColor, onConfirm)
-            }
-        }
-    }
+    com.future.sharednav.components.ConfirmDialog(message = message, theme = theme, onCancel = onCancel, onConfirm = onConfirm, destructive = true)
 }
 
-@Composable
-private fun DialogButton(text: String, color: Color, onClick: () -> Unit) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val bgColor by animateColorAsState(if (isFocused) color else color.copy(alpha = 0.7f), label = "dialogBtnBg")
-    Box(
-        modifier = Modifier
-            .clip(FutureShapes.xl)
-            .background(bgColor)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
-            .padding(horizontal = 24.dp, vertical = 12.dp)
-    ) {
-        Text(text, color = Color.Black, fontWeight = FontWeight.Bold)
-    }
-}
+

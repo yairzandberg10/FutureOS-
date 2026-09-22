@@ -1,4 +1,15 @@
 package com.future.music.ui.screens
+import com.future.sharednav.components.FutureProgressBar
+import com.future.sharednav.components.FutureDialog
+import com.future.sharednav.components.FutureButton
+import com.future.sharednav.components.FutureListItem
+import com.future.sharednav.components.FutureCheckbox
+import com.future.sharednav.theme.FutureDimens
+import com.future.sharednav.theme.FutureMotion
+import com.future.sharednav.theme.idleFieldColor
+import com.future.sharednav.theme.readableAccentColor
+import com.future.sharednav.theme.onReadableAccentColor
+import com.future.sharednav.theme.mutedTextColor
 
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
@@ -203,12 +214,7 @@ fun NowPlayingScreen(
             if (song != null) {
                 Spacer(modifier = Modifier.height(10.dp))
                 val progress = if (playerState.durationMs > 0) (playerState.positionMs.toFloat() / playerState.durationMs.toFloat()).coerceIn(0f, 1f) else 0f
-                LinearProgressIndicator(
-                    progress = { progress },
-                    modifier = Modifier.fillMaxWidth().height(4.dp).clip(FutureShapes.xs),
-                    color = theme.accentColor,
-                    trackColor = theme.textColor.copy(alpha = 0.12f),
-                )
+                FutureProgressBar(progress = progress, theme = theme)
                 Row(modifier = Modifier.fillMaxWidth().padding(top = 2.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(formatDuration(playerState.positionMs), color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.caption)
                     Text(formatDuration(playerState.durationMs), color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.caption)
@@ -296,14 +302,24 @@ private fun RoundIconButton(
         if (hasEmittedFocusChange || isFocused) onFocusChanged(isFocused)
         hasEmittedFocusChange = true
     }
-    val bg = when {
-        filled -> theme.accentColor
-        active -> theme.accentColor.copy(alpha = 0.3f)
-        else -> theme.textColor.copy(alpha = 0.08f)
-    }
-    val tint = if (filled) theme.backgroundColor else if (active) theme.accentColor else theme.textColor
+    // כפתור אייקון של הדיזיין סיסטם (IconButton.jsx): 8% במנוחה, 30% הדגשה
+    // בפוקוס. "מלא" (נגן/השהה) הוא הכפתור הראשי - מילוי בהדגשה המתוקנת ודיו
+    // שמתאים לה, ובפוקוס מסגרת 2dp בצבע הטקסט. "פעיל" (ערבוב/חזרה) = נבחר,
+    // ולכן האייקון בהדגשה.
+    val accent = theme.readableAccentColor
+    val bg by animateColorAsState(
+        when {
+            filled -> accent
+            isFocused -> accent.copy(alpha = 0.30f)
+            else -> theme.idleFieldColor
+        },
+        FutureMotion.focusColorSpec,
+        label = "roundIconBtnBg",
+    )
+    val tint = if (filled) theme.onReadableAccentColor else if (active) accent else theme.textColor
     val focusBorderColor by animateColorAsState(
-        if (isFocused) theme.accentColor else androidx.compose.ui.graphics.Color.Transparent,
+        if (isFocused && filled) theme.textColor else androidx.compose.ui.graphics.Color.Transparent,
+        FutureMotion.focusColorSpec,
         label = "roundIconBtnFocusBorder",
     )
     Box(
@@ -311,7 +327,7 @@ private fun RoundIconButton(
             .size(size)
             .clip(CircleShape)
             .background(bg)
-            .border(width = 2.dp, color = focusBorderColor, shape = CircleShape)
+            .border(width = FutureDimens.focusBorderControl, color = focusBorderColor, shape = CircleShape)
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
             .focusable(interactionSource = interactionSource).bringIntoViewOnFocus(),
@@ -321,6 +337,7 @@ private fun RoundIconButton(
     }
 }
 
+/** הוספה לפלייליסטים - דיאלוג של הדיזיין סיסטם; כל פלייליסט הוא שורה עם תיבת סימון בסופה. */
 @Composable
 private fun AddToPlaylistDialog(
     playlists: List<Playlist>,
@@ -329,37 +346,32 @@ private fun AddToPlaylistDialog(
     onToggle: (Long) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    androidx.compose.material3.AlertDialog(
+    FutureDialog(
+        theme = theme,
         onDismissRequest = onDismiss,
-        containerColor = theme.surfaceColor,
-        title = { Text("הוספה לפלייליסט", color = theme.textColor) },
-        text = {
-            if (playlists.isEmpty()) {
-                Text("אין עדיין פלייליסטים - צרו אחד ממסך הפלייליסטים", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.summary)
-            } else {
-                Column {
-                    playlists.forEach { playlist ->
-                        val checked = currentSongId != null && currentSongId in playlist.songIds
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { onToggle(playlist.id) }
-                                .padding(vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Checkbox(
-                                checked = checked,
-                                onCheckedChange = { onToggle(playlist.id) },
-                                colors = CheckboxDefaults.colors(checkedColor = theme.accentColor),
-                            )
-                            Text(playlist.name, color = theme.textColor, fontSize = FutureTypography.body)
-                        }
-                    }
+        title = "הוספה לפלייליסט",
+        buttons = { FutureButton("סגור", theme, onDismiss) },
+    ) {
+        if (playlists.isEmpty()) {
+            Text(
+                "אין פלייליסטים",
+                color = theme.mutedTextColor,
+                fontSize = FutureTypography.body,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        } else {
+            Column(verticalArrangement = Arrangement.spacedBy(FutureDimens.spacingXs)) {
+                playlists.forEach { playlist ->
+                    val checked = currentSongId != null && currentSongId in playlist.songIds
+                    FutureListItem(
+                        title = playlist.name,
+                        theme = theme,
+                        onClick = { onToggle(playlist.id) },
+                        trailing = { FutureCheckbox(checked, theme) },
+                    )
                 }
             }
-        },
-        confirmButton = {
-            androidx.compose.material3.TextButton(onClick = onDismiss) { Text("סגור", color = theme.accentColor) }
-        },
-    )
+        }
+    }
 }

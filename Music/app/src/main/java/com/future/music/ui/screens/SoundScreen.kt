@@ -1,4 +1,5 @@
 package com.future.music.ui.screens
+import com.future.sharednav.theme.subtleTextColor
 
 import com.future.sharednav.theme.FutureTypography
 import androidx.compose.foundation.layout.Column
@@ -103,7 +104,7 @@ fun SoundScreen(theme: FutureTheme, onBack: () -> Unit, onSelectPreset: (Int) ->
                             Text(preset.label, color = theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Medium)
                             Text(preset.subtitle, color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.label)
                         }
-                        Text(preset.digit, color = theme.textColor.copy(alpha = 0.35f), fontSize = FutureTypography.summary)
+                        Text(preset.digit, color = theme.subtleTextColor, fontSize = FutureTypography.summary)
                     }
                 }
             }

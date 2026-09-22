@@ -1,4 +1,5 @@
 package com.future.music.ui.components
+import com.future.sharednav.theme.idleChipColor
 
 import com.future.sharednav.theme.FutureShapes
 import androidx.compose.foundation.layout.BoxScope
@@ -9,11 +10,9 @@ import androidx.compose.ui.unit.dp
 import com.future.sharednav.theme.FutureTheme
 import com.future.sharednav.focus.FocusableItem as SharedFocusableItem
 
-/** עטיפה דקה סביב הרכיב המשותף (מודול SharedKeypadNav) ששומרת על חתימת
- * הקריאה המקורית של Music (theme: FutureTheme) כך שכל אתרי הקריאה במסכים
- * נשארים ללא שינוי - היא רק ממפה את צבעי ה-theme של Music לפרמטרים
- * הפרימיטיביים שהרכיב המשותף מצפה להם. המראה המקורי נשמר במדויק: בלי
- * אנימציית scale, פינות 16dp, בורדר 2dp בפוקוס, בלי ריפוד תוכן. */
+/** עטיפה דקה סביב שורת הרשימה המשותפת. אריח במנוחה (6%), ובפוקוס כמו כל
+ * שורת רשימה במערכת - 14% הדגשה, מסגרת 1.5dp והגדלה 1.02. קודם הפוקוס כאן
+ * היה 14% מצבע *הטקסט* עם מסגרת 2dp ובלי הגדלה, בפינות 16dp. */
 @Composable
 fun FocusableItem(
     onClick: () -> Unit,
@@ -26,12 +25,7 @@ fun FocusableItem(
         onClick = onClick,
         accentColor = theme.accentColor,
         modifier = modifier,
-        idleBackgroundColor = theme.textColor.copy(alpha = 0.05f),
-        focusedBackgroundColor = theme.textColor.copy(alpha = 0.14f),
-        borderColor = theme.accentColor,
-        borderWidth = 2.dp,
-        cornerRadius = FutureShapes.radiusLg,
-        scaleOnFocus = false,
+        idleBackgroundColor = theme.idleChipColor,
         contentPadding = 0.dp,
         focusRequester = focusRequester,
         content = content,

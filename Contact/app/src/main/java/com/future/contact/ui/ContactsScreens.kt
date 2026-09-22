@@ -1,4 +1,19 @@
 package com.future.contact.ui
+import com.future.sharednav.components.FutureAvatar
+import com.future.sharednav.components.FutureDialog
+import com.future.sharednav.components.FutureButtonVariant
+import com.future.sharednav.components.FutureFormField
+import com.future.sharednav.components.ConfirmDialog
+import com.future.sharednav.components.FutureOptionsMenu
+import com.future.sharednav.components.FutureMenuRow
+import com.future.sharednav.theme.secondaryTextColor
+import com.future.sharednav.theme.mutedTextColor
+import com.future.sharednav.theme.FutureMotion
+import com.future.sharednav.theme.readableAccentColor
+import com.future.sharednav.theme.idleChipColor
+import com.future.sharednav.theme.FutureDimens
+import com.future.sharednav.focus.focusMotion
+import com.future.sharednav.components.FutureButton
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.focus.bringIntoViewOnFocus
@@ -210,7 +225,7 @@ fun ContactsListScreen(
                     ) {
                         Text(t9Query, color = theme.textColor, fontWeight = FontWeight.Bold, fontSize = FutureTypography.bodyLarge)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("${filteredContacts.size} תוצאות", color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.label)
+                        Text("${filteredContacts.size} תוצאות", color = theme.mutedTextColor, fontSize = FutureTypography.label)
                     }
                 }
 
@@ -269,18 +284,7 @@ private fun PermissionRequiredMessage(theme: FutureTheme, onRequestPermission: (
             fontSize = FutureTypography.bodyLarge
         )
         Spacer(modifier = Modifier.height(16.dp))
-        val interactionSource = remember { MutableInteractionSource() }
-        val isFocused by interactionSource.collectIsFocusedAsState()
-        Box(
-            modifier = Modifier
-                .clip(FutureShapes.xl)
-                .background(if (isFocused) theme.accentColor else theme.accentColor.copy(alpha = 0.7f))
-                .clickable(interactionSource = interactionSource, indication = null, onClick = onRequestPermission)
-                .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
-                .padding(horizontal = 24.dp, vertical = 12.dp)
-        ) {
-            Text("אשר הרשאה", color = Color.Black, fontWeight = FontWeight.Bold)
-        }
+        FutureButton("אשר הרשאה", theme, onRequestPermission)
     }
 }
 
@@ -296,9 +300,10 @@ private fun ContactRow(
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
     LaunchedEffect(isFocused) { if (isFocused) onFocused() }
-    val shape = FutureShapes.lg
+    val shape = FutureShapes.sm
     val bgColor by animateColorAsState(
-        if (isFocused) theme.textColor.copy(alpha = 0.16f) else theme.textColor.copy(alpha = 0.06f),
+        if (isFocused) theme.readableAccentColor.copy(alpha = 0.14f) else theme.idleChipColor,
+        FutureMotion.focusColorSpec,
         label = "rowBg"
     )
     val scale by animateFloatAsState(if (isFocused) 1.02f else 1f, label = "rowScale")
@@ -309,7 +314,7 @@ private fun ContactRow(
             .graphicsLayer { scaleX = scale; scaleY = scale }
             .clip(shape)
             .background(bgColor)
-            .then(if (isFocused) Modifier.border(2.dp, theme.accentColor, shape) else Modifier)
+            .then(if (isFocused) Modifier.border(FutureDimens.focusBorderItem, theme.readableAccentColor, shape) else Modifier)
             .let { if (focusRequester != null) it.focusRequester(focusRequester) else it }
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
             .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
@@ -322,17 +327,12 @@ private fun ContactRow(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier.size(40.dp).clip(CircleShape).background(theme.textColor.copy(alpha = 0.12f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(contact.name.take(1).uppercase(), color = theme.textColor, fontWeight = FontWeight.Bold)
-        }
+        FutureAvatar(theme = theme, name = contact.name)
         Spacer(modifier = Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(contact.name, color = theme.textColor, fontWeight = FontWeight.SemiBold, fontSize = FutureTypography.bodyLarge)
             if (contact.phoneNumbers.isNotEmpty()) {
-                Text(contact.phoneNumbers.first(), color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.label)
+                Text(contact.phoneNumbers.first(), color = theme.mutedTextColor, fontSize = FutureTypography.label)
             }
         }
         if (contact.isFavorite) {
@@ -399,12 +399,7 @@ fun ContactDetailScreen(contact: Contact, theme: FutureTheme, onBack: () -> Unit
                     .padding(horizontal = 24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Box(
-                    modifier = Modifier.size(88.dp).clip(CircleShape).background(theme.textColor.copy(alpha = 0.12f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Rounded.Person, contentDescription = null, tint = theme.textColor, modifier = Modifier.size(44.dp))
-                }
+                FutureAvatar(theme = theme, name = contact.name, size = 88.dp)
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(contact.name, fontSize = FutureTypography.headline, fontWeight = FontWeight.Bold, color = theme.textColor)
                 Spacer(modifier = Modifier.height(24.dp))
@@ -415,7 +410,7 @@ fun ContactDetailScreen(contact: Contact, theme: FutureTheme, onBack: () -> Unit
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(number, color = theme.textColor.copy(alpha = 0.8f), fontSize = FutureTypography.bodyLarge)
+                        Text(number, color = theme.secondaryTextColor, fontSize = FutureTypography.bodyLarge)
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             FocusableIconButton(icon = Icons.AutoMirrored.Rounded.Message, theme = theme, onClick = {
                                 val intent = Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:$number"))
@@ -483,7 +478,7 @@ private fun DetailInfoRow(icon: androidx.compose.ui.graphics.vector.ImageVector,
     ) {
         Icon(icon, contentDescription = null, tint = theme.textColor.copy(alpha = 0.6f), modifier = Modifier.size(18.dp))
         Spacer(modifier = Modifier.width(12.dp))
-        Text(text, color = theme.textColor.copy(alpha = 0.85f), fontSize = FutureTypography.body)
+        Text(text, color = theme.textColor, fontSize = FutureTypography.body)
     }
 }
 
@@ -495,105 +490,43 @@ private fun ContactEditDetailsDialog(initial: ContactDetails, theme: FutureTheme
     var address by remember { mutableStateOf(initial.address) }
     var notes by remember { mutableStateOf(initial.notes) }
 
-    AppDialog(onDismissRequest = onDismiss) {
-        Column(
-            modifier = Modifier
-                .escapeTextFieldFocusTrap()
-                .clip(FutureShapes.xl)
-                .background(theme.surfaceColor)
-                .padding(20.dp)
-        ) {
-            Text("עריכת פרטים", color = theme.textColor, fontWeight = FontWeight.Bold, fontSize = FutureTypography.bodyLarge)
-            Spacer(modifier = Modifier.height(16.dp))
+    FutureDialog(
+        theme = theme,
+        onDismissRequest = onDismiss,
+        title = "עריכת פרטים",
+        buttons = {
+            FutureButton("ביטול", theme, onDismiss, variant = FutureButtonVariant.Secondary)
+            FutureButton("שמור", theme, { onSave(ContactDetails(email, organization, jobTitle, address, notes)) })
+        },
+    ) {
+        Column(modifier = Modifier.escapeTextFieldFocusTrap()) {
             EditField("אימייל", email, theme) { email = it }
             EditField("ארגון", organization, theme) { organization = it }
             EditField("תפקיד", jobTitle, theme) { jobTitle = it }
             EditField("כתובת", address, theme) { address = it }
             EditField("הערות", notes, theme) { notes = it }
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                EditDialogButton("ביטול", theme.textColor.copy(alpha = 0.15f), theme.textColor, onClick = onDismiss)
-                EditDialogButton("שמור", theme.accentColor, Color.Black, onClick = {
-                    onSave(ContactDetails(email, organization, jobTitle, address, notes))
-                })
-            }
         }
     }
 }
 
 @Composable
 private fun EditField(label: String, value: String, theme: FutureTheme, onValueChange: (String) -> Unit) {
-    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
-        Text(label, color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.caption)
-        BasicTextField(
-            value = value,
-            onValueChange = onValueChange,
-            textStyle = TextStyle(color = theme.textColor, fontSize = FutureTypography.body),
-            cursorBrush = SolidColor(theme.accentColor),
-            singleLine = true,
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(theme.textColor.copy(alpha = 0.06f), FutureShapes.sm)
-                .padding(10.dp)
-        )
-    }
+    FutureFormField(label, value, onValueChange, theme, modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp))
 }
 
-@Composable
-private fun EditDialogButton(text: String, bg: Color, fg: Color, focusRequester: FocusRequester? = null, onClick: () -> Unit) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val bgColor by animateColorAsState(if (isFocused) bg else bg.copy(alpha = bg.alpha * 0.7f), label = "editDialogBtnBg")
-    Box(
-        modifier = Modifier
-            .clip(FutureShapes.lg)
-            .background(bgColor)
-            .let { if (focusRequester != null) it.focusRequester(focusRequester) else it }
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
-            .padding(horizontal = 20.dp, vertical = 10.dp)
-    ) {
-        Text(text, color = fg, fontWeight = FontWeight.Bold, fontSize = FutureTypography.summary)
-    }
-}
+
 
 /** דיאלוג אישור לפני מחיקת איש קשר - מחיקה היא פעולה בלתי הפיכה, ולפני
  * התיקון היא הייתה מתבצעת מיידית מתפריט האפשרויות בלי אף שלב אישור. ברירת
  * המחדל לפוקוס D-pad היא "ביטול", כדי שלחיצה בטעות על מרכז המקלדת לא תמחק. */
+/** דיאלוג אישור לפני מחיקת איש קשר - ConfirmDialog של הדיזיין סיסטם; השאלה
+ * בנוסח שלו ("למחוק את X?"), והתשובות בפעלים. */
 @Composable
 private fun DeleteConfirmationDialog(contactName: String, theme: FutureTheme, onConfirm: () -> Unit, onCancel: () -> Unit) {
-    val cancelFocusRequester = remember { FocusRequester() }
-    LaunchedEffect(Unit) { cancelFocusRequester.requestFocus() }
-
-    AppDialog(onDismissRequest = onCancel) {
-        Column(
-            modifier = Modifier
-                .clip(FutureShapes.xl)
-                .background(theme.surfaceColor)
-                .padding(20.dp)
-        ) {
-            Text("מחיקת איש קשר", color = theme.textColor, fontWeight = FontWeight.Bold, fontSize = FutureTypography.bodyLarge)
-            Spacer(modifier = Modifier.height(10.dp))
-            Text(
-                "האם למחוק לצמיתות את \"$contactName\"?",
-                color = theme.textColor.copy(alpha = 0.7f),
-                fontSize = FutureTypography.body
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                EditDialogButton(
-                    "ביטול",
-                    theme.textColor.copy(alpha = 0.15f),
-                    theme.textColor,
-                    focusRequester = cancelFocusRequester,
-                    onClick = onCancel
-                )
-                EditDialogButton("מחק", theme.dangerColor, Color.White, onClick = onConfirm)
-            }
-        }
-    }
+    ConfirmDialog(message = "למחוק את \"$contactName\"?", theme = theme, onCancel = onCancel, onConfirm = onConfirm)
 }
 
+/** תפריט אפשרויות - נפתח בלחיצה על מקש Options כשאיש קשר בפוקוס. */
 /** תפריט אפשרויות - נפתח בלחיצה על מקש Options כשאיש קשר בפוקוס. */
 @Composable
 private fun ContactOptionsMenu(
@@ -604,50 +537,19 @@ private fun ContactOptionsMenu(
     onDelete: () -> Unit,
     onToggleFavorite: () -> Unit
 ) {
-    AppDialog(onDismissRequest = onDismiss) {
-        Column(
-            modifier = Modifier
-                .clip(FutureShapes.xl)
-                .background(theme.surfaceColor)
-                .padding(vertical = 8.dp)
-        ) {
-            Text(
-                contact.name,
-                color = theme.textColor.copy(alpha = 0.5f),
-                fontSize = FutureTypography.label,
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
-            )
-            MenuOptionRow(
-                if (contact.isFavorite) "הסר ממועדפים" else "הוסף למועדפים",
-                if (contact.isFavorite) Icons.Rounded.Star else Icons.Rounded.StarBorder,
-                theme = theme,
-                onClick = onToggleFavorite
-            )
-            MenuOptionRow("ערוך איש קשר", Icons.Rounded.Edit, theme = theme, onClick = onEdit)
-            MenuOptionRow("מחק איש קשר", Icons.Rounded.Delete, theme = theme, onClick = onDelete, isDestructive = true)
-        }
+    FutureOptionsMenu(theme = theme, onDismissRequest = onDismiss, header = contact.name) {
+        FutureMenuRow(
+            if (contact.isFavorite) "הסר ממועדפים" else "הוסף למועדפים",
+            if (contact.isFavorite) Icons.Rounded.Star else Icons.Rounded.StarBorder,
+            theme,
+            onToggleFavorite,
+        )
+        FutureMenuRow("ערוך איש קשר", Icons.Rounded.Edit, theme, onEdit)
+        FutureMenuRow("מחק איש קשר", Icons.Rounded.Delete, theme, onDelete, destructive = true)
     }
 }
 
-@Composable
-private fun MenuOptionRow(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, theme: FutureTheme, onClick: () -> Unit, isDestructive: Boolean = false) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val bgColor by animateColorAsState(if (isFocused) theme.textColor.copy(alpha = 0.12f) else Color.Transparent, label = "menuRowBg")
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(bgColor)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
-            .padding(horizontal = 20.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(icon, contentDescription = null, tint = if (isDestructive) theme.dangerColor else theme.textColor, modifier = Modifier.size(20.dp))
-        Spacer(modifier = Modifier.width(14.dp))
-        Text(label, color = if (isDestructive) theme.dangerColor else theme.textColor, fontSize = FutureTypography.bodyLarge)
-    }
-}
+
 
 @Composable
 fun FocusableIconButton(
@@ -656,29 +558,5 @@ fun FocusableIconButton(
     onClick: () -> Unit,
     focusRequester: FocusRequester? = null
 ) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val scale by animateFloatAsState(if (isFocused) 1.15f else 1f, label = "iconScale")
-    val bgColor by animateColorAsState(
-        if (isFocused) theme.accentColor.copy(alpha = 0.3f) else theme.textColor.copy(alpha = 0.08f),
-        label = "iconBg"
-    )
-
-    Box(
-        modifier = Modifier
-            .size(40.dp)
-            .graphicsLayerScale(scale)
-            .clip(CircleShape)
-            .background(bgColor)
-            .let { if (focusRequester != null) it.focusRequester(focusRequester) else it }
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus(),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(icon, contentDescription = null, tint = theme.textColor, modifier = Modifier.size(20.dp))
-    }
+    com.future.sharednav.components.TopBarIconButton(icon, "", theme.textColor, theme.accentColor, onClick, focusRequester)
 }
-
-private fun Modifier.graphicsLayerScale(scale: Float): Modifier = this.then(
-    Modifier.graphicsLayer(scaleX = scale, scaleY = scale)
-)

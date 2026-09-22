@@ -1,4 +1,13 @@
 package com.future.music.ui.components
+import com.future.sharednav.components.InputDialog
+import com.future.sharednav.components.FutureDialog
+import com.future.sharednav.components.FutureButton
+import com.future.sharednav.components.FutureButtonVariant
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.mutedTextColor
+import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.ui.text.style.TextAlign
 
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedTextField
@@ -16,6 +25,7 @@ import androidx.compose.ui.focus.focusRequester
 import com.future.sharednav.focus.escapeTextFieldFocusTrap
 import com.future.sharednav.theme.FutureTheme
 
+/** עטיפה סביב InputDialog המשותף - חתימת הקריאה של Music נשמרת. */
 @Composable
 fun NameInputDialog(
     title: String,
@@ -25,36 +35,20 @@ fun NameInputDialog(
     onDismiss: () -> Unit,
     onConfirm: (String) -> Unit,
 ) {
-    var text by remember { mutableStateOf(initialValue) }
-    val fieldFocusRequester = remember { FocusRequester() }
-    LaunchedEffect(Unit) { fieldFocusRequester.requestFocus() }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = theme.surfaceColor,
-        title = { Text(title, color = theme.textColor) },
-        text = {
-            OutlinedTextField(
-                value = text,
-                onValueChange = { text = it },
-                singleLine = true,
-                modifier = androidx.compose.ui.Modifier.escapeTextFieldFocusTrap().focusRequester(fieldFocusRequester),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = theme.textColor,
-                    unfocusedTextColor = theme.textColor,
-                    focusedBorderColor = theme.accentColor,
-                    cursorColor = theme.accentColor,
-                ),
-            )
-        },
-        confirmButton = {
-            TextButton(onClick = { if (text.isNotBlank()) onConfirm(text.trim()) }) {
-                Text(confirmLabel, color = theme.accentColor)
-            }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("ביטול", color = theme.textColor.copy(alpha = 0.6f)) } },
+    InputDialog(
+        title = title,
+        theme = theme,
+        initialValue = initialValue,
+        confirmLabel = confirmLabel,
+        onDismiss = onDismiss,
+        onConfirm = onConfirm,
     )
 }
 
+/**
+ * אישור מחיקה: המשטח והכפתורים של הדיזיין סיסטם (היה AlertDialog עם
+ * TextButton-ים), עם שורת הסבר מתחת לכותרת.
+ */
 @Composable
 fun ConfirmDialog(
     title: String,
@@ -65,18 +59,22 @@ fun ConfirmDialog(
     onConfirm: () -> Unit,
 ) {
     val confirmFocusRequester = remember { FocusRequester() }
-    LaunchedEffect(Unit) { confirmFocusRequester.requestFocus() }
-    AlertDialog(
+    FutureDialog(
+        theme = theme,
         onDismissRequest = onDismiss,
-        containerColor = theme.surfaceColor,
-        title = { Text(title, color = theme.textColor) },
-        text = { Text(message, color = theme.textColor.copy(alpha = 0.7f)) },
-        confirmButton = {
-            TextButton(
-                onClick = onConfirm,
-                modifier = androidx.compose.ui.Modifier.focusRequester(confirmFocusRequester),
-            ) { Text(confirmLabel, color = theme.dangerColor) }
+        title = title,
+        buttons = {
+            FutureButton("ביטול", theme, onDismiss, variant = FutureButtonVariant.Secondary)
+            FutureButton(confirmLabel, theme, onConfirm, variant = FutureButtonVariant.Destructive, focusRequester = confirmFocusRequester)
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("ביטול", color = theme.textColor.copy(alpha = 0.6f)) } },
-    )
+    ) {
+        Text(
+            message,
+            color = theme.mutedTextColor,
+            fontSize = FutureTypography.body,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+    LaunchedEffect(Unit) { runCatching { confirmFocusRequester.requestFocus() } }
 }

@@ -1,4 +1,6 @@
 package com.future.sharednav.components
+import com.future.sharednav.theme.mutedTextColor
+import androidx.compose.foundation.layout.fillMaxWidth
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
@@ -206,5 +208,48 @@ private fun FieldDecoration(
             inner()
         }
         trailing?.invoke(this)
+    }
+}
+
+/**
+ * שדה בטופס של כמה שדות (עריכת אירוע, פרטי איש קשר, פרופיל): שם השדה
+ * בשורת תווית (12sp, 60%) ומתחתיו [FutureTextField]. כששדה בודד עומד
+ * בדיאלוג, הכותרת של הדיאלוג עושה את התפקיד הזה ואין צורך בתווית
+ * (components/forms/TextField.prompt.md) - אבל בטופס בלי תווית אי אפשר
+ * לדעת איזה שדה הוא איזה אחרי שמולא. Calendar, Contact ו-Fitness בנו כל
+ * אחד את השורה הזו בעצמם.
+ */
+@Composable
+fun FutureFormField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    theme: FutureTheme,
+    modifier: Modifier = Modifier,
+    placeholder: String? = null,
+    singleLine: Boolean = true,
+    autoFocus: Boolean = false,
+    focusRequester: FocusRequester? = null,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+) {
+    val type = rememberFutureType()
+    androidx.compose.foundation.layout.Column(modifier = modifier) {
+        Text(
+            label,
+            color = theme.mutedTextColor,
+            fontSize = type.label,
+            modifier = Modifier.padding(bottom = FutureDimens.spacingXs),
+        )
+        FutureTextField(
+            value = value,
+            onValueChange = onValueChange,
+            theme = theme,
+            placeholder = placeholder,
+            singleLine = singleLine,
+            autoFocus = autoFocus,
+            focusRequester = focusRequester,
+            keyboardOptions = keyboardOptions,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }

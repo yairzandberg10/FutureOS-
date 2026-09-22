@@ -1,4 +1,5 @@
 package com.future.music.ui.screens
+import com.future.sharednav.theme.subtleTextColor
 
 import com.future.sharednav.theme.FutureTypography
 import androidx.compose.foundation.background
@@ -129,7 +130,7 @@ fun HomeScreen(
                             Text(item.label, color = theme.textColor, fontSize = FutureTypography.title, fontWeight = FontWeight.Medium)
                             Text(item.subtitle, color = theme.textColor.copy(alpha = 0.55f), fontSize = FutureTypography.label)
                         }
-                        Text(item.digit, color = theme.textColor.copy(alpha = 0.35f), fontSize = FutureTypography.body, fontWeight = FontWeight.Bold)
+                        Text(item.digit, color = theme.subtleTextColor, fontSize = FutureTypography.body, fontWeight = FontWeight.Bold)
                     }
                 }
             }

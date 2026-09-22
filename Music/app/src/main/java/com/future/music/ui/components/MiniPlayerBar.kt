@@ -1,4 +1,10 @@
 package com.future.music.ui.components
+import com.future.sharednav.components.FutureProgressBar
+import com.future.sharednav.components.FutureAvatar
+import com.future.sharednav.theme.FutureShapes
+import com.future.sharednav.theme.mutedTextColor
+import com.future.sharednav.theme.readableAccentColor
+import com.future.sharednav.theme.onReadableAccentColor
 
 import com.future.sharednav.theme.FutureTypography
 import androidx.compose.foundation.background
@@ -45,15 +51,10 @@ fun MiniPlayerBar(playerState: PlayerUiState, theme: FutureTheme, onClick: () ->
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp))
+            .clip(RoundedCornerShape(topStart = FutureShapes.radiusLg, topEnd = FutureShapes.radiusLg))
             .background(theme.surfaceColor)
     ) {
-        LinearProgressIndicator(
-            progress = { progress },
-            modifier = Modifier.fillMaxWidth().height(2.dp),
-            color = theme.accentColor,
-            trackColor = theme.textColor.copy(alpha = 0.1f),
-        )
+        FutureProgressBar(progress = progress, theme = theme, mini = true)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -61,30 +62,25 @@ fun MiniPlayerBar(playerState: PlayerUiState, theme: FutureTheme, onClick: () ->
                 .padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(
-                modifier = Modifier.size(38.dp).clip(CircleShape).background(theme.accentColor.copy(alpha = 0.2f)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(Icons.Rounded.MusicNote, contentDescription = null, tint = theme.accentColor, modifier = Modifier.size(18.dp))
-            }
+            FutureAvatar(theme = theme, icon = Icons.Rounded.MusicNote, size = 38.dp)
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(song.title, color = theme.textColor, fontSize = FutureTypography.body, fontWeight = FontWeight.Medium, maxLines = 1)
-                Text(song.artist, color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.label, maxLines = 1)
+                Text(song.artist, color = theme.mutedTextColor, fontSize = FutureTypography.summary, maxLines = 1)
             }
             Spacer(modifier = Modifier.width(8.dp))
             Box(
                 modifier = Modifier
                     .size(36.dp)
                     .clip(CircleShape)
-                    .background(theme.accentColor)
+                    .background(theme.readableAccentColor)
                     .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onTogglePlay),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     if (playerState.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                     contentDescription = if (playerState.isPlaying) "השהה" else "נגן",
-                    tint = theme.backgroundColor,
+                    tint = theme.onReadableAccentColor,
                     modifier = Modifier.size(18.dp),
                 )
             }

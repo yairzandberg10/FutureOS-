@@ -1,4 +1,5 @@
 package com.future.music.ui.screens
+import com.future.sharednav.components.FutureButton
 
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
@@ -63,21 +64,7 @@ fun PermissionScreen(theme: FutureTheme, onRequestPermission: () -> Unit) {
                 textAlign = TextAlign.Center,
             )
             androidx.compose.foundation.layout.Spacer(modifier = Modifier.padding(top = 24.dp))
-            val interactionSource = remember { MutableInteractionSource() }
-            val isFocused by interactionSource.collectIsFocusedAsState()
-            val shape = FutureShapes.lg
-            Box(
-                modifier = Modifier
-                    .clip(shape)
-                    .background(theme.accentColor)
-                    .then(if (isFocused) Modifier.border(2.dp, theme.textColor, shape) else Modifier)
-                    .focusRequester(buttonFocusRequester)
-                    .clickable(interactionSource = interactionSource, indication = null, onClick = onRequestPermission)
-                    .focusable(interactionSource = interactionSource)
-                    .padding(horizontal = 28.dp, vertical = 14.dp),
-            ) {
-                Text("אפשר גישה", color = theme.backgroundColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Bold)
-            }
+            FutureButton("אפשר גישה", theme, onRequestPermission, focusRequester = buttonFocusRequester)
         }
     }
 }

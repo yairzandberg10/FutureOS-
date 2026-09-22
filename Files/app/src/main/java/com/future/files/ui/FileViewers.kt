@@ -1,4 +1,16 @@
 package com.future.files.ui
+import com.future.sharednav.theme.FutureDimens
+import com.future.sharednav.theme.FutureMotion
+import com.future.sharednav.theme.FutureContrast
+import com.future.sharednav.theme.scrimColor
+import com.future.sharednav.theme.elevatedSurfaceColor
+import com.future.sharednav.theme.raisedSurfaceColor
+import com.future.sharednav.theme.readableAccentColor
+import com.future.sharednav.theme.onReadableAccentColor
+import com.future.sharednav.components.FutureSpinner
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.ui.draw.alpha
+import androidx.compose.foundation.border
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.focus.bringIntoViewOnFocus
@@ -79,7 +91,7 @@ fun TextViewerScreen(file: File, theme: FutureTheme, onBack: () -> Unit) {
             try {
                 val maxBytes = 300_000L
                 if (file.length() > maxBytes) {
-                    file.readText().take(maxBytes.toInt()) + "\n\n… (הקובץ נחתך, גדול מדי להצגה מלאה)"
+                    file.readText().take(maxBytes.toInt()) + "\n\nהקובץ נחתך כי הוא גדול מדי להצגה מלאה"
                 } else {
                     file.readText()
                 }
@@ -162,20 +174,34 @@ fun ImageFileViewerScreen(file: File, theme: FutureTheme, onBack: () -> Unit) {
     }
 }
 
+/**
+ * כפתור חזרה מעל תמונה. במנוחה - קפסולה בהכהיה של המערכת (60% שחור, קבוע
+ * בשני המצבים ולכן תמיד קריא מעל תמונה); בפוקוס - מילוי בהדגשה עם הדיו שלה.
+ */
 @Composable
 private fun ViewerBackChip(theme: FutureTheme, onBack: () -> Unit) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    val bgColor by animateColorAsState(if (isFocused) theme.accentColor else Color.Black.copy(alpha = 0.5f))
+    val bgColor by animateColorAsState(
+        if (isFocused) theme.accentColor else theme.scrimColor,
+        FutureMotion.focusColorSpec,
+        label = "viewerBackBg",
+    )
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(50))
+            .size(FutureDimens.rowHeightTopBarButton)
+            .clip(FutureShapes.pill)
             .background(bgColor)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onBack)
-            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
-            .padding(10.dp)
+            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus(),
+        contentAlignment = Alignment.Center,
     ) {
-        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "חזור", tint = if (isFocused) Color.Black else Color.White)
+        Icon(
+            Icons.AutoMirrored.Rounded.ArrowBack,
+            contentDescription = "חזור",
+            tint = if (isFocused) FutureContrast.onColor(theme.accentColor) else Color.White,
+            modifier = Modifier.size(FutureDimens.iconTopBar),
+        )
     }
 }
 
@@ -229,17 +255,22 @@ fun AudioPlayerScreen(file: File, theme: FutureTheme, onBack: () -> Unit) {
                 verticalArrangement = Arrangement.Center
             ) {
                 Box(
-                    modifier = Modifier.size(140.dp).clip(FutureShapes.xxl).background(theme.accentColor.copy(alpha = 0.15f)),
+                    modifier = Modifier.size(140.dp).clip(FutureShapes.xl).background(theme.elevatedSurfaceColor),
                     contentAlignment = Alignment.Center
                 ) {
                     val interactionSource = remember { MutableInteractionSource() }
                     val isFocused by interactionSource.collectIsFocusedAsState()
-                    val bgColor by animateColorAsState(if (isFocused) theme.accentColor else theme.accentColor.copy(alpha = 0.6f))
+                    // כפתור ראשי של הדיזיין סיסטם: ההדגשה המתוקנת ב-70% במנוחה, מלאה
+                    // בפוקוס עם מסגרת 2dp בצבע הטקסט.
+                    val playOpacity by animateFloatAsState(if (isFocused) 1f else 0.7f, FutureMotion.fast(), label = "playOpacity")
+                    val playRing by animateColorAsState(if (isFocused) theme.textColor else Color.Transparent, FutureMotion.focusColorSpec, label = "playRing")
                     Box(
                         modifier = Modifier
                             .size(72.dp)
                             .clip(CircleShape)
-                            .background(bgColor)
+                            .alpha(playOpacity)
+                            .background(theme.readableAccentColor)
+                            .border(FutureDimens.focusBorderControl, playRing, CircleShape)
                             .clickable(interactionSource = interactionSource, indication = null, enabled = isPrepared && !loadFailed) {
                                 if (isPlaying) player.pause() else player.start()
                                 isPlaying = !isPlaying
@@ -250,7 +281,7 @@ fun AudioPlayerScreen(file: File, theme: FutureTheme, onBack: () -> Unit) {
                         Icon(
                             if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                             contentDescription = if (isPlaying) "השהה" else "נגן",
-                            tint = Color.Black,
+                            tint = theme.onReadableAccentColor,
                             modifier = Modifier.size(32.dp)
                         )
                     }
@@ -341,11 +372,11 @@ fun PdfViewerScreen(file: File, theme: FutureTheme, onBack: () -> Unit) {
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-        Column(modifier = Modifier.fillMaxSize().background(Color(0xFF3A3A3C))) {
+        Column(modifier = Modifier.fillMaxSize().background(theme.raisedSurfaceColor)) {
             ViewerHeader(file.name, theme, onBack)
             when {
                 isLoading -> Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    Text("טוען PDF...", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.summary)
+                    FutureSpinner(theme = theme, label = "טוען PDF")
                 }
                 loadFailed || pageCount == 0 -> Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                     Text("לא ניתן להציג את הקובץ", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.summary)
@@ -390,7 +421,7 @@ fun PdfViewerScreen(file: File, theme: FutureTheme, onBack: () -> Unit) {
                                 contentScale = ContentScale.FillWidth
                             )
                         } else {
-                            Box(modifier = Modifier.fillMaxWidth().height(280.dp).background(Color(0xFF2A2A2C)))
+                            Box(modifier = Modifier.fillMaxWidth().height(280.dp).background(theme.elevatedSurfaceColor))
                         }
                     }
                 }

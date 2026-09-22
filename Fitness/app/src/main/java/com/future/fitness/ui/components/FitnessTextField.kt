@@ -1,4 +1,5 @@
 package com.future.fitness.ui.components
+import com.future.sharednav.components.FutureFormField
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -30,17 +31,14 @@ fun FitnessTextField(
     singleLine: Boolean = true,
     focusRequester: FocusRequester? = null,
 ) {
-    val type = rememberFutureType()
-    Column(modifier = modifier) {
-        Text(label, color = theme.mutedTextColor, fontSize = type.label, modifier = Modifier.padding(bottom = FutureDimens.spacingXs))
-        FutureTextField(
-            value = value,
-            onValueChange = onValueChange,
-            theme = theme,
-            singleLine = singleLine,
-            keyboardOptions = keyboardOptions,
-            focusRequester = focusRequester,
-            modifier = Modifier.fillMaxWidth(),
-        )
-    }
+    FutureFormField(
+        label = label,
+        value = value,
+        onValueChange = onValueChange,
+        theme = theme,
+        modifier = modifier,
+        singleLine = singleLine,
+        keyboardOptions = keyboardOptions,
+        focusRequester = focusRequester,
+    )
 }
