@@ -1,4 +1,13 @@
 package com.future.futureui.notificationcenter.ui
+import com.future.sharednav.theme.LocalFutureTheme
+import com.future.sharednav.theme.mutedTextColor
+import com.future.sharednav.theme.elevatedSurfaceColor
+import com.future.sharednav.theme.raisedSurfaceColor
+import com.future.sharednav.theme.readableAccentColor
+import com.future.sharednav.theme.idleChipColor
+import com.future.sharednav.theme.idleFieldColor
+import com.future.sharednav.theme.focusFillChipColor
+import com.future.sharednav.theme.FutureDimens
 import com.future.sharednav.theme.FutureMotion
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
@@ -90,9 +99,12 @@ fun NotificationCenterScreen(
         }
     }
 
-    val isDarkBackground = wallpaper != null
-    val textColor = if (isDarkBackground) Color.White else Color.Black
-    val subTextColor = if (isDarkBackground) Color.LightGray else Color.Gray
+    // הצבעים מהערכה (מצב כהה/בהיר של המשתמש), לא מקיום טפט - המרכז מצויר
+    // על הרקע השטוח של המערכת.
+    val theme = LocalFutureTheme.current
+    val isDarkBackground = theme.isDarkMode
+    val textColor = theme.textColor
+    val subTextColor = theme.mutedTextColor
 
     var isVisible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { isVisible = true }
@@ -136,24 +148,12 @@ fun NotificationCenterScreen(
             ) + fadeOut(animationSpec = tween(FutureMotion.DurationStandard))
         ) {
             Box(modifier = modifier.fillMaxSize()) {
-                // רקע עם טשטוש (Blur) אם קיימת תמונת רקע
-                if (wallpaper != null) {
-                    Image(
-                        bitmap = wallpaper,
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize().blur(40.dp),
-                        contentScale = ContentScale.Crop
-                    )
-                }
-
-                // שכבת כיסוי חצי שקופה
+                // רקע שטוח של המערכת - היה טפט מטושטש (40dp) מתחת לשכבה לבנה, אבל
+                // "there is no blur in this system" ו"the background is a flat fill".
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(
-                            if (wallpaper != null) Color.White.copy(alpha = 0.2f)
-                            else Color(0xCCFFFFFF)
-                        )
+                        .background(theme.backgroundColor)
                 )
 
                 Column(
@@ -174,18 +174,12 @@ fun NotificationCenterScreen(
                                 text = currentTime,
                                 fontSize = FutureTypography.display,
                                 fontWeight = FontWeight.Bold,
-                                color = textColor,
-                                style = androidx.compose.ui.text.TextStyle(
-                                    shadow = androidx.compose.ui.graphics.Shadow(color = Color.Black.copy(alpha = 0.3f), blurRadius = 8f)
-                                )
+                                color = textColor
                             )
                             Text(
                                 text = currentDate,
                                 fontSize = FutureTypography.label,
-                                color = subTextColor,
-                                style = androidx.compose.ui.text.TextStyle(
-                                    shadow = androidx.compose.ui.graphics.Shadow(color = Color.Black.copy(alpha = 0.3f), blurRadius = 8f)
-                                )
+                                color = subTextColor
                             )
                         }
                     }
@@ -274,7 +268,7 @@ fun NotificationCenterScreen(
                             icon = Icons.Rounded.DeleteSweep,
                             onClick = { ncManager.clearAll() },
                             modifier = Modifier.weight(1f),
-                            color = Color.Black.copy(alpha = 0.3f),
+                            color = theme.idleFieldColor,
                             focusRequester = clearAllFocusRequester
                         )
                         NotificationCenterButton(
@@ -282,7 +276,7 @@ fun NotificationCenterScreen(
                             icon = if (ncManager.controlManager.isDndOn) Icons.Rounded.NotificationsOff else Icons.Rounded.NotificationsActive,
                             onClick = { ncManager.toggleDnd() },
                             modifier = Modifier.weight(1f),
-                            color = Color.Black.copy(alpha = 0.3f)
+                            color = theme.idleFieldColor
                         )
                     }
                 }
@@ -369,12 +363,10 @@ fun NotificationItem(
     val shape = FutureShapes.xxl
     // הרקע של הכרטיס נגזר מכיוון הטקסט (isDarkBackground) ולא מהטפט עצמו, כדי
     // שהניגודיות טקסט-מול-כרטיס תישמר גם כשהטפט שמתחת בהיר או כהה באופן בלתי צפוי.
-    val cardBackground = if (isDarkBackground) {
-        if (isFocused) Color.Black.copy(alpha = 0.45f) else Color.Black.copy(alpha = 0.38f)
-    } else {
-        if (isFocused) Color.White.copy(alpha = 0.55f) else Color.White.copy(alpha = 0.42f)
-    }
-    val legibilityShadow = androidx.compose.ui.graphics.Shadow(color = Color.Black.copy(alpha = 0.35f), blurRadius = 6f)
+    // כרטיס התראה = "זכוכית" של המעטפת (elevatedSurfaceColor, 28dp); בפוקוס דרגה
+    // אחת מעליה ומסגרת בהדגשה. קודם זה היה שחור/לבן שקוף-למחצה מעל טפט מטושטש.
+    val theme = LocalFutureTheme.current
+    val cardBackground = if (isFocused) theme.raisedSurfaceColor else theme.elevatedSurfaceColor
 
     Box(
         modifier = Modifier
@@ -384,7 +376,7 @@ fun NotificationItem(
             .clip(shape)
             .background(cardBackground)
             .then(
-                if (isFocused) Modifier.border(2.dp, Color.LightGray, shape) else Modifier
+                if (isFocused) Modifier.border(FutureDimens.focusBorderControl, theme.readableAccentColor, shape) else Modifier
             )
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .onKeyEvent { event ->
@@ -478,19 +470,22 @@ fun NotificationItem(
                 ) {
                     options.forEachIndexed { index, option ->
                         val isSelected = index == selectedOptionIndex
-                        val baseColor = if (option.isDestructive) Color.Red.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.2f)
+                        // הפעולה הממוקדת = נבחרת: מילוי מלא (הדגשה, או סכנה לפעולה הרסנית)
+                        // ודיו שמתאים לו; השאר צ'יפ במנוחה (6%).
+                        val selectedFill = if (option.isDestructive) theme.dangerColor else theme.readableAccentColor
+                        val baseColor = if (isSelected) selectedFill else theme.idleChipColor
                         Text(
                             text = option.label,
-                            color = textColor,
+                            color = when {
+                                isSelected -> com.future.sharednav.theme.FutureContrast.onColor(selectedFill)
+                                option.isDestructive -> theme.dangerColor
+                                else -> textColor
+                            },
                             fontSize = FutureTypography.summary,
                             fontWeight = FontWeight.Bold,
-                            style = androidx.compose.ui.text.TextStyle(shadow = legibilityShadow),
                             modifier = Modifier
                                 .clip(CircleShape)
                                 .background(baseColor)
-                                .then(
-                                    if (isSelected) Modifier.border(1.5.dp, Color.White, CircleShape) else Modifier
-                                )
                                 .clickable {
                                     option.action()
                                     showOptions = false
@@ -509,7 +504,7 @@ fun NotificationItem(
                         modifier = Modifier
                             .size(32.dp)
                             .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.2f)),
+                            .background(theme.raisedSurfaceColor),
                         contentAlignment = Alignment.Center
                     ) {
                         if (appIcon != null) {
@@ -533,16 +528,14 @@ fun NotificationItem(
                             fontWeight = FontWeight.Bold,
                             color = textColor,
                             maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            style = androidx.compose.ui.text.TextStyle(shadow = legibilityShadow)
+                            overflow = TextOverflow.Ellipsis
                         )
                         Text(
-                            text = if (isExpanded) text else if (text.length > 40) text.take(40) + "..." else text,
+                            text = text,
                             fontSize = FutureTypography.caption,
                             color = subTextColor,
                             maxLines = if (isExpanded) Int.MAX_VALUE else 1,
-                            overflow = TextOverflow.Ellipsis,
-                            style = androidx.compose.ui.text.TextStyle(shadow = legibilityShadow)
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
@@ -563,6 +556,7 @@ fun NotificationCenterButton(
     color: Color,
     focusRequester: FocusRequester? = null
 ) {
+    val theme = LocalFutureTheme.current
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
     val shape = CircleShape
@@ -572,10 +566,8 @@ fun NotificationCenterButton(
             .height(38.dp)
             .focusEffect(isFocused, shape)
             .clip(shape)
-            .background(if (isFocused) Color.White.copy(alpha = 0.25f) else color)
-            .then(
-                if (isFocused) Modifier.border(2.dp, Color.White, shape) else Modifier
-            )
+            // פוקוס של צ'יפ: 18% מהטקסט, והמסגרת בהדגשה מגיעה מ-focusEffect.
+            .background(if (isFocused) theme.focusFillChipColor else color)
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
             .focusable(interactionSource = interactionSource).bringIntoViewOnFocus(),
@@ -585,9 +577,9 @@ fun NotificationCenterButton(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
-            Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+            Icon(icon, contentDescription = null, tint = theme.textColor, modifier = Modifier.size(FutureDimens.iconTopBar))
             Spacer(modifier = Modifier.width(6.dp))
-            Text(text = text, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = FutureTypography.label)
+            Text(text = text, color = theme.textColor, fontWeight = FontWeight.SemiBold, fontSize = FutureTypography.label)
         }
     }
 }

@@ -1,4 +1,7 @@
 package com.future.futureui.notificationcenter.ui
+import com.future.sharednav.theme.LocalFutureTheme
+import com.future.sharednav.theme.headsUpSurfaceColor
+import com.future.sharednav.theme.headsUpBorderColor
 
 import com.future.sharednav.theme.FutureMotion
 import com.future.sharednav.theme.FutureTypography
@@ -129,8 +132,8 @@ fun HeadsUpNotificationScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(shape)
-                    .background(Color(0xE61C1C1E))
-                    .border(0.5.dp, Color.White.copy(alpha = 0.15f), shape)
+                    .background(LocalFutureTheme.current.headsUpSurfaceColor)
+                    .border(0.5.dp, LocalFutureTheme.current.headsUpBorderColor, shape)
                     .padding(horizontal = 14.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -157,7 +160,7 @@ fun HeadsUpNotificationScreen(
                         Text(
                             text = title.ifBlank { "שיחה נכנסת" },
                             fontSize = FutureTypography.label,
-                            color = textColor.copy(alpha = 0.65f),
+                            color = textColor.copy(alpha = 0.6f),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )

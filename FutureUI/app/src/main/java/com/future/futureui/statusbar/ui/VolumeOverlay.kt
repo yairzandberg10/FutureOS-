@@ -1,4 +1,8 @@
 package com.future.futureui.statusbar.ui
+import com.future.sharednav.theme.LocalFutureTheme
+import com.future.sharednav.theme.elevatedSurfaceColor
+import com.future.sharednav.theme.readableAccentColor
+import com.future.sharednav.theme.onReadableAccentColor
 
 import com.future.sharednav.theme.FutureShapes
 import androidx.compose.foundation.background
@@ -25,6 +29,7 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun VolumeOverlay(level: Float, modifier: Modifier = Modifier) {
     val shape = FutureShapes.xxl
+    val theme = LocalFutureTheme.current
 
     Box(
         modifier = modifier.fillMaxWidth(),
@@ -36,8 +41,9 @@ fun VolumeOverlay(level: Float, modifier: Modifier = Modifier) {
                 .width(200.dp)
                 .height(47.dp)
                 .clip(shape)
-                .background(Color(0xE6E0E0E0))
-                .border(width = 0.5.dp, color = Color.White.copy(alpha = 0.6f), shape = shape),
+                // "זכוכית" של המעטפת (elevatedSurfaceColor) - לא אפור בהיר קבוע,
+                // שנראה אותו דבר במצב כהה ובהיר.
+                .background(theme.elevatedSurfaceColor),
             contentAlignment = Alignment.CenterStart
         ) {
             Box(
@@ -45,12 +51,12 @@ fun VolumeOverlay(level: Float, modifier: Modifier = Modifier) {
                     .fillMaxHeight()
                     .fillMaxWidth(level.coerceIn(0f, 1f).coerceAtLeast(0.01f))
                     .clip(shape)
-                    .background(Color(0xFFBDBDBD))
+                    .background(theme.readableAccentColor)
             )
             Icon(
                 imageVector = if (level <= 0f) Icons.AutoMirrored.Rounded.VolumeOff else Icons.AutoMirrored.Rounded.VolumeUp,
                 contentDescription = null,
-                tint = Color(0xFF616161),
+                tint = if (level >= 0.12f) theme.onReadableAccentColor else theme.textColor,
                 modifier = Modifier.padding(start = 14.dp).size(22.dp)
             )
         }

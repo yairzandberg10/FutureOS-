@@ -129,8 +129,7 @@ fun StatusBarScreen(
                     text = currentTime,
                     color = Color.White,
                     fontSize = FutureTypography.summary,
-                    fontWeight = FontWeight.SemiBold,
-                    letterSpacing = 0.2.sp
+                    fontWeight = FontWeight.SemiBold
                 )
             }
 
@@ -139,7 +138,7 @@ fun StatusBarScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if (isCallActive) {
-                    Icon(Icons.Rounded.Call, contentDescription = null, tint = Color(0xFF30D158), modifier = Modifier.size(13.dp))
+                    Icon(Icons.Rounded.Call, contentDescription = null, tint = StatusBarPalette.successColor, modifier = Modifier.size(13.dp))
                 }
                 if (manager.isDndOn) {
                     Icon(Icons.Rounded.DoNotDisturbOn, contentDescription = null, tint = Color.White.copy(alpha = 0.9f), modifier = Modifier.size(13.dp))
@@ -159,7 +158,7 @@ fun StatusBarScreen(
                     Icon(Icons.Rounded.SignalCellularAlt, contentDescription = null, tint = Color.White.copy(alpha = 0.9f), modifier = Modifier.size(13.dp))
                 }
                 if (manager.isBatterySaverOn) {
-                    Icon(Icons.Rounded.BatterySaver, contentDescription = null, tint = Color(0xFFFFD60A), modifier = Modifier.size(13.dp))
+                    Icon(Icons.Rounded.BatterySaver, contentDescription = null, tint = StatusBarPalette.warningColor, modifier = Modifier.size(13.dp))
                 }
                 if (showBattery) {
                     Text(text = "$batteryPercent%", color = Color.White.copy(alpha = 0.9f), fontSize = FutureTypography.caption, fontWeight = FontWeight.Medium)
@@ -175,8 +174,15 @@ fun StatusBarScreen(
     }
 }
 
-/** ברירת מחדל כשאין עדיין צבע הדגשה משותף זמין (למשל בתצוגה מקדימה). */
-private val StatusBarAccent = Color(0xFF5AC8FA)
+/** ברירת מחדל כשאין עדיין צבע הדגשה משותף זמין - ההדגשה של ברירת המחדל במערכת (לבן). */
+private val StatusBarAccent = Color.White
+
+/**
+ * שורת המצב יושבת מעל כל תוכן (טפט, מסך בהיר, מסך כהה) על רקע כהה משלה,
+ * ולכן היא לוקחת את צבעי הסטטוס של הערכה *הכהה* - כמו ההתראה הצפה, שתמיד
+ * כהה. קודם היו כאן שלושה hex של iOS שאינם הפלטה.
+ */
+private val StatusBarPalette = com.future.sharednav.theme.FutureTheme(isDarkMode = true)
 
 private fun Modifier.drawBottomHairline(color: Color): Modifier = this.then(
     Modifier.drawBehind {
@@ -198,7 +204,7 @@ private fun Modifier.drawBottomHairline(color: Color): Modifier = this.then(
 private fun BatteryPill(percent: Int, isCharging: Boolean, accentColor: Color, modifier: Modifier = Modifier) {
     val fillColor = when {
         isCharging -> accentColor
-        percent <= 15 -> Color(0xFFFF453A)
+        percent <= 15 -> StatusBarPalette.dangerColor
         else -> Color.White
     }
     Canvas(modifier = modifier.size(width = 21.dp, height = 11.dp)) {
@@ -208,13 +214,13 @@ private fun BatteryPill(percent: Int, isCharging: Boolean, accentColor: Color, m
         val bodyCorner = CornerRadius(2.6.dp.toPx())
 
         drawRoundRect(
-            color = Color.White.copy(alpha = 0.85f),
+            color = Color.White.copy(alpha = 0.7f),
             size = Size(bodyWidth, size.height),
             cornerRadius = bodyCorner,
             style = Stroke(width = strokeWidth)
         )
         drawRoundRect(
-            color = Color.White.copy(alpha = 0.85f),
+            color = Color.White.copy(alpha = 0.7f),
             topLeft = Offset(bodyWidth, size.height / 2f - 2.dp.toPx()),
             size = Size(nubWidth, 4.dp.toPx()),
             cornerRadius = CornerRadius(0.8.dp.toPx())

@@ -1,4 +1,11 @@
 package com.future.futureui.controlcenter.ui.components
+import com.future.sharednav.theme.LocalFutureTheme
+import com.future.sharednav.theme.elevatedSurfaceColor
+import com.future.sharednav.theme.raisedSurfaceColor
+import com.future.sharednav.theme.readableAccentColor
+import com.future.sharednav.theme.onReadableAccentColor
+import com.future.sharednav.theme.FutureDimens
+import com.future.sharednav.theme.textAlpha
 
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
@@ -32,11 +39,12 @@ import androidx.compose.ui.unit.sp
 import com.future.futureui.controlcenter.logic.ControlManager
 
 @Composable
-fun MusicPlayerCard(manager: ControlManager, labelColor: Color = Color.Black) {
+fun MusicPlayerCard(manager: ControlManager, labelColor: Color = Color.Unspecified) {
+    val theme = LocalFutureTheme.current
+    val ink = if (labelColor == Color.Unspecified) theme.textColor else labelColor
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
     val shape = FutureShapes.xxl
-    val legibilityShadow = androidx.compose.ui.graphics.Shadow(color = Color.Black.copy(alpha = 0.35f), blurRadius = 6f)
 
     if (!manager.isMediaServiceEnabled) {
         Box(
@@ -45,9 +53,9 @@ fun MusicPlayerCard(manager: ControlManager, labelColor: Color = Color.Black) {
                 .height(80.dp)
                 .clip(shape)
                 .focusEffect(isFocused, shape)
-                .background(Color(0x80E0E0E0))
+                .background(theme.elevatedSurfaceColor)
                 .then(
-                    if (isFocused) Modifier.border(2.dp, Color.LightGray, shape) else Modifier
+                    if (isFocused) Modifier.border(FutureDimens.focusBorderControl, theme.readableAccentColor, shape) else Modifier
                 )
                 .clickable(interactionSource = interactionSource, indication = null) { manager.openNotificationAccessSettings() }
                 .focusable(interactionSource = interactionSource)
@@ -56,10 +64,10 @@ fun MusicPlayerCard(manager: ControlManager, labelColor: Color = Color.Black) {
         ) {
             Text(
                 text = "לחצו OK לאישור גישה למוזיקה",
-                color = labelColor,
+                color = ink,
                 fontSize = FutureTypography.body,
                 fontWeight = FontWeight.Bold,
-                style = androidx.compose.ui.text.TextStyle(shadow = legibilityShadow)
+                
             )
         }
     } else if (!manager.hasActiveMedia) {
@@ -69,9 +77,9 @@ fun MusicPlayerCard(manager: ControlManager, labelColor: Color = Color.Black) {
                 .height(65.dp)
                 .clip(shape)
                 .focusEffect(isFocused, shape)
-                .background(Color(0x80E0E0E0))
+                .background(theme.elevatedSurfaceColor)
                 .then(
-                    if (isFocused) Modifier.border(2.dp, Color.LightGray, shape) else Modifier
+                    if (isFocused) Modifier.border(FutureDimens.focusBorderControl, theme.readableAccentColor, shape) else Modifier
                 )
                 .clickable(
                     interactionSource = interactionSource,
@@ -89,7 +97,7 @@ fun MusicPlayerCard(manager: ControlManager, labelColor: Color = Color.Black) {
                     modifier = Modifier
                         .size(40.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFF616161)),
+                        .background(theme.raisedSurfaceColor),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -103,10 +111,10 @@ fun MusicPlayerCard(manager: ControlManager, labelColor: Color = Color.Black) {
                 Text(
                     text = "אין מוזיקה מתנגנת",
                     fontSize = FutureTypography.summary,
-                    color = labelColor,
+                    color = ink,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
-                    style = androidx.compose.ui.text.TextStyle(shadow = legibilityShadow)
+                    
                 )
                 Spacer(modifier = Modifier.weight(1f))
             }
@@ -154,7 +162,7 @@ fun MusicPlayerCard(manager: ControlManager, labelColor: Color = Color.Black) {
                     Text(
                         text = manager.currentArtist,
                         fontSize = FutureTypography.body,
-                        color = Color.White.copy(alpha = 0.8f),
+                        color = Color.White.copy(alpha = 0.7f),
                         maxLines = 1
                     )
                 }
@@ -222,7 +230,8 @@ private fun formatMillis(millis: Long): String {
 }
 
 @Composable
-fun MediaControlButton(icon: ImageVector, onClick: () -> Unit, isLarge: Boolean = false, tint: Color = Color.Black) {
+fun MediaControlButton(icon: ImageVector, onClick: () -> Unit, isLarge: Boolean = false, tint: Color = Color.Unspecified) {
+    val theme = LocalFutureTheme.current
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
     val shape = CircleShape
@@ -234,7 +243,7 @@ fun MediaControlButton(icon: ImageVector, onClick: () -> Unit, isLarge: Boolean 
                 scaleX = if (isFocused) 1.2f else 1f
                 scaleY = if (isFocused) 1.2f else 1f
             }
-            .then(if (isFocused) Modifier.border(2.dp, Color.LightGray, shape) else Modifier)
+            .then(if (isFocused) Modifier.border(FutureDimens.focusBorderControl, theme.readableAccentColor, shape) else Modifier)
             .clip(shape)
             .background(if (isFocused) Color.White.copy(alpha = 0.3f) else Color.Transparent)
             .clickable(
@@ -248,7 +257,7 @@ fun MediaControlButton(icon: ImageVector, onClick: () -> Unit, isLarge: Boolean 
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = if (isFocused) Color.White else tint,
+            tint = if (tint == Color.Unspecified) theme.textColor else tint,
             modifier = Modifier.size(if (isLarge) 32.dp else 24.dp)
         )
     }

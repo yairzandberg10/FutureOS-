@@ -1,4 +1,9 @@
 package com.future.futureui.controlcenter.ui
+import com.future.sharednav.components.FutureMenuRow
+import com.future.sharednav.theme.LocalFutureTheme
+import com.future.sharednav.theme.scrimColor
+import com.future.sharednav.theme.textAlpha
+import com.future.sharednav.theme.FutureDimens
 
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
@@ -53,78 +58,34 @@ fun PowerMenuScreen(
         }
     }
 
+    val theme = LocalFutureTheme.current
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+        // תפריט האפשרויות של הדיזיין סיסטם (OptionsMenu.jsx): הכהיה של 60%
+        // מאחור, משטח אטום ברדיוס 20dp, כותרת 12sp ב-50%, שורות 50dp עם מילוי
+        // פוקוס של 12% בלבד, והשורה ההרסנית באדום.
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.55f)),
+                .background(theme.scrimColor),
             contentAlignment = Alignment.Center
         ) {
             Column(
                 modifier = Modifier
-                    .widthIn(min = 230.dp)
-                    .clip(FutureShapes.xxl)
-                    .background(Color(0xEE1C1C1E))
-                    .border(0.5.dp, Color.White.copy(alpha = 0.15f), FutureShapes.xxl)
-                    .padding(vertical = 10.dp)
+                    .fillMaxWidth(0.85f)
+                    .clip(FutureShapes.dialog)
+                    .background(theme.surfaceColor)
+                    .padding(vertical = FutureDimens.spacingSm)
             ) {
                 Text(
                     text = "אפשרויות כיבוי",
-                    color = Color.White.copy(alpha = 0.55f),
+                    color = theme.textAlpha(50),
                     fontSize = FutureTypography.label,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier.padding(horizontal = 22.dp, vertical = 8.dp)
+                    modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 6.dp, bottom = FutureDimens.spacingSm)
                 )
-                PowerMenuRow(
-                    icon = Icons.Rounded.PowerSettingsNew,
-                    label = "כיבוי",
-                    tint = Color(0xFFFF453A),
-                    onClick = onPowerOff,
-                    modifier = Modifier.focusRequester(focusRequester)
-                )
-                PowerMenuRow(
-                    icon = Icons.Rounded.RestartAlt,
-                    label = "הפעלה מחדש",
-                    tint = Color.White,
-                    onClick = onRestart
-                )
-                PowerMenuRow(
-                    icon = Icons.Rounded.Close,
-                    label = "ביטול",
-                    tint = Color.White.copy(alpha = 0.7f),
-                    onClick = onCancel
-                )
+                FutureMenuRow("כיבוי", Icons.Rounded.PowerSettingsNew, theme, onPowerOff, destructive = true, focusRequester = focusRequester)
+                FutureMenuRow("הפעלה מחדש", Icons.Rounded.RestartAlt, theme, onRestart)
+                FutureMenuRow("ביטול", Icons.Rounded.Close, theme, onCancel)
             }
         }
-    }
-}
-
-@Composable
-private fun PowerMenuRow(
-    icon: ImageVector,
-    label: String,
-    tint: Color,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val shape = FutureShapes.lg
-
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 10.dp, vertical = 3.dp)
-            .focusEffect(isFocused, shape)
-            .clip(shape)
-            .background(if (isFocused) Color.White.copy(alpha = 0.15f) else Color.Transparent)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource)
-            .padding(horizontal = 14.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
-        Spacer(modifier = Modifier.width(14.dp))
-        Text(label, color = tint, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Medium)
     }
 }

@@ -1,4 +1,13 @@
 package com.future.futureui.controlcenter.ui
+import com.future.sharednav.theme.mutedTextColor
+import com.future.sharednav.theme.dividerColor
+import com.future.sharednav.theme.LocalFutureTheme
+import com.future.sharednav.theme.elevatedSurfaceColor
+import com.future.sharednav.theme.raisedSurfaceColor
+import com.future.sharednav.theme.readableAccentColor
+import com.future.sharednav.theme.onReadableAccentColor
+import com.future.sharednav.theme.FutureDimens
+import com.future.sharednav.theme.textAlpha
 
 import com.future.sharednav.theme.FutureMotion
 import com.future.sharednav.theme.FutureTypography
@@ -116,9 +125,12 @@ fun ControlCenterScreen(
     }
 
     val scrollState = rememberScrollState()
-    val isDarkBackground = wallpaper != null
-    val clockColor = if (isDarkBackground) Color.White else Color.Black
-    val dateColor = if (isDarkBackground) Color.LightGray else Color.Gray
+    // הצבעים באים מהערכה (מצב כהה/בהיר של המשתמש) ולא מקיום טפט: המרכז כבר לא
+    // מצויר מעל טפט מטושטש, אלא על הרקע השטוח של המערכת.
+    val theme = LocalFutureTheme.current
+    val isDarkBackground = theme.isDarkMode
+    val clockColor = theme.textColor
+    val dateColor = theme.mutedTextColor
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         AnimatedVisibility(
@@ -145,24 +157,12 @@ fun ControlCenterScreen(
                         false
                     }
             ) {
-                if (wallpaper != null) {
-                    Image(
-                        bitmap = wallpaper,
-                        contentDescription = null,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .blur(40.dp),
-                        contentScale = ContentScale.Crop
-                    )
-                }
-
+                // רקע שטוח של המערכת. היה טפט מטושטש (40dp) מתחת לשכבה לבנה - אבל
+                // "there is no blur in this system" ו"the background is a flat fill".
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(
-                            if (wallpaper != null) Color.White.copy(alpha = 0.2f)
-                            else Color(0xCCFFFFFF)
-                        )
+                        .background(theme.backgroundColor)
                 )
 
                 Column(
@@ -184,18 +184,12 @@ fun ControlCenterScreen(
                                 text = currentTime,
                                 fontSize = FutureTypography.display,
                                 fontWeight = FontWeight.Bold,
-                                color = clockColor,
-                                style = androidx.compose.ui.text.TextStyle(
-                                    shadow = androidx.compose.ui.graphics.Shadow(color = Color.Black.copy(alpha = 0.3f), blurRadius = 8f)
-                                )
+                                color = clockColor
                             )
                             Text(
                                 text = currentDate,
                                 fontSize = FutureTypography.caption,
-                                color = dateColor,
-                                style = androidx.compose.ui.text.TextStyle(
-                                    shadow = androidx.compose.ui.graphics.Shadow(color = Color.Black.copy(alpha = 0.3f), blurRadius = 8f)
-                                )
+                                color = dateColor
                             )
                         }
 
@@ -288,10 +282,10 @@ fun ControlCenterScreen(
                                             .fillMaxWidth()
                                             .animateContentSize(animationSpec = tween(FutureMotion.DurationSlow))
                                             .clip(FutureShapes.xxl)
-                                            .background(Color(0x80E0E0E0))
+                                            .background(theme.elevatedSurfaceColor)
                                             .border(
                                                 width = if (isGridEditing) 2.dp else 0.5.dp, 
-                                                color = if (isGridEditing) Color.Red else Color.White.copy(alpha = 0.5f), 
+                                                color = if (isGridEditing) theme.dangerColor else Color.Transparent,
                                                 shape = FutureShapes.xxl
                                             )
                                             .onKeyEvent { event ->
@@ -353,7 +347,7 @@ fun ControlCenterScreen(
                                                         .padding(vertical = 12.dp)
                                                         .fillMaxWidth(0.95f)
                                                         .height(1.5.dp)
-                                                        .background(Color.White.copy(alpha = 0.6f))
+                                                        .background(theme.dividerColor)
                                                 )
                                             }
                                         }
@@ -421,7 +415,7 @@ fun ControlCenterScreen(
                                                 contentAlignment = Alignment.Center
                                             ) {
                                                 Box(modifier = Modifier.width(36.dp).height(4.dp).clip(CircleShape)
-                                                    .background(if (isIndicatorFocused) Color(0xFF525252) else Color(0xFFBDBDBD)))
+                                                    .background(if (isIndicatorFocused) theme.readableAccentColor else theme.textAlpha(30)))
                                             }
                                         }
                                     }

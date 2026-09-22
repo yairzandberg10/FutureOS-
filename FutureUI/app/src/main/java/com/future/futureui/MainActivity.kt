@@ -1,4 +1,7 @@
 package com.future.futureui
+import com.future.sharednav.components.FutureButton
+import com.future.sharednav.components.FutureButtonVariant
+import com.future.sharednav.theme.LocalFutureTheme
 
 import com.future.sharednav.theme.FutureTypography
 import android.accessibilityservice.AccessibilityService
@@ -95,19 +98,15 @@ class MainActivity : ComponentActivity() {
                         
                         Spacer(modifier = Modifier.height(24.dp))
                         
-                        Button(onClick = {
+                        FutureButton("הפעל שירותי נגישות", LocalFutureTheme.current, {
                             startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-                        }) {
-                            Text("הפעל שירותי נגישות")
-                        }
+                        })
 
                         Spacer(modifier = Modifier.height(12.dp))
 
-                        Button(onClick = {
+                        FutureButton("התאמה אישית", LocalFutureTheme.current, {
                             startActivity(Intent(this@MainActivity, SettingsActivity::class.java))
-                        }) {
-                            Text("התאמה אישית")
-                        }
+                        }, variant = FutureButtonVariant.Secondary)
 
                         Spacer(modifier = Modifier.height(24.dp))
                         

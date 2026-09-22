@@ -1,4 +1,11 @@
 package com.future.futureui.controlcenter.ui.components
+import com.future.sharednav.theme.LocalFutureTheme
+import com.future.sharednav.theme.elevatedSurfaceColor
+import com.future.sharednav.theme.raisedSurfaceColor
+import com.future.sharednav.theme.readableAccentColor
+import com.future.sharednav.theme.onReadableAccentColor
+import com.future.sharednav.theme.FutureDimens
+import com.future.sharednav.theme.textAlpha
 
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
@@ -34,8 +41,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 
-/** Subtle drop shadow applied to label text so it stays legible over any wallpaper/blur behind the glass chips. */
-private val LegibilityShadow = Shadow(color = Color.Black.copy(alpha = 0.35f), blurRadius = 6f)
 
 @Composable
 fun TogglePill(
@@ -47,8 +52,10 @@ fun TogglePill(
     isEditMode: Boolean = false,
     onOptionPressed: () -> Unit = {},
     focusRequester: FocusRequester? = null,
-    labelColor: Color = Color.Black
+    labelColor: Color = Color.Unspecified
 ) {
+    val theme = LocalFutureTheme.current
+    val ink = if (labelColor == Color.Unspecified) theme.textColor else labelColor
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
     val shape = FutureShapes.xxl
@@ -62,9 +69,9 @@ fun TogglePill(
             .height(55.dp)
             .clip(shape)
             .focusEffect(isFocused, shape)
-            .background(Color(0x80E0E0E0))
+            .background(theme.elevatedSurfaceColor)
             .then(
-                if (isFocused) Modifier.border(2.dp, Color.LightGray, shape) else Modifier
+                if (isFocused) Modifier.border(FutureDimens.focusBorderControl, theme.readableAccentColor, shape) else Modifier
             )
             .padding(6.dp)
             .onKeyEvent { event ->
@@ -89,24 +96,26 @@ fun TogglePill(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(CircleShape)
-                    .background(if (isOn) Color(0xFF6E6969) else Color(0xFF616161)),
+                    // דלוק = נבחר, ולכן מילוי מלא בהדגשה (states.html); כבוי = דרגה אחת
+                    // מעל הזכוכית. קודם שני המצבים היו #6E6969 מול #616161 - כמעט זהים.
+                    .background(if (isOn) theme.readableAccentColor else theme.raisedSurfaceColor),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(18.dp)
+                    tint = if (isOn) theme.onReadableAccentColor else theme.textColor,
+                    modifier = Modifier.size(FutureDimens.iconTopBar)
                 )
             }
             Spacer(modifier = Modifier.width(10.dp))
             Text(
                 text = label,
                 fontSize = FutureTypography.label,
-                color = labelColor,
+                color = ink,
                 fontWeight = FontWeight.Medium,
                 maxLines = 1,
-                style = TextStyle(shadow = LegibilityShadow)
+                
             )
         }
     }
@@ -122,8 +131,10 @@ fun FocusableIcon(
     isEditMode: Boolean = false,
     isRemove: Boolean = false,
     onMenuClick: () -> Unit = {},
-    labelColor: Color = Color.Black
+    labelColor: Color = Color.Unspecified
 ) {
+    val theme = LocalFutureTheme.current
+    val ink = if (labelColor == Color.Unspecified) theme.textColor else labelColor
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
 
@@ -140,7 +151,7 @@ fun FocusableIcon(
                 .size(38.dp)
                 .focusEffect(isFocused, CircleShape)
                 .clip(CircleShape)
-                .background(if (isOn) Color(0xFF969494).copy(alpha = 0.9f) else Color(0xFF616161).copy(alpha = 0.8f))
+                .background(if (isOn) theme.readableAccentColor else theme.raisedSurfaceColor)
                 .onKeyEvent { event ->
                     if (event.type == KeyEventType.KeyDown) {
                         if (event.key == Key.Menu || event.key == Key.Settings || event.key == Key.F1 || event.key == Key.Back) {
@@ -160,8 +171,8 @@ fun FocusableIcon(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(20.dp)
+                tint = if (isOn) theme.onReadableAccentColor else theme.textColor,
+                modifier = Modifier.size(FutureDimens.iconMenuRow)
             )
 
             if (isEditMode) {
@@ -171,14 +182,14 @@ fun FocusableIcon(
                         .offset(x = 6.dp, y = (-6).dp)
                         .size(18.dp)
                         .clip(CircleShape)
-                        .background(if (isRemove) Color.Red else Color(0xFF4CAF50))
-                        .border(1.5.dp, Color.White, CircleShape),
+                        .background(if (isRemove) theme.dangerColor else theme.successColor)
+                        .border(1.5.dp, theme.surfaceColor, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = if (isRemove) Icons.Rounded.Remove else Icons.Rounded.Add,
                         contentDescription = null,
-                        tint = Color.White,
+                        tint = com.future.sharednav.theme.FutureContrast.onColor(if (isRemove) theme.dangerColor else theme.successColor),
                         modifier = Modifier.size(12.dp)
                     )
                 }
@@ -194,10 +205,10 @@ fun FocusableIcon(
                 Text(
                     text = label,
                     fontSize = FutureTypography.caption,
-                    color = labelColor,
+                    color = ink,
                     textAlign = TextAlign.Center,
                     maxLines = 1,
-                    style = TextStyle(shadow = LegibilityShadow)
+                    
                 )
             }
         }
@@ -215,6 +226,7 @@ fun FocusableSection(
     onMenuClick: () -> Unit = {},
     content: @Composable () -> Unit
 ) {
+    val theme = LocalFutureTheme.current
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
     val shape = FutureShapes.xl
@@ -243,8 +255,8 @@ fun FocusableSection(
                         .border(
                             width = 2.dp,
                             color = when {
-                                isMoving -> Color.Red
-                                isFocused -> Color.LightGray
+                                isMoving -> theme.dangerColor
+                                isFocused -> theme.readableAccentColor
                                 else -> Color.Transparent
                             },
                             shape = shape

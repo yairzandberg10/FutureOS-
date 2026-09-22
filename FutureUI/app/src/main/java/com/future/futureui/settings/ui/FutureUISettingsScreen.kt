@@ -1,4 +1,6 @@
 package com.future.futureui.settings.ui
+import com.future.sharednav.components.FutureSwitch
+import androidx.compose.runtime.ReadOnlyComposable
 
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
@@ -80,13 +82,13 @@ fun FutureUISettingsScreen(
         Column(
             modifier = modifier
                 .fillMaxSize()
-                .background(Color.Black)
+                .background(shellTheme.backgroundColor)
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 24.dp)
         ) {
             Text(
                 text = "התאמה אישית",
-                color = Color.White,
+                color = shellTheme.textColor,
                 fontSize = FutureTypography.headline,
                 fontWeight = FontWeight.Bold
             )
@@ -144,7 +146,7 @@ fun FutureUISettingsScreen(
             Spacer(modifier = Modifier.height(24.dp))
             Text(
                 text = "מרכז הבקרה ניתן לעריכה ישירות בתוכו - לחיצה ארוכה על כפתור העריכה מאפשרת להוסיף, להסיר ולסדר מחדש כפתורים.",
-                color = Color.White.copy(alpha = 0.6f),
+                color = shellTheme.textColor.copy(alpha = 0.6f),
                 fontSize = FutureTypography.label
             )
         }
@@ -160,7 +162,7 @@ private fun nextInOrder(current: String): String {
 private fun SettingsSection(title: String, content: @Composable ColumnScope.() -> Unit) {
     Text(
         text = title,
-        color = Color.White.copy(alpha = 0.6f),
+        color = shellTheme.textColor.copy(alpha = 0.6f),
         fontSize = FutureTypography.summary,
         fontWeight = FontWeight.Bold
     )
@@ -169,7 +171,7 @@ private fun SettingsSection(title: String, content: @Composable ColumnScope.() -
         modifier = Modifier
             .fillMaxWidth()
             .clip(FutureShapes.xl)
-            .background(Color.White.copy(alpha = 0.08f))
+            .background(shellTheme.textColor.copy(alpha = 0.08f))
     ) {
         content()
     }
@@ -196,12 +198,8 @@ private fun SettingsToggleRow(label: String, value: Boolean, onChange: (Boolean)
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(text = label, color = Color.White, fontSize = FutureTypography.body, modifier = Modifier.weight(1f))
-        Switch(
-            checked = value,
-            onCheckedChange = onChange,
-            colors = SwitchDefaults.colors(checkedTrackColor = Color.White, checkedThumbColor = Color.Black)
-        )
+        Text(text = label, color = shellTheme.textColor, fontSize = FutureTypography.body, modifier = Modifier.weight(1f))
+        FutureSwitch(checked = value, theme = com.future.sharednav.theme.LocalFutureTheme.current)
     }
 }
 
@@ -226,7 +224,11 @@ private fun SettingsCycleRow(label: String, value: String, onNext: () -> Unit) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(text = label, color = Color.White, fontSize = FutureTypography.body, modifier = Modifier.weight(1f))
-        Text(text = value, color = Color.White.copy(alpha = 0.7f), fontSize = FutureTypography.summary)
+        Text(text = label, color = shellTheme.textColor, fontSize = FutureTypography.body, modifier = Modifier.weight(1f))
+        Text(text = value, color = shellTheme.textColor.copy(alpha = 0.7f), fontSize = FutureTypography.summary)
     }
 }
+
+/** הערכה הפעילה - מסכי המעטפת עוקבים אחרי מצב כהה/בהיר וצבע ההדגשה, כמו כל אפליקציה. */
+private val shellTheme: com.future.sharednav.theme.FutureTheme
+    @Composable @ReadOnlyComposable get() = com.future.sharednav.theme.LocalFutureTheme.current

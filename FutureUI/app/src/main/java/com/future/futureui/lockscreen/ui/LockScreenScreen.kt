@@ -1,4 +1,5 @@
 package com.future.futureui.lockscreen.ui
+import androidx.compose.animation.core.snap
 
 // ייבוא ספריות נדרשות של אנדרואיד וקומפוז (Jetpack Compose)
 import com.future.sharednav.theme.FutureMotion
@@ -313,7 +314,7 @@ fun LockScreenScreen(
             )
             val screenAlpha by animateFloatAsState(
                 targetValue = if (isUnlocking) 0f else 1f,
-                animationSpec = tween(280, easing = LinearEasing),
+                animationSpec = tween(FutureMotion.DurationSlow, easing = LinearEasing),
                 label = "lockScreenFade"
             )
 
@@ -322,24 +323,25 @@ fun LockScreenScreen(
                     .fillMaxSize()
                     .graphicsLayer { translationY = screenOffset; alpha = screenAlpha }
             ) {
-                // תצוגת הטפט עם אנימציית טשטוש (Blur) כשנכנסים לעריכה
-                val blurRadius by animateDpAsState(if (isEditMode) 20.dp else 0.dp, label = "blur")
+                // הטפט (תמונה של המשתמש) - חד, בלי טשטוש: "there is no blur in this
+                // system". במצב עריכה הוא מוחשך בהכהיה של המערכת (60%) במקום.
                 if (wallpaper != null) {
                     Image(
                         bitmap = wallpaper,
                         contentDescription = null,
-                        modifier = Modifier.fillMaxSize().blur(blurRadius),
+                        modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
                     )
                 } else {
-                    Box(modifier = Modifier.fillMaxSize().background(Color.Black).blur(blurRadius))
+                    Box(modifier = Modifier.fillMaxSize().background(Color.Black))
                 }
 
-                // שכבת הצללה מעל הטפט כדי שהטקסט יהיה קריא
+                // שכבת הכהיה מעל הטפט כדי שהטקסט יהיה קריא (20% במנוחה, 60% בעריכה)
+                val dim by animateFloatAsState(if (isEditMode) 0.6f else 0.2f, FutureMotion.standard(), label = "lockDim")
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color.Black.copy(alpha = if (isEditMode) 0.5f else 0.2f))
+                        .background(Color.Black.copy(alpha = dim))
                 )
 
                 // התוכן הראשי של המסך (שעון, התראות וקיצורים) עם אנימציית כניסה
@@ -428,7 +430,7 @@ fun PinEntryOverlay(
 ) {
     val shake by animateFloatAsState(
         targetValue = if (isError) 1f else 0f,
-        animationSpec = if (isError) repeatable(iterations = 3, animation = tween(60), repeatMode = RepeatMode.Reverse) else tween(0),
+        animationSpec = if (isError) repeatable(iterations = 3, animation = tween(PinShakeStepMillis), repeatMode = RepeatMode.Reverse) else snap(),
         label = "pinShake"
     )
 
@@ -441,7 +443,7 @@ fun PinEntryOverlay(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.75f)),
+                .background(Color.Black.copy(alpha = 0.60f)),
             contentAlignment = Alignment.Center
         ) {
             Column(
@@ -454,7 +456,7 @@ fun PinEntryOverlay(
                         isError -> "קוד שגוי, נסה שוב"
                         else -> "הזן קוד נעילה"
                     },
-                    color = if (isError) Color(0xFFFF6B6B) else Color.White,
+                    color = if (isError) LockDanger else Color.White,
                     fontSize = FutureTypography.bodyLarge,
                     fontWeight = FontWeight.Medium
                 )
@@ -466,7 +468,7 @@ fun PinEntryOverlay(
                             modifier = Modifier
                                 .size(16.dp)
                                 .clip(CircleShape)
-                                .background(if (filled) Color.White else Color.White.copy(alpha = 0.25f))
+                                .background(if (filled) Color.White else Color.White.copy(alpha = 0.2f))
                                 .border(1.dp, Color.White.copy(alpha = 0.4f), CircleShape)
                         )
                     }
@@ -553,7 +555,7 @@ fun AnimatedClock(
                 0 -> { // סגנון עבה ובולט
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(text = time, fontSize = 70.sp, fontWeight = FontWeight.Black, color = Color.White, lineHeight = 82.sp)
-                        Text(text = date, fontSize = FutureTypography.headline, color = Color.White.copy(alpha = 0.8f))
+                        Text(text = date, fontSize = FutureTypography.headline, color = Color.White.copy(alpha = 0.7f))
                     }
                 }
                 1 -> { // סגנון דק ואלגנטי
@@ -576,7 +578,7 @@ fun AnimatedClock(
 
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(text = time, fontSize = 70.sp, fontWeight = FontWeight.SemiBold, color = Color.White, lineHeight = 82.sp)
-                        Text(text = date, fontSize = FutureTypography.bodyLarge, color = Color.White.copy(alpha = 0.8f))
+                        Text(text = date, fontSize = FutureTypography.bodyLarge, color = Color.White.copy(alpha = 0.7f))
                     }
                 }
             }
@@ -660,3 +662,9 @@ fun nextShortcut(current: String): String {
     val idx = all.indexOf(current)
     return all[(idx + 1) % all.size]
 }
+
+/** צעד אחד של רעידת "קוד שגוי" - משוב פיזי קצר, לא מעבר, ולכן מחוץ לסקאלת התנועה. */
+private const val PinShakeStepMillis = 60
+
+/** מסך הנעילה תמיד מעל טפט מוחשך, ולכן צבע הסכנה של הערכה הכהה. */
+private val LockDanger = com.future.sharednav.theme.FutureTheme(isDarkMode = true).dangerColor
