@@ -1,6 +1,12 @@
 package com.future.flashlight.ui
+import com.future.sharednav.components.FutureButton
+import com.future.sharednav.theme.FutureMotion
+import com.future.sharednav.theme.FutureDimens
+import com.future.sharednav.theme.focusFillChipColor
+import com.future.sharednav.theme.idleFieldColor
+import com.future.sharednav.theme.readableAccentColor
+import com.future.sharednav.theme.onStatusColor
 
-import com.future.sharednav.theme.onAccentColor
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
 import android.Manifest
@@ -116,7 +122,8 @@ private fun FlashlightToggle(isOn: Boolean, theme: FutureTheme, onToggle: () -> 
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
     val bgColor by animateColorAsState(
-        if (isOn) theme.warningColor else if (isFocused) theme.textColor.copy(alpha = 0.18f) else theme.textColor.copy(alpha = 0.08f),
+        if (isOn) theme.warningColor else if (isFocused) theme.focusFillChipColor else theme.idleFieldColor,
+        FutureMotion.focusColorSpec,
         label = "flashlightBg"
     )
     val scale by animateFloatAsState(if (isFocused) 1.06f else 1f, label = "flashlightScale")
@@ -128,7 +135,7 @@ private fun FlashlightToggle(isOn: Boolean, theme: FutureTheme, onToggle: () -> 
             .clip(CircleShape)
             .background(bgColor)
             .then(
-                if (isFocused) Modifier.border(3.dp, if (isOn) theme.warningColor else theme.textColor.copy(alpha = 0.4f), CircleShape)
+                if (isFocused) Modifier.border(FutureDimens.focusBorderControl, if (isOn) theme.textColor else theme.readableAccentColor, CircleShape)
                 else Modifier
             )
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
@@ -139,7 +146,7 @@ private fun FlashlightToggle(isOn: Boolean, theme: FutureTheme, onToggle: () -> 
         Icon(
             if (isOn) Icons.Rounded.FlashlightOn else Icons.Rounded.FlashlightOff,
             contentDescription = "הפעל/כבה פנס",
-            tint = if (isOn) theme.onAccentColor else theme.textColor,
+            tint = if (isOn) theme.onStatusColor(theme.warningColor) else theme.textColor,
             modifier = Modifier.size(64.dp)
         )
     }
@@ -147,18 +154,5 @@ private fun FlashlightToggle(isOn: Boolean, theme: FutureTheme, onToggle: () -> 
 
 @Composable
 private fun FlashlightPermissionButton(theme: FutureTheme, onClick: () -> Unit, focusRequester: FocusRequester? = null) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val bgColor by animateColorAsState(if (isFocused) theme.accentColor else theme.accentColor.copy(alpha = 0.7f), label = "permBtnBg")
-    Box(
-        modifier = Modifier
-            .clip(FutureShapes.xl)
-            .background(bgColor)
-            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource)
-            .padding(horizontal = 24.dp, vertical = 12.dp)
-    ) {
-        Text("אשר הרשאה", color = Color.Black, fontWeight = FontWeight.Bold)
-    }
+    FutureButton("אשר הרשאה", theme, onClick, focusRequester = focusRequester)
 }

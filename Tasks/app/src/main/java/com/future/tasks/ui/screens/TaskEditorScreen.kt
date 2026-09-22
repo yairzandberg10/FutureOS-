@@ -1,6 +1,8 @@
 package com.future.tasks.ui.screens
+import com.future.sharednav.components.FutureTextField
+import com.future.sharednav.components.FutureChip
+import com.future.sharednav.components.FutureSectionHeader
 
-import com.future.sharednav.theme.onAccentColor
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
 import androidx.activity.compose.BackHandler
@@ -32,7 +34,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.future.sharednav.components.ConfirmDialog
 import com.future.sharednav.components.TopBarIconButton
 import com.future.sharednav.focus.escapeTextFieldFocusTrap
@@ -108,7 +109,6 @@ fun TaskEditorScreen(
                         onValueChange = { title = it },
                         placeholder = "כותרת המשימה",
                         theme = theme,
-                        textSize = 18.sp,
                         singleLine = true,
                     )
                     EditorField(
@@ -116,13 +116,12 @@ fun TaskEditorScreen(
                         onValueChange = { notes = it },
                         placeholder = "פרטים נוספים",
                         theme = theme,
-                        textSize = 14.sp,
                         singleLine = false,
                         modifier = Modifier.weight(1f),
                     )
 
                     Column(modifier = Modifier.padding(bottom = 20.dp)) {
-                        Text("עדיפות", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.label, modifier = Modifier.padding(bottom = 8.dp))
+                        FutureSectionHeader("עדיפות", theme, inset = false)
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             PriorityChip("נמוכה", TaskPriority.LOW, priority, theme.textColor.copy(alpha = 0.4f), theme) { priority = it }
                             PriorityChip("רגילה", TaskPriority.NORMAL, priority, theme.warningColor, theme) { priority = it }
@@ -152,50 +151,22 @@ private fun EditorField(
     onValueChange: (String) -> Unit,
     placeholder: String,
     theme: FutureTheme,
-    textSize: TextUnit,
     singleLine: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(FutureShapes.md)
-            .background(theme.textColor.copy(alpha = 0.06f))
-            .padding(12.dp),
-    ) {
-        if (value.isEmpty()) {
-            Text(placeholder, color = theme.textColor.copy(alpha = 0.35f), fontSize = textSize)
-        }
-        BasicTextField(
-            value = value,
-            onValueChange = onValueChange,
-            singleLine = singleLine,
-            textStyle = TextStyle(color = theme.textColor, fontSize = textSize),
-            cursorBrush = SolidColor(theme.accentColor),
-            modifier = Modifier.fillMaxWidth(),
-        )
-    }
+    FutureTextField(
+        value = value,
+        onValueChange = onValueChange,
+        theme = theme,
+        placeholder = placeholder,
+        singleLine = singleLine,
+        modifier = modifier.fillMaxWidth(),
+    )
 }
 
+/** בחירת עדיפות - הצ'יפ של הדיזיין סיסטם; הנבחר במילוי ההדגשה עם הדיו שלה (קודם
+ * הצבע היה של העדיפות, אבל הטקסט נגזר מההדגשה - זוג שלא מבטיח ניגודיות). */
 @Composable
-private fun PriorityChip(label: String, value: Int, current: Int, activeColor: Color, theme: FutureTheme, onSelect: (Int) -> Unit) {
-    val selected = value == current
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val bgColor = when {
-        selected -> activeColor
-        isFocused -> theme.textColor.copy(alpha = 0.2f)
-        else -> theme.textColor.copy(alpha = 0.08f)
-    }
-    Box(
-        modifier = Modifier
-            .clip(FutureShapes.lg)
-            .background(bgColor)
-            .then(if (isFocused) Modifier.border(width = 2.dp, color = activeColor, shape = FutureShapes.lg) else Modifier)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = { onSelect(value) })
-            .focusable(interactionSource = interactionSource)
-            .padding(horizontal = 14.dp, vertical = 8.dp),
-    ) {
-        Text(label, color = if (selected) theme.onAccentColor else theme.textColor, fontSize = FutureTypography.summary, fontWeight = FontWeight.Bold)
-    }
+private fun PriorityChip(label: String, value: Int, current: Int, @Suppress("UNUSED_PARAMETER") activeColor: Color, theme: FutureTheme, onSelect: (Int) -> Unit) {
+    FutureChip(label, theme, selected = value == current, onClick = { onSelect(value) })
 }

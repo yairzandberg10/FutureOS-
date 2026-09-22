@@ -1,4 +1,5 @@
 package com.future.dialer
+import com.future.sharednav.theme.onStatusColor
 
 import com.future.sharednav.theme.FutureShapes
 import android.Manifest
@@ -561,10 +562,12 @@ fun MainScreen(
 private fun OngoingCallBanner(name: String, onReturn: () -> Unit) {
     com.future.sharednav.focus.FocusableItem(
         onClick = onReturn,
-        accentColor = MaterialTheme.colorScheme.onPrimary,
+        // שיחה פעילה היא סטטוס, ולכן בצבע ההצלחה של הפלטה ולא בצבע ההדגשה -
+        // ההדגשה שמורה לפוקוס ולבחירה בלבד.
+        accentColor = com.future.sharednav.theme.LocalFutureTheme.current.onStatusColor(com.future.sharednav.theme.LocalFutureTheme.current.successColor),
         modifier = Modifier.fillMaxWidth(),
-        idleBackgroundColor = MaterialTheme.colorScheme.primary,
-        focusedBackgroundColor = MaterialTheme.colorScheme.primary,
+        idleBackgroundColor = com.future.sharednav.theme.LocalFutureTheme.current.successColor,
+        focusedBackgroundColor = com.future.sharednav.theme.LocalFutureTheme.current.successColor,
         cornerRadius = 0.dp,
         scaleOnFocus = false,
         contentPadding = 0.dp
@@ -579,13 +582,13 @@ private fun OngoingCallBanner(name: String, onReturn: () -> Unit) {
             Icon(
                 imageVector = Icons.Rounded.Call,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onPrimary,
+                tint = com.future.sharednav.theme.LocalFutureTheme.current.onStatusColor(com.future.sharednav.theme.LocalFutureTheme.current.successColor),
                 modifier = Modifier.size(16.dp)
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = "${stringResource(R.string.ongoing_call)} · $name",
-                color = MaterialTheme.colorScheme.onPrimary,
+                color = com.future.sharednav.theme.LocalFutureTheme.current.onStatusColor(com.future.sharednav.theme.LocalFutureTheme.current.successColor),
                 fontWeight = FontWeight.Medium,
                 style = MaterialTheme.typography.bodyMedium,
                 maxLines = 1
@@ -593,7 +596,7 @@ private fun OngoingCallBanner(name: String, onReturn: () -> Unit) {
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = stringResource(R.string.tap_to_return),
-                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f),
+                color = com.future.sharednav.theme.LocalFutureTheme.current.onStatusColor(com.future.sharednav.theme.LocalFutureTheme.current.successColor).copy(alpha = 0.7f),
                 style = MaterialTheme.typography.labelSmall
             )
         }
@@ -616,14 +619,11 @@ private fun DefaultDialerRequiredScreen(onRequest: () -> Unit) {
                 textAlign = TextAlign.Center
             )
             Spacer(modifier = Modifier.height(16.dp))
-            Button(
+            com.future.sharednav.components.FutureButton(
+                text = stringResource(R.string.set_as_default_dialer),
+                theme = com.future.sharednav.theme.LocalFutureTheme.current,
                 onClick = onRequest,
-                shape = FutureShapes.lg,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                ),
-            ) { Text(stringResource(R.string.set_as_default_dialer)) }
+            )
         }
     }
 }

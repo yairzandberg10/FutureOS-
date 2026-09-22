@@ -1,4 +1,5 @@
 package com.future.guide.ui
+import com.future.sharednav.theme.elevatedSurfaceColor
 
 import com.future.sharednav.theme.FutureTypography
 import androidx.compose.foundation.background
@@ -35,7 +36,6 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.future.guide.data.GuideApp
 import com.future.sharednav.theme.FutureTheme
 import kotlinx.coroutines.launch
@@ -122,16 +122,16 @@ private fun GuideStepRow(number: Int, text: String, theme: FutureTheme) {
             modifier = Modifier
                 .size(24.dp)
                 .clip(CircleShape)
-                .background(theme.accentColor.copy(alpha = 0.22f)),
+                .background(theme.elevatedSurfaceColor),
             contentAlignment = Alignment.Center
         ) {
-            Text("$number", color = theme.accentColor, fontSize = FutureTypography.label, fontWeight = FontWeight.Bold)
+            Text("$number", color = theme.textColor, fontSize = FutureTypography.label, fontWeight = FontWeight.Bold)
         }
         Text(
             text,
-            color = theme.textColor.copy(alpha = 0.9f),
+            color = theme.textColor,
             fontSize = FutureTypography.body,
-            lineHeight = 20.sp,
+            lineHeight = FutureTypography.body * FutureTypography.lineHeightRatio,
             modifier = Modifier.padding(start = 12.dp).weight(1f, fill = true)
         )
     }

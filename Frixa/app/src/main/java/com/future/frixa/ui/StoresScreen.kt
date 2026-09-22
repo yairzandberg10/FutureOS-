@@ -1,4 +1,8 @@
 package com.future.frixa.ui
+import com.future.sharednav.theme.FutureShapes
+import com.future.sharednav.theme.readableAccentColor
+import com.future.sharednav.theme.mutedTextColor
+import com.future.sharednav.theme.FutureMotion
 
 import com.future.sharednav.theme.FutureTypography
 import androidx.compose.animation.animateColorAsState
@@ -108,8 +112,9 @@ fun StoresScreen(theme: FutureTheme) {
 
 @Composable
 private fun StoreRow(store: Store, distanceMeters: Double?, theme: FutureTheme) {
-    val shape = RoundedCornerShape(FutureDimens.cardCornerRadius)
-    val bgColor by animateColorAsState(theme.surfaceColor, label = "storeRowBg")
+    // שורה שאינה מקבלת פוקוס - כרטיס מידע, ולכן ברדיוס הכרטיס (16dp).
+    val shape = FutureShapes.lg
+    val bgColor by animateColorAsState(theme.surfaceColor, FutureMotion.focusColorSpec, label = "storeRowBg")
     Row(
         modifier = Modifier
             .fillMaxWidth()

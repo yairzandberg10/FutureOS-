@@ -1,4 +1,6 @@
 package com.future.frixa
+import com.future.sharednav.components.FutureBottomNav
+import com.future.sharednav.components.FutureNavItem
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -109,31 +111,14 @@ class MainActivity : ComponentActivity() {
                         },
                     containerColor = theme.backgroundColor,
                     bottomBar = {
-                        NavigationBar(
-                            containerColor = Color.Transparent,
-                            contentColor = theme.textColor,
-                        ) {
-                            tabs.forEach { (tabRoute, label, icon) ->
-                                NavigationBarItem(
-                                    // D-pad ימינה/שמאלה כבר עוברים בין הטאבים (ר' onKeyEvent
-                                    // למעלה) - בלי זה, המיקוד ההתחלתי של Compose נוחת על
-                                    // אחד מפריטי הסרגל (בגלל RTL, בדרך כלל האחרון - "חנויות"),
-                                    // ואז לחיצת OK "לוחצת" עליו ישירות ומדלגת טאב במפתיע.
-                                    modifier = Modifier.focusProperties { canFocus = false },
-                                    icon = { Icon(icon, contentDescription = label) },
-                                    label = { Text(label) },
-                                    selected = currentTabRoute == tabRoute,
-                                    colors = NavigationBarItemDefaults.colors(
-                                        selectedIconColor = theme.onReadableAccentColor,
-                                        selectedTextColor = theme.readableAccentColor,
-                                        indicatorColor = theme.readableAccentColor,
-                                        unselectedIconColor = theme.mutedTextColor,
-                                        unselectedTextColor = theme.mutedTextColor,
-                                    ),
-                                    onClick = { route = tabRoute }
-                                )
-                            }
-                        }
+                        // הסרגל התחתון של המערכת (FutureBottomNav), כמו בשעון ובכושר - לא
+                        // NavigationBar של Material. הפריטים לא מקבלים פוקוס; חצים ימינה/שמאלה
+                        // עוברים בין הטאבים (ר' onKeyEvent למעלה).
+                        FutureBottomNav(
+                            items = tabs.map { (_, label, icon) -> FutureNavItem(label = label, icon = icon) },
+                            selectedIndex = tabs.indexOfFirst { it.first == currentTabRoute }.coerceAtLeast(0),
+                            theme = theme,
+                        )
                     }
                 ) { innerPadding ->
                     Surface(

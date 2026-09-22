@@ -1,4 +1,8 @@
 package com.future.camera.ui
+import com.future.sharednav.theme.FutureMotion
+import com.future.sharednav.theme.FutureContrast
+import com.future.sharednav.theme.FutureTheme
+import com.future.sharednav.theme.scrimColor
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
@@ -24,6 +28,11 @@ import androidx.compose.ui.unit.dp
 
 /** כפתור עגול צף מעל תצוגת המצלמה - אותה שפת עיצוב כמו ToolsIconButton
  * (טבעת מיקוד בצבע ההדגשה, רקע כהה למראה שקוף מעל התצוגה החיה). */
+/**
+ * כפתור עגול צף מעל תצוגת המצלמה. במנוחה - עיגול בהכהיה של המערכת (60%
+ * שחור, קבוע ולכן קריא מעל כל תמונה חיה); בפוקוס - מילוי מלא בהדגשה, והאייקון
+ * בדיו שמתאים לה (קודם Color.Black קבוע - שחור על שחור עם הדגשה כהה).
+ */
 @Composable
 fun CameraIconButton(
     icon: ImageVector,
@@ -38,7 +47,8 @@ fun CameraIconButton(
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
     val bgColor by animateColorAsState(
-        if (isFocused) accentColor.copy(alpha = 0.85f) else Color.Black.copy(alpha = 0.4f),
+        if (isFocused) accentColor else ScrimOverPreview,
+        FutureMotion.focusColorSpec,
         label = "cameraIconBtnBg"
     )
     Box(
@@ -50,6 +60,12 @@ fun CameraIconButton(
             .focusable(interactionSource = interactionSource),
         contentAlignment = Alignment.Center
     ) {
-        Icon(icon, contentDescription = contentDescription, tint = if (isFocused) Color.Black else tint, modifier = Modifier.size(iconSize))
+        Icon(icon, contentDescription = contentDescription, tint = if (isFocused) FutureContrast.onColor(accentColor) else tint, modifier = Modifier.size(iconSize))
     }
 }
+
+/** ההכהיה של המערכת (--fos-scrim, 60% שחור) - מה שנותן לפקד קריאות מעל התצוגה החיה. */
+val ScrimOverPreview: Color = FutureTheme().scrimColor
+
+/** המצלמה תמיד מעל תמונה חיה, ולכן לוקחת את צבעי הסטטוס של הערכה הכהה. */
+val CameraDanger: Color = FutureTheme(isDarkMode = true).dangerColor

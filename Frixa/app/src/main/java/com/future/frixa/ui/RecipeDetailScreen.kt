@@ -79,7 +79,7 @@ fun RecipeDetailScreen(recipe: Recipe, theme: FutureTheme, onBack: () -> Unit) {
             items(recipe.ingredients) { ingredient ->
                 Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(modifier = Modifier.size(6.dp).background(theme.accentColor, CircleShape))
-                    Text(ingredient, color = theme.textColor.copy(alpha = 0.85f), fontSize = FutureTypography.body, modifier = Modifier.padding(start = 10.dp))
+                    Text(ingredient, color = theme.textColor, fontSize = FutureTypography.body, modifier = Modifier.padding(start = 10.dp))
                 }
             }
             item {
@@ -95,7 +95,7 @@ fun RecipeDetailScreen(recipe: Recipe, theme: FutureTheme, onBack: () -> Unit) {
                     ) {
                         Text("${index + 1}", color = theme.accentColor, fontSize = FutureTypography.label, fontWeight = FontWeight.Bold)
                     }
-                    Text(step, color = theme.textColor.copy(alpha = 0.85f), fontSize = FutureTypography.body, modifier = Modifier.padding(start = 10.dp))
+                    Text(step, color = theme.textColor, fontSize = FutureTypography.body, modifier = Modifier.padding(start = 10.dp))
                 }
             }
             item { Spacer(modifier = Modifier.height(24.dp)) }

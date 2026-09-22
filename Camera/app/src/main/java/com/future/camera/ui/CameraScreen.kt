@@ -1,4 +1,11 @@
 package com.future.camera.ui
+import com.future.sharednav.components.FutureOptionsMenu
+import com.future.sharednav.components.FutureMenuRow
+import com.future.sharednav.theme.FutureDimens
+import com.future.sharednav.theme.FutureMotion
+import com.future.sharednav.theme.FutureContrast
+import com.future.sharednav.theme.readableAccentColor
+import androidx.compose.material.icons.rounded.Check
 
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
@@ -245,21 +252,9 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
                 if (showGrid) GridOverlay()
             }
 
-            // רקע שקוף בשולי המסך כדי שהכפתורים הצפים יישארו קריאים מעל התצוגה החיה.
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(90.dp)
-                    .align(Alignment.TopCenter)
-                    .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.55f), Color.Transparent)))
-            )
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(230.dp)
-                    .align(Alignment.BottomCenter)
-                    .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.6f))))
-            )
+            // בלי מעברי צבע בשולי המסך: "No protection gradients; a scrim or a solid
+            // capsule does that job" (README של הדיזיין סיסטם). כל פקד כאן כבר
+            // יושב על עיגול/קפסולה בהכהיה של המערכת.
 
             // שורה עליונה: חזרה, מד זמן הקלטה (במצב וידאו פעיל), רשת/טיימר/הבזק.
             Row(
@@ -408,7 +403,7 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
                             if (isRecording) Icons.Rounded.Stop else Icons.Rounded.Videocam
                         } else Icons.Rounded.Camera,
                         contentDescription = if (captureMode == CaptureMode.VIDEO) "הקלט וידאו" else "צלם",
-                        accentColor = if (isRecording) Color.Red else theme.accentColor,
+                        accentColor = if (isRecording) CameraDanger else theme.accentColor,
                         size = 72.dp,
                         iconSize = 32.dp,
                         focusRequester = shutterFocus,
@@ -469,13 +464,13 @@ private fun RecordingIndicator(seconds: Int) {
     val secs = seconds % 60
     Row(
         modifier = Modifier
-            .clip(FutureShapes.xl)
-            .background(Color.Black.copy(alpha = 0.5f))
-            .padding(horizontal = 12.dp, vertical = 6.dp),
+            .clip(FutureShapes.pill)
+            .background(ScrimOverPreview)
+            .padding(horizontal = FutureDimens.spacingMd, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Box(modifier = Modifier.size(8.dp).background(Color.Red, CircleShape))
+        Box(modifier = Modifier.size(8.dp).background(CameraDanger, CircleShape))
         Text("%d:%02d".format(minutes, secs), color = Color.White, fontSize = FutureTypography.summary, fontWeight = FontWeight.Medium)
     }
 }
@@ -498,8 +493,8 @@ private fun GridOverlay() {
 private fun CaptureModeSelector(selected: CaptureMode, theme: FutureTheme, onSelect: (CaptureMode) -> Unit) {
     Row(
         modifier = Modifier
-            .clip(FutureShapes.xl)
-            .background(Color.Black.copy(alpha = 0.4f))
+            .clip(FutureShapes.pill)
+            .background(ScrimOverPreview)
             .padding(3.dp),
     ) {
         CaptureModeSegment("תמונה", isSelected = selected == CaptureMode.PHOTO, theme = theme) { onSelect(CaptureMode.PHOTO) }
@@ -511,9 +506,11 @@ private fun CaptureModeSelector(selected: CaptureMode, theme: FutureTheme, onSel
 private fun CaptureModeSegment(label: String, isSelected: Boolean, theme: FutureTheme, onClick: () -> Unit) {
     val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    val shape = FutureShapes.lg
+    // צ'יפ מעל תמונה חיה: נבחר = מילוי בהדגשה עם הדיו שלה; ממוקד = 18% לבן.
+    val shape = FutureShapes.pill
     val bgColor by androidx.compose.animation.animateColorAsState(
-        if (isSelected) theme.accentColor else if (isFocused) Color.White.copy(alpha = 0.25f) else Color.Transparent,
+        if (isSelected) theme.accentColor else if (isFocused) Color.White.copy(alpha = 0.18f) else Color.Transparent,
+        FutureMotion.focusColorSpec,
         label = "captureModeSegmentBg",
     )
     Box(
@@ -525,7 +522,7 @@ private fun CaptureModeSegment(label: String, isSelected: Boolean, theme: Future
             .padding(horizontal = 18.dp, vertical = 7.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text(label, color = if (isSelected) Color.Black else Color.White, fontSize = FutureTypography.summary, fontWeight = FontWeight.SemiBold)
+        Text(label, color = if (isSelected) FutureContrast.onColor(theme.accentColor) else Color.White, fontSize = FutureTypography.summary, fontWeight = FutureTypography.weightMedium)
     }
 }
 
@@ -538,41 +535,26 @@ private fun CameraSettingsMenu(
     onSelectTimer: (Int) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    com.future.sharednav.components.AppDialog(onDismissRequest = onDismiss) {
-        Column(
-            modifier = Modifier
-                .clip(FutureShapes.xl)
-                .background(theme.surfaceColor)
-                .padding(vertical = 8.dp)
-        ) {
-            CameraSettingsRow("קווי רשת", theme = theme, isOn = showGrid, onClick = onToggleGrid)
-            CameraSettingsRow("טיימר עצמי - כבוי", theme = theme, isOn = timerSeconds == 0, onClick = { onSelectTimer(0) })
-            CameraSettingsRow("טיימר עצמי - 3 שניות", theme = theme, isOn = timerSeconds == 3, onClick = { onSelectTimer(3) })
-            CameraSettingsRow("טיימר עצמי - 10 שניות", theme = theme, isOn = timerSeconds == 10, onClick = { onSelectTimer(10) })
-        }
+    FutureOptionsMenu(theme = theme, onDismissRequest = onDismiss, header = "מצלמה") {
+        CameraSettingsRow("קווי רשת", theme = theme, isOn = showGrid, onClick = onToggleGrid)
+        CameraSettingsRow("טיימר עצמי כבוי", theme = theme, isOn = timerSeconds == 0, onClick = { onSelectTimer(0) })
+        CameraSettingsRow("טיימר עצמי 3 שניות", theme = theme, isOn = timerSeconds == 3, onClick = { onSelectTimer(3) })
+        CameraSettingsRow("טיימר עצמי 10 שניות", theme = theme, isOn = timerSeconds == 10, onClick = { onSelectTimer(10) })
     }
 }
 
+/** שורת תפריט; האפשרות הפעילה מסומנת בסימן V בהדגשה בסוף השורה. */
 @Composable
 private fun CameraSettingsRow(label: String, theme: FutureTheme, isOn: Boolean, onClick: () -> Unit) {
-    val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val bgColor by androidx.compose.animation.animateColorAsState(
-        if (isFocused) theme.textColor.copy(alpha = 0.12f) else Color.Transparent,
-        label = "cameraSettingsRowBg",
+    FutureMenuRow(
+        label = label,
+        icon = null,
+        theme = theme,
+        onClick = onClick,
+        trailing = if (isOn) {
+            { Icon(Icons.Rounded.Check, contentDescription = null, tint = theme.readableAccentColor, modifier = Modifier.size(FutureDimens.iconMenuRow)) }
+        } else null,
     )
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(bgColor)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource)
-            .padding(horizontal = 20.dp, vertical = 14.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(label, color = if (isOn) theme.accentColor else theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = if (isOn) FontWeight.Bold else FontWeight.Normal)
-    }
 }
 
 @Composable

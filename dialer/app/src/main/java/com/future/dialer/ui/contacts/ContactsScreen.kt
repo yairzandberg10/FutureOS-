@@ -1,4 +1,6 @@
 package com.future.dialer.ui.contacts
+import com.future.sharednav.components.FutureTextField
+import com.future.sharednav.theme.FutureDimens
 
 import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.theme.favoriteColor
@@ -44,26 +46,16 @@ fun ContactsScreen(
         // צבעים מותאמים לזכוכית הכהה של המערכת (מילוי שקוף בגוון ההדגשה + בורדר
         // בצבע ההדגשה) במקום ברירת המחדל האפורה/כחולה של OutlinedTextField -
         // אותה שפה בדיוק כמו תצוגת המספר המוקש ב-DialpadScreen.
-        OutlinedTextField(
+        FutureTextField(
             value = searchQuery,
             onValueChange = { viewModel.onSearchQueryChanged(it) },
+            theme = com.future.sharednav.theme.LocalFutureTheme.current,
+            placeholder = stringResource(R.string.search_contacts),
+            focusRequester = searchFocusRequester,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
-                .focusRequester(searchFocusRequester)
+                .padding(FutureDimens.screenPadding)
                 .escapeTextFieldFocusTrap(),
-            placeholder = { Text(stringResource(R.string.search_contacts)) },
-            shape = FutureShapes.lg,
-            singleLine = true,
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.06f),
-                unfocusedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.06f),
-                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                unfocusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.25f),
-                cursorColor = MaterialTheme.colorScheme.primary,
-                focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-            ),
         )
 
         LazyColumn(

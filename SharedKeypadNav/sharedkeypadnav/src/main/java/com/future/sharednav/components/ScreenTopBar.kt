@@ -101,6 +101,20 @@ fun TopBarIconButton(
     textColor: Color,
     accentColor: Color,
     onClick: () -> Unit,
+) {
+    // החתימה המקורית נשמרת כעומס נפרד: קריאות עם lambda נגרר
+    // (`TopBarIconButton(icon, "", c, a) { ... }`) נקשרות תמיד לפרמטר האחרון,
+    // ולכן הפרמטרים החדשים לא יכולים לבוא אחרי onClick באותה פונקציה.
+    TopBarIconButton(icon, contentDescription, textColor, accentColor, onClick, focusRequester = null)
+}
+
+@Composable
+fun TopBarIconButton(
+    icon: ImageVector,
+    contentDescription: String,
+    textColor: Color,
+    accentColor: Color,
+    onClick: () -> Unit,
     focusRequester: FocusRequester? = null,
     enabled: Boolean = true,
 ) {

@@ -1,4 +1,9 @@
 package com.future.tasks.ui.screens
+import com.future.sharednav.components.FutureTextField
+import com.future.sharednav.components.FutureListItem
+import com.future.sharednav.theme.mutedTextColor
+import com.future.sharednav.theme.subtleTextColor
+import com.future.sharednav.theme.textAlpha
 
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
@@ -77,7 +82,7 @@ fun TaskListScreen(
                 EmptyState(
                     icon = Icons.Rounded.Checklist,
                     title = if (searchQuery.isBlank()) "אין משימות" else "לא נמצאו משימות",
-                    subtitle = if (searchQuery.isBlank()) "נווטו לכפתור ההוספה למעלה ולחצו OK כדי להוסיף אחת" else null,
+                    subtitle = if (searchQuery.isBlank()) "נווט לכפתור ההוספה שלמעלה ולחץ OK" else null,
                     textColor = theme.textColor,
                     modifier = Modifier.weight(1f),
                 )
@@ -103,79 +108,49 @@ fun TaskListScreen(
 
 @Composable
 private fun SearchField(query: String, onQueryChanged: (String) -> Unit, theme: FutureTheme) {
-    var isFocused by remember { mutableStateOf(false) }
-    Row(
+    FutureTextField(
+        value = query,
+        onValueChange = onQueryChanged,
+        theme = theme,
+        placeholder = "חיפוש משימות",
+        leading = {
+            Icon(Icons.Rounded.Search, contentDescription = null, tint = theme.mutedTextColor, modifier = Modifier.size(FutureDimens.iconTopBar))
+        },
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = FutureDimens.screenPadding, vertical = 8.dp)
-            .clip(FutureShapes.md)
-            .background(theme.textColor.copy(alpha = if (isFocused) 0.14f else 0.08f))
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(Icons.Rounded.Search, contentDescription = null, tint = theme.textColor.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
-        Spacer(modifier = Modifier.width(8.dp))
-        Box(modifier = Modifier.weight(1f)) {
-            if (query.isEmpty()) {
-                Text("חיפוש משימות", color = theme.textColor.copy(alpha = 0.4f), fontSize = FutureTypography.body)
-            }
-            BasicTextField(
-                value = query,
-                onValueChange = onQueryChanged,
-                singleLine = true,
-                textStyle = TextStyle(color = theme.textColor, fontSize = FutureTypography.body),
-                cursorBrush = SolidColor(theme.accentColor),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .onFocusChanged { isFocused = it.isFocused },
-            )
-        }
-    }
+            .padding(horizontal = FutureDimens.screenPadding, vertical = FutureDimens.spacingSm),
+    )
 }
 
+/** שורת משימה - שורת הרשימה של הדיזיין סיסטם; משימה שבוצעה בקו חוצה וב-40%. */
 @Composable
 private fun TaskRow(task: Task, theme: FutureTheme, focusRequester: FocusRequester, onClick: () -> Unit) {
-    FocusableItem(
+    FutureListItem(
+        title = task.title.ifEmpty { "משימה ללא שם" },
+        summary = task.notes.ifBlank { null },
+        theme = theme,
         onClick = onClick,
-        accentColor = theme.accentColor,
-        modifier = Modifier.fillMaxWidth(),
-        cornerRadius = FutureDimens.cardCornerRadius,
-        contentPadding = 12.dp,
         focusRequester = focusRequester,
-    ) {
-        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        titleColor = if (task.isDone) theme.subtleTextColor else theme.textColor,
+        titleDecoration = if (task.isDone) TextDecoration.LineThrough else null,
+        leading = {
             Icon(
                 if (task.isDone) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
                 contentDescription = null,
-                tint = if (task.isDone) theme.successColor else theme.textColor.copy(alpha = 0.4f),
-                modifier = Modifier.size(22.dp),
+                tint = if (task.isDone) theme.successColor else theme.subtleTextColor,
+                modifier = Modifier.size(FutureDimens.iconSettingRow),
             )
-            Spacer(modifier = Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    task.title.ifEmpty { "משימה ללא שם" },
-                    color = if (task.isDone) theme.textColor.copy(alpha = 0.4f) else theme.textColor,
-                    fontSize = FutureTypography.bodyLarge,
-                    fontWeight = FontWeight.Medium,
-                    textDecoration = if (task.isDone) TextDecoration.LineThrough else null,
-                    maxLines = 1,
-                )
-                if (task.notes.isNotBlank()) {
-                    Text(task.notes, color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.label, maxLines = 1)
-                }
-            }
-            Spacer(modifier = Modifier.width(8.dp))
-            PriorityDot(task.priority, theme)
-        }
-    }
+        },
+        trailing = { PriorityDot(task.priority, theme) },
+    )
 }
 
 @Composable
 private fun PriorityDot(priority: Int, theme: FutureTheme) {
     val color = when (priority) {
         TaskPriority.HIGH -> theme.dangerColor
-        TaskPriority.LOW -> theme.textColor.copy(alpha = 0.25f)
+        TaskPriority.LOW -> theme.textAlpha(30)
         else -> theme.warningColor
     }
-    Box(modifier = Modifier.size(10.dp).clip(RoundedCornerShape(50)).background(color))
+    Box(modifier = Modifier.size(10.dp).clip(FutureShapes.pill).background(color))
 }

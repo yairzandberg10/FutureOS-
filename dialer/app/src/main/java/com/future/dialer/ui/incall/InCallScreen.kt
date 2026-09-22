@@ -86,7 +86,7 @@ fun InCallScreen(
     // (F44336 / 4CAF50) אינם בפלטה של המערכת ולא הגיבו למצב כהה/בהיר.
     val futureTheme = com.future.sharednav.theme.LocalFutureTheme.current
     val onSurfaceColor = MaterialTheme.colorScheme.onBackground
-    val onSurfaceMuted = onSurfaceColor.copy(alpha = 0.65f)
+    val onSurfaceMuted = onSurfaceColor.copy(alpha = 0.6f)
     // ה-scrim מעל טפט הרקע המטושטש חייב להיות בניגוד ל-onBackground (הצבע שבו כתוב
     // הטקסט) כדי שהטקסט יישאר קריא בשני מצבי העיצוב: כהה (onBackground לבן -> scrim שחור)
     // ובהיר (onBackground שחור -> scrim לבן).
@@ -149,7 +149,7 @@ fun InCallScreen(
                     text = if (isRinging) stringResource(R.string.incoming_call) else formatDuration(duration),
                     fontSize = FutureTypography.headline,
                     fontWeight = FontWeight.Medium,
-                    color = onSurfaceColor.copy(alpha = 0.85f)
+                    color = onSurfaceColor.copy(alpha = 0.7f)
                 )
                 if (isRecording) {
                     Spacer(modifier = Modifier.height(8.dp))
@@ -266,14 +266,21 @@ fun InCallScreen(
  * למסך השיחה מראה "אמיתי" יותר. בזמן צלצול הטבעת "נושמת" (פועמת בעדינות) כדי
  * שהמסך ירגיש חי, בלי טקסט מהבהב או אנימציה תזזיתית.
  */
+/**
+ * האווטאר של הדיזיין סיסטם בגודל גיבור (Avatar.jsx: 88 ברשימה, 176px = 88dp
+ * כגיבור; כאן 120dp כי הוא כל המסך). בזמן צלצול טבעת ב-30% מהטקסט "נושמת"
+ * סביבו. בלי צל ובלי הילה בצבע ההדגשה: הצל היחיד במערכת הוא של כרטיס,
+ * וההדגשה אינה קישוט.
+ */
 @Composable
 private fun CallerAvatar(initial: String, accentColor: Color, onSurfaceColor: Color, isPulsing: Boolean) {
+    val theme = com.future.sharednav.theme.LocalFutureTheme.current
     val infiniteTransition = rememberInfiniteTransition(label = "avatarPulse")
     val pulseScale by infiniteTransition.animateFloat(
         initialValue = 1f,
         targetValue = if (isPulsing) 1.08f else 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1100, easing = LinearEasing),
+            animation = tween(durationMillis = RingPulseMillis, easing = LinearEasing),
             repeatMode = RepeatMode.Reverse
         ),
         label = "avatarPulseScale"
@@ -284,65 +291,32 @@ private fun CallerAvatar(initial: String, accentColor: Color, onSurfaceColor: Co
             modifier = Modifier
                 .size(136.dp)
                 .graphicsLayerScale(pulseScale)
-                .border(2.dp, accentColor.copy(alpha = 0.5f), CircleShape)
+                .border(2.dp, onSurfaceColor.copy(alpha = 0.3f), CircleShape)
         )
-        Box(
-            modifier = Modifier
-                .size(120.dp)
-                .shadow(elevation = 12.dp, shape = CircleShape, clip = false, ambientColor = accentColor.copy(alpha = 0.4f), spotColor = accentColor.copy(alpha = 0.4f))
-                .background(accentColor.copy(alpha = 0.18f), CircleShape)
-                .border(1.dp, accentColor.copy(alpha = 0.35f), CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(initial, fontSize = FutureTypography.hero, fontWeight = FontWeight.Bold, color = onSurfaceColor)
-        }
+        com.future.sharednav.components.FutureAvatar(
+            theme = theme,
+            name = initial,
+            size = 120.dp,
+            contentColor = onSurfaceColor,
+        )
     }
 }
+
+/** נשימה אחת של הטבעת בזמן צלצול - לולאה, ולא מעבר, ולכן מחוץ לסקאלת התנועה. */
+private const val RingPulseMillis = 1100
 
 private fun Modifier.graphicsLayerScale(scale: Float): Modifier = this.then(
     Modifier.graphicsLayer(scaleX = scale, scaleY = scale)
 )
 
+/**
+ * רקע מסך השיחה: מילוי שטוח של הערכה. קודם זה היה טפט מטושטש (32dp) מתחת
+ * להכהיה - אבל "there is no blur in this system" ו"the background is a flat
+ * fill" (README של הדיזיין סיסטם).
+ */
 @Composable
-private fun BlurredWallpaperBackground(scrimColor: Color) {
-    val context = LocalContext.current
-    var wallpaperBitmap by remember { mutableStateOf<Bitmap?>(null) }
-
-    LaunchedEffect(Unit) {
-        wallpaperBitmap = withContext(Dispatchers.IO) {
-            try {
-                val drawable = WallpaperManager.getInstance(context).drawable
-                when (drawable) {
-                    is BitmapDrawable -> drawable.bitmap
-                    null -> null
-                    else -> {
-                        val width = drawable.intrinsicWidth.coerceAtLeast(1)
-                        val height = drawable.intrinsicHeight.coerceAtLeast(1)
-                        val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-                        val canvas = android.graphics.Canvas(bmp)
-                        drawable.setBounds(0, 0, width, height)
-                        drawable.draw(canvas)
-                        bmp
-                    }
-                }
-            } catch (e: Exception) {
-                null
-            }
-        }
-    }
-
-    val bmp = wallpaperBitmap
-    if (bmp != null) {
-        Image(
-            bitmap = bmp.asImageBitmap(),
-            contentDescription = null,
-            modifier = Modifier.fillMaxSize().blur(32.dp),
-            contentScale = ContentScale.Crop
-        )
-        Box(modifier = Modifier.fillMaxSize().background(scrimColor.copy(alpha = 0.55f)))
-    } else {
-        Box(modifier = Modifier.fillMaxSize().background(scrimColor))
-    }
+private fun BlurredWallpaperBackground(@Suppress("UNUSED_PARAMETER") scrimColor: Color) {
+    Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
 }
 
 /**
@@ -423,11 +397,10 @@ private fun RoundCallButton(icon: ImageVector, background: Color, onClick: () ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .shadow(elevation = 10.dp, shape = CircleShape, clip = false, ambientColor = background.copy(alpha = 0.6f), spotColor = background.copy(alpha = 0.6f))
                 .background(background, CircleShape),
             contentAlignment = Alignment.Center
         ) {
-            Icon(imageVector = icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(size / 2.5f))
+            Icon(imageVector = icon, contentDescription = null, tint = com.future.sharednav.theme.FutureContrast.onColor(background), modifier = Modifier.size(size / 2.5f))
         }
     }
 }

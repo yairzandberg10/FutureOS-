@@ -1,4 +1,6 @@
 package com.future.bluetooth.ui
+import com.future.sharednav.components.FutureSectionHeader
+import com.future.sharednav.components.FutureButton
 
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
@@ -185,15 +187,10 @@ private fun DeviceRow(device: BluetoothDeviceInfo, theme: FutureTheme, focusRequ
     }
 }
 
+/** כותרת קטע - FutureSectionHeader של הדיזיין סיסטם (13sp, 55%, ריווח 1sp). */
 @Composable
 private fun SectionHeader(text: String, theme: FutureTheme) {
-    Text(
-        text,
-        color = theme.textColor.copy(alpha = 0.6f),
-        fontSize = FutureTypography.summary,
-        fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(vertical = 4.dp),
-    )
+    FutureSectionHeader(text, theme, inset = false)
 }
 
 @Composable
@@ -237,22 +234,6 @@ private fun ActionPrompt(
 
         val focusRequester = remember { FocusRequester() }
         LaunchedEffect(Unit) { focusRequester.requestFocus() }
-        val interactionSource = remember { MutableInteractionSource() }
-        val isFocused by interactionSource.collectIsFocusedAsState()
-        val bgColor by animateColorAsState(
-            if (isFocused) theme.accentColor else theme.accentColor.copy(alpha = 0.7f),
-            label = "actionPromptBtnBg",
-        )
-        Box(
-            modifier = Modifier
-                .clip(FutureShapes.xl)
-                .background(bgColor)
-                .focusRequester(focusRequester)
-                .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-                .focusable(interactionSource = interactionSource)
-                .padding(horizontal = 24.dp, vertical = 12.dp),
-        ) {
-            Text(buttonLabel, color = Color.Black, fontWeight = FontWeight.Bold)
-        }
+        FutureButton(buttonLabel, theme, onClick, focusRequester = focusRequester)
     }
 }

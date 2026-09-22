@@ -1,4 +1,8 @@
 package com.future.keyboard
+import com.future.sharednav.theme.FutureTheme
+import com.future.sharednav.theme.FutureAppTheme
+import com.future.sharednav.theme.LocalFutureTheme
+import com.future.sharednav.components.FutureButton
 
 import android.Manifest
 import android.content.Intent
@@ -65,14 +69,11 @@ class MainActivity : ComponentActivity() {
                 onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
             }
 
-            val accentColor = Color(sharedTheme.primaryColor)
-            val colorScheme = if (sharedTheme.isDarkMode) {
-                darkColorScheme(primary = accentColor, background = Color(0xFF1C1C1E), surface = Color(0xFF1C1C1E))
-            } else {
-                lightColorScheme(primary = accentColor, background = Color(0xFFEFEFEF), surface = Color.White)
-            }
+            // הערכה המשותפת במקום ColorScheme ידני (רקע #1C1C1E במצב כהה ו-#EFEFEF
+            // בבהיר - שני ערכים שאינם הרקע של המערכת).
+            val futureTheme = FutureTheme(isDarkMode = sharedTheme.isDarkMode, accentColor = Color(sharedTheme.primaryColor))
 
-            MaterialTheme(colorScheme = colorScheme) {
+            FutureAppTheme(futureTheme) {
                 KeyboardSetupScreen(
                     onOpenInputMethodSettings = {
                         startActivity(Intent(Settings.ACTION_INPUT_METHOD_SETTINGS))
@@ -109,9 +110,7 @@ fun KeyboardSetupScreen(onOpenInputMethodSettings: () -> Unit) {
                     textAlign = TextAlign.Center,
                     style = MaterialTheme.typography.bodyMedium
                 )
-                Button(onClick = onOpenInputMethodSettings) {
-                    Text(stringResource(R.string.open_input_method_settings))
-                }
+                FutureButton(stringResource(R.string.open_input_method_settings), LocalFutureTheme.current, onOpenInputMethodSettings)
                 Text(
                     stringResource(R.string.voice_permission_summary),
                     modifier = Modifier.padding(top = 32.dp, bottom = 16.dp),
@@ -121,9 +120,7 @@ fun KeyboardSetupScreen(onOpenInputMethodSettings: () -> Unit) {
                 if (micGranted) {
                     Text(stringResource(R.string.voice_permission_granted), textAlign = TextAlign.Center)
                 } else {
-                    Button(onClick = { requestMicPermission.launch(Manifest.permission.RECORD_AUDIO) }) {
-                        Text(stringResource(R.string.voice_permission_grant))
-                    }
+                    FutureButton(stringResource(R.string.voice_permission_grant), LocalFutureTheme.current, { requestMicPermission.launch(Manifest.permission.RECORD_AUDIO) })
                 }
             }
         }

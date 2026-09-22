@@ -241,7 +241,7 @@ fun CallHistoryItem(record: CallRecord, onCall: (String, String) -> Unit, focusR
             Text(
                 text = DateUtils.getRelativeTimeSpanString(record.timestamp).toString(),
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }

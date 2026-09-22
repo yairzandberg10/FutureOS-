@@ -1,4 +1,8 @@
 package com.future.frixa.ui
+import com.future.sharednav.theme.readableAccentColor
+import com.future.sharednav.theme.FutureShapes
+import com.future.sharednav.theme.mutedTextColor
+import com.future.sharednav.theme.FutureMotion
 
 import com.future.sharednav.theme.FutureTypography
 import androidx.compose.animation.animateColorAsState
@@ -54,9 +58,10 @@ fun RecipesScreen(theme: FutureTheme, onOpenRecipe: (Int) -> Unit) {
  * (שמניח שהוא זה שמחזיק אינטראקציה/פוקוס אמיתיים על עצמו). */
 @Composable
 private fun RecipeRow(recipe: Recipe, theme: FutureTheme, isFocused: Boolean) {
-    val shape = RoundedCornerShape(FutureDimens.cardCornerRadius)
+    val shape = FutureShapes.sm
     val bgColor by animateColorAsState(
-        if (isFocused) theme.accentColor.copy(alpha = 0.16f) else theme.surfaceColor,
+        if (isFocused) theme.readableAccentColor.copy(alpha = 0.14f) else theme.surfaceColor,
+        FutureMotion.focusColorSpec,
         label = "recipeRowBg",
     )
     Row(
@@ -65,11 +70,11 @@ private fun RecipeRow(recipe: Recipe, theme: FutureTheme, isFocused: Boolean) {
             .padding(bottom = 10.dp)
             .clip(shape)
             .background(bgColor)
-            .then(if (isFocused) Modifier.border(1.5.dp, theme.accentColor, shape) else Modifier)
+            .then(if (isFocused) Modifier.border(FutureDimens.focusBorderItem, theme.readableAccentColor, shape) else Modifier)
             .padding(14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(Icons.Rounded.Restaurant, contentDescription = null, tint = theme.accentColor)
+        Icon(Icons.Rounded.Restaurant, contentDescription = null, tint = theme.mutedTextColor)
         Column(modifier = Modifier.weight(1f).padding(horizontal = 12.dp)) {
             Text(recipe.title, color = theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Bold)
             Row(verticalAlignment = Alignment.CenterVertically) {

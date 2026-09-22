@@ -1,4 +1,13 @@
 package com.future.sfarim.ui.screens
+import com.future.sharednav.components.FutureOptionsMenu
+import com.future.sharednav.components.FutureMenuRow
+import com.future.sharednav.components.FutureDialog
+import com.future.sharednav.components.FutureListItem
+import com.future.sharednav.components.FutureSpinner
+import com.future.sharednav.theme.FutureDimens
+import com.future.sharednav.theme.mutedTextColor
+import com.future.sharednav.theme.subtleTextColor
+import androidx.compose.foundation.layout.Arrangement
 
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
@@ -345,7 +354,7 @@ private fun SegmentRow(
             Spacer(modifier = Modifier.width(6.dp))
         }
         Column {
-            Text(segment.refDisplay, color = theme.textColor.copy(alpha = 0.45f), fontSize = FutureTypography.caption)
+            Text(segment.refDisplay, color = theme.subtleTextColor, fontSize = FutureTypography.caption)
             Text(cleanedText, color = theme.textColor, fontSize = fontSize.sp, lineHeight = (fontSize * 1.5f).sp)
         }
     }
@@ -364,35 +373,21 @@ private fun ContentOptionsMenu(
     onIncreaseFont: () -> Unit,
     onDecreaseFont: () -> Unit,
 ) {
-    val firstRowFocusRequester = remember { FocusRequester() }
-    LaunchedEffect(Unit) { firstRowFocusRequester.requestFocus() }
-
-    AppDialog(onDismissRequest = onDismiss) {
-        Column(
-            modifier = Modifier.clip(FutureShapes.xl).background(theme.surfaceColor).padding(vertical = 8.dp),
-        ) {
-            Text(
-                refDisplay,
-                color = theme.textColor.copy(alpha = 0.5f),
-                fontSize = FutureTypography.label,
-                maxLines = 1,
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp),
-            )
-            MenuRow(
-                if (isBookmarked) "הסר $contentLabel מהסימניות" else "הוסף $contentLabel לסימניות",
-                if (isBookmarked) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
-                theme,
-                focusRequester = firstRowFocusRequester,
-                onClick = onToggleBookmark,
-            )
-            MenuRow("שתף $contentLabel", Icons.Rounded.Share, theme, onClick = onShare)
-            MenuRow("מפרשים על ה$contentLabel", Icons.AutoMirrored.Rounded.Comment, theme, onClick = onShowCommentaries)
-            MenuRow("הגדל גופן", Icons.Rounded.TextIncrease, theme, onClick = onIncreaseFont)
-            MenuRow("הקטן גופן", Icons.Rounded.TextDecrease, theme, onClick = onDecreaseFont)
-        }
+    FutureOptionsMenu(theme = theme, onDismissRequest = onDismiss, header = refDisplay) {
+        FutureMenuRow(
+            if (isBookmarked) "הסר $contentLabel מהסימניות" else "הוסף $contentLabel לסימניות",
+            if (isBookmarked) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
+            theme,
+            onToggleBookmark,
+        )
+        FutureMenuRow("שתף $contentLabel", Icons.Rounded.Share, theme, onShare)
+        FutureMenuRow("מפרשים על ה$contentLabel", Icons.AutoMirrored.Rounded.Comment, theme, onShowCommentaries)
+        FutureMenuRow("הגדל גופן", Icons.Rounded.TextIncrease, theme, onIncreaseFont)
+        FutureMenuRow("הקטן גופן", Icons.Rounded.TextDecrease, theme, onDecreaseFont)
     }
 }
 
+/** רשימת המפרשים - דיאלוג של הדיזיין סיסטם; כל מפרש הוא שורת רשימה (כותרת + שורת תצוגה מקדימה). */
 @Composable
 private fun CommentariesDialog(
     contentLabel: String,
@@ -401,82 +396,33 @@ private fun CommentariesDialog(
     onDismiss: () -> Unit,
     onOpen: (CommentaryEntry) -> Unit,
 ) {
-    AppDialog(onDismissRequest = onDismiss) {
-        Column(
-            modifier = Modifier
-                .clip(FutureShapes.xl)
-                .background(theme.surfaceColor)
-                .padding(vertical = 8.dp),
-        ) {
-            Text(
-                "מפרשים על ה$contentLabel",
-                color = theme.textColor.copy(alpha = 0.5f),
-                fontSize = FutureTypography.label,
-                maxLines = 1,
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp),
+    FutureDialog(theme = theme, onDismissRequest = onDismiss, title = "מפרשים על ה$contentLabel") {
+        when {
+            results == null -> Box(
+                modifier = Modifier.fillMaxWidth().padding(FutureDimens.spacingXl),
+                contentAlignment = Alignment.Center,
+            ) {
+                FutureSpinner(theme = theme)
+            }
+            results.isEmpty() -> Text(
+                "לא נמצאו מפרשים",
+                color = theme.mutedTextColor,
+                fontSize = FutureTypography.body,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().padding(vertical = FutureDimens.spacingLg),
             )
-            when {
-                results == null -> Box(
-                    modifier = Modifier.fillMaxWidth().padding(32.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    CircularProgressIndicator(color = theme.accentColor)
-                }
-                results.isEmpty() -> Text(
-                    "לא נמצאו מפרשים",
-                    color = theme.textColor.copy(alpha = 0.5f),
-                    fontSize = FutureTypography.body,
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
-                )
-                else -> LazyColumn(modifier = Modifier.padding(vertical = 4.dp)) {
-                    items(results, key = { it.bookId }) { entry ->
-                        val interactionSource = remember { MutableInteractionSource() }
-                        val isFocused by interactionSource.collectIsFocusedAsState()
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(if (isFocused) theme.accentColor.copy(alpha = 0.12f) else Color.Transparent)
-                                .clickable(interactionSource = interactionSource, indication = null) { onOpen(entry) }
-                                .focusable(interactionSource = interactionSource)
-                                .padding(horizontal = 20.dp, vertical = 10.dp),
-                        ) {
-                            Text(entry.bookTitle, color = theme.textColor, fontSize = FutureTypography.bodyLarge)
-                            Text(entry.preview, color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.label, maxLines = 1)
-                        }
-                    }
+            else -> Column(verticalArrangement = Arrangement.spacedBy(FutureDimens.spacingXs)) {
+                results.forEach { entry ->
+                    FutureListItem(
+                        title = entry.bookTitle,
+                        summary = entry.preview,
+                        theme = theme,
+                        onClick = { onOpen(entry) },
+                    )
                 }
             }
         }
     }
 }
 
-@Composable
-private fun MenuRow(
-    label: String,
-    icon: ImageVector,
-    theme: FutureTheme,
-    focusRequester: FocusRequester? = null,
-    onClick: () -> Unit,
-) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val scale by animateFloatAsState(if (isFocused) 1.02f else 1f, label = "menuRowScale")
-    val shape = FutureShapes.sm
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .graphicsLayer { scaleX = scale; scaleY = scale }
-            .clip(shape)
-            .background(if (isFocused) theme.accentColor.copy(alpha = 0.12f) else Color.Transparent)
-            .then(if (isFocused) Modifier.border(width = 1.5.dp, color = theme.accentColor, shape = shape) else Modifier)
-            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource)
-            .padding(horizontal = 20.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(icon, contentDescription = null, tint = theme.textColor, modifier = Modifier.size(20.dp))
-        Spacer(modifier = Modifier.width(14.dp))
-        Text(label, color = theme.textColor, fontSize = FutureTypography.bodyLarge)
-    }
-}
+

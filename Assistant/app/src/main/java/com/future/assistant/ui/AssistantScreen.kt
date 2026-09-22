@@ -1,4 +1,9 @@
 package com.future.assistant.ui
+import com.future.sharednav.theme.FutureDimens
+import com.future.sharednav.theme.FutureContrast
+import com.future.sharednav.theme.readableAccentColor
+import androidx.compose.foundation.border
+import androidx.compose.ui.draw.alpha
 
 import com.future.sharednav.theme.FutureTypography
 import android.Manifest
@@ -157,14 +162,14 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
     val pulseScale by infiniteTransition.animateFloat(
         initialValue = 1f,
         targetValue = if (state == AssistantState.LISTENING) 1.15f else 1f,
-        animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
+        animationSpec = infiniteRepeatable(tween(ListeningPulseMillis), RepeatMode.Reverse),
         label = "micPulseScale"
     )
     // אנימציית "מדבר" - פעימה קטנה על טקסט התשובה בזמן שהתשובה מושמעת בקול.
     val speakPulse by infiniteTransition.animateFloat(
         initialValue = 1f,
         targetValue = if (state == AssistantState.SPEAKING) 1.06f else 1f,
-        animationSpec = infiniteRepeatable(tween(300), RepeatMode.Reverse),
+        animationSpec = infiniteRepeatable(tween(SpeakingPulseMillis), RepeatMode.Reverse),
         label = "speakPulseScale"
     )
 
@@ -240,22 +245,32 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
     }
 }
 
+/**
+ * כפתור המיקרופון. ההתנהגות של כפתור הדיזיין סיסטם: 70% במנוחה, מלא בפוקוס
+ * עם מסגרת 2dp בצבע הטקסט. המילוי - ההדגשה המתוקנת (סכנה בזמן הקשבה), והאייקון
+ * בדיו שמתאים לו (היה Color.Black קבוע).
+ */
 @Composable
 private fun MicButton(state: AssistantState, theme: FutureTheme, pulseScale: Float, focusRequester: FocusRequester, onClick: () -> Unit) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    val baseColor = if (state == AssistantState.LISTENING) theme.dangerColor else theme.accentColor
-    val bgColor = if (isFocused) baseColor else baseColor.copy(alpha = 0.85f)
+    val fill = if (state == AssistantState.LISTENING) theme.dangerColor else theme.readableAccentColor
     Box(
         modifier = Modifier
             .size(84.dp)
             .scale(pulseScale)
-            .background(bgColor, CircleShape)
+            .alpha(if (isFocused) 1f else 0.7f)
+            .background(fill, CircleShape)
+            .border(FutureDimens.focusBorderControl, if (isFocused) theme.textColor else androidx.compose.ui.graphics.Color.Transparent, CircleShape)
             .focusRequester(focusRequester)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
             .focusable(interactionSource = interactionSource),
         contentAlignment = Alignment.Center
     ) {
-        androidx.compose.material3.Icon(Icons.Rounded.Mic, contentDescription = "מיקרופון", tint = androidx.compose.ui.graphics.Color.Black, modifier = Modifier.size(32.dp))
+        androidx.compose.material3.Icon(Icons.Rounded.Mic, contentDescription = "מיקרופון", tint = FutureContrast.onColor(fill), modifier = Modifier.size(32.dp))
     }
 }
+
+/** פעימת המיקרופון בזמן הקשבה ופעימת הטקסט בזמן דיבור - לולאות, ולא מעברים, ולכן מחוץ לסקאלת התנועה. */
+private const val ListeningPulseMillis = 700
+private const val SpeakingPulseMillis = 300

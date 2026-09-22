@@ -1,4 +1,12 @@
 package com.future.terminal
+import com.future.sharednav.components.FutureOptionsMenu
+import com.future.sharednav.components.FutureMenuRow
+import com.future.sharednav.theme.FutureMotion
+import com.future.sharednav.theme.FutureDimens
+import com.future.sharednav.theme.idleFieldColor
+import com.future.sharednav.theme.readableAccentColor
+import com.future.sharednav.theme.mutedTextColor
+import androidx.compose.runtime.getValue
 
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
@@ -225,21 +233,31 @@ class MainActivity : ComponentActivity() {
                                 .padding(8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("$", color = theme.accentColor, fontFamily = FontFamily.Monospace, modifier = Modifier.padding(end = 6.dp))
-                            TextField(
+                            Text("$", color = theme.mutedTextColor, fontFamily = FontFamily.Monospace, modifier = Modifier.padding(end = 6.dp))
+                            // שדה הקלט של הדיזיין סיסטם (8% מילוי, 10dp, מסגרת 2dp בהדגשה בפוקוס),
+                            // בגופן חד-רווח - היה TextField של Material עם קו תחתון, וריאנט שאין
+                            // בעיצוב ("No underline variant exists; the field is always filled").
+                            val inputInteraction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                            val inputFocused by inputInteraction.collectIsFocusedAsState()
+                            val inputRing by androidx.compose.animation.animateColorAsState(
+                                if (inputFocused) theme.readableAccentColor else Color.Transparent,
+                                FutureMotion.focusColorSpec,
+                                label = "terminalInputRing",
+                            )
+                            androidx.compose.foundation.text.BasicTextField(
                                 value = input,
                                 onValueChange = { input = it },
-                                modifier = Modifier.escapeTextFieldFocusTrap().weight(1f).focusRequester(inputFocusRequester),
+                                modifier = Modifier
+                                    .escapeTextFieldFocusTrap()
+                                    .weight(1f)
+                                    .focusRequester(inputFocusRequester)
+                                    .clip(FutureShapes.textField)
+                                    .background(theme.idleFieldColor)
+                                    .border(FutureDimens.focusBorderControl, inputRing, FutureShapes.textField)
+                                    .padding(FutureDimens.spacingSm),
                                 textStyle = TextStyle(color = theme.textColor, fontFamily = FontFamily.Monospace, fontSize = FutureTypography.summary),
-                                colors = TextFieldDefaults.colors(
-                                    focusedContainerColor = Color.Transparent,
-                                    unfocusedContainerColor = Color.Transparent,
-                                    // אינדיקטור פוקוס אמיתי (קו תחתון בצבע ההדגשה) - בלי זה,
-                                    // כשהמסך כולו מבוסס D-pad, אין שום סימן ויזואלי שהשדה ממוקד.
-                                    focusedIndicatorColor = theme.accentColor,
-                                    unfocusedIndicatorColor = Color.Transparent,
-                                    cursorColor = theme.accentColor
-                                ),
+                                cursorBrush = androidx.compose.ui.graphics.SolidColor(theme.readableAccentColor),
+                                interactionSource = inputInteraction,
                                 singleLine = true,
                                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                                 keyboardActions = KeyboardActions(onSend = { runCommand(input) })
@@ -261,7 +279,7 @@ class MainActivity : ComponentActivity() {
                                     contentDescription = "הרץ",
                                     onClick = { runCommand(input) },
                                     theme = theme,
-                                    tint = theme.accentColor,
+                                    tint = theme.textColor,
                                     enabled = !isRunning
                                 )
                             }
@@ -314,56 +332,19 @@ private fun TerminalIconButton(
     contentDescription: String,
     onClick: () -> Unit,
     theme: FutureTheme,
-    tint: Color = theme.accentColor,
+    tint: Color = theme.textColor,
     enabled: Boolean = true
 ) {
-    // TopBarIconButton המשותף לא תומך ב-enabled - כשמנוטרל, פשוט לא מצמידים
-    // onClick אמיתי (הכפתור עדיין מוצג אך לא לחיץ/ממוקד).
-    if (enabled) {
-        com.future.sharednav.components.TopBarIconButton(icon, contentDescription, tint, tint, onClick)
-    } else {
-        Box(modifier = Modifier.size(32.dp), contentAlignment = Alignment.Center) {
-            Icon(icon, contentDescription = contentDescription, tint = tint.copy(alpha = 0.4f), modifier = Modifier.size(18.dp))
-        }
-    }
+    com.future.sharednav.components.TopBarIconButton(icon, contentDescription, tint, theme.accentColor, onClick, enabled = enabled)
 }
 
 @Composable
 private fun TerminalOptionsMenu(theme: FutureTheme, onDismiss: () -> Unit, onClear: () -> Unit, onCopyLastOutput: () -> Unit, onShareHistory: () -> Unit) {
-    AppDialog(onDismissRequest = onDismiss) {
-        Column(
-            modifier = Modifier
-                .clip(FutureShapes.xl)
-                .background(theme.surfaceColor)
-                .padding(vertical = 8.dp)
-        ) {
-            TerminalMenuRow("העתק פלט אחרון", Icons.Rounded.ContentCopy, onCopyLastOutput, theme)
-            TerminalMenuRow("שתף היסטוריה", Icons.Rounded.Share, onShareHistory, theme)
-            TerminalMenuRow("נקה היסטוריה", Icons.Rounded.DeleteSweep, onClear, theme, isDestructive = true)
-        }
+    FutureOptionsMenu(theme = theme, onDismissRequest = onDismiss, header = "טרמינל") {
+        FutureMenuRow("העתק פלט אחרון", Icons.Rounded.ContentCopy, theme, onCopyLastOutput)
+        FutureMenuRow("שתף היסטוריה", Icons.Rounded.Share, theme, onShareHistory)
+        FutureMenuRow("נקה היסטוריה", Icons.Rounded.DeleteSweep, theme, onClear, destructive = true)
     }
 }
 
-@Composable
-private fun TerminalMenuRow(label: String, icon: ImageVector, onClick: () -> Unit, theme: FutureTheme, isDestructive: Boolean = false) {
-    com.future.sharednav.focus.FocusableItem(
-        onClick = onClick,
-        accentColor = theme.accentColor,
-        modifier = Modifier.fillMaxWidth(),
-        idleBackgroundColor = Color.Transparent,
-        focusedBackgroundColor = Color.White.copy(alpha = 0.12f),
-        showBorderOnFocus = false,
-        scaleOnFocus = false,
-        cornerRadius = 0.dp,
-        contentPadding = 0.dp,
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(icon, contentDescription = null, tint = if (isDestructive) theme.dangerColor else theme.accentColor, modifier = Modifier.size(20.dp))
-            Spacer(modifier = Modifier.width(14.dp))
-            Text(label, color = if (isDestructive) theme.dangerColor else theme.textColor, fontSize = FutureTypography.bodyLarge)
-        }
-    }
-}
+

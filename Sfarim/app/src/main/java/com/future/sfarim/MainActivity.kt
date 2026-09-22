@@ -88,7 +88,7 @@ private fun SfarimApp() {
         when {
             isLoadingDb -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = theme.accentColor)
+                    com.future.sharednav.components.FutureSpinner(theme = theme)
                 }
             }
             repository == null -> {

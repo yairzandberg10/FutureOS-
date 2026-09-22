@@ -1,4 +1,9 @@
 package com.future.guide.ui
+import com.future.sharednav.components.FutureListItem
+import com.future.sharednav.components.FutureAvatar
+import com.future.sharednav.components.FutureSectionHeader
+import com.future.sharednav.theme.FutureDimens
+import com.future.sharednav.theme.idleChipColor
 
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
@@ -27,7 +32,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.future.sharednav.theme.FutureTheme
 import com.future.sharednav.components.ScreenTopBar as SharedScreenTopBar
 import com.future.sharednav.components.TopBarIconButton as SharedTopBarIconButton
@@ -36,8 +40,8 @@ import com.future.sharednav.focus.FocusableItem as SharedFocusableItem
 /** עטיפה דקה סביב הרכיב המשותף (מודול SharedKeypadNav) - חתימת הקריאה
  * נשארת זהה כדי שקריאות קיימות ב-Guide לא ישתנו. */
 @Composable
-fun GuideIconButton(icon: ImageVector, contentDescription: String, theme: FutureTheme, tint: Color = theme.accentColor, onClick: () -> Unit) {
-    SharedTopBarIconButton(icon, contentDescription, tint, tint, onClick)
+fun GuideIconButton(icon: ImageVector, contentDescription: String, theme: FutureTheme, tint: Color = theme.textColor, onClick: () -> Unit) {
+    SharedTopBarIconButton(icon, contentDescription, tint, theme.accentColor, onClick)
 }
 
 @Composable
@@ -49,14 +53,14 @@ fun GuideHeader(title: String, theme: FutureTheme, onBack: (() -> Unit)? = null,
         // צריך תוכן טריילינג חופשי (@Composable), אז השורה עצמה נשארת מקומית,
         // אבל כפתור החזרה בתוכה כן משתמש ברכיב המשותף.
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = FutureDimens.spacingLg, vertical = FutureDimens.spacingMd),
             verticalAlignment = Alignment.CenterVertically
         ) {
             if (onBack != null) {
                 GuideIconButton(Icons.AutoMirrored.Rounded.ArrowBack, "חזור", theme = theme, onClick = onBack)
-                Spacer(modifier = Modifier.width(10.dp))
+                Spacer(modifier = Modifier.width(FutureDimens.spacingSm))
             }
-            Text(title, color = theme.textColor, fontSize = FutureTypography.title, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f, fill = true))
+            Text(title, color = theme.textColor, fontSize = FutureTypography.screenTitle, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.weight(1f, fill = true))
             trailing.invoke()
         }
     }
@@ -64,46 +68,20 @@ fun GuideHeader(title: String, theme: FutureTheme, onBack: (() -> Unit)? = null,
 
 @Composable
 fun GuideAppRow(icon: ImageVector, label: String, subtitle: String, theme: FutureTheme, onClick: () -> Unit, focusRequester: FocusRequester? = null) {
-    SharedFocusableItem(
+    FutureListItem(
+        title = label,
+        summary = subtitle,
+        theme = theme,
         onClick = onClick,
-        accentColor = theme.accentColor,
-        modifier = Modifier.fillMaxWidth(),
-        idleBackgroundColor = theme.textColor.copy(alpha = 0.055f),
-        focusedBackgroundColor = theme.textColor.copy(alpha = 0.14f),
-        cornerRadius = FutureShapes.radiusLg,
         focusRequester = focusRequester,
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(42.dp)
-                    .clip(CircleShape)
-                    .background(theme.accentColor.copy(alpha = 0.18f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(icon, contentDescription = null, tint = theme.accentColor, modifier = Modifier.size(20.dp))
-            }
-            Spacer(modifier = Modifier.width(14.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(label, color = theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(subtitle, color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.label, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
-        }
-    }
+        leading = { FutureAvatar(theme = theme, icon = icon) },
+    )
 }
 
+/** כותרת קטע - FutureSectionHeader (13sp, 55%, ריווח 1sp); הייתה בצבע ההדגשה, שאינו צבע לכותרות. */
 @Composable
 fun GuideSectionTitle(text: String, theme: FutureTheme) {
-    Text(
-        text,
-        color = theme.accentColor,
-        fontSize = FutureTypography.body,
-        fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(top = 18.dp, bottom = 6.dp)
-    )
+    FutureSectionHeader(text, theme, inset = false, modifier = Modifier.padding(top = FutureDimens.spacingSm))
 }
 
 @Composable
@@ -111,15 +89,15 @@ fun GuideTip(text: String, theme: FutureTheme) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(FutureShapes.md)
-            .background(theme.textColor.copy(alpha = 0.055f))
-            .padding(horizontal = 14.dp, vertical = 12.dp)
+            .clip(FutureShapes.sm)
+            .background(theme.idleChipColor)
+            .padding(horizontal = FutureDimens.spacingMd, vertical = FutureDimens.spacingMd)
     ) {
         Text(
             text,
-            color = theme.textColor.copy(alpha = 0.85f),
+            color = theme.textColor,
             fontSize = FutureTypography.body,
-            lineHeight = 20.sp
+            lineHeight = FutureTypography.body * FutureTypography.lineHeightRatio
         )
     }
 }
