@@ -1,4 +1,5 @@
 package com.future.remote.ui
+import com.future.sharednav.theme.subtleTextColor
 
 sealed class RemoteRoute {
     object Home : RemoteRoute()

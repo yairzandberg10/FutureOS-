@@ -1,4 +1,5 @@
 package com.future.clock.ui
+import com.future.sharednav.theme.LocalFutureTheme
 
 import com.future.sharednav.theme.FutureTypography
 import android.os.Build
@@ -192,19 +193,5 @@ fun TimerScreen(theme: FutureTheme, onBack: () -> Unit) {
 
 @Composable
 private fun TimerActionButton(label: String, color: Color, focusRequester: FocusRequester? = null, onClick: () -> Unit) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val bgColor by animateColorAsState(if (isFocused) color.copy(alpha = 1f) else color.copy(alpha = 0.8f), label = "timerActionBg")
-    Box(
-        modifier = Modifier
-            .size(84.dp)
-            .clip(CircleShape)
-            .background(bgColor)
-            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(label, color = Color.Black, fontSize = FutureTypography.summary, fontWeight = FontWeight.Bold)
-    }
+    RoundActionButton(label, color, LocalFutureTheme.current, 84.dp, focusRequester, onClick)
 }

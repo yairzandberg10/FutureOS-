@@ -1,9 +1,7 @@
 package com.future.clock.ui
-import com.future.sharednav.theme.FutureTypography
-import com.future.sharednav.theme.FutureShapes
-import com.future.sharednav.focus.bringIntoViewOnFocus
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,62 +16,77 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import com.future.sharednav.components.FutureAvatar
+import com.future.sharednav.components.FutureListItem
+import com.future.sharednav.components.ScreenTopBar as SharedScreenTopBar
+import com.future.sharednav.components.TopBarIconButton as SharedTopBarIconButton
+import com.future.sharednav.focus.bringIntoViewOnFocus
+import com.future.sharednav.theme.FutureContrast
+import com.future.sharednav.theme.FutureDimens
+import com.future.sharednav.theme.FutureMotion
 import com.future.sharednav.theme.FutureTheme
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.rememberFutureType
 
+/**
+ * כפתור אייקון - TopBarIconButton המשותף. האייקון בצבע הטקסט
+ * (components/core/IconButton.jsx); קודם הוא היה בצבע ההדגשה, בפינות 16dp
+ * ולא בעיגול.
+ */
 @Composable
-fun ToolsIconButton(icon: ImageVector, contentDescription: String, theme: FutureTheme, tint: Color = theme.accentColor, onClick: () -> Unit) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val bgColor by animateColorAsState(
-        if (isFocused) tint.copy(alpha = 0.3f) else theme.textColor.copy(alpha = 0.08f),
-        label = "toolsIconBtnBg"
-    )
-    Box(
-        modifier = Modifier
-            .size(36.dp)
-            .clip(FutureShapes.lg)
-            .background(bgColor)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus(),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(icon, contentDescription = contentDescription, tint = tint, modifier = Modifier.size(18.dp))
-    }
+fun ToolsIconButton(icon: ImageVector, contentDescription: String, theme: FutureTheme, tint: Color = theme.textColor, onClick: () -> Unit) {
+    SharedTopBarIconButton(icon, contentDescription, tint, theme.accentColor, onClick)
 }
 
+/**
+ * השורה העליונה - ScreenTopBar, או אותה שורה בדיוק (16/12dp, כותרת 20sp)
+ * כשיש בצד השני תוכן חופשי. קודם הכותרת כאן הייתה 17sp.
+ */
 @Composable
 fun ToolsHeader(title: String, theme: FutureTheme, onBack: (() -> Unit)? = null, trailing: (@Composable () -> Unit)? = null) {
+    if (trailing == null) {
+        SharedScreenTopBar(title = title, textColor = theme.textColor, accentColor = theme.accentColor, onBack = onBack)
+        return
+    }
+    val type = rememberFutureType()
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = FutureDimens.spacingLg, vertical = FutureDimens.spacingMd),
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (onBack != null) {
-            ToolsIconButton(Icons.AutoMirrored.Rounded.ArrowBack, "חזור", theme = theme, onClick = onBack)
-            Spacer(modifier = Modifier.width(10.dp))
+            SharedTopBarIconButton(Icons.AutoMirrored.Rounded.ArrowBack, "חזור", theme.textColor, theme.accentColor, onBack)
+            Spacer(modifier = Modifier.width(FutureDimens.spacingSm))
         }
-        Text(title, color = theme.textColor, fontSize = FutureTypography.title, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f, fill = true))
-        trailing?.invoke()
+        Text(
+            title,
+            color = theme.textColor,
+            fontSize = type.screenTitle,
+            fontWeight = FutureTypography.weightBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = true),
+        )
+        trailing.invoke()
     }
 }
 
+/** שורת רשימה של הדיזיין סיסטם עם אווטאר-אייקון (קודם: 5.5% במנוחה, פוקוס 14% מהטקסט, עיגול בהדגשה). */
 @Composable
 fun ToolRow(
     icon: ImageVector,
@@ -84,40 +97,50 @@ fun ToolRow(
     trailing: (@Composable () -> Unit)? = null,
     focusRequester: FocusRequester? = null
 ) {
+    FutureListItem(
+        title = label,
+        summary = subtitle.ifEmpty { null },
+        theme = theme,
+        onClick = onClick,
+        focusRequester = focusRequester,
+        leading = { FutureAvatar(theme = theme, icon = icon) },
+        trailing = trailing?.let { content -> { content() } },
+    )
+}
+
+/**
+ * כפתור פעולה עגול וגדול (התחל/עצור). ההתנהגות של כפתור הדיזיין סיסטם:
+ * 70% במנוחה, מלא בפוקוס, מסגרת 2dp בצבע הטקסט. הדיו נגזר מהמילוי - לא
+ * Color.Black קבוע, שנעלם על מילוי כהה.
+ */
+@Composable
+fun RoundActionButton(
+    label: String,
+    fill: Color,
+    theme: FutureTheme,
+    size: Dp,
+    focusRequester: FocusRequester? = null,
+    onClick: () -> Unit,
+) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    val shape = FutureShapes.lg
-    val bgColor by animateColorAsState(
-        if (isFocused) theme.textColor.copy(alpha = 0.14f) else theme.textColor.copy(alpha = 0.055f),
-        label = "toolRowBg"
-    )
-
-    Row(
+    val opacity by animateFloatAsState(if (isFocused) 1f else 0.7f, FutureMotion.fast(), label = "roundActionOpacity")
+    val ring by animateColorAsState(if (isFocused) theme.textColor else Color.Transparent, FutureMotion.focusColorSpec, label = "roundActionRing")
+    // מילוי שקוף (12% מהטקסט) יושב על הרקע, ולכן הדיו שלו הוא צבע הטקסט.
+    val ink = if (fill.alpha < 0.5f) theme.textColor else FutureContrast.onColor(fill)
+    Box(
         modifier = Modifier
-            .fillMaxWidth()
-            .clip(shape)
-            .background(bgColor)
-            .then(if (isFocused) Modifier.border(width = 2.dp, color = theme.accentColor, shape = shape) else Modifier)
+            .size(size)
+            .clip(CircleShape)
+            .alpha(opacity)
+            .background(fill)
+            .border(FutureDimens.focusBorderControl, ring, CircleShape)
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .focusable(interactionSource = interactionSource)
+            .bringIntoViewOnFocus(),
+        contentAlignment = Alignment.Center
     ) {
-        Box(
-            modifier = Modifier
-                .size(42.dp)
-                .clip(CircleShape)
-                .background(theme.accentColor.copy(alpha = if (isFocused) 0.35f else 0.18f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(icon, contentDescription = null, tint = theme.accentColor, modifier = Modifier.size(20.dp))
-        }
-        Spacer(modifier = Modifier.width(14.dp))
-        androidx.compose.foundation.layout.Column(modifier = Modifier.weight(1f, fill = true)) {
-            Text(label, color = theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Medium)
-            Text(subtitle, color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.label)
-        }
-        trailing?.invoke()
+        Text(label, color = ink, fontSize = FutureTypography.summary, fontWeight = FutureTypography.weightBold)
     }
 }

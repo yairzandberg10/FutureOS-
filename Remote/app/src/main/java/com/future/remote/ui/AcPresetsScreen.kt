@@ -1,4 +1,5 @@
 package com.future.remote.ui
+import com.future.sharednav.theme.subtleTextColor
 
 import com.future.sharednav.theme.FutureTypography
 import androidx.compose.foundation.background

@@ -1,6 +1,8 @@
 package com.future.remote.ui
+import com.future.sharednav.theme.subtleTextColor
+import com.future.sharednav.components.FutureTextField
+import com.future.sharednav.components.FutureChip
 
-import com.future.sharednav.theme.onAccentColor
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
 import android.widget.Toast
@@ -179,41 +181,17 @@ private fun RemoteTextField(
     theme: FutureTheme,
     keyboardType: KeyboardType = KeyboardType.Text
 ) {
-    TextField(
+    FutureTextField(
         value = value,
         onValueChange = onValueChange,
-        placeholder = { Text(placeholder, color = theme.textColor.copy(alpha = 0.35f)) },
-        singleLine = true,
+        theme = theme,
+        placeholder = placeholder,
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = ImeAction.Next),
-        colors = TextFieldDefaults.colors(
-            focusedContainerColor = theme.textColor.copy(alpha = 0.08f),
-            unfocusedContainerColor = theme.textColor.copy(alpha = 0.05f),
-            focusedIndicatorColor = theme.accentColor,
-            unfocusedIndicatorColor = Color.Transparent,
-            focusedTextColor = theme.textColor,
-            unfocusedTextColor = theme.textColor
-        ),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
     )
 }
 
 @Composable
 private fun EncodingChip(text: String, selected: Boolean, theme: FutureTheme, onClick: () -> Unit) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val shape = FutureShapes.md
-    val bg = if (selected) theme.accentColor.copy(alpha = 0.85f) else theme.textColor.copy(alpha = 0.08f)
-    val textColor = if (selected) theme.onAccentColor else theme.textColor
-
-    Box(
-        modifier = Modifier
-            .height(40.dp)
-            .background(bg, shape)
-            .then(if (isFocused) Modifier.border(width = 2.dp, color = theme.accentColor, shape = shape) else Modifier)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource)
-            .padding(horizontal = 14.dp)
-    ) {
-        Text(text, color = textColor, fontSize = FutureTypography.summary, fontWeight = FontWeight.Medium, modifier = Modifier.align(Alignment.Center))
-    }
+    FutureChip(text, theme, selected = selected, onClick = onClick)
 }

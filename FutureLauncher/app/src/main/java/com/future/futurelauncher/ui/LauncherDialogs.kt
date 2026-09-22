@@ -1,4 +1,16 @@
 package com.future.futurelauncher.ui
+import com.future.sharednav.components.AppDialog
+import com.future.sharednav.components.FutureButton
+import com.future.sharednav.components.FutureButtonVariant
+import com.future.sharednav.components.FutureFormField
+import com.future.sharednav.components.FutureSettingItem
+import com.future.sharednav.components.FutureSwitch
+import com.future.sharednav.components.FutureDivider
+import com.future.sharednav.components.TopBarIconButton
+import com.future.sharednav.theme.FutureDimens
+import com.future.sharednav.theme.readableAccentColor
+import com.future.sharednav.theme.idleFieldColor
+import com.future.sharednav.theme.secondaryTextColor
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.focus.bringIntoViewOnFocus
@@ -64,6 +76,12 @@ import com.future.sharednav.theme.FutureTheme
  * מעטפת אחידה לכל תפריטי ה"אופציות" של הלאנצ'ר - זכוכית כהה/בהירה עקבית עם
  * שאר האפליקציה, במקום המראה הלבן והגנרי של AlertDialog הסטנדרטי של Material.
  */
+/**
+ * המעטפת של כל דיאלוג בלאנצ'ר - המשטח של הדיזיין סיסטם: אטום, רדיוס 20dp,
+ * ריפוד 20dp, כותרת 15sp מודגשת. קודם זה היה "זכוכית" שקופה-למחצה ברדיוס
+ * 28dp (הרדיוס של התראה צפה) עם מסגרת ב-30% מצבע ההדגשה - שלושה דברים שאין
+ * לדיאלוג בעיצוב ("There is no blur", "a dialog is separated by the scrim").
+ */
 @Composable
 private fun GlassDialog(
     onDismissRequest: () -> Unit,
@@ -74,59 +92,45 @@ private fun GlassDialog(
     footer: @Composable () -> Unit,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    Dialog(
-        onDismissRequest = onDismissRequest,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
-    ) {
+    AppDialog(onDismissRequest = onDismissRequest, widthFraction = widthFraction) {
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-            // המסך קבוע ב-640x960 (ר' CLAUDE.md) ותוכן דיאלוגים כמו אפשרויות
-            // אפליקציה/ווידג'ט (שינוי גודל + שדות שינוי שם + הוספה לתיקייה) יכול
-            // בקלות לעלות על הגובה הפנוי. בלי מגבלת גובה כאן, ה-Column החיצוני היה
-            // פשוט תופס את הגובה שהתוכן דורש, מה שדוחף את הדיאלוג המרוכז אנכית
-            // מעבר לגבולות המסך - הכותרת "בורחת" מעל החלק הנראה. BoxWithConstraints
-            // נותן לנו את הגובה הפנוי האמיתי כדי להגביל את הדיאלוג אליו, עם רק אזור
-            // התוכן האמצעי גולל (הכותרת והפוטר תמיד נשארים קבועים/נראים).
-            BoxWithConstraints(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                val maxDialogHeight = maxHeight * 0.86f
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(FutureShapes.dialog)
+                    .background(theme.surfaceColor)
+                    .padding(20.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = title,
+                        color = theme.textColor,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = FutureTypography.dialog,
+                        modifier = Modifier.weight(1f)
+                    )
+                    trailingTitleContent?.invoke()
+                }
+                Spacer(modifier = Modifier.height(FutureDimens.spacingLg))
                 Column(
                     modifier = Modifier
-                        .fillMaxWidth(widthFraction)
-                        .heightIn(max = maxDialogHeight)
-                        .clip(FutureShapes.xxl)
-                        .background(theme.surfaceColor.copy(alpha = if (theme.isDarkMode) 0.92f else 0.97f))
-                        .border(1.dp, theme.accentColor.copy(alpha = 0.3f), FutureShapes.xxl)
-                        .padding(20.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = title,
-                            color = theme.textColor,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = FutureTypography.title,
-                            modifier = Modifier.weight(1f)
-                        )
-                        trailingTitleContent?.invoke()
-                    }
-                    Spacer(modifier = Modifier.height(14.dp))
-                    Column(
-                        modifier = Modifier
-                            .weight(1f, fill = false)
-                            .verticalScroll(rememberScrollState()),
-                        content = content
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    footer()
-                }
+                        .weight(1f, fill = false)
+                        .verticalScroll(rememberScrollState()),
+                    content = content
+                )
+                Spacer(modifier = Modifier.height(FutureDimens.spacingLg))
+                footer()
             }
         }
     }
 }
 
 /** כפתור מלבני/גלולה בסגנון זכוכית עם טבעת פוקוס ברורה - להחלפת ה-Button/TextButton הגנריים של Material. */
+/** כפתור - FutureButton של הדיזיין סיסטם (ראשי / משני / הרסני). */
 @Composable
 private fun GlassButton(
     text: String,
@@ -137,53 +141,31 @@ private fun GlassButton(
     isDestructive: Boolean = false,
     focusRequester: FocusRequester? = null
 ) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val shape = FutureShapes.md
     // Dialog() מריץ את החלון שלו במעטפת נפרדת - אם מבקשים פוקוס לפני שהחלון
     // בכלל נדבק, הבקשה נבלעת בשקט. onGloballyPositioned מבטיח שהבקשה תקרה
-    // ברגע שהכפתור באמת נמדד/מוצג, במקום delay() קבוע ושביר.
+    // ברגע שהכפתור באמת נמדד/מוצג.
     var hasRequestedFocus by remember { mutableStateOf(false) }
-
-    val background = when {
-        isDestructive -> Color(0xFFCF4A4A).copy(alpha = if (isFocused) 0.9f else 0.75f)
-        isPrimary -> theme.accentColor.copy(alpha = if (isFocused) 0.95f else 0.8f)
-        else -> theme.textColor.copy(alpha = if (isFocused) 0.18f else 0.1f)
-    }
-    val contentColor = when {
-        isDestructive -> Color.White
-        isPrimary -> if (theme.accentColor.luminance() > 0.5f) Color.Black else Color.White
-        else -> theme.textColor
-    }
-
-    Box(
-        modifier = modifier
-            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
-            .then(
-                if (focusRequester != null) Modifier.onGloballyPositioned {
-                    if (!hasRequestedFocus) {
-                        hasRequestedFocus = true
-                        focusRequester.requestFocus()
-                    }
-                } else Modifier
-            )
-            .clip(shape)
-            .background(background)
-            .border(
-                width = if (isFocused) 1.5.dp else 0.dp,
-                color = if (isFocused) theme.textColor.copy(alpha = 0.6f) else Color.Transparent,
-                shape = shape
-            )
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(text = text, color = contentColor, fontSize = FutureTypography.body, fontWeight = FontWeight.SemiBold)
-    }
+    FutureButton(
+        text = text,
+        theme = theme,
+        onClick = onClick,
+        modifier = modifier.then(
+            if (focusRequester != null) Modifier.onGloballyPositioned {
+                if (!hasRequestedFocus) {
+                    hasRequestedFocus = true
+                    runCatching { focusRequester.requestFocus() }
+                }
+            } else Modifier
+        ),
+        variant = when {
+            isDestructive -> FutureButtonVariant.Destructive
+            isPrimary -> FutureButtonVariant.Primary
+            else -> FutureButtonVariant.Secondary
+        },
+        focusRequester = focusRequester,
+    )
 }
 
-private fun Color.luminance(): Float = (0.299f * red + 0.587f * green + 0.114f * blue)
 
 /** שדה טקסט בסגנון זכוכית - להחלפת ה-OutlinedTextField הגנרי שצובע גבול/תווית בצבעי ברירת המחדל של Material. */
 @Composable
@@ -194,27 +176,11 @@ private fun GlassTextField(
     theme: FutureTheme,
     modifier: Modifier = Modifier
 ) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        label = { Text(label, fontSize = FutureTypography.label, color = theme.textColor.copy(alpha = 0.6f)) },
-        modifier = modifier,
-        singleLine = true,
-        shape = FutureShapes.md,
-        textStyle = LocalTextStyle.current.copy(fontSize = FutureTypography.body, color = theme.textColor),
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedTextColor = theme.textColor,
-            unfocusedTextColor = theme.textColor,
-            focusedBorderColor = theme.accentColor,
-            unfocusedBorderColor = theme.textColor.copy(alpha = 0.3f),
-            focusedLabelColor = theme.accentColor,
-            unfocusedLabelColor = theme.textColor.copy(alpha = 0.5f),
-            cursorColor = theme.accentColor
-        )
-    )
+    FutureFormField(label = label, value = value, onValueChange = onValueChange, theme = theme, modifier = modifier)
 }
 
 /** שורת מתג הגדרה בסגנון זכוכית, עקבית עם שאר תפריטי ההגדרות ב-FutureOS. */
+/** שורת הגדרה עם מתג - FutureSettingItem ו-FutureSwitch של הדיזיין סיסטם. */
 @Composable
 private fun GlassSettingSwitch(
     title: String,
@@ -223,47 +189,13 @@ private fun GlassSettingSwitch(
     onCheckedChange: (Boolean) -> Unit,
     theme: FutureTheme
 ) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val shape = FutureShapes.lg
-    val bgColor by animateColorAsState(
-        if (isFocused) theme.accentColor.copy(alpha = 0.18f) else theme.textColor.copy(alpha = 0.05f),
-        label = "settingSwitchBg"
+    FutureSettingItem(
+        title = title,
+        summary = description,
+        theme = theme,
+        onClick = { onCheckedChange(!checked) },
+        trailing = { FutureSwitch(checked = checked, theme = theme) },
     )
-    val scale by animateFloatAsState(if (isFocused) 1.02f else 1f, label = "settingSwitchScale")
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .graphicsLayer { scaleX = scale; scaleY = scale }
-            .clip(shape)
-            .background(bgColor)
-            .then(if (isFocused) Modifier.border(2.dp, theme.accentColor, shape) else Modifier)
-            .clickable(interactionSource = interactionSource, indication = null) { onCheckedChange(!checked) }
-            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
-            .padding(horizontal = 14.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(title, color = theme.textColor, fontSize = FutureTypography.body, fontWeight = FontWeight.Medium)
-            Text(description, color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.caption)
-        }
-        Spacer(modifier = Modifier.width(10.dp))
-        // המתג מוצג בלבד (הריבוע כולו כבר clickable דרך ה-Row למעלה) - לכן הוא
-        // עטוף כך שלא יקבל פוקוס משלו וייצור עצירה כפולה לאותה פעולה בניווט שלט.
-        Box(modifier = Modifier.focusable(false)) {
-            Switch(
-                checked = checked,
-                onCheckedChange = null,
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = Color.White,
-                    checkedTrackColor = theme.accentColor,
-                    uncheckedThumbColor = Color.White,
-                    uncheckedTrackColor = theme.textColor.copy(alpha = 0.3f)
-                )
-            )
-        }
-    }
 }
 
 @Composable
@@ -301,8 +233,8 @@ fun FolderDialog(
                             .size(44.dp)
                             .onFocusChanged { isAppFocused = it.isFocused },
                         shape = RoundedCornerShape(percent = 28),
-                        color = if (isAppFocused) theme.accentColor.copy(alpha = 0.35f) else theme.textColor.copy(alpha = 0.08f),
-                        border = androidx.compose.foundation.BorderStroke(1.5.dp, if (isAppFocused) theme.accentColor else Color.Transparent),
+                        color = if (isAppFocused) theme.readableAccentColor.copy(alpha = 0.14f) else theme.idleFieldColor,
+                        border = androidx.compose.foundation.BorderStroke(FutureDimens.focusBorderItem, if (isAppFocused) theme.readableAccentColor else Color.Transparent),
                         onClick = { onAppClick(app) }
                     ) {
                         Image(bitmap = icon, contentDescription = null, modifier = Modifier.fillMaxSize())
@@ -334,19 +266,7 @@ fun AppOptionsDialog(
         theme = theme,
         title = item.label,
         trailingTitleContent = {
-            Box(
-                modifier = Modifier
-                    .clip(CircleShape)
-                    .clickable { onRemove(); onDismiss() }
-                    .padding(6.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.Delete,
-                    contentDescription = stringResource(R.string.trash),
-                    tint = Color(0xFFCF4A4A),
-                    modifier = Modifier.size(20.dp)
-                )
-            }
+            TopBarIconButton(Icons.Rounded.Delete, stringResource(R.string.trash), theme.dangerColor, theme.accentColor, { onRemove(); onDismiss() })
         },
         footer = {
             GlassButton(text = stringResource(R.string.close), onClick = onDismiss, theme = theme, isPrimary = false, modifier = Modifier.fillMaxWidth())
@@ -374,20 +294,20 @@ fun AppOptionsDialog(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(stringResource(R.string.width, item.spanX), color = theme.textColor, fontSize = FutureTypography.label)
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            GlassButton("−", { if (item.spanX > 1) onResize(item.spanX - 1, item.spanY) }, theme, isPrimary = false, modifier = Modifier.size(40.dp, 34.dp))
-                            GlassButton("+", { if (item.spanX < 4) onResize(item.spanX + 1, item.spanY) }, theme, isPrimary = false, modifier = Modifier.size(40.dp, 34.dp))
+                            TopBarIconButton(Icons.Rounded.Remove, "הקטן", theme.textColor, theme.accentColor, { if (item.spanX > 1) onResize(item.spanX - 1, item.spanY) })
+                            TopBarIconButton(Icons.Rounded.Add, "הגדל", theme.textColor, theme.accentColor, { if (item.spanX < 4) onResize(item.spanX + 1, item.spanY) })
                         }
                     }
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(stringResource(R.string.height, item.spanY), color = theme.textColor, fontSize = FutureTypography.label)
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            GlassButton("−", { if (item.spanY > 1) onResize(item.spanX, item.spanY - 1) }, theme, isPrimary = false, modifier = Modifier.size(40.dp, 34.dp))
-                            GlassButton("+", { if (item.spanY < 4) onResize(item.spanX, item.spanY + 1) }, theme, isPrimary = false, modifier = Modifier.size(40.dp, 34.dp))
+                            TopBarIconButton(Icons.Rounded.Remove, "הקטן", theme.textColor, theme.accentColor, { if (item.spanY > 1) onResize(item.spanX, item.spanY - 1) })
+                            TopBarIconButton(Icons.Rounded.Add, "הגדל", theme.textColor, theme.accentColor, { if (item.spanY < 4) onResize(item.spanX, item.spanY + 1) })
                         }
                     }
                 }
                 Spacer(modifier = Modifier.height(10.dp))
-                HorizontalDivider(color = theme.textColor.copy(alpha = 0.12f))
+                FutureDivider(theme = theme, inset = false)
                 Spacer(modifier = Modifier.height(10.dp))
             }
 
@@ -408,7 +328,7 @@ fun AppOptionsDialog(
 
             if (item is LauncherItem.App) {
                 Spacer(modifier = Modifier.height(10.dp))
-                HorizontalDivider(color = theme.textColor.copy(alpha = 0.12f))
+                FutureDivider(theme = theme, inset = false)
                 Spacer(modifier = Modifier.height(10.dp))
 
                 GlassTextField(
@@ -461,7 +381,7 @@ fun EmptySlotOptionsDialog(
             )
 
             Spacer(modifier = Modifier.height(12.dp))
-            HorizontalDivider(color = theme.textColor.copy(alpha = 0.12f))
+            FutureDivider(theme = theme, inset = false)
             Spacer(modifier = Modifier.height(12.dp))
 
             GlassTextField(
@@ -497,7 +417,7 @@ fun WidgetsDialog(onSelectWidget: () -> Unit, onDismiss: () -> Unit, theme: Futu
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(stringResource(R.string.select_widget_title), color = theme.textColor.copy(alpha = 0.8f), textAlign = TextAlign.Center, fontSize = FutureTypography.body)
+            Text(stringResource(R.string.select_widget_title), color = theme.secondaryTextColor, textAlign = TextAlign.Center, fontSize = FutureTypography.body)
             Spacer(modifier = Modifier.height(12.dp))
             GlassButton(
                 text = stringResource(R.string.select_widget_button),
@@ -679,7 +599,7 @@ fun LauncherSettingsDialog(
             if (confirmingReset) {
                 Text(
                     stringResource(R.string.reset_layout_confirm),
-                    color = Color(0xFFCF4A4A),
+                    color = theme.dangerColor,
                     fontSize = FutureTypography.summary,
                     textAlign = TextAlign.Center
                 )

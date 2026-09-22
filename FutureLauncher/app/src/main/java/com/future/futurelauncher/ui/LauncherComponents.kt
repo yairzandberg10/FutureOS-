@@ -148,7 +148,7 @@ fun ItemPanel(
     val iconSize = if (isEditMode) 40.dp else 48.dp
     val scale by animateFloatAsState(if (isFocused || isMoving) 1.15f else 1f)
     val borderColor = when {
-        isMoving -> Color.Red
+        isMoving -> theme.dangerColor
         isFocused -> theme.accentColor
         else -> if (item is LauncherItem.Empty && isEditMode) OnWallpaperColor.copy(alpha = 0.05f) else Color.Transparent
     }
@@ -235,7 +235,7 @@ fun ItemPanel(
                         }
                     } else if (isFocused) {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Box(modifier = Modifier.size(6.dp).clip(RoundedCornerShape(50)).background(OnWallpaperColor.copy(alpha = 0.5f)))
+                            Box(modifier = Modifier.size(6.dp).clip(FutureShapes.pill).background(OnWallpaperColor.copy(alpha = 0.5f)))
                         }
                     }
                 }

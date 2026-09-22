@@ -1,4 +1,5 @@
 package com.future.clock.ui
+import com.future.sharednav.theme.FutureMotion
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.mutedTextColor
 import com.future.sharednav.theme.FutureShapes
@@ -150,10 +151,12 @@ private fun PinToHomeButton(entry: ClockEntry, theme: FutureTheme) {
     val isFocused by interactionSource.collectIsFocusedAsState()
     val tint by animateColorAsState(
         if (isPinned) theme.accentColor else theme.textColor.copy(alpha = if (isFocused) 0.6f else 0.3f),
+        FutureMotion.focusColorSpec,
         label = "pinTint"
     )
     val bgColor by animateColorAsState(
         if (isFocused) theme.textColor.copy(alpha = 0.14f) else theme.textColor.copy(alpha = 0f),
+        FutureMotion.focusColorSpec,
         label = "pinBg"
     )
 

@@ -1,4 +1,8 @@
 package com.future.gallery.ui
+import com.future.sharednav.theme.readableAccentColor
+import com.future.sharednav.theme.idleChipColor
+import com.future.sharednav.theme.FutureDimens
+import com.future.sharednav.focus.focusMotion
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.focus.bringIntoViewOnFocus
@@ -103,13 +107,14 @@ private fun AlbumCard(album: Album, theme: FutureTheme, onClick: () -> Unit, foc
     }
 
     val scale by animateFloatAsState(if (isFocused) 0.97f else 1f, label = "albumScale")
-    val shape = FutureShapes.lg
+    val shape = FutureShapes.sm
 
     Column(
         modifier = Modifier
+            .focusMotion(interactionSource)
             .clip(shape)
             .background(theme.surfaceColor)
-            .then(if (isFocused) Modifier.border(2.dp, theme.accentColor, shape) else Modifier)
+            .then(if (isFocused) Modifier.border(FutureDimens.focusBorderItem, theme.readableAccentColor, shape) else Modifier)
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
             .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()

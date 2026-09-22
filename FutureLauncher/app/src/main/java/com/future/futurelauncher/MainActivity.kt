@@ -1,4 +1,5 @@
 package com.future.futurelauncher
+import com.future.sharednav.theme.scrimColor
 import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.focus.bringIntoViewOnFocus
 
@@ -824,14 +825,16 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                     Row(
                         modifier = Modifier
                             .fillMaxSize()
+                            // סרגל מעל טפט: ההכהיה של המערכת (60%) והפינות של משטח
+                            // "זכוכית" (22dp) - לא 35% שחור ו-24dp, שאינם בסקאלה.
                             .background(
-                                Color.Black.copy(alpha = 0.35f),
-                                RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+                                theme.scrimColor,
+                                RoundedCornerShape(topStart = FutureShapes.radiusXl, topEnd = FutureShapes.radiusXl)
                             )
                             .border(
                                 1.dp,
                                 OnWallpaperColor.copy(alpha = 0.15f),
-                                RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+                                RoundedCornerShape(topStart = FutureShapes.radiusXl, topEnd = FutureShapes.radiusXl)
                             )
                             .padding(horizontal = 16.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly,
@@ -857,7 +860,7 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                             Box(
                                 modifier = Modifier
                                     .padding(4.dp)
-                                    .clip(RoundedCornerShape(50))
+                                    .clip(FutureShapes.pill)
                                     .background(color)
                                     .size(6.dp)
                             )

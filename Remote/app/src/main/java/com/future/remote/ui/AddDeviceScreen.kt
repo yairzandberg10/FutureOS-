@@ -1,5 +1,7 @@
 package com.future.remote.ui
-import com.future.sharednav.theme.onAccentColor
+import com.future.sharednav.theme.subtleTextColor
+import com.future.sharednav.components.FutureTextField
+import com.future.sharednav.components.FutureChip
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.focus.bringIntoViewOnFocus
@@ -60,21 +62,13 @@ fun AddDeviceScreen(theme: FutureTheme, onBack: () -> Unit, onSaved: () -> Unit)
 
                 Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                     Text("שם המכשיר", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.summary, modifier = Modifier.padding(bottom = 6.dp))
-                    TextField(
+                    FutureTextField(
                         value = name,
                         onValueChange = { name = it },
-                        placeholder = { Text("למשל: מזגן סלון") },
-                        singleLine = true,
+                        theme = theme,
+                        placeholder = "למשל: מזגן סלון",
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                        colors = TextFieldDefaults.colors(
-                            focusedContainerColor = theme.textColor.copy(alpha = 0.08f),
-                            unfocusedContainerColor = theme.textColor.copy(alpha = 0.05f),
-                            focusedIndicatorColor = theme.accentColor,
-                            unfocusedIndicatorColor = Color.Transparent,
-                            focusedTextColor = theme.textColor,
-                            unfocusedTextColor = theme.textColor
-                        ),
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
                     )
 
                     Text("סוג המכשיר", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.summary, modifier = Modifier.padding(top = 20.dp, bottom = 6.dp))
@@ -108,21 +102,5 @@ fun AddDeviceScreen(theme: FutureTheme, onBack: () -> Unit, onSaved: () -> Unit)
 
 @Composable
 private fun CategoryChip(category: DeviceCategory, selected: Boolean, theme: FutureTheme, onClick: () -> Unit) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val shape = FutureShapes.md
-    val bg = if (selected) theme.accentColor.copy(alpha = 0.85f) else theme.textColor.copy(alpha = 0.08f)
-    val textColor = if (selected) theme.onAccentColor else theme.textColor
-
-    Box(
-        modifier = Modifier
-            .height(40.dp)
-            .background(bg, shape)
-            .then(if (isFocused) Modifier.border(width = 2.dp, color = theme.accentColor, shape = shape) else Modifier)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
-            .padding(horizontal = 16.dp),
-    ) {
-        Text(category.label, color = textColor, fontSize = FutureTypography.body, fontWeight = FontWeight.Medium, modifier = Modifier.align(androidx.compose.ui.Alignment.Center))
-    }
+    FutureChip(category.label, theme, selected = selected, onClick = onClick)
 }

@@ -1,5 +1,6 @@
 package com.future.clock.ui
-import com.future.sharednav.theme.onAccentColor
+import com.future.sharednav.components.FutureButton
+import com.future.sharednav.components.FutureButtonVariant
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.components.ConfirmDialog
 import com.future.sharednav.focus.bringIntoViewOnFocus
@@ -244,20 +245,8 @@ fun TimePickerOverlay(alarm: Alarm, theme: FutureTheme, onSave: (Alarm) -> Unit,
         Spacer(modifier = Modifier.height(32.dp))
 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            Button(
-                onClick = onCancel,
-                modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.buttonColors(containerColor = theme.textColor.copy(alpha = 0.1f), contentColor = theme.textColor)
-            ) {
-                Text("ביטול")
-            }
-            Button(
-                onClick = { onSave(alarm.copy(hour = hour, minute = minute, days = days, isEnabled = true)) },
-                modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.buttonColors(containerColor = theme.accentColor, contentColor = Color.Black)
-            ) {
-                Text("שמור")
-            }
+            FutureButton("ביטול", theme, onCancel, modifier = Modifier.weight(1f), variant = FutureButtonVariant.Secondary)
+            FutureButton("שמור", theme, { onSave(alarm.copy(hour = hour, minute = minute, days = days, isEnabled = true)) }, modifier = Modifier.weight(1f))
         }
     }
 }

@@ -1,5 +1,15 @@
 package com.future.gallery.ui
-import com.future.sharednav.theme.onAccentColor
+import com.future.sharednav.components.FutureChip
+import com.future.sharednav.components.FutureOptionsMenu
+import com.future.sharednav.components.FutureMenuRow
+import com.future.sharednav.components.FutureButton
+import com.future.sharednav.components.ConfirmDialog
+import com.future.sharednav.theme.FutureDimens
+import com.future.sharednav.theme.FutureContrast
+import com.future.sharednav.theme.scrimColor
+import com.future.sharednav.theme.readableAccentColor
+import com.future.sharednav.theme.textAlpha
+import androidx.compose.material.icons.rounded.Check
 import com.future.sharednav.theme.FutureMotion
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
@@ -233,28 +243,10 @@ private fun MediaGrid(
     }
 }
 
+/** לשונית "הכל / אלבומים" - הצ'יפ של הדיזיין סיסטם, שנגזר מהרכיב הזה עצמו (GalleryTabChip, 14dp). */
 @Composable
 private fun GalleryTabChip(label: String, isSelected: Boolean, theme: FutureTheme, onClick: () -> Unit) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val bgColor by animateColorAsState(
-        when {
-            isSelected -> theme.accentColor
-            isFocused -> theme.textColor.copy(alpha = 0.18f)
-            else -> theme.textColor.copy(alpha = 0.06f)
-        },
-        label = "tabChipBg"
-    )
-    Box(
-        modifier = Modifier
-            .clip(FutureShapes.md)
-            .background(bgColor)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
-            .padding(horizontal = 18.dp, vertical = 8.dp)
-    ) {
-        Text(label, color = if (isSelected) theme.onAccentColor else theme.textColor, fontSize = FutureTypography.summary, fontWeight = FontWeight.Medium)
-    }
+    FutureChip(label, theme, selected = isSelected, onClick = onClick)
 }
 
 @Composable
@@ -266,54 +258,27 @@ private fun GalleryIconButton(icon: androidx.compose.ui.graphics.vector.ImageVec
 
 @Composable
 private fun SortMenu(current: SortOption, theme: FutureTheme, onDismiss: () -> Unit, onSelect: (SortOption) -> Unit) {
-    com.future.sharednav.components.AppDialog(onDismissRequest = onDismiss) {
-        Column(
-            modifier = Modifier
-                .clip(FutureShapes.xl)
-                .background(theme.surfaceColor)
-                .padding(vertical = 8.dp)
-        ) {
-            Text("מיין לפי", color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.label, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
-            SortOption.entries.forEach { option ->
-                SortRow(SORT_LABELS.getValue(option), isSelected = option == current, theme = theme) { onSelect(option) }
-            }
+    FutureOptionsMenu(theme = theme, onDismissRequest = onDismiss, header = "מיין לפי") {
+        SortOption.entries.forEach { option ->
+            FutureMenuRow(
+                label = SORT_LABELS.getValue(option),
+                icon = null,
+                theme = theme,
+                onClick = { onSelect(option) },
+                // המיון הנוכחי = הבחירה, ולכן בהדגשה (ולא הדגשת הטקסט כולו כמו קודם)
+                trailing = if (option == current) {
+                    { Icon(Icons.Rounded.Check, contentDescription = null, tint = theme.readableAccentColor, modifier = Modifier.size(FutureDimens.iconMenuRow)) }
+                } else null,
+            )
         }
     }
 }
 
-@Composable
-private fun SortRow(label: String, isSelected: Boolean, theme: FutureTheme, onClick: () -> Unit) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val bgColor by animateColorAsState(if (isFocused) theme.textColor.copy(alpha = 0.12f) else Color.Transparent, label = "sortRowBg")
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(bgColor)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
-            .padding(horizontal = 20.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(label, color = if (isSelected) theme.accentColor else theme.textColor, fontSize = FutureTypography.body, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
-    }
-}
+
 
 @Composable
 private fun FocusableTextButton(text: String, onClick: () -> Unit, theme: FutureTheme) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val bgColor by animateColorAsState(if (isFocused) theme.accentColor else theme.accentColor.copy(alpha = 0.7f), label = "btnBg")
-    androidx.compose.foundation.layout.Box(
-        modifier = Modifier
-            .clip(FutureShapes.xl)
-            .background(bgColor)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
-            .padding(horizontal = 24.dp, vertical = 12.dp)
-    ) {
-        Text(text, color = Color.Black, fontWeight = FontWeight.Bold)
-    }
+    FutureButton(text, theme, onClick)
 }
 
 @Composable
@@ -563,7 +528,7 @@ fun MediaViewerScreen(
                             )
                             if (!isVideoPlaying) {
                                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                    Icon(Icons.Rounded.PlayArrow, contentDescription = null, tint = Color.White.copy(alpha = 0.85f), modifier = Modifier.size(56.dp))
+                                    Icon(Icons.Rounded.PlayArrow, contentDescription = null, tint = Color.White, modifier = Modifier.size(56.dp))
                                 }
                             }
                         }
@@ -588,15 +553,8 @@ fun MediaViewerScreen(
                     }
                 }
 
-                Box(
-                    modifier = Modifier
-                        .padding(12.dp)
-                        .clip(RoundedCornerShape(50))
-                        .background(Color.Black.copy(alpha = 0.5f))
-                        .clickable { onBack() }
-                        .padding(10.dp)
-                ) {
-                    Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "חזור", tint = Color.White)
+                Box(modifier = Modifier.padding(FutureDimens.spacingMd)) {
+                    ViewerBackButton(theme, onBack)
                 }
             }
 
@@ -674,11 +632,14 @@ private fun MediaViewerBottomBar(
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
+    // הצופה תמיד כהה (תמונה על שחור), גם במצב בהיר - לכן הסרגל שלו לוקח את
+    // המשטח של הערכה הכהה, ולא hex ידני שלו.
+    val viewer = remember(theme.accentColor) { FutureTheme(isDarkMode = true, accentColor = theme.accentColor) }
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color(0xFF1C1C1E))
-            .padding(horizontal = 12.dp, vertical = 14.dp),
+            .background(viewer.surfaceColor)
+            .padding(horizontal = FutureDimens.spacingMd, vertical = FutureDimens.spacingMd),
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
         MediaViewerBarButton(Icons.Rounded.ZoomIn, "זום", theme, enabled = canZoom, isActive = isZoomed, onClick = onZoom)
@@ -702,13 +663,15 @@ private fun MediaViewerBarButton(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
+    val viewer = remember(theme.accentColor) { FutureTheme(isDarkMode = true, accentColor = theme.accentColor) }
     val tint = when {
-        !enabled -> Color.White.copy(alpha = 0.25f)
-        isDestructive -> Color(0xFFFF6B6B)
-        isActive || isFocused -> theme.accentColor
-        else -> Color.White
+        !enabled -> viewer.textAlpha(30)
+        isDestructive -> viewer.dangerColor
+        isActive -> viewer.readableAccentColor
+        else -> viewer.textColor
     }
-    val bgColor by animateColorAsState(if (isFocused && enabled) theme.accentColor.copy(alpha = 0.2f) else Color.Transparent, label = "viewerBarBtnBg")
+    // פוקוס של כפתור אייקון (IconButton.jsx): 30% הדגשה ברקע.
+    val bgColor by animateColorAsState(if (isFocused && enabled) viewer.readableAccentColor.copy(alpha = 0.30f) else Color.Transparent, FutureMotion.focusColorSpec, label = "viewerBarBtnBg")
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -727,37 +690,35 @@ private fun MediaViewerBarButton(
 
 @Composable
 private fun DeleteConfirmDialog(onCancel: () -> Unit, onConfirm: () -> Unit, theme: FutureTheme) {
-    com.future.sharednav.components.AppDialog(onDismissRequest = onCancel) {
-        Column(
-            modifier = Modifier
-                .clip(FutureShapes.xl)
-                .background(theme.surfaceColor)
-                .padding(20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text("למחוק את הפריט הזה?", color = theme.textColor, fontWeight = FontWeight.Bold, fontSize = FutureTypography.bodyLarge)
-            Spacer(modifier = Modifier.height(16.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                FocusableTextButton("ביטול", onCancel, theme)
-                FocusableDestructiveButton("מחק", onConfirm)
-            }
-        }
-    }
+    ConfirmDialog(message = "למחוק את הפריט הזה?", theme = theme, onCancel = onCancel, onConfirm = onConfirm)
 }
 
+
+
+/**
+ * כפתור חזרה מעל תמונה. במנוחה - קפסולה בהכהיה של המערכת (60% שחור, קבוע
+ * ולכן קריא מעל כל תמונה); בפוקוס - מילוי בהדגשה עם הדיו שלה. קודם הוא לא
+ * סימן פוקוס בכלל.
+ */
 @Composable
-private fun FocusableDestructiveButton(text: String, onClick: () -> Unit) {
+private fun ViewerBackButton(theme: FutureTheme, onBack: () -> Unit) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    val bgColor by animateColorAsState(if (isFocused) Color(0xFFFF6B6B) else Color(0xFFFF6B6B).copy(alpha = 0.7f), label = "delBtnBg")
+    val bgColor by animateColorAsState(if (isFocused) theme.accentColor else theme.scrimColor, FutureMotion.focusColorSpec, label = "viewerBackBg")
     Box(
         modifier = Modifier
-            .clip(FutureShapes.xl)
+            .size(FutureDimens.rowHeightTopBarButton)
+            .clip(FutureShapes.pill)
             .background(bgColor)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
-            .padding(horizontal = 24.dp, vertical = 12.dp)
+            .clickable(interactionSource = interactionSource, indication = null, onClick = onBack)
+            .focusable(interactionSource = interactionSource),
+        contentAlignment = Alignment.Center,
     ) {
-        Text(text, color = Color.Black, fontWeight = FontWeight.Bold)
+        Icon(
+            Icons.AutoMirrored.Rounded.ArrowBack,
+            contentDescription = "חזור",
+            tint = if (isFocused) FutureContrast.onColor(theme.accentColor) else Color.White,
+            modifier = Modifier.size(FutureDimens.iconTopBar),
+        )
     }
 }

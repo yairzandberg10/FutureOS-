@@ -1,5 +1,12 @@
 package com.future.gallery.ui
-import com.future.sharednav.theme.onAccentColor
+import com.future.sharednav.components.FutureChip
+import com.future.sharednav.components.FutureSpinner
+import com.future.sharednav.components.TopBarIconButton
+import com.future.sharednav.theme.FutureDimens
+import com.future.sharednav.theme.FutureMotion
+import com.future.sharednav.theme.readableAccentColor
+import com.future.sharednav.theme.mutedTextColor
+import com.future.sharednav.theme.focusFillChipColor
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.focus.bringIntoViewOnFocus
@@ -171,11 +178,11 @@ fun PhotoEditorScreen(item: MediaItem, theme: FutureTheme, onBack: () -> Unit, o
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = FutureDimens.spacingLg, vertical = FutureDimens.spacingMd),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     EditorIconButton(Icons.AutoMirrored.Rounded.ArrowBack, "ביטול", theme) { onBack() }
-                    Text("עריכת תמונה", color = Color.White, fontWeight = FontWeight.Bold, fontSize = FutureTypography.bodyLarge, modifier = Modifier.weight(1f).padding(start = 10.dp))
+                    Text("עריכת תמונה", color = Color.White, fontWeight = FontWeight.Bold, fontSize = FutureTypography.screenTitle, modifier = Modifier.weight(1f).padding(start = FutureDimens.spacingSm))
                     EditorSaveButton(theme = theme, enabled = state.hasEdits && !isSaving, isSaving = isSaving) { save() }
                 }
 
@@ -202,7 +209,7 @@ fun PhotoEditorScreen(item: MediaItem, theme: FutureTheme, onBack: () -> Unit, o
                         }
                     }
                     if (sourceBitmap == null) {
-                        Text("טוען תמונה...", color = Color.White.copy(alpha = 0.5f), fontSize = FutureTypography.summary)
+                        FutureSpinner(theme = FutureTheme(isDarkMode = true, accentColor = theme.accentColor), label = "טוען תמונה")
                     }
                 }
 
@@ -294,99 +301,54 @@ private fun AdjustRow(label: String, value: Float, theme: FutureTheme, onChange:
                 modifier = Modifier
                     .fillMaxHeight()
                     .fillMaxWidth(((value + 100f) / 200f).coerceIn(0f, 1f))
-                    .background(theme.accentColor, FutureShapes.xs)
+                    .background(theme.readableAccentColor, FutureShapes.xs)
             )
         }
     }
 }
 
+/** צ'יפ פעולה בעורך - הצ'יפ של הדיזיין סיסטם, בערכה הכהה (העורך תמיד כהה). */
 @Composable
 private fun EditorActionChip(label: String, theme: FutureTheme, isSelected: Boolean = false, onClick: () -> Unit) {
+    val dark = remember(theme.accentColor) { FutureTheme(isDarkMode = true, accentColor = theme.accentColor) }
+    FutureChip(label, dark, selected = isSelected, onClick = onClick)
+}
+
+/** לשונית כלי בעורך: הכלי הנבחר בהדגשה, ממוקד = 18% מהטקסט ברקע. */
+@Composable
+private fun EditorToolTab(tool: EditorTool, isSelected: Boolean, theme: FutureTheme, onClick: () -> Unit) {
+    val dark = remember(theme.accentColor) { FutureTheme(isDarkMode = true, accentColor = theme.accentColor) }
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    val bgColor by animateColorAsState(
-        when {
-            isFocused -> theme.accentColor
-            isSelected -> theme.accentColor.copy(alpha = 0.35f)
-            else -> Color.White.copy(alpha = 0.1f)
-        },
-        label = "chipBg"
-    )
-    Box(
+    val tint = if (isSelected) dark.readableAccentColor else dark.mutedTextColor
+    val bgColor by animateColorAsState(if (isFocused) dark.focusFillChipColor else Color.Transparent, FutureMotion.focusColorSpec, label = "toolTabBg")
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .clip(FutureShapes.md)
             .background(bgColor)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
             .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .padding(FutureDimens.spacingSm)
     ) {
-        Text(label, color = if (isFocused) theme.onAccentColor else theme.textColor, fontSize = FutureTypography.label, fontWeight = FontWeight.Medium)
-    }
-}
-
-@Composable
-private fun EditorToolTab(tool: EditorTool, isSelected: Boolean, theme: FutureTheme, onClick: () -> Unit) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val tint = if (isSelected || isFocused) theme.accentColor else Color.White.copy(alpha = 0.6f)
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .clip(FutureShapes.md)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
-            .padding(8.dp)
-    ) {
-        Icon(tool.icon, contentDescription = tool.label, tint = tint, modifier = Modifier.size(22.dp))
-        Spacer(modifier = Modifier.height(2.dp))
+        Icon(tool.icon, contentDescription = tool.label, tint = tint, modifier = Modifier.size(FutureDimens.iconSettingRow))
+        Spacer(modifier = Modifier.height(FutureDimens.spacingXxs))
         Text(tool.label, color = tint, fontSize = FutureTypography.caption)
     }
 }
 
 @Composable
 private fun EditorIconButton(icon: ImageVector, contentDescription: String, theme: FutureTheme, onClick: () -> Unit) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val bgColor by animateColorAsState(if (isFocused) theme.accentColor.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.08f), label = "iconBtnBg")
-    Box(
-        modifier = Modifier
-            .size(36.dp)
-            .clip(CircleShape)
-            .background(bgColor)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus(),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(icon, contentDescription = contentDescription, tint = Color.White, modifier = Modifier.size(18.dp))
-    }
+    TopBarIconButton(icon, contentDescription, Color.White, theme.accentColor, onClick)
 }
 
+/** שמירה - כפתור אייקון; בלי שינויים הוא לא מקבל פוקוס. בזמן שמירה - ספינר. */
 @Composable
 private fun EditorSaveButton(theme: FutureTheme, enabled: Boolean, isSaving: Boolean, onClick: () -> Unit) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val bgColor by animateColorAsState(
-        when {
-            !enabled -> Color.White.copy(alpha = 0.1f)
-            isFocused -> theme.accentColor
-            else -> theme.accentColor.copy(alpha = 0.6f)
-        },
-        label = "saveBtnBg"
-    )
-    Box(
-        modifier = Modifier
-            .size(36.dp)
-            .clip(CircleShape)
-            .background(bgColor)
-            .clickable(interactionSource = interactionSource, indication = null, enabled = enabled, onClick = onClick)
-            .focusable(interactionSource = interactionSource, enabled = enabled).bringIntoViewOnFocus(),
-        contentAlignment = Alignment.Center
-    ) {
-        if (isSaving) {
-            androidx.compose.material3.CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = Color.Black)
-        } else {
-            Icon(Icons.Rounded.Check, contentDescription = "שמור", tint = if (enabled) Color.Black else Color.White.copy(alpha = 0.3f), modifier = Modifier.size(18.dp))
-        }
+    if (isSaving) {
+        FutureSpinner(theme = FutureTheme(isDarkMode = true, accentColor = theme.accentColor), size = FutureDimens.rowHeightTopBarButton)
+    } else {
+        TopBarIconButton(Icons.Rounded.Check, "שמור", Color.White, theme.accentColor, onClick, enabled = enabled)
     }
 }
 
@@ -437,11 +399,13 @@ private fun CropFocusOverlay(rotatedBitmap: Bitmap, state: EditState, accentColo
         Image(
             bitmap = bitmapImage,
             contentDescription = null,
-            modifier = Modifier.fillMaxSize().blur(16.dp),
+            modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Fit
         )
+        // אין טשטוש בדיזיין סיסטם ("there is no blur in this system") - מה שמחוץ
+        // לחלון החיתוך מוחשך בהכהיה של המערכת (60%), והחלון עצמו נשאר חד.
         Canvas(modifier = Modifier.fillMaxSize()) {
-            drawRect(Color.Black.copy(alpha = 0.4f))
+            drawRect(Color.Black.copy(alpha = 0.60f))
         }
         if (screenCropRect != Rect.Zero) {
             Image(
