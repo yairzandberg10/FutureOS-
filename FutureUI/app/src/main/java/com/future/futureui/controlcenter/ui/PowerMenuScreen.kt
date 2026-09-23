@@ -73,7 +73,7 @@ fun PowerMenuScreen(
                 modifier = Modifier
                     .fillMaxWidth(0.85f)
                     .clip(FutureShapes.dialog)
-                    .background(com.future.futureui.ui.theme.ShellGlass.panel(theme))
+                    .background(theme.surfaceColor)
                     .padding(vertical = FutureDimens.spacingSm)
             ) {
                 Text(

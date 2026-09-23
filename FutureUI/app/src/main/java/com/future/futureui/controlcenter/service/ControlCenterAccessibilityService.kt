@@ -135,11 +135,7 @@ class ControlCenterAccessibilityService : AccessibilityService(), LifecycleOwner
             if (keyCode == KeyEvent.KEYCODE_BACK) {
                 if (action == KeyEvent.ACTION_UP) {
                     // BACK מתפריט הכיבוי חוזר ל-Control Center במקום לסגור הכל.
-                    when {
-                        powerMenuVisible.value -> powerMenuVisible.value = false
-                        controlManager?.showKeyboardLanguages == true -> controlManager?.showKeyboardLanguages = false
-                        else -> hideControlCenter()
-                    }
+                    if (powerMenuVisible.value) powerMenuVisible.value = false else hideControlCenter()
                 }
                 return true
             }
@@ -212,14 +208,6 @@ class ControlCenterAccessibilityService : AccessibilityService(), LifecycleOwner
                                 }
                             )
 
-                            controlManager?.let { manager ->
-                                if (manager.showKeyboardLanguages) {
-                                    com.future.futureui.controlcenter.ui.KeyboardLanguagesPanel(
-                                        onClose = { manager.showKeyboardLanguages = false }
-                                    )
-                                }
-                            }
-
                             if (powerMenuVisible.value) {
                                 PowerMenuScreen(
                                     onPowerOff = {
@@ -279,7 +267,6 @@ class ControlCenterAccessibilityService : AccessibilityService(), LifecycleOwner
         if (!isVisible) return
         try {
             powerMenuVisible.value = false
-            controlManager?.showKeyboardLanguages = false
             lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
             lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
             windowManager.removeView(composeView)

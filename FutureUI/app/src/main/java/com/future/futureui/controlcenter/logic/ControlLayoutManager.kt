@@ -28,32 +28,20 @@ class ControlLayoutManager(context: Context) {
         ControlInfo("account", "חשבון", FutureIcons.Person),
         ControlInfo("calendar", "יומן", Icons.Rounded.CalendarMonth),
         ControlInfo("security", "אבטחה", Icons.Rounded.Security),
-        ControlInfo("predictive_text", "ניבוי טקסט", Icons.Rounded.Spellcheck),
-        ControlInfo("keyboard_langs", "שפות מקלדת", FutureIcons.Keyboard)
+        ControlInfo("predictive_text", "ניבוי טקסט", Icons.Rounded.Spellcheck)
     )
 
     private val defaultLayout = listOf(
         "wifi", "bluetooth", "flashlight", "airplane", "data", "dnd", "location",
         "rotation", "battery", "night", "settings", "camera",
-        "search", "music", "account", "calendar", "security", "predictive_text", "keyboard_langs"
+        "search", "music", "account", "calendar", "security", "predictive_text"
     )
 
     private val defaultSectionOrder = listOf("toggles", "media", "grid", "sliders", "bottom_toggles")
 
     fun getActiveLayout(): List<String> {
-        val saved = prefs.getString("layout_ids", null) ?: return defaultLayout
-        var ids = saved.split(",")
-        // פריסה שמורה מלפני שנוסף האריח "שפות מקלדת" - מוסיפים אותו פעם אחת
-        // (אחרי "ניבוי טקסט"); אם המשתמש הסיר אותו אחר כך, הוא לא חוזר.
-        if (!prefs.getBoolean("added_keyboard_langs", false)) {
-            if ("keyboard_langs" !in ids) {
-                val at = ids.indexOf("predictive_text")
-                ids = if (at >= 0) ids.toMutableList().apply { add(at + 1, "keyboard_langs") } else ids + "keyboard_langs"
-                saveLayout(ids)
-            }
-            prefs.edit().putBoolean("added_keyboard_langs", true).apply()
-        }
-        return ids
+        val saved = prefs.getString("layout_ids", null)
+        return saved?.split(",") ?: defaultLayout
     }
 
     fun saveLayout(ids: List<String>) {

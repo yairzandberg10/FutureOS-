@@ -1,6 +1,4 @@
 package com.future.futureui.controlcenter.ui.components
-import com.future.futureui.ui.theme.ShellGlass
-import com.future.futureui.ui.theme.shellFocusRing
 import androidx.compose.material.icons.rounded.Remove
 
 import com.future.sharednav.icons.FutureIcons
@@ -72,9 +70,9 @@ fun TogglePill(
             .height(55.dp)
             .clip(shape)
             .focusEffect(isFocused, shape)
-            .background(ShellGlass.tile(theme))
+            .background(theme.elevatedSurfaceColor)
             .then(
-                Modifier.shellFocusRing(isFocused, shape)
+                if (isFocused) Modifier.border(FutureDimens.focusBorderControl, theme.readableAccentColor, shape) else Modifier
             )
             .padding(6.dp)
             .onKeyEvent { event ->
@@ -101,13 +99,13 @@ fun TogglePill(
                     .clip(CircleShape)
                     // דלוק = נבחר, ולכן מילוי מלא בהדגשה (states.html); כבוי = דרגה אחת
                     // מעל הזכוכית. קודם שני המצבים היו #6E6969 מול #616161 - כמעט זהים.
-                    .background(if (isOn) ShellGlass.on(theme) else ShellGlass.tile(theme)),
+                    .background(if (isOn) theme.readableAccentColor else theme.raisedSurfaceColor),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = if (isOn) ShellGlass.onInk(theme) else theme.textColor,
+                    tint = if (isOn) theme.onReadableAccentColor else theme.textColor,
                     modifier = Modifier.size(FutureDimens.iconTopBar)
                 )
             }
@@ -154,7 +152,7 @@ fun FocusableIcon(
                 .size(38.dp)
                 .focusEffect(isFocused, CircleShape)
                 .clip(CircleShape)
-                .background(if (isOn) ShellGlass.on(theme) else ShellGlass.tile(theme))
+                .background(if (isOn) theme.readableAccentColor else theme.raisedSurfaceColor)
                 .onKeyEvent { event ->
                     if (event.type == KeyEventType.KeyDown) {
                         if (event.key == Key.Menu || event.key == Key.Settings || event.key == Key.F1 || event.key == Key.Back) {
@@ -174,7 +172,7 @@ fun FocusableIcon(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = if (isOn) ShellGlass.onInk(theme) else theme.textColor,
+                tint = if (isOn) theme.onReadableAccentColor else theme.textColor,
                 modifier = Modifier.size(FutureDimens.iconMenuRow)
             )
 
@@ -259,7 +257,7 @@ fun FocusableSection(
                             width = 2.dp,
                             color = when {
                                 isMoving -> theme.dangerColor
-                                isFocused -> ShellGlass.ring(theme)
+                                isFocused -> theme.readableAccentColor
                                 else -> Color.Transparent
                             },
                             shape = shape

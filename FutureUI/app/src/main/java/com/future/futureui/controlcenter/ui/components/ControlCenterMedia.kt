@@ -1,6 +1,4 @@
 package com.future.futureui.controlcenter.ui.components
-import com.future.futureui.ui.theme.ShellGlass
-import com.future.futureui.ui.theme.shellFocusRing
 
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.theme.LocalFutureTheme
@@ -57,9 +55,9 @@ fun MusicPlayerCard(manager: ControlManager, labelColor: Color = Color.Unspecifi
                 .height(80.dp)
                 .clip(shape)
                 .focusEffect(isFocused, shape)
-                .background(ShellGlass.tile(theme))
+                .background(theme.elevatedSurfaceColor)
                 .then(
-                    Modifier.shellFocusRing(isFocused, shape)
+                    if (isFocused) Modifier.border(FutureDimens.focusBorderControl, theme.readableAccentColor, shape) else Modifier
                 )
                 .clickable(interactionSource = interactionSource, indication = null) { manager.openNotificationAccessSettings() }
                 .focusable(interactionSource = interactionSource)
@@ -81,9 +79,9 @@ fun MusicPlayerCard(manager: ControlManager, labelColor: Color = Color.Unspecifi
                 .height(65.dp)
                 .clip(shape)
                 .focusEffect(isFocused, shape)
-                .background(ShellGlass.tile(theme))
+                .background(theme.elevatedSurfaceColor)
                 .then(
-                    Modifier.shellFocusRing(isFocused, shape)
+                    if (isFocused) Modifier.border(FutureDimens.focusBorderControl, theme.readableAccentColor, shape) else Modifier
                 )
                 .clickable(
                     interactionSource = interactionSource,
@@ -101,7 +99,7 @@ fun MusicPlayerCard(manager: ControlManager, labelColor: Color = Color.Unspecifi
                     modifier = Modifier
                         .size(40.dp)
                         .clip(CircleShape)
-                        .background(ShellGlass.tile(theme)),
+                        .background(theme.raisedSurfaceColor),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -247,7 +245,7 @@ fun MediaControlButton(icon: ImageVector, onClick: () -> Unit, isLarge: Boolean 
                 scaleX = if (isFocused) 1.2f else 1f
                 scaleY = if (isFocused) 1.2f else 1f
             }
-            .then(Modifier.shellFocusRing(isFocused, shape))
+            .then(if (isFocused) Modifier.border(FutureDimens.focusBorderControl, theme.readableAccentColor, shape) else Modifier)
             .clip(shape)
             .background(if (isFocused) Color.White.copy(alpha = 0.3f) else Color.Transparent)
             .clickable(

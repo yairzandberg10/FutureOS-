@@ -53,28 +53,6 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
     private var layoutManager: StatusBarLayoutManager? = null
     private val mainHandler = Handler(Looper.getMainLooper())
     private val volumeLevelState = mutableFloatStateOf(0.5f)
-    private val volumeVisibleState = mutableStateOf(true)
-
-    /**
-     * Power + ווליום למטה = צילום מסך. אנדרואיד מזהה את הצירוף לפני השירות
-     * הזה, אבל הווליום-למטה עדיין מגיע לכאן - ואז הווליום ירד והחלונית שלנו
-     * הופיעה בתוך הצילום. לכן ווליום-למטה מופעל אחרי השהיה קצרה, ומתבטל אם
-     * בינתיים התחיל צילום מסך (ACTION_CLOSE_SYSTEM_DIALOGS, reason=screenshot)
-     * או שהמסך כבה (Power לבדו).
-     */
-    private var pendingVolumeDown: Runnable? = null
-    private val screenshotReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            val reason = intent?.getStringExtra("reason")
-            if (intent?.action == Intent.ACTION_SCREEN_OFF || reason == "screenshot") {
-                pendingVolumeDown?.let { mainHandler.removeCallbacks(it) }
-                pendingVolumeDown = null
-                hideVolumeOverlay(immediate = true)
-                // גם הבאנר הוא אלמנט זמני שלא צריך להיכנס לצילום המסך.
-                if (reason == "screenshot") removeHeadsUp()
-            }
-        }
-    }
     private var hideVolumeRunnable: Runnable? = null
     private var statusBarParams: WindowManager.LayoutParams? = null
     private var recentsView: ComposeView? = null
@@ -126,12 +104,6 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
             recentsAccentColor.value = Color(themePrefs.getInt(ThemeProvider.COL_PRIMARY_COLOR, android.graphics.Color.WHITE))
             themePrefs.registerOnSharedPreferenceChangeListener(themePrefsListener)
 
-            val shotFilter = IntentFilter().apply {
-                addAction(Intent.ACTION_CLOSE_SYSTEM_DIALOGS)
-                addAction(Intent.ACTION_SCREEN_OFF)
-            }
-            registerReceiver(screenshotReceiver, shotFilter)
-
             val filter = IntentFilter(FutureUIActions.ACTION_BRING_STATUS_BAR_FRONT)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 registerReceiver(bringToFrontReceiver, filter, Context.RECEIVER_EXPORTED)
@@ -145,10 +117,6 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
 
     override fun onServiceConnected() {
         super.onServiceConnected()
-        instance = this
-        // באנר קופץ דרך TYPE_APPLICATION_OVERLAY דורש הרשאה שבמכשיר נדחתה - הבאנר
-        // מוצג מכאן (חלון נגישות), וההרשאה מוענקת גם דרך root ליתר ביטחון.
-        controlManager?.runRootCommandAsync("appops set $packageName SYSTEM_ALERT_WINDOW allow")
         if (layoutManager?.getSuppressSystemBars() == true) {
             suppressSystemBars()
         }
@@ -162,15 +130,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
         val keyCode = event.keyCode
         if (keyCode == KeyEvent.KEYCODE_VOLUME_UP || keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
             if (event.action == KeyEvent.ACTION_DOWN) {
-                if (keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
-                    adjustVolume(1)
-                } else if (event.repeatCount > 0) {
-                    adjustVolume(-1)
-                } else {
-                    val run = Runnable { pendingVolumeDown = null; adjustVolume(-1) }
-                    pendingVolumeDown = run
-                    mainHandler.postDelayed(run, SCREENSHOT_CHORD_MS)
-                }
+                adjustVolume(if (keyCode == KeyEvent.KEYCODE_VOLUME_UP) 1 else -1)
             }
             // צורכים תמיד את אירוע המקש כדי שחלונית הווליום המקורית של אנדרואיד לא תופיע
             return true
@@ -302,7 +262,6 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
 
     private fun showVolumeOverlay() {
         hideVolumeRunnable?.let { mainHandler.removeCallbacks(it) }
-        volumeVisibleState.value = true
 
         if (volumeOverlayView == null) {
             try {
@@ -326,7 +285,6 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
                         FutureUITheme {
                             VolumeOverlay(
                                 level = volumeLevelState.floatValue,
-                                visible = volumeVisibleState.value,
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
@@ -342,21 +300,13 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
         mainHandler.postDelayed(hideVolumeRunnable!!, 1500)
     }
 
-    /** קודם אנימציית היציאה, ואז הסרת החלון (מיד - לפני צילום מסך). */
-    private fun hideVolumeOverlay(immediate: Boolean = false) {
-        val view = volumeOverlayView ?: return
-        volumeVisibleState.value = false
-        val remove = Runnable {
-            try {
-                if (volumeOverlayView === view) {
-                    windowManager.removeView(view)
-                    volumeOverlayView = null
-                }
-            } catch (e: Exception) {
-                Log.e("FutureUI", "Error hiding volume overlay", e)
-            }
+    private fun hideVolumeOverlay() {
+        try {
+            volumeOverlayView?.let { windowManager.removeView(it) }
+        } catch (e: Exception) {
+            Log.e("FutureUI", "Error hiding volume overlay", e)
         }
-        if (immediate) remove.run() else mainHandler.postDelayed(remove, 220)
+        volumeOverlayView = null
     }
 
     /** מסך "אפליקציות אחרונות" עצמאי מבוסס UsageStatsManager, במקום GLOBAL_ACTION_RECENTS המכוער. */
@@ -441,61 +391,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
         controlManager?.runRootCommandAsync("settings put global policy_control immersive.none=*")
     }
 
-    private var headsUpView: ComposeView? = null
-
-    /**
-     * הבאנר הקופץ (heads-up). חלון נגישות ולא TYPE_APPLICATION_OVERLAY: אין
-     * צורך בהרשאת "הצגה מעל אפליקציות", שבמכשיר נדחתה - ולכן אף באנר לא הופיע.
-     * התראה חדשה מחליפה את הקודמת; הבאנר לא לוקח פוקוס ולא מגע.
-     */
-    fun showHeadsUp(sbn: android.service.notification.StatusBarNotification) {
-        removeHeadsUp()
-        try {
-            val params = WindowManager.LayoutParams(
-                WindowManager.LayoutParams.MATCH_PARENT,
-                WindowManager.LayoutParams.WRAP_CONTENT,
-                WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
-                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
-                PixelFormat.TRANSLUCENT
-            ).apply { gravity = Gravity.TOP }
-            val view = ComposeView(this).apply {
-                setViewTreeLifecycleOwner(this@StatusBarAccessibilityService)
-                setViewTreeSavedStateRegistryOwner(this@StatusBarAccessibilityService)
-                setViewTreeViewModelStoreOwner(this@StatusBarAccessibilityService)
-                setContent {
-                    FutureUITheme {
-                        val isCall = sbn.notification.category == android.app.Notification.CATEGORY_CALL
-                        com.future.futureui.notificationcenter.ui.HeadsUpNotificationScreen(
-                            sbn = sbn,
-                            autoDismissMillis = if (isCall) 30_000L else 5_000L,
-                            onDismissed = { removeHeadsUp() },
-                        )
-                    }
-                }
-            }
-            headsUpView = view
-            windowManager.addView(view, params)
-            bringStatusBarToFront()
-        } catch (e: Exception) {
-            Log.e("FutureUI", "Error showing heads-up", e)
-        }
-    }
-
-    fun removeHeadsUp() {
-        val view = headsUpView ?: return
-        headsUpView = null
-        try {
-            windowManager.removeView(view)
-        } catch (e: Exception) {
-            Log.w("FutureUI", "removeHeadsUp failed", e)
-        }
-    }
-
     override fun onDestroy() {
-        instance = null
-        removeHeadsUp()
         try {
             hideVolumeOverlay()
             hideRecentApps()
@@ -506,11 +402,6 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
         }
         restoreSystemBars()
         controlManager?.dispose()
-        try {
-            unregisterReceiver(screenshotReceiver)
-        } catch (e: Exception) {
-            android.util.Log.w("StatusBarAccessibilityS", "onDestroy failed", e)
-        }
         try {
             unregisterReceiver(bringToFrontReceiver)
         } catch (e: Exception) {
@@ -524,14 +415,5 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
         store.clear()
         super.onDestroy()
-    }
-
-    companion object {
-        /** השירות הפעיל - מארח את הבאנר הקופץ (MediaControlService קורא לו). */
-        var instance: StatusBarAccessibilityService? = null
-            private set
-
-        /** חלון הזמן שבו אנדרואיד מזהה Power + ווליום למטה כצילום מסך. */
-        const val SCREENSHOT_CHORD_MS = 170L
     }
 }

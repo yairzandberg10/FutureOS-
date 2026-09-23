@@ -1,6 +1,4 @@
 package com.future.futureui.controlcenter.ui.components
-import com.future.futureui.ui.theme.ShellGlass
-import com.future.futureui.ui.theme.shellFocusRing
 import com.future.sharednav.theme.LocalFutureTheme
 import com.future.sharednav.theme.elevatedSurfaceColor
 import com.future.sharednav.theme.raisedSurfaceColor
@@ -45,9 +43,9 @@ fun SliderBar(
             .height(47.dp)
             .focusEffect(isFocused, shape)
             .clip(shape)
-            .background(ShellGlass.tile(theme))
+            .background(theme.elevatedSurfaceColor)
             .then(
-                Modifier.shellFocusRing(isFocused, shape)
+                if (isFocused) Modifier.border(FutureDimens.focusBorderControl, theme.readableAccentColor, shape) else Modifier
             )
             .onKeyEvent { event ->
                 if (event.type == KeyEventType.KeyDown) {
@@ -72,14 +70,14 @@ fun SliderBar(
                 .fillMaxHeight()
                 .fillMaxWidth(value.coerceAtLeast(0.01f))
                 // המילוי הוא הערך - בהדגשה, כמו במחוון של הדיזיין סיסטם (Slider.jsx).
-                .background(ShellGlass.on(theme).copy(alpha = 0.85f))
+                .background(theme.readableAccentColor)
         )
 
         Icon(
             imageVector = icon,
             contentDescription = null,
             // האייקון יושב בתחילת המילוי; ברגע שהמילוי מכסה אותו הוא עובר לדיו של ההדגשה.
-            tint = if (value >= 0.12f) ShellGlass.onInk(theme) else theme.textColor,
+            tint = if (value >= 0.12f) theme.onReadableAccentColor else theme.textColor,
             modifier = Modifier
                 .padding(start = 14.dp)
                 .size(22.dp)

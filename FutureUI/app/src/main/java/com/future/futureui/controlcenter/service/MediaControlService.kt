@@ -33,18 +33,9 @@ class MediaControlService : NotificationListenerService() {
         }
     }
 
-    /** מפתחות שכבר הקפיצו באנר - עדכון שלהם לא מקפיץ שוב כשהם "התרע פעם אחת". */
-    private val alerted = LinkedHashSet<String>()
-
-    override fun onNotificationRemoved(sbn: StatusBarNotification) {
-        super.onNotificationRemoved(sbn)
-        alerted.remove(sbn.key)
-    }
-
     override fun onListenerConnected() {
         super.onListenerConnected()
         instance = this
-        activeNotifications?.forEach { alerted.add(it.key) }
     }
 
     override fun onListenerDisconnected() {
@@ -56,8 +47,7 @@ class MediaControlService : NotificationListenerService() {
         super.onNotificationPosted(sbn)
         if (!shouldShowHeadsUp(sbn)) return
         try {
-            val host = com.future.futureui.statusbar.service.StatusBarAccessibilityService.instance
-            if (host != null) host.showHeadsUp(sbn) else HeadsUpNotificationService.show(this, sbn.key)
+            HeadsUpNotificationService.show(this, sbn.key)
         } catch (e: Exception) {
             Log.e("MediaControlService", "Failed to show heads-up for ${sbn.key}", e)
         }
@@ -72,23 +62,6 @@ class MediaControlService : NotificationListenerService() {
         // מהתראות מתמשכות רגילות (התקדמות נגן וכו') שהמסנן הזה נועד לחסום - היא
         // חייבת להופיע כבאנר, אחרת אין שום אינדיקציה לשיחה נכנסת מעל אפליקציה אחרת.
         if (sbn.isOngoing && n.category != android.app.Notification.CATEGORY_CALL) return false
-        // סיכום קבוצה, ועדכון של התראה שכבר הוצגה עם "התרע פעם אחת" (התקדמות
-        // הורדה, נגן) - לא באנר חדש בכל עדכון.
-        if (n.flags and android.app.Notification.FLAG_GROUP_SUMMARY != 0) return false
-        val isUpdate = !alerted.add(sbn.key)
-        if (isUpdate && n.flags and android.app.Notification.FLAG_ONLY_ALERT_ONCE != 0) return false
-        // כמו במערכת: רק התראות בחשיבות גבוהה קופצות, או הודעה/שיחה/שעון מעורר.
-        val ranking = NotificationListenerService.Ranking()
-        val importance = if (currentRanking?.getRanking(sbn.key, ranking) == true) ranking.importance else NotificationManager.IMPORTANCE_HIGH
-        val urgentCategory = n.category in setOf(
-            android.app.Notification.CATEGORY_MESSAGE,
-            android.app.Notification.CATEGORY_CALL,
-            android.app.Notification.CATEGORY_ALARM,
-            android.app.Notification.CATEGORY_EMAIL,
-            android.app.Notification.CATEGORY_REMINDER,
-            android.app.Notification.CATEGORY_EVENT,
-        )
-        if (importance < NotificationManager.IMPORTANCE_HIGH && !urgentCategory) return false
         val title = n.extras.getCharSequence(android.app.Notification.EXTRA_TITLE)
         val text = n.extras.getCharSequence(android.app.Notification.EXTRA_TEXT)
         if (title.isNullOrBlank() && text.isNullOrBlank()) return false

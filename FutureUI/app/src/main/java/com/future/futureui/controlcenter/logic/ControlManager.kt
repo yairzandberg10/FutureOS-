@@ -65,9 +65,6 @@ class ControlManager(private val context: Context) {
     var isBatterySaverOn by mutableStateOf(false)
     var isPredictiveTextOn by mutableStateOf(true)
 
-    /** חלונית "שפות מקלדת" בתוך מרכז הבקרה (ר' KeyboardLanguagesPanel). */
-    var showKeyboardLanguages by mutableStateOf(false)
-
     // Media States
     var isPlaying by mutableStateOf(false)
     var hasActiveMedia by mutableStateOf(false)
@@ -236,7 +233,6 @@ class ControlManager(private val context: Context) {
             "calendar" -> openCalendar()
             "security" -> openSecurity()
             "predictive_text" -> togglePredictiveText()
-            "keyboard_langs" -> showKeyboardLanguages = true
         }
         // Poll state after a short delay to sync with actual system result
         Handler(Looper.getMainLooper()).postDelayed({ updateStates() }, 800)

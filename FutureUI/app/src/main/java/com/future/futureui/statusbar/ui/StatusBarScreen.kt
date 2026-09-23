@@ -9,9 +9,6 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.BatteryManager
 import android.telecom.TelecomManager
-import android.telephony.TelephonyManager
-import androidx.core.graphics.drawable.toBitmap
-import androidx.compose.ui.graphics.asImageBitmap
 import android.util.Log
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -70,7 +67,6 @@ fun StatusBarScreen(
     var isCharging by remember { mutableStateOf(false) }
     var notificationCount by remember { mutableIntStateOf(0) }
     var isCallActive by remember { mutableStateOf(false) }
-    var extras by remember { mutableStateOf(StatusExtras()) }
 
     val showBattery = layout.getShowBattery()
     val showBluetooth = layout.getShowBluetooth()
@@ -154,9 +150,8 @@ fun StatusBarScreen(
             }
             notificationCount = notifications
             isCallActive = inCall
-            extras = withContext(Dispatchers.IO) { readStatusExtras(context) }
 
-            delay(10_000)
+            delay(15_000)
         }
     }
 
@@ -177,48 +172,26 @@ fun StatusBarScreen(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                if (notificationCount > 0) {
+                    Box(
+                        modifier = Modifier
+                            .size(6.dp)
+                            .clip(CircleShape)
+                            .background(accentColor)
+                    )
+                }
                 Text(
                     text = currentTime,
                     color = Color.White,
                     fontSize = FutureTypography.summary,
                     fontWeight = FontWeight.SemiBold
                 )
-                // מאילו אפליקציות יש התראות (עד שלוש), ומעבר לזה "+N" - במקום נקודה אחת.
-                extras.notificationIcons.forEach { icon ->
-                    androidx.compose.foundation.Image(
-                        bitmap = icon,
-                        contentDescription = null,
-                        colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(Color.White.copy(alpha = 0.9f)),
-                        modifier = Modifier.size(12.dp)
-                    )
-                }
-                val more = notificationCount - extras.notificationIcons.size
-                if (extras.notificationIcons.isEmpty() && notificationCount > 0) {
-                    Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.9f)))
-                } else if (more > 0 && extras.notificationIcons.size >= 3) {
-                    Text(text = "+$more", color = Color.White.copy(alpha = 0.8f), fontSize = FutureTypography.caption)
-                }
             }
 
             Row(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                if (extras.isMediaPlaying) {
-                    Icon(FutureIcons.MusicNote, contentDescription = null, tint = Color.White.copy(alpha = 0.9f), modifier = Modifier.size(13.dp))
-                }
-                if (extras.hasAlarm) {
-                    Icon(FutureIcons.Alarm, contentDescription = null, tint = Color.White.copy(alpha = 0.9f), modifier = Modifier.size(13.dp))
-                }
-                if (extras.headphones) {
-                    Icon(FutureIcons.Headphones, contentDescription = null, tint = Color.White.copy(alpha = 0.9f), modifier = Modifier.size(13.dp))
-                }
-                when (extras.ringerMode) {
-                    android.media.AudioManager.RINGER_MODE_SILENT ->
-                        Icon(FutureIcons.AutoMirrored.VolumeOff, contentDescription = null, tint = Color.White.copy(alpha = 0.9f), modifier = Modifier.size(13.dp))
-                    android.media.AudioManager.RINGER_MODE_VIBRATE ->
-                        Icon(Icons.Rounded.Vibration, contentDescription = null, tint = Color.White.copy(alpha = 0.9f), modifier = Modifier.size(13.dp))
-                }
                 if (isCallActive) {
                     Icon(FutureIcons.Call, contentDescription = null, tint = StatusBarPalette.successColor, modifier = Modifier.size(13.dp))
                 }
@@ -236,12 +209,8 @@ fun StatusBarScreen(
                         modifier = Modifier.size(13.dp)
                     )
                 }
-                if (extras.wifiConnected) {
-                    Icon(FutureIcons.Wifi, contentDescription = null, tint = Color.White.copy(alpha = 0.9f), modifier = Modifier.size(13.dp))
-                }
-                // עוצמת הקליטה הסלולרית בפועל (0-4 פסים), ולא רק "נתונים דלוקים".
-                if (extras.signalLevel >= 0 && !manager.isAirplaneOn) {
-                    SignalBars(level = extras.signalLevel, dataOn = manager.isDataOn)
+                if (manager.isDataOn) {
+                    Icon(Icons.Rounded.SignalCellularAlt, contentDescription = null, tint = Color.White.copy(alpha = 0.9f), modifier = Modifier.size(13.dp))
                 }
                 if (manager.isBatterySaverOn) {
                     Icon(Icons.Rounded.BatterySaver, contentDescription = null, tint = StatusBarPalette.warningColor, modifier = Modifier.size(13.dp))
@@ -256,89 +225,6 @@ fun StatusBarScreen(
                     )
                 }
             }
-        }
-    }
-}
-
-/** מידע נוסף לשורת המצב - נאסף ב-thread רקע בכל סבב סקר. */
-private data class StatusExtras(
-    val notificationIcons: List<androidx.compose.ui.graphics.ImageBitmap> = emptyList(),
-    val wifiConnected: Boolean = false,
-    val signalLevel: Int = -1,
-    val ringerMode: Int = android.media.AudioManager.RINGER_MODE_NORMAL,
-    val hasAlarm: Boolean = false,
-    val headphones: Boolean = false,
-    val isMediaPlaying: Boolean = false,
-)
-
-private val iconCache = HashMap<String, androidx.compose.ui.graphics.ImageBitmap>()
-
-private fun readStatusExtras(context: Context): StatusExtras {
-    val icons = try {
-        val active = MediaControlService.instance?.activeNotifications.orEmpty()
-        active.filter { !it.isOngoing && it.packageName != context.packageName }
-            .sortedByDescending { it.postTime }
-            .map { it.packageName to it.notification.smallIcon }
-            .distinctBy { it.first }
-            .take(3)
-            .mapNotNull { (pkg, icon) ->
-                iconCache[pkg] ?: runCatching {
-                    icon?.loadDrawable(context)?.let { d ->
-                        d.toBitmap(36, 36).asImageBitmap()
-                    }
-                }.getOrNull()?.also { iconCache[pkg] = it }
-            }
-    } catch (e: Exception) {
-        Log.w("StatusBarScreen", "notification icons failed", e)
-        emptyList()
-    }
-    val audio = context.getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager
-    val wifi = runCatching {
-        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
-        cm.getNetworkCapabilities(cm.activeNetwork)?.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) == true
-    }.getOrDefault(false)
-    val signal = runCatching {
-        val tm = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
-        if (tm.simState == TelephonyManager.SIM_STATE_READY) tm.signalStrength?.level ?: -1 else -1
-    }.getOrDefault(-1)
-    val alarm = runCatching {
-        (context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager).nextAlarmClock != null
-    }.getOrDefault(false)
-    val headphones = runCatching {
-        audio?.getDevices(android.media.AudioManager.GET_DEVICES_OUTPUTS)?.any {
-            it.type == android.media.AudioDeviceInfo.TYPE_WIRED_HEADPHONES ||
-                it.type == android.media.AudioDeviceInfo.TYPE_WIRED_HEADSET ||
-                it.type == android.media.AudioDeviceInfo.TYPE_USB_HEADSET ||
-                it.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_A2DP
-        } == true
-    }.getOrDefault(false)
-    return StatusExtras(
-        notificationIcons = icons,
-        wifiConnected = wifi,
-        signalLevel = signal,
-        ringerMode = audio?.ringerMode ?: android.media.AudioManager.RINGER_MODE_NORMAL,
-        hasAlarm = alarm,
-        headphones = headphones,
-        isMediaPlaying = audio?.isMusicActive == true,
-    )
-}
-
-/** פסי קליטה: ארבעה פסים עולים, המלאים לפי [level]; בלי נתונים - שקופים יותר. */
-@Composable
-private fun SignalBars(level: Int, dataOn: Boolean) {
-    val on = Color.White.copy(alpha = if (dataOn) 0.95f else 0.75f)
-    val off = Color.White.copy(alpha = 0.25f)
-    Canvas(modifier = Modifier.size(width = 14.dp, height = 11.dp)) {
-        val gap = 1.2.dp.toPx()
-        val w = (size.width - gap * 3) / 4
-        for (i in 0 until 4) {
-            val h = size.height * (i + 1) / 4f
-            drawRoundRect(
-                color = if (i < level) on else off,
-                topLeft = Offset(i * (w + gap), size.height - h),
-                size = Size(w, h),
-                cornerRadius = CornerRadius(0.8.dp.toPx())
-            )
         }
     }
 }
