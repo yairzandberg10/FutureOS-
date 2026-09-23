@@ -33,3 +33,8 @@
     <init>(...);
     <fields>;
 }
+
+# SQLite משלנו (mil.nga:sqlite-android): libsqliteX.so ניגשת ב-JNI לשדות
+# ולמתודות של org.sqlite.database לפי שם (SQLiteCustomFunction.name/numArgs
+# ועוד). בלי זה R8 משנה את השמות והאפליקציה קורסת ב-JNI_OnLoad.
+-keep class org.sqlite.database.** { *; }

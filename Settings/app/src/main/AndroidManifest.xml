@@ -6,6 +6,7 @@
          מחזירים null עבור חבילות אחרות אלא אם הן מוצהרות כאן - אחרת "מותקן" נראה כמו "לא מותקן". -->
     <queries>
         <package android:name="com.future.futurelauncher" />
+        <package android:name="com.future.bluetooth" />
         <package android:name="com.future.futureui" />
         <package android:name="com.future.keyboard" />
         <package android:name="com.future.dialer" />

@@ -131,14 +131,14 @@ val FUTURE_OS_APPS = listOf(
     FutureApp("com.future.futureui", "FutureUI (System UI)", Icons.Rounded.Widgets),
     FutureApp("com.future.futurelauncher", "FutureLauncher", FutureIcons.Home),
     FutureApp("com.future.dialer", "טלפון", FutureIcons.Dialpad),
-    FutureApp("com.future.messages", "הודעות", Icons.AutoMirrored.Rounded.Message),
+    FutureApp("com.future.messages", "הודעות", FutureIcons.AutoMirrored.Chat),
     FutureApp("com.future.contact", "אנשי קשר", FutureIcons.Contacts),
     FutureApp("com.future.files", "קבצים", FutureIcons.Folder),
     FutureApp("com.future.gallery", "גלריה", FutureIcons.Image),
     FutureApp("com.future.terminal", "טרמינל", Icons.Rounded.Terminal),
     FutureApp("com.future.tools", "כלים", Icons.Rounded.Handyman),
     FutureApp("com.future.music", "מוזיקה", FutureIcons.MusicNote),
-    FutureApp("com.future.notes", "פתקים", Icons.AutoMirrored.Rounded.Notes),
+    FutureApp("com.future.notes", "פתקים", FutureIcons.Description),
     FutureApp("com.future.gotitdone", "gotitdone", Icons.Rounded.CheckCircle),
     FutureApp("com.future.mikdash", "מקדש", FutureIcons.Apps),
     FutureApp("com.future.sfarim", "ספרים", Icons.AutoMirrored.Rounded.MenuBook)
@@ -271,8 +271,8 @@ private val SEARCHABLE_SETTINGS = listOf(
     SearchableSetting("סוללה", "battery חיסכון טעינה אחוז", Icons.Rounded.BatteryFull, Screen.Battery.route),
     SearchableSetting("אחסון", "storage זיכרון פנוי מקום", Icons.Rounded.Storage, Screen.Storage.route),
     SearchableSetting("ביצועים ותחזוקה", "performance מעבד ram ניקוי אופטימיזציה", Icons.Rounded.Speed, Screen.Performance.route),
-    SearchableSetting("התראות ומיקוד", "notifications focus שקט מיקוד שינה", Icons.Rounded.NotificationsActive, Screen.NotificationsFocus.route),
-    SearchableSetting("זמן מסך", "screen time שימוש טיימר אפליקציות", Icons.Rounded.HourglassBottom, Screen.ScreenTime.route),
+    SearchableSetting("התראות ומיקוד", "notifications focus שקט מיקוד שינה", FutureIcons.Notifications, Screen.NotificationsFocus.route),
+    SearchableSetting("זמן מסך", "screen time שימוש טיימר אפליקציות", FutureIcons.HourglassEmpty, Screen.ScreenTime.route),
     SearchableSetting("מקלדת ושפות הקלדה", "keyboard מקלדת ניבוי prediction t9 שפות הקלדה", FutureIcons.Keyboard, Screen.KeyboardLanguages.route),
     SearchableSetting("כללי", "general תאריך שעה שפה נגישות accessibility date time language", FutureIcons.Language, Screen.General.route),
     SearchableSetting("אפליקציות", "apps אפליקציה", FutureIcons.Apps, Screen.Apps.route),
@@ -376,9 +376,9 @@ fun MainMenu(navController: NavController, theme: ThemeConfig, viewModel: Settin
                 item { SettingHeader("שימוש", theme) }
                 item {
                     SettingsCard(theme) {
-                        SettingItem("התראות ומיקוד", "מצב מיקוד, שעות שינה", Icons.Rounded.NotificationsActive, theme) { navController.navigate(Screen.NotificationsFocus.route) }
+                        SettingItem("התראות ומיקוד", "מצב מיקוד, שעות שינה", FutureIcons.Notifications, theme) { navController.navigate(Screen.NotificationsFocus.route) }
                         SettingDivider(theme)
-                        SettingItem("זמן מסך", "שימוש יומי באפליקציות", Icons.Rounded.HourglassBottom, theme) { navController.navigate(Screen.ScreenTime.route) }
+                        SettingItem("זמן מסך", "שימוש יומי באפליקציות", FutureIcons.HourglassEmpty, theme) { navController.navigate(Screen.ScreenTime.route) }
                     }
                 }
 
@@ -431,15 +431,23 @@ fun SmallHeader(title: String, theme: ThemeConfig, onBack: () -> Unit) {
     ScreenTopBar(title = title, textColor = theme.textColor, accentColor = theme.primaryColor, onBack = onBack)
 }
 
+/** Bluetooth נפתח באפליקציית ה-Bluetooth של FutureOS; המסך הפנימי נשאר רק
+ *  כגיבוי כשהאפליקציה לא מותקנת. */
+private fun openBluetoothApp(context: android.content.Context, navController: NavController) {
+    val intent = context.packageManager.getLaunchIntentForPackage("com.future.bluetooth")
+    if (intent != null) context.startActivity(intent) else navController.navigate(Screen.Bluetooth.route)
+}
+
 @Composable
 fun ConnectionsScreen(navController: NavController, theme: ThemeConfig, viewModel: SettingsViewModel) {
+    val context = LocalContext.current
     Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
         Column {
             SmallHeader("חיבורים", theme) { navController.popBackStack() }
             LazyColumn {
                 item {
                     SettingsCard(theme) {
-                        SettingItem("Bluetooth", if (viewModel.bluetoothEnabled.value) "מופעל" else "כבוי", FutureIcons.Bluetooth, theme) { navController.navigate(Screen.Bluetooth.route) }
+                        SettingItem("Bluetooth", if (viewModel.bluetoothEnabled.value) "מופעל" else "כבוי", FutureIcons.Bluetooth, theme) { openBluetoothApp(context, navController) }
                         SettingDivider(theme)
                         SettingSwitch("מצב טיסה", null, viewModel.airplaneMode.value, { viewModel.toggleAirplaneMode() }, theme)
                     }
@@ -647,7 +655,7 @@ fun BluetoothScreen(navController: NavController, theme: ThemeConfig, viewModel:
                                 SettingDivider(theme)
                                 discovered.forEachIndexed { index, device ->
                                     val name = try { device.name ?: device.address } catch (e: SecurityException) { device.address }
-                                    SettingItem(name, "לחצו OK כדי להתאים", Icons.Rounded.BluetoothSearching, theme, showChevron = false) {
+                                    SettingItem(name, "לחצו OK כדי להתאים", FutureIcons.Bluetooth, theme, showChevron = false) {
                                         val started = interactor.pairBluetoothDevice(device)
                                         if (!started) android.widget.Toast.makeText(context, "לא ניתן היה להתחיל התאמה עם $name", android.widget.Toast.LENGTH_SHORT).show()
                                     }
@@ -708,7 +716,7 @@ fun SoundScreen(navController: NavController, theme: ThemeConfig, viewModel: Set
                     SettingsCard(theme) {
                         SettingItem("רינגטון", null, FutureIcons.MusicNote, theme) { navController.navigate(Screen.Ringtone.route) }
                         SettingDivider(theme)
-                        SettingItem("צליל התראות", null, Icons.Rounded.NotificationsActive, theme) { navController.navigate(Screen.NotificationSound.route) }
+                        SettingItem("צליל התראות", null, FutureIcons.Notifications, theme) { navController.navigate(Screen.NotificationSound.route) }
                         SettingDivider(theme)
                         SettingItem("צליל אזעקה", null, FutureIcons.Alarm, theme) { navController.navigate(Screen.AlarmSound.route) }
                         SettingDivider(theme)
@@ -762,7 +770,7 @@ fun DisplayScreen(navController: NavController, theme: ThemeConfig, viewModel: S
                             SettingItem("איפוס זום מסך", null, FutureIcons.RestartAlt, theme, showChevron = false) { viewModel.resetScreenZoom() }
                         }
                         SettingDivider(theme)
-                        SettingItem("כיבוי מסך אוטומטי", viewModel.screenTimeoutLabel(viewModel.screenTimeout.value), Icons.Rounded.Timelapse, theme) {
+                        SettingItem("כיבוי מסך אוטומטי", viewModel.screenTimeoutLabel(viewModel.screenTimeout.value), FutureIcons.Timer, theme) {
                             viewModel.cycleScreenTimeout()
                         }
                     }
@@ -1295,7 +1303,7 @@ fun GeneralScreen(navController: NavController, theme: ThemeConfig, viewModel: S
                     SettingsCard(theme) {
                         SettingItem("אבטחה", "נעילת מסך FutureOS", Icons.Rounded.Security, theme) { navController.navigate(Screen.Security.route) }
                         SettingDivider(theme)
-                        SettingItem("התראות ומיקוד", "גישת מדיניות התראות, מצב מיקוד", Icons.Rounded.NotificationsActive, theme) {
+                        SettingItem("התראות ומיקוד", "גישת מדיניות התראות, מצב מיקוד", FutureIcons.Notifications, theme) {
                             navController.navigate(Screen.NotificationsFocus.route)
                         }
                     }
@@ -1636,7 +1644,7 @@ fun AppDetailScreen(navController: NavController, theme: ThemeConfig, viewModel:
                                 viewModel.forceStopApp(packageName, app?.displayName ?: packageName)
                             }
                             SettingDivider(theme)
-                            SettingItem("מחיקת נתונים", "מוחק לצמיתות את כל המידע השמור", Icons.Rounded.DeleteForever, theme, showChevron = false) {
+                            SettingItem("מחיקת נתונים", "מוחק לצמיתות את כל המידע השמור", FutureIcons.Delete, theme, showChevron = false) {
                                 showClearDataConfirm = true
                             }
                         }
@@ -1754,7 +1762,7 @@ fun ScreenTimeScreen(navController: NavController, theme: ThemeConfig, viewModel
 
     val itemsTail: @Composable () -> Unit = {
         SettingsCard(theme) {
-            SettingItem("טיימרים לאפליקציות", "הגבלת זמן שימוש יומי", Icons.Rounded.HourglassTop, theme) {
+            SettingItem("טיימרים לאפליקציות", "הגבלת זמן שימוש יומי", FutureIcons.HourglassEmpty, theme) {
                 navController.navigate(Screen.AppTimers.route)
             }
         }
@@ -1773,7 +1781,7 @@ fun ScreenTimeScreen(navController: NavController, theme: ThemeConfig, viewModel
             LazyColumn {
                 item {
                     Column(modifier = Modifier.fillMaxWidth().padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Rounded.HourglassBottom, contentDescription = null, modifier = Modifier.size(48.dp), tint = theme.primaryColor)
+                        Icon(FutureIcons.HourglassEmpty, contentDescription = null, modifier = Modifier.size(48.dp), tint = theme.primaryColor)
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(formatDuration(summary.totalMillis), fontSize = FutureTypography.display, fontWeight = FontWeight.Bold, color = theme.textColor)
                         Text("שימוש היום", fontSize = FutureTypography.summary, color = theme.textColor.copy(alpha = 0.6f))
@@ -1879,7 +1887,7 @@ fun DefaultAppsScreen(navController: NavController, theme: ThemeConfig, viewMode
                     )
                 }
                 item {
-                    DefaultAppSection("הודעות", Icons.AutoMirrored.Rounded.Message, smsPackage, "com.future.messages", "הודעות", RoleManager.ROLE_SMS, "הודעות לא מותקנת על המכשיר")
+                    DefaultAppSection("הודעות", FutureIcons.AutoMirrored.Chat, smsPackage, "com.future.messages", "הודעות", RoleManager.ROLE_SMS, "הודעות לא מותקנת על המכשיר")
                 }
                 item {
                     DefaultAppSection("חיוג", FutureIcons.Dialpad, dialerPackage, "com.future.dialer", "טלפון", RoleManager.ROLE_DIALER, "טלפון לא מותקנת על המכשיר")
@@ -1981,7 +1989,7 @@ fun NotificationsFocusScreen(navController: NavController, theme: ThemeConfig, v
                             viewModel.focusNow(60)
                         }
                         SettingDivider(theme)
-                        SettingItem("ביטול מיקוד", null, Icons.Rounded.NotificationsActive, theme, showChevron = false) {
+                        SettingItem("ביטול מיקוד", null, FutureIcons.Notifications, theme, showChevron = false) {
                             viewModel.cancelFocusNow()
                         }
                     }
@@ -2056,7 +2064,7 @@ fun AboutScreen(navController: NavController, theme: ThemeConfig, viewModel: Set
             LazyColumn(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(horizontal = 16.dp)) {
                 item {
                     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Rounded.PhoneAndroid, contentDescription = null, modifier = Modifier.size(80.dp), tint = theme.primaryColor)
+                        Icon(FutureIcons.Smartphone, contentDescription = null, modifier = Modifier.size(80.dp), tint = theme.primaryColor)
                         Spacer(modifier = Modifier.height(16.dp))
                         Text("Future Phone", fontSize = FutureTypography.display, fontWeight = FontWeight.Bold, color = theme.textColor)
                         Text("FutureOS", fontSize = FutureTypography.body, color = theme.textColor.copy(alpha = 0.6f))
@@ -2105,7 +2113,7 @@ fun AboutScreen(navController: NavController, theme: ThemeConfig, viewModel: Set
                     SettingsCard(theme) {
                         SettingItem("IMEI", viewModel.imei.value ?: "לא זמין במכשיר זה", Icons.Rounded.Pin, theme, showChevron = false)
                         SettingDivider(theme)
-                        SettingItem("מספר טלפון", viewModel.phoneNumber.value ?: "לא זמין", Icons.Rounded.Phone, theme, showChevron = false)
+                        SettingItem("מספר טלפון", viewModel.phoneNumber.value ?: "לא זמין", FutureIcons.Call, theme, showChevron = false)
                         SettingDivider(theme)
                         SettingItem("מידע רגולטורי ומשפטי", null, Icons.Rounded.Gavel, theme) { viewModel.openRegulatoryInfo() }
                     }
@@ -2169,8 +2177,9 @@ fun VolumeSlider(label: String, value: Float, theme: ThemeConfig, onValueChange:
             .onKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
                 when (event.key) {
-                    Key.DirectionLeft -> { onValueChange((value - 0.05f).coerceIn(0f, 1f)); true }
-                    Key.DirectionRight -> { onValueChange((value + 0.05f).coerceIn(0f, 1f)); true }
+                    // הממשק RTL והמילוי גדל מימין (לפי ה-DS) - שמאלה זה "קדימה".
+                    Key.DirectionLeft -> { onValueChange((value + 0.05f).coerceIn(0f, 1f)); true }
+                    Key.DirectionRight -> { onValueChange((value - 0.05f).coerceIn(0f, 1f)); true }
                     else -> false
                 }
             }
@@ -2182,18 +2191,21 @@ fun VolumeSlider(label: String, value: Float, theme: ThemeConfig, onValueChange:
     ) {
         Text(label, fontSize = FutureTypography.body, color = theme.textColor.copy(alpha = 0.6f))
         Spacer(modifier = Modifier.height(10.dp))
+        val fill by androidx.compose.animation.core.animateFloatAsState(
+            value.coerceIn(0f, 1f), FutureMotion.fast(), label = "volumeSliderFill"
+        )
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(6.dp)
-                .clip(FutureShapes.xs)
+                .height(12.dp)
+                .clip(RoundedCornerShape(6.dp))
                 .background(theme.textColor.copy(alpha = 0.15f))
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxHeight()
-                    .fillMaxWidth(value.coerceIn(0f, 1f))
-                    .clip(FutureShapes.xs)
+                    .fillMaxWidth(fill)
+                    .clip(RoundedCornerShape(6.dp))
                     .background(theme.primaryColor)
             )
         }
@@ -2411,7 +2423,7 @@ fun DiagnosticsScreen(navController: NavController, theme: ThemeConfig, viewMode
                     SettingsCard(theme) {
                         SettingItem("תאוצה (Accelerometer)", accelText, Icons.Rounded.Speed, theme, showChevron = false)
                         SettingDivider(theme)
-                        SettingItem("חיישן אור", lightText, Icons.Rounded.LightMode, theme, showChevron = false)
+                        SettingItem("חיישן אור", lightText, FutureIcons.Brightness6, theme, showChevron = false)
                         SettingDivider(theme)
                         SettingItem("חיישן קרבה", proximityText, Icons.Rounded.Sensors, theme, showChevron = false)
                     }
@@ -2487,7 +2499,7 @@ fun SosScreen(navController: NavController, theme: ThemeConfig, viewModel: Setti
                             SettingDivider(theme)
                             SettingItem("הסר איש קשר", null, Icons.Rounded.PersonRemove, theme, showChevron = false) { viewModel.clearEmergencyContact() }
                         } else {
-                            SettingItem("הוסף איש קשר לחירום", "יקבל SMS עם מיקום בעת שליחת SOS", Icons.Rounded.PersonAddAlt, theme) {
+                            SettingItem("הוסף איש קשר לחירום", "יקבל SMS עם מיקום בעת שליחת SOS", FutureIcons.PersonAdd, theme) {
                                 nameField = ""
                                 phoneField = ""
                                 showEditDialog = true

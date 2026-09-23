@@ -99,7 +99,8 @@ fun GuideAppIcon(packageName: String, fallback: ImageVector, theme: FutureTheme,
     }
     val icon = bitmap
     if (icon != null) {
-        androidx.compose.foundation.Image(icon, contentDescription = null, modifier = Modifier.size(size))
+        // מסכה עגולה בלבד - האייקון עצמו לא משתנה.
+        androidx.compose.foundation.Image(icon, contentDescription = null, modifier = Modifier.size(size).clip(CircleShape))
     } else {
         FutureAvatar(theme = theme, icon = fallback, size = size)
     }
