@@ -32,7 +32,14 @@ Java_com_future_assistant_asr_WhisperCpp_nativeTranscribe(JNIEnv *env, jobject /
     wparams.print_realtime = false;
     wparams.print_special = false;
     wparams.single_segment = false;
+    // כל הליבות: במדידה על ה-MT6768 (2 ליבות A75 + 6 A55) 8 threads היו
+    // מהירים מ-4 ומ-6, למרות שהליבות הקטנות איטיות.
     wparams.n_threads = std::max(1, static_cast<int>(std::thread::hardware_concurrency()));
+    // Whisper מרפד כל הקלטה ל-30 שניות, ולכן ה-encoder עולה אותו דבר על
+    // משפט של 3 שניות ועל חצי דקה. audio_ctx מקצר את החלון לאורך ההקלטה
+    // בפועל (1500 פריימים = 30 שניות, כלומר 50 לשנייה) + מרווח: במודל
+    // small זה הוריד את ה-encoder מ-8.7 שניות ל-1.1 שניות למשפט קצר.
+    wparams.audio_ctx = std::min(1500, static_cast<int>(static_cast<long long>(n) * 50 / 16000) + 64);
 
     int result = whisper_full(ctx, wparams, data, n);
 

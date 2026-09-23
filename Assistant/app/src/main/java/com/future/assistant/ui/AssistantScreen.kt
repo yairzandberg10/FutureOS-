@@ -75,7 +75,7 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
     val micFocus = remember { FocusRequester() }
     val scope = rememberCoroutineScope()
 
-    // מנוע Text-to-Speech נוירוני מקומי (Piper, דרך sherpa-onnx) - במכשירי
+    // מנוע Text-to-Speech נוירוני מקומי (ReNikud + Piper, ר' PiperTts) - במכשירי
     // הבדיקה אין בכלל מנוע TTS מותקן ברמת המערכת, אז
     // android.speech.tts.TextToSpeech נכשל תמיד עם "not bound to TTS engine".
     val piperTts = remember { PiperTts(context) }

@@ -94,9 +94,10 @@ android {
 
 dependencies {
     implementation(project(":sharedkeypadnav"))
-    // Piper TTS (קול neural, לא רובוטי) - דרך sherpa-onnx, כי אין מנוע TTS
-    // כלשהו מותקן ברמת המערכת במכשירי הבדיקה.
-    implementation(group = "", name = "sherpa-onnx-1.13.7", ext = "aar")
+    // Piper TTS (קול neural) + ReNikud (טקסט עברי בלי ניקוד -> הגייה), שניהם
+    // מודלי ONNX שרצים ישירות על ONNX Runtime - אין מנוע TTS כלשהו מותקן ברמת
+    // המערכת במכשירי הבדיקה. ר' PiperTts.
+    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.30.0")
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)

@@ -1,84 +1,140 @@
 package com.future.assistant.asr
 
+import ai.onnxruntime.OnnxTensor
+import ai.onnxruntime.OrtEnvironment
+import ai.onnxruntime.OrtSession
 import android.content.Context
-import com.k2fsa.sherpa.onnx.OfflineTts
-import com.k2fsa.sherpa.onnx.OfflineTtsConfig
-import com.k2fsa.sherpa.onnx.OfflineTtsModelConfig
-import com.k2fsa.sherpa.onnx.OfflineTtsVitsModelConfig
+import android.util.Log
+import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
+import java.nio.FloatBuffer
+import java.nio.LongBuffer
+import java.util.concurrent.Executors
+import java.util.concurrent.Future
 
 /**
- * מנוע Text-to-Speech נוירוני מקומי (Piper/VITS, דרך sherpa-onnx) - קול
- * הרבה יותר טבעי מ-eSpeak NG (שנשאר בקוד כגיבוי, לא בשימוש כרגע). המודל
- * (he_IL-saspeech-medium, קול עברי) נטען ישירות מ-assets/piper, אבל
- * espeak-ng-data (המשמש את Piper לפונמיזציה) חייב להיות מועתק לדיסק אמיתי
- * קודם - הספרייה הנייטיבית פותחת את הקבצים ישירות (fopen), לא דרך
- * AssetManager, וגם בונה את הנתיב בעצמה כ-"<dataDir>/espeak-ng-data", אז
- * dataDir צריך להצביע על התיקייה שמכילה את espeak-ng-data ולא עליה עצמה.
+ * מנוע Text-to-Speech נוירוני מקומי: טקסט -> HebrewTextNormalizer (מספרים
+ * למילים) -> ReNikud (הגייה, HebrewG2P) -> Piper/VITS (קול "shaul" של
+ * Phonikud, אומן על אותה הגייה). שני המודלים רצים ישירות על ONNX Runtime.
+ *
+ * קודם זה היה Piper he_IL-saspeech דרך sherpa-onnx, שם eSpeak קבע את
+ * ההגייה - ו-eSpeak לא משחזר תנועות מעברית בלי ניקוד, אז הקול היה טבעי
+ * אבל המילים משובשות.
+ *
+ * רישיון הקול (Phonikud TTS checkpoints) הוא לא-מסחרי (CC-NC).
  */
 class PiperTts(private val context: Context) {
-    private var tts: OfflineTts? = null
+    private var env: OrtEnvironment? = null
+    private var g2p: HebrewG2P? = null
+    private var voice: OrtSession? = null
+    private var phonemeIds: Map<Int, Int> = emptyMap()
+    private var sampleRate = 22050
+    private var scales = floatArrayOf(0.667f, 1.0f, 0.8f)
+    private val synthExecutor = Executors.newSingleThreadExecutor()
 
-    /** טוען את המודל. חוסם - יש לקרוא מ-thread ברקע. */
+    /** טוען את המודלים. חוסם - יש לקרוא מ-thread ברקע. */
     fun init(): Boolean {
         return try {
-            val dataParentDir = copyEspeakDataDirIfNeeded()
-            val vits = OfflineTtsVitsModelConfig(
-                model = "piper/he_IL-saspeech-medium.onnx",
-                tokens = "piper/tokens.txt",
-                dataDir = dataParentDir.absolutePath,
-                noiseScale = 0.667f,
-                noiseScaleW = 0.8f,
-                lengthScale = 1.0f,
-            )
-            val config = OfflineTtsConfig(
-                model = OfflineTtsModelConfig(vits = vits, numThreads = 2, provider = "cpu"),
-            )
-            tts = OfflineTts(context.assets, config)
+            // שאריות המנוע הקודם (eSpeak לפונמיזציה של sherpa-onnx).
+            File(context.filesDir, "piper/espeak-ng-data").deleteRecursively()
+
+            val env = OrtEnvironment.getEnvironment()
+            val options = OrtSession.SessionOptions().apply {
+                // 4 ולא 8: המודלים קטנים, ו-threads על הליבות החלשות (A55)
+                // מוסיפים בעיקר תקורת סנכרון.
+                setIntraOpNumThreads(4)
+                setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL_OPT)
+            }
+            g2p = HebrewG2P(env, copyAssetIfNeeded("renikud/model.onnx").absolutePath, options)
+            voice = env.createSession(copyAssetIfNeeded("piper/shaul.onnx").absolutePath, options)
+
+            val config = JSONObject(context.assets.open("piper/shaul.onnx.json").bufferedReader().use { it.readText() })
+            sampleRate = config.getJSONObject("audio").getInt("sample_rate")
+            config.getJSONObject("inference").let {
+                scales = floatArrayOf(
+                    it.getDouble("noise_scale").toFloat(),
+                    it.getDouble("length_scale").toFloat(),
+                    it.getDouble("noise_w").toFloat(),
+                )
+            }
+            val map = config.getJSONObject("phoneme_id_map")
+            phonemeIds = map.keys().asSequence().associate { key ->
+                key.codePointAt(0) to map.getJSONArray(key).getInt(0)
+            }
+            this.env = env
             true
         } catch (e: Exception) {
-            tts = null
+            Log.e(TAG, "Piper init failed", e)
             false
         }
     }
 
-    private fun copyEspeakDataDirIfNeeded(): File {
-        val parentDir = File(context.filesDir, "piper")
-        val outDir = File(parentDir, "espeak-ng-data")
-        val marker = File(outDir, ".copied")
-        if (!marker.exists()) {
-            copyAssetDir("piper/espeak-ng-data", outDir)
-            marker.createNewFile()
-        }
-        return parentDir
-    }
-
-    private fun copyAssetDir(assetPath: String, outDir: File) {
-        val assets = context.assets
-        val children = assets.list(assetPath) ?: emptyArray()
-        if (children.isEmpty()) {
-            outDir.parentFile?.mkdirs()
-            assets.open(assetPath).use { input ->
-                FileOutputStream(outDir).use { output -> input.copyTo(output) }
-            }
-            return
-        }
-        outDir.mkdirs()
-        for (child in children) {
-            copyAssetDir("$assetPath/$child", File(outDir, child))
-        }
-    }
-
-    /** מתמלל ומשמיע את הטקסט. חוסם עד סוף ההשמעה - יש לקרוא מ-thread ברקע. */
+    /** מקריא את הטקסט. חוסם עד סוף ההשמעה - יש לקרוא מ-thread ברקע. */
     fun speak(text: String) {
-        val engine = tts ?: return
-        if (text.isBlank()) return
-        val audio = engine.generate(text, 0, 1.0f)
-        if (audio.samples.isEmpty()) return
-        val pcm = ShortArray(audio.samples.size) { i ->
-            (audio.samples[i] * 32767f).toInt().coerceIn(-32768, 32767).toShort()
+        if (voice == null || text.isBlank()) return
+        // משפט-משפט: המשפט הבא מסונתז בזמן שהקודם מושמע, כך שתשובה ארוכה
+        // מתחילה להישמע אחרי סינתוז המשפט הראשון בלבד.
+        val sentences = SENTENCE_END.split(HebrewTextNormalizer.normalize(text)).filter { it.isNotBlank() }
+        var next: Future<ShortArray>? = sentences.firstOrNull()?.let { s -> synthExecutor.submit<ShortArray> { synthesize(s) } }
+        for (i in sentences.indices) {
+            val pcm = next!!.get()
+            next = sentences.getOrNull(i + 1)?.let { s -> synthExecutor.submit<ShortArray> { synthesize(s) } }
+            if (pcm.isNotEmpty()) PcmPlayback.playAndWait(pcm, sampleRate)
         }
-        PcmPlayback.playAndWait(pcm, audio.sampleRate)
+    }
+
+    private fun synthesize(sentence: String): ShortArray {
+        val env = env ?: return ShortArray(0)
+        val session = voice ?: return ShortArray(0)
+        val ipa = g2p?.phonemize(sentence.trim()) ?: return ShortArray(0)
+
+        // הפורמט של Piper: BOS, ואחרי כל פונמה (וגם אחרי ה-BOS) ריפוד, ואז EOS.
+        val ids = ArrayList<Long>()
+        ids += BOS; ids += PAD
+        ipa.codePoints().forEach { cp ->
+            val id = phonemeIds[cp] ?: return@forEach
+            ids += id.toLong(); ids += PAD
+        }
+        ids += EOS
+
+        val input = ids.toLongArray()
+        val samples: FloatArray = OnnxTensor.createTensor(env, LongBuffer.wrap(input), longArrayOf(1, input.size.toLong())).use { inputT ->
+            OnnxTensor.createTensor(env, LongBuffer.wrap(longArrayOf(input.size.toLong())), longArrayOf(1)).use { lengthsT ->
+                OnnxTensor.createTensor(env, FloatBuffer.wrap(scales), longArrayOf(3)).use { scalesT ->
+                    session.run(mapOf("input" to inputT, "input_lengths" to lengthsT, "scales" to scalesT)).use { out ->
+                        val buf = (out.get(0) as OnnxTensor).floatBuffer
+                        FloatArray(buf.remaining()).also { buf.get(it) }
+                    }
+                }
+            }
+        }
+        // נרמול עוצמה כמו ב-Piper המקורי: השיא מגיע לקצה הטווח, בלי קליפינג.
+        val peak = samples.maxOfOrNull { kotlin.math.abs(it) }?.coerceAtLeast(0.01f) ?: return ShortArray(0)
+        val gain = 32767f / peak
+        return ShortArray(samples.size) { i -> (samples[i] * gain).toInt().coerceIn(-32768, 32767).toShort() }
+    }
+
+    /** ONNX Runtime טוען מנתיב קובץ - מעתיק מ-assets לאחסון הפנימי פעם אחת. */
+    private fun copyAssetIfNeeded(assetPath: String): File {
+        val outFile = File(context.filesDir, assetPath)
+        if (!outFile.exists() || outFile.length() == 0L) {
+            outFile.parentFile?.mkdirs()
+            val tmp = File(outFile.path + ".tmp")
+            context.assets.open(assetPath).use { input ->
+                FileOutputStream(tmp).use { output -> input.copyTo(output) }
+            }
+            check(tmp.renameTo(outFile)) { "rename $tmp failed" }
+        }
+        return outFile
+    }
+
+    private companion object {
+        const val TAG = "PiperTts"
+        const val PAD = 0L
+        const val BOS = 1L
+        const val EOS = 2L
+        // הסימן נשאר בסוף המשפט (lookbehind), כדי שהקול ישמע את הנקודה/סימן השאלה.
+        val SENTENCE_END = Regex("""(?<=[.!?])\s+|\n+""")
     }
 }

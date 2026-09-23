@@ -13,6 +13,12 @@ set(GGML_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 # javascript bindings שלא רלוונטיים לבנייה הזו).
 add_compile_definitions(WHISPER_VERSION="1.9.3-android")
 
+# בבנייה חוצת-פלטפורמות (NDK) GGML_NATIVE כבוי, ובלי GGML_CPU_ARM_ARCH ggml
+# נבנה ל-armv8-a בסיסי - בלי dotprod ו-fp16, שהם עיקר ההאצה של המודלים
+# המכומתים. ה-MT6768 של מכשירי הבדיקה (Cortex-A75/A55) הוא ARMv8.2 ותומך
+# בשניהם; במדידה על המכשיר זה קיצר את ה-encoder בכ-40%.
+set(GGML_CPU_ARM_ARCH "armv8.2-a+dotprod+fp16" CACHE STRING "" FORCE)
+
 add_subdirectory(ggml)
 add_subdirectory(src)
 

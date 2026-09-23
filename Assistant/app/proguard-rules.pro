@@ -33,3 +33,6 @@
     <init>(...);
     <fields>;
 }
+
+# ONNX Runtime: הספרייה הנייטיבית ניגשת למחלקות ה-Java שלה בשמן (JNI).
+-keep class ai.onnxruntime.** { *; }
