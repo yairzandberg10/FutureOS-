@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.sp
 import com.future.assistant.asr.LocalSpeechEngine
 import com.future.assistant.asr.PiperTts
 import com.future.assistant.data.CommandProcessor
+import com.future.assistant.data.KnowledgeBase
 import com.future.sharednav.theme.FutureTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -80,11 +81,11 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
     // android.speech.tts.TextToSpeech נכשל תמיד עם "not bound to TTS engine".
     val piperTts = remember { PiperTts(context) }
 
-    fun speak(text: String) {
+    fun speak(text: String, spoken: String = text) {
         state = AssistantState.SPEAKING
         responseText = text
         scope.launch(Dispatchers.IO) {
-            piperTts.speak(text)
+            piperTts.speak(spoken)
             withContext(Dispatchers.Main) {
                 state = AssistantState.IDLE
                 if (pendingClose) {
@@ -107,7 +108,7 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
             try {
                 val result = CommandProcessor.process(context, text)
                 pendingClose = result.shouldClose
-                speak(result.responseText)
+                speak(result.responseText, result.speech)
             } catch (e: Exception) {
                 pendingClose = false
                 speak("משהו השתבש בביצוע הפקודה, נסה שוב")
@@ -120,6 +121,12 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
     // להיות חסום ברמת המכשיר, למשל ע"י Device Admin שחוסם RECORD_AUDIO
     // לאפליקציית המערכת שמבצעת את הזיהוי בפועל).
     val speechEngine = remember { LocalSpeechEngine(context) }
+
+    // מאגר הידע (assets/knowledge) נטען ברקע כבר עכשיו, כדי שהשאלה הראשונה
+    // לא תחכה לקריאת הקבצים על ה-thread הראשי.
+    LaunchedEffect(Unit) {
+        withContext(Dispatchers.IO) { KnowledgeBase.preload(context) }
+    }
 
     LaunchedEffect(hasPermission) {
         if (!hasPermission) return@LaunchedEffect

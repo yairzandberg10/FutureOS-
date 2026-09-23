@@ -17,7 +17,9 @@ import java.util.Date
 import java.util.Locale
 import kotlin.random.Random
 
-data class CommandResult(val responseText: String, val shouldClose: Boolean = false)
+/** speech - מה שהקול מקריא, כשהוא שונה מהטקסט שעל המסך (למשל מילה באנגלית
+ * שמוצגת באותיות לועזיות אבל מוקראת בתעתיק עברי). */
+data class CommandResult(val responseText: String, val shouldClose: Boolean = false, val speech: String = responseText)
 
 /**
  * מנוע פקודות קוליות מקומי לגמרי - בלי AI/שרת חיצוני, בלי אינטרנט. כל
@@ -72,10 +74,17 @@ object CommandProcessor {
         // המרת יחידות (מייל/ק"מ, פאונד/קילו, צלזיוס/פרנהייט) ואחוזים -
         // נבדקים לפני חשבון כללי כי גם הם מזהים שני מספרים במשפט.
         tryUnitConversion(text)?.let { return it }
+        UnitConverter.tryConvert(text)?.let { return it }
         tryPercentage(text)?.let { return it }
 
         // חשבון פשוט (חיבור/חיסור/כפל/חילוק) - דורש חילוץ מספרים מהמשפט.
         tryMath(text)?.let { return it }
+
+        // תאריך עברי וחגים, ואז מאגר הידע (assets/knowledge) - לפני הפקודות
+        // הרגילות, כי אלה דורשות מילת רמז + ישות מוכרת ולכן ספציפיות יותר
+        // ("איך אומרים שלום באנגלית" לא צריך ליפול לברכת "שלום").
+        HebrewDates.tryAnswer(text)?.let { return it }
+        KnowledgeBase.answer(context, text)?.let { return it }
 
         // כל שאר הפקודות - התאמה לפי מילות מפתח מתוך הרשימה הגדולה למטה.
         for (intent in ALL_INTENTS) {
@@ -321,7 +330,8 @@ object CommandProcessor {
     private fun helpIntents(): List<VoiceIntent> {
         val cores = listOf("מה אתה יודע לעשות", "מה אתה יכול לעשות", "מה אתה יודע", "עזרה", "איך זה עובד", "מה אפשר לבקש ממך")
         return listOf(voiceIntent(cores) {
-            "אני יכול לספר שעה ותאריך, לפתוח אפליקציות, להדליק פנס, לשלוט בעוצמת קול, לחשב, ועוד"
+            "אני יכול לספר שעה, תאריך עברי ומתי החגים, לפתוח אפליקציות, להדליק פנס, לשלוט בעוצמת קול, לחשב ולהמיר יחידות, " +
+                "לתרגם מילים לאנגלית, לומר מה מברכים על מאכלים, בירות של מדינות, ספרי תנ\"ך ופרשות, יסודות כימיים, חיות, גימטריה, ועוד אלפי שאלות"
         })
     }
 
