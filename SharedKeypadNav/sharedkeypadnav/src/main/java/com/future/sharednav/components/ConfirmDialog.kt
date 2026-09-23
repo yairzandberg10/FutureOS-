@@ -106,17 +106,14 @@ private fun ConfirmDialogContent(
             ) {
                 FutureButtonCore(
                     text = cancelLabel,
-                    fill = textColor,
-                    contentColor = FutureContrast.onColor(textColor),
-                    ringColor = textColor,
+                    fill = textColor.copy(alpha = 0.2f),
+                    contentColor = textColor,
                     onClick = onCancel,
-                    baseAlpha = 0.7f,
                 )
                 FutureButtonCore(
                     text = confirmLabel,
                     fill = confirmFill,
                     contentColor = FutureContrast.onColor(confirmFill),
-                    ringColor = textColor,
                     onClick = onConfirm,
                 )
             }

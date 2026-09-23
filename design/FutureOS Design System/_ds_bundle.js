@@ -1,4 +1,4 @@
-/* @ds-bundle: {"format":4,"namespace":"FutureOSDesignSystem_3ab611","components":[{"name":"ActionGrid","sourcePath":"components/core/ActionGrid.jsx"},{"name":"Avatar","sourcePath":"components/core/Avatar.jsx"},{"name":"Button","sourcePath":"components/core/Button.jsx"},{"name":"Card","sourcePath":"components/core/Card.jsx"},{"name":"Divider","sourcePath":"components/core/Divider.jsx"},{"name":"EmptyState","sourcePath":"components/core/EmptyState.jsx"},{"name":"FosIcon","sourcePath":"components/core/FosIcon.jsx"},{"name":"FOS_ICON_NAMES","sourcePath":"components/core/FosIcon.jsx"},{"name":"Icon","sourcePath":"components/core/Icon.jsx"},{"name":"IconButton","sourcePath":"components/core/IconButton.jsx"},{"name":"ListItem","sourcePath":"components/core/ListItem.jsx"},{"name":"MonoValue","sourcePath":"components/core/MonoValue.jsx"},{"name":"ScreenHero","sourcePath":"components/core/ScreenHero.jsx"},{"name":"SectionHeader","sourcePath":"components/core/SectionHeader.jsx"},{"name":"TopBar","sourcePath":"components/core/TopBar.jsx"},{"name":"Badge","sourcePath":"components/feedback/Badge.jsx"},{"name":"ConfirmDialog","sourcePath":"components/feedback/ConfirmDialog.jsx"},{"name":"HeadsUpNotification","sourcePath":"components/feedback/HeadsUpNotification.jsx"},{"name":"InputDialog","sourcePath":"components/feedback/InputDialog.jsx"},{"name":"ProgressBar","sourcePath":"components/feedback/ProgressBar.jsx"},{"name":"Snackbar","sourcePath":"components/feedback/Snackbar.jsx"},{"name":"Spinner","sourcePath":"components/feedback/Spinner.jsx"},{"name":"Capsule","sourcePath":"components/forms/Capsule.jsx"},{"name":"Checkbox","sourcePath":"components/forms/Checkbox.jsx"},{"name":"Chip","sourcePath":"components/forms/Chip.jsx"},{"name":"DatePicker","sourcePath":"components/forms/DatePicker.jsx"},{"name":"DayChip","sourcePath":"components/forms/DayChip.jsx"},{"name":"RadioButton","sourcePath":"components/forms/RadioButton.jsx"},{"name":"SettingItem","sourcePath":"components/forms/SettingItem.jsx"},{"name":"Slider","sourcePath":"components/forms/Slider.jsx"},{"name":"Switch","sourcePath":"components/forms/Switch.jsx"},{"name":"TextArea","sourcePath":"components/forms/TextArea.jsx"},{"name":"TextField","sourcePath":"components/forms/TextField.jsx"},{"name":"TimePicker","sourcePath":"components/forms/TimePicker.jsx"},{"name":"ToggleButton","sourcePath":"components/forms/ToggleButton.jsx"},{"name":"BottomNav","sourcePath":"components/navigation/BottomNav.jsx"},{"name":"OptionsMenu","sourcePath":"components/navigation/OptionsMenu.jsx"},{"name":"SoftKeyBar","sourcePath":"components/navigation/SoftKeyBar.jsx"},{"name":"TabRow","sourcePath":"components/navigation/TabRow.jsx"}],"sourceHashes":{"components/core/ActionGrid.jsx":"1dac07e1c560","components/core/Avatar.jsx":"fca60feda10e","components/core/Button.jsx":"e1d14bb15651","components/core/Card.jsx":"d1221204057c","components/core/Divider.jsx":"9ce386a7db14","components/core/EmptyState.jsx":"0190085decc8","components/core/FosIcon.jsx":"8e200ea899ff","components/core/Icon.jsx":"77fa91a06ef0","components/core/IconButton.jsx":"fd182bcf1148","components/core/ListItem.jsx":"08963c64d715","components/core/MonoValue.jsx":"93033b85d235","components/core/ScreenHero.jsx":"270e3e83fef1","components/core/SectionHeader.jsx":"66f7be2cf6f4","components/core/TopBar.jsx":"f6e6440d6faa","components/feedback/Badge.jsx":"da8a60b9a105","components/feedback/ConfirmDialog.jsx":"98ad1eadd672","components/feedback/HeadsUpNotification.jsx":"78cb3d5c38fb","components/feedback/InputDialog.jsx":"16ec2899f44f","components/feedback/ProgressBar.jsx":"4fa3e02273ad","components/feedback/Snackbar.jsx":"cca72c5417b1","components/feedback/Spinner.jsx":"074c00e9ef4a","components/forms/Capsule.jsx":"91ad95a91ccd","components/forms/Checkbox.jsx":"d1baa228e661","components/forms/Chip.jsx":"b019249ab06e","components/forms/DatePicker.jsx":"a8ea753c9a0f","components/forms/DayChip.jsx":"8708e3b3b07e","components/forms/RadioButton.jsx":"5fecfa82d426","components/forms/SettingItem.jsx":"2320ee21cca5","components/forms/Slider.jsx":"dcd45d3e1f62","components/forms/Switch.jsx":"5bcb19b90b79","components/forms/TextArea.jsx":"31e91283ff62","components/forms/TextField.jsx":"83f6aa086b21","components/forms/TimePicker.jsx":"0376d714d63e","components/forms/ToggleButton.jsx":"1bbb9fbba640","components/navigation/BottomNav.jsx":"bc08fdca8729","components/navigation/OptionsMenu.jsx":"5102a72a04d4","components/navigation/SoftKeyBar.jsx":"d3565ae1f0b0","components/navigation/TabRow.jsx":"740331b451e3","ui_kits/bluetooth/BluetoothScreens.jsx":"f905a806bb14","ui_kits/calls/ScreensA.jsx":"f03eb79a6759","ui_kits/calls/data.js":"cb2d06765e1d","ui_kits/clock/ClockScreens.jsx":"d3a5d1df7cc3","ui_kits/communication/CommScreens.jsx":"62e066d39d0d","ui_kits/settings/SettingsScreens.jsx":"222f45fdf47c","ui_kits/translate/TranslateScreens.jsx":"9a37b194e4bc"},"inlinedExternals":[],"unexposedExports":[]} */
+/* @ds-bundle: {"format":4,"namespace":"FutureOSDesignSystem_3ab611","components":[{"name":"ActionGrid","sourcePath":"components/core/ActionGrid.jsx"},{"name":"Avatar","sourcePath":"components/core/Avatar.jsx"},{"name":"Button","sourcePath":"components/core/Button.jsx"},{"name":"Card","sourcePath":"components/core/Card.jsx"},{"name":"Divider","sourcePath":"components/core/Divider.jsx"},{"name":"EmptyState","sourcePath":"components/core/EmptyState.jsx"},{"name":"FosIcon","sourcePath":"components/core/FosIcon.jsx"},{"name":"FOS_ICON_NAMES","sourcePath":"components/core/FosIcon.jsx"},{"name":"Icon","sourcePath":"components/core/Icon.jsx"},{"name":"IconButton","sourcePath":"components/core/IconButton.jsx"},{"name":"ListItem","sourcePath":"components/core/ListItem.jsx"},{"name":"MonoValue","sourcePath":"components/core/MonoValue.jsx"},{"name":"ScreenHero","sourcePath":"components/core/ScreenHero.jsx"},{"name":"SectionHeader","sourcePath":"components/core/SectionHeader.jsx"},{"name":"TopBar","sourcePath":"components/core/TopBar.jsx"},{"name":"Badge","sourcePath":"components/feedback/Badge.jsx"},{"name":"ConfirmDialog","sourcePath":"components/feedback/ConfirmDialog.jsx"},{"name":"HeadsUpNotification","sourcePath":"components/feedback/HeadsUpNotification.jsx"},{"name":"InputDialog","sourcePath":"components/feedback/InputDialog.jsx"},{"name":"ProgressBar","sourcePath":"components/feedback/ProgressBar.jsx"},{"name":"Snackbar","sourcePath":"components/feedback/Snackbar.jsx"},{"name":"Spinner","sourcePath":"components/feedback/Spinner.jsx"},{"name":"Capsule","sourcePath":"components/forms/Capsule.jsx"},{"name":"Checkbox","sourcePath":"components/forms/Checkbox.jsx"},{"name":"Chip","sourcePath":"components/forms/Chip.jsx"},{"name":"DatePicker","sourcePath":"components/forms/DatePicker.jsx"},{"name":"DayChip","sourcePath":"components/forms/DayChip.jsx"},{"name":"RadioButton","sourcePath":"components/forms/RadioButton.jsx"},{"name":"SettingItem","sourcePath":"components/forms/SettingItem.jsx"},{"name":"Slider","sourcePath":"components/forms/Slider.jsx"},{"name":"Switch","sourcePath":"components/forms/Switch.jsx"},{"name":"TextArea","sourcePath":"components/forms/TextArea.jsx"},{"name":"TextField","sourcePath":"components/forms/TextField.jsx"},{"name":"TimePicker","sourcePath":"components/forms/TimePicker.jsx"},{"name":"ToggleButton","sourcePath":"components/forms/ToggleButton.jsx"},{"name":"BottomNav","sourcePath":"components/navigation/BottomNav.jsx"},{"name":"OptionsMenu","sourcePath":"components/navigation/OptionsMenu.jsx"},{"name":"SoftKeyBar","sourcePath":"components/navigation/SoftKeyBar.jsx"},{"name":"TabRow","sourcePath":"components/navigation/TabRow.jsx"}],"sourceHashes":{"components/core/ActionGrid.jsx":"1dac07e1c560","components/core/Avatar.jsx":"fca60feda10e","components/core/Button.jsx":"7598ed3564fe","components/core/Card.jsx":"d1221204057c","components/core/Divider.jsx":"9ce386a7db14","components/core/EmptyState.jsx":"0190085decc8","components/core/FosIcon.jsx":"8e200ea899ff","components/core/Icon.jsx":"77fa91a06ef0","components/core/IconButton.jsx":"fd182bcf1148","components/core/ListItem.jsx":"08963c64d715","components/core/MonoValue.jsx":"93033b85d235","components/core/ScreenHero.jsx":"270e3e83fef1","components/core/SectionHeader.jsx":"66f7be2cf6f4","components/core/TopBar.jsx":"f6e6440d6faa","components/feedback/Badge.jsx":"da8a60b9a105","components/feedback/ConfirmDialog.jsx":"98ad1eadd672","components/feedback/HeadsUpNotification.jsx":"78cb3d5c38fb","components/feedback/InputDialog.jsx":"16ec2899f44f","components/feedback/ProgressBar.jsx":"4fa3e02273ad","components/feedback/Snackbar.jsx":"cca72c5417b1","components/feedback/Spinner.jsx":"074c00e9ef4a","components/forms/Capsule.jsx":"91ad95a91ccd","components/forms/Checkbox.jsx":"d1baa228e661","components/forms/Chip.jsx":"b019249ab06e","components/forms/DatePicker.jsx":"a8ea753c9a0f","components/forms/DayChip.jsx":"8708e3b3b07e","components/forms/RadioButton.jsx":"5fecfa82d426","components/forms/SettingItem.jsx":"2320ee21cca5","components/forms/Slider.jsx":"dcd45d3e1f62","components/forms/Switch.jsx":"5bcb19b90b79","components/forms/TextArea.jsx":"31e91283ff62","components/forms/TextField.jsx":"83f6aa086b21","components/forms/TimePicker.jsx":"0376d714d63e","components/forms/ToggleButton.jsx":"1bbb9fbba640","components/navigation/BottomNav.jsx":"bc08fdca8729","components/navigation/OptionsMenu.jsx":"5102a72a04d4","components/navigation/SoftKeyBar.jsx":"d3565ae1f0b0","components/navigation/TabRow.jsx":"740331b451e3","ui_kits/bluetooth/BluetoothScreens.jsx":"f905a806bb14","ui_kits/calls/ScreensA.jsx":"f03eb79a6759","ui_kits/calls/data.js":"cb2d06765e1d","ui_kits/clock/ClockScreens.jsx":"d3a5d1df7cc3","ui_kits/communication/CommScreens.jsx":"62e066d39d0d","ui_kits/settings/SettingsScreens.jsx":"222f45fdf47c","ui_kits/translate/TranslateScreens.jsx":"9a37b194e4bc"},"inlinedExternals":[],"unexposedExports":[]} */
 
 (() => {
 
@@ -11,30 +11,37 @@ const __ds_scope = {};
 // components/core/Button.jsx
 try { (() => {
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
-/* No shared button exists in the Kotlin source. This consolidates the four patterns
-   that recur, on DialogButton's geometry: pill radius, 88px tall, 16sp/700,
-   2dp white focus border (inside the box, so focus never changes the height),
-   and 70% fill opacity when not focused. */
+/* Pill, 88px tall, 16sp/700 (DialogButton geometry).
+   Fills are always solid: no element-level opacity, so labels stay at full contrast.
+   Idle and focused share the same fill. Focus = a ring in the button's own color, drawn outside the pill after a small gap (outline + offset, never changes layout) and a 1.02 lift. */
 const FILL = {
   primary: {
     bg: "var(--fos-accent)",
     fg: "var(--fos-on-accent)",
-    base: 1
+    fbg: "var(--fos-accent)",
+    ffg: "var(--fos-on-accent)",
+    ring: "var(--fos-accent)"
   },
   destructive: {
     bg: "var(--fos-danger)",
     fg: "var(--fos-on-accent)",
-    base: 1
+    fbg: "var(--fos-danger)",
+    ffg: "var(--fos-on-accent)",
+    ring: "var(--fos-danger)"
   },
   secondary: {
-    bg: "var(--fos-text)",
-    fg: "var(--fos-on-accent)",
-    base: 0.7
+    bg: "var(--fos-text-20)",
+    fg: "var(--fos-text)",
+    fbg: "var(--fos-text-20)",
+    ffg: "var(--fos-text)",
+    ring: "var(--fos-text-20)"
   },
   quiet: {
     bg: "var(--fos-text-10)",
     fg: "var(--fos-text)",
-    base: 1
+    fbg: "var(--fos-text-10)",
+    ffg: "var(--fos-text)",
+    ring: "var(--fos-text-10)"
   }
 };
 function Button({
@@ -57,20 +64,23 @@ function Button({
       fontSize: "var(--fos-size-base)",
       fontWeight: quiet ? "var(--fos-weight-medium)" : "var(--fos-weight-bold)",
       lineHeight: 1.25,
-      color: v.fg,
-      background: v.bg,
-      opacity: quiet ? 1 : focused ? v.base : v.base * 0.7,
-      border: focused && !quiet ? "var(--fos-focus-border-control) solid var(--fos-text)" : "var(--fos-focus-border-control) solid transparent",
+      color: focused ? v.ffg : v.fg,
+      background: focused ? v.fbg : v.bg,
+      border: "none",
+      outline: focused ? "var(--fos-focus-border-control) solid " + v.ring : "var(--fos-focus-border-control) solid transparent",
+      outlineOffset: 4,
+      transform: focused ? "scale(var(--fos-focus-scale))" : "none",
       borderRadius: "var(--fos-radius-full)",
       padding: "0 var(--fos-space-9)",
       height: 88,
+      minWidth: 176,
       boxSizing: "border-box",
       width: fullWidth ? "100%" : "auto",
       display: "inline-flex",
       alignItems: "center",
       justifyContent: "center",
       cursor: "pointer",
-      transition: "opacity var(--fos-transition-focus), border-color var(--fos-transition-focus)",
+      transition: "background var(--fos-transition-focus), color var(--fos-transition-focus), outline-color var(--fos-transition-focus), transform var(--fos-transition-focus)",
       ...style
     }
   }, rest), children);

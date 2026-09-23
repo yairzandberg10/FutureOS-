@@ -7,4 +7,4 @@ A FutureOS button; use for dialog actions and full-screen overlay actions — th
 <Button variant="quiet">ביטול</Button>
 ```
 
-Labels are bare Hebrew verbs, never sentences. `primary` and `destructive` put black text on a colored fill; `secondary` is the same shape in 70% text color; `quiet` is the full-round 10%-text variant used only in the time-picker overlay and has no focus border in the source. Unfocused buttons render their fill at 70% of its opacity — that is the idle state, not a disabled state (there is no disabled state).
+Labels are bare Hebrew verbs, never sentences. `primary` and `destructive` put black text on a solid colored fill; `secondary` (ביטול) is a 20% text-tint pill with white text; `quiet` a 10% tint. Fills look the same idle and focused, never faded. Focus adds a small gap and then a ring in the button's own color, plus a 1.02 lift — layout never shifts. There is no disabled state.
