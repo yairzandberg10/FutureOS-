@@ -21,7 +21,7 @@ class CallActionReceiver : BroadcastReceiver() {
             ACTION_REJECT_CALL -> CallService.reject()
             ACTION_LAUNCH_CALL_UI -> {
                 val launchIntent = Intent(context, MainActivity::class.java)
-                launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
                 context.startActivity(launchIntent)
             }
         }

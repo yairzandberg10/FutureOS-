@@ -82,7 +82,8 @@ class CallService : InCallService() {
         ringingNotified = true
 
         val launchIntent = Intent(applicationContext, MainActivity::class.java).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            // SINGLE_TOP: מסך החיוג שכבר פתוח עובר למסך השיחה, במקום שיהרס ויבנה מחדש.
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
         }
         val fullScreenPendingIntent = PendingIntent.getActivity(
             applicationContext, 0, launchIntent,
@@ -111,6 +112,16 @@ class CallService : InCallService() {
             manager.notify(CALL_NOTIFICATION_ID, notification)
         } catch (e: Exception) {
             Log.e(TAG, "failed to post ringing-call notification", e)
+        }
+
+        // ההתראה לבדה מוצגת כ-heads-up בלבד כשהמסך דלוק ולא נעול - ובמכשיר הזה
+        // אין פס מערכת שמציג אותה, כך שהשיחה הייתה בלתי נראית. במכשיר מקשים
+        // שיחה נכנסת חייבת לתפוס את המסך, ולכן פותחים את מסך השיחה ישירות.
+        // InCallService קשור ע"י המערכת פטור מהגבלת הפעלת Activity מהרקע.
+        try {
+            startActivity(launchIntent)
+        } catch (e: Exception) {
+            Log.w(TAG, "failed to bring the call screen up", e)
         }
 
         // FutureUI (מסך הנעילה המותאם-אישית) לא בהכרח מותקן בכל build - אם השידור

@@ -21,6 +21,18 @@ how anything looks or behaves.
   which stopped R8 from optimizing any UI code at all — removed. Release lint
   skips `ExpiredTargetSdkVersion`, a Google Play rule (targetSdk is 31 on
   purpose, for the Android 12 device).
+- **Calls (dialer): dialing, incoming calls and tab keys fixed.** The main
+  activity had an `ACTION_CALL` intent-filter, so every call it placed (and
+  every `ACTION_CALL` from Messages) resolved back to the dialer itself and
+  never reached Telecom. The filter is gone and calls go through
+  `TelecomManager.placeCall`. A ringing call now brings the call screen up
+  directly (an InCallService is exempt from background-start limits); before,
+  it was only a heads-up notification, which this device has no system bar to
+  show. The activity is `singleTop`, so the call screen and `ACTION_DIAL`
+  reuse the open dialer instead of rebuilding it. Left/right on a tab with
+  nothing focused (empty favorites, or a lazy list not yet laid out) now
+  still switches tabs, and the first row of a lazy list is focused once it is
+  attached.
 - **Calls (dialer): the call log is a lazy list.** The log tab built every
   call on the phone at once (500+ rows, each a focusable row with its own
   animations) on every visit to the tab. It is now a `LazyColumn` with one

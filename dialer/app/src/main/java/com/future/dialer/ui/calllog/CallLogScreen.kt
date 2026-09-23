@@ -19,11 +19,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import com.future.dialer.ui.CallFormat
 import com.future.dialer.ui.CallsViewModel
+import com.future.dialer.ui.requestFocusWhenAttached
 import com.future.sharednav.components.EmptyState
 import com.future.sharednav.components.FutureCard
 import com.future.sharednav.components.FutureChip
@@ -60,15 +60,7 @@ fun CallLogScreen(
 
     val firstRow = remember { FocusRequester() }
     LaunchedEffect(groups.isNotEmpty(), showMissedOnly) {
-        if (groups.isEmpty()) return@LaunchedEffect
-        // השורה הראשונה נבנית רק בשלב ה-layout של הרשימה העצלה, אחרי ה-
-        // composition - מחכים פריים (או שניים) עד שהיא מחוברת.
-        repeat(3) {
-            // גרסאות Compose שונות: זורק כשהשורה לא מחוברת, או מחזיר false.
-            val result = runCatching { firstRow.requestFocus() }.getOrNull()
-            if (result != null && result != false) return@LaunchedEffect
-            withFrameNanos { }
-        }
+        if (groups.isNotEmpty()) firstRow.requestFocusWhenAttached()
     }
 
     Column(modifier = Modifier.fillMaxSize()) {

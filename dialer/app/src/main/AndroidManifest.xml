@@ -53,6 +53,7 @@
             android:label="@string/app_name"
             android:theme="@style/Theme.Dialer"
             android:windowSoftInputMode="adjustResize"
+            android:launchMode="singleTop"
             android:showOnLockScreen="true"
             android:turnScreenOn="true">
             <intent-filter>
@@ -70,13 +71,11 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:scheme="tel" />
             </intent-filter>
-            <!-- ACTION_CALL (חיוג ישיר, לא רק פתיחת מסך חיוג) - נדרש הרשאת CALL_PHONE
-                 מהאפליקציה השולחת, כבר קיימת אצלנו למקרה שאפליקציה חיצונית תבקש. -->
-            <intent-filter>
-                <action android:name="android.intent.action.CALL" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <data android:scheme="tel" />
-            </intent-filter>
+            <!-- בלי intent-filter ל-ACTION_CALL: כשהיה כאן, כל ACTION_CALL (גם שלנו
+                 וגם של Messages) הגיע ל-Activity הזה במקום ל-Telecom, והשיחה לא
+                 יצאה בכלל. חיוג ישיר עובר דרך TelecomManager.placeCall
+                 (MainActivity.makeRealCall), ו-ACTION_CALL של אפליקציות אחרות
+                 מטופל ע"י Telecom עצמו, שבודק את הרשאת CALL_PHONE של השולח. -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.APP_CONTACTS" />

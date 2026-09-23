@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.future.dialer.R
 import com.future.dialer.ui.CallFormat
+import com.future.dialer.ui.requestFocusWhenAttached
 import com.future.sharednav.components.FutureActionCell
 import com.future.sharednav.components.FutureAvatar
 import com.future.sharednav.components.FutureButton
@@ -161,7 +162,7 @@ private fun IncomingCall(
 ) {
     val type = rememberFutureType()
     val answer = remember { FocusRequester() }
-    LaunchedEffect(Unit) { runCatching { answer.requestFocus() } }
+    LaunchedEffect(Unit) { answer.requestFocusWhenAttached() }
     // שיחה מצלצלת נשארת עד מענה או דחייה, כמו בטלפון אמיתי.
     BackHandler(enabled = true) {}
 

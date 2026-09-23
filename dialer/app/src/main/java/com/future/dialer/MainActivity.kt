@@ -145,6 +145,11 @@ class MainActivity : ComponentActivity() {
     // מקשים רגיל, שבו מתחילים לחייג מכל מסך.
     private val _openDialpad = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
+    // חץ ימין/שמאל בטאב שאין בו אף רכיב בפוקוס (מועדפים ריקים, או רשימה שעוד
+    // לא נבנתה). ה-onKeyEvent של הטאבים מקבל מקשים רק כשמשהו בתוכו בפוקוס -
+    // בלי זה המקשים הגיעו רק לכאן, אף אחד לא טיפל בהם, והטאב "נתקע".
+    private val _tabStep = MutableSharedFlow<Int>(extraBufferCapacity = 1)
+
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
@@ -189,6 +194,7 @@ class MainActivity : ComponentActivity() {
                     contactsViewModel = contactsViewModel,
                     inCallViewModel = inCallViewModel,
                     openDialpadRequests = _openDialpad.asSharedFlow(),
+                    tabStepRequests = _tabStep.asSharedFlow(),
                     startOnDialpad = prefillNumber != null,
                     actions = DialerActions(
                         placeCall = ::makeRealCall,
@@ -204,6 +210,16 @@ class MainActivity : ComponentActivity() {
                 )
             }
         }
+    }
+
+    // launchMode="singleTop": מסך החיוג שכבר פתוח מקבל את הכוונה כאן במקום
+    // להיבנות מחדש (שיחה נכנסת, ACTION_DIAL מאפליקציה אחרת).
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        val number = intentDialNumber(intent) ?: return
+        callsViewModel.setNumber(number)
+        _openDialpad.tryEmit(Unit)
     }
 
     private fun intentDialNumber(intent: Intent?): String? {
@@ -258,7 +274,15 @@ class MainActivity : ComponentActivity() {
     private fun makeRealCall(phoneNumber: String) {
         if (phoneNumber.isBlank()) return
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED) {
-            startActivity(Intent(Intent.ACTION_CALL, Uri.parse("tel:${Uri.encode(phoneNumber)}")))
+            // ישירות ל-Telecom. ACTION_CALL דרך startActivity חזר ל-Activity הזה
+            // עצמו (אפליקציית החיוג ברירת המחדל), והשיחה לא יצאה.
+            val telecom = getSystemService(TelecomManager::class.java)
+            try {
+                telecom.placeCall(Uri.fromParts("tel", phoneNumber, null), Bundle())
+            } catch (e: SecurityException) {
+                checkAndRequestPermissions()
+                return
+            }
             // מנקים את שדה החיוג אחרי שהשיחה יצאה, כדי שמספר ישן לא יישאר "תקוע"
             // בשדה ויחטוף בטעות לחיצת DPAD_CENTER/ENTER/CALL הבאה (ראו onKeyDown).
             callsViewModel.clearNumber()
@@ -352,6 +376,11 @@ class MainActivity : ComponentActivity() {
             _openDialpad.tryEmit(Unit)
             return true
         }
+        if (route in TabRoutes && (keyCode == KeyEvent.KEYCODE_DPAD_LEFT || keyCode == KeyEvent.KEYCODE_DPAD_RIGHT)) {
+            // כמו ב-onKeyEvent של הטאבים: ימין = הטאב הקודם (RTL).
+            _tabStep.tryEmit(if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) -1 else 1)
+            return true
+        }
         if (!isOnDialpadTab) return super.onKeyDown(keyCode, event)
 
         if (digit != null) {
@@ -389,6 +418,7 @@ class MainActivity : ComponentActivity() {
 
     private companion object {
         const val CONTACTS_PACKAGE = "com.future.contact"
+        val TabRoutes = setOf(Screen.CallLog.route, Screen.Dialpad.route, Screen.Favorites.route)
     }
 }
 
@@ -408,6 +438,7 @@ fun MainScreen(
     contactsViewModel: ContactsViewModel,
     inCallViewModel: InCallViewModel,
     openDialpadRequests: kotlinx.coroutines.flow.SharedFlow<Unit>,
+    tabStepRequests: kotlinx.coroutines.flow.SharedFlow<Int>,
     startOnDialpad: Boolean,
     actions: DialerActions,
     checkIsDefaultDialer: () -> Boolean,
@@ -487,6 +518,14 @@ fun MainScreen(
     )
     val tabIndex = tabs.indexOfFirst { it.first == currentRoute }
     val isOnTab = tabIndex >= 0
+
+    LaunchedEffect(Unit) {
+        tabStepRequests.collect { step ->
+            val current = tabs.indexOfFirst { it.first == navController.currentDestination?.route }
+            val next = current + step
+            if (current >= 0 && next in tabs.indices) navController.switchTab(tabs[next].first)
+        }
+    }
 
     // חזרה מהמקלדת או מהמועדפים מחזירה ליומן, כמו בערכה; מהיומן - יוצאים.
     BackHandler(enabled = isOnTab && tabIndex != 0) { navController.switchTab(Screen.CallLog.route) }

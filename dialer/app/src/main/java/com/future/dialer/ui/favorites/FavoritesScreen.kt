@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import com.future.dialer.data.model.Contact
 import com.future.dialer.ui.CallsViewModel
+import com.future.dialer.ui.requestFocusWhenAttached
 import com.future.sharednav.components.EmptyState
 import com.future.sharednav.components.FutureListItem
 import com.future.sharednav.components.ScreenTopBar
@@ -40,7 +41,7 @@ fun FavoritesScreen(
     val favorites by viewModel.favorites.collectAsState()
     val firstRow = remember { FocusRequester() }
     LaunchedEffect(favorites.isNotEmpty()) {
-        if (favorites.isNotEmpty()) runCatching { firstRow.requestFocus() }
+        if (favorites.isNotEmpty()) firstRow.requestFocusWhenAttached()
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
