@@ -72,6 +72,10 @@ android {
     // עוברות דרך Play - והוא הכלל היחיד שחוסם את בניית ה-release.
     lint {
         disable += "ExpiredTargetSdkVersion"
+        // lintVital רץ בכל בניית release ומוסיף דקה לכל אפליקציה; ב-Assistant
+        // וב-Messages הוא גם קורס על באג פנימי של lint (נתיב עם תווים לא
+        // חוקיים ב-Windows) ומפיל את הבנייה. lint מלא עדיין זמין ב-./gradlew lint.
+        checkReleaseBuilds = false
     }
     buildFeatures {
         compose = true
