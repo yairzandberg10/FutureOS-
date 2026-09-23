@@ -1,12 +1,5 @@
 package com.future.futureui.recents.ui
 
-import com.future.sharednav.icons.FutureIcons
-import com.future.sharednav.theme.FutureMotion
-import com.future.sharednav.theme.readableAccentColor
-import com.future.sharednav.theme.idleChipColor
-import com.future.sharednav.theme.FutureDimens
-import androidx.compose.runtime.ReadOnlyComposable
-
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
 import androidx.compose.animation.animateColorAsState
@@ -21,6 +14,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -69,7 +64,7 @@ fun RecentAppsScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(shellTheme.backgroundColor)
+                .background(Color.Black.copy(alpha = 0.94f))
                 .focusRequester(focusRequester)
                 .focusable()
                 .onKeyEvent { event ->
@@ -104,14 +99,14 @@ fun RecentAppsScreen(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 20.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(FutureIcons.Apps, contentDescription = null, tint = shellTheme.textColor, modifier = Modifier.size(FutureDimens.iconSettingRow))
+                    Icon(Icons.Rounded.Apps, contentDescription = null, tint = accentColor, modifier = Modifier.size(22.dp))
                     Spacer(modifier = Modifier.width(10.dp))
-                    Text("אפליקציות אחרונות", color = shellTheme.textColor, fontSize = FutureTypography.screenTitle, fontWeight = FontWeight.Bold)
+                    Text("אפליקציות אחרונות", color = Color.White, fontSize = FutureTypography.title, fontWeight = FontWeight.Bold)
                 }
 
                 if (apps.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("אין אפליקציות אחרונות", color = shellTheme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.body)
+                        Text("אין אפליקציות אחרונות", color = Color.White.copy(alpha = 0.5f), fontSize = FutureTypography.body)
                     }
                 } else {
                     LazyColumn(
@@ -132,7 +127,7 @@ fun RecentAppsScreen(
 
                 Text(
                     "אישור לפתיחה · אפשרויות לסגירה · חזרה ליציאה",
-                    color = shellTheme.textColor.copy(alpha = 0.4f),
+                    color = Color.White.copy(alpha = 0.35f),
                     fontSize = FutureTypography.caption,
                     modifier = Modifier.fillMaxWidth().padding(16.dp),
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -144,10 +139,9 @@ fun RecentAppsScreen(
 
 @Composable
 private fun RecentAppRow(app: RecentAppInfo, isFocused: Boolean, accentColor: Color, onClick: () -> Unit) {
-    val shape = FutureShapes.row
+    val shape = FutureShapes.lg
     val bgColor by animateColorAsState(
-        if (isFocused) shellTheme.readableAccentColor.copy(alpha = 0.14f) else shellTheme.idleChipColor,
-        FutureMotion.focusColorSpec,
+        if (isFocused) Color.White.copy(alpha = 0.14f) else Color.White.copy(alpha = 0.05f),
         label = "recentRowBg"
     )
     val scale by animateFloatAsState(if (isFocused) 1.02f else 1f, label = "recentRowScale")
@@ -158,7 +152,7 @@ private fun RecentAppRow(app: RecentAppInfo, isFocused: Boolean, accentColor: Co
             .fillMaxWidth()
             .clip(shape)
             .background(bgColor)
-            .then(if (isFocused) Modifier.border(width = FutureDimens.focusBorderItem, color = shellTheme.readableAccentColor, shape = shape) else Modifier)
+            .then(if (isFocused) Modifier.border(width = 2.dp, color = accentColor, shape = shape) else Modifier)
             .clickable(onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -169,10 +163,6 @@ private fun RecentAppRow(app: RecentAppInfo, isFocused: Boolean, accentColor: Co
             modifier = Modifier.size(if (isFocused) 44.dp else 40.dp).clip(RoundedCornerShape(percent = 28))
         )
         Spacer(modifier = Modifier.width(14.dp))
-        Text(app.label, color = shellTheme.textColor, fontSize = FutureTypography.bodyLarge, maxLines = 1, modifier = Modifier.weight(1f))
+        Text(app.label, color = Color.White, fontSize = FutureTypography.bodyLarge, maxLines = 1, modifier = Modifier.weight(1f))
     }
 }
-
-/** הערכה הפעילה - מסכי המעטפת עוקבים אחרי מצב כהה/בהיר וצבע ההדגשה, כמו כל אפליקציה. */
-private val shellTheme: com.future.sharednav.theme.FutureTheme
-    @Composable @ReadOnlyComposable get() = com.future.sharednav.theme.LocalFutureTheme.current

@@ -1,10 +1,5 @@
 package com.future.futureui.notificationcenter.ui
 
-import com.future.sharednav.icons.FutureIcons
-import com.future.sharednav.theme.LocalFutureTheme
-import com.future.sharednav.theme.headsUpSurfaceColor
-import com.future.sharednav.theme.headsUpBorderColor
-
 import com.future.sharednav.theme.FutureMotion
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
@@ -33,6 +28,8 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -132,8 +129,8 @@ fun HeadsUpNotificationScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(shape)
-                    .background(LocalFutureTheme.current.headsUpSurfaceColor)
-                    .border(0.5.dp, LocalFutureTheme.current.headsUpBorderColor, shape)
+                    .background(Color(0xE61C1C1E))
+                    .border(0.5.dp, Color.White.copy(alpha = 0.15f), shape)
                     .padding(horizontal = 14.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -148,7 +145,7 @@ fun HeadsUpNotificationScreen(
                     if (icon != null) {
                         Image(bitmap = icon, contentDescription = null, modifier = Modifier.fillMaxSize())
                     } else {
-                        Icon(FutureIcons.Notifications, contentDescription = null, tint = textColor, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Rounded.Notifications, contentDescription = null, tint = textColor, modifier = Modifier.size(18.dp))
                     }
                 }
                 Spacer(modifier = Modifier.width(12.dp))
@@ -160,7 +157,7 @@ fun HeadsUpNotificationScreen(
                         Text(
                             text = title.ifBlank { "שיחה נכנסת" },
                             fontSize = FutureTypography.label,
-                            color = textColor.copy(alpha = 0.6f),
+                            color = textColor.copy(alpha = 0.65f),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )

@@ -1,11 +1,4 @@
 package com.future.futureui.controlcenter.ui.components
-import com.future.sharednav.theme.LocalFutureTheme
-import com.future.sharednav.theme.elevatedSurfaceColor
-import com.future.sharednav.theme.raisedSurfaceColor
-import com.future.sharednav.theme.readableAccentColor
-import com.future.sharednav.theme.onReadableAccentColor
-import com.future.sharednav.theme.FutureDimens
-import com.future.sharednav.theme.textAlpha
 
 import com.future.sharednav.theme.FutureShapes
 import androidx.compose.foundation.background
@@ -32,7 +25,6 @@ fun SliderBar(
     onValueChange: (Float) -> Unit,
     isDarkBackground: Boolean = false
 ) {
-    val theme = LocalFutureTheme.current
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
     val shape = FutureShapes.xxl
@@ -43,9 +35,9 @@ fun SliderBar(
             .height(47.dp)
             .focusEffect(isFocused, shape)
             .clip(shape)
-            .background(theme.elevatedSurfaceColor)
+            .background(Color(0x80E0E0E0))
             .then(
-                if (isFocused) Modifier.border(FutureDimens.focusBorderControl, theme.readableAccentColor, shape) else Modifier
+                if (isFocused) Modifier.border(2.dp, Color.LightGray, shape) else Modifier
             )
             .onKeyEvent { event ->
                 if (event.type == KeyEventType.KeyDown) {
@@ -69,15 +61,13 @@ fun SliderBar(
             modifier = Modifier
                 .fillMaxHeight()
                 .fillMaxWidth(value.coerceAtLeast(0.01f))
-                // המילוי הוא הערך - בהדגשה, כמו במחוון של הדיזיין סיסטם (Slider.jsx).
-                .background(theme.readableAccentColor)
+                .background(Color(0x66BDBDBD))
         )
 
         Icon(
             imageVector = icon,
             contentDescription = null,
-            // האייקון יושב בתחילת המילוי; ברגע שהמילוי מכסה אותו הוא עובר לדיו של ההדגשה.
-            tint = if (value >= 0.12f) theme.onReadableAccentColor else theme.textColor,
+            tint = if (isDarkBackground) Color.White else Color(0xFF616161),
             modifier = Modifier
                 .padding(start = 14.dp)
                 .size(22.dp)

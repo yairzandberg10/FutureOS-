@@ -1,7 +1,4 @@
 package com.future.futureui
-import com.future.sharednav.components.FutureButton
-import com.future.sharednav.components.FutureButtonVariant
-import com.future.sharednav.theme.LocalFutureTheme
 
 import com.future.sharednav.theme.FutureTypography
 import android.accessibilityservice.AccessibilityService
@@ -98,15 +95,19 @@ class MainActivity : ComponentActivity() {
                         
                         Spacer(modifier = Modifier.height(24.dp))
                         
-                        FutureButton("הפעל שירותי נגישות", LocalFutureTheme.current, {
+                        Button(onClick = {
                             startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-                        })
+                        }) {
+                            Text("הפעל שירותי נגישות")
+                        }
 
                         Spacer(modifier = Modifier.height(12.dp))
 
-                        FutureButton("התאמה אישית", LocalFutureTheme.current, {
+                        Button(onClick = {
                             startActivity(Intent(this@MainActivity, SettingsActivity::class.java))
-                        }, variant = FutureButtonVariant.Secondary)
+                        }) {
+                            Text("התאמה אישית")
+                        }
 
                         Spacer(modifier = Modifier.height(24.dp))
                         
@@ -129,8 +130,8 @@ class MainActivity : ComponentActivity() {
         ) {
             Text(text = label)
             Text(
-                text = if (isEnabled) "פעיל" else "כבוי",
-                color = if (isEnabled) LocalFutureTheme.current.successColor else LocalFutureTheme.current.dangerColor
+                text = if (isEnabled) "✅ פעיל" else "❌ כבוי",
+                color = if (isEnabled) androidx.compose.material3.MaterialTheme.colorScheme.primary else androidx.compose.material3.MaterialTheme.colorScheme.error
             )
         }
     }

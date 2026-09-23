@@ -1,17 +1,13 @@
 package com.future.futureui.statusbar.ui
 
-import com.future.sharednav.icons.FutureIcons
-import com.future.sharednav.theme.LocalFutureTheme
-import com.future.sharednav.theme.elevatedSurfaceColor
-import com.future.sharednav.theme.readableAccentColor
-import com.future.sharednav.theme.onReadableAccentColor
-
 import com.future.sharednav.theme.FutureShapes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.VolumeOff
+import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -29,7 +25,6 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun VolumeOverlay(level: Float, modifier: Modifier = Modifier) {
     val shape = FutureShapes.xxl
-    val theme = LocalFutureTheme.current
 
     Box(
         modifier = modifier.fillMaxWidth(),
@@ -41,9 +36,8 @@ fun VolumeOverlay(level: Float, modifier: Modifier = Modifier) {
                 .width(200.dp)
                 .height(47.dp)
                 .clip(shape)
-                // "זכוכית" של המעטפת (elevatedSurfaceColor) - לא אפור בהיר קבוע,
-                // שנראה אותו דבר במצב כהה ובהיר.
-                .background(theme.elevatedSurfaceColor),
+                .background(Color(0xE6E0E0E0))
+                .border(width = 0.5.dp, color = Color.White.copy(alpha = 0.6f), shape = shape),
             contentAlignment = Alignment.CenterStart
         ) {
             Box(
@@ -51,12 +45,12 @@ fun VolumeOverlay(level: Float, modifier: Modifier = Modifier) {
                     .fillMaxHeight()
                     .fillMaxWidth(level.coerceIn(0f, 1f).coerceAtLeast(0.01f))
                     .clip(shape)
-                    .background(theme.readableAccentColor)
+                    .background(Color(0xFFBDBDBD))
             )
             Icon(
-                imageVector = if (level <= 0f) FutureIcons.AutoMirrored.VolumeOff else FutureIcons.AutoMirrored.VolumeUp,
+                imageVector = if (level <= 0f) Icons.AutoMirrored.Rounded.VolumeOff else Icons.AutoMirrored.Rounded.VolumeUp,
                 contentDescription = null,
-                tint = if (level >= 0.12f) theme.onReadableAccentColor else theme.textColor,
+                tint = Color(0xFF616161),
                 modifier = Modifier.padding(start = 14.dp).size(22.dp)
             )
         }

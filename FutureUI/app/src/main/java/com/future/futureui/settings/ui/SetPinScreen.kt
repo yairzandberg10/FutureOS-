@@ -1,8 +1,4 @@
 package com.future.futureui.settings.ui
-import com.future.sharednav.components.FutureTextField
-import com.future.sharednav.components.FutureButton
-import com.future.sharednav.components.FutureButtonVariant
-import androidx.compose.runtime.ReadOnlyComposable
 
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
@@ -29,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.future.futureui.lockscreen.logic.LockScreenLayoutManager
 
+private val AccentColor = Color(0xFF64D2FF)
 private const val PIN_LENGTH = 4
 
 /**
@@ -80,7 +77,7 @@ fun SetPinScreen(onDone: () -> Unit, onCancel: () -> Unit) {
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Column(
-            modifier = Modifier.fillMaxSize().background(shellTheme.backgroundColor).padding(24.dp),
+            modifier = Modifier.fillMaxSize().background(Color.Black).padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
@@ -90,19 +87,17 @@ fun SetPinScreen(onDone: () -> Unit, onCancel: () -> Unit) {
                     Stage.EnterNew -> "בחר קוד נעילה חדש (4 ספרות)"
                     Stage.ConfirmNew -> "הזן שוב לאישור"
                 },
-                color = shellTheme.textColor,
+                color = Color.White,
                 fontSize = FutureTypography.title,
                 fontWeight = FontWeight.Bold
             )
             if (errorMessage != null) {
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(errorMessage!!, color = shellTheme.dangerColor, fontSize = FutureTypography.summary)
+                Text(errorMessage!!, color = Color(0xFFFF6B6B), fontSize = FutureTypography.summary)
             }
             Spacer(modifier = Modifier.height(24.dp))
 
-            // שדה הקלט של הדיזיין סיסטם, מוסתר כסיסמה (היה OutlinedTextField בתכלת
-            // קבוע #64D2FF - צבע הדגשה שלא נבחר ע"י המשתמש).
-            FutureTextField(
+            OutlinedTextField(
                 value = input,
                 onValueChange = { new ->
                     if (new.length <= PIN_LENGTH && new.all { it.isDigit() }) {
@@ -111,9 +106,13 @@ fun SetPinScreen(onDone: () -> Unit, onCancel: () -> Unit) {
                     }
                 },
                 keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                theme = shellTheme,
-                autoFocus = true,
-                visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
+                    focusedBorderColor = AccentColor,
+                    cursorColor = AccentColor
+                ),
+                singleLine = true,
                 modifier = Modifier.width(160.dp)
             )
 
@@ -128,12 +127,12 @@ fun SetPinScreen(onDone: () -> Unit, onCancel: () -> Unit) {
 fun RemovePinConfirmScreen(onConfirm: () -> Unit, onCancel: () -> Unit) {
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Column(
-            modifier = Modifier.fillMaxSize().background(shellTheme.backgroundColor).padding(24.dp),
+            modifier = Modifier.fillMaxSize().background(Color.Black).padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text("לבטל את קוד הנעילה?", color = shellTheme.textColor, fontSize = FutureTypography.title, fontWeight = FontWeight.Bold)
-            Text("מסך הנעילה יפתח בלחיצת OK בלבד, בלי קוד.", color = shellTheme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.summary)
+            Text("לבטל את קוד הנעילה?", color = Color.White, fontSize = FutureTypography.title, fontWeight = FontWeight.Bold)
+            Text("מסך הנעילה יפתח בלחיצת OK בלבד, בלי קוד.", color = Color.White.copy(alpha = 0.6f), fontSize = FutureTypography.summary)
             Spacer(modifier = Modifier.height(24.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 FocusableTextButton("ביטול", onCancel)
@@ -147,14 +146,18 @@ private enum class Stage { ConfirmExisting, EnterNew, ConfirmNew }
 
 @Composable
 private fun FocusableTextButton(text: String, onClick: () -> Unit, isDestructive: Boolean = false) {
-    FutureButton(
-        text,
-        shellTheme,
-        onClick,
-        variant = if (isDestructive) FutureButtonVariant.Destructive else FutureButtonVariant.Secondary,
-    )
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
+    val base = if (isDestructive) Color(0xFFFF6B6B) else AccentColor
+    val bgColor by animateColorAsState(if (isFocused) base else base.copy(alpha = 0.7f), label = "btnBg")
+    Box(
+        modifier = Modifier
+            .clip(FutureShapes.xl)
+            .background(bgColor)
+            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
+            .focusable(interactionSource = interactionSource)
+            .padding(horizontal = 24.dp, vertical = 12.dp)
+    ) {
+        Text(text, color = Color.Black, fontWeight = FontWeight.Bold)
+    }
 }
-
-/** הערכה הפעילה - מסכי המעטפת עוקבים אחרי מצב כהה/בהיר וצבע ההדגשה, כמו כל אפליקציה. */
-private val shellTheme: com.future.sharednav.theme.FutureTheme
-    @Composable @ReadOnlyComposable get() = com.future.sharednav.theme.LocalFutureTheme.current
