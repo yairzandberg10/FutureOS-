@@ -68,12 +68,12 @@ fun FutureSettingItem(
     val isFocused by interactionSource.collectIsFocusedAsState()
     val accent = LocalFutureAccent.current ?: theme.readableAccentColor
 
-    val background by animateColorAsState(
+    val background = animateColorAsState(
         if (isFocused) theme.focusFillSettingColor else Color.Transparent,
         FutureMotion.focusColorSpec,
         label = "settingItemBg",
     )
-    val border by animateColorAsState(
+    val border = animateColorAsState(
         if (isFocused) accent else Color.Transparent,
         FutureMotion.focusColorSpec,
         label = "settingItemBorder",
@@ -87,7 +87,7 @@ fun FutureSettingItem(
             .fillMaxWidth()
             .then(if (inCard) Modifier else Modifier.padding(FutureDimens.spacingXs))
             .height(FutureDimens.rowHeightSetting)
-            .cardRowFocus(background, border)
+            .cardRowFocus({ background.value }, { border.value })
             .padding(horizontal = if (inCard) FutureDimens.spacingLg else FutureDimens.spacingMd)
             .then(if (focusRequester != null && onClick != null) Modifier.focusRequester(focusRequester) else Modifier)
             .bringIntoViewOnFocus()

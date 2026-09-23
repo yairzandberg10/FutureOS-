@@ -62,6 +62,8 @@ adb devices
 ./build-all.sh --install    # בונה ומתקינה (adb install -r) כל אפליקציה שנבנתה בהצלחה
 ```
 
+ההתקנה היא של גרסת **release** ולא debug, ואחריה `cmd package compile -m speed` לכל חבילה. על המכשיר הזה Compose ב-debug איטי פי כמה: debuggable מבטל את הקומפילציה מראש של ART, ו-R8 לא רץ. בלי `keystore.properties` ה-release נחתם במפתח ה-debug של המחשב, ולכן מותקן מעל התקנת debug קיימת בלי הסרה ובלי לאבד נתונים.
+
 ## 7. מאגר הטקסטים של Sfarim (sefaria.db, ~1.55GB)
 
 הקובץ לא נכנס ל-git (מעל 100MB, ונבנה מחדש מהמקור דרך `Sfarim/tools/build_library.py` — ר' `Sfarim/README.md`), אבל אם כבר בנית אותו הוא קיים ב-`Sfarim/tools/output/sefaria.db`. יש לדחוף אותו למכשיר בנפרד (USB, לא Wi-Fi — כאמור אין Wi-Fi ביעד):

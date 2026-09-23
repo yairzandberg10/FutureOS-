@@ -7,11 +7,15 @@ import com.future.dialer.data.model.Contact
 import com.future.dialer.data.repository.CallLogRepository
 import com.future.dialer.data.repository.ContactRepository
 import com.future.dialer.util.T9Search
+import com.future.dialer.data.model.CallType
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -40,6 +44,21 @@ class CallsViewModel(
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     /**
+     * היומן מקובץ לימים, עם הטקסטים של כל שורה כבר מוכנים - מחושב פעם אחת
+     * לכל טעינה, ברקע (Default), ולא ב-composition של המסך. עם מאות שיחות
+     * הקיבוץ (Calendar לכל שיחה) והפורמט עלו בכל כניסה לטאב על ה-main thread.
+     */
+    val callDays: StateFlow<List<CallDay>> = _recentCalls
+        .map { groupByDay(it) }
+        .flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    val missedCallDays: StateFlow<List<CallDay>> = _recentCalls
+        .map { list -> groupByDay(list.filter { it.type == CallType.MISSED }) }
+        .flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    /**
      * איש הקשר שהמספר המוקלד שייך לו - מוצג מתחת למספר במקלדת. משלוש ספרות
      * ומעלה, כמו בערכה: קודם התאמה במספר, ואם אין - התאמת T9 על השם.
      */
@@ -48,15 +67,27 @@ class CallsViewModel(
         val clean = digitsOf(digits)
         list.firstOrNull { digitsOf(it.phoneNumber).contains(clean) }
             ?: list.firstOrNull { T9Search.matchesAnyWord(it.name, digits) }
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     init {
         refresh()
     }
 
+    private var contactsJob: Job? = null
+    private var callsJob: Job? = null
+
+    /**
+     * טוען מחדש את אנשי הקשר והיומן. נקרא מכמה מקומות בפתיחה (init, onResume,
+     * סוף שיחה) - טעינה שכבר רצה לא מתחילה שוב, כדי שלא ירוצו שתי שאילתות
+     * זהות במקביל על אותו ספק.
+     */
     fun refresh() {
-        viewModelScope.launch { _contacts.value = contactRepository.getAllContacts() }
-        viewModelScope.launch { _recentCalls.value = callLogRepository.getCallLogs() }
+        if (contactsJob?.isActive != true) {
+            contactsJob = viewModelScope.launch { _contacts.value = contactRepository.getAllContacts() }
+        }
+        if (callsJob?.isActive != true) {
+            callsJob = viewModelScope.launch { _recentCalls.value = callLogRepository.getCallLogs() }
+        }
     }
 
     fun onDigitPressed(digit: String) {
@@ -105,6 +136,24 @@ class CallsViewModel(
     }
 
     private companion object {
+        /** קיבוץ לפי יום, בסדר יורד - "היום", "אתמול", ואז תאריך מלא. */
+        fun groupByDay(calls: List<CallRecord>): List<CallDay> =
+            calls.sortedByDescending { it.timestamp }
+                .groupBy { CallFormat.dayTitle(it.timestamp) }
+                .map { (title, dayCalls) ->
+                    CallDay(
+                        title = title,
+                        rows = dayCalls.map { call ->
+                            CallRow(
+                                call = call,
+                                title = call.name ?: call.phoneNumber,
+                                summary = CallFormat.summaryOf(call),
+                                time = CallFormat.timeOf(call),
+                            )
+                        },
+                    )
+                }
+
         /** מספר טלפון ארוך ביותר שהמקלדת מקבלת (כולל קידומת בינלאומית). */
         const val MaxDialLength = 20
 
@@ -117,3 +166,9 @@ class CallsViewModel(
         }
     }
 }
+
+/** יום אחד ביומן: הכותרת ("היום", "אתמול"...) והשורות שלו. */
+data class CallDay(val title: String, val rows: List<CallRow>)
+
+/** שורת יומן עם הטקסטים שלה מוכנים מראש. */
+data class CallRow(val call: CallRecord, val title: String, val summary: String, val time: String)

@@ -15,7 +15,9 @@ class CallLogRepository(private val context: Context) {
         try {
             val cursor = context.contentResolver.query(
                 CallLog.Calls.CONTENT_URI,
-                null,
+                // רק העמודות שהיומן מציג - בלי projection הספק מחזיר עשרות
+                // עמודות לכל שורה (מאות שיחות), ורובן נזרקות.
+                PROJECTION,
                 null,
                 null,
                 CallLog.Calls.DATE + " DESC"
@@ -75,5 +77,16 @@ class CallLogRepository(private val context: Context) {
             Log.e("CallLogRepository", "Error clearing call log", e)
             false
         }
+    }
+
+    private companion object {
+        val PROJECTION = arrayOf(
+            CallLog.Calls._ID,
+            CallLog.Calls.CACHED_NAME,
+            CallLog.Calls.NUMBER,
+            CallLog.Calls.DATE,
+            CallLog.Calls.DURATION,
+            CallLog.Calls.TYPE,
+        )
     }
 }

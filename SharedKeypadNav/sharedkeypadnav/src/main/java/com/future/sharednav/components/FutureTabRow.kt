@@ -1,5 +1,6 @@
 package com.future.sharednav.components
 
+import com.future.sharednav.focus.animatedFill
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -95,7 +96,7 @@ fun FutureTabItem(
     val accent = LocalFutureAccent.current ?: theme.readableAccentColor
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    val background by animateColorAsState(
+    val background = animateColorAsState(
         when {
             selected -> accent
             isFocused -> theme.focusFillChipColor
@@ -107,7 +108,7 @@ fun FutureTabItem(
     Box(
         modifier = modifier
             .clip(FutureShapes.md)
-            .background(background)
+            .animatedFill { background.value }
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
             .focusable(interactionSource = interactionSource)

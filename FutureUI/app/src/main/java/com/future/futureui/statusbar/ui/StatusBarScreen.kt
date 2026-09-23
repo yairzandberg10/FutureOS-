@@ -1,6 +1,7 @@
 package com.future.futureui.statusbar.ui
 
 import com.future.sharednav.theme.FutureTypography
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -35,7 +36,9 @@ import androidx.compose.ui.unit.sp
 import com.future.futureui.controlcenter.logic.ControlManager
 import com.future.futureui.controlcenter.service.MediaControlService
 import com.future.futureui.statusbar.logic.StatusBarLayoutManager
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -68,33 +71,83 @@ fun StatusBarScreen(
     val use24Hour = layout.getUse24HourClock()
     val opacity = layout.getBarOpacity()
 
+    // השעון והסוללה מתעדכנים מאירועי מערכת ולא מסקר: TIME_TICK מגיע בדיוק
+    // בתחילת כל דקה (קודם השעון יכול היה לפגר עד 15 שניות אחרי החלפת הדקה),
+    // ו-BATTERY_CHANGED מגיע רק כשמשהו בסוללה באמת משתנה. registerReceiver
+    // מחזיר מיד את ה-BATTERY_CHANGED האחרון (sticky), אז הערך הראשון לא מחכה.
+    DisposableEffect(use24Hour) {
+        val pattern = if (use24Hour) "HH:mm" else "h:mm a"
+        val timeFormat = SimpleDateFormat(pattern, Locale.getDefault())
+        fun refreshTime() {
+            currentTime = timeFormat.format(Date())
+        }
+        fun applyBattery(intent: Intent?) {
+            if (intent == null) return
+            val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+            val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
+            if (level >= 0 && scale > 0) batteryPercent = (level * 100) / scale
+            val status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
+            isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL
+        }
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(receiverContext: Context?, intent: Intent?) {
+                when (intent?.action) {
+                    Intent.ACTION_BATTERY_CHANGED -> applyBattery(intent)
+                    Intent.ACTION_TIMEZONE_CHANGED -> {
+                        timeFormat.timeZone = TimeZone.getDefault()
+                        refreshTime()
+                    }
+                    else -> refreshTime()
+                }
+            }
+        }
+        val filter = IntentFilter().apply {
+            addAction(Intent.ACTION_TIME_TICK)
+            addAction(Intent.ACTION_TIME_CHANGED)
+            addAction(Intent.ACTION_TIMEZONE_CHANGED)
+            addAction(Intent.ACTION_BATTERY_CHANGED)
+        }
+        refreshTime()
+        applyBattery(context.registerReceiver(receiver, filter))
+        onDispose {
+            try {
+                context.unregisterReceiver(receiver)
+            } catch (e: IllegalArgumentException) {
+                Log.w("StatusBarScreen", "receiver already unregistered", e)
+            }
+        }
+    }
+
+    // שאר האינדיקטורים (DND, טיסה, Bluetooth, נתונים, התראות, שיחה) עדיין
+    // בסקר של 15 שניות - אבל כל הקריאות רצות ב-thread רקע. קודם כולן רצו על
+    // ה-main thread של FutureUI, שהוא גם זה שמסנן את כל לחיצות המקשים בטלפון.
     LaunchedEffect(Unit) {
         while (true) {
             manager.updateStates()
 
-            val batteryIntent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
-            val level = batteryIntent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
-            val scale = batteryIntent?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: -1
-            if (level >= 0 && scale > 0) batteryPercent = (level * 100) / scale
-            val status = batteryIntent?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ?: -1
-            isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL
+            val (notifications, inCall) = withContext(Dispatchers.IO) {
+                val count = if (MediaControlService.isEnabled(context)) {
+                    try {
+                        MediaControlService.instance?.activeNotifications?.size ?: 0
+                    } catch (e: Exception) {
+                        Log.w("StatusBarScreen", "activeNotifications failed", e)
+                        0
+                    }
+                } else 0
 
-            val pattern = if (use24Hour) "HH:mm" else "h:mm a"
-            currentTime = SimpleDateFormat(pattern, Locale.getDefault()).format(Calendar.getInstance().time)
-
-            notificationCount = if (MediaControlService.isEnabled(context)) {
-                MediaControlService.instance?.activeNotifications?.size ?: 0
-            } else 0
-
-            // dialer שומר את מצב השיחה בתהליך שלו בלבד (CallService.activeCall) - אין
-            // לו ערוץ IPC החוצה, אז כאן פשוט שואלים את המערכת ישירות (כמו כל אינדיקטור
-            // אחר בשורה הזו), באותו דפוס "משיכה ממקור מערכת" שכבר קיים למדיה.
-            isCallActive = try {
-                (context.getSystemService(Context.TELECOM_SERVICE) as? TelecomManager)?.isInCall == true
-            } catch (e: SecurityException) {
-                Log.w("StatusBarScreen", "missing READ_PHONE_STATE, hiding call indicator", e)
-                false
+                // dialer שומר את מצב השיחה בתהליך שלו בלבד (CallService.activeCall) - אין
+                // לו ערוץ IPC החוצה, אז כאן פשוט שואלים את המערכת ישירות (כמו כל אינדיקטור
+                // אחר בשורה הזו), באותו דפוס "משיכה ממקור מערכת" שכבר קיים למדיה.
+                val call = try {
+                    (context.getSystemService(Context.TELECOM_SERVICE) as? TelecomManager)?.isInCall == true
+                } catch (e: SecurityException) {
+                    Log.w("StatusBarScreen", "missing READ_PHONE_STATE, hiding call indicator", e)
+                    false
+                }
+                count to call
             }
+            notificationCount = notifications
+            isCallActive = inCall
 
             delay(15_000)
         }

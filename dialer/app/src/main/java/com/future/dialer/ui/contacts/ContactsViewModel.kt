@@ -19,9 +19,9 @@ class ContactsViewModel(private val repository: ContactRepository) : ViewModel()
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
-    init {
-        refresh()
-    }
+    // בלי טעינה ב-init: ה-ViewModel נוצר בפתיחת האפליקציה, אבל הרשימה
+    // נחוצה רק במסך החיפוש - והוא טוען אותה בכל כניסה (SearchScreen).
+    // כך לא רצה שאילתת אנשי קשר כפולה בזמן שהיומן נטען.
 
     fun refresh() {
         viewModelScope.launch {

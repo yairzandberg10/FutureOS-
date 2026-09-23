@@ -87,7 +87,12 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
-            signingConfig = signingConfigs.findByName("release")
+            // בלי keystore.properties החתימה נופלת למפתח ה-debug של המחשב הזה,
+            // ולא לבנייה לא-חתומה: זה מה שמאפשר להתקין release על המכשיר מעל
+            // התקנת debug קיימת (אותה חתימה - בלי הסרה ובלי לאבד נתונים). על
+            // המכשיר רץ release ולא debug כי debug של Compose איטי פי כמה: בלי
+            // R8, ו-debuggable מבטל את הקומפילציה מראש של ART.
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
         }
     }
     compileOptions {
@@ -101,6 +106,12 @@ android {
         compilerOptions {
             jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
         }
+    }
+    // המכשיר הוא Android 12 (API 31) ו-targetSdk 31 בכוונה. ExpiredTargetSdkVersion
+    // הוא כלל של Google Play, לא של אנדרואיד - האפליקציות מותקנות ישירות ולא
+    // עוברות דרך Play - והוא הכלל היחיד שחוסם את בניית ה-release.
+    lint {
+        disable += "ExpiredTargetSdkVersion"
     }
     buildFeatures {
         compose = true

@@ -1,8 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    התצורה של שירות מסך הנעילה - השירות היחיד שבאמת קורא אירועי נגישות
+    (onAccessibilityEvent שלו עוקב אחרי TYPE_WINDOW_STATE_CHANGED כדי לדעת
+    איזו אפליקציה בחזית). שאר השלושה משתמשים ב-accessibility_service_keys.xml,
+    שם מוסבר למה typeAllMask היה יקר כל כך.
+
+    כאן typeWindowStateChanged הוא בדיוק מה שהקוד קורא, ולא יותר: כל שאר
+    האירועים ש-typeAllMask הביא (תוכן חלון שהשתנה, גלילה, טקסט) נזרקו כאן
+    בלי שימוש. notificationTimeout נשאר 100 ולא 500 כמו בשלושת האחרים, כי
+    זיהוי האפליקציה שבחזית צריך להיות עדכני כשמסך הנעילה עולה.
+-->
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
-    android:accessibilityEventTypes="typeAllMask"
+    android:accessibilityEventTypes="typeWindowStateChanged"
     android:accessibilityFeedbackType="feedbackGeneric"
-    android:accessibilityFlags="flagDefault|flagRequestFilterKeyEvents|flagIncludeNotImportantViews"
+    android:accessibilityFlags="flagDefault|flagRequestFilterKeyEvents"
     android:canRetrieveWindowContent="false"
     android:canRequestFilterKeyEvents="true"
     android:notificationTimeout="100" />

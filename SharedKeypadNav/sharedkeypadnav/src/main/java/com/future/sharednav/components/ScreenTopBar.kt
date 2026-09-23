@@ -1,4 +1,5 @@
 package com.future.sharednav.components
+import com.future.sharednav.focus.animatedFill
 import androidx.compose.foundation.focusable
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -128,7 +129,7 @@ fun TopBarIconButton(
     // כפתור אייקון הוא החריג השני בפירוט הפוקוס (guidelines/focus-spec.html):
     // הסימון שלו הוא רקע ב-30% מההדגשה ובלי מסגרת כלל. ב-22% שהיה כאן
     // הרקע לא נשא את הסימון לבדו, ולכן נוספה לו מסגרת שאינה בעיצוב.
-    val bgColor by animateColorAsState(
+    val bgColor = animateColorAsState(
         if (isFocused) ring.copy(alpha = 0.30f) else textColor.copy(alpha = 0.08f),
         FutureMotion.focusColorSpec,
         label = "topBarIconBtnBg",
@@ -138,7 +139,7 @@ fun TopBarIconButton(
             .size(FutureDimens.rowHeightTopBarButton)
             .focusMotion(interactionSource, focusedScale = 1.08f, pressedScale = 0.92f)
             .clip(CircleShape)
-            .background(bgColor)
+            .animatedFill { bgColor.value }
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             // כפתור שאי אפשר להפעיל (שליחה בלי טקסט) לא מקבל פוקוס בכלל, והאייקון
             // שלו יורד ל-40% - אותו כלל של FutureButton.

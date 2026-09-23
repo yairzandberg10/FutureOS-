@@ -1,5 +1,7 @@
 package com.future.sharednav.components
 
+import com.future.sharednav.focus.animatedFill
+import com.future.sharednav.focus.animatedFocusSurface
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateDpAsState
@@ -77,17 +79,17 @@ fun FutureSwitch(
     modifier: Modifier = Modifier,
 ) {
     val accent = LocalFutureAccent.current ?: theme.readableAccentColor
-    val track by animateColorAsState(
+    val track = animateColorAsState(
         if (checked) accent else Color.Transparent,
         FutureMotion.focusColorSpec,
         label = "switchTrack",
     )
-    val border by animateColorAsState(
+    val border = animateColorAsState(
         if (checked) accent else theme.textAlpha(30),
         FutureMotion.focusColorSpec,
         label = "switchBorder",
     )
-    val thumb by animateColorAsState(
+    val thumb = animateColorAsState(
         if (checked) theme.backgroundColor else theme.textAlpha(40),
         FutureMotion.focusColorSpec,
         label = "switchThumb",
@@ -106,8 +108,7 @@ fun FutureSwitch(
         modifier = modifier
             .size(width = SwitchTrackWidth, height = SwitchTrackHeight)
             .clip(FutureShapes.pill)
-            .background(track)
-            .border(FutureDimens.focusBorderControl, border, FutureShapes.pill)
+            .animatedFocusSurface(FutureShapes.pill, FutureDimens.focusBorderControl, fill = { track.value }, ring = { border.value })
             .padding(FutureDimens.focusBorderControl),
         contentAlignment = Alignment.CenterStart,
     ) {
@@ -116,7 +117,7 @@ fun FutureSwitch(
                 .padding(start = thumbStart)
                 .size(thumbSize)
                 .clip(FutureShapes.pill)
-                .background(thumb),
+                .animatedFill { thumb.value },
         )
     }
 }
@@ -149,7 +150,7 @@ fun FutureChip(
     // צ'יפ לא-לחיץ שהפוקוס שלו מנוהל מבחוץ (רשימה עם keypadListNav).
     val interactionSource = remember { MutableInteractionSource() }
     val ownFocus by interactionSource.collectIsFocusedAsState()
-    val background by animateColorAsState(
+    val background = animateColorAsState(
         when {
             selected -> accent
             focused || ownFocus -> theme.focusFillChipColor
@@ -165,7 +166,7 @@ fun FutureChip(
         fontWeight = FutureTypography.weightMedium,
         modifier = modifier
             .clip(FutureShapes.chip)
-            .background(background)
+            .animatedFill { background.value }
             .then(
                 if (onClick != null) {
                     Modifier
@@ -203,7 +204,7 @@ fun FutureDayChip(
     val accent = LocalFutureAccent.current ?: theme.readableAccentColor
     val interactionSource = remember { MutableInteractionSource() }
     val focused by interactionSource.collectIsFocusedAsState()
-    val background by animateColorAsState(
+    val background = animateColorAsState(
         when {
             selected -> accent
             focused -> accent.copy(alpha = 0.20f)
@@ -212,7 +213,7 @@ fun FutureDayChip(
         FutureMotion.focusColorSpec,
         label = "dayChipBg",
     )
-    val ring by animateColorAsState(
+    val ring = animateColorAsState(
         if (focused && !selected) accent else Color.Transparent,
         FutureMotion.focusColorSpec,
         label = "dayChipRing",
@@ -221,8 +222,7 @@ fun FutureDayChip(
         modifier = modifier
             .size(36.dp)
             .clip(FutureShapes.pill)
-            .background(background)
-            .border(FutureDimens.focusBorderControl, ring, FutureShapes.pill)
+            .animatedFocusSurface(FutureShapes.pill, FutureDimens.focusBorderControl, fill = { background.value }, ring = { ring.value })
             .then(
                 if (onClick != null) {
                     Modifier.clickable(
@@ -308,12 +308,12 @@ fun FutureCheckbox(
     modifier: Modifier = Modifier,
 ) {
     val accent = LocalFutureAccent.current ?: theme.readableAccentColor
-    val fill by animateColorAsState(
+    val fill = animateColorAsState(
         if (checked) accent else Color.Transparent,
         FutureMotion.focusColorSpec,
         label = "checkboxFill",
     )
-    val border by animateColorAsState(
+    val border = animateColorAsState(
         if (checked) accent else theme.subtleTextColor,
         FutureMotion.focusColorSpec,
         label = "checkboxBorder",
@@ -322,8 +322,7 @@ fun FutureCheckbox(
         modifier = modifier
             .size(CheckboxSize)
             .clip(FutureShapes.sm)
-            .background(fill)
-            .border(FutureDimens.focusBorderControl, border, FutureShapes.sm),
+            .animatedFocusSurface(FutureShapes.sm, FutureDimens.focusBorderControl, fill = { fill.value }, ring = { border.value }),
         contentAlignment = Alignment.Center,
     ) {
         if (checked) {

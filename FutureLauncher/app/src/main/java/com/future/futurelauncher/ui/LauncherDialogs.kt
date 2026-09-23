@@ -225,9 +225,7 @@ fun FolderDialog(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.padding(4.dp)
                 ) {
-                    val icon = remember(app.resolveInfo.activityInfo.packageName) {
-                        app.resolveInfo.loadIcon(pm).toBitmap().asImageBitmap()
-                    }
+                    val icon = rememberAppIcon(app.resolveInfo, pm)
                     Surface(
                         modifier = Modifier
                             .size(44.dp)
@@ -237,7 +235,7 @@ fun FolderDialog(
                         border = androidx.compose.foundation.BorderStroke(FutureDimens.focusBorderItem, if (isAppFocused) theme.readableAccentColor else Color.Transparent),
                         onClick = { onAppClick(app) }
                     ) {
-                        Image(bitmap = icon, contentDescription = null, modifier = Modifier.fillMaxSize())
+                        if (icon != null) Image(bitmap = icon, contentDescription = null, modifier = Modifier.fillMaxSize())
                     }
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(text = app.label, color = theme.textColor, fontSize = FutureTypography.caption, maxLines = 1, textAlign = TextAlign.Center)
@@ -534,9 +532,7 @@ fun AppListDialog(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.padding(2.dp)
                 ) {
-                    val icon = remember(app.resolveInfo.activityInfo.packageName) {
-                        app.resolveInfo.loadIcon(pm).toBitmap().asImageBitmap()
-                    }
+                    val icon = rememberAppIcon(app.resolveInfo, pm)
                     Surface(
                         modifier = Modifier
                             .size(40.dp)
@@ -556,7 +552,7 @@ fun AppListDialog(
                         onClick = { onAppClick(app) }
                     ) {
                         Box(contentAlignment = Alignment.Center) {
-                            Image(bitmap = icon, contentDescription = null, modifier = Modifier.fillMaxSize())
+                            if (icon != null) Image(bitmap = icon, contentDescription = null, modifier = Modifier.fillMaxSize())
                         }
                     }
                     Spacer(modifier = Modifier.height(2.dp))

@@ -45,8 +45,20 @@ class HebrewDictionaryDb(context: Context) {
         db = SQLiteDatabase.openDatabase(dbFile.path, null, SQLiteDatabase.OPEN_READONLY)
     }
 
+    // התוצאות האחרונות, לפי רצף ספרות. החיפוש רץ על ה-main thread של ה-IME
+    // בכל לחיצת ספרה, ובקובץ של 345MB גישה ראשונה לדף מהדיסק יכולה לקחת
+    // עשרות מילישניות. מחיקה אחורה ודפדוף בין מועמדות חוזרים בדיוק על
+    // רצפים שכבר נשאלו - מהזיכרון הם חוזרים מיד. המילון לקריאה בלבד, אז
+    // תוצאה שמורה לא מתיישנת.
+    private val cache = android.util.LruCache<String, List<String>>(CACHE_ENTRIES)
+
     /** כל המילים שתואמות לרצף ספרות נתון, ממוינות לפי rank (=סדר עדיפות/תדירות מקורי). */
     fun candidatesFor(digits: String): List<String> {
+        cache.get(digits)?.let { return it }
+        return queryCandidates(digits).also { cache.put(digits, it) }
+    }
+
+    private fun queryCandidates(digits: String): List<String> {
         val words = mutableListOf<String>()
         db.rawQuery(
             "SELECT word FROM words WHERE digits = ? ORDER BY rank LIMIT $MAX_CANDIDATES",
@@ -64,5 +76,7 @@ class HebrewDictionaryDb(context: Context) {
         // הקצרים תואמים עשרות אלפי מילים במילון בגודל הזה, ואין תועלת
         // למשתמש בגלילה דרך יותר מכמה עשרות מועמדים.
         private const val MAX_CANDIDATES = 50
+
+        private const val CACHE_ENTRIES = 256
     }
 }

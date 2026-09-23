@@ -1,8 +1,6 @@
 package com.future.sharednav.focus
 
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
@@ -63,7 +61,7 @@ fun FocusableItem(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    val shape = RoundedCornerShape(cornerRadius)
+    val shape = remember(cornerRadius) { RoundedCornerShape(cornerRadius) }
 
     // ההדגשה המתוקנת של המסך, אם יש כזו. בלעדיה שורה ממוקדת במצב בהיר עם
     // הדגשה לבנה (ברירת המחדל) מקבלת מילוי לבן ומסגרת לבנה על כרטיס לבן -
@@ -77,12 +75,14 @@ fun FocusableItem(
     }
     val ring = if (screenAccent != null && borderColor == accentColor) screenAccent else borderColor
 
-    val backgroundColor by animateColorAsState(
+    // State ולא `by`: הערכים נקראים רק בשלב הציור (animatedFocusSurface), כך
+    // שכל פריים של האנימציה מצייר מחדש בלי להריץ את ה-composition של הפריט.
+    val backgroundColor = animateColorAsState(
         if (isFocused) fill else idleBackgroundColor,
         FutureMotion.focusColorSpec,
         label = "focusableItemBg",
     )
-    val ringColor by animateColorAsState(
+    val ringColor = animateColorAsState(
         if (showBorderOnFocus && isFocused) ring else ring.copy(alpha = 0f),
         FutureMotion.focusColorSpec,
         label = "focusableItemRing",
@@ -93,8 +93,7 @@ fun FocusableItem(
             .bringIntoViewOnFocus()
             .focusMotion(interactionSource, focusedScale = if (scaleOnFocus) focusedScale else 1f)
             .clip(shape)
-            .background(backgroundColor)
-            .border(width = borderWidth, color = ringColor, shape = shape)
+            .animatedFocusSurface(shape, borderWidth, fill = { backgroundColor.value }, ring = { ringColor.value })
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
             .padding(contentPadding),

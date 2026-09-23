@@ -53,7 +53,7 @@ fun SettingItem(
     // משלה, מה שהפך כרטיס אחד עם שלוש שורות לשלוש גלולות נפרדות שנראות כמו
     // שלושה כרטיסים, והקווים המפרידים נבלעו ביניהן. הפוקוס הוא זה שמוסיף
     // מילוי עדין ומסגרת, בלי הגדלה - עקבי עם הפוקוס בשאר המערכת.
-    val bgColor by animateColorAsState(
+    val bgColor = animateColorAsState(
         if (isInteractive && isFocused) theme.textColor.copy(alpha = 0.06f) else Color.Transparent,
         FutureMotion.focusColorSpec,
         label = "settingItemBg"
@@ -62,7 +62,7 @@ fun SettingItem(
     // הפוקוס ממלא את כל רוחב הכרטיס ולוקח את הפינות שלו בשורה הראשונה
     // והאחרונה (cardRowFocus, SettingItem.jsx). קודם השורה הייתה מוסטת 4dp
     // מכל צד עם פינות משלה, כלומר גלולה שצפה בתוך הכרטיס.
-    val borderColor by animateColorAsState(
+    val borderColor = animateColorAsState(
         if (isInteractive && isFocused) theme.futureTheme.readableAccentColor else Color.Transparent,
         FutureMotion.focusColorSpec,
         label = "settingItemBorder"
@@ -84,7 +84,7 @@ fun SettingItem(
             // בכרטיס השורה נוגעת בשפות שלו (והריפוד הפנימי גדל ב-2dp, כך
             // שהגובה והמיקום של הטקסט לא זזו). מחוץ לכרטיס - מוסטת כמו קודם.
             .then(if (inCard) Modifier else Modifier.padding(horizontal = 4.dp, vertical = 2.dp))
-            .cardRowFocus(bgColor, borderColor, fallbackShape = shape)
+            .cardRowFocus({ bgColor.value }, { borderColor.value }, fallbackShape = shape)
             .then(if (isInteractive) Modifier.clickable { onClick!!() } else Modifier)
     ) {
         Row(
@@ -144,13 +144,13 @@ fun SettingSwitch(
     val shape = FutureShapes.lg
     val inCard = LocalFutureCard.current != null
     // אותה לוגיקה כמו ב-SettingItem: השורה שקופה על הכרטיס, והפוקוס מוסיף מילוי ומסגרת.
-    val bgColor by animateColorAsState(
+    val bgColor = animateColorAsState(
         if (isFocused) theme.textColor.copy(alpha = 0.06f) else Color.Transparent,
         FutureMotion.focusColorSpec,
         label = "settingSwitchBg"
     )
 
-    val borderColor by animateColorAsState(
+    val borderColor = animateColorAsState(
         if (isFocused) theme.futureTheme.readableAccentColor else Color.Transparent,
         FutureMotion.focusColorSpec,
         label = "settingSwitchBorder"
@@ -170,7 +170,7 @@ fun SettingSwitch(
             // בכרטיס השורה נוגעת בשפות שלו (והריפוד הפנימי גדל ב-2dp, כך
             // שהגובה והמיקום של הטקסט לא זזו). מחוץ לכרטיס - מוסטת כמו קודם.
             .then(if (inCard) Modifier else Modifier.padding(horizontal = 4.dp, vertical = 2.dp))
-            .cardRowFocus(bgColor, borderColor, fallbackShape = shape)
+            .cardRowFocus({ bgColor.value }, { borderColor.value }, fallbackShape = shape)
             .clickable { onCheckedChange(!checked) }
     ) {
         Row(

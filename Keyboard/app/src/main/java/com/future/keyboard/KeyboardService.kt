@@ -104,16 +104,16 @@ class KeyboardService : InputMethodService() {
     // (ראו onCreate) והקריאה ב-buildEngine קורית ב-thread הראשי.
     @Volatile
     private var hebrewDb: HebrewDictionaryDb? = null
-    private var engine: T9Engine = T9Engine(T9Engine.Language.HEBREW)
+    private var engine: T9Engine = T9Engine(T9Engine.Language.HEBREW, buildIndexInBackground = true)
 
     // כשה-DB עוד לא מוכן (null) מחזירים null, לא רשימה ריקה - כדי ש-T9Engine
     // ייפול חזרה למילון הפנימי הקטן במקום להציג "אין ניבוי" בחלון הקצר של
     // ההעתקה הראשונית (ראו hebrewDb ו-externalCandidates).
     private fun buildEngine(language: T9Engine.Language): T9Engine =
         if (language == T9Engine.Language.HEBREW) {
-            T9Engine(language) { digits -> hebrewDb?.candidatesFor(digits) }
+            T9Engine(language, buildIndexInBackground = true) { digits -> hebrewDb?.candidatesFor(digits) }
         } else {
-            T9Engine(language)
+            T9Engine(language, buildIndexInBackground = true)
         }
 
     // רצף הספרות שנלחצו עד כה - מפתח החיפוש במילון (מיקום אחד לכל אות, בלי
@@ -841,7 +841,20 @@ class KeyboardService : InputMethodService() {
     }
 
     /** בונה את מקרא המקשים מחדש לפי המצב הנוכחי של הפאנל. */
+    // המקרא שכבר מוצג, ובאיזו שורה. renderPanel רץ בכל לחיצת מקש, והמקרא
+    // של מצב ההקלדה זהה בכל הלחיצות - קודם הוא נבנה מחדש כל פעם (חמישה
+    // LinearLayout, עשרה TextView ו-GradientDrawable), כלומר הקצאות ומדידה
+    // מחדש של הפאנל כולו על כל ספרה שהוקלדה. השורה עצמה נבנית מחדש ב-
+    // onCreateInputView (למשל אחרי החלפת ערכת צבעים), ואז ההשוואה לפי
+    // זהות השורה מאלצת בנייה.
+    private var renderedLegend: List<LegendItem>? = null
+    private var renderedLegendRow: View? = null
+
     private fun renderLegend(vararg items: LegendItem) {
+        val requested = items.toList()
+        if (renderedLegendRow === legendRow && renderedLegend == requested) return
+        renderedLegend = requested
+        renderedLegendRow = legendRow
         legendRow.removeAllViews()
         items.forEachIndexed { index, item ->
             val entry = LinearLayout(this).apply {

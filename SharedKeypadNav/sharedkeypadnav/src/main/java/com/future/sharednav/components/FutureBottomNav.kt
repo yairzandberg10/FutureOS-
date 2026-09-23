@@ -1,5 +1,6 @@
 package com.future.sharednav.components
 
+import com.future.sharednav.focus.animatedFill
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -109,7 +110,7 @@ private fun RowScope.NavItem(
     labelSize: androidx.compose.ui.unit.TextUnit,
 ) {
     // הפריט הנבחר רחב יותר כי הוא היחיד שנושא תווית.
-    val background by animateColorAsState(
+    val background = animateColorAsState(
         if (isSelected) pillColor else Color.Transparent,
         FutureMotion.focusColorSpec,
         label = "bottomNavPill",
@@ -124,7 +125,7 @@ private fun RowScope.NavItem(
             modifier = Modifier
                 .height(NavPillHeight)
                 .clip(FutureShapes.pill)
-                .background(background)
+                .animatedFill { background.value }
                 .padding(horizontal = if (isSelected) FutureDimens.spacingMd else 0.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm),

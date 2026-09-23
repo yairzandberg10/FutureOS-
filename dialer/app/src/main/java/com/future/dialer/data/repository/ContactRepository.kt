@@ -10,9 +10,11 @@ import kotlinx.coroutines.withContext
 
 class ContactRepository(private val context: Context) {
 
-    /** מזהה שם איש קשר אמיתי לפי מספר טלפון (למשל לשיחה נכנסת) - אם לא נמצא, מחזיר null. */
-    fun findNameForNumber(number: String): String? {
-        return try {
+    /** מזהה שם איש קשר אמיתי לפי מספר טלפון (למשל לשיחה נכנסת) - אם לא נמצא, מחזיר null.
+     * שאילתה לספק אנשי הקשר (IPC) - ולכן על IO, לא בתוך composition. */
+    suspend fun findNameForNumber(number: String): String? = withContext(Dispatchers.IO) {
+        if (number.isBlank()) return@withContext null
+        try {
             val uri = Uri.withAppendedPath(ContactsContract.PhoneLookup.CONTENT_FILTER_URI, Uri.encode(number))
             context.contentResolver.query(uri, arrayOf(ContactsContract.PhoneLookup.DISPLAY_NAME), null, null, null)?.use { cursor ->
                 if (cursor.moveToFirst()) cursor.getString(0) else null

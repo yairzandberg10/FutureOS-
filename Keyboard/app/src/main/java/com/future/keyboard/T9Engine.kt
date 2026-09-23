@@ -11,6 +11,13 @@ import com.future.sharednav.t9.T9DigitMap
  */
 class T9Engine(
     private val language: Language,
+    // true: האינדקס של השפה נבנה ב-thread רקע ולא בבנאי. KeyboardService בונה
+    // T9Engine על ה-main thread של ה-IME (ב-onCreate ובכל החלפת שפה), והבנייה
+    // הסינכרונית הקפיאה אותו: מילון אנגלי של כ-370,000 מילים לקח כמה שניות,
+    // שבהן המקלדת לא הגיבה לשום מקש. עד שהאינדקס מוכן, candidatesFor מחזיר
+    // רשימה ריקה, וההקלדה ממשיכה ב-multi-tap. false (ברירת המחדל) שומר על
+    // ההתנהגות הסינכרונית - הבדיקות מצפות לתוצאה מיד.
+    private val buildIndexInBackground: Boolean = false,
     // מקור מועמדים חיצוני (למשל [HebrewDictionaryDb]) - כשמסופק ומחזיר תוצאה
     // לא-null, עוקף את המילון הפנימי הקטן בזיכרון עבור השפה הזו. החזרת null
     // (להבדיל מרשימה ריקה) נופלת חזרה למילון הפנימי - כך KeyboardService יכול
@@ -128,12 +135,29 @@ class T9Engine(
             return stream.bufferedReader(Charsets.UTF_8).useLines { lines -> lines.filter { it.isNotBlank() }.toList() }
         }
 
+        // אות -> ספרה, לכל שפה. digitsFor רץ פעם אחת על כל מילה במילון כשבונים
+        // את האינדקס, וקודם הוא חיפש כל אות בסריקה של כל מחרוזות המקשים
+        // (entries.firstOrNull { ch in it.value }) - עשרות השוואות לכל אות,
+        // כפול כ-370,000 מילים באנגלית. טבלה הפוכה הופכת את זה לחיפוש אחד.
+        private val reverseMapCache = java.util.concurrent.ConcurrentHashMap<Language, Map<Char, Char>>()
+
+        private fun reverseMapFor(language: Language): Map<Char, Char> =
+            reverseMapCache.computeIfAbsent(language) { lang ->
+                val reverse = HashMap<Char, Char>()
+                // סדר המקשים נשמר: אם אות מופיעה בשני מקשים, הראשון זוכה - כמו
+                // ה-firstOrNull שהיה כאן.
+                for ((digit, letters) in keyMapFor(lang)) {
+                    for (letter in letters) reverse.putIfAbsent(letter, digit)
+                }
+                reverse
+            }
+
         /** ממיר מילה לרצף הספרות שהיא הייתה מייצרת - המפתח לחיפוש מהיר במילון. */
         fun digitsFor(word: String, language: Language): String {
-            val map = keyMapFor(language)
-            val builder = StringBuilder()
+            val map = reverseMapFor(language)
+            val builder = StringBuilder(word.length)
             for (ch in word) {
-                val digit = map.entries.firstOrNull { ch in it.value }?.key ?: return ""
+                val digit = map[ch] ?: return ""
                 builder.append(digit)
             }
             return builder.toString()
@@ -148,15 +172,53 @@ class T9Engine(
         private val digitIndexCache = java.util.concurrent.ConcurrentHashMap<Language, Map<String, List<String>>>()
 
         private fun digitIndexFor(language: Language): Map<String, List<String>> =
-            digitIndexCache.computeIfAbsent(language) { lang ->
-                // .distinct() שומר על סדר ההופעה הראשון (=פופולריות) אבל מסיר כפילויות
-                // ממשיות במילון - בלעדיו המשתמש רואה שני צ'יפים זהים לאותו רצף ספרות.
-                wordsFor(lang).distinct().groupBy { digitsFor(it, lang) }.filterKeys { it.isNotEmpty() }
+            digitIndexCache.computeIfAbsent(language, ::buildDigitIndex)
+
+        private fun buildDigitIndex(language: Language): Map<String, List<String>> =
+            // .distinct() שומר על סדר ההופעה הראשון (=פופולריות) אבל מסיר כפילויות
+            // ממשיות במילון - בלעדיו המשתמש רואה שני צ'יפים זהים לאותו רצף ספרות.
+            wordsFor(language).distinct().groupBy { digitsFor(it, language) }.filterKeys { it.isNotEmpty() }
+
+        // בנייה ברקע: thread יחיד בעדיפות נמוכה, כדי שבניית אינדקס לא תתחרה ב-
+        // main thread של ה-IME על המעבד. inFlight מונע שתי בניות של אותה שפה.
+        private val inFlight = java.util.concurrent.ConcurrentHashMap.newKeySet<Language>()
+        private val indexExecutor = java.util.concurrent.Executors.newSingleThreadExecutor { task ->
+            Thread(task, "t9-index").apply {
+                isDaemon = true
+                priority = Thread.MIN_PRIORITY
             }
+        }
+
+        /** האינדקס אם הוא כבר מוכן; אחרת מתחיל לבנות אותו ברקע ומחזיר null. */
+        private fun digitIndexOrStartBuilding(language: Language): Map<String, List<String>>? {
+            digitIndexCache[language]?.let { return it }
+            if (inFlight.add(language)) {
+                indexExecutor.execute {
+                    try {
+                        digitIndexCache.computeIfAbsent(language, ::buildDigitIndex)
+                    } catch (t: Throwable) {
+                        // מילון פגום לא מפיל את ה-IME - ההקלדה נשארת ב-multi-tap.
+                        System.err.println("T9 index for $language failed: $t")
+                    } finally {
+                        inFlight.remove(language)
+                    }
+                }
+            }
+            return null
+        }
     }
 
     private val keyMap = keyMapFor(language)
-    private val digitIndex: Map<String, List<String>> = digitIndexFor(language)
+
+    // במצב סינכרוני - נבנה כאן, כמו תמיד. במצב רקע - נקרא בכל חיפוש, כי
+    // האינדקס עשוי להיות מוכן רק אחרי שהמנוע נוצר. בעברית, כשה-DB המלא
+    // זמין, candidatesFor לא מגיע לכאן בכלל - ולכן האינדקס העברי בזיכרון
+    // נבנה רק אם באמת צריך אותו (ה-DB עוד מועתק), ולא בכל הפעלה של ה-IME.
+    private val eagerDigitIndex: Map<String, List<String>>? =
+        if (buildIndexInBackground) null else digitIndexFor(language)
+
+    private val digitIndex: Map<String, List<String>>?
+        get() = eagerDigitIndex ?: digitIndexOrStartBuilding(language)
 
     fun lettersFor(digit: Char): String = keyMap[digit] ?: ""
 
@@ -168,7 +230,7 @@ class T9Engine(
      */
     fun candidatesFor(digits: String, wordFrequency: (String) -> Int = { 0 }): List<String> {
         if (digits.isEmpty()) return emptyList()
-        val base = externalCandidates?.invoke(digits) ?: digitIndex[digits] ?: return emptyList()
+        val base = externalCandidates?.invoke(digits) ?: digitIndex?.get(digits) ?: return emptyList()
         return base.sortedByDescending { wordFrequency(it) }
     }
 

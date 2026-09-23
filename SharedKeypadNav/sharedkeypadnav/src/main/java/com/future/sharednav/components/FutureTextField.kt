@@ -1,4 +1,5 @@
 package com.future.sharednav.components
+import com.future.sharednav.focus.animatedFocusSurface
 import com.future.sharednav.theme.mutedTextColor
 import androidx.compose.foundation.layout.fillMaxWidth
 
@@ -151,7 +152,7 @@ private fun FieldFrame(
     val accent = LocalFutureAccent.current ?: theme.readableAccentColor
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    val ring by animateColorAsState(
+    val ring = animateColorAsState(
         if (isFocused) accent else Color.Transparent,
         FutureMotion.focusColorSpec,
         label = "textFieldRing",
@@ -162,8 +163,12 @@ private fun FieldFrame(
 
     val fieldModifier = modifier
         .clip(FutureShapes.textField)
-        .background(theme.idleFieldColor)
-        .border(FutureDimens.focusBorderControl, ring, FutureShapes.textField)
+        .animatedFocusSurface(
+            FutureShapes.textField,
+            FutureDimens.focusBorderControl,
+            fill = { theme.idleFieldColor },
+            ring = { ring.value },
+        )
         .then(if (requester != null) Modifier.focusRequester(requester) else Modifier)
         .then(
             if (autoFocus && requester != null) Modifier.onGloballyPositioned {

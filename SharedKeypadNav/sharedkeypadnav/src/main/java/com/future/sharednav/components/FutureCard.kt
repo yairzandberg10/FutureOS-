@@ -33,6 +33,7 @@ import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.future.sharednav.focus.animatedFocusSurface
 import com.future.sharednav.theme.FutureDimens
 import com.future.sharednav.theme.FutureElevation
 import com.future.sharednav.theme.FutureShapes
@@ -122,12 +123,27 @@ fun Modifier.cardRowFocus(
     border: Color,
     borderWidth: Dp = FutureDimens.focusBorderControl,
     fallbackShape: Shape = FutureShapes.lg,
+): Modifier = cardRowFocus({ background }, { border }, borderWidth, fallbackShape)
+
+/**
+ * אותו משטח פוקוס, עם הצבעים כ-lambda שנקראת בשלב הציור בלבד. זו הגרסה
+ * לצבעים מונפשים: `cardRowFocus({ bg.value }, { ring.value })` על ה-State
+ * שחוזר מ-animateColorAsState, בלי `by`. כך כל פריים של אנימציית הפוקוס
+ * מצייר מחדש את השורה בלי להריץ את ה-composition שלה (הכותרת, התקציר,
+ * האייקון) - ברשימת הגדרות שמגללים בה עם חץ מוחזק זה ההבדל בין פריים
+ * חלק לפריים שנופל.
+ */
+@Composable
+fun Modifier.cardRowFocus(
+    background: () -> Color,
+    border: () -> Color,
+    borderWidth: Dp = FutureDimens.focusBorderControl,
+    fallbackShape: Shape = FutureShapes.lg,
 ): Modifier {
     val card = LocalFutureCard.current
         ?: return this
             .clip(fallbackShape)
-            .background(background, fallbackShape)
-            .border(borderWidth, border, fallbackShape)
+            .animatedFocusSurface(fallbackShape, borderWidth, background, border)
 
     var top by remember { mutableFloatStateOf(Float.NaN) }
     var bottom by remember { mutableFloatStateOf(Float.NaN) }
@@ -140,7 +156,9 @@ fun Modifier.cardRowFocus(
             bottom = y + row.size.height
         }
         .drawBehind {
-            if (background.alpha == 0f && border.alpha == 0f) return@drawBehind
+            val fillColor = background()
+            val ringColor = border()
+            if (fillColor.alpha == 0f && ringColor.alpha == 0f) return@drawBehind
             // שורה שמרחקה משפת הכרטיס הוא בדיוק הריפוד היא הראשונה/האחרונה.
             // חצי פיקסל של סובלנות - מיקום מעוגל לפיקסלים לא נופל תמיד
             // בדיוק על הערך.
@@ -158,7 +176,7 @@ fun Modifier.cardRowFocus(
                 drawOutline(
                     RoundedCornerShape(topRadius, topRadius, bottomRadius, bottomRadius)
                         .createOutline(fullSize, layoutDirection, this),
-                    background,
+                    fillColor,
                 )
                 // המסגרת נמתחת בתוך הצורה, בפינות קונצנטריות, כך שהיא לא נחתכת
                 // בשפת הכרטיס (Card חותך את כל מה שיוצא מהעיגול שלו).
@@ -176,7 +194,7 @@ fun Modifier.cardRowFocus(
                             layoutDirection,
                             this,
                         ),
-                        border,
+                        ringColor,
                         style = Stroke(stroke),
                     )
                 }

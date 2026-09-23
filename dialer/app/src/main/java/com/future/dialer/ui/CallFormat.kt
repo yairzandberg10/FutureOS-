@@ -38,20 +38,20 @@ object CallFormat {
     fun summaryOf(call: CallRecord): String =
         durationOf(call)?.let { "${labelOf(call.type)} · $it" } ?: labelOf(call.type)
 
-    fun timeOf(call: CallRecord): String = timeFormat.format(Date(call.timestamp))
+    fun timeOf(call: CallRecord): String = timeFormat.formatSafely(call.timestamp)
 
     /** שעה להיום, "אתמול", ותאריך קצר לפני כן - למסך איש הקשר, שאין בו כותרות יום. */
     fun whenOf(call: CallRecord): String = when (dayOffset(call.timestamp)) {
         0 -> timeOf(call)
         1 -> "אתמול"
-        else -> shortDate.format(Date(call.timestamp))
+        else -> shortDate.formatSafely(call.timestamp)
     }
 
     /** כותרת יום ביומן: "היום", "אתמול", או "יום שני, 21 בספטמבר". */
     fun dayTitle(timestamp: Long): String = when (dayOffset(timestamp)) {
         0 -> "היום"
         1 -> "אתמול"
-        else -> dayFormat.format(Date(timestamp))
+        else -> dayFormat.formatSafely(timestamp)
     }
 
     private fun dayOffset(timestamp: Long): Int {
@@ -63,6 +63,11 @@ object CallFormat {
         val yesterday = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -1) }
         return if (same(at, yesterday)) 1 else 2
     }
+
+    // SimpleDateFormat לא בטוח לשימוש מכמה threads, והיומן מפורמט עכשיו ברקע
+    // (CallsViewModel.callDays) בזמן שמסך איש הקשר מפרמט על ה-main thread.
+    private fun SimpleDateFormat.formatSafely(timestamp: Long): String =
+        synchronized(this) { format(Date(timestamp)) }
 
     private val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
     private val shortDate = SimpleDateFormat("d.M", Locale.getDefault())

@@ -1,5 +1,6 @@
 package com.future.sharednav.components
 
+import com.future.sharednav.focus.animatedFocusSurface
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -62,7 +63,7 @@ fun FutureCapsule(
     val accent = LocalFutureAccent.current ?: theme.readableAccentColor
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    val ring by animateColorAsState(
+    val ring = animateColorAsState(
         if (isFocused) accent else Color.Transparent,
         FutureMotion.focusColorSpec,
         label = "capsuleRing",
@@ -72,8 +73,12 @@ fun FutureCapsule(
     Column(
         modifier = modifier
             .clip(shape)
-            .background(if (active) accent.copy(alpha = 0.20f) else theme.textAlpha(8))
-            .border(FutureDimens.focusBorderControl, ring, shape)
+            .animatedFocusSurface(
+                shape,
+                FutureDimens.focusBorderControl,
+                fill = { if (active) accent.copy(alpha = 0.20f) else theme.textAlpha(8) },
+                ring = { ring.value },
+            )
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .bringIntoViewOnFocus()
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
@@ -133,12 +138,12 @@ fun FutureRoundCapsule(
     val accent = LocalFutureAccent.current ?: theme.readableAccentColor
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    val ring by animateColorAsState(
+    val ring = animateColorAsState(
         if (isFocused) accent else Color.Transparent,
         FutureMotion.focusColorSpec,
         label = "roundCapsuleRing",
     )
-    val fill by animateColorAsState(
+    val fill = animateColorAsState(
         if (active) accent.copy(alpha = 0.20f) else theme.textAlpha(8),
         FutureMotion.focusColorSpec,
         label = "roundCapsuleFill",
@@ -148,8 +153,7 @@ fun FutureRoundCapsule(
         modifier = modifier
             .size(size)
             .clip(shape)
-            .background(fill)
-            .border(FutureDimens.focusBorderControl, ring, shape)
+            .animatedFocusSurface(shape, FutureDimens.focusBorderControl, fill = { fill.value }, ring = { ring.value })
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .bringIntoViewOnFocus()
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick),

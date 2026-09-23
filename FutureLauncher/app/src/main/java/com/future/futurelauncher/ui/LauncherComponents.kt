@@ -1,4 +1,11 @@
 package com.future.futurelauncher.ui
+import androidx.compose.runtime.Composable
+import androidx.compose.foundation.layout.Spacer
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
+import android.content.pm.ResolveInfo
 import androidx.compose.material.icons.rounded.Widgets
 import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Icon
@@ -45,16 +52,44 @@ import com.future.sharednav.theme.FutureTheme
  * שוב, כל 16 האייקונים שבו נטענים מהדיסק מחדש (loadIcon+toBitmap, פעולה
  * יקרה יחסית), מה שגרם לתחושת "תקיעה" בדיוק ברגע המעבר בין דפים.
  */
-private object AppIconCache {
-    private val cache = mutableMapOf<String, ImageBitmap>()
+internal object AppIconCache {
+    // ConcurrentHashMap: האייקונים נטענים ב-Dispatchers.IO (rememberAppIcon,
+    // ו-preload מתוך LauncherViewModel.loadData) ונקראים מה-main thread.
+    private val cache = java.util.concurrent.ConcurrentHashMap<String, ImageBitmap>()
 
-    fun get(packageName: String, load: () -> ImageBitmap): ImageBitmap {
-        return cache.getOrPut(packageName, load)
+    fun peek(packageName: String): ImageBitmap? = cache[packageName]
+
+    /** טוען (אם צריך) ומחזיר - חוסם, לקרוא רק מ-thread רקע. */
+    fun load(pm: PackageManager, resolveInfo: ResolveInfo): ImageBitmap {
+        val packageName = resolveInfo.activityInfo.packageName
+        cache[packageName]?.let { return it }
+        return resolveInfo.loadIcon(pm).toBitmap().asImageBitmap().also { cache[packageName] = it }
     }
 
     fun evict(packageName: String) {
         cache.remove(packageName)
     }
+}
+
+/**
+ * האייקון של אפליקציה, בלי לחסום את ה-main thread. קודם loadIcon+toBitmap
+ * רץ בתוך ה-composition עצמו: בפתיחה הראשונה של הלאנצ'ר (אחרי אתחול או
+ * אחרי שהתהליך נהרג) כל האייקונים בדף פוענחו ברצף בפריים הראשון, ומסך הבית
+ * הופיע באיחור. עכשיו אייקון שכבר במטמון מוצג מיד, ואחר נטען ברקע ומופיע
+ * כשהוא מוכן. LauncherViewModel טוען מראש את כולם יחד עם רשימת האפליקציות,
+ * כך שבפועל גם בפתיחה הראשונה הם כבר שם.
+ */
+@Composable
+internal fun rememberAppIcon(resolveInfo: ResolveInfo, pm: PackageManager): ImageBitmap? {
+    val packageName = resolveInfo.activityInfo.packageName
+    val icon by produceState(initialValue = AppIconCache.peek(packageName), packageName) {
+        if (value == null) {
+            value = withContext(Dispatchers.IO) {
+                runCatching { AppIconCache.load(pm, resolveInfo) }.getOrNull()
+            }
+        }
+    }
+    return icon
 }
 
 /**
@@ -190,10 +225,10 @@ fun ItemPanel(
         ) {
             when (item) {
                 is LauncherItem.App -> {
-                    val icon = AppIconCache.get(item.resolveInfo.activityInfo.packageName) {
-                        item.resolveInfo.loadIcon(pm).toBitmap().asImageBitmap()
+                    val icon = rememberAppIcon(item.resolveInfo, pm)
+                    if (icon != null) {
+                        Image(bitmap = icon, contentDescription = null, modifier = Modifier.fillMaxSize())
                     }
-                    Image(bitmap = icon, contentDescription = null, modifier = Modifier.fillMaxSize())
                 }
                 is LauncherItem.Folder -> {
                     LazyVerticalGrid(
@@ -203,14 +238,16 @@ fun ItemPanel(
                     ) {
                         items(minOf(item.apps.size, 4)) { index ->
                             val app = item.apps[index]
-                            val icon = AppIconCache.get(app.resolveInfo.activityInfo.packageName) {
-                                app.resolveInfo.loadIcon(pm).toBitmap().asImageBitmap()
+                            val icon = rememberAppIcon(app.resolveInfo, pm)
+                            if (icon != null) {
+                                Image(
+                                    bitmap = icon,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp).clip(RoundedCornerShape(percent = 28))
+                                )
+                            } else {
+                                Spacer(Modifier.size(16.dp))
                             }
-                            Image(
-                                bitmap = icon,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp).clip(RoundedCornerShape(percent = 28))
-                            )
                         }
                     }
                 }

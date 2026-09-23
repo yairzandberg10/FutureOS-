@@ -4,6 +4,71 @@ This repo has no carried-over git history (see root [README](README.md)), so thi
 
 ## Unreleased
 
+### Performance: release builds, a quieter system shell, draw-phase focus
+
+A pass over the whole system for speed and smoothness. Nothing here changes
+how anything looks or behaves.
+
+- **The device runs release builds now, compiled ahead of time.** Every app
+  was installed as a debuggable debug build: no R8, and `debuggable` turns off
+  ART's ahead-of-time compilation, so all of Compose ran interpreted/JIT
+  (`dumpsys package dexopt` showed `run-from-apk` for every app). Release is
+  now signed with the local debug key when there is no `keystore.properties`,
+  so it installs over the existing debug install without losing data, and
+  every install is followed by `cmd package compile -m speed`. The build
+  picker and `build-all.sh --install` do both; CLAUDE.md has the new commands.
+  The shared R8 rules also kept every `@Composable` method in every class,
+  which stopped R8 from optimizing any UI code at all — removed. Release lint
+  skips `ExpiredTargetSdkVersion`, a Google Play rule (targetSdk is 31 on
+  purpose, for the Android 12 device).
+- **Calls (dialer): the call log is a lazy list.** The log tab built every
+  call on the phone at once (500+ rows, each a focusable row with its own
+  animations) on every visit to the tab. It is now a `LazyColumn` with one
+  item per day, so the same day header + card are built only when on screen.
+  Day grouping and the row texts are computed once per load in the
+  ViewModel on `Dispatchers.Default`; the call log query asks for the six
+  columns it shows instead of all of them; overlapping refreshes (init,
+  resume, call ended) no longer run duplicate queries; the dialpad's contact
+  match runs off the main thread; the caller-name lookup (a ContentProvider
+  query) moved out of composition to IO; and the search screen's contact list
+  is loaded when search opens instead of at app start.
+- **FutureUI's accessibility services no longer receive every event on the
+  phone.** All four shared one config with `typeAllMask`, so every scroll,
+  content change and text change in every app was delivered four times to
+  FutureUI's main thread — the same thread that filters every key press.
+  Three of them had an empty `onAccessibilityEvent`; the lock screen only
+  reads `TYPE_WINDOW_STATE_CHANGED`. Each now subscribes to exactly that one
+  event (`accessibility_service_keys.xml` / `accessibility_service_config.xml`).
+- **System state is read off the main thread.** `ControlManager.updateStates`
+  (a dozen binder calls, two reflection lookups and a ContentProvider query to
+  the keyboard) ran on the main thread every 500ms while the control center was
+  open and every 15s in the status bar. It now reads on `Dispatchers.IO`,
+  coalesces overlapping refreshes, and caches the reflection lookups; the media
+  controller lookup moved off the main thread too. The status bar clock and
+  battery are driven by `TIME_TICK` / `BATTERY_CHANGED` instead of the poll, so
+  the clock also changes exactly on the minute.
+- **Focus animations are drawn, not recomposed.** Every focus component in
+  SharedKeypadNav read its animated colours during composition, so each frame
+  of the 90ms focus animation recomposed the row it was on — two rows per key
+  press, continuously while an arrow key is held. `FocusableItem`,
+  `dpadFocusBorder`, `cardRowFocus`, `FutureSettingItem`, `FutureButton`,
+  `FutureOptionsMenu`, `FutureTabRow`, `FutureTextField`, `ScreenTopBar`,
+  `FutureBottomNav`, `FutureSwitch`/`Chip`/`DayChip`/`Checkbox` and the
+  capsules now read them in the draw phase (`animatedFocusSurface`,
+  `animatedFill`, and a lambda overload of `cardRowFocus`), and Settings' own
+  rows use the same overload.
+- **Keyboard.** The T9 index for a language was built on the IME's main thread
+  when the engine was created — for English (~370,000 words) that froze the
+  keyboard for seconds on the first switch. It now builds on a background
+  thread (typing falls back to multi-tap until it is ready), `digitsFor` uses a
+  letter→digit table instead of scanning every key string per letter, the
+  in-memory Hebrew index is only built if the SQLite dictionary is not ready,
+  Hebrew lookups are cached (LRU, 256 sequences), and the key legend is no
+  longer rebuilt from new views on every key press.
+- **Launcher icons** are decoded on a background thread and preloaded together
+  with the app list, instead of `loadIcon().toBitmap()` inside composition on
+  the first frame of the home screen.
+
 ### Card focus, the calls redesign, Bluetooth, and a translation app
 
 Three UI kits that shipped with the design system but had no code behind them

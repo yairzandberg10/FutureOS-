@@ -2,11 +2,8 @@ package com.future.sharednav.focus
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
@@ -37,12 +34,14 @@ fun Modifier.dpadFocusBorder(
         FutureMotion.focusScaleSpec,
         label = "dpadFocusScale",
     )
-    val bgColor by animateColorAsState(
+    // כמו ב-FocusableItem: הצבעים נקראים בשלב הציור בלבד (animatedFocusSurface),
+    // לא ב-composition - אנימציית הפוקוס לא מריצה recomposition בכל פריים.
+    val bgColor = animateColorAsState(
         if (isFocused) accent.copy(alpha = 0.14f) else Color.Transparent,
         FutureMotion.focusColorSpec,
         label = "dpadFocusBg",
     )
-    val ringColor by animateColorAsState(
+    val ringColor = animateColorAsState(
         if (isFocused) accent else accent.copy(alpha = 0f),
         FutureMotion.focusColorSpec,
         label = "dpadFocusRing",
@@ -53,6 +52,5 @@ fun Modifier.dpadFocusBorder(
             scaleX = scale.value
             scaleY = scale.value
         }
-        .background(bgColor, shape)
-        .border(width = FutureDimens.focusBorderWidth, color = ringColor, shape = shape)
+        .animatedFocusSurface(shape, FutureDimens.focusBorderWidth, fill = { bgColor.value }, ring = { ringColor.value })
 }

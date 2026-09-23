@@ -13,6 +13,7 @@
 
 ## פקודות אוטומטיות ובנייה (ADB Workflow Commands)
 - בסיום כל שינוי קוד, בצע בנייה והתקנה אוטומטית של האפליקציה על המכשיר באמצעות ADB.
-- פקודת בנייה והתקנה: `./gradlew installDebug` (או פקודת ה-Build של הפריימוורק שלך).
+- פקודת בנייה והתקנה: `./gradlew installRelease` (לא installDebug - על המכשיר רצה גרסת release: R8 פעיל ולא debuggable, חתומה במפתח ה-debug כשאין keystore.properties, ולכן מתקינה מעל התקנת debug בלי לאבד נתונים).
+- אחרי כל התקנה, קומפילציה מראש של ART: `adb shell cmd package compile -m speed -f <PACKAGE_NAME>` - בלי זה האפליקציה רצה בלי קומפילציה בכלל (run-from-apk) עד ה-dexopt של הלילה.
 - פקודת הרצה (מבוססת ADB): `adb shell am start -n <YOUR_PACKAGE_NAME>/<YOUR_ACTIVITY_NAME>`
 - בסיום כל שינוי קוד, העלה את הגרסה החדשה לגיט עם הסבר על הגרסה החדשה מה חדש  ותעלה לריפו בלינק:   https://github.com/yairzandberg10/FutureOS-.git

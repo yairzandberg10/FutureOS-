@@ -16,11 +16,13 @@
 -keep public class * extends android.accessibilityservice.AccessibilityService
 -keep public class * extends android.inputmethodservice.InputMethodService
 
-# Compose ו-Kotlin: מטא-דאטה שנדרשת ב-runtime.
+# Kotlin: מטא-דאטה שנדרשת ב-runtime.
 -keep class kotlin.Metadata { *; }
--keepclassmembers class ** {
-    @androidx.compose.runtime.Composable <methods>;
-}
+
+# פונקציות @Composable לא נשמרות כאן בכוונה. היה כאן keepclassmembers על
+# כולן, בכל מחלקה - כלל שמונע מ-R8 להסיר, לשנות שם, ובעיקר לבצע inlining
+# ואופטימיזציה לכל ה-UI של המערכת, ו-Compose עצמו לא צריך אותו: אף
+# composable לא נקרא ב-reflection, ו-Compose מביא כללי consumer משלו.
 
 # Room יוצרת מימושים בזמן קומפילציה ומאתרת אותם בשמם.
 -keep class * extends androidx.room.RoomDatabase { *; }

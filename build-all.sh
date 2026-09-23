@@ -12,7 +12,7 @@
 # מכניסה אותה לכאן אוטומטית ואי אפשר שהרשימה תתיישן שוב.
 #
 # שימוש:
-#   ./build-all.sh              # assembleDebug בכל האפליקציות
+#   ./build-all.sh              # assembleDebug בכל האפליקציות (בדיקת קומפילציה)
 #   ./build-all.sh --install    # גם adb install -r אחרי כל בנייה מוצלחת
 #
 # יוצא עם קוד שגיאה != 0 אם אפליקציה כלשהי נכשלה, אחרי שניסה את כולן
@@ -67,18 +67,29 @@ SUCCEEDED=()
 for app in "${APPS[@]}"; do
     echo ""
     echo "=== $app ==="
-    (cd "$SCRIPT_DIR/$app" && ./gradlew assembleDebug)
+    # בלי התקנה - בדיקת קומפילציה מהירה (debug, כמו ב-CI). עם התקנה - release:
+    # זו הגרסה שרצה על המכשיר (R8, לא debuggable, חתומה במפתח ה-debug כשאין
+    # keystore.properties - ר' app/build.gradle.kts).
+    if [[ "$INSTALL" == true ]]; then TASK=assembleRelease; VARIANT=release; else TASK=assembleDebug; VARIANT=debug; fi
+    (cd "$SCRIPT_DIR/$app" && ./gradlew "$TASK")
     if [[ $? -ne 0 ]]; then
-        echo "!! $app נכשל ב-assembleDebug"
+        echo "!! $app נכשל ב-$TASK"
         FAILED+=("$app")
         continue
     fi
     SUCCEEDED+=("$app")
 
     if [[ "$INSTALL" == true ]]; then
-        apk="$SCRIPT_DIR/$app/app/build/outputs/apk/debug/app-debug.apk"
+        apk="$SCRIPT_DIR/$app/app/build/outputs/apk/$VARIANT/app-$VARIANT.apk"
         if [[ -f "$apk" ]]; then
-            "$ADB" install -r "$apk" || FAILED+=("$app (install)")
+            if "$ADB" install -r "$apk"; then
+                # קומפילציה מראש: אחרי adb install ה-APK רץ בלי קומפילציה בכלל
+                # (run-from-apk) עד ה-dexopt של הלילה.
+                pkg=$(sed -n 's/.*applicationId *= *"\([^"]*\)".*/\1/p' "$SCRIPT_DIR/$app/app/build.gradle.kts" | head -1)
+                [[ -n "$pkg" ]] && "$ADB" shell cmd package compile -m speed -f "$pkg"
+            else
+                FAILED+=("$app (install)")
+            fi
         else
             echo "!! לא נמצא APK עבור $app אחרי בנייה מוצלחת - נתיב לא צפוי?"
             FAILED+=("$app (apk missing)")

@@ -2,12 +2,13 @@ package com.future.dialer.ui.calllog
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Call
 import androidx.compose.material.icons.rounded.CallMissed
@@ -18,10 +19,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import com.future.dialer.data.model.CallRecord
-import com.future.dialer.data.model.CallType
 import com.future.dialer.ui.CallFormat
 import com.future.dialer.ui.CallsViewModel
 import com.future.sharednav.components.EmptyState
@@ -53,16 +53,22 @@ fun CallLogScreen(
 ) {
     val theme = LocalFutureTheme.current
     val type = rememberFutureType()
-    val recentCalls by viewModel.recentCalls.collectAsState()
-
-    val shown = remember(recentCalls, showMissedOnly) {
-        if (showMissedOnly) recentCalls.filter { it.type == CallType.MISSED } else recentCalls
-    }
-    val groups = remember(shown) { groupByDay(shown) }
+    // מקובץ ומפורמט מראש ב-ViewModel, ברקע.
+    val allDays by viewModel.callDays.collectAsState()
+    val missedDays by viewModel.missedCallDays.collectAsState()
+    val groups = if (showMissedOnly) missedDays else allDays
 
     val firstRow = remember { FocusRequester() }
     LaunchedEffect(groups.isNotEmpty(), showMissedOnly) {
-        if (groups.isNotEmpty()) runCatching { firstRow.requestFocus() }
+        if (groups.isEmpty()) return@LaunchedEffect
+        // השורה הראשונה נבנית רק בשלב ה-layout של הרשימה העצלה, אחרי ה-
+        // composition - מחכים פריים (או שניים) עד שהיא מחוברת.
+        repeat(3) {
+            // גרסאות Compose שונות: זורק כשהשורה לא מחוברת, או מחזיר false.
+            val result = runCatching { firstRow.requestFocus() }.getOrNull()
+            if (result != null && result != false) return@LaunchedEffect
+            withFrameNanos { }
+        }
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -95,43 +101,42 @@ fun CallLogScreen(
             return@Column
         }
 
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .verticalScroll(rememberScrollState())
-                .padding(bottom = FutureDimens.spacingLg),
+        // רשימה עצלה, יום לכל פריט: רק הימים שעל המסך נבנים. קודם כל היומן
+        // (מאות שיחות, כל אחת שורה עם פוקוס ואנימציה) נבנה בבת אחת בכל כניסה
+        // לטאב - זו הייתה עיקר האיטיות של האפליקציה. כל יום נשאר כותרת +
+        // כרטיס אחד, כך שהמראה זהה.
+        val firstId = groups.first().rows.first().call.id
+        LazyColumn(
+            modifier = Modifier.weight(1f),
+            contentPadding = PaddingValues(bottom = FutureDimens.spacingLg),
         ) {
-            val firstId = groups.first().second.first().id
-            groups.forEach { (day, calls) ->
-                FutureSectionHeader(day, theme = theme)
-                FutureCard(theme = theme) {
-                    calls.forEachIndexed { index, call ->
-                        if (index > 0) FutureDivider(theme = theme)
-                        FutureSettingItem(
-                            title = call.name ?: call.phoneNumber,
-                            summary = CallFormat.summaryOf(call),
-                            icon = CallFormat.iconOf(call.type),
-                            theme = theme,
-                            showChevron = false,
-                            focusRequester = if (call.id == firstId) firstRow else null,
-                            onClick = { onOpen(call.name.orEmpty(), call.phoneNumber) },
-                            trailing = {
-                                Text(
-                                    CallFormat.timeOf(call),
-                                    color = theme.subtleTextColor,
-                                    fontSize = type.summary,
-                                )
-                            },
-                        )
+            items(groups, key = { it.title }) { day ->
+                Column {
+                    FutureSectionHeader(day.title, theme = theme)
+                    FutureCard(theme = theme) {
+                        day.rows.forEachIndexed { index, row ->
+                            if (index > 0) FutureDivider(theme = theme)
+                            val call = row.call
+                            FutureSettingItem(
+                                title = row.title,
+                                summary = row.summary,
+                                icon = CallFormat.iconOf(call.type),
+                                theme = theme,
+                                showChevron = false,
+                                focusRequester = if (call.id == firstId) firstRow else null,
+                                onClick = { onOpen(call.name.orEmpty(), call.phoneNumber) },
+                                trailing = {
+                                    Text(
+                                        row.time,
+                                        color = theme.subtleTextColor,
+                                        fontSize = type.summary,
+                                    )
+                                },
+                            )
+                        }
                     }
                 }
             }
         }
     }
 }
-
-/** קיבוץ לפי יום, בסדר יורד - "היום", "אתמול", ואז תאריך מלא. */
-private fun groupByDay(calls: List<CallRecord>): List<Pair<String, List<CallRecord>>> =
-    calls.sortedByDescending { it.timestamp }
-        .groupBy { CallFormat.dayTitle(it.timestamp) }
-        .toList()

@@ -1,5 +1,7 @@
 package com.future.sharednav.components
 
+import androidx.compose.ui.graphics.graphicsLayer
+import com.future.sharednav.focus.animatedFocusSurface
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
@@ -113,12 +115,12 @@ internal fun FutureButtonCore(
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
 
-    val opacity by animateFloatAsState(
+    val opacity = animateFloatAsState(
         if (quiet) 1f else if (isFocused) baseAlpha else baseAlpha * 0.7f,
         FutureMotion.fast(),
         label = "buttonOpacity",
     )
-    val ring by animateColorAsState(
+    val ring = animateColorAsState(
         if (isFocused && !quiet) ringColor else Color.Transparent,
         FutureMotion.focusColorSpec,
         label = "buttonRing",
@@ -130,9 +132,8 @@ internal fun FutureButtonCore(
             .then(if (fillMaxWidth) Modifier.fillMaxWidth() else Modifier)
             .height(FutureDimens.rowHeightDialogButton)
             .clip(shape)
-            .alpha(opacity)
-            .background(fill)
-            .border(FutureDimens.focusBorderControl, ring, shape)
+            .graphicsLayer { alpha = opacity.value }
+            .animatedFocusSurface(shape, FutureDimens.focusBorderControl, fill = { fill }, ring = { ring.value })
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             // כפתור שאי אפשר להפעיל גם לא מקבל פוקוס - "Anything that cannot
             // receive focus cannot be activated at all" (README של הדיזיין סיסטם).

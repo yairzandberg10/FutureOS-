@@ -120,6 +120,12 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 }
             }
 
+            // פענוח האייקונים מתחיל כבר עכשיו ברקע, במקביל לבניית הדפים, כדי
+            // שכשמסך הבית מורכב לראשונה הם כבר במטמון (ר' rememberAppIcon).
+            launch(Dispatchers.IO) {
+                apps.forEach { app -> runCatching { AppIconCache.load(pm, app.resolveInfo) } }
+            }
+
             if (savedPagesJsons.isNotEmpty()) {
                 val reconstructedPages = mutableListOf<List<LauncherItem>>()
                 val remainingApps = apps.toMutableList()

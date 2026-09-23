@@ -1,5 +1,6 @@
 package com.future.sharednav.components
 
+import com.future.sharednav.focus.animatedFill
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -119,7 +120,7 @@ fun FutureMenuRow(
     val type = rememberFutureType()
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    val background by animateColorAsState(
+    val background = animateColorAsState(
         if (isFocused) theme.focusFillMenuColor else Color.Transparent,
         FutureMotion.focusColorSpec,
         label = "menuRowBg",
@@ -138,7 +139,7 @@ fun FutureMenuRow(
         modifier = Modifier
             .fillMaxWidth()
             .height(FutureDimens.rowHeightMenu)
-            .background(background)
+            .animatedFill { background.value }
             .then(if (requester != null) Modifier.focusRequester(requester) else Modifier)
             .then(
                 if (isFirst && requester != null) Modifier.onGloballyPositioned {

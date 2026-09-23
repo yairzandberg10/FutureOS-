@@ -23,7 +23,11 @@ import com.future.sharednav.root.RootShell
 import androidx.compose.runtime.getValue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableLongStateOf
@@ -75,6 +79,35 @@ class ControlManager(private val context: Context) {
     private var activeController: MediaController? = null
     
     private val scope = CoroutineScope(Dispatchers.IO)
+
+    // מוגדרים כאן, לפני init, ולא ליד updateStates שמשתמשת בהם: init קורא ל-
+    // updateStates, ו-Kotlin מאתחל שדות לפי סדר הופעתם בקובץ - שדה שמוגדר אחרי
+    // init עדיין null כשהוא רץ. אותו דבר ל-lazy: אובייקט ה-delegate עצמו
+    // נוצר במקומו בקובץ, וה-thread ברקע ניגש אליו מיד.
+    private val mainScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private var refreshJob: Job? = null
+    private var refreshQueued = false
+    private var mediaRefreshJob: Job? = null
+
+    // ה-Method של ה-reflection נמצא פעם אחת ונשמר. קודם getDeclaredMethod רץ
+    // מחדש בכל ריענון (כל 500ms במרכז הבקרה), וכשהמתודה חסומה ב-hidden API
+    // של אנדרואיד 12 כל ניסיון כזה גם בנה NoSuchMethodException עם stack trace.
+    // null פירושו "חיפשנו ואין" - לא מחפשים שוב.
+    private val mobileDataMethod: java.lang.reflect.Method? by lazy {
+        try {
+            connectivityManager?.javaClass?.getDeclaredMethod("getMobileDataEnabled")?.apply { isAccessible = true }
+        } catch (t: Throwable) {
+            null
+        }
+    }
+
+    private val bluetoothIsConnectedMethod: java.lang.reflect.Method? by lazy {
+        try {
+            android.bluetooth.BluetoothDevice::class.java.getMethod("isConnected")
+        } catch (t: Throwable) {
+            null
+        }
+    }
 
     /**
      * מריץ פקודת root ומחזיר אם היא באמת הצליחה.
@@ -151,6 +184,7 @@ class ControlManager(private val context: Context) {
      * יש לקרוא לזה מתוך onDestroy()/onInterrupt() של השירות שמחזיק את המופע הזה.
      */
     fun dispose() {
+        mainScope.cancel()
         try {
             context.contentResolver.unregisterContentObserver(settingsObserver)
         } catch (t: Throwable) {
@@ -221,12 +255,27 @@ class ControlManager(private val context: Context) {
         }
     }
 
+    /**
+     * מרכז הבקרה קורא לזה כל 500ms. החיפוש עצמו (הגדרת Secure וקריאת binder
+     * ל-MediaSessionManager) רץ ברקע, כמו ב-[updateStates]; רק ההחלפה של
+     * ה-controller חוזרת ל-main thread, כי registerCallback בלי Handler נרשם
+     * על ה-Looper של ה-thread שקורא לו.
+     */
     fun updateMediaController() {
-        isMediaServiceEnabled = MediaControlService.isEnabled(context)
+        if (mediaRefreshJob?.isActive == true) return
+        mediaRefreshJob = mainScope.launch {
+            val (enabled, controllers) = withContext(Dispatchers.IO) {
+                val enabled = MediaControlService.isEnabled(context)
+                enabled to if (enabled) MediaControlService.getActiveControllers(context) else emptyList()
+            }
+            applyMediaController(enabled, controllers.firstOrNull())
+        }
+    }
+
+    private fun applyMediaController(enabled: Boolean, newController: MediaController?) {
+        isMediaServiceEnabled = enabled
         if (!isMediaServiceEnabled) return
 
-        val controllers = MediaControlService.getActiveControllers(context)
-        val newController = controllers.firstOrNull()
         hasActiveMedia = newController != null
 
         if (newController?.packageName != activeController?.packageName) {
@@ -589,47 +638,114 @@ class ControlManager(private val context: Context) {
         }
     }
 
+    /**
+     * מרענן את כל מצבי המערכת. לא חוסם: הקריאות עצמן רצות ב-thread רקע,
+     * ורק ההשמה לשדות חוזרת ל-main thread.
+     *
+     * קודם כל הקריאה הזו רצה על ה-main thread - בערך תריסר קריאות binder
+     * (אודיו, התראות, Bluetooth, Wi-Fi, מיקום, חשמל), שתי קריאות reflection,
+     * ושאילתת ContentProvider לתהליך של המקלדת. מרכז הבקרה קרא לה כל 500ms
+     * כל עוד הוא פתוח, ושורת המצב כל 15 שניות תמיד. ה-main thread של FutureUI
+     * הוא גם זה שעונה למסנן המקשים של שירותי הנגישות, כך שכל ריענון כזה
+     * עיכב את לחיצת המקש הבאה בכל הטלפון, והפוקוס במרכז הבקרה קפץ בגמגום.
+     *
+     * קריאות שמגיעות בזמן שריענון כבר רץ לא פותחות ריענון מקביל - הן רק
+     * מסמנות שצריך עוד סבב אחד כשהנוכחי מסתיים, כדי שהתוצאה האחרונה תמיד
+     * תשקף את המצב אחרי הקריאה האחרונה.
+     *
+     * נקראת רק מה-main thread (LaunchedEffect, ה-ContentObserver שרשום על
+     * ה-main looper, ו-init מתוך onCreate של השירות) - לכן refreshJob ו-
+     * refreshQueued לא צריכים סנכרון.
+     */
     fun updateStates() {
-        volumeLevel = getCurrentVolume()
-        brightnessLevel = getCurrentBrightness()
-        isDndOn = notificationManager?.currentInterruptionFilter?.let { it != NotificationManager.INTERRUPTION_FILTER_ALL } ?: false
-        isRotateOn = try { Settings.System.getInt(context.contentResolver, Settings.System.ACCELEROMETER_ROTATION, 0) == 1 } catch(t: Throwable) { false }
-        isPredictiveTextOn = try { com.future.sharednav.keyboard.KeyboardSettingsClient.isPredictiveEnabled(context) } catch (t: Throwable) { true }
-        isBluetoothOn = bluetoothAdapter?.isEnabled ?: false
-        isWifiOn = try { wifiManager?.isWifiEnabled ?: false } catch (t: Throwable) { false }
-        isAirplaneOn = try { Settings.Global.getInt(context.contentResolver, Settings.Global.AIRPLANE_MODE_ON, 0) != 0 } catch(t: Throwable) { false }
-        
-        isLocationOn = try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                locationManager?.isLocationEnabled ?: false
-            } else {
-                @Suppress("DEPRECATION")
-                val mode = Settings.Secure.getInt(context.contentResolver, Settings.Secure.LOCATION_MODE, Settings.Secure.LOCATION_MODE_OFF)
-                mode != Settings.Secure.LOCATION_MODE_OFF
-            }
-        } catch(t: Throwable) { false }
-
-        isDataOn = try {
-            val method = connectivityManager?.javaClass?.getDeclaredMethod("getMobileDataEnabled")
-            method?.isAccessible = true
-            method?.invoke(connectivityManager) as? Boolean ?: false
-        } catch(t: Throwable) {
-            // Fallback for newer Android or if reflection fails
-            false
+        if (refreshJob?.isActive == true) {
+            refreshQueued = true
+            return
         }
+        refreshJob = mainScope.launch {
+            do {
+                refreshQueued = false
+                val states = withContext(Dispatchers.IO) { readSystemStates() }
+                applySystemStates(states)
+            } while (refreshQueued)
+        }
+    }
 
-        isNightModeOn = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-        isBatterySaverOn = powerManager?.isPowerSaveMode ?: false
-        isBluetoothDeviceConnected = isBluetoothOn && isAnyBluetoothDeviceConnected()
+    /** צילום של כל מצבי המערכת - נבנה ב-thread רקע ומוחל בבת אחת על ה-main thread. */
+    private class SystemStates(
+        val volume: Float,
+        val brightness: Float,
+        val dnd: Boolean,
+        val rotate: Boolean,
+        val predictiveText: Boolean,
+        val bluetooth: Boolean,
+        val wifi: Boolean,
+        val airplane: Boolean,
+        val location: Boolean,
+        val data: Boolean,
+        val nightMode: Boolean,
+        val batterySaver: Boolean,
+        val bluetoothDeviceConnected: Boolean,
+    )
+
+    private fun readSystemStates(): SystemStates {
+        val bluetooth = try { bluetoothAdapter?.isEnabled ?: false } catch (t: Throwable) { false }
+        return SystemStates(
+            volume = getCurrentVolume(),
+            brightness = getCurrentBrightness(),
+            dnd = try {
+                notificationManager?.currentInterruptionFilter?.let { it != NotificationManager.INTERRUPTION_FILTER_ALL } ?: false
+            } catch (t: Throwable) { false },
+            rotate = try { Settings.System.getInt(context.contentResolver, Settings.System.ACCELEROMETER_ROTATION, 0) == 1 } catch (t: Throwable) { false },
+            predictiveText = try { com.future.sharednav.keyboard.KeyboardSettingsClient.isPredictiveEnabled(context) } catch (t: Throwable) { true },
+            bluetooth = bluetooth,
+            wifi = try { wifiManager?.isWifiEnabled ?: false } catch (t: Throwable) { false },
+            airplane = try { Settings.Global.getInt(context.contentResolver, Settings.Global.AIRPLANE_MODE_ON, 0) != 0 } catch (t: Throwable) { false },
+            location = try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    locationManager?.isLocationEnabled ?: false
+                } else {
+                    @Suppress("DEPRECATION")
+                    val mode = Settings.Secure.getInt(context.contentResolver, Settings.Secure.LOCATION_MODE, Settings.Secure.LOCATION_MODE_OFF)
+                    mode != Settings.Secure.LOCATION_MODE_OFF
+                }
+            } catch (t: Throwable) { false },
+            data = isMobileDataEnabled(),
+            nightMode = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES,
+            batterySaver = try { powerManager?.isPowerSaveMode ?: false } catch (t: Throwable) { false },
+            bluetoothDeviceConnected = bluetooth && isAnyBluetoothDeviceConnected(),
+        )
+    }
+
+    private fun applySystemStates(states: SystemStates) {
+        volumeLevel = states.volume
+        brightnessLevel = states.brightness
+        isDndOn = states.dnd
+        isRotateOn = states.rotate
+        isPredictiveTextOn = states.predictiveText
+        isBluetoothOn = states.bluetooth
+        isWifiOn = states.wifi
+        isAirplaneOn = states.airplane
+        isLocationOn = states.location
+        isDataOn = states.data
+        isNightModeOn = states.nightMode
+        isBatterySaverOn = states.batterySaver
+        isBluetoothDeviceConnected = states.bluetoothDeviceConnected
+    }
+
+    private fun isMobileDataEnabled(): Boolean = try {
+        mobileDataMethod?.invoke(connectivityManager) as? Boolean ?: false
+    } catch (t: Throwable) {
+        false
     }
 
     /** בודק אם יש מכשיר Bluetooth מחובר בפועל, לא רק מקושר (paired) - אין API
      * ציבורי ישיר לזה, אז משתמשים ב-BluetoothDevice.isConnected() המוסתרת
      * אבל יציבה, בדיוק כמו שהמערכת עצמה עושה בשורת המצב האמיתית שלה. */
     private fun isAnyBluetoothDeviceConnected(): Boolean {
+        val method = bluetoothIsConnectedMethod ?: return false
         return try {
             bluetoothAdapter?.bondedDevices?.any { device ->
-                val method = device.javaClass.getMethod("isConnected")
                 method.invoke(device) as? Boolean ?: false
             } ?: false
         } catch (e: Exception) {
