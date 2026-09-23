@@ -1,4 +1,6 @@
 package com.future.futureui.notificationcenter.ui
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.theme.LocalFutureTheme
 import com.future.sharednav.theme.headsUpSurfaceColor
 import com.future.sharednav.theme.headsUpBorderColor
@@ -31,8 +33,6 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -148,7 +148,7 @@ fun HeadsUpNotificationScreen(
                     if (icon != null) {
                         Image(bitmap = icon, contentDescription = null, modifier = Modifier.fillMaxSize())
                     } else {
-                        Icon(Icons.Rounded.Notifications, contentDescription = null, tint = textColor, modifier = Modifier.size(18.dp))
+                        Icon(FutureIcons.Notifications, contentDescription = null, tint = textColor, modifier = Modifier.size(18.dp))
                     }
                 }
                 Spacer(modifier = Modifier.width(12.dp))

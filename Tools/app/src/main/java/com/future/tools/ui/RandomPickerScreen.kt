@@ -1,4 +1,6 @@
 package com.future.tools.ui
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureButton
 import com.future.sharednav.theme.FutureDimens
 import com.future.sharednav.theme.idleChipColor
@@ -22,9 +24,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -113,7 +112,7 @@ fun RandomPickerScreen(theme: FutureTheme, onBack: () -> Unit) {
 
 @Composable
 private fun RpAddButton(theme: FutureTheme, onClick: () -> Unit) {
-    ToolsIconButton(Icons.Rounded.Add, "הוסף", theme, onClick = onClick)
+    ToolsIconButton(FutureIcons.Add, "הוסף", theme, onClick = onClick)
 }
 
 /**
@@ -140,7 +139,7 @@ private fun RpOptionRow(text: String, isChosen: Boolean, theme: FutureTheme, onD
             fontWeight = if (isChosen) FutureTypography.weightBold else FutureTypography.weightMedium,
             modifier = Modifier.weight(1f)
         )
-        ToolsIconButton(Icons.Rounded.Close, "מחק", theme, tint = if (isChosen) theme.onReadableAccentColor else theme.textColor, onClick = onDelete)
+        ToolsIconButton(FutureIcons.Close, "מחק", theme, tint = if (isChosen) theme.onReadableAccentColor else theme.textColor, onClick = onDelete)
     }
 }
 

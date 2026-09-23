@@ -1,4 +1,7 @@
 package com.future.tools.ui
+import androidx.compose.material.icons.rounded.Remove
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureAvatar
 import com.future.sharednav.components.AvatarListSize
 
@@ -17,9 +20,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.animation.animateColorAsState
@@ -75,10 +75,8 @@ fun ToolsHeader(title: String, theme: FutureTheme, onBack: (() -> Unit)? = null,
             modifier = Modifier.fillMaxWidth().padding(horizontal = FutureDimens.spacingLg, vertical = FutureDimens.spacingMd),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            if (onBack != null) {
-                SharedTopBarIconButton(Icons.AutoMirrored.Rounded.ArrowBack, "חזור", theme.textColor, theme.accentColor, onBack)
-                Spacer(modifier = Modifier.width(FutureDimens.spacingSm))
-            }
+            // אין כפתור חזור על המסך - מקש BACK הפיזי עושה את זה
+            if (onBack != null) androidx.activity.compose.BackHandler(onBack = onBack)
             Text(
                 title,
                 color = theme.textColor,
@@ -128,7 +126,7 @@ fun ToolIcon(icon: ImageVector, theme: FutureTheme, size: Dp = AvatarListSize) {
 /** כפתור +/- ליד ערך מספרי - כפתור אייקון רגיל (8% במנוחה, 30% הדגשה בפוקוס). */
 @Composable
 fun ToolsStepperButton(label: String, theme: FutureTheme, onClick: () -> Unit) {
-    val icon = if (label.trim() == "+") Icons.Rounded.Add else Icons.Rounded.Remove
+    val icon = if (label.trim() == "+") FutureIcons.Add else Icons.Rounded.Remove
     SharedTopBarIconButton(icon, label, theme.textColor, theme.accentColor, onClick)
 }
 

@@ -1,4 +1,8 @@
 package com.future.notes.ui.screens
+import androidx.compose.material.icons.rounded.PushPin
+import androidx.compose.material.icons.automirrored.rounded.Notes
+
+import com.future.sharednav.icons.FutureIcons
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -10,10 +14,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.Notes
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.PushPin
-import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -88,7 +88,7 @@ fun ListScreen(
         title = stringResource(R.string.my_notes),
         textColor = theme.textColor,
         accentColor = theme.accentColor,
-        trailingIcon = Icons.Rounded.Add,
+        trailingIcon = FutureIcons.Add,
         trailingContentDescription = stringResource(R.string.add_note),
         onTrailingClick = onAddNote,
         trailingFocusRequester = addFocusRequester,
@@ -101,7 +101,7 @@ fun ListScreen(
                 placeholder = stringResource(R.string.search_notes),
                 leading = {
                     Icon(
-                        Icons.Rounded.Search,
+                        FutureIcons.Search,
                         contentDescription = null,
                         tint = theme.mutedTextColor,
                         modifier = Modifier.size(FutureDimens.iconTopBar),
@@ -159,7 +159,7 @@ fun ListScreen(
             onDismissRequest = { showMenu = false },
             header = note?.title?.ifEmpty { stringResource(R.string.untitled) },
         ) {
-            FutureMenuRow(stringResource(R.string.new_note), Icons.Rounded.Add, theme, {
+            FutureMenuRow(stringResource(R.string.new_note), FutureIcons.Add, theme, {
                 showMenu = false
                 onAddNote()
             })

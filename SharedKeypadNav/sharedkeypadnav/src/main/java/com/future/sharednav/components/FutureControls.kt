@@ -1,5 +1,7 @@
 package com.future.sharednav.components
 
+import com.future.sharednav.icons.FutureIcons
+
 import com.future.sharednav.focus.animatedFill
 import com.future.sharednav.focus.animatedFocusSurface
 import androidx.compose.animation.animateColorAsState
@@ -12,8 +14,6 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Row
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.Icon
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -327,7 +327,7 @@ fun FutureCheckbox(
     ) {
         if (checked) {
             Icon(
-                Icons.Rounded.Check,
+                FutureIcons.Check,
                 contentDescription = null,
                 tint = FutureContrast.onColor(accent),
                 modifier = Modifier.size(CheckboxSize * 0.72f),

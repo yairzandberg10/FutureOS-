@@ -1,5 +1,7 @@
 package com.future.clock.ui
 
+import com.future.sharednav.icons.FutureIcons
+
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
@@ -17,7 +19,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -69,10 +70,8 @@ fun ToolsHeader(title: String, theme: FutureTheme, onBack: (() -> Unit)? = null,
         modifier = Modifier.fillMaxWidth().padding(horizontal = FutureDimens.spacingLg, vertical = FutureDimens.spacingMd),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        if (onBack != null) {
-            SharedTopBarIconButton(Icons.AutoMirrored.Rounded.ArrowBack, "חזור", theme.textColor, theme.accentColor, onBack)
-            Spacer(modifier = Modifier.width(FutureDimens.spacingSm))
-        }
+        // אין כפתור חזור על המסך - מקש BACK הפיזי עושה את זה
+        if (onBack != null) androidx.activity.compose.BackHandler(onBack = onBack)
         Text(
             title,
             color = theme.textColor,

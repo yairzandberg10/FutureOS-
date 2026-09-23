@@ -1,4 +1,7 @@
 package com.future.futureui.controlcenter.ui
+import androidx.compose.material.icons.rounded.PowerSettingsNew
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureMenuRow
 import com.future.sharednav.theme.LocalFutureTheme
 import com.future.sharednav.theme.scrimColor
@@ -16,9 +19,6 @@ import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.PowerSettingsNew
-import androidx.compose.material.icons.rounded.RestartAlt
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -83,8 +83,8 @@ fun PowerMenuScreen(
                     modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 6.dp, bottom = FutureDimens.spacingSm)
                 )
                 FutureMenuRow("כיבוי", Icons.Rounded.PowerSettingsNew, theme, onPowerOff, destructive = true, focusRequester = focusRequester)
-                FutureMenuRow("הפעלה מחדש", Icons.Rounded.RestartAlt, theme, onRestart)
-                FutureMenuRow("ביטול", Icons.Rounded.Close, theme, onCancel)
+                FutureMenuRow("הפעלה מחדש", FutureIcons.RestartAlt, theme, onRestart)
+                FutureMenuRow("ביטול", FutureIcons.Close, theme, onCancel)
             }
         }
     }

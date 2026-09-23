@@ -37,6 +37,28 @@ class BluetoothController(private val context: Context) {
 
     private val aliases = context.getSharedPreferences("device_aliases", Context.MODE_PRIVATE)
 
+    /** מתי כל מכשיר מותאם היה בשימוש לאחרונה - לאנדרואיד אין API לזה. */
+    private val lastUsed = context.getSharedPreferences("device_last_used", Context.MODE_PRIVATE)
+
+    /** רושם שימוש במכשיר (חיבור, או כניסה למסך שלו), כדי שיעלה בראש הרשימה. */
+    fun markUsed(address: String) {
+        lastUsed.edit().putLong(address, System.currentTimeMillis()).apply()
+    }
+
+    /**
+     * המותאמים לפי רלוונטיות: מחובר, מתחבר, ואחר כך לפי השימוש האחרון.
+     * שלושת הראשונים הם מה שמוצג במסך הראשי.
+     */
+    fun pairedByRelevance(): List<BluetoothDeviceInfo> = pairedDevices.sortedWith(
+        compareBy<BluetoothDeviceInfo> {
+            when (it.connection) {
+                Connection.Connected -> 0
+                Connection.Connecting -> 1
+                Connection.Disconnected -> 2
+            }
+        }.thenByDescending { lastUsed.getLong(it.address, 0L) }.thenBy { it.name }
+    )
+
     fun isSupported(): Boolean = adapter != null
 
     var isEnabled by mutableStateOf(adapter?.isEnabled == true)
@@ -318,7 +340,7 @@ class BluetoothController(private val context: Context) {
                         refreshPairedDevices()
                     }
                     BluetoothDevice.ACTION_ACL_CONNECTED -> {
-                        device?.address?.let { aclConnected.add(it) }
+                        device?.address?.let { aclConnected.add(it); markUsed(it) }
                         refreshPairedDevices()
                     }
                     BluetoothDevice.ACTION_ACL_DISCONNECTED -> {

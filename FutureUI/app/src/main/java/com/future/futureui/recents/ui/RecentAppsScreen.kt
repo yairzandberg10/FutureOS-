@@ -1,4 +1,6 @@
 package com.future.futureui.recents.ui
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.theme.FutureMotion
 import com.future.sharednav.theme.readableAccentColor
 import com.future.sharednav.theme.idleChipColor
@@ -19,8 +21,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -104,7 +104,7 @@ fun RecentAppsScreen(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 20.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Rounded.Apps, contentDescription = null, tint = shellTheme.textColor, modifier = Modifier.size(FutureDimens.iconSettingRow))
+                    Icon(FutureIcons.Apps, contentDescription = null, tint = shellTheme.textColor, modifier = Modifier.size(FutureDimens.iconSettingRow))
                     Spacer(modifier = Modifier.width(10.dp))
                     Text("אפליקציות אחרונות", color = shellTheme.textColor, fontSize = FutureTypography.screenTitle, fontWeight = FontWeight.Bold)
                 }

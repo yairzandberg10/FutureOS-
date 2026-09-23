@@ -1,4 +1,7 @@
 package com.future.music.ui.screens
+import androidx.compose.material.icons.automirrored.rounded.QueueMusic
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureListItem
 import com.future.sharednav.components.FutureAvatar
 import com.future.sharednav.theme.subtleTextColor
@@ -21,8 +24,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -61,7 +62,7 @@ fun PlaylistsScreen(
             title = "פלייליסטים",
             theme = theme,
             onBack = onBack,
-            trailingIcon = Icons.Rounded.Add,
+            trailingIcon = FutureIcons.Add,
             trailingContentDescription = "פלייליסט חדש",
             onTrailingClick = { showCreateDialog = true },
         )

@@ -1,4 +1,8 @@
 package com.future.notes.ui.screens
+import androidx.compose.material.icons.rounded.PushPin
+import androidx.compose.material.icons.rounded.Save
+
+import com.future.sharednav.icons.FutureIcons
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
@@ -7,9 +11,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.PushPin
-import androidx.compose.material.icons.rounded.Save
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -119,7 +120,7 @@ fun EditorScreen(
                 isPinned = !isPinned
             })
             if (note != null) {
-                FutureMenuRow(stringResource(R.string.delete), Icons.Rounded.Delete, theme, {
+                FutureMenuRow(stringResource(R.string.delete), FutureIcons.Delete, theme, {
                     showMenu = false
                     showDeleteConfirm = true
                 }, destructive = true)

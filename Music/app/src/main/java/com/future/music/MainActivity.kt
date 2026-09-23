@@ -40,15 +40,32 @@ class MainActivity : ComponentActivity() {
     // dispatchKeyEvent הוא נתיב נפרד לגמרי מ-dispatchTouchEvent.
     override fun dispatchTouchEvent(ev: android.view.MotionEvent): Boolean = true
 
+    /**
+     * קובץ שמע שנפתח מאפליקציה אחרת (קבצים, הודעות) - ACTION_VIEW. קודם
+     * המניפסט הכריז שהאפליקציה פותחת קבצי שמע, אבל אף אחד לא קרא את ה-Uri,
+     * ו"פתיחה במוזיקה" רק פתחה את המסך הראשי בלי לנגן כלום.
+     */
+    private val openUri = androidx.compose.runtime.mutableStateOf<android.net.Uri?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContent { MusicApp() }
+        openUri.value = viewUriOf(intent)
+        setContent { MusicApp(openUri = openUri.value, onOpened = { openUri.value = null }) }
     }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        viewUriOf(intent)?.let { openUri.value = it }
+    }
+
+    private fun viewUriOf(intent: android.content.Intent?): android.net.Uri? =
+        intent?.takeIf { it.action == android.content.Intent.ACTION_VIEW }?.data
 }
 
 @Composable
-private fun MusicApp() {
+private fun MusicApp(openUri: android.net.Uri?, onOpened: () -> Unit) {
     val context = LocalContext.current
 
     val repository = remember { SongRepository(context) }
@@ -85,6 +102,24 @@ private fun MusicApp() {
     DisposableEffect(Unit) {
         playerController.connect()
         onDispose { playerController.disconnect() }
+    }
+
+    // הקובץ שנפתח מבחוץ מתנגן ברגע שהנגן מחובר (בלי קשר להרשאת הספרייה -
+    // ל-Uri שהתקבל יש הרשאת קריאה משלו).
+    LaunchedEffect(openUri) {
+        val uri = openUri ?: return@LaunchedEffect
+        while (!playerController.state.isConnected) kotlinx.coroutines.delay(50)
+        val title = withContext(Dispatchers.IO) {
+            runCatching {
+                context.contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)
+                    ?.use { c -> if (c.moveToFirst()) c.getString(0) else null }
+            }.getOrNull()
+        } ?: uri.lastPathSegment.orEmpty()
+        playerController.playQueue(
+            listOf(com.future.music.data.Song(id = -1L, uri = uri, title = title.substringBeforeLast('.'), artist = "", album = "", albumId = -1L, durationMs = 0L)),
+            startIndex = 0,
+        )
+        onOpened()
     }
 
     var hasAudioPermission by remember { mutableStateOf(repository.hasAudioPermission()) }

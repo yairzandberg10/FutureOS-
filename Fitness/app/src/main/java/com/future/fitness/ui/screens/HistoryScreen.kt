@@ -1,4 +1,6 @@
 package com.future.fitness.ui.screens
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.theme.elevatedSurfaceColor
 import com.future.sharednav.theme.idleFieldColor
@@ -23,9 +25,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.History
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -57,7 +56,7 @@ fun HistoryScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
-                Icon(Icons.Rounded.History, contentDescription = null, tint = theme.textColor.copy(alpha = 0.3f), modifier = Modifier.padding(bottom = 12.dp))
+                Icon(FutureIcons.History, contentDescription = null, tint = theme.textColor.copy(alpha = 0.3f), modifier = Modifier.padding(bottom = 12.dp))
                 Text("עדיין אין אימונים שהושלמו", color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.body, fontWeight = FontWeight.Medium)
             }
         } else {
@@ -74,7 +73,7 @@ fun HistoryScreen(
                     entry.distanceKm?.let { parts.add("%.2f ק״מ".format(it)) }
                     entry.avgHr?.let { parts.add("דופק ממוצע $it") }
                     IconListRow(
-                        icon = Icons.Rounded.Check,
+                        icon = FutureIcons.Check,
                         title = entry.name,
                         subtitle = parts.joinToString(" · "),
                         theme = theme,

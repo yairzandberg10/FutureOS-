@@ -1,4 +1,10 @@
 package com.future.sfarim.ui.screens
+import androidx.compose.material.icons.rounded.BookmarkBorder
+import androidx.compose.material.icons.rounded.TextDecrease
+import androidx.compose.material.icons.rounded.TextIncrease
+import androidx.compose.material.icons.automirrored.rounded.Comment
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureOptionsMenu
 import com.future.sharednav.components.FutureMenuRow
 import com.future.sharednav.components.FutureDialog
@@ -38,12 +44,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.Comment
-import androidx.compose.material.icons.rounded.Bookmark
-import androidx.compose.material.icons.rounded.BookmarkBorder
-import androidx.compose.material.icons.rounded.Share
-import androidx.compose.material.icons.rounded.TextDecrease
-import androidx.compose.material.icons.rounded.TextIncrease
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -350,7 +350,7 @@ private fun SegmentRow(
         verticalAlignment = Alignment.Top,
     ) {
         if (isBookmarked) {
-            Icon(Icons.Rounded.Bookmark, contentDescription = "מסומן", tint = theme.accentColor, modifier = Modifier.padding(top = 3.dp))
+            Icon(FutureIcons.Bookmark, contentDescription = "מסומן", tint = theme.accentColor, modifier = Modifier.padding(top = 3.dp))
             Spacer(modifier = Modifier.width(6.dp))
         }
         Column {
@@ -376,11 +376,11 @@ private fun ContentOptionsMenu(
     FutureOptionsMenu(theme = theme, onDismissRequest = onDismiss, header = refDisplay) {
         FutureMenuRow(
             if (isBookmarked) "הסר $contentLabel מהסימניות" else "הוסף $contentLabel לסימניות",
-            if (isBookmarked) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
+            if (isBookmarked) FutureIcons.Bookmark else Icons.Rounded.BookmarkBorder,
             theme,
             onToggleBookmark,
         )
-        FutureMenuRow("שתף $contentLabel", Icons.Rounded.Share, theme, onShare)
+        FutureMenuRow("שתף $contentLabel", FutureIcons.Share, theme, onShare)
         FutureMenuRow("מפרשים על ה$contentLabel", Icons.AutoMirrored.Rounded.Comment, theme, onShowCommentaries)
         FutureMenuRow("הגדל גופן", Icons.Rounded.TextIncrease, theme, onIncreaseFont)
         FutureMenuRow("הקטן גופן", Icons.Rounded.TextDecrease, theme, onDecreaseFont)

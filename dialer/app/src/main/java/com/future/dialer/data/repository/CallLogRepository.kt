@@ -30,6 +30,7 @@ class CallLogRepository(private val context: Context) {
                 val dateIndex = it.getColumnIndex(CallLog.Calls.DATE)
                 val durationIndex = it.getColumnIndex(CallLog.Calls.DURATION)
                 val typeIndex = it.getColumnIndex(CallLog.Calls.TYPE)
+                val presentationIndex = it.getColumnIndex(CallLog.Calls.NUMBER_PRESENTATION)
 
                 while (it.moveToNext()) {
                     val type = if (typeIndex != -1) {
@@ -38,6 +39,8 @@ class CallLogRepository(private val context: Context) {
                             CallLog.Calls.OUTGOING_TYPE -> CallType.OUTGOING
                             CallLog.Calls.MISSED_TYPE -> CallType.MISSED
                             CallLog.Calls.REJECTED_TYPE -> CallType.REJECTED
+                            CallLog.Calls.BLOCKED_TYPE -> CallType.BLOCKED
+                            CallLog.Calls.VOICEMAIL_TYPE -> CallType.VOICEMAIL
                             else -> CallType.INCOMING
                         }
                     } else CallType.INCOMING
@@ -47,11 +50,15 @@ class CallLogRepository(private val context: Context) {
                         records.add(
                             CallRecord(
                                 id = id,
-                                name = if (nameIndex != -1) it.getString(nameIndex) else null,
+                                // CACHED_NAME מגיע לעיתים כמחרוזת ריקה ולא null (מספר
+                                // שאינו איש קשר) - ריק נחשב "אין שם", אחרת השורה הוצגה בלי כותרת.
+                                name = if (nameIndex != -1) it.getString(nameIndex)?.takeIf { n -> n.isNotBlank() } else null,
                                 phoneNumber = if (numberIndex != -1) it.getString(numberIndex) ?: "" else "",
                                 timestamp = if (dateIndex != -1) it.getLong(dateIndex) else 0L,
                                 duration = if (durationIndex != -1) it.getLong(durationIndex) else 0L,
-                                type = type
+                                type = type,
+                                isPrivate = presentationIndex != -1 &&
+                                    it.getInt(presentationIndex) != CallLog.Calls.PRESENTATION_ALLOWED,
                             )
                         )
                     }
@@ -87,6 +94,7 @@ class CallLogRepository(private val context: Context) {
             CallLog.Calls.DATE,
             CallLog.Calls.DURATION,
             CallLog.Calls.TYPE,
+            CallLog.Calls.NUMBER_PRESENTATION,
         )
     }
 }

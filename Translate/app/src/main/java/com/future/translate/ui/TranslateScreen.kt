@@ -1,4 +1,7 @@
 package com.future.translate.ui
+import androidx.compose.material.icons.rounded.StarBorder
+
+import com.future.sharednav.icons.FutureIcons
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -10,15 +13,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.VolumeUp
-import androidx.compose.material.icons.rounded.ContentCopy
-import androidx.compose.material.icons.rounded.KeyboardArrowLeft
-import androidx.compose.material.icons.rounded.MoreVert
-import androidx.compose.material.icons.rounded.Share
-import androidx.compose.material.icons.rounded.Star
-import androidx.compose.material.icons.rounded.StarBorder
-import androidx.compose.material.icons.rounded.SwapHoriz
-import androidx.compose.material.icons.rounded.Translate
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -92,9 +86,6 @@ fun TranslateScreen(
         title = "תרגום",
         textColor = theme.textColor,
         accentColor = theme.accentColor,
-        trailingIcon = Icons.Rounded.MoreVert,
-        trailingContentDescription = "אפשרויות",
-        onTrailingClick = onMenu,
     ) {
         Column(
             modifier = Modifier
@@ -120,7 +111,7 @@ fun TranslateScreen(
                     modifier = Modifier.weight(1f),
                 )
                 TopBarIconButton(
-                    icon = Icons.Rounded.SwapHoriz,
+                    icon = FutureIcons.SwapHoriz,
                     contentDescription = "החלף שפות",
                     textColor = theme.textColor,
                     accentColor = theme.accentColor,
@@ -180,7 +171,7 @@ fun TranslateScreen(
             // ---- התוצאה
             if (text.isBlank()) {
                 EmptyState(
-                    icon = Icons.Rounded.Translate,
+                    icon = FutureIcons.Translate,
                     title = "אין מה לתרגם",
                     subtitle = "לחץ על אישור בשדה כדי להקליד",
                     textColor = theme.textColor,
@@ -293,7 +284,7 @@ private fun ResultCard(
                 horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm),
             ) {
                 FutureActionCell(
-                    icon = Icons.AutoMirrored.Rounded.VolumeUp,
+                    icon = FutureIcons.AutoMirrored.VolumeUp,
                     label = "השמע",
                     theme = theme,
                     active = speaking,
@@ -302,7 +293,7 @@ private fun ResultCard(
                     modifier = Modifier.weight(1f),
                 )
                 FutureActionCell(
-                    icon = Icons.Rounded.ContentCopy,
+                    icon = FutureIcons.ContentCopy,
                     label = "העתק",
                     theme = theme,
                     height = ActionHeight,
@@ -310,7 +301,7 @@ private fun ResultCard(
                     modifier = Modifier.weight(1f),
                 )
                 FutureActionCell(
-                    icon = Icons.Rounded.Share,
+                    icon = FutureIcons.Share,
                     label = "שתף",
                     theme = theme,
                     height = ActionHeight,
@@ -318,7 +309,7 @@ private fun ResultCard(
                     modifier = Modifier.weight(1f),
                 )
                 FutureActionCell(
-                    icon = if (saved) Icons.Rounded.Star else Icons.Rounded.StarBorder,
+                    icon = if (saved) FutureIcons.Star else Icons.Rounded.StarBorder,
                     label = "שמור",
                     theme = theme,
                     iconColor = if (saved) theme.favoriteColor else null,
@@ -354,10 +345,10 @@ internal fun HistoryRow(
         focusRequester = focusRequester,
         trailing = {
             if (entry.saved) {
-                Icon(Icons.Rounded.Star, contentDescription = "שמור", tint = theme.favoriteColor, modifier = Modifier.size(16.dp))
+                Icon(FutureIcons.Star, contentDescription = "שמור", tint = theme.favoriteColor, modifier = Modifier.size(16.dp))
             } else {
                 Icon(
-                    Icons.Rounded.KeyboardArrowLeft,
+                    FutureIcons.KeyboardArrowLeft,
                     contentDescription = null,
                     tint = theme.chevronColor,
                     modifier = Modifier.size(FutureDimens.iconTopBar),

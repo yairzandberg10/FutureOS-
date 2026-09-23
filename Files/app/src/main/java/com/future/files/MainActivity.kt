@@ -19,6 +19,9 @@ import com.future.files.data.FileCategory
 import com.future.files.data.FileEntry
 import com.future.files.data.FileRepository
 import com.future.files.data.categorize
+import com.future.files.data.isInsideUserStorage
+import com.future.files.ui.VideoPlayerScreen
+import com.future.sharednav.components.FutureSnackbarHost
 import com.future.sharednav.theme.ThemeClient
 import com.future.files.ui.AudioPlayerScreen
 import com.future.files.ui.FilesScreen
@@ -57,6 +60,12 @@ class MainActivity : ComponentActivity() {
             // מציין שפעולת קבצים כבדה (מחיקה/העתקה/העברה) רצה כרגע ברקע כדי
             // שהתור העליון של ה-UI thread לא ייחסם בתיקיות גדולות.
             var isBusy by remember { mutableStateOf(false) }
+            val snackbar = com.future.sharednav.components.rememberFutureSnackbarState()
+            val uiPrefs = remember { getSharedPreferences("files_ui", MODE_PRIVATE) }
+            var gridView by remember { mutableStateOf(uiPrefs.getBoolean("grid", false)) }
+            // התקנת APK מחכה לאישור מפורש של המשתמש.
+            var pendingApk by remember { mutableStateOf<FileEntry?>(null) }
+            fun message(text: String) = snackbar.show(text)
             val coroutineScope = rememberCoroutineScope()
             var theme by remember {
                 mutableStateOf(
@@ -89,7 +98,7 @@ class MainActivity : ComponentActivity() {
             fun goUp() {
                 val parent = currentDir.parentFile
                 if (parent != null && currentDir.absolutePath != root.absolutePath) {
-                    currentDir = if (parent.absolutePath.length < root.absolutePath.length) root else parent
+                    currentDir = if (!isInsideUserStorage(parent, root)) root else parent
                 }
             }
 
@@ -98,6 +107,7 @@ class MainActivity : ComponentActivity() {
             }
 
             Surface(modifier = Modifier.fillMaxSize(), color = theme.backgroundColor) {
+              androidx.compose.foundation.layout.Box(modifier = Modifier.fillMaxSize()) {
                 // המציג והרשימה מחליקים זה מול זה. מעבר בין תיקיות נשאר בתוך
                 // אותו מסך בכוונה (FilesScreen שומר מצב בחירה/חיפוש פנימי), והשם
                 // בכותרת מתחלף ב-crossfade של ScreenTopBar.
@@ -112,6 +122,7 @@ class MainActivity : ComponentActivity() {
                         FileCategory.IMAGE -> ImageFileViewerScreen(viewing.file, theme, onBack = { viewingFile = null })
                         FileCategory.AUDIO -> AudioPlayerScreen(viewing.file, theme, onBack = { viewingFile = null })
                         FileCategory.PDF -> PdfViewerScreen(viewing.file, theme, onBack = { viewingFile = null })
+                        FileCategory.VIDEO -> VideoPlayerScreen(viewing.file, theme, onBack = { viewingFile = null })
                         else -> {}
                     }
                 } else FilesScreen(
@@ -136,14 +147,23 @@ class MainActivity : ComponentActivity() {
                     onOpenFile = { entry ->
                         lastSelectedPathByDir = lastSelectedPathByDir + (currentDir.absolutePath to entry.file.absolutePath)
                         if (entry.isDirectory) {
-                            currentDir = entry.file
+                            // תיקיות מערכת ונתוני אפליקציות לא נפתחים, גם דרך קישור.
+                            if (isInsideUserStorage(entry.file, root)) currentDir = entry.file
+                            else message("אין גישה לתיקייה הזו")
                         } else {
                             when (categorize(entry.file)) {
-                                FileCategory.APK -> android.widget.Toast.makeText(this@MainActivity, "התקנת אפליקציות אינה נתמכת במכשיר הזה", android.widget.Toast.LENGTH_SHORT).show()
-                                FileCategory.VIDEO, FileCategory.OTHER -> openFile(entry.file)
+                                FileCategory.APK -> pendingApk = entry
+                                // שירים וקבצי שמע נפתחים במוזיקה; בלעדיה - בנגן הפנימי.
+                                FileCategory.AUDIO -> if (!openInMusic(entry.file)) viewingFile = entry
+                                FileCategory.OTHER -> if (!openFile(entry.file)) message("אין אפליקציה שפותחת את הקובץ")
                                 else -> viewingFile = entry
                             }
                         }
+                    },
+                    gridView = gridView,
+                    onToggleGridView = {
+                        gridView = !gridView
+                        uiPrefs.edit().putBoolean("grid", gridView).apply()
                     },
                     lastSelectedPath = lastSelectedPathByDir[currentDir.absolutePath],
                     onBack = { goUp() },
@@ -151,14 +171,14 @@ class MainActivity : ComponentActivity() {
                         if (repository.createFolder(currentDir, name)) {
                             entries = repository.listDirectory(currentDir, isRootDir)
                         } else {
-                            android.widget.Toast.makeText(this@MainActivity, "לא ניתן ליצור את התיקייה", android.widget.Toast.LENGTH_SHORT).show()
+                            message("לא ניתן ליצור את התיקייה")
                         }
                     },
                     onRename = { entry, newName ->
                         if (repository.renameEntry(entry.file, newName)) {
                             entries = repository.listDirectory(currentDir, isRootDir)
                         } else {
-                            android.widget.Toast.makeText(this@MainActivity, "לא ניתן לשנות את השם", android.widget.Toast.LENGTH_SHORT).show()
+                            message("לא ניתן לשנות את השם")
                         }
                     },
                     isBusy = isBusy,
@@ -170,7 +190,7 @@ class MainActivity : ComponentActivity() {
                                 if (ok) {
                                     entries = repository.listDirectory(currentDir, isRootDir)
                                 } else {
-                                    android.widget.Toast.makeText(this@MainActivity, "לא ניתן למחוק", android.widget.Toast.LENGTH_SHORT).show()
+                                    message("לא ניתן למחוק")
                                 }
                                 isBusy = false
                             }
@@ -183,15 +203,15 @@ class MainActivity : ComponentActivity() {
                             val shareIntent = Intent(Intent.ACTION_SEND).apply {
                                 type = mime
                                 putExtra(Intent.EXTRA_STREAM, uri)
+                                clipData = android.content.ClipData.newRawUri(entry.file.name, uri)
                                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                             }
-                            startActivity(Intent.createChooser(shareIntent, null).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                            com.future.sharednav.share.FutureShare.open(this@MainActivity, shareIntent, "שיתוף קובץ")
                         } catch (e: Exception) {
-                            android.widget.Toast.makeText(this@MainActivity, "לא ניתן לשתף", android.widget.Toast.LENGTH_SHORT).show()
+                            message("לא ניתן לשתף")
                         }
                     },
-                    onOpenExternally = { entry -> openFile(entry.file) },
+                    onOpenExternally = { entry -> if (!openFile(entry.file)) message("אין אפליקציה שפותחת את הקובץ") },
                     onCopy = { entry -> clipboardEntry = entry; clipboardIsMove = false },
                     onMove = { entry -> clipboardEntry = entry; clipboardIsMove = true },
                     onPaste = {
@@ -206,7 +226,7 @@ class MainActivity : ComponentActivity() {
                                 if (ok) {
                                     entries = repository.listDirectory(currentDir, isRootDir)
                                 } else {
-                                    android.widget.Toast.makeText(this@MainActivity, "לא ניתן להדביק כאן", android.widget.Toast.LENGTH_SHORT).show()
+                                    message("לא ניתן להדביק כאן")
                                 }
                                 clipboardEntry = null
                                 isBusy = false
@@ -222,7 +242,7 @@ class MainActivity : ComponentActivity() {
                                 }
                                 entries = repository.listDirectory(currentDir, isRootDir)
                                 if (!allOk) {
-                                    android.widget.Toast.makeText(this@MainActivity, "חלק מהפריטים לא נמחקו", android.widget.Toast.LENGTH_SHORT).show()
+                                    message("חלק מהפריטים לא נמחקו")
                                 }
                                 isBusy = false
                             }
@@ -237,38 +257,93 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
                             if (uris.isEmpty()) {
-                                android.widget.Toast.makeText(this@MainActivity, "אין קבצים לשתף", android.widget.Toast.LENGTH_SHORT).show()
+                                message("אין קבצים לשתף")
                                 return@FilesScreen
                             }
                             val shareIntent = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
                                 type = "*/*"
                                 putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris)
+                                clipData = android.content.ClipData.newRawUri("", uris.first()).also { clip ->
+                                    uris.drop(1).forEach { clip.addItem(android.content.ClipData.Item(it)) }
+                                }
                                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                             }
-                            startActivity(Intent.createChooser(shareIntent, null).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                            com.future.sharednav.share.FutureShare.open(this@MainActivity, shareIntent, "שיתוף קבצים")
                         } catch (e: Exception) {
-                            android.widget.Toast.makeText(this@MainActivity, "לא ניתן לשתף", android.widget.Toast.LENGTH_SHORT).show()
+                            message("לא ניתן לשתף")
                         }
                     }
                 )
                 }
+                FutureSnackbarHost(snackbar, theme)
+              }
+            }
+
+            pendingApk?.let { apk ->
+                com.future.sharednav.components.ConfirmDialog(
+                    message = "להתקין את ${apk.file.name}?",
+                    theme = theme,
+                    confirmLabel = "התקן",
+                    destructive = false,
+                    onCancel = { pendingApk = null },
+                    onConfirm = {
+                        pendingApk = null
+                        if (!installApk(apk.file)) message("לא ניתן להתקין את הקובץ")
+                    },
+                )
             }
         }
     }
 
-    private fun openFile(file: File) {
-        try {
-            val uri = FileProvider.getUriForFile(this, "$packageName.fileprovider", file)
-            val mime = contentResolver.getType(uri) ?: "*/*"
-            val intent = Intent(Intent.ACTION_VIEW).apply {
-                setDataAndType(uri, mime)
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            }
-            startActivity(intent)
-        } catch (e: Exception) {
-            android.widget.Toast.makeText(this, "לא ניתן לפתוח את הקובץ", android.widget.Toast.LENGTH_SHORT).show()
+    private fun openFile(file: File, targetPackage: String? = null): Boolean = try {
+        val uri = FileProvider.getUriForFile(this, "$packageName.fileprovider", file)
+        val mime = contentResolver.getType(uri) ?: "*/*"
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, mime)
+            targetPackage?.let { setPackage(it) }
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
+        startActivity(intent)
+        true
+    } catch (e: Exception) {
+        false
+    }
+
+    /** שירים וקבצי שמע - באפליקציית המוזיקה של המערכת. */
+    private fun openInMusic(file: File): Boolean = openFile(file, MUSIC_PACKAGE)
+
+    /**
+     * התקנת APK - אחרי שהמשתמש אישר בדיאלוג. בפעם הראשונה אנדרואיד מבקש
+     * לאשר ל"קבצים" להתקין אפליקציות (מקורות לא ידועים) - מסך המערכת נפתח.
+     */
+    private fun installApk(file: File): Boolean {
+        if (!packageManager.canRequestPackageInstalls()) {
+            return try {
+                startActivity(
+                    Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:$packageName"))
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                )
+                true
+            } catch (e: Exception) {
+                false
+            }
+        }
+        return try {
+            val uri = FileProvider.getUriForFile(this, "$packageName.fileprovider", file)
+            startActivity(
+                Intent(Intent.ACTION_VIEW)
+                    .setDataAndType(uri, "application/vnd.android.package-archive")
+                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    private companion object {
+        const val MUSIC_PACKAGE = "com.future.music"
     }
 }

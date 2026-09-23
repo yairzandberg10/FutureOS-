@@ -1,29 +1,20 @@
 package com.future.guide.data
-
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.MenuBook
-import androidx.compose.material.icons.automirrored.rounded.Message
-import androidx.compose.material.icons.automirrored.rounded.Notes
-import androidx.compose.material.icons.rounded.Apps
-import androidx.compose.material.icons.rounded.Bluetooth
+import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.CalendarMonth
-import androidx.compose.material.icons.rounded.Call
 import androidx.compose.material.icons.rounded.Checklist
-import androidx.compose.material.icons.rounded.Contacts
-import androidx.compose.material.icons.rounded.FitnessCenter
-import androidx.compose.material.icons.rounded.Folder
-import androidx.compose.material.icons.rounded.Keyboard
-import androidx.compose.material.icons.rounded.Mic
-import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Navigation
 import androidx.compose.material.icons.rounded.PhoneAndroid
 import androidx.compose.material.icons.rounded.PhotoCamera
 import androidx.compose.material.icons.rounded.PhotoLibrary
-import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.SettingsRemote
 import androidx.compose.material.icons.rounded.Terminal
-import androidx.compose.material.icons.rounded.Translate
-import androidx.compose.material.icons.rounded.Build
+import androidx.compose.material.icons.automirrored.rounded.MenuBook
+import androidx.compose.material.icons.automirrored.rounded.Message
+import androidx.compose.material.icons.automirrored.rounded.Notes
+
+import com.future.sharednav.icons.FutureIcons
+
+import androidx.compose.material.icons.Icons
 import androidx.compose.ui.graphics.vector.ImageVector
 
 /** תוכן המדריך לכל אפליקציות FutureOS. סטטי בקוד - אין תלות ברשת או במאגר נתונים. */
@@ -52,7 +43,7 @@ val GUIDE_APPS = listOf(
     ),
     GuideApp(
         id = "launcher",
-        icon = Icons.Rounded.Apps,
+        icon = FutureIcons.Apps,
         name = "FutureLauncher",
         subtitle = "מסך הבית",
         steps = listOf(
@@ -64,7 +55,7 @@ val GUIDE_APPS = listOf(
     ),
     GuideApp(
         id = "dialer",
-        icon = Icons.Rounded.Call,
+        icon = FutureIcons.Call,
         name = "טלפון",
         subtitle = "חיוג ושיחות",
         steps = listOf(
@@ -115,7 +106,7 @@ val GUIDE_APPS = listOf(
     ),
     GuideApp(
         id = "contact",
-        icon = Icons.Rounded.Contacts,
+        icon = FutureIcons.Contacts,
         name = "אנשי קשר",
         subtitle = "ניהול אנשי קשר",
         steps = listOf(
@@ -127,7 +118,7 @@ val GUIDE_APPS = listOf(
     ),
     GuideApp(
         id = "files",
-        icon = Icons.Rounded.Folder,
+        icon = FutureIcons.Folder,
         name = "קבצים",
         subtitle = "דפדפן קבצים",
         steps = listOf(
@@ -138,7 +129,7 @@ val GUIDE_APPS = listOf(
     ),
     GuideApp(
         id = "keyboard",
-        icon = Icons.Rounded.Keyboard,
+        icon = FutureIcons.Keyboard,
         name = "מקלדת",
         subtitle = "קלט טקסט T9 חזוי",
         steps = listOf(
@@ -161,7 +152,7 @@ val GUIDE_APPS = listOf(
     ),
     GuideApp(
         id = "music",
-        icon = Icons.Rounded.MusicNote,
+        icon = FutureIcons.MusicNote,
         name = "מוזיקה",
         subtitle = "נגן מוזיקה מקומי",
         steps = listOf(
@@ -221,7 +212,7 @@ val GUIDE_APPS = listOf(
     ),
     GuideApp(
         id = "bluetooth",
-        icon = Icons.Rounded.Bluetooth,
+        icon = FutureIcons.Bluetooth,
         name = "בלוטות'",
         subtitle = "חיבור אוזניות ומכשירים",
         steps = listOf(
@@ -258,7 +249,7 @@ val GUIDE_APPS = listOf(
     ),
     GuideApp(
         id = "fitness",
-        icon = Icons.Rounded.FitnessCenter,
+        icon = FutureIcons.FitnessCenter,
         name = "כושר",
         subtitle = "צעדים, אימונים ודופק",
         steps = listOf(
@@ -283,7 +274,7 @@ val GUIDE_APPS = listOf(
     ),
     GuideApp(
         id = "assistant",
-        icon = Icons.Rounded.Mic,
+        icon = FutureIcons.Mic,
         name = "עוזר קולי",
         subtitle = "זיהוי דיבור והקראה מקומיים",
         steps = listOf(
@@ -296,7 +287,7 @@ val GUIDE_APPS = listOf(
     ),
     GuideApp(
         id = "translate",
-        icon = Icons.Rounded.Translate,
+        icon = FutureIcons.Translate,
         name = "תרגום",
         subtitle = "תרגום בין שפות, גם בלי רשת",
         steps = listOf(
@@ -312,7 +303,7 @@ val GUIDE_APPS = listOf(
     ),
     GuideApp(
         id = "settings",
-        icon = Icons.Rounded.Settings,
+        icon = FutureIcons.Settings,
         name = "הגדרות",
         subtitle = "הגדרות מערכת",
         steps = listOf(

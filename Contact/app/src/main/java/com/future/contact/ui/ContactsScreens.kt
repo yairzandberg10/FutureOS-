@@ -1,484 +1,451 @@
 package com.future.contact.ui
-import com.future.sharednav.components.FutureAvatar
-import com.future.sharednav.components.FutureDialog
-import com.future.sharednav.components.FutureButtonVariant
-import com.future.sharednav.components.FutureFormField
-import com.future.sharednav.components.ConfirmDialog
-import com.future.sharednav.components.FutureOptionsMenu
-import com.future.sharednav.components.FutureMenuRow
-import com.future.sharednav.theme.secondaryTextColor
-import com.future.sharednav.theme.mutedTextColor
-import com.future.sharednav.theme.FutureMotion
-import com.future.sharednav.theme.readableAccentColor
-import com.future.sharednav.theme.idleChipColor
-import com.future.sharednav.theme.FutureDimens
-import com.future.sharednav.focus.focusMotion
-import com.future.sharednav.components.FutureButton
-import com.future.sharednav.theme.FutureTypography
-import com.future.sharednav.theme.FutureShapes
-import com.future.sharednav.focus.bringIntoViewOnFocus
 
 import android.content.Intent
 import android.net.Uri
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateFloatAsState
+import android.provider.ContactsContract
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.focusable
-import androidx.compose.foundation.gestures.animateScrollBy
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.Call
-import androidx.compose.material.icons.rounded.Person
-import androidx.compose.material.icons.rounded.MoreVert
-import androidx.compose.material.icons.rounded.PersonAdd
-import androidx.compose.material.icons.automirrored.rounded.Message
-import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material.icons.automirrored.rounded.Sort
+import androidx.compose.material.icons.rounded.AddAPhoto
+import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material.icons.rounded.Business
-import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Email
 import androidx.compose.material.icons.rounded.LocationOn
-import androidx.compose.material.icons.rounded.Notes
-import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.NoPhotography
 import androidx.compose.material.icons.rounded.StarBorder
+import androidx.compose.material.icons.automirrored.rounded.Notes
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.text.TextStyle
-import com.future.sharednav.components.AppDialog
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.future.contact.data.Contact
 import com.future.contact.data.ContactDetails
-import com.future.sharednav.focus.escapeTextFieldFocusTrap
-import com.future.sharednav.nav.digitForKey
-import com.future.sharednav.theme.FutureTheme
-import com.future.sharednav.theme.favoriteColor
+import com.future.contact.data.ContactsRepository
 import com.future.contact.util.T9Search
+import com.future.sharednav.components.ConfirmDialog
+import com.future.sharednav.components.EmptyState
+import com.future.sharednav.components.FutureAvatar
+import com.future.sharednav.components.FutureButton
+import com.future.sharednav.components.FutureButtonVariant
+import com.future.sharednav.components.FutureCard
+import com.future.sharednav.components.FutureDialog
+import com.future.sharednav.components.FutureDivider
+import com.future.sharednav.components.FutureFormField
+import com.future.sharednav.components.FutureListItem
+import com.future.sharednav.components.FutureMenuRow
+import com.future.sharednav.components.FutureOptionsMenu
+import com.future.sharednav.components.FutureSectionHeader
+import com.future.sharednav.components.FutureSettingItem
+import com.future.sharednav.components.FutureTextField
+import com.future.sharednav.components.ScreenTopBar
+import com.future.sharednav.components.TopBarIconButton
+import com.future.sharednav.focus.escapeTextFieldFocusTrap
+import com.future.sharednav.icons.FutureIcons
+import com.future.sharednav.nav.digitForKey
+import com.future.sharednav.nav.onOptionsKeyPress
+import com.future.sharednav.theme.FutureDimens
+import com.future.sharednav.theme.FutureTheme
+import com.future.sharednav.theme.FutureTransitions
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.favoriteColor
+import com.future.sharednav.theme.mutedTextColor
+import com.future.sharednav.theme.rememberFutureType
+import com.future.sharednav.theme.subtleTextColor
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+/** שלוש הלשוניות בסרגל התחתון, בסדר RTL (הראשונה מימין). */
+enum class ContactsTab(val title: String) { FAVORITES("מועדפים"), CONTACTS("אנשי קשר"), BLOCKED("חסומים") }
+
+/** פעולות על איש קשר - MainActivity מממש (Intent-ים, הרשאות, בוחר תמונות). */
+class ContactActions(
+    val call: (String) -> Unit,
+    val message: (String) -> Unit,
+    val share: (Contact) -> Unit,
+    val pickPhoto: (Contact) -> Unit,
+    val removePhoto: (Contact) -> Unit,
+    val toggleFavorite: (Contact) -> Unit,
+    val toggleBlocked: (Contact) -> Unit,
+    val delete: (Contact) -> Unit,
+    val add: (name: String, number: String) -> Unit,
+    val cycleSort: () -> Unit,
+)
+
+/**
+ * רשימת אנשי הקשר של לשונית אחת: כותרת עם כפתור חיפוש שנפתח לשדה, רשימה
+ * (T9 מהספרות גם בלי לפתוח את השדה), ומקש Options לפעולות.
+ */
 @Composable
 fun ContactsListScreen(
+    tab: ContactsTab,
     contacts: List<Contact>,
     hasPermission: Boolean,
+    sortLabel: String,
     theme: FutureTheme,
+    actions: ContactActions,
     onRequestPermission: () -> Unit,
     onContactClick: (Contact) -> Unit,
-    onAddContact: () -> Unit,
-    onEditContact: (Contact) -> Unit = {},
-    onDeleteContact: (Contact) -> Unit = {},
-    onToggleFavorite: (Contact) -> Unit = {},
-    // איש הקשר שממנו נכנסו למסך הפרטים לאחרונה - כשחוזרים "אחורה" הפוקוס
-    // צריך לשוב לשורה הזו בדיוק, לא תמיד לשורה הראשונה ברשימה.
-    lastSelectedContactId: String? = null,
+    lastSelectedContactId: String?,
 ) {
-    val context = LocalContext.current
-    var menuFor by remember { mutableStateOf<Contact?>(null) }
-    var pendingDelete by remember { mutableStateOf<Contact?>(null) }
-    // גישה חלופית לתפריט מחיקה/מועדפים (זהה בדיוק לפתרון של Files.FilesScreen)
-    // עבור מכשירים בלי מקש Menu/Settings ייעודי - בלעדיה התפריט נגיש רק דרך
-    // מקש חומרה ספציפי שאולי לא קיים במכשיר בפועל.
-    var focusedContact by remember { mutableStateOf<Contact?>(null) }
-
-    // מקש Options הפיזי נחסם ברמת המערכת ולא מגיע כ-Key.Menu לאפליקציה -
-    // זו הדרך האמיתית שהוא פותח את תפריט הפעולות של איש הקשר הממוקד.
-    com.future.sharednav.nav.onOptionsKeyPress { if (focusedContact != null) menuFor = focusedContact }
-
-    // T9: מקשי הספרות הפיזיים בונים רצף שמסנן חי את רשימת אנשי הקשר לפי
-    // תחילת שם פרטי/משפחה (ראה T9Search) - זו התכונה הכי בסיסית שחסרה
-    // באפליקציית אנשי קשר שמבוססת מקלדת T9 בלבד. הרצף מתאפס אוטומטית אחרי
-    // הפסקה קצרה בהקלדה, בדיוק כמו שמתבצע חיפוש T9 בשאר הסוויטה.
+    var searchOpen by remember { mutableStateOf(false) }
+    var searchText by remember { mutableStateOf("") }
     var t9Query by remember { mutableStateOf("") }
+    var focusedContact by remember { mutableStateOf<Contact?>(null) }
+    var menuOpen by remember { mutableStateOf(false) }
+    var pendingDelete by remember { mutableStateOf<Contact?>(null) }
+    var adding by remember { mutableStateOf(false) }
+
+    onOptionsKeyPress { if (pendingDelete == null && !adding) menuOpen = !menuOpen }
+    BackHandler(enabled = searchOpen || t9Query.isNotEmpty()) {
+        searchOpen = false
+        searchText = ""
+        t9Query = ""
+    }
     LaunchedEffect(t9Query) {
         if (t9Query.isNotEmpty()) {
-            delay(2000)
+            delay(2500)
             t9Query = ""
         }
     }
-    val filteredContacts = remember(contacts, t9Query) {
-        if (t9Query.isEmpty()) contacts else contacts.filter { T9Search.matchesAnyWord(it.name, t9Query) }
-    }
 
-    menuFor?.let { contact ->
-        ContactOptionsMenu(
-            contact = contact,
-            theme = theme,
-            onDismiss = { menuFor = null },
-            onEdit = { onEditContact(contact); menuFor = null },
-            onDelete = { pendingDelete = contact; menuFor = null },
-            onToggleFavorite = { onToggleFavorite(contact); menuFor = null }
-        )
+    val inTab = remember(contacts, tab) {
+        when (tab) {
+            ContactsTab.FAVORITES -> contacts.filter { it.isFavorite && !it.isBlocked }
+            ContactsTab.CONTACTS -> contacts.filter { !it.isBlocked }
+            ContactsTab.BLOCKED -> contacts.filter { it.isBlocked }
+        }
     }
-
-    pendingDelete?.let { contact ->
-        DeleteConfirmationDialog(
-            contactName = contact.name,
-            theme = theme,
-            onConfirm = { onDeleteContact(contact); pendingDelete = null },
-            onCancel = { pendingDelete = null }
-        )
-    }
-
-    val addContactFocusRequester = remember { FocusRequester() }
-    // FocusRequester לפי מזהה איש קשר (לא רק לשורה הראשונה) - כדי שאפשר יהיה
-    // למקד בחזרה בדיוק את השורה שממנה נכנסו למסך הפרטים.
-    val rowFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
-    var initialFocusRequested by remember { mutableStateOf(false) }
-    LaunchedEffect(hasPermission, contacts.isEmpty()) {
-        if (!initialFocusRequested) {
-            if (hasPermission && contacts.isNotEmpty()) {
-                val target = filteredContacts.firstOrNull { it.id == lastSelectedContactId } ?: filteredContacts.firstOrNull()
-                target?.let { rowFocusRequesters.getOrPut(it.id) { FocusRequester() }.requestFocus() }
-                initialFocusRequested = true
-            } else if (!hasPermission) {
-                // אין עדיין רשימה שאפשר למקד אליה - נמקד את כפתור ההוספה כברירת
-                // מחדל, כדי שהמסך לא יישאר בלי שום פוקוס D-pad.
-                addContactFocusRequester.requestFocus()
-                initialFocusRequested = true
-            }
+    val shown = remember(inTab, searchText, t9Query) {
+        val text = searchText.trim()
+        inTab.filter { c ->
+            (text.isEmpty() || c.name.contains(text, ignoreCase = true) || c.phoneNumbers.any { it.filter(Char::isDigit).contains(text.filter(Char::isDigit).ifEmpty { "\u0000" }) }) &&
+                (t9Query.isEmpty() || T9Search.matchesAnyWord(c.name, t9Query) || c.phoneNumbers.any { it.filter(Char::isDigit).contains(t9Query) })
         }
     }
 
+    val rowFocus = remember { mutableMapOf<String, FocusRequester>() }
+    fun focusFor(id: String) = rowFocus.getOrPut(id) { FocusRequester() }
+    val searchButtonFocus = remember { FocusRequester() }
+    LaunchedEffect(hasPermission, tab, inTab.isEmpty()) {
+        val target = inTab.firstOrNull { it.id == lastSelectedContactId } ?: inTab.firstOrNull()
+        runCatching { if (target != null) focusFor(target.id).requestFocus() else searchButtonFocus.requestFocus() }
+    }
+
+    val type = rememberFutureType()
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .background(theme.backgroundColor)
                 .onKeyEvent { event ->
-                    if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
-                    if (pendingDelete != null || menuFor != null) return@onKeyEvent false
-                    val digit = digitForKey(event.key)
-                    if (digit != null) {
-                        t9Query += digit
+                    if (searchOpen || event.type != KeyEventType.KeyDown) return@onKeyEvent false
+                    digitForKey(event.key)?.let {
+                        t9Query += it
                         return@onKeyEvent true
                     }
                     if ((event.key == Key.Backspace || event.key == Key.Delete) && t9Query.isNotEmpty()) {
                         t9Query = t9Query.dropLast(1)
-                        return@onKeyEvent true
-                    }
-                    false
+                        true
+                    } else false
                 }
         ) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(20.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("אנשי קשר", fontSize = FutureTypography.headline, fontWeight = FontWeight.Bold, color = theme.textColor)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        if (focusedContact != null) {
-                            FocusableIconButton(
-                                icon = Icons.Rounded.MoreVert,
-                                theme = theme,
-                                onClick = { menuFor = focusedContact }
-                            )
-                        }
-                        FocusableIconButton(
-                            icon = Icons.Rounded.PersonAdd,
-                            theme = theme,
-                            onClick = onAddContact,
-                            focusRequester = addContactFocusRequester
-                        )
-                    }
-                }
-
-                if (t9Query.isNotEmpty()) {
+            // כותרת: שם הלשונית וכפתור חיפוש, שנפתח לשדה חיפוש ברוחב מלא.
+            AnimatedContent(targetState = searchOpen, transitionSpec = { FutureTransitions.appear() }, label = "searchHeader") { open ->
+                if (open) {
+                    FutureTextField(
+                        value = searchText,
+                        onValueChange = { searchText = it },
+                        theme = theme,
+                        placeholder = "חיפוש ב${tab.title}",
+                        autoFocus = true,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = FutureDimens.spacingLg, vertical = FutureDimens.spacingMd).escapeTextFieldFocusTrap(),
+                        leading = { Icon(FutureIcons.Search, contentDescription = null, tint = theme.mutedTextColor, modifier = Modifier.size(FutureDimens.iconMenuRow)) },
+                    )
+                } else {
                     Row(
-                        modifier = Modifier
-                            .padding(horizontal = 20.dp)
-                            .padding(bottom = 8.dp)
-                            .clip(FutureShapes.md)
-                            .background(theme.textColor.copy(alpha = 0.1f))
-                            .padding(horizontal = 14.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = FutureDimens.spacingLg, vertical = FutureDimens.spacingMd),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(t9Query, color = theme.textColor, fontWeight = FontWeight.Bold, fontSize = FutureTypography.bodyLarge)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("${filteredContacts.size} תוצאות", color = theme.mutedTextColor, fontSize = FutureTypography.label)
+                        Text(tab.title, fontSize = type.screenTitle, fontWeight = FutureTypography.weightBold, color = theme.textColor, modifier = Modifier.weight(1f))
+                        TopBarIconButton(FutureIcons.Search, "חיפוש", theme.textColor, theme.accentColor, { searchOpen = true }, focusRequester = searchButtonFocus)
                     }
                 }
+            }
+            if (t9Query.isNotEmpty() && !searchOpen) {
+                Text(
+                    "$t9Query · ${shown.size} תוצאות",
+                    color = theme.mutedTextColor,
+                    fontSize = type.summary,
+                    modifier = Modifier.padding(horizontal = FutureDimens.spacingXl, vertical = FutureDimens.spacingXs),
+                )
+            }
 
-                when {
-                    !hasPermission -> {
-                        PermissionRequiredMessage(theme = theme, onRequestPermission = onRequestPermission)
-                    }
-                    contacts.isEmpty() -> {
-                        com.future.sharednav.components.EmptyState(
-                            icon = Icons.Rounded.Person,
-                            title = "אין אנשי קשר עדיין",
-                            subtitle = "הוסיפו איש קשר עם כפתור ההוספה",
-                            textColor = theme.textColor,
+            when {
+                !hasPermission -> Column(
+                    modifier = Modifier.fillMaxSize().padding(32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    Text("כדי להציג אנשי קשר צריך לאשר הרשאה", color = theme.mutedTextColor, fontSize = type.bodyLarge, textAlign = TextAlign.Center)
+                    FutureButton("אשר הרשאה", theme, onRequestPermission, modifier = Modifier.padding(top = 16.dp))
+                }
+                inTab.isEmpty() -> EmptyState(
+                    icon = when (tab) {
+                        ContactsTab.FAVORITES -> FutureIcons.Star
+                        ContactsTab.CONTACTS -> FutureIcons.Person
+                        ContactsTab.BLOCKED -> Icons.Rounded.Block
+                    },
+                    title = when (tab) {
+                        ContactsTab.FAVORITES -> "אין מועדפים"
+                        ContactsTab.CONTACTS -> "אין אנשי קשר"
+                        ContactsTab.BLOCKED -> "אין אנשי קשר חסומים"
+                    },
+                    subtitle = if (tab == ContactsTab.CONTACTS) "לחץ על מקש התפריט כדי להוסיף" else null,
+                    textColor = theme.textColor,
+                )
+                shown.isEmpty() -> EmptyState(icon = FutureIcons.SearchOff, title = "לא נמצאו תוצאות", textColor = theme.textColor)
+                else -> LazyColumn(contentPadding = PaddingValues(horizontal = FutureDimens.spacingMd, vertical = FutureDimens.spacingXs)) {
+                    itemsIndexed(shown, key = { _, c -> c.id }) { _, contact ->
+                        FutureListItem(
+                            title = contact.name,
+                            summary = contact.phoneNumbers.firstOrNull(),
+                            theme = theme,
+                            onClick = { onContactClick(contact) },
+                            focusRequester = focusFor(contact.id),
+                            modifier = Modifier.onFocusChanged { if (it.isFocused) focusedContact = contact },
+                            leading = { FutureAvatar(theme = theme, name = contact.name, photoUri = contact.photoUri) },
+                            trailing = {
+                                when {
+                                    contact.isBlocked -> Icon(Icons.Rounded.Block, contentDescription = "חסום", tint = theme.dangerColor, modifier = Modifier.size(FutureDimens.iconMenuRow))
+                                    contact.isFavorite && tab != ContactsTab.FAVORITES -> Icon(FutureIcons.Star, contentDescription = "מועדף", tint = theme.favoriteColor, modifier = Modifier.size(FutureDimens.iconMenuRow))
+                                }
+                            },
                         )
-                    }
-                    filteredContacts.isEmpty() -> {
-                        com.future.sharednav.components.EmptyState(
-                            icon = Icons.Rounded.Person,
-                            title = "לא נמצאו אנשי קשר תואמים",
-                            textColor = theme.textColor,
-                        )
-                    }
-                    else -> {
-                        LazyColumn(
-                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            itemsIndexed(filteredContacts, key = { _, contact -> contact.id }) { _, contact ->
-                                ContactRow(
-                                    contact,
-                                    theme = theme,
-                                    onClick = { onContactClick(contact) },
-                                    onMenu = { menuFor = contact },
-                                    focusRequester = rowFocusRequesters.getOrPut(contact.id) { FocusRequester() },
-                                    onFocused = { focusedContact = contact }
-                                )
-                            }
-                        }
                     }
                 }
             }
         }
     }
-}
 
-@Composable
-private fun PermissionRequiredMessage(theme: FutureTheme, onRequestPermission: () -> Unit) {
-    Column(
-        modifier = Modifier.fillMaxSize().padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(
-            "כדי להציג אנשי קשר צריך לאשר הרשאה",
-            color = theme.textColor.copy(alpha = 0.7f),
-            fontSize = FutureTypography.bodyLarge
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        FutureButton("אשר הרשאה", theme, onRequestPermission)
+    if (menuOpen) {
+        val target = focusedContact?.takeIf { f -> shown.any { it.id == f.id } }
+        FutureOptionsMenu(theme = theme, onDismissRequest = { menuOpen = false }, header = target?.name ?: tab.title) {
+            fun pick(action: () -> Unit): () -> Unit = { menuOpen = false; action() }
+            if (target != null) {
+                target.phoneNumbers.firstOrNull()?.let { number ->
+                    FutureMenuRow("התקשר", FutureIcons.Call, theme, pick { actions.call(number) })
+                    FutureMenuRow("שלח הודעה", FutureIcons.AutoMirrored.Chat, theme, pick { actions.message(number) })
+                }
+                ContactMenuRows(target, theme, actions, onDelete = { pendingDelete = target }, pick = ::pick)
+            }
+            FutureMenuRow("איש קשר חדש", FutureIcons.PersonAdd, theme, pick { adding = true })
+            FutureMenuRow("מיון · $sortLabel", Icons.AutoMirrored.Rounded.Sort, theme, pick(actions.cycleSort))
+            FutureMenuRow("חיפוש", FutureIcons.Search, theme, pick { searchOpen = true })
+        }
+    }
+    pendingDelete?.let { contact ->
+        ConfirmDialog(message = "למחוק את ${contact.name}?", theme = theme, confirmLabel = "מחק", onCancel = { pendingDelete = null }, onConfirm = {
+            pendingDelete = null
+            actions.delete(contact)
+        })
+    }
+    if (adding) {
+        AddContactDialog(theme = theme, onDismiss = { adding = false }, onSave = { name, number ->
+            adding = false
+            actions.add(name, number)
+        })
     }
 }
 
+/** השורות של תפריט איש קשר שמשותפות לרשימה ולכרטיס. */
 @Composable
-private fun ContactRow(
-    contact: Contact,
-    theme: FutureTheme,
-    onClick: () -> Unit,
-    onMenu: () -> Unit,
-    focusRequester: FocusRequester? = null,
-    onFocused: () -> Unit = {}
-) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    LaunchedEffect(isFocused) { if (isFocused) onFocused() }
-    val shape = FutureShapes.row
-    val bgColor by animateColorAsState(
-        if (isFocused) theme.readableAccentColor.copy(alpha = 0.14f) else theme.idleChipColor,
-        FutureMotion.focusColorSpec,
-        label = "rowBg"
+private fun ContactMenuRows(contact: Contact, theme: FutureTheme, actions: ContactActions, onDelete: () -> Unit, pick: (() -> Unit) -> () -> Unit) {
+    FutureMenuRow(
+        if (contact.isFavorite) "הסר ממועדפים" else "הוסף למועדפים",
+        if (contact.isFavorite) FutureIcons.Star else Icons.Rounded.StarBorder,
+        theme,
+        pick { actions.toggleFavorite(contact) },
     )
-    val scale by animateFloatAsState(if (isFocused) 1.02f else 1f, label = "rowScale")
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .graphicsLayer { scaleX = scale; scaleY = scale }
-            .clip(shape)
-            .background(bgColor)
-            .then(if (isFocused) Modifier.border(FutureDimens.focusBorderItem, theme.readableAccentColor, shape) else Modifier)
-            .let { if (focusRequester != null) it.focusRequester(focusRequester) else it }
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
-            .onKeyEvent { event ->
-                if (isFocused && event.type == KeyEventType.KeyUp && (event.key == Key.Menu || event.key == Key.Settings)) {
-                    onMenu()
-                    true
-                } else false
-            }
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        FutureAvatar(theme = theme, name = contact.name)
-        Spacer(modifier = Modifier.width(14.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(contact.name, color = theme.textColor, fontWeight = FontWeight.SemiBold, fontSize = FutureTypography.bodyLarge)
-            if (contact.phoneNumbers.isNotEmpty()) {
-                Text(contact.phoneNumbers.first(), color = theme.mutedTextColor, fontSize = FutureTypography.label)
-            }
-        }
-        if (contact.isFavorite) {
-            Icon(Icons.Rounded.Star, contentDescription = "מועדף", tint = theme.favoriteColor, modifier = Modifier.size(18.dp))
-        }
-    }
+    FutureMenuRow("שתף איש קשר", FutureIcons.Share, theme, pick { actions.share(contact) })
+    FutureMenuRow(if (contact.photoUri == null) "הגדר תמונה" else "החלף תמונה", Icons.Rounded.AddAPhoto, theme, pick { actions.pickPhoto(contact) })
+    FutureMenuRow(if (contact.isBlocked) "בטל חסימה" else "חסום", Icons.Rounded.Block, theme, pick { actions.toggleBlocked(contact) }, destructive = !contact.isBlocked)
+    FutureMenuRow("מחק איש קשר", FutureIcons.Delete, theme, pick(onDelete), destructive = true)
 }
 
+/**
+ * כרטיס איש קשר - אותו מבנה של כרטיס איש הקשר בחייגן (ui_kits/calls):
+ * אווטאר גדול (עם התמונה), שם ומספר; כרטיס פעולות; פרטים; וכרטיס ניהול.
+ */
 @Composable
-fun ContactDetailScreen(contact: Contact, theme: FutureTheme, onBack: () -> Unit) {
+fun ContactDetailScreen(contact: Contact, theme: FutureTheme, actions: ContactActions, onBack: () -> Unit) {
     val context = LocalContext.current
-    val repository = remember { com.future.contact.data.ContactsRepository(context) }
-    val coroutineScope = rememberCoroutineScope()
+    val repository = remember { ContactsRepository(context) }
+    val scope = rememberCoroutineScope()
+    val type = rememberFutureType()
     var details by remember(contact.id) { mutableStateOf(ContactDetails()) }
-    var isEditing by remember { mutableStateOf(false) }
+    var editing by remember { mutableStateOf(false) }
+    var menuOpen by remember { mutableStateOf(false) }
+    var pendingDelete by remember { mutableStateOf(false) }
+    LaunchedEffect(contact.id) { details = withContext(Dispatchers.IO) { repository.getContactDetails(contact.id) } }
+    onOptionsKeyPress { if (!editing && !pendingDelete) menuOpen = !menuOpen }
 
-    LaunchedEffect(contact.id) {
-        details = withContext(kotlinx.coroutines.Dispatchers.IO) { repository.getContactDetails(contact.id) }
-    }
-
-    val backFocusRequester = remember { FocusRequester() }
-    LaunchedEffect(Unit) { backFocusRequester.requestFocus() }
+    val first = remember { FocusRequester() }
+    LaunchedEffect(Unit) { runCatching { first.requestFocus() } }
+    val primary = contact.phoneNumbers.firstOrNull()
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Column(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                FocusableIconButton(
-                    icon = Icons.AutoMirrored.Rounded.ArrowBack,
-                    theme = theme,
-                    onClick = onBack,
-                    focusRequester = backFocusRequester
-                )
-                Spacer(modifier = Modifier.weight(1f))
-                FocusableIconButton(icon = Icons.Rounded.Edit, theme = theme, onClick = { isEditing = true })
-            }
-            val detailsScrollState = rememberScrollState()
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .verticalScroll(detailsScrollState)
-                    // בלי זה, איש קשר בלי מספרי טלפון (רק אימייל/ארגון/כתובת/הערות)
-                    // לא מכיל אף רכיב פוקוסבילי באזור הגלילה - ואין דרך במקלדת לגלול
-                    // אליו אם התוכן חורג מגובה המסך.
-                    .focusable().bringIntoViewOnFocus()
-                    .onKeyEvent { event ->
-                        if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
-                        val step = 300f
-                        when (event.key) {
-                            Key.DirectionDown -> {
-                                coroutineScope.launch { detailsScrollState.animateScrollBy(step) }
-                                true
-                            }
-                            Key.DirectionUp -> {
-                                coroutineScope.launch { detailsScrollState.animateScrollBy(-step) }
-                                true
-                            }
-                            else -> false
+            ScreenTopBar(title = "איש קשר", textColor = theme.textColor, accentColor = theme.accentColor, onBack = onBack)
+            Column(modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(bottom = FutureDimens.spacingLg)) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(top = FutureDimens.spacingMd, bottom = 20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm),
+                ) {
+                    FutureAvatar(theme = theme, name = contact.name, size = 88.dp, photoUri = contact.photoUri)
+                    Text(contact.name, color = theme.textColor, fontSize = type.screenTitle, fontWeight = FutureTypography.weightBold, textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = FutureDimens.screenPadding))
+                    if (primary != null) {
+                        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                            Text(primary, color = theme.mutedTextColor, fontSize = type.body)
                         }
                     }
-                    .padding(horizontal = 24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                FutureAvatar(theme = theme, name = contact.name, size = 88.dp)
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(contact.name, fontSize = FutureTypography.headline, fontWeight = FontWeight.Bold, color = theme.textColor)
-                Spacer(modifier = Modifier.height(24.dp))
-
-                contact.phoneNumbers.forEach { number ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(number, color = theme.secondaryTextColor, fontSize = FutureTypography.bodyLarge)
-                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            FocusableIconButton(icon = Icons.AutoMirrored.Rounded.Message, theme = theme, onClick = {
-                                val intent = Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:$number"))
-                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                context.startActivity(intent)
-                            })
-                            FocusableIconButton(icon = Icons.Rounded.Call, theme = theme, onClick = {
-                                val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$number"))
-                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                context.startActivity(intent)
-                            })
-                        }
-                    }
+                    if (contact.isBlocked) Text("חסום", color = theme.dangerColor, fontSize = type.summary)
                 }
 
-                if (details.email.isNotBlank() || details.organization.isNotBlank() || details.address.isNotBlank() || details.notes.isNotBlank()) {
-                    Spacer(modifier = Modifier.height(20.dp))
-                    if (details.email.isNotBlank()) DetailInfoRow(Icons.Rounded.Email, details.email, theme)
-                    if (details.organization.isNotBlank() || details.jobTitle.isNotBlank()) {
-                        DetailInfoRow(
-                            Icons.Rounded.Business,
-                            listOf(details.jobTitle, details.organization).filter { it.isNotBlank() }.joinToString(" · "),
-                            theme
+                FutureCard(theme = theme) {
+                    if (contact.phoneNumbers.isEmpty()) {
+                        FutureSettingItem(title = "אין מספר טלפון", theme = theme, showChevron = false, onClick = null)
+                    }
+                    contact.phoneNumbers.forEachIndexed { index, number ->
+                        if (index > 0) FutureDivider(theme = theme)
+                        FutureSettingItem(
+                            title = if (contact.phoneNumbers.size > 1) "התקשר · $number" else "התקשר",
+                            icon = FutureIcons.Call,
+                            theme = theme,
+                            showChevron = false,
+                            focusRequester = if (index == 0) first else null,
+                            onClick = { actions.call(number) },
                         )
                     }
-                    if (details.address.isNotBlank()) DetailInfoRow(Icons.Rounded.LocationOn, details.address, theme)
-                    if (details.notes.isNotBlank()) DetailInfoRow(Icons.Rounded.Notes, details.notes, theme)
+                    if (primary != null) {
+                        FutureDivider(theme = theme)
+                        FutureSettingItem(title = "שלח הודעה", icon = FutureIcons.AutoMirrored.Chat, theme = theme, showChevron = false, onClick = { actions.message(primary) })
+                    }
+                    FutureDivider(theme = theme)
+                    FutureSettingItem(
+                        title = if (contact.isFavorite) "הסר ממועדפים" else "הוסף למועדפים",
+                        icon = if (contact.isFavorite) FutureIcons.Star else Icons.Rounded.StarBorder,
+                        theme = theme,
+                        showChevron = false,
+                        focusRequester = if (contact.phoneNumbers.isEmpty()) first else null,
+                        onClick = { actions.toggleFavorite(contact) },
+                    )
                 }
-                Spacer(modifier = Modifier.height(24.dp))
+
+                val info = listOfNotNull(
+                    details.email.takeIf { it.isNotBlank() }?.let { Icons.Rounded.Email to it },
+                    listOf(details.jobTitle, details.organization).filter { it.isNotBlank() }.joinToString(" · ").takeIf { it.isNotBlank() }?.let { Icons.Rounded.Business to it },
+                    details.address.takeIf { it.isNotBlank() }?.let { Icons.Rounded.LocationOn to it },
+                    details.notes.takeIf { it.isNotBlank() }?.let { Icons.AutoMirrored.Rounded.Notes to it },
+                )
+                FutureSectionHeader("פרטים", theme)
+                FutureCard(theme = theme) {
+                    info.forEachIndexed { index, (icon, text) ->
+                        if (index > 0) FutureDivider(theme = theme)
+                        FutureSettingItem(title = text, icon = icon, theme = theme, showChevron = false, onClick = null)
+                    }
+                    if (info.isNotEmpty()) FutureDivider(theme = theme)
+                    FutureSettingItem(title = "ערוך פרטים", icon = FutureIcons.Edit, theme = theme, onClick = { editing = true })
+                }
+
+                FutureSectionHeader("ניהול", theme)
+                FutureCard(theme = theme) {
+                    FutureSettingItem(title = "שתף איש קשר", icon = FutureIcons.Share, theme = theme, showChevron = false, onClick = { actions.share(contact) })
+                    FutureDivider(theme = theme)
+                    FutureSettingItem(
+                        title = if (contact.photoUri == null) "הגדר תמונה" else "החלף תמונה",
+                        icon = Icons.Rounded.AddAPhoto,
+                        theme = theme,
+                        onClick = { actions.pickPhoto(contact) },
+                    )
+                    if (contact.photoUri != null) {
+                        FutureDivider(theme = theme)
+                        FutureSettingItem(title = "הסר תמונה", icon = Icons.Rounded.NoPhotography, theme = theme, showChevron = false, onClick = { actions.removePhoto(contact) })
+                    }
+                    FutureDivider(theme = theme)
+                    FutureSettingItem(
+                        title = if (contact.isBlocked) "בטל חסימה" else "חסום",
+                        summary = if (contact.isBlocked) "שיחות והודעות ממנו חסומות" else null,
+                        icon = Icons.Rounded.Block,
+                        theme = theme,
+                        showChevron = false,
+                        onClick = { actions.toggleBlocked(contact) },
+                    )
+                    FutureDivider(theme = theme)
+                    FutureSettingItem(title = "מחק איש קשר", icon = FutureIcons.Delete, theme = theme, showChevron = false, onClick = { pendingDelete = true })
+                }
             }
         }
     }
 
-    if (isEditing) {
-        ContactEditDetailsDialog(
-            initial = details,
-            theme = theme,
-            onDismiss = { isEditing = false },
-            onSave = { updated ->
-                isEditing = false
-                // מעדכנים את המסך רק אם הכתיבה בפועל הצליחה - לפני התיקון
-                // ה-UI היה קופץ לערכים החדשים באופן אופטימי גם כשהכתיבה
-                // נכשלה בשקט (חסרת הרשאת WRITE_CONTACTS למשל), והמשתמש היה
-                // חושב שהשמירה הצליחה בעוד שהנתונים הישנים בלבד נשארו בפועל.
-                coroutineScope.launch {
-                    val success = withContext(kotlinx.coroutines.Dispatchers.IO) {
-                        repository.updateContactDetails(contact.id, updated)
-                    }
-                    if (success) {
-                        details = updated
-                    } else {
-                        android.widget.Toast.makeText(context, "לא ניתן לשמור — נדרשת הרשאה", android.widget.Toast.LENGTH_SHORT).show()
-                    }
-                }
-            }
-        )
+    if (menuOpen) {
+        FutureOptionsMenu(theme = theme, onDismissRequest = { menuOpen = false }, header = contact.name) {
+            fun pick(action: () -> Unit): () -> Unit = { menuOpen = false; action() }
+            ContactMenuRows(contact, theme, actions, onDelete = { pendingDelete = true }, pick = ::pick)
+            FutureMenuRow("ערוך פרטים", FutureIcons.Edit, theme, pick { editing = true })
+        }
     }
-}
-
-@Composable
-private fun DetailInfoRow(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String, theme: FutureTheme) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(icon, contentDescription = null, tint = theme.textColor.copy(alpha = 0.6f), modifier = Modifier.size(18.dp))
-        Spacer(modifier = Modifier.width(12.dp))
-        Text(text, color = theme.textColor, fontSize = FutureTypography.body)
+    if (pendingDelete) {
+        ConfirmDialog(message = "למחוק את ${contact.name}?", theme = theme, confirmLabel = "מחק", onCancel = { pendingDelete = false }, onConfirm = {
+            pendingDelete = false
+            actions.delete(contact)
+        })
+    }
+    if (editing) {
+        ContactEditDetailsDialog(initial = details, theme = theme, onDismiss = { editing = false }, onSave = { updated ->
+            editing = false
+            scope.launch {
+                val ok = withContext(Dispatchers.IO) { repository.updateContactDetails(contact.id, updated) }
+                if (ok) details = updated
+            }
+        })
     }
 }
 
@@ -489,7 +456,6 @@ private fun ContactEditDetailsDialog(initial: ContactDetails, theme: FutureTheme
     var jobTitle by remember { mutableStateOf(initial.jobTitle) }
     var address by remember { mutableStateOf(initial.address) }
     var notes by remember { mutableStateOf(initial.notes) }
-
     FutureDialog(
         theme = theme,
         onDismissRequest = onDismiss,
@@ -500,63 +466,38 @@ private fun ContactEditDetailsDialog(initial: ContactDetails, theme: FutureTheme
         },
     ) {
         Column(modifier = Modifier.escapeTextFieldFocusTrap()) {
-            EditField("אימייל", email, theme) { email = it }
-            EditField("ארגון", organization, theme) { organization = it }
-            EditField("תפקיד", jobTitle, theme) { jobTitle = it }
-            EditField("כתובת", address, theme) { address = it }
-            EditField("הערות", notes, theme) { notes = it }
+            FutureFormField("אימייל", email, { email = it }, theme, modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp))
+            FutureFormField("ארגון", organization, { organization = it }, theme, modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp))
+            FutureFormField("תפקיד", jobTitle, { jobTitle = it }, theme, modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp))
+            FutureFormField("כתובת", address, { address = it }, theme, modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp))
+            FutureFormField("הערות", notes, { notes = it }, theme, modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp))
         }
     }
 }
 
+/** איש קשר חדש, בתוך האפליקציה - עורך אנשי הקשר של המערכת מושבת במכשיר. */
 @Composable
-private fun EditField(label: String, value: String, theme: FutureTheme, onValueChange: (String) -> Unit) {
-    FutureFormField(label, value, onValueChange, theme, modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp))
-}
-
-
-
-/** דיאלוג אישור לפני מחיקת איש קשר - מחיקה היא פעולה בלתי הפיכה, ולפני
- * התיקון היא הייתה מתבצעת מיידית מתפריט האפשרויות בלי אף שלב אישור. ברירת
- * המחדל לפוקוס D-pad היא "ביטול", כדי שלחיצה בטעות על מרכז המקלדת לא תמחק. */
-/** דיאלוג אישור לפני מחיקת איש קשר - ConfirmDialog של הדיזיין סיסטם; השאלה
- * בנוסח שלו ("למחוק את X?"), והתשובות בפעלים. */
-@Composable
-private fun DeleteConfirmationDialog(contactName: String, theme: FutureTheme, onConfirm: () -> Unit, onCancel: () -> Unit) {
-    ConfirmDialog(message = "למחוק את \"$contactName\"?", theme = theme, onCancel = onCancel, onConfirm = onConfirm)
-}
-
-/** תפריט אפשרויות - נפתח בלחיצה על מקש Options כשאיש קשר בפוקוס. */
-/** תפריט אפשרויות - נפתח בלחיצה על מקש Options כשאיש קשר בפוקוס. */
-@Composable
-private fun ContactOptionsMenu(
-    contact: Contact,
-    theme: FutureTheme,
-    onDismiss: () -> Unit,
-    onEdit: () -> Unit,
-    onDelete: () -> Unit,
-    onToggleFavorite: () -> Unit
-) {
-    FutureOptionsMenu(theme = theme, onDismissRequest = onDismiss, header = contact.name) {
-        FutureMenuRow(
-            if (contact.isFavorite) "הסר ממועדפים" else "הוסף למועדפים",
-            if (contact.isFavorite) Icons.Rounded.Star else Icons.Rounded.StarBorder,
-            theme,
-            onToggleFavorite,
-        )
-        FutureMenuRow("ערוך איש קשר", Icons.Rounded.Edit, theme, onEdit)
-        FutureMenuRow("מחק איש קשר", Icons.Rounded.Delete, theme, onDelete, destructive = true)
+fun AddContactDialog(theme: FutureTheme, initialNumber: String = "", onDismiss: () -> Unit, onSave: (String, String) -> Unit) {
+    var name by remember { mutableStateOf("") }
+    var number by remember { mutableStateOf(initialNumber) }
+    FutureDialog(
+        theme = theme,
+        onDismissRequest = onDismiss,
+        title = "איש קשר חדש",
+        buttons = {
+            FutureButton("ביטול", theme, onDismiss, variant = FutureButtonVariant.Secondary)
+            FutureButton("שמור", theme, { if (name.isNotBlank()) onSave(name.trim(), number.trim()) }, enabled = name.isNotBlank())
+        },
+    ) {
+        Column(modifier = Modifier.escapeTextFieldFocusTrap()) {
+            FutureFormField("שם", name, { name = it }, theme, autoFocus = true, modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp))
+            FutureFormField(
+                "טלפון",
+                number,
+                { number = it },
+                theme,
+                modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+            )
+        }
     }
-}
-
-
-
-@Composable
-fun FocusableIconButton(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    theme: FutureTheme,
-    onClick: () -> Unit,
-    focusRequester: FocusRequester? = null
-) {
-    com.future.sharednav.components.TopBarIconButton(icon, "", theme.textColor, theme.accentColor, onClick, focusRequester)
 }

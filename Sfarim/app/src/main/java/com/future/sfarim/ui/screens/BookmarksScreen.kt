@@ -1,4 +1,6 @@
 package com.future.sfarim.ui.screens
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureListItem
 import com.future.sharednav.components.FutureAvatar
 import com.future.sharednav.components.FutureSectionHeader
@@ -19,9 +21,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Bookmark
-import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -71,7 +70,7 @@ fun BookmarksScreen(
                 ScreenTopBar(title = "סימניות", theme = theme, onBack = onBack)
                 if (bookmarks.isEmpty()) {
                     EmptyState(
-                        icon = Icons.Rounded.Bookmark,
+                        icon = FutureIcons.Bookmark,
                         title = "אין סימניות עדיין",
                         textColor = theme.textColor,
                     )
@@ -128,12 +127,12 @@ private fun BookmarkRow(
                 onDelete(); true
             } else false
         },
-        leading = { FutureAvatar(theme = theme, icon = Icons.Rounded.Bookmark) },
+        leading = { FutureAvatar(theme = theme, icon = FutureIcons.Bookmark) },
         // אייקון תצוגתי בלבד (לא focusable) - המחיקה זמינה דרך מקש Menu על
         // השורה עצמה. שני יעדי פוקוס על אותה שורה לא נגישים שניהם ב-D-pad.
         trailing = {
             Icon(
-                Icons.Rounded.Delete,
+                FutureIcons.Delete,
                 contentDescription = "מחק סימניה",
                 tint = theme.mutedTextColor,
                 modifier = Modifier.size(FutureDimens.iconTopBar),

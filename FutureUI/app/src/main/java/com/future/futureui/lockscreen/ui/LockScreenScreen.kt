@@ -1,4 +1,6 @@
 package com.future.futureui.lockscreen.ui
+
+import com.future.sharednav.icons.FutureIcons
 import androidx.compose.animation.core.snap
 
 // ייבוא ספריות נדרשות של אנדרואיד וקומפוז (Jetpack Compose)
@@ -650,8 +652,8 @@ fun getShortcutIcon(id: String): ImageVector = when(id) {
     "phone" -> Icons.Rounded.Phone
     "camera" -> Icons.Rounded.CameraAlt
     "flashlight" -> Icons.Rounded.FlashlightOn
-    "settings" -> Icons.Rounded.Settings
-    else -> Icons.Rounded.Apps
+    "settings" -> FutureIcons.Settings
+    else -> FutureIcons.Apps
 }
 
 /**

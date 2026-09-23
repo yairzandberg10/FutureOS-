@@ -1,4 +1,6 @@
 package com.future.tools.ui
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.theme.subtleTextColor
 import com.future.sharednav.theme.mutedTextColor
 
@@ -20,9 +22,6 @@ import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ContentCopy
-import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -101,7 +100,7 @@ fun VoiceTranscribeScreen(theme: FutureTheme, onBack: () -> Unit) {
                     title = "תמלול קולי", theme = theme, onBack = onBack,
                     trailing = {
                         if (transcript.isNotBlank()) {
-                            ToolsIconButton(Icons.Rounded.ContentCopy, "העתק", theme = theme) {
+                            ToolsIconButton(FutureIcons.ContentCopy, "העתק", theme = theme) {
                                 val clipboard = context.getSystemService(ClipboardManager::class.java)
                                 clipboard.setPrimaryClip(ClipData.newPlainText("transcript", transcript))
                                 Toast.makeText(context, "הטקסט הועתק", Toast.LENGTH_SHORT).show()
@@ -156,6 +155,6 @@ private fun MicButton(isListening: Boolean, theme: FutureTheme, onClick: () -> U
         fill = if (isListening) theme.dangerColor else theme.toolsPrimaryFill,
         onClick = onClick,
     ) { contentColor ->
-        Icon(Icons.Rounded.Mic, contentDescription = if (isListening) "עצור הקלטה" else "התחל הקלטה", tint = contentColor, modifier = Modifier.size(32.dp))
+        Icon(FutureIcons.Mic, contentDescription = if (isListening) "עצור הקלטה" else "התחל הקלטה", tint = contentColor, modifier = Modifier.size(32.dp))
     }
 }

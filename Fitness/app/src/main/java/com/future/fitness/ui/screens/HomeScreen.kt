@@ -1,4 +1,9 @@
 package com.future.fitness.ui.screens
+import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material.icons.rounded.LocalFireDepartment
+import androidx.compose.material.icons.rounded.PlayCircle
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.AvatarListSize
 import com.future.sharednav.components.FutureAvatar
 import com.future.sharednav.theme.FutureShapes
@@ -38,13 +43,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.FavoriteBorder
-import androidx.compose.material.icons.rounded.FitnessCenter
-import androidx.compose.material.icons.rounded.History
-import androidx.compose.material.icons.rounded.LocalFireDepartment
-import androidx.compose.material.icons.rounded.PlayCircle
-import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -95,9 +93,9 @@ fun HomeScreen(
     onOpenNextWorkoutDetail: () -> Unit,
 ) {
     val items = listOf(
-        MenuItem("1", Icons.Rounded.History, "היסטוריה", "אימונים קודמים", onOpenHistory),
+        MenuItem("1", FutureIcons.History, "היסטוריה", "אימונים קודמים", onOpenHistory),
         MenuItem("2", Icons.Rounded.FavoriteBorder, "בריאות", "הסברים ואזורי דופק", onOpenHealth),
-        MenuItem("3", Icons.Rounded.Settings, "הגדרות", "עיצוב, פרופיל ושעון חכם", onOpenSettings),
+        MenuItem("3", FutureIcons.Settings, "הגדרות", "עיצוב, פרופיל ושעון חכם", onOpenSettings),
     )
 
     val weekDays = remember(history) { buildWeekDots(history) }
@@ -191,7 +189,7 @@ fun HomeScreen(
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     if (day.done) {
-                                        Icon(Icons.Rounded.Check, contentDescription = null, tint = theme.textColor, modifier = Modifier.size(14.dp))
+                                        Icon(FutureIcons.Check, contentDescription = null, tint = theme.textColor, modifier = Modifier.size(14.dp))
                                     }
                                 }
                             }
@@ -244,7 +242,7 @@ fun HomeScreen(
                             .padding(18.dp),
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            FutureAvatar(theme = theme, icon = Icons.Rounded.FitnessCenter, size = AvatarListSize)
+                            FutureAvatar(theme = theme, icon = FutureIcons.FitnessCenter, size = AvatarListSize)
                             Spacer(Modifier.width(14.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text("האימון המומלץ הבא", color = theme.sectionHeaderColor, fontSize = FutureTypography.caption, fontWeight = FontWeight.Bold)

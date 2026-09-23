@@ -1,4 +1,6 @@
 package com.future.fitness.ui.screens
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.theme.elevatedSurfaceColor
 import com.future.sharednav.theme.idleFieldColor
 import com.future.sharednav.theme.idleChipColor
@@ -30,9 +32,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -152,7 +151,7 @@ fun WorkoutBuilderScreen(
                                     .padding(8.dp),
                                 contentAlignment = Alignment.Center,
                             ) {
-                                Icon(Icons.Rounded.Close, contentDescription = "הסר תרגיל", tint = theme.textColor.copy(alpha = if (exercises.size > 1) 0.7f else 0.2f))
+                                Icon(FutureIcons.Close, contentDescription = "הסר תרגיל", tint = theme.textColor.copy(alpha = if (exercises.size > 1) 0.7f else 0.2f))
                             }
                         }
                     }
@@ -194,7 +193,7 @@ fun WorkoutBuilderScreen(
                         horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Icon(Icons.Rounded.Add, contentDescription = null, tint = theme.textColor, modifier = Modifier.size(18.dp))
+                        Icon(FutureIcons.Add, contentDescription = null, tint = theme.textColor, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
                         Text("הוסף תרגיל", color = theme.textColor, fontSize = FutureTypography.body, fontWeight = FontWeight.SemiBold)
                     }

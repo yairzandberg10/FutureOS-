@@ -1,4 +1,7 @@
 package com.future.remote.ui
+import androidx.compose.material.icons.rounded.RadioButtonChecked
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.theme.subtleTextColor
 
 import android.widget.Toast
@@ -11,9 +14,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.RadioButtonChecked
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -56,7 +56,7 @@ fun DeviceScreen(theme: FutureTheme, deviceId: String, refreshKey: Int, onBack: 
                     theme = theme,
                     onBack = onBack,
                     trailing = {
-                        RemoteIconButton(Icons.Rounded.Delete, "מחק מכשיר", theme = theme, tint = theme.dangerColor) {
+                        RemoteIconButton(FutureIcons.Delete, "מחק מכשיר", theme = theme, tint = theme.dangerColor) {
                             repository.deleteDevice(deviceId)
                             onBack()
                         }
@@ -84,7 +84,7 @@ fun DeviceScreen(theme: FutureTheme, deviceId: String, refreshKey: Int, onBack: 
                                 Toast.makeText(context, if (sent) "נשלח" else "השליחה נכשלה", Toast.LENGTH_SHORT).show()
                             },
                             trailing = {
-                                RemoteIconButton(Icons.Rounded.Delete, "מחק כפתור", theme = theme, tint = theme.textColor.copy(alpha = 0.4f)) {
+                                RemoteIconButton(FutureIcons.Delete, "מחק כפתור", theme = theme, tint = theme.textColor.copy(alpha = 0.4f)) {
                                     repository.deleteButton(deviceId, button.id)
                                     device = repository.loadDevices().firstOrNull { it.id == deviceId }
                                 }
@@ -94,7 +94,7 @@ fun DeviceScreen(theme: FutureTheme, deviceId: String, refreshKey: Int, onBack: 
                     }
                     item {
                         RemoteRow(
-                            icon = Icons.Rounded.Add,
+                            icon = FutureIcons.Add,
                             label = "הוסף כפתור",
                             subtitle = "קוד NEC (כתובת+פקודה) או תבנית גולמית",
                             theme = theme,

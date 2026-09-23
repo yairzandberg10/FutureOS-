@@ -7,7 +7,7 @@ class StatusBarLayoutManager(context: Context) {
     companion object {
         // גובה שורת המצב הקבועה, בדפ"י - צריך להיות זהה בין השירות (שמגדיר את גובה
         // חלון ה-overlay) לבין כל מסך אחר שצריך padding עליון כדי לא להיחסם על ידה.
-        const val HEIGHT_DP = 28
+        const val HEIGHT_DP = com.future.sharednav.systemui.StatusBarInset.HEIGHT_DP
     }
 
     private val prefs: SharedPreferences = context.getSharedPreferences("status_bar_prefs", Context.MODE_PRIVATE)

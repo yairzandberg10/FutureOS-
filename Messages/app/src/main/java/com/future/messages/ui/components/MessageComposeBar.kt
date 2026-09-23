@@ -1,4 +1,6 @@
 package com.future.messages.ui.components
+
+import com.future.sharednav.icons.FutureIcons
 import androidx.compose.ui.graphics.drawscope.Stroke
 
 import androidx.compose.animation.animateColorAsState
@@ -20,9 +22,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.Send
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -153,7 +152,7 @@ fun MessageComposeBar(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                ComposeIconButton(Icons.Rounded.Add, "צרף תמונה", theme, onAttach)
+                ComposeIconButton(FutureIcons.Add, "צרף תמונה", theme, onAttach)
                 BasicTextField(
                     value = text,
                     onValueChange = onTextChange,
@@ -176,7 +175,7 @@ fun MessageComposeBar(
                     },
                 )
                 if (onDictate != null) {
-                    ComposeIconButton(Icons.Rounded.Mic, "הכתבה", theme, onDictate)
+                    ComposeIconButton(FutureIcons.Mic, "הכתבה", theme, onDictate)
                 }
             }
 
@@ -243,7 +242,7 @@ private fun ComposeSendButton(theme: FutureTheme, accent: Color, enabled: Boolea
         contentAlignment = Alignment.Center,
     ) {
         Icon(
-            Icons.AutoMirrored.Rounded.Send,
+            FutureIcons.AutoMirrored.Send,
             contentDescription = "שלח",
             tint = FutureContrast.onColor(accent),
             modifier = Modifier.size(23.dp),

@@ -1,4 +1,16 @@
 package com.future.music.ui.screens
+import androidx.compose.material.icons.rounded.Equalizer
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material.icons.rounded.Repeat
+import androidx.compose.material.icons.rounded.RepeatOne
+import androidx.compose.material.icons.rounded.Shuffle
+import androidx.compose.material.icons.rounded.SkipNext
+import androidx.compose.material.icons.rounded.SkipPrevious
+import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
+import androidx.compose.material.icons.automirrored.rounded.QueueMusic
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureProgressBar
 import com.future.sharednav.components.FutureDialog
 import com.future.sharednav.components.FutureButton
@@ -38,20 +50,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Equalizer
-import androidx.compose.material.icons.rounded.Favorite
-import androidx.compose.material.icons.rounded.FavoriteBorder
-import androidx.compose.material.icons.rounded.Menu
-import androidx.compose.material.icons.rounded.MusicNote
-import androidx.compose.material.icons.rounded.Pause
-import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
-import androidx.compose.material.icons.automirrored.rounded.QueueMusic
-import androidx.compose.material.icons.rounded.Repeat
-import androidx.compose.material.icons.rounded.RepeatOne
-import androidx.compose.material.icons.rounded.Shuffle
-import androidx.compose.material.icons.rounded.SkipNext
-import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Icon
@@ -162,9 +160,6 @@ fun NowPlayingScreen(
             title = "מתנגן כעת",
             theme = theme,
             onBack = onBack,
-            trailingIcon = Icons.Rounded.Menu,
-            trailingContentDescription = "תפריט ראשי",
-            onTrailingClick = onOpenMenu,
         )
 
         val artBitmap = rememberAlbumArt(song?.uri)
@@ -189,7 +184,7 @@ fun NowPlayingScreen(
                 if (artBitmap != null) {
                     Image(bitmap = artBitmap, contentDescription = null, modifier = Modifier.fillMaxSize())
                 } else {
-                    Icon(Icons.Rounded.MusicNote, contentDescription = null, tint = theme.accentColor, modifier = Modifier.size(48.dp))
+                    Icon(FutureIcons.MusicNote, contentDescription = null, tint = theme.accentColor, modifier = Modifier.size(48.dp))
                 }
             }
 
@@ -227,7 +222,7 @@ fun NowPlayingScreen(
                     RoundIconButton(Icons.Rounded.SkipPrevious, "קודם (4)", theme, size = 42.dp, onClick = onPrevious, onFocusChanged = trackControlFocus)
                     Spacer(modifier = Modifier.width(14.dp))
                     RoundIconButton(
-                        if (playerState.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                        if (playerState.isPlaying) FutureIcons.Pause else FutureIcons.PlayArrow,
                         if (playerState.isPlaying) "השהה (5)" else "נגן (5)",
                         theme, size = 54.dp, filled = true, onClick = onTogglePlay,
                         focusRequester = playButtonFocusRequester, onFocusChanged = trackControlFocus,

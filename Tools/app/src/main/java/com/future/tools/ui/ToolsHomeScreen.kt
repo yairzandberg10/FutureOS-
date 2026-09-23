@@ -1,4 +1,22 @@
 package com.future.tools.ui
+import androidx.compose.material.icons.rounded.Architecture
+import androidx.compose.material.icons.rounded.Casino
+import androidx.compose.material.icons.rounded.Checklist
+import androidx.compose.material.icons.rounded.DocumentScanner
+import androidx.compose.material.icons.rounded.Explore
+import androidx.compose.material.icons.rounded.LocalCafe
+import androidx.compose.material.icons.rounded.Numbers
+import androidx.compose.material.icons.rounded.Percent
+import androidx.compose.material.icons.rounded.PushPin
+import androidx.compose.material.icons.rounded.QrCodeScanner
+import androidx.compose.material.icons.rounded.Receipt
+import androidx.compose.material.icons.rounded.RecordVoiceOver
+import androidx.compose.material.icons.rounded.Shuffle
+import androidx.compose.material.icons.rounded.Straighten
+import androidx.compose.material.icons.rounded.VpnKey
+import androidx.compose.material.icons.rounded.WbSunny
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.theme.FutureDimens
 import com.future.sharednav.theme.FutureMotion
 import com.future.sharednav.theme.readableAccentColor
@@ -26,25 +44,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Architecture
-import androidx.compose.material.icons.rounded.Casino
-import androidx.compose.material.icons.rounded.Checklist
-import androidx.compose.material.icons.rounded.DocumentScanner
-import androidx.compose.material.icons.rounded.Explore
-import androidx.compose.material.icons.rounded.GraphicEq
-import androidx.compose.material.icons.rounded.LocalCafe
-import androidx.compose.material.icons.rounded.Numbers
-import androidx.compose.material.icons.rounded.Percent
-import androidx.compose.material.icons.rounded.Public
-import androidx.compose.material.icons.rounded.PushPin
-import androidx.compose.material.icons.rounded.QrCodeScanner
-import androidx.compose.material.icons.rounded.Receipt
-import androidx.compose.material.icons.rounded.RecordVoiceOver
-import androidx.compose.material.icons.rounded.Shuffle
-import androidx.compose.material.icons.rounded.SwapHoriz
-import androidx.compose.material.icons.rounded.Straighten
-import androidx.compose.material.icons.rounded.VpnKey
-import androidx.compose.material.icons.rounded.WbSunny
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -69,19 +68,19 @@ data class ToolEntry(val icon: ImageVector, val label: String, val subtitle: Str
 val TOOL_ENTRIES = listOf(
     // כלים קיימים - המחשבון, השעון עצר/טיימר והפנס עברו לאפליקציות עצמאיות
     // משלהם (Calculator, Clock, Flashlight) ואינם חלק מ-Tools יותר.
-    ToolEntry(Icons.Rounded.SwapHoriz, "ממיר יחידות", "אורך, משקל, טמפרטורה, נפח", ToolRoute.UnitConverter),
+    ToolEntry(FutureIcons.SwapHoriz, "ממיר יחידות", "אורך, משקל, טמפרטורה, נפח", ToolRoute.UnitConverter),
     ToolEntry(Icons.Rounded.Explore, "מצפן וגובה", "כיוון מגנטי וגובה ברומטרי", ToolRoute.Compass),
     ToolEntry(Icons.Rounded.Straighten, "פלס", "איזון אופקי לפי חיישן תאוצה", ToolRoute.Level),
 
     // מדידה וחיישנים
-    ToolEntry(Icons.Rounded.GraphicEq, "מד רעש", "עוצמת קול בדציבלים מהמיקרופון", ToolRoute.NoiseMeter),
+    ToolEntry(FutureIcons.GraphicEq, "מד רעש", "עוצמת קול בדציבלים מהמיקרופון", ToolRoute.NoiseMeter),
     ToolEntry(Icons.Rounded.WbSunny, "מד אור", "עוצמת תאורה בלוקס מהחיישן הקדמי", ToolRoute.LuxMeter),
     ToolEntry(Icons.Rounded.Architecture, "סרגל וזווית", "סרגל וירטואלי ומד זווית הטיה", ToolRoute.AngleRuler),
 
     // מחשבונים וממירים
     ToolEntry(Icons.Rounded.Receipt, "טיפים ופיצול חשבון", "תשר וחלוקה בין סועדים", ToolRoute.TipSplitCalculator),
     ToolEntry(Icons.Rounded.Percent, "מחשבון פיננסי", "הנחות, מע\"מ והחזרי הלוואה", ToolRoute.QuickFinanceCalculator),
-    ToolEntry(Icons.Rounded.Public, "ממיר אזורי זמן", "השעה הנוכחית בכל העולם", ToolRoute.TimeZoneConverter),
+    ToolEntry(FutureIcons.Public, "ממיר אזורי זמן", "השעה הנוכחית בכל העולם", ToolRoute.TimeZoneConverter),
 
     // פרודוקטיביות
     ToolEntry(Icons.Rounded.QrCodeScanner, "סורק קודים", "QR וברקוד ללא פרסומות", ToolRoute.QrScanner),

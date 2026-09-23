@@ -32,6 +32,8 @@
             android:label="@string/app_name"
             android:theme="@style/Theme.Camera"
             android:screenOrientation="portrait">
+            <!-- התצוגה החיה מצוירת עד הקצה; הפקדים שומרים מרווח משורת המצב בעצמם -->
+            <meta-data android:name="com.future.sharednav.STATUS_BAR_INSET" android:value="false" />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

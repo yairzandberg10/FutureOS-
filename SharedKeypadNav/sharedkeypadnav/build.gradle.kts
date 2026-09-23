@@ -59,6 +59,9 @@ dependencies {
     // תלות ישירה (לא דרך alias של קטלוג) כי לא בכל 16 האפליקציות הצורכות
     // יש alias בקטלוג שלהן ל-material-icons-extended - הגרסה נגזרת מה-BOM.
     implementation("androidx.compose.material:material-icons-extended")
+    // BackHandler ב-ScreenTopBar: כפתור החזור על המסך הוסר (מקש BACK הפיזי
+    // עושה את אותה פעולה), וה-onBack של הכותרת נרשם למקש במקומו.
+    implementation(libs.androidx.activity.compose)
 
     testImplementation(libs.junit)
 }

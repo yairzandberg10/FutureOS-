@@ -1,4 +1,8 @@
 package com.future.translate.ui
+import androidx.compose.material.icons.rounded.DownloadDone
+import androidx.compose.material.icons.rounded.StarBorder
+
+import com.future.sharednav.icons.FutureIcons
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -13,19 +17,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.Download
-import androidx.compose.material.icons.rounded.DownloadDone
-import androidx.compose.material.icons.rounded.Forum
-import androidx.compose.material.icons.rounded.GraphicEq
-import androidx.compose.material.icons.rounded.History
-import androidx.compose.material.icons.rounded.Keyboard
-import androidx.compose.material.icons.rounded.Mic
-import androidx.compose.material.icons.rounded.MoreVert
-import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material.icons.rounded.SearchOff
-import androidx.compose.material.icons.rounded.StarBorder
-import androidx.compose.material.icons.rounded.Wifi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -125,7 +116,7 @@ fun LanguagePickerScreen(
                 theme = theme,
                 placeholder = "חפש שפה",
                 autoFocus = true,
-                leading = { Icon(Icons.Rounded.Search, contentDescription = null, tint = theme.subtleTextColor) },
+                leading = { Icon(FutureIcons.Search, contentDescription = null, tint = theme.subtleTextColor) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(start = FutureDimens.screenPadding, end = FutureDimens.screenPadding, bottom = 6.dp),
@@ -137,7 +128,7 @@ fun LanguagePickerScreen(
             FutureSectionHeader("כל השפות", theme)
             if (list.isEmpty()) {
                 EmptyState(
-                    icon = Icons.Rounded.SearchOff,
+                    icon = FutureIcons.SearchOff,
                     title = "לא נמצאה שפה",
                     subtitle = "נסה מילה אחרת",
                     textColor = theme.textColor,
@@ -160,7 +151,7 @@ private fun LanguageCard(languages: List<Language>, current: String, theme: Futu
                 theme = theme,
                 onClick = { onSelect(language.code) },
                 trailing = if (language.code == current) {
-                    { Icon(Icons.Rounded.Check, contentDescription = "נבחרה", tint = accent, modifier = Modifier.size(FutureDimens.iconSettingRow)) }
+                    { Icon(FutureIcons.Check, contentDescription = "נבחרה", tint = accent, modifier = Modifier.size(FutureDimens.iconSettingRow)) }
                 } else null,
             )
         }
@@ -194,9 +185,6 @@ fun HistoryScreen(
         textColor = theme.textColor,
         accentColor = theme.accentColor,
         onBack = onBack,
-        trailingIcon = Icons.Rounded.MoreVert,
-        trailingContentDescription = "אפשרויות",
-        onTrailingClick = onMenu,
     ) {
         Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = FutureDimens.spacingXl)) {
             Row(
@@ -228,7 +216,7 @@ fun HistoryScreen(
                     )
                 } else {
                     EmptyState(
-                        icon = Icons.Rounded.History,
+                        icon = FutureIcons.History,
                         title = "אין תרגומים",
                         subtitle = "לחץ על חזרה והקלד טקסט לתרגום",
                         textColor = theme.textColor,
@@ -295,9 +283,6 @@ fun TalkScreen(
             viewModel.listener.stop()
             onBack()
         },
-        trailingIcon = Icons.Rounded.MoreVert,
-        trailingContentDescription = "אפשרויות",
-        onTrailingClick = onMenu,
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             Column(
@@ -310,7 +295,7 @@ fun TalkScreen(
             ) {
                 if (lines.isEmpty()) {
                     EmptyState(
-                        icon = Icons.Rounded.Forum,
+                        icon = FutureIcons.Forum,
                         title = "אין עדיין שיחה",
                         subtitle = "${Languages.of(a).name} ו${Languages.of(b).name}",
                         textColor = theme.textColor,
@@ -333,9 +318,9 @@ fun TalkScreen(
                 }
                 FutureRoundCapsule(
                     icon = when {
-                        listening -> Icons.Rounded.GraphicEq
-                        canListen -> Icons.Rounded.Mic
-                        else -> Icons.Rounded.Keyboard
+                        listening -> FutureIcons.GraphicEq
+                        canListen -> FutureIcons.Mic
+                        else -> FutureIcons.Keyboard
                     },
                     theme = theme,
                     active = listening,
@@ -466,7 +451,7 @@ fun DownloadsScreen(
                     FutureSettingItem(
                         title = language.name,
                         summary = if (busy) "מוריד" else "לא הורדה",
-                        icon = Icons.Rounded.Download,
+                        icon = FutureIcons.Download,
                         theme = theme,
                         showChevron = false,
                         focusRequester = if (have.isEmpty() && index == 0) first else null,
@@ -518,7 +503,7 @@ fun SettingsScreen(viewModel: TranslateViewModel, theme: FutureTheme, onBack: ()
                 FutureSettingItem(
                     title = "שמירת היסטוריה",
                     summary = if (saveHistory) "מופעל" else "כבוי",
-                    icon = Icons.Rounded.History,
+                    icon = FutureIcons.History,
                     theme = theme,
                     showChevron = false,
                     focusRequester = first,
@@ -529,7 +514,7 @@ fun SettingsScreen(viewModel: TranslateViewModel, theme: FutureTheme, onBack: ()
                 FutureSettingItem(
                     title = "הורדה ב-Wi-Fi בלבד",
                     summary = if (wifiOnly) "מופעל" else "כבוי",
-                    icon = Icons.Rounded.Wifi,
+                    icon = FutureIcons.Wifi,
                     theme = theme,
                     showChevron = false,
                     onClick = { viewModel.setWifiOnly(!wifiOnly) },

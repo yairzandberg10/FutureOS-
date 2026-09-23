@@ -1,4 +1,9 @@
 package com.future.calculator.ui
+import androidx.activity.compose.BackHandler
+import androidx.compose.material.icons.rounded.Functions
+import androidx.compose.material.icons.rounded.DeleteSweep
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.ScreenTopBar
 import com.future.sharednav.components.FutureTabRow
 import com.future.sharednav.components.FutureSectionHeader
@@ -30,9 +35,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ContentCopy
-import androidx.compose.material.icons.rounded.DeleteSweep
-import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -94,8 +96,17 @@ fun CalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
     var showMenu by remember { mutableStateOf(false) }
     var calcMode by remember { mutableStateOf(CalculatorMode.STANDARD) }
     val context = LocalContext.current
+    // במצב רגיל אין אף מקש על המסך שמקבל פוקוס - החצים הם פעולות החשבון
+    // עצמן - ולכן השורש הוא שמחזיק את הפוקוס ומקבל את המקשים. במצב מדעי
+    // הפוקוס עובר לרשת הפונקציות והחצים זזים בה.
+    val rootFocus = remember { FocusRequester() }
     val focusRequester = remember { FocusRequester() }
-    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+    LaunchedEffect(calcMode) {
+        runCatching { if (calcMode == CalculatorMode.STANDARD) rootFocus.requestFocus() else focusRequester.requestFocus() }
+    }
+    // "*" קצר = C, "*" ארוך = נקודה עשרונית (ל-* ול-# יש כבר תפקיד, והנקודה
+    // צריכה מקש פיזי כלשהו).
+    var starHeld by remember { mutableStateOf(false) }
     // מקש Options הפיזי נחסם ברמת המערכת ולעולם לא מגיע כ-Key.Menu לאפליקציה -
     // התפריט נפתח באמת רק דרך השידור הגלובלי (ר' onOptionsKeyPress).
     com.future.sharednav.nav.onOptionsKeyPress { showMenu = true }
@@ -233,6 +244,17 @@ fun CalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
         startFresh = true
     }
 
+    /** BACK במחשבון מוחק. רק כשאין מה למחוק הוא יוצא מהאפליקציה. */
+    fun onBackKey() {
+        val empty = display == "0" && pendingOp == null && expressionLine.isEmpty()
+        when {
+            empty -> onBack()
+            startFresh -> onClear()
+            else -> onBackspace()
+        }
+    }
+    BackHandler(onBack = ::onBackKey)
+
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
     // הפוקוס ההתחלתי צריך לנחות על כפתור אמיתי (למשל "C"), לא על ה-Box החיצוני
     // עצמו: Box עם .focusable() משלו "בולע" את הפוקוס לצמיתות ומונע ניווט D-pad
@@ -243,39 +265,57 @@ fun CalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
         modifier = Modifier
             .fillMaxSize()
             .background(theme.backgroundColor)
+            .focusRequester(rootFocus)
+            .focusable(enabled = calcMode == CalculatorMode.STANDARD)
             .onKeyEvent { event ->
+                val native = event.nativeKeyEvent
+                // "*": קצר = C (בשחרור), מוחזק = נקודה (בחזרה הראשונה של המקש).
+                if (native.keyCode == android.view.KeyEvent.KEYCODE_STAR) {
+                    if (event.type == KeyEventType.KeyDown) {
+                        if (native.repeatCount == 0) starHeld = false
+                        else if (!starHeld) { starHeld = true; inputDot() }
+                    } else if (event.type == KeyEventType.KeyUp && !starHeld) {
+                        onClear()
+                    }
+                    return@onKeyEvent true
+                }
                 if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
                 digitForKey(event.key)?.let {
                     inputDigit(it)
                     return@onKeyEvent true
                 }
-                when (event.nativeKeyEvent.keyCode) {
-                    android.view.KeyEvent.KEYCODE_STAR -> { inputDot(); true }
-                    android.view.KeyEvent.KEYCODE_POUND -> { onEquals(); true }
-                    else -> when (event.key) {
-                        Key.Enter, Key.NumPadEnter, Key.DirectionCenter -> { onEquals(); true }
-                        Key.Backspace, Key.Delete -> { onBackspace(); true }
-                        else -> false
+                if (native.keyCode == android.view.KeyEvent.KEYCODE_POUND) {
+                    onPercent()
+                    return@onKeyEvent true
+                }
+                when (event.key) {
+                    Key.Backspace, Key.Delete -> { onBackspace(); true }
+                    else -> if (calcMode == CalculatorMode.STANDARD) {
+                        // במצב רגיל החצים הם הפעולות, ו-OK הוא "=".
+                        when (event.key) {
+                            Key.DirectionUp -> { onOperator(CalcOp.ADD); true }
+                            Key.DirectionDown -> { onOperator(CalcOp.SUB); true }
+                            Key.DirectionLeft -> { onOperator(CalcOp.MUL); true }
+                            Key.DirectionRight -> { onOperator(CalcOp.DIV); true }
+                            Key.Enter, Key.NumPadEnter, Key.DirectionCenter -> { onEquals(); true }
+                            else -> false
+                        }
+                    } else {
+                        // במצב מדעי OK מפעיל את המקש הממוקד (הוא מגיע לכאן רק אם אף
+                        // מקש לא טיפל בו), ו-Enter של מקלדת חיצונית הוא "=".
+                        when (event.key) {
+                            Key.Enter, Key.NumPadEnter -> { onEquals(); true }
+                            else -> false
+                        }
                     }
                 }
             }
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             ScreenTopBar(
-                title = "מחשבון",
+                title = if (calcMode == CalculatorMode.SCIENTIFIC) "מחשבון מדעי" else "מחשבון",
                 textColor = theme.textColor,
                 accentColor = theme.accentColor,
-                onBack = onBack,
-                trailingIcon = Icons.Rounded.MoreVert,
-                trailingContentDescription = "אפשרויות",
-                onTrailingClick = { showMenu = true },
-            )
-
-            FutureTabRow(
-                items = listOf("רגיל", "מדעי"),
-                selectedIndex = calcMode.ordinal,
-                theme = theme,
-                onSelect = { calcMode = CalculatorMode.entries[it] },
             )
 
             // הביטוי והתוצאה חייבים להישאר קריאים משמאל-לימין (ספרות + סימני
@@ -344,7 +384,19 @@ fun CalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
                 listOf(Triple("C", true) { onClear() }, Triple("⌫", true) { onBackspace() }, Triple("%", true) { onPercent() }, Triple("÷", false) { onOperator(CalcOp.DIV) }),
                 listOf(Triple("×", false) { onOperator(CalcOp.MUL) }, Triple("−", false) { onOperator(CalcOp.SUB) }, Triple("+", false) { onOperator(CalcOp.ADD) }, Triple("=", false) { onEquals() })
             )
-            val actionRows = if (calcMode == CalculatorMode.SCIENTIFIC) scientificRows + standardRows else standardRows
+            // במדעי: C/⌫/% כבר על מקשים פיזיים (* / BACK / #), אז הרשת היא רק
+            // הפונקציות, ארבע הפעולות ו-"=" - חמש שורות קומפקטיות במקום שבע,
+            // בלי היסטוריה מתחת, כך שהכול נכנס למסך בלי גלילה.
+            val scientificOps = listOf(
+                listOf(
+                    Triple("÷", false) { onOperator(CalcOp.DIV) },
+                    Triple("×", false) { onOperator(CalcOp.MUL) },
+                    Triple("−", false) { onOperator(CalcOp.SUB) },
+                    Triple("+", false) { onOperator(CalcOp.ADD) },
+                ),
+            )
+            val scientific = calcMode == CalculatorMode.SCIENTIFIC
+            val actionRows = if (scientific) scientificRows + scientificOps else standardRows
 
             Column(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = FutureDimens.spacingMd, vertical = FutureDimens.spacingXs),
@@ -363,13 +415,29 @@ fun CalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
                                 theme = theme,
                                 modifier = Modifier.weight(1f),
                                 focusRequester = if (rowIndex == 0 && colIndex == 0) focusRequester else null,
+                                // במצב רגיל המקשים הם תזכורת בלבד - החצים/OK/*/# מפעילים אותם.
+                                focusable = scientific,
+                                height = if (scientific) CalcKeyHeightCompact else CalcKeyHeight,
+                                selected = !scientific && pendingOp != null && startFresh && label == pendingOp?.symbol(),
                                 onClick = onClick
                             )
                         }
                     }
                 }
+                if (scientific) {
+                    CalcActionButton(
+                        label = "=",
+                        isAccent = true,
+                        isMuted = false,
+                        theme = theme,
+                        modifier = Modifier.fillMaxWidth(),
+                        height = CalcKeyHeightCompact,
+                        onClick = { onEquals() },
+                    )
+                }
             }
 
+            if (scientific) return@Column
             FutureSectionHeader("היסטוריה", theme)
             if (history.isEmpty()) {
                 Box(modifier = Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
@@ -397,6 +465,11 @@ fun CalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
         if (showMenu) {
             CalculatorOptionsMenu(
                 theme = theme,
+                scientific = calcMode == CalculatorMode.SCIENTIFIC,
+                onToggleMode = {
+                    showMenu = false
+                    calcMode = if (calcMode == CalculatorMode.SCIENTIFIC) CalculatorMode.STANDARD else CalculatorMode.SCIENTIFIC
+                },
                 onDismiss = { showMenu = false },
                 onCopyResult = {
                     showMenu = false
@@ -428,6 +501,9 @@ private fun CalcActionButton(
     theme: FutureTheme,
     modifier: Modifier = Modifier,
     focusRequester: FocusRequester? = null,
+    focusable: Boolean = true,
+    height: androidx.compose.ui.unit.Dp = CalcKeyHeight,
+    selected: Boolean = false,
     onClick: () -> Unit
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -444,7 +520,7 @@ private fun CalcActionButton(
         label = "calcActionBg"
     )
     val ring by animateColorAsState(
-        if (isFocused && isAccent) theme.textColor else Color.Transparent,
+        if ((isFocused || selected) && isAccent) theme.textColor else Color.Transparent,
         FutureMotion.focusColorSpec,
         label = "calcActionRing"
     )
@@ -452,13 +528,18 @@ private fun CalcActionButton(
 
     Box(
         modifier = modifier
-            .height(CalcKeyHeight)
+            .height(height)
             .clip(FutureShapes.sm)
             .background(bgColor)
             .border(FutureDimens.focusBorderControl, ring, FutureShapes.sm)
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus(),
+            .then(
+                if (focusable) Modifier
+                    .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
+                    .focusable(interactionSource = interactionSource)
+                    .bringIntoViewOnFocus()
+                else Modifier
+            ),
         contentAlignment = Alignment.Center
     ) {
         Text(label, color = textColor, fontSize = FutureTypography.screenTitle, fontWeight = FutureTypography.weightMedium)
@@ -467,6 +548,9 @@ private fun CalcActionButton(
 
 /** 52dp - גובה מקש במחשבון. */
 private val CalcKeyHeight = 52.dp
+
+/** 44dp - מקש ברשת המדעית (שש שורות על מסך של 480dp). */
+private val CalcKeyHeightCompact = 44.dp
 
 /** שורת היסטוריה - שורת רשימה רגילה (FocusableItem): 14% הדגשה ומסגרת 1.5dp בפוקוס. */
 @Composable
@@ -495,9 +579,17 @@ private fun CalcHistoryRow(entry: CalcHistoryEntry, theme: FutureTheme, onClick:
 }
 
 @Composable
-private fun CalculatorOptionsMenu(theme: FutureTheme, onDismiss: () -> Unit, onCopyResult: () -> Unit, onClearHistory: () -> Unit) {
+private fun CalculatorOptionsMenu(
+    theme: FutureTheme,
+    scientific: Boolean,
+    onToggleMode: () -> Unit,
+    onDismiss: () -> Unit,
+    onCopyResult: () -> Unit,
+    onClearHistory: () -> Unit,
+) {
     FutureOptionsMenu(theme = theme, onDismissRequest = onDismiss, header = "מחשבון") {
-        FutureMenuRow("העתק תוצאה", Icons.Rounded.ContentCopy, theme, onCopyResult)
+        FutureMenuRow(if (scientific) "מחשבון רגיל" else "מחשבון מדעי", Icons.Rounded.Functions, theme, onToggleMode)
+        FutureMenuRow("העתק תוצאה", FutureIcons.ContentCopy, theme, onCopyResult)
         FutureMenuRow("נקה היסטוריה", Icons.Rounded.DeleteSweep, theme, onClearHistory, destructive = true)
     }
 }

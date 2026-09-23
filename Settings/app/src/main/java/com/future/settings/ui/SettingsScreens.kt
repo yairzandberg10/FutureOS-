@@ -1,4 +1,6 @@
 package com.future.settings.ui
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.theme.FutureMotion
 import com.future.sharednav.theme.readableAccentColor
 import com.future.sharednav.theme.onReadableAccentColor
@@ -126,18 +128,18 @@ data class FutureApp(val packageName: String, val displayName: String, val icon:
 
 val FUTURE_OS_APPS = listOf(
     FutureApp("com.future.futureui", "FutureUI (System UI)", Icons.Rounded.Widgets),
-    FutureApp("com.future.futurelauncher", "FutureLauncher", Icons.Rounded.Home),
-    FutureApp("com.future.dialer", "טלפון", Icons.Rounded.Dialpad),
+    FutureApp("com.future.futurelauncher", "FutureLauncher", FutureIcons.Home),
+    FutureApp("com.future.dialer", "טלפון", FutureIcons.Dialpad),
     FutureApp("com.future.messages", "הודעות", Icons.AutoMirrored.Rounded.Message),
-    FutureApp("com.future.contact", "אנשי קשר", Icons.Rounded.Contacts),
-    FutureApp("com.future.files", "קבצים", Icons.Rounded.Folder),
-    FutureApp("com.future.gallery", "גלריה", Icons.Rounded.Image),
+    FutureApp("com.future.contact", "אנשי קשר", FutureIcons.Contacts),
+    FutureApp("com.future.files", "קבצים", FutureIcons.Folder),
+    FutureApp("com.future.gallery", "גלריה", FutureIcons.Image),
     FutureApp("com.future.terminal", "טרמינל", Icons.Rounded.Terminal),
     FutureApp("com.future.tools", "כלים", Icons.Rounded.Handyman),
-    FutureApp("com.future.music", "מוזיקה", Icons.Rounded.MusicNote),
+    FutureApp("com.future.music", "מוזיקה", FutureIcons.MusicNote),
     FutureApp("com.future.notes", "פתקים", Icons.AutoMirrored.Rounded.Notes),
     FutureApp("com.future.gotitdone", "gotitdone", Icons.Rounded.CheckCircle),
-    FutureApp("com.future.mikdash", "מקדש", Icons.Rounded.Apps),
+    FutureApp("com.future.mikdash", "מקדש", FutureIcons.Apps),
     FutureApp("com.future.sfarim", "ספרים", Icons.AutoMirrored.Rounded.MenuBook)
 )
 
@@ -261,17 +263,17 @@ private data class SearchableSetting(val title: String, val keywords: String, va
 
 private val SEARCHABLE_SETTINGS = listOf(
     SearchableSetting("חיבורים", "bluetooth בלוטות' מצב טיסה נתונים סלולריים sim מיקום location airplane", Icons.Rounded.Hub, Screen.Connections.route),
-    SearchableSetting("צלילים", "עוצמת שמע צליל רינגטון volume sound ringtone", Icons.AutoMirrored.Rounded.VolumeUp, Screen.Sound.route),
-    SearchableSetting("תצוגה", "בהירות מסך עיצוב brightness display", Icons.Rounded.Brightness6, Screen.Display.route),
+    SearchableSetting("צלילים", "עוצמת שמע צליל רינגטון volume sound ringtone", FutureIcons.AutoMirrored.VolumeUp, Screen.Sound.route),
+    SearchableSetting("תצוגה", "בהירות מסך עיצוב brightness display", FutureIcons.Brightness6, Screen.Display.route),
     SearchableSetting("מסך נעילה ורקע", "שורת מצב סטטוס בר שעון lockscreen status bar clock טפט wallpaper", Icons.Rounded.Widgets, Screen.SystemUi.route),
     SearchableSetting("סוללה", "battery חיסכון טעינה אחוז", Icons.Rounded.BatteryFull, Screen.Battery.route),
     SearchableSetting("אחסון", "storage זיכרון פנוי מקום", Icons.Rounded.Storage, Screen.Storage.route),
     SearchableSetting("ביצועים ותחזוקה", "performance מעבד ram ניקוי אופטימיזציה", Icons.Rounded.Speed, Screen.Performance.route),
     SearchableSetting("התראות ומיקוד", "notifications focus שקט מיקוד שינה", Icons.Rounded.NotificationsActive, Screen.NotificationsFocus.route),
     SearchableSetting("זמן מסך", "screen time שימוש טיימר אפליקציות", Icons.Rounded.HourglassBottom, Screen.ScreenTime.route),
-    SearchableSetting("כללי", "general תאריך שעה שפה נגישות accessibility date time language", Icons.Rounded.Language, Screen.General.route),
-    SearchableSetting("אפליקציות", "apps אפליקציה", Icons.Rounded.Apps, Screen.Apps.route),
-    SearchableSetting("אודות הטלפון", "about imei גרסה מספר טלפון version", Icons.Rounded.Info, Screen.About.route)
+    SearchableSetting("כללי", "general תאריך שעה שפה נגישות accessibility date time language", FutureIcons.Language, Screen.General.route),
+    SearchableSetting("אפליקציות", "apps אפליקציה", FutureIcons.Apps, Screen.Apps.route),
+    SearchableSetting("אודות הטלפון", "about imei גרסה מספר טלפון version", FutureIcons.Info, Screen.About.route)
 )
 
 @Composable
@@ -324,11 +326,11 @@ fun MainMenu(navController: NavController, theme: ThemeConfig, viewModel: Settin
                     theme = theme.futureTheme,
                     placeholder = "חיפוש בהגדרות",
                     leading = {
-                        Icon(Icons.Rounded.Search, contentDescription = null, tint = theme.textColor.copy(alpha = 0.6f), modifier = Modifier.size(FutureDimens.iconTopBar))
+                        Icon(FutureIcons.Search, contentDescription = null, tint = theme.textColor.copy(alpha = 0.6f), modifier = Modifier.size(FutureDimens.iconTopBar))
                     },
                     trailing = {
                         if (searchQuery.isNotEmpty()) {
-                            TopBarIconButton(Icons.Rounded.Close, "נקה חיפוש", theme.textColor, theme.primaryColor, { searchQuery = "" })
+                            TopBarIconButton(FutureIcons.Close, "נקה חיפוש", theme.textColor, theme.primaryColor, { searchQuery = "" })
                         }
                     },
                     modifier = Modifier
@@ -349,9 +351,9 @@ fun MainMenu(navController: NavController, theme: ThemeConfig, viewModel: Settin
                     SettingsCard(theme) {
                         SettingItem("חיבורים", "Bluetooth, רשת, מיקום", Icons.Rounded.Hub, theme) { navController.navigate(Screen.Connections.route) }
                         SettingDivider(theme)
-                        SettingItem("צלילים", "עוצמה, רינגטון, רטט", Icons.AutoMirrored.Rounded.VolumeUp, theme) { navController.navigate(Screen.Sound.route) }
+                        SettingItem("צלילים", "עוצמה, רינגטון, רטט", FutureIcons.AutoMirrored.VolumeUp, theme) { navController.navigate(Screen.Sound.route) }
                         SettingDivider(theme)
-                        SettingItem("תצוגה", "בהירות, מצב כהה, טקסט", Icons.Rounded.Brightness6, theme) { navController.navigate(Screen.Display.route) }
+                        SettingItem("תצוגה", "בהירות, מצב כהה, טקסט", FutureIcons.Brightness6, theme) { navController.navigate(Screen.Display.route) }
                     }
                 }
 
@@ -380,11 +382,11 @@ fun MainMenu(navController: NavController, theme: ThemeConfig, viewModel: Settin
                 item { SettingHeader("מערכת", theme) }
                 item {
                     SettingsCard(theme) {
-                        SettingItem("כללי", "תאריך, שעה, שפה, נגישות", Icons.Rounded.Language, theme) { navController.navigate(Screen.General.route) }
+                        SettingItem("כללי", "תאריך, שעה, שפה, נגישות", FutureIcons.Language, theme) { navController.navigate(Screen.General.route) }
                         SettingDivider(theme)
-                        SettingItem("אפליקציות", "כל אפליקציות FutureOS", Icons.Rounded.Apps, theme) { navController.navigate(Screen.Apps.route) }
+                        SettingItem("אפליקציות", "כל אפליקציות FutureOS", FutureIcons.Apps, theme) { navController.navigate(Screen.Apps.route) }
                         SettingDivider(theme)
-                        SettingItem("אודות הטלפון", "גרסה, דגם, סטטוס", Icons.Rounded.Info, theme) { navController.navigate(Screen.About.route) }
+                        SettingItem("אודות הטלפון", "גרסה, דגם, סטטוס", FutureIcons.Info, theme) { navController.navigate(Screen.About.route) }
                     }
                 }
             } else {
@@ -434,7 +436,7 @@ fun ConnectionsScreen(navController: NavController, theme: ThemeConfig, viewMode
             LazyColumn {
                 item {
                     SettingsCard(theme) {
-                        SettingItem("Bluetooth", if (viewModel.bluetoothEnabled.value) "מופעל" else "כבוי", Icons.Rounded.Bluetooth, theme) { navController.navigate(Screen.Bluetooth.route) }
+                        SettingItem("Bluetooth", if (viewModel.bluetoothEnabled.value) "מופעל" else "כבוי", FutureIcons.Bluetooth, theme) { navController.navigate(Screen.Bluetooth.route) }
                         SettingDivider(theme)
                         SettingSwitch("מצב טיסה", null, viewModel.airplaneMode.value, { viewModel.toggleAirplaneMode() }, theme)
                     }
@@ -598,7 +600,7 @@ fun BluetoothScreen(navController: NavController, theme: ThemeConfig, viewModel:
                 if (viewModel.bluetoothEnabled.value) {
                     item {
                         SettingsCard(theme) {
-                            SettingItem("שם המכשיר שלי", viewModel.bluetoothDeviceName.value, Icons.Rounded.Edit, theme) {
+                            SettingItem("שם המכשיר שלי", viewModel.bluetoothDeviceName.value, FutureIcons.Edit, theme) {
                                 deviceNameText = viewModel.bluetoothDeviceName.value
                                 isRenaming = true
                             }
@@ -616,7 +618,7 @@ fun BluetoothScreen(navController: NavController, theme: ThemeConfig, viewModel:
                                     SettingItem(
                                         device.name,
                                         (if (device.isConnected) "מחובר כעת" else "משויך") + " - לחצו OK כדי לשכוח",
-                                        if (device.isConnected) Icons.Rounded.BluetoothConnected else Icons.Rounded.Bluetooth,
+                                        if (device.isConnected) Icons.Rounded.BluetoothConnected else FutureIcons.Bluetooth,
                                         theme,
                                         showChevron = false
                                     ) { forgetTarget = device }
@@ -632,7 +634,7 @@ fun BluetoothScreen(navController: NavController, theme: ThemeConfig, viewModel:
                             SettingItem(
                                 if (isScanning) "סורק מכשירים בסביבה" else "סרוק מכשירים חדשים",
                                 if (discovered.isEmpty()) null else "${discovered.size} נמצאו",
-                                Icons.Rounded.Search,
+                                FutureIcons.Search,
                                 theme,
                                 showChevron = false
                             ) {
@@ -655,7 +657,7 @@ fun BluetoothScreen(navController: NavController, theme: ThemeConfig, viewModel:
                     item { SettingHeader("שיתוף קבצים", theme) }
                     item {
                         SettingsCard(theme) {
-                            SettingItem("שלח קובץ דרך Bluetooth", "בחירת קובץ מהמכשיר לשליחה", Icons.Rounded.Send, theme) {
+                            SettingItem("שלח קובץ דרך Bluetooth", "בחירת קובץ מהמכשיר לשליחה", FutureIcons.Send, theme) {
                                 filePickerLauncher.launch("*/*")
                             }
                         }
@@ -678,9 +680,9 @@ fun SoundScreen(navController: NavController, theme: ThemeConfig, viewModel: Set
                     SettingsCard(theme) {
                         val currentMode = viewModel.ringerMode.value
                         Row(modifier = Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
-                            SoundModeItem("צליל", Icons.AutoMirrored.Rounded.VolumeUp, currentMode == AudioManager.RINGER_MODE_NORMAL, theme) { viewModel.setRingerMode(AudioManager.RINGER_MODE_NORMAL) }
+                            SoundModeItem("צליל", FutureIcons.AutoMirrored.VolumeUp, currentMode == AudioManager.RINGER_MODE_NORMAL, theme) { viewModel.setRingerMode(AudioManager.RINGER_MODE_NORMAL) }
                             SoundModeItem("רטט", Icons.Rounded.Vibration, currentMode == AudioManager.RINGER_MODE_VIBRATE, theme) { viewModel.setRingerMode(AudioManager.RINGER_MODE_VIBRATE) }
-                            SoundModeItem("השתק", Icons.AutoMirrored.Rounded.VolumeOff, currentMode == AudioManager.RINGER_MODE_SILENT, theme) { viewModel.setRingerMode(AudioManager.RINGER_MODE_SILENT) }
+                            SoundModeItem("השתק", FutureIcons.AutoMirrored.VolumeOff, currentMode == AudioManager.RINGER_MODE_SILENT, theme) { viewModel.setRingerMode(AudioManager.RINGER_MODE_SILENT) }
                         }
                     }
                 }
@@ -701,11 +703,11 @@ fun SoundScreen(navController: NavController, theme: ThemeConfig, viewModel: Set
                 item { SettingHeader("קול ורטט", theme) }
                 item {
                     SettingsCard(theme) {
-                        SettingItem("רינגטון", null, Icons.Rounded.MusicNote, theme) { navController.navigate(Screen.Ringtone.route) }
+                        SettingItem("רינגטון", null, FutureIcons.MusicNote, theme) { navController.navigate(Screen.Ringtone.route) }
                         SettingDivider(theme)
                         SettingItem("צליל התראות", null, Icons.Rounded.NotificationsActive, theme) { navController.navigate(Screen.NotificationSound.route) }
                         SettingDivider(theme)
-                        SettingItem("צליל אזעקה", null, Icons.Rounded.Alarm, theme) { navController.navigate(Screen.AlarmSound.route) }
+                        SettingItem("צליל אזעקה", null, FutureIcons.Alarm, theme) { navController.navigate(Screen.AlarmSound.route) }
                         SettingDivider(theme)
                         SettingSwitch("רטט בצלצול", null, viewModel.vibrateWhenRinging.value, { viewModel.toggleVibrateWhenRinging() }, theme)
                         SettingDivider(theme)
@@ -754,7 +756,7 @@ fun DisplayScreen(navController: NavController, theme: ThemeConfig, viewModel: S
                         }
                         if (viewModel.densityDpi.value != viewModel.defaultDensityDpi) {
                             SettingDivider(theme)
-                            SettingItem("איפוס זום מסך", null, Icons.Rounded.RestartAlt, theme, showChevron = false) { viewModel.resetScreenZoom() }
+                            SettingItem("איפוס זום מסך", null, FutureIcons.RestartAlt, theme, showChevron = false) { viewModel.resetScreenZoom() }
                         }
                         SettingDivider(theme)
                         SettingItem("כיבוי מסך אוטומטי", viewModel.screenTimeoutLabel(viewModel.screenTimeout.value), Icons.Rounded.Timelapse, theme) {
@@ -816,7 +818,7 @@ fun SoundPickerScreen(navController: NavController, theme: ThemeConfig, title: S
                                 SettingItem(
                                     ringtone.title,
                                     null,
-                                    if (ringtone.uri == selectedUri) Icons.Rounded.CheckCircle else Icons.Rounded.MusicNote,
+                                    if (ringtone.uri == selectedUri) Icons.Rounded.CheckCircle else FutureIcons.MusicNote,
                                     theme,
                                     showChevron = false
                                 ) {
@@ -944,7 +946,7 @@ fun SystemUiScreen(navController: NavController, theme: ThemeConfig, viewModel: 
                 item { SettingHeader("מסך נעילה", theme) }
                 item {
                     SettingsCard(theme) {
-                        SettingItem("סגנון שעון", clockStyleNames.getOrElse(settings.clockStyle) { "קלאסי" }, Icons.Rounded.Schedule, theme) {
+                        SettingItem("סגנון שעון", clockStyleNames.getOrElse(settings.clockStyle) { "קלאסי" }, FutureIcons.Schedule, theme) {
                             val next = (settings.clockStyle + 1) % clockStyleNames.size
                             com.future.settings.theme.SystemUiSettingsClient.setClockStyle(context, next)
                             reload()
@@ -954,7 +956,7 @@ fun SystemUiScreen(navController: NavController, theme: ThemeConfig, viewModel: 
                 item { SettingHeader("רקע מסך", theme) }
                 item {
                     SettingsCard(theme) {
-                        SettingItem("בחר תמונה מהגלריה", "טפט מותאם אישית מהתמונות במכשיר", Icons.Rounded.Image, theme) {
+                        SettingItem("בחר תמונה מהגלריה", "טפט מותאם אישית מהתמונות במכשיר", FutureIcons.Image, theme) {
                             galleryLauncher.launch("image/*")
                         }
                     }
@@ -1270,7 +1272,7 @@ fun GeneralScreen(navController: NavController, theme: ThemeConfig, viewModel: S
                 item { SettingHeader("שפה ונגישות", theme) }
                 item {
                     SettingsCard(theme) {
-                        SettingItem("שפת מערכת", null, Icons.Rounded.Translate, theme) { navController.navigate(Screen.Language.route) }
+                        SettingItem("שפת מערכת", null, FutureIcons.Translate, theme) { navController.navigate(Screen.Language.route) }
                         SettingDivider(theme)
                         SettingItem("גודל טקסט", "מתוך תצוגה", Icons.Rounded.Accessibility, theme) { navController.navigate(Screen.Display.route) }
                         SettingDivider(theme)
@@ -1302,7 +1304,7 @@ fun GeneralScreen(navController: NavController, theme: ThemeConfig, viewModel: S
                 item { SettingHeader("FutureOS", theme) }
                 item {
                     SettingsCard(theme) {
-                        SettingItem("איפוס הגדרות FutureOS", "מצב כהה, צבע הדגשה, גודל טקסט", Icons.Rounded.RestartAlt, theme) {
+                        SettingItem("איפוס הגדרות FutureOS", "מצב כהה, צבע הדגשה, גודל טקסט", FutureIcons.RestartAlt, theme) {
                             viewModel.resetFutureOsSettings()
                         }
                     }
@@ -1326,7 +1328,7 @@ fun GeneralScreen(navController: NavController, theme: ThemeConfig, viewModel: S
                             }
                         }, theme)
                         SettingDivider(theme)
-                        SettingItem("הפעלה מחדש", null, Icons.Rounded.RestartAlt, theme, showChevron = false) { showRestartConfirm = true }
+                        SettingItem("הפעלה מחדש", null, FutureIcons.RestartAlt, theme, showChevron = false) { showRestartConfirm = true }
                         SettingDivider(theme)
                         SettingItem("כיבוי המכשיר", null, Icons.Rounded.PowerSettingsNew, theme, showChevron = false) { showShutdownConfirm = true }
                     }
@@ -1355,7 +1357,7 @@ fun LanguageScreen(navController: NavController, theme: ThemeConfig, viewModel: 
                 item {
                     SettingsCard(theme) {
                         languages.forEachIndexed { index, (label, tag) ->
-                            SettingItem(label, null, if (current.startsWith(tag.take(2))) Icons.Rounded.CheckCircle else Icons.Rounded.Language, theme, showChevron = false) {
+                            SettingItem(label, null, if (current.startsWith(tag.take(2))) Icons.Rounded.CheckCircle else FutureIcons.Language, theme, showChevron = false) {
                                 viewModel.setSystemLanguage(tag)
                             }
                             if (index < languages.lastIndex) SettingDivider(theme)
@@ -1382,7 +1384,7 @@ fun SecurityScreen(navController: NavController, theme: ThemeConfig) {
                         SettingItem(
                             if (isSecure) "המכשיר מאובטח" else "המכשיר לא מאובטח",
                             if (isSecure) "נעילת מסך פעילה" else "לא הוגדר קוד נעילה",
-                            if (isSecure) Icons.Rounded.Lock else Icons.Rounded.LockOpen,
+                            if (isSecure) FutureIcons.Lock else Icons.Rounded.LockOpen,
                             theme,
                             showChevron = false
                         ) { }
@@ -1420,7 +1422,7 @@ fun SecurityScreen(navController: NavController, theme: ThemeConfig) {
                             }
                         }
                         SettingDivider(theme)
-                        SettingItem("אזור פרטי (Private Space)", "אזור מוצפן ומבודד לאפליקציות ונתונים", Icons.Rounded.Lock, theme) {
+                        SettingItem("אזור פרטי (Private Space)", "אזור מוצפן ומבודד לאפליקציות ונתונים", FutureIcons.Lock, theme) {
                             safeStartActivity(
                                 context,
                                 Intent("android.settings.PRIVATE_SPACE_SETTINGS"),
@@ -1528,7 +1530,7 @@ fun AppDetailScreen(navController: NavController, theme: ThemeConfig, viewModel:
                         SettingItem("סטטוס", if (installed) "מותקנת" else "לא מותקנת", if (installed) Icons.Rounded.CheckCircle else Icons.Rounded.Cancel, theme, showChevron = false)
                         if (versionName != null) {
                             SettingDivider(theme)
-                            SettingItem("גרסה", versionName, Icons.Rounded.Info, theme, showChevron = false)
+                            SettingItem("גרסה", versionName, FutureIcons.Info, theme, showChevron = false)
                         }
                     }
                 }
@@ -1722,7 +1724,7 @@ fun ScreenTimeScreen(navController: NavController, theme: ThemeConfig, viewModel
                                 SettingItem(
                                     app?.displayName ?: entry.packageName,
                                     formatDuration(entry.millis),
-                                    app?.icon ?: Icons.Rounded.Apps,
+                                    app?.icon ?: FutureIcons.Apps,
                                     theme,
                                     showChevron = false
                                 ) { }
@@ -1810,10 +1812,10 @@ fun DefaultAppsScreen(navController: NavController, theme: ThemeConfig, viewMode
                     DefaultAppSection("הודעות", Icons.AutoMirrored.Rounded.Message, smsPackage, "com.future.messages", "הודעות", RoleManager.ROLE_SMS, "הודעות לא מותקנת על המכשיר")
                 }
                 item {
-                    DefaultAppSection("חיוג", Icons.Rounded.Dialpad, dialerPackage, "com.future.dialer", "טלפון", RoleManager.ROLE_DIALER, "טלפון לא מותקנת על המכשיר")
+                    DefaultAppSection("חיוג", FutureIcons.Dialpad, dialerPackage, "com.future.dialer", "טלפון", RoleManager.ROLE_DIALER, "טלפון לא מותקנת על המכשיר")
                 }
                 item {
-                    DefaultAppSection("בית", Icons.Rounded.Home, homePackage, "com.future.futurelauncher", "FutureLauncher", RoleManager.ROLE_HOME, "FutureLauncher לא מותקן על המכשיר")
+                    DefaultAppSection("בית", FutureIcons.Home, homePackage, "com.future.futurelauncher", "FutureLauncher", RoleManager.ROLE_HOME, "FutureLauncher לא מותקן על המכשיר")
                 }
             }
         }
@@ -1897,7 +1899,7 @@ fun NotificationsFocusScreen(navController: NavController, theme: ThemeConfig, v
             LazyColumn {
                 item {
                     SettingsCard(theme) {
-                        SettingItem("גישת מדיניות התראות", "נדרש כדי לשלוט על מצב שקט/רטט", Icons.Rounded.Notifications, theme) {
+                        SettingItem("גישת מדיניות התראות", "נדרש כדי לשלוט על מצב שקט/רטט", FutureIcons.Notifications, theme) {
                             safeStartActivity(context, Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS), "לא ניתן לפתוח הגדרות התראות")
                         }
                     }
@@ -2023,7 +2025,7 @@ fun AboutScreen(navController: NavController, theme: ThemeConfig, viewModel: Set
                 item { SettingHeader("סטטוס", theme) }
                 item {
                     SettingsCard(theme) {
-                        SettingItem("זמן פעולה", uptime, Icons.Rounded.Schedule, theme, showChevron = false)
+                        SettingItem("זמן פעולה", uptime, FutureIcons.Schedule, theme, showChevron = false)
                         SettingDivider(theme)
                         SettingItem("זיכרון RAM", ram, Icons.Rounded.Memory, theme, showChevron = false)
                     }
@@ -2172,7 +2174,7 @@ fun SimManagerScreen(navController: NavController, theme: ThemeConfig, viewModel
                                 }
                             }
                             SettingDivider(theme)
-                            SettingItem("שנה שם תצוגה", null, Icons.Rounded.Edit, theme) {
+                            SettingItem("שנה שם תצוגה", null, FutureIcons.Edit, theme) {
                                 renamingSubId = sim.subscriptionId
                                 renameText = sim.displayName
                             }
@@ -2255,7 +2257,7 @@ fun AppTimersScreen(navController: NavController, theme: ThemeConfig, viewModel:
                                 SettingItem(
                                     app?.displayName ?: timer.packageName,
                                     "${timer.dailyLimitMinutes} דקות ליום - לחצו OK כדי להסיר",
-                                    app?.icon ?: Icons.Rounded.Apps,
+                                    app?.icon ?: FutureIcons.Apps,
                                     theme,
                                     showChevron = false
                                 ) { viewModel.removeAppTimer(timer.packageName) }
@@ -2325,7 +2327,7 @@ fun DiagnosticsScreen(navController: NavController, theme: ThemeConfig, viewMode
                 item { SettingHeader("רמקול ורטט", theme) }
                 item {
                     SettingsCard(theme) {
-                        SettingItem("השמע צליל בדיקה", null, Icons.AutoMirrored.Rounded.VolumeUp, theme, showChevron = false) {
+                        SettingItem("השמע צליל בדיקה", null, FutureIcons.AutoMirrored.VolumeUp, theme, showChevron = false) {
                             viewModel.testSpeakerTone()
                         }
                         SettingDivider(theme)

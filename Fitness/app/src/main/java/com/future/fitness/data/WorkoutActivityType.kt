@@ -1,20 +1,20 @@
 package com.future.fitness.data
-
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.DirectionsRun
 import androidx.compose.material.icons.rounded.AcUnit
 import androidx.compose.material.icons.rounded.Accessibility
 import androidx.compose.material.icons.rounded.DirectionsBike
 import androidx.compose.material.icons.rounded.DirectionsBoat
 import androidx.compose.material.icons.rounded.DirectionsWalk
 import androidx.compose.material.icons.rounded.EmojiEvents
-import androidx.compose.material.icons.rounded.FitnessCenter
-import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Pool
 import androidx.compose.material.icons.rounded.Spa
 import androidx.compose.material.icons.rounded.Terrain
 import androidx.compose.material.icons.rounded.VideogameAsset
 import androidx.compose.material.icons.rounded.Whatshot
+import androidx.compose.material.icons.automirrored.rounded.DirectionsRun
+
+import com.future.sharednav.icons.FutureIcons
+
+import androidx.compose.material.icons.Icons
 import androidx.compose.ui.graphics.vector.ImageVector
 
 /** קטגוריות סוגי הפעילות, באותו סדר שבו הן מוצגות במסך "כל סוגי האימונים" -
@@ -101,9 +101,9 @@ object WorkoutActivityTypes {
         WorkoutActivityType("cooldown", "שחרור / קירור", ActivityCategory.CARDIO, 2.0, Icons.Rounded.Whatshot),
 
         // כוח
-        WorkoutActivityType("core_training", "אימון ליבה", ActivityCategory.STRENGTH, 3.5, Icons.Rounded.FitnessCenter),
-        WorkoutActivityType("functional_strength", "כוח פונקציונלי", ActivityCategory.STRENGTH, 6.0, Icons.Rounded.FitnessCenter),
-        WorkoutActivityType("traditional_strength", "כוח מסורתי (משקולות)", ActivityCategory.STRENGTH, 5.0, Icons.Rounded.FitnessCenter),
+        WorkoutActivityType("core_training", "אימון ליבה", ActivityCategory.STRENGTH, 3.5, FutureIcons.FitnessCenter),
+        WorkoutActivityType("functional_strength", "כוח פונקציונלי", ActivityCategory.STRENGTH, 6.0, FutureIcons.FitnessCenter),
+        WorkoutActivityType("traditional_strength", "כוח מסורתי (משקולות)", ActivityCategory.STRENGTH, 5.0, FutureIcons.FitnessCenter),
 
         // גוף ונפש
         WorkoutActivityType("yoga", "יוגה", ActivityCategory.MIND_BODY, 2.5, Icons.Rounded.Spa),
@@ -113,9 +113,9 @@ object WorkoutActivityTypes {
         WorkoutActivityType("mind_and_body", "גוף ונפש כללי", ActivityCategory.MIND_BODY, 2.0, Icons.Rounded.Spa),
 
         // ריקוד
-        WorkoutActivityType("dance", "ריקוד", ActivityCategory.DANCE, 4.8, Icons.Rounded.MusicNote),
-        WorkoutActivityType("cardio_dance", "ריקוד קרדיו", ActivityCategory.DANCE, 6.5, Icons.Rounded.MusicNote),
-        WorkoutActivityType("social_dance", "ריקוד חברתי", ActivityCategory.DANCE, 4.5, Icons.Rounded.MusicNote),
+        WorkoutActivityType("dance", "ריקוד", ActivityCategory.DANCE, 4.8, FutureIcons.MusicNote),
+        WorkoutActivityType("cardio_dance", "ריקוד קרדיו", ActivityCategory.DANCE, 6.5, FutureIcons.MusicNote),
+        WorkoutActivityType("social_dance", "ריקוד חברתי", ActivityCategory.DANCE, 4.5, FutureIcons.MusicNote),
 
         // ספורט קבוצתי וכדורים
         WorkoutActivityType("basketball", "כדורסל", ActivityCategory.TEAM_SPORTS, 6.5, Icons.Rounded.EmojiEvents),
@@ -178,7 +178,7 @@ object WorkoutActivityTypes {
         WorkoutActivityType("wheelchair_run_pace", "כיסא גלגלים - קצב ריצה", ActivityCategory.OTHER, 8.0, Icons.Rounded.Accessibility),
         WorkoutActivityType("underwater_diving", "צלילה", ActivityCategory.OTHER, 7.0, Icons.Rounded.Pool),
         WorkoutActivityType("fitness_gaming", "גיימינג כושר", ActivityCategory.OTHER, 4.0, Icons.Rounded.VideogameAsset),
-        WorkoutActivityType("other", "אחר", ActivityCategory.OTHER, 4.0, Icons.Rounded.FitnessCenter),
+        WorkoutActivityType("other", "אחר", ActivityCategory.OTHER, 4.0, FutureIcons.FitnessCenter),
     )
 
     fun byId(id: String): WorkoutActivityType? = all.find { it.id == id }

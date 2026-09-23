@@ -1,4 +1,7 @@
 package com.future.dialer.ui.contact
+import androidx.compose.material.icons.rounded.StarBorder
+
+import com.future.sharednav.icons.FutureIcons
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -8,13 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.Chat
-import androidx.compose.material.icons.rounded.Call
-import androidx.compose.material.icons.rounded.MoreVert
-import androidx.compose.material.icons.rounded.Person
-import androidx.compose.material.icons.rounded.PersonAdd
-import androidx.compose.material.icons.rounded.Star
-import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -80,9 +76,6 @@ fun ContactScreen(
             textColor = theme.textColor,
             accentColor = theme.accentColor,
             onBack = onBack,
-            trailingIcon = Icons.Rounded.MoreVert,
-            trailingContentDescription = "אפשרויות",
-            onTrailingClick = onMenu,
         )
         Column(
             modifier = Modifier
@@ -102,8 +95,9 @@ fun ContactScreen(
                 FutureAvatar(
                     theme = theme,
                     name = if (hasName) shownName else null,
-                    icon = if (hasName) null else Icons.Rounded.Person,
+                    icon = if (hasName) null else FutureIcons.Person,
                     size = HeroAvatar,
+                    photoUri = contact?.photoUri,
                 )
                 Text(
                     shownName,
@@ -123,7 +117,7 @@ fun ContactScreen(
             FutureCard(theme = theme) {
                 FutureSettingItem(
                     title = "התקשר",
-                    icon = Icons.Rounded.Call,
+                    icon = FutureIcons.Call,
                     theme = theme,
                     showChevron = false,
                     focusRequester = callRow,
@@ -132,7 +126,7 @@ fun ContactScreen(
                 FutureDivider(theme = theme)
                 FutureSettingItem(
                     title = "שלח הודעה",
-                    icon = Icons.AutoMirrored.Rounded.Chat,
+                    icon = FutureIcons.AutoMirrored.Chat,
                     theme = theme,
                     showChevron = false,
                     onClick = onMessage,
@@ -141,7 +135,7 @@ fun ContactScreen(
                 if (contact != null) {
                     FutureSettingItem(
                         title = if (contact.isFavorite) "הסר ממועדפים" else "הוסף למועדפים",
-                        icon = if (contact.isFavorite) Icons.Rounded.Star else Icons.Rounded.StarBorder,
+                        icon = if (contact.isFavorite) FutureIcons.Star else Icons.Rounded.StarBorder,
                         theme = theme,
                         showChevron = false,
                         onClick = { viewModel.toggleFavorite(contact) },
@@ -149,7 +143,7 @@ fun ContactScreen(
                 } else {
                     FutureSettingItem(
                         title = "הוסף לאנשי קשר",
-                        icon = Icons.Rounded.PersonAdd,
+                        icon = FutureIcons.PersonAdd,
                         theme = theme,
                         showChevron = false,
                         onClick = onAddContact,
@@ -166,6 +160,7 @@ fun ContactScreen(
                             title = CallFormat.labelOf(call.type),
                             summary = CallFormat.durationOf(call),
                             icon = CallFormat.iconOf(call.type),
+                            iconTint = CallFormat.colorOf(call.type, theme),
                             theme = theme,
                             showChevron = false,
                             onClick = null,

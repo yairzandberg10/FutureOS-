@@ -1,4 +1,6 @@
 package com.future.tools.ui
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureButton
 import com.future.sharednav.theme.subtleTextColor
 import com.future.sharednav.theme.mutedTextColor
@@ -19,8 +21,6 @@ import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -58,7 +58,7 @@ fun TextScannerScreen(theme: FutureTheme, onBack: () -> Unit) {
                     title = "סורק טקסט", theme = theme, onBack = onBack,
                     trailing = {
                         if (liveText.isNotBlank()) {
-                            ToolsIconButton(Icons.Rounded.ContentCopy, "העתק", theme = theme) {
+                            ToolsIconButton(FutureIcons.ContentCopy, "העתק", theme = theme) {
                                 val clipboard = context.getSystemService(ClipboardManager::class.java)
                                 clipboard.setPrimaryClip(ClipData.newPlainText("scanned_text", liveText))
                                 Toast.makeText(context, "הטקסט הועתק", Toast.LENGTH_SHORT).show()

@@ -1,4 +1,7 @@
 package com.future.clock.ui
+import androidx.compose.material.icons.rounded.AccessTime
+
+import com.future.sharednav.icons.FutureIcons
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.style.TextAlign
@@ -33,12 +36,6 @@ import com.future.sharednav.theme.subtleTextColor
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.AccessTime
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.KeyboardArrowDown
-import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -102,7 +99,7 @@ fun AlarmScreen(theme: FutureTheme, onBack: () -> Unit) {
                     onBack = if (editingAlarm == null) onBack else null,
                     trailing = {
                         if (editingAlarm == null) {
-                            ToolsIconButton(Icons.Rounded.Add, "הוסף שעון", theme) {
+                            ToolsIconButton(FutureIcons.Add, "הוסף שעון", theme) {
                                 val newId = (alarms.maxOfOrNull { it.id } ?: 0) + 1
                                 val newAlarm = Alarm(newId, 7, 0, emptySet())
                                 alarms.add(newAlarm)
@@ -201,7 +198,7 @@ fun AlarmRow(alarm: Alarm, theme: FutureTheme, onToggle: (Boolean) -> Unit, onDe
         trailing = {
             FutureSwitch(checked = alarm.isEnabled, theme = theme)
             Spacer(modifier = Modifier.width(FutureDimens.spacingSm))
-            ToolsIconButton(Icons.Rounded.Delete, "מחק", theme, tint = theme.dangerColor, onClick = onDelete)
+            ToolsIconButton(FutureIcons.Delete, "מחק", theme, tint = theme.dangerColor, onClick = onDelete)
         },
     )
 }
@@ -290,8 +287,8 @@ private fun TimeGrid(hour: Int, minute: Int, theme: FutureTheme, onHourChange: (
         verticalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm),
     ) {
         TimeGridRow(
-            hours = { TimeStepButton(Icons.Rounded.KeyboardArrowUp, "שעה למעלה", theme) { onHourChange(step(hour, 0..23, up = true)) } },
-            minutes = { TimeStepButton(Icons.Rounded.KeyboardArrowUp, "דקה למעלה", theme) { onMinuteChange(step(minute, 0..59, up = true)) } },
+            hours = { TimeStepButton(FutureIcons.KeyboardArrowUp, "שעה למעלה", theme) { onHourChange(step(hour, 0..23, up = true)) } },
+            minutes = { TimeStepButton(FutureIcons.KeyboardArrowUp, "דקה למעלה", theme) { onMinuteChange(step(minute, 0..59, up = true)) } },
         )
         TimeGridRow(
             hours = { TimeValue("%02d".format(hour), theme) },
@@ -299,8 +296,8 @@ private fun TimeGrid(hour: Int, minute: Int, theme: FutureTheme, onHourChange: (
             minutes = { TimeValue("%02d".format(minute), theme) },
         )
         TimeGridRow(
-            hours = { TimeStepButton(Icons.Rounded.KeyboardArrowDown, "שעה למטה", theme) { onHourChange(step(hour, 0..23, up = false)) } },
-            minutes = { TimeStepButton(Icons.Rounded.KeyboardArrowDown, "דקה למטה", theme) { onMinuteChange(step(minute, 0..59, up = false)) } },
+            hours = { TimeStepButton(FutureIcons.KeyboardArrowDown, "שעה למטה", theme) { onHourChange(step(hour, 0..23, up = false)) } },
+            minutes = { TimeStepButton(FutureIcons.KeyboardArrowDown, "דקה למטה", theme) { onMinuteChange(step(minute, 0..59, up = false)) } },
         )
         TimeGridRow(
             hours = { Text("שעות", color = theme.textAlpha(50), fontSize = FutureTypography.label) },

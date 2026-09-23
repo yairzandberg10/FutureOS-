@@ -1,4 +1,6 @@
 package com.future.messages.ui.screens
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.TopBarIconButton
 import com.future.sharednav.components.FutureTextField
 import com.future.sharednav.components.FutureListItem
@@ -24,10 +26,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.automirrored.rounded.Send
-import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -96,10 +94,6 @@ fun GroupComposeScreen(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = FutureDimens.spacingLg, vertical = FutureDimens.spacingMd),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                com.future.sharednav.components.TopBarIconButton(
-                    Icons.AutoMirrored.Rounded.ArrowBack, "ביטול", theme.textColor, theme.accentColor, onCancel
-                )
-                Spacer(modifier = Modifier.width(8.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text("הודעה קבוצתית", color = theme.textColor, fontWeight = FontWeight.Bold, fontSize = FutureTypography.screenTitle)
                     if (selectedContacts.isNotEmpty()) {
@@ -125,7 +119,7 @@ fun GroupComposeScreen(
 
             if (filteredContacts.isEmpty()) {
                 EmptyState(
-                    icon = Icons.Rounded.Person,
+                    icon = FutureIcons.Person,
                     title = "אין אנשי קשר",
                     textColor = theme.textColor,
                     modifier = Modifier.weight(1f),
@@ -190,5 +184,5 @@ private fun GroupContactRow(contact: Contact, isSelected: Boolean, theme: Future
 
 @Composable
 private fun GroupSendButton(theme: FutureTheme, enabled: Boolean, onClick: () -> Unit) {
-    TopBarIconButton(Icons.AutoMirrored.Rounded.Send, "שלח לכולם", theme.textColor, theme.accentColor, onClick, enabled = enabled)
+    TopBarIconButton(FutureIcons.AutoMirrored.Send, "שלח לכולם", theme.textColor, theme.accentColor, onClick, enabled = enabled)
 }

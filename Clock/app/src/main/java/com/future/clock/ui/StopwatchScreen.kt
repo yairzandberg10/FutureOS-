@@ -1,4 +1,5 @@
 package com.future.clock.ui
+import com.future.sharednav.components.FutureSnackbarHost
 import com.future.sharednav.theme.readableAccentColor
 import com.future.sharednav.components.FutureProgressBar
 import com.future.sharednav.theme.FutureTypography
@@ -46,6 +47,7 @@ fun StopwatchScreen(theme: FutureTheme, onBack: () -> Unit) {
     var startedAtElapsedRealtime by remember { mutableLongStateOf(0L) }
     var displayedElapsed by remember { mutableLongStateOf(0L) }
     val laps = remember { mutableStateListOf<Long>() }
+    val snackbar = com.future.sharednav.components.rememberFutureSnackbarState()
     // אותה תקלת "אין פוקוס" שתועדה ותוקנה במחשבון/ממיר יחידות - ראו שם.
     val focusRequester = remember { FocusRequester() }
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
@@ -137,8 +139,10 @@ fun StopwatchScreen(theme: FutureTheme, onBack: () -> Unit) {
                     }
                 }
             }
+            FutureSnackbarHost(snackbar, theme)
         }
     }
+    ClockShortcutMenu(route = ClockRoute.Stopwatch, title = "שעון עצר", theme = theme, onMessage = snackbar::show)
 }
 
 @Composable

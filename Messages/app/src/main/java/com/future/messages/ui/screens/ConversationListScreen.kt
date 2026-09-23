@@ -1,4 +1,7 @@
 package com.future.messages.ui.screens
+import androidx.compose.material.icons.rounded.Groups
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.TopBarIconButton
 import com.future.sharednav.components.FutureSpinner
 import com.future.sharednav.components.EmptyState
@@ -30,11 +33,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.Chat
-import androidx.compose.material.icons.rounded.Call
-import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.Groups
-import androidx.compose.material.icons.rounded.PersonAdd
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -153,7 +151,7 @@ fun ConversationListScreen(
                     Text("הודעות", fontSize = FutureTypography.screenTitle, fontWeight = FontWeight.Bold, color = theme.textColor, modifier = Modifier.weight(1f))
                     Row(horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm)) {
                         TopBarIconButton(Icons.Rounded.Groups, "הודעה קבוצתית", theme.textColor, theme.accentColor, onGroupComposeClick)
-                        TopBarIconButton(Icons.AutoMirrored.Rounded.Chat, "הודעה חדשה", theme.textColor, theme.accentColor, onComposeClick, composeButtonFocusRequester)
+                        TopBarIconButton(FutureIcons.AutoMirrored.Chat, "הודעה חדשה", theme.textColor, theme.accentColor, onComposeClick, composeButtonFocusRequester)
                     }
                 }
 
@@ -163,7 +161,7 @@ fun ConversationListScreen(
                     }
                 } else if (conversations.isEmpty()) {
                     EmptyState(
-                        icon = Icons.AutoMirrored.Rounded.Chat,
+                        icon = FutureIcons.AutoMirrored.Chat,
                         title = "אין הודעות",
                         subtitle = "כפתור ההודעה החדשה נמצא בראש המסך",
                         textColor = theme.textColor,
@@ -282,11 +280,11 @@ private fun ConversationOptionsMenu(
     onDelete: () -> Unit,
 ) {
     FutureOptionsMenu(theme = theme, onDismissRequest = onDismiss, header = conversation.contact.name) {
-        FutureMenuRow("התקשר", Icons.Rounded.Call, theme, onCall)
+        FutureMenuRow("התקשר", FutureIcons.Call, theme, onCall)
         if (onAddToContacts != null) {
-            FutureMenuRow("הוסף לאנשי קשר", Icons.Rounded.PersonAdd, theme, onAddToContacts)
+            FutureMenuRow("הוסף לאנשי קשר", FutureIcons.PersonAdd, theme, onAddToContacts)
         }
-        FutureMenuRow("מחק שיחה", Icons.Rounded.Delete, theme, onDelete, destructive = true)
+        FutureMenuRow("מחק שיחה", FutureIcons.Delete, theme, onDelete, destructive = true)
     }
 }
 

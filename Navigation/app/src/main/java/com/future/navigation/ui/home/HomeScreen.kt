@@ -1,4 +1,9 @@
 package com.future.navigation.ui.home
+import androidx.compose.material.icons.rounded.LocationOn
+import androidx.compose.material.icons.rounded.Place
+import androidx.compose.material.icons.rounded.Work
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureAvatar
 
 import androidx.compose.foundation.background
@@ -16,11 +21,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Home
-import androidx.compose.material.icons.rounded.LocationOn
-import androidx.compose.material.icons.rounded.Place
-import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material.icons.rounded.Work
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -141,7 +141,7 @@ fun HomeScreen(
             focusRequester = searchFocusRequester,
             leading = {
                 Icon(
-                    Icons.Rounded.Search,
+                    FutureIcons.Search,
                     contentDescription = null,
                     tint = theme.mutedTextColor,
                     modifier = Modifier.size(FutureDimens.iconTopBar),
@@ -195,7 +195,7 @@ fun HomeScreen(
                 item {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(FutureDimens.itemSpacing)) {
                         QuickPlaceTile(
-                            icon = Icons.Rounded.Home,
+                            icon = FutureIcons.Home,
                             label = stringResource(R.string.quick_home),
                             emptyHint = stringResource(R.string.add_home_address),
                             place = homePlace,

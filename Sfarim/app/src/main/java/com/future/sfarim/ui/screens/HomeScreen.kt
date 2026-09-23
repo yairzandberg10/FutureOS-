@@ -1,4 +1,8 @@
 package com.future.sfarim.ui.screens
+import androidx.compose.material.icons.rounded.AutoStories
+import androidx.compose.material.icons.automirrored.rounded.LibraryBooks
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureListItem
 import com.future.sharednav.components.FutureAvatar
 import com.future.sharednav.components.FutureSectionHeader
@@ -21,10 +25,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.LibraryBooks
-import androidx.compose.material.icons.rounded.AutoStories
-import androidx.compose.material.icons.rounded.Bookmark
-import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -83,11 +83,11 @@ fun HomeScreen(
             item {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
                     HomeShortcut(
-                        Icons.Rounded.Search, "חיפוש", theme, Modifier.weight(1f),
+                        FutureIcons.Search, "חיפוש", theme, Modifier.weight(1f),
                         focusRequester = if (continueReading == null) firstFocusRequester else null,
                         onClick = onOpenSearch,
                     )
-                    HomeShortcut(Icons.Rounded.Bookmark, "סימניות", theme, Modifier.weight(1f), onClick = onOpenBookmarks)
+                    HomeShortcut(FutureIcons.Bookmark, "סימניות", theme, Modifier.weight(1f), onClick = onOpenBookmarks)
                 }
             }
             item {

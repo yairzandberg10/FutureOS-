@@ -1,4 +1,6 @@
 package com.future.futureui.notificationcenter.ui
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.theme.LocalFutureTheme
 import com.future.sharednav.theme.mutedTextColor
 import com.future.sharednav.theme.elevatedSurfaceColor
@@ -514,7 +516,7 @@ fun NotificationItem(
                                 modifier = Modifier.fillMaxSize()
                             )
                         } else {
-                            Icon(Icons.Rounded.Notifications, contentDescription = null, tint = subTextColor, modifier = Modifier.size(18.dp))
+                            Icon(FutureIcons.Notifications, contentDescription = null, tint = subTextColor, modifier = Modifier.size(18.dp))
                         }
                     }
 

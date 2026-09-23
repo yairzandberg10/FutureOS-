@@ -1,4 +1,7 @@
 package com.future.futureui.controlcenter.ui.components
+import androidx.compose.material.icons.rounded.Remove
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.theme.LocalFutureTheme
 import com.future.sharednav.theme.elevatedSurfaceColor
 import com.future.sharednav.theme.raisedSurfaceColor
@@ -20,8 +23,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -187,7 +188,7 @@ fun FocusableIcon(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = if (isRemove) Icons.Rounded.Remove else Icons.Rounded.Add,
+                        imageVector = if (isRemove) Icons.Rounded.Remove else FutureIcons.Add,
                         contentDescription = null,
                         tint = com.future.sharednav.theme.FutureContrast.onColor(if (isRemove) theme.dangerColor else theme.successColor),
                         modifier = Modifier.size(12.dp)

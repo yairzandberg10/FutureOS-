@@ -1,4 +1,10 @@
 package com.future.fitness.ui.screens
+import androidx.compose.material.icons.rounded.EmojiEvents
+import androidx.compose.material.icons.rounded.LocalFireDepartment
+import androidx.compose.material.icons.rounded.MilitaryTech
+import androidx.compose.material.icons.rounded.Route
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.theme.elevatedSurfaceColor
 import com.future.sharednav.theme.idleFieldColor
@@ -37,12 +43,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.EmojiEvents
-import androidx.compose.material.icons.rounded.FitnessCenter
-import androidx.compose.material.icons.rounded.LocalFireDepartment
-import androidx.compose.material.icons.rounded.MilitaryTech
-import androidx.compose.material.icons.rounded.Route
-import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -255,7 +255,7 @@ private fun buildPersonalRecords(history: List<WorkoutHistoryEntry>, theme: Futu
 
     val longest = history.maxByOrNull { it.minutes }
     if (longest != null) {
-        records.add(PersonalRecord(Icons.Rounded.Timer, "האימון הארוך ביותר", longest.name, longest.minutes.toString(), "דקות", theme.readableAccentColor))
+        records.add(PersonalRecord(FutureIcons.Timer, "האימון הארוך ביותר", longest.name, longest.minutes.toString(), "דקות", theme.readableAccentColor))
     }
 
     val mostCalories = history.maxByOrNull { it.calories }

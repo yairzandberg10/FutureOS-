@@ -38,18 +38,23 @@ object FutureTransitions {
     private fun transform(enter: EnterTransition, exit: ExitTransition) =
         ContentTransform(enter, exit, sizeTransform = SizeTransform(clip = false))
 
-    /** כניסה למסך עמוק יותר. */
+    /**
+     * כניסה למסך עמוק יותר: המסך החדש מחליק פנימה מהצד, והמסך הקודם לא בורח
+     * הצידה אלא "נסוג" מעט לעומק (הקטנה קלה + דהייה) - שני הצירים יחד נותנים
+     * תחושת עומק ברורה יותר מהסטה בלבד, במחיר אפסי: scale ו-alpha הם שכבה
+     * גרפית אחת, בלי מדידה או ציור מחדש.
+     */
     fun forward(): ContentTransform = transform(
         fadeIn(FutureMotion.enter()) +
             slideInHorizontally(FutureMotion.enter()) { -slideDistance(it) },
         fadeOut(FutureMotion.exit()) +
-            slideOutHorizontally(FutureMotion.exit()) { slideDistance(it) },
+            scaleOut(FutureMotion.exit(), targetScale = FutureMotion.DepthScale),
     )
 
-    /** חזרה אחורה. */
+    /** חזרה אחורה - אותה תנועה הפוכה: המסך הקודם חוזר מהעומק, העמוק מחליק החוצה. */
     fun backward(): ContentTransform = transform(
         fadeIn(FutureMotion.enter()) +
-            slideInHorizontally(FutureMotion.enter()) { slideDistance(it) },
+            scaleIn(FutureMotion.enter(), initialScale = FutureMotion.DepthScale),
         fadeOut(FutureMotion.exit()) +
             slideOutHorizontally(FutureMotion.exit()) { -slideDistance(it) },
     )
@@ -85,10 +90,10 @@ object FutureTransitions {
         fadeIn(FutureMotion.enter()) + slideInHorizontally(FutureMotion.enter()) { -slideDistance(it) }
 
     val navExit: ExitTransition =
-        fadeOut(FutureMotion.exit()) + slideOutHorizontally(FutureMotion.exit()) { slideDistance(it) }
+        fadeOut(FutureMotion.exit()) + scaleOut(FutureMotion.exit(), targetScale = FutureMotion.DepthScale)
 
     val navPopEnter: EnterTransition =
-        fadeIn(FutureMotion.enter()) + slideInHorizontally(FutureMotion.enter()) { slideDistance(it) }
+        fadeIn(FutureMotion.enter()) + scaleIn(FutureMotion.enter(), initialScale = FutureMotion.DepthScale)
 
     val navPopExit: ExitTransition =
         fadeOut(FutureMotion.exit()) + slideOutHorizontally(FutureMotion.exit()) { -slideDistance(it) }

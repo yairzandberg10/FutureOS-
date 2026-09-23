@@ -1,4 +1,11 @@
 package com.future.gallery.ui
+import androidx.compose.material.icons.rounded.Crop
+import androidx.compose.material.icons.rounded.FilterVintage
+import androidx.compose.material.icons.rounded.Flip
+import androidx.compose.material.icons.rounded.RotateLeft
+import androidx.compose.material.icons.rounded.Tune
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureChip
 import com.future.sharednav.components.FutureSpinner
 import com.future.sharednav.components.TopBarIconButton
@@ -27,13 +34,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.Crop
-import androidx.compose.material.icons.rounded.Flip
-import androidx.compose.material.icons.rounded.RotateLeft
-import androidx.compose.material.icons.rounded.Tune
-import androidx.compose.material.icons.rounded.FilterVintage
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -181,7 +181,7 @@ fun PhotoEditorScreen(item: MediaItem, theme: FutureTheme, onBack: () -> Unit, o
                     modifier = Modifier.fillMaxWidth().padding(horizontal = FutureDimens.spacingLg, vertical = FutureDimens.spacingMd),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    EditorIconButton(Icons.AutoMirrored.Rounded.ArrowBack, "ביטול", theme) { onBack() }
+                    EditorIconButton(FutureIcons.AutoMirrored.ArrowBack, "ביטול", theme) { onBack() }
                     Text("עריכת תמונה", color = Color.White, fontWeight = FontWeight.Bold, fontSize = FutureTypography.screenTitle, modifier = Modifier.weight(1f).padding(start = FutureDimens.spacingSm))
                     EditorSaveButton(theme = theme, enabled = state.hasEdits && !isSaving, isSaving = isSaving) { save() }
                 }
@@ -348,7 +348,7 @@ private fun EditorSaveButton(theme: FutureTheme, enabled: Boolean, isSaving: Boo
     if (isSaving) {
         FutureSpinner(theme = FutureTheme(isDarkMode = true, accentColor = theme.accentColor), size = FutureDimens.rowHeightTopBarButton)
     } else {
-        TopBarIconButton(Icons.Rounded.Check, "שמור", Color.White, theme.accentColor, onClick, enabled = enabled)
+        TopBarIconButton(FutureIcons.Check, "שמור", Color.White, theme.accentColor, onClick, enabled = enabled)
     }
 }
 

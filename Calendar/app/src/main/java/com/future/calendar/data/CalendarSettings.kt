@@ -36,7 +36,19 @@ object CalendarSettings {
     /** תצוגת התאריכים העיקרית (מספרי הימים ברשת החודש, כותרת חודש/שנה) בלוח
      * העברי עם ספרור באותיות (ט״ו וכו') במקום מספור לועזי גרגוריאני. */
     fun getUseHebrewCalendar(context: Context): Boolean = prefs(context).getBoolean(KEY_USE_HEBREW_CALENDAR, false)
-    fun setUseHebrewCalendar(context: Context, value: Boolean) { prefs(context).edit().putBoolean(KEY_USE_HEBREW_CALENDAR, value).apply() }
+
+    private const val KEY_CALENDAR_KIND = "calendar_kind"
+
+    /** עברי / לועזי / משולב. מי שהדליק בעבר "לוח עברי" ממשיך בעברי; ברירת המחדל משולב. */
+    fun getCalendarKind(context: Context): CalendarKind {
+        val stored = prefs(context).getString(KEY_CALENDAR_KIND, null)
+        stored?.let { name -> CalendarKind.entries.firstOrNull { it.name == name }?.let { return it } }
+        return if (getUseHebrewCalendar(context)) CalendarKind.HEBREW else CalendarKind.COMBINED
+    }
+
+    fun setCalendarKind(context: Context, kind: CalendarKind) {
+        prefs(context).edit().putString(KEY_CALENDAR_KIND, kind.name).apply()
+    }
 
     fun getRegion(context: Context): Region {
         val id = prefs(context).getString(KEY_REGION_ID, null)

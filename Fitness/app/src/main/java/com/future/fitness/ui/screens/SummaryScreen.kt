@@ -1,4 +1,6 @@
 package com.future.fitness.ui.screens
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureAvatar
 import com.future.sharednav.theme.elevatedSurfaceColor
 import com.future.sharednav.theme.idleFieldColor
@@ -28,8 +30,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -65,7 +65,7 @@ fun SummaryScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        FutureAvatar(theme = theme, icon = Icons.Rounded.Check, size = 76.dp)
+        FutureAvatar(theme = theme, icon = FutureIcons.Check, size = 76.dp)
         Spacer(Modifier.height(16.dp))
         Text(title, color = theme.textColor, fontSize = FutureTypography.headline, fontWeight = FontWeight.Bold)
         Text(subtitle, color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.body, modifier = Modifier.padding(top = 4.dp, bottom = 28.dp))

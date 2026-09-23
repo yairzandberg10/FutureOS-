@@ -1,4 +1,6 @@
 package com.future.fitness.ui.screens
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.AvatarListSize
 import com.future.sharednav.components.FutureAvatar
 import com.future.sharednav.theme.FutureShapes
@@ -37,9 +39,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Bluetooth
-import androidx.compose.material.icons.rounded.Watch
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -211,7 +210,7 @@ fun SettingsScreen(
                                     .padding(14.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                Icon(Icons.Rounded.Watch, contentDescription = null, tint = theme.textColor, modifier = Modifier.size(20.dp))
+                                Icon(FutureIcons.Watch, contentDescription = null, tint = theme.textColor, modifier = Modifier.size(20.dp))
                                 Spacer(Modifier.width(10.dp))
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(heartRateMonitor.connectedDeviceName ?: "מכשיר מחובר", color = theme.textColor, fontSize = FutureTypography.body, fontWeight = FontWeight.Bold)
@@ -255,7 +254,7 @@ fun SettingsScreen(
                                 .padding(14.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            FutureAvatar(theme = theme, icon = Icons.Rounded.Watch, size = AvatarListSize)
+                            FutureAvatar(theme = theme, icon = FutureIcons.Watch, size = AvatarListSize)
                             Spacer(Modifier.width(10.dp))
                             Text(device.name, color = theme.textColor, fontSize = FutureTypography.body)
                         }

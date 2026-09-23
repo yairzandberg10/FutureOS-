@@ -1,4 +1,8 @@
 package com.future.music.ui.screens
+import androidx.compose.material.icons.rounded.Equalizer
+import androidx.compose.material.icons.rounded.RecordVoiceOver
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureListItem
 import com.future.sharednav.components.FutureAvatar
 import com.future.sharednav.theme.rememberFutureType
@@ -15,10 +19,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Equalizer
-import androidx.compose.material.icons.rounded.GraphicEq
-import androidx.compose.material.icons.rounded.MusicNote
-import androidx.compose.material.icons.rounded.RecordVoiceOver
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -56,8 +56,8 @@ fun SoundScreen(theme: FutureTheme, onBack: () -> Unit, onSelectPreset: (Int) ->
     var selected by remember { mutableIntStateOf(MusicPlaybackService.currentEqPreset.value) }
 
     val presets = listOf(
-        EqPreset(MusicPlaybackService.EQ_PRESET_NORMAL, "1", Icons.Rounded.MusicNote, "רגיל", "בלי עיבוד"),
-        EqPreset(MusicPlaybackService.EQ_PRESET_BASS, "2", Icons.Rounded.GraphicEq, "הגברת באסים", "מדגיש תדרים נמוכים"),
+        EqPreset(MusicPlaybackService.EQ_PRESET_NORMAL, "1", FutureIcons.MusicNote, "רגיל", "בלי עיבוד"),
+        EqPreset(MusicPlaybackService.EQ_PRESET_BASS, "2", FutureIcons.GraphicEq, "הגברת באסים", "מדגיש תדרים נמוכים"),
         EqPreset(MusicPlaybackService.EQ_PRESET_TREBLE, "3", Icons.Rounded.Equalizer, "הגברת טרבל", "מדגיש תדרים גבוהים"),
         EqPreset(MusicPlaybackService.EQ_PRESET_VOCAL, "4", Icons.Rounded.RecordVoiceOver, "קול", "מדגיש טווח קולי"),
     )

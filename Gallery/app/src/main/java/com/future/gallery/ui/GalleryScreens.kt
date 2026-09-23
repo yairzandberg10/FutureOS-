@@ -1,4 +1,10 @@
 package com.future.gallery.ui
+import androidx.compose.material.icons.rounded.PlayCircle
+import androidx.compose.material.icons.rounded.Sort
+import androidx.compose.material.icons.rounded.VideocamOff
+import androidx.compose.material.icons.rounded.ZoomIn
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureChip
 import com.future.sharednav.components.FutureOptionsMenu
 import com.future.sharednav.components.FutureMenuRow
@@ -9,7 +15,6 @@ import com.future.sharednav.theme.FutureContrast
 import com.future.sharednav.theme.scrimColor
 import com.future.sharednav.theme.readableAccentColor
 import com.future.sharednav.theme.textAlpha
-import androidx.compose.material.icons.rounded.Check
 import com.future.sharednav.theme.FutureMotion
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
@@ -40,16 +45,6 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.Edit
-import androidx.compose.material.icons.rounded.Image
-import androidx.compose.material.icons.rounded.PlayCircle
-import androidx.compose.material.icons.rounded.Share
-import androidx.compose.material.icons.rounded.Sort
-import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material.icons.rounded.VideocamOff
-import androidx.compose.material.icons.rounded.ZoomIn
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -149,7 +144,7 @@ fun GalleryHomeScreen(
                     tab == GalleryTab.ALBUMS -> AlbumsScreen(albums, theme, onAlbumClick, lastSelectedAlbumId = lastSelectedAlbumId)
                     sortedItems.isEmpty() -> {
                         com.future.sharednav.components.EmptyState(
-                            icon = Icons.Rounded.Image,
+                            icon = FutureIcons.Image,
                             title = "אין תמונות או סרטונים במכשיר",
                             textColor = theme.textColor,
                         )
@@ -186,7 +181,7 @@ fun AlbumDetailScreen(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    GalleryIconButton(Icons.AutoMirrored.Rounded.ArrowBack, "חזור", theme, onBack)
+                    GalleryIconButton(FutureIcons.AutoMirrored.ArrowBack, "חזור", theme, onBack)
                     Spacer(modifier = Modifier.width(10.dp))
                     Text(albumName, fontSize = FutureTypography.screenTitle, fontWeight = FontWeight.Bold, color = theme.textColor)
                 }
@@ -267,7 +262,7 @@ private fun SortMenu(current: SortOption, theme: FutureTheme, onDismiss: () -> U
                 onClick = { onSelect(option) },
                 // המיון הנוכחי = הבחירה, ולכן בהדגשה (ולא הדגשת הטקסט כולו כמו קודם)
                 trailing = if (option == current) {
-                    { Icon(Icons.Rounded.Check, contentDescription = null, tint = theme.readableAccentColor, modifier = Modifier.size(FutureDimens.iconMenuRow)) }
+                    { Icon(FutureIcons.Check, contentDescription = null, tint = theme.readableAccentColor, modifier = Modifier.size(FutureDimens.iconMenuRow)) }
                 } else null,
             )
         }
@@ -528,7 +523,7 @@ fun MediaViewerScreen(
                             )
                             if (!isVideoPlaying) {
                                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                    Icon(Icons.Rounded.PlayArrow, contentDescription = null, tint = Color.White, modifier = Modifier.size(56.dp))
+                                    Icon(FutureIcons.PlayArrow, contentDescription = null, tint = Color.White, modifier = Modifier.size(56.dp))
                                 }
                             }
                         }
@@ -643,11 +638,11 @@ private fun MediaViewerBottomBar(
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
         MediaViewerBarButton(Icons.Rounded.ZoomIn, "זום", theme, enabled = canZoom, isActive = isZoomed, onClick = onZoom)
-        MediaViewerBarButton(Icons.Rounded.Share, "שתף", theme, onClick = onShare)
+        MediaViewerBarButton(FutureIcons.Share, "שתף", theme, onClick = onShare)
         if (showEdit) {
-            MediaViewerBarButton(Icons.Rounded.Edit, "ערוך", theme, onClick = onEdit)
+            MediaViewerBarButton(FutureIcons.Edit, "ערוך", theme, onClick = onEdit)
         }
-        MediaViewerBarButton(Icons.Rounded.Delete, "מחק", theme, isDestructive = true, onClick = onDelete)
+        MediaViewerBarButton(FutureIcons.Delete, "מחק", theme, isDestructive = true, onClick = onDelete)
     }
 }
 
@@ -715,7 +710,7 @@ private fun ViewerBackButton(theme: FutureTheme, onBack: () -> Unit) {
         contentAlignment = Alignment.Center,
     ) {
         Icon(
-            Icons.AutoMirrored.Rounded.ArrowBack,
+            FutureIcons.AutoMirrored.ArrowBack,
             contentDescription = "חזור",
             tint = if (isFocused) FutureContrast.onColor(theme.accentColor) else Color.White,
             modifier = Modifier.size(FutureDimens.iconTopBar),

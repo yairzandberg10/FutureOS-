@@ -1,4 +1,12 @@
 package com.future.fitness.ui.screens
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.LocationOn
+import androidx.compose.material.icons.rounded.SkipNext
+import androidx.compose.material.icons.rounded.SkipPrevious
+import androidx.compose.material.icons.rounded.Terrain
+import androidx.compose.material.icons.automirrored.rounded.VolumeDown
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.theme.elevatedSurfaceColor
 import com.future.sharednav.theme.idleFieldColor
 import com.future.sharednav.theme.idleChipColor
@@ -40,15 +48,6 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.VolumeDown
-import androidx.compose.material.icons.automirrored.rounded.VolumeUp
-import androidx.compose.material.icons.rounded.Favorite
-import androidx.compose.material.icons.rounded.LocationOn
-import androidx.compose.material.icons.rounded.Pause
-import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material.icons.rounded.SkipNext
-import androidx.compose.material.icons.rounded.SkipPrevious
-import androidx.compose.material.icons.rounded.Terrain
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -273,7 +272,7 @@ fun WorkoutTemplateScreen(
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
-                        if (running) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                        if (running) FutureIcons.Pause else FutureIcons.PlayArrow,
                         contentDescription = if (running) "השהה" else "המשך",
                         tint = theme.textColor,
                     )
@@ -465,13 +464,13 @@ private fun MusicControlPage(theme: FutureTheme) {
         )
         Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             MediaButton(theme, Icons.Rounded.SkipPrevious, "הקודם") { sendMediaKey(context, AndroidKeyEvent.KEYCODE_MEDIA_PREVIOUS) }
-            MediaButton(theme, Icons.Rounded.PlayArrow, "נגן/השהה", primary = true) { sendMediaKey(context, AndroidKeyEvent.KEYCODE_MEDIA_PLAY_PAUSE) }
+            MediaButton(theme, FutureIcons.PlayArrow, "נגן/השהה", primary = true) { sendMediaKey(context, AndroidKeyEvent.KEYCODE_MEDIA_PLAY_PAUSE) }
             MediaButton(theme, Icons.Rounded.SkipNext, "הבא") { sendMediaKey(context, AndroidKeyEvent.KEYCODE_MEDIA_NEXT) }
         }
         Spacer(Modifier.height(20.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             MediaButton(theme, Icons.AutoMirrored.Rounded.VolumeDown, "הנמך") { adjustVolume(context, AudioManager.ADJUST_LOWER) }
-            MediaButton(theme, Icons.AutoMirrored.Rounded.VolumeUp, "הגבר") { adjustVolume(context, AudioManager.ADJUST_RAISE) }
+            MediaButton(theme, FutureIcons.AutoMirrored.VolumeUp, "הגבר") { adjustVolume(context, AudioManager.ADJUST_RAISE) }
         }
     }
 }

@@ -1,9 +1,16 @@
 package com.future.dialer.ui
-
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.CallMade
-import androidx.compose.material.icons.rounded.CallMissed
-import androidx.compose.material.icons.rounded.CallReceived
+import androidx.compose.material.icons.rounded.Block
+import androidx.compose.ui.graphics.Color
+import com.future.sharednav.theme.FutureTheme
+import com.future.sharednav.theme.callMissedColor
+import com.future.sharednav.theme.callOutgoingColor
+import com.future.sharednav.theme.callReceivedColor
+import com.future.sharednav.theme.callRejectedColor
+import com.future.sharednav.theme.subtleTextColor
+
+import com.future.sharednav.icons.FutureIcons
+
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.future.dialer.data.model.CallRecord
 import com.future.dialer.data.model.CallType
@@ -16,16 +23,31 @@ import java.util.Locale
 object CallFormat {
 
     fun iconOf(type: CallType): ImageVector = when (type) {
-        CallType.INCOMING -> Icons.Rounded.CallReceived
-        CallType.OUTGOING -> Icons.Rounded.CallMade
-        CallType.MISSED, CallType.REJECTED -> Icons.Rounded.CallMissed
+        CallType.INCOMING, CallType.VOICEMAIL -> FutureIcons.CallReceived
+        CallType.OUTGOING -> FutureIcons.CallMade
+        CallType.MISSED, CallType.REJECTED -> FutureIcons.CallMissed
+        CallType.BLOCKED -> Icons.Rounded.Block
     }
 
     fun labelOf(type: CallType): String = when (type) {
-        CallType.INCOMING -> "נכנסת"
-        CallType.OUTGOING -> "יוצאת"
+        CallType.INCOMING -> "התקבלה"
+        CallType.OUTGOING -> "חויגה"
         CallType.MISSED -> "לא נענתה"
         CallType.REJECTED -> "נדחתה"
+        CallType.BLOCKED -> "נחסמה"
+        CallType.VOICEMAIL -> "תא קולי"
+    }
+
+    /**
+     * הצבע של סוג השיחה: אדום - לא נענתה, ירוק - התקבלה, כתום - נדחתה,
+     * כחול - חויגה (ר' callMissedColor וחבריו בערכה). נחסמה - אפורה.
+     */
+    fun colorOf(type: CallType, theme: FutureTheme): Color = when (type) {
+        CallType.MISSED -> theme.callMissedColor
+        CallType.INCOMING, CallType.VOICEMAIL -> theme.callReceivedColor
+        CallType.REJECTED -> theme.callRejectedColor
+        CallType.OUTGOING -> theme.callOutgoingColor
+        CallType.BLOCKED -> theme.subtleTextColor
     }
 
     /** "4:12" - או null כשלא הייתה שיחה בפועל. */

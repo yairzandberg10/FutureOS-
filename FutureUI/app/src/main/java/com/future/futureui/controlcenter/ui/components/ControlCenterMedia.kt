@@ -1,4 +1,6 @@
 package com.future.futureui.controlcenter.ui.components
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.theme.LocalFutureTheme
 import com.future.sharednav.theme.elevatedSurfaceColor
 import com.future.sharednav.theme.raisedSurfaceColor
@@ -101,7 +103,7 @@ fun MusicPlayerCard(manager: ControlManager, labelColor: Color = Color.Unspecifi
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Rounded.MusicNote,
+                        imageVector = FutureIcons.MusicNote,
                         contentDescription = null,
                         tint = Color.White,
                         modifier = Modifier.size(18.dp)
@@ -210,7 +212,7 @@ fun MusicPlayerCard(manager: ControlManager, labelColor: Color = Color.Unspecifi
                     MediaControlButton(icon = Icons.Rounded.SkipPrevious, onClick = { manager.previousTrack() }, tint = Color.White)
                     Spacer(modifier = Modifier.width(24.dp))
                     MediaControlButton(
-                        icon = if (manager.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                        icon = if (manager.isPlaying) FutureIcons.Pause else FutureIcons.PlayArrow,
                         onClick = { manager.togglePlayPause() },
                         isLarge = true,
                         tint = Color.White

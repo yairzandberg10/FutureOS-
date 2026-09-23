@@ -1,14 +1,10 @@
 package com.future.translate.ui
 
+import com.future.sharednav.icons.FutureIcons
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.Download
-import androidx.compose.material.icons.rounded.Forum
-import androidx.compose.material.icons.rounded.History
-import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -123,11 +119,11 @@ fun TranslateApp(viewModel: TranslateViewModel, theme: FutureTheme, actions: Tra
     if (menuOpen) {
         FutureOptionsMenu(theme = theme, onDismissRequest = { menuOpen = false }, header = "תרגום") {
             fun pick(action: () -> Unit): () -> Unit = { menuOpen = false; action() }
-            if (top != Route.Talk) FutureMenuRow("שיחה", Icons.Rounded.Forum, theme, pick { push(Route.Talk) })
-            if (top != Route.History) FutureMenuRow("היסטוריה", Icons.Rounded.History, theme, pick { push(Route.History) })
-            FutureMenuRow("הורדת שפה", Icons.Rounded.Download, theme, pick { push(Route.Downloads) })
-            FutureMenuRow("הגדרות", Icons.Rounded.Settings, theme, pick { push(Route.Settings) })
-            FutureMenuRow("נקה היסטוריה", Icons.Rounded.Delete, theme, pick { confirmClear = true }, destructive = true)
+            if (top != Route.Talk) FutureMenuRow("שיחה", FutureIcons.Forum, theme, pick { push(Route.Talk) })
+            if (top != Route.History) FutureMenuRow("היסטוריה", FutureIcons.History, theme, pick { push(Route.History) })
+            FutureMenuRow("הורדת שפה", FutureIcons.Download, theme, pick { push(Route.Downloads) })
+            FutureMenuRow("הגדרות", FutureIcons.Settings, theme, pick { push(Route.Settings) })
+            FutureMenuRow("נקה היסטוריה", FutureIcons.Delete, theme, pick { confirmClear = true }, destructive = true)
         }
     }
 

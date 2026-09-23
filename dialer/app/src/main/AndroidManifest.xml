@@ -110,6 +110,15 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/app_widget_info" />
         </receiver>
+        <!-- חסימת מספר מבקשת אנשי קשר (BlockNumberReceiver) - רק מאפליקציות הסוויטה. -->
+        <receiver
+            android:name=".telecom.BlockNumberReceiver"
+            android:exported="true"
+            android:permission="com.future.futureui.permission.SYSTEM_SETTINGS">
+            <intent-filter>
+                <action android:name="com.future.dialer.ACTION_SET_BLOCKED" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>

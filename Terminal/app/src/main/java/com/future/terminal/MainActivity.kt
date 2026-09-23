@@ -1,4 +1,8 @@
 package com.future.terminal
+import androidx.compose.material.icons.rounded.Cancel
+import androidx.compose.material.icons.rounded.DeleteSweep
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureOptionsMenu
 import com.future.sharednav.components.FutureMenuRow
 import com.future.sharednav.theme.FutureMotion
@@ -28,16 +32,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.icons.rounded.Cancel
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.Send
-import androidx.compose.material.icons.rounded.ContentCopy
-import androidx.compose.material.icons.rounded.DeleteSweep
-import androidx.compose.material.icons.rounded.MoreVert
-import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -190,7 +188,6 @@ class MainActivity : ComponentActivity() {
                                 color = theme.accentColor,
                                 modifier = Modifier.weight(1f)
                             )
-                            TerminalIconButton(Icons.Rounded.MoreVert, "אפשרויות", { showMenu = true }, theme)
                         }
                         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
                         LazyColumn(
@@ -275,7 +272,7 @@ class MainActivity : ComponentActivity() {
                                 )
                             } else {
                                 TerminalIconButton(
-                                    icon = Icons.AutoMirrored.Rounded.Send,
+                                    icon = FutureIcons.AutoMirrored.Send,
                                     contentDescription = "הרץ",
                                     onClick = { runCommand(input) },
                                     theme = theme,
@@ -341,8 +338,8 @@ private fun TerminalIconButton(
 @Composable
 private fun TerminalOptionsMenu(theme: FutureTheme, onDismiss: () -> Unit, onClear: () -> Unit, onCopyLastOutput: () -> Unit, onShareHistory: () -> Unit) {
     FutureOptionsMenu(theme = theme, onDismissRequest = onDismiss, header = "טרמינל") {
-        FutureMenuRow("העתק פלט אחרון", Icons.Rounded.ContentCopy, theme, onCopyLastOutput)
-        FutureMenuRow("שתף היסטוריה", Icons.Rounded.Share, theme, onShareHistory)
+        FutureMenuRow("העתק פלט אחרון", FutureIcons.ContentCopy, theme, onCopyLastOutput)
+        FutureMenuRow("שתף היסטוריה", FutureIcons.Share, theme, onShareHistory)
         FutureMenuRow("נקה היסטוריה", Icons.Rounded.DeleteSweep, theme, onClear, destructive = true)
     }
 }

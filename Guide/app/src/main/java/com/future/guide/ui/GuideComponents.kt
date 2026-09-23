@@ -1,4 +1,6 @@
 package com.future.guide.ui
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureListItem
 import com.future.sharednav.components.FutureAvatar
 import com.future.sharednav.components.FutureSectionHeader
@@ -19,7 +21,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -56,10 +57,8 @@ fun GuideHeader(title: String, theme: FutureTheme, onBack: (() -> Unit)? = null,
             modifier = Modifier.fillMaxWidth().padding(horizontal = FutureDimens.spacingLg, vertical = FutureDimens.spacingMd),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            if (onBack != null) {
-                GuideIconButton(Icons.AutoMirrored.Rounded.ArrowBack, "חזור", theme = theme, onClick = onBack)
-                Spacer(modifier = Modifier.width(FutureDimens.spacingSm))
-            }
+            // אין כפתור חזור על המסך - מקש BACK הפיזי עושה את זה
+            if (onBack != null) androidx.activity.compose.BackHandler(onBack = onBack)
             Text(title, color = theme.textColor, fontSize = FutureTypography.screenTitle, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.weight(1f, fill = true))
             trailing.invoke()
         }

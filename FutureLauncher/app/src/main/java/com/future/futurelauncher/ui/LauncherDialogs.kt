@@ -1,4 +1,7 @@
 package com.future.futurelauncher.ui
+import androidx.compose.material.icons.rounded.Remove
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.AppDialog
 import com.future.sharednav.components.FutureButton
 import com.future.sharednav.components.FutureButtonVariant
@@ -36,9 +39,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -264,7 +264,7 @@ fun AppOptionsDialog(
         theme = theme,
         title = item.label,
         trailingTitleContent = {
-            TopBarIconButton(Icons.Rounded.Delete, stringResource(R.string.trash), theme.dangerColor, theme.accentColor, { onRemove(); onDismiss() })
+            TopBarIconButton(FutureIcons.Delete, stringResource(R.string.trash), theme.dangerColor, theme.accentColor, { onRemove(); onDismiss() })
         },
         footer = {
             GlassButton(text = stringResource(R.string.close), onClick = onDismiss, theme = theme, isPrimary = false, modifier = Modifier.fillMaxWidth())
@@ -293,14 +293,14 @@ fun AppOptionsDialog(
                         Text(stringResource(R.string.width, item.spanX), color = theme.textColor, fontSize = FutureTypography.label)
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             TopBarIconButton(Icons.Rounded.Remove, "הקטן", theme.textColor, theme.accentColor, { if (item.spanX > 1) onResize(item.spanX - 1, item.spanY) })
-                            TopBarIconButton(Icons.Rounded.Add, "הגדל", theme.textColor, theme.accentColor, { if (item.spanX < 4) onResize(item.spanX + 1, item.spanY) })
+                            TopBarIconButton(FutureIcons.Add, "הגדל", theme.textColor, theme.accentColor, { if (item.spanX < 4) onResize(item.spanX + 1, item.spanY) })
                         }
                     }
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(stringResource(R.string.height, item.spanY), color = theme.textColor, fontSize = FutureTypography.label)
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             TopBarIconButton(Icons.Rounded.Remove, "הקטן", theme.textColor, theme.accentColor, { if (item.spanY > 1) onResize(item.spanX, item.spanY - 1) })
-                            TopBarIconButton(Icons.Rounded.Add, "הגדל", theme.textColor, theme.accentColor, { if (item.spanY < 4) onResize(item.spanX, item.spanY + 1) })
+                            TopBarIconButton(FutureIcons.Add, "הגדל", theme.textColor, theme.accentColor, { if (item.spanY < 4) onResize(item.spanX, item.spanY + 1) })
                         }
                     }
                 }

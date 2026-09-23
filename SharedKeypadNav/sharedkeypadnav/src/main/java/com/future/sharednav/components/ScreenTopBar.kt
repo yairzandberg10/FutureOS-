@@ -1,4 +1,7 @@
 package com.future.sharednav.components
+import androidx.activity.compose.BackHandler
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.focus.animatedFill
 import androidx.compose.foundation.focusable
 import androidx.compose.ui.focus.FocusRequester
@@ -20,7 +23,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -41,8 +43,12 @@ import com.future.sharednav.theme.FutureTransitions
 import com.future.sharednav.theme.rememberFutureType
 
 /**
- * שורת כותרת משותפת למסכי רשימה - כפתור חזור (RTL: חץ ימינה) + כותרת +
- * כפתור פעולה אופציונלי בצד ההפוך.
+ * שורת כותרת משותפת למסכי רשימה - כותרת + כפתור פעולה אופציונלי.
+ *
+ * אין בה כפתור חזור: למכשיר יש מקש BACK פיזי, וכפתור על המסך רק שכפל אותו
+ * ולקח עצירת פוקוס ראשונה בכל מסך. onBack נרשם כאן למקש עצמו
+ * (BackHandler), כך שכל מסך שהעביר onBack לכפתור ממשיך להגיב ל-BACK בדיוק
+ * כמו קודם, גם אם לא היה לו BackHandler משלו.
  *
  * כשהכותרת משתנה בתוך אותו מסך (מעבר תיקייה בקבצים, החלפת פרק בספרים)
  * היא מתחלפת ב-crossfade ולא קופצת.
@@ -59,16 +65,13 @@ fun ScreenTopBar(
     trailingFocusRequester: FocusRequester? = null,
 ) {
     val type = rememberFutureType()
+    if (onBack != null) BackHandler(onBack = onBack)
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = FutureDimens.spacingLg, vertical = FutureDimens.spacingMd),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (onBack != null) {
-            TopBarIconButton(Icons.AutoMirrored.Rounded.ArrowBack, "חזור", textColor, accentColor, onBack)
-            Spacer(modifier = Modifier.width(FutureDimens.spacingSm))
-        }
         AnimatedContent(
             targetState = title,
             transitionSpec = { FutureTransitions.appear() },

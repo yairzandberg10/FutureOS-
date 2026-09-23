@@ -1,22 +1,20 @@
 package com.future.camera.ui
-import com.future.sharednav.components.FutureOptionsMenu
-import com.future.sharednav.components.FutureMenuRow
-import com.future.sharednav.theme.FutureDimens
-import com.future.sharednav.theme.FutureMotion
-import com.future.sharednav.theme.FutureContrast
-import com.future.sharednav.theme.readableAccentColor
-import androidx.compose.material.icons.rounded.Check
 
-import com.future.sharednav.theme.FutureTypography
-import com.future.sharednav.theme.FutureShapes
 import android.Manifest
+import android.graphics.Bitmap
 import android.net.Uri
-import android.widget.Toast
+import android.view.KeyEvent as AndroidKeyEvent
+import androidx.activity.compose.BackHandler
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.FocusMeteringAction
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.Preview
+import androidx.camera.core.resolutionselector.AspectRatioStrategy
+import androidx.camera.core.resolutionselector.ResolutionSelector
+import androidx.camera.extensions.ExtensionsManager
 import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.video.FallbackStrategy
 import androidx.camera.video.Quality
 import androidx.camera.video.QualitySelector
 import androidx.camera.video.Recorder
@@ -24,51 +22,46 @@ import androidx.camera.video.Recording
 import androidx.camera.video.VideoCapture
 import androidx.camera.view.PreviewView
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Camera
-import androidx.compose.material.icons.rounded.Cameraswitch
 import androidx.compose.material.icons.rounded.FlashAuto
 import androidx.compose.material.icons.rounded.FlashOff
 import androidx.compose.material.icons.rounded.FlashOn
-import androidx.compose.material.icons.rounded.GridOn
 import androidx.compose.material.icons.rounded.PhotoLibrary
-import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material.icons.rounded.Stop
-import androidx.compose.material.icons.rounded.Timer
-import androidx.compose.material.icons.rounded.Timer10
-import androidx.compose.material.icons.rounded.Timer3
 import androidx.compose.material.icons.rounded.Videocam
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -76,125 +69,254 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import com.future.camera.data.AspectOption
+import com.future.camera.data.CameraMedia
+import com.future.camera.data.CameraOptions
+import com.future.camera.data.PhotoQualityOption
 import com.future.camera.data.PhotoStorage
+import com.future.camera.data.SceneOption
+import com.future.camera.data.VideoQualityOption
 import com.future.camera.data.VideoStorage
+import com.future.sharednav.components.FutureSnackbarHost
+import com.future.sharednav.components.rememberFutureSnackbarState
+import com.future.sharednav.icons.FutureIcons
+import com.future.sharednav.systemui.StatusBarInset
+import com.future.sharednav.theme.FutureContrast
+import com.future.sharednav.theme.FutureDimens
+import com.future.sharednav.theme.FutureMotion
+import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.theme.FutureTheme
+import com.future.sharednav.theme.FutureTypography
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 
 private enum class CaptureMode { PHOTO, VIDEO }
 
-/** מסך המצלמה היחיד באפליקציה - תצוגה חיה במסך מלא, ללא מגע (כל הפעולות
- * דרך כפתורי OK/D-pad על שורות הבקרות למעלה ולמטה).
+/** קפיצת הזום בכל חזרה של מקש מוחזק - בערך שנייה וחצי מ-1x עד הזום המרבי. */
+private const val ZOOM_STEP = 0.035f
+
+/**
+ * מסך המצלמה - תצוגה חיה במסך מלא, הכול מהמקשים:
  *
- * מעבר לצילום תמונה בסיסי, כולל: וידאו (מעבר מצב + כפתור הקלטה אדום +
- * טיימר הקלטה), זום (כפתורי +/− עם אחוז נוכחי), טיימר עצמי (כיבוי/3/10
- * שניות עם ספירה לאחור על המסך), וקווי רשת (כלל השלישים) - כל אלה חסרו
- * לגמרי במסך הבסיסי הקודם. */
+ * - OK מפעיל את הפקד הממוקד (כפתור הצילום כברירת מחדל).
+ * - Options מחליף בין המצלמה האחורית לקדמית, בלי הודעה.
+ * - חץ למעלה/למטה מוחזק - זום פנימה/החוצה; לחיצה קצרה מזיזה את הפוקוס.
+ * - 1-9 - נקודת מיקוד לפי מיקום הספרה על המקלדת (1 = למעלה משמאל); 0 - מיקוד אוטומטי.
+ * - * - תמונה/וידאו. # - הבזק.
+ * - BACK - סוגר את ההגדרות/המציג, ואחרת יוצא.
+ */
 @Composable
 fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
     val context = LocalContext.current
+    val focusManager = LocalFocusManager.current
     val hasCameraPermission by rememberRuntimePermission(Manifest.permission.CAMERA)
-    val (hasAudioPermission, requestAudioPermission) = rememberLazyRuntimePermission(Manifest.permission.RECORD_AUDIO)
+    val (_, requestAudioPermission) = rememberLazyRuntimePermission(Manifest.permission.RECORD_AUDIO)
+    // המצלמה תמיד מעל תמונה חיה - הפקדים והתפריטים בצבעי הערכה הכהה.
+    val darkTheme = remember(theme.accentColor) { FutureTheme(isDarkMode = true, accentColor = theme.accentColor) }
+    val snackbar = rememberFutureSnackbarState()
 
-    var lensFacing by remember { mutableStateOf(CameraSelector.LENS_FACING_BACK) }
-    var flashMode by remember { mutableStateOf(ImageCapture.FLASH_MODE_OFF) }
-    var lastMediaUri by remember { mutableStateOf<Uri?>(null) }
+    var options by remember { mutableStateOf(CameraOptions.load(context)) }
+    fun update(transform: (CameraOptions) -> CameraOptions) {
+        options = transform(options)
+        options.save(context)
+    }
+
+    var lensFacing by remember { mutableIntStateOf(CameraSelector.LENS_FACING_BACK) }
     var cameraAvailable by remember { mutableStateOf(true) }
-    var flashFeedback by remember { mutableStateOf(false) }
     var camera by remember { mutableStateOf<Camera?>(null) }
-    var zoomRatio by remember { mutableStateOf(1f) }
-    var maxZoomRatio by remember { mutableStateOf(1f) }
+    var previewView by remember { mutableStateOf<PreviewView?>(null) }
+    var extensionsManager by remember { mutableStateOf<ExtensionsManager?>(null) }
+    var availableScenes by remember { mutableStateOf(listOf(SceneOption.NONE)) }
     var captureMode by remember { mutableStateOf(CaptureMode.PHOTO) }
-    var showGrid by remember { mutableStateOf(false) }
-    var timerSeconds by remember { mutableStateOf(0) }
     var countdownRemaining by remember { mutableStateOf<Int?>(null) }
     var isRecording by remember { mutableStateOf(false) }
-    var recordingSeconds by remember { mutableStateOf(0) }
+    var recordingSeconds by remember { mutableIntStateOf(0) }
     var currentRecording by remember { mutableStateOf<Recording?>(null) }
+    var flashFeedback by remember { mutableStateOf(false) }
 
-    val imageCapture = remember { ImageCapture.Builder().build() }
-    val recorder = remember { Recorder.Builder().setQualitySelector(QualitySelector.from(Quality.HD)).build() }
-    val videoCapture = remember { VideoCapture.withOutput(recorder) }
+    var linearZoom by remember { mutableFloatStateOf(0f) }
+    var zoomRatio by remember { mutableFloatStateOf(1f) }
+    var zoomBadgeUntil by remember { mutableStateOf(0L) }
+    var upDownHeld by remember { mutableStateOf(false) }
+
+    // נקודת המיקוד הנבחרת, בשברי רוחב/גובה של התצוגה; null = אוטומטי.
+    var focusPoint by remember { mutableStateOf<Offset?>(null) }
+    var focusLocked by remember { mutableStateOf(false) }
+
+    var lastMediaUri by remember { mutableStateOf<Uri?>(null) }
+    var lastThumb by remember { mutableStateOf<Bitmap?>(null) }
+    var showSettings by remember { mutableStateOf(false) }
+    var showViewer by remember { mutableStateOf(false) }
+
     val shutterFocus = remember { FocusRequester() }
 
-    LaunchedEffect(flashMode) { imageCapture.flashMode = flashMode }
-    LaunchedEffect(zoomRatio, camera) { camera?.cameraControl?.setZoomRatio(zoomRatio) }
+    val imageCapture = remember(options.aspect, options.photoQuality) {
+        ImageCapture.Builder()
+            .setResolutionSelector(resolutionFor(options.aspect))
+            .setCaptureMode(
+                if (options.photoQuality == PhotoQualityOption.QUALITY) ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY
+                else ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY
+            )
+            .build()
+    }
+    val recorder = remember(options.videoQuality) {
+        val quality = when (options.videoQuality) {
+            VideoQualityOption.SD -> Quality.SD
+            VideoQualityOption.HD -> Quality.HD
+            VideoQualityOption.FHD -> Quality.FHD
+        }
+        Recorder.Builder()
+            .setQualitySelector(QualitySelector.from(quality, FallbackStrategy.lowerQualityOrHigherThan(quality)))
+            .build()
+    }
+    val videoCapture = remember(recorder) { VideoCapture.withOutput(recorder) }
 
-    // מקש Options הפיזי נחסם ברמת המערכת ולעולם לא מגיע כ-Key.Menu לאפליקציה -
-    // כאן פותח את תפריט הגדרות הצילום (רשת/טיימר), בדיוק כמו בכל שאר האפליקציות.
-    var showSettingsMenu by remember { mutableStateOf(false) }
-    com.future.sharednav.nav.onOptionsKeyPress { showSettingsMenu = true }
+    LaunchedEffect(options.flashMode, imageCapture) { imageCapture.flashMode = options.flashMode }
+    LaunchedEffect(linearZoom, camera) {
+        val cam = camera ?: return@LaunchedEffect
+        val future = cam.cameraControl.setLinearZoom(linearZoom)
+        future.addListener({ zoomRatio = cam.cameraInfo.zoomState.value?.zoomRatio ?: 1f }, ContextCompat.getMainExecutor(context))
+    }
+    // הפנס בווידאו: אין "הבזק" להקלטה, אז "מופעל" מדליק את הפנס בזמן ההקלטה.
+    LaunchedEffect(isRecording, options.flashMode, camera) {
+        camera?.cameraControl?.enableTorch(isRecording && options.flashMode == ImageCapture.FLASH_MODE_ON)
+    }
+
+    // המדיה האחרונה - לתצוגה המקדימה ליד כפתור הצילום, גם אחרי פתיחה מחדש.
+    LaunchedEffect(Unit) {
+        val latest = withContext(Dispatchers.IO) { CameraMedia.recentPhotos(context, limit = 1).firstOrNull() }
+        if (latest != null && lastMediaUri == null) lastMediaUri = latest
+    }
+    LaunchedEffect(lastMediaUri) {
+        val uri = lastMediaUri ?: return@LaunchedEffect
+        lastThumb = withContext(Dispatchers.IO) { CameraMedia.thumbnail(context, uri, 128) }
+    }
+
+    // Options - החלפת מצלמה, בלי Toast. פעיל רק במסך הצילום עצמו.
+    com.future.sharednav.nav.onOptionsKeyPress {
+        if (!showSettings && !showViewer && !isRecording) {
+            lensFacing = if (lensFacing == CameraSelector.LENS_FACING_BACK) CameraSelector.LENS_FACING_FRONT else CameraSelector.LENS_FACING_BACK
+            focusPoint = null
+        }
+    }
+
+    BackHandler(enabled = showSettings || showViewer || focusPoint != null) {
+        when {
+            showViewer -> showViewer = false
+            showSettings -> showSettings = false
+            else -> {
+                focusPoint = null
+                camera?.cameraControl?.cancelFocusAndMetering()
+            }
+        }
+    }
 
     fun startCapture() {
         if (!hasCameraPermission || !cameraAvailable) return
         when (captureMode) {
-            CaptureMode.PHOTO -> {
-                PhotoStorage.capture(
+            CaptureMode.PHOTO -> PhotoStorage.capture(
+                context = context,
+                imageCapture = imageCapture,
+                onSaved = { uri ->
+                    lastMediaUri = uri
+                    flashFeedback = true
+                },
+                onError = { snackbar.show("הצילום נכשל") },
+            )
+            CaptureMode.VIDEO -> if (isRecording) {
+                currentRecording?.stop()
+                currentRecording = null
+                isRecording = false
+            } else {
+                requestAudioPermission()
+                val recording = VideoStorage.startRecording(
                     context = context,
-                    imageCapture = imageCapture,
-                    onSaved = { uri ->
-                        lastMediaUri = uri
-                        flashFeedback = true
-                        Toast.makeText(context, "התמונה נשמרה", Toast.LENGTH_SHORT).show()
-                    },
-                    onError = { Toast.makeText(context, "הצילום נכשל, נסה שוב", Toast.LENGTH_SHORT).show() }
-                )
-            }
-            CaptureMode.VIDEO -> {
-                if (isRecording) {
-                    currentRecording?.stop()
-                    currentRecording = null
-                    isRecording = false
-                } else {
-                    requestAudioPermission()
-                    val recording = VideoStorage.startRecording(
-                        context = context,
-                        recorder = recorder,
-                        onFinished = { uri ->
-                            isRecording = false
-                            recordingSeconds = 0
-                            uri?.let { lastMediaUri = it }
-                            Toast.makeText(context, "הווידאו נשמר", Toast.LENGTH_SHORT).show()
-                        },
-                        onError = {
-                            isRecording = false
-                            recordingSeconds = 0
-                            Toast.makeText(context, "ההקלטה נכשלה", Toast.LENGTH_SHORT).show()
-                        },
-                    )
-                    if (recording != null) {
-                        currentRecording = recording
-                        isRecording = true
+                    recorder = recorder,
+                    onFinished = { uri ->
+                        isRecording = false
                         recordingSeconds = 0
-                    }
+                        uri?.let { lastMediaUri = it }
+                        snackbar.show("הווידאו נשמר")
+                    },
+                    onError = {
+                        isRecording = false
+                        recordingSeconds = 0
+                        snackbar.show("ההקלטה נכשלה")
+                    },
+                )
+                if (recording != null) {
+                    currentRecording = recording
+                    isRecording = true
+                    recordingSeconds = 0
                 }
             }
         }
     }
 
-    // כפתור הצילום עצמו: אם יש טיימר עצמי פעיל ולא באמצע ספירה כבר, מתחיל
-    // ספירה לאחור במקום לצלם מיד - הצילום/ההקלטה בפועל קורים כשהספירה מגיעה ל-0.
     fun onShutterPressed() {
         if (captureMode == CaptureMode.VIDEO && isRecording) {
             startCapture()
             return
         }
-        if (timerSeconds > 0 && countdownRemaining == null) {
-            countdownRemaining = timerSeconds
-        } else if (countdownRemaining == null) {
-            startCapture()
+        if (options.timerSeconds > 0 && countdownRemaining == null) countdownRemaining = options.timerSeconds
+        else if (countdownRemaining == null) startCapture()
+    }
+
+    fun focusAt(fraction: Offset) {
+        val view = previewView ?: return
+        val cam = camera ?: return
+        focusPoint = fraction
+        focusLocked = false
+        val point = view.meteringPointFactory.createPoint(fraction.x * view.width, fraction.y * view.height)
+        val action = FocusMeteringAction.Builder(point).setAutoCancelDuration(5, java.util.concurrent.TimeUnit.SECONDS).build()
+        val future = cam.cameraControl.startFocusAndMetering(action)
+        future.addListener({
+            focusLocked = runCatching { future.get().isFocusSuccessful }.getOrDefault(false)
+        }, ContextCompat.getMainExecutor(context))
+    }
+
+    fun openPreview() {
+        val uri = lastMediaUri
+        if (uri == null) {
+            snackbar.show("עדיין לא צולם כלום")
+            return
+        }
+        val isVideo = context.contentResolver.getType(uri)?.startsWith("video") == true
+        if (!isVideo) {
+            showViewer = true
+            return
+        }
+        try {
+            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, uri)
+                .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                .addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            snackbar.show("אין נגן שיכול להציג את זה")
         }
     }
 
@@ -216,192 +338,145 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
         }
     }
 
+    // מקשי המצלמה. onPreviewKeyEvent כדי שמקש מוחזק יגיע לזום לפני שהפוקוס זז.
+    val cameraKeys = Modifier.onPreviewKeyEvent { event ->
+        if (showSettings || showViewer) return@onPreviewKeyEvent false
+        val native = event.nativeKeyEvent
+        when (event.key) {
+            Key.DirectionUp, Key.DirectionDown -> {
+                val zoomIn = event.key == Key.DirectionUp
+                when (event.type) {
+                    KeyEventType.KeyDown -> {
+                        if (native.repeatCount == 0) {
+                            upDownHeld = false
+                        } else {
+                            upDownHeld = true
+                            linearZoom = (linearZoom + if (zoomIn) ZOOM_STEP else -ZOOM_STEP).coerceIn(0f, 1f)
+                            zoomBadgeUntil = System.currentTimeMillis() + 1500
+                        }
+                    }
+                    KeyEventType.KeyUp -> if (!upDownHeld) {
+                        focusManager.moveFocus(if (zoomIn) FocusDirection.Up else FocusDirection.Down)
+                    }
+                }
+                true
+            }
+            else -> {
+                if (event.type != KeyEventType.KeyDown || native.repeatCount > 0) return@onPreviewKeyEvent false
+                when (native.keyCode) {
+                    in AndroidKeyEvent.KEYCODE_1..AndroidKeyEvent.KEYCODE_9 -> {
+                        // המיקום הפיזי של הספרה על המקלדת: 1 2 3 / 4 5 6 / 7 8 9.
+                        val index = native.keyCode - AndroidKeyEvent.KEYCODE_1
+                        focusAt(Offset((index % 3) / 3f + 1f / 6f, (index / 3) / 3f + 1f / 6f))
+                        true
+                    }
+                    AndroidKeyEvent.KEYCODE_0 -> {
+                        focusPoint = null
+                        camera?.cameraControl?.cancelFocusAndMetering()
+                        true
+                    }
+                    AndroidKeyEvent.KEYCODE_STAR -> {
+                        if (!isRecording) captureMode = if (captureMode == CaptureMode.PHOTO) CaptureMode.VIDEO else CaptureMode.PHOTO
+                        true
+                    }
+                    AndroidKeyEvent.KEYCODE_POUND -> {
+                        update { it.copy(flashMode = nextFlash(it.flashMode)) }
+                        true
+                    }
+                    else -> false
+                }
+            }
+        }
+    }
+
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-        Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+        Box(modifier = Modifier.fillMaxSize().background(Color.Black).then(cameraKeys)) {
             if (!hasCameraPermission) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                        "נדרשת הרשאת מצלמה כדי לצלם",
-                        color = Color.White.copy(alpha = 0.7f),
-                        fontSize = FutureTypography.body,
-                        modifier = Modifier.padding(horizontal = 32.dp)
-                    )
-                }
+                CenterMessage("נדרשת הרשאת מצלמה כדי לצלם")
             } else if (!cameraAvailable) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                        "אין מצלמה זמינה במכשיר הזה",
-                        color = Color.White.copy(alpha = 0.7f),
-                        fontSize = FutureTypography.body,
-                        modifier = Modifier.padding(horizontal = 32.dp)
-                    )
-                }
+                CenterMessage("אין מצלמה זמינה במכשיר הזה")
             } else {
                 CameraPreview(
                     lensFacing = lensFacing,
                     captureMode = captureMode,
+                    aspect = options.aspect,
+                    scene = options.scene,
+                    extensionsManager = extensionsManager,
                     imageCapture = imageCapture,
                     videoCapture = videoCapture,
+                    onPreviewView = { previewView = it },
+                    onExtensions = { manager, scenes ->
+                        extensionsManager = manager
+                        availableScenes = scenes
+                        if (options.scene !in scenes) update { it.copy(scene = SceneOption.NONE) }
+                    },
                     onBindFailed = { cameraAvailable = false },
-                    onCameraReady = { boundCamera ->
-                        camera = boundCamera
-                        maxZoomRatio = boundCamera.cameraInfo.zoomState.value?.maxZoomRatio ?: 1f
+                    onCameraReady = { bound ->
+                        camera = bound
+                        linearZoom = 0f
                         zoomRatio = 1f
                     },
                 )
-                if (showGrid) GridOverlay()
+                if (options.showGrid) GridOverlay()
+                focusPoint?.let { FocusReticle(it, locked = focusLocked, accent = darkTheme.accentColor) }
             }
 
-            // בלי מעברי צבע בשולי המסך: "No protection gradients; a scrim or a solid
-            // capsule does that job" (README של הדיזיין סיסטם). כל פקד כאן כבר
-            // יושב על עיגול/קפסולה בהכהיה של המערכת.
-
-            // שורה עליונה: חזרה, מד זמן הקלטה (במצב וידאו פעיל), רשת/טיימר/הבזק.
+            // שורה עליונה: הגדרות, מד הקלטה, הבזק. מתחת לשורת המצב - המסך הזה
+            // מצויר עד הקצה (ר' StatusBarInset ב-AndroidManifest).
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp).align(Alignment.TopCenter),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.TopCenter)
+                    .padding(start = 16.dp, end = 16.dp, top = StatusBarInset.HEIGHT_DP.dp + 10.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 CameraIconButton(
-                    icon = Icons.AutoMirrored.Rounded.ArrowBack,
-                    contentDescription = "חזור",
+                    icon = FutureIcons.Settings,
+                    contentDescription = "הגדרות",
                     accentColor = theme.accentColor,
                     size = 40.dp,
                     iconSize = 20.dp,
-                    onClick = onExit
+                    onClick = { showSettings = true }
                 )
-
-                if (isRecording) {
-                    RecordingIndicator(seconds = recordingSeconds)
-                }
-
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    CameraIconButton(
-                        icon = when (timerSeconds) {
-                            3 -> Icons.Rounded.Timer3
-                            10 -> Icons.Rounded.Timer10
-                            else -> Icons.Rounded.Timer
-                        },
-                        contentDescription = "טיימר עצמי",
-                        accentColor = theme.accentColor,
-                        size = 40.dp,
-                        iconSize = 18.dp,
-                        tint = if (timerSeconds > 0) theme.accentColor else Color.White,
-                        onClick = { timerSeconds = when (timerSeconds) { 0 -> 3; 3 -> 10; else -> 0 } }
-                    )
-                    CameraIconButton(
-                        icon = Icons.Rounded.GridOn,
-                        contentDescription = "קווי רשת",
-                        accentColor = theme.accentColor,
-                        size = 40.dp,
-                        iconSize = 18.dp,
-                        tint = if (showGrid) theme.accentColor else Color.White,
-                        onClick = { showGrid = !showGrid }
-                    )
-                    CameraIconButton(
-                        icon = when (flashMode) {
-                            ImageCapture.FLASH_MODE_ON -> Icons.Rounded.FlashOn
-                            ImageCapture.FLASH_MODE_AUTO -> Icons.Rounded.FlashAuto
-                            else -> Icons.Rounded.FlashOff
-                        },
-                        contentDescription = "הבזק",
-                        accentColor = theme.accentColor,
-                        size = 40.dp,
-                        iconSize = 18.dp,
-                        onClick = {
-                            flashMode = when (flashMode) {
-                                ImageCapture.FLASH_MODE_OFF -> ImageCapture.FLASH_MODE_AUTO
-                                ImageCapture.FLASH_MODE_AUTO -> ImageCapture.FLASH_MODE_ON
-                                else -> ImageCapture.FLASH_MODE_OFF
-                            }
-                        }
-                    )
-                }
+                if (isRecording) RecordingIndicator(seconds = recordingSeconds)
+                ZoomBadge(zoomRatio = zoomRatio, visibleUntil = zoomBadgeUntil)
+                CameraIconButton(
+                    icon = flashIcon(options.flashMode),
+                    contentDescription = "הבזק",
+                    accentColor = theme.accentColor,
+                    size = 40.dp,
+                    iconSize = 20.dp,
+                    tint = if (options.flashMode != ImageCapture.FLASH_MODE_OFF) theme.accentColor else Color.White,
+                    onClick = { update { it.copy(flashMode = nextFlash(it.flashMode)) } }
+                )
             }
 
             countdownRemaining?.let { remaining ->
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                        remaining.toString(),
-                        color = Color.White,
-                        fontSize = 96.sp,
-                        fontWeight = FontWeight.Bold,
-                    )
+                    Text(remaining.toString(), color = Color.White, fontSize = 96.sp, fontWeight = FontWeight.Bold)
                 }
             }
 
-            // עמודת פקדים תחתונה: זום, בורר מצב (תמונה/וידאו), ואז שורת הצילום עצמה.
+            // למטה: בורר תמונה/וידאו, ושורת הצילום - תצוגה מקדימה, כפתור צילום.
             Column(
                 modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter).padding(bottom = 20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                if (maxZoomRatio > 1.05f) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                        CameraIconButton(
-                            icon = Icons.Rounded.Remove,
-                            contentDescription = "התרחק",
-                            accentColor = theme.accentColor,
-                            size = 36.dp,
-                            iconSize = 16.dp,
-                            onClick = { zoomRatio = (zoomRatio - 0.5f).coerceAtLeast(1f) }
-                        )
-                        Text(
-                            "%.1fx".format(zoomRatio),
-                            color = Color.White,
-                            fontSize = FutureTypography.summary,
-                            fontWeight = FontWeight.Medium,
-                        )
-                        CameraIconButton(
-                            icon = Icons.Rounded.Add,
-                            contentDescription = "התקרב",
-                            accentColor = theme.accentColor,
-                            size = 36.dp,
-                            iconSize = 16.dp,
-                            onClick = { zoomRatio = (zoomRatio + 0.5f).coerceAtMost(maxZoomRatio) }
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(12.dp))
-                }
-
                 if (!isRecording) {
-                    CaptureModeSelector(
-                        selected = captureMode,
-                        theme = theme,
-                        onSelect = { captureMode = it },
-                    )
+                    CaptureModeSelector(selected = captureMode, theme = theme, onSelect = { captureMode = it })
                     Spacer(modifier = Modifier.height(16.dp))
                 }
-
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    CameraIconButton(
-                        icon = Icons.Rounded.PhotoLibrary,
-                        contentDescription = "המדיה האחרונה",
-                        accentColor = theme.accentColor,
-                        onClick = {
-                            val uri = lastMediaUri
-                            if (uri != null) {
-                                try {
-                                    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, uri)
-                                    intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-                                    intent.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                    context.startActivity(intent)
-                                } catch (e: Exception) {
-                                    Toast.makeText(context, "אין אפליקציה שיכולה להציג את זה", Toast.LENGTH_SHORT).show()
-                                }
-                            } else {
-                                Toast.makeText(context, "עדיין לא צולם כלום", Toast.LENGTH_SHORT).show()
-                            }
-                        }
-                    )
-
+                    PreviewThumbButton(thumb = lastThumb, accentColor = theme.accentColor, onClick = ::openPreview)
                     CameraIconButton(
                         icon = if (captureMode == CaptureMode.VIDEO) {
                             if (isRecording) Icons.Rounded.Stop else Icons.Rounded.Videocam
-                        } else Icons.Rounded.Camera,
+                        } else FutureIcons.Camera,
                         contentDescription = if (captureMode == CaptureMode.VIDEO) "הקלט וידאו" else "צלם",
                         accentColor = if (isRecording) CameraDanger else theme.accentColor,
                         size = 72.dp,
@@ -409,28 +484,12 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
                         focusRequester = shutterFocus,
                         onClick = ::onShutterPressed
                     )
-
-                    CameraIconButton(
-                        icon = Icons.Rounded.Cameraswitch,
-                        contentDescription = "החלף מצלמה",
-                        accentColor = theme.accentColor,
-                        onClick = {
-                            lensFacing = if (lensFacing == CameraSelector.LENS_FACING_BACK) {
-                                CameraSelector.LENS_FACING_FRONT
-                            } else {
-                                CameraSelector.LENS_FACING_BACK
-                            }
-                        }
-                    )
+                    // מאזן את השורה - החלפת המצלמה היא מקש Options, בלי כפתור על המסך.
+                    Spacer(modifier = Modifier.size(52.dp))
                 }
             }
 
-            AnimatedVisibility(
-                visible = flashFeedback,
-                enter = fadeIn(),
-                exit = fadeOut(),
-                modifier = Modifier.fillMaxSize()
-            ) {
+            AnimatedVisibility(visible = flashFeedback, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.fillMaxSize()) {
                 Box(modifier = Modifier.fillMaxSize().background(Color.White.copy(alpha = 0.25f)))
             }
             if (flashFeedback) {
@@ -440,28 +499,127 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
                 }
             }
 
-            if (showSettingsMenu) {
-                CameraSettingsMenu(
-                    theme = theme,
-                    showGrid = showGrid,
-                    timerSeconds = timerSeconds,
-                    onToggleGrid = { showGrid = !showGrid },
-                    onSelectTimer = { timerSeconds = it },
-                    onDismiss = { showSettingsMenu = false },
+            AnimatedVisibility(visible = showSettings, enter = fadeIn(FutureMotion.enter()), exit = fadeOut(FutureMotion.exit())) {
+                CameraSettingsScreen(
+                    theme = darkTheme,
+                    options = options,
+                    availableScenes = availableScenes,
+                    onChange = { changed -> update { changed } },
                 )
             }
-
-            LaunchedEffect(hasCameraPermission, cameraAvailable) {
-                if (hasCameraPermission && cameraAvailable) shutterFocus.requestFocus()
+            AnimatedVisibility(visible = showViewer, enter = fadeIn(FutureMotion.enter()), exit = fadeOut(FutureMotion.exit())) {
+                PhotoViewer(theme = darkTheme, startUri = lastMediaUri)
             }
+
+            FutureSnackbarHost(snackbar, darkTheme)
+
+            LaunchedEffect(hasCameraPermission, cameraAvailable, showSettings, showViewer) {
+                if (hasCameraPermission && cameraAvailable && !showSettings && !showViewer) {
+                    runCatching { shutterFocus.requestFocus() }
+                }
+            }
+        }
+    }
+}
+
+private fun nextFlash(mode: Int): Int = when (mode) {
+    ImageCapture.FLASH_MODE_OFF -> ImageCapture.FLASH_MODE_AUTO
+    ImageCapture.FLASH_MODE_AUTO -> ImageCapture.FLASH_MODE_ON
+    else -> ImageCapture.FLASH_MODE_OFF
+}
+
+private fun flashIcon(mode: Int) = when (mode) {
+    ImageCapture.FLASH_MODE_ON -> Icons.Rounded.FlashOn
+    ImageCapture.FLASH_MODE_AUTO -> Icons.Rounded.FlashAuto
+    else -> Icons.Rounded.FlashOff
+}
+
+private fun resolutionFor(aspect: AspectOption): ResolutionSelector = ResolutionSelector.Builder()
+    .setAspectRatioStrategy(
+        if (aspect == AspectOption.RATIO_16_9) AspectRatioStrategy.RATIO_16_9_FALLBACK_AUTO_STRATEGY
+        else AspectRatioStrategy.RATIO_4_3_FALLBACK_AUTO_STRATEGY
+    )
+    .build()
+
+@Composable
+private fun CenterMessage(text: String) {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Text(text, color = Color.White.copy(alpha = 0.7f), fontSize = FutureTypography.body, modifier = Modifier.padding(horizontal = 32.dp))
+    }
+}
+
+/** "2.4x" ליד הפקדים העליונים, בזמן זום ושנייה וחצי אחריו. */
+@Composable
+private fun ZoomBadge(zoomRatio: Float, visibleUntil: Long) {
+    var visible by remember { mutableStateOf(false) }
+    LaunchedEffect(visibleUntil) {
+        visible = System.currentTimeMillis() < visibleUntil
+        if (visible) {
+            delay((visibleUntil - System.currentTimeMillis()).coerceAtLeast(0))
+            visible = false
+        }
+    }
+    AnimatedVisibility(visible = visible || zoomRatio > 1.01f, enter = fadeIn(), exit = fadeOut()) {
+        Text(
+            "%.1fx".format(zoomRatio),
+            color = Color.White,
+            fontSize = FutureTypography.summary,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier
+                .clip(FutureShapes.pill)
+                .background(ScrimOverPreview)
+                .padding(horizontal = FutureDimens.spacingMd, vertical = 6.dp),
+        )
+    }
+}
+
+/** מסגרת המיקוד: לבנה בזמן החיפוש, בהדגשה כשהמיקוד ננעל. */
+@Composable
+private fun FocusReticle(fraction: Offset, locked: Boolean, accent: Color) {
+    val scale by animateFloatAsState(if (locked) 1f else 1.25f, FutureMotion.focusScaleSpec, label = "reticleScale")
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val size = 64.dp
+        val density = LocalDensity.current
+        val x = with(density) { (maxWidth.toPx() * fraction.x - size.toPx() / 2).toInt() }
+        val y = with(density) { (maxHeight.toPx() * fraction.y - size.toPx() / 2).toInt() }
+        // המיקום כאן מוחלט (שבר מהרוחב מהקצה השמאלי), בלי קשר לכיוון הפריסה.
+        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+            Box(
+                modifier = Modifier
+                    .offset { IntOffset(x, y) }
+                    .size(size)
+                    .graphicsLayer { scaleX = scale; scaleY = scale }
+                    .border(2.dp, if (locked) accent else Color.White, FutureShapes.sm)
+            )
+        }
+    }
+}
+
+/** התמונה האחרונה בעיגול במקום אייקון גלריה - לחיצה פותחת את המציג. */
+@Composable
+private fun PreviewThumbButton(thumb: Bitmap?, accentColor: Color, onClick: () -> Unit) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
+    Box(
+        modifier = Modifier
+            .size(52.dp)
+            .clip(CircleShape)
+            .background(ScrimOverPreview)
+            .border(FutureDimens.focusBorderControl, if (isFocused) accentColor else Color.White.copy(alpha = 0.3f), CircleShape)
+            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
+            .focusable(interactionSource = interactionSource),
+        contentAlignment = Alignment.Center
+    ) {
+        if (thumb != null) {
+            Image(thumb.asImageBitmap(), contentDescription = "התמונה האחרונה", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+        } else {
+            Icon(Icons.Rounded.PhotoLibrary, contentDescription = "התמונה האחרונה", tint = Color.White, modifier = Modifier.size(24.dp))
         }
     }
 }
 
 @Composable
 private fun RecordingIndicator(seconds: Int) {
-    val minutes = seconds / 60
-    val secs = seconds % 60
     Row(
         modifier = Modifier
             .clip(FutureShapes.pill)
@@ -471,7 +629,7 @@ private fun RecordingIndicator(seconds: Int) {
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Box(modifier = Modifier.size(8.dp).background(CameraDanger, CircleShape))
-        Text("%d:%02d".format(minutes, secs), color = Color.White, fontSize = FutureTypography.summary, fontWeight = FontWeight.Medium)
+        Text("%d:%02d".format(seconds / 60, seconds % 60), color = Color.White, fontSize = FutureTypography.summary, fontWeight = FontWeight.Medium)
     }
 }
 
@@ -488,7 +646,7 @@ private fun GridOverlay() {
     }
 }
 
-/** בורר בין צילום תמונה לוידאו - שני פלחים קטנים מעל שורת הצילום. */
+/** בורר בין צילום תמונה לווידאו - שני פלחים קטנים מעל שורת הצילום. */
 @Composable
 private fun CaptureModeSelector(selected: CaptureMode, theme: FutureTheme, onSelect: (CaptureMode) -> Unit) {
     Row(
@@ -504,9 +662,8 @@ private fun CaptureModeSelector(selected: CaptureMode, theme: FutureTheme, onSel
 
 @Composable
 private fun CaptureModeSegment(label: String, isSelected: Boolean, theme: FutureTheme, onClick: () -> Unit) {
-    val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    // צ'יפ מעל תמונה חיה: נבחר = מילוי בהדגשה עם הדיו שלה; ממוקד = 18% לבן.
     val shape = FutureShapes.pill
     val bgColor by androidx.compose.animation.animateColorAsState(
         if (isSelected) theme.accentColor else if (isFocused) Color.White.copy(alpha = 0.18f) else Color.Transparent,
@@ -517,6 +674,7 @@ private fun CaptureModeSegment(label: String, isSelected: Boolean, theme: Future
         modifier = Modifier
             .clip(shape)
             .background(bgColor)
+            .border(FutureDimens.focusBorderControl, if (isFocused && isSelected) Color.White else Color.Transparent, shape)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
             .focusable(interactionSource = interactionSource)
             .padding(horizontal = 18.dp, vertical = 7.dp),
@@ -527,42 +685,16 @@ private fun CaptureModeSegment(label: String, isSelected: Boolean, theme: Future
 }
 
 @Composable
-private fun CameraSettingsMenu(
-    theme: FutureTheme,
-    showGrid: Boolean,
-    timerSeconds: Int,
-    onToggleGrid: () -> Unit,
-    onSelectTimer: (Int) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    FutureOptionsMenu(theme = theme, onDismissRequest = onDismiss, header = "מצלמה") {
-        CameraSettingsRow("קווי רשת", theme = theme, isOn = showGrid, onClick = onToggleGrid)
-        CameraSettingsRow("טיימר עצמי כבוי", theme = theme, isOn = timerSeconds == 0, onClick = { onSelectTimer(0) })
-        CameraSettingsRow("טיימר עצמי 3 שניות", theme = theme, isOn = timerSeconds == 3, onClick = { onSelectTimer(3) })
-        CameraSettingsRow("טיימר עצמי 10 שניות", theme = theme, isOn = timerSeconds == 10, onClick = { onSelectTimer(10) })
-    }
-}
-
-/** שורת תפריט; האפשרות הפעילה מסומנת בסימן V בהדגשה בסוף השורה. */
-@Composable
-private fun CameraSettingsRow(label: String, theme: FutureTheme, isOn: Boolean, onClick: () -> Unit) {
-    FutureMenuRow(
-        label = label,
-        icon = null,
-        theme = theme,
-        onClick = onClick,
-        trailing = if (isOn) {
-            { Icon(Icons.Rounded.Check, contentDescription = null, tint = theme.readableAccentColor, modifier = Modifier.size(FutureDimens.iconMenuRow)) }
-        } else null,
-    )
-}
-
-@Composable
 private fun CameraPreview(
     lensFacing: Int,
     captureMode: CaptureMode,
+    aspect: AspectOption,
+    scene: SceneOption,
+    extensionsManager: ExtensionsManager?,
     imageCapture: ImageCapture,
     videoCapture: VideoCapture<Recorder>,
+    onPreviewView: (PreviewView) -> Unit,
+    onExtensions: (ExtensionsManager, List<SceneOption>) -> Unit,
     onBindFailed: () -> Unit,
     onCameraReady: (Camera) -> Unit,
 ) {
@@ -570,23 +702,38 @@ private fun CameraPreview(
     val context = LocalContext.current
     val currentOnBindFailed by rememberUpdatedState(onBindFailed)
     val currentOnCameraReady by rememberUpdatedState(onCameraReady)
+    val currentOnExtensions by rememberUpdatedState(onExtensions)
 
     AndroidView(
         modifier = Modifier.fillMaxSize(),
-        factory = { ctx -> PreviewView(ctx).apply { scaleType = PreviewView.ScaleType.FILL_CENTER } },
+        factory = { ctx -> PreviewView(ctx).apply { scaleType = PreviewView.ScaleType.FILL_CENTER }.also(onPreviewView) },
         update = { previewView ->
             val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
             cameraProviderFuture.addListener({
                 try {
                     val cameraProvider = cameraProviderFuture.get()
-                    val preview = Preview.Builder().build().also { it.surfaceProvider = previewView.surfaceProvider }
-                    val selector = CameraSelector.Builder().requireLensFacing(lensFacing).build()
+                    val baseSelector = CameraSelector.Builder().requireLensFacing(lensFacing).build()
+                    // אילו מצבי צילום מיוחדים החומרה תומכת בהם - נבדק פעם אחת.
+                    if (extensionsManager == null) {
+                        val future = ExtensionsManager.getInstanceAsync(context, cameraProvider)
+                        future.addListener({
+                            runCatching { future.get() }.getOrNull()?.let { manager ->
+                                val scenes = SceneOption.entries.filter {
+                                    it == SceneOption.NONE || runCatching { manager.isExtensionAvailable(baseSelector, it.mode) }.getOrDefault(false)
+                                }
+                                currentOnExtensions(manager, scenes)
+                            }
+                        }, ContextCompat.getMainExecutor(context))
+                    }
+                    val selector = if (scene != SceneOption.NONE && captureMode == CaptureMode.PHOTO && extensionsManager != null &&
+                        runCatching { extensionsManager.isExtensionAvailable(baseSelector, scene.mode) }.getOrDefault(false)
+                    ) extensionsManager.getExtensionEnabledCameraSelector(baseSelector, scene.mode) else baseSelector
+
+                    val preview = Preview.Builder().setResolutionSelector(resolutionFor(aspect)).build()
+                        .also { it.surfaceProvider = previewView.surfaceProvider }
                     cameraProvider.unbindAll()
-                    // חומרת המצלמה כאן ברמת Camera2 "LIMITED" (ר' Camera2CameraInfo בלוגים) -
-                    // לא תומכת בקישור בו-זמנית של תצוגה חיה + צילום תמונה + הקלטת וידאו
-                    // (3 זרמים) יחד; הניסיון הראשוני לקשר את כולם תמיד גרם למסך שחור לגמרי
-                    // תקוע (משא-ומתן על session שלעולם לא מצליח). קושרים רק את מה שהמצב
-                    // הנוכחי צריך בפועל - זה כן עובד, במחיר rebind קצר במעבר תמונה/וידאו.
+                    // החומרה כאן ברמת Camera2 "LIMITED" - לא מקשרים תצוגה + תמונה +
+                    // וידאו יחד (המסך נשאר שחור). רק מה שהמצב הנוכחי צריך.
                     val boundCamera = if (captureMode == CaptureMode.VIDEO) {
                         cameraProvider.bindToLifecycle(lifecycleOwner, selector, preview, videoCapture)
                     } else {

@@ -8,6 +8,8 @@ import com.future.dialer.data.repository.CallLogRepository
 import com.future.dialer.data.repository.ContactRepository
 import com.future.dialer.util.T9Search
 import com.future.dialer.data.model.CallType
+import com.future.dialer.data.model.CallFilter
+import com.future.dialer.data.model.CallStats
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -48,15 +50,46 @@ class CallsViewModel(
      * לכל טעינה, ברקע (Default), ולא ב-composition של המסך. עם מאות שיחות
      * הקיבוץ (Calendar לכל שיחה) והפורמט עלו בכל כניסה לטאב על ה-main thread.
      */
-    val callDays: StateFlow<List<CallDay>> = _recentCalls
-        .map { groupByDay(it) }
-        .flowOn(Dispatchers.Default)
-        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    private val _filter = MutableStateFlow(CallFilter.ALL)
+    val filter: StateFlow<CallFilter> = _filter.asStateFlow()
 
-    val missedCallDays: StateFlow<List<CallDay>> = _recentCalls
-        .map { list -> groupByDay(list.filter { it.type == CallType.MISSED }) }
-        .flowOn(Dispatchers.Default)
-        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    fun setFilter(filter: CallFilter) {
+        _filter.value = filter
+    }
+
+    /**
+     * היומן המסונן, מקובץ לימים. השם של כל שורה: השם השמור ביומן, ואם אין -
+     * איש הקשר של המספר (אנשי קשר שנוספו אחרי השיחה), ואם גם אין - המספר
+     * עצמו, או "מספר חסוי". כך כל שיחה מוצגת, גם ממספר שאינו שמור.
+     */
+    val callDays: StateFlow<List<CallDay>> = combine(_recentCalls, _contacts, _filter) { calls, contacts, filter ->
+        val byKey = HashMap<String, String>()
+        contacts.forEach { c -> matchKey(c.phoneNumber)?.let { k -> byKey.putIfAbsent(k, c.name) } }
+        groupByDay(calls.filter { filter.matches(it.type) }) { call ->
+            call.name
+                ?: matchKey(call.phoneNumber)?.let(byKey::get)
+                ?: call.phoneNumber.takeIf { it.isNotBlank() && !call.isPrivate }
+                ?: "מספר חסוי"
+        }
+    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    /** סיכום הדקות של כל היומן - לא תלוי בסינון. */
+    val stats: StateFlow<CallStats> = _recentCalls.map { calls ->
+        CallStats(
+            incomingSeconds = calls.filter { it.type == CallType.INCOMING }.sumOf { it.duration },
+            outgoingSeconds = calls.filter { it.type == CallType.OUTGOING }.sumOf { it.duration },
+            incomingCount = calls.count { it.type == CallType.INCOMING && it.duration > 0 },
+            outgoingCount = calls.count { it.type == CallType.OUTGOING },
+            missedCount = calls.count { it.type == CallType.MISSED },
+        )
+    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Eagerly, CallStats(0, 0, 0, 0, 0))
+
+    /** אנשי קשר שמתאימים למה שהוקלד במקלדת (ספרות במספר או T9 בשם) - עד שישה. */
+    val dialSuggestions: StateFlow<List<Contact>> = combine(_dialedNumber, _contacts) { digits, list ->
+        if (digits.length < 2) return@combine emptyList()
+        val clean = digitsOf(digits)
+        list.filter { digitsOf(it.phoneNumber).contains(clean) || T9Search.matchesAnyWord(it.name, digits) }.take(6)
+    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     /**
      * איש הקשר שהמספר המוקלד שייך לו - מוצג מתחת למספר במקלדת. משלוש ספרות
@@ -88,6 +121,21 @@ class CallsViewModel(
         if (callsJob?.isActive != true) {
             callsJob = viewModelScope.launch { _recentCalls.value = callLogRepository.getCallLogs() }
         }
+    }
+
+    /**
+     * טעינה מחדש של היומן כשהוא משתנה (ContentObserver ב-MainActivity).
+     * הטעינה שרצה כבר מבוטלת ומתחילה מחדש - אחרת שיחה שנרשמה ביומן שנייה
+     * אחרי שהטעינה התחילה (Telecom כותב את היומן אחרי סוף השיחה) לא הופיעה.
+     */
+    fun reloadCalls() {
+        callsJob?.cancel()
+        callsJob = viewModelScope.launch { _recentCalls.value = callLogRepository.getCallLogs() }
+    }
+
+    fun reloadContacts() {
+        contactsJob?.cancel()
+        contactsJob = viewModelScope.launch { _contacts.value = contactRepository.getAllContacts() }
     }
 
     fun onDigitPressed(digit: String) {
@@ -137,7 +185,7 @@ class CallsViewModel(
 
     private companion object {
         /** קיבוץ לפי יום, בסדר יורד - "היום", "אתמול", ואז תאריך מלא. */
-        fun groupByDay(calls: List<CallRecord>): List<CallDay> =
+        fun groupByDay(calls: List<CallRecord>, titleOf: (CallRecord) -> String): List<CallDay> =
             calls.sortedByDescending { it.timestamp }
                 .groupBy { CallFormat.dayTitle(it.timestamp) }
                 .map { (title, dayCalls) ->
@@ -146,7 +194,7 @@ class CallsViewModel(
                         rows = dayCalls.map { call ->
                             CallRow(
                                 call = call,
-                                title = call.name ?: call.phoneNumber,
+                                title = titleOf(call),
                                 summary = CallFormat.summaryOf(call),
                                 time = CallFormat.timeOf(call),
                             )

@@ -1,4 +1,8 @@
 package com.future.futurelauncher
+import androidx.compose.material.icons.rounded.Wallpaper
+import androidx.compose.material.icons.rounded.Widgets
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.theme.scrimColor
 import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.focus.bringIntoViewOnFocus
@@ -31,13 +35,6 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Apps
-import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.Home
-import androidx.compose.material.icons.rounded.Settings
-import androidx.compose.material.icons.rounded.Wallpaper
-import androidx.compose.material.icons.rounded.Widgets
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -693,11 +690,11 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 24.dp),
+                        .padding(top = com.future.sharednav.systemui.StatusBarInset.HEIGHT_DP.dp),
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // תמיד Icons.Rounded.Home (לא Icons.Outlined) - הגרסה החלולה עם
+                    // תמיד FutureIcons.Home (לא Icons.Outlined) - הגרסה החלולה עם
                     // הקווים הדקים והפינות החדות בלטה לרעה ליד שאר האייקונים המעוגלים
                     // באפליקציה. "זה עמוד הבית הנוכחי" מסומן עכשיו באטימות מלאה במקום
                     // בהחלפת האייקון עצמו.
@@ -705,7 +702,7 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                     val isHomeFocused = viewModel.isTopBarFocused && viewModel.topBarSelectedIndex == 0
                     val homeColor = if (isHomeFocused) theme.accentColor else if (isCurrentHome) OnWallpaperColor else OnWallpaperColor.copy(alpha = 0.5f)
                     Icon(
-                        imageVector = Icons.Rounded.Home,
+                        imageVector = FutureIcons.Home,
                         contentDescription = stringResource(R.string.home), 
                         tint = homeColor, 
                         modifier = Modifier.size(32.dp).graphicsLayer {
@@ -716,7 +713,7 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                     Spacer(modifier = Modifier.width(64.dp))
                     val trashColor = if (viewModel.isTopBarFocused && viewModel.topBarSelectedIndex == 1) theme.accentColor else OnWallpaperColor
                     Icon(
-                        imageVector = Icons.Rounded.Delete, 
+                        imageVector = FutureIcons.Delete, 
                         contentDescription = stringResource(R.string.trash), 
                         tint = trashColor, 
                         modifier = Modifier.size(32.dp).graphicsLayer {
@@ -734,7 +731,7 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                 if (viewModel.isEditMode) {
                     val leftPlusColor = if (viewModel.isLeftPlusFocused) theme.accentColor else OnWallpaperColor
                     Icon(
-                        Icons.Rounded.Add, 
+                        FutureIcons.Add, 
                         contentDescription = null, 
                         tint = leftPlusColor,
                         modifier = Modifier.size(48.dp).padding(8.dp).graphicsLayer {
@@ -804,7 +801,7 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                 if (viewModel.isEditMode) {
                     val rightPlusColor = if (viewModel.isRightPlusFocused) theme.accentColor else OnWallpaperColor
                     Icon(
-                        Icons.Rounded.Add, 
+                        FutureIcons.Add, 
                         contentDescription = null, 
                         tint = rightPlusColor,
                         modifier = Modifier.size(48.dp).padding(8.dp).graphicsLayer {
@@ -840,7 +837,7 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                         horizontalArrangement = Arrangement.SpaceEvenly,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        EditModeButton(stringResource(R.string.settings), Icons.Rounded.Settings, viewModel.isEditModeBottomBarFocused && viewModel.editModeSelectedIndex == 0, theme = theme) {
+                        EditModeButton(stringResource(R.string.settings), FutureIcons.Settings, viewModel.isEditModeBottomBarFocused && viewModel.editModeSelectedIndex == 0, theme = theme) {
                             viewModel.dialogState = LauncherDialog.LauncherSettings
                         }
                         EditModeButton(stringResource(R.string.widgets), Icons.Rounded.Widgets, viewModel.isEditModeBottomBarFocused && viewModel.editModeSelectedIndex == 1, theme = theme) {
@@ -849,7 +846,7 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                         EditModeButton(stringResource(R.string.wallpaper), Icons.Rounded.Wallpaper, viewModel.isEditModeBottomBarFocused && viewModel.editModeSelectedIndex == 2, theme = theme) {
                             context.startActivity(Intent(Intent.ACTION_SET_WALLPAPER))
                         }
-                        EditModeButton(stringResource(R.string.apps), Icons.Rounded.Apps, viewModel.isEditModeBottomBarFocused && viewModel.editModeSelectedIndex == 3, theme = theme) {
+                        EditModeButton(stringResource(R.string.apps), FutureIcons.Apps, viewModel.isEditModeBottomBarFocused && viewModel.editModeSelectedIndex == 3, theme = theme) {
                             viewModel.dialogState = LauncherDialog.AppList
                         }
                     }

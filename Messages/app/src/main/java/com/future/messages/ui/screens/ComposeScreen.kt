@@ -1,4 +1,7 @@
 package com.future.messages.ui.screens
+import androidx.compose.material.icons.rounded.AttachFile
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureAvatar
 import com.future.sharednav.components.ScreenTopBar
 import com.future.sharednav.components.TopBarIconButton
@@ -27,10 +30,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.AttachFile
-import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -125,7 +124,7 @@ fun ComposeScreen(
                                 Image(bitmap = bitmap, contentDescription = null, modifier = Modifier.fillMaxSize())
                             }
                         }
-                        TopBarIconButton(Icons.Rounded.Close, "הסר צירוף", theme.textColor, theme.accentColor, { attachedImageUri = null })
+                        TopBarIconButton(FutureIcons.Close, "הסר צירוף", theme.textColor, theme.accentColor, { attachedImageUri = null })
                     }
                 }
 

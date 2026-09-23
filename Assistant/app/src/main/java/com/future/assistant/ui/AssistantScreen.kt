@@ -1,4 +1,6 @@
 package com.future.assistant.ui
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.theme.FutureDimens
 import com.future.sharednav.theme.FutureContrast
 import com.future.sharednav.theme.readableAccentColor
@@ -24,8 +26,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -274,7 +274,7 @@ private fun MicButton(state: AssistantState, theme: FutureTheme, pulseScale: Flo
             .focusable(interactionSource = interactionSource),
         contentAlignment = Alignment.Center
     ) {
-        androidx.compose.material3.Icon(Icons.Rounded.Mic, contentDescription = "מיקרופון", tint = FutureContrast.onColor(fill), modifier = Modifier.size(32.dp))
+        androidx.compose.material3.Icon(FutureIcons.Mic, contentDescription = "מיקרופון", tint = FutureContrast.onColor(fill), modifier = Modifier.size(32.dp))
     }
 }
 

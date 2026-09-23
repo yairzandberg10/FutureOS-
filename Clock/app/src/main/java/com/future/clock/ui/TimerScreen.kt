@@ -1,4 +1,6 @@
 package com.future.clock.ui
+import com.future.sharednav.components.FutureSnackbarHost
+import com.future.sharednav.theme.readableAccentColor
 import com.future.sharednav.theme.LocalFutureTheme
 
 import com.future.sharednav.theme.FutureTypography
@@ -64,6 +66,9 @@ fun TimerScreen(theme: FutureTheme, onBack: () -> Unit) {
     // מחושב נכון מהשעון היחסי ולא ממשיך לספור מאיפה שהפסיק. אותו דפוס בדיוק
     // כמו ב-StopwatchScreen (startedAtElapsedRealtime).
     var deadlineElapsedRealtime by remember { mutableLongStateOf(0L) }
+    // האורך המלא של הספירה הנוכחית - הבסיס של הטבעת (כמה עבר / כמה נשאר).
+    var totalMillis by remember { mutableLongStateOf(0L) }
+    val snackbar = com.future.sharednav.components.rememberFutureSnackbarState()
     var isRunning by remember { mutableStateOf(false) }
     var isFinished by remember { mutableStateOf(false) }
     // אותה תקלת "אין פוקוס" שתועדה ותוקנה במחשבון/ממיר יחידות - ראו שם. בלי
@@ -93,6 +98,7 @@ fun TimerScreen(theme: FutureTheme, onBack: () -> Unit) {
         val totalMs = (minutes * 60L + seconds) * 1000L
         if (totalMs <= 0) return
         remainingMillis = totalMs
+        totalMillis = totalMs
         deadlineElapsedRealtime = android.os.SystemClock.elapsedRealtime() + totalMs
         isFinished = false
         isRunning = true
@@ -102,6 +108,7 @@ fun TimerScreen(theme: FutureTheme, onBack: () -> Unit) {
         isRunning = false
         isFinished = false
         remainingMillis = 0
+        totalMillis = 0
         mmss = 0
     }
 
@@ -129,38 +136,52 @@ fun TimerScreen(theme: FutureTheme, onBack: () -> Unit) {
             Column(modifier = Modifier.fillMaxSize()) {
                 ToolsHeader(title = "טיימר", theme = theme, onBack = onBack)
 
-                Box(modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp), contentAlignment = Alignment.Center) {
-                    Text(
-                        text = if (isRunning || remainingMillis > 0) {
-                            val totalSeconds = (remainingMillis + 999) / 1000
-                            "%02d:%02d".format(totalSeconds / 60, totalSeconds % 60)
-                        } else mmssToText(mmss),
-                        color = if (isFinished) theme.dangerColor else theme.textColor,
-                        fontSize = FutureTypography.hero,
-                        fontWeight = FontWeight.Light,
-                        fontFamily = FutureTypography.monoFamily
-                    )
+                // הטבעת: החלק הצבוע הוא מה שנשאר, והוא מתקצר עם הזמן.
+                val progress = when {
+                    isFinished -> 0f
+                    totalMillis > 0 -> (remainingMillis.toFloat() / totalMillis).coerceIn(0f, 1f)
+                    else -> 1f
                 }
-
-                if (!isRunning && remainingMillis <= 0) {
-                    Text(
-                        "הקלד דקות ושניות במקלדת",
-                        color = theme.textColor.copy(alpha = 0.4f),
-                        fontSize = FutureTypography.summary,
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                val ringColor = if (isFinished) theme.dangerColor else theme.readableAccentColor
+                Box(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    TimerRing(
+                        progress = progress,
+                        active = totalMillis > 0,
+                        color = ringColor,
+                        track = theme.textColor.copy(alpha = 0.10f),
+                        modifier = Modifier.size(TimerRingSize),
                     )
-                }
-
-                if (isFinished) {
-                    Text(
-                        "הזמן נגמר!",
-                        color = theme.dangerColor,
-                        fontSize = FutureTypography.bodyLarge,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                    )
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = if (isRunning || remainingMillis > 0) {
+                                val totalSeconds = (remainingMillis + 999) / 1000
+                                "%02d:%02d".format(totalSeconds / 60, totalSeconds % 60)
+                            } else mmssToText(mmss),
+                            color = if (isFinished) theme.dangerColor else theme.textColor,
+                            fontSize = FutureTypography.hero,
+                            fontWeight = FontWeight.Light,
+                            fontFamily = FutureTypography.monoFamily
+                        )
+                        val caption = when {
+                            isFinished -> "הזמן נגמר"
+                            !isRunning && remainingMillis <= 0 -> "הקלד דקות ושניות"
+                            totalMillis > 0 -> {
+                                val passed = ((totalMillis - remainingMillis) / 1000).coerceAtLeast(0)
+                                "עברו %d:%02d".format(passed / 60, passed % 60)
+                            }
+                            else -> ""
+                        }
+                        if (caption.isNotEmpty()) {
+                            Text(
+                                caption,
+                                color = if (isFinished) theme.dangerColor else theme.textColor.copy(alpha = 0.5f),
+                                fontSize = FutureTypography.summary,
+                            )
+                        }
+                    }
                 }
 
                 Row(
@@ -187,11 +208,42 @@ fun TimerScreen(theme: FutureTheme, onBack: () -> Unit) {
                     TimerActionButton(label = "איפוס", color = theme.textColor.copy(alpha = 0.12f)) { resetTimer() }
                 }
             }
+            FutureSnackbarHost(snackbar, theme)
+        }
+    }
+    ClockShortcutMenu(route = ClockRoute.Timer, title = "טיימר", theme = theme, onMessage = snackbar::show)
+}
+
+/** 190dp - הטבעת סביב הזמן; נכנסת עם הכפתורים והסרגל התחתון במסך אחד. */
+private val TimerRingSize = 190.dp
+
+/**
+ * טבעת ההתקדמות של הטיימר: מסלול ב-10% מהטקסט, ומעליו קשת בהדגשה עם
+ * קצוות מעוגלים (כמו FutureSpinner) שמתחילה למעלה ונסגרת עם כיוון השעון.
+ */
+@Composable
+private fun TimerRing(progress: Float, active: Boolean, color: Color, track: Color, modifier: Modifier) {
+    val animated by androidx.compose.animation.core.animateFloatAsState(
+        progress,
+        com.future.sharednav.theme.FutureMotion.fast(),
+        label = "timerRing",
+    )
+    androidx.compose.foundation.Canvas(modifier = modifier) {
+        val stroke = 8.dp.toPx()
+        val inset = stroke / 2
+        val arcSize = androidx.compose.ui.geometry.Size(size.width - stroke, size.height - stroke)
+        val topLeft = androidx.compose.ui.geometry.Offset(inset, inset)
+        drawArc(track, 0f, 360f, false, topLeft, arcSize, style = androidx.compose.ui.graphics.drawscope.Stroke(stroke))
+        if (active && animated > 0f) {
+            drawArc(
+                color, -90f, 360f * animated, false, topLeft, arcSize,
+                style = androidx.compose.ui.graphics.drawscope.Stroke(stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round),
+            )
         }
     }
 }
 
 @Composable
 private fun TimerActionButton(label: String, color: Color, focusRequester: FocusRequester? = null, onClick: () -> Unit) {
-    RoundActionButton(label, color, LocalFutureTheme.current, 84.dp, focusRequester, onClick)
+    RoundActionButton(label, color, LocalFutureTheme.current, 72.dp, focusRequester, onClick)
 }

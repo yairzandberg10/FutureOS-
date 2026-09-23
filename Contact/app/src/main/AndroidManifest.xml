@@ -7,8 +7,16 @@
          את העיצוב המשותף (כהה/בהיר, צבע הדגשה) מ-FutureUI. -->
     <queries>
         <package android:name="com.future.futureui" />
+        <!-- חסימה עוברת דרך החייגן (אפליקציית ברירת המחדל לשיחות), והתמונה נבחרת בגלריה. -->
+        <package android:name="com.future.dialer" />
+        <package android:name="com.future.gallery" />
+        <intent>
+            <action android:name="android.intent.action.GET_CONTENT" />
+            <data android:mimeType="image/*" />
+        </intent>
     </queries>
 
+    <uses-permission android:name="android.permission.CALL_PHONE" />
     <uses-permission android:name="android.permission.READ_CONTACTS" />
     <uses-permission android:name="android.permission.WRITE_CONTACTS" />
 
@@ -34,6 +42,13 @@
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- "הוסף לאנשי קשר" מאפליקציות אחרות (ContactsContract.Intents.Insert). -->
+            <intent-filter>
+                <action android:name="android.intent.action.INSERT" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="vnd.android.cursor.dir/raw_contact" />
+                <data android:mimeType="vnd.android.cursor.dir/contact" />
             </intent-filter>
             <!-- מזהה את Contact כמועמדת תקינה לתפקיד "אפליקציית אנשי קשר" של המערכת. -->
             <intent-filter>

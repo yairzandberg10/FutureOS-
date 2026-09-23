@@ -1,4 +1,7 @@
 package com.future.frixa.ui
+import androidx.compose.material.icons.rounded.Restaurant
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.theme.readableAccentColor
 import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.theme.mutedTextColor
@@ -16,9 +19,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
-import androidx.compose.material.icons.rounded.Restaurant
-import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -81,7 +81,7 @@ private fun RecipeRow(recipe: Recipe, theme: FutureTheme, isFocused: Boolean) {
                 Text(recipe.category, color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.label)
                 Text(" · ", color = theme.textColor.copy(alpha = 0.4f), fontSize = FutureTypography.label)
                 Icon(
-                    Icons.Rounded.Schedule,
+                    FutureIcons.Schedule,
                     contentDescription = null,
                     tint = theme.textColor.copy(alpha = 0.5f),
                     modifier = Modifier.padding(end = 2.dp),
@@ -89,6 +89,6 @@ private fun RecipeRow(recipe: Recipe, theme: FutureTheme, isFocused: Boolean) {
                 Text("${recipe.minutes} דק'", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.label)
             }
         }
-        Icon(Icons.AutoMirrored.Rounded.KeyboardArrowLeft, contentDescription = null, tint = theme.textColor.copy(alpha = 0.4f))
+        Icon(FutureIcons.AutoMirrored.KeyboardArrowLeft, contentDescription = null, tint = theme.textColor.copy(alpha = 0.4f))
     }
 }

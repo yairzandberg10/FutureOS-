@@ -1,4 +1,8 @@
 package com.future.fitness.ui.screens
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.LocalFireDepartment
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureAvatar
 import com.future.sharednav.components.FutureProgressBar
 import com.future.sharednav.theme.elevatedSurfaceColor
@@ -33,12 +37,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.Favorite
-import androidx.compose.material.icons.rounded.FitnessCenter
-import androidx.compose.material.icons.rounded.LocalFireDepartment
-import androidx.compose.material.icons.rounded.Pause
-import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
@@ -234,7 +232,7 @@ fun ActiveWorkoutScreen(
                         .padding(22.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    FutureAvatar(theme = theme, icon = Icons.Rounded.FitnessCenter, size = 56.dp)
+                    FutureAvatar(theme = theme, icon = FutureIcons.FitnessCenter, size = 56.dp)
                     Spacer(Modifier.height(8.dp))
                     Text(exercise.name, color = theme.textColor, fontSize = FutureTypography.screenTitle, fontWeight = FontWeight.Bold)
                     Text(
@@ -275,7 +273,7 @@ fun ActiveWorkoutScreen(
                             contentAlignment = Alignment.Center,
                         ) {
                             Icon(
-                                if (state.running) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                                if (state.running) FutureIcons.Pause else FutureIcons.PlayArrow,
                                 contentDescription = if (state.running) "השהה" else "המשך",
                                 tint = theme.textColor,
                             )
@@ -311,7 +309,7 @@ fun ActiveWorkoutScreen(
                             horizontalArrangement = Arrangement.Center,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Icon(Icons.Rounded.Check, contentDescription = null, tint = theme.backgroundColor, modifier = Modifier.size(18.dp))
+                            Icon(FutureIcons.Check, contentDescription = null, tint = theme.backgroundColor, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
                             Text("סיימתי סט", color = theme.backgroundColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Bold)
                         }

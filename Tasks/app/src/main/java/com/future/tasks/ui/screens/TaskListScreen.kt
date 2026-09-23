@@ -1,4 +1,9 @@
 package com.future.tasks.ui.screens
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Checklist
+import androidx.compose.material.icons.rounded.RadioButtonUnchecked
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureTextField
 import com.future.sharednav.components.FutureListItem
 import com.future.sharednav.theme.mutedTextColor
@@ -14,11 +19,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material.icons.rounded.Checklist
-import androidx.compose.material.icons.rounded.RadioButtonUnchecked
-import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -71,7 +71,7 @@ fun TaskListScreen(
         title = "משימות",
         textColor = theme.textColor,
         accentColor = theme.accentColor,
-        trailingIcon = Icons.Rounded.Add,
+        trailingIcon = FutureIcons.Add,
         trailingContentDescription = "משימה חדשה",
         onTrailingClick = onAddTask,
     ) {
@@ -114,7 +114,7 @@ private fun SearchField(query: String, onQueryChanged: (String) -> Unit, theme: 
         theme = theme,
         placeholder = "חיפוש משימות",
         leading = {
-            Icon(Icons.Rounded.Search, contentDescription = null, tint = theme.mutedTextColor, modifier = Modifier.size(FutureDimens.iconTopBar))
+            Icon(FutureIcons.Search, contentDescription = null, tint = theme.mutedTextColor, modifier = Modifier.size(FutureDimens.iconTopBar))
         },
         modifier = Modifier
             .fillMaxWidth()

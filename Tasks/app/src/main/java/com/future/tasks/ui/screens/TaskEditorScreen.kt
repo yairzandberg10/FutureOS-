@@ -1,4 +1,9 @@
 package com.future.tasks.ui.screens
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.RadioButtonUnchecked
+import androidx.compose.material.icons.rounded.Save
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureTextField
 import com.future.sharednav.components.FutureChip
 import com.future.sharednav.components.FutureSectionHeader
@@ -16,11 +21,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.RadioButtonUnchecked
-import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -73,8 +73,6 @@ fun TaskEditorScreen(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    TopBarIconButton(Icons.AutoMirrored.Rounded.ArrowBack, "חזור", theme.textColor, theme.accentColor, ::saveIfNeeded)
-                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         if (task == null) "משימה חדשה" else "עריכת משימה",
                         fontSize = FutureTypography.title,
@@ -92,7 +90,7 @@ fun TaskEditorScreen(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     if (task != null) {
-                        TopBarIconButton(Icons.Rounded.Delete, "מחק", theme.textColor, theme.dangerColor) { showDeleteConfirm = true }
+                        TopBarIconButton(FutureIcons.Delete, "מחק", theme.textColor, theme.dangerColor) { showDeleteConfirm = true }
                         Spacer(modifier = Modifier.width(8.dp))
                     }
                     TopBarIconButton(Icons.Rounded.Save, "שמור", theme.textColor, theme.accentColor) {

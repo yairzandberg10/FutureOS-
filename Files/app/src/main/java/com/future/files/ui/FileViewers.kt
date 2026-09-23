@@ -1,4 +1,6 @@
 package com.future.files.ui
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.theme.FutureDimens
 import com.future.sharednav.theme.FutureMotion
 import com.future.sharednav.theme.FutureContrast
@@ -37,9 +39,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.Pause
-import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -107,6 +106,16 @@ fun TextViewerScreen(file: File, theme: FutureTheme, onBack: () -> Unit) {
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Column(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
             ViewerHeader(file.name, theme, onBack)
+            // סקריפט (sh, py, bat...) מוצג כטקסט לקריאה בלבד - קבצים לא מריצים
+            // קוד. להרצה יש את הטרמינל, בפעולה מודעת של המשתמש.
+            if (com.future.files.data.isScript(file)) {
+                Text(
+                    "סקריפט · מוצג לקריאה בלבד, לא מורץ",
+                    color = theme.warningColor,
+                    fontSize = FutureTypography.summary,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                )
+            }
             Box(
                 modifier = Modifier
                     .weight(1f)
@@ -167,9 +176,8 @@ fun ImageFileViewerScreen(file: File, theme: FutureTheme, onBack: () -> Unit) {
                     contentScale = ContentScale.Fit
                 )
             }
-            Box(modifier = Modifier.align(Alignment.TopEnd).padding(12.dp)) {
-                ViewerBackChip(theme, onBack)
-            }
+            // אין כפתור חזרה מעל התמונה - מקש BACK הפיזי חוזר.
+            androidx.activity.compose.BackHandler(onBack = onBack)
         }
     }
 }
@@ -197,7 +205,7 @@ private fun ViewerBackChip(theme: FutureTheme, onBack: () -> Unit) {
         contentAlignment = Alignment.Center,
     ) {
         Icon(
-            Icons.AutoMirrored.Rounded.ArrowBack,
+            FutureIcons.AutoMirrored.ArrowBack,
             contentDescription = "חזור",
             tint = if (isFocused) FutureContrast.onColor(theme.accentColor) else Color.White,
             modifier = Modifier.size(FutureDimens.iconTopBar),
@@ -279,7 +287,7 @@ fun AudioPlayerScreen(file: File, theme: FutureTheme, onBack: () -> Unit) {
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                            if (isPlaying) FutureIcons.Pause else FutureIcons.PlayArrow,
                             contentDescription = if (isPlaying) "השהה" else "נגן",
                             tint = theme.onReadableAccentColor,
                             modifier = Modifier.size(32.dp)
@@ -423,6 +431,89 @@ fun PdfViewerScreen(file: File, theme: FutureTheme, onBack: () -> Unit) {
                         } else {
                             Box(modifier = Modifier.fillMaxWidth().height(280.dp).background(theme.elevatedSurfaceColor))
                         }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * נגן וידאו בתוך הקבצים - הגלריה כבר לא מנגנת וידאו, ולא היה במכשיר מי
+ * שיפתח סרטון. OK - הפעלה/השהיה, ימינה/שמאלה - 10 שניות אחורה/קדימה (RTL:
+ * שמאלה היא קדימה), BACK - חזרה.
+ */
+@Composable
+fun VideoPlayerScreen(file: File, theme: FutureTheme, onBack: () -> Unit) {
+    var view by remember { mutableStateOf<android.widget.VideoView?>(null) }
+    var playing by remember { mutableStateOf(true) }
+    var position by remember { mutableIntStateOf(0) }
+    var duration by remember { mutableIntStateOf(0) }
+    var failed by remember { mutableStateOf(false) }
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
+    LaunchedEffect(view) {
+        while (view != null) {
+            view?.let {
+                position = it.currentPosition
+                if (it.duration > 0) duration = it.duration
+            }
+            kotlinx.coroutines.delay(250)
+        }
+    }
+    DisposableEffect(Unit) { onDispose { view?.stopPlayback() } }
+    androidx.activity.compose.BackHandler(onBack = onBack)
+
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black)
+                .focusRequester(focus)
+                .focusable()
+                .onKeyEvent { event ->
+                    if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
+                    val v = view ?: return@onKeyEvent false
+                    when (event.key) {
+                        Key.DirectionCenter, Key.Enter -> {
+                            if (v.isPlaying) v.pause() else v.start()
+                            playing = v.isPlaying
+                            true
+                        }
+                        Key.DirectionLeft -> { v.seekTo((v.currentPosition + 10_000).coerceAtMost(maxOf(0, v.duration))); true }
+                        Key.DirectionRight -> { v.seekTo((v.currentPosition - 10_000).coerceAtLeast(0)); true }
+                        else -> false
+                    }
+                },
+            contentAlignment = Alignment.Center,
+        ) {
+            androidx.compose.ui.viewinterop.AndroidView(
+                modifier = Modifier.fillMaxWidth(),
+                factory = { ctx ->
+                    android.widget.VideoView(ctx).apply {
+                        setVideoURI(android.net.Uri.fromFile(file))
+                        setOnPreparedListener { it.start(); playing = true }
+                        setOnCompletionListener { playing = false }
+                        setOnErrorListener { _, _, _ -> failed = true; true }
+                        view = this
+                    }
+                },
+            )
+            if (failed) {
+                Text("לא ניתן לנגן את הסרטון", color = Color.White.copy(alpha = 0.7f), fontSize = FutureTypography.body)
+            }
+            Column(
+                modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                com.future.sharednav.components.FutureProgressBar(
+                    progress = if (duration > 0) position.toFloat() / duration else 0f,
+                    theme = com.future.sharednav.theme.FutureTheme(isDarkMode = true, accentColor = theme.accentColor),
+                )
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(if (playing) file.nameWithoutExtension else "מושהה", color = Color.White, fontSize = FutureTypography.summary, maxLines = 1, modifier = Modifier.weight(1f))
+                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                        Text("${formatMs(position)} / ${formatMs(duration)}", color = Color.White.copy(alpha = 0.7f), fontSize = FutureTypography.summary)
                     }
                 }
             }

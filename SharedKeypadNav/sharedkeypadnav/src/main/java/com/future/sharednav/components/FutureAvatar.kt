@@ -1,6 +1,22 @@
 package com.future.sharednav.components
 
+import android.graphics.ImageDecoder
+import android.net.Uri
+import android.util.LruCache
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.padding
@@ -42,7 +58,14 @@ fun FutureAvatar(
     icon: ImageVector? = null,
     size: Dp = AvatarListSize,
     contentColor: Color? = null,
+    /**
+     * תמונת איש הקשר (PHOTO_THUMBNAIL_URI / PHOTO_URI של ספק אנשי הקשר).
+     * כשהיא קיימת היא ממלאת את העיגול במקום ראשי התיבות - אותה תמונה שהוגדרה
+     * באנשי קשר מופיעה כך בחייגן, בהודעות ובכל מקום אחר שמשתמש באווטאר.
+     */
+    photoUri: String? = null,
 ) {
+    val photo = rememberContactPhoto(photoUri, size)
     Box(
         modifier = modifier
             .size(size)
@@ -50,7 +73,9 @@ fun FutureAvatar(
             .background(theme.avatarFillColor),
         contentAlignment = Alignment.Center,
     ) {
-        if (icon != null) {
+        if (photo != null) {
+            Image(photo, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.matchParentSize())
+        } else if (icon != null) {
             Icon(
                 icon,
                 contentDescription = null,
@@ -67,6 +92,38 @@ fun FutureAvatar(
             )
         }
     }
+}
+
+/**
+ * טוען תמונת איש קשר בגודל העיגול, מחוץ ל-UI thread, עם מטמון קטן - רשימה
+ * של מאה אנשי קשר לא מפענחת כל תמונה מחדש בכל גלילה.
+ */
+@Composable
+private fun rememberContactPhoto(uri: String?, size: Dp): ImageBitmap? {
+    if (uri.isNullOrBlank()) return null
+    val context = LocalContext.current
+    val px = with(LocalDensity.current) { size.roundToPx() }
+    val key = "$uri@$px"
+    var bitmap by remember(key) { mutableStateOf(AvatarPhotoCache.get(key)) }
+    LaunchedEffect(key) {
+        if (bitmap != null) return@LaunchedEffect
+        bitmap = withContext(Dispatchers.IO) {
+            runCatching {
+                val source = ImageDecoder.createSource(context.contentResolver, Uri.parse(uri))
+                ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
+                    val scale = maxOf(1, minOf(info.size.width, info.size.height) / px)
+                    decoder.setTargetSize(info.size.width / scale, info.size.height / scale)
+                }.asImageBitmap()
+            }.getOrNull()
+        }?.also { AvatarPhotoCache.put(key, it) }
+    }
+    return bitmap
+}
+
+private object AvatarPhotoCache {
+    private val cache = LruCache<String, ImageBitmap>(64)
+    fun get(key: String): ImageBitmap? = cache.get(key)
+    fun put(key: String, value: ImageBitmap) { cache.put(key, value) }
 }
 
 /** 44dp - גודל האווטאר בשורת רשימה (88px ב-Avatar.jsx). */

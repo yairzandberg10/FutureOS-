@@ -15,11 +15,14 @@ import androidx.compose.ui.graphics.Color
 import com.future.calendar.data.CalendarEvent
 import com.future.calendar.data.CalendarRepository
 import com.future.calendar.data.CalendarSettings
+import com.future.calendar.data.CalendarKind
+import com.future.calendar.data.CalendarMonths
 import com.future.calendar.data.LocationHelper
 import com.future.sharednav.components.ConfirmDialog
 import com.future.sharednav.theme.ThemeClient
 import com.future.calendar.ui.CalendarHomeScreen
 import com.future.calendar.ui.CalendarSettingsScreen
+import com.future.calendar.ui.CalendarLocationScreen
 import com.future.calendar.ui.CalendarViewMode
 import com.future.calendar.ui.EventEditDialog
 import com.future.sharednav.theme.FutureTheme
@@ -49,12 +52,13 @@ class MainActivity : ComponentActivity() {
             var events by remember { mutableStateOf<List<CalendarEvent>>(emptyList()) }
             var editorState by remember { mutableStateOf<Pair<LocalDate, CalendarEvent?>?>(null) }
             var pendingDelete by remember { mutableStateOf<CalendarEvent?>(null) }
-            var showSettings by remember { mutableStateOf(false) }
+            // 0 - לוח השנה, 1 - הגדרות, 2 - הגדרות > מיקום.
+            var settingsPage by remember { mutableStateOf(0) }
 
             var useGps by remember { mutableStateOf(CalendarSettings.getUseGps(this@MainActivity)) }
             var region by remember { mutableStateOf(CalendarSettings.getRegion(this@MainActivity)) }
             var showWeather by remember { mutableStateOf(CalendarSettings.getShowWeather(this@MainActivity)) }
-            var useHebrewCalendar by remember { mutableStateOf(CalendarSettings.getUseHebrewCalendar(this@MainActivity)) }
+            var calendarKind by remember { mutableStateOf(CalendarSettings.getCalendarKind(this@MainActivity)) }
             var hasLocationPermission by remember { mutableStateOf(LocationHelper.hasPermission(this@MainActivity)) }
 
             val locationPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
@@ -83,23 +87,30 @@ class MainActivity : ComponentActivity() {
                 hasPermission = result.values.all { it }
             }
 
+            // הטווח שנטען: שנה (עברית או לועזית) בתצוגת שנה, אחרת שלושה חודשים
+            // סביב החודש הנוכחי - חודש עברי חוצה שני חודשים לועזיים.
+            val eventRange = remember(viewMode, currentMonth, calendarKind, if (viewMode == CalendarViewMode.YEAR && calendarKind == CalendarKind.HEBREW) CalendarMonths.hebrewYearLabel(selectedDate) else "") {
+                if (viewMode == CalendarViewMode.YEAR) {
+                    if (calendarKind == CalendarKind.HEBREW) {
+                        val months = CalendarMonths.hebrewYear(selectedDate)
+                        months.first().first to months.last().last
+                    } else {
+                        YearMonth.of(currentMonth.year, 1).atDay(1) to YearMonth.of(currentMonth.year, 12).atEndOfMonth()
+                    }
+                } else {
+                    currentMonth.minusMonths(1).atDay(1) to currentMonth.plusMonths(1).atEndOfMonth()
+                }
+            }
+
             fun refreshEvents() {
                 if (!hasPermission) return
-                val rangeStart: LocalDate
-                val rangeEnd: LocalDate
-                if (viewMode == CalendarViewMode.YEAR) {
-                    rangeStart = YearMonth.of(currentMonth.year, 1).atDay(1)
-                    rangeEnd = YearMonth.of(currentMonth.year, 12).atEndOfMonth()
-                } else {
-                    rangeStart = currentMonth.atDay(1).minusDays(7)
-                    rangeEnd = currentMonth.atEndOfMonth().plusDays(7)
-                }
+                val (rangeStart, rangeEnd) = eventRange
                 val startMillis = rangeStart.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
                 val endMillis = rangeEnd.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
                 events = repository.getEventsInRange(startMillis, endMillis)
             }
 
-            LaunchedEffect(hasPermission, currentMonth, viewMode) { refreshEvents() }
+            LaunchedEffect(hasPermission, eventRange) { refreshEvents() }
 
             val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
             DisposableEffect(lifecycleOwner) {
@@ -123,10 +134,10 @@ class MainActivity : ComponentActivity() {
 
             val eventsByDate = remember(events) { events.groupBy { it.startDate } }
 
-            BackHandler(enabled = editorState != null || showSettings || viewMode != CalendarViewMode.MONTH) {
+            BackHandler(enabled = editorState != null || settingsPage != 0 || viewMode != CalendarViewMode.MONTH) {
                 when {
                     editorState != null -> editorState = null
-                    showSettings -> showSettings = false
+                    settingsPage != 0 -> settingsPage -= 1
                     else -> viewMode = CalendarViewMode.MONTH
                 }
             }
@@ -134,6 +145,29 @@ class MainActivity : ComponentActivity() {
             fun goToDate(date: LocalDate) {
                 selectedDate = date
                 currentMonth = YearMonth.from(date)
+            }
+
+            /** חודש קודם/הבא - באותו יום בחודש, לפי סוג הלוח. */
+            fun shiftMonth(delta: Int) {
+                if (calendarKind == CalendarKind.HEBREW) {
+                    val current = CalendarMonths.hebrewContaining(selectedDate)
+                    val dayIndex = java.time.temporal.ChronoUnit.DAYS.between(current.first, selectedDate)
+                    val target = if (delta < 0) CalendarMonths.hebrewContaining(current.first.minusDays(1))
+                    else CalendarMonths.hebrewContaining(current.last.plusDays(1))
+                    goToDate(target.first.plusDays(dayIndex.coerceAtMost((target.length - 1).toLong())))
+                } else {
+                    val base = if (YearMonth.from(selectedDate) == currentMonth) selectedDate else currentMonth.atDay(1)
+                    goToDate(base.plusMonths(delta.toLong()))
+                }
+            }
+
+            fun shiftYear(delta: Int) {
+                if (calendarKind == CalendarKind.HEBREW) {
+                    val months = CalendarMonths.hebrewYear(selectedDate)
+                    goToDate(if (delta < 0) months.first().first.minusDays(1) else months.last().last.plusDays(1))
+                } else {
+                    goToDate(selectedDate.plusYears(delta.toLong()))
+                }
             }
 
             fun saveEvent(date: LocalDate, editing: CalendarEvent?, title: String, description: String, location: String, startHour: Int, startMinute: Int, endHour: Int, endMinute: Int, allDay: Boolean) {
@@ -167,18 +201,32 @@ class MainActivity : ComponentActivity() {
             Surface(modifier = Modifier.fillMaxSize(), color = theme.backgroundColor) {
                 // הגדרות לוח השנה עמוקות ממסך הבית - החלקה פנימה/החוצה.
                 com.future.sharednav.components.AnimatedScreenHost(
-                    targetState = showSettings,
-                    depthOf = { if (it) 1 else 0 },
-                ) { settingsShown ->
-                if (settingsShown) {
+                    targetState = settingsPage,
+                    depthOf = { it },
+                ) { page ->
+                if (page == 1) {
                     CalendarSettingsScreen(
+                        kind = calendarKind,
+                        locationSummary = if (useGps) "GPS" else region.displayName,
+                        showWeather = showWeather,
+                        theme = theme,
+                        onSelectKind = {
+                            calendarKind = it
+                            CalendarSettings.setCalendarKind(this@MainActivity, it)
+                        },
+                        onOpenLocation = { settingsPage = 2 },
+                        onToggleShowWeather = {
+                            val newValue = !showWeather
+                            showWeather = newValue
+                            CalendarSettings.setShowWeather(this@MainActivity, newValue)
+                        },
+                    )
+                } else if (page == 2) {
+                    CalendarLocationScreen(
                         useGps = useGps,
                         hasLocationPermission = hasLocationPermission,
                         currentRegion = region,
-                        showWeather = showWeather,
-                        useHebrewCalendar = useHebrewCalendar,
                         theme = theme,
-                        onBack = { showSettings = false },
                         onToggleGps = {
                             val newValue = !useGps
                             useGps = newValue
@@ -191,16 +239,6 @@ class MainActivity : ComponentActivity() {
                             region = it
                             CalendarSettings.setRegionId(this@MainActivity, it.id)
                         },
-                        onToggleShowWeather = {
-                            val newValue = !showWeather
-                            showWeather = newValue
-                            CalendarSettings.setShowWeather(this@MainActivity, newValue)
-                        },
-                        onToggleHebrewCalendar = {
-                            val newValue = !useHebrewCalendar
-                            useHebrewCalendar = newValue
-                            CalendarSettings.setUseHebrewCalendar(this@MainActivity, newValue)
-                        }
                     )
                 } else {
                     CalendarHomeScreen(
@@ -215,17 +253,20 @@ class MainActivity : ComponentActivity() {
                             permissionLauncher.launch(arrayOf(android.Manifest.permission.READ_CALENDAR, android.Manifest.permission.WRITE_CALENDAR))
                         },
                         onChangeViewMode = { viewMode = it },
-                        onPrevMonth = { currentMonth = currentMonth.minusMonths(1) },
-                        onNextMonth = { currentMonth = currentMonth.plusMonths(1) },
+                        onPrevMonth = { shiftMonth(-1) },
+                        onNextMonth = { shiftMonth(1) },
                         onPrevDay = { goToDate(selectedDate.minusDays(1)) },
                         onNextDay = { goToDate(selectedDate.plusDays(1)) },
                         onPrevWeek = { goToDate(selectedDate.minusWeeks(1)) },
                         onNextWeek = { goToDate(selectedDate.plusWeeks(1)) },
-                        onPrevYear = { currentMonth = currentMonth.minusYears(1) },
-                        onNextYear = { currentMonth = currentMonth.plusYears(1) },
-                        onSelectDate = { selectedDate = it },
+                        onPrevYear = { shiftYear(-1) },
+                        onNextYear = { shiftYear(1) },
+                        onSelectDate = { goToDate(it) },
                         onOpenDay = { goToDate(it); viewMode = CalendarViewMode.DAY },
-                        onOpenMonth = { currentMonth = it; viewMode = CalendarViewMode.MONTH },
+                        onOpenMonth = { m ->
+                            goToDate(if (selectedDate in m) selectedDate else if (today in m) today else m.first)
+                            viewMode = CalendarViewMode.MONTH
+                        },
                         onAddEvent = { editorState = selectedDate to null },
                         onEditEvent = { editorState = selectedDate to it },
                         onDeleteEvent = { pendingDelete = it },
@@ -234,11 +275,11 @@ class MainActivity : ComponentActivity() {
                             selectedDate = today
                             viewMode = CalendarViewMode.DAY
                         },
-                        onOpenSettings = { showSettings = true },
+                        onOpenSettings = { settingsPage = 1 },
                         resolvedLat = resolvedLatLon.first,
                         resolvedLon = resolvedLatLon.second,
                         showWeather = showWeather,
-                        useHebrewCalendar = useHebrewCalendar,
+                        kind = calendarKind,
                         usingFallbackLocation = usingFallbackLocation
                     )
                 }

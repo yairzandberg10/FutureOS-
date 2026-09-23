@@ -52,6 +52,24 @@ fun File.displayName(isTopLevel: Boolean): String {
     return name
 }
 
+private val SCRIPT_EXTENSIONS = setOf("sh", "bash", "py", "bat", "cmd", "ps1", "js", "rb", "pl")
+
+/** קובץ שמכיל קוד להרצה - מוצג כטקסט לקריאה בלבד, אף פעם לא מורץ מהקבצים. */
+fun isScript(file: File): Boolean = file.extension.lowercase() in SCRIPT_EXTENSIONS
+
+/**
+ * האם [file] בתוך האחסון של המשתמש. תיקיות מערכת (data, system, cache, proc...)
+ * ונתוני אפליקציות לא נגישים מהקבצים, גם דרך קישור סמלי שמוביל אליהן.
+ */
+fun isInsideUserStorage(file: File, root: File): Boolean = try {
+    val path = file.canonicalPath
+    val rootPath = root.canonicalPath
+    (path == rootPath || path.startsWith("$rootPath/")) &&
+        !path.startsWith("$rootPath/Android/data") && !path.startsWith("$rootPath/Android/obb")
+} catch (e: Exception) {
+    false
+}
+
 fun categorize(file: File): FileCategory {
     val ext = file.extension.lowercase()
     return when {
@@ -75,6 +93,8 @@ class FileRepository {
                     val name = entry.name
                     if (name.startsWith(".")) return@filter false
                     if (isRoot && name in ROOT_HIDDEN_NAMES) return@filter false
+                    // קישור שמוביל אל מחוץ לאחסון (למשל אל /data) לא מוצג בכלל.
+                    if (entry.isDirectory && !isInsideUserStorage(entry, rootDirectory())) return@filter false
                     true
                 }
                 .map { FileEntry(it, it.isDirectory, if (it.isFile) it.length() else 0L) }

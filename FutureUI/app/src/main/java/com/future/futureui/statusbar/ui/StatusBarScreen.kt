@@ -1,5 +1,7 @@
 package com.future.futureui.statusbar.ui
 
+import com.future.sharednav.icons.FutureIcons
+
 import com.future.sharednav.theme.FutureTypography
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -191,17 +193,17 @@ fun StatusBarScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if (isCallActive) {
-                    Icon(Icons.Rounded.Call, contentDescription = null, tint = StatusBarPalette.successColor, modifier = Modifier.size(13.dp))
+                    Icon(FutureIcons.Call, contentDescription = null, tint = StatusBarPalette.successColor, modifier = Modifier.size(13.dp))
                 }
                 if (manager.isDndOn) {
                     Icon(Icons.Rounded.DoNotDisturbOn, contentDescription = null, tint = Color.White.copy(alpha = 0.9f), modifier = Modifier.size(13.dp))
                 }
                 if (manager.isAirplaneOn) {
-                    Icon(Icons.Rounded.AirplanemodeActive, contentDescription = null, tint = Color.White.copy(alpha = 0.9f), modifier = Modifier.size(13.dp))
+                    Icon(FutureIcons.AirplanemodeActive, contentDescription = null, tint = Color.White.copy(alpha = 0.9f), modifier = Modifier.size(13.dp))
                 }
                 if (showBluetooth && manager.isBluetoothOn) {
                     Icon(
-                        if (manager.isBluetoothDeviceConnected) Icons.Rounded.BluetoothConnected else Icons.Rounded.Bluetooth,
+                        if (manager.isBluetoothDeviceConnected) Icons.Rounded.BluetoothConnected else FutureIcons.Bluetooth,
                         contentDescription = null,
                         tint = Color.White.copy(alpha = 0.9f),
                         modifier = Modifier.size(13.dp)

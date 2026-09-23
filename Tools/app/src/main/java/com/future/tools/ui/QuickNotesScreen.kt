@@ -1,4 +1,6 @@
 package com.future.tools.ui
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureListItem
 import com.future.sharednav.components.FutureCheckbox
 import com.future.sharednav.components.FutureTextField
@@ -18,9 +20,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -139,7 +138,7 @@ fun QuickNotesScreen(theme: FutureTheme, onBack: () -> Unit) {
 
 @Composable
 private fun NoteAddButton(theme: FutureTheme, onClick: () -> Unit) {
-    ToolsIconButton(Icons.Rounded.Add, "הוסף", theme, onClick = onClick)
+    ToolsIconButton(FutureIcons.Add, "הוסף", theme, onClick = onClick)
 }
 
 /** פריט ברשימה: OK מסמן/מבטל, תיבת הסימון בתחילת השורה, מחיקה בכפתור אייקון בסופה. */
@@ -152,6 +151,6 @@ private fun NoteRow(item: NoteItem, theme: FutureTheme, onToggle: () -> Unit, on
         titleColor = if (item.done) theme.subtleTextColor else theme.textColor,
         titleDecoration = if (item.done) TextDecoration.LineThrough else null,
         leading = { FutureCheckbox(item.done, theme) },
-        trailing = { ToolsIconButton(Icons.Rounded.Close, "מחק", theme, onClick = onDelete) },
+        trailing = { ToolsIconButton(FutureIcons.Close, "מחק", theme, onClick = onDelete) },
     )
 }

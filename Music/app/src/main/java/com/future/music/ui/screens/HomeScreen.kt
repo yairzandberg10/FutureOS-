@@ -1,4 +1,10 @@
 package com.future.music.ui.screens
+import androidx.compose.material.icons.rounded.Album
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.LibraryMusic
+import androidx.compose.material.icons.automirrored.rounded.QueueMusic
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureListItem
 import com.future.sharednav.components.FutureAvatar
 import com.future.sharednav.theme.rememberFutureType
@@ -20,12 +26,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Album
-import androidx.compose.material.icons.rounded.Favorite
-import androidx.compose.material.icons.rounded.LibraryMusic
-import androidx.compose.material.icons.rounded.Person
-import androidx.compose.material.icons.automirrored.rounded.QueueMusic
-import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -71,11 +71,11 @@ fun HomeScreen(
     val type = rememberFutureType()
     val items = listOf(
         HomeItem("1", Icons.Rounded.LibraryMusic, "כל השירים", "כל המוזיקה שבטלפון", onOpenAllSongs),
-        HomeItem("2", Icons.Rounded.Person, "אמנים", "לפי זמר/זמרת", onOpenArtists),
+        HomeItem("2", FutureIcons.Person, "אמנים", "לפי זמר/זמרת", onOpenArtists),
         HomeItem("3", Icons.Rounded.Album, "אלבומים", "לפי אלבום", onOpenAlbums),
         HomeItem("4", Icons.AutoMirrored.Rounded.QueueMusic, "פלייליסטים", "הרשימות שלי", onOpenPlaylists),
         HomeItem("5", Icons.Rounded.Favorite, "מועדפים", "השירים שאהבת", onOpenFavorites),
-        HomeItem("6", Icons.Rounded.Search, "חיפוש", "חיפוש T9 מהיר", onOpenSearch),
+        HomeItem("6", FutureIcons.Search, "חיפוש", "חיפוש T9 מהיר", onOpenSearch),
     )
 
     // פוקוס אוטומטי ומלא על הפריט הראשון בתפריט מיד כשהוא נפתח - בלי צורך

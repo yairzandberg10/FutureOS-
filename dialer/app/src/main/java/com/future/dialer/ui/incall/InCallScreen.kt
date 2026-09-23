@@ -1,4 +1,8 @@
 package com.future.dialer.ui.incall
+import androidx.compose.material.icons.rounded.FiberManualRecord
+import androidx.compose.material.icons.rounded.Sms
+
+import com.future.sharednav.icons.FutureIcons
 
 import android.telecom.Call
 import android.widget.Toast
@@ -13,15 +17,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.VolumeUp
-import androidx.compose.material.icons.rounded.Dialpad
-import androidx.compose.material.icons.rounded.FiberManualRecord
-import androidx.compose.material.icons.rounded.Mic
-import androidx.compose.material.icons.rounded.MicOff
-import androidx.compose.material.icons.rounded.Pause
-import androidx.compose.material.icons.rounded.Person
-import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material.icons.rounded.Sms
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -279,12 +274,12 @@ private fun ActiveCall(
         // האריחים של ActionGrid בשתי עמודות. ארבעת הראשונים הם של הערכה;
         // הקלטה והודעה הם יכולות קיימות של החייגן, באותו רכיב.
         val controls = listOf(
-            Control(if (isMuted) Icons.Rounded.MicOff else Icons.Rounded.Mic,
+            Control(if (isMuted) FutureIcons.MicOff else FutureIcons.Mic,
                 stringResource(if (isMuted) R.string.unmute else R.string.mute), isMuted) { viewModel.toggleMute() },
-            Control(Icons.AutoMirrored.Rounded.VolumeUp, stringResource(R.string.speaker), isSpeakerOn) { viewModel.toggleSpeaker() },
-            Control(if (isOnHold) Icons.Rounded.PlayArrow else Icons.Rounded.Pause,
+            Control(FutureIcons.AutoMirrored.VolumeUp, stringResource(R.string.speaker), isSpeakerOn) { viewModel.toggleSpeaker() },
+            Control(if (isOnHold) FutureIcons.PlayArrow else FutureIcons.Pause,
                 if (isOnHold) "המשך" else "המתנה", isOnHold) { if (!viewModel.toggleHold()) onHoldUnsupported() },
-            Control(Icons.Rounded.Dialpad, stringResource(R.string.keypad), isDialpadVisible) { viewModel.toggleDialpad() },
+            Control(FutureIcons.Dialpad, stringResource(R.string.keypad), isDialpadVisible) { viewModel.toggleDialpad() },
             Control(Icons.Rounded.FiberManualRecord,
                 stringResource(if (isRecording) R.string.stop_recording else R.string.record), isRecording,
                 iconColor = if (isRecording) theme.dangerColor else null) { viewModel.toggleRecording(context) },
@@ -391,7 +386,7 @@ private fun CallerAvatar(name: String, phoneNumber: String, theme: FutureTheme, 
     FutureAvatar(
         theme = theme,
         name = if (hasName) name else null,
-        icon = if (hasName) null else Icons.Rounded.Person,
+        icon = if (hasName) null else FutureIcons.Person,
         size = size,
     )
 }

@@ -1,4 +1,7 @@
 package com.future.dialer
+import androidx.compose.material.icons.rounded.StarBorder
+
+import com.future.sharednav.icons.FutureIcons
 
 import android.Manifest
 import android.app.role.RoleManager
@@ -30,15 +33,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Call
-import androidx.compose.material.icons.rounded.CallMissed
-import androidx.compose.material.icons.rounded.Contacts
-import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.Dialpad
-import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material.icons.rounded.Settings
-import androidx.compose.material.icons.rounded.Star
-import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -84,7 +78,9 @@ import com.future.dialer.ui.contact.ContactScreen
 import com.future.dialer.ui.contacts.ContactsViewModel
 import com.future.dialer.ui.contacts.SearchScreen
 import com.future.dialer.ui.dialpad.DialpadScreen
-import com.future.dialer.ui.favorites.FavoritesScreen
+import com.future.dialer.ui.contacts.ContactsTabScreen
+import com.future.dialer.ui.CallFormat
+import com.future.dialer.data.model.CallFilter
 import com.future.dialer.ui.incall.InCallScreen
 import com.future.dialer.ui.incall.InCallViewModel
 import com.future.dialer.ui.navigation.Screen
@@ -169,6 +165,7 @@ class MainActivity : ComponentActivity() {
         setTurnScreenOn(true)
 
         checkAndRequestPermissions()
+        registerProviderObservers()
 
         // אם המספר הגיע מכוונה חיצונית (ACTION_DIAL, למשל לחיצה על מספר באנשי קשר)
         val prefillNumber = intentDialNumber(intent)
@@ -227,6 +224,36 @@ class MainActivity : ComponentActivity() {
         val data = intent.data ?: return null
         if (data.scheme != "tel") return null
         return data.schemeSpecificPart
+    }
+
+    private val providerObservers = mutableListOf<android.database.ContentObserver>()
+
+    /**
+     * היומן ואנשי הקשר נטענים מחדש ברגע שהם משתנים. בלי זה שיחה שהסתיימה
+     * הופיעה ביומן רק אחרי יציאה וכניסה (Telecom כותב אותה שנייה אחרי שהמסך
+     * כבר חזר), ואיש קשר שנוסף לא החליף את המספר בשם.
+     */
+    private fun registerProviderObservers() {
+        val handler = android.os.Handler(android.os.Looper.getMainLooper())
+        fun observe(uri: Uri, onChange: () -> Unit) {
+            val observer = object : android.database.ContentObserver(handler) {
+                override fun onChange(selfChange: Boolean) = onChange()
+            }
+            try {
+                contentResolver.registerContentObserver(uri, true, observer)
+                providerObservers += observer
+            } catch (e: SecurityException) {
+                // אין עדיין הרשאה - onResume טוען מחדש בכל מקרה.
+            }
+        }
+        observe(android.provider.CallLog.Calls.CONTENT_URI) { callsViewModel.reloadCalls() }
+        observe(ContactsContract.Contacts.CONTENT_URI) { callsViewModel.reloadContacts() }
+    }
+
+    override fun onDestroy() {
+        providerObservers.forEach { contentResolver.unregisterContentObserver(it) }
+        providerObservers.clear()
+        super.onDestroy()
     }
 
     private fun isDefaultDialer(): Boolean {
@@ -371,7 +398,7 @@ class MainActivity : ComponentActivity() {
         val digit = digitFor(keyCode)
 
         // ספרה ביומן או במועדפים: עוברים למקלדת עם הספרה.
-        if (digit != null && (route == Screen.CallLog.route || route == Screen.Favorites.route)) {
+        if (digit != null && (route == Screen.CallLog.route || route == Screen.Contacts.route)) {
             callsViewModel.setNumber(digit.toString())
             _openDialpad.tryEmit(Unit)
             return true
@@ -418,7 +445,7 @@ class MainActivity : ComponentActivity() {
 
     private companion object {
         const val CONTACTS_PACKAGE = "com.future.contact"
-        val TabRoutes = setOf(Screen.CallLog.route, Screen.Dialpad.route, Screen.Favorites.route)
+        val TabRoutes = setOf(Screen.CallLog.route, Screen.Contacts.route, Screen.Dialpad.route)
     }
 }
 
@@ -479,7 +506,8 @@ fun MainScreen(
 
     var menuOpen by remember { mutableStateOf(false) }
     var confirmClear by remember { mutableStateOf(false) }
-    var showMissedOnly by rememberSaveable { mutableStateOf(false) }
+    var showStats by remember { mutableStateOf(false) }
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
 
     // כל שיחה אמיתית - נכנסת או יוצאת - מגיעה מ-CallService. כשמופיעה שיחה חדשה,
     // עוברים אוטומטית למסך השיחה, בלי קשר לאיך היא הותחלה.
@@ -511,10 +539,11 @@ fun MainScreen(
         }
     }
 
+    // מימין לשמאל: יומן, אנשי קשר, מקלדת.
     val tabs = listOf(
-        Triple(Screen.CallLog.route, "יומן", Icons.Rounded.Call),
-        Triple(Screen.Dialpad.route, "מקלדת", Icons.Rounded.Dialpad),
-        Triple(Screen.Favorites.route, "מועדפים", Icons.Rounded.StarBorder),
+        Triple(Screen.CallLog.route, "יומן", FutureIcons.Call),
+        Triple(Screen.Contacts.route, "אנשי קשר", FutureIcons.Contacts),
+        Triple(Screen.Dialpad.route, "מקלדת", FutureIcons.Dialpad),
     )
     val tabIndex = tabs.indexOfFirst { it.first == currentRoute }
     val isOnTab = tabIndex >= 0
@@ -527,7 +556,7 @@ fun MainScreen(
         }
     }
 
-    // חזרה מהמקלדת או מהמועדפים מחזירה ליומן, כמו בערכה; מהיומן - יוצאים.
+    // חזרה מהמקלדת (כשאין ספרות למחוק) או מאנשי הקשר מחזירה ליומן; מהיומן - יוצאים.
     BackHandler(enabled = isOnTab && tabIndex != 0) { navController.switchTab(Screen.CallLog.route) }
 
     val ongoingCall = activeCall
@@ -551,7 +580,7 @@ fun MainScreen(
             if (isOnTab) {
                 FutureBottomNav(
                     items = tabs.map { (_, label, icon) ->
-                        FutureNavItem(label = label, icon = icon, selectedIcon = if (icon == Icons.Rounded.StarBorder) Icons.Rounded.Star else icon)
+                        FutureNavItem(label = label, icon = icon)
                     },
                     selectedIndex = tabIndex,
                     theme = theme,
@@ -566,16 +595,14 @@ fun MainScreen(
                     if (isOnTab) {
                         Modifier.onKeyEvent { event ->
                             if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
-                            // f מסנן את היומן כשמחוברת מקלדת מלאה; במכשיר - מהתפריט.
-                            if (event.key == Key.F && currentRoute == Screen.CallLog.route) {
-                                showMissedOnly = !showMissedOnly
-                                return@onKeyEvent true
-                            }
-                            val next = when (event.key) {
-                                Key.DirectionRight -> tabIndex - 1
-                                Key.DirectionLeft -> tabIndex + 1
+                            val direction = when (event.key) {
+                                Key.DirectionRight -> androidx.compose.ui.focus.FocusDirection.Right
+                                Key.DirectionLeft -> androidx.compose.ui.focus.FocusDirection.Left
                                 else -> return@onKeyEvent false
                             }
+                            // קודם בין צ'יפי הסינון; רק כשאין לאן לזוז - טאב.
+                            if (focusManager.moveFocus(direction)) return@onKeyEvent true
+                            val next = if (event.key == Key.DirectionRight) tabIndex - 1 else tabIndex + 1
                             if (next !in tabs.indices) return@onKeyEvent false
                             navController.switchTab(tabs[next].first)
                             true
@@ -604,19 +631,16 @@ fun MainScreen(
                 composable(Screen.CallLog.route) {
                     CallLogScreen(
                         viewModel = callsViewModel,
-                        showMissedOnly = showMissedOnly,
                         onOpen = { name, number -> navController.navigate(Screen.Contact.createRoute(name, number)) },
-                        onMenu = { menuOpen = true },
                     )
                 }
                 composable(Screen.Dialpad.route) {
                     DialpadScreen(callsViewModel, onCall = actions.placeCall)
                 }
-                composable(Screen.Favorites.route) {
-                    FavoritesScreen(
+                composable(Screen.Contacts.route) {
+                    ContactsTabScreen(
                         viewModel = callsViewModel,
-                        onCall = { actions.placeCall(it.phoneNumber) },
-                        onMenu = { menuOpen = true },
+                        onOpen = { contact -> navController.navigate(Screen.Contact.createRoute(contact.name, contact.phoneNumber)) },
                     )
                 }
                 composable(Screen.Search.route) {
@@ -679,18 +703,54 @@ fun MainScreen(
     if (menuOpen) {
         FutureOptionsMenu(theme = theme, onDismissRequest = { menuOpen = false }, header = "שיחות") {
             fun pick(action: () -> Unit): () -> Unit = { menuOpen = false; action() }
-            FutureMenuRow("חיפוש", Icons.Rounded.Search, theme, pick { navController.navigate(Screen.Search.route) })
+            FutureMenuRow("חיפוש", FutureIcons.Search, theme, pick { navController.navigate(Screen.Search.route) })
             if (currentRoute == Screen.CallLog.route) {
-                FutureMenuRow(
-                    if (showMissedOnly) "כל השיחות" else "שיחות שלא נענו",
-                    if (showMissedOnly) Icons.Rounded.Call else Icons.Rounded.CallMissed,
-                    theme,
-                    pick { showMissedOnly = !showMissedOnly },
-                )
+                val filter = callsViewModel.filter.value
+                val next = CallFilter.entries[(filter.ordinal + 1) % CallFilter.entries.size]
+                FutureMenuRow("סינון · ${filter.label}", FutureIcons.Call, theme, pick { callsViewModel.setFilter(next) })
+                FutureMenuRow("סטטיסטיקות", FutureIcons.TrendingUp, theme, pick { showStats = true })
             }
-            FutureMenuRow("אנשי קשר", Icons.Rounded.Contacts, theme, pick(actions.openContactsApp))
-            FutureMenuRow("הגדרות", Icons.Rounded.Settings, theme, pick(actions.openCallSettings))
-            FutureMenuRow("נקה יומן", Icons.Rounded.Delete, theme, pick { confirmClear = true }, destructive = true)
+            FutureMenuRow("פתח את אנשי קשר", FutureIcons.Contacts, theme, pick(actions.openContactsApp))
+            FutureMenuRow("הגדרות", FutureIcons.Settings, theme, pick(actions.openCallSettings))
+            FutureMenuRow("נקה יומן", FutureIcons.Delete, theme, pick { confirmClear = true }, destructive = true)
+        }
+    }
+
+    if (showStats) {
+        val stats by callsViewModel.stats.collectAsState()
+        com.future.sharednav.components.FutureDialog(
+            theme = theme,
+            onDismissRequest = { showStats = false },
+            title = "סטטיסטיקות",
+            buttons = { FutureButton("סגור", theme, { showStats = false }, fillMaxWidth = true) },
+        ) {
+            fun minutes(seconds: Long): String = "${(seconds + 59) / 60} דק׳"
+            com.future.sharednav.components.FutureSettingItem(
+                title = "התקבלו",
+                summary = "${stats.incomingCount} שיחות",
+                icon = FutureIcons.CallReceived,
+                iconTint = CallFormat.colorOf(com.future.dialer.data.model.CallType.INCOMING, theme),
+                theme = theme,
+                onClick = null,
+                trailing = { Text(minutes(stats.incomingSeconds), color = theme.textColor, fontWeight = FontWeight.SemiBold) },
+            )
+            com.future.sharednav.components.FutureSettingItem(
+                title = "חויגו",
+                summary = "${stats.outgoingCount} שיחות",
+                icon = FutureIcons.CallMade,
+                iconTint = CallFormat.colorOf(com.future.dialer.data.model.CallType.OUTGOING, theme),
+                theme = theme,
+                onClick = null,
+                trailing = { Text(minutes(stats.outgoingSeconds), color = theme.textColor, fontWeight = FontWeight.SemiBold) },
+            )
+            com.future.sharednav.components.FutureSettingItem(
+                title = "סה״כ דקות שיחה",
+                summary = "${stats.missedCount} לא נענו",
+                icon = FutureIcons.Call,
+                theme = theme,
+                onClick = null,
+                trailing = { Text(minutes(stats.totalSeconds), color = theme.textColor, fontWeight = FontWeight.Bold) },
+            )
         }
     }
 
@@ -743,7 +803,7 @@ private fun OngoingCallBanner(name: String, onReturn: () -> Unit) {
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(imageVector = Icons.Rounded.Call, contentDescription = null, tint = onSuccess, modifier = Modifier.size(16.dp))
+            Icon(imageVector = FutureIcons.Call, contentDescription = null, tint = onSuccess, modifier = Modifier.size(16.dp))
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = "${stringResource(R.string.ongoing_call)} · $name",

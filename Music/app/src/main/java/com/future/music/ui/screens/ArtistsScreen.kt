@@ -1,4 +1,6 @@
 package com.future.music.ui.screens
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureListItem
 import com.future.sharednav.components.FutureAvatar
 import com.future.sharednav.theme.subtleTextColor
@@ -19,8 +21,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -60,7 +60,7 @@ fun ArtistsScreen(artists: List<ArtistGroup>, theme: FutureTheme, onBack: () -> 
                         theme = theme,
                         onClick = { onOpenArtist(artist.name) },
                         focusRequester = if (index == 0) firstItemFocusRequester else null,
-                        leading = { FutureAvatar(theme = theme, icon = Icons.Rounded.Person) },
+                        leading = { FutureAvatar(theme = theme, icon = FutureIcons.Person) },
                         trailing = { Text("${artist.songCount} שירים", color = theme.subtleTextColor, fontSize = type.summary) },
                     )
                 }

@@ -1,4 +1,6 @@
 package com.future.fitness.ui.screens
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.theme.elevatedSurfaceColor
 import com.future.sharednav.theme.idleFieldColor
 import com.future.sharednav.theme.idleChipColor
@@ -31,10 +33,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.TrendingUp
-import androidx.compose.material.icons.rounded.FitnessCenter
-import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -74,9 +72,9 @@ fun WorkoutDetailScreen(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            MetaChip(Icons.Rounded.FitnessCenter, "${workout.exercises.size} תרגילים", theme)
-            MetaChip(Icons.Rounded.Timer, "${workout.durationMin} דקות", theme)
-            MetaChip(Icons.AutoMirrored.Rounded.TrendingUp, workout.difficulty, theme)
+            MetaChip(FutureIcons.FitnessCenter, "${workout.exercises.size} תרגילים", theme)
+            MetaChip(FutureIcons.Timer, "${workout.durationMin} דקות", theme)
+            MetaChip(FutureIcons.AutoMirrored.TrendingUp, workout.difficulty, theme)
         }
         Text(
             "~$estimatedCalories קלוריות משוער",

@@ -1,4 +1,8 @@
 package com.future.frixa
+import androidx.compose.material.icons.rounded.Restaurant
+import androidx.compose.material.icons.rounded.Storefront
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureBottomNav
 import com.future.sharednav.components.FutureNavItem
 
@@ -13,9 +17,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Home
-import androidx.compose.material.icons.rounded.Restaurant
-import androidx.compose.material.icons.rounded.Storefront
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -75,7 +76,7 @@ class MainActivity : ComponentActivity() {
             val theme = rememberFutureTheme()
 
             val tabs = listOf(
-                Triple(FrixaRoute.Home, "ראשי", Icons.Rounded.Home),
+                Triple(FrixaRoute.Home, "ראשי", FutureIcons.Home),
                 Triple(FrixaRoute.Recipes, "מתכונים", Icons.Rounded.Restaurant),
                 Triple(FrixaRoute.Stores, "חנויות", Icons.Rounded.Storefront),
             )

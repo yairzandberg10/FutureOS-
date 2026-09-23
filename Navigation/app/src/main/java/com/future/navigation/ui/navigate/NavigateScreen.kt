@@ -1,4 +1,6 @@
 package com.future.navigation.ui.navigate
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.TopBarIconButton
 import com.future.sharednav.theme.FutureDimens
 import com.future.sharednav.theme.FutureElevation
@@ -24,11 +26,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ArrowUpward
-import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.automirrored.rounded.VolumeOff
-import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -114,14 +111,14 @@ fun NavigateScreen(viewModel: NavigateViewModel, onClose: () -> Unit = {}) {
             if (!state.ended) {
                 Surface(shape = FutureShapes.lg, color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxWidth()) {
                     Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        TopBarIconButton(if (state.muted) Icons.AutoMirrored.Rounded.VolumeOff else Icons.AutoMirrored.Rounded.VolumeUp, "השתק", theme.textColor, theme.accentColor, viewModel::toggleMute)
+                        TopBarIconButton(if (state.muted) FutureIcons.AutoMirrored.VolumeOff else FutureIcons.AutoMirrored.VolumeUp, "השתק", theme.textColor, theme.accentColor, viewModel::toggleMute)
                         Spacer(modifier = Modifier.width(12.dp))
                         Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text("%d דק׳".format((state.remainingDurationSeconds / 60).toInt()), fontWeight = FontWeight.Bold)
                             Text("·", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f))
                             Text("%.1f ק״מ".format(state.remainingDistanceMeters / 1000.0))
                         }
-                        TopBarIconButton(Icons.Rounded.Close, "סיים ניווט", theme.dangerColor, theme.accentColor, onClick = {
+                        TopBarIconButton(FutureIcons.Close, "סיים ניווט", theme.dangerColor, theme.accentColor, onClick = {
                             // הכפתור הזה משמעו "בטל/צא מהניווט" - לא רק לסמן ended=true (זה
                             // קורה גם אוטומטית בהגעה בפועל ליעד) אלא גם לצאת בפועל מהמסך,
                             // אחרת המשתמש נשאר תקוע על מסך המפה עם באנר "הגעת ליעד" שגוי.
@@ -134,7 +131,7 @@ fun NavigateScreen(viewModel: NavigateViewModel, onClose: () -> Unit = {}) {
                 Surface(shape = FutureShapes.lg, color = theme.successColor.copy(alpha = 0.15f), modifier = Modifier.fillMaxWidth()) {
                     Row(modifier = Modifier.padding(FutureDimens.spacingMd), verticalAlignment = Alignment.CenterVertically) {
                         Box(modifier = Modifier.size(FutureDimens.rowHeightTopBarButton).clip(CircleShape).background(theme.successColor), contentAlignment = Alignment.Center) {
-                            Icon(Icons.Rounded.Check, contentDescription = null, tint = theme.onStatusColor(theme.successColor))
+                            Icon(FutureIcons.Check, contentDescription = null, tint = theme.onStatusColor(theme.successColor))
                         }
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(stringResource(R.string.arrived_at_destination), fontWeight = FontWeight.Bold)
@@ -158,7 +155,7 @@ private fun ManeuverIcon(step: Maneuver) {
         else -> 0f
     }
     Icon(
-        Icons.Rounded.ArrowUpward,
+        FutureIcons.ArrowUpward,
         contentDescription = null,
         tint = MaterialTheme.colorScheme.onSurface,
         modifier = Modifier.rotate(angle)

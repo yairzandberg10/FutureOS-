@@ -1,4 +1,19 @@
 package com.future.files.ui
+import androidx.compose.material.icons.rounded.Code
+import androidx.compose.material.icons.rounded.GridView
+import androidx.compose.material.icons.automirrored.rounded.ViewList
+import com.future.sharednav.theme.idleChipColor
+import com.future.sharednav.theme.readableAccentColor
+import androidx.compose.material.icons.rounded.Android
+import androidx.compose.material.icons.rounded.ContentPaste
+import androidx.compose.material.icons.rounded.CreateNewFolder
+import androidx.compose.material.icons.rounded.DriveFileMove
+import androidx.compose.material.icons.rounded.DriveFileRenameOutline
+import androidx.compose.material.icons.rounded.Movie
+import androidx.compose.material.icons.rounded.OpenInNew
+import androidx.compose.material.icons.rounded.PictureAsPdf
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureButton
 import com.future.sharednav.components.EmptyState
 import com.future.sharednav.components.FutureSpinner
@@ -37,26 +52,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.Android
-import androidx.compose.material.icons.rounded.ContentCopy
-import androidx.compose.material.icons.rounded.ContentPaste
-import androidx.compose.material.icons.rounded.CreateNewFolder
-import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.Description
-import androidx.compose.material.icons.rounded.DriveFileMove
-import androidx.compose.material.icons.rounded.DriveFileRenameOutline
-import androidx.compose.material.icons.rounded.Folder
-import androidx.compose.material.icons.rounded.Image
-import androidx.compose.material.icons.rounded.Info
-import androidx.compose.material.icons.rounded.MoreVert
-import androidx.compose.material.icons.rounded.Movie
-import androidx.compose.material.icons.rounded.MusicNote
-import androidx.compose.material.icons.rounded.OpenInNew
-import androidx.compose.material.icons.rounded.PictureAsPdf
-import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -116,6 +111,9 @@ fun FilesScreen(
     onPaste: () -> Unit = {},
     onDeleteMultiple: (List<FileEntry>) -> Unit = {},
     onShareMultiple: (List<FileEntry>) -> Unit = {},
+    /** תצוגת רשת (ריבועים) או רשימה - מתחלפת מתפריט האפשרויות. */
+    gridView: Boolean = false,
+    onToggleGridView: () -> Unit = {},
     // הנתיב של הפריט שנפתח לאחרונה מהתיקייה הזו - כשחוזרים "אחורה" (מקובץ
     // שנפתח, או מתת-תיקייה) הפוקוס צריך לשוב אליו בדיוק, לא תמיד לפריט הראשון.
     lastSelectedPath: String? = null,
@@ -131,9 +129,14 @@ fun FilesScreen(
     // עוקב אחר הפריט הממוקד כרגע ברשימה כדי לאפשר פתיחת התפריט גם דרך כפתור
     // ה-⋮ הממוקד בסרגל העליון (לא רק דרך מקש Menu/Settings בחומרה).
     var focusedEntry by remember { mutableStateOf<FileEntry?>(null) }
-    // מקש Options הפיזי נחסם ברמת המערכת ולא מגיע כ-Key.Menu לאפליקציה -
-    // זו הדרך האמיתית שהוא פותח את תפריט הפעולות של הפריט הממוקד.
-    com.future.sharednav.nav.onOptionsKeyPress { if (focusedEntry != null) menuEntry = focusedEntry }
+    // תפריט Options נפתח תמיד: פעולות על הפריט הממוקד (אם יש), ופעולות על
+    // התיקייה - תיקייה חדשה, הדבקה, רשת/רשימה. אין להן כפתורים על המסך.
+    var generalMenu by remember { mutableStateOf(false) }
+    com.future.sharednav.nav.onOptionsKeyPress {
+        if (!hasAccess) return@onOptionsKeyPress
+        val focused = focusedEntry?.takeIf { f -> entries.any { it.file == f.file } }
+        if (focused != null) menuEntry = focused else generalMenu = true
+    }
     // FocusRequester לפי נתיב - מתאפס בכל מעבר תיקייה, כדי שגם הפוקוס ההתחלתי
     // וגם השחזור אחרי חזרה "אחורה" יעבדו על אותה תבנית.
     val rowFocusRequesters = remember(currentDir) { mutableMapOf<String, FocusRequester>() }
@@ -165,34 +168,12 @@ fun FilesScreen(
         Box(modifier = Modifier.escapeTextFieldFocusTrap().fillMaxSize().background(theme.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize()) {
                 if (selectedEntries.isEmpty()) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        if (!isRoot) {
-                            FocusableIconButton(Icons.AutoMirrored.Rounded.ArrowBack, "חזור", theme, onBack)
-                            Spacer(modifier = Modifier.width(8.dp))
-                        }
-                        Text(
-                            if (isRoot) "קבצים" else currentDir.displayName(currentDirIsTopLevelFolder),
-                            fontSize = FutureTypography.screenTitle,
-                            fontWeight = FontWeight.Bold,
-                            color = theme.textColor,
-                            maxLines = 1,
-                            modifier = Modifier.weight(1f)
-                        )
-                        if (hasAccess && hasClipboard) {
-                            FocusableIconButton(Icons.Rounded.ContentPaste, "הדבק", theme, onPaste)
-                            Spacer(modifier = Modifier.width(8.dp))
-                        }
-                        if (hasAccess && focusedEntry != null) {
-                            FocusableIconButton(Icons.Rounded.MoreVert, "אפשרויות", theme, { menuEntry = focusedEntry })
-                            Spacer(modifier = Modifier.width(8.dp))
-                        }
-                        if (hasAccess) {
-                            FocusableIconButton(Icons.Rounded.CreateNewFolder, "תיקייה חדשה", theme, { showNewFolder = true })
-                        }
-                    }
+                    // כותרת בלבד: חזרה במקש BACK, והפעולות במקש Options.
+                    com.future.sharednav.components.ScreenTopBar(
+                        title = if (isRoot) "קבצים" else currentDir.displayName(currentDirIsTopLevelFolder),
+                        textColor = theme.textColor,
+                        accentColor = theme.accentColor,
+                    )
                 } else {
                     // סרגל בחירה מרובה
                     Row(
@@ -202,7 +183,7 @@ fun FilesScreen(
                             .padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        FocusableIconButton(Icons.Rounded.Close, "בטל בחירה", theme, ::clearSelection)
+                        FocusableIconButton(FutureIcons.Close, "בטל בחירה", theme, ::clearSelection)
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
                             "${selectedEntries.size} נבחרו",
@@ -211,12 +192,12 @@ fun FilesScreen(
                             color = theme.textColor,
                             modifier = Modifier.weight(1f)
                         )
-                        FocusableIconButton(Icons.Rounded.Share, "שתף נבחרים", theme, {
+                        FocusableIconButton(FutureIcons.Share, "שתף נבחרים", theme, {
                             onShareMultiple(selectedEntries.toList())
                             clearSelection()
                         })
                         Spacer(modifier = Modifier.width(8.dp))
-                        FocusableIconButton(Icons.Rounded.Delete, "מחק נבחרים", theme, {
+                        FocusableIconButton(FutureIcons.Delete, "מחק נבחרים", theme, {
                             deleteMultipleState = selectedEntries.toList()
                         })
                     }
@@ -234,10 +215,34 @@ fun FilesScreen(
                     }
                 } else if (entries.isEmpty()) {
                     EmptyState(
-                        icon = Icons.Rounded.Folder,
+                        icon = FutureIcons.Folder,
                         title = "התיקייה ריקה",
                         textColor = theme.textColor,
                     )
+                } else if (gridView) {
+                    androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+                        columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(3),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        items(entries.size, key = { entries[it].file.absolutePath }) { index ->
+                            val entry = entries[index]
+                            FileTile(
+                                entry = entry,
+                                displayName = displayNameOf(entry),
+                                theme = theme,
+                                isSelected = selectedEntries.contains(entry),
+                                onClick = {
+                                    if (selectedEntries.isNotEmpty()) toggleSelection(entry)
+                                    else onOpenFile(entry)
+                                },
+                                onToggleSelection = { toggleSelection(entry) },
+                                onFocused = { focusedEntry = entry },
+                                focusRequester = rowFocusRequesters.getOrPut(entry.file.absolutePath) { FocusRequester() },
+                            )
+                        }
+                    }
                 } else {
                     LazyColumn(
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
@@ -276,8 +281,17 @@ fun FilesScreen(
                     onCopy = { menuEntry = null; onCopy(entry) },
                     onMove = { menuEntry = null; onMove(entry) },
                     onDetails = { menuEntry = null; detailsEntry = entry },
-                    onDelete = { menuEntry = null; deleteEntryState = entry }
+                    onDelete = { menuEntry = null; deleteEntryState = entry },
+                    folderRows = {
+                        FolderMenuRows(theme, hasClipboard, gridView, onDone = { menuEntry = null }, onNewFolder = { showNewFolder = true }, onPaste = onPaste, onToggleGridView = onToggleGridView)
+                    },
                 )
+            }
+
+            if (generalMenu) {
+                FutureOptionsMenu(theme = theme, onDismissRequest = { generalMenu = false }, header = if (isRoot) "קבצים" else currentDir.name) {
+                    FolderMenuRows(theme, hasClipboard, gridView, onDone = { generalMenu = false }, onNewFolder = { showNewFolder = true }, onPaste = onPaste, onToggleGridView = onToggleGridView)
+                }
             }
 
             detailsEntry?.let { entry ->
@@ -407,8 +421,7 @@ private fun FileRow(
                 isSelected -> Box(modifier = Modifier.size(AvatarListSize), contentAlignment = Alignment.Center) {
                     FutureCheckbox(checked = true, theme = theme)
                 }
-                entry.isDirectory -> FutureAvatar(theme = theme, icon = Icons.Rounded.Folder)
-                else -> FilePreviewIcon(entry, theme)
+                else -> FileGlyph(entry, theme, size = AvatarListSize)
             }
             Column(modifier = Modifier.weight(1f)) {
                 MarqueeText(
@@ -425,10 +438,25 @@ private fun FileRow(
     }
 }
 
+/**
+ * הסמל של פריט: תיקייה - אייקון בצבע ההדגשה (צבע הפוקוס), בלי עיגול סביבו;
+ * תמונה - תמונה ממוזערת; קובץ אחר - אייקון הסוג שלו.
+ */
+@Composable
+private fun FileGlyph(entry: FileEntry, theme: FutureTheme, size: androidx.compose.ui.unit.Dp) {
+    if (entry.isDirectory) {
+        Box(modifier = Modifier.size(size), contentAlignment = Alignment.Center) {
+            Icon(FutureIcons.Folder, contentDescription = null, tint = theme.readableAccentColor, modifier = Modifier.size(size * 0.75f))
+        }
+        return
+    }
+    FilePreviewIcon(entry, theme, size)
+}
+
 /** תצוגה מקדימה (preview) של קובץ ברשימה: תמונה ממוזערת אמיתית לתמונות, ואייקון
  * ייעודי לפי סוג הקובץ (מוזיקה, וידאו, PDF, APK...) לכל שאר הקבצים. */
 @Composable
-private fun FilePreviewIcon(entry: FileEntry, theme: FutureTheme) {
+private fun FilePreviewIcon(entry: FileEntry, theme: FutureTheme, size: androidx.compose.ui.unit.Dp) {
     val category = remember(entry.file.absolutePath) { categorize(entry.file) }
     if (category == FileCategory.IMAGE) {
         val thumb by produceState<Bitmap?>(ThumbnailCache.get(entry.file), entry.file.absolutePath, entry.file.lastModified()) {
@@ -440,20 +468,24 @@ private fun FilePreviewIcon(entry: FileEntry, theme: FutureTheme) {
                 bitmap = bitmap.asImageBitmap(),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
-                modifier = Modifier.size(AvatarListSize).clip(FutureShapes.sm)
+                modifier = Modifier.size(size).clip(FutureShapes.sm)
             )
         } else {
-            FutureAvatar(theme = theme, icon = Icons.Rounded.Image)
+            Box(modifier = Modifier.size(size), contentAlignment = Alignment.Center) {
+                Icon(FutureIcons.Image, contentDescription = null, tint = theme.mutedTextColor, modifier = Modifier.size(size * 0.7f))
+            }
         }
     } else {
         val icon = when (category) {
-            FileCategory.AUDIO -> Icons.Rounded.MusicNote
+            FileCategory.AUDIO -> FutureIcons.MusicNote
             FileCategory.VIDEO -> Icons.Rounded.Movie
             FileCategory.PDF -> Icons.Rounded.PictureAsPdf
             FileCategory.APK -> Icons.Rounded.Android
-            else -> Icons.Rounded.Description
+            else -> if (com.future.files.data.isScript(entry.file)) Icons.Rounded.Code else FutureIcons.Description
         }
-        FutureAvatar(theme = theme, icon = icon)
+        Box(modifier = Modifier.size(size), contentAlignment = Alignment.Center) {
+            Icon(icon, contentDescription = null, tint = theme.mutedTextColor, modifier = Modifier.size(size * 0.7f))
+        }
     }
 }
 
@@ -469,20 +501,103 @@ private fun FileOptionsMenu(
     onCopy: () -> Unit,
     onMove: () -> Unit,
     onDetails: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    folderRows: @Composable () -> Unit = {},
 ) {
     FutureOptionsMenu(theme = theme, onDismissRequest = onDismiss, header = entryName) {
         if (!isDirectory) {
-            FutureMenuRow("שתף", Icons.Rounded.Share, theme, onShare)
+            FutureMenuRow("שתף", FutureIcons.Share, theme, onShare)
             FutureMenuRow("פתח באפליקציה חיצונית", Icons.Rounded.OpenInNew, theme, onOpenExternally)
         }
         FutureMenuRow("שנה שם", Icons.Rounded.DriveFileRenameOutline, theme, onRename)
-        FutureMenuRow("העתק", Icons.Rounded.ContentCopy, theme, onCopy)
+        FutureMenuRow("העתק", FutureIcons.ContentCopy, theme, onCopy)
         FutureMenuRow("העבר", Icons.Rounded.DriveFileMove, theme, onMove)
-        FutureMenuRow("פרטים", Icons.Rounded.Info, theme, onDetails)
-        FutureMenuRow("מחק", Icons.Rounded.Delete, theme, onDelete, destructive = true)
+        FutureMenuRow("פרטים", FutureIcons.Info, theme, onDetails)
+        FutureMenuRow("מחק", FutureIcons.Delete, theme, onDelete, destructive = true)
+        folderRows()
     }
 }
+
+/** פעולות על התיקייה הנוכחית - בסוף כל תפריט Options של הקבצים. */
+@Composable
+private fun FolderMenuRows(
+    theme: FutureTheme,
+    hasClipboard: Boolean,
+    gridView: Boolean,
+    onDone: () -> Unit,
+    onNewFolder: () -> Unit,
+    onPaste: () -> Unit,
+    onToggleGridView: () -> Unit,
+) {
+    fun pick(action: () -> Unit): () -> Unit = { onDone(); action() }
+    if (hasClipboard) FutureMenuRow("הדבק כאן", Icons.Rounded.ContentPaste, theme, pick(onPaste))
+    FutureMenuRow("תיקייה חדשה", Icons.Rounded.CreateNewFolder, theme, pick(onNewFolder))
+    FutureMenuRow(
+        if (gridView) "תצוגת רשימה" else "תצוגת רשת",
+        if (gridView) Icons.AutoMirrored.Rounded.ViewList else Icons.Rounded.GridView,
+        theme,
+        pick(onToggleGridView),
+    )
+}
+
+/**
+ * פריט בתצוגת רשת: אייקון גדול (או תמונה ממוזערת) ושם בשתי שורות. תיקייה
+ * בצבע ההדגשה - בלי עיגול סביבה.
+ */
+@Composable
+private fun FileTile(
+    entry: FileEntry,
+    displayName: String,
+    theme: FutureTheme,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    onToggleSelection: () -> Unit,
+    onFocused: () -> Unit,
+    focusRequester: FocusRequester,
+) {
+    var isFocused by remember { mutableStateOf(false) }
+    LaunchedEffect(isFocused) { if (isFocused) onFocused() }
+    FocusableItem(
+        onClick = onClick,
+        accentColor = theme.accentColor,
+        cornerRadius = FutureShapes.radiusLg,
+        idleBackgroundColor = theme.idleChipColor,
+        borderWidth = FutureDimens.focusBorderControl,
+        contentPadding = 0.dp,
+        focusRequester = focusRequester,
+        modifier = Modifier
+            .fillMaxWidth()
+            .onKeyEvent { event ->
+                if (isFocused && event.type == KeyEventType.KeyUp && event.key == Key.Pound) {
+                    onToggleSelection(); true
+                } else false
+            },
+    ) { focused ->
+        LaunchedEffect(focused) { isFocused = focused }
+        Column(
+            modifier = Modifier.fillMaxWidth().height(TileHeight).padding(6.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically),
+        ) {
+            if (isSelected) {
+                FutureCheckbox(checked = true, theme = theme)
+            } else {
+                FileGlyph(entry, theme, size = 40.dp)
+            }
+            Text(
+                displayName,
+                color = theme.textColor,
+                fontSize = FutureTypography.summary,
+                maxLines = 2,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            )
+        }
+    }
+}
+
+/** 104dp - גובה פריט ברשת (שלוש עמודות, ארבע שורות על המסך). */
+private val TileHeight = 104.dp
 
 @Composable
 private fun FileDetailsDialog(entry: FileEntry, displayName: String, repository: FileRepository, theme: FutureTheme, onDismiss: () -> Unit) {

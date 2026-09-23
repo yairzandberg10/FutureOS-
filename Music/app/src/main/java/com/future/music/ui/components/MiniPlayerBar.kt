@@ -1,4 +1,6 @@
 package com.future.music.ui.components
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureProgressBar
 import com.future.sharednav.components.FutureAvatar
 import com.future.sharednav.theme.FutureShapes
@@ -21,10 +23,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.MusicNote
-import androidx.compose.material.icons.rounded.Pause
-import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
@@ -62,7 +60,7 @@ fun MiniPlayerBar(playerState: PlayerUiState, theme: FutureTheme, onClick: () ->
                 .padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            FutureAvatar(theme = theme, icon = Icons.Rounded.MusicNote, size = 38.dp)
+            FutureAvatar(theme = theme, icon = FutureIcons.MusicNote, size = 38.dp)
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(song.title, color = theme.textColor, fontSize = FutureTypography.body, fontWeight = FontWeight.Medium, maxLines = 1)
@@ -78,7 +76,7 @@ fun MiniPlayerBar(playerState: PlayerUiState, theme: FutureTheme, onClick: () ->
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
-                    if (playerState.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                    if (playerState.isPlaying) FutureIcons.Pause else FutureIcons.PlayArrow,
                     contentDescription = if (playerState.isPlaying) "השהה" else "נגן",
                     tint = theme.onReadableAccentColor,
                     modifier = Modifier.size(18.dp),

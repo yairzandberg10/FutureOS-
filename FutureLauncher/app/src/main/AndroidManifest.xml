@@ -30,6 +30,8 @@
             android:theme="@style/Theme.FutureLauncher"
             android:launchMode="singleInstance"
             android:windowSoftInputMode="adjustResize">
+            <!-- מסך הבית מצייר את הרקע עד הקצה ושומר מרווח משורת המצב בעצמו -->
+            <meta-data android:name="com.future.sharednav.STATUS_BAR_INSET" android:value="false" />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

@@ -1,4 +1,8 @@
 package com.future.bluetooth.ui
+import androidx.compose.material.icons.rounded.Mouse
+import androidx.compose.material.icons.automirrored.rounded.BluetoothSearching
+
+import com.future.sharednav.icons.FutureIcons
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
@@ -13,28 +17,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.BluetoothSearching
-import androidx.compose.material.icons.rounded.Badge
-import androidx.compose.material.icons.rounded.Bluetooth
-import androidx.compose.material.icons.rounded.BluetoothDisabled
-import androidx.compose.material.icons.rounded.Call
-import androidx.compose.material.icons.rounded.Devices
-import androidx.compose.material.icons.rounded.DirectionsCar
-import androidx.compose.material.icons.rounded.Edit
-import androidx.compose.material.icons.rounded.Folder
-import androidx.compose.material.icons.rounded.Headphones
-import androidx.compose.material.icons.rounded.Keyboard
-import androidx.compose.material.icons.rounded.KeyboardArrowLeft
-import androidx.compose.material.icons.rounded.LaptopMac
-import androidx.compose.material.icons.rounded.LinkOff
-import androidx.compose.material.icons.rounded.Mouse
-import androidx.compose.material.icons.rounded.MoreVert
-import androidx.compose.material.icons.rounded.MusicNote
-import androidx.compose.material.icons.rounded.Refresh
-import androidx.compose.material.icons.rounded.Settings
-import androidx.compose.material.icons.rounded.Smartphone
-import androidx.compose.material.icons.rounded.Speaker
-import androidx.compose.material.icons.rounded.Watch
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -51,6 +33,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.future.bluetooth.data.BluetoothController
 import com.future.bluetooth.data.BluetoothDeviceInfo
@@ -63,6 +46,7 @@ import com.future.sharednav.components.FutureButton
 import com.future.sharednav.components.FutureButtonVariant
 import com.future.sharednav.components.FutureCard
 import com.future.sharednav.components.FutureDivider
+import com.future.sharednav.components.FutureFocusCard
 import com.future.sharednav.components.FutureIndeterminateProgressBar
 import com.future.sharednav.components.FutureListItem
 import com.future.sharednav.components.FutureMenuRow
@@ -81,6 +65,7 @@ import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.theme.FutureTheme
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.LocalFutureAccent
+import com.future.sharednav.theme.avatarFillColor
 import com.future.sharednav.theme.chevronColor
 import com.future.sharednav.theme.mutedTextColor
 import com.future.sharednav.theme.readableAccentColor
@@ -120,6 +105,8 @@ fun BluetoothApp(
 ) {
     var openAddress by rememberSaveable { mutableStateOf<String?>(null) }
     var lastOpened by rememberSaveable { mutableStateOf<String?>(null) }
+    // "הצג עוד" - כל המותאמים. מכשיר שנפתח משם חוזר אליו ב-BACK.
+    var showAllPaired by rememberSaveable { mutableStateOf(false) }
     var menuOpen by remember { mutableStateOf(false) }
     var dialog by remember { mutableStateOf<Dialog?>(null) }
     val snackbar = rememberFutureSnackbarState()
@@ -132,7 +119,9 @@ fun BluetoothApp(
     LaunchedEffect(openAddress, openDevice) {
         if (openAddress != null && openDevice == null) openAddress = null
     }
-    BackHandler(enabled = openAddress != null) { openAddress = null }
+    BackHandler(enabled = openAddress != null || showAllPaired) {
+        if (openAddress != null) openAddress = null else showAllPaired = false
+    }
 
     fun toggleRadio() {
         val on = !controller.isEnabled
@@ -149,11 +138,29 @@ fun BluetoothApp(
 
     Box(modifier = Modifier.fillMaxSize()) {
         AnimatedScreenHost(
-            targetState = openDevice?.address,
-            depthOf = { if (it == null) 0 else 1 },
+            targetState = openDevice?.address ?: if (showAllPaired) ALL_PAIRED else null,
+            depthOf = {
+                when (it) {
+                    null -> 0
+                    ALL_PAIRED -> 1
+                    else -> if (showAllPaired) 2 else 1
+                }
+            },
         ) { address ->
             val device = address?.let { a -> controller.pairedDevices.firstOrNull { it.address == a } }
-            if (device == null) {
+            val openFromList: (BluetoothDeviceInfo) -> Unit = {
+                lastOpened = it.address
+                controller.markUsed(it.address)
+                openAddress = it.address
+            }
+            if (address == ALL_PAIRED) {
+                AllPairedScreen(
+                    controller = controller,
+                    theme = theme,
+                    focusAddress = lastOpened,
+                    onOpenDevice = openFromList,
+                )
+            } else if (device == null) {
                 RootScreen(
                     controller = controller,
                     theme = theme,
@@ -163,7 +170,12 @@ fun BluetoothApp(
                     onRequestPermission = actions.requestPermission,
                     onToggleRadio = ::toggleRadio,
                     onRenamePhone = { dialog = Dialog.RenamePhone },
-                    onOpenDevice = { lastOpened = it.address; openAddress = it.address },
+                    onOpenDevice = openFromList,
+                    onShowAll = { lastOpened = SHOW_ALL_ROW; showAllPaired = true },
+                    onScan = {
+                        controller.startDiscovery()
+                        snackbar.show("מחפש מכשירים")
+                    },
                     onPair = { dialog = Dialog.Pair(it) },
                 )
             } else {
@@ -276,6 +288,8 @@ private fun RootScreen(
     onToggleRadio: () -> Unit,
     onRenamePhone: () -> Unit,
     onOpenDevice: (BluetoothDeviceInfo) -> Unit,
+    onShowAll: () -> Unit,
+    onScan: () -> Unit,
     onPair: (BluetoothDeviceInfo) -> Unit,
 ) {
     ScreenScaffold(
@@ -283,18 +297,15 @@ private fun RootScreen(
         title = "בלוטות'",
         textColor = theme.textColor,
         accentColor = theme.accentColor,
-        trailingIcon = if (controller.isSupported() && hasPermission) Icons.Rounded.MoreVert else null,
-        trailingContentDescription = "אפשרויות",
-        onTrailingClick = onMenu,
     ) {
         when {
             !controller.isSupported() -> EmptyState(
-                icon = Icons.Rounded.BluetoothDisabled,
+                icon = FutureIcons.BluetoothDisabled,
                 title = "אין בלוטות' במכשיר הזה",
                 textColor = theme.textColor,
             )
             !hasPermission -> PermissionPrompt(theme, onRequestPermission)
-            else -> DeviceLists(controller, theme, focusAddress, onToggleRadio, onRenamePhone, onOpenDevice, onPair)
+            else -> DeviceLists(controller, theme, focusAddress, onToggleRadio, onRenamePhone, onOpenDevice, onShowAll, onScan, onPair)
         }
     }
 }
@@ -307,18 +318,23 @@ private fun DeviceLists(
     onToggleRadio: () -> Unit,
     onRenamePhone: () -> Unit,
     onOpenDevice: (BluetoothDeviceInfo) -> Unit,
+    onShowAll: () -> Unit,
+    onScan: () -> Unit,
     onPair: (BluetoothDeviceInfo) -> Unit,
 ) {
     val on = controller.isEnabled
-    val paired = controller.pairedDevices
+    val paired = controller.pairedByRelevance()
+    val shownPaired = paired.take(PAIRED_ON_ROOT)
     val nearby = controller.discoveredDevices
 
-    // הפוקוס נוחת על הרדיו, או - בחזרה ממסך מכשיר - על השורה של אותו מכשיר.
+    // הפוקוס נוחת על הרדיו, או - בחזרה ממסך מכשיר / מ"הצג עוד" - על אותו כרטיס.
     val radioFocus = remember { FocusRequester() }
     val rowFocus = remember { mutableMapOf<String, FocusRequester>() }
     fun focusFor(address: String) = rowFocus.getOrPut(address) { FocusRequester() }
     LaunchedEffect(Unit) {
-        val target = focusAddress?.takeIf { a -> paired.any { it.address == a } }
+        val target = focusAddress?.takeIf { a ->
+            (a == SHOW_ALL_ROW && paired.size > PAIRED_ON_ROOT) || shownPaired.any { it.address == a }
+        }
         runCatching { if (target != null) focusFor(target).requestFocus() else radioFocus.requestFocus() }
     }
     // הסריקה מתחילה לבד כשנכנסים עם רדיו דולק, כמו בערכת העיצוב.
@@ -336,7 +352,7 @@ private fun DeviceLists(
             FutureSettingItem(
                 title = "בלוטות'",
                 summary = if (on) "מופעל" else "כבוי",
-                icon = Icons.Rounded.Bluetooth,
+                icon = FutureIcons.Bluetooth,
                 theme = theme,
                 showChevron = false,
                 focusRequester = radioFocus,
@@ -347,7 +363,7 @@ private fun DeviceLists(
             FutureSettingItem(
                 title = "שם המכשיר",
                 summary = controller.adapterName.ifEmpty { null },
-                icon = Icons.Rounded.Badge,
+                icon = FutureIcons.Badge,
                 theme = theme,
                 onClick = onRenamePhone,
             )
@@ -355,7 +371,7 @@ private fun DeviceLists(
 
         if (!on) {
             EmptyState(
-                icon = Icons.Rounded.BluetoothDisabled,
+                icon = FutureIcons.BluetoothDisabled,
                 title = "בלוטות' כבוי",
                 subtitle = "לחץ על אישור כדי להפעיל ולחפש מכשירים",
                 textColor = theme.textColor,
@@ -366,102 +382,205 @@ private fun DeviceLists(
         FutureSectionHeader("מכשירים מותאמים", theme)
         if (paired.isEmpty()) {
             EmptyState(
-                icon = Icons.Rounded.Devices,
+                icon = FutureIcons.Devices,
                 title = "אין מכשירים מותאמים",
                 subtitle = "בחר מכשיר מהרשימה שלמטה כדי להתאים",
                 textColor = theme.textColor,
             )
         } else {
-            FutureCard(theme = theme) {
-                paired.forEachIndexed { index, device ->
-                    if (index > 0) FutureDivider(theme = theme)
-                    val connected = device.connection == Connection.Connected
-                    FutureListItem(
-                        title = device.name,
-                        summary = statusOf(device),
+            CardStack {
+                shownPaired.forEach { device ->
+                    DeviceCard(
+                        device = device,
                         theme = theme,
                         focusRequester = focusFor(device.address),
                         onClick = { onOpenDevice(device) },
-                        trailing = {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm),
-                            ) {
-                                DeviceGlyph(device.kind, theme, lit = connected)
-                                Icon(
-                                    Icons.Rounded.KeyboardArrowLeft,
-                                    contentDescription = null,
-                                    tint = theme.chevronColor,
-                                    modifier = Modifier.size(FutureDimens.iconTopBar),
-                                )
-                            }
-                        },
                     )
-                    if (device.connection == Connection.Connecting) {
-                        FutureIndeterminateProgressBar(
-                            theme = theme,
-                            modifier = Modifier.padding(start = 14.dp, end = 14.dp, bottom = 10.dp),
-                        )
-                    }
+                }
+                if (paired.size > PAIRED_ON_ROOT) {
+                    ShowMoreCard(
+                        hidden = paired.size - PAIRED_ON_ROOT,
+                        theme = theme,
+                        focusRequester = focusFor(SHOW_ALL_ROW),
+                        onClick = onShowAll,
+                    )
                 }
             }
         }
 
-        AvailableHeader(scanning = controller.isScanning, theme = theme)
-        if (controller.isScanning) {
-            FutureIndeterminateProgressBar(
-                theme = theme,
-                modifier = Modifier.padding(start = FutureDimens.spacingLg, end = FutureDimens.spacingLg, bottom = FutureDimens.spacingSm),
-            )
-        }
-        if (nearby.isNotEmpty()) {
-            FutureCard(theme = theme) {
-                nearby.forEachIndexed { index, device ->
-                    if (index > 0) FutureDivider(theme = theme)
-                    FutureListItem(
-                        title = device.name,
-                        theme = theme,
-                        onClick = { onPair(device) },
-                        trailing = { DeviceGlyph(device.kind, theme, lit = false) },
-                    )
-                }
+        FutureSectionHeader("מכשירים זמינים", theme)
+        CardStack {
+            // כרטיס החיפוש הוא תמיד יעד פוקוס. קודם, כשלא נמצאו מכשירים, לא היה
+            // בחלק הזה אף פריט שאפשר להגיע אליו בחצים - והגלילה לא ירדה אליו בכלל.
+            ScanCard(scanning = controller.isScanning, found = nearby.size, theme = theme, onClick = onScan)
+            nearby.forEach { device ->
+                DeviceCard(device = device, theme = theme, onClick = { onPair(device) })
             }
-        } else if (!controller.isScanning) {
+        }
+        if (nearby.isEmpty() && !controller.isScanning) {
             EmptyState(
                 icon = Icons.AutoMirrored.Rounded.BluetoothSearching,
                 title = "לא נמצאו מכשירים",
-                subtitle = "לחץ על מקש התפריט ובחר רענן",
+                subtitle = "לחץ על חפש מכשירים כדי לחפש שוב",
                 textColor = theme.textColor,
             )
         }
     }
 }
 
-/** "מכשירים זמינים", ובצד השני "מחפש" כל עוד הסריקה רצה. */
+/** כל המכשירים המותאמים - המסך של "הצג עוד". */
 @Composable
-private fun AvailableHeader(scanning: Boolean, theme: FutureTheme) {
-    val type = rememberFutureType()
-    Row(
+private fun AllPairedScreen(
+    controller: BluetoothController,
+    theme: FutureTheme,
+    focusAddress: String?,
+    onOpenDevice: (BluetoothDeviceInfo) -> Unit,
+) {
+    val paired = controller.pairedByRelevance()
+    val rowFocus = remember { mutableMapOf<String, FocusRequester>() }
+    fun focusFor(address: String) = rowFocus.getOrPut(address) { FocusRequester() }
+    LaunchedEffect(Unit) {
+        val target = paired.firstOrNull { it.address == focusAddress } ?: paired.firstOrNull()
+        runCatching { target?.let { focusFor(it.address).requestFocus() } }
+    }
+    ScreenScaffold(
+        backgroundColor = theme.backgroundColor,
+        title = "מכשירים מותאמים",
+        textColor = theme.textColor,
+        accentColor = theme.accentColor,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(bottom = FutureDimens.spacingXl),
+        ) {
+            CardStack {
+                paired.forEach { device ->
+                    DeviceCard(
+                        device = device,
+                        theme = theme,
+                        focusRequester = focusFor(device.address),
+                        onClick = { onOpenDevice(device) },
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** עמודת כרטיסים: 16dp מדפנות המסך ו-8dp ביניהם. */
+@Composable
+private fun CardStack(content: @Composable () -> Unit) {
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = FutureDimens.spacingXl, end = FutureDimens.spacingXl, top = 20.dp, bottom = FutureDimens.spacingSm),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
+            .padding(horizontal = FutureDimens.spacingLg, vertical = FutureDimens.spacingXs),
+        verticalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm),
+    ) { content() }
+}
+
+/**
+ * מכשיר ככרטיס: אייקון הסוג בעיגול, שם ומצב, וחץ כניסה. הכרטיס כולו הוא
+ * יעד הפוקוס (FutureFocusCard) ולא שורה בתוך כרטיס משותף.
+ */
+@Composable
+private fun DeviceCard(
+    device: BluetoothDeviceInfo,
+    theme: FutureTheme,
+    onClick: () -> Unit,
+    focusRequester: FocusRequester? = null,
+) {
+    val type = rememberFutureType()
+    val connected = device.connection == Connection.Connected
+    FutureFocusCard(theme = theme, onClick = onClick, focusRequester = focusRequester) {
+        Box(
+            modifier = Modifier
+                .size(DeviceCircle)
+                .clip(FutureShapes.pill)
+                .background(if (connected) accentOf(theme).copy(alpha = 0.18f) else theme.avatarFillColor),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                iconOf(device.kind),
+                contentDescription = null,
+                tint = if (connected) accentOf(theme) else theme.textColor,
+                modifier = Modifier.size(FutureDimens.iconSettingRow),
+            )
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                device.name,
+                color = theme.textColor,
+                fontSize = type.title,
+                fontWeight = FutureTypography.weightMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                if (device.isBonded || device.connection != Connection.Disconnected) statusOf(device) else "זמין להתאמה",
+                color = if (connected) accentOf(theme) else theme.mutedTextColor,
+                fontSize = type.summary,
+                maxLines = 1,
+            )
+            if (device.connection == Connection.Connecting) {
+                FutureIndeterminateProgressBar(theme = theme, modifier = Modifier.padding(top = 6.dp))
+            }
+        }
+        Icon(
+            FutureIcons.KeyboardArrowLeft,
+            contentDescription = null,
+            tint = theme.chevronColor,
+            modifier = Modifier.size(FutureDimens.iconTopBar),
+        )
+    }
+}
+
+/** "הצג עוד" - שאר המותאמים שלא נכנסו לשלושת הראשונים. */
+@Composable
+private fun ShowMoreCard(hidden: Int, theme: FutureTheme, focusRequester: FocusRequester, onClick: () -> Unit) {
+    val type = rememberFutureType()
+    FutureFocusCard(theme = theme, onClick = onClick, focusRequester = focusRequester, minHeight = FutureDimens.rowHeightSetting) {
         Text(
-            "מכשירים זמינים",
-            color = theme.sectionHeaderColor,
-            fontSize = type.summary,
-            fontWeight = FutureTypography.weightBold,
-            letterSpacing = FutureTypography.trackingSection,
+            "הצג עוד",
+            color = theme.textColor,
+            fontSize = type.title,
+            fontWeight = FutureTypography.weightMedium,
             modifier = Modifier.weight(1f),
         )
-        if (scanning) {
+        Text("$hidden", color = theme.mutedTextColor, fontSize = type.summary)
+        Icon(
+            FutureIcons.KeyboardArrowLeft,
+            contentDescription = null,
+            tint = theme.chevronColor,
+            modifier = Modifier.size(FutureDimens.iconTopBar),
+        )
+    }
+}
+
+/** חיפוש מכשירים: "מחפש" עם פס התקדמות בזמן סריקה, אחרת "חפש מכשירים". */
+@Composable
+private fun ScanCard(scanning: Boolean, found: Int, theme: FutureTheme, onClick: () -> Unit) {
+    val type = rememberFutureType()
+    FutureFocusCard(theme = theme, onClick = onClick, minHeight = FutureDimens.rowHeightSetting) {
+        Icon(
+            if (scanning) Icons.AutoMirrored.Rounded.BluetoothSearching else FutureIcons.Refresh,
+            contentDescription = null,
+            tint = if (scanning) accentOf(theme) else theme.textColor,
+            modifier = Modifier.size(FutureDimens.iconSettingRow),
+        )
+        Column(modifier = Modifier.weight(1f)) {
             Text(
-                "מחפש",
-                color = theme.subtleTextColor,
-                fontSize = type.summary,
-                letterSpacing = FutureTypography.trackingSection,
+                if (scanning) "מחפש" else "חפש מכשירים",
+                color = theme.textColor,
+                fontSize = type.title,
+                fontWeight = FutureTypography.weightMedium,
             )
+            if (scanning) {
+                FutureIndeterminateProgressBar(theme = theme, modifier = Modifier.padding(top = 6.dp))
+            } else if (found > 0) {
+                Text("נמצאו $found", color = theme.mutedTextColor, fontSize = type.summary)
+            }
         }
     }
 }
@@ -475,7 +594,7 @@ private fun PermissionPrompt(theme: FutureTheme, onRequest: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         EmptyState(
-            icon = Icons.Rounded.Bluetooth,
+            icon = FutureIcons.Bluetooth,
             title = "אין הרשאה לבלוטות'",
             subtitle = "לחץ על אישור כדי לאשר",
             textColor = theme.textColor,
@@ -510,9 +629,6 @@ private fun DeviceScreen(
         textColor = theme.textColor,
         accentColor = theme.accentColor,
         onBack = onBack,
-        trailingIcon = Icons.Rounded.MoreVert,
-        trailingContentDescription = "אפשרויות",
-        onTrailingClick = onMenu,
     ) {
         Column(
             modifier = Modifier
@@ -566,7 +682,7 @@ private fun DeviceScreen(
                     FutureSettingItem(
                         title = "שיחות ואודיו",
                         summary = if (device.callsConnected) "מופעל" else "כבוי",
-                        icon = Icons.Rounded.Call,
+                        icon = FutureIcons.Call,
                         theme = theme,
                         showChevron = false,
                         focusRequester = first,
@@ -580,7 +696,7 @@ private fun DeviceScreen(
                     FutureSettingItem(
                         title = "מדיה",
                         summary = if (device.mediaConnected) "מופעל" else "כבוי",
-                        icon = Icons.Rounded.MusicNote,
+                        icon = FutureIcons.MusicNote,
                         theme = theme,
                         showChevron = false,
                         focusRequester = if (rows == 0) first else null,
@@ -593,7 +709,7 @@ private fun DeviceScreen(
                 FutureSettingItem(
                     title = "שנה שם",
                     summary = device.name,
-                    icon = Icons.Rounded.Edit,
+                    icon = FutureIcons.Edit,
                     theme = theme,
                     focusRequester = if (rows == 0) first else null,
                     onClick = onRename,
@@ -639,11 +755,11 @@ private fun BluetoothMenu(
 ) {
     fun pick(action: () -> Unit): () -> Unit = { onDismiss(); action() }
     FutureOptionsMenu(theme = theme, onDismissRequest = onDismiss, header = "בלוטות'") {
-        FutureMenuRow("רענן", Icons.Rounded.Refresh, theme, pick(onRefresh))
-        FutureMenuRow("שם המכשיר", Icons.Rounded.Edit, theme, pick(onRenamePhone))
-        FutureMenuRow("קבצים שהתקבלו", Icons.Rounded.Folder, theme, pick(onReceivedFiles))
-        FutureMenuRow("הגדרות", Icons.Rounded.Settings, theme, pick(onSettings))
-        FutureMenuRow("נתק הכל", Icons.Rounded.LinkOff, theme, pick(onDisconnectAll), destructive = true)
+        FutureMenuRow("רענן", FutureIcons.Refresh, theme, pick(onRefresh))
+        FutureMenuRow("שם המכשיר", FutureIcons.Edit, theme, pick(onRenamePhone))
+        FutureMenuRow("קבצים שהתקבלו", FutureIcons.Folder, theme, pick(onReceivedFiles))
+        FutureMenuRow("הגדרות", FutureIcons.Settings, theme, pick(onSettings))
+        FutureMenuRow("נתק הכל", FutureIcons.LinkOff, theme, pick(onDisconnectAll), destructive = true)
     }
 }
 
@@ -651,6 +767,18 @@ private fun BluetoothMenu(
 
 /** 80dp - העיגול של אייקון המכשיר במסך המכשיר (160px בערכה). */
 private val HeroCircle = 80.dp
+
+/** 40dp - העיגול של אייקון המכשיר בכרטיס. */
+private val DeviceCircle = 40.dp
+
+/** כמה מותאמים מוצגים במסך הראשי לפני "הצג עוד". */
+private const val PAIRED_ON_ROOT = 3
+
+/** מסלול "כל המותאמים" - לא כתובת MAC חוקית, ולכן לא מתנגש בכתובת של מכשיר. */
+private const val ALL_PAIRED = "#all-paired"
+
+/** מפתח הפוקוס של כרטיס "הצג עוד", כדי לחזור אליו מהמסך המלא. */
+private const val SHOW_ALL_ROW = "#show-all"
 
 @Composable
 private fun accentOf(theme: FutureTheme): Color = LocalFutureAccent.current ?: theme.readableAccentColor
@@ -667,15 +795,15 @@ private fun DeviceGlyph(kind: DeviceKind, theme: FutureTheme, lit: Boolean) {
 }
 
 private fun iconOf(kind: DeviceKind): ImageVector = when (kind) {
-    DeviceKind.Headphones -> Icons.Rounded.Headphones
-    DeviceKind.Speaker -> Icons.Rounded.Speaker
-    DeviceKind.Car -> Icons.Rounded.DirectionsCar
-    DeviceKind.Phone -> Icons.Rounded.Smartphone
-    DeviceKind.Computer -> Icons.Rounded.LaptopMac
-    DeviceKind.Keyboard -> Icons.Rounded.Keyboard
+    DeviceKind.Headphones -> FutureIcons.Headphones
+    DeviceKind.Speaker -> FutureIcons.Speaker
+    DeviceKind.Car -> FutureIcons.DirectionsCar
+    DeviceKind.Phone -> FutureIcons.Smartphone
+    DeviceKind.Computer -> FutureIcons.LaptopMac
+    DeviceKind.Keyboard -> FutureIcons.Keyboard
     DeviceKind.Mouse -> Icons.Rounded.Mouse
-    DeviceKind.Watch -> Icons.Rounded.Watch
-    DeviceKind.Other -> Icons.Rounded.Bluetooth
+    DeviceKind.Watch -> FutureIcons.Watch
+    DeviceKind.Other -> FutureIcons.Bluetooth
 }
 
 /** שורת המצב מתחת לשם: "מחובר · 80%", "מחובר", "מתחבר", "מותאם". */

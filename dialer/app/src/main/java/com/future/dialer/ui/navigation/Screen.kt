@@ -3,10 +3,11 @@ package com.future.dialer.ui.navigation
 import android.net.Uri
 
 sealed class Screen(val route: String) {
-    /** שלושת הטאבים של ui_kits/calls, היומן ראשון ("log first"). */
+    /** שלושת הטאבים: יומן, אנשי קשר, מקלדת - מימין לשמאל, היומן ראשון. */
     object CallLog : Screen("calllog")
     object Dialpad : Screen("dialpad")
-    object Favorites : Screen("favorites")
+    /** אנשי קשר - במקום המועדפים (המועדפים ראשונים בראש הרשימה). */
+    object Contacts : Screen("contacts")
 
     /** חיפוש לפי שם או ספרות - מתפריט האפשרויות. */
     object Search : Screen("search")

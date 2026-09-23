@@ -1,9 +1,9 @@
 package com.future.fitness.ui
+import androidx.compose.material.icons.rounded.Dashboard
+
+import com.future.sharednav.icons.FutureIcons
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.TrendingUp
-import androidx.compose.material.icons.rounded.Dashboard
-import androidx.compose.material.icons.rounded.FitnessCenter
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.future.sharednav.components.FutureBottomNav
@@ -15,8 +15,8 @@ import com.future.sharednav.components.FutureNavItem
  * [FutureBottomNav] ולא בכל אפליקציה בנפרד. */
 enum class FitnessTab(val label: String, val icon: ImageVector) {
     HOME("ראשי", Icons.Rounded.Dashboard),
-    WORKOUTS("אימונים", Icons.Rounded.FitnessCenter),
-    PROGRESS("התקדמות", Icons.AutoMirrored.Rounded.TrendingUp),
+    WORKOUTS("אימונים", FutureIcons.FitnessCenter),
+    PROGRESS("התקדמות", FutureIcons.AutoMirrored.TrendingUp),
 }
 
 @Composable

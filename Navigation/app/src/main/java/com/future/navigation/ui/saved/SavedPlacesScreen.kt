@@ -1,4 +1,8 @@
 package com.future.navigation.ui.saved
+import androidx.compose.material.icons.rounded.Place
+import androidx.compose.material.icons.rounded.Work
+
+import com.future.sharednav.icons.FutureIcons
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -11,13 +15,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.Home
-import androidx.compose.material.icons.rounded.Place
-import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material.icons.rounded.Star
-import androidx.compose.material.icons.rounded.Work
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -88,7 +85,7 @@ fun SavedPlacesScreen(viewModel: SavedPlacesViewModel, onBack: () -> Unit, onNav
             }
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(FutureDimens.itemSpacing)) {
-                    PinTile(Icons.Rounded.Home, stringResource(R.string.quick_home), homePlace, stringResource(R.string.add_home_address), theme, modifier = Modifier.weight(1f), focusRequester = homeCardFocusRequester) {
+                    PinTile(FutureIcons.Home, stringResource(R.string.quick_home), homePlace, stringResource(R.string.add_home_address), theme, modifier = Modifier.weight(1f), focusRequester = homeCardFocusRequester) {
                         viewModel.startEditing(EditingSlot.HOME)
                     }
                     PinTile(Icons.Rounded.Work, stringResource(R.string.quick_work), workPlace, stringResource(R.string.add_work_address), theme, modifier = Modifier.weight(1f)) {
@@ -100,7 +97,7 @@ fun SavedPlacesScreen(viewModel: SavedPlacesViewModel, onBack: () -> Unit, onNav
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = FutureDimens.spacingMd)) {
                     FutureSectionHeader(stringResource(R.string.favorites), theme, inset = false, modifier = Modifier.weight(1f))
                     TopBarIconButton(
-                        icon = Icons.Rounded.Add,
+                        icon = FutureIcons.Add,
                         contentDescription = stringResource(R.string.favorites),
                         textColor = theme.textColor,
                         accentColor = theme.accentColor,
@@ -125,14 +122,14 @@ fun SavedPlacesScreen(viewModel: SavedPlacesViewModel, onBack: () -> Unit, onNav
                     // כוכב המועדפים הוא החריג היחיד לכלל "אייקון לא נושא צבע משלו"
                     // (#FFC107, README של הדיזיין סיסטם).
                     TopBarIconButton(
-                        icon = Icons.Rounded.Star,
+                        icon = FutureIcons.Star,
                         contentDescription = stringResource(R.string.favorites),
                         textColor = theme.favoriteColor,
                         accentColor = theme.accentColor,
                         onClick = { viewModel.toggleFavorite(place) },
                     )
                     TopBarIconButton(
-                        icon = Icons.Rounded.Delete,
+                        icon = FutureIcons.Delete,
                         contentDescription = "מחק",
                         textColor = theme.textColor,
                         accentColor = theme.accentColor,
@@ -201,7 +198,7 @@ private fun AddressSearchScreen(viewModel: SavedPlacesViewModel, onBack: () -> U
             autoFocus = true,
             leading = {
                 Icon(
-                    Icons.Rounded.Search,
+                    FutureIcons.Search,
                     contentDescription = null,
                     tint = theme.mutedTextColor,
                     modifier = Modifier.size(FutureDimens.iconTopBar),

@@ -1,8 +1,8 @@
 package com.future.messages.ui.screens
-import com.future.messages.ui.components.MessageComposeBar
-import androidx.compose.material.icons.rounded.Schedule
-import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.ErrorOutline
+
+import com.future.sharednav.icons.FutureIcons
+import com.future.messages.ui.components.MessageComposeBar
 import androidx.compose.ui.unit.em
 import com.future.sharednav.theme.mutedTextColor
 import com.future.sharednav.components.ScreenTopBar
@@ -47,12 +47,6 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.automirrored.rounded.Send
-import androidx.compose.material.icons.rounded.AttachFile
-import androidx.compose.material.icons.rounded.Call
-import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -147,7 +141,7 @@ fun MessageThreadScreen(
                 textColor = theme.textColor,
                 accentColor = theme.accentColor,
                 onBack = onBack,
-                trailingIcon = Icons.Rounded.Call,
+                trailingIcon = FutureIcons.Call,
                 trailingContentDescription = "התקשר",
                 onTrailingClick = onCall,
             )
@@ -283,7 +277,7 @@ private fun AttachmentPreview(uri: Uri, theme: FutureTheme, onRemove: () -> Unit
             }
         }
         Text("תמונה מצורפת MMS", color = theme.secondaryTextColor, fontSize = FutureTypography.summary, modifier = Modifier.weight(1f))
-        TopBarIconButton(Icons.Rounded.Close, "הסר תמונה", theme.textColor, theme.accentColor, onRemove)
+        TopBarIconButton(FutureIcons.Close, "הסר תמונה", theme.textColor, theme.accentColor, onRemove)
     }
 }
 
@@ -376,9 +370,9 @@ private fun MessageMeta(message: Message, time: String, theme: FutureTheme) {
     val status = message.status
     val (icon, label, color) = when (status) {
         null -> Triple(null, time, theme.subtleTextColor)
-        com.future.messages.data.MessageStatus.SENDING -> Triple(Icons.Rounded.Schedule, "שולח", theme.mutedTextColor)
-        com.future.messages.data.MessageStatus.SENT -> Triple(Icons.Rounded.Check, "נשלח · $time", theme.readableAccentColor)
-        com.future.messages.data.MessageStatus.DELIVERED -> Triple(Icons.Rounded.Check, "נמסר · $time", theme.readableAccentColor)
+        com.future.messages.data.MessageStatus.SENDING -> Triple(FutureIcons.Schedule, "שולח", theme.mutedTextColor)
+        com.future.messages.data.MessageStatus.SENT -> Triple(FutureIcons.Check, "נשלח · $time", theme.readableAccentColor)
+        com.future.messages.data.MessageStatus.DELIVERED -> Triple(FutureIcons.Check, "נמסר · $time", theme.readableAccentColor)
         com.future.messages.data.MessageStatus.FAILED -> Triple(Icons.Rounded.ErrorOutline, "לא נשלח", theme.dangerColor)
     }
     Row(
@@ -402,8 +396,8 @@ private val BubbleGap = 10.dp
 @Composable
 private fun MessageActionDialog(theme: FutureTheme, onForward: () -> Unit, onDelete: () -> Unit, onDismiss: () -> Unit) {
     FutureOptionsMenu(theme = theme, onDismissRequest = onDismiss, header = "הודעה") {
-        FutureMenuRow("העבר הודעה", Icons.AutoMirrored.Rounded.Send, theme, onForward)
-        FutureMenuRow("מחק הודעה", Icons.Rounded.Delete, theme, onDelete, destructive = true)
+        FutureMenuRow("העבר הודעה", FutureIcons.AutoMirrored.Send, theme, onForward)
+        FutureMenuRow("מחק הודעה", FutureIcons.Delete, theme, onDelete, destructive = true)
     }
 }
 

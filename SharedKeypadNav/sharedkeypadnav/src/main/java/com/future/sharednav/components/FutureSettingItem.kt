@@ -1,5 +1,7 @@
 package com.future.sharednav.components
 
+import com.future.sharednav.icons.FutureIcons
+
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -12,8 +14,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.KeyboardArrowLeft
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -61,6 +61,8 @@ fun FutureSettingItem(
     icon: ImageVector? = null,
     showChevron: Boolean = true,
     focusRequester: FocusRequester? = null,
+    /** צבע אייקון שנושא משמעות (סוג שיחה ביומן) - אחרת האייקון בהדגשה. */
+    iconTint: Color? = null,
     trailing: (@Composable RowScope.() -> Unit)? = null,
 ) {
     val type = rememberFutureType()
@@ -103,7 +105,7 @@ fun FutureSettingItem(
             Icon(
                 icon,
                 contentDescription = null,
-                tint = accent,
+                tint = iconTint ?: accent,
                 modifier = Modifier.size(FutureDimens.iconSettingRow),
             )
         }
@@ -130,7 +132,7 @@ fun FutureSettingItem(
         when {
             trailing != null -> trailing()
             showChevron -> Icon(
-                Icons.Rounded.KeyboardArrowLeft,
+                FutureIcons.KeyboardArrowLeft,
                 contentDescription = null,
                 tint = theme.chevronColor,
                 modifier = Modifier.size(FutureDimens.iconTopBar),

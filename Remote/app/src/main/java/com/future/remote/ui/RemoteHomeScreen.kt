@@ -1,4 +1,9 @@
 package com.future.remote.ui
+import androidx.compose.material.icons.rounded.AcUnit
+import androidx.compose.material.icons.rounded.Air
+import androidx.compose.material.icons.rounded.Tune
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.theme.subtleTextColor
 
 import androidx.compose.foundation.background
@@ -11,12 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.AcUnit
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Air
-import androidx.compose.material.icons.rounded.SettingsRemote
-import androidx.compose.material.icons.rounded.Speaker
-import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -42,7 +41,7 @@ import com.future.sharednav.theme.FutureTheme
 fun iconForCategory(category: DeviceCategory): ImageVector = when (category) {
     DeviceCategory.AC -> Icons.Rounded.AcUnit
     DeviceCategory.FAN -> Icons.Rounded.Air
-    DeviceCategory.AUDIO -> Icons.Rounded.Speaker
+    DeviceCategory.AUDIO -> FutureIcons.Speaker
     DeviceCategory.CUSTOM -> Icons.Rounded.Tune
 }
 
@@ -105,7 +104,7 @@ fun RemoteHomeScreen(
                         }
                         item {
                             RemoteRow(
-                                icon = Icons.Rounded.Add,
+                                icon = FutureIcons.Add,
                                 label = "הוסף מכשיר חדש",
                                 subtitle = "מזגן, מאוורר, מערכת שמע או מותאם אישית",
                                 theme = theme,

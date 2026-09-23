@@ -1,4 +1,6 @@
 package com.future.settings.ui.components
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.theme.FutureMotion
 import com.future.sharednav.components.FutureSwitch
 import com.future.sharednav.components.FutureDivider
@@ -16,8 +18,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.KeyboardArrowLeft
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -122,7 +122,7 @@ fun SettingItem(
                 // (RTL), ושם כיוון ההתקדמות פנימה הוא שמאלה. הווריאנט המשקף הפך
                 // את החץ ימינה, כלומר לכיוון ההפוך מזה שהלחיצה על השורה מובילה אליו.
                 Icon(
-                    imageVector = Icons.Rounded.KeyboardArrowLeft,
+                    imageVector = FutureIcons.KeyboardArrowLeft,
                     contentDescription = null,
                     tint = theme.textColor.copy(alpha = 0.3f),
                     modifier = Modifier.size(18.dp)

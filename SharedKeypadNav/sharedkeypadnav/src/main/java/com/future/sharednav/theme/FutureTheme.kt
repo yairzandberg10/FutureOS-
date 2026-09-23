@@ -30,6 +30,17 @@ data class FutureTheme(
     val warningColor: Color = if (isDarkMode) Color(0xFFFFD60A) else Color(0xFFB8860B)
 }
 
+// ---- סוגי שיחה ביומן (חייגן) ----
+// ארבעה צבעים שמזהים סוג שיחה במבט: אדום - לא נענתה, ירוק - התקבלה, כתום -
+// נדחתה, כחול - חויגה. אדום וירוק הם צבעי הסטטוס של הערכה; הכתום והכחול
+// לקוחים מפלטת ההדגשות (FutureAccents) ומוכהים במצב בהיר, כדי שיהיו קריאים
+// על כרטיס לבן באותה מידה שהם קריאים על שחור.
+
+val FutureTheme.callMissedColor: Color get() = dangerColor
+val FutureTheme.callReceivedColor: Color get() = successColor
+val FutureTheme.callRejectedColor: Color get() = if (isDarkMode) FutureAccents.Orange else Color(0xFFB85C00)
+val FutureTheme.callOutgoingColor: Color get() = if (isDarkMode) FutureAccents.Cyan else Color(0xFF0A6FB0)
+
 /**
  * חמש ההדגשות שהמשתמש יכול לבחור בהגדרות - הצבע היחיד במערכת שבשליטתו
  * (guidelines/colors-accent.html). לבן הוא ברירת המחדל, ולכן שום רכיב לא

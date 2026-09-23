@@ -1,4 +1,6 @@
 package com.future.futureui.statusbar.ui
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.theme.LocalFutureTheme
 import com.future.sharednav.theme.elevatedSurfaceColor
 import com.future.sharednav.theme.readableAccentColor
@@ -10,8 +12,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.VolumeOff
-import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -54,7 +54,7 @@ fun VolumeOverlay(level: Float, modifier: Modifier = Modifier) {
                     .background(theme.readableAccentColor)
             )
             Icon(
-                imageVector = if (level <= 0f) Icons.AutoMirrored.Rounded.VolumeOff else Icons.AutoMirrored.Rounded.VolumeUp,
+                imageVector = if (level <= 0f) FutureIcons.AutoMirrored.VolumeOff else FutureIcons.AutoMirrored.VolumeUp,
                 contentDescription = null,
                 tint = if (level >= 0.12f) theme.onReadableAccentColor else theme.textColor,
                 modifier = Modifier.padding(start = 14.dp).size(22.dp)

@@ -1,4 +1,6 @@
 package com.future.tools.ui
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureButton
 import com.future.sharednav.components.FutureButtonVariant
 import com.future.sharednav.components.FutureListItem
@@ -19,9 +21,6 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ContentCopy
-import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -102,8 +101,8 @@ fun PasswordGeneratorScreen(theme: FutureTheme, onBack: () -> Unit) {
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    PwActionButton(Icons.Rounded.Refresh, "חדש", theme = theme, modifier = Modifier.weight(1f), primary = false) { regenerate() }
-                    PwActionButton(Icons.Rounded.ContentCopy, "העתק", theme = theme, modifier = Modifier.weight(1f)) {
+                    PwActionButton(FutureIcons.Refresh, "חדש", theme = theme, modifier = Modifier.weight(1f), primary = false) { regenerate() }
+                    PwActionButton(FutureIcons.ContentCopy, "העתק", theme = theme, modifier = Modifier.weight(1f)) {
                         val clipboard = context.getSystemService(ClipboardManager::class.java)
                         clipboard.setPrimaryClip(ClipData.newPlainText("password", password))
                         Toast.makeText(context, "הסיסמה הועתקה", Toast.LENGTH_SHORT).show()

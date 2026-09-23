@@ -1,5 +1,7 @@
 package com.future.dialer.ui.contacts
 
+import com.future.sharednav.icons.FutureIcons
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -8,9 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material.icons.rounded.SearchOff
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -64,7 +63,7 @@ fun SearchScreen(
             autoFocus = true,
             leading = {
                 Icon(
-                    Icons.Rounded.Search,
+                    FutureIcons.Search,
                     contentDescription = null,
                     tint = theme.subtleTextColor,
                     modifier = Modifier.padding(end = 2.dp),
@@ -77,7 +76,7 @@ fun SearchScreen(
         )
         if (results.isEmpty()) {
             EmptyState(
-                icon = Icons.Rounded.SearchOff,
+                icon = FutureIcons.SearchOff,
                 title = "אין תוצאות",
                 subtitle = "נסה שם או ספרות אחרות",
                 textColor = theme.textColor,

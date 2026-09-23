@@ -1,4 +1,6 @@
 package com.future.futureui.controlcenter.ui
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.theme.mutedTextColor
 import com.future.sharednav.theme.dividerColor
 import com.future.sharednav.theme.LocalFutureTheme
@@ -27,7 +29,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -198,7 +199,7 @@ fun ControlCenterScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             HeaderActionButton(
-                                icon = if (isEditMode) Icons.Rounded.Check else Icons.Rounded.Edit,
+                                icon = if (isEditMode) FutureIcons.Check else FutureIcons.Edit,
                                 color = clockColor,
                                 onClick = { 
                                     if (isEditMode) {
@@ -212,7 +213,7 @@ fun ControlCenterScreen(
                                     isEditMode = !isEditMode 
                                 }
                             )
-                            HeaderActionButton(icon = Icons.Rounded.Settings, color = clockColor, onClick = onSettingsClick)
+                            HeaderActionButton(icon = FutureIcons.Settings, color = clockColor, onClick = onSettingsClick)
                             HeaderActionButton(icon = Icons.Rounded.PowerSettingsNew, color = clockColor, onClick = onPowerClick, isPower = true)
                         }
                     }
@@ -427,8 +428,8 @@ fun ControlCenterScreen(
                                 }
                                 "sliders" -> {
                                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        SliderBar(icon = Icons.Rounded.Brightness6, value = manager.brightnessLevel, onValueChange = { manager.setBrightness(it) }, isDarkBackground = isDarkBackground)
-                                        SliderBar(icon = Icons.AutoMirrored.Rounded.VolumeUp, value = manager.volumeLevel, onValueChange = { manager.setVolume(it) }, isDarkBackground = isDarkBackground)
+                                        SliderBar(icon = FutureIcons.Brightness6, value = manager.brightnessLevel, onValueChange = { manager.setBrightness(it) }, isDarkBackground = isDarkBackground)
+                                        SliderBar(icon = FutureIcons.AutoMirrored.VolumeUp, value = manager.volumeLevel, onValueChange = { manager.setVolume(it) }, isDarkBackground = isDarkBackground)
                                     }
                                 }
                                 "bottom_toggles" -> {

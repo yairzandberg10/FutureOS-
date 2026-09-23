@@ -1,4 +1,6 @@
 package com.future.fitness.ui.components
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureAvatar
 import com.future.sharednav.components.FutureListItem
 import com.future.sharednav.theme.FutureDimens
@@ -7,7 +9,6 @@ import com.future.sharednav.theme.subtleTextColor
 import com.future.sharednav.theme.chevronColor
 import com.future.sharednav.theme.idleChipColor
 import com.future.sharednav.theme.idleFieldColor
-import androidx.compose.material.icons.rounded.KeyboardArrowLeft
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Arrangement
@@ -25,8 +26,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -79,7 +78,7 @@ fun IconListRow(
         }
         if (showChevron) {
             Icon(
-                Icons.Rounded.KeyboardArrowLeft,
+                FutureIcons.KeyboardArrowLeft,
                 contentDescription = null,
                 tint = theme.chevronColor,
                 modifier = Modifier.size(FutureDimens.iconTopBar),

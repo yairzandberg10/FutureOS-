@@ -1,4 +1,9 @@
 package com.future.fitness.ui.screens
+import androidx.compose.material.icons.rounded.GridView
+import androidx.compose.material.icons.rounded.LocalFireDepartment
+import androidx.compose.material.icons.automirrored.rounded.DirectionsRun
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.AvatarListSize
 import com.future.sharednav.components.FutureAvatar
 import com.future.sharednav.theme.elevatedSurfaceColor
@@ -36,15 +41,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.DirectionsRun
-import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.FitnessCenter
-import androidx.compose.material.icons.rounded.GridView
-import androidx.compose.material.icons.rounded.LocalFireDepartment
-import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -159,7 +155,7 @@ fun WorkoutsScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center,
                     ) {
-                        Icon(Icons.Rounded.Add, contentDescription = null, tint = theme.textColor, modifier = Modifier.size(18.dp))
+                        Icon(FutureIcons.Add, contentDescription = null, tint = theme.textColor, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
                         Text("אימון חדש", color = theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Bold)
                     }
@@ -216,7 +212,7 @@ private fun QuickActionCard(icon: androidx.compose.ui.graphics.vector.ImageVecto
                 Text(title, color = theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Bold, maxLines = 1)
                 Text(subtitle, color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.label, maxLines = 1)
             }
-            Icon(Icons.AutoMirrored.Rounded.KeyboardArrowLeft, contentDescription = null, tint = theme.textColor.copy(alpha = 0.4f))
+            Icon(FutureIcons.AutoMirrored.KeyboardArrowLeft, contentDescription = null, tint = theme.textColor.copy(alpha = 0.4f))
         }
     }
 }
@@ -233,7 +229,7 @@ private fun WorkoutCard(workout: Workout, weightKg: Int, theme: FutureTheme, onC
                     .padding(14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                FutureAvatar(theme = theme, icon = Icons.Rounded.FitnessCenter, size = AvatarListSize)
+                FutureAvatar(theme = theme, icon = FutureIcons.FitnessCenter, size = AvatarListSize)
                 Spacer(Modifier.width(14.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(workout.name, color = theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Bold, maxLines = 1)
@@ -241,7 +237,7 @@ private fun WorkoutCard(workout: Workout, weightKg: Int, theme: FutureTheme, onC
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(workout.difficulty, color = theme.sectionHeaderColor, fontSize = FutureTypography.label, fontWeight = FontWeight.SemiBold)
                         Text(" · ", color = theme.textColor.copy(alpha = 0.4f), fontSize = FutureTypography.label)
-                        Icon(Icons.Rounded.Schedule, contentDescription = null, tint = theme.textColor.copy(alpha = 0.5f), modifier = Modifier.size(13.dp))
+                        Icon(FutureIcons.Schedule, contentDescription = null, tint = theme.textColor.copy(alpha = 0.5f), modifier = Modifier.size(13.dp))
                         Text(" ${workout.durationMin} דק׳", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.label)
                         Text(" · ", color = theme.textColor.copy(alpha = 0.4f), fontSize = FutureTypography.label)
                         Icon(Icons.Rounded.LocalFireDepartment, contentDescription = null, tint = theme.dangerColor, modifier = Modifier.size(13.dp))
@@ -255,7 +251,7 @@ private fun WorkoutCard(workout: Workout, weightKg: Int, theme: FutureTheme, onC
                     modifier = Modifier.size(36.dp).background(theme.readableAccentColor, CircleShape),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(Icons.Rounded.PlayArrow, contentDescription = null, tint = theme.backgroundColor, modifier = Modifier.size(18.dp))
+                    Icon(FutureIcons.PlayArrow, contentDescription = null, tint = theme.backgroundColor, modifier = Modifier.size(18.dp))
                 }
             }
         }
@@ -268,7 +264,7 @@ private fun WorkoutCard(workout: Workout, weightKg: Int, theme: FutureTheme, onC
                         .background(theme.textColor.copy(alpha = if (isFocused) 0.16f else 0.06f), FutureShapes.md),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(Icons.Rounded.Close, contentDescription = "מחק אימון", tint = theme.textColor.copy(alpha = 0.7f), modifier = Modifier.size(18.dp))
+                    Icon(FutureIcons.Close, contentDescription = "מחק אימון", tint = theme.textColor.copy(alpha = 0.7f), modifier = Modifier.size(18.dp))
                 }
             }
         }

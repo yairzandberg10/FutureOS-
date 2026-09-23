@@ -1,5 +1,7 @@
 package com.future.futureui.controlcenter.logic
 
+import com.future.sharednav.icons.FutureIcons
+
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.material.icons.Icons
@@ -9,21 +11,21 @@ class ControlLayoutManager(context: Context) {
     private val prefs: SharedPreferences = context.getSharedPreferences("control_center_layout", Context.MODE_PRIVATE)
 
     val allAvailableControls = listOf(
-        ControlInfo("wifi", "Wi-Fi", Icons.Rounded.Wifi),
-        ControlInfo("bluetooth", "Bluetooth", Icons.Rounded.Bluetooth),
+        ControlInfo("wifi", "Wi-Fi", FutureIcons.Wifi),
+        ControlInfo("bluetooth", "Bluetooth", FutureIcons.Bluetooth),
         ControlInfo("flashlight", "פנס", Icons.Rounded.FlashlightOn),
-        ControlInfo("airplane", "מצב טיסה", Icons.Rounded.AirplanemodeActive),
+        ControlInfo("airplane", "מצב טיסה", FutureIcons.AirplanemodeActive),
         ControlInfo("data", "נתונים", Icons.Rounded.SignalCellularAlt),
         ControlInfo("dnd", "נא לא להפריע", Icons.Rounded.DoNotDisturbOn),
         ControlInfo("location", "מיקום", Icons.Rounded.LocationOn),
         ControlInfo("rotation", "סיבוב", Icons.Rounded.ScreenRotation),
         ControlInfo("battery", "סוללה", Icons.Rounded.BatterySaver),
         ControlInfo("night", "לילה", Icons.Rounded.Nightlight),
-        ControlInfo("settings", "הגדרות", Icons.Rounded.Settings),
+        ControlInfo("settings", "הגדרות", FutureIcons.Settings),
         ControlInfo("camera", "מצלמה", Icons.Rounded.CameraAlt),
-        ControlInfo("search", "חיפוש", Icons.Rounded.Search),
-        ControlInfo("music", "מוזיקה", Icons.Rounded.MusicNote),
-        ControlInfo("account", "חשבון", Icons.Rounded.Person),
+        ControlInfo("search", "חיפוש", FutureIcons.Search),
+        ControlInfo("music", "מוזיקה", FutureIcons.MusicNote),
+        ControlInfo("account", "חשבון", FutureIcons.Person),
         ControlInfo("calendar", "יומן", Icons.Rounded.CalendarMonth),
         ControlInfo("security", "אבטחה", Icons.Rounded.Security),
         ControlInfo("predictive_text", "ניבוי טקסט", Icons.Rounded.Spellcheck)

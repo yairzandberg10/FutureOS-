@@ -1,4 +1,11 @@
 package com.future.calendar.ui
+import androidx.compose.material.icons.rounded.LocationOn
+import androidx.compose.material.icons.rounded.MenuBook
+import androidx.compose.material.icons.rounded.MyLocation
+import androidx.compose.material.icons.rounded.Today
+import androidx.compose.material.icons.rounded.WbTwilight
+
+import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureSwitch
 import com.future.sharednav.components.FutureOptionsMenu
 import com.future.sharednav.components.FutureMenuRow
@@ -35,19 +42,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.ChevronLeft
-import androidx.compose.material.icons.rounded.ChevronRight
-import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.Edit
-import androidx.compose.material.icons.rounded.LocationOn
-import androidx.compose.material.icons.rounded.MenuBook
-import androidx.compose.material.icons.rounded.MyLocation
-import androidx.compose.material.icons.rounded.Settings
-import androidx.compose.material.icons.rounded.Today
-import androidx.compose.material.icons.rounded.Translate
-import androidx.compose.material.icons.rounded.WbTwilight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -75,6 +69,13 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.future.sharednav.components.AppDialog
 import com.future.calendar.data.CalendarEvent
+import com.future.calendar.data.CalMonth
+import com.future.calendar.data.CalendarKind
+import com.future.calendar.data.CalendarMonths
+import com.future.sharednav.components.FutureCard
+import com.future.sharednav.components.FutureDivider
+import com.future.sharednav.components.FutureSectionHeader
+import com.future.sharednav.components.FutureSettingItem
 import com.future.calendar.data.DafYomi
 import com.future.calendar.data.DayZmanim
 import com.future.calendar.data.HebrewDateFormatter
@@ -116,7 +117,7 @@ fun CalendarHomeScreen(
     onNextYear: () -> Unit,
     onSelectDate: (LocalDate) -> Unit,
     onOpenDay: (LocalDate) -> Unit,
-    onOpenMonth: (YearMonth) -> Unit,
+    onOpenMonth: (CalMonth) -> Unit,
     onAddEvent: () -> Unit,
     onEditEvent: (CalendarEvent) -> Unit,
     onDeleteEvent: (CalendarEvent) -> Unit,
@@ -125,7 +126,7 @@ fun CalendarHomeScreen(
     resolvedLat: Double,
     resolvedLon: Double,
     showWeather: Boolean,
-    useHebrewCalendar: Boolean = false,
+    kind: CalendarKind = CalendarKind.COMBINED,
     usingFallbackLocation: Boolean = false
 ) {
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
@@ -136,10 +137,10 @@ fun CalendarHomeScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    FocusableIconButton(icon = Icons.Rounded.Settings, theme = theme, onClick = onOpenSettings)
+                    FocusableIconButton(icon = FutureIcons.Settings, theme = theme, onClick = onOpenSettings)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         FocusableIconButton(icon = Icons.Rounded.Today, theme = theme, onClick = onGoToday)
-                        FocusableIconButton(icon = Icons.Rounded.Add, theme = theme, onClick = onAddEvent)
+                        FocusableIconButton(icon = FutureIcons.Add, theme = theme, onClick = onAddEvent)
                     }
                 }
 
@@ -152,7 +153,13 @@ fun CalendarHomeScreen(
                     )
                 }
 
-                ViewModeTabRow(current = viewMode, theme = theme, onSelect = onChangeViewMode)
+                val modes = listOf(CalendarViewMode.DAY, CalendarViewMode.WEEK, CalendarViewMode.MONTH, CalendarViewMode.YEAR)
+                com.future.sharednav.components.FutureTabRow(
+                    items = listOf("יום", "שבוע", "חודש", "שנה"),
+                    selectedIndex = modes.indexOf(viewMode),
+                    theme = theme,
+                    onSelect = { onChangeViewMode(modes[it]) },
+                )
 
                 if (!hasPermission) {
                     PermissionRequiredMessage(theme = theme, onRequestPermission = onRequestPermission)
@@ -161,18 +168,19 @@ fun CalendarHomeScreen(
 
                 when (viewMode) {
                     CalendarViewMode.MONTH -> {
-                        MonthNavigationRow(month = month, theme = theme, useHebrewCalendar = useHebrewCalendar, onPrevMonth = onPrevMonth, onNextMonth = onNextMonth)
+                        // בלוח עברי החודש נגזר מהתאריך הנבחר (חודש עברי שלם), אחרת מהחודש הלועזי.
+                        val calMonth = if (kind == CalendarKind.HEBREW) CalendarMonths.hebrewContaining(selectedDate)
+                        else CalendarMonths.gregorian(month, kind)
+                        MonthNavigationRow(month = calMonth, theme = theme, onPrevMonth = onPrevMonth, onNextMonth = onNextMonth)
                         WeekDayHeaderRow(theme = theme)
                         MonthGrid(
-                            month = month,
+                            month = calMonth,
                             selectedDate = selectedDate,
                             today = today,
                             eventsByDate = eventsByDate,
                             theme = theme,
-                            useHebrewCalendar = useHebrewCalendar,
-                            onPrevMonth = onPrevMonth,
-                            onNextMonth = onNextMonth,
-                            onSelectDate = onSelectDate,
+                            kind = kind,
+                            onMoveTo = onSelectDate,
                             onOpenDay = onOpenDay
                         )
                     }
@@ -181,6 +189,7 @@ fun CalendarHomeScreen(
                         today = today,
                         eventsByDate = eventsByDate,
                         theme = theme,
+                        kind = kind,
                         onPrevWeek = onPrevWeek,
                         onNextWeek = onNextWeek,
                         onOpenDay = onOpenDay
@@ -196,63 +205,25 @@ fun CalendarHomeScreen(
                         onDeleteEvent = onDeleteEvent,
                         lat = resolvedLat,
                         lon = resolvedLon,
-                        showWeather = showWeather
+                        showWeather = showWeather,
+                        kind = kind
                     )
                     CalendarViewMode.YEAR -> YearView(
-                        year = month.year,
+                        title = if (kind == CalendarKind.HEBREW) CalendarMonths.hebrewYearLabel(selectedDate)
+                        else if (kind == CalendarKind.COMBINED) "${month.year} · ${CalendarMonths.hebrewYearLabel(month.atDay(1))}"
+                        else month.year.toString(),
+                        months = if (kind == CalendarKind.HEBREW) CalendarMonths.hebrewYear(selectedDate)
+                        else (1..12).map { CalendarMonths.gregorian(YearMonth.of(month.year, it), kind) },
+                        selectedDate = selectedDate,
+                        today = today,
                         eventsByDate = eventsByDate,
                         theme = theme,
+                        kind = kind,
                         onPrevYear = onPrevYear,
                         onNextYear = onNextYear,
                         onOpenMonth = onOpenMonth
                     )
                 }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ViewModeTabRow(current: CalendarViewMode, theme: FutureTheme, onSelect: (CalendarViewMode) -> Unit) {
-    val tabs = listOf(
-        CalendarViewMode.DAY to "יום",
-        CalendarViewMode.WEEK to "שבוע",
-        CalendarViewMode.MONTH to "חודש",
-        CalendarViewMode.YEAR to "שנה"
-    )
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        tabs.forEach { (mode, label) ->
-            val interactionSource = remember { MutableInteractionSource() }
-            val isFocused by interactionSource.collectIsFocusedAsState()
-            val isSelected = mode == current
-            val bgColor by animateColorAsState(
-                when {
-                    isSelected -> theme.accentColor
-                    isFocused -> theme.textColor.copy(alpha = 0.18f)
-                    else -> theme.textColor.copy(alpha = 0.08f)
-                },
-                FutureMotion.focusColorSpec,
-                label = "tabBg"
-            )
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(FutureShapes.md)
-                    .background(bgColor)
-                    .clickable(interactionSource = interactionSource, indication = null, onClick = { onSelect(mode) })
-                    .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
-                    .padding(vertical = 8.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    label,
-                    fontSize = FutureTypography.summary,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                    color = if (isSelected) theme.onReadableAccentColor else theme.textColor
-                )
             }
         }
     }
@@ -272,66 +243,64 @@ private fun PermissionRequiredMessage(theme: FutureTheme, onRequestPermission: (
 }
 
 @Composable
-private fun MonthNavigationRow(month: YearMonth, theme: FutureTheme, useHebrewCalendar: Boolean = false, onPrevMonth: () -> Unit, onNextMonth: () -> Unit) {
-    val gregLabel = "${month.month.getDisplayName(JavaTextStyle.FULL, HE_LOCALE)} ${month.year}"
-    val hebrewLabel = HebrewDateFormatter.formatMonthYear(month.atDay(15))
-    // כשהמצב העברי דלוק, התאריך העברי הוא הראשי (גדול/מודגש) והלועזי המשני -
-    // הפוך מהמצב הרגיל, כדי שבאמת "לוח עברי" יהיה מה שהעין קולטת קודם.
-    val primaryLabel = if (useHebrewCalendar) hebrewLabel else gregLabel
-    val secondaryLabel = if (useHebrewCalendar) gregLabel else hebrewLabel
+private fun MonthNavigationRow(month: CalMonth, theme: FutureTheme, onPrevMonth: () -> Unit, onNextMonth: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        FocusableIconButton(icon = Icons.Rounded.ChevronRight, theme = theme, onClick = onPrevMonth)
+        FocusableIconButton(icon = FutureIcons.ChevronRight, theme = theme, onClick = onPrevMonth)
         Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(primaryLabel, textAlign = TextAlign.Center, fontSize = FutureTypography.title, fontWeight = FontWeight.SemiBold, color = theme.textColor)
-            if (secondaryLabel.isNotBlank()) {
-                Text(secondaryLabel, textAlign = TextAlign.Center, fontSize = FutureTypography.caption, color = theme.mutedTextColor)
+            Text(month.title, textAlign = TextAlign.Center, fontSize = FutureTypography.title, fontWeight = FontWeight.SemiBold, color = theme.textColor, maxLines = 1)
+            if (month.subtitle.isNotBlank()) {
+                Text(month.subtitle, textAlign = TextAlign.Center, fontSize = FutureTypography.caption, color = theme.mutedTextColor, maxLines = 1)
             }
         }
-        FocusableIconButton(icon = Icons.Rounded.ChevronLeft, theme = theme, onClick = onNextMonth)
+        FocusableIconButton(icon = FutureIcons.ChevronLeft, theme = theme, onClick = onNextMonth)
     }
 }
 
 @Composable
 private fun WeekDayHeaderRow(theme: FutureTheme) {
-    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)) {
+    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 2.dp)) {
         HEBREW_WEEKDAY_LABELS.forEach { label ->
             Text(label, modifier = Modifier.weight(1f), textAlign = TextAlign.Center, fontSize = FutureTypography.label, color = theme.mutedTextColor)
         }
     }
 }
 
+/**
+ * רשת החודש. הפוקוס הוא התאריך הנבחר עצמו ([selectedDate]) ולא אינדקס
+ * פנימי: כל תזוזה מחשבת תאריך חדש ומעבירה אותו ל-[onMoveTo], שמעדכן גם את
+ * החודש כשהתאריך יוצא ממנו. כך מעבר חודש בחצים ממשיך בדיוק מהיום הסמוך
+ * (ולא קופץ ליום הראשון), והפוקוס לא "נגנב" מכפתורי הניווט בכל החלפת חודש.
+ *
+ * RTL: העמודה הראשונה (ראשון) מימין, ולכן ימינה = יום קודם, שמאלה = יום הבא.
+ * למעלה מהשורה הראשונה יוצא מהרשת אל הכפתורים שמעליה.
+ */
 @Composable
 private fun MonthGrid(
-    month: YearMonth,
+    month: CalMonth,
     selectedDate: LocalDate,
     today: LocalDate,
     eventsByDate: Map<LocalDate, List<CalendarEvent>>,
     theme: FutureTheme,
-    useHebrewCalendar: Boolean = false,
-    onPrevMonth: () -> Unit = {},
-    onNextMonth: () -> Unit = {},
-    onSelectDate: (LocalDate) -> Unit,
+    kind: CalendarKind,
+    onMoveTo: (LocalDate) -> Unit,
     onOpenDay: (LocalDate) -> Unit
 ) {
-    val firstOfMonth = month.atDay(1)
-    val leadingBlanks = firstOfMonth.sundayStartColumn()
-    val daysInMonth = month.lengthOfMonth()
-    val totalCells = (((leadingBlanks + daysInMonth + 6) / 7) * 7).coerceAtLeast(35)
+    val leadingBlanks = month.first.sundayStartColumn()
+    val totalCells = (((leadingBlanks + month.length + 6) / 7) * 7).coerceAtLeast(35)
     val cells: List<LocalDate?> = (0 until totalCells).map { i ->
-        val dayNum = i - leadingBlanks + 1
-        if (dayNum in 1..daysInMonth) month.atDay(dayNum) else null
+        val offset = i - leadingBlanks
+        if (offset in 0 until month.length) month.first.plusDays(offset.toLong()) else null
     }
+    // תאריך נבחר מחוץ לחודש המוצג (אחרי מעבר חודש בכפתורים) - הפוקוס על היום הראשון.
+    val focusDate = if (selectedDate in month) selectedDate else month.first
+    val focusedIndex = cells.indexOf(focusDate)
 
-    var focusedIndex by remember(month) {
-        mutableIntStateOf(cells.indexOf(selectedDate).let { if (it >= 0) it else leadingBlanks })
-    }
-    var isGridFocused by remember(month) { mutableStateOf(false) }
-    val focusRequester = remember(month) { FocusRequester() }
-
-    LaunchedEffect(month) { focusRequester.requestFocus() }
+    var isGridFocused by remember { mutableStateOf(false) }
+    val focusRequester = remember { FocusRequester() }
+    LaunchedEffect(Unit) { runCatching { focusRequester.requestFocus() } }
 
     Column(
         modifier = Modifier
@@ -339,47 +308,26 @@ private fun MonthGrid(
             .padding(horizontal = 8.dp)
             .focusRequester(focusRequester)
             .onFocusChanged { isGridFocused = it.isFocused }
-            .focusable().bringIntoViewOnFocus()
+            .focusable()
             .onKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
-                val current = focusedIndex
                 when (event.key) {
-                    Key.DirectionRight -> {
-                        val next = current - 1
-                        if (next in cells.indices) { focusedIndex = next; cells[next]?.let(onSelectDate); true }
-                        else { onNextMonth(); true }
-                    }
-                    Key.DirectionLeft -> {
-                        val next = current + 1
-                        if (next in cells.indices) { focusedIndex = next; cells[next]?.let(onSelectDate); true }
-                        else { onPrevMonth(); true }
-                    }
-                    Key.DirectionDown -> {
-                        val next = current + 7
-                        if (next in cells.indices) { focusedIndex = next; cells[next]?.let(onSelectDate); true }
-                        else { onNextMonth(); true }
-                    }
+                    Key.DirectionRight -> { onMoveTo(focusDate.minusDays(1)); true }
+                    Key.DirectionLeft -> { onMoveTo(focusDate.plusDays(1)); true }
+                    Key.DirectionDown -> { onMoveTo(focusDate.plusDays(7)); true }
                     Key.DirectionUp -> {
-                        val next = current - 7
-                        if (next in cells.indices) { focusedIndex = next; cells[next]?.let(onSelectDate); true }
-                        // בשורה העליונה משאירים את מקש למעלה לצאת מהרשת, כדי שאפשר יהיה להגיע
-                        // לכפתורים מעל (הגדרות/היום/הוספה, טאבים, ניווט חודש) - לא "בולעים" אותו כמו שאר הכיוונים
-                        else false
+                        if (focusedIndex >= 7) { onMoveTo(focusDate.minusDays(7)); true } else false
                     }
-                    Key.DirectionCenter, Key.Enter -> {
-                        cells.getOrNull(current)?.let(onOpenDay)
-                        true
-                    }
+                    Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> { onOpenDay(focusDate); true }
                     else -> false
                 }
             }
     ) {
-        val rows = cells.chunked(7)
-        rows.forEachIndexed { rowIndex, rowCells ->
+        cells.chunked(7).forEachIndexed { rowIndex, rowCells ->
             Row(modifier = Modifier.fillMaxWidth()) {
                 rowCells.forEachIndexed { colIndex, date ->
                     val cellIndex = rowIndex * 7 + colIndex
-                    Box(modifier = Modifier.weight(1f).aspectRatio(1f).padding(3.dp)) {
+                    Box(modifier = Modifier.weight(1f).aspectRatio(1f).padding(2.dp)) {
                         if (date != null) {
                             DayCell(
                                 date = date,
@@ -388,7 +336,7 @@ private fun MonthGrid(
                                 isFocused = isGridFocused && cellIndex == focusedIndex,
                                 hasEvents = eventsByDate[date]?.isNotEmpty() == true,
                                 theme = theme,
-                                useHebrewCalendar = useHebrewCalendar
+                                kind = kind
                             )
                         }
                     }
@@ -398,47 +346,60 @@ private fun MonthGrid(
     }
 }
 
+/**
+ * תא יום. עברי - היום באותיות; לועזי - במספר; משולב - המספר הלועזי גדול
+ * ומתחתיו היום העברי באותיות קטנות, כך ששני התאריכים נקראים בבת אחת.
+ * הפוקוס הוא מילוי 14% ומסגרת בהדגשה, כמו בכל פריט ממוקד ברשת.
+ */
 @Composable
-private fun DayCell(date: LocalDate, isToday: Boolean, isSelected: Boolean, isFocused: Boolean, hasEvents: Boolean, theme: FutureTheme, useHebrewCalendar: Boolean = false) {
+private fun DayCell(date: LocalDate, isToday: Boolean, isSelected: Boolean, isFocused: Boolean, hasEvents: Boolean, theme: FutureTheme, kind: CalendarKind) {
     val shape = FutureShapes.sm
-    // ספרור עברי (ט״ו וכו') במקום מספר גרגוריאני לועזי - זה בדיוק ה"אותיות
-    // עבריות" שהמשתמש ביקש, לא רק שם חודש עברי בתת-כותרת כמו שהיה קודם.
-    val dayLabel = if (useHebrewCalendar) {
-        HebrewNumerals.toHebrew(HebrewDateFormatter.hebrewDayOfMonth(date))
-    } else {
-        date.dayOfMonth.toString()
-    }
+    val accent = theme.readableAccentColor
+    val primary = if (kind == CalendarKind.HEBREW) CalendarMonths.hebrewDayLabel(date) else date.dayOfMonth.toString()
+    val secondary = if (kind == CalendarKind.COMBINED) CalendarMonths.hebrewDayLabel(date) else null
     val bgColor by animateColorAsState(
-        if (isSelected && !isFocused) theme.textColor.copy(alpha = 0.08f) else Color.Transparent,
+        when {
+            isFocused -> accent.copy(alpha = 0.14f)
+            isSelected -> theme.textColor.copy(alpha = 0.08f)
+            else -> Color.Transparent
+        },
         FutureMotion.focusColorSpec,
         label = "dayBg"
     )
+    val ring by animateColorAsState(if (isFocused) accent else Color.Transparent, FutureMotion.focusColorSpec, label = "dayRing")
     Box(
         modifier = Modifier
             .fillMaxSize()
             .clip(shape)
             .background(bgColor)
-            .then(if (isFocused) Modifier.border(width = FutureDimens.focusBorderItem, color = theme.readableAccentColor, shape = shape) else Modifier),
+            .border(width = FutureDimens.focusBorderItem, color = ring, shape = shape),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Box(
-                modifier = Modifier.size(26.dp).clip(CircleShape).then(if (isToday) Modifier.background(theme.readableAccentColor) else Modifier),
+                modifier = Modifier
+                    .size(if (secondary != null) 22.dp else 26.dp)
+                    .clip(CircleShape)
+                    .then(if (isToday) Modifier.background(accent) else Modifier),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    dayLabel,
-                    fontSize = if (useHebrewCalendar) FutureTypography.caption else FutureTypography.body,
+                    primary,
+                    fontSize = if (kind == CalendarKind.HEBREW) FutureTypography.label else FutureTypography.body,
                     fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
-                    color = if (isToday) theme.onReadableAccentColor else theme.textColor
+                    color = if (isToday) theme.onReadableAccentColor else theme.textColor,
+                    maxLines = 1
                 )
+            }
+            if (secondary != null) {
+                Text(secondary, fontSize = FutureTypography.caption, color = theme.mutedTextColor, maxLines = 1)
             }
             Box(
                 modifier = Modifier
-                    .padding(top = 3.dp)
+                    .padding(top = 2.dp)
                     .size(width = 12.dp, height = 3.dp)
                     .clip(FutureShapes.xs)
-                    .background(if (hasEvents) theme.readableAccentColor else Color.Transparent)
+                    .background(if (hasEvents) accent else Color.Transparent)
             )
         }
     }
@@ -450,6 +411,7 @@ private fun WeekView(
     today: LocalDate,
     eventsByDate: Map<LocalDate, List<CalendarEvent>>,
     theme: FutureTheme,
+    kind: CalendarKind,
     onPrevWeek: () -> Unit,
     onNextWeek: () -> Unit,
     onOpenDay: (LocalDate) -> Unit
@@ -462,12 +424,12 @@ private fun WeekView(
     LaunchedEffect(start) { firstRowFocusRequester.requestFocus() }
 
     Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        FocusableIconButton(icon = Icons.Rounded.ChevronRight, theme = theme, onClick = onPrevWeek)
+        FocusableIconButton(icon = FutureIcons.ChevronRight, theme = theme, onClick = onPrevWeek)
         Text(
             "${start.dayOfMonth} ${start.month.getDisplayName(JavaTextStyle.SHORT, HE_LOCALE)} – ${days.last().dayOfMonth} ${days.last().month.getDisplayName(JavaTextStyle.SHORT, HE_LOCALE)}",
             modifier = Modifier.weight(1f), textAlign = TextAlign.Center, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.SemiBold, color = theme.textColor
         )
-        FocusableIconButton(icon = Icons.Rounded.ChevronLeft, theme = theme, onClick = onNextWeek)
+        FocusableIconButton(icon = FutureIcons.ChevronLeft, theme = theme, onClick = onNextWeek)
     }
 
     LazyColumn(contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -478,14 +440,15 @@ private fun WeekView(
                 events = eventsByDate[date] ?: emptyList(),
                 theme = theme,
                 onClick = { onOpenDay(date) },
-                focusRequester = if (date == days.first()) firstRowFocusRequester else null
+                focusRequester = if (date == days.first()) firstRowFocusRequester else null,
+                kind = kind
             )
         }
     }
 }
 
 @Composable
-private fun WeekDayRow(date: LocalDate, isToday: Boolean, events: List<CalendarEvent>, theme: FutureTheme, onClick: () -> Unit, focusRequester: FocusRequester? = null) {
+private fun WeekDayRow(date: LocalDate, isToday: Boolean, events: List<CalendarEvent>, theme: FutureTheme, onClick: () -> Unit, focusRequester: FocusRequester? = null, kind: CalendarKind = CalendarKind.COMBINED) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
     val shape = FutureShapes.row
@@ -508,11 +471,20 @@ private fun WeekDayRow(date: LocalDate, isToday: Boolean, events: List<CalendarE
             modifier = Modifier.size(38.dp).clip(CircleShape).then(if (isToday) Modifier.background(theme.readableAccentColor) else Modifier.background(theme.textColor.copy(alpha = 0.08f))),
             contentAlignment = Alignment.Center
         ) {
-            Text(date.dayOfMonth.toString(), fontSize = FutureTypography.body, fontWeight = FontWeight.Bold, color = if (isToday) theme.onReadableAccentColor else theme.textColor)
+            Text(
+                if (kind == CalendarKind.HEBREW) CalendarMonths.hebrewDayLabel(date) else date.dayOfMonth.toString(),
+                fontSize = FutureTypography.body, fontWeight = FontWeight.Bold, color = if (isToday) theme.onReadableAccentColor else theme.textColor
+            )
         }
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(date.dayOfWeek.getDisplayName(JavaTextStyle.FULL, HE_LOCALE), fontSize = FutureTypography.summary, fontWeight = FontWeight.SemiBold, color = theme.textColor)
+            val weekday = date.dayOfWeek.getDisplayName(JavaTextStyle.FULL, HE_LOCALE)
+            val dayTitle = when (kind) {
+                CalendarKind.COMBINED -> "$weekday · ${CalendarMonths.hebrewDayLabel(date)} ${CalendarMonths.hebrewMonthName(date)}"
+                CalendarKind.HEBREW -> "$weekday · ${date.dayOfMonth}.${date.monthValue}"
+                CalendarKind.GREGORIAN -> weekday
+            }
+            Text(dayTitle, fontSize = FutureTypography.summary, fontWeight = FontWeight.SemiBold, color = theme.textColor, maxLines = 1)
             if (events.isEmpty()) {
                 Text("אין אירועים", fontSize = FutureTypography.caption, color = theme.textColor.copy(alpha = 0.4f))
             } else {
@@ -538,7 +510,8 @@ private fun DayView(
     onDeleteEvent: (CalendarEvent) -> Unit,
     lat: Double,
     lon: Double,
-    showWeather: Boolean
+    showWeather: Boolean,
+    kind: CalendarKind = CalendarKind.COMBINED
 ) {
     var menuFor by remember { mutableStateOf<CalendarEvent?>(null) }
     // עוקב אחרי האירוע הממוקד כרגע ברשימת היום, כדי שמקש Options יוכל לפתוח
@@ -582,16 +555,21 @@ private fun DayView(
 
     Column(modifier = Modifier.fillMaxSize()) {
         Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            FocusableIconButton(icon = Icons.Rounded.ChevronRight, theme = theme, onClick = onPrevDay, focusRequester = prevDayFocusRequester)
+            FocusableIconButton(icon = FutureIcons.ChevronRight, theme = theme, onClick = onPrevDay, focusRequester = prevDayFocusRequester)
             Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(date.dayOfWeek.getDisplayName(JavaTextStyle.FULL, HE_LOCALE), fontSize = FutureTypography.label, color = theme.mutedTextColor)
-                Text(
-                    "${date.dayOfMonth} ב${date.month.getDisplayName(JavaTextStyle.FULL, HE_LOCALE)}",
-                    fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Bold, color = theme.textColor
-                )
-                if (hebrewDate.isNotBlank()) Text(hebrewDate, fontSize = FutureTypography.caption, color = theme.accentColor)
+                val gregorianDate = "${date.dayOfMonth} ב${date.month.getDisplayName(JavaTextStyle.FULL, HE_LOCALE)}"
+                // בלוח עברי התאריך העברי הוא הראשי; בלועזי בלבד - אין תאריך עברי.
+                val primary = if (kind == CalendarKind.HEBREW && hebrewDate.isNotBlank()) hebrewDate else gregorianDate
+                val secondary = when (kind) {
+                    CalendarKind.HEBREW -> gregorianDate
+                    CalendarKind.COMBINED -> hebrewDate
+                    CalendarKind.GREGORIAN -> ""
+                }
+                Text(primary, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Bold, color = theme.textColor, maxLines = 1)
+                if (secondary.isNotBlank()) Text(secondary, fontSize = FutureTypography.caption, color = theme.readableAccentColor, maxLines = 1)
             }
-            FocusableIconButton(icon = Icons.Rounded.ChevronLeft, theme = theme, onClick = onNextDay)
+            FocusableIconButton(icon = FutureIcons.ChevronLeft, theme = theme, onClick = onNextDay)
         }
 
         LazyColumn(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -685,84 +663,117 @@ private fun WeatherPanel(weather: com.future.calendar.data.DailyWeather, theme: 
     }
 }
 
+/**
+ * תצוגת השנה: ארבעה חודשים בשורה בתאים בגובה קבוע, כך ש-12 חודשים (או 13
+ * בשנה עברית מעוברת) נכנסים במסך אחד בלי גלילה ובלי שורות בגבהים שונים.
+ * קודם היו 3 בשורה, והמשפט "N ימים עם אירועים" נשבר לשתי שורות בתאים הצרים.
+ */
 @Composable
 private fun YearView(
-    year: Int,
+    title: String,
+    months: List<CalMonth>,
+    selectedDate: LocalDate,
+    today: LocalDate,
     eventsByDate: Map<LocalDate, List<CalendarEvent>>,
     theme: FutureTheme,
+    kind: CalendarKind,
     onPrevYear: () -> Unit,
     onNextYear: () -> Unit,
-    onOpenMonth: (YearMonth) -> Unit
+    onOpenMonth: (CalMonth) -> Unit
 ) {
-    val months = (1..12).map { YearMonth.of(year, it) }
-    var focusedIndex by remember(year) { mutableIntStateOf(0) }
-    var isGridFocused by remember(year) { mutableStateOf(false) }
-    // בלי פוקוס התחלתי מפורש, הרשת הזו נשארת בלי שום פריט מודגש ב-D-pad עד
-    // שהמשתמש לוחץ כיוון כלשהו - בדיוק כמו ב-MonthGrid.
-    val gridFocusRequester = remember(year) { FocusRequester() }
-    LaunchedEffect(year) { gridFocusRequester.requestFocus() }
+    val columns = 4
+    val initial = months.indexOfFirst { selectedDate in it }.coerceAtLeast(0)
+    var focusedIndex by remember(months.firstOrNull()?.first) { mutableIntStateOf(initial) }
+    var isGridFocused by remember { mutableStateOf(false) }
+    val gridFocusRequester = remember { FocusRequester() }
+    LaunchedEffect(Unit) { runCatching { gridFocusRequester.requestFocus() } }
 
     Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        FocusableIconButton(icon = Icons.Rounded.ChevronRight, theme = theme, onClick = onPrevYear)
-        Text(year.toString(), modifier = Modifier.weight(1f), textAlign = TextAlign.Center, fontSize = FutureTypography.title, fontWeight = FontWeight.SemiBold, color = theme.textColor)
-        FocusableIconButton(icon = Icons.Rounded.ChevronLeft, theme = theme, onClick = onNextYear)
+        FocusableIconButton(icon = FutureIcons.ChevronRight, theme = theme, onClick = onPrevYear)
+        Text(title, modifier = Modifier.weight(1f), textAlign = TextAlign.Center, fontSize = FutureTypography.title, fontWeight = FontWeight.SemiBold, color = theme.textColor)
+        FocusableIconButton(icon = FutureIcons.ChevronLeft, theme = theme, onClick = onNextYear)
     }
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(12.dp)
+            .padding(horizontal = 12.dp, vertical = 6.dp)
             .focusRequester(gridFocusRequester)
             .onFocusChanged { isGridFocused = it.isFocused }
-            .focusable().bringIntoViewOnFocus()
+            .focusable()
             .onKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
-                val current = focusedIndex
+                val current = focusedIndex.coerceIn(0, months.lastIndex)
+                fun go(n: Int): Boolean = if (n in months.indices) { focusedIndex = n; true } else false
                 when (event.key) {
-                    Key.DirectionRight -> { val n = current - 1; if (n in months.indices) { focusedIndex = n; true } else false }
-                    Key.DirectionLeft -> { val n = current + 1; if (n in months.indices) { focusedIndex = n; true } else false }
-                    Key.DirectionDown -> { val n = current + 3; if (n in months.indices) { focusedIndex = n; true } else false }
-                    Key.DirectionUp -> { val n = current - 3; if (n in months.indices) { focusedIndex = n; true } else false }
-                    Key.DirectionCenter, Key.Enter -> { onOpenMonth(months[current]); true }
+                    // RTL: החודש הראשון מימין.
+                    Key.DirectionRight -> go(current - 1) || true
+                    Key.DirectionLeft -> go(current + 1) || true
+                    Key.DirectionDown -> go(current + columns) || true
+                    // מהשורה העליונה - החוצה אל כפתורי השנה.
+                    Key.DirectionUp -> go(current - columns)
+                    Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> { onOpenMonth(months[current]); true }
                     else -> false
                 }
-            }
+            },
+        verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        months.chunked(3).forEachIndexed { rowIndex, rowMonths ->
-            Row(modifier = Modifier.fillMaxWidth()) {
-                rowMonths.forEachIndexed { colIndex, ym ->
-                    val idx = rowIndex * 3 + colIndex
-                    val count = eventsByDate.entries.count { it.key.year == ym.year && it.key.monthValue == ym.monthValue && it.value.isNotEmpty() }
+        months.chunked(columns).forEachIndexed { rowIndex, rowMonths ->
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                rowMonths.forEachIndexed { colIndex, month ->
+                    val idx = rowIndex * columns + colIndex
+                    val eventDays = eventsByDate.count { (date, list) -> list.isNotEmpty() && date in month }
                     MonthMiniCard(
-                        month = ym,
-                        eventDayCount = count,
+                        name = if (kind == CalendarKind.HEBREW) CalendarMonths.hebrewMonthName(month.first)
+                        else month.first.month.getDisplayName(JavaTextStyle.SHORT, HE_LOCALE),
+                        // במשולב - גם החודש העברי שבו החודש הלועזי מתחיל.
+                        secondary = if (kind == CalendarKind.COMBINED) CalendarMonths.hebrewMonthName(month.first) else null,
+                        isCurrent = today in month,
+                        eventDays = eventDays,
                         isFocused = isGridFocused && idx == focusedIndex,
                         theme = theme,
-                        modifier = Modifier.weight(1f).padding(4.dp),
-                        onClick = { onOpenMonth(ym) }
+                        modifier = Modifier.weight(1f)
                     )
                 }
+                repeat(columns - rowMonths.size) { Spacer(modifier = Modifier.weight(1f)) }
             }
         }
     }
 }
 
 @Composable
-private fun MonthMiniCard(month: YearMonth, eventDayCount: Int, isFocused: Boolean, theme: FutureTheme, modifier: Modifier, onClick: () -> Unit) {
+private fun MonthMiniCard(name: String, secondary: String?, isCurrent: Boolean, eventDays: Int, isFocused: Boolean, theme: FutureTheme, modifier: Modifier) {
     val shape = FutureShapes.sm
+    val accent = theme.readableAccentColor
+    val bg by animateColorAsState(if (isFocused) accent.copy(alpha = 0.14f) else theme.idleChipColor, FutureMotion.focusColorSpec, label = "monthBg")
+    val ring by animateColorAsState(if (isFocused) accent else Color.Transparent, FutureMotion.focusColorSpec, label = "monthRing")
     Column(
         modifier = modifier
+            .height(58.dp)
             .clip(shape)
-            .background(theme.textColor.copy(alpha = 0.06f))
-            .then(if (isFocused) Modifier.border(width = FutureDimens.focusBorderItem, color = theme.readableAccentColor, shape = shape) else Modifier)
-            .clickable(onClick = onClick)
-            .padding(vertical = 14.dp, horizontal = 6.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .background(bg)
+            .border(width = FutureDimens.focusBorderControl, color = ring, shape = shape)
+            .padding(horizontal = 4.dp, vertical = 6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
-        Text(month.month.getDisplayName(JavaTextStyle.SHORT, HE_LOCALE), fontSize = FutureTypography.summary, fontWeight = FontWeight.SemiBold, color = theme.textColor)
-        if (eventDayCount > 0) {
-            Spacer(modifier = Modifier.height(4.dp))
-            Text("$eventDayCount ימים עם אירועים", fontSize = FutureTypography.caption, color = theme.mutedTextColor)
+        Text(
+            name,
+            fontSize = FutureTypography.summary,
+            fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.SemiBold,
+            color = if (isCurrent) accent else theme.textColor,
+            maxLines = 1
+        )
+        if (secondary != null) {
+            Text(secondary, fontSize = FutureTypography.caption, color = theme.mutedTextColor, maxLines = 1)
+        }
+        // נקודה + מספר הימים עם אירועים, במקום משפט שלא נכנס בתא.
+        if (eventDays > 0) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp)) {
+                Box(modifier = Modifier.size(5.dp).clip(CircleShape).background(accent))
+                Spacer(modifier = Modifier.width(3.dp))
+                Text("$eventDays", fontSize = FutureTypography.caption, color = theme.mutedTextColor)
+            }
         }
     }
 }
@@ -813,8 +824,8 @@ private fun EventRow(event: CalendarEvent, theme: FutureTheme, onClick: () -> Un
 @Composable
 private fun EventOptionsMenu(event: CalendarEvent, theme: FutureTheme, onDismiss: () -> Unit, onEdit: () -> Unit, onDelete: () -> Unit) {
     FutureOptionsMenu(theme = theme, onDismissRequest = onDismiss, header = event.title) {
-        FutureMenuRow("ערוך אירוע", Icons.Rounded.Edit, theme, onEdit)
-        FutureMenuRow("מחק אירוע", Icons.Rounded.Delete, theme, onDelete, destructive = true)
+        FutureMenuRow("ערוך אירוע", FutureIcons.Edit, theme, onEdit)
+        FutureMenuRow("מחק אירוע", FutureIcons.Delete, theme, onDelete, destructive = true)
     }
 }
 
@@ -980,141 +991,135 @@ fun FocusableIconButton(icon: androidx.compose.ui.graphics.vector.ImageVector, t
     com.future.sharednav.components.TopBarIconButton(icon, "", theme.textColor, theme.accentColor, onClick, focusRequester)
 }
 
+/**
+ * הגדרות לוח השנה: סוג הלוח, תצוגה, ומיקום כתת-קטגוריה (מסך משלו) - קודם
+ * רשימת עשר הערים ישבה באמצע מסך ההגדרות ודחפה את שאר ההגדרות מתחת לקצה.
+ * אין כפתור חזור: מקש BACK הפיזי חוזר (MainActivity).
+ */
 @Composable
 fun CalendarSettingsScreen(
+    kind: CalendarKind,
+    locationSummary: String,
+    showWeather: Boolean,
+    theme: FutureTheme,
+    onSelectKind: (CalendarKind) -> Unit,
+    onOpenLocation: () -> Unit,
+    onToggleShowWeather: () -> Unit,
+) {
+    val first = remember { FocusRequester() }
+    LaunchedEffect(Unit) { runCatching { first.requestFocus() } }
+
+    com.future.sharednav.components.ScreenScaffold(
+        backgroundColor = theme.backgroundColor,
+        title = "הגדרות לוח שנה",
+        textColor = theme.textColor,
+        accentColor = theme.accentColor,
+    ) {
+        Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 24.dp)) {
+            FutureSectionHeader("סוג לוח", theme)
+            FutureCard(theme = theme) {
+                CalendarKind.entries.forEachIndexed { index, option ->
+                    if (index > 0) FutureDivider(theme = theme)
+                    FutureSettingItem(
+                        title = "לוח ${option.label}",
+                        summary = when (option) {
+                            CalendarKind.HEBREW -> "חודשים עבריים, ימים באותיות"
+                            CalendarKind.GREGORIAN -> "חודשים לועזיים"
+                            CalendarKind.COMBINED -> "לועזי, ובכל יום גם התאריך העברי"
+                        },
+                        icon = if (option == CalendarKind.HEBREW) FutureIcons.Translate else FutureIcons.CalendarToday,
+                        theme = theme,
+                        showChevron = false,
+                        focusRequester = if (index == 0) first else null,
+                        onClick = { onSelectKind(option) },
+                        trailing = {
+                            if (option == kind) {
+                                Icon(FutureIcons.Check, contentDescription = "נבחר", tint = theme.readableAccentColor, modifier = Modifier.size(FutureDimens.iconSettingRow))
+                            }
+                        },
+                    )
+                }
+            }
+
+            FutureSectionHeader("כללי", theme)
+            FutureCard(theme = theme) {
+                FutureSettingItem(
+                    title = "מיקום",
+                    summary = locationSummary,
+                    icon = Icons.Rounded.LocationOn,
+                    theme = theme,
+                    onClick = onOpenLocation,
+                )
+                FutureDivider(theme = theme)
+                FutureSettingItem(
+                    title = "תחזית מזג אוויר",
+                    summary = if (showWeather) "מוצגת בתצוגת היום" else "כבויה",
+                    icon = Icons.Rounded.WbTwilight,
+                    theme = theme,
+                    showChevron = false,
+                    onClick = onToggleShowWeather,
+                    trailing = { FutureSwitch(checked = showWeather, theme = theme) },
+                )
+            }
+        }
+    }
+}
+
+/** תת-קטגוריית המיקום: GPS, או עיר קבועה לזמני היום ולתחזית. */
+@Composable
+fun CalendarLocationScreen(
     useGps: Boolean,
     hasLocationPermission: Boolean,
     currentRegion: com.future.calendar.data.Region,
-    showWeather: Boolean,
-    useHebrewCalendar: Boolean,
     theme: FutureTheme,
-    onBack: () -> Unit,
     onToggleGps: () -> Unit,
     onSelectRegion: (com.future.calendar.data.Region) -> Unit,
-    onToggleShowWeather: () -> Unit,
-    onToggleHebrewCalendar: () -> Unit
 ) {
-    // בלי פוקוס התחלתי מפורש, מסך ההגדרות נשאר בלי שום פריט מודגש ב-D-pad -
-    // בשונה מ-MonthGrid שכן קובע פוקוס אוטומטי.
-    val backFocusRequester = remember { FocusRequester() }
-    LaunchedEffect(Unit) { backFocusRequester.requestFocus() }
+    val first = remember { FocusRequester() }
+    LaunchedEffect(Unit) { runCatching { first.requestFocus() } }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-        Column(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
-            Row(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                // Icons.AutoMirrored.Rounded.ArrowBack (לא ArrowForward!) - תחת
-                // LayoutDirection.Rtl הכפוי, AutoMirrored הופך אותו לחץ ימינה כראוי לכפתור "חזור".
-                FocusableIconButton(icon = Icons.AutoMirrored.Rounded.ArrowBack, theme = theme, onClick = onBack, focusRequester = backFocusRequester)
-                Text("הגדרות לוח שנה", modifier = Modifier.padding(start = 8.dp), fontSize = FutureTypography.title, fontWeight = FontWeight.Bold, color = theme.textColor)
+    com.future.sharednav.components.ScreenScaffold(
+        backgroundColor = theme.backgroundColor,
+        title = "מיקום",
+        textColor = theme.textColor,
+        accentColor = theme.accentColor,
+    ) {
+        Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 24.dp)) {
+            FutureCard(theme = theme) {
+                FutureSettingItem(
+                    title = "מיקום GPS",
+                    summary = when {
+                        useGps && !hasLocationPermission -> "צריך לאשר הרשאת מיקום"
+                        useGps -> "מיקום המכשיר בפועל"
+                        else -> "כבוי"
+                    },
+                    icon = Icons.Rounded.MyLocation,
+                    theme = theme,
+                    showChevron = false,
+                    focusRequester = first,
+                    onClick = onToggleGps,
+                    trailing = { FutureSwitch(checked = useGps, theme = theme) },
+                )
             }
-
-            LazyColumn(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                item { SettingsSectionLabel("מיקום לזמני היום ותחזית", theme) }
-                item {
-                    SettingsToggleRow(
-                        icon = Icons.Rounded.MyLocation,
-                        label = "שימוש במיקום GPS",
-                        sublabel = if (useGps && !hasLocationPermission) "צריך לאשר הרשאת מיקום" else "מיקום המכשיר בפועל, במקום עיר קבועה",
-                        checked = useGps,
-                        theme = theme,
-                        onToggle = onToggleGps
-                    )
-                }
-                if (!useGps) {
-                    items(com.future.calendar.data.KNOWN_REGIONS) { region ->
-                        RegionRow(region = region, isSelected = region.id == currentRegion.id, theme = theme, onClick = { onSelectRegion(region) })
+            if (!useGps) {
+                FutureSectionHeader("עיר", theme)
+                FutureCard(theme = theme) {
+                    com.future.calendar.data.KNOWN_REGIONS.forEachIndexed { index, region ->
+                        if (index > 0) FutureDivider(theme = theme)
+                        FutureSettingItem(
+                            title = region.displayName,
+                            theme = theme,
+                            showChevron = false,
+                            onClick = { onSelectRegion(region) },
+                            trailing = {
+                                if (region.id == currentRegion.id) {
+                                    Icon(FutureIcons.Check, contentDescription = "נבחר", tint = theme.readableAccentColor, modifier = Modifier.size(FutureDimens.iconSettingRow))
+                                }
+                            },
+                        )
                     }
                 }
-
-                item { Spacer(modifier = Modifier.height(12.dp)) }
-                item { SettingsSectionLabel("תצוגה", theme) }
-                item {
-                    SettingsToggleRow(
-                        icon = Icons.Rounded.WbTwilight,
-                        label = "הצג תחזית מזג אוויר",
-                        sublabel = "במסך תצוגת היום",
-                        checked = showWeather,
-                        theme = theme,
-                        onToggle = onToggleShowWeather
-                    )
-                }
-                item {
-                    SettingsToggleRow(
-                        icon = Icons.Rounded.Translate,
-                        label = "לוח עברי באותיות עבריות",
-                        sublabel = "מספרי הימים בלוח (למשל ט״ו) לפי החודש העברי, במקום תאריך לועזי",
-                        checked = useHebrewCalendar,
-                        theme = theme,
-                        onToggle = onToggleHebrewCalendar
-                    )
-                }
             }
         }
-    }
-}
-
-@Composable
-private fun SettingsSectionLabel(text: String, theme: FutureTheme) {
-    Text(text, fontSize = FutureTypography.label, fontWeight = FontWeight.SemiBold, color = theme.mutedTextColor, modifier = Modifier.padding(vertical = 6.dp, horizontal = 4.dp))
-}
-
-@Composable
-private fun SettingsToggleRow(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, sublabel: String, checked: Boolean, theme: FutureTheme, onToggle: () -> Unit) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val shape = FutureShapes.row
-    val bgColor by animateColorAsState(if (isFocused) theme.readableAccentColor.copy(alpha = 0.14f) else theme.idleChipColor, FutureMotion.focusColorSpec, label = "settingsRowBg")
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .focusMotion(interactionSource)
-            .clip(shape)
-            .background(bgColor)
-            .then(if (isFocused) Modifier.border(width = FutureDimens.focusBorderItem, color = theme.readableAccentColor, shape = shape) else Modifier)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onToggle)
-            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
-            .padding(14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(icon, contentDescription = null, tint = theme.textColor.copy(alpha = 0.7f), modifier = Modifier.size(20.dp))
-        Spacer(modifier = Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(label, fontSize = FutureTypography.body, color = theme.textColor)
-            Text(sublabel, fontSize = FutureTypography.caption, color = theme.mutedTextColor)
-        }
-        FutureSwitch(checked = checked, theme = theme)
-    }
-}
-
-@Composable
-private fun RegionRow(region: com.future.calendar.data.Region, isSelected: Boolean, theme: FutureTheme, onClick: () -> Unit) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val bgColor by animateColorAsState(
-        when {
-            isFocused -> theme.readableAccentColor.copy(alpha = 0.14f)
-            isSelected -> theme.readableAccentColor.copy(alpha = 0.15f)
-            else -> theme.textColor.copy(alpha = 0.06f)
-        },
-        FutureMotion.focusColorSpec,
-        label = "regionRowBg"
-    )
-    val shape = FutureShapes.row
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .focusMotion(interactionSource)
-            .clip(shape)
-            .background(bgColor)
-            .then(if (isFocused) Modifier.border(width = FutureDimens.focusBorderItem, color = theme.readableAccentColor, shape = shape) else Modifier)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
-            .padding(horizontal = 14.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(Icons.Rounded.LocationOn, contentDescription = null, tint = if (isSelected) theme.readableAccentColor else theme.mutedTextColor, modifier = Modifier.size(18.dp))
-        Spacer(modifier = Modifier.width(10.dp))
-        Text(region.displayName, fontSize = FutureTypography.body, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal, color = theme.textColor)
     }
 }
