@@ -53,6 +53,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -109,12 +110,27 @@ fun HomeScreen(
     // container גדול שממוקד ישירות לא זהה לגלילה חלקה). כאן, בדיוק כמו
     // ב-ProgressScreen, DirectionUp/Down מטפלים בגלילה מפורשת עם
     // animateScrollBy, וספרות עדיין מפעילות קיצורי-דרך - הכל על אותו רכיב.
+    // קודם ה-LazyColumn כולו היה יעד הפוקוס ובלע את חיצי מעלה/מטה לגלילה -
+    // כך שהכרטיס "האימון הבא" ושורות התפריט לא קיבלו פוקוס אף פעם. עכשיו
+    // הפוקוס עובר בין הרכיבים עצמם (הרשימה גוללת אליהם), הספרות 1-3 עדיין
+    // קיצורי דרך (עולות מהרכיב הממוקד אל ה-Column), והכרטיסים העליונים -
+    // מידע בלבד - נחשפים כשחוזרים לרכיב הראשון.
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     val focusRequester = remember { FocusRequester() }
-    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+    LaunchedEffect(Unit) { runCatching { focusRequester.requestFocus() } }
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .onKeyEvent { event ->
+                if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
+                val digit = digitForKey(event.key) ?: return@onKeyEvent false
+                val match = items.firstOrNull { it.digit == digit } ?: return@onKeyEvent false
+                match.onClick()
+                true
+            }
+    ) {
         Text(
             greeting(),
             color = theme.textColor,
@@ -133,22 +149,7 @@ fun HomeScreen(
             state = listState,
             modifier = Modifier
                 .weight(1f)
-                .fillMaxWidth()
-                .focusRequester(focusRequester)
-                .focusable()
-                .onKeyEvent { event ->
-                    if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
-                    when (event.key) {
-                        Key.DirectionDown -> { scope.launch { listState.animateScrollBy(220f) }; true }
-                        Key.DirectionUp -> { scope.launch { listState.animateScrollBy(-220f) }; true }
-                        else -> {
-                            val digit = digitForKey(event.key) ?: return@onKeyEvent false
-                            val match = items.firstOrNull { it.digit == digit } ?: return@onKeyEvent false
-                            match.onClick()
-                            true
-                        }
-                    }
-                },
+                .fillMaxWidth(),
             // ריפוד עליון קטן חשוב פונקציונלית ולא רק ויזואלית: בלעדיו, תוכן
             // ה-item הראשון לא מצטייר כלל בקומפוזיציה הראשונה של המסך (נראה
             // כתקלת תזמון עם עיבוד ה-WindowInsets תחת enableEdgeToEdge - כל
@@ -233,7 +234,13 @@ fun HomeScreen(
                 com.future.fitness.ui.components.FocusableItem(
                     onClick = onOpenNextWorkoutDetail,
                     theme = theme,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    focusRequester = focusRequester,
+                    cornerRadius = FutureShapes.radiusXl,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        // הרכיב הממוקד הראשון - כשהוא מקבל פוקוס גם כרטיסי המידע שמעליו נראים.
+                        .onFocusChanged { if (it.isFocused) scope.launch { listState.animateScrollToItem(0) } },
                 ) {
                     Column(
                         modifier = Modifier

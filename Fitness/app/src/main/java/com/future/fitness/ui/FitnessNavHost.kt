@@ -94,6 +94,7 @@ fun FitnessNavHost(store: WorkoutStore, heartRateMonitor: HeartRateMonitor, them
     // (בית/אימונים/התקדמות) גוזל את הפוקוס בחזרה מיד עם LaunchedEffect(Unit)
     // הפנימי שלו.
     val rootFocusRequester = remember { FocusRequester() }
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
     LaunchedEffect(current) { rootFocusRequester.requestFocus() }
 
     var statsVersion by remember { mutableIntStateOf(0) }
@@ -116,11 +117,14 @@ fun FitnessNavHost(store: WorkoutStore, heartRateMonitor: HeartRateMonitor, them
             .onKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
                 if (currentTabIndex < 0) return@onKeyEvent false
-                val nextIndex = when (event.key) {
-                    Key.DirectionRight -> currentTabIndex - 1
-                    Key.DirectionLeft -> currentTabIndex + 1
+                val direction = when (event.key) {
+                    Key.DirectionRight -> androidx.compose.ui.focus.FocusDirection.Right
+                    Key.DirectionLeft -> androidx.compose.ui.focus.FocusDirection.Left
                     else -> return@onKeyEvent false
                 }
+                // קודם בין רכיבים באותה שורה (כפתורים, אריחים); רק כשאין לאן - טאב.
+                if (focusManager.moveFocus(direction)) return@onKeyEvent true
+                val nextIndex = if (event.key == Key.DirectionRight) currentTabIndex - 1 else currentTabIndex + 1
                 if (nextIndex !in TAB_ORDER.indices) return@onKeyEvent false
                 switchTab(TAB_ORDER[nextIndex])
                 true

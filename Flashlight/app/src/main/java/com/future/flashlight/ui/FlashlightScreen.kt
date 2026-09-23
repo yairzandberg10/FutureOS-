@@ -1,4 +1,5 @@
 package com.future.flashlight.ui
+import com.future.flashlight.data.TorchService
 import com.future.sharednav.components.FutureButton
 import com.future.sharednav.theme.FutureMotion
 import com.future.sharednav.theme.FutureDimens
@@ -51,43 +52,29 @@ fun FlashlightScreen(theme: FutureTheme) {
     val context = LocalContext.current
     val controller = remember { FlashlightController(context) }
     var isOn by remember { mutableStateOf(false) }
-    var hasPermission by remember {
-        mutableStateOf(context.checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
-    }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
-    val permissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
-        androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
-    ) { granted -> hasPermission = granted }
-
-    // אם המשתמש יוצא מהאפליקציה (מקש הבית וכו') כשהפנס דלוק, מכבים אותו -
-    // אחרת הוא נשאר דלוק לצמיתות בלי שום דרך לכבות אותו חזרה מהאפליקציה עצמה.
+    // אין כאן בקשת הרשאה: setTorchMode לא צריך הרשאת CAMERA, והמניפסט כבר
+    // לא מבקש אותה - כך שהבקשה הקודמת תמיד נדחתה והפנס לא הוצג בכלל.
+    // המצב נקרא מהמערכת (TorchCallback), כולל הדלקה/כיבוי ממרכז הבקרה, וכשהמצלמה
+    // תופסת את הפנס.
     DisposableEffect(Unit) {
-        onDispose { if (isOn) controller.setTorch(false) }
+        val stop = controller.observe { on, available ->
+            isOn = on
+            errorMessage = if (!available) "הפנס לא זמין כשהמצלמה פתוחה" else null
+        }
+        onDispose { stop() }
     }
 
     val focusRequester = remember { FocusRequester() }
-    LaunchedEffect(hasPermission) { focusRequester.requestFocus() }
+    LaunchedEffect(Unit) { runCatching { focusRequester.requestFocus() } }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize()) {
                 ScreenTopBar(title = "פנס", textColor = theme.textColor, accentColor = theme.accentColor, onBack = null)
 
-                if (!hasPermission) {
-                    Box(modifier = Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                "כדי להשתמש בפנס צריך לאשר הרשאת מצלמה",
-                                color = theme.textColor.copy(alpha = 0.7f),
-                                fontSize = FutureTypography.bodyLarge,
-                                textAlign = TextAlign.Center,
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            FlashlightPermissionButton(theme = theme, focusRequester = focusRequester, onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) })
-                        }
-                    }
-                } else if (!controller.hasFlash()) {
+                if (!controller.hasFlash()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text("לא נמצא פנס במכשיר הזה", color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.body)
                     }
@@ -95,13 +82,9 @@ fun FlashlightScreen(theme: FutureTheme) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             FlashlightToggle(isOn = isOn, theme = theme, focusRequester = focusRequester, onToggle = {
-                                val target = !isOn
-                                if (controller.setTorch(target)) {
-                                    isOn = target
-                                    errorMessage = null
-                                } else {
-                                    errorMessage = "לא ניתן להפעיל את הפנס"
-                                }
+                                // הדלקה דרך שירות קדמי - כך הפנס נשאר דלוק גם כשהמסך
+                                // נכבה/ננעל והמערכת מפנה את האפליקציה מהזיכרון.
+                                if (isOn) TorchService.turnOff(context) else TorchService.turnOn(context)
                             })
                             Spacer(modifier = Modifier.height(20.dp))
                             Text(if (isOn) "דלוק" else "כבוי", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.body)
@@ -152,7 +135,4 @@ private fun FlashlightToggle(isOn: Boolean, theme: FutureTheme, onToggle: () -> 
     }
 }
 
-@Composable
-private fun FlashlightPermissionButton(theme: FutureTheme, onClick: () -> Unit, focusRequester: FocusRequester? = null) {
-    FutureButton("אשר הרשאה", theme, onClick, focusRequester = focusRequester)
-}
+

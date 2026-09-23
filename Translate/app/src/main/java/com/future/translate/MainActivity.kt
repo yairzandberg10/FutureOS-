@@ -92,7 +92,7 @@ class MainActivity : ComponentActivity() {
             putExtra(Intent.EXTRA_TEXT, text)
         }
         try {
-            startActivity(Intent.createChooser(send, "שתף תרגום"))
+            com.future.sharednav.share.FutureShare.open(this, send, "שתף תרגום")
         } catch (e: Exception) {
             // אין אפליקציה שמקבלת טקסט - אין לאן לשתף.
         }

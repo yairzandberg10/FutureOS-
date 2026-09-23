@@ -7,6 +7,7 @@
     <queries>
         <package android:name="com.future.futurelauncher" />
         <package android:name="com.future.futureui" />
+        <package android:name="com.future.keyboard" />
         <package android:name="com.future.dialer" />
         <package android:name="com.future.messages" />
         <package android:name="com.future.contact" />

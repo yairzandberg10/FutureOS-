@@ -88,10 +88,9 @@ class KeyboardService : InputMethodService() {
         // מעבר לתקרה תמיד תהיה נגישה בלחיצת חץ.
         private const val MAX_VISIBLE_CANDIDATES = 12
 
-        // גובה (ב-dp) של שש עמודות הוויזואלייזר במצב התמלול הקולי, במנוחה.
-        // בזמן האזנה הן מתכווצות/מתרחבות סביב הערכים האלה לפי עוצמת הקול
-        // בפועל (ר' updateVoiceLevel).
-        private val VOICE_BAR_HEIGHTS = intArrayOf(9, 17, 26, 20, 13, 22)
+        // אם אחרי שחרור 0 התמלול לא החזיר תוצאה בזמן הזה - סוגרים בכל זאת,
+        // כדי שהפאנל לא יישאר תקוע במצב "מתמלל".
+        private const val VOICE_RESULT_TIMEOUT_MS = 9_000L
 
         private const val ASSISTANT_PACKAGE = "com.future.assistant"
     }
@@ -147,6 +146,42 @@ class KeyboardService : InputMethodService() {
     // FutureUI (ר' KeyboardSettingsProvider), נכנס לתוקף בכניסה הבאה לשדה קלט.
     private var predictiveEnabled = true
 
+    // השפות שבהן מקלידים (# ותפריט השפה עוברים רק עליהן) והשפות שבהן יש ניבוי -
+    // נשלטות מההגדרות וממרכז הבקרה (ר' KeyboardLanguages / KeyboardSettingsProvider).
+    private var enabledLanguages: Set<T9Engine.Language> = emptySet()
+    private var predictionLanguages: Set<T9Engine.Language> = emptySet()
+
+    private fun loadLanguageSettings() {
+        enabledLanguages = KeyboardLanguages.enabled(prefs)
+        predictionLanguages = KeyboardLanguages.predicted(prefs)
+    }
+
+    /** המצבים ש-# עובר עליהם: רק שפות פעילות, ועברית עם ניבוי רק אם הוא מופעל לה. */
+    private fun activeCycle(): List<InputMode> = InputMode.CYCLE_ORDER.filter { mode ->
+        val lang = engineLanguageFor(mode) ?: return@filter true
+        when {
+            lang !in enabledLanguages -> false
+            mode == InputMode.HEBREW_PREDICTIVE -> lang in predictionLanguages
+            else -> true
+        }
+    }
+
+    private fun isPredictingIn(mode: InputMode): Boolean {
+        val lang = engineLanguageFor(mode) ?: return false
+        return predictiveEnabled && mode != InputMode.HEBREW_MULTITAP && lang in predictionLanguages
+    }
+
+    /** אם השפה השמורה כובתה בהגדרות - עוברים לשפה הפעילה הראשונה. */
+    private fun ensureModeIsActive() {
+        val cycle = activeCycle()
+        val mode = currentMode()
+        if (mode !in cycle) {
+            val next = cycle.firstOrNull() ?: InputMode.NUMERIC
+            prefs.edit().putString("input_mode", next.name).apply()
+            engineLanguageFor(next)?.let { engine = buildEngine(it); loadFrequencies(); loadCustomWords() }
+        }
+    }
+
     // תפריט סימני הפיסוק (מקש * קצר): פתוח/סגור והאינדקס הנבחר כרגע בתוכו.
     private var isPunctuationMenuOpen = false
     private var punctuationIndex = 0
@@ -180,7 +215,8 @@ class KeyboardService : InputMethodService() {
     private lateinit var micView: ImageView
     private lateinit var voiceTitle: TextView
     private lateinit var voiceSubtitle: TextView
-    private lateinit var voiceBars: List<View>
+    private lateinit var voiceWave: VoiceWaveView
+    private var micPulse: android.animation.Animator? = null
     private lateinit var legendBar: LinearLayout
     private lateinit var legendRow: LinearLayout
 
@@ -209,6 +245,22 @@ class KeyboardService : InputMethodService() {
     private var voiceInputArmed = false
     private var speechRecognizer: SpeechRecognizer? = null
     private var isListening = false
+
+    // לחיצה קצרה על 0 (רווח / הספרה 0) מבוצעת בשחרור ולא בלחיצה - אחרת כל
+    // החזקה לתמלול הייתה מכניסה קודם רווח מיותר לפני הטקסט המתומלל.
+    private var zeroPending = false
+
+    // אחרי שחרור 0: ההקלטה נעצרה והמנוע מסיים לתמלל. הפאנל מראה "מתמלל…"
+    // ונסגר מעצמו כשמגיעה תוצאה, שגיאה, או אחרי VOICE_RESULT_TIMEOUT_MS.
+    private var isVoiceProcessing = false
+    private var voicePartial: String? = null
+    private val voiceHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val voiceTimeout = Runnable {
+        if (isListening) {
+            stopListening()
+            showPanelMessage("התמלול לא הסתיים - נסו שוב")
+        }
+    }
 
     // מקש Options הפיזי נחסם ברמת המערכת (StatusBarAccessibilityService של
     // FutureUI צורך אותו) ולעולם לא מגיע ל-onKeyDown כאן - בדיוק כמו בכל שאר
@@ -244,6 +296,7 @@ class KeyboardService : InputMethodService() {
         loadFrequencies()
         loadCustomWords()
         predictiveEnabled = prefs.getBoolean("predictive_enabled", true)
+        loadLanguageSettings()
         // בפעם הראשונה בלבד, פתיחת HebrewDictionaryDb מעתיקה קובץ של מאות MB
         // מה-assets לאחסון הפנימי - רצה ברקע כדי לא לחסום את onCreate. עד
         // שהיא מסתיימת, buildEngine נופל חזרה למילון הפנימי הקטן.
@@ -397,13 +450,18 @@ class KeyboardService : InputMethodService() {
      *  כיבוי הניבוי הגלובלי ממרכז הבקרה (ר' predictiveEnabled). */
     private fun modeTag(mode: InputMode): String = when {
         mode == InputMode.NUMERIC -> "ספרות"
-        mode == InputMode.HEBREW_MULTITAP || !predictiveEnabled -> "אות-אות"
+        !isPredictingIn(mode) -> "אות-אות"
         else -> "ניבוי"
     }
 
     /** היקף המילון של השפה, כפי שמוצג בתפריט בחירת השפה. עברית ואנגלית נשענות
      *  על קורפוס אמיתי; לשאר השפות יש מילון התחלה של כמה מאות מילים (ר' T9Engine). */
     private fun dictionaryLabel(mode: InputMode): String = when (engineLanguageFor(mode)) {
+        null -> ""
+        else -> if (!isPredictingIn(mode)) "בלי ניבוי" else dictionaryScope(mode)
+    }
+
+    private fun dictionaryScope(mode: InputMode): String = when (engineLanguageFor(mode)) {
         null -> ""
         T9Engine.Language.HEBREW, T9Engine.Language.ENGLISH -> "מילון מלא"
         else -> "מילון בסיסי"
@@ -418,8 +476,8 @@ class KeyboardService : InputMethodService() {
 
     /** מעביר למצב הבא במחזור הקבוע (ראו [InputMode.CYCLE_ORDER]) - מקש # קצר. */
     private fun advanceMode() {
-        val order = InputMode.CYCLE_ORDER
-        val next = order[(order.indexOf(currentMode()) + 1) % order.size]
+        val order = activeCycle()
+        val next = order[(order.indexOf(currentMode()) + 1).mod(order.size)]
         prefs.edit().putString("input_mode", next.name).apply()
         engineLanguageFor(next)?.let { engine = buildEngine(it); loadFrequencies(); loadCustomWords() }
         resetComposing()
@@ -642,21 +700,7 @@ class KeyboardService : InputMethodService() {
                     .apply { topMargin = dp(3) },
             )
         }
-        val waveform = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.BOTTOM
-        }
-        voiceBars = VOICE_BAR_HEIGHTS.mapIndexed { index, height ->
-            View(this).apply {
-                background = GradientDrawable().apply {
-                    cornerRadius = dp(2).toFloat()
-                    setColor(selectionColor)
-                }
-                val params = LinearLayout.LayoutParams(dp(4), dp(height))
-                if (index > 0) params.marginStart = dp(3)
-                waveform.addView(this, params)
-            }
-        }
+        voiceWave = VoiceWaveView(this).apply { color = selectionColor }
         voiceRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -670,7 +714,7 @@ class KeyboardService : InputMethodService() {
                 LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
                     .apply { marginStart = dp(10); marginEnd = dp(10) },
             )
-            addView(waveform, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(28)))
+            addView(voiceWave, LinearLayout.LayoutParams(dp(72), dp(32)))
         }
 
         // ---- מקרא המקשים -------------------------------------------------------
@@ -751,6 +795,8 @@ class KeyboardService : InputMethodService() {
         isLanguageMenuOpen = false
         panelMessage = null
         predictiveEnabled = prefs.getBoolean("predictive_enabled", true)
+        loadLanguageSettings()
+        ensureModeIsActive()
         val inputClass = attribute?.inputType?.and(InputType.TYPE_MASK_CLASS)
         isPredictiveField = inputClass == InputType.TYPE_CLASS_TEXT
         renderPanel()
@@ -887,8 +933,31 @@ class KeyboardService : InputMethodService() {
         renderPanel()
     }
 
+    private var renderedPanelState: Int = -1
+
     private fun renderPanel() {
         if (!::panelRoot.isInitialized) return
+        val state = when {
+            isListening -> 3
+            isLanguageMenuOpen -> 2
+            isPunctuationMenuOpen -> 1
+            else -> 0
+        }
+        // רק במעבר בין מצבים (לא בכל הקשה): הופעה רכה וקצרה של החלקים החדשים.
+        if (renderedPanelState != -1 && state != renderedPanelState && panelRoot.isAttachedToWindow) {
+            android.transition.TransitionManager.beginDelayedTransition(
+                panelRoot,
+                android.transition.AutoTransition().setDuration(140),
+            )
+        }
+        renderedPanelState = state
+        if (state != 3) {
+            voiceWave.active = false
+            micPulse?.cancel()
+            micPulse = null
+            micView.scaleX = 1f
+            micView.scaleY = 1f
+        }
         when {
             isListening -> renderVoiceState()
             isLanguageMenuOpen -> renderLanguageState()
@@ -978,7 +1047,13 @@ class KeyboardService : InputMethodService() {
                 setOnClickListener { selectCandidate(index) }
             }
             candidatesRow.addView(chip, gap(if (index == windowStart) 0 else dp(8)))
-            if (isSelected) selectedChip = chip
+            if (isSelected) {
+                selectedChip = chip
+                chip.scaleX = 0.9f
+                chip.scaleY = 0.9f
+                chip.animate().scaleX(1f).scaleY(1f).setDuration(120)
+                    .setInterpolator(android.view.animation.DecelerateInterpolator()).start()
+            }
         }
         if (windowEnd < total) candidatesRow.addView(ellipsisChip(), gap(dp(4)))
 
@@ -1033,11 +1108,12 @@ class KeyboardService : InputMethodService() {
 
     private fun renderLanguageState() {
         showOnly(languageRail, languageMenuScroll)
-        languageCounter.text = "${languageMenuIndex + 1}/${InputMode.CYCLE_ORDER.size}"
+        val cycle = activeCycle()
+        languageCounter.text = "${languageMenuIndex + 1}/${cycle.size}"
 
         languageMenuList.removeAllViews()
         var selectedRow: View? = null
-        InputMode.CYCLE_ORDER.forEachIndexed { index, candidateMode ->
+        cycle.forEachIndexed { index, candidateMode ->
             val isSelected = index == languageMenuIndex
             val ink = if (isSelected) onSelectionColor else textColor
             val row = LinearLayout(this).apply {
@@ -1110,28 +1186,38 @@ class KeyboardService : InputMethodService() {
 
     private fun renderVoiceState() {
         showOnly(voiceRow)
-        voiceSubtitle.text = modeFullName(currentMode())
-        resetVoiceLevel()
-        renderLegend(LegendItem("0", "שחרר את המקש כדי לסיים", longPress = true))
+        voiceTitle.text = if (isVoiceProcessing) "מתמלל…" else getString(R.string.voice_listening)
+        voiceSubtitle.text = voicePartial?.takeLast(42) ?: modeFullName(currentMode())
+        voiceWave.processing = isVoiceProcessing
+        if (!voiceWave.active) voiceWave.active = true
+        if (isVoiceProcessing) {
+            micPulse?.cancel()
+            micPulse = null
+        } else if (micPulse == null) {
+            // "נשימה" עדינה של המיקרופון בזמן ההקלטה.
+            micPulse = android.animation.AnimatorSet().apply {
+                val sx = android.animation.ObjectAnimator.ofFloat(micView, View.SCALE_X, 1f, 1.1f)
+                val sy = android.animation.ObjectAnimator.ofFloat(micView, View.SCALE_Y, 1f, 1.1f)
+                listOf(sx, sy).forEach {
+                    it.repeatCount = android.animation.ValueAnimator.INFINITE
+                    it.repeatMode = android.animation.ValueAnimator.REVERSE
+                }
+                playTogether(sx, sy)
+                duration = 620
+                start()
+            }
+        }
+        if (isVoiceProcessing) {
+            renderLegend(LegendItem("←", "ביטול"))
+        } else {
+            renderLegend(LegendItem("0", "שחרר את המקש כדי לסיים", longPress = true))
+        }
     }
 
-    /** גובה עמודות הוויזואלייזר לפי עוצמת הקול בפועל (ר' onRmsChanged). */
+    /** עוצמת הקול בפועל (ר' onRmsChanged) - מזינה את גלי הקול. */
     private fun updateVoiceLevel(rmsdB: Float) {
-        if (!::voiceBars.isInitialized || !isListening) return
-        val level = ((rmsdB + 2f) / 12f).coerceIn(0f, 1f)
-        voiceBars.forEachIndexed { index, bar ->
-            bar.layoutParams.height =
-                (dp(VOICE_BAR_HEIGHTS[index]) * (0.35f + 0.65f * level)).toInt().coerceAtLeast(dp(2))
-            bar.requestLayout()
-        }
-    }
-
-    private fun resetVoiceLevel() {
-        if (!::voiceBars.isInitialized) return
-        voiceBars.forEachIndexed { index, bar ->
-            bar.layoutParams.height = dp(VOICE_BAR_HEIGHTS[index])
-            bar.requestLayout()
-        }
+        if (!::voiceWave.isInitialized || !isListening || isVoiceProcessing) return
+        voiceWave.setLevel(((rmsdB + 2f) / 12f).coerceIn(0f, 1f))
     }
 
     private fun ellipsisChip(): TextView = TextView(this).apply {
@@ -1172,6 +1258,12 @@ class KeyboardService : InputMethodService() {
         // במקרה שהחומרה שולחת קוד שונה מ-KEYCODE_STAR/KEYCODE_POUND הצפויים
         // (יש לאמת מול המכשיר עם adb shell getevent -l; אין קבוע KEYCODE_NUMPAD_POUND
         // ב-Android - לוח מספרי לא כולל #).
+        if (isListening) {
+            // בזמן תמלול: BACK/מחיקה מבטלים בלי להכניס טקסט; שאר המקשים נבלעים.
+            if (keyCode == KeyEvent.KEYCODE_BACK || keyCode == KeyEvent.KEYCODE_DEL) stopListening()
+            return true
+        }
+
         if (isLanguageMenuOpen) {
             // כשתפריט השפה פתוח, רק הניווט/האישור/הביטול פעילים - אותו עיקרון
             // בדיוק כמו תפריט הפיסוק למטה.
@@ -1227,12 +1319,13 @@ class KeyboardService : InputMethodService() {
 
         if (mode == InputMode.NUMERIC) {
             if (keyCode == KeyEvent.KEYCODE_0) {
-                // כמו במקשים אחרים - לחיצה קצרה מציבה את הספרה, ארוכה מפעילה תמלול.
+                // לחיצה קצרה מציבה את הספרה (בשחרור - ר' onKeyUp), ארוכה מפעילה תמלול.
                 if (event.repeatCount == 0) {
                     voiceInputArmed = false
-                    ic.commitText("0", 1)
+                    zeroPending = true
                 } else if (!voiceInputArmed && event.repeatCount > longPressRepeatThreshold) {
                     voiceInputArmed = true
+                    zeroPending = false
                     startVoiceTranscription()
                 }
                 return true
@@ -1270,16 +1363,19 @@ class KeyboardService : InputMethodService() {
             // ממילה אחת מתאימה (למעלה/למטה כי חלון המועמדות מוצג כשורה מעל שדה
             // הטקסט - ניווט אנכי טבעי לתוכו, בנוסף לחצים האופקיים); אם אין כמה
             // מועמדות, מתנהג כניווט רגיל (ברירת המחדל של המערכת).
-            KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_UP -> {
+            // שורת המועמדות מסודרת מימין לשמאל (הפאנל RTL): הראשונה בימין, ולכן
+            // חץ שמאל מתקדם למועמדת הבאה וחץ ימין חוזר - כמו כיוון התנועה על המסך.
+            // קודם זה היה הפוך. למעלה/למטה: הקודמת/הבאה.
+            KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_DOWN -> {
                 if (candidates.size > 1) {
-                    cycleCandidate(ic, -1)
+                    cycleCandidate(ic, 1)
                     return true
                 }
                 return super.onKeyDown(keyCode, event)
             }
-            KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_DPAD_DOWN -> {
+            KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_DPAD_UP -> {
                 if (candidates.size > 1) {
-                    cycleCandidate(ic, 1)
+                    cycleCandidate(ic, -1)
                     return true
                 }
                 return super.onKeyDown(keyCode, event)
@@ -1323,10 +1419,10 @@ class KeyboardService : InputMethodService() {
                 // לחיצה ארוכה (repeatCount עולה כל עוד המקש מוחזק) - מפעילה תמלול קולי.
                 if (event.repeatCount == 0) {
                     voiceInputArmed = false
-                    if (digitSequence.isNotEmpty()) commitCurrentWord(ic, appendSpace = false)
-                    ic.commitText(" ", 1)
+                    zeroPending = true
                 } else if (!voiceInputArmed && event.repeatCount > longPressRepeatThreshold) {
                     voiceInputArmed = true
+                    zeroPending = false
                     startVoiceTranscription()
                 }
                 return true
@@ -1343,12 +1439,33 @@ class KeyboardService : InputMethodService() {
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
         if (keyCode == KeyEvent.KEYCODE_0) {
+            val wasArmed = voiceInputArmed
             voiceInputArmed = false
-            // "שחרר את המקש כדי לסיים" - מה שהפאנל מבטיח במצב התמלול הקולי.
-            // SpeechRecognizer.stopListening מסמן שהדיבור נגמר וגורם למנוע
-            // לתמלל את מה שכבר נקלט (onResults), להבדיל מ-stopListening
-            // המקומית כאן שמשמידה את המנוע ומוחקת את התוצאה.
-            if (isListening) speechRecognizer?.stopListening()
+            if (zeroPending) {
+                // לחיצה קצרה: רווח (או הספרה 0 במצב מספרים).
+                zeroPending = false
+                val ic = currentInputConnection
+                if (ic != null) {
+                    if (currentMode() == InputMode.NUMERIC) {
+                        ic.commitText("0", 1)
+                    } else {
+                        if (digitSequence.isNotEmpty()) commitCurrentWord(ic, appendSpace = false)
+                        ic.commitText(" ", 1)
+                    }
+                }
+                return true
+            }
+            // "שחרר את המקש כדי לסיים": SpeechRecognizer.stopListening מסיים את
+            // ההקלטה והמנוע מתמלל את מה שנקלט (onResults). הפאנל עובר ל"מתמלל…"
+            // ונסגר מעצמו - גם אם התוצאה לא מגיעה (voiceTimeout).
+            if (isListening && !isVoiceProcessing) {
+                isVoiceProcessing = true
+                speechRecognizer?.stopListening()
+                voiceHandler.postDelayed(voiceTimeout, VOICE_RESULT_TIMEOUT_MS)
+                renderPanel()
+                return true
+            }
+            if (wasArmed) return true
         }
         return super.onKeyUp(keyCode, event)
     }
@@ -1387,6 +1504,8 @@ class KeyboardService : InputMethodService() {
 
         resetComposing()
         isListening = true
+        isVoiceProcessing = false
+        voicePartial = null
         renderPanel()
 
         val recognizer = if (assistantComponent != null) {
@@ -1401,15 +1520,34 @@ class KeyboardService : InputMethodService() {
             override fun onRmsChanged(rmsdB: Float) = updateVoiceLevel(rmsdB)
             override fun onBufferReceived(buffer: ByteArray?) {}
             override fun onEndOfSpeech() {}
-            override fun onError(error: Int) = stopListening()
+            override fun onError(error: Int) {
+                val message = when (error) {
+                    SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "לא זוהה דיבור"
+                    SpeechRecognizer.ERROR_AUDIO -> "שגיאה במיקרופון"
+                    else -> null
+                }
+                stopListening()
+                message?.let { showPanelMessage(it) }
+            }
             override fun onResults(results: Bundle?) {
-                val text = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()
+                val text = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.trim()
+                    ?.replace(Regex("\\s+"), " ")
                 if (!text.isNullOrBlank()) {
-                    currentInputConnection?.commitText("$text ", 1)
+                    val ic = currentInputConnection
+                    // רווח לפני - רק אם הטקסט הקודם לא נגמר ברווח; ואחרי, כדי להמשיך להקליד.
+                    val before = ic?.getTextBeforeCursor(1, 0)
+                    val lead = if (before.isNullOrEmpty() || before.last().isWhitespace()) "" else " "
+                    ic?.commitText("$lead$text ", 1)
                 }
                 stopListening()
             }
-            override fun onPartialResults(partialResults: Bundle?) {}
+            override fun onPartialResults(partialResults: Bundle?) {
+                val partial = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()
+                if (!partial.isNullOrBlank() && isListening) {
+                    voicePartial = partial.trim()
+                    renderPanel()
+                }
+            }
             override fun onEvent(eventType: Int, params: Bundle?) {}
         })
 
@@ -1418,12 +1556,21 @@ class KeyboardService : InputMethodService() {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, locale)
             putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, packageName)
+            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+            putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+            putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
+            // המשתמש מסיים בשחרור 0 - לא לעצור לבד באמצע משפט בגלל שתיקה קצרה.
+            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 6_000L)
+            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 4_000L)
         }
         recognizer.startListening(recognizerIntent)
     }
 
     private fun stopListening() {
+        voiceHandler.removeCallbacks(voiceTimeout)
         isListening = false
+        isVoiceProcessing = false
+        voicePartial = null
         speechRecognizer?.destroy()
         speechRecognizer = null
         renderPanel()
@@ -1476,8 +1623,9 @@ class KeyboardService : InputMethodService() {
         var newRow = row
         var newCol = col
         when (keyCode) {
-            KeyEvent.KEYCODE_DPAD_LEFT -> newCol = (col - 1 + columns) % columns
-            KeyEvent.KEYCODE_DPAD_RIGHT -> newCol = (col + 1) % columns
+            // רשת הפיסוק RTL: עמודה 0 בימין, ולכן שמאל = העמודה הבאה.
+            KeyEvent.KEYCODE_DPAD_LEFT -> newCol = (col + 1) % columns
+            KeyEvent.KEYCODE_DPAD_RIGHT -> newCol = (col - 1 + columns) % columns
             KeyEvent.KEYCODE_DPAD_UP -> newRow = (row - 1 + rowCount) % rowCount
             KeyEvent.KEYCODE_DPAD_DOWN -> newRow = (row + 1) % rowCount
         }
@@ -1500,7 +1648,7 @@ class KeyboardService : InputMethodService() {
     private fun openLanguageMenu(ic: InputConnection) {
         if (digitSequence.isNotEmpty()) commitCurrentWord(ic, appendSpace = false)
         isLanguageMenuOpen = true
-        languageMenuIndex = InputMode.CYCLE_ORDER.indexOf(currentMode()).coerceAtLeast(0)
+        languageMenuIndex = activeCycle().indexOf(currentMode()).coerceAtLeast(0)
         renderPanel()
     }
 
@@ -1510,14 +1658,15 @@ class KeyboardService : InputMethodService() {
     }
 
     private fun moveLanguageSelection(direction: Int) {
-        val count = InputMode.CYCLE_ORDER.size
+        val count = activeCycle().size
         languageMenuIndex = (languageMenuIndex + direction + count) % count
         renderPanel()
     }
 
     private fun selectLanguageMenuItem(index: Int) {
-        if (index !in InputMode.CYCLE_ORDER.indices) return
-        val selected = InputMode.CYCLE_ORDER[index]
+        val cycle = activeCycle()
+        if (index !in cycle.indices) return
+        val selected = cycle[index]
         prefs.edit().putString("input_mode", selected.name).apply()
         engineLanguageFor(selected)?.let { engine = buildEngine(it); loadFrequencies(); loadCustomWords() }
         resetComposing()
@@ -1555,7 +1704,7 @@ class KeyboardService : InputMethodService() {
         // במצב "עברית ללא ניבוי", וגם כשהניבוי כבוי כולו ממרכז הבקרה, מדלגים על
         // חיפוש המילון לגמרי - מוצגות תמיד האותיות שנבחרו בפועל ב-multi-tap, גם
         // אם יש התאמה במילון לרצף.
-        val dictionaryCandidates = if (mode == InputMode.HEBREW_MULTITAP || !predictiveEnabled) emptyList()
+        val dictionaryCandidates = if (!isPredictingIn(mode)) emptyList()
             else engine.candidatesFor(digitSequence) { word -> wordFrequency[word] ?: 0 }
         // מילים שהמשתמש הוסיף בעצמו (ר' addCurrentWordToDictionary) מוצגות ראשונות.
         val custom = customWords[digitSequence].orEmpty()

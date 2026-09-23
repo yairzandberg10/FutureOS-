@@ -12,6 +12,8 @@
         <package android:name="com.future.futureui" />
     </queries>
 
+    <!-- שירות קדמי שמחזיק את הפנס דלוק כשהמסך נכבה (TorchService) -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="com.future.futureui.permission.SYSTEM_SETTINGS" />
     <uses-permission android:name="com.future.keyboard.permission.SETTINGS" />
     <application
@@ -34,6 +36,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <service android:name=".data.TorchService" android:exported="false" />
     </application>
 
 </manifest>

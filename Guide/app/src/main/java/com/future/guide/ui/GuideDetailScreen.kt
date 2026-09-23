@@ -81,15 +81,7 @@ fun GuideDetailScreen(app: GuideApp, theme: FutureTheme, onBack: () -> Unit) {
                         .padding(bottom = 24.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(52.dp)
-                                .clip(CircleShape)
-                                .background(theme.accentColor.copy(alpha = 0.18f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(app.icon, contentDescription = null, tint = theme.accentColor, modifier = Modifier.size(26.dp))
-                        }
+                        GuideAppIcon(app.packageName, app.icon, theme, size = 56.dp)
                         Column(modifier = Modifier.padding(start = 14.dp)) {
                             Text(app.name, color = theme.textColor, fontSize = FutureTypography.title, fontWeight = FontWeight.Bold)
                             Text(app.subtitle, color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.summary)

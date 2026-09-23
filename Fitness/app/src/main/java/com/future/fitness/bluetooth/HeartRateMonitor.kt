@@ -55,6 +55,25 @@ class HeartRateMonitor(private val context: Context) {
         private set
     val foundDevices = mutableStateListOf<FoundDevice>()
 
+    /**
+     * למה החיבור האחרון לא הצליח - מוצג בהגדרות במקום "לא מתחבר" שקט.
+     * null כשאין שגיאה.
+     */
+    var lastError by mutableStateOf<String?>(null)
+        private set
+
+    private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val stopScanRunnable = Runnable { stopScan() }
+
+    /**
+     * פעולות GATT רצות אחת-אחת: אנדרואיד מקבל רק פעולה אחת בכל רגע. קודם
+     * שלוש ההרשמות (דופק, קצב, הספק) נשלחו ברצף, והשנייה והשלישית נכשלו
+     * בשקט - ולפעמים גם הראשונה, כשהגילוי עוד לא נסגר.
+     */
+    private val pendingSubscriptions = ArrayDeque<BluetoothGattCharacteristic>()
+    private var connectAttempts = 0
+    private var connectingAddress: String? = null
+
     // Running Speed and Cadence - null כל עוד לא זוהה שירות כזה על המכשיר המחובר
     var hasRunningCadenceSensor by mutableStateOf(false)
         private set
@@ -81,20 +100,42 @@ class HeartRateMonitor(private val context: Context) {
 
     fun isBluetoothAvailable(): Boolean = adapter != null
 
+    /**
+     * סריקה בלי סינון לפי שירות הדופק: רוב השעונים לא מפרסמים את שירות
+     * 0x180D בשידור הפרסום שלהם (רק רצועות דופק עושות זאת), ולכן הסינון הקודם
+     * לא מצא אף שעון. מוצגים כל מכשירי ה-BLE עם שם, ובראש הרשימה מכשירים
+     * שכבר מותאמים לטלפון. השירות נבדק רק אחרי החיבור.
+     */
     fun startScan() {
-        val scanner = adapter?.bluetoothLeScanner ?: return
+        val a = adapter ?: return
+        if (!a.isEnabled) {
+            lastError = "הבלוטות' כבוי"
+            return
+        }
+        val scanner = a.bluetoothLeScanner ?: return
+        lastError = null
         foundDevices.clear()
+        try {
+            a.bondedDevices.orEmpty()
+                .filter { it.type == BluetoothDevice.DEVICE_TYPE_LE || it.type == BluetoothDevice.DEVICE_TYPE_DUAL }
+                .forEach { d -> foundDevices.add(FoundDevice(d.name ?: d.address, d.address)) }
+        } catch (e: SecurityException) {
+            // אין BLUETOOTH_CONNECT - רק תוצאות סריקה
+        }
         state = HrConnectionState.SCANNING
-        val filter = ScanFilter.Builder().setServiceUuid(ParcelUuid(HEART_RATE_SERVICE_UUID)).build()
         val settings = ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build()
         try {
-            scanner.startScan(listOf(filter), settings, scanCallback)
+            scanner.startScan(null, settings, scanCallback)
+            mainHandler.removeCallbacks(stopScanRunnable)
+            mainHandler.postDelayed(stopScanRunnable, SCAN_TIMEOUT_MS)
         } catch (e: SecurityException) {
             state = HrConnectionState.DISCONNECTED
+            lastError = "אין הרשאת בלוטות'"
         }
     }
 
     fun stopScan() {
+        mainHandler.removeCallbacks(stopScanRunnable)
         try {
             adapter?.bluetoothLeScanner?.stopScan(scanCallback)
         } catch (e: SecurityException) {
@@ -106,9 +147,15 @@ class HeartRateMonitor(private val context: Context) {
     private val scanCallback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult) {
             val device = result.device
-            val name = try { device.name } catch (e: SecurityException) { null } ?: "מכשיר לא ידוע"
+            // בלי שם (תגיות, משואות) - לא שעון שאפשר לזהות ברשימה.
+            val name = try { device.name } catch (e: SecurityException) { null }
+                ?: result.scanRecord?.deviceName
+                ?: return
+            val advertisesHr = result.scanRecord?.serviceUuids?.any { it.uuid == HEART_RATE_SERVICE_UUID } == true
             if (foundDevices.none { it.address == device.address }) {
-                foundDevices.add(FoundDevice(name, device.address))
+                // מי שמפרסם דופק - ראשון ברשימה.
+                if (advertisesHr) foundDevices.add(0, FoundDevice(name, device.address))
+                else foundDevices.add(FoundDevice(name, device.address))
             }
         }
     }
@@ -116,8 +163,20 @@ class HeartRateMonitor(private val context: Context) {
     fun connect(address: String) {
         val device = try { adapter?.getRemoteDevice(address) } catch (e: IllegalArgumentException) { null } ?: return
         stopScan()
+        gatt?.close()
+        lastError = null
+        if (connectingAddress != address) connectAttempts = 0
+        connectingAddress = address
         state = HrConnectionState.CONNECTING
-        gatt = device.connectGatt(context, false, gattCallback)
+        // TRANSPORT_LE במפורש: שעון שהוא גם מכשיר בלוטות' קלאסי (DUAL) נפתח
+        // אחרת בערוץ הקלאסי, והחיבור נכשל (סטטוס 133) בלי שום שירות BLE.
+        gatt = try {
+            device.connectGatt(context, false, gattCallback, BluetoothDevice.TRANSPORT_LE)
+        } catch (e: SecurityException) {
+            state = HrConnectionState.DISCONNECTED
+            lastError = "אין הרשאת בלוטות'"
+            null
+        }
     }
 
     fun disconnect() {
@@ -139,10 +198,27 @@ class HeartRateMonitor(private val context: Context) {
 
     private val gattCallback = object : BluetoothGattCallback() {
         override fun onConnectionStateChange(g: BluetoothGatt, status: Int, newState: Int) {
+            if (status != BluetoothGatt.GATT_SUCCESS && newState != BluetoothProfile.STATE_CONNECTED) {
+                // כשל חיבור (133 וחבריו) - ניסיון חוזר אחד, ואז הודעה.
+                g.close()
+                if (gatt === g) gatt = null
+                val address = g.device.address
+                if (connectAttempts < 1 && state == HrConnectionState.CONNECTING) {
+                    connectAttempts++
+                    mainHandler.postDelayed({ connect(address) }, 600)
+                } else {
+                    state = HrConnectionState.DISCONNECTED
+                    lastError = "החיבור נכשל - ודא שהשעון קרוב ושהבלוטות' שלו פעיל"
+                }
+                return
+            }
             when (newState) {
                 BluetoothProfile.STATE_CONNECTED -> {
+                    connectAttempts = 0
                     connectedDeviceName = try { g.device.name } catch (e: SecurityException) { null } ?: g.device.address
-                    g.discoverServices()
+                    // השהיה קצרה לפני הגילוי - חלק מהשעונים עוד מסיימים את
+                    // הגדרת הקישור, והגילוי המוקדם חוזר ריק.
+                    mainHandler.postDelayed({ g.discoverServices() }, 400)
                 }
                 BluetoothProfile.STATE_DISCONNECTED -> {
                     state = HrConnectionState.DISCONNECTED
@@ -161,34 +237,49 @@ class HeartRateMonitor(private val context: Context) {
         }
 
         override fun onServicesDiscovered(g: BluetoothGatt, status: Int) {
-            val hrService = g.getService(HEART_RATE_SERVICE_UUID)
-            val hrCharacteristic = hrService?.getCharacteristic(HEART_RATE_MEASUREMENT_UUID)
-            if (hrCharacteristic != null) subscribe(g, hrCharacteristic)
-
-            val rscService = g.getService(RSC_SERVICE_UUID)
-            val rscCharacteristic = rscService?.getCharacteristic(RSC_MEASUREMENT_UUID)
-            if (rscCharacteristic != null) {
+            pendingSubscriptions.clear()
+            val hrCharacteristic = g.getService(HEART_RATE_SERVICE_UUID)?.getCharacteristic(HEART_RATE_MEASUREMENT_UUID)
+            if (hrCharacteristic == null) {
+                // השעון מחובר אבל לא חושף דופק בפרוטוקול הסטנדרטי. ברוב השעונים
+                // צריך להפעיל בו "שידור דופק" (HR broadcast) - אחרת הדופק עובר
+                // רק לאפליקציית היצרן, שאין לה ממשק ציבורי.
+                state = HrConnectionState.DISCONNECTED
+                lastError = "השעון לא משדר דופק. הפעל בו \"שידור דופק\" ונסה שוב"
+                g.disconnect()
+                g.close()
+                if (gatt === g) gatt = null
+                return
+            }
+            pendingSubscriptions.add(hrCharacteristic)
+            g.getService(RSC_SERVICE_UUID)?.getCharacteristic(RSC_MEASUREMENT_UUID)?.let {
                 hasRunningCadenceSensor = true
-                subscribe(g, rscCharacteristic)
+                pendingSubscriptions.add(it)
             }
-
-            val powerService = g.getService(CYCLING_POWER_SERVICE_UUID)
-            val powerCharacteristic = powerService?.getCharacteristic(CYCLING_POWER_MEASUREMENT_UUID)
-            if (powerCharacteristic != null) {
+            g.getService(CYCLING_POWER_SERVICE_UUID)?.getCharacteristic(CYCLING_POWER_MEASUREMENT_UUID)?.let {
                 hasCyclingPowerSensor = true
-                subscribe(g, powerCharacteristic)
+                pendingSubscriptions.add(it)
             }
-
-            // מצב "מחובר" נקבע לפי דופק בלבד - זה השירות היחיד שכל שעון/רצועה
-            // תומכים בו; קצב-צעדים/וואטים הם תוספת אופציונלית כשקיימת.
             state = HrConnectionState.CONNECTED
+            subscribeNext(g)
         }
 
-        private fun subscribe(g: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
+        @Suppress("DEPRECATION")
+        override fun onDescriptorWrite(g: BluetoothGatt, descriptor: BluetoothGattDescriptor, status: Int) {
+            subscribeNext(g)
+        }
+
+        /** ההרשמה הבאה בתור - רק אחרי שהקודמת אושרה (onDescriptorWrite). */
+        @Suppress("DEPRECATION")
+        private fun subscribeNext(g: BluetoothGatt) {
+            val characteristic = pendingSubscriptions.removeFirstOrNull() ?: return
             g.setCharacteristicNotification(characteristic, true)
-            val descriptor = characteristic.getDescriptor(CLIENT_CONFIG_UUID) ?: return
+            val descriptor = characteristic.getDescriptor(CLIENT_CONFIG_UUID)
+            if (descriptor == null) {
+                subscribeNext(g)
+                return
+            }
             descriptor.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
-            g.writeDescriptor(descriptor)
+            if (!g.writeDescriptor(descriptor)) subscribeNext(g)
         }
 
         @Suppress("DEPRECATION")
@@ -220,6 +311,9 @@ class HeartRateMonitor(private val context: Context) {
         val CYCLING_POWER_SERVICE_UUID: UUID = UUID.fromString("00001818-0000-1000-8000-00805f9b34fb")
         val CYCLING_POWER_MEASUREMENT_UUID: UUID = UUID.fromString("00002a63-0000-1000-8000-00805f9b34fb")
         val CLIENT_CONFIG_UUID: UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
+
+        /** הסריקה נעצרת לבד - סריקת BLE פתוחה מרוקנת סוללה. */
+        private const val SCAN_TIMEOUT_MS = 20_000L
 
         /** פענוח ערך הדופק לפי מפרט ה-Bluetooth SIG ל-Heart Rate Measurement:
          * ביט 0 של הדגלים (בית ראשון) קובע אם הערך הוא UINT8 (בית אחד) או

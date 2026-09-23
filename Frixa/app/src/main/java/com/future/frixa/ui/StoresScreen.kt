@@ -1,155 +1,145 @@
 package com.future.frixa.ui
-import com.future.sharednav.theme.FutureShapes
-import com.future.sharednav.theme.readableAccentColor
-import com.future.sharednav.theme.mutedTextColor
-import com.future.sharednav.theme.FutureMotion
 
-import com.future.sharednav.theme.FutureTypography
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.focusable
-import androidx.compose.foundation.gestures.animateScrollBy
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.LocationOn
 import androidx.compose.material.icons.rounded.Storefront
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onKeyEvent
-import androidx.compose.ui.input.key.type
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.future.frixa.data.FricasseStores
 import com.future.frixa.data.LocationHelper
 import com.future.frixa.data.Store
-import com.future.frixa.data.StoreCatalog
-import com.future.sharednav.theme.FutureDimens
+import com.future.sharednav.components.EmptyState
+import com.future.sharednav.components.FutureAvatar
+import com.future.sharednav.components.FutureIndeterminateProgressBar
+import com.future.sharednav.components.FutureListItem
+import com.future.sharednav.components.FutureMenuRow
+import com.future.sharednav.components.FutureOptionsMenu
+import com.future.sharednav.icons.FutureIcons
+import com.future.sharednav.nav.onOptionsKeyPress
 import com.future.sharednav.theme.FutureTheme
-import kotlinx.coroutines.launch
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.mutedTextColor
+import com.future.sharednav.theme.readableAccentColor
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
+/**
+ * מקומות שמוכרים פריקסה, מהקרוב לרחוק (FricasseStores - OpenStreetMap).
+ * OK פותח ניווט למקום; מקש Options - רענון, וחיוג כשיש למקום טלפון.
+ */
 @Composable
 fun StoresScreen(theme: FutureTheme) {
     val context = LocalContext.current
     val locationGranted = rememberRuntimePermission(android.Manifest.permission.ACCESS_COARSE_LOCATION)
-
     var myLocation by remember { mutableStateOf<Pair<Double, Double>?>(null) }
+    var stores by remember { mutableStateOf(FricasseStores.cached(context)) }
+    var loading by remember { mutableStateOf(false) }
+    var offline by remember { mutableStateOf(false) }
+    var refreshKey by remember { mutableIntStateOf(0) }
+    var focused by remember { mutableStateOf<Store?>(null) }
+    var menuOpen by remember { mutableStateOf(false) }
+
     LaunchedEffect(locationGranted.value) {
         if (locationGranted.value) myLocation = LocationHelper.lastKnownLatLon(context)
     }
+    LaunchedEffect(myLocation, refreshKey) {
+        loading = true
+        val result = withContext(Dispatchers.IO) { runCatching { FricasseStores.search(context, myLocation) } }
+        result.onSuccess { stores = it; offline = false }.onFailure { offline = true }
+        loading = false
+    }
+    onOptionsKeyPress { menuOpen = !menuOpen }
 
-    val storesWithDistance = remember(myLocation) {
+    val sorted = remember(stores, myLocation) {
         val loc = myLocation
-        StoreCatalog.all
-            .map { store ->
-                val distance = loc?.let { (lat, lon) -> LocationHelper.distanceMeters(lat, lon, store.latitude, store.longitude) }
-                store to distance
-            }
+        stores.map { s -> s to loc?.let { (lat, lon) -> LocationHelper.distanceMeters(lat, lon, s.latitude, s.longitude) } }
             .sortedBy { it.second ?: Double.MAX_VALUE }
     }
+    val first = remember { FocusRequester() }
+    LaunchedEffect(sorted.isNotEmpty()) { if (sorted.isNotEmpty()) runCatching { first.requestFocus() } }
 
-    val listState = rememberLazyListState()
-    val scope = rememberCoroutineScope()
-    val focusRequester = remember { FocusRequester() }
-    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+    fun navigate(store: Store) {
+        val uri = Uri.parse("geo:${store.latitude},${store.longitude}?q=${store.latitude},${store.longitude}(${Uri.encode(store.name)})")
+        runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        if (myLocation == null) {
-            Text(
-                if (locationGranted.value) "מאתר את מיקומך" else "אשר הרשאת מיקום כדי לראות מרחקים",
-                color = theme.textColor.copy(alpha = 0.6f),
-                fontSize = FutureTypography.summary,
-                modifier = Modifier.padding(16.dp),
-            )
+        if (loading) FutureIndeterminateProgressBar(theme = theme, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp))
+        val note = when {
+            offline && stores.isNotEmpty() -> "אין חיבור - מוצגות התוצאות האחרונות"
+            myLocation == null && !locationGranted.value -> "אשר מיקום כדי לראות מה קרוב אליך"
+            myLocation == null -> "בלי מיקום - מוצגים מקומות בכל הארץ"
+            else -> null
         }
-        LazyColumn(
-            state = listState,
-            modifier = Modifier
-                .fillMaxSize()
-                .focusRequester(focusRequester)
-                .focusable()
-                .onKeyEvent { event ->
-                    if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
-                    when (event.key) {
-                        Key.DirectionDown -> { scope.launch { listState.animateScrollBy(220f) }; true }
-                        Key.DirectionUp -> { scope.launch { listState.animateScrollBy(-220f) }; true }
-                        else -> false
-                    }
-                },
-            contentPadding = PaddingValues(16.dp),
-        ) {
-            items(storesWithDistance, key = { it.first.id }) { (store, distance) ->
-                StoreRow(store = store, distanceMeters = distance, theme = theme)
+        note?.let { Text(it, color = theme.mutedTextColor, fontSize = FutureTypography.summary, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) }
+
+        when {
+            sorted.isEmpty() && loading -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("מחפש מקומות", color = theme.mutedTextColor, fontSize = FutureTypography.body)
             }
+            sorted.isEmpty() -> EmptyState(
+                icon = Icons.Rounded.Storefront,
+                title = if (offline) "אין חיבור לרשת" else "לא נמצאו מקומות",
+                subtitle = "לחץ על מקש התפריט כדי לרענן",
+                textColor = theme.textColor,
+            )
+            else -> LazyColumn(contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)) {
+                itemsIndexed(sorted, key = { _, it -> it.first.id }) { index, (store, distance) ->
+                    FutureListItem(
+                        title = store.name,
+                        summary = store.address.ifBlank { store.openingHours ?: "" }.ifBlank { null },
+                        theme = theme,
+                        onClick = { navigate(store) },
+                        focusRequester = if (index == 0) first else null,
+                        modifier = Modifier.onFocusChanged { if (it.isFocused) focused = store },
+                        leading = { FutureAvatar(theme = theme, icon = Icons.Rounded.Storefront) },
+                        trailing = {
+                            distance?.let {
+                                Text(formatDistance(it), color = theme.readableAccentColor, fontSize = FutureTypography.body, fontWeight = FutureTypography.weightBold)
+                            }
+                        },
+                    )
+                }
+            }
+        }
+    }
+
+    if (menuOpen) {
+        FutureOptionsMenu(theme = theme, onDismissRequest = { menuOpen = false }, header = focused?.name ?: "חנויות") {
+            focused?.let { store ->
+                FutureMenuRow("נווט", FutureIcons.DirectionsCar, theme, { menuOpen = false; navigate(store) })
+                store.phone?.let { phone ->
+                    FutureMenuRow("התקשר", FutureIcons.Call, theme, {
+                        menuOpen = false
+                        runCatching { context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                    })
+                }
+            }
+            FutureMenuRow("רענן", FutureIcons.Refresh, theme, { menuOpen = false; refreshKey++ })
         }
     }
 }
 
-@Composable
-private fun StoreRow(store: Store, distanceMeters: Double?, theme: FutureTheme) {
-    // שורה שאינה מקבלת פוקוס - כרטיס מידע, ולכן ברדיוס הכרטיס (16dp).
-    val shape = FutureShapes.lg
-    val bgColor by animateColorAsState(theme.surfaceColor, FutureMotion.focusColorSpec, label = "storeRowBg")
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 10.dp)
-            .clip(shape)
-            .background(bgColor)
-            .border(1.dp, theme.textColor.copy(alpha = 0.08f), shape)
-            .padding(14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(Icons.Rounded.Storefront, contentDescription = null, tint = theme.accentColor)
-        Column(modifier = Modifier.weight(1f).padding(horizontal = 12.dp)) {
-            Text(store.name, color = theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Bold)
-            Text(store.category, color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.label)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    Icons.Rounded.LocationOn,
-                    contentDescription = null,
-                    tint = theme.textColor.copy(alpha = 0.5f),
-                    modifier = Modifier.padding(end = 2.dp),
-                )
-                Text(store.address, color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.label)
-            }
-        }
-        if (distanceMeters != null) {
-            Text(
-                formatDistance(distanceMeters),
-                color = theme.accentColor,
-                fontSize = FutureTypography.body,
-                fontWeight = FontWeight.Bold,
-            )
-        }
-    }
-}
-
-private fun formatDistance(meters: Double): String {
-    return if (meters < 1000) "${meters.toInt()} מ'" else "%.1f ק\"מ".format(meters / 1000)
-}
+private fun formatDistance(meters: Double): String =
+    if (meters < 1000) "${meters.toInt()} מ'" else "%.1f ק\"מ".format(meters / 1000)

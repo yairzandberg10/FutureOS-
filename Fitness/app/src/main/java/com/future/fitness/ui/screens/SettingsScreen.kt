@@ -226,6 +226,9 @@ fun SettingsScreen(
                             Text("סורק מכשירים בקרבת מקום", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.summary, modifier = Modifier.padding(vertical = 12.dp))
                         }
                         HrConnectionState.DISCONNECTED -> {
+                            heartRateMonitor.lastError?.let { error ->
+                                Text(error, color = theme.dangerColor, fontSize = FutureTypography.summary, modifier = Modifier.padding(bottom = 8.dp))
+                            }
                             FutureButton(
                                 "סרוק מכשירים",
                                 theme,

@@ -120,20 +120,20 @@ fun HeadsUpNotificationScreen(
             exit = slideOutVertically(targetOffsetY = { -it }, animationSpec = tween(FutureMotion.DurationStandard)) + fadeOut(animationSpec = tween(FutureMotion.DurationStandard)),
             modifier = Modifier
                 .fillMaxWidth()
-                .statusBarsPadding()
-                .padding(top = 8.dp, start = 12.dp, end = 12.dp)
+                .padding(top = com.future.futureui.statusbar.logic.StatusBarLayoutManager.HEIGHT_DP.dp + 6.dp, start = 12.dp, end = 12.dp)
         ) {
             val shape = FutureShapes.xxl
             // אותה שפת עיצוב "זכוכית כהה" כמו שאר חלקי FutureUI (Control Center,
             // Notification Center, תפריט הכיבוי) - לא MaterialTheme.colorScheme, כדי
             // שהבאנר לא יבלוט ככתם בהיר/לא עקבי מעל שאר המערכת.
-            val textColor = Color.White
+            val theme = LocalFutureTheme.current
+            val textColor = com.future.futureui.ui.theme.ShellGlass.ink(theme)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(shape)
-                    .background(LocalFutureTheme.current.headsUpSurfaceColor)
-                    .border(0.5.dp, LocalFutureTheme.current.headsUpBorderColor, shape)
+                    .background(com.future.futureui.ui.theme.ShellGlass.panel(theme))
+                    .border(0.5.dp, textColor.copy(alpha = 0.14f), shape)
                     .padding(horizontal = 14.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -141,7 +141,7 @@ fun HeadsUpNotificationScreen(
                     modifier = Modifier
                         .size(34.dp)
                         .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.12f)),
+                        .background(com.future.futureui.ui.theme.ShellGlass.tile(theme)),
                     contentAlignment = Alignment.Center
                 ) {
                     val icon = appIcon
@@ -195,7 +195,7 @@ fun HeadsUpNotificationScreen(
                                 text = text,
                                 fontSize = FutureTypography.label,
                                 color = textColor.copy(alpha = 0.7f),
-                                maxLines = 1,
+                                maxLines = 2,
                                 overflow = TextOverflow.Ellipsis
                             )
                         }

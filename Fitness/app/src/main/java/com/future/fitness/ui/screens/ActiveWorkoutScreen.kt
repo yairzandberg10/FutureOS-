@@ -127,8 +127,9 @@ fun ActiveWorkoutScreen(
     val isHrConnected = heartRateMonitor.state == HrConnectionState.CONNECTED
     val liveBpm = heartRateMonitor.currentBpm
     val actionButtonFocusRequester = remember { FocusRequester() }
+    val restFocusRequester = remember { FocusRequester() }
     LaunchedEffect(state.resting) {
-        if (!state.resting) actionButtonFocusRequester.requestFocus()
+        runCatching { if (state.resting) restFocusRequester.requestFocus() else actionButtonFocusRequester.requestFocus() }
     }
 
     LaunchedEffect(state) {
@@ -154,93 +155,85 @@ fun ActiveWorkoutScreen(
     val doneSets = (0 until state.exerciseIndex).sumOf { workout.exercises[it].sets } + state.setIndex
     val overallProgress = doneSets.toFloat() / totalSetsInWorkout.toFloat()
 
+    // המסך נבנה לגובה 480dp: קודם הזמן, שני אריחי דופק/קלוריות, האווטאר
+    // הגדול וכרטיס התרגיל הצטברו לכ-550dp, וכפתורי "סיימתי סט"/השהה נדחקו
+    // מתחת לקצה המסך. עכשיו הזמן והמדדים חולקים שורה אחת, והכרטיס קומפקטי.
     Column(modifier = Modifier.fillMaxSize()) {
         ScreenTopBar(title = workout.name, theme = theme, onBack = onBack)
 
         Column(
-            modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 20.dp),
+            modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text(
-                formatElapsed(state.elapsedSec),
-                color = theme.textColor,
-                fontSize = FutureTypography.hero,
-                fontWeight = FontWeight.Bold,
-            )
-            Text("זמן אימון כולל", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.label, modifier = Modifier.padding(bottom = 14.dp))
-
-            if (!state.resting) {
-                val liveCalories = remember(state.elapsedSec, workout.met, weightKg) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        formatElapsed(state.elapsedSec),
+                        color = theme.textColor,
+                        fontSize = FutureTypography.display,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = FutureTypography.monoFamily,
+                    )
+                    Text(if (state.running) "זמן אימון" else "מושהה", color = theme.mutedTextColor, fontSize = FutureTypography.label)
+                }
+                val liveCalories = remember(state.elapsedSec / 60, workout.met, weightKg) {
                     WorkoutStore.estimateCalories(workout.met, weightKg, maxOf(1, state.elapsedSec / 60))
                 }
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    BioTile(
-                        icon = Icons.Rounded.Favorite,
-                        value = if (isHrConnected && liveBpm != null) "$liveBpm" else "--",
-                        unit = "BPM",
-                        color = theme.dangerColor,
-                        theme = theme,
-                        modifier = Modifier.weight(1f),
-                    )
-                    BioTile(
-                        icon = Icons.Rounded.LocalFireDepartment,
-                        value = "$liveCalories",
-                        unit = "קק״ל",
-                        color = theme.textColor,
-                        theme = theme,
-                        modifier = Modifier.weight(1f),
-                    )
+                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    MetricChip(Icons.Rounded.Favorite, if (isHrConnected && liveBpm != null) "$liveBpm" else "--", "BPM", theme.dangerColor, theme)
+                    MetricChip(Icons.Rounded.LocalFireDepartment, "$liveCalories", "קק״ל", theme.textColor, theme)
                 }
             }
 
             Row(modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp)) {
                 Text(
                     "תרגיל ${state.exerciseIndex + 1} מתוך ${workout.exercises.size}",
-                    color = theme.textColor.copy(alpha = 0.6f),
+                    color = theme.mutedTextColor,
                     fontSize = FutureTypography.label,
                     modifier = Modifier.weight(1f),
                 )
-                Text("${(overallProgress * 100).toInt()}%", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.label)
+                Text("${(overallProgress * 100).toInt()}%", color = theme.mutedTextColor, fontSize = FutureTypography.label)
             }
             FutureProgressBar(progress = overallProgress, theme = theme)
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(12.dp))
 
             if (state.resting) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(theme.elevatedSurfaceColor, FutureShapes.xl)
-                        .padding(26.dp),
+                        .padding(vertical = 16.dp, horizontal = 16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text("מנוחה", color = theme.textColor, fontSize = FutureTypography.summary, fontWeight = FontWeight.Bold)
                     Text(state.restRemaining.toString(), color = theme.textColor, fontSize = FutureTypography.hero, fontWeight = FontWeight.Bold)
+                    val next = workout.exercises[state.pendingExerciseIndex]
+                    Text("הבא: ${next.name} · סט ${state.pendingSetIndex + 1}", color = theme.mutedTextColor, fontSize = FutureTypography.summary)
+                    Spacer(Modifier.height(10.dp))
                     FutureButton("דלג על המנוחה", theme, {
                         state.resting = false
                         state.exerciseIndex = state.pendingExerciseIndex
                         state.setIndex = state.pendingSetIndex
-                    }, variant = FutureButtonVariant.Quiet)
+                    }, variant = FutureButtonVariant.Secondary, focusRequester = restFocusRequester)
                 }
             } else {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(theme.surfaceColor, FutureShapes.xl)
-                        .padding(22.dp),
+                        .padding(vertical = 14.dp, horizontal = 16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    FutureAvatar(theme = theme, icon = FutureIcons.FitnessCenter, size = 56.dp)
-                    Spacer(Modifier.height(8.dp))
-                    Text(exercise.name, color = theme.textColor, fontSize = FutureTypography.screenTitle, fontWeight = FontWeight.Bold)
+                    Text(exercise.name, color = theme.textColor, fontSize = FutureTypography.screenTitle, fontWeight = FontWeight.Bold, maxLines = 1)
                     Text(
                         "סט ${state.setIndex + 1} מתוך ${exercise.sets} · ${exercise.repsLabel}",
-                        color = theme.textColor.copy(alpha = 0.6f),
+                        color = theme.mutedTextColor,
                         fontSize = FutureTypography.summary,
                     )
-                    Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(10.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         for (i in 0 until exercise.sets) {
                             val done = state.isSetDone(state.exerciseIndex, i)
@@ -248,30 +241,26 @@ fun ActiveWorkoutScreen(
                             val borderColor = if (done || current) theme.readableAccentColor else theme.subtleTextColor
                             Box(
                                 modifier = Modifier
-                                    .size(14.dp)
-                                    .background(if (done) theme.readableAccentColor else androidx.compose.ui.graphics.Color.Transparent, CircleShape)
+                                    .size(12.dp)
+                                    .background(if (done) theme.readableAccentColor else Color.Transparent, CircleShape)
                                     .border(1.5.dp, borderColor, CircleShape)
                             )
                         }
                     }
                 }
+            }
 
-                Spacer(Modifier.weight(1f))
+            Spacer(Modifier.weight(1f))
 
+            if (!state.resting) {
                 Row(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     FocusableItem(
                         onClick = { state.running = !state.running },
                         theme = theme,
-                        modifier = Modifier.size(56.dp),
-                        focusRequester = actionButtonFocusRequester,
+                        modifier = Modifier.size(52.dp),
                         cornerRadius = FutureShapes.radiusLg,
-                    ) { isFocused ->
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(if (isFocused) theme.focusFillChipColor else theme.textColor.copy(alpha = 0.08f), FutureShapes.lg),
-                            contentAlignment = Alignment.Center,
-                        ) {
+                    ) { _ ->
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             Icon(
                                 if (state.running) FutureIcons.Pause else FutureIcons.PlayArrow,
                                 contentDescription = if (state.running) "השהה" else "המשך",
@@ -279,13 +268,13 @@ fun ActiveWorkoutScreen(
                             )
                         }
                     }
-                    FocusableItem(
+                    FutureButton(
+                        text = "סיימתי סט",
+                        theme = theme,
                         onClick = {
                             state.markSetDone(state.exerciseIndex, state.setIndex)
-
                             val isLastSet = state.setIndex == exercise.sets - 1
                             val isLastExercise = state.exerciseIndex == workout.exercises.lastIndex
-
                             if (isLastSet && isLastExercise) {
                                 val minutes = maxOf(1, Math.round(state.elapsedSec / 60f))
                                 val calories = WorkoutStore.estimateCalories(workout.met, weightKg, minutes)
@@ -297,26 +286,27 @@ fun ActiveWorkoutScreen(
                                 state.resting = true
                             }
                         },
-                        theme = theme,
-                        modifier = Modifier.weight(1f).height(56.dp),
-                        cornerRadius = FutureShapes.radiusLg,
-                    ) { isFocused ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(theme.readableAccentColor, FutureShapes.lg)
-                                .then(if (isFocused) Modifier.border(3.dp, theme.textColor, FutureShapes.lg) else Modifier),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Icon(FutureIcons.Check, contentDescription = null, tint = theme.backgroundColor, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text("סיימתי סט", color = theme.backgroundColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Bold)
-                        }
-                    }
+                        modifier = Modifier.weight(1f),
+                        fillMaxWidth = true,
+                        focusRequester = actionButtonFocusRequester,
+                    )
                 }
             }
         }
+    }
+}
+
+/** מדד חי קטן (דופק, קלוריות) ליד הזמן. */
+@Composable
+private fun MetricChip(icon: ImageVector, value: String, unit: String, color: Color, theme: FutureTheme) {
+    Row(
+        modifier = Modifier.background(theme.surfaceColor, FutureShapes.pill).padding(horizontal = 10.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(14.dp))
+        Spacer(Modifier.width(6.dp))
+        Text(value, color = theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Bold)
+        Text(" $unit", color = theme.mutedTextColor, fontSize = FutureTypography.caption)
     }
 }
 

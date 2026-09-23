@@ -36,6 +36,7 @@ fun GuideHomeScreen(theme: FutureTheme, onOpen: (String) -> Unit) {
                     itemsIndexed(GUIDE_APPS) { index, app ->
                         GuideAppRow(
                             app.icon,
+                            app.packageName,
                             app.name,
                             app.subtitle,
                             theme = theme,

@@ -99,6 +99,7 @@ sealed class Screen(val route: String) {
     object NotificationSound : Screen("notification_sound")
     object AlarmSound : Screen("alarm_sound")
     object Language : Screen("language")
+    object KeyboardLanguages : Screen("keyboard_languages")
     object Security : Screen("security")
     object Apps : Screen("apps")
     object AppDetail : Screen("app_detail/{pkg}") {
@@ -229,6 +230,7 @@ fun SettingsApp(viewModel: SettingsViewModel) {
                 SoundPickerScreen(navController, theme, "צליל אזעקה", RingtoneManager.TYPE_ALARM, viewModel)
             }
             composable(Screen.Language.route) { LanguageScreen(navController, theme, viewModel) }
+            composable(Screen.KeyboardLanguages.route) { KeyboardLanguagesScreen(navController, theme) }
             composable(Screen.Security.route) { SecurityScreen(navController, theme) }
             composable(Screen.Apps.route) { AppsScreen(navController, theme) }
             composable(Screen.AppDetail.route) { backStackEntry ->
@@ -271,6 +273,7 @@ private val SEARCHABLE_SETTINGS = listOf(
     SearchableSetting("ביצועים ותחזוקה", "performance מעבד ram ניקוי אופטימיזציה", Icons.Rounded.Speed, Screen.Performance.route),
     SearchableSetting("התראות ומיקוד", "notifications focus שקט מיקוד שינה", Icons.Rounded.NotificationsActive, Screen.NotificationsFocus.route),
     SearchableSetting("זמן מסך", "screen time שימוש טיימר אפליקציות", Icons.Rounded.HourglassBottom, Screen.ScreenTime.route),
+    SearchableSetting("מקלדת ושפות הקלדה", "keyboard מקלדת ניבוי prediction t9 שפות הקלדה", FutureIcons.Keyboard, Screen.KeyboardLanguages.route),
     SearchableSetting("כללי", "general תאריך שעה שפה נגישות accessibility date time language", FutureIcons.Language, Screen.General.route),
     SearchableSetting("אפליקציות", "apps אפליקציה", FutureIcons.Apps, Screen.Apps.route),
     SearchableSetting("אודות הטלפון", "about imei גרסה מספר טלפון version", FutureIcons.Info, Screen.About.route)
@@ -1274,6 +1277,10 @@ fun GeneralScreen(navController: NavController, theme: ThemeConfig, viewModel: S
                     SettingsCard(theme) {
                         SettingItem("שפת מערכת", null, FutureIcons.Translate, theme) { navController.navigate(Screen.Language.route) }
                         SettingDivider(theme)
+                        SettingItem("מקלדת ושפות הקלדה", "באילו שפות מקלידים ובאילו יש ניבוי", FutureIcons.Keyboard, theme) {
+                            navController.navigate(Screen.KeyboardLanguages.route)
+                        }
+                        SettingDivider(theme)
                         SettingItem("גודל טקסט", "מתוך תצוגה", Icons.Rounded.Accessibility, theme) { navController.navigate(Screen.Display.route) }
                         SettingDivider(theme)
                         SettingSwitch("היפוך צבעים", "לניגודיות גבוהה יותר", viewModel.colorInversion.value, { viewModel.toggleColorInversion() }, theme)
@@ -1331,6 +1338,69 @@ fun GeneralScreen(navController: NavController, theme: ThemeConfig, viewModel: S
                         SettingItem("הפעלה מחדש", null, FutureIcons.RestartAlt, theme, showChevron = false) { showRestartConfirm = true }
                         SettingDivider(theme)
                         SettingItem("כיבוי המכשיר", null, Icons.Rounded.PowerSettingsNew, theme, showChevron = false) { showShutdownConfirm = true }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * שפות המקלדת: לכל שפה OK מחליף כבויה → הקלדה בלבד → הקלדה וניבוי. # במקלדת
+ * עובר רק על השפות הפעילות. אותו מידע בדיוק כמו "שפות מקלדת" במרכז הבקרה.
+ */
+@Composable
+fun KeyboardLanguagesScreen(navController: NavController, theme: ThemeConfig) {
+    val context = LocalContext.current
+    var languages by remember { mutableStateOf(com.future.sharednav.keyboard.KeyboardSettingsClient.languages(context)) }
+    var predictive by remember { mutableStateOf(com.future.sharednav.keyboard.KeyboardSettingsClient.isPredictiveEnabled(context)) }
+    Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
+        Column {
+            SmallHeader("מקלדת ושפות הקלדה", theme) { navController.popBackStack() }
+            LazyColumn {
+                item {
+                    SettingsCard(theme) {
+                        SettingSwitch("ניבוי טקסט", "מתג כללי - גם במרכז הבקרה", predictive, {
+                            predictive = !predictive
+                            com.future.sharednav.keyboard.KeyboardSettingsClient.setPredictiveEnabled(context, predictive)
+                        }, theme)
+                    }
+                }
+                item { SettingHeader("שפות", theme) }
+                item {
+                    Text(
+                        text = "OK מחליף מצב: כבויה · הקלדה בלבד · הקלדה וניבוי. # במקלדת עובר רק על השפות הפעילות.",
+                        color = theme.textColor.copy(alpha = 0.6f),
+                        fontSize = FutureTypography.label,
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp)
+                    )
+                }
+                if (languages.isEmpty()) {
+                    item {
+                        Text(
+                            "המקלדת לא מותקנת",
+                            color = theme.textColor.copy(alpha = 0.6f),
+                            fontSize = FutureTypography.body,
+                            modifier = Modifier.padding(20.dp)
+                        )
+                    }
+                } else {
+                    item {
+                        SettingsCard(theme) {
+                            languages.forEachIndexed { index, lang ->
+                                SettingItem(
+                                    lang.name,
+                                    com.future.sharednav.keyboard.KeyboardSettingsClient.stateLabel(lang),
+                                    if (lang.enabled) Icons.Rounded.CheckCircle else FutureIcons.Language,
+                                    theme,
+                                    showChevron = false
+                                ) {
+                                    val updated = com.future.sharednav.keyboard.KeyboardSettingsClient.cycleLanguage(context, lang)
+                                    languages = languages.map { if (it.code == lang.code) updated else it }
+                                }
+                                if (index < languages.lastIndex) SettingDivider(theme)
+                            }
+                        }
                     }
                 }
             }

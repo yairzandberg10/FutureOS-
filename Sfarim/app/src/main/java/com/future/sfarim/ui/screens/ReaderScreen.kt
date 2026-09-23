@@ -301,11 +301,7 @@ fun ReaderScreen(
 }
 
 private fun shareText(context: android.content.Context, text: String) {
-    val intent = Intent(Intent.ACTION_SEND).apply {
-        type = "text/plain"
-        putExtra(Intent.EXTRA_TEXT, text)
-    }
-    context.startActivity(Intent.createChooser(intent, null))
+    com.future.sharednav.share.FutureShare.text(context, text)
 }
 
 @Composable

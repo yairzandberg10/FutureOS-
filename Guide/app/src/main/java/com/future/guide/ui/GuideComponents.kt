@@ -24,6 +24,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.core.graphics.drawable.toBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -66,15 +69,40 @@ fun GuideHeader(title: String, theme: FutureTheme, onBack: (() -> Unit)? = null,
 }
 
 @Composable
-fun GuideAppRow(icon: ImageVector, label: String, subtitle: String, theme: FutureTheme, onClick: () -> Unit, focusRequester: FocusRequester? = null) {
+fun GuideAppRow(icon: ImageVector, packageName: String, label: String, subtitle: String, theme: FutureTheme, onClick: () -> Unit, focusRequester: FocusRequester? = null) {
     FutureListItem(
         title = label,
         summary = subtitle,
         theme = theme,
         onClick = onClick,
         focusRequester = focusRequester,
-        leading = { FutureAvatar(theme = theme, icon = icon) },
+        leading = { GuideAppIcon(packageName, icon, theme, size = 40.dp) },
     )
+}
+
+/**
+ * האייקון האמיתי של האפליקציה, כמו שהוא מופיע במסך הבית (נטען מהמערכת -
+ * לא משנים ולא מציירים אותו מחדש). אם האפליקציה לא מותקנת - גליף ה-DS
+ * שלה בעיגול, כמו אווטאר.
+ */
+@Composable
+fun GuideAppIcon(packageName: String, fallback: ImageVector, theme: FutureTheme, size: androidx.compose.ui.unit.Dp) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val px = with(density) { size.roundToPx() }
+    val bitmap by androidx.compose.runtime.produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, packageName, px) {
+        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            runCatching {
+                context.packageManager.getApplicationIcon(packageName).toBitmap(px, px).asImageBitmap()
+            }.getOrNull()
+        }
+    }
+    val icon = bitmap
+    if (icon != null) {
+        androidx.compose.foundation.Image(icon, contentDescription = null, modifier = Modifier.size(size))
+    } else {
+        FutureAvatar(theme = theme, icon = fallback, size = size)
+    }
 }
 
 /** כותרת קטע - FutureSectionHeader (13sp, 55%, ריווח 1sp); הייתה בצבע ההדגשה, שאינו צבע לכותרות. */

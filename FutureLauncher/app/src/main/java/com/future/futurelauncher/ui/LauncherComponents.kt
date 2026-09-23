@@ -181,9 +181,14 @@ fun ItemPanel(
     isFocused: Boolean,
     isMoving: Boolean = false,
     appWidgetHost: AppWidgetHost? = null,
-    theme: FutureTheme = FutureTheme()
+    theme: FutureTheme = FutureTheme(),
+    /** גודל האייקון מהגדרות הלאנצ'ר: 0 קטן, 1 רגיל, 2 גדול. */
+    iconSizeStep: Int = 1,
+    showLabel: Boolean = true,
+    largeLabel: Boolean = false,
 ) {
-    val iconSize = if (isEditMode) 40.dp else 48.dp
+    val baseIcon = when (iconSizeStep) { 0 -> 40.dp; 2 -> 56.dp; else -> 48.dp }
+    val iconSize = if (isEditMode) baseIcon - 8.dp else baseIcon
     val scale by animateFloatAsState(if (isFocused || isMoving) 1.15f else 1f)
     val borderColor = when {
         isMoving -> theme.dangerColor
@@ -281,7 +286,7 @@ fun ItemPanel(
                 }
             }
         }
-        if (item !is LauncherItem.Widget || isEditMode) {
+        if ((item !is LauncherItem.Widget || isEditMode) && (showLabel || isEditMode)) {
             Spacer(modifier = Modifier.height(6.dp))
             Text(
                 text = if (item is LauncherItem.Empty) "" else (item.customLabel ?: item.label),
@@ -290,7 +295,7 @@ fun ItemPanel(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Center,
-                fontSize = FutureTypography.caption
+                fontSize = if (largeLabel) FutureTypography.summary else FutureTypography.caption
             )
         }
     }

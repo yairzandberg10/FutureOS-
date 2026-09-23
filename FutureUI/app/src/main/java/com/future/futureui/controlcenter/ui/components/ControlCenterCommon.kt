@@ -1,4 +1,14 @@
 package com.future.futureui.controlcenter.ui.components
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.layout.size
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.draw.clip
+import com.future.sharednav.focus.focusMotion
+import com.future.futureui.ui.theme.ShellGlass
+import com.future.futureui.ui.theme.shellFocusRing
 import com.future.sharednav.theme.LocalFutureTheme
 import com.future.sharednav.theme.readableAccentColor
 import com.future.sharednav.theme.FutureDimens
@@ -25,16 +35,25 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 
+/** כפתור עגול בכותרת - אריח זכוכית, פוקוס במסגרת בלבד (ShellGlass). */
 @Composable
 fun HeaderActionButton(icon: ImageVector, color: Color, onClick: () -> Unit, isPower: Boolean = false) {
     val theme = LocalFutureTheme.current
-    com.future.sharednav.components.TopBarIconButton(
-        icon = icon,
-        contentDescription = "",
-        textColor = if (isPower) theme.dangerColor else color,
-        accentColor = theme.accentColor,
-        onClick = onClick,
-    )
+    val interactionSource = androidx.compose.runtime.remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
+    androidx.compose.foundation.layout.Box(
+        modifier = Modifier
+            .size(FutureDimens.rowHeightTopBarButton)
+            .focusMotion(interactionSource, focusedScale = 1.08f, pressedScale = 0.92f)
+            .clip(androidx.compose.foundation.shape.CircleShape)
+            .background(com.future.futureui.ui.theme.shellTile(isFocused))
+            .shellFocusRing(isFocused, androidx.compose.foundation.shape.CircleShape)
+            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
+            .focusable(interactionSource = interactionSource),
+        contentAlignment = androidx.compose.ui.Alignment.Center,
+    ) {
+        androidx.compose.material3.Icon(icon, contentDescription = null, tint = if (isPower) theme.dangerColor else color, modifier = Modifier.size(FutureDimens.iconTopBar))
+    }
 }
 
 /**
@@ -43,8 +62,8 @@ fun HeaderActionButton(icon: ImageVector, color: Color, onClick: () -> Unit, isP
  * פוקוס שלא מגיב לצבע ההדגשה שהמשתמש בחר ונעלם על משטח בהיר.
  */
 fun Modifier.focusEffect(isFocused: Boolean, shape: androidx.compose.ui.graphics.Shape = FutureShapes.lg): Modifier = composed {
-    val ring = LocalFutureTheme.current.readableAccentColor
+    // מסגרת בצבע הטקסט ולא בהדגשה - המעטפת לא צובעת פוקוס (ShellGlass).
     this
         .zIndex(if (isFocused) 1f else 0f)
-        .then(if (isFocused) Modifier.border(FutureDimens.focusBorderControl, ring, shape) else Modifier)
+        .shellFocusRing(isFocused, shape)
 }

@@ -25,6 +25,14 @@ data class GuideApp(
     val subtitle: String,
     val steps: List<String>,
     val tips: List<String> = emptyList()
+) {
+    /** החבילה של האפליקציה המתוארת - ממנה נטען האייקון האמיתי שלה. */
+    val packageName: String get() = "com.future." + (PACKAGE_BY_ID[id] ?: id)
+}
+
+private val PACKAGE_BY_ID = mapOf(
+    "system" to "futureui",
+    "launcher" to "futurelauncher",
 )
 
 val GUIDE_APPS = listOf(

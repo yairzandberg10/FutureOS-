@@ -10,7 +10,7 @@
     </queries>
 
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <uses-permission android:name="android.permission.SET_WALLPAPER" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
 
     <uses-permission android:name="com.future.futureui.permission.SYSTEM_SETTINGS" />
@@ -46,12 +46,7 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="image/*" />
             </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <data android:mimeType="video/*" />
-            </intent-filter>
-            <!-- מזהה את Gallery כבורר תמונות/וידאו תקין עבור אפליקציות אחרות
+            <!-- מזהה את Gallery כבורר תמונות תקין עבור אפליקציות אחרות
                  (כמו Messages) שקוראות ל-ActivityResultContracts.GetContent() -
                  בלי זה, על מכשיר בלי Google Photos/מודול הבורר המערכתי,
                  לבורר שנפתח אין עם מה להיפתח בכלל. -->
@@ -62,20 +57,9 @@
                 <data android:mimeType="image/*" />
             </intent-filter>
             <intent-filter>
-                <action android:name="android.intent.action.GET_CONTENT" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.OPENABLE" />
-                <data android:mimeType="video/*" />
-            </intent-filter>
-            <intent-filter>
                 <action android:name="android.intent.action.PICK" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="image/*" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.PICK" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <data android:mimeType="video/*" />
             </intent-filter>
         </activity>
         <receiver

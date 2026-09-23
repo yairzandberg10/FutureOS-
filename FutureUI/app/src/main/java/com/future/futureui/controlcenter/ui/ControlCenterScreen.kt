@@ -1,4 +1,6 @@
 package com.future.futureui.controlcenter.ui
+import com.future.futureui.ui.theme.ShellGlass
+import com.future.futureui.ui.theme.shellFocusRing
 
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.theme.mutedTextColor
@@ -163,7 +165,7 @@ fun ControlCenterScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(theme.backgroundColor)
+                        .background(ShellGlass.scrim(theme))
                 )
 
                 Column(
@@ -283,7 +285,7 @@ fun ControlCenterScreen(
                                             .fillMaxWidth()
                                             .animateContentSize(animationSpec = tween(FutureMotion.DurationSlow))
                                             .clip(FutureShapes.xxl)
-                                            .background(theme.elevatedSurfaceColor)
+                                            .background(ShellGlass.tile(theme))
                                             .border(
                                                 width = if (isGridEditing) 2.dp else 0.5.dp, 
                                                 color = if (isGridEditing) theme.dangerColor else Color.Transparent,
@@ -416,7 +418,7 @@ fun ControlCenterScreen(
                                                 contentAlignment = Alignment.Center
                                             ) {
                                                 Box(modifier = Modifier.width(36.dp).height(4.dp).clip(CircleShape)
-                                                    .background(if (isIndicatorFocused) theme.readableAccentColor else theme.textAlpha(30)))
+                                                    .background(if (isIndicatorFocused) ShellGlass.ring(theme) else theme.textAlpha(30)))
                                             }
                                         }
                                     }

@@ -304,12 +304,7 @@ class MainActivity : ComponentActivity() {
                                 showMenu = false
                                 val historyText = lines.joinToString("\n") { it.text }
                                 if (historyText.isNotBlank()) {
-                                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                        type = "text/plain"
-                                        putExtra(Intent.EXTRA_TEXT, historyText)
-                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                    }
-                                    startActivity(Intent.createChooser(shareIntent, null).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                                    com.future.sharednav.share.FutureShare.text(this@MainActivity, historyText)
                                 }
                             }
                         )

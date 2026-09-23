@@ -60,6 +60,17 @@ class MainActivity : ComponentActivity() {
             var lastSelectedItemId by remember { mutableStateOf<Long?>(null) }
             var lastSelectedAlbumId by remember { mutableStateOf<String?>(null) }
             var editingItem by remember { mutableStateOf<MediaItem?>(null) }
+            // תמונה שנפתחה מאפליקציה אחרת (VIEW) - נפתחת ישר לצפייה, ו-BACK סוגר.
+            val viewUri = remember { intent?.takeIf { it.action == Intent.ACTION_VIEW }?.data }
+            LaunchedEffect(viewUri) {
+                val uri = viewUri ?: return@LaunchedEffect
+                val single = MediaItem(
+                    id = uri.hashCode().toLong(), uri = uri, dateAdded = System.currentTimeMillis() / 1000,
+                    displayName = uri.lastPathSegment ?: "", size = 0L, bucketId = "", bucketName = "",
+                )
+                viewerList = listOf(single)
+                selectedItem = single
+            }
             // מתעדכן בזמן אמת כשמצב כהה/בהיר או צבע ההדגשה משתנים (ר' rememberFutureTheme).
             val theme = rememberFutureTheme()
 
@@ -84,7 +95,7 @@ class MainActivity : ComponentActivity() {
             BackHandler(enabled = editingItem != null || selectedItem != null || selectedAlbum != null) {
                 when {
                     editingItem != null -> editingItem = null
-                    selectedItem != null -> selectedItem = null
+                    selectedItem != null -> if (viewUri != null) finish() else selectedItem = null
                     else -> selectedAlbum = null
                 }
             }
@@ -117,7 +128,7 @@ class MainActivity : ComponentActivity() {
                             current != null -> MediaViewerScreen(
                                 item = current,
                                 items = viewerList,
-                                onBack = { selectedItem = null },
+                                onBack = { if (viewUri != null) finish() else selectedItem = null },
                                 onNavigate = { selectedItem = it; lastSelectedItemId = it.id },
                                 onDeleted = {
                                     selectedItem = null

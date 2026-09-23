@@ -78,13 +78,12 @@ class MainActivity : ComponentActivity() {
         pruneOrphanedWidgetIds()
 
         pickWidgetLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            // ACTION_APPWIDGET_BIND לא תמיד מחזיר את המזהה - שומרים אותו בצד.
+            val appWidgetId = result.data?.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, -1)?.takeIf { it != -1 } ?: pendingBindId
+            pendingBindId = -1
             if (result.resultCode == RESULT_OK) {
-                val appWidgetId = result.data?.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, -1) ?: -1
-                if (appWidgetId != -1) {
-                    configureWidget(appWidgetId)
-                }
+                if (appWidgetId != -1) configureWidget(appWidgetId)
             } else {
-                val appWidgetId = result.data?.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, -1) ?: -1
                 if (appWidgetId != -1) appWidgetHost.deleteAppWidgetId(appWidgetId)
             }
         }
@@ -110,13 +109,48 @@ class MainActivity : ComponentActivity() {
         
         setContent {
             FutureLauncherTheme {
-                LauncherScreen(viewModel, onSelectWidget = { selectWidget() })
+                // כמו בכל אפליקציה אחרת - RTL כפוי, גם אם שפת המערכת אחרת.
+                androidx.compose.runtime.CompositionLocalProvider(
+                    androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Rtl
+                ) {
+                    LauncherScreen(viewModel, onSelectWidget = { selectWidget() })
+                }
             }
         }
     }
 
     fun getAppWidgetHost() = appWidgetHost
     fun getAppWidgetManager() = appWidgetManager
+
+    private var pendingBindId = -1
+
+    /**
+     * ווידג'ט שנבחר בבורר של הלאנצ'ר (WidgetPickerScreen). אם המערכת כבר
+     * מרשה ללאנצ'ר לקשר ווידג'טים - ישר; אחרת חלון האישור של המערכת.
+     */
+    fun bindWidget(info: android.appwidget.AppWidgetProviderInfo) {
+        val id = appWidgetHost.allocateAppWidgetId()
+        if (appWidgetManager.bindAppWidgetIdIfAllowed(id, info.provider)) {
+            configureWidget(id)
+        } else {
+            pendingBindId = id
+            pickWidgetLauncher.launch(
+                Intent(AppWidgetManager.ACTION_APPWIDGET_BIND)
+                    .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
+                    .putExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER, info.provider)
+            )
+        }
+    }
+
+    /** אפליקציית הרקעים של FutureOS; בלעדיה - בורר הרקע של המערכת. */
+    fun openWallpapers() {
+        val wallpapers = Intent().setClassName("com.future.wallpapers", "com.future.wallpapers.MainActivity")
+        try {
+            startActivity(wallpapers)
+        } catch (e: android.content.ActivityNotFoundException) {
+            runCatching { startActivity(Intent(Intent.ACTION_SET_WALLPAPER)) }
+        }
+    }
 
     /**
      * מוחק מהמארח (AppWidgetHost) כל widgetId ש-AppWidgetManager כבר לא מכיר
@@ -253,6 +287,13 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
     val currentPage = pagerState.currentPage
     val currentItems = pages.getOrNull(currentPage) ?: emptyList()
     val theme = viewModel.theme
+    val prefs = remember { LauncherPrefs(context) }
+    val activity = context as MainActivity
+    // מסכים מלאים (הגדרות, בחירת אפליקציה/ווידג'ט) - המקשים שלהם לא עוברים לרשת.
+    val overlayOpen = viewModel.dialogState == LauncherDialog.LauncherSettings ||
+        viewModel.dialogState == LauncherDialog.Widgets ||
+        viewModel.dialogState is LauncherDialog.AppList
+    LaunchedEffect(overlayOpen) { if (!overlayOpen) runCatching { focusRequester.requestFocus() } }
 
     // מרענן את העיצוב המשותף (כהה/בהיר, צבע הדגשה) בכל חזרה למסך, כדי
     // שלשינויים שנעשו באפליקציית ההגדרות תהיה השפעה מיידית על הלאנצ'ר.
@@ -283,6 +324,7 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                     menuClickJob?.cancel()
                     menuClickJob = null
                     lastMenuKeyUpTime = 0L
+                    if (prefs.lockLayout && !viewModel.isEditMode) return
                     viewModel.isEditMode = !viewModel.isEditMode
                     if (viewModel.isEditMode) {
                         viewModel.editModeSelectedIndex = 0
@@ -300,7 +342,7 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                     menuClickJob?.cancel()
                     menuClickJob = scope.launch {
                         delay(350)
-                        if (!viewModel.isEditMode) {
+                        if (!viewModel.isEditMode && !overlayOpen && !prefs.lockLayout) {
                             val freshItems = viewModel.pages.getOrNull(pagerState.currentPage) ?: emptyList()
                             val item = freshItems.getOrNull(viewModel.focusedIndex)
                             if (item != null) viewModel.dialogState = LauncherDialog.AppOptions(item)
@@ -326,6 +368,14 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
             .focusable().bringIntoViewOnFocus()
             .onKeyEvent { keyEvent ->
                 val index = viewModel.focusedIndex
+                if (overlayOpen) {
+                    // המסך המלא מנווט בעצמו; כאן רק BACK סוגר אותו.
+                    if (keyEvent.nativeKeyEvent.keyCode == AndroidKeyEvent.KEYCODE_BACK) {
+                        if (keyEvent.type == KeyEventType.KeyUp) viewModel.dialogState = LauncherDialog.None
+                        return@onKeyEvent true
+                    }
+                    return@onKeyEvent false
+                }
 
                 if (keyEvent.nativeKeyEvent.keyCode == AndroidKeyEvent.KEYCODE_DPAD_CENTER ||
                     keyEvent.nativeKeyEvent.keyCode == AndroidKeyEvent.KEYCODE_ENTER) {
@@ -333,7 +383,7 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                         if (keyEvent.nativeKeyEvent.repeatCount == 0 && centerLongPressJob == null) {
                             centerLongPressJob = scope.launch {
                                 delay(800)
-                                if (!viewModel.isEditMode) {
+                                if (!viewModel.isEditMode && !prefs.lockLayout) {
                                     viewModel.isReorderMode = !viewModel.isReorderMode
                                 }
                                 centerLongPressJob = null
@@ -361,9 +411,7 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                                 when (viewModel.editModeSelectedIndex) {
                                     0 -> viewModel.dialogState = LauncherDialog.LauncherSettings
                                     1 -> viewModel.dialogState = LauncherDialog.Widgets
-                                    2 -> {
-                                        context.startActivity(Intent(Intent.ACTION_SET_WALLPAPER))
-                                    }
+                                    2 -> activity.openWallpapers()
                                     3 -> viewModel.dialogState = LauncherDialog.AppList
                                 }
                             } else if (viewModel.isEditMode) {
@@ -414,28 +462,27 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                                 viewModel.isEditModeBottomBarFocused = false
                                 return@onKeyEvent true
                             }
-                            // באדיט מוד הפוקוס נשאר לגמרי במסגרת סביב הרשת (Home/Trash,
-                            // שני כפתורי ה-+, הפס התחתון) ולעולם לא נכנס לתוך הרשת עצמה -
-                            // בכוונה, כדי שלא יהיה מוזר לראות מסגרת פוקוס על תוכן המסך
-                            // (אפליקציה/וידג'ט/תיקייה) בזמן שהמשתמש בעצם עורך את הפריסה,
-                            // לא בוחר להריץ אפליקציה.
+                            // באדיט מוד הפוקוס נע במסגרת שסביב הרשת, לפי המיקום שלה על
+                            // המסך (RTL): למעלה בית (מימין) ופח (משמאל); באמצע "+" מימין
+                            // ו-"+" משמאל; למטה ארבעת הכפתורים, מימין לשמאל. כל חץ זז
+                            // לשכן הקרוב באותו כיוון, ובקצה נעצר - קודם החצים קפצו בין
+                            // שורות באלכסון (פח -> "+" הימני, כפתור שמאלי -> "+" הימני).
                             AndroidKeyEvent.KEYCODE_DPAD_DOWN -> {
                                 when {
                                     viewModel.isTopBarFocused -> {
-                                        val target = viewModel.topBarSelectedIndex
                                         viewModel.isTopBarFocused = false
-                                        if (target == 0) viewModel.isLeftPlusFocused = true
-                                        else viewModel.isLeftPlusFocused = true // Per user request: Down from Trash to Left Plus
+                                        if (viewModel.topBarSelectedIndex == 0) viewModel.isLeftPlusFocused = true
+                                        else viewModel.isRightPlusFocused = true
                                     }
                                     viewModel.isLeftPlusFocused -> {
                                         viewModel.isLeftPlusFocused = false
                                         viewModel.isEditModeBottomBarFocused = true
-                                        viewModel.editModeSelectedIndex = 3
+                                        viewModel.editModeSelectedIndex = 0
                                     }
                                     viewModel.isRightPlusFocused -> {
                                         viewModel.isRightPlusFocused = false
                                         viewModel.isEditModeBottomBarFocused = true
-                                        viewModel.editModeSelectedIndex = 0
+                                        viewModel.editModeSelectedIndex = 3
                                     }
                                 }
                                 return@onKeyEvent true
@@ -444,69 +491,43 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                                 when {
                                     viewModel.isEditModeBottomBarFocused -> {
                                         viewModel.isEditModeBottomBarFocused = false
-                                        if (viewModel.editModeSelectedIndex >= 2) viewModel.isLeftPlusFocused = true
+                                        if (viewModel.editModeSelectedIndex <= 1) viewModel.isLeftPlusFocused = true
                                         else viewModel.isRightPlusFocused = true
                                     }
                                     viewModel.isLeftPlusFocused -> {
                                         viewModel.isLeftPlusFocused = false
                                         viewModel.isTopBarFocused = true
-                                        viewModel.topBarSelectedIndex = 1
+                                        viewModel.topBarSelectedIndex = 0
                                     }
                                     viewModel.isRightPlusFocused -> {
                                         viewModel.isRightPlusFocused = false
                                         viewModel.isTopBarFocused = true
-                                        viewModel.topBarSelectedIndex = 0
+                                        viewModel.topBarSelectedIndex = 1
                                     }
                                 }
                                 return@onKeyEvent true
                             }
                             AndroidKeyEvent.KEYCODE_DPAD_LEFT -> {
                                 when {
-                                    viewModel.isTopBarFocused -> {
-                                        if (viewModel.topBarSelectedIndex == 1) { // Trash
-                                            viewModel.isTopBarFocused = false
-                                            viewModel.isLeftPlusFocused = true
-                                        } else { // Home
-                                            viewModel.topBarSelectedIndex = 1
-                                        }
+                                    viewModel.isTopBarFocused -> viewModel.topBarSelectedIndex = 1
+                                    viewModel.isLeftPlusFocused -> {
+                                        viewModel.isLeftPlusFocused = false
+                                        viewModel.isRightPlusFocused = true
                                     }
-                                    viewModel.isEditModeBottomBarFocused -> {
-                                        if (viewModel.editModeSelectedIndex < 3) viewModel.editModeSelectedIndex++
-                                        else {
-                                            viewModel.isEditModeBottomBarFocused = false
-                                            viewModel.isLeftPlusFocused = true
-                                        }
-                                    }
-                                    viewModel.isRightPlusFocused -> {
-                                        viewModel.isRightPlusFocused = false
-                                        viewModel.isTopBarFocused = true
-                                        viewModel.topBarSelectedIndex = 0
-                                    }
+                                    viewModel.isEditModeBottomBarFocused ->
+                                        viewModel.editModeSelectedIndex = (viewModel.editModeSelectedIndex + 1).coerceAtMost(3)
                                 }
                                 return@onKeyEvent true
                             }
                             AndroidKeyEvent.KEYCODE_DPAD_RIGHT -> {
                                 when {
-                                    viewModel.isTopBarFocused -> {
-                                        if (viewModel.topBarSelectedIndex == 1) { // Trash
-                                            viewModel.topBarSelectedIndex = 0
-                                        } else { // Home
-                                            viewModel.isTopBarFocused = false
-                                            viewModel.isRightPlusFocused = true
-                                        }
+                                    viewModel.isTopBarFocused -> viewModel.topBarSelectedIndex = 0
+                                    viewModel.isRightPlusFocused -> {
+                                        viewModel.isRightPlusFocused = false
+                                        viewModel.isLeftPlusFocused = true
                                     }
-                                    viewModel.isEditModeBottomBarFocused -> {
-                                        if (viewModel.editModeSelectedIndex > 0) viewModel.editModeSelectedIndex--
-                                        else {
-                                            viewModel.isEditModeBottomBarFocused = false
-                                            viewModel.isRightPlusFocused = true
-                                        }
-                                    }
-                                    viewModel.isLeftPlusFocused -> {
-                                        viewModel.isLeftPlusFocused = false
-                                        viewModel.isTopBarFocused = true
-                                        viewModel.topBarSelectedIndex = 1
-                                    }
+                                    viewModel.isEditModeBottomBarFocused ->
+                                        viewModel.editModeSelectedIndex = (viewModel.editModeSelectedIndex - 1).coerceAtLeast(0)
                                 }
                                 return@onKeyEvent true
                             }
@@ -561,7 +582,7 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                                     // At bottom row in edit mode, go to Top Bar
                                     viewModel.isTopBarFocused = true
                                     viewModel.topBarSelectedIndex = if (index % 4 < 2) 0 else 1
-                                } else {
+                                } else if (prefs.wrapNavigation) {
                                     // At bottom row in regular mode, wrap to top row
                                     val column = index % 4
                                     var wrapIndex = column
@@ -591,7 +612,7 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                                     // At top row in edit mode, go to Top Bar
                                     viewModel.isTopBarFocused = true
                                     viewModel.topBarSelectedIndex = if (index % 4 < 2) 0 else 1
-                                } else {
+                                } else if (prefs.wrapNavigation) {
                                     // At top row in regular mode, wrap to bottom row
                                     val column = index % 4
                                     var wrapIndex = ((currentItems.size - 1) / 4) * 4 + column
@@ -685,12 +706,15 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                 return@onKeyEvent false
             }
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
+        if (prefs.dimWallpaper > 0) {
+            Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = prefs.dimWallpaper / 100f)))
+        }
+        Column(modifier = Modifier.fillMaxSize().padding(top = com.future.sharednav.systemui.StatusBarInset.HEIGHT_DP.dp)) {
             if (viewModel.isEditMode) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = com.future.sharednav.systemui.StatusBarInset.HEIGHT_DP.dp),
+                        .padding(top = 8.dp),
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -792,7 +816,10 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                                 isFocused = indexInPage == viewModel.focusedIndex && !viewModel.isEditMode && !viewModel.isTopBarFocused && !viewModel.isLeftPlusFocused && !viewModel.isRightPlusFocused,
                                 isMoving = (indexInPage == viewModel.focusedIndex && viewModel.isReorderMode),
                                 appWidgetHost = appWidgetHost,
-                                theme = theme
+                                theme = theme,
+                                iconSizeStep = prefs.iconSize,
+                                showLabel = prefs.showLabels,
+                                largeLabel = prefs.largeLabels,
                             )
                         }
                     }
@@ -844,13 +871,13 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                             viewModel.dialogState = LauncherDialog.Widgets
                         }
                         EditModeButton(stringResource(R.string.wallpaper), Icons.Rounded.Wallpaper, viewModel.isEditModeBottomBarFocused && viewModel.editModeSelectedIndex == 2, theme = theme) {
-                            context.startActivity(Intent(Intent.ACTION_SET_WALLPAPER))
+                            activity.openWallpapers()
                         }
                         EditModeButton(stringResource(R.string.apps), FutureIcons.Apps, viewModel.isEditModeBottomBarFocused && viewModel.editModeSelectedIndex == 3, theme = theme) {
                             viewModel.dialogState = LauncherDialog.AppList
                         }
                     }
-                } else if (pages.size > 1) {
+                } else if (pages.size > 1 && prefs.showPageIndicator) {
                     Row(horizontalArrangement = Arrangement.Center) {
                         repeat(pages.size) { iteration ->
                             val color = if (pagerState.currentPage == iteration) OnWallpaperColor else OnWallpaperColor.copy(alpha = 0.4f)
@@ -965,26 +992,44 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                 )
             }
             LauncherDialog.LauncherSettings -> {
-                LauncherSettingsDialog(
-                    onResetLayout = { viewModel.resetLayout() },
-                    onDismiss = { viewModel.dialogState = LauncherDialog.None },
-                    theme = theme
+                LauncherSettingsScreen(
+                    theme = theme,
+                    prefs = prefs,
+                    pageCount = pages.size,
+                    currentPage = currentPage,
+                    homePage = viewModel.homePageIndex,
+                    restrictToDefaultApps = viewModel.restrictToDefaultApps,
+                    onSetHome = {
+                        viewModel.homePageIndex = currentPage
+                        viewModel.savePages()
+                    },
+                    onAddPage = { viewModel.addPage(pages.size) },
+                    onOpenWallpapers = { activity.openWallpapers() },
+                    onOpenWidgets = { viewModel.dialogState = LauncherDialog.Widgets },
+                    onResetLayout = {
+                        viewModel.resetLayout()
+                        viewModel.dialogState = LauncherDialog.None
+                    },
                 )
             }
             LauncherDialog.Widgets -> {
-                WidgetsDialog(
-                    onSelectWidget = onSelectWidget,
-                    onDismiss = { viewModel.dialogState = LauncherDialog.None },
-                    theme = theme
+                WidgetPickerScreen(
+                    theme = theme,
+                    pm = pm,
+                    restrictToDefaultApps = viewModel.restrictToDefaultApps,
+                    onPick = { info ->
+                        viewModel.dialogState = LauncherDialog.None
+                        activity.bindWidget(info)
+                    },
                 )
             }
             is LauncherDialog.AppList -> {
-                AppListDialog(
+                AppPickerScreen(
                     pm = pm,
                     theme = theme,
                     restrictToDefaultApps = viewModel.restrictToDefaultApps,
                     onUnlockCode = { viewModel.unlockAllApps() },
-                    onAppClick = { app ->
+                    onPick = { app ->
                         val newPages = viewModel.pages.toMutableList()
                         val currentPageItems = newPages[currentPage].toMutableList()
                         
@@ -1000,10 +1045,6 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                         }
                         viewModel.dialogState = LauncherDialog.None
                     },
-                    onDismiss = {
-                        viewModel.dialogState = LauncherDialog.None
-                        viewModel.pendingSlot = null
-                    }
                 )
             }
             is LauncherDialog.EmptySlotOptions -> {

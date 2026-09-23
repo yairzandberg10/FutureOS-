@@ -1,41 +1,29 @@
 package com.future.gallery.ui
-import androidx.compose.material.icons.rounded.PlayCircle
-import androidx.compose.material.icons.rounded.Sort
-import androidx.compose.material.icons.rounded.VideocamOff
-import androidx.compose.material.icons.rounded.ZoomIn
-
-import com.future.sharednav.icons.FutureIcons
-import com.future.sharednav.components.FutureChip
-import com.future.sharednav.components.FutureOptionsMenu
-import com.future.sharednav.components.FutureMenuRow
-import com.future.sharednav.components.FutureButton
-import com.future.sharednav.components.ConfirmDialog
-import com.future.sharednav.theme.FutureDimens
-import com.future.sharednav.theme.FutureContrast
-import com.future.sharednav.theme.scrimColor
-import com.future.sharednav.theme.readableAccentColor
-import com.future.sharednav.theme.textAlpha
-import com.future.sharednav.theme.FutureMotion
-import com.future.sharednav.theme.FutureTypography
-import com.future.sharednav.theme.FutureShapes
-import com.future.sharednav.focus.bringIntoViewOnFocus
 
 import android.app.RecoverableSecurityException
 import android.content.Intent
 import android.graphics.Bitmap
 import android.os.Build
 import android.util.Size
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.*
@@ -43,8 +31,6 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -53,8 +39,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.zIndex
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -69,13 +56,28 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.future.gallery.data.Album
 import com.future.gallery.data.MediaItem
 import com.future.gallery.data.SortOption
 import com.future.gallery.data.sortedBy
+import com.future.sharednav.components.ConfirmDialog
+import com.future.sharednav.components.FutureButton
+import com.future.sharednav.components.FutureChip
+import com.future.sharednav.components.FutureMenuRow
+import com.future.sharednav.components.FutureOptionsMenu
+import com.future.sharednav.focus.bringIntoViewOnFocus
+import com.future.sharednav.focus.focusMotion
+import com.future.sharednav.icons.FutureIcons
+import com.future.sharednav.theme.FutureDimens
+import com.future.sharednav.theme.FutureMotion
+import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.theme.FutureTheme
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.mutedTextColor
+import com.future.sharednav.theme.readableAccentColor
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 private enum class GalleryTab { ALL, ALBUMS }
@@ -89,6 +91,11 @@ private val SORT_LABELS = mapOf(
     SortOption.SIZE_SMALLEST to "גודל - הקטן קודם"
 )
 
+/** רמות הזום: מ-1x (כל התמונה) עד 8x; OK מדלג בין 1/2/4, 1 ו-3 בצעדים רציפים. */
+private const val ZOOM_MAX = 8f
+private const val ZOOM_STEP = 1.25f
+private val ZOOM_PRESETS = listOf(1f, 2f, 4f)
+
 @Composable
 fun GalleryHomeScreen(
     items: List<MediaItem>,
@@ -101,21 +108,27 @@ fun GalleryHomeScreen(
     lastSelectedItemId: Long? = null,
     lastSelectedAlbumId: String? = null,
 ) {
-    var tab by remember { mutableStateOf(GalleryTab.ALL) }
-    var sortOption by remember { mutableStateOf(SortOption.DATE_NEWEST) }
-    var showSortMenu by remember { mutableStateOf(false) }
+    var tab by rememberSaveable { mutableStateOf(GalleryTab.ALL) }
+    var sortOption by rememberSaveable { mutableStateOf(SortOption.DATE_NEWEST) }
+    var showMenu by remember { mutableStateOf(false) }
     val sortedItems = remember(items, sortOption) { items.sortedBy(sortOption) }
+
+    com.future.sharednav.nav.onOptionsKeyPress { showMenu = !showMenu }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize()) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 8.dp),
+                    verticalAlignment = Alignment.Bottom
                 ) {
                     Text("גלריה", fontSize = FutureTypography.headline, fontWeight = FontWeight.Bold, color = theme.textColor, modifier = Modifier.weight(1f))
-                    if (tab == GalleryTab.ALL && hasPermission) {
-                        GalleryIconButton(Icons.Rounded.Sort, "מיון", theme) { showSortMenu = true }
+                    if (hasPermission) {
+                        Text(
+                            if (tab == GalleryTab.ALL) "${items.size} תמונות" else "${albums.size} אלבומים",
+                            color = theme.mutedTextColor,
+                            fontSize = FutureTypography.caption,
+                        )
                     }
                 }
 
@@ -123,8 +136,8 @@ fun GalleryHomeScreen(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    GalleryTabChip("הכל", tab == GalleryTab.ALL, theme) { tab = GalleryTab.ALL }
-                    GalleryTabChip("אלבומים", tab == GalleryTab.ALBUMS, theme) { tab = GalleryTab.ALBUMS }
+                    FutureChip("הכל", theme, selected = tab == GalleryTab.ALL, onClick = { tab = GalleryTab.ALL })
+                    FutureChip("אלבומים", theme, selected = tab == GalleryTab.ALBUMS, onClick = { tab = GalleryTab.ALBUMS })
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -136,16 +149,16 @@ fun GalleryHomeScreen(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center
                         ) {
-                            Text("כדי להציג תמונות צריך לאשר הרשאה", color = theme.textColor.copy(alpha = 0.7f), fontSize = FutureTypography.bodyLarge)
+                            Text("כדי להציג תמונות צריך לאשר הרשאה", color = theme.mutedTextColor, fontSize = FutureTypography.bodyLarge)
                             Spacer(modifier = Modifier.height(16.dp))
-                            FocusableTextButton("אשר הרשאה", onRequestPermission, theme)
+                            FutureButton("אשר הרשאה", theme, onRequestPermission)
                         }
                     }
                     tab == GalleryTab.ALBUMS -> AlbumsScreen(albums, theme, onAlbumClick, lastSelectedAlbumId = lastSelectedAlbumId)
                     sortedItems.isEmpty() -> {
                         com.future.sharednav.components.EmptyState(
                             icon = FutureIcons.Image,
-                            title = "אין תמונות או סרטונים במכשיר",
+                            title = "אין תמונות במכשיר",
                             textColor = theme.textColor,
                         )
                     }
@@ -153,18 +166,37 @@ fun GalleryHomeScreen(
                 }
             }
 
-            if (showSortMenu) {
-                SortMenu(
-                    current = sortOption,
-                    theme = theme,
-                    onDismiss = { showSortMenu = false },
-                    onSelect = { sortOption = it; showSortMenu = false }
-                )
+            if (showMenu) {
+                FutureOptionsMenu(theme = theme, onDismissRequest = { showMenu = false }, header = "גלריה") {
+                    FutureMenuRow(
+                        if (tab == GalleryTab.ALL) "הצג אלבומים" else "הצג את כל התמונות",
+                        if (tab == GalleryTab.ALL) FutureIcons.Folder else FutureIcons.Image,
+                        theme,
+                        onClick = {
+                            tab = if (tab == GalleryTab.ALL) GalleryTab.ALBUMS else GalleryTab.ALL
+                            showMenu = false
+                        },
+                    )
+                    if (tab == GalleryTab.ALL && hasPermission) {
+                        SortOption.entries.forEach { option ->
+                            FutureMenuRow(
+                                label = SORT_LABELS.getValue(option),
+                                icon = null,
+                                theme = theme,
+                                onClick = { sortOption = option; showMenu = false },
+                                trailing = if (option == sortOption) {
+                                    { Icon(FutureIcons.Check, contentDescription = null, tint = theme.readableAccentColor, modifier = Modifier.size(FutureDimens.iconMenuRow)) }
+                                } else null,
+                            )
+                        }
+                    }
+                }
             }
         }
     }
 }
 
+/** תוכן אלבום. בלי כפתור חזרה על המסך - מקש BACK חוזר (MainActivity). */
 @Composable
 fun AlbumDetailScreen(
     albumName: String,
@@ -178,16 +210,15 @@ fun AlbumDetailScreen(
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize()) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.Bottom
                 ) {
-                    GalleryIconButton(FutureIcons.AutoMirrored.ArrowBack, "חזור", theme, onBack)
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Text(albumName, fontSize = FutureTypography.screenTitle, fontWeight = FontWeight.Bold, color = theme.textColor)
+                    Text(albumName, fontSize = FutureTypography.screenTitle, fontWeight = FontWeight.Bold, color = theme.textColor, modifier = Modifier.weight(1f), maxLines = 1)
+                    Text("${items.size} תמונות", color = theme.mutedTextColor, fontSize = FutureTypography.caption)
                 }
                 if (items.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("האלבום ריק", color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.bodyLarge)
+                        Text("האלבום ריק", color = theme.mutedTextColor, fontSize = FutureTypography.bodyLarge)
                     }
                 } else {
                     MediaGrid(items, theme, onItemClick = { item -> onItemClick(items, item) }, lastSelectedId = lastSelectedItemId)
@@ -202,30 +233,28 @@ private fun MediaGrid(
     items: List<MediaItem>,
     theme: FutureTheme,
     onItemClick: (MediaItem) -> Unit,
-    // הפריט שנפתח לאחרונה מהרשת הזו - כשחוזרים "אחורה" מהצפייה, הפוקוס צריך
-    // לשוב אליו בדיוק, לא תמיד לפריט הראשון ברשת.
+    // הפריט שנפתח לאחרונה - כשחוזרים מהצפייה הפוקוס חוזר אליו בדיוק.
     lastSelectedId: Long? = null,
 ) {
     val gridState = rememberLazyGridState()
     val thumbnailFocusRequesters = remember { mutableMapOf<Long, FocusRequester>() }
-    // בלי זה, אין שום פריט ממוקד כשנכנסים לרשת הזו (או חוזרים אליה) - dead
-    // end ב-D-pad בלי מסך מגע.
-    LaunchedEffect(items.map { it.id }) {
-        val target = items.firstOrNull { it.id == lastSelectedId } ?: items.firstOrNull()
-        target?.let { thumbnailFocusRequesters.getOrPut(it.id) { FocusRequester() }.requestFocus() }
+    val ids = remember(items) { items.map { it.id } }
+    LaunchedEffect(ids) {
+        val index = items.indexOfFirst { it.id == lastSelectedId }.takeIf { it >= 0 } ?: 0
+        val target = items.getOrNull(index) ?: return@LaunchedEffect
+        // פריט רחוק ברשת עוד לא מורכב - קודם גוללים אליו, ורק אז מבקשים פוקוס.
+        // קודם הבקשה נפלה בשקט והפוקוס "קפץ" למקום אקראי.
+        if (index > 0) gridState.scrollToItem(index)
+        withFrameNanos { }
+        runCatching { thumbnailFocusRequesters.getOrPut(target.id) { FocusRequester() }.requestFocus() }
     }
     LazyVerticalGrid(
         columns = GridCells.Fixed(3),
         state = gridState,
-        // focusGroup() נותן ל-Compose גבול/סדר חיפוש פוקוס מפורש לרשת הזו - בלי זה,
-        // חיפוש הפוקוס הדו-ממדי הדיפולטיבי (במיוחד בשילוב עם RTL שכל המסך עטוף בו)
-        // לפעמים לא מוצא את הפריט "הבא ההגיוני" בין שורות ונשאר תקוע במקום, למרות
-        // שיש עוד תוכן לגלול אליו. זה ה-API הרשמי המומלץ ב-Compose בדיוק למקרה הזה
-        // (רשימות/רשתות מנווטות ב-D-pad).
         modifier = Modifier.focusGroup(),
-        contentPadding = PaddingValues(4.dp),
-        horizontalArrangement = Arrangement.spacedBy(3.dp),
-        verticalArrangement = Arrangement.spacedBy(3.dp)
+        contentPadding = PaddingValues(6.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         items(items, key = { it.id }) { item ->
             MediaThumbnail(
@@ -238,44 +267,7 @@ private fun MediaGrid(
     }
 }
 
-/** לשונית "הכל / אלבומים" - הצ'יפ של הדיזיין סיסטם, שנגזר מהרכיב הזה עצמו (GalleryTabChip, 14dp). */
-@Composable
-private fun GalleryTabChip(label: String, isSelected: Boolean, theme: FutureTheme, onClick: () -> Unit) {
-    FutureChip(label, theme, selected = isSelected, onClick = onClick)
-}
-
-@Composable
-private fun GalleryIconButton(icon: androidx.compose.ui.graphics.vector.ImageVector, contentDescription: String, theme: FutureTheme, onClick: () -> Unit) {
-    // עטיפה דקה סביב TopBarIconButton המשותף (מודול SharedKeypadNav) - חתימת
-    // הקריאה נשארת זהה כדי שקריאות קיימות ב-Gallery לא ישתנו.
-    com.future.sharednav.components.TopBarIconButton(icon, contentDescription, theme.textColor, theme.accentColor, onClick)
-}
-
-@Composable
-private fun SortMenu(current: SortOption, theme: FutureTheme, onDismiss: () -> Unit, onSelect: (SortOption) -> Unit) {
-    FutureOptionsMenu(theme = theme, onDismissRequest = onDismiss, header = "מיין לפי") {
-        SortOption.entries.forEach { option ->
-            FutureMenuRow(
-                label = SORT_LABELS.getValue(option),
-                icon = null,
-                theme = theme,
-                onClick = { onSelect(option) },
-                // המיון הנוכחי = הבחירה, ולכן בהדגשה (ולא הדגשת הטקסט כולו כמו קודם)
-                trailing = if (option == current) {
-                    { Icon(FutureIcons.Check, contentDescription = null, tint = theme.readableAccentColor, modifier = Modifier.size(FutureDimens.iconMenuRow)) }
-                } else null,
-            )
-        }
-    }
-}
-
-
-
-@Composable
-private fun FocusableTextButton(text: String, onClick: () -> Unit, theme: FutureTheme) {
-    FutureButton(text, theme, onClick)
-}
-
+/** תמונה ממוזערת: פוקוס = מתרוממת מעט ומסגרת בהדגשה (כמו כל פריט במערכת). */
 @Composable
 private fun MediaThumbnail(item: MediaItem, onClick: () -> Unit, theme: FutureTheme, focusRequester: FocusRequester? = null) {
     val context = LocalContext.current
@@ -286,27 +278,22 @@ private fun MediaThumbnail(item: MediaItem, onClick: () -> Unit, theme: FutureTh
     LaunchedEffect(item.id) {
         bitmap = withContext(Dispatchers.IO) {
             try {
-                if (android.os.Build.VERSION.SDK_INT >= 29) {
-                    context.contentResolver.loadThumbnail(item.uri, Size(200, 200), null)
-                } else {
-                    null
-                }
+                context.contentResolver.loadThumbnail(item.uri, Size(220, 220), null)
             } catch (e: Exception) {
                 null
             }
         }
     }
-
-    val scale by animateFloatAsState(if (isFocused) 0.94f else 1f, label = "thumbScale")
-    val shape = if (isFocused) FutureShapes.sm else FutureShapes.xs
+    val alpha by animateFloatAsState(if (bitmap != null) 1f else 0f, FutureMotion.fast(), label = "thumbFade")
+    val shape = FutureShapes.sm
 
     Box(
         modifier = Modifier
             .aspectRatio(1f)
-            .graphicsLayer { scaleX = scale; scaleY = scale }
+            .zIndex(if (isFocused) 1f else 0f)
+            .focusMotion(interactionSource, focusedScale = 1.06f)
             .clip(shape)
             .background(theme.textColor.copy(alpha = 0.08f))
-            .then(if (isFocused) Modifier.border(width = 3.dp, color = theme.accentColor, shape = shape) else Modifier)
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
             .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
@@ -315,21 +302,24 @@ private fun MediaThumbnail(item: MediaItem, onClick: () -> Unit, theme: FutureTh
             Image(
                 bitmap = it.asImageBitmap(),
                 contentDescription = null,
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxSize().graphicsLayer { this.alpha = alpha },
                 contentScale = ContentScale.Crop
             )
         }
-        if (item.isVideo) {
-            Icon(
-                Icons.Rounded.PlayCircle,
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.align(Alignment.Center).size(28.dp)
-            )
+        if (isFocused) {
+            Box(modifier = Modifier.matchParentSize().border(FutureDimens.focusBorderControl, theme.readableAccentColor, shape))
         }
     }
 }
 
+/**
+ * צפייה בתמונה. אין כפתורים על המסך - הכל במקשים ובתפריט Options:
+ * - ימינה/שמאלה: התמונה הקודמת/הבאה (רק כשלא בזום).
+ * - OK: דילוג בין 1x/2x/4x; 3 מגדיל ו-1 מקטין בצעדים (החזקה = רציף), עד 8x.
+ * - בזום: החצים (או 2/4/6/8) מזיזים בתוך התמונה ולא עוברים לתמונה אחרת;
+ *   0 או BACK מחזירים לתמונה המלאה.
+ * - Options: עריכה, שיתוף, פרטים, רקע, מחיקה.
+ */
 @Composable
 fun MediaViewerScreen(
     item: MediaItem,
@@ -341,47 +331,42 @@ fun MediaViewerScreen(
     theme: FutureTheme
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var bitmap by remember(item.id) { mutableStateOf<Bitmap?>(null) }
+    var imageSize by remember(item.id) { mutableStateOf<android.util.Size?>(null) }
     var loadFailed by remember(item.id) { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
-    var zoomTarget by remember(item.id) { mutableStateOf(1f) }
-    var panX by remember(item.id) { mutableStateOf(0f) }
-    var panY by remember(item.id) { mutableStateOf(0f) }
-    val focusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
+    var showMenu by remember { mutableStateOf(false) }
+    var showInfo by remember { mutableStateOf(false) }
+    var zoomTarget by remember(item.id) { mutableFloatStateOf(1f) }
+    var panX by remember(item.id) { mutableFloatStateOf(0f) }
+    var panY by remember(item.id) { mutableFloatStateOf(0f) }
     var boxSize by remember { mutableStateOf(IntSize.Zero) }
-    var videoView by remember(item.id) { mutableStateOf<android.widget.VideoView?>(null) }
-    var isVideoPlaying by remember(item.id) { mutableStateOf(true) }
-    var videoLoadFailed by remember(item.id) { mutableStateOf(false) }
+    var direction by remember { mutableIntStateOf(1) }
+    var zoomBadgeTick by remember { mutableIntStateOf(0) }
+    var showZoomBadge by remember { mutableStateOf(false) }
+    var showHint by remember { mutableStateOf(true) }
+    val focusRequester = remember { FocusRequester() }
 
-    // אנימציה חלקה במקום קפיצה מיידית של הזום - לחיצה על כפתור הזום הייתה
-    // "מטלפרת" את התמונה בין הרמות בלי שום מעבר, מה שהרגיש שבור/מקוטע.
-    val zoom by androidx.compose.animation.core.animateFloatAsState(
-        targetValue = zoomTarget,
-        animationSpec = androidx.compose.animation.core.tween(FutureMotion.DurationStandard),
-        label = "mediaZoom"
-    )
-    val animatedPanX by androidx.compose.animation.core.animateFloatAsState(
-        targetValue = panX,
-        animationSpec = androidx.compose.animation.core.tween(FutureMotion.DurationFast),
-        label = "mediaPanX"
-    )
-    val animatedPanY by androidx.compose.animation.core.animateFloatAsState(
-        targetValue = panY,
-        animationSpec = androidx.compose.animation.core.tween(FutureMotion.DurationFast),
-        label = "mediaPanY"
-    )
+    val zoom by animateFloatAsState(zoomTarget, FutureMotion.standard(), label = "mediaZoom")
+    val animatedPanX by animateFloatAsState(panX, FutureMotion.fast(), label = "mediaPanX")
+    val animatedPanY by animateFloatAsState(panY, FutureMotion.fast(), label = "mediaPanY")
 
     val currentIndex = remember(item.id, items) { items.indexOfFirst { it.id == item.id } }
 
-    LaunchedEffect(item.id) { focusRequester.requestFocus() }
+    com.future.sharednav.nav.onOptionsKeyPress { showMenu = !showMenu }
+    BackHandler(enabled = zoomTarget > 1f) { zoomTarget = 1f }
 
-    // מאפסים את הפאן בכל שינוי רמת זום כדי שלא יישאר תזוזה "תקועה" מחוץ לתמונה
-    LaunchedEffect(zoomTarget) { panX = 0f; panY = 0f }
+    LaunchedEffect(item.id) { runCatching { focusRequester.requestFocus() } }
+    LaunchedEffect(Unit) { delay(2600); showHint = false }
+    LaunchedEffect(zoomBadgeTick) {
+        if (zoomBadgeTick == 0) return@LaunchedEffect
+        showZoomBadge = true
+        delay(1400)
+        showZoomBadge = false
+    }
 
-    // הגבלת הפאן חייבת להתבסס על הגודל שבו התמונה בפועל מוצגת (ContentScale.Fit
-    // עלול "להקטין" רק ציר אחד ולהשאיר פסי ריווח בציר השני - letterbox), לא על
-    // גודל המכל כולו. אחרת קליפ הגבול מרשה לפאן את התמונה עד מחוץ למסך לגמרי
-    // בציר המצומצם.
+    // התמונה מוצגת ב-Fit: הגבולות של הפאן נגזרים מהגודל המוצג בפועל, לא מהמכל.
     val (renderedW, renderedH) = remember(bitmap, boxSize) {
         val bmp = bitmap
         if (bmp == null || boxSize.width == 0 || boxSize.height == 0) {
@@ -389,16 +374,25 @@ fun MediaViewerScreen(
         } else {
             val bitmapAspect = bmp.width.toFloat() / bmp.height.toFloat()
             val boxAspect = boxSize.width.toFloat() / boxSize.height.toFloat()
-            if (bitmapAspect > boxAspect) {
-                boxSize.width.toFloat() to (boxSize.width.toFloat() / bitmapAspect)
-            } else {
-                (boxSize.height.toFloat() * bitmapAspect) to boxSize.height.toFloat()
-            }
+            if (bitmapAspect > boxAspect) boxSize.width.toFloat() to (boxSize.width.toFloat() / bitmapAspect)
+            else (boxSize.height.toFloat() * bitmapAspect) to boxSize.height.toFloat()
         }
     }
 
-    LaunchedEffect(item.id, item.isVideo) {
-        if (item.isVideo) return@LaunchedEffect
+    fun clampPan() {
+        val maxX = renderedW * (zoomTarget - 1f) / 2f
+        val maxY = renderedH * (zoomTarget - 1f) / 2f
+        panX = panX.coerceIn(-maxX, maxX)
+        panY = panY.coerceIn(-maxY, maxY)
+    }
+
+    fun setZoom(z: Float) {
+        zoomTarget = z.coerceIn(1f, ZOOM_MAX)
+        if (zoomTarget <= 1.001f) { zoomTarget = 1f; panX = 0f; panY = 0f } else clampPan()
+        zoomBadgeTick++
+    }
+
+    LaunchedEffect(item.id) {
         bitmap = null
         loadFailed = false
         bitmap = withContext(Dispatchers.IO) {
@@ -406,7 +400,9 @@ fun MediaViewerScreen(
                 val source = android.graphics.ImageDecoder.createSource(context.contentResolver, item.uri)
                 android.graphics.ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
                     decoder.allocator = android.graphics.ImageDecoder.ALLOCATOR_SOFTWARE
-                    val maxDim = 1920
+                    imageSize = info.size
+                    // רזולוציה גבוהה יותר מבעבר - בזום 8x צריך פרטים.
+                    val maxDim = 2560
                     val w = info.size.width
                     val h = info.size.height
                     val scale = maxDim.toFloat() / maxOf(w, h)
@@ -414,167 +410,137 @@ fun MediaViewerScreen(
                 }
             } catch (e: Exception) {
                 null
+            } catch (e: OutOfMemoryError) {
+                null
             }
         }
         if (bitmap == null) loadFailed = true
     }
 
     fun goTo(delta: Int) {
-        if (currentIndex < 0) return
+        if (currentIndex < 0 || zoomTarget > 1f) return
         val nextIndex = currentIndex + delta
-        if (nextIndex in items.indices) onNavigate(items[nextIndex])
+        if (nextIndex in items.indices) {
+            direction = delta
+            onNavigate(items[nextIndex])
+        }
+    }
+
+    fun share() {
+        val send = Intent(Intent.ACTION_SEND).apply {
+            type = "image/*"
+            putExtra(Intent.EXTRA_STREAM, item.uri)
+            clipData = android.content.ClipData.newRawUri(item.displayName, item.uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        com.future.sharednav.share.FutureShare.open(context, send, "שיתוף תמונה")
+    }
+
+    fun setAsWallpaper() {
+        scope.launch {
+            val ok = withContext(Dispatchers.IO) {
+                runCatching {
+                    context.contentResolver.openInputStream(item.uri)?.use { input ->
+                        android.app.WallpaperManager.getInstance(context).setStream(input)
+                    }
+                    true
+                }.getOrDefault(false)
+            }
+            android.widget.Toast.makeText(context, if (ok) "הוגדר כרקע" else "לא ניתן להגדיר כרקע", android.widget.Toast.LENGTH_SHORT).show()
+        }
     }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-        Column(modifier = Modifier.fillMaxSize().background(Color.Black)) {
-            BoxWithConstraints(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .onSizeChanged { boxSize = it }
-                    .focusRequester(focusRequester)
-                    .focusable().bringIntoViewOnFocus()
-                    .onKeyEvent { event ->
-                        if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
-                        if (item.isVideo) {
-                            // בקרת וידאו: שמאל/ימין תמיד מכוונים הרצה אחורה/קדימה בציר
-                            // הזמן של הסרטון (המוסכמה האוניברסלית של נגני מדיה/שלטים -
-                            // לא תלוית כיוון RTL כמו ניווט בין פריטים), ולמעלה/למטה
-                            // עוברים לפריט הקודם/הבא כי אין זום להזיז בו במסך וידאו.
-                            return@onKeyEvent when (event.key) {
-                                Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> {
-                                    videoView?.let { vv ->
-                                        if (vv.isPlaying) { vv.pause(); isVideoPlaying = false } else { vv.start(); isVideoPlaying = true }
-                                    }
-                                    true
-                                }
-                                Key.DirectionRight -> {
-                                    videoView?.let { vv -> vv.seekTo((vv.currentPosition + 10_000).coerceAtMost(vv.duration)) }
-                                    true
-                                }
-                                Key.DirectionLeft -> {
-                                    videoView?.let { vv -> vv.seekTo((vv.currentPosition - 10_000).coerceAtLeast(0)) }
-                                    true
-                                }
-                                Key.DirectionUp -> { goTo(-1); true }
-                                Key.DirectionDown -> { goTo(1); true }
-                                else -> false
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(theme.backgroundColor)
+                .onSizeChanged { boxSize = it }
+                .focusRequester(focusRequester)
+                .focusable()
+                .onKeyEvent { event ->
+                    if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
+                    val zoomed = zoomTarget > 1f
+                    val panStep = 60f * zoomTarget
+                    when (event.key) {
+                        Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> {
+                            if (bitmap != null && event.nativeKeyEvent.repeatCount == 0) {
+                                setZoom(ZOOM_PRESETS.firstOrNull { it > zoomTarget + 0.01f } ?: 1f)
                             }
+                            true
                         }
-                        val panStep = 40f * zoomTarget
-                        if (zoomTarget > 1f) {
-                            val maxPanX = (renderedW * (zoomTarget - 1f) / 2f)
-                            val maxPanY = (renderedH * (zoomTarget - 1f) / 2f)
-                            when (event.key) {
-                                // כשכבר הגענו לקצה הפאן בכיוון הזה, החץ עדיין לא "מת" -
-                                // עובר לתמונה הבאה/קודמת במקום, כדי שדפדוף לא יתקע
-                                // כשמזוגמים פנימה (בלי דרך אחרת לצאת חוץ מלאפס זום).
-                                Key.DirectionRight -> {
-                                    val next = (panX - panStep).coerceIn(-maxPanX, maxPanX)
-                                    if (next == panX && panX <= -maxPanX + 0.5f) goTo(-1) else panX = next
-                                    true
-                                }
-                                Key.DirectionLeft -> {
-                                    val next = (panX + panStep).coerceIn(-maxPanX, maxPanX)
-                                    if (next == panX && panX >= maxPanX - 0.5f) goTo(1) else panX = next
-                                    true
-                                }
-                                Key.DirectionUp -> { panY = (panY + panStep).coerceIn(-maxPanY, maxPanY); true }
-                                Key.DirectionDown -> { panY = (panY - panStep).coerceIn(-maxPanY, maxPanY); true }
-                                else -> false
-                            }
-                        } else {
-                            when (event.key) {
-                                Key.DirectionRight -> { goTo(-1); true }
-                                Key.DirectionLeft -> { goTo(1); true }
-                                else -> false
-                            }
+                        Key.Three, Key.VolumeUp -> { if (bitmap != null) setZoom(zoomTarget * ZOOM_STEP); true }
+                        Key.One, Key.VolumeDown -> { if (bitmap != null) setZoom(zoomTarget / ZOOM_STEP); true }
+                        Key.Zero -> { setZoom(1f); true }
+                        // בזום נשארים בתוך התמונה - גם בקצה, החץ לא מחליף תמונה.
+                        Key.DirectionRight, Key.Six -> {
+                            if (zoomed) { panX -= panStep; clampPan() } else if (event.key == Key.DirectionRight) goTo(-1)
+                            true
                         }
-                    }
-            ) {
-                when {
-                    item.isVideo -> {
-                        if (videoLoadFailed) {
-                            Column(
-                                modifier = Modifier.fillMaxSize(),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
-                            ) {
-                                Icon(Icons.Rounded.VideocamOff, contentDescription = null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(48.dp))
-                                Spacer(modifier = Modifier.height(12.dp))
-                                Text("לא ניתן לנגן את הסרטון", color = Color.White.copy(alpha = 0.7f), fontSize = FutureTypography.body)
-                            }
-                        } else {
-                            androidx.compose.ui.viewinterop.AndroidView(
-                                modifier = Modifier.fillMaxSize(),
-                                factory = { ctx ->
-                                    android.widget.VideoView(ctx).apply {
-                                        setOnErrorListener { _, _, _ -> videoLoadFailed = true; true }
-                                        setOnPreparedListener { player ->
-                                            player.isLooping = false
-                                            start()
-                                        }
-                                        setOnCompletionListener { isVideoPlaying = false }
-                                        setVideoURI(item.uri)
-                                        videoView = this
-                                    }
-                                },
-                                onRelease = { it.stopPlayback(); videoView = null },
-                            )
-                            if (!isVideoPlaying) {
-                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                    Icon(FutureIcons.PlayArrow, contentDescription = null, tint = Color.White, modifier = Modifier.size(56.dp))
-                                }
-                            }
+                        Key.DirectionLeft, Key.Four -> {
+                            if (zoomed) { panX += panStep; clampPan() } else if (event.key == Key.DirectionLeft) goTo(1)
+                            true
                         }
-                    }
-                    loadFailed -> {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text("לא ניתן לטעון את התמונה", color = Color.White.copy(alpha = 0.5f), fontSize = FutureTypography.body)
-                        }
-                    }
-                    else -> {
-                        bitmap?.let {
-                            Image(
-                                bitmap = it.asImageBitmap(),
-                                contentDescription = null,
-                                modifier = Modifier.fillMaxSize().graphicsLayer {
-                                    scaleX = zoom; scaleY = zoom
-                                    translationX = animatedPanX; translationY = animatedPanY
-                                },
-                                contentScale = ContentScale.Fit
-                            )
-                        }
+                        Key.DirectionUp, Key.Two -> { if (zoomed) { panY += panStep; clampPan() }; true }
+                        Key.DirectionDown, Key.Eight -> { if (zoomed) { panY -= panStep; clampPan() }; true }
+                        else -> false
                     }
                 }
-
-                Box(modifier = Modifier.padding(FutureDimens.spacingMd)) {
-                    ViewerBackButton(theme, onBack)
+        ) {
+            AnimatedContent(
+                targetState = item.id,
+                transitionSpec = {
+                    // RTL: "הבאה" נכנסת משמאל.
+                    val sign = if (direction > 0) -1 else 1
+                    (slideInHorizontally(FutureMotion.enter()) { sign * it / 5 } + fadeIn(FutureMotion.enter()) + scaleIn(FutureMotion.enter(), initialScale = 0.96f))
+                        .togetherWith(slideOutHorizontally(FutureMotion.exit()) { -sign * it / 5 } + fadeOut(FutureMotion.exit()))
+                },
+                label = "photoSwap",
+                modifier = Modifier.fillMaxSize(),
+            ) { id ->
+                val bmp = if (id == item.id) bitmap else null
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    when {
+                        id == item.id && loadFailed -> Text("לא ניתן לטעון את התמונה", color = theme.mutedTextColor, fontSize = FutureTypography.body)
+                        bmp != null -> Image(
+                            bitmap = bmp.asImageBitmap(),
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize().graphicsLayer {
+                                scaleX = zoom; scaleY = zoom
+                                translationX = animatedPanX; translationY = animatedPanY
+                            },
+                            contentScale = ContentScale.Fit
+                        )
+                    }
                 }
             }
 
-            MediaViewerBottomBar(
-                theme = theme,
-                canZoom = !item.isVideo && !loadFailed && bitmap != null,
-                isZoomed = zoomTarget > 1f,
-                showEdit = !item.isVideo && !loadFailed && bitmap != null,
-                onZoom = { zoomTarget = if (zoomTarget >= 3f) 1f else zoomTarget + 1f },
-                onShare = {
-                    try {
-                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                            type = if (item.isVideo) "video/*" else "image/*"
-                            putExtra(Intent.EXTRA_STREAM, item.uri)
-                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        }
-                        context.startActivity(Intent.createChooser(shareIntent, null).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                    } catch (e: Exception) {
-                        android.util.Log.w("GalleryScreens", "goTo failed", e)
-                    }
-                },
-                onEdit = onEdit,
-                onDelete = { showDeleteConfirm = true }
-            )
+            // מונה + זום בפינה העליונה
+            Row(
+                modifier = Modifier.align(Alignment.TopCenter).padding(top = 10.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                if (items.size > 1 && currentIndex >= 0) ViewerBadge("${currentIndex + 1} / ${items.size}", theme)
+                AnimatedVisibility(visible = showZoomBadge || zoomTarget > 1f, enter = fadeIn() + scaleIn(initialScale = 0.8f), exit = fadeOut()) {
+                    ViewerBadge("${"%.1f".format(zoomTarget)}x", theme)
+                }
+            }
+
+            // מפת מיקום קטנה בזום - איפה בתוך התמונה נמצאים
+            if (zoomTarget > 1f && renderedW > 0f && renderedH > 0f) {
+                ZoomMiniMap(
+                    zoom = zoomTarget, panX = panX, panY = panY, renderedW = renderedW, renderedH = renderedH, theme = theme,
+                    modifier = Modifier.align(Alignment.BottomStart).padding(12.dp),
+                )
+            }
+
+            AnimatedVisibility(
+                visible = showHint && bitmap != null,
+                enter = fadeIn(), exit = fadeOut(),
+                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 14.dp),
+            ) {
+                ViewerBadge("OK / 1 / 3 זום · Options תפריט", theme)
+            }
         }
 
         val deleteIntentLauncher = rememberLauncherForActivityResult(
@@ -587,10 +553,35 @@ fun MediaViewerScreen(
             }
         }
 
+        if (showMenu) {
+            FutureOptionsMenu(theme = theme, onDismissRequest = { showMenu = false }, header = item.displayName.ifBlank { "תמונה" }) {
+                if (bitmap != null) FutureMenuRow("עריכה ואפקטים", FutureIcons.Edit, theme, onClick = { showMenu = false; onEdit() })
+                FutureMenuRow("שיתוף", FutureIcons.Share, theme, onClick = { showMenu = false; share() })
+                if (zoomTarget > 1f) FutureMenuRow("חזרה לתמונה המלאה", FutureIcons.RestartAlt, theme, onClick = { showMenu = false; setZoom(1f) })
+                FutureMenuRow("פרטים", FutureIcons.Info, theme, onClick = { showMenu = false; showInfo = true })
+                FutureMenuRow("הגדר כרקע", FutureIcons.Palette, theme, onClick = { showMenu = false; setAsWallpaper() })
+                FutureMenuRow("מחיקה", FutureIcons.Delete, theme, destructive = true, onClick = { showMenu = false; showDeleteConfirm = true })
+            }
+        }
+
+        if (showInfo) {
+            FutureOptionsMenu(theme = theme, onDismissRequest = { showInfo = false }, header = "פרטים") {
+                val date = remember(item.dateAdded) {
+                    java.text.SimpleDateFormat("d.M.yyyy HH:mm", java.util.Locale.getDefault()).format(java.util.Date(item.dateAdded * 1000))
+                }
+                InfoRow("שם", item.displayName, theme) { showInfo = false }
+                InfoRow("תאריך", date, theme) { showInfo = false }
+                imageSize?.let { InfoRow("רזולוציה", "${it.width}×${it.height}", theme) { showInfo = false } }
+                InfoRow("גודל", android.text.format.Formatter.formatShortFileSize(context, item.size), theme) { showInfo = false }
+                if (item.bucketName.isNotBlank()) InfoRow("אלבום", item.bucketName, theme) { showInfo = false }
+            }
+        }
+
         if (showDeleteConfirm) {
-            DeleteConfirmDialog(
-                onCancel = { showDeleteConfirm = false },
+            ConfirmDialog(
+                message = "למחוק את התמונה?",
                 theme = theme,
+                onCancel = { showDeleteConfirm = false },
                 onConfirm = {
                     showDeleteConfirm = false
                     try {
@@ -608,7 +599,7 @@ fun MediaViewerScreen(
                             android.widget.Toast.makeText(context, "לא ניתן למחוק - צריך אישור נוסף", android.widget.Toast.LENGTH_SHORT).show()
                         }
                     } catch (e: Exception) {
-                        android.widget.Toast.makeText(context, "לא ניתן למחוק - צריך אישור נוסף", android.widget.Toast.LENGTH_SHORT).show()
+                        android.widget.Toast.makeText(context, "לא ניתן למחוק", android.widget.Toast.LENGTH_SHORT).show()
                     }
                 }
             )
@@ -617,103 +608,52 @@ fun MediaViewerScreen(
 }
 
 @Composable
-private fun MediaViewerBottomBar(
-    theme: FutureTheme,
-    canZoom: Boolean,
-    isZoomed: Boolean,
-    showEdit: Boolean,
-    onZoom: () -> Unit,
-    onShare: () -> Unit,
-    onEdit: () -> Unit,
-    onDelete: () -> Unit
-) {
-    // הצופה תמיד כהה (תמונה על שחור), גם במצב בהיר - לכן הסרגל שלו לוקח את
-    // המשטח של הערכה הכהה, ולא hex ידני שלו.
-    val viewer = remember(theme.accentColor) { FutureTheme(isDarkMode = true, accentColor = theme.accentColor) }
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(viewer.surfaceColor)
-            .padding(horizontal = FutureDimens.spacingMd, vertical = FutureDimens.spacingMd),
-        horizontalArrangement = Arrangement.SpaceEvenly
-    ) {
-        MediaViewerBarButton(Icons.Rounded.ZoomIn, "זום", theme, enabled = canZoom, isActive = isZoomed, onClick = onZoom)
-        MediaViewerBarButton(FutureIcons.Share, "שתף", theme, onClick = onShare)
-        if (showEdit) {
-            MediaViewerBarButton(FutureIcons.Edit, "ערוך", theme, onClick = onEdit)
-        }
-        MediaViewerBarButton(FutureIcons.Delete, "מחק", theme, isDestructive = true, onClick = onDelete)
-    }
+private fun InfoRow(label: String, value: String, theme: FutureTheme, onClick: () -> Unit) {
+    FutureMenuRow(
+        label = label,
+        icon = null,
+        theme = theme,
+        onClick = onClick,
+        trailing = { Text(value, color = theme.mutedTextColor, fontSize = FutureTypography.summary, maxLines = 1) },
+    )
 }
 
 @Composable
-private fun MediaViewerBarButton(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String,
-    theme: FutureTheme,
-    enabled: Boolean = true,
-    isActive: Boolean = false,
-    isDestructive: Boolean = false,
-    onClick: () -> Unit
-) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val viewer = remember(theme.accentColor) { FutureTheme(isDarkMode = true, accentColor = theme.accentColor) }
-    val tint = when {
-        !enabled -> viewer.textAlpha(30)
-        isDestructive -> viewer.dangerColor
-        isActive -> viewer.readableAccentColor
-        else -> viewer.textColor
-    }
-    // פוקוס של כפתור אייקון (IconButton.jsx): 30% הדגשה ברקע.
-    val bgColor by animateColorAsState(if (isFocused && enabled) viewer.readableAccentColor.copy(alpha = 0.30f) else Color.Transparent, FutureMotion.focusColorSpec, label = "viewerBarBtnBg")
-
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
+private fun ViewerBadge(text: String, theme: FutureTheme) {
+    Text(
+        text,
+        color = theme.textColor,
+        fontSize = FutureTypography.caption,
+        fontWeight = FontWeight.Medium,
         modifier = Modifier
-            .clip(FutureShapes.md)
-            .background(bgColor)
-            .clickable(interactionSource = interactionSource, indication = null, enabled = enabled, onClick = onClick)
-            .focusable(interactionSource = interactionSource, enabled = enabled).bringIntoViewOnFocus()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
-    ) {
-        Icon(icon, contentDescription = label, tint = tint, modifier = Modifier.size(22.dp))
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(label, color = tint, fontSize = FutureTypography.caption)
-    }
-}
-
-@Composable
-private fun DeleteConfirmDialog(onCancel: () -> Unit, onConfirm: () -> Unit, theme: FutureTheme) {
-    ConfirmDialog(message = "למחוק את הפריט הזה?", theme = theme, onCancel = onCancel, onConfirm = onConfirm)
-}
-
-
-
-/**
- * כפתור חזרה מעל תמונה. במנוחה - קפסולה בהכהיה של המערכת (60% שחור, קבוע
- * ולכן קריא מעל כל תמונה); בפוקוס - מילוי בהדגשה עם הדיו שלה. קודם הוא לא
- * סימן פוקוס בכלל.
- */
-@Composable
-private fun ViewerBackButton(theme: FutureTheme, onBack: () -> Unit) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val bgColor by animateColorAsState(if (isFocused) theme.accentColor else theme.scrimColor, FutureMotion.focusColorSpec, label = "viewerBackBg")
-    Box(
-        modifier = Modifier
-            .size(FutureDimens.rowHeightTopBarButton)
             .clip(FutureShapes.pill)
-            .background(bgColor)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onBack)
-            .focusable(interactionSource = interactionSource),
-        contentAlignment = Alignment.Center,
+            .background(theme.surfaceColor.copy(alpha = 0.86f))
+            .padding(horizontal = 10.dp, vertical = 4.dp)
+    )
+}
+
+/** מפה קטנה: מסגרת התמונה, והמלבן הממוקד = החלק שרואים עכשיו. */
+@Composable
+private fun ZoomMiniMap(zoom: Float, panX: Float, panY: Float, renderedW: Float, renderedH: Float, theme: FutureTheme, modifier: Modifier = Modifier) {
+    val w = 64f
+    val h = w * renderedH / renderedW
+    val accent = theme.readableAccentColor
+    androidx.compose.foundation.Canvas(
+        modifier = modifier
+            .size(w.dp, h.coerceIn(24f, 96f).dp)
+            .clip(FutureShapes.xs)
+            .background(theme.surfaceColor.copy(alpha = 0.8f))
     ) {
-        Icon(
-            FutureIcons.AutoMirrored.ArrowBack,
-            contentDescription = "חזור",
-            tint = if (isFocused) FutureContrast.onColor(theme.accentColor) else Color.White,
-            modifier = Modifier.size(FutureDimens.iconTopBar),
+        val viewW = size.width / zoom
+        val viewH = size.height / zoom
+        // פאן חיובי = התמונה זזה ימינה/למטה, כלומר רואים את החלק השמאלי/העליון.
+        val cx = size.width / 2f - panX / renderedW * size.width / zoom
+        val cy = size.height / 2f - panY / renderedH * size.height / zoom
+        drawRect(
+            color = accent,
+            topLeft = androidx.compose.ui.geometry.Offset(cx - viewW / 2f, cy - viewH / 2f),
+            size = androidx.compose.ui.geometry.Size(viewW, viewH),
+            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.5.dp.toPx()),
         )
     }
 }

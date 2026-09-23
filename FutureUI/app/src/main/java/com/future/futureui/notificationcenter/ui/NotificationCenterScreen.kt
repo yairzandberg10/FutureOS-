@@ -14,6 +14,7 @@ import com.future.sharednav.theme.FutureMotion
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.focus.bringIntoViewOnFocus
+import com.future.futureui.ui.theme.ShellGlass
 
 import android.app.Notification
 import android.app.PendingIntent
@@ -150,12 +151,11 @@ fun NotificationCenterScreen(
             ) + fadeOut(animationSpec = tween(FutureMotion.DurationStandard))
         ) {
             Box(modifier = modifier.fillMaxSize()) {
-                // רקע שטוח של המערכת - היה טפט מטושטש (40dp) מתחת לשכבה לבנה, אבל
-                // "there is no blur in this system" ו"the background is a flat fill".
+                // הכהיה שקופה מעל האפליקציה שמתחת (ShellGlass) - כמו מרכז הבקרה.
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(theme.backgroundColor)
+                        .background(ShellGlass.scrim(theme))
                 )
 
                 Column(
@@ -184,9 +184,26 @@ fun NotificationCenterScreen(
                                 color = subTextColor
                             )
                         }
+                        val count = ncManager.notifications.size
+                        if (count > 0) {
+                            Box(
+                                modifier = Modifier
+                                    .padding(top = 10.dp)
+                                    .clip(CircleShape)
+                                    .background(ShellGlass.tile(theme))
+                                    .padding(horizontal = 12.dp, vertical = 5.dp)
+                            ) {
+                                Text(
+                                    text = if (count == 1) "התראה אחת" else "$count התראות",
+                                    fontSize = FutureTypography.caption,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = textColor
+                                )
+                            }
+                        }
                     }
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(18.dp))
 
                     // רשימת התראות נגללת
                     LazyColumn(
@@ -197,10 +214,18 @@ fun NotificationCenterScreen(
                         if (ncManager.notifications.isEmpty()) {
                             // תצוגה כשאין התראות
                             item {
-                                Box(
+                                Column(
                                     modifier = Modifier.fillParentMaxSize(),
-                                    contentAlignment = Alignment.Center
+                                    verticalArrangement = Arrangement.Center,
+                                    horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
+                                    Box(
+                                        modifier = Modifier.size(64.dp).clip(CircleShape).background(ShellGlass.tile(theme)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(FutureIcons.Notifications, contentDescription = null, tint = subTextColor, modifier = Modifier.size(28.dp))
+                                    }
+                                    Spacer(modifier = Modifier.height(12.dp))
                                     Text(
                                         text = "אין התראות חדשות",
                                         color = subTextColor,
@@ -245,7 +270,10 @@ fun NotificationCenterScreen(
                                     sbn = sbn,
                                     onSwitchToControlCenter = onSwitchToControlCenter,
                                     onDismiss = { isDismissing = true },
-                                    onOpen = { ncManager.launchApp(sbn.packageName) },
+                                    onOpen = {
+                                        val sent = runCatching { sbn.notification.contentIntent?.send() != null }.getOrDefault(false)
+                                        if (!sent) ncManager.launchApp(sbn.packageName)
+                                    },
                                     onMuteApp = { ncManager.openNotificationSettings(sbn.packageName) },
                                     textColor = textColor,
                                     subTextColor = subTextColor,
@@ -257,30 +285,38 @@ fun NotificationCenterScreen(
                         }
                     }
 
-                    // כפתורי פעולה בתחתית (נקה הכל והשתק)
+                    // כפתורי פעולה בתחתית (נקה הכל ולא להפריע)
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .navigationBarsPadding()
-                            .padding(bottom = 12.dp),
+                            .padding(bottom = 6.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         NotificationCenterButton(
                             text = "נקה הכל",
-                            icon = Icons.Rounded.DeleteSweep,
+                            icon = FutureIcons.Delete,
                             onClick = { ncManager.clearAll() },
                             modifier = Modifier.weight(1f),
-                            color = theme.idleFieldColor,
+                            color = ShellGlass.tile(theme),
                             focusRequester = clearAllFocusRequester
                         )
+                        val dnd = ncManager.controlManager.isDndOn
                         NotificationCenterButton(
-                            text = "השתק",
-                            icon = if (ncManager.controlManager.isDndOn) Icons.Rounded.NotificationsOff else Icons.Rounded.NotificationsActive,
+                            text = if (dnd) "לא להפריע: פועל" else "לא להפריע",
+                            icon = if (dnd) FutureIcons.DarkMode else FutureIcons.Notifications,
                             onClick = { ncManager.toggleDnd() },
                             modifier = Modifier.weight(1f),
-                            color = theme.idleFieldColor
+                            color = if (dnd) ShellGlass.tileFocused(theme) else ShellGlass.tile(theme)
                         )
                     }
+                    Text(
+                        text = "OK הרחבה · החזקת OK פתיחה · Options פעולות",
+                        fontSize = FutureTypography.caption,
+                        color = subTextColor,
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
                 }
             }
         }
@@ -368,7 +404,7 @@ fun NotificationItem(
     // כרטיס התראה = "זכוכית" של המעטפת (elevatedSurfaceColor, 28dp); בפוקוס דרגה
     // אחת מעליה ומסגרת בהדגשה. קודם זה היה שחור/לבן שקוף-למחצה מעל טפט מטושטש.
     val theme = LocalFutureTheme.current
-    val cardBackground = if (isFocused) theme.raisedSurfaceColor else theme.elevatedSurfaceColor
+    val cardBackground = if (isFocused) ShellGlass.tileFocused(theme) else ShellGlass.panel(theme)
 
     Box(
         modifier = Modifier
@@ -377,9 +413,6 @@ fun NotificationItem(
             .focusEffect(isFocused, shape)
             .clip(shape)
             .background(cardBackground)
-            .then(
-                if (isFocused) Modifier.border(FutureDimens.focusBorderControl, theme.readableAccentColor, shape) else Modifier
-            )
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .onKeyEvent { event ->
                 if (!isFocused) return@onKeyEvent false
@@ -456,7 +489,7 @@ fun NotificationItem(
                 if (showOptions) showOptions = false else isExpanded = !isExpanded
             })
             .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
-            .padding(horizontal = 12.dp, vertical = 8.dp)
+            .padding(horizontal = 14.dp, vertical = 10.dp)
     ) {
         // מעבר חלק (fade צולב) בין תוכן ההתראה הרגיל לתפריט האפשרויות, במקום
         // חיתוך קשה - כך שפתיחת/סגירת התפריט מרגישה כמו טרנזישן מכוון ולא כמו
@@ -474,8 +507,8 @@ fun NotificationItem(
                         val isSelected = index == selectedOptionIndex
                         // הפעולה הממוקדת = נבחרת: מילוי מלא (הדגשה, או סכנה לפעולה הרסנית)
                         // ודיו שמתאים לו; השאר צ'יפ במנוחה (6%).
-                        val selectedFill = if (option.isDestructive) theme.dangerColor else theme.readableAccentColor
-                        val baseColor = if (isSelected) selectedFill else theme.idleChipColor
+                        val selectedFill = if (option.isDestructive) theme.dangerColor else ShellGlass.on(theme)
+                        val baseColor = if (isSelected) selectedFill else ShellGlass.tile(theme)
                         Text(
                             text = option.label,
                             color = when {
@@ -504,9 +537,9 @@ fun NotificationItem(
                     // אייקון האפליקציה (בצד ימין ב-RTL)
                     Box(
                         modifier = Modifier
-                            .size(32.dp)
+                            .size(36.dp)
                             .clip(CircleShape)
-                            .background(theme.raisedSurfaceColor),
+                            .background(ShellGlass.tile(theme)),
                         contentAlignment = Alignment.Center
                     ) {
                         if (appIcon != null) {
@@ -524,21 +557,43 @@ fun NotificationItem(
 
                     // תוכן ההתראה: שם אפליקציה ותקציר הודעה
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = if (title.isNotBlank()) "$appName: $title" else appName,
-                            fontSize = FutureTypography.summary,
-                            fontWeight = FontWeight.Bold,
-                            color = textColor,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text(
-                            text = text,
-                            fontSize = FutureTypography.caption,
-                            color = subTextColor,
-                            maxLines = if (isExpanded) Int.MAX_VALUE else 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = appName,
+                                fontSize = FutureTypography.caption,
+                                color = subTextColor,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f, fill = false)
+                            )
+                            Text(
+                                text = " · " + android.text.format.DateUtils.getRelativeTimeSpanString(
+                                    sbn.postTime, System.currentTimeMillis(), android.text.format.DateUtils.MINUTE_IN_MILLIS
+                                ),
+                                fontSize = FutureTypography.caption,
+                                color = subTextColor,
+                                maxLines = 1
+                            )
+                        }
+                        if (title.isNotBlank()) {
+                            Text(
+                                text = title,
+                                fontSize = FutureTypography.summary,
+                                fontWeight = FontWeight.Bold,
+                                color = textColor,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                        if (text.isNotBlank()) {
+                            Text(
+                                text = text,
+                                fontSize = FutureTypography.caption,
+                                color = textColor.copy(alpha = 0.78f),
+                                maxLines = if (isExpanded) Int.MAX_VALUE else 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
                 }
             }
@@ -565,11 +620,11 @@ fun NotificationCenterButton(
 
     Box(
         modifier = modifier
-            .height(38.dp)
+            .height(40.dp)
             .focusEffect(isFocused, shape)
             .clip(shape)
             // פוקוס של צ'יפ: 18% מהטקסט, והמסגרת בהדגשה מגיעה מ-focusEffect.
-            .background(if (isFocused) theme.focusFillChipColor else color)
+            .background(if (isFocused) ShellGlass.tileFocused(theme) else color)
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
             .focusable(interactionSource = interactionSource).bringIntoViewOnFocus(),

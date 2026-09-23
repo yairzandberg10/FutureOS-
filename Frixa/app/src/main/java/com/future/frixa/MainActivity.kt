@@ -1,4 +1,6 @@
 package com.future.frixa
+import androidx.compose.material.icons.rounded.Calculate
+import com.future.frixa.ui.ToolScreen
 import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.material.icons.rounded.Storefront
 
@@ -78,8 +80,10 @@ class MainActivity : ComponentActivity() {
             val tabs = listOf(
                 Triple(FrixaRoute.Home, "ראשי", FutureIcons.Home),
                 Triple(FrixaRoute.Recipes, "מתכונים", Icons.Rounded.Restaurant),
+                Triple(FrixaRoute.Tool, "הכנה", Icons.Rounded.Calculate),
                 Triple(FrixaRoute.Stores, "חנויות", Icons.Rounded.Storefront),
             )
+            val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
             val currentTabRoute = if (route is FrixaRoute.RecipeDetail) FrixaRoute.Recipes else route
             val currentTabIndex = tabs.indexOfFirst { it.first == currentTabRoute }.coerceAtLeast(0)
 
@@ -101,11 +105,19 @@ class MainActivity : ComponentActivity() {
                         .onKeyEvent { event ->
                             if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
                             if (route is FrixaRoute.RecipeDetail) return@onKeyEvent false
-                            val nextIndex = when (event.key) {
-                                Key.DirectionRight -> currentTabIndex - 1
-                                Key.DirectionLeft -> currentTabIndex + 1
+                            // ספרות 1-3 במסך הבית - מתכונים, הכנה, חנויות.
+                            if (route == FrixaRoute.Home) {
+                                com.future.sharednav.nav.digitForKey(event.key)?.let { digit ->
+                                    tabs.getOrNull(digit.toInt())?.let { route = it.first; return@onKeyEvent true }
+                                }
+                            }
+                            val direction = when (event.key) {
+                                Key.DirectionRight -> androidx.compose.ui.focus.FocusDirection.Right
+                                Key.DirectionLeft -> androidx.compose.ui.focus.FocusDirection.Left
                                 else -> return@onKeyEvent false
                             }
+                            if (focusManager.moveFocus(direction)) return@onKeyEvent true
+                            val nextIndex = if (event.key == Key.DirectionRight) currentTabIndex - 1 else currentTabIndex + 1
                             if (nextIndex !in tabs.indices) return@onKeyEvent false
                             route = tabs[nextIndex].first
                             true
@@ -138,7 +150,13 @@ class MainActivity : ComponentActivity() {
                             depthOf = { if (it is FrixaRoute.RecipeDetail) 1 else 0 },
                         ) { shown ->
                             when (shown) {
-                                FrixaRoute.Home -> HomeScreen(theme = theme)
+                                FrixaRoute.Home -> HomeScreen(
+                                    theme = theme,
+                                    onOpenRecipes = { route = FrixaRoute.Recipes },
+                                    onOpenTool = { route = FrixaRoute.Tool },
+                                    onOpenStores = { route = FrixaRoute.Stores },
+                                )
+                                FrixaRoute.Tool -> ToolScreen(theme = theme)
                                 FrixaRoute.Recipes -> RecipesScreen(theme = theme, onOpenRecipe = { route = FrixaRoute.RecipeDetail(it) })
                                 is FrixaRoute.RecipeDetail -> {
                                     val recipe = RecipeCatalog.all.first { it.id == shown.id }

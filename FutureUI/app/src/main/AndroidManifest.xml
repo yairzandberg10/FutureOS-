@@ -27,6 +27,23 @@
         android:protectionLevel="signature" />
 
     <uses-permission android:name="com.future.keyboard.permission.SETTINGS" />
+    <!-- חיווי Wi-Fi בשורת המצב (ConnectivityManager.activeNetwork) -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- חלון השיתוף צריך לראות את כל האפליקציות שמקבלות שיתוף -->
+    <queries>
+        <!-- ספק ההגדרות של המקלדת (ניבוי, שפות) -->
+        <package android:name="com.future.keyboard" />
+        <intent>
+            <action android:name="android.intent.action.SEND" />
+            <data android:mimeType="*/*" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.SEND_MULTIPLE" />
+            <data android:mimeType="*/*" />
+        </intent>
+    </queries>
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -120,6 +137,20 @@
                 <action android:name="android.service.notification.NotificationListenerService" />
             </intent-filter>
         </service>
+
+        <!-- חלון השיתוף המרכזי - כל האפליקציות משתפות דרכו (FutureShare). -->
+        <activity
+            android:name=".share.ShareActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@style/Theme.FutureUI.Translucent">
+            <intent-filter>
+                <action android:name="com.future.futureui.ACTION_SHARE" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
 
         <activity
             android:name=".SettingsActivity"
