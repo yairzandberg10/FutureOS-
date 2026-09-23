@@ -1,473 +1,414 @@
 package com.future.dialer.ui.incall
 
-import com.future.sharednav.theme.FutureTypography
-import com.future.sharednav.theme.elevatedSurfaceColor
-import com.future.sharednav.theme.mutedTextColor
-import com.future.sharednav.theme.FutureShapes
-import android.app.WallpaperManager
-import android.graphics.Bitmap
-import android.graphics.drawable.BitmapDrawable
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Image
+import android.telecom.Call
+import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Call
-import androidx.compose.material.icons.rounded.CallEnd
+import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.Dialpad
 import androidx.compose.material.icons.rounded.FiberManualRecord
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.MicOff
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Sms
-import androidx.compose.material.icons.rounded.KeyboardArrowDown
-import androidx.compose.material.icons.automirrored.rounded.VolumeOff
-import androidx.compose.material.icons.automirrored.rounded.VolumeUp
-import androidx.compose.material3.*
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.draw.blur
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.future.dialer.R
-import com.future.sharednav.focus.FocusableItem
-import com.future.sharednav.t9.T9DigitMap
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import com.future.dialer.ui.CallFormat
+import com.future.sharednav.components.FutureActionCell
+import com.future.sharednav.components.FutureAvatar
+import com.future.sharednav.components.FutureButton
+import com.future.sharednav.components.FutureButtonVariant
+import com.future.sharednav.components.FutureMenuRow
+import com.future.sharednav.components.FutureOptionsMenu
+import com.future.sharednav.theme.FutureDimens
+import com.future.sharednav.theme.FutureTheme
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.LocalFutureTheme
+import com.future.sharednav.theme.mutedTextColor
+import com.future.sharednav.theme.rememberFutureType
+import com.future.sharednav.theme.sectionHeaderColor
 
+/**
+ * מסכי השיחה (ui_kits/calls): שיחה נכנסת, שיחה פעילה, וסיום שיחה.
+ *
+ * - נכנסת: אווטאר, שם ומספר, ו"ענה" / "דחה" ככפתורים מלאים. מקש התפריט
+ *   פותח הודעה מהירה, ושליחה שלה דוחה את השיחה.
+ * - פעילה: מונה זמן, אריחי פקד בשתי עמודות (השתק, רמקול, המתנה, מקלדת,
+ *   הקלטה, הודעה) ו"סיים שיחה". חזרה ממזערת - השיחה ממשיכה עם פס בראש
+ *   שאר המסכים; מקש הניתוק מנתק.
+ * - סיום: המשך השיחה, "התקשר שוב" / "חזור ליומן". רק לשיחה שנענתה - שיחה
+ *   שנדחתה או לא נענתה חוזרת ישר ליומן.
+ */
 @Composable
 fun InCallScreen(
     name: String,
     phoneNumber: String,
     viewModel: InCallViewModel,
     onCallEnded: () -> Unit,
-    onMinimize: () -> Unit = {}
+    onCallAgain: (String) -> Unit,
 ) {
+    val theme = LocalFutureTheme.current
+    val context = LocalContext.current
     val callState by viewModel.callState.collectAsState()
     val isRinging by viewModel.isRinging.collectAsState()
     val duration by viewModel.callDuration.collectAsState()
-    val isMuted by viewModel.isMuted.collectAsState()
-    val isSpeakerOn by viewModel.isSpeakerOn.collectAsState()
-    val isRecording by viewModel.isRecording.collectAsState()
-    val isDialpadVisible by viewModel.isDialpadVisible.collectAsState()
-    val dtmfDigits by viewModel.dtmfDigits.collectAsState()
-    val isQuickMessageVisible by viewModel.isQuickMessageVisible.collectAsState()
-    val context = LocalContext.current
+    val quickMessage by viewModel.isQuickMessageVisible.collectAsState()
 
-    // צבעי הסטטוס מגיעים מהערכה ולא מלוח Material: האדום/הירוק שהיו כאן
-    // (F44336 / 4CAF50) אינם בפלטה של המערכת ולא הגיבו למצב כהה/בהיר.
-    val futureTheme = com.future.sharednav.theme.LocalFutureTheme.current
-    val onSurfaceColor = MaterialTheme.colorScheme.onBackground
-    val onSurfaceMuted = onSurfaceColor.copy(alpha = 0.6f)
-    // ה-scrim מעל טפט הרקע המטושטש חייב להיות בניגוד ל-onBackground (הצבע שבו כתוב
-    // הטקסט) כדי שהטקסט יישאר קריא בשני מצבי העיצוב: כהה (onBackground לבן -> scrim שחור)
-    // ובהיר (onBackground שחור -> scrim לבן).
-    val scrimColor = if (onSurfaceColor.luminance() > 0.5f) Color.Black else Color.White
-
-    val answerFocusRequester = remember { FocusRequester() }
-
+    // אחרי שהשיחה נגמרת callState הוא null והמשך מתאפס - שומרים את מה שהיה.
+    var wasAnswered by remember { mutableStateOf(false) }
+    var lastDuration by remember { mutableLongStateOf(0L) }
+    var ended by remember { mutableStateOf(false) }
+    LaunchedEffect(callState, duration) {
+        if (callState == Call.STATE_ACTIVE || callState == Call.STATE_HOLDING) wasAnswered = true
+        if (duration > 0) lastDuration = duration
+    }
     LaunchedEffect(Unit) { viewModel.startDurationTimer() }
     LaunchedEffect(callState) {
-        if (callState == null) onCallEnded()
-    }
-    // פוקוס ראשוני על כפתור המענה ברגע שמסך שיחה נכנסת מוצג - בלי זה אין שום
-    // פריט ממוקד ב-D-pad, וטיפול המקש הגלובלי (onKeyDown) יכול "לחטוף" את הלחיצה.
-    LaunchedEffect(Unit) {
-        if (isRinging) answerFocusRequester.requestFocus()
+        if (callState == null) {
+            viewModel.closeQuickMessage()
+            if (wasAnswered) ended = true else onCallEnded()
+        }
     }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            BlurredWallpaperBackground(scrimColor)
-            // מזעור זמין רק כששיחה פעילה (לא בזמן צלצול) - כמו בטלפון אמיתי, שיחה
-            // מצלצלת חייבת מענה/דחייה לפני שאפשר לצאת ממסך השיחה.
-            if (!isRinging) {
-                Box(modifier = Modifier.fillMaxWidth().padding(top = 20.dp, end = 20.dp), contentAlignment = Alignment.TopEnd) {
-                    FocusableItem(onClick = onMinimize, accentColor = MaterialTheme.colorScheme.primary) {
-                        Box(
-                            modifier = Modifier.size(40.dp).background(onSurfaceColor.copy(alpha = 0.12f), CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Rounded.KeyboardArrowDown,
-                                contentDescription = stringResource(R.string.minimize_call),
-                                tint = onSurfaceColor,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-                    }
-                }
-            }
-            Column(
-                modifier = Modifier.fillMaxSize().padding(32.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.SpaceBetween
-            ) {
-            Column(
-                modifier = Modifier.padding(top = 64.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                CallerAvatar(
-                    initial = name.take(1).uppercase(),
-                    accentColor = MaterialTheme.colorScheme.primary,
-                    onSurfaceColor = onSurfaceColor,
-                    isPulsing = isRinging
+        Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
+            when {
+                ended -> EndedCall(
+                    name = name,
+                    phoneNumber = phoneNumber,
+                    duration = lastDuration,
+                    theme = theme,
+                    onCallAgain = { onCallAgain(phoneNumber) },
+                    onBackToLog = onCallEnded,
                 )
-                Spacer(modifier = Modifier.height(28.dp))
-                Text(name, fontSize = FutureTypography.display, fontWeight = FontWeight.Bold, color = onSurfaceColor)
-                Text(phoneNumber, fontSize = FutureTypography.title, color = onSurfaceMuted)
-                Spacer(modifier = Modifier.height(24.dp))
-                Text(
-                    text = if (isRinging) stringResource(R.string.incoming_call) else formatDuration(duration),
-                    fontSize = FutureTypography.headline,
-                    fontWeight = FontWeight.Medium,
-                    color = onSurfaceColor.copy(alpha = 0.7f)
+                isRinging -> IncomingCall(
+                    name = name,
+                    phoneNumber = phoneNumber,
+                    theme = theme,
+                    onAnswer = viewModel::answer,
+                    onReject = viewModel::reject,
                 )
-                if (isRecording) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Rounded.FiberManualRecord, contentDescription = null, tint = futureTheme.dangerColor, modifier = Modifier.size(14.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(stringResource(R.string.recording_in_progress), fontSize = FutureTypography.body, color = futureTheme.dangerColor)
-                    }
-                }
-                if (!isRinging && isDialpadVisible) {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = dtmfDigits.ifEmpty { "•" },
-                        fontSize = FutureTypography.headline,
-                        fontWeight = FontWeight.Medium,
-                        color = onSurfaceColor,
-                        modifier = Modifier
-                            .background(onSurfaceColor.copy(alpha = 0.08f), FutureShapes.md)
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    DtmfKeypad(
-                        onSurfaceColor = onSurfaceColor,
-                        onDigit = { digit ->
-                            viewModel.onDtmfDigitPressed(digit)
-                            viewModel.onDtmfDigitReleased()
-                        }
-                    )
-                }
-                if (!isRinging && isQuickMessageVisible) {
-                    Spacer(modifier = Modifier.height(20.dp))
-                    QuickMessagePanel(onSurfaceColor = onSurfaceColor) { message ->
-                        viewModel.sendQuickMessage(context, phoneNumber, message)
-                    }
-                }
-            }
-
-            if (isRinging) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    RoundCallButton(icon = Icons.Rounded.CallEnd, background = futureTheme.dangerColor, onClick = { viewModel.reject() })
-                    RoundCallButton(icon = Icons.Rounded.Call, background = futureTheme.successColor, onClick = { viewModel.answer() }, focusRequester = answerFocusRequester)
-                }
-            } else {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(24.dp)
-                ) {
-                    // ארבעה-חמישה אריחים בשתי עמודות, ולא שורה של עיגולים
-                    // (ui_kits/calls). בשורה אחת התוויות נחתכו, והאריח נותן
-                    // לכל פקד שטח פוקוס גדול מספיק במכשיר בלי מגע.
-                    CallControlGrid {
-                        CallActionIcon(
-                            icon = if (isMuted) Icons.Rounded.MicOff else Icons.Rounded.Mic,
-                            label = if (isMuted) stringResource(R.string.unmute) else stringResource(R.string.mute),
-                            onClick = { viewModel.toggleMute() },
-                            tint = onSurfaceColor,
-                            modifier = Modifier.weight(1f),
-                            isActive = isMuted
-                        )
-                        CallActionIcon(
-                            icon = if (isSpeakerOn) Icons.AutoMirrored.Rounded.VolumeUp else Icons.AutoMirrored.Rounded.VolumeOff,
-                            label = if (isSpeakerOn) stringResource(R.string.handset) else stringResource(R.string.speaker),
-                            onClick = { viewModel.toggleSpeaker() },
-                            tint = onSurfaceColor,
-                            modifier = Modifier.weight(1f),
-                            isActive = isSpeakerOn
-                        )
-                        CallActionIcon(
-                            icon = Icons.Rounded.Dialpad,
-                            label = stringResource(R.string.keypad),
-                            onClick = { viewModel.toggleDialpad() },
-                            tint = onSurfaceColor,
-                            modifier = Modifier.weight(1f),
-                            isActive = isDialpadVisible
-                        )
-                        CallActionIcon(
-                            icon = Icons.Rounded.FiberManualRecord,
-                            label = if (isRecording) stringResource(R.string.stop_recording) else stringResource(R.string.record),
-                            onClick = { viewModel.toggleRecording(context) },
-                            tint = if (isRecording) futureTheme.dangerColor else onSurfaceColor,
-                            modifier = Modifier.weight(1f),
-                            isActive = isRecording
-                        )
-                        CallActionIcon(
-                            icon = Icons.Rounded.Sms,
-                            label = if (isQuickMessageVisible) stringResource(R.string.close_message) else stringResource(R.string.send_message),
-                            onClick = { viewModel.toggleQuickMessage() },
-                            tint = onSurfaceColor,
-                            modifier = Modifier.weight(1f),
-                            isActive = isQuickMessageVisible
-                        )
-                    }
-                    com.future.sharednav.components.FutureButton(
-                        text = stringResource(R.string.end_call),
-                        theme = futureTheme,
-                        variant = com.future.sharednav.components.FutureButtonVariant.Destructive,
-                        fillMaxWidth = true,
-                        onClick = { viewModel.hangUp() },
-                        modifier = Modifier.padding(horizontal = 24.dp),
-                    )
-                }
-            }
+                else -> ActiveCall(
+                    name = name,
+                    phoneNumber = phoneNumber,
+                    callState = callState,
+                    duration = duration,
+                    viewModel = viewModel,
+                    theme = theme,
+                    onHoldUnsupported = {
+                        Toast.makeText(context, "השיחה לא תומכת בהמתנה", Toast.LENGTH_SHORT).show()
+                    },
+                )
             }
         }
     }
-}
 
-/**
- * אווטאר עגול עם טבעת בצבע ההדגשה המשותף (במקום ריבוע מעוגל אפור שטוח) - נותן
- * למסך השיחה מראה "אמיתי" יותר. בזמן צלצול הטבעת "נושמת" (פועמת בעדינות) כדי
- * שהמסך ירגיש חי, בלי טקסט מהבהב או אנימציה תזזיתית.
- */
-/**
- * האווטאר של הדיזיין סיסטם בגודל גיבור (Avatar.jsx: 88 ברשימה, 176px = 88dp
- * כגיבור; כאן 120dp כי הוא כל המסך). בזמן צלצול טבעת ב-30% מהטקסט "נושמת"
- * סביבו. בלי צל ובלי הילה בצבע ההדגשה: הצל היחיד במערכת הוא של כרטיס,
- * וההדגשה אינה קישוט.
- */
-@Composable
-private fun CallerAvatar(initial: String, accentColor: Color, onSurfaceColor: Color, isPulsing: Boolean) {
-    val theme = com.future.sharednav.theme.LocalFutureTheme.current
-    val infiniteTransition = rememberInfiniteTransition(label = "avatarPulse")
-    val pulseScale by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = if (isPulsing) 1.08f else 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = RingPulseMillis, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "avatarPulseScale"
-    )
-
-    Box(contentAlignment = Alignment.Center) {
-        Box(
-            modifier = Modifier
-                .size(136.dp)
-                .graphicsLayerScale(pulseScale)
-                .border(2.dp, onSurfaceColor.copy(alpha = 0.3f), CircleShape)
-        )
-        com.future.sharednav.components.FutureAvatar(
-            theme = theme,
-            name = initial,
-            size = 120.dp,
-            contentColor = onSurfaceColor,
-        )
-    }
-}
-
-/** נשימה אחת של הטבעת בזמן צלצול - לולאה, ולא מעבר, ולכן מחוץ לסקאלת התנועה. */
-private const val RingPulseMillis = 1100
-
-private fun Modifier.graphicsLayerScale(scale: Float): Modifier = this.then(
-    Modifier.graphicsLayer(scaleX = scale, scaleY = scale)
-)
-
-/**
- * רקע מסך השיחה: מילוי שטוח של הערכה. קודם זה היה טפט מטושטש (32dp) מתחת
- * להכהיה - אבל "there is no blur in this system" ו"the background is a flat
- * fill" (README של הדיזיין סיסטם).
- */
-@Composable
-private fun BlurredWallpaperBackground(@Suppress("UNUSED_PARAMETER") scrimColor: Color) {
-    Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
-}
-
-/**
- * לוח DTMF אמיתי וניתן ל"לחיצה" (בפועל: ניווט מקלדת פיזי/D-pad ובחירה - אין מסך
- * מגע במכשיר) - לפני זה תצוגת הספרות שנלחצו הייתה טקסט בלבד בלי שום דבר לבחור בו.
- * מתן דגש דרך FocusableItem היחיד הזמין למקש בודד; אין gesture נפרד ל"לחיצה
- * ממושכת" בלי מסך מגע, אז כל בחירה שולחת טון DTMF קצר אחד.
- */
-@Composable
-private fun DtmfKeypad(onSurfaceColor: Color, onDigit: (Char) -> Unit) {
-    val rows = listOf(
-        listOf('1', '2', '3'),
-        listOf('4', '5', '6'),
-        listOf('7', '8', '9'),
-        listOf('*', '0', '#')
-    )
-    Column(
-        modifier = Modifier.widthIn(max = 280.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        rows.forEach { row ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                row.forEach { digit ->
-                    DtmfKey(digit = digit, onSurfaceColor = onSurfaceColor, onClick = { onDigit(digit) })
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun DtmfKey(digit: Char, onSurfaceColor: Color, onClick: () -> Unit) {
-    val letters = T9DigitMap.ENGLISH[digit].orEmpty()
-    FocusableItem(onClick = onClick, accentColor = MaterialTheme.colorScheme.primary, modifier = Modifier.size(56.dp)) {
-        Box(
-            modifier = Modifier.fillMaxSize().background(onSurfaceColor.copy(alpha = 0.08f), CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(digit.toString(), fontSize = FutureTypography.screenTitle, fontWeight = FontWeight.Medium, color = onSurfaceColor)
-                if (letters.isNotEmpty()) {
-                    Text(letters, fontSize = FutureTypography.caption, color = onSurfaceColor.copy(alpha = 0.6f))
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun QuickMessagePanel(onSurfaceColor: Color, onSend: (String) -> Unit) {
-    Surface(
-        modifier = Modifier.widthIn(max = 320.dp),
-        shape = FutureShapes.lg,
-        color = onSurfaceColor.copy(alpha = 0.08f)
-    ) {
-        Column(modifier = Modifier.padding(8.dp)) {
+    if (quickMessage && !ended) {
+        FutureOptionsMenu(theme = theme, onDismissRequest = viewModel::closeQuickMessage, header = "הודעה מהירה") {
             InCallViewModel.quickMessages.forEach { message ->
-                FocusableItem(onClick = { onSend(message) }, accentColor = MaterialTheme.colorScheme.primary) {
-                    Text(
-                        text = message,
-                        fontSize = FutureTypography.bodyLarge,
-                        color = onSurfaceColor,
-                        maxLines = 1,
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp)
-                    )
-                }
+                FutureMenuRow(message, null, theme, onClick = {
+                    // בשיחה מצלצלת ההודעה היא התשובה - שולחים ודוחים.
+                    val rejecting = isRinging
+                    viewModel.sendQuickMessage(context, phoneNumber, message)
+                    if (rejecting) viewModel.reject()
+                })
             }
         }
     }
 }
 
-@Composable
-private fun RoundCallButton(icon: ImageVector, background: Color, onClick: () -> Unit, size: androidx.compose.ui.unit.Dp = 68.dp, focusRequester: FocusRequester? = null) {
-    FocusableItem(onClick = onClick, accentColor = MaterialTheme.colorScheme.primary, modifier = Modifier.size(size), focusRequester = focusRequester) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(background, CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(imageVector = icon, contentDescription = null, tint = com.future.sharednav.theme.FutureContrast.onColor(background), modifier = Modifier.size(size / 2.5f))
-        }
-    }
-}
+// ---------------------------------------------------------------- נכנסת
 
-/**
- * כפתור פעולה עגול עם רקע (השתקה/רמקול/מקלדת/הקלטה/הודעה) - קודם היה אייקון
- * חשוף בלי שום רקע, מה שנראה "לא גמור" ליד שני כפתורי השיחה העגולים והמלאים.
- * מצב פעיל (isActive) ממלא את העיגול בצבע ההדגשה, בדיוק כמו מסכי שיחה אמיתיים.
- */
 @Composable
-fun CallActionIcon(icon: ImageVector, label: String, onClick: () -> Unit, tint: Color = MaterialTheme.colorScheme.onSurface, isActive: Boolean = false, modifier: Modifier = Modifier) {
-    val accent = MaterialTheme.colorScheme.primary
-    // tint/onPrimary נגזרים מה-theme במקום Color.White/Black קשיחים - בלי זה
-    // האייקונים היו נעלמים על רקע בהיר (מצב לא-כהה) והניגוד במצב פעיל (isActive)
-    // לא היה מובטח לצבע הדגשה שהמשתמש בחר.
-    val theme = com.future.sharednav.theme.LocalFutureTheme.current
-    // אריח: 66dp, רדיוס 16dp, רקע "זכוכית" - או 20% מההדגשה כשהפקד דלוק.
-    FocusableItem(
-        onClick = onClick,
-        accentColor = accent,
-        idleBackgroundColor = if (isActive) accent.copy(alpha = 0.20f) else theme.elevatedSurfaceColor,
-        focusedBackgroundColor = if (isActive) accent.copy(alpha = 0.20f) else theme.elevatedSurfaceColor,
-        cornerRadius = com.future.sharednav.theme.FutureShapes.radiusLg,
-        scaleOnFocus = false,
-        modifier = modifier.height(66.dp),
+private fun IncomingCall(
+    name: String,
+    phoneNumber: String,
+    theme: FutureTheme,
+    onAnswer: () -> Unit,
+    onReject: () -> Unit,
+) {
+    val type = rememberFutureType()
+    val answer = remember { FocusRequester() }
+    LaunchedEffect(Unit) { runCatching { answer.requestFocus() } }
+    // שיחה מצלצלת נשארת עד מענה או דחייה, כמו בטלפון אמיתי.
+    BackHandler(enabled = true) {}
+
+    Column(
+        modifier = Modifier.fillMaxSize().padding(FutureDimens.spacingXl),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.SpaceBetween,
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.padding(top = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
+            verticalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm),
         ) {
-            Icon(
-                icon,
-                contentDescription = label,
-                tint = if (isActive) accent else tint.copy(alpha = 0.7f),
-                modifier = Modifier.size(20.dp),
-            )
-            Spacer(modifier = Modifier.height(3.dp))
             Text(
-                label,
+                stringResource(R.string.incoming_call),
                 color = theme.mutedTextColor,
-                fontSize = FutureTypography.summary,
+                fontSize = type.label,
+                letterSpacing = FutureTypography.trackingSection,
+            )
+            CallerAvatar(name, phoneNumber, theme, IncomingAvatar)
+            Text(
+                name,
+                color = theme.textColor,
+                fontSize = type.display,
+                fontWeight = FutureTypography.weightBold,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+            )
+            if (name != phoneNumber) Number(phoneNumber, theme)
+        }
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm),
+        ) {
+            FutureButton(stringResource(R.string.answer), theme, onAnswer, fillMaxWidth = true, focusRequester = answer)
+            FutureButton(stringResource(R.string.decline), theme, onReject, variant = FutureButtonVariant.Destructive, fillMaxWidth = true)
+        }
+    }
+}
+
+// ---------------------------------------------------------------- פעילה
+
+@Composable
+private fun ActiveCall(
+    name: String,
+    phoneNumber: String,
+    callState: Int?,
+    duration: Long,
+    viewModel: InCallViewModel,
+    theme: FutureTheme,
+    onHoldUnsupported: () -> Unit,
+) {
+    val type = rememberFutureType()
+    val context = LocalContext.current
+    val isMuted by viewModel.isMuted.collectAsState()
+    val isSpeakerOn by viewModel.isSpeakerOn.collectAsState()
+    val isOnHold by viewModel.isOnHold.collectAsState()
+    val isRecording by viewModel.isRecording.collectAsState()
+    val isDialpadVisible by viewModel.isDialpadVisible.collectAsState()
+    val quickMessage by viewModel.isQuickMessageVisible.collectAsState()
+    val dtmfDigits by viewModel.dtmfDigits.collectAsState()
+
+    val first = remember { FocusRequester() }
+    LaunchedEffect(Unit) { runCatching { first.requestFocus() } }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = FutureDimens.spacingXl, bottom = 20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            CallerAvatar(name, phoneNumber, theme, ActiveAvatar)
+            Text(
+                name,
+                color = theme.textColor,
+                fontSize = type.screenTitle,
+                fontWeight = FutureTypography.weightBold,
+                textAlign = TextAlign.Center,
                 maxLines = 1,
+                modifier = Modifier.padding(horizontal = FutureDimens.screenPadding),
+            )
+            val status = when {
+                isOnHold -> "בהמתנה"
+                callState == Call.STATE_DIALING || callState == Call.STATE_CONNECTING -> stringResource(R.string.dialing)
+                else -> null
+            }
+            if (status != null) {
+                Text(status, color = theme.mutedTextColor, fontSize = type.body)
+            } else {
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                    Text(CallFormat.duration(duration), color = theme.successColor, fontSize = type.body)
+                }
+            }
+            if (isDialpadVisible) {
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                    Text(
+                        dtmfDigits.ifEmpty { " " },
+                        color = theme.textColor,
+                        fontSize = type.headline,
+                        maxLines = 1,
+                    )
+                }
+            }
+            if (isRecording) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Icon(Icons.Rounded.FiberManualRecord, contentDescription = null, tint = theme.dangerColor, modifier = Modifier.size(12.dp))
+                    Text(stringResource(R.string.recording_in_progress), color = theme.dangerColor, fontSize = type.summary)
+                }
+            }
+        }
+
+        // האריחים של ActionGrid בשתי עמודות. ארבעת הראשונים הם של הערכה;
+        // הקלטה והודעה הם יכולות קיימות של החייגן, באותו רכיב.
+        val controls = listOf(
+            Control(if (isMuted) Icons.Rounded.MicOff else Icons.Rounded.Mic,
+                stringResource(if (isMuted) R.string.unmute else R.string.mute), isMuted) { viewModel.toggleMute() },
+            Control(Icons.AutoMirrored.Rounded.VolumeUp, stringResource(R.string.speaker), isSpeakerOn) { viewModel.toggleSpeaker() },
+            Control(if (isOnHold) Icons.Rounded.PlayArrow else Icons.Rounded.Pause,
+                if (isOnHold) "המשך" else "המתנה", isOnHold) { if (!viewModel.toggleHold()) onHoldUnsupported() },
+            Control(Icons.Rounded.Dialpad, stringResource(R.string.keypad), isDialpadVisible) { viewModel.toggleDialpad() },
+            Control(Icons.Rounded.FiberManualRecord,
+                stringResource(if (isRecording) R.string.stop_recording else R.string.record), isRecording,
+                iconColor = if (isRecording) theme.dangerColor else null) { viewModel.toggleRecording(context) },
+            Control(Icons.Rounded.Sms, stringResource(R.string.send_message), quickMessage) { viewModel.toggleQuickMessage() },
+        )
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .padding(horizontal = FutureDimens.spacingXl),
+            verticalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm),
+        ) {
+            controls.chunked(2).forEachIndexed { rowIndex, row ->
+                Row(horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm)) {
+                    row.forEachIndexed { i, c ->
+                        FutureActionCell(
+                            icon = c.icon,
+                            label = c.label,
+                            theme = theme,
+                            onClick = c.onClick,
+                            active = c.active,
+                            iconColor = c.iconColor,
+                            height = ControlHeight,
+                            focusRequester = if (rowIndex == 0 && i == 0) first else null,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                }
+            }
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = FutureDimens.spacingXl, end = FutureDimens.spacingXl, top = FutureDimens.spacingMd, bottom = 20.dp),
+        ) {
+            FutureButton(
+                text = stringResource(R.string.end_call),
+                theme = theme,
+                onClick = viewModel::hangUp,
+                variant = FutureButtonVariant.Destructive,
+                fillMaxWidth = true,
             )
         }
     }
 }
 
-/** שתי עמודות של אריחי פקד, במרווח של 8dp (ui_kits/calls). */
+private class Control(
+    val icon: ImageVector,
+    val label: String,
+    val active: Boolean,
+    val iconColor: androidx.compose.ui.graphics.Color? = null,
+    val onClick: () -> Unit,
+)
+
+// ---------------------------------------------------------------- סיום
+
 @Composable
-private fun CallControlGrid(content: @Composable androidx.compose.foundation.layout.FlowRowScope.() -> Unit) {
+private fun EndedCall(
+    name: String,
+    phoneNumber: String,
+    duration: Long,
+    theme: FutureTheme,
+    onCallAgain: () -> Unit,
+    onBackToLog: () -> Unit,
+) {
+    val type = rememberFutureType()
+    val again = remember { FocusRequester() }
+    LaunchedEffect(Unit) { runCatching { again.requestFocus() } }
+    BackHandler(onBack = onBackToLog)
+
     Column(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxSize().padding(FutureDimens.spacingXl),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(FutureDimens.spacingMd, Alignment.CenterVertically),
     ) {
-        androidx.compose.foundation.layout.FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            maxItemsInEachRow = 2,
+        CallerAvatar(name, phoneNumber, theme, ActiveAvatar)
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text(
+                name,
+                color = theme.textColor,
+                fontSize = type.screenTitle,
+                fontWeight = FutureTypography.weightBold,
+                textAlign = TextAlign.Center,
+            )
+            Text("השיחה הסתיימה · ${CallFormat.duration(duration)}", color = theme.mutedTextColor, fontSize = type.body)
+        }
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(top = FutureDimens.spacingMd),
+            verticalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm),
         ) {
-            content()
+            FutureButton("התקשר שוב", theme, onCallAgain, fillMaxWidth = true, focusRequester = again)
+            FutureButton("חזור ליומן", theme, onBackToLog, variant = FutureButtonVariant.Quiet, fillMaxWidth = true)
         }
     }
 }
 
-private fun formatDuration(seconds: Long): String {
-    val m = seconds / 60
-    val s = seconds % 60
-    return "%02d:%02d".format(m, s)
+// ---------------------------------------------------------------- עזרים
+
+/** האווטאר של המערכת; מספר בלי שם מקבל אייקון ולא "ראשי תיבות" של ספרות. */
+@Composable
+private fun CallerAvatar(name: String, phoneNumber: String, theme: FutureTheme, size: Dp) {
+    val hasName = name.isNotBlank() && name != phoneNumber
+    FutureAvatar(
+        theme = theme,
+        name = if (hasName) name else null,
+        icon = if (hasName) null else Icons.Rounded.Person,
+        size = size,
+    )
 }
+
+/** מספר טלפון לא מתהפך בתוך שורה עברית. */
+@Composable
+private fun Number(phoneNumber: String, theme: FutureTheme) {
+    val type = rememberFutureType()
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+        Text(phoneNumber, color = theme.mutedTextColor, fontSize = type.body)
+    }
+}
+
+/** 100dp - אווטאר השיחה הנכנסת (200px בערכה). */
+private val IncomingAvatar = 100.dp
+
+/** 80dp - אווטאר השיחה הפעילה והסיום (160px בערכה). */
+private val ActiveAvatar = 80.dp
+
+/** 60dp - אריח פקד בשיחה; שש משבצות בשלוש שורות נכנסות מעל "סיים שיחה". */
+private val ControlHeight = 60.dp

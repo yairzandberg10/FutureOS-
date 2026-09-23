@@ -17,7 +17,7 @@ export function Avatar({ name, icon, size = 88, color, background, style, ...res
         height: size,
         flex: "0 0 auto",
         borderRadius: "var(--fos-radius-full)",
-        background: background || "var(--fos-glass)",
+        background: background || "var(--fos-avatar-fill)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -26,12 +26,12 @@ export function Avatar({ name, icon, size = 88, color, background, style, ...res
       {...rest}
     >
       {icon
-        ? <FosIcon name={icon} size={Math.round(size * 0.44)} color={color || "var(--fos-text-60)"} />
+        ? <FosIcon name={icon} size={Math.round(size * 0.44)} color={color || "var(--fos-text)"} />
         : <span style={{
             fontFamily: "var(--fos-font-display)",
             fontSize: Math.round(size * 0.3),
             fontWeight: "var(--fos-weight-medium)",
-            color: color || "var(--fos-text-70)"
+            color: color || "var(--fos-text)"
           }}>{initials(name)}</span>}
     </div>
   );

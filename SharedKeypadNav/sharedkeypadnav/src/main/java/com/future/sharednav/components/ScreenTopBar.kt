@@ -117,6 +117,9 @@ fun TopBarIconButton(
     onClick: () -> Unit,
     focusRequester: FocusRequester? = null,
     enabled: Boolean = true,
+    // צבע האייקון כשהוא שונה מצבע הטקסט - החצים של בורר השעה צבועים בהדגשה
+    // (TimePicker.jsx), אבל הרקע והטבעת נשארים נגזרים מהטקסט.
+    iconColor: Color? = null,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
@@ -143,6 +146,7 @@ fun TopBarIconButton(
             .clickable(interactionSource = interactionSource, indication = null, enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(icon, contentDescription = contentDescription, tint = if (enabled) textColor else textColor.copy(alpha = 0.4f), modifier = Modifier.size(FutureDimens.iconTopBar))
+        val tint = iconColor ?: textColor
+        Icon(icon, contentDescription = contentDescription, tint = if (enabled) tint else tint.copy(alpha = 0.4f), modifier = Modifier.size(FutureDimens.iconTopBar))
     }
 }

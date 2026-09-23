@@ -10,6 +10,8 @@
         <!-- נחוץ כדי לשלוח תשובה מהירה (SMS) בזמן שיחה בלי לצאת מהחייגן, דרך
              ACTION_RESPOND_VIA_MESSAGE שמטופל ב-HeadlessSmsSendService של Messages. -->
         <package android:name="com.future.messages" />
+        <!-- "אנשי קשר" בתפריט פותח את אפליקציית אנשי הקשר של המערכת. -->
+        <package android:name="com.future.contact" />
         <intent>
             <action android:name="android.intent.action.RESPOND_VIA_MESSAGE" />
             <data android:scheme="smsto" />

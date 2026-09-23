@@ -1,4 +1,6 @@
 package com.future.fitness.ui.screens
+import com.future.sharednav.components.AvatarListSize
+import com.future.sharednav.components.FutureAvatar
 import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.theme.elevatedSurfaceColor
 import com.future.sharednav.theme.idleFieldColor
@@ -253,12 +255,7 @@ fun SettingsScreen(
                                 .padding(14.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Box(
-                                modifier = Modifier.size(32.dp).background(theme.textColor.copy(alpha = 0.08f), CircleShape),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Icon(Icons.Rounded.Watch, contentDescription = null, tint = theme.textColor.copy(alpha = 0.7f), modifier = Modifier.size(16.dp))
-                            }
+                            FutureAvatar(theme = theme, icon = Icons.Rounded.Watch, size = AvatarListSize)
                             Spacer(Modifier.width(10.dp))
                             Text(device.name, color = theme.textColor, fontSize = FutureTypography.body)
                         }

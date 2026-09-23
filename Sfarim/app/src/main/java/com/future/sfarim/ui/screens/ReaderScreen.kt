@@ -324,7 +324,7 @@ private fun SegmentRow(
     // בורדר + scale בפוקוס, כמו בשאר האפליקציה (FocusableItem המשותף) - בלי זה
     // דווקא מסך הקריאה, המרכזי ביותר, נראה שונה מכל שאר המסכים.
     val scale by animateFloatAsState(if (isFocused) 1.02f else 1f, label = "segmentRowScale")
-    val shape = FutureShapes.sm
+    val shape = FutureShapes.row
 
     Row(
         modifier = Modifier

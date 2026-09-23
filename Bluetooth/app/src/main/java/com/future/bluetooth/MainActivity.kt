@@ -1,8 +1,11 @@
 package com.future.bluetooth
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.os.Environment
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -14,11 +17,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.graphics.Color
 import com.future.bluetooth.data.BluetoothController
-import com.future.bluetooth.ui.BluetoothScreen
-import com.future.sharednav.theme.FutureTheme
-import com.future.sharednav.theme.ThemeClient
+import com.future.bluetooth.ui.BluetoothActions
+import com.future.bluetooth.ui.BluetoothApp
+import com.future.sharednav.theme.FutureAppTheme
+import com.future.sharednav.theme.rememberFutureTheme
+import java.io.File
 
 class MainActivity : ComponentActivity() {
     // המכשיר האמיתי הוא מקלדת T9 בלבד בלי מסך מגע - מבטלים קלט מגע לגמרי כדי
@@ -38,13 +42,9 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         setContent {
-            var theme by remember {
-                mutableStateOf(
-                    ThemeClient.getTheme(this@MainActivity).let {
-                        FutureTheme(isDarkMode = it.isDarkMode, accentColor = Color(it.primaryColor))
-                    }
-                )
-            }
+            // הערכה מתעדכנת חי (ContentObserver) - גם כשמצב כהה/בהיר משתנה
+            // ממרכז הבקרה שנפתח מעל האפליקציה.
+            val theme = rememberFutureTheme()
             var hasPermission by remember { mutableStateOf(hasRequiredPermissions()) }
             val controller = remember { BluetoothController(this@MainActivity) }
 
@@ -58,15 +58,12 @@ class MainActivity : ComponentActivity() {
                 ActivityResultContracts.StartActivityForResult()
             ) { controller.refreshState() }
 
-            // מרענן את העיצוב, ההרשאות ומצב הבלוטוס בכל חזרה למסך - כל השלושה
-            // יכולים להשתנות בזמן שהאפליקציה ברקע (הגדרות עיצוב, הרשאות,
-            // כיבוי/הפעלת בלוטוס משורת המצב).
+            // ההרשאות ומצב הבלוטות' יכולים להשתנות בזמן שהאפליקציה ברקע
+            // (הגדרות, שורת המצב) - מרעננים בכל חזרה למסך.
             val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
             DisposableEffect(lifecycleOwner) {
                 val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
                     if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
-                        val shared = ThemeClient.getTheme(this@MainActivity)
-                        theme = FutureTheme(isDarkMode = shared.isDarkMode, accentColor = Color(shared.primaryColor))
                         hasPermission = hasRequiredPermissions()
                         if (hasPermission) controller.refreshState()
                     }
@@ -77,28 +74,62 @@ class MainActivity : ComponentActivity() {
 
             DisposableEffect(Unit) {
                 controller.register()
-                onDispose { controller.unregister() }
+                onDispose {
+                    controller.stopDiscovery()
+                    controller.unregister()
+                }
             }
 
-            LaunchedEffect(hasPermission) {
-                if (hasPermission) controller.refreshState()
+            LaunchedEffect(Unit) {
+                if (!hasPermission) permissionLauncher.launch(requiredPermissions)
             }
 
-            BluetoothScreen(
-                theme = theme,
-                isSupported = controller.isSupported(),
-                hasPermission = hasPermission,
-                isEnabled = controller.isEnabled,
-                isScanning = controller.isScanning,
-                pairedDevices = controller.pairedDevices,
-                discoveredDevices = controller.discoveredDevices,
-                onRequestPermission = { permissionLauncher.launch(requiredPermissions) },
-                onEnableBluetooth = { enableLauncher.launch(controller.requestEnableIntent()) },
-                onScan = { controller.startDiscovery() },
-                onStopScan = { controller.stopDiscovery() },
-                onPair = { address -> controller.pair(address) },
-                onUnpair = { address -> controller.unpair(address) },
-            )
+            val actions = remember {
+                BluetoothActions(
+                    requestPermission = { permissionLauncher.launch(requiredPermissions) },
+                    requestEnable = { enableLauncher.launch(controller.requestEnableIntent()) },
+                    openSystemSettings = { openSystemBluetoothSettings() },
+                    openReceivedFiles = { openReceivedFiles() },
+                )
+            }
+
+            FutureAppTheme(theme) {
+                BluetoothApp(
+                    controller = controller,
+                    theme = theme,
+                    hasPermission = hasPermission,
+                    actions = actions,
+                )
+            }
         }
+    }
+
+    private fun openSystemBluetoothSettings() {
+        try {
+            startActivity(Intent(Settings.ACTION_BLUETOOTH_SETTINGS))
+        } catch (e: Exception) {
+            // אין מסך הגדרות בלוטות' במכשיר - אין לאן לפנות.
+        }
+    }
+
+    /**
+     * קבצים שהתקבלו בבלוטות' נשמרים ב-Download/Bluetooth (או bluetooth בשורש
+     * האחסון בחלק מהמכשירים). אם התיקייה קיימת נפתחת אפליקציית הקבצים; אם לא -
+     * false, ואין מה להראות.
+     */
+    private fun openReceivedFiles(): Boolean {
+        val root = Environment.getExternalStorageDirectory()
+        val folders = listOf(
+            File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Bluetooth"),
+            File(root, "bluetooth"),
+        )
+        if (folders.none { it.isDirectory }) return false
+        val launch = packageManager.getLaunchIntentForPackage(FILES_PACKAGE) ?: return false
+        startActivity(launch)
+        return true
+    }
+
+    private companion object {
+        const val FILES_PACKAGE = "com.future.files"
     }
 }

@@ -1,4 +1,8 @@
 package com.future.sfarim.ui.screens
+import com.future.sharednav.components.FutureListItem
+import com.future.sharednav.components.FutureAvatar
+import com.future.sharednav.components.FutureSectionHeader
+import com.future.sharednav.theme.FutureDimens
 
 import com.future.sharednav.theme.FutureTypography
 import androidx.compose.foundation.background
@@ -31,7 +35,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.CompositionLocalProvider
 import com.future.sfarim.data.LibraryBook
 import com.future.sfarim.data.LibraryCategory
-import com.future.sfarim.ui.components.FocusableItem
 import com.future.sfarim.ui.components.ScreenTopBar
 import com.future.sharednav.theme.FutureTheme
 
@@ -125,14 +128,11 @@ private fun BrowseRow(
     focusRequester: FocusRequester? = null,
     onClick: () -> Unit,
 ) {
-    FocusableItem(onClick = onClick, theme = theme, modifier = Modifier.fillMaxWidth(), focusRequester = focusRequester) { _ ->
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 13.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(icon, contentDescription = null, tint = theme.textColor.copy(alpha = 0.7f))
-            Spacer(modifier = Modifier.width(14.dp))
-            Text(label, color = theme.textColor, fontSize = FutureTypography.bodyLarge, maxLines = 2)
-        }
-    }
+    FutureListItem(
+        title = label,
+        theme = theme,
+        onClick = onClick,
+        focusRequester = focusRequester,
+        leading = { FutureAvatar(theme = theme, icon = icon) },
+    )
 }

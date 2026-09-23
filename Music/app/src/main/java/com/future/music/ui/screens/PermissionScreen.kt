@@ -1,4 +1,5 @@
 package com.future.music.ui.screens
+import com.future.sharednav.components.FutureAvatar
 import com.future.sharednav.components.FutureButton
 
 import com.future.sharednav.theme.FutureTypography
@@ -42,12 +43,7 @@ fun PermissionScreen(theme: FutureTheme, onRequestPermission: () -> Unit) {
 
     Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor), contentAlignment = Alignment.Center) {
         Column(modifier = Modifier.padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(
-                modifier = Modifier.size(84.dp).clip(CircleShape).background(theme.accentColor.copy(alpha = 0.18f)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(Icons.Rounded.LibraryMusic, contentDescription = null, tint = theme.accentColor, modifier = Modifier.size(40.dp))
-            }
+            FutureAvatar(theme = theme, icon = Icons.Rounded.LibraryMusic, size = 88.dp)
             androidx.compose.foundation.layout.Spacer(modifier = Modifier.padding(top = 20.dp))
             Text(
                 "גישה לספריית המוזיקה",

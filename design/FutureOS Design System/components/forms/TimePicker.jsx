@@ -6,27 +6,27 @@ import { Button } from "../core/Button.jsx";
 const DAYS = ["א", "ב", "ג", "ד", "ה", "ו", "ש"];
 
 /* TimePickerOverlay: a full-screen overlay, not a dialog. 48sp/300 mono values,
-   36dp stepper buttons, 12sp/50% unit labels, hours on the RIGHT (RTL first child). */
-function Unit({ value, label, upFocused }) {
-  const step = {
-    width: 72, height: 72, borderRadius: 36, display: "inline-flex",
-    alignItems: "center", justifyContent: "center", border: "none", cursor: "pointer"
-  };
+   36dp stepper buttons, 12sp/50% unit labels, hours on the RIGHT (RTL first column). */
+function Step({ dir, focused }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-      <button type="button" style={{ ...step, background: upFocused ? "var(--fos-accent-30)" : "var(--fos-text-08)" }}>
-        <FosIcon name="keyboard_arrow_up" size={36} color="var(--fos-accent)" />
-      </button>
-      <div style={{ fontFamily: "var(--fos-font-mono)", fontSize: "var(--fos-size-clock)", fontWeight: "var(--fos-weight-light)", color: "var(--fos-text)", padding: "var(--fos-space-3) 0", lineHeight: 1.2 }}>{value}</div>
-      <button type="button" style={{ ...step, background: "var(--fos-text-08)" }}>
-        <FosIcon name="keyboard_arrow_down" size={36} color="var(--fos-accent)" />
-      </button>
-      <div style={{ fontSize: "var(--fos-size-label)", color: "var(--fos-text-50)", marginTop: "var(--fos-space-2)" }}>{label}</div>
-    </div>
+    <button type="button" style={{
+      width: 72, height: 72, borderRadius: "var(--fos-radius-full)", display: "inline-flex",
+      alignItems: "center", justifyContent: "center", border: "none", cursor: "pointer",
+      background: focused ? "var(--fos-accent-30)" : "var(--fos-text-08)"
+    }}>
+      <FosIcon name={dir === "up" ? "keyboard_arrow_up" : "keyboard_arrow_down"} size={36} color="var(--fos-accent)" />
+    </button>
   );
 }
 
-export function TimePicker({ title = "ערוך שעה", hours = "07", minutes = "30", repeat = [0, 1, 2, 3, 4], focusedDay = 5, onCancel, onSave, style, ...rest }) {
+const VALUE = {
+  fontFamily: "var(--fos-font-mono)", fontSize: "var(--fos-size-clock)",
+  fontWeight: "var(--fos-weight-light)", color: "var(--fos-text)", lineHeight: 1,
+  fontVariantNumeric: "tabular-nums", textAlign: "center"
+};
+const UNIT_LABEL = { fontSize: "var(--fos-size-label)", color: "var(--fos-text-50)", textAlign: "center" };
+
+export function TimePicker({ title = "ערוך שעה", hours = "07", minutes = "18", repeat = [0, 1, 2, 3, 4], focusedDay = 5, onCancel, onSave, style, ...rest }) {
   return (
     <div
       style={{
@@ -44,10 +44,27 @@ export function TimePicker({ title = "ערוך שעה", hours = "07", minutes = 
       {...rest}
     >
       <div style={{ fontSize: "var(--fos-size-screen-title)", fontWeight: "var(--fos-weight-bold)", color: "var(--fos-text)" }}>{title}</div>
-      <div style={{ display: "flex", alignItems: "flex-start", gap: "var(--fos-space-7)" }}>
-        <Unit value={hours} label="שעות" upFocused />
-        <div style={{ fontFamily: "var(--fos-font-mono)", fontSize: "var(--fos-size-clock)", fontWeight: "var(--fos-weight-light)", color: "var(--fos-text)", lineHeight: 1, marginTop: 96 }}>:</div>
-        <Unit value={minutes} label="דקות" />
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "104px 40px 104px",
+        gridTemplateRows: "auto auto auto auto",
+        justifyItems: "center",
+        alignItems: "center",
+        columnGap: "var(--fos-space-5)",
+        rowGap: "var(--fos-space-3)"
+      }}>
+        <Step dir="up" focused />
+        <div />
+        <Step dir="up" />
+        <div style={VALUE}>{hours}</div>
+        <div style={VALUE}>:</div>
+        <div style={VALUE}>{minutes}</div>
+        <Step dir="down" />
+        <div />
+        <Step dir="down" />
+        <div style={UNIT_LABEL}>שעות</div>
+        <div />
+        <div style={UNIT_LABEL}>דקות</div>
       </div>
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--fos-space-3)" }}>
         <div style={{ fontSize: "var(--fos-size-summary)", color: "var(--fos-text-60)" }}>חוזרת</div>

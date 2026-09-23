@@ -1,4 +1,5 @@
 package com.future.fitness.ui.screens
+import com.future.sharednav.components.FutureAvatar
 import com.future.sharednav.theme.elevatedSurfaceColor
 import com.future.sharednav.theme.idleFieldColor
 import com.future.sharednav.theme.idleChipColor
@@ -64,12 +65,7 @@ fun SummaryScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Box(
-            modifier = Modifier.size(76.dp).background(theme.idleFieldColor, CircleShape),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(Icons.Rounded.Check, contentDescription = null, tint = theme.textColor, modifier = Modifier.size(34.dp))
-        }
+        FutureAvatar(theme = theme, icon = Icons.Rounded.Check, size = 76.dp)
         Spacer(Modifier.height(16.dp))
         Text(title, color = theme.textColor, fontSize = FutureTypography.headline, fontWeight = FontWeight.Bold)
         Text(subtitle, color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.body, modifier = Modifier.padding(top = 4.dp, bottom = 28.dp))

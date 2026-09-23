@@ -22,7 +22,7 @@
   --fos-density: 2; /* @kind other */
 
   /* focus target heights — there is no touch, so 48dp does not apply */
-  --fos-row-list: 112px;     /* FocusableItem */
+  --fos-row-list: 130px;     /* FocusableItem */
   --fos-row-setting: 108px;  /* SettingItem */
   --fos-row-menu: 100px;     /* MenuRow */
   --fos-row-topbar-btn: 72px;/* TopBarIconButton */

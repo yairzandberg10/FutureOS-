@@ -103,7 +103,7 @@ fun IconListRow(
         Row(
             modifier = modifier
                 .fillMaxWidth()
-                .background(theme.idleChipColor, FutureShapes.sm)
+                .background(theme.idleChipColor, FutureShapes.row)
                 .heightIn(min = FutureDimens.rowHeightList)
                 .padding(horizontal = FutureDimens.spacingMd, vertical = FutureDimens.spacingSm),
             verticalAlignment = Alignment.CenterVertically,

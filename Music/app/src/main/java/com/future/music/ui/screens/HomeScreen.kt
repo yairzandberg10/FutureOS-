@@ -1,4 +1,8 @@
 package com.future.music.ui.screens
+import com.future.sharednav.components.FutureListItem
+import com.future.sharednav.components.FutureAvatar
+import com.future.sharednav.theme.rememberFutureType
+import com.future.sharednav.theme.FutureDimens
 import com.future.sharednav.theme.subtleTextColor
 
 import com.future.sharednav.theme.FutureTypography
@@ -41,7 +45,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.future.music.playback.PlayerUiState
-import com.future.music.ui.components.FocusableItem
 import com.future.music.ui.components.MiniPlayerBar
 
 import com.future.sharednav.nav.digitForKey
@@ -65,6 +68,7 @@ fun HomeScreen(
     // צריך לשוב אליו בדיוק, לא תמיד לפריט הראשון.
     lastOpenedItemId: String? = null,
 ) {
+    val type = rememberFutureType()
     val items = listOf(
         HomeItem("1", Icons.Rounded.LibraryMusic, "כל השירים", "כל המוזיקה שבטלפון", onOpenAllSongs),
         HomeItem("2", Icons.Rounded.Person, "אמנים", "לפי זמר/זמרת", onOpenArtists),
@@ -102,37 +106,19 @@ fun HomeScreen(
         )
 
         LazyColumn(
-            modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp),
-            verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp),
+            modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = FutureDimens.screenPadding),
+            verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(FutureDimens.itemSpacing),
         ) {
             itemsIndexed(items) { _, item ->
-                FocusableItem(
-                    onClick = item.onClick,
+                FutureListItem(
+                    title = item.label,
+                    summary = item.subtitle,
                     theme = theme,
-                    modifier = Modifier.fillMaxWidth(),
+                    onClick = item.onClick,
                     focusRequester = itemFocusRequesters.getOrPut(item.digit) { FocusRequester() },
-                ) { isFocused ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(44.dp)
-                                .clip(CircleShape)
-                                .background(theme.accentColor.copy(alpha = if (isFocused) 0.35f else 0.18f)),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Icon(item.icon, contentDescription = null, tint = theme.accentColor, modifier = Modifier.size(22.dp))
-                        }
-                        Spacer(modifier = Modifier.width(14.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(item.label, color = theme.textColor, fontSize = FutureTypography.title, fontWeight = FontWeight.Medium)
-                            Text(item.subtitle, color = theme.textColor.copy(alpha = 0.55f), fontSize = FutureTypography.label)
-                        }
-                        Text(item.digit, color = theme.subtleTextColor, fontSize = FutureTypography.body, fontWeight = FontWeight.Bold)
-                    }
-                }
+                    leading = { FutureAvatar(theme = theme, icon = item.icon) },
+                    trailing = { Text(item.digit, color = theme.subtleTextColor, fontSize = type.body, fontWeight = FontWeight.Bold) },
+                )
             }
         }
 

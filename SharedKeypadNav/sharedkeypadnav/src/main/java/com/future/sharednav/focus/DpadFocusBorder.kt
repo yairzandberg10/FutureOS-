@@ -29,7 +29,7 @@ import com.future.sharednav.theme.FutureShapes
 @Composable
 fun Modifier.dpadFocusBorder(
     isFocused: Boolean,
-    shape: Shape = FutureShapes.sm,
+    shape: Shape = FutureShapes.row,
 ): Modifier {
     val accent = MaterialTheme.colorScheme.primary
     val scale = animateFloatAsState(

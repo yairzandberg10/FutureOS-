@@ -20,6 +20,7 @@ export function ActionGrid({ items = [], focusedIndex = -1, columns = 2, height 
     >
       {items.map((it, i) => {
         const focused = focusedIndex === i;
+        const glyph = Math.max(40, Math.min(80, Math.round(height * 0.44)));
         return (
           <div
             key={(it.label || "") + i}
@@ -39,7 +40,7 @@ export function ActionGrid({ items = [], focusedIndex = -1, columns = 2, height 
               transition: "background var(--fos-transition-focus), border-color var(--fos-transition-focus)"
             }}
           >
-            <FosIcon name={it.icon} size={80} strokeWidth={1.3} color={it.color || (it.active ? "var(--fos-accent)" : "var(--fos-text-70)")} />
+            <FosIcon name={it.icon} size={glyph} strokeWidth={1.3} color={it.color || (it.active ? "var(--fos-accent)" : "var(--fos-text-70)")} />
             {it.label && <div style={{ fontSize: "var(--fos-size-summary)", color: "var(--fos-text-60)", textAlign: "center" }}>{it.label}</div>}
           </div>
         );

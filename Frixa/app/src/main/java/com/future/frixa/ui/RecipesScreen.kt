@@ -58,7 +58,7 @@ fun RecipesScreen(theme: FutureTheme, onOpenRecipe: (Int) -> Unit) {
  * (שמניח שהוא זה שמחזיק אינטראקציה/פוקוס אמיתיים על עצמו). */
 @Composable
 private fun RecipeRow(recipe: Recipe, theme: FutureTheme, isFocused: Boolean) {
-    val shape = FutureShapes.sm
+    val shape = FutureShapes.row
     val bgColor by animateColorAsState(
         if (isFocused) theme.readableAccentColor.copy(alpha = 0.14f) else theme.surfaceColor,
         FutureMotion.focusColorSpec,

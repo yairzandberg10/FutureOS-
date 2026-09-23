@@ -1,4 +1,6 @@
 package com.future.fitness.ui.screens
+import com.future.sharednav.components.AvatarListSize
+import com.future.sharednav.components.FutureAvatar
 import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.theme.elevatedSurfaceColor
 import com.future.sharednav.theme.idleFieldColor
@@ -242,12 +244,7 @@ fun HomeScreen(
                             .padding(18.dp),
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier.size(48.dp).background(theme.idleFieldColor, CircleShape),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Icon(Icons.Rounded.FitnessCenter, contentDescription = null, tint = theme.textColor, modifier = Modifier.size(24.dp))
-                            }
+                            FutureAvatar(theme = theme, icon = Icons.Rounded.FitnessCenter, size = AvatarListSize)
                             Spacer(Modifier.width(14.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text("האימון המומלץ הבא", color = theme.sectionHeaderColor, fontSize = FutureTypography.caption, fontWeight = FontWeight.Bold)

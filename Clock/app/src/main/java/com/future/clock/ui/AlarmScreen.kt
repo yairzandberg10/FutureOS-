@@ -1,4 +1,13 @@
 package com.future.clock.ui
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.PlatformTextStyle
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.graphics.vector.ImageVector
+import com.future.sharednav.theme.textAlpha
+import com.future.sharednav.theme.readableAccentColor
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.Box
+import com.future.sharednav.components.TopBarIconButton as SharedTopBarIconButton
 import com.future.sharednav.components.FutureButton
 import com.future.sharednav.components.FutureButtonVariant
 import com.future.sharednav.theme.FutureTypography
@@ -216,11 +225,13 @@ fun TimePickerOverlay(alarm: Alarm, theme: FutureTheme, onSave: (Alarm) -> Unit,
         Text("ערוך שעה", color = theme.textColor, fontSize = FutureTypography.screenTitle, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(24.dp))
 
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            TimeUnitPicker("שעות", hour, 0..23, theme) { hour = it }
-            Text(":", color = theme.textColor, fontSize = FutureTypography.hero, fontFamily = FutureTypography.monoFamily, modifier = Modifier.padding(horizontal = 16.dp))
-            TimeUnitPicker("דקות", minute, 0..59, theme) { minute = it }
-        }
+        TimeGrid(
+            hour = hour,
+            minute = minute,
+            theme = theme,
+            onHourChange = { hour = it },
+            onMinuteChange = { minute = it },
+        )
 
         Spacer(modifier = Modifier.height(24.dp))
         Text(
@@ -242,10 +253,11 @@ fun TimePickerOverlay(alarm: Alarm, theme: FutureTheme, onSave: (Alarm) -> Unit,
             }
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
+        // TimePicker.jsx: הביטול כאן הוא הכפתור השקט - זה המקום היחיד במערכת שבו הוא מופיע.
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            FutureButton("ביטול", theme, onCancel, modifier = Modifier.weight(1f), variant = FutureButtonVariant.Secondary)
+            FutureButton("ביטול", theme, onCancel, modifier = Modifier.weight(1f), variant = FutureButtonVariant.Quiet)
             FutureButton("שמור", theme, { onSave(alarm.copy(hour = hour, minute = minute, days = days, isEnabled = true)) }, modifier = Modifier.weight(1f))
         }
     }
@@ -260,23 +272,90 @@ fun DayToggleChip(label: String, selected: Boolean, theme: FutureTheme, onToggle
     FutureDayChip(text = label, theme = theme, selected = selected, onClick = onToggle)
 }
 
+/**
+ * הטבלה של בורר השעה (components/forms/TimePicker.jsx): שלוש עמודות -
+ * שעות, נקודתיים, דקות (52/20/52dp, מרווח 12dp) - וארבע שורות: חץ למעלה,
+ * ערך, חץ למטה, תווית. כך החצים יושבים בדיוק מעל ומתחת לספרות, והנקודתיים
+ * בשורה של הערכים ולא באמצע הגובה של כל הבלוק. השעות בעמודה הראשונה, כלומר
+ * מימין.
+ */
 @Composable
-fun TimeUnitPicker(label: String, value: Int, range: IntRange, theme: FutureTheme, onValueChange: (Int) -> Unit) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        ToolsIconButton(Icons.Rounded.KeyboardArrowUp, "למעלה", theme) {
-            onValueChange(if (value == range.last) range.first else value + 1)
-        }
-        Text(
-            "%02d".format(value),
-            color = theme.textColor,
-            fontSize = FutureTypography.hero,
-            fontWeight = FontWeight.Light,
-            fontFamily = FutureTypography.monoFamily,
-            modifier = Modifier.padding(vertical = 8.dp)
+private fun TimeGrid(hour: Int, minute: Int, theme: FutureTheme, onHourChange: (Int) -> Unit, onMinuteChange: (Int) -> Unit) {
+    fun step(value: Int, range: IntRange, up: Boolean): Int = when {
+        up -> if (value == range.last) range.first else value + 1
+        else -> if (value == range.first) range.last else value - 1
+    }
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm),
+    ) {
+        TimeGridRow(
+            hours = { TimeStepButton(Icons.Rounded.KeyboardArrowUp, "שעה למעלה", theme) { onHourChange(step(hour, 0..23, up = true)) } },
+            minutes = { TimeStepButton(Icons.Rounded.KeyboardArrowUp, "דקה למעלה", theme) { onMinuteChange(step(minute, 0..59, up = true)) } },
         )
-        ToolsIconButton(Icons.Rounded.KeyboardArrowDown, "למטה", theme) {
-            onValueChange(if (value == range.first) range.last else value - 1)
-        }
-        Text(label, color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.label)
+        TimeGridRow(
+            hours = { TimeValue("%02d".format(hour), theme) },
+            separator = { TimeValue(":", theme) },
+            minutes = { TimeValue("%02d".format(minute), theme) },
+        )
+        TimeGridRow(
+            hours = { TimeStepButton(Icons.Rounded.KeyboardArrowDown, "שעה למטה", theme) { onHourChange(step(hour, 0..23, up = false)) } },
+            minutes = { TimeStepButton(Icons.Rounded.KeyboardArrowDown, "דקה למטה", theme) { onMinuteChange(step(minute, 0..59, up = false)) } },
+        )
+        TimeGridRow(
+            hours = { Text("שעות", color = theme.textAlpha(50), fontSize = FutureTypography.label) },
+            minutes = { Text("דקות", color = theme.textAlpha(50), fontSize = FutureTypography.label) },
+        )
     }
 }
+
+@Composable
+private fun TimeGridRow(
+    hours: @Composable () -> Unit,
+    minutes: @Composable () -> Unit,
+    separator: @Composable () -> Unit = {},
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingMd),
+    ) {
+        Box(modifier = Modifier.width(TimeUnitColumn), contentAlignment = Alignment.Center) { hours() }
+        Box(modifier = Modifier.width(TimeSeparatorColumn), contentAlignment = Alignment.Center) { separator() }
+        Box(modifier = Modifier.width(TimeUnitColumn), contentAlignment = Alignment.Center) { minutes() }
+    }
+}
+
+/** 48sp/300 מונו, גובה שורה 1 - כך שהמרווח בין הספרות לחצים הוא המרווח של הטבלה בלבד. */
+@Composable
+private fun TimeValue(text: String, theme: FutureTheme) {
+    Text(
+        text,
+        color = theme.textColor,
+        fontSize = FutureTypography.hero,
+        fontWeight = FontWeight.Light,
+        fontFamily = FutureTypography.monoFamily,
+        style = TextStyle(
+            lineHeight = FutureTypography.hero,
+            fontFeatureSettings = "tnum",
+            platformStyle = PlatformTextStyle(includeFontPadding = false),
+        ),
+        textAlign = TextAlign.Center,
+    )
+}
+
+/** חץ של בורר השעה - עיגול 36dp, 8% מהטקסט במנוחה ו-30% מההדגשה בפוקוס, והחץ עצמו בהדגשה. */
+@Composable
+private fun TimeStepButton(icon: ImageVector, contentDescription: String, theme: FutureTheme, onClick: () -> Unit) {
+    SharedTopBarIconButton(
+        icon = icon,
+        contentDescription = contentDescription,
+        textColor = theme.textColor,
+        accentColor = theme.accentColor,
+        onClick = onClick,
+        iconColor = theme.readableAccentColor,
+    )
+}
+
+/** 104px / 40px - רוחב עמודת ערך ועמודת הנקודתיים ב-TimePicker.jsx. */
+private val TimeUnitColumn = 52.dp
+private val TimeSeparatorColumn = 20.dp

@@ -45,8 +45,12 @@ class InCallViewModel : ViewModel() {
         }
     }
 
+    private var timerJob: kotlinx.coroutines.Job? = null
+
+    /** מונה המשך. כניסה חוזרת למסך השיחה מחליפה את המונה הקודם ולא מוסיפה עוד אחד. */
     fun startDurationTimer() {
-        viewModelScope.launch {
+        timerJob?.cancel()
+        timerJob = viewModelScope.launch {
             while (true) {
                 val connectTime = CallService.activeCall.value?.details?.connectTimeMillis ?: 0L
                 _callDuration.value = if (connectTime > 0) {
@@ -55,6 +59,24 @@ class InCallViewModel : ViewModel() {
                 delay(1000)
             }
         }
+    }
+
+    /** השיחה בהמתנה (Call.STATE_HOLDING). */
+    val isOnHold: StateFlow<Boolean> = MutableStateFlow(false).also { flow ->
+        viewModelScope.launch {
+            CallService.callState.collect { state -> flow.value = state == Call.STATE_HOLDING }
+        }
+    }
+
+    /** false כשהשיחה לא תומכת בהמתנה - המסך מודיע על כך במקום לא לעשות כלום. */
+    fun toggleHold(): Boolean {
+        if (!isOnHold.value && !CallService.canHold()) return false
+        CallService.setOnHold(!isOnHold.value)
+        return true
+    }
+
+    fun closeQuickMessage() {
+        _isQuickMessageVisible.value = false
     }
 
     fun answer() = CallService.answer()

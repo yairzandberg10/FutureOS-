@@ -2,6 +2,10 @@ package com.future.settings.ui.components
 import com.future.sharednav.theme.FutureMotion
 import com.future.sharednav.components.FutureSwitch
 import com.future.sharednav.components.FutureDivider
+import com.future.sharednav.components.FutureCard
+import com.future.sharednav.components.cardRowFocus
+import com.future.sharednav.components.LocalFutureCard
+import com.future.sharednav.theme.readableAccentColor
 
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
@@ -39,6 +43,7 @@ fun SettingItem(
 ) {
     var isFocused by remember { mutableStateOf(false) }
     val shape = FutureShapes.lg
+    val inCard = LocalFutureCard.current != null
     // שורות מידע-בלבד (onClick == null) לא מקבלות אף אחד מהאפקטים של פוקוס/לחיצה
     // למטה - בלעדי זה שורה שלחיצה עליה היא no-op הייתה מקבלת בדיוק אותה הדגשת
     // פוקוס מלאה כמו פריט לחיץ אמיתי, ומטעה את המשתמש לחשוב שיש לה פעולה.
@@ -54,7 +59,16 @@ fun SettingItem(
         label = "settingItemBg"
     )
 
-    Surface(
+    // הפוקוס ממלא את כל רוחב הכרטיס ולוקח את הפינות שלו בשורה הראשונה
+    // והאחרונה (cardRowFocus, SettingItem.jsx). קודם השורה הייתה מוסטת 4dp
+    // מכל צד עם פינות משלה, כלומר גלולה שצפה בתוך הכרטיס.
+    val borderColor by animateColorAsState(
+        if (isInteractive && isFocused) theme.futureTheme.readableAccentColor else Color.Transparent,
+        FutureMotion.focusColorSpec,
+        label = "settingItemBorder"
+    )
+
+    Box(
         modifier = Modifier
             .fillMaxWidth()
             .then(if (isInteractive) Modifier.onFocusChanged { isFocused = it.isFocused } else Modifier)
@@ -67,15 +81,15 @@ fun SettingItem(
                 } else Modifier
             )
             .then(if (isInteractive) Modifier.focusable() else Modifier)
-            .padding(horizontal = 4.dp, vertical = 2.dp)
-            .then(if (isInteractive && isFocused) Modifier.border(width = 2.dp, color = theme.primaryColor, shape = shape) else Modifier)
-            .then(if (isInteractive) Modifier.clickable { onClick!!() } else Modifier),
-        color = bgColor,
-        shape = shape
+            // בכרטיס השורה נוגעת בשפות שלו (והריפוד הפנימי גדל ב-2dp, כך
+            // שהגובה והמיקום של הטקסט לא זזו). מחוץ לכרטיס - מוסטת כמו קודם.
+            .then(if (inCard) Modifier else Modifier.padding(horizontal = 4.dp, vertical = 2.dp))
+            .cardRowFocus(bgColor, borderColor, fallbackShape = shape)
+            .then(if (isInteractive) Modifier.clickable { onClick!!() } else Modifier)
     ) {
         Row(
             modifier = Modifier
-                .padding(horizontal = 12.dp, vertical = 14.dp)
+                .padding(horizontal = if (inCard) 16.dp else 12.dp, vertical = if (inCard) 16.dp else 14.dp)
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -128,6 +142,7 @@ fun SettingSwitch(
 ) {
     var isFocused by remember { mutableStateOf(false) }
     val shape = FutureShapes.lg
+    val inCard = LocalFutureCard.current != null
     // אותה לוגיקה כמו ב-SettingItem: השורה שקופה על הכרטיס, והפוקוס מוסיף מילוי ומסגרת.
     val bgColor by animateColorAsState(
         if (isFocused) theme.textColor.copy(alpha = 0.06f) else Color.Transparent,
@@ -135,7 +150,13 @@ fun SettingSwitch(
         label = "settingSwitchBg"
     )
 
-    Surface(
+    val borderColor by animateColorAsState(
+        if (isFocused) theme.futureTheme.readableAccentColor else Color.Transparent,
+        FutureMotion.focusColorSpec,
+        label = "settingSwitchBorder"
+    )
+
+    Box(
         modifier = Modifier
             .fillMaxWidth()
             .onFocusChanged { isFocused = it.isFocused }
@@ -146,15 +167,15 @@ fun SettingSwitch(
                 } else false
             }
             .focusable()
-            .padding(horizontal = 4.dp, vertical = 2.dp)
-            .then(if (isFocused) Modifier.border(width = 2.dp, color = theme.primaryColor, shape = shape) else Modifier)
-            .clickable { onCheckedChange(!checked) },
-        color = bgColor,
-        shape = shape
+            // בכרטיס השורה נוגעת בשפות שלו (והריפוד הפנימי גדל ב-2dp, כך
+            // שהגובה והמיקום של הטקסט לא זזו). מחוץ לכרטיס - מוסטת כמו קודם.
+            .then(if (inCard) Modifier else Modifier.padding(horizontal = 4.dp, vertical = 2.dp))
+            .cardRowFocus(bgColor, borderColor, fallbackShape = shape)
+            .clickable { onCheckedChange(!checked) }
     ) {
         Row(
             modifier = Modifier
-                .padding(horizontal = 12.dp, vertical = 12.dp)
+                .padding(horizontal = if (inCard) 16.dp else 12.dp, vertical = if (inCard) 14.dp else 12.dp)
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -180,21 +201,13 @@ fun SettingSwitch(
     }
 }
 
+/**
+ * הכרטיס של המערכת (FutureCard) - אותן מידות וצל כמו קודם, אבל עכשיו
+ * השורות שבתוכו יודעות איפה הן יושבות, והפוקוס שלהן לוקח את הפינות שלו.
+ */
 @Composable
 fun SettingsCard(theme: ThemeConfig, content: @Composable ColumnScope.() -> Unit) {
-    Surface(
-        modifier = Modifier
-            .padding(horizontal = 16.dp, vertical = 6.dp)
-            .fillMaxWidth(),
-        shape = RoundedCornerShape(theme.borderRadius),
-        color = theme.surfaceColor,
-        tonalElevation = 0.dp,
-        shadowElevation = if (theme.isDarkMode) 4.dp else 1.dp
-    ) {
-        Column(modifier = Modifier.padding(vertical = 4.dp)) {
-            content()
-        }
-    }
+    FutureCard(theme = theme.futureTheme, content = content)
 }
 
 @Composable

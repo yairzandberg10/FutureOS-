@@ -17,7 +17,7 @@ winget install Google.PlatformTools
 adb version
 ```
 
-ודא ש-Android Studio / Gradle מותקנים לבניית כל אפליקציה (`./gradlew assembleDebug` בכל תיקיית אפליקציה). רוב האפליקציות מתקמפלות ב-Java 11, אבל ל-`Fitness`, `Music`, `Navigation`, `notes` ו-`Tasks` יש `sourceCompatibility`/`jvmTarget` של Java 21 — יש להתקין JDK 21 (או ערכת JDKs תואמת דרך Android Studio) כדי שכל 28 האפליקציות ייבנו, לא רק JDK 17.
+ודא ש-Android Studio / Gradle מותקנים לבניית כל אפליקציה (`./gradlew assembleDebug` בכל תיקיית אפליקציה). רוב האפליקציות מתקמפלות ב-Java 11, אבל ל-`Fitness`, `Music`, `Navigation`, `notes` ו-`Tasks` יש `sourceCompatibility`/`jvmTarget` של Java 21 — יש להתקין JDK 21 (או ערכת JDKs תואמת דרך Android Studio) כדי שכל 29 האפליקציות ייבנו, לא רק JDK 17.
 
 ## 3. הפעלת מצב מפתח + USB debugging במכשיר
 
@@ -46,12 +46,12 @@ adb devices
 
 ## 5. בניית כל האפליקציות
 
-כל אפליקציה היא פרויקט Gradle עצמאי בתיקייה משלה. **כל 28 האפליקציות** תלויות במודול המשותף `SharedKeypadNav/` דרך נתיב יחסי (D-pad focus, T9, ומאז איחוד מערכת העיצוב — גם `FutureTheme`/`ThemeClient` המשותפים) — **אל תעביר תיקיית אפליקציה בודדת החוצה מהריפו בלי שאר התיקיות ובלי `SharedKeypadNav/`**, הבנייה תיכשל.
+כל אפליקציה היא פרויקט Gradle עצמאי בתיקייה משלה. **כל 29 האפליקציות** תלויות במודול המשותף `SharedKeypadNav/` דרך נתיב יחסי (D-pad focus, T9, ומאז איחוד מערכת העיצוב — גם `FutureTheme`/`ThemeClient` המשותפים) — **אל תעביר תיקיית אפליקציה בודדת החוצה מהריפו בלי שאר התיקיות ובלי `SharedKeypadNav/`**, הבנייה תיכשל.
 
-מה-root של הריפו, יש סקריפט אחד (`build-all.sh`) שמכסה את כל 28 האפליקציות. הוא מגלה אותן מהדיסק - כל תיקייה ברמה העליונה שיש בה `settings.gradle.kts` - ולא מחזיק רשימת שמות קשיחה, כך שאפליקציה חדשה נכנסת אליו אוטומטית ואי אפשר שהרשימה תתיישן (מה שקרה בעבר: רשימה קשיחה של 25 שמות פספסה בשקט את `Flashlight`, `Frixa` ו-`SystemUI`):
+מה-root של הריפו, יש סקריפט אחד (`build-all.sh`) שמכסה את כל 29 האפליקציות. הוא מגלה אותן מהדיסק - כל תיקייה ברמה העליונה שיש בה `settings.gradle.kts` - ולא מחזיק רשימת שמות קשיחה, כך שאפליקציה חדשה נכנסת אליו אוטומטית ואי אפשר שהרשימה תתיישן (מה שקרה בעבר: רשימה קשיחה של 25 שמות פספסה בשקט את `Flashlight`, `Frixa` ו-`SystemUI`):
 
 ```bash
-./build-all.sh              # assembleDebug בכל 28 האפליקציות, אחת אחרי השנייה
+./build-all.sh              # assembleDebug בכל 29 האפליקציות, אחת אחרי השנייה
 ```
 
 כל APK יימצא ב-`<App>/app/build/outputs/apk/debug/app-debug.apk`. הסקריפט בונה אפליקציה-אחר-אפליקציה בכוונה (לא במקביל) - בנייה מקבילית של כמה אפליקציות שכולן תלויות ב-`SharedKeypadNav/` עלולה להיתקל בנעילת קובץ על ה-`build/` המשותף שלו (ר' `CHANGELOG.md`).

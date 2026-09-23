@@ -66,20 +66,24 @@ for the keyboard panel only.)
 
 | Token | Radius | Use for |
 |---|---|---|
-| `xs` / `radiusXs` | 4dp | progress bars, tiny tags |
-| `sm` / `radiusSm` | 8dp | list rows (`FocusableItem`, `--fos-radius-item`), keys, grid cells |
-| `textField` / `radiusTextField` | 10dp | text fields |
-| `md` / `radiusMd` | 12dp | tab items (`--fos-radius-tab`) |
-| `chip` / `radiusChip` | 14dp | chips |
-| `lg` / `radiusLg` | 16dp | cards, panels, slider rows (`--fos-radius-card`) |
+| `xs` / `radiusXs` | 12dp | progress bars, thin gauges, tiny tags (clamps to a pill on a thin bar) |
+| `sm` / `radiusSm` | 12dp | small controls: checkbox, key, action tile (`--fos-radius-item`) |
+| `row` / `radiusRow` | 20dp | list rows (`FocusableItem`, `ListItem.jsx`, `--fos-radius-row`) |
+| `textField` / `radiusTextField` | 16dp | text fields, text areas |
+| `md` / `radiusMd` | 16dp | tab items (`--fos-radius-tab`) |
+| `chip` / `radiusChip` | 16dp | chips |
+| `lg` / `radiusLg` | 16dp | cards, panels, slider rows, ActionGrid cells (`--fos-radius-card`) |
 | `dialog` / `radiusDialog` | 20dp | dialogs, options menu |
 | `xl` / `radiusXl` | 22dp | central surfaces, the settings card, "glass" |
 | `xxl` / `radiusXxl` | 28dp | heads-up notification, system-shell glass |
-| `pill` | 50% | pill buttons, switch track, day chip, nav indicator |
+| `pill` | 50% | buttons, switch track, day chip, nav indicator |
 
-Replaced 18 hand-picked radii. `FutureDimens.itemCornerRadius` /
-`cardCornerRadius` / `borderRadius` are aliases onto this scale. Corners are
-always rounded — there is no square-cornered element in the system.
+House rule from `tokens/shape.css`: no tight corners anywhere — 12dp is the
+smallest radius in the system, and text surfaces and tabs sit at 16dp. A
+radius larger than half a side clamps, so a 4dp bar with `xs` renders as a
+pill (the same as `ProgressBar.jsx`'s `h / 2`). `FutureDimens.itemCornerRadius`
+(the list row) / `cardCornerRadius` / `borderRadius` are aliases onto this
+scale.
 
 ### Type — `FutureTypography` / `FutureType`
 
@@ -113,7 +117,7 @@ Focus borders are **two** widths, and the split is deliberate
 `focusBorderControl` 2dp on a control. `focusBorderWidth` aliases the control
 width. `focusScale` is 1.02 and applies to list rows and dialogs only.
 
-Focus row heights — `rowHeightList` 56 · `rowHeightSetting` 54 ·
+Focus row heights — `rowHeightList` 65 · `rowHeightSetting` 54 ·
 `rowHeightMenu` 50 · `rowHeightDialogButton` 44 · `rowHeightTopBarButton` 36
 (dp). There is no touch, so Material's 48dp minimum does not apply; the rule is
 that a focused row must be unmistakable at a glance. `screenWidth`/
@@ -234,27 +238,62 @@ tab chips, each slightly off the spec). Use these instead of Material's
   **`InputDialog`** (`ConfirmDialog.jsx`, `InputDialog.jsx`) — 20dp surface,
   20dp padding, 15sp bold centered title, 12dp between buttons.
 - **`FutureButton`** (`Button.jsx`) — Primary / Destructive / Secondary /
-  Quiet; `enabled = false` also removes focus (the DS rule: what cannot be
-  activated cannot be focused). `ConfirmDialog` is built from the same button.
-- **`FutureTextField`** (`TextField.jsx`) — 8% fill, 10dp radius, 15sp, 2dp
+  Quiet, all one shape: a pill at a fixed 44dp, 24dp side padding, 16sp, and
+  a 2dp focus ring drawn inside the box so focus never changes the height.
+  `enabled = false` also removes focus (the DS rule: what cannot be activated
+  cannot be focused). `ConfirmDialog` is built from the same button.
+- **`FutureTextField`** (`TextField.jsx`) — 8% fill, 16dp radius, 15sp, 2dp
   accent ring; `leading`/`trailing` slots, `autoFocus` that works inside a
   Dialog. **`FutureFormField`** adds a 12sp label row for multi-field forms.
-- **`FutureListItem`** (`ListItem.jsx`) — 56dp row, title 17sp/500, summary
-  13sp/60%, `leading`/`trailing` slots, list-row focus.
-- **`FutureAvatar`** (`Avatar.jsx`) — glass circle, icon at 44% or initials at
-  30%; 44dp in a list. **`FutureBadge`** (`Badge.jsx`) — unread count.
+- **`FutureListItem`** (`ListItem.jsx`) — 65dp row, 20dp corners, title
+  17sp/500, summary 13sp/60%, `leading`/`trailing` slots, list-row focus.
+- **`FutureAvatar`** (`Avatar.jsx`) — a circle in `avatarFillColor`
+  (`--fos-avatar-fill`, #3A3A3C / #D3D3DC, which reads on both the screen and
+  a card), icon at 44% or initials at 30%, both in the full text color; 44dp in
+  a list, 88dp as a hero. **`FutureBadge`** (`Badge.jsx`) — unread count.
+- **`FutureActionCell`** (`ActionGrid.jsx`) — one focusable icon+label cell:
+  glass fill (20% accent when active), card radius, 2dp accent focus ring,
+  glyph at 44% of the cell height clamped to 20-40dp
+  (`FutureDimens.iconActionCell`), 13sp label at 60%. Call controls, home
+  shortcuts.
 - **`FutureTabRow`** / **`FutureTabItem`** (`TabRow.jsx`), **`FutureChip`**
   (tracks its own focus), **`FutureCheckbox`**, **`FutureSwitch`**
   (`Switch.jsx`: on = accent track + thumb in the background color, off =
-  empty track with a 30% border — never a white thumb), **`FutureSpinner`**,
-  **`FutureProgressBar`**, **`FutureCard`**, **`FutureDivider`**,
+  empty track with a 30% border — never a white thumb), **`FutureSpinner`**
+  (a round-capped accent arc over 26% of a 10% track, 900ms a turn),
+  **`FutureProgressBar`** (and **`FutureIndeterminateProgressBar`**, a third
+  of the track sweeping right to left, for a scan or a download with no known
+  length), **`FutureCard`**, **`FutureDivider`**,
   **`FutureSectionHeader`** (`inset = false` inside an already-padded list),
-  **`FutureSettingItem`**, **`FutureBottomNav`**.
+  **`FutureSettingItem`** (`onClick = null` for a display-only row — a row
+  that cannot be activated does not take focus), **`FutureBottomNav`**.
+- **`FutureCapsule`** / **`FutureRoundCapsule`** (`Capsule.jsx`) — a pill that
+  carries a small label above its value (the language pickers in תרגום), and
+  its round variant (the big microphone in conversation mode): 8% fill, 20%
+  accent when active, 2dp accent focus ring, no scale.
+- **`FutureSnackbar`** + **`rememberFutureSnackbarState`** /
+  **`FutureSnackbarHost`** (`Snackbar.jsx`) — transient feedback for something
+  that already happened ("הועתק", "נשמר"), anchored to the bottom of the
+  screen and gone on its own. It never takes focus. An *incoming* event is a
+  heads-up notification instead, and that one belongs to FutureUI.
+
+### Rows inside a card
+
+`FutureCard` holds *transparent* rows separated by a hairline, and a focused
+row is drawn by **`Modifier.cardRowFocus(background, border)`**: the fill and
+the ring span the full width of the card, the first row keeps the card's top
+corners, the last row its bottom corners, and a middle row is a rectangle
+(`Card.jsx` + `SettingItem.jsx`). A row finds its own place by measuring
+itself against the card, so a row inside a loop, a condition or another
+wrapper needs no index from the call site, and outside a card the same
+modifier falls back to the ordinary rounded shape. `FutureSettingItem` uses
+it; a hand-built row inside a card should too, instead of clipping itself to
+its own shape.
 
 ## Focus utilities (`focus/`)
 
 - **`FocusableItem`** — a focus-highlighted `Box` around arbitrary content.
-  Defaults are the list-row tokens (`radiusSm` = `--fos-radius-item`,
+  Defaults are the list-row tokens (`radiusRow` = `--fos-radius-row`,
   `focusBorderItem` 1.5dp, 14% accent fill); the fill and ring
   fade in with `focusColorSpec`, the item scales up on focus and down on an OK
   press.

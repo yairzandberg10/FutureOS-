@@ -62,4 +62,18 @@ class CallLogRepository(private val context: Context) {
         }
         records
     }
+
+    /** מוחק את כל יומן השיחות ("נקה יומן"). false בלי הרשאת WRITE_CALL_LOG. */
+    suspend fun clearAll(): Boolean = withContext(Dispatchers.IO) {
+        try {
+            context.contentResolver.delete(CallLog.Calls.CONTENT_URI, null, null)
+            true
+        } catch (e: SecurityException) {
+            Log.e("CallLogRepository", "Permission denied clearing call log", e)
+            false
+        } catch (e: Exception) {
+            Log.e("CallLogRepository", "Error clearing call log", e)
+            false
+        }
+    }
 }

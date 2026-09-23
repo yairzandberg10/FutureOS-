@@ -1,4 +1,5 @@
 package com.future.music.ui.screens
+import com.future.sharednav.theme.FutureDimens
 
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
@@ -35,10 +36,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.future.music.data.Song
 import com.future.music.playback.PlayerUiState
-import com.future.music.ui.components.FocusableItem
 import com.future.music.ui.components.MiniPlayerBar
 import com.future.music.ui.components.ScreenTopBar
-import com.future.music.ui.components.SongRow
+import com.future.music.ui.components.SongListItem
 
 import com.future.sharednav.nav.digitForKey
 import com.future.sharednav.theme.FutureTheme
@@ -95,7 +95,7 @@ fun SearchScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 4.dp)
-                .clip(FutureShapes.md)
+                .clip(FutureShapes.textField)
                 .background(theme.textColor.copy(alpha = 0.08f))
                 .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -122,19 +122,19 @@ fun SearchScreen(
             }
         } else {
             LazyColumn(
-                modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
-                verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp),
+                modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = FutureDimens.screenPadding, vertical = FutureDimens.spacingSm),
+                verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(FutureDimens.itemSpacing),
             ) {
                 itemsIndexed(results, key = { _, song -> song.id }) { index, song ->
                     val isCurrent = playerState.currentSong?.id == song.id
-                    FocusableItem(
-                        onClick = { onPlayResults(results, index) },
+                    SongListItem(
+                        song = song,
+                        isCurrent = isCurrent,
+                        isPlaying = playerState.isPlaying,
                         theme = theme,
-                        modifier = Modifier.fillMaxWidth(),
+                        onClick = { onPlayResults(results, index) },
                         focusRequester = if (index == 0) firstResultFocusRequester else null,
-                    ) { isFocused ->
-                        SongRow(song = song, isCurrent = isCurrent, isPlaying = playerState.isPlaying, isFocused = isFocused, theme = theme)
-                    }
+                    )
                 }
             }
         }

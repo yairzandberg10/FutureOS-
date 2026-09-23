@@ -1,4 +1,5 @@
 package com.future.music.ui.screens
+import com.future.sharednav.theme.FutureDimens
 
 import com.future.sharednav.theme.FutureTypography
 import androidx.compose.foundation.layout.Box
@@ -18,9 +19,8 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.future.music.playback.PlayerUiState
-import com.future.music.ui.components.FocusableItem
 import com.future.music.ui.components.ScreenTopBar
-import com.future.music.ui.components.SongRow
+import com.future.music.ui.components.SongListItem
 import com.future.sharednav.theme.FutureTheme
 
 @Composable
@@ -37,19 +37,19 @@ fun QueueScreen(playerState: PlayerUiState, theme: FutureTheme, onBack: () -> Un
             }
         } else {
             LazyColumn(
-                modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 12.dp),
-                verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp),
+                modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = FutureDimens.screenPadding),
+                verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(FutureDimens.itemSpacing),
             ) {
                 itemsIndexed(playerState.queue, key = { index, song -> "$index-${song.id}" }) { index, song ->
                     val isCurrent = index == playerState.currentIndex
-                    FocusableItem(
-                        onClick = { onPlayAt(index) },
+                    SongListItem(
+                        song = song,
+                        isCurrent = isCurrent,
+                        isPlaying = playerState.isPlaying,
                         theme = theme,
-                        modifier = Modifier.fillMaxWidth(),
+                        onClick = { onPlayAt(index) },
                         focusRequester = if (index == 0) firstItemFocusRequester else null,
-                    ) { isFocused ->
-                        SongRow(song = song, isCurrent = isCurrent, isPlaying = playerState.isPlaying, isFocused = isFocused, theme = theme)
-                    }
+                    )
                 }
             }
         }

@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- הורדת מודל שפה (פעם אחת לכל שפה); התרגום עצמו רץ על המכשיר. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- מצב שיחה - זיהוי דיבור. מתבקשת רק כשנכנסים לשיחה. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <!-- מאנדרואיד 11 (API 30) ומעלה, ContentResolver.query() על ספק תוכן של
+         אפליקציה אחרת מוחזר ריק בשקט אלא אם היא מוצהרת כאן - נחוץ כדי לקרוא
+         את העיצוב המשותף (כהה/בהיר, צבע הדגשה) מ-FutureUI. שירות זיהוי הדיבור
+         והקראת הטקסט מוצהרים מאותה סיבה - בלעדיהם הם נראים "לא קיימים". -->
+    <queries>
+        <package android:name="com.future.futureui" />
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+    </queries>
+
+    <uses-permission android:name="com.future.futureui.permission.SYSTEM_SETTINGS" />
+    <uses-permission android:name="com.future.keyboard.permission.SETTINGS" />
+    <application
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Translate">
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:windowSoftInputMode="adjustResize"
+            android:theme="@style/Theme.Translate">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- "תרגם" מתפריט הבחירה של טקסט באפליקציות אחרות. -->
+            <intent-filter>
+                <action android:name="android.intent.action.PROCESS_TEXT" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+            <!-- שיתוף טקסט לתרגום. -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>

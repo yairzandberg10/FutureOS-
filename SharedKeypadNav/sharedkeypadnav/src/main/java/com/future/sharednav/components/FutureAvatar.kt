@@ -21,17 +21,15 @@ import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.theme.FutureTheme
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.LocalFutureAccent
-import com.future.sharednav.theme.elevatedSurfaceColor
-import com.future.sharednav.theme.mutedTextColor
+import com.future.sharednav.theme.avatarFillColor
 import com.future.sharednav.theme.readableAccentColor
 import com.future.sharednav.theme.rememberFutureType
-import com.future.sharednav.theme.secondaryTextColor
 
 /**
  * העיגול שחוזר בכל משטח של אדם או מכשיר (components/core/Avatar.jsx):
- * מילוי "זכוכית" (elevatedSurfaceColor), עיגול מלא, ובתוכו אייקון ב-44%
- * מהקוטר ב-60% מהטקסט, או ראשי התיבות של השם ב-30% מהקוטר ב-70%.
- * 44dp בשורת רשימה, 88dp כגיבור מסך.
+ * מילוי [avatarFillColor] (--fos-avatar-fill), עיגול מלא, ובתוכו אייקון
+ * ב-44% מהקוטר או ראשי התיבות של השם ב-30% מהקוטר - שניהם בצבע הטקסט
+ * המלא. 44dp בשורת רשימה, 88dp כגיבור מסך.
  *
  * לפני הרכיב הזה כל אפליקציה ציירה את העיגול הזה אחרת - לרוב ב-18-20%
  * מצבע ההדגשה, כלומר ההדגשה כקישוט, שמתחלפת בכל פעם שהמשתמש משנה אותה.
@@ -49,20 +47,20 @@ fun FutureAvatar(
         modifier = modifier
             .size(size)
             .clip(FutureShapes.pill)
-            .background(theme.elevatedSurfaceColor),
+            .background(theme.avatarFillColor),
         contentAlignment = Alignment.Center,
     ) {
         if (icon != null) {
             Icon(
                 icon,
                 contentDescription = null,
-                tint = contentColor ?: theme.mutedTextColor,
+                tint = contentColor ?: theme.textColor,
                 modifier = Modifier.size(size * 0.44f),
             )
         } else if (name != null) {
             Text(
                 initials(name),
-                color = contentColor ?: theme.secondaryTextColor,
+                color = contentColor ?: theme.textColor,
                 fontSize = (size.value * 0.3f).sp,
                 fontWeight = FutureTypography.weightMedium,
                 maxLines = 1,

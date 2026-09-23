@@ -1,248 +1,169 @@
 package com.future.dialer.ui.dialpad
 
-import com.future.sharednav.theme.FutureTypography
-import com.future.sharednav.theme.FutureShapes
-import android.text.format.DateUtils
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.CallMade
-import androidx.compose.material.icons.rounded.CallMissed
-import androidx.compose.material.icons.rounded.CallReceived
-import androidx.compose.material3.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.future.dialer.R
-import com.future.dialer.data.model.CallRecord
-import com.future.dialer.data.model.CallType
-import com.future.dialer.data.model.Contact
-import com.future.dialer.ui.theme.DialerCallColors
-import com.future.sharednav.theme.mutedTextColor
-import com.future.sharednav.focus.FocusableItem
+import com.future.dialer.ui.CallsViewModel
+import com.future.sharednav.components.FutureButton
+import com.future.sharednav.components.ScreenTopBar
+import com.future.sharednav.t9.T9DigitMap
+import com.future.sharednav.theme.FutureDimens
+import com.future.sharednav.theme.FutureShapes
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.LocalFutureAccent
+import com.future.sharednav.theme.LocalFutureTheme
+import com.future.sharednav.theme.calcButtonColor
+import com.future.sharednav.theme.readableAccentColor
+import com.future.sharednav.theme.rememberFutureType
+import com.future.sharednav.theme.subtleTextColor
+import com.future.sharednav.theme.textAlpha
 
 /**
- * מסך חיוג + היסטוריה מאוחד: תצוגת המספר המוקש תמיד למעלה, ומתחתיה רשימה אחת
- * שמתחלפת בהתאם להקשה - שיחות אחרונות כשהשדה ריק, אנשי קשר תואמים (T9) כשמתחילים
- * להקיש. כך אין צורך במעבר בין טאבים נפרדים במכשיר בלי מסך מגע.
+ * טאב המקלדת (ui_kits/calls): המספר בגדול למעלה, ומתחתיו השם של איש הקשר
+ * שהמספר שייך לו; רשת 3×4 של המקשים עם האותיות; וכפתור "התקשר" ראשי.
+ *
+ * המקשים שעל המסך הם הד של המקשים הפיזיים ולא יעד פוקוס - הספרות מגיעות
+ * מהמקלדת של המכשיר (MainActivity.onKeyDown). הפוקוס היחיד הוא הכפתור, והוא
+ * מקבל אותו ברגע שיש מספר לחייג.
  */
 @Composable
 fun DialpadScreen(
-    viewModel: DialpadViewModel,
-    onCall: (String, String) -> Unit
+    viewModel: CallsViewModel,
+    onCall: (number: String) -> Unit,
 ) {
-    val dialedNumber by viewModel.dialedNumber.collectAsState()
-    val suggestions by viewModel.suggestedContacts.collectAsState()
-    val recentCalls by viewModel.recentCalls.collectAsState()
+    val theme = LocalFutureTheme.current
+    val type = rememberFutureType()
+    val accent = LocalFutureAccent.current ?: theme.readableAccentColor
+    val digits by viewModel.dialedNumber.collectAsState()
+    val match by viewModel.dialMatch.collectAsState()
 
-    // פוקוס D-pad התחלתי על הפריט הראשון ברשימה הרלוונטית (שיחות אחרונות/הצעות
-    // אנשי קשר) - בלי זה נחיתה על המסך משאירה אותו בלי שום פריט מודגש, בניגוד
-    // לדפוס העקבי ב-InCallScreen (מיקוד אוטומטי על כפתור המענה).
-    val firstRecentCallFocusRequester = remember { FocusRequester() }
-    val firstSuggestionFocusRequester = remember { FocusRequester() }
-    LaunchedEffect(dialedNumber.isEmpty(), recentCalls.isNotEmpty()) {
-        if (dialedNumber.isEmpty() && recentCalls.isNotEmpty()) {
-            firstRecentCallFocusRequester.requestFocus()
-        }
-    }
-    LaunchedEffect(dialedNumber.isEmpty(), suggestions.isNotEmpty()) {
-        if (dialedNumber.isNotEmpty() && suggestions.isNotEmpty()) {
-            firstSuggestionFocusRequester.requestFocus()
-        }
+    val callButton = remember { FocusRequester() }
+    LaunchedEffect(digits.isNotEmpty()) {
+        if (digits.isNotEmpty()) runCatching { callButton.requestFocus() }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        // תצוגת המספר המוקש
-        Surface(
+    Column(modifier = Modifier.fillMaxSize()) {
+        ScreenTopBar(title = "מקלדת", textColor = theme.textColor, accentColor = theme.accentColor)
+
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 24.dp, bottom = 16.dp),
-            shape = FutureShapes.lg,
-            color = MaterialTheme.colorScheme.primary.copy(alpha = if (dialedNumber.isEmpty()) 0.06f else 0.12f),
-            border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = if (dialedNumber.isEmpty()) 0.25f else 0.5f))
+                .heightIn(min = DisplayMinHeight)
+                .padding(start = FutureDimens.spacingLg, end = FutureDimens.spacingLg, bottom = FutureDimens.spacingMd),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(3.dp, Alignment.CenterVertically),
         ) {
-            Box(
-                modifier = Modifier.padding(16.dp),
-                contentAlignment = Alignment.Center
-            ) {
+            // מספרים לא מתהפכים בתוך ממשק RTL (README של המערכת).
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
                 Text(
-                    text = dialedNumber.ifEmpty { stringResource(R.string.enter_number) },
-                    fontSize = FutureTypography.display,
-                    fontWeight = FontWeight.Normal,
-                    color = if (dialedNumber.isEmpty()) MaterialTheme.colorScheme.primary.copy(alpha = 0.55f) else MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1
+                    digits.ifEmpty { "הקלד מספר" },
+                    color = if (digits.isEmpty()) theme.textAlpha(30) else theme.textColor,
+                    fontSize = if (digits.length > 12) type.headline else type.display,
+                    fontWeight = FontWeight.Light,
+                    letterSpacing = if (digits.isEmpty()) 0.sp else 1.sp,
+                    maxLines = 1,
                 )
             }
+            Text(
+                match?.name.orEmpty(),
+                color = accent,
+                fontSize = type.body,
+                maxLines = 1,
+                modifier = Modifier.heightIn(min = 17.dp),
+            )
         }
 
-        if (dialedNumber.isEmpty()) {
-            Text(
-                text = stringResource(R.string.recent_calls),
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp)
-            )
-            if (recentCalls.isEmpty()) {
-                EmptyState(stringResource(R.string.no_recent_calls), modifier = Modifier.weight(1f))
-            } else {
-                LazyColumn(
-                    modifier = Modifier.weight(1f).fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                    contentPadding = PaddingValues(bottom = 16.dp)
-                ) {
-                    itemsIndexed(recentCalls, key = { _, it -> it.id }) { index, record ->
-                        CallHistoryItem(record, onCall, focusRequester = if (index == 0) firstRecentCallFocusRequester else null)
-                    }
-                }
-            }
-        } else {
-            Text(
-                text = stringResource(R.string.matching_contacts),
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp)
-            )
-            if (suggestions.isEmpty()) {
-                EmptyState(stringResource(R.string.no_matching_contacts), modifier = Modifier.weight(1f))
-            } else {
-                LazyColumn(
-                    modifier = Modifier.weight(1f).fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                    contentPadding = PaddingValues(bottom = 16.dp)
-                ) {
-                    itemsIndexed(suggestions, key = { _, it -> it.id }) { index, contact ->
-                        ContactSuggestionItem(contact, onCall, focusRequester = if (index == 0) firstSuggestionFocusRequester else null)
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .padding(horizontal = FutureDimens.spacingXl),
+            verticalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm, Alignment.CenterVertically),
+        ) {
+            Keys.chunked(3).forEach { row ->
+                Row(horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm)) {
+                    row.forEach { key ->
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(KeyHeight)
+                                .clip(FutureShapes.lg)
+                                .background(theme.calcButtonColor),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(1.dp, Alignment.CenterVertically),
+                        ) {
+                            Text(
+                                key.toString(),
+                                color = theme.textColor,
+                                fontSize = type.screenTitle,
+                                fontWeight = FutureTypography.weightMedium,
+                            )
+                            val letters = lettersOf(key)
+                            if (letters.isNotEmpty()) {
+                                Text(
+                                    letters,
+                                    color = theme.subtleTextColor,
+                                    fontSize = type.badge,
+                                    letterSpacing = 0.5.sp,
+                                )
+                            }
+                        }
                     }
                 }
             }
         }
-    }
-}
 
-@Composable
-private fun EmptyState(text: String, modifier: Modifier = Modifier) {
-    Box(modifier = modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
-        )
-    }
-}
-
-@Composable
-private fun ContactSuggestionItem(contact: Contact, onCall: (String, String) -> Unit, focusRequester: FocusRequester? = null) {
-    FocusableItem(onClick = { onCall(contact.name, contact.phoneNumber) }, accentColor = MaterialTheme.colorScheme.primary, focusRequester = focusRequester) {
-        Row(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(8.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(start = FutureDimens.spacingXl, end = FutureDimens.spacingXl, top = FutureDimens.spacingMd, bottom = FutureDimens.spacingLg),
         ) {
-            Surface(
-                modifier = Modifier.size(48.dp),
-                shape = FutureShapes.md,
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text(
-                        contact.name.take(1).uppercase(),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.width(16.dp))
-            Column {
-                Text(
-                    contact.name,
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.bodyLarge
-                )
-                Text(
-                    contact.phoneNumber,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun CallHistoryItem(record: CallRecord, onCall: (String, String) -> Unit, focusRequester: FocusRequester? = null) {
-    FocusableItem(onClick = { onCall(record.name ?: record.phoneNumber, record.phoneNumber) }, accentColor = MaterialTheme.colorScheme.primary, focusRequester = focusRequester) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            val theme = com.future.sharednav.theme.LocalFutureTheme.current
-            val (icon, color) = with(DialerCallColors) {
-                when (record.type) {
-                    CallType.INCOMING -> Icons.Rounded.CallReceived to theme.incoming
-                    CallType.OUTGOING -> Icons.Rounded.CallMade to theme.outgoing
-                    CallType.MISSED -> Icons.Rounded.CallMissed to theme.missed
-                    CallType.REJECTED -> Icons.Rounded.CallMissed to theme.mutedTextColor
-                }
-            }
-
-            Surface(
-                modifier = Modifier.size(40.dp),
-                shape = FutureShapes.md,
-                color = color.copy(alpha = 0.14f)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = color,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.width(16.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = record.name ?: record.phoneNumber,
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.bodyLarge
-                )
-                Text(
-                    text = record.phoneNumber,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                )
-            }
-
-            Text(
-                text = DateUtils.getRelativeTimeSpanString(record.timestamp).toString(),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+            FutureButton(
+                text = "התקשר",
+                theme = theme,
+                onClick = { if (digits.isNotEmpty()) onCall(digits) },
+                fillMaxWidth = true,
+                focusRequester = callButton,
+                enabled = digits.isNotEmpty(),
             )
         }
     }
 }
+
+private val Keys = listOf('1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#')
+
+/** האותיות מתחת לספרה, כמו על המקשים עצמם; ו-"+" מתחת ל-0. */
+private fun lettersOf(key: Char): String = when (key) {
+    '0' -> "+"
+    in '2'..'9' -> T9DigitMap.ENGLISH[key].orEmpty().uppercase()
+    else -> ""
+}
+
+/** 58dp - מקש (116px בערכה). */
+private val KeyHeight = 58.dp
+
+/** 64dp - המקום של המספר והשם מעל המקשים (128px בערכה). */
+private val DisplayMinHeight = 64.dp

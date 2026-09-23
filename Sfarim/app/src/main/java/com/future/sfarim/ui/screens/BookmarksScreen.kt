@@ -1,4 +1,10 @@
 package com.future.sfarim.ui.screens
+import com.future.sharednav.components.FutureListItem
+import com.future.sharednav.components.FutureAvatar
+import com.future.sharednav.components.FutureSectionHeader
+import com.future.sharednav.theme.FutureDimens
+import com.future.sharednav.theme.mutedTextColor
+import androidx.compose.foundation.layout.size
 
 import com.future.sharednav.theme.FutureTypography
 import androidx.compose.foundation.background
@@ -40,7 +46,6 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.future.sfarim.data.LibraryBookmark
-import com.future.sfarim.ui.components.FocusableItem
 import com.future.sfarim.ui.components.ScreenTopBar
 import com.future.sharednav.theme.FutureTheme
 
@@ -112,36 +117,27 @@ private fun BookmarkRow(
     onClick: () -> Unit,
     onDelete: () -> Unit,
 ) {
-    FocusableItem(
-        onClick = onClick,
+    FutureListItem(
+        title = bookmark.bookTitle,
+        summary = bookmark.segmentRef,
         theme = theme,
+        onClick = onClick,
         focusRequester = focusRequester,
-        modifier = Modifier.fillMaxWidth().onKeyEvent { event ->
+        modifier = Modifier.onKeyEvent { event ->
             if (event.type == KeyEventType.KeyUp && (event.key == Key.Menu || event.key == Key.Settings)) {
                 onDelete(); true
             } else false
         },
-    ) { _ ->
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 13.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(Icons.Rounded.Bookmark, contentDescription = null, tint = theme.accentColor)
-            Spacer(modifier = Modifier.width(14.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(bookmark.bookTitle, color = theme.textColor, fontSize = FutureTypography.bodyLarge, maxLines = 1)
-                Text(bookmark.segmentRef, color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.label, maxLines = 1)
-            }
-            // אייקון תצוגתי בלבד (לא focusable) - המחיקה כבר זמינה דרך מקש
-            // Menu על השורה עצמה (למעלה). לפני התיקון האייקון היה עטוף
-            // ב-TopBarIconButton שהוא focusable משלו, מקונן בתוך FocusableItem
-            // שגם הוא focusable - שני יעדי פוקוס על אותה שורה שכנראה לא היו
-            // באמת נגישים שניהם ב-D-pad.
+        leading = { FutureAvatar(theme = theme, icon = Icons.Rounded.Bookmark) },
+        // אייקון תצוגתי בלבד (לא focusable) - המחיקה זמינה דרך מקש Menu על
+        // השורה עצמה. שני יעדי פוקוס על אותה שורה לא נגישים שניהם ב-D-pad.
+        trailing = {
             Icon(
                 Icons.Rounded.Delete,
                 contentDescription = "מחק סימניה",
-                tint = theme.textColor.copy(alpha = 0.6f),
+                tint = theme.mutedTextColor,
+                modifier = Modifier.size(FutureDimens.iconTopBar),
             )
-        }
-    }
+        },
+    )
 }

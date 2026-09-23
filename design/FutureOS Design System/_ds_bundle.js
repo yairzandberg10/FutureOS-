@@ -1,4 +1,4 @@
-/* @ds-bundle: {"format":4,"namespace":"FutureOSDesignSystem_3ab611","components":[{"name":"ActionGrid","sourcePath":"components/core/ActionGrid.jsx"},{"name":"Avatar","sourcePath":"components/core/Avatar.jsx"},{"name":"Button","sourcePath":"components/core/Button.jsx"},{"name":"Card","sourcePath":"components/core/Card.jsx"},{"name":"Divider","sourcePath":"components/core/Divider.jsx"},{"name":"EmptyState","sourcePath":"components/core/EmptyState.jsx"},{"name":"FosIcon","sourcePath":"components/core/FosIcon.jsx"},{"name":"FOS_ICON_NAMES","sourcePath":"components/core/FosIcon.jsx"},{"name":"Icon","sourcePath":"components/core/Icon.jsx"},{"name":"IconButton","sourcePath":"components/core/IconButton.jsx"},{"name":"ListItem","sourcePath":"components/core/ListItem.jsx"},{"name":"MonoValue","sourcePath":"components/core/MonoValue.jsx"},{"name":"ScreenHero","sourcePath":"components/core/ScreenHero.jsx"},{"name":"SectionHeader","sourcePath":"components/core/SectionHeader.jsx"},{"name":"TopBar","sourcePath":"components/core/TopBar.jsx"},{"name":"Badge","sourcePath":"components/feedback/Badge.jsx"},{"name":"ConfirmDialog","sourcePath":"components/feedback/ConfirmDialog.jsx"},{"name":"HeadsUpNotification","sourcePath":"components/feedback/HeadsUpNotification.jsx"},{"name":"InputDialog","sourcePath":"components/feedback/InputDialog.jsx"},{"name":"ProgressBar","sourcePath":"components/feedback/ProgressBar.jsx"},{"name":"Snackbar","sourcePath":"components/feedback/Snackbar.jsx"},{"name":"Spinner","sourcePath":"components/feedback/Spinner.jsx"},{"name":"Capsule","sourcePath":"components/forms/Capsule.jsx"},{"name":"Checkbox","sourcePath":"components/forms/Checkbox.jsx"},{"name":"Chip","sourcePath":"components/forms/Chip.jsx"},{"name":"DatePicker","sourcePath":"components/forms/DatePicker.jsx"},{"name":"DayChip","sourcePath":"components/forms/DayChip.jsx"},{"name":"RadioButton","sourcePath":"components/forms/RadioButton.jsx"},{"name":"SettingItem","sourcePath":"components/forms/SettingItem.jsx"},{"name":"Slider","sourcePath":"components/forms/Slider.jsx"},{"name":"Switch","sourcePath":"components/forms/Switch.jsx"},{"name":"TextArea","sourcePath":"components/forms/TextArea.jsx"},{"name":"TextField","sourcePath":"components/forms/TextField.jsx"},{"name":"TimePicker","sourcePath":"components/forms/TimePicker.jsx"},{"name":"ToggleButton","sourcePath":"components/forms/ToggleButton.jsx"},{"name":"BottomNav","sourcePath":"components/navigation/BottomNav.jsx"},{"name":"OptionsMenu","sourcePath":"components/navigation/OptionsMenu.jsx"},{"name":"SoftKeyBar","sourcePath":"components/navigation/SoftKeyBar.jsx"},{"name":"TabRow","sourcePath":"components/navigation/TabRow.jsx"}],"sourceHashes":{"components/core/ActionGrid.jsx":"fbd305604e53","components/core/Avatar.jsx":"66f68b60cec6","components/core/Button.jsx":"58b98754908f","components/core/Card.jsx":"d1221204057c","components/core/Divider.jsx":"9ce386a7db14","components/core/EmptyState.jsx":"0190085decc8","components/core/FosIcon.jsx":"c2b7612517b4","components/core/Icon.jsx":"77fa91a06ef0","components/core/IconButton.jsx":"fd182bcf1148","components/core/ListItem.jsx":"40f5661489f8","components/core/MonoValue.jsx":"93033b85d235","components/core/ScreenHero.jsx":"270e3e83fef1","components/core/SectionHeader.jsx":"66f7be2cf6f4","components/core/TopBar.jsx":"f6e6440d6faa","components/feedback/Badge.jsx":"da8a60b9a105","components/feedback/ConfirmDialog.jsx":"98ad1eadd672","components/feedback/HeadsUpNotification.jsx":"78cb3d5c38fb","components/feedback/InputDialog.jsx":"16ec2899f44f","components/feedback/ProgressBar.jsx":"4fa3e02273ad","components/feedback/Snackbar.jsx":"cca72c5417b1","components/feedback/Spinner.jsx":"7fbd6bd08881","components/forms/Capsule.jsx":"91ad95a91ccd","components/forms/Checkbox.jsx":"d1baa228e661","components/forms/Chip.jsx":"b019249ab06e","components/forms/DatePicker.jsx":"a8ea753c9a0f","components/forms/DayChip.jsx":"8708e3b3b07e","components/forms/RadioButton.jsx":"5fecfa82d426","components/forms/SettingItem.jsx":"2320ee21cca5","components/forms/Slider.jsx":"dcd45d3e1f62","components/forms/Switch.jsx":"5bcb19b90b79","components/forms/TextArea.jsx":"e49f10f22d76","components/forms/TextField.jsx":"66fd1ee0a401","components/forms/TimePicker.jsx":"a69f0422c7d1","components/forms/ToggleButton.jsx":"1bbb9fbba640","components/navigation/BottomNav.jsx":"bc08fdca8729","components/navigation/OptionsMenu.jsx":"5102a72a04d4","components/navigation/SoftKeyBar.jsx":"d3565ae1f0b0","components/navigation/TabRow.jsx":"740331b451e3","ui_kits/bluetooth/BluetoothScreens.jsx":"f905a806bb14","ui_kits/calls/ScreensA.jsx":"f03eb79a6759","ui_kits/calls/data.js":"cb2d06765e1d","ui_kits/clock/ClockScreens.jsx":"d3a5d1df7cc3","ui_kits/communication/CommScreens.jsx":"62e066d39d0d","ui_kits/settings/SettingsScreens.jsx":"222f45fdf47c","ui_kits/translate/TranslateScreens.jsx":"9a37b194e4bc"},"inlinedExternals":[],"unexposedExports":[]} */
+/* @ds-bundle: {"format":4,"namespace":"FutureOSDesignSystem_3ab611","components":[{"name":"ActionGrid","sourcePath":"components/core/ActionGrid.jsx"},{"name":"Avatar","sourcePath":"components/core/Avatar.jsx"},{"name":"Button","sourcePath":"components/core/Button.jsx"},{"name":"Card","sourcePath":"components/core/Card.jsx"},{"name":"Divider","sourcePath":"components/core/Divider.jsx"},{"name":"EmptyState","sourcePath":"components/core/EmptyState.jsx"},{"name":"FosIcon","sourcePath":"components/core/FosIcon.jsx"},{"name":"FOS_ICON_NAMES","sourcePath":"components/core/FosIcon.jsx"},{"name":"Icon","sourcePath":"components/core/Icon.jsx"},{"name":"IconButton","sourcePath":"components/core/IconButton.jsx"},{"name":"ListItem","sourcePath":"components/core/ListItem.jsx"},{"name":"MonoValue","sourcePath":"components/core/MonoValue.jsx"},{"name":"ScreenHero","sourcePath":"components/core/ScreenHero.jsx"},{"name":"SectionHeader","sourcePath":"components/core/SectionHeader.jsx"},{"name":"TopBar","sourcePath":"components/core/TopBar.jsx"},{"name":"Badge","sourcePath":"components/feedback/Badge.jsx"},{"name":"ConfirmDialog","sourcePath":"components/feedback/ConfirmDialog.jsx"},{"name":"HeadsUpNotification","sourcePath":"components/feedback/HeadsUpNotification.jsx"},{"name":"InputDialog","sourcePath":"components/feedback/InputDialog.jsx"},{"name":"ProgressBar","sourcePath":"components/feedback/ProgressBar.jsx"},{"name":"Snackbar","sourcePath":"components/feedback/Snackbar.jsx"},{"name":"Spinner","sourcePath":"components/feedback/Spinner.jsx"},{"name":"Capsule","sourcePath":"components/forms/Capsule.jsx"},{"name":"Checkbox","sourcePath":"components/forms/Checkbox.jsx"},{"name":"Chip","sourcePath":"components/forms/Chip.jsx"},{"name":"DatePicker","sourcePath":"components/forms/DatePicker.jsx"},{"name":"DayChip","sourcePath":"components/forms/DayChip.jsx"},{"name":"RadioButton","sourcePath":"components/forms/RadioButton.jsx"},{"name":"SettingItem","sourcePath":"components/forms/SettingItem.jsx"},{"name":"Slider","sourcePath":"components/forms/Slider.jsx"},{"name":"Switch","sourcePath":"components/forms/Switch.jsx"},{"name":"TextArea","sourcePath":"components/forms/TextArea.jsx"},{"name":"TextField","sourcePath":"components/forms/TextField.jsx"},{"name":"TimePicker","sourcePath":"components/forms/TimePicker.jsx"},{"name":"ToggleButton","sourcePath":"components/forms/ToggleButton.jsx"},{"name":"BottomNav","sourcePath":"components/navigation/BottomNav.jsx"},{"name":"OptionsMenu","sourcePath":"components/navigation/OptionsMenu.jsx"},{"name":"SoftKeyBar","sourcePath":"components/navigation/SoftKeyBar.jsx"},{"name":"TabRow","sourcePath":"components/navigation/TabRow.jsx"}],"sourceHashes":{"components/core/ActionGrid.jsx":"1dac07e1c560","components/core/Avatar.jsx":"fca60feda10e","components/core/Button.jsx":"e1d14bb15651","components/core/Card.jsx":"d1221204057c","components/core/Divider.jsx":"9ce386a7db14","components/core/EmptyState.jsx":"0190085decc8","components/core/FosIcon.jsx":"8e200ea899ff","components/core/Icon.jsx":"77fa91a06ef0","components/core/IconButton.jsx":"fd182bcf1148","components/core/ListItem.jsx":"08963c64d715","components/core/MonoValue.jsx":"93033b85d235","components/core/ScreenHero.jsx":"270e3e83fef1","components/core/SectionHeader.jsx":"66f7be2cf6f4","components/core/TopBar.jsx":"f6e6440d6faa","components/feedback/Badge.jsx":"da8a60b9a105","components/feedback/ConfirmDialog.jsx":"98ad1eadd672","components/feedback/HeadsUpNotification.jsx":"78cb3d5c38fb","components/feedback/InputDialog.jsx":"16ec2899f44f","components/feedback/ProgressBar.jsx":"4fa3e02273ad","components/feedback/Snackbar.jsx":"cca72c5417b1","components/feedback/Spinner.jsx":"074c00e9ef4a","components/forms/Capsule.jsx":"91ad95a91ccd","components/forms/Checkbox.jsx":"d1baa228e661","components/forms/Chip.jsx":"b019249ab06e","components/forms/DatePicker.jsx":"a8ea753c9a0f","components/forms/DayChip.jsx":"8708e3b3b07e","components/forms/RadioButton.jsx":"5fecfa82d426","components/forms/SettingItem.jsx":"2320ee21cca5","components/forms/Slider.jsx":"dcd45d3e1f62","components/forms/Switch.jsx":"5bcb19b90b79","components/forms/TextArea.jsx":"31e91283ff62","components/forms/TextField.jsx":"83f6aa086b21","components/forms/TimePicker.jsx":"0376d714d63e","components/forms/ToggleButton.jsx":"1bbb9fbba640","components/navigation/BottomNav.jsx":"bc08fdca8729","components/navigation/OptionsMenu.jsx":"5102a72a04d4","components/navigation/SoftKeyBar.jsx":"d3565ae1f0b0","components/navigation/TabRow.jsx":"740331b451e3","ui_kits/bluetooth/BluetoothScreens.jsx":"f905a806bb14","ui_kits/calls/ScreensA.jsx":"f03eb79a6759","ui_kits/calls/data.js":"cb2d06765e1d","ui_kits/clock/ClockScreens.jsx":"d3a5d1df7cc3","ui_kits/communication/CommScreens.jsx":"62e066d39d0d","ui_kits/settings/SettingsScreens.jsx":"222f45fdf47c","ui_kits/translate/TranslateScreens.jsx":"9a37b194e4bc"},"inlinedExternals":[],"unexposedExports":[]} */
 
 (() => {
 
@@ -12,8 +12,9 @@ const __ds_scope = {};
 try { (() => {
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 /* No shared button exists in the Kotlin source. This consolidates the four patterns
-   that recur, on DialogButton's geometry: 20dp radius, 24/12dp padding, 16sp/700,
-   2dp white focus border, and 70% fill opacity when not focused. */
+   that recur, on DialogButton's geometry: pill radius, 88px tall, 16sp/700,
+   2dp white focus border (inside the box, so focus never changes the height),
+   and 70% fill opacity when not focused. */
 const FILL = {
   primary: {
     bg: "var(--fos-accent)",
@@ -53,17 +54,17 @@ function Button({
     style: {
       direction: "rtl",
       fontFamily: "var(--fos-font)",
-      fontSize: quiet ? "var(--fos-size-body)" : "var(--fos-size-base)",
+      fontSize: "var(--fos-size-base)",
       fontWeight: quiet ? "var(--fos-weight-medium)" : "var(--fos-weight-bold)",
       lineHeight: 1.25,
       color: v.fg,
       background: v.bg,
       opacity: quiet ? 1 : focused ? v.base : v.base * 0.7,
       border: focused && !quiet ? "var(--fos-focus-border-control) solid var(--fos-text)" : "var(--fos-focus-border-control) solid transparent",
-      borderRadius: quiet ? "var(--fos-radius-full)" : "var(--fos-radius-dialog)",
-      padding: quiet ? "0 var(--fos-space-9)" : "var(--fos-space-5) var(--fos-space-9)",
-      height: quiet ? 80 : "auto",
-      minHeight: quiet ? 80 : 88,
+      borderRadius: "var(--fos-radius-full)",
+      padding: "0 var(--fos-space-9)",
+      height: 88,
+      boxSizing: "border-box",
       width: fullWidth ? "100%" : "auto",
       display: "inline-flex",
       alignItems: "center",
@@ -300,7 +301,9 @@ const P = {
   palette: "M12 4a8 8 0 0 0 0 16 1.8 1.8 0 0 0 1.8-1.8c0-.5-.2-.9-.5-1.2a1.8 1.8 0 0 1 1.3-3h1.9A4.5 4.5 0 0 0 21 9.5C21 6.4 16.9 4 12 4Z|d:7.6 12|d:9.4 8.2|d:14.2 7.8|d:17.2 10.6",
   animation: "M9 8.4a5.6 5.6 0 1 0 0 11.2 5.6 5.6 0 0 0 0-11.2Z|M11.6 6.2h4.2a2 2 0 0 1 2 2v4.2|M14.2 3.8h4a2 2 0 0 1 2 2v4",
   mark_email_read: "M3.6 7.6a1.8 1.8 0 0 1 1.8-1.8h10.2a1.8 1.8 0 0 1 1.8 1.8v3|M3.6 8.2 10.5 13l3.3-2.3|M3.6 8.2v8a1.8 1.8 0 0 0 1.8 1.8h6.2|M14.4 17.2l2 2 4.2-4.6",
-  devices_other: "M3.2 6.4a1.6 1.6 0 0 1 1.6-1.6h10.8a1.6 1.6 0 0 1 1.6 1.6v1.4|M3.2 8.6v6.2a1.6 1.6 0 0 0 1.6 1.6h6.6|M6 19.4h4|M15.2 10.4a1.4 1.4 0 0 1 1.4-1.4h3.4a1.4 1.4 0 0 1 1.4 1.4v7.6a1.4 1.4 0 0 1-1.4 1.4h-3.4a1.4 1.4 0 0 1-1.4-1.4Z"
+  devices_other: "M3.2 6.4a1.6 1.6 0 0 1 1.6-1.6h10.8a1.6 1.6 0 0 1 1.6 1.6v1.4|M3.2 8.6v6.2a1.6 1.6 0 0 0 1.6 1.6h6.6|M6 19.4h4|M15.2 10.4a1.4 1.4 0 0 1 1.4-1.4h3.4a1.4 1.4 0 0 1 1.4 1.4v7.6a1.4 1.4 0 0 1-1.4 1.4h-3.4a1.4 1.4 0 0 1-1.4-1.4Z",
+  send: "M20.4 4 3.6 12l16.8 8-3.2-8Z|M17.2 12H6.4",
+  error: "M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16Z|M12 7.8v5.4|d:12 16.4"
 };
 function FosIcon({
   name,
@@ -389,6 +392,7 @@ function ActionGrid({
     }
   }, rest), items.map((it, i) => {
     const focused = focusedIndex === i;
+    const glyph = Math.max(40, Math.min(80, Math.round(height * 0.44)));
     return /*#__PURE__*/React.createElement("div", {
       key: (it.label || "") + i,
       onClick: onSelect ? () => onSelect(i) : undefined,
@@ -408,7 +412,7 @@ function ActionGrid({
       }
     }, /*#__PURE__*/React.createElement(__ds_scope.FosIcon, {
       name: it.icon,
-      size: 80,
+      size: glyph,
       strokeWidth: 1.3,
       color: it.color || (it.active ? "var(--fos-accent)" : "var(--fos-text-70)")
     }), it.label && /*#__PURE__*/React.createElement("div", {
@@ -448,7 +452,7 @@ function Avatar({
       height: size,
       flex: "0 0 auto",
       borderRadius: "var(--fos-radius-full)",
-      background: background || "var(--fos-glass)",
+      background: background || "var(--fos-avatar-fill)",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -457,13 +461,13 @@ function Avatar({
   }, rest), icon ? /*#__PURE__*/React.createElement(__ds_scope.FosIcon, {
     name: icon,
     size: Math.round(size * 0.44),
-    color: color || "var(--fos-text-60)"
+    color: color || "var(--fos-text)"
   }) : /*#__PURE__*/React.createElement("span", {
     style: {
       fontFamily: "var(--fos-font-display)",
       fontSize: Math.round(size * 0.3),
       fontWeight: "var(--fos-weight-medium)",
-      color: color || "var(--fos-text-70)"
+      color: color || "var(--fos-text)"
     }
   }, initials(name)));
 }
@@ -582,7 +586,7 @@ function ListItem({
       gap: "var(--fos-space-5)",
       height: "var(--fos-row-list)",
       padding: "0 var(--fos-space-5)",
-      borderRadius: "var(--fos-radius-item)",
+      borderRadius: "var(--fos-radius-row)",
       background: focused ? "var(--fos-focus-bg-item)" : "transparent",
       border: `var(--fos-focus-border-item) solid ${focused ? "var(--fos-accent)" : "transparent"}`,
       transform: focused ? "scale(var(--fos-focus-scale))" : "none",
@@ -1060,8 +1064,9 @@ Object.assign(__ds_scope, { Snackbar });
 try { (() => {
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 /* Spinner: the circular counterpart to ProgressBar, for waits with no known
-   length (scanning, connecting, sending). 10% text track, accent arc, one
-   rotation per 900ms — the only rotating element in the system. */
+   length (scanning, connecting, sending). 10% text track, a round-capped accent
+   arc over a quarter of the circle, one rotation per 900ms — the only rotating
+   element in the system. */
 const KEYFRAMES = "@keyframes fos-spin{to{transform:rotate(360deg)}}";
 function Spinner({
   size = 72,
@@ -1070,6 +1075,8 @@ function Spinner({
   style,
   ...rest
 }) {
+  const r = (size - thickness) / 2;
+  const c = 2 * Math.PI * r;
   return /*#__PURE__*/React.createElement("div", _extends({
     style: {
       direction: "rtl",
@@ -1079,18 +1086,32 @@ function Spinner({
       gap: "var(--fos-space-5)",
       ...style
     }
-  }, rest), /*#__PURE__*/React.createElement("style", null, KEYFRAMES), /*#__PURE__*/React.createElement("div", {
+  }, rest), /*#__PURE__*/React.createElement("style", null, KEYFRAMES), /*#__PURE__*/React.createElement("svg", {
+    width: size,
+    height: size,
+    viewBox: `0 0 ${size} ${size}`,
     style: {
-      width: size,
-      height: size,
       flex: "0 0 auto",
-      borderRadius: "var(--fos-radius-full)",
-      border: `${thickness}px solid var(--fos-text-10)`,
-      borderTopColor: "var(--fos-accent)",
-      boxSizing: "border-box",
       animation: "fos-spin 900ms var(--fos-ease-linear) infinite"
     }
-  }), label && /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("circle", {
+    cx: size / 2,
+    cy: size / 2,
+    r: r,
+    fill: "none",
+    stroke: "var(--fos-text-10)",
+    strokeWidth: thickness
+  }), /*#__PURE__*/React.createElement("circle", {
+    cx: size / 2,
+    cy: size / 2,
+    r: r,
+    fill: "none",
+    stroke: "var(--fos-accent)",
+    strokeWidth: thickness,
+    strokeLinecap: "round",
+    strokeDasharray: `${c * 0.26} ${c}`,
+    transform: `rotate(-90 ${size / 2} ${size / 2})`
+  })), label && /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: "var(--fos-size-body)",
       color: "var(--fos-text-60)"
@@ -1705,7 +1726,7 @@ Object.assign(__ds_scope, { Switch });
 // components/forms/TextArea.jsx
 try { (() => {
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
-/* TextArea: TextField's surface grown to a paragraph — same 8% fill, 10dp radius
+/* TextArea: TextField's surface grown to a paragraph — same 8% fill, card radius
    and accent focus border, but 16sp text on the body line-height, a minimum height
    and top alignment. `dir`/`align` let a field hold a foreign-language string. */
 function TextArea({
@@ -1758,7 +1779,7 @@ Object.assign(__ds_scope, { TextArea });
 // components/forms/TextField.jsx
 try { (() => {
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
-/* BasicTextField: 8% text background, 10dp radius, 12dp padding, 15sp text,
+/* BasicTextField: 8% text background, card radius, 12dp padding, 15sp text,
    2dp accent focus border, and a 3px accent caret. */
 function TextField({
   value,
@@ -1878,69 +1899,48 @@ function _extends() { return _extends = Object.assign ? Object.assign.bind() : f
 const DAYS = ["א", "ב", "ג", "ד", "ה", "ו", "ש"];
 
 /* TimePickerOverlay: a full-screen overlay, not a dialog. 48sp/300 mono values,
-   36dp stepper buttons, 12sp/50% unit labels, hours on the RIGHT (RTL first child). */
-function Unit({
-  value,
-  label,
-  upFocused
+   36dp stepper buttons, 12sp/50% unit labels, hours on the RIGHT (RTL first column). */
+function Step({
+  dir,
+  focused
 }) {
-  const step = {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    border: "none",
-    cursor: "pointer"
-  };
-  return /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center"
-    }
-  }, /*#__PURE__*/React.createElement("button", {
+  return /*#__PURE__*/React.createElement("button", {
     type: "button",
     style: {
-      ...step,
-      background: upFocused ? "var(--fos-accent-30)" : "var(--fos-text-08)"
+      width: 72,
+      height: 72,
+      borderRadius: "var(--fos-radius-full)",
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      border: "none",
+      cursor: "pointer",
+      background: focused ? "var(--fos-accent-30)" : "var(--fos-text-08)"
     }
   }, /*#__PURE__*/React.createElement(__ds_scope.FosIcon, {
-    name: "keyboard_arrow_up",
+    name: dir === "up" ? "keyboard_arrow_up" : "keyboard_arrow_down",
     size: 36,
     color: "var(--fos-accent)"
-  })), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontFamily: "var(--fos-font-mono)",
-      fontSize: "var(--fos-size-clock)",
-      fontWeight: "var(--fos-weight-light)",
-      color: "var(--fos-text)",
-      padding: "var(--fos-space-3) 0",
-      lineHeight: 1.2
-    }
-  }, value), /*#__PURE__*/React.createElement("button", {
-    type: "button",
-    style: {
-      ...step,
-      background: "var(--fos-text-08)"
-    }
-  }, /*#__PURE__*/React.createElement(__ds_scope.FosIcon, {
-    name: "keyboard_arrow_down",
-    size: 36,
-    color: "var(--fos-accent)"
-  })), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: "var(--fos-size-label)",
-      color: "var(--fos-text-50)",
-      marginTop: "var(--fos-space-2)"
-    }
-  }, label));
+  }));
 }
+const VALUE = {
+  fontFamily: "var(--fos-font-mono)",
+  fontSize: "var(--fos-size-clock)",
+  fontWeight: "var(--fos-weight-light)",
+  color: "var(--fos-text)",
+  lineHeight: 1,
+  fontVariantNumeric: "tabular-nums",
+  textAlign: "center"
+};
+const UNIT_LABEL = {
+  fontSize: "var(--fos-size-label)",
+  color: "var(--fos-text-50)",
+  textAlign: "center"
+};
 function TimePicker({
   title = "ערוך שעה",
   hours = "07",
-  minutes = "30",
+  minutes = "18",
   repeat = [0, 1, 2, 3, 4],
   focusedDay = 5,
   onCancel,
@@ -1969,27 +1969,34 @@ function TimePicker({
     }
   }, title), /*#__PURE__*/React.createElement("div", {
     style: {
-      display: "flex",
-      alignItems: "flex-start",
-      gap: "var(--fos-space-7)"
+      display: "grid",
+      gridTemplateColumns: "104px 40px 104px",
+      gridTemplateRows: "auto auto auto auto",
+      justifyItems: "center",
+      alignItems: "center",
+      columnGap: "var(--fos-space-5)",
+      rowGap: "var(--fos-space-3)"
     }
-  }, /*#__PURE__*/React.createElement(Unit, {
-    value: hours,
-    label: "\u05E9\u05E2\u05D5\u05EA",
-    upFocused: true
+  }, /*#__PURE__*/React.createElement(Step, {
+    dir: "up",
+    focused: true
+  }), /*#__PURE__*/React.createElement("div", null), /*#__PURE__*/React.createElement(Step, {
+    dir: "up"
   }), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontFamily: "var(--fos-font-mono)",
-      fontSize: "var(--fos-size-clock)",
-      fontWeight: "var(--fos-weight-light)",
-      color: "var(--fos-text)",
-      lineHeight: 1,
-      marginTop: 96
-    }
-  }, ":"), /*#__PURE__*/React.createElement(Unit, {
-    value: minutes,
-    label: "\u05D3\u05E7\u05D5\u05EA"
-  })), /*#__PURE__*/React.createElement("div", {
+    style: VALUE
+  }, hours), /*#__PURE__*/React.createElement("div", {
+    style: VALUE
+  }, ":"), /*#__PURE__*/React.createElement("div", {
+    style: VALUE
+  }, minutes), /*#__PURE__*/React.createElement(Step, {
+    dir: "down"
+  }), /*#__PURE__*/React.createElement("div", null), /*#__PURE__*/React.createElement(Step, {
+    dir: "down"
+  }), /*#__PURE__*/React.createElement("div", {
+    style: UNIT_LABEL
+  }, "\u05E9\u05E2\u05D5\u05EA"), /*#__PURE__*/React.createElement("div", null), /*#__PURE__*/React.createElement("div", {
+    style: UNIT_LABEL
+  }, "\u05D3\u05E7\u05D5\u05EA")), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       flexDirection: "column",

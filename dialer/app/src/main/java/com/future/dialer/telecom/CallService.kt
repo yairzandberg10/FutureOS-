@@ -189,6 +189,16 @@ class CallService : InCallService() {
             stopRecording()
         }
 
+        /** המתנה - השיחה נשארת פתוחה, השמע נעצר בשני הצדדים (Call.hold/unhold). */
+        fun setOnHold(hold: Boolean) {
+            val call = _activeCall.value ?: return
+            if (hold) call.hold() else call.unhold()
+        }
+
+        /** האם השיחה תומכת בהמתנה - לא כל רשת/שיחה מאפשרת. */
+        fun canHold(): Boolean =
+            _activeCall.value?.details?.can(Call.Details.CAPABILITY_HOLD) == true
+
         fun setMuted(muted: Boolean) {
             instance?.setMuted(muted)
         }

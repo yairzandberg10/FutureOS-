@@ -61,6 +61,7 @@
   --fos-surface-screen: var(--fos-bg);
   --fos-surface-card: var(--fos-surface);
   --fos-surface-raised: var(--fos-glass);
+  --fos-avatar-fill: #3A3A3C;   /* avatar circle — reads against both bg and surface */
   --fos-border-divider: var(--fos-divider);
   --fos-border-focus: var(--fos-accent);
 }
@@ -69,6 +70,7 @@
   --fos-bg: #F2F2F7;
   --fos-surface: #FFFFFF;
   --fos-glass: #EDEDF2;
+  --fos-avatar-fill: #D3D3DC;
   --fos-text: #000000;
   --fos-danger: #D32F2F;
   --fos-success: #1E8E3E;

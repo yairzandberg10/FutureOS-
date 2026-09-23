@@ -36,8 +36,9 @@ Since there's no custom ROM, "System UI" (status bar, lock screen, control cente
 |[Guide](Guide/)|מדריך למשתמש|`com.future.guide`|On-device user guide for every app|
 |[Assistant](Assistant/)|עוזר קולי|`com.future.assistant`|Voice assistant - also opens on a global double-press of OK, see FutureUI|
 |[Frixa](Frixa/)|פריקסה|`com.future.frixa`|Recipe catalog and nearby grocery stores, located via GPS|
+|[Translate](Translate/)|תרגום|`com.future.translate`|On-device translation (ML Kit), language download for offline use, conversation mode|
 
-Two more top-level folders are not standalone apps: [SharedKeypadNav](SharedKeypadNav/) is a shared Gradle library module (`com.future.sharednav`) that **all 28** apps above depend on for D-pad focus handling, T9 digit mapping, and the cross-app design system (colors, spacing, type scale) — see [`SharedKeypadNav/README.md`](SharedKeypadNav/README.md), which is also the canonical design-system reference for this project. [hardware](hardware/) holds CAD files (Onshape motherboard keep-out volumes, an OpenSCAD case/keycap model) for the target device, a Qin F22 Pro.
+Two more top-level folders are not standalone apps: [SharedKeypadNav](SharedKeypadNav/) is a shared Gradle library module (`com.future.sharednav`) that **all 29** apps above depend on for D-pad focus handling, T9 digit mapping, and the cross-app design system (colors, spacing, type scale) — see [`SharedKeypadNav/README.md`](SharedKeypadNav/README.md), which is also the canonical design-system reference for this project. [hardware](hardware/) holds CAD files (Onshape motherboard keep-out volumes, an OpenSCAD case/keycap model) for the target device, a Qin F22 Pro.
 
 Each app is a standalone Android Studio project (its own `build.gradle.kts`/`settings.gradle.kts`) living in its own top-level folder here.
 

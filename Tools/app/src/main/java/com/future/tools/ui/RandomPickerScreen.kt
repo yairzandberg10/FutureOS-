@@ -128,7 +128,7 @@ private fun RpOptionRow(text: String, isChosen: Boolean, theme: FutureTheme, onD
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(FutureShapes.sm)
+            .clip(FutureShapes.row)
             .background(if (isChosen) accent else theme.idleChipColor)
             .padding(start = FutureDimens.spacingMd, end = FutureDimens.spacingXs, top = FutureDimens.spacingXs, bottom = FutureDimens.spacingXs),
         verticalAlignment = Alignment.CenterVertically

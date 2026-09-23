@@ -7,6 +7,11 @@
          את העיצוב המשותף (כהה/בהיר, צבע הדגשה) מ-FutureUI. -->
     <queries>
         <package android:name="com.future.futureui" />
+        <!-- כפתור ההכתבה בשורת הכתיבה מוצג רק אם יש מי שמטפל בזיהוי דיבור;
+             בלי ההצהרה resolveActivity מחזיר תמיד null מאנדרואיד 11. -->
+        <intent>
+            <action android:name="android.speech.action.RECOGNIZE_SPEECH" />
+        </intent>
     </queries>
 
     <uses-permission android:name="android.permission.SEND_SMS" />

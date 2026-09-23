@@ -29,7 +29,8 @@ object FutureDimens {
     // מקור האמת הוא FutureShapes; השמות כאן נשארים כדי שקוד קיים שקורא
     // ל-FutureDimens.cardCornerRadius ימשיך לעבוד, ולא יתקיימו שתי
     // סקאלות מתחרות.
-    val itemCornerRadius: Dp get() = FutureShapes.radiusSm
+    /** שורת רשימה - --fos-radius-row. */
+    val itemCornerRadius: Dp get() = FutureShapes.radiusRow
     val cardCornerRadius: Dp get() = FutureShapes.radiusLg
     val borderRadius: Dp get() = FutureShapes.radiusXl
     val glassColorRadius: Dp get() = FutureShapes.radiusXl
@@ -56,8 +57,8 @@ object FutureDimens {
     // הממוקדת חייבת להיות חד-משמעית במבט אחד, ומכאן הגבהים הגדולים
     // (tokens/spacing.css).
 
-    /** FocusableItem - שורת רשימה. */
-    val rowHeightList: Dp = 56.dp
+    /** FocusableItem - שורת רשימה (130px ב---fos-row-list). */
+    val rowHeightList: Dp = 65.dp
 
     /** SettingItem - שורת הגדרה. */
     val rowHeightSetting: Dp = 54.dp
@@ -91,6 +92,13 @@ object FutureDimens {
 
     /** האייקון הגדול של מצב ריק. */
     val iconEmptyState: Dp = 56.dp
+
+    /**
+     * האייקון בתא של ActionGrid (פקדי שיחה, פעולות איש קשר, שורת פעולות
+     * מתחת לתרגום): 44% מגובה התא, לא פחות מ-20dp ולא יותר מ-40dp -
+     * Math.max(40, Math.min(80, height * 0.44)) בפיקסלים ב-ActionGrid.jsx.
+     */
+    fun iconActionCell(cellHeight: Dp): Dp = (cellHeight * 0.44f).coerceIn(20.dp, 40.dp)
 
     // ---- מידות המסך ----
     // מסך אחד, לנצח. אין breakpoints ואין כללים רספונסיביים.

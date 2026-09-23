@@ -1,24 +1,22 @@
 package com.future.dialer
-import com.future.sharednav.theme.onStatusColor
 
-import com.future.sharednav.theme.FutureShapes
 import android.Manifest
 import android.app.role.RoleManager
-import android.content.BroadcastReceiver
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
+import android.provider.ContactsContract
+import android.telecom.TelecomManager
 import android.view.KeyEvent
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.core.content.ContextCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -31,14 +29,29 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Call
+import androidx.compose.material.icons.rounded.CallMissed
 import androidx.compose.material.icons.rounded.Contacts
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Dialpad
-import androidx.compose.material.icons.rounded.History
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.StarBorder
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -51,8 +64,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -62,16 +77,34 @@ import androidx.navigation.navArgument
 import com.future.dialer.data.repository.CallLogRepository
 import com.future.dialer.data.repository.ContactRepository
 import com.future.dialer.telecom.CallService
-import com.future.dialer.ui.contacts.ContactsScreen
+import com.future.dialer.ui.CallsViewModel
+import com.future.dialer.ui.calllog.CallLogScreen
+import com.future.dialer.ui.contact.ContactScreen
 import com.future.dialer.ui.contacts.ContactsViewModel
+import com.future.dialer.ui.contacts.SearchScreen
 import com.future.dialer.ui.dialpad.DialpadScreen
-import com.future.dialer.ui.dialpad.DialpadViewModel
+import com.future.dialer.ui.favorites.FavoritesScreen
 import com.future.dialer.ui.incall.InCallScreen
 import com.future.dialer.ui.incall.InCallViewModel
-import com.future.dialer.ui.calllog.CallLogScreen
 import com.future.dialer.ui.navigation.Screen
+import com.future.dialer.ui.navigation.decodeArg
 import com.future.dialer.ui.theme.DialerTheme
+import com.future.sharednav.components.ConfirmDialog
+import com.future.sharednav.components.FutureBottomNav
+import com.future.sharednav.components.FutureButton
+import com.future.sharednav.components.FutureMenuRow
+import com.future.sharednav.components.FutureNavItem
+import com.future.sharednav.components.FutureOptionsMenu
+import com.future.sharednav.components.FutureSnackbarHost
+import com.future.sharednav.components.rememberFutureSnackbarState
+import com.future.sharednav.focus.FocusableItem
+import com.future.sharednav.nav.onOptionsKeyPress
+import com.future.sharednav.theme.FutureTransitions
+import com.future.sharednav.theme.LocalFutureTheme
 import com.future.sharednav.theme.ThemeClient
+import com.future.sharednav.theme.onStatusColor
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 
 class MainActivity : ComponentActivity() {
     // המכשיר האמיתי הוא מקלדת T9 בלבד בלי מסך מגע - מבטלים קלט מגע לגמרי כדי
@@ -79,15 +112,14 @@ class MainActivity : ComponentActivity() {
     // dispatchKeyEvent הוא נתיב נפרד לגמרי מ-dispatchTouchEvent.
     override fun dispatchTouchEvent(ev: android.view.MotionEvent): Boolean = true
 
-
     private val contactRepository by lazy { ContactRepository(this) }
     private val callLogRepository by lazy { CallLogRepository(this) }
 
-    private val dialpadViewModel: DialpadViewModel by viewModels {
+    private val callsViewModel: CallsViewModel by viewModels {
         object : ViewModelProvider.Factory {
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
                 @Suppress("UNCHECKED_CAST")
-                return DialpadViewModel(contactRepository, callLogRepository) as T
+                return CallsViewModel(contactRepository, callLogRepository) as T
             }
         }
     }
@@ -103,17 +135,20 @@ class MainActivity : ComponentActivity() {
 
     private val inCallViewModel: InCallViewModel by viewModels()
 
-    // המסך/טאב הפעיל כרגע (Dialpad/Contacts/InCall) - מתעדכן מ-MainScreen כדי
-    // ש-onKeyDown ידע אם מותר להעביר ספרות לשדה החיוג. בלי זה, ספרות שהוקלדו
-    // בזמן שהמשתמש נמצא בטאב אנשי קשר (למשל בשדה החיפוש) "דולפות" גם לשדה
-    // החיוג ברקע ומופיעות שם בטעות כשחוזרים לטאב החיוג.
-    @Volatile private var currentRoute: String? = Screen.Dialpad.route
+    // המסך/טאב הפעיל כרגע - מתעדכן מ-MainScreen כדי ש-onKeyDown ידע לאן
+    // שייכת ספרה. בלי זה, ספרות שהוקלדו בשדה החיפוש "דולפות" גם למקלדת
+    // ברקע ומופיעות שם בטעות כשחוזרים אליה.
+    @Volatile private var currentRoute: String? = Screen.CallLog.route
+
+    // ספרה שהוקלדה ביומן או במועדפים מעבירה למקלדת עם הספרה - כמו בטלפון
+    // מקשים רגיל, שבו מתחילים לחייג מכל מסך.
+    private val _openDialpad = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
         if (permissions.values.any { it }) {
-            dialpadViewModel.refresh()
+            callsViewModel.refresh()
             contactsViewModel.refresh()
         }
     }
@@ -131,9 +166,7 @@ class MainActivity : ComponentActivity() {
 
         // אם המספר הגיע מכוונה חיצונית (ACTION_DIAL, למשל לחיצה על מספר באנשי קשר)
         val prefillNumber = intentDialNumber(intent)
-        if (prefillNumber != null) {
-            prefillNumber.forEach { dialpadViewModel.onDigitPressed(it.toString()) }
-        }
+        if (prefillNumber != null) callsViewModel.setNumber(prefillNumber)
 
         setContent {
             var sharedTheme by remember { mutableStateOf(ThemeClient.getTheme(this)) }
@@ -142,42 +175,31 @@ class MainActivity : ComponentActivity() {
                 val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
                     if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
                         sharedTheme = ThemeClient.getTheme(this@MainActivity)
+                        callsViewModel.refresh()
                     }
                 }
                 lifecycleOwner.lifecycle.addObserver(observer)
                 onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
             }
 
-            // מקש MENU הפיזי תמיד נחסם ברמת המערכת (StatusBarAccessibilityService צורך
-            // אותו ללחיצה ארוכה) ומשודר מחדש כלחיצה קצרה - ראו ההערה המקבילה ב-
-            // Music/MusicNavHost.kt. בזמן שיחה מצלצלת, זו הדרך היחידה לפתוח "שליחת הודעה
-            // מהירה" בלי לענות/לדחות קודם.
-            DisposableEffect(Unit) {
-                val receiver = object : BroadcastReceiver() {
-                    override fun onReceive(ctx: Context?, intent: Intent?) {
-                        if (CallService.callState.value == android.telecom.Call.STATE_RINGING) {
-                            inCallViewModel.toggleQuickMessage()
-                        }
-                    }
-                }
-                val filter = IntentFilter("com.future.futureui.ACTION_OPTIONS_SHORT_PRESS")
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                    registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)
-                } else {
-                    @Suppress("UnspecifiedRegisterReceiverFlag")
-                    registerReceiver(receiver, filter)
-                }
-                onDispose { unregisterReceiver(receiver) }
-            }
-
             DialerTheme(isDarkMode = sharedTheme.isDarkMode, accentColor = Color(sharedTheme.primaryColor)) {
                 MainScreen(
-                    dialpadViewModel = dialpadViewModel,
+                    callsViewModel = callsViewModel,
                     contactsViewModel = contactsViewModel,
                     inCallViewModel = inCallViewModel,
+                    openDialpadRequests = _openDialpad.asSharedFlow(),
+                    startOnDialpad = prefillNumber != null,
+                    actions = DialerActions(
+                        placeCall = ::makeRealCall,
+                        sendMessage = ::openMessage,
+                        addContact = ::openAddContact,
+                        openContactsApp = ::openContactsApp,
+                        openCallSettings = ::openCallSettings,
+                        ensureCallLogWrite = ::ensureCallLogWrite,
+                    ),
                     checkIsDefaultDialer = { isDefaultDialer() },
                     onRequestDefaultDialer = { requestDefaultDialerRole() },
-                    onRouteChanged = { route -> currentRoute = route }
+                    onRouteChanged = { route -> currentRoute = route },
                 )
             }
         }
@@ -203,62 +225,82 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun checkAndRequestPermissions() {
-        val permissionsToRequest = mutableListOf<String>()
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED) {
-            permissionsToRequest.add(Manifest.permission.READ_CONTACTS)
-        }
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_CONTACTS) != PackageManager.PERMISSION_GRANTED) {
-            permissionsToRequest.add(Manifest.permission.WRITE_CONTACTS)
-        }
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CALL_LOG) != PackageManager.PERMISSION_GRANTED) {
-            permissionsToRequest.add(Manifest.permission.READ_CALL_LOG)
-        }
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
-            permissionsToRequest.add(Manifest.permission.CALL_PHONE)
-        }
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            permissionsToRequest.add(Manifest.permission.RECORD_AUDIO)
-        }
+        val permissions = mutableListOf(
+            Manifest.permission.READ_CONTACTS,
+            Manifest.permission.WRITE_CONTACTS,
+            Manifest.permission.READ_CALL_LOG,
+            // "נקה יומן" מוחק מהיומן של המערכת.
+            Manifest.permission.WRITE_CALL_LOG,
+            Manifest.permission.CALL_PHONE,
+            Manifest.permission.RECORD_AUDIO,
+        )
         // בלי זה, החל מאנדרואיד 13, התראת השיחה הנכנסת (כולל ה-fullScreenIntent שמעיר
         // את המסך) לא מוצגת בכלל - ראו CallService.notifyCallRinging.
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU &&
-            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-        ) {
-            permissionsToRequest.add(Manifest.permission.POST_NOTIFICATIONS)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            permissions.add(Manifest.permission.POST_NOTIFICATIONS)
         }
+        val missing = permissions.filter {
+            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+        }
+        if (missing.isNotEmpty()) requestPermissionLauncher.launch(missing.toTypedArray())
+    }
 
-        if (permissionsToRequest.isNotEmpty()) {
-            requestPermissionLauncher.launch(permissionsToRequest.toTypedArray())
+    /** true כשיש הרשאה למחוק מהיומן; אחרת מבקש אותה ומחזיר false. */
+    private fun ensureCallLogWrite(): Boolean {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_CALL_LOG) == PackageManager.PERMISSION_GRANTED) {
+            return true
         }
+        requestPermissionLauncher.launch(arrayOf(Manifest.permission.WRITE_CALL_LOG))
+        return false
     }
 
     private fun makeRealCall(phoneNumber: String) {
+        if (phoneNumber.isBlank()) return
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED) {
-            val intent = Intent(Intent.ACTION_CALL).apply {
-                data = Uri.parse("tel:$phoneNumber")
-            }
-            startActivity(intent)
+            startActivity(Intent(Intent.ACTION_CALL, Uri.parse("tel:${Uri.encode(phoneNumber)}")))
             // מנקים את שדה החיוג אחרי שהשיחה יצאה, כדי שמספר ישן לא יישאר "תקוע"
             // בשדה ויחטוף בטעות לחיצת DPAD_CENTER/ENTER/CALL הבאה (ראו onKeyDown).
-            dialpadViewModel.clearNumber()
+            callsViewModel.clearNumber()
         } else {
             checkAndRequestPermissions()
         }
     }
 
+    private fun openMessage(phoneNumber: String) {
+        startSafely(Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:${Uri.encode(phoneNumber)}")))
+    }
+
+    private fun openAddContact(phoneNumber: String) {
+        startSafely(
+            Intent(ContactsContract.Intents.Insert.ACTION).apply {
+                type = ContactsContract.RawContacts.CONTENT_TYPE
+                putExtra(ContactsContract.Intents.Insert.PHONE, phoneNumber)
+            }
+        )
+    }
+
+    private fun openContactsApp() {
+        val intent = packageManager.getLaunchIntentForPackage(CONTACTS_PACKAGE)
+            ?: Intent(Intent.ACTION_VIEW, ContactsContract.Contacts.CONTENT_URI)
+        startSafely(intent)
+    }
+
+    private fun openCallSettings() {
+        startSafely(Intent(TelecomManager.ACTION_SHOW_CALL_SETTINGS))
+    }
+
+    private fun startSafely(intent: Intent) {
+        try {
+            startActivity(intent)
+        } catch (e: ActivityNotFoundException) {
+            // אין מי שמטפל בזה במכשיר - אין לאן לפנות.
+        }
+    }
+
     // כשיש שיחה פעילה (לא מצלצלת), מקשי הספרות שולחים טוני DTMF לצד השני
     // במקום להקליד מספר חדש למסך החיוג - בדיוק כמו בטלפון אמיתי.
-    private fun dtmfDigitFor(keyCode: Int): Char? = when (keyCode) {
-        KeyEvent.KEYCODE_0 -> '0'
-        KeyEvent.KEYCODE_1 -> '1'
-        KeyEvent.KEYCODE_2 -> '2'
-        KeyEvent.KEYCODE_3 -> '3'
-        KeyEvent.KEYCODE_4 -> '4'
-        KeyEvent.KEYCODE_5 -> '5'
-        KeyEvent.KEYCODE_6 -> '6'
-        KeyEvent.KEYCODE_7 -> '7'
-        KeyEvent.KEYCODE_8 -> '8'
-        KeyEvent.KEYCODE_9 -> '9'
+    private fun digitFor(keyCode: Int): Char? = when (keyCode) {
+        in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9 -> '0' + (keyCode - KeyEvent.KEYCODE_0)
         KeyEvent.KEYCODE_STAR -> '*'
         KeyEvent.KEYCODE_POUND -> '#'
         else -> null
@@ -268,26 +310,23 @@ class MainActivity : ComponentActivity() {
         val currentCallState = CallService.callState.value
         val isCallActive = currentCallState == android.telecom.Call.STATE_ACTIVE
         // שיחה נכנסת שעדיין לא נענתה - "מצלצלת" - חייבת להישאר עד למענה/דחייה
-        // דרך מסך השיחה עצמו. בלי הבדיקה הזו, ספרות ה-D-pad היו דולפות לשדה
-        // החיוג הרגיל וקיצור החיוג (DPAD_CENTER/ENTER/CALL) היה יכול "לחטוף"
-        // את הלחיצה שאמורה לענות לשיחה ולחייג בטעות למספר ישן שנשאר בשדה.
+        // דרך מסך השיחה עצמו. בלי הבדיקה הזו, ספרות היו דולפות לשדה החיוג
+        // וקיצור החיוג (DPAD_CENTER/ENTER/CALL) היה יכול "לחטוף" את הלחיצה
+        // שאמורה לענות לשיחה ולחייג בטעות למספר ישן שנשאר בשדה.
         val isCallRinging = currentCallState == android.telecom.Call.STATE_RINGING
         if (isCallActive) {
-            dtmfDigitFor(keyCode)?.let { digit ->
+            digitFor(keyCode)?.let { digit ->
                 inCallViewModel.onDtmfDigitPressed(digit)
                 return true
             }
         }
 
         // מקש הפעולה הפיזי (CALL) וניתוק/דחייה (ENDCALL) חייבים לעבוד גם כשמסך
-        // השיחה הוא זה שממוקד - בטלפון פיצ'ר אמיתי אלה המקשים האינסטינקטיביים
-        // למענה/ניתוק, ולא רק כפתור על המסך.
+        // השיחה הוא זה שממוקד - בטלפון מקשים אלה המקשים האינסטינקטיביים.
         when (keyCode) {
-            KeyEvent.KEYCODE_CALL -> {
-                if (isCallRinging) {
-                    inCallViewModel.answer()
-                    return true
-                }
+            KeyEvent.KEYCODE_CALL -> if (isCallRinging) {
+                inCallViewModel.answer()
+                return true
             }
             KeyEvent.KEYCODE_ENDCALL -> {
                 if (isCallRinging) {
@@ -300,44 +339,37 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+        if (isCallRinging) return super.onKeyDown(keyCode, event)
 
-        // ספרות/כוכבית/סולמית/מחיקה מיועדות אך ורק לשדה החיוג של טאב החיוג עצמו -
-        // בטאב אנשי קשר (או כל מסך אחר) יש להן משמעות מקומית (חיפוש וכו') ואסור
-        // שהן "ידלפו" ברקע לתוך dialpadViewModel וייצרו מספר-רוח-רפאים.
-        val isOnDialpadTab = currentRoute == Screen.Dialpad.route
+        val route = currentRoute
+        val isOnDialpadTab = route == Screen.Dialpad.route
+        val digit = digitFor(keyCode)
 
+        // ספרה ביומן או במועדפים: עוברים למקלדת עם הספרה.
+        if (digit != null && (route == Screen.CallLog.route || route == Screen.Favorites.route)) {
+            callsViewModel.setNumber(digit.toString())
+            _openDialpad.tryEmit(Unit)
+            return true
+        }
+        if (!isOnDialpadTab) return super.onKeyDown(keyCode, event)
+
+        if (digit != null) {
+            callsViewModel.onDigitPressed(digit.toString())
+            return true
+        }
         when (keyCode) {
-            KeyEvent.KEYCODE_BACK -> {
-                // אי אפשר "לצאת" ממסך שיחה מצלצלת בלי לענות/לדחות - בדיוק כמו בטלפון אמיתי.
-                // שיחה פעילה כן אפשר לעזוב (היא ממשיכה ברקע, עם פס תזכורת במסכים האחרים).
-                if (isCallRinging) {
-                    return true
-                }
-                if (isOnDialpadTab && dialpadViewModel.dialedNumber.value.isNotEmpty()) {
-                    dialpadViewModel.onDeletePressed()
+            KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_DEL -> {
+                if (callsViewModel.dialedNumber.value.isNotEmpty()) {
+                    callsViewModel.onDeletePressed()
                     return true
                 }
             }
-            KeyEvent.KEYCODE_0 -> if (isOnDialpadTab && !isCallRinging) dialpadViewModel.onDigitPressed("0")
-            KeyEvent.KEYCODE_1 -> if (isOnDialpadTab && !isCallRinging) dialpadViewModel.onDigitPressed("1")
-            KeyEvent.KEYCODE_2 -> if (isOnDialpadTab && !isCallRinging) dialpadViewModel.onDigitPressed("2")
-            KeyEvent.KEYCODE_3 -> if (isOnDialpadTab && !isCallRinging) dialpadViewModel.onDigitPressed("3")
-            KeyEvent.KEYCODE_4 -> if (isOnDialpadTab && !isCallRinging) dialpadViewModel.onDigitPressed("4")
-            KeyEvent.KEYCODE_5 -> if (isOnDialpadTab && !isCallRinging) dialpadViewModel.onDigitPressed("5")
-            KeyEvent.KEYCODE_6 -> if (isOnDialpadTab && !isCallRinging) dialpadViewModel.onDigitPressed("6")
-            KeyEvent.KEYCODE_7 -> if (isOnDialpadTab && !isCallRinging) dialpadViewModel.onDigitPressed("7")
-            KeyEvent.KEYCODE_8 -> if (isOnDialpadTab && !isCallRinging) dialpadViewModel.onDigitPressed("8")
-            KeyEvent.KEYCODE_9 -> if (isOnDialpadTab && !isCallRinging) dialpadViewModel.onDigitPressed("9")
-            KeyEvent.KEYCODE_STAR -> if (isOnDialpadTab && !isCallRinging) dialpadViewModel.onDigitPressed("*")
-            KeyEvent.KEYCODE_POUND -> if (isOnDialpadTab && !isCallRinging) dialpadViewModel.onDigitPressed("#")
-            KeyEvent.KEYCODE_DEL -> if (isOnDialpadTab && !isCallRinging) dialpadViewModel.onDeletePressed()
             KeyEvent.KEYCODE_CALL, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_DPAD_CENTER -> {
-                // הקיצור "חייג את המספר שבשדה" לא אמור לפעול כשיש שיחה מצלצלת/פעילה -
-                // אחרת הוא חוטף את לחיצת המענה למסך השיחה הנכנסת ומחייג בטעות.
-                if (isOnDialpadTab && !isCallRinging && !isCallActive) {
-                    val currentNumber = dialpadViewModel.dialedNumber.value
-                    if (currentNumber.isNotEmpty()) {
-                        makeRealCall(currentNumber)
+                // לא מחייגים מעל שיחה פעילה - הלחיצה שייכת למסך השיחה.
+                if (!isCallActive) {
+                    val number = callsViewModel.dialedNumber.value
+                    if (number.isNotEmpty()) {
+                        makeRealCall(number)
                         return true
                     }
                 }
@@ -347,27 +379,43 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent?): Boolean {
-        if (CallService.callState.value == android.telecom.Call.STATE_ACTIVE && dtmfDigitFor(keyCode) != null) {
+        if (CallService.callState.value == android.telecom.Call.STATE_ACTIVE && digitFor(keyCode) != null) {
             inCallViewModel.onDtmfDigitReleased()
             return true
         }
         return super.onKeyUp(keyCode, event)
     }
+
+    private companion object {
+        const val CONTACTS_PACKAGE = "com.future.contact"
+    }
 }
+
+/** פעולות שיוצאות מהאפליקציה - מתבצעות ב-Activity. */
+class DialerActions(
+    val placeCall: (String) -> Unit,
+    val sendMessage: (String) -> Unit,
+    val addContact: (String) -> Unit,
+    val openContactsApp: () -> Unit,
+    val openCallSettings: () -> Unit,
+    val ensureCallLogWrite: () -> Boolean,
+)
 
 @Composable
 fun MainScreen(
-    dialpadViewModel: DialpadViewModel,
+    callsViewModel: CallsViewModel,
     contactsViewModel: ContactsViewModel,
     inCallViewModel: InCallViewModel,
+    openDialpadRequests: kotlinx.coroutines.flow.SharedFlow<Unit>,
+    startOnDialpad: Boolean,
+    actions: DialerActions,
     checkIsDefaultDialer: () -> Boolean,
     onRequestDefaultDialer: () -> Unit,
-    onRouteChanged: (String?) -> Unit = {}
+    onRouteChanged: (String?) -> Unit = {},
 ) {
     // חוזרים מהדיאלוג של המערכת (בקשת ברירת מחדל) לא מפעילים מחדש את onCreate,
     // אז בלי לבדוק שוב ב-onResume נשארים תקועים במסך "הגדר כברירת מחדל" גם אחרי
-    // שהמשתמש כן אישר - זה בדיוק מה שגרם לרשימת אנשי הקשר להיראות "ריקה" (בפועל
-    // המסך איתה אף פעם לא הוצג).
+    // שהמשתמש כן אישר.
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     var isDefaultDialer by remember { mutableStateOf(checkIsDefaultDialer()) }
     DisposableEffect(lifecycleOwner) {
@@ -385,6 +433,7 @@ fun MainScreen(
         return
     }
 
+    val theme = LocalFutureTheme.current
     val context = androidx.compose.ui.platform.LocalContext.current
     val contactRepository = remember { ContactRepository(context) }
     val navController = rememberNavController()
@@ -393,6 +442,12 @@ fun MainScreen(
     LaunchedEffect(currentRoute) { onRouteChanged(currentRoute) }
 
     val activeCall by CallService.activeCall.collectAsState()
+    val callState by CallService.callState.collectAsState()
+    val snackbar = rememberFutureSnackbarState()
+
+    var menuOpen by remember { mutableStateOf(false) }
+    var confirmClear by remember { mutableStateOf(false) }
+    var showMissedOnly by rememberSaveable { mutableStateOf(false) }
 
     // כל שיחה אמיתית - נכנסת או יוצאת - מגיעה מ-CallService. כשמופיעה שיחה חדשה,
     // עוברים אוטומטית למסך השיחה, בלי קשר לאיך היא הותחלה.
@@ -401,30 +456,43 @@ fun MainScreen(
         if (call != null) {
             val number = call.details?.handle?.schemeSpecificPart ?: ""
             val name = contactRepository.findNameForNumber(number) ?: number
-            navController.navigate(Screen.InCall.createRoute(name, number)) {
-                launchSingleTop = true
-            }
+            menuOpen = false
+            navController.navigate(Screen.InCall.createRoute(name, number)) { launchSingleTop = true }
+        } else {
+            // השיחה נכנסה ליומן של המערכת - טוענים אותו מחדש.
+            callsViewModel.refresh()
+        }
+    }
+    LaunchedEffect(Unit) {
+        // מספר שהגיע מכוונה חיצונית (ACTION_DIAL) נפתח במקלדת, מוכן לחיוג.
+        if (startOnDialpad) navController.switchTab(Screen.Dialpad.route)
+        openDialpadRequests.collect { navController.switchTab(Screen.Dialpad.route) }
+    }
+
+    val isOnCallScreen = currentRoute?.startsWith("incall") == true
+    // מקש התפריט: בזמן שיחה הוא פותח הודעה מהירה (גם כשהיא מצלצלת - ואז
+    // ההודעה היא התשובה); בשאר המסכים את תפריט האפשרויות.
+    onOptionsKeyPress {
+        when {
+            isOnCallScreen || callState == android.telecom.Call.STATE_RINGING -> inCallViewModel.toggleQuickMessage()
+            currentRoute != null && currentRoute != Screen.Search.route -> menuOpen = !menuOpen
         }
     }
 
-    // שלושה טאבים, היומן ראשון (ui_kits/calls). קודם היו שניים, והיומן
-    // היה רשימה שטוחה בתוך מסך החיוג.
-    val navItems = listOf(
-        Triple(Screen.CallLog, "יומן", Icons.Rounded.History),
-        Triple(Screen.Dialpad, stringResource(R.string.nav_dial), Icons.Rounded.Dialpad),
-        Triple(Screen.Contacts, stringResource(R.string.nav_contacts), Icons.Rounded.Contacts)
+    val tabs = listOf(
+        Triple(Screen.CallLog.route, "יומן", Icons.Rounded.Call),
+        Triple(Screen.Dialpad.route, "מקלדת", Icons.Rounded.Dialpad),
+        Triple(Screen.Favorites.route, "מועדפים", Icons.Rounded.StarBorder),
     )
+    val tabIndex = tabs.indexOfFirst { it.first == currentRoute }
+    val isOnTab = tabIndex >= 0
 
-    // מקש f מחליף בין "הכל" ל"לא נענו" ביומן - אין מסך מגע ללחוץ על הצ'יפ.
-    var showMissedOnly by remember { mutableStateOf(false) }
+    // חזרה מהמקלדת או מהמועדפים מחזירה ליומן, כמו בערכה; מהיומן - יוצאים.
+    BackHandler(enabled = isOnTab && tabIndex != 0) { navController.switchTab(Screen.CallLog.route) }
 
-    val showBottomBar = currentRoute != null && !currentRoute.startsWith("incall")
-    val isOnCallScreen = currentRoute?.startsWith("incall") == true
-
-    // שיחה פעילה שהמשתמש יצא ממנה (מיזעור) ממשיכה ברקע - פס תזכורת דק בראש שאר
-    // המסכים מאפשר לחזור אליה בלי לחפש אותה בהיסטוריה.
     val ongoingCall = activeCall
     Scaffold(
+        containerColor = theme.backgroundColor,
         topBar = {
             if (ongoingCall != null && !isOnCallScreen) {
                 val number = ongoingCall.details?.handle?.schemeSpecificPart ?: ""
@@ -432,172 +500,221 @@ fun MainScreen(
                 OngoingCallBanner(
                     name = callerName,
                     onReturn = {
-                        navController.navigate(Screen.InCall.createRoute(callerName, number)) {
-                            launchSingleTop = true
-                        }
-                    }
+                        navController.navigate(Screen.InCall.createRoute(callerName, number)) { launchSingleTop = true }
+                    },
                 )
             }
         },
         bottomBar = {
-            if (showBottomBar) {
-                // הסרגל המשותף (FutureBottomNav) - פס מרחף בצורת גלולה, ותווית
-                // רק על הפריט הנבחר. קודם היה כאן NavigationBar של Material3
-                // עם צבעים מותאמים, כלומר גיאומטריה של Material ולא של המערכת.
-                com.future.sharednav.components.FutureBottomNav(
-                    items = navItems.map { (_, label, icon) ->
-                        com.future.sharednav.components.FutureNavItem(label = label, icon = icon)
+            if (isOnTab) {
+                FutureBottomNav(
+                    items = tabs.map { (_, label, icon) ->
+                        FutureNavItem(label = label, icon = icon, selectedIcon = if (icon == Icons.Rounded.StarBorder) Icons.Rounded.Star else icon)
                     },
-                    selectedIndex = navItems.indexOfFirst { it.first.route == currentRoute }
-                        .coerceAtLeast(0),
-                    theme = com.future.sharednav.theme.LocalFutureTheme.current,
+                    selectedIndex = tabIndex,
+                    theme = theme,
                 )
             }
-        }
+        },
     ) { innerPadding ->
         Box(
             modifier = Modifier
                 .padding(innerPadding)
                 .then(
-                    if (showBottomBar) {
-                        Modifier
-                            .onKeyEvent { event ->
-                                if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
-                                // f מסנן את היומן ל"לא נענו" וחזרה. רק שם -
-                                // בשאר הטאבים המקש נשאר פנוי להקלדה.
-                                if (event.key == Key.F && currentRoute == Screen.CallLog.route) {
-                                    showMissedOnly = !showMissedOnly
-                                    return@onKeyEvent true
-                                }
-                                val currentIndex = navItems.indexOfFirst { it.first.route == currentRoute }
-                                if (currentIndex < 0) return@onKeyEvent false
-                                val nextIndex = when (event.key) {
-                                    Key.DirectionRight -> currentIndex - 1
-                                    Key.DirectionLeft -> currentIndex + 1
-                                    else -> return@onKeyEvent false
-                                }
-                                if (nextIndex !in navItems.indices) return@onKeyEvent false
-                                navController.navigate(navItems[nextIndex].first.route) {
-                                    popUpTo(navController.graph.startDestinationId)
-                                    launchSingleTop = true
-                                }
-                                true
+                    if (isOnTab) {
+                        Modifier.onKeyEvent { event ->
+                            if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
+                            // f מסנן את היומן כשמחוברת מקלדת מלאה; במכשיר - מהתפריט.
+                            if (event.key == Key.F && currentRoute == Screen.CallLog.route) {
+                                showMissedOnly = !showMissedOnly
+                                return@onKeyEvent true
                             }
+                            val next = when (event.key) {
+                                Key.DirectionRight -> tabIndex - 1
+                                Key.DirectionLeft -> tabIndex + 1
+                                else -> return@onKeyEvent false
+                            }
+                            if (next !in tabs.indices) return@onKeyEvent false
+                            navController.switchTab(tabs[next].first)
+                            true
+                        }
                     } else Modifier
-                )
+                ),
         ) {
-            // בין שני הטאבים (חיוג/אנשי קשר) אין "פנימה" - fade; מסך השיחה מחליק.
-            val tabRoutes = remember(navItems) { navItems.map { it.first.route }.toSet() }
+            val tabRoutes = remember { tabs.map { it.first }.toSet() }
             fun isTabSwitch(from: String?, to: String?) = from in tabRoutes && to in tabRoutes
             NavHost(
                 navController,
                 startDestination = Screen.CallLog.route,
                 enterTransition = {
                     if (isTabSwitch(initialState.destination.route, targetState.destination.route)) {
-                        com.future.sharednav.theme.FutureTransitions.fadeThrough().targetContentEnter
-                    } else com.future.sharednav.theme.FutureTransitions.navEnter
+                        FutureTransitions.fadeThrough().targetContentEnter
+                    } else FutureTransitions.navEnter
                 },
                 exitTransition = {
                     if (isTabSwitch(initialState.destination.route, targetState.destination.route)) {
-                        com.future.sharednav.theme.FutureTransitions.fadeThrough().initialContentExit
-                    } else com.future.sharednav.theme.FutureTransitions.navExit
+                        FutureTransitions.fadeThrough().initialContentExit
+                    } else FutureTransitions.navExit
                 },
-                popEnterTransition = { com.future.sharednav.theme.FutureTransitions.navPopEnter },
-                popExitTransition = { com.future.sharednav.theme.FutureTransitions.navPopExit },
+                popEnterTransition = { FutureTransitions.navPopEnter },
+                popExitTransition = { FutureTransitions.navPopExit },
             ) {
                 composable(Screen.CallLog.route) {
                     CallLogScreen(
-                        viewModel = dialpadViewModel,
+                        viewModel = callsViewModel,
                         showMissedOnly = showMissedOnly,
-                        onOpen = { _, number ->
-                            dialpadViewModel.setNumber(number)
-                            navController.navigate(Screen.Dialpad.route) {
-                                popUpTo(navController.graph.startDestinationId)
-                                launchSingleTop = true
+                        onOpen = { name, number -> navController.navigate(Screen.Contact.createRoute(name, number)) },
+                        onMenu = { menuOpen = true },
+                    )
+                }
+                composable(Screen.Dialpad.route) {
+                    DialpadScreen(callsViewModel, onCall = actions.placeCall)
+                }
+                composable(Screen.Favorites.route) {
+                    FavoritesScreen(
+                        viewModel = callsViewModel,
+                        onCall = { actions.placeCall(it.phoneNumber) },
+                        onMenu = { menuOpen = true },
+                    )
+                }
+                composable(Screen.Search.route) {
+                    SearchScreen(
+                        viewModel = contactsViewModel,
+                        onBack = { navController.popBackStack() },
+                        onOpen = { contact ->
+                            navController.navigate(Screen.Contact.createRoute(contact.name, contact.phoneNumber)) {
+                                popUpTo(Screen.Search.route) { inclusive = true }
                             }
                         },
                     )
                 }
-                composable(Screen.Dialpad.route) {
-                    // בחירת שיחה אחרונה/הצעת T9 רק ממלאת את שדה החיוג - היא לא מחייגת
-                    // מיד, בדיוק כמו כפתור "חיוג" באנשי קשר (ר' Contacts.route למטה).
-                    // המשתמש עדיין צריך ללחוץ על כפתור/מקש החיוג בעצמו.
-                    DialpadScreen(dialpadViewModel) { _, number ->
-                        dialpadViewModel.setNumber(number)
-                    }
+                composable(
+                    route = Screen.Contact.route,
+                    arguments = listOf(
+                        navArgument("name") { type = NavType.StringType },
+                        navArgument("number") { type = NavType.StringType },
+                    ),
+                ) { entry ->
+                    val name = decodeArg(entry.arguments?.getString("name"))
+                    val number = decodeArg(entry.arguments?.getString("number"))
+                    ContactScreen(
+                        name = name,
+                        number = number,
+                        viewModel = callsViewModel,
+                        onBack = { navController.popBackStack() },
+                        onMenu = { menuOpen = true },
+                        onCall = { actions.placeCall(number) },
+                        onMessage = { actions.sendMessage(number) },
+                        onAddContact = { actions.addContact(number) },
+                    )
                 }
-                composable(Screen.Contacts.route) {
-                    ContactsScreen(contactsViewModel) { _, number ->
-                        dialpadViewModel.setNumber(number)
-                        navController.navigate(Screen.Dialpad.route) {
-                            popUpTo(navController.graph.startDestinationId)
-                            launchSingleTop = true
-                        }
-                    }
-                }
-
                 composable(
                     route = Screen.InCall.route,
                     arguments = listOf(
                         navArgument("name") { type = NavType.StringType },
-                        navArgument("number") { type = NavType.StringType }
-                    )
-                ) { backStackEntry ->
-                    val name = backStackEntry.arguments?.getString("name") ?: stringResource(R.string.unknown)
-                    val number = backStackEntry.arguments?.getString("number") ?: ""
+                        navArgument("number") { type = NavType.StringType },
+                    ),
+                ) { entry ->
+                    val number = decodeArg(entry.arguments?.getString("number"))
+                    val name = decodeArg(entry.arguments?.getString("name")).ifEmpty { number.ifEmpty { stringResource(R.string.unknown) } }
                     InCallScreen(
                         name = name,
                         phoneNumber = number,
                         viewModel = inCallViewModel,
                         onCallEnded = { navController.popBackStack() },
-                        onMinimize = { navController.popBackStack() }
+                        onCallAgain = { again ->
+                            navController.popBackStack()
+                            actions.placeCall(again)
+                        },
                     )
                 }
             }
+
+            FutureSnackbarHost(snackbar, theme)
         }
+    }
+
+    if (menuOpen) {
+        FutureOptionsMenu(theme = theme, onDismissRequest = { menuOpen = false }, header = "שיחות") {
+            fun pick(action: () -> Unit): () -> Unit = { menuOpen = false; action() }
+            FutureMenuRow("חיפוש", Icons.Rounded.Search, theme, pick { navController.navigate(Screen.Search.route) })
+            if (currentRoute == Screen.CallLog.route) {
+                FutureMenuRow(
+                    if (showMissedOnly) "כל השיחות" else "שיחות שלא נענו",
+                    if (showMissedOnly) Icons.Rounded.Call else Icons.Rounded.CallMissed,
+                    theme,
+                    pick { showMissedOnly = !showMissedOnly },
+                )
+            }
+            FutureMenuRow("אנשי קשר", Icons.Rounded.Contacts, theme, pick(actions.openContactsApp))
+            FutureMenuRow("הגדרות", Icons.Rounded.Settings, theme, pick(actions.openCallSettings))
+            FutureMenuRow("נקה יומן", Icons.Rounded.Delete, theme, pick { confirmClear = true }, destructive = true)
+        }
+    }
+
+    if (confirmClear) {
+        ConfirmDialog(
+            message = "לנקות את יומן השיחות?",
+            theme = theme,
+            confirmLabel = "נקה",
+            onCancel = { confirmClear = false },
+            onConfirm = {
+                confirmClear = false
+                if (actions.ensureCallLogWrite()) {
+                    callsViewModel.clearCallLog { ok -> snackbar.show(if (ok) "היומן נוקה" else "היומן לא נוקה") }
+                } else {
+                    snackbar.show("אשר את ההרשאה ונסה שוב")
+                }
+            },
+        )
+    }
+}
+
+/** מעבר בין טאבים: בלי להעמיס את מחסנית החזרה, כמו NavigationBar רגיל. */
+private fun NavHostController.switchTab(route: String) {
+    navigate(route) {
+        popUpTo(graph.startDestinationId)
+        launchSingleTop = true
     }
 }
 
 @Composable
 private fun OngoingCallBanner(name: String, onReturn: () -> Unit) {
-    com.future.sharednav.focus.FocusableItem(
+    val theme = LocalFutureTheme.current
+    val onSuccess = theme.onStatusColor(theme.successColor)
+    FocusableItem(
         onClick = onReturn,
         // שיחה פעילה היא סטטוס, ולכן בצבע ההצלחה של הפלטה ולא בצבע ההדגשה -
         // ההדגשה שמורה לפוקוס ולבחירה בלבד.
-        accentColor = com.future.sharednav.theme.LocalFutureTheme.current.onStatusColor(com.future.sharednav.theme.LocalFutureTheme.current.successColor),
+        accentColor = onSuccess,
         modifier = Modifier.fillMaxWidth(),
-        idleBackgroundColor = com.future.sharednav.theme.LocalFutureTheme.current.successColor,
-        focusedBackgroundColor = com.future.sharednav.theme.LocalFutureTheme.current.successColor,
+        idleBackgroundColor = theme.successColor,
+        focusedBackgroundColor = theme.successColor,
         cornerRadius = 0.dp,
         scaleOnFocus = false,
-        contentPadding = 0.dp
+        contentPadding = 0.dp,
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 10.dp),
             horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(
-                imageVector = Icons.Rounded.Call,
-                contentDescription = null,
-                tint = com.future.sharednav.theme.LocalFutureTheme.current.onStatusColor(com.future.sharednav.theme.LocalFutureTheme.current.successColor),
-                modifier = Modifier.size(16.dp)
-            )
+            Icon(imageVector = Icons.Rounded.Call, contentDescription = null, tint = onSuccess, modifier = Modifier.size(16.dp))
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = "${stringResource(R.string.ongoing_call)} · $name",
-                color = com.future.sharednav.theme.LocalFutureTheme.current.onStatusColor(com.future.sharednav.theme.LocalFutureTheme.current.successColor),
+                color = onSuccess,
                 fontWeight = FontWeight.Medium,
                 style = MaterialTheme.typography.bodyMedium,
-                maxLines = 1
+                maxLines = 1,
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = stringResource(R.string.tap_to_return),
-                color = com.future.sharednav.theme.LocalFutureTheme.current.onStatusColor(com.future.sharednav.theme.LocalFutureTheme.current.successColor).copy(alpha = 0.7f),
-                style = MaterialTheme.typography.labelSmall
+                color = onSuccess.copy(alpha = 0.7f),
+                style = MaterialTheme.typography.labelSmall,
             )
         }
     }
@@ -605,9 +722,6 @@ private fun OngoingCallBanner(name: String, onReturn: () -> Unit) {
 
 @Composable
 private fun DefaultDialerRequiredScreen(onRequest: () -> Unit) {
-    // היה משתמש ב-Color.Black/White קשיחים ו-Button ברירת מחדל בלי שום עיצוב -
-    // המסך היחיד באפליקציה שעקף את DialerTheme לגמרי, אז לא עקב אחרי מצב
-    // כהה/בהיר או צבע ההדגשה של המשתמש כמו כל שאר האפליקציה.
     Box(
         modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
         contentAlignment = Alignment.Center,
@@ -616,12 +730,12 @@ private fun DefaultDialerRequiredScreen(onRequest: () -> Unit) {
             Text(
                 text = stringResource(R.string.default_dialer_required),
                 color = MaterialTheme.colorScheme.onBackground,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
             )
             Spacer(modifier = Modifier.height(16.dp))
-            com.future.sharednav.components.FutureButton(
+            FutureButton(
                 text = stringResource(R.string.set_as_default_dialer),
-                theme = com.future.sharednav.theme.LocalFutureTheme.current,
+                theme = LocalFutureTheme.current,
                 onClick = onRequest,
             )
         }

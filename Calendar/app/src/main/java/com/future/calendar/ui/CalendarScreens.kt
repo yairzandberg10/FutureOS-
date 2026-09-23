@@ -488,7 +488,7 @@ private fun WeekView(
 private fun WeekDayRow(date: LocalDate, isToday: Boolean, events: List<CalendarEvent>, theme: FutureTheme, onClick: () -> Unit, focusRequester: FocusRequester? = null) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    val shape = FutureShapes.sm
+    val shape = FutureShapes.row
     val bgColor by animateColorAsState(if (isFocused) theme.readableAccentColor.copy(alpha = 0.14f) else theme.idleChipColor, FutureMotion.focusColorSpec, label = "weekRowBg")
 
     Row(
@@ -772,7 +772,7 @@ private fun EventRow(event: CalendarEvent, theme: FutureTheme, onClick: () -> Un
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
     LaunchedEffect(isFocused) { onFocusChanged(isFocused) }
-    val shape = FutureShapes.sm
+    val shape = FutureShapes.row
     val bgColor by animateColorAsState(if (isFocused) theme.readableAccentColor.copy(alpha = 0.14f) else theme.idleChipColor, FutureMotion.focusColorSpec, label = "eventRowBg")
     val timeLabel = if (event.allDay) "כל היום" else {
         val start = java.time.Instant.ofEpochMilli(event.startMillis).atZone(java.time.ZoneId.systemDefault()).toLocalTime()
@@ -1062,7 +1062,7 @@ private fun SettingsSectionLabel(text: String, theme: FutureTheme) {
 private fun SettingsToggleRow(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, sublabel: String, checked: Boolean, theme: FutureTheme, onToggle: () -> Unit) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    val shape = FutureShapes.sm
+    val shape = FutureShapes.row
     val bgColor by animateColorAsState(if (isFocused) theme.readableAccentColor.copy(alpha = 0.14f) else theme.idleChipColor, FutureMotion.focusColorSpec, label = "settingsRowBg")
 
     Row(
@@ -1100,7 +1100,7 @@ private fun RegionRow(region: com.future.calendar.data.Region, isSelected: Boole
         FutureMotion.focusColorSpec,
         label = "regionRowBg"
     )
-    val shape = FutureShapes.sm
+    val shape = FutureShapes.row
     Row(
         modifier = Modifier
             .fillMaxWidth()

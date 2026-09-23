@@ -1,4 +1,9 @@
 package com.future.music.ui.screens
+import com.future.sharednav.components.FutureListItem
+import com.future.sharednav.components.FutureAvatar
+import com.future.sharednav.theme.rememberFutureType
+import com.future.sharednav.theme.FutureDimens
+import com.future.sharednav.theme.readableAccentColor
 import com.future.sharednav.theme.subtleTextColor
 
 import com.future.sharednav.theme.FutureTypography
@@ -34,7 +39,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.future.music.playback.MusicPlaybackService
-import com.future.music.ui.components.FocusableItem
 import com.future.music.ui.components.ScreenTopBar
 
 import com.future.sharednav.nav.digitForKey
@@ -46,6 +50,7 @@ private data class EqPreset(val id: Int, val digit: String, val icon: ImageVecto
  * שרץ בתוך MusicPlaybackService (קשור ל-audioSessionId האמיתי של הנגן). */
 @Composable
 fun SoundScreen(theme: FutureTheme, onBack: () -> Unit, onSelectPreset: (Int) -> Unit) {
+    val type = rememberFutureType()
     // מאתחלים לפי הפריסט שבאמת פעיל כרגע ב-service, לא תמיד ל"רגיל" - אחרת
     // המסך היה מציג "רגיל" מודגש גם כשפריסט אחר כבר פעיל בפועל.
     var selected by remember { mutableIntStateOf(MusicPlaybackService.currentEqPreset.value) }
@@ -81,32 +86,27 @@ fun SoundScreen(theme: FutureTheme, onBack: () -> Unit, onSelectPreset: (Int) ->
         )
         Spacer(modifier = Modifier.height(6.dp))
 
-        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp)) {
+        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = FutureDimens.screenPadding), verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(FutureDimens.itemSpacing)) {
             presets.forEachIndexed { index, preset ->
                 val isSelected = selected == preset.id
-                FocusableItem(
+                FutureListItem(
+                    title = preset.label,
+                    summary = preset.subtitle,
+                    theme = theme,
                     onClick = {
                         selected = preset.id
                         onSelectPreset(preset.id)
                     },
-                    theme = theme,
-                    modifier = Modifier.fillMaxWidth(),
                     focusRequester = if (index == 0) firstItemFocusRequester else null,
-                ) {
-                    Row(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            preset.icon,
-                            contentDescription = null,
-                            tint = if (isSelected) theme.accentColor else theme.textColor.copy(alpha = 0.6f),
-                            modifier = Modifier.padding(end = 12.dp),
+                    leading = {
+                        FutureAvatar(
+                            theme = theme,
+                            icon = preset.icon,
+                            contentColor = if (isSelected) theme.readableAccentColor else null,
                         )
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(preset.label, color = theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Medium)
-                            Text(preset.subtitle, color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.label)
-                        }
-                        Text(preset.digit, color = theme.subtleTextColor, fontSize = FutureTypography.summary)
-                    }
-                }
+                    },
+                    trailing = { Text(preset.digit, color = theme.subtleTextColor, fontSize = type.summary) },
+                )
             }
         }
     }

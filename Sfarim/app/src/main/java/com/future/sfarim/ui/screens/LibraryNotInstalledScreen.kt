@@ -1,4 +1,5 @@
 package com.future.sfarim.ui.screens
+import com.future.sharednav.components.FutureButton
 
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
@@ -22,7 +23,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.future.sfarim.ui.components.FocusableItem
 import com.future.sharednav.theme.FutureTheme
 
 /** מוצג כשקובץ sefaria.db לא נמצא בנתיב הצפוי - האפליקציה לא יכולה להוריד
@@ -50,31 +50,21 @@ fun LibraryNotInstalledScreen(expectedPath: String, theme: FutureTheme, onRetry:
             Box(
                 modifier = Modifier
                     .padding(top = 12.dp)
-                    .background(theme.textColor.copy(alpha = 0.08f), FutureShapes.sm)
+                    .background(theme.textColor.copy(alpha = 0.08f), FutureShapes.textField)
                     .padding(horizontal = 14.dp, vertical = 10.dp),
             ) {
-                Text(expectedPath, color = theme.accentColor, fontSize = FutureTypography.label, textAlign = TextAlign.Center)
+                Text(expectedPath, color = theme.textColor, fontSize = FutureTypography.label, textAlign = TextAlign.Center)
             }
 
             // בלי כפתור ניסיון-חוזר, אחרי adb push של הקובץ תוך כדי שהמסך הזה כבר
             // מוצג המשתמש היה חייב לצאת ולפתוח את האפליקציה מחדש כדי שהבדיקה תרוץ שוב.
-            FocusableItem(
-                onClick = onRetry,
+            FutureButton(
+                text = "נסה שוב",
                 theme = theme,
+                onClick = onRetry,
                 focusRequester = focusRequester,
                 modifier = Modifier.padding(top = 20.dp),
-            ) { isFocused ->
-                Box(
-                    modifier = Modifier
-                        .background(theme.accentColor.copy(alpha = if (isFocused) 0.28f else 0.14f), FutureShapes.sm)
-                        .padding(horizontal = 20.dp, vertical = 12.dp),
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Rounded.Refresh, contentDescription = null, tint = theme.accentColor)
-                        Text("נסה שוב", color = theme.accentColor, fontWeight = FontWeight.Bold, fontSize = FutureTypography.body)
-                    }
-                }
-            }
+            )
         }
     }
 }

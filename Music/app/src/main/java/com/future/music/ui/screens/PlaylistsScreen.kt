@@ -1,4 +1,9 @@
 package com.future.music.ui.screens
+import com.future.sharednav.components.FutureListItem
+import com.future.sharednav.components.FutureAvatar
+import com.future.sharednav.theme.subtleTextColor
+import com.future.sharednav.theme.rememberFutureType
+import com.future.sharednav.theme.FutureDimens
 
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
@@ -34,7 +39,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.future.music.data.Playlist
-import com.future.music.ui.components.FocusableItem
 import com.future.music.ui.components.NameInputDialog
 import com.future.music.ui.components.ScreenTopBar
 import com.future.sharednav.theme.FutureTheme
@@ -47,6 +51,7 @@ fun PlaylistsScreen(
     onOpenPlaylist: (Playlist) -> Unit,
     onCreatePlaylist: (String) -> Unit,
 ) {
+    val type = rememberFutureType()
     var showCreateDialog by remember { mutableStateOf(false) }
     val firstItemFocusRequester = remember { FocusRequester() }
     LaunchedEffect(Unit) { firstItemFocusRequester.requestFocus() }
@@ -67,31 +72,18 @@ fun PlaylistsScreen(
             }
         } else {
             LazyColumn(
-                modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 12.dp),
-                verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp),
+                modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = FutureDimens.screenPadding),
+                verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(FutureDimens.itemSpacing),
             ) {
                 itemsIndexed(playlists, key = { _, playlist -> playlist.id }) { index, playlist ->
-                    FocusableItem(
-                        onClick = { onOpenPlaylist(playlist) },
+                    FutureListItem(
+                        title = playlist.name,
                         theme = theme,
-                        modifier = Modifier.fillMaxWidth(),
+                        onClick = { onOpenPlaylist(playlist) },
                         focusRequester = if (index == 0) firstItemFocusRequester else null,
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Box(
-                                modifier = Modifier.size(36.dp).clip(FutureShapes.sm).background(theme.accentColor.copy(alpha = 0.18f)),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Icon(Icons.AutoMirrored.Rounded.QueueMusic, contentDescription = null, tint = theme.accentColor, modifier = Modifier.size(18.dp))
-                            }
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(playlist.name, color = theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f), maxLines = 1)
-                            Text("${playlist.songIds.size} שירים", color = theme.textColor.copy(alpha = 0.4f), fontSize = FutureTypography.label)
-                        }
-                    }
+                        leading = { FutureAvatar(theme = theme, icon = Icons.AutoMirrored.Rounded.QueueMusic) },
+                        trailing = { Text("${playlist.songIds.size} שירים", color = theme.subtleTextColor, fontSize = type.summary) },
+                    )
                 }
             }
         }

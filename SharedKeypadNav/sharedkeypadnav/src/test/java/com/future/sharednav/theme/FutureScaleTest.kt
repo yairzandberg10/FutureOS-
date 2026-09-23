@@ -14,8 +14,8 @@ import org.junit.Test
 class FutureScaleTest {
 
     private val radii = listOf(FutureShapes.radiusXs, FutureShapes.radiusSm, FutureShapes.radiusTextField,
-        FutureShapes.radiusMd, FutureShapes.radiusChip, FutureShapes.radiusLg, FutureShapes.radiusDialog,
-        FutureShapes.radiusXl, FutureShapes.radiusXxl)
+        FutureShapes.radiusMd, FutureShapes.radiusChip, FutureShapes.radiusLg, FutureShapes.radiusRow,
+        FutureShapes.radiusDialog, FutureShapes.radiusXl, FutureShapes.radiusXxl)
 
     private val sizes = listOf(FutureTypography.badge, FutureTypography.caption, FutureTypography.label,
         FutureTypography.summary, FutureTypography.body, FutureTypography.dialog, FutureTypography.bodyLarge,
@@ -34,18 +34,28 @@ class FutureScaleTest {
         for (r in radii) assertEquals(r, FutureShapes.snap(r))
         assertEquals(22.dp, FutureDimens.borderRadius)
         assertEquals(16.dp, FutureDimens.cardCornerRadius)
-        assertEquals(8.dp, FutureDimens.itemCornerRadius)
+        assertEquals(20.dp, FutureDimens.itemCornerRadius)
     }
 
     /**
-     * שלוש הדרגות שנוספו מהדיזיין סיסטם. קודם הן נבלעו בדרגה הסמוכה,
-     * ולכן דווקא הן הבדיקה שהמיפוי באמת משתמש בהן.
+     * tokens/shape.css: "no tight corners anywhere" - 12dp היא הרצפה, שדה
+     * קלט/לשונית/צ'יפ יושבים על 16dp, ושורת רשימה על 20dp.
      */
     @Test
-    fun `the design-system radii each get their own step`() {
-        assertEquals(10.dp, FutureShapes.snap(10.dp))
-        assertEquals(14.dp, FutureShapes.snap(14.dp))
-        assertEquals(20.dp, FutureShapes.snap(20.dp))
+    fun `the design-system radii match tokens shape css`() {
+        for (r in radii) assertTrue("$r", r >= 12.dp)
+        assertEquals(12.dp, FutureShapes.radiusSm)
+        assertEquals(20.dp, FutureShapes.radiusRow)
+        assertEquals(16.dp, FutureShapes.radiusTextField)
+        assertEquals(16.dp, FutureShapes.radiusMd)
+        assertEquals(16.dp, FutureShapes.radiusChip)
+        assertEquals(20.dp, FutureShapes.radiusDialog)
+        assertEquals(12.dp, FutureShapes.snap(4.dp))
+    }
+
+    @Test
+    fun `list row height follows the row list token`() {
+        assertEquals(65.dp, FutureDimens.rowHeightList)
     }
 
     @Test

@@ -265,7 +265,7 @@ fun WorkoutTemplateScreen(
         }
 
         Row(modifier = Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            FocusableItem(onClick = { running = !running }, theme = theme, modifier = Modifier.size(56.dp)) { isFocused ->
+            FocusableItem(onClick = { running = !running }, theme = theme, modifier = Modifier.size(56.dp), cornerRadius = FutureShapes.radiusLg) { isFocused ->
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -290,6 +290,7 @@ fun WorkoutTemplateScreen(
                 },
                 theme = theme,
                 modifier = Modifier.weight(1f).height(56.dp),
+                cornerRadius = FutureShapes.radiusLg,
             ) { isFocused ->
                 Row(
                     modifier = Modifier
@@ -477,7 +478,7 @@ private fun MusicControlPage(theme: FutureTheme) {
 
 @Composable
 private fun MediaButton(theme: FutureTheme, icon: ImageVector, contentDescription: String, primary: Boolean = false, onClick: () -> Unit) {
-    FocusableItem(onClick = onClick, theme = theme, modifier = Modifier.size(56.dp)) { isFocused ->
+    FocusableItem(onClick = onClick, theme = theme, modifier = Modifier.size(56.dp), cornerRadius = FutureShapes.radiusLg) { isFocused ->
         Box(
             modifier = Modifier
                 .fillMaxSize()

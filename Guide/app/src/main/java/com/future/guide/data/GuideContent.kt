@@ -22,6 +22,7 @@ import androidx.compose.material.icons.rounded.PhotoLibrary
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.SettingsRemote
 import androidx.compose.material.icons.rounded.Terminal
+import androidx.compose.material.icons.rounded.Translate
 import androidx.compose.material.icons.rounded.Build
 import androidx.compose.ui.graphics.vector.ImageVector
 
@@ -292,6 +293,22 @@ val GUIDE_APPS = listOf(
             "מקש החזרה עוצר האזנה פעילה."
         ),
         tips = listOf("נדרשת הרשאת מיקרופון; בלעדיה ההאזנה לא תתחיל.")
+    ),
+    GuideApp(
+        id = "translate",
+        icon = Icons.Rounded.Translate,
+        name = "תרגום",
+        subtitle = "תרגום בין שפות, גם בלי רשת",
+        steps = listOf(
+            "בשורה העליונה בוחרים שפת מקור ושפת יעד; הכפתור שביניהן מחליף ביניהן.",
+            "מקש הבחירה בשדה פותח הקלדה, והתרגום מופיע מיד מתחת.",
+            "בשורת הפעולות שמתחת לתרגום אפשר להשמיע, להעתיק, לשתף ולשמור.",
+            "מקש התפריט פותח שיחה, היסטוריה והורדת שפות."
+        ),
+        tips = listOf(
+            "כל שפה יורדת פעם אחת (כ-30MB) ומשם התרגום עובד בלי חיבור לרשת - \"הורדת שפה\" בתפריט.",
+            "במצב שיחה כל צד מדבר בתורו והתרגום נקרא בקול; חצי ימין/שמאל מחליפים דובר."
+        )
     ),
     GuideApp(
         id = "settings",

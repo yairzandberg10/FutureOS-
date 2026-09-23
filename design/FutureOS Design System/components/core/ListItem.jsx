@@ -14,7 +14,7 @@ export function ListItem({ title, summary, trailing, focused = false, onClick, s
         gap: "var(--fos-space-5)",
         height: "var(--fos-row-list)",
         padding: "0 var(--fos-space-5)",
-        borderRadius: "var(--fos-radius-item)",
+        borderRadius: "var(--fos-radius-row)",
         background: focused ? "var(--fos-focus-bg-item)" : "transparent",
         border: `var(--fos-focus-border-item) solid ${focused ? "var(--fos-accent)" : "transparent"}`,
         transform: focused ? "scale(var(--fos-focus-scale))" : "none",

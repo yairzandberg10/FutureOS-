@@ -89,7 +89,7 @@ fun GuideTip(text: String, theme: FutureTheme) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(FutureShapes.sm)
+            .clip(FutureShapes.lg)
             .background(theme.idleChipColor)
             .padding(horizontal = FutureDimens.spacingMd, vertical = FutureDimens.spacingMd)
     ) {

@@ -94,4 +94,10 @@ object FutureMotion {
      * ולא מעבר.
      */
     const val SpinnerRotationMillis: Int = 900
+
+    /**
+     * מעבר אחד של המקטע בפס התקדמות לא-מוגדר (חיפוש מכשירים, התחברות) -
+     * לינארי, כמו כל פס התקדמות במערכת, ולולאה ולא מעבר.
+     */
+    const val ProgressSweepMillis: Int = 1400
 }

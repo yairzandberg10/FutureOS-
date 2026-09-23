@@ -1,6 +1,6 @@
 import React from "react";
 
-/* TextArea: TextField's surface grown to a paragraph — same 8% fill, 10dp radius
+/* TextArea: TextField's surface grown to a paragraph — same 8% fill, card radius
    and accent focus border, but 16sp text on the body line-height, a minimum height
    and top alignment. `dir`/`align` let a field hold a foreign-language string. */
 export function TextArea({ value, placeholder, focused = false, showCaret = true, minHeight = 150, dir = "rtl", align, style, onClick, ...rest }) {

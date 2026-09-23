@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.future.sharednav.theme.FutureTheme
 import com.future.sharednav.focus.FocusableItem as SharedFocusableItem
@@ -23,6 +24,9 @@ fun FocusableItem(
     theme: FutureTheme,
     modifier: Modifier = Modifier,
     focusRequester: FocusRequester? = null,
+    // פקד שאינו שורה (כפתור אייקון, אריח) מעביר את הפינות של המילוי שלו, כדי
+    // שטבעת הפוקוס תעטוף אותו ולא תצא עגולה יותר או פחות ממנו.
+    cornerRadius: Dp = FutureShapes.radiusRow,
     content: @Composable BoxScope.(isFocused: Boolean) -> Unit,
 ) {
     SharedFocusableItem(
@@ -32,6 +36,7 @@ fun FocusableItem(
         idleBackgroundColor = theme.idleChipColor,
         contentPadding = 0.dp,
         focusRequester = focusRequester,
+        cornerRadius = cornerRadius,
         content = content,
     )
 }

@@ -1,4 +1,9 @@
 package com.future.sfarim.ui.screens
+import com.future.sharednav.components.FutureListItem
+import com.future.sharednav.components.FutureAvatar
+import com.future.sharednav.components.FutureSectionHeader
+import com.future.sharednav.theme.FutureDimens
+import com.future.sharednav.components.FutureActionCell
 
 import com.future.sharednav.theme.FutureTypography
 import androidx.compose.foundation.background
@@ -34,7 +39,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.future.sfarim.data.LibraryCategory
 import com.future.sfarim.data.ReadingProgressEntry
-import com.future.sfarim.ui.components.FocusableItem
 import com.future.sharednav.theme.FutureTheme
 
 @Composable
@@ -52,8 +56,8 @@ fun HomeScreen(
 
     Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
         LazyColumn(
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp),
+            contentPadding = PaddingValues(horizontal = FutureDimens.screenPadding, vertical = FutureDimens.spacingMd),
+            verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(FutureDimens.itemSpacing),
         ) {
             item {
                 Text(
@@ -66,29 +70,14 @@ fun HomeScreen(
             }
             if (continueReading != null) {
                 item {
-                    FocusableItem(
-                        onClick = { onContinueReading(continueReading) },
+                    FutureListItem(
+                        title = "${continueReading.bookTitle} · ${continueReading.segmentRef}",
+                        summary = "המשך קריאה",
                         theme = theme,
-                        modifier = Modifier.fillMaxWidth(),
+                        onClick = { onContinueReading(continueReading) },
                         focusRequester = firstFocusRequester,
-                    ) { isFocused ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 14.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Icon(Icons.Rounded.AutoStories, contentDescription = null, tint = theme.accentColor)
-                            Spacer(modifier = Modifier.width(14.dp))
-                            Column {
-                                Text("המשך קריאה", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.label)
-                                Text(
-                                    "${continueReading.bookTitle} — ${continueReading.segmentRef}",
-                                    color = theme.textColor,
-                                    fontSize = FutureTypography.bodyLarge,
-                                    maxLines = 1,
-                                )
-                            }
-                        }
-                    }
+                        leading = { FutureAvatar(theme = theme, icon = Icons.Rounded.AutoStories) },
+                    )
                 }
             }
             item {
@@ -102,33 +91,15 @@ fun HomeScreen(
                 }
             }
             item {
-                Text(
-                    "קטגוריות",
-                    fontSize = FutureTypography.body,
-                    fontWeight = FontWeight.Bold,
-                    color = theme.textColor.copy(alpha = 0.6f),
-                    modifier = Modifier.padding(top = 12.dp, bottom = 4.dp),
-                )
+                FutureSectionHeader("קטגוריות", theme, inset = false)
             }
             items(categories, key = { it.id }) { category ->
-                FocusableItem(
-                    onClick = { onOpenCategory(category) },
+                FutureListItem(
+                    title = category.nameHe?.takeIf { it.isNotBlank() } ?: category.nameEn,
                     theme = theme,
-                    modifier = Modifier.fillMaxWidth(),
-                ) { _ ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(Icons.AutoMirrored.Rounded.LibraryBooks, contentDescription = null, tint = theme.textColor.copy(alpha = 0.7f))
-                        Spacer(modifier = Modifier.width(14.dp))
-                        Text(
-                            category.nameHe?.takeIf { it.isNotBlank() } ?: category.nameEn,
-                            color = theme.textColor,
-                            fontSize = FutureTypography.bodyLarge,
-                        )
-                    }
-                }
+                    onClick = { onOpenCategory(category) },
+                    leading = { FutureAvatar(theme = theme, icon = Icons.AutoMirrored.Rounded.LibraryBooks) },
+                )
             }
         }
     }
@@ -143,14 +114,12 @@ private fun HomeShortcut(
     focusRequester: FocusRequester? = null,
     onClick: () -> Unit,
 ) {
-    FocusableItem(onClick = onClick, theme = theme, modifier = modifier, focusRequester = focusRequester) { _ ->
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Icon(icon, contentDescription = null, tint = theme.accentColor)
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(label, color = theme.textColor, fontSize = FutureTypography.summary)
-        }
-    }
+    FutureActionCell(
+        icon = icon,
+        label = label,
+        theme = theme,
+        onClick = onClick,
+        modifier = modifier,
+        focusRequester = focusRequester,
+    )
 }

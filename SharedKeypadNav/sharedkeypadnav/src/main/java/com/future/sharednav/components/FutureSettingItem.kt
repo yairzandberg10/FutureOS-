@@ -1,8 +1,6 @@
 package com.future.sharednav.components
 
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
@@ -23,7 +21,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
@@ -33,7 +30,6 @@ import androidx.compose.ui.unit.dp
 import com.future.sharednav.focus.bringIntoViewOnFocus
 import com.future.sharednav.theme.FutureDimens
 import com.future.sharednav.theme.FutureMotion
-import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.theme.FutureTheme
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.LocalFutureAccent
@@ -49,7 +45,8 @@ import com.future.sharednav.theme.rememberFutureType
  *
  * שים לב שסימון הפוקוס שלה *אינו* זה של שורת רשימה: רקע ב-6% מצבע הטקסט
  * (ולא בהדגשה), מסגרת 2dp (ולא 1.5dp), ובלי הגדלה. הפירוט מפריד ביניהן
- * במפורש (guidelines/focus-spec.html).
+ * במפורש (guidelines/focus-spec.html). בתוך [FutureCard] הפוקוס ממלא את כל
+ * רוחב הכרטיס ושומר על הפינות שלו בשורה הראשונה והאחרונה ([cardRowFocus]).
  *
  * חץ הכניסה מצביע **שמאלה** ואינו מתהפך: הממשק כולו RTL, ושמאלה זה קדימה.
  */
@@ -57,7 +54,8 @@ import com.future.sharednav.theme.rememberFutureType
 fun FutureSettingItem(
     title: String,
     theme: FutureTheme,
-    onClick: () -> Unit,
+    /** null - שורת מידע בלבד (היסטוריה, ערך קבוע): בלי פוקוס ובלי לחיצה. */
+    onClick: (() -> Unit)?,
     modifier: Modifier = Modifier,
     summary: String? = null,
     icon: ImageVector? = null,
@@ -81,18 +79,23 @@ fun FutureSettingItem(
         label = "settingItemBorder",
     )
 
+    // בתוך כרטיס השורה נמתחת לכל רוחבו, והפוקוס לוקח את הפינות של הכרטיס
+    // (cardRowFocus). מחוץ לכרטיס - בדיאלוג - היא נשארת גלולה מוסטת 4dp.
+    val inCard = LocalFutureCard.current != null
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(FutureDimens.spacingXs)
+            .then(if (inCard) Modifier else Modifier.padding(FutureDimens.spacingXs))
             .height(FutureDimens.rowHeightSetting)
-            .clip(FutureShapes.lg)
-            .background(background)
-            .border(FutureDimens.focusBorderControl, border, FutureShapes.lg)
-            .padding(horizontal = FutureDimens.spacingMd)
-            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
+            .cardRowFocus(background, border)
+            .padding(horizontal = if (inCard) FutureDimens.spacingLg else FutureDimens.spacingMd)
+            .then(if (focusRequester != null && onClick != null) Modifier.focusRequester(focusRequester) else Modifier)
             .bringIntoViewOnFocus()
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick),
+            .then(
+                if (onClick != null) {
+                    Modifier.clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
+                } else Modifier
+            ),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingLg),
     ) {

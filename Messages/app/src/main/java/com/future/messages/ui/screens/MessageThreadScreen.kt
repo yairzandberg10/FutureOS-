@@ -1,4 +1,10 @@
 package com.future.messages.ui.screens
+import com.future.messages.ui.components.MessageComposeBar
+import androidx.compose.material.icons.rounded.Schedule
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.ErrorOutline
+import androidx.compose.ui.unit.em
+import com.future.sharednav.theme.mutedTextColor
 import com.future.sharednav.components.ScreenTopBar
 import com.future.sharednav.components.TopBarIconButton
 import com.future.sharednav.components.FutureTextField
@@ -106,6 +112,23 @@ fun MessageThreadScreen(
         if (uri != null) attachedImageUri = uri
     }
 
+    // הכתבה - המיקרופון שבתוך שורת הכתיבה (templates/message-compose). רק אם
+    // יש במכשיר מי שמטפל ב-RECOGNIZE_SPEECH; אחרת הכפתור לא מוצג בכלל.
+    val context = LocalContext.current
+    val canDictate = remember {
+        android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+            .resolveActivity(context.packageManager) != null
+    }
+    val dictation = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val spoken = result.data
+            ?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)
+            ?.firstOrNull()
+        if (!spoken.isNullOrBlank()) {
+            textState = if (textState.isBlank()) spoken else "$textState $spoken"
+        }
+        textFieldFocusRequester.requestFocus()
+    }
+
     LaunchedEffect(Unit) {
         textFieldFocusRequester.requestFocus()
     }
@@ -161,7 +184,7 @@ fun MessageThreadScreen(
                         }
                     },
                 reverseLayout = true,
-                contentPadding = PaddingValues(horizontal = FutureDimens.spacingMd, vertical = FutureDimens.spacingSm)
+                contentPadding = PaddingValues(start = FutureDimens.screenPadding, end = FutureDimens.screenPadding, top = FutureDimens.spacingMd, bottom = FutureDimens.spacingXs)
             ) {
                 items(messages.reversed(), key = { "${it.isMms}_${it.id}" }) { message ->
                     MessageBubble(
@@ -180,41 +203,33 @@ fun MessageThreadScreen(
                 )
             }
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = FutureDimens.spacingMd, vertical = FutureDimens.spacingSm)
-                    .escapeTextFieldFocusTrap(),
-                verticalAlignment = Alignment.Bottom,
-                horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm),
-            ) {
-                TopBarIconButton(Icons.Rounded.AttachFile, "צרף תמונה", theme.textColor, theme.accentColor, { imagePicker.launch("image/*") })
-
-                FutureTextField(
-                    value = textState,
-                    onValueChange = { textState = it },
-                    theme = theme,
-                    placeholder = "הודעה",
-                    singleLine = false,
-                    maxLines = 4,
-                    focusRequester = textFieldFocusRequester,
-                    modifier = Modifier.weight(1f),
-                )
-
-
-                SendButton(
-                    theme = theme,
-                    enabled = textState.isNotBlank() || attachedImageUri != null,
-                    onClick = {
-                        if (textState.isNotBlank() || attachedImageUri != null) {
-                            onSend(textState, attachedImageUri)
-                            textState = ""
-                            attachedImageUri = null
-                            textFieldFocusRequester.requestFocus()
-                        }
+            MessageComposeBar(
+                theme = theme,
+                recipient = conversation.contact.name,
+                text = textState,
+                onTextChange = { textState = it },
+                canSend = textState.isNotBlank() || attachedImageUri != null,
+                onSend = {
+                    if (textState.isNotBlank() || attachedImageUri != null) {
+                        onSend(textState, attachedImageUri)
+                        textState = ""
+                        attachedImageUri = null
+                        textFieldFocusRequester.requestFocus()
                     }
-                )
-            }
+                },
+                onAttach = { imagePicker.launch("image/*") },
+                onDictate = if (canDictate) {
+                    {
+                        dictation.launch(
+                            android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+                                .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                                .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, "he-IL")
+                        )
+                    }
+                } else null,
+                fieldFocusRequester = textFieldFocusRequester,
+                modifier = Modifier.escapeTextFieldFocusTrap(),
+            )
         }
     }
 
@@ -272,17 +287,20 @@ private fun AttachmentPreview(uri: Uri, theme: FutureTheme, onRemove: () -> Unit
     }
 }
 
-/** שליחה - כפתור אייקון; בלי טקסט ובלי צירוף הוא לא מקבל פוקוס (אין מה לשלוח). */
-@Composable
-private fun SendButton(theme: FutureTheme, enabled: Boolean, onClick: () -> Unit) {
-    TopBarIconButton(Icons.AutoMirrored.Rounded.Send, "שלח", theme.textColor, theme.accentColor, onClick, enabled = enabled)
-}
-
 /**
  * בועת הודעה. שלי = ההדגשה המתוקנת עם הדיו שמתאים לה (היה Color.Black קבוע,
  * בלתי קריא על הדגשה כהה); של הצד השני = 12% מהטקסט. פוקוס = מסגרת 1.5dp של
  * שורת רשימה - קודם הוא סומן רק בהחלשת המילוי ל-70%, שכמעט לא נראתה.
  * הפינות על הסקאלה: 16dp, והפינה ה"זנב" 4dp.
+ */
+/**
+ * בועת הודעה (templates/message-compose): של הצד השני על המשטח, בצד ימין;
+ * שלי בהדגשה המתוקנת עם הדיו שמתאים לה, בצד שמאל. פינות 20dp, והפינה של
+ * ה"זנב" - הפינה התחתונה שפונה לדובר - 6dp. רוחב עד 220dp, טקסט 15sp.
+ * פוקוס = מסגרת 1.5dp של שורת רשימה.
+ *
+ * מתחת לבועה: שלי - סטטוס השליחה עם אייקון ("שולח", "נשלח · 14:03", "לא
+ * נשלח" באדום); של הצד השני - השעה.
  */
 @Composable
 private fun MessageBubble(message: Message, theme: FutureTheme, onClick: () -> Unit, onFocused: () -> Unit = {}) {
@@ -291,91 +309,95 @@ private fun MessageBubble(message: Message, theme: FutureTheme, onClick: () -> U
     LaunchedEffect(isFocused) { if (isFocused) onFocused() }
     val bitmap = message.imageUri?.let { rememberMmsBitmap(it) }
     val accent = theme.readableAccentColor
-    val fill = if (message.isFromMe) accent else theme.textAlpha(12)
+    val fill = if (message.isFromMe) accent else theme.surfaceColor
     val ink = if (message.isFromMe) theme.onReadableAccentColor else theme.textColor
     val ring by animateColorAsState(
         if (isFocused) (if (message.isFromMe) theme.textColor else accent) else Color.Transparent,
         FutureMotion.focusColorSpec,
         label = "bubbleRing",
     )
+    // RTL: start = ימין. ההודעה של הצד השני יושבת בימין והזנב שלה בפינה
+    // הימנית-תחתונה (bottomStart); שלי בשמאל, והזנב בפינה השמאלית (bottomEnd).
     val shape = RoundedCornerShape(
-        topStart = FutureShapes.radiusLg,
-        topEnd = FutureShapes.radiusLg,
-        bottomStart = if (message.isFromMe) FutureShapes.radiusLg else FutureShapes.radiusXs,
-        bottomEnd = if (message.isFromMe) FutureShapes.radiusXs else FutureShapes.radiusLg,
+        topStart = BubbleRadius,
+        topEnd = BubbleRadius,
+        bottomStart = if (message.isFromMe) BubbleRadius else BubbleTailRadius,
+        bottomEnd = if (message.isFromMe) BubbleTailRadius else BubbleRadius,
     )
+    val time = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(message.timestamp))
 
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = FutureDimens.spacingXs),
-        contentAlignment = if (message.isFromMe) Alignment.CenterEnd else Alignment.CenterStart
+            .padding(vertical = BubbleGap / 2),
+        horizontalAlignment = if (message.isFromMe) Alignment.End else Alignment.Start,
     ) {
-        Column(
-            horizontalAlignment = if (message.isFromMe) Alignment.End else Alignment.Start,
-            modifier = Modifier.fillMaxWidth(0.8f)
+        Box(
+            modifier = Modifier
+                .widthIn(max = BubbleMaxWidth)
+                .clip(shape)
+                .background(fill)
+                .border(FutureDimens.focusBorderItem, ring, shape)
+                .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
+                .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
+                .padding(horizontal = 14.dp, vertical = 11.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .clip(shape)
-                    .background(fill)
-                    .border(FutureDimens.focusBorderItem, ring, shape)
-                    .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-                    .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
-            ) {
-                Column(modifier = Modifier.padding(6.dp)) {
-                    if (bitmap != null) {
-                        Image(
-                            bitmap = bitmap,
-                            contentDescription = "תמונה",
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(FutureShapes.md)
-                        )
-                        if (message.text.isNotBlank()) Spacer(modifier = Modifier.height(6.dp))
-                    }
-                    if (message.text.isNotBlank()) {
-                        Text(
-                            text = message.text,
-                            modifier = Modifier.padding(horizontal = FutureDimens.spacingSm, vertical = FutureDimens.spacingXs),
-                            color = ink,
-                            fontSize = FutureTypography.body
-                        )
-                    }
+            Column {
+                if (bitmap != null) {
+                    Image(
+                        bitmap = bitmap,
+                        contentDescription = "תמונה",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(FutureShapes.md)
+                    )
+                    if (message.text.isNotBlank()) Spacer(modifier = Modifier.height(FutureDimens.spacingSm))
                 }
-            }
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingXs),
-                modifier = Modifier.padding(horizontal = 6.dp, vertical = FutureDimens.spacingXxs)
-            ) {
-                Text(
-                    text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(message.timestamp)),
-                    color = theme.subtleTextColor,
-                    fontSize = FutureTypography.caption,
-                )
-                // סטטוס שליחה אמיתי - משוב אם ההודעה יצאה מהמכשיר בפועל, ולא רק
-                // ש"נשלחה" באופן אופטימי (ראו MessageStatus/SmsSentReceiver).
-                messageStatusLabel(message.status)?.let { (label, isFailure) ->
+                if (message.text.isNotBlank()) {
                     Text(
-                        text = label,
-                        color = if (isFailure) theme.dangerColor else theme.subtleTextColor,
-                        fontSize = FutureTypography.caption
+                        text = message.text,
+                        color = ink,
+                        fontSize = FutureTypography.dialog,
+                        lineHeight = 1.35.em,
                     )
                 }
             }
         }
+        MessageMeta(message, time, theme)
     }
 }
 
-/** תווית לסטטוס שליחה + האם זו כשל (לצביעה) - null להודעות נכנסות (status == null),
- * שאין להן משמעות "האם נשלחה". */
-private fun messageStatusLabel(status: com.future.messages.data.MessageStatus?): Pair<String, Boolean>? = when (status) {
-    com.future.messages.data.MessageStatus.SENDING -> "שולח" to false
-    com.future.messages.data.MessageStatus.SENT -> "נשלח" to false
-    com.future.messages.data.MessageStatus.DELIVERED -> "נמסר" to false
-    com.future.messages.data.MessageStatus.FAILED -> "השליחה נכשלה" to true
-    null -> null
+/**
+ * השורה מתחת לבועה - 11sp בינוני, אייקון 13dp. הצבע נושא את הסטטוס: 60%
+ * בזמן שליחה, הדגשה כשיצאה, אדום כשנכשלה.
+ */
+@Composable
+private fun MessageMeta(message: Message, time: String, theme: FutureTheme) {
+    val status = message.status
+    val (icon, label, color) = when (status) {
+        null -> Triple(null, time, theme.subtleTextColor)
+        com.future.messages.data.MessageStatus.SENDING -> Triple(Icons.Rounded.Schedule, "שולח", theme.mutedTextColor)
+        com.future.messages.data.MessageStatus.SENT -> Triple(Icons.Rounded.Check, "נשלח · $time", theme.readableAccentColor)
+        com.future.messages.data.MessageStatus.DELIVERED -> Triple(Icons.Rounded.Check, "נמסר · $time", theme.readableAccentColor)
+        com.future.messages.data.MessageStatus.FAILED -> Triple(Icons.Rounded.ErrorOutline, "לא נשלח", theme.dangerColor)
+    }
+    Row(
+        modifier = Modifier.padding(horizontal = 3.dp, vertical = FutureDimens.spacingXs),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
+    ) {
+        if (icon != null) {
+            Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(13.dp))
+        }
+        Text(label, color = color, fontSize = FutureTypography.caption, fontWeight = FutureTypography.weightMedium)
+    }
 }
+
+/** 40px / 12px / 440px / 20px - הפינות, פינת הזנב, הרוחב והמרווח של הבועות בתבנית. */
+private val BubbleRadius = 20.dp
+private val BubbleTailRadius = 6.dp
+private val BubbleMaxWidth = 220.dp
+private val BubbleGap = 10.dp
 
 @Composable
 private fun MessageActionDialog(theme: FutureTheme, onForward: () -> Unit, onDelete: () -> Unit, onDismiss: () -> Unit) {

@@ -1,4 +1,5 @@
 package com.future.fitness.ui.screens
+import com.future.sharednav.components.FutureAvatar
 import com.future.sharednav.components.FutureProgressBar
 import com.future.sharednav.theme.elevatedSurfaceColor
 import com.future.sharednav.theme.idleFieldColor
@@ -233,12 +234,7 @@ fun ActiveWorkoutScreen(
                         .padding(22.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Box(
-                        modifier = Modifier.size(56.dp).background(theme.idleFieldColor, CircleShape),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(Icons.Rounded.FitnessCenter, contentDescription = null, tint = theme.textColor, modifier = Modifier.size(28.dp))
-                    }
+                    FutureAvatar(theme = theme, icon = Icons.Rounded.FitnessCenter, size = 56.dp)
                     Spacer(Modifier.height(8.dp))
                     Text(exercise.name, color = theme.textColor, fontSize = FutureTypography.screenTitle, fontWeight = FontWeight.Bold)
                     Text(
@@ -270,6 +266,7 @@ fun ActiveWorkoutScreen(
                         theme = theme,
                         modifier = Modifier.size(56.dp),
                         focusRequester = actionButtonFocusRequester,
+                        cornerRadius = FutureShapes.radiusLg,
                     ) { isFocused ->
                         Box(
                             modifier = Modifier
@@ -304,6 +301,7 @@ fun ActiveWorkoutScreen(
                         },
                         theme = theme,
                         modifier = Modifier.weight(1f).height(56.dp),
+                        cornerRadius = FutureShapes.radiusLg,
                     ) { isFocused ->
                         Row(
                             modifier = Modifier

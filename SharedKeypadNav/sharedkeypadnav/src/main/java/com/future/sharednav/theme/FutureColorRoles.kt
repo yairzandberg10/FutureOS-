@@ -61,6 +61,14 @@ val FutureTheme.elevatedSurfaceColor: Color
 val FutureTheme.raisedSurfaceColor: Color
     get() = if (isDarkMode) Color(0xFF3A3A3C) else Color(0xFFD1D1D6)
 
+/**
+ * מילוי העיגול של אווטאר (--fos-avatar-fill). צבע משלו ולא "זכוכית": אווטאר
+ * יושב גם על רקע המסך וגם על משטח/כרטיס, ו[elevatedSurfaceColor] כמעט
+ * נבלע במשטח במצב בהיר.
+ */
+val FutureTheme.avatarFillColor: Color
+    get() = if (isDarkMode) Color(0xFF3A3A3C) else Color(0xFFD3D3DC)
+
 // ---- רקעים של פוקוס ומנוחה (tokens/focus.css) ----
 // לכל רכיב יש בדיוק רקע אחד, ולא "תבנית פוקוס" כללית: שורת רשימה
 // נצבעת בהדגשה, שורת הגדרה בטקסט, ושורת תפריט בדרגה אחרת לגמרי.

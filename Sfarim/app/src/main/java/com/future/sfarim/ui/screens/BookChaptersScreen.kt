@@ -1,4 +1,8 @@
 package com.future.sfarim.ui.screens
+import com.future.sharednav.components.FutureListItem
+import com.future.sharednav.components.FutureAvatar
+import com.future.sharednav.components.FutureSectionHeader
+import com.future.sharednav.theme.FutureDimens
 
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
@@ -34,7 +38,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.future.sfarim.data.BookChapter
 import com.future.sfarim.data.LibraryBook
-import com.future.sfarim.ui.components.FocusableItem
 import com.future.sfarim.ui.components.ScreenTopBar
 
 import com.future.sharednav.nav.digitForKey
@@ -93,7 +96,7 @@ fun BookChaptersScreen(
                     ) {
                         Box(
                             modifier = Modifier
-                                .background(theme.accentColor.copy(alpha = 0.15f), FutureShapes.sm)
+                                .background(theme.accentColor.copy(alpha = 0.15f), FutureShapes.lg)
                                 .padding(horizontal = 12.dp, vertical = 6.dp),
                         ) {
                             Text("עבור אל $jumpBuffer  (# לאישור, * לניקוי)", color = theme.accentColor, fontSize = FutureTypography.summary)
@@ -114,19 +117,12 @@ fun BookChaptersScreen(
                         verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp),
                     ) {
                         itemsIndexed(chapters, key = { _, it -> it.topIndex }) { index, chapter ->
-                            FocusableItem(
-                                onClick = { onOpenChapter(chapter.topIndex) },
+                            FutureListItem(
+                                title = chapter.label,
                                 theme = theme,
-                                modifier = Modifier.fillMaxWidth(),
+                                onClick = { onOpenChapter(chapter.topIndex) },
                                 focusRequester = if (index == 0) firstFocusRequester else null,
-                            ) { _ ->
-                                Text(
-                                    chapter.label,
-                                    color = theme.textColor,
-                                    fontSize = FutureTypography.bodyLarge,
-                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 14.dp),
-                                )
-                            }
+                            )
                         }
                     }
                 }

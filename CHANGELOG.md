@@ -4,6 +4,80 @@ This repo has no carried-over git history (see root [README](README.md)), so thi
 
 ## Unreleased
 
+### Card focus, the calls redesign, Bluetooth, and a translation app
+
+Three UI kits that shipped with the design system but had no code behind them
+(`ui_kits/calls`, `ui_kits/bluetooth`, `ui_kits/translate`) are now built.
+
+- **The focus of a row inside a card** follows `SettingItem.jsx`: it fills the
+  full width of the card, the first row keeps the card's top corners, the last
+  row its bottom corners, and a middle row has none — instead of a rounded
+  pill floating inside the card with a gap on each side. A row finds where it
+  sits by measuring itself against the card (`FutureCard` + the new
+  `Modifier.cardRowFocus`), the way `Card.jsx` finds its rows through wrapper
+  elements, so nothing has to be counted by hand at the call site. Settings,
+  Clock's alarms, the call log and the new screens all pick it up.
+- **Calls** (`dialer`) was rebuilt on the kit: three tabs — יומן / מקלדת /
+  מועדפים — a keypad tab with the number, the matching contact and the 3×4
+  key grid, a contact screen with actions and the history for that number, a
+  search screen, and incoming / active / ended call screens (avatar, timer,
+  2-column control tiles, "התקשר שוב"). The options menu carries חיפוש,
+  אנשי קשר, הגדרות and נקה יומן. A digit pressed in the log or in favourites
+  jumps to the keypad with that digit, like any feature phone. Hold
+  (`Call.hold`) is a real control now, and the quick-reply list answers a
+  ringing call with a message and rejects it.
+- **Bluetooth** was rebuilt on its kit: the radio and the device name in one
+  card, paired devices with their state (`מחובר · 80%` / `מתחבר` / `מותאם`),
+  a scanning section for nearby devices, and a device screen with a hero
+  glyph, per-profile switches (שיחות ואודיו / מדיה), rename, connect and
+  forget. Connecting a paired device and switching its profiles are not public
+  Android APIs; they are attempted through the profile proxies and, on a
+  device that refuses them (`BLUETOOTH_PRIVILEGED`), the app opens the
+  system's own Bluetooth screen instead of failing silently.
+- **Translate** (`com.future.translate`, new app) — the 29th app. Translation
+  runs on the device through ML Kit: a language bar with the two capsules and
+  a swap button, an input card, a result card with השמע · העתק · שתף · שמור,
+  history with a שמורים tab, a conversation mode that speaks each side's
+  translation out loud, per-language download for offline use, and settings.
+  Each language model downloads once (~30MB); after that there is no network
+  in the loop. On a device with no speech recogniser the conversation mode
+  falls back to typing.
+- New shared components for all of the above: `FutureCapsule` /
+  `FutureRoundCapsule` (`Capsule.jsx`), `FutureSnackbar` + host
+  (`Snackbar.jsx`), and an indeterminate `FutureProgressBar` for a scan or a
+  download. `FutureSettingItem` now takes a null `onClick` for a display-only
+  row (the call history), because a row that cannot be activated must not take
+  focus.
+
+### Design-system update: corners, list rows, buttons, avatar, compose bar
+
+`design/FutureOS Design System` was updated; the code now follows it.
+
+- **Corners** (`tokens/shape.css`: "no tight corners anywhere"). 12dp is the
+  floor: `radiusXs`/`radiusSm` 4/8dp to 12dp. Text fields, tabs and chips move
+  to 16dp. List rows get their own token, `radiusRow` = 20dp
+  (`--fos-radius-row`), which is now `FocusableItem`'s default; hand-built rows
+  in Calendar, Contact, Frixa, Fitness, Sfarim, Tools and Recents use it too.
+- **List rows** are 65dp tall (`--fos-row-list` 130px, was 56dp).
+- **Buttons** are one shape: a pill at a fixed 44dp, 16sp for every variant,
+  focus ring inside the box. The quiet variant is used where the time picker
+  spec calls for it.
+- **Avatar** has its own fill, `avatarFillColor` (#3A3A3C dark / #D3D3DC
+  light), and its initials/icon are in the full text color.
+- **Spinner** is a round-capped arc over 26% of the circle.
+- **ActionGrid**: new `FutureActionCell`; the glyph is 44% of the cell height
+  (20-40dp). The dialer's call controls and Sfarim's home shortcuts use it.
+- **Time picker** (Clock): the arrows, values and colon sit on one grid
+  (52/20/52dp) instead of two stacked columns, the arrows are accent-colored,
+  and cancel is the quiet button.
+- **Message compose bar** (new template `templates/message-compose`): recipient
+  line, a pill field on the surface with attach and dictation buttons inside
+  (dictation only when the device has a speech recognizer), a 48dp accent send
+  circle, 20dp bubbles with a 6dp tail, and a status line under each message
+  (sending / sent at a time / not sent in red).
+- Music, dialer, Sfarim and Bluetooth rows moved from hand-built rows onto
+  `FutureListItem` + `FutureAvatar` (accent-tinted icon circles removed).
+
 ### Design-system audit: every app moved onto the shared components
 
 A suite-wide audit against `design/FutureOS Design System` found that most

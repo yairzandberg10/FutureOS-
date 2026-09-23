@@ -1,8 +1,9 @@
 import React from "react";
 
 /* No shared button exists in the Kotlin source. This consolidates the four patterns
-   that recur, on DialogButton's geometry: 20dp radius, 24/12dp padding, 16sp/700,
-   2dp white focus border, and 70% fill opacity when not focused. */
+   that recur, on DialogButton's geometry: pill radius, 88px tall, 16sp/700,
+   2dp white focus border (inside the box, so focus never changes the height),
+   and 70% fill opacity when not focused. */
 const FILL = {
   primary: { bg: "var(--fos-accent)", fg: "var(--fos-on-accent)", base: 1 },
   destructive: { bg: "var(--fos-danger)", fg: "var(--fos-on-accent)", base: 1 },
@@ -20,17 +21,17 @@ export function Button({ children, variant = "primary", focused = false, fullWid
       style={{
         direction: "rtl",
         fontFamily: "var(--fos-font)",
-        fontSize: quiet ? "var(--fos-size-body)" : "var(--fos-size-base)",
+        fontSize: "var(--fos-size-base)",
         fontWeight: quiet ? "var(--fos-weight-medium)" : "var(--fos-weight-bold)",
         lineHeight: 1.25,
         color: v.fg,
         background: v.bg,
         opacity: quiet ? 1 : (focused ? v.base : v.base * 0.7),
         border: focused && !quiet ? "var(--fos-focus-border-control) solid var(--fos-text)" : "var(--fos-focus-border-control) solid transparent",
-        borderRadius: quiet ? "var(--fos-radius-full)" : "var(--fos-radius-dialog)",
-        padding: quiet ? "0 var(--fos-space-9)" : "var(--fos-space-5) var(--fos-space-9)",
-        height: quiet ? 80 : "auto",
-        minHeight: quiet ? 80 : 88,
+        borderRadius: "var(--fos-radius-full)",
+        padding: "0 var(--fos-space-9)",
+        height: 88,
+        boxSizing: "border-box",
         width: fullWidth ? "100%" : "auto",
         display: "inline-flex",
         alignItems: "center",

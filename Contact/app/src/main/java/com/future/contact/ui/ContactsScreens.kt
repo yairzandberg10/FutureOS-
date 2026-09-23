@@ -300,7 +300,7 @@ private fun ContactRow(
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
     LaunchedEffect(isFocused) { if (isFocused) onFocused() }
-    val shape = FutureShapes.sm
+    val shape = FutureShapes.row
     val bgColor by animateColorAsState(
         if (isFocused) theme.readableAccentColor.copy(alpha = 0.14f) else theme.idleChipColor,
         FutureMotion.focusColorSpec,

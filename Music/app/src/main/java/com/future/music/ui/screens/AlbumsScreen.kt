@@ -1,4 +1,9 @@
 package com.future.music.ui.screens
+import com.future.sharednav.components.FutureListItem
+import com.future.sharednav.components.FutureAvatar
+import com.future.sharednav.theme.subtleTextColor
+import com.future.sharednav.theme.rememberFutureType
+import com.future.sharednav.theme.FutureDimens
 
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
@@ -30,12 +35,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.future.music.data.AlbumGroup
-import com.future.music.ui.components.FocusableItem
 import com.future.music.ui.components.ScreenTopBar
 import com.future.sharednav.theme.FutureTheme
 
 @Composable
 fun AlbumsScreen(albums: List<AlbumGroup>, theme: FutureTheme, onBack: () -> Unit, onOpenAlbum: (Long, String) -> Unit) {
+    val type = rememberFutureType()
     val firstItemFocusRequester = remember { FocusRequester() }
     LaunchedEffect(Unit) { firstItemFocusRequester.requestFocus() }
 
@@ -47,34 +52,19 @@ fun AlbumsScreen(albums: List<AlbumGroup>, theme: FutureTheme, onBack: () -> Uni
             }
         } else {
             LazyColumn(
-                modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 12.dp),
-                verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp),
+                modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = FutureDimens.screenPadding),
+                verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(FutureDimens.itemSpacing),
             ) {
                 itemsIndexed(albums, key = { _, album -> album.albumId }) { index, album ->
-                    FocusableItem(
-                        onClick = { onOpenAlbum(album.albumId, album.name) },
+                    FutureListItem(
+                        title = album.name,
+                        summary = album.artist,
                         theme = theme,
-                        modifier = Modifier.fillMaxWidth(),
+                        onClick = { onOpenAlbum(album.albumId, album.name) },
                         focusRequester = if (index == 0) firstItemFocusRequester else null,
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Box(
-                                modifier = Modifier.size(40.dp).clip(FutureShapes.sm).background(theme.accentColor.copy(alpha = 0.18f)),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Icon(Icons.Rounded.Album, contentDescription = null, tint = theme.accentColor, modifier = Modifier.size(20.dp))
-                            }
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(album.name, color = theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Medium, maxLines = 1)
-                                Text(album.artist, color = theme.textColor.copy(alpha = 0.55f), fontSize = FutureTypography.label, maxLines = 1)
-                            }
-                            Text("${album.songCount}", color = theme.textColor.copy(alpha = 0.4f), fontSize = FutureTypography.label)
-                        }
-                    }
+                        leading = { FutureAvatar(theme = theme, icon = Icons.Rounded.Album) },
+                        trailing = { Text("${album.songCount}", color = theme.subtleTextColor, fontSize = type.summary) },
+                    )
                 }
             }
         }

@@ -9,8 +9,8 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -23,7 +23,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
 import com.future.sharednav.focus.bringIntoViewOnFocus
 import com.future.sharednav.theme.FutureContrast
 import com.future.sharednav.theme.FutureDimens
@@ -40,8 +39,10 @@ import com.future.sharednav.theme.rememberFutureType
 /**
  * ארבעת סוגי הכפתור של המערכת. לא היה כאן רכיב כפתור משותף - כל מסך
  * בנה אחד בעצמו, ולכן אותו תפקיד יצא בארבעה עיצובים שונים. הגיאומטריה
- * כאן היא של כפתור הדיאלוג, שהוא זה שהופיע הכי הרבה פעמים: רדיוס 20dp,
- * ריפוד 24/12dp, 16sp מודגש, ומסגרת פוקוס 2dp בצבע הטקסט.
+ * היא של components/core/Button.jsx: גלולה מלאה בגובה קבוע של 44dp,
+ * ריפוד צד 24dp, 16sp, ומסגרת פוקוס 2dp בצבע הטקסט שמצוירת בתוך הכפתור -
+ * כך שפוקוס אף פעם לא משנה את הגובה. כל ארבעת הסוגים באותה צורה ובאותו
+ * גובה; השקט שונה רק במשקל (בינוני) ובהיעדר מסגרת.
  *
  * במנוחה הכפתור ב-70% אטימות ובפוקוס הוא מלא - כלומר הפוקוס נמסר גם
  * בעוצמת הצבע וגם במסגרת, ולא במסגרת בלבד.
@@ -122,12 +123,12 @@ internal fun FutureButtonCore(
         FutureMotion.focusColorSpec,
         label = "buttonRing",
     )
-    val shape = if (quiet) FutureShapes.pill else FutureShapes.dialog
+    val shape = FutureShapes.pill
 
     Box(
         modifier = modifier
             .then(if (fillMaxWidth) Modifier.fillMaxWidth() else Modifier)
-            .defaultMinSize(minHeight = if (quiet) QuietButtonHeight else FutureDimens.rowHeightDialogButton)
+            .height(FutureDimens.rowHeightDialogButton)
             .clip(shape)
             .alpha(opacity)
             .background(fill)
@@ -139,20 +140,15 @@ internal fun FutureButtonCore(
             .focusable(enabled = enabled, interactionSource = interactionSource)
             .bringIntoViewOnFocus()
             .clickable(interactionSource = interactionSource, indication = null, enabled = enabled, onClick = onClick)
-            .padding(
-                horizontal = FutureDimens.spacingXl,
-                vertical = if (quiet) 0.dp else FutureDimens.spacingMd,
-            ),
+            .padding(horizontal = FutureDimens.spacingXl),
         contentAlignment = Alignment.Center,
     ) {
         Text(
             text,
             color = contentColor,
-            fontSize = if (quiet) type.body else type.bodyLarge,
+            fontSize = type.bodyLarge,
+            maxLines = 1,
             fontWeight = if (quiet) FutureTypography.weightMedium else FutureTypography.weightBold,
         )
     }
 }
-
-/** 40dp - הגובה של הכפתור השקט (80px ב-components/core/Button.jsx). */
-private val QuietButtonHeight = 40.dp

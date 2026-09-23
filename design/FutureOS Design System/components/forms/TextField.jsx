@@ -1,6 +1,6 @@
 import React from "react";
 
-/* BasicTextField: 8% text background, 10dp radius, 12dp padding, 15sp text,
+/* BasicTextField: 8% text background, card radius, 12dp padding, 15sp text,
    2dp accent focus border, and a 3px accent caret. */
 export function TextField({ value, placeholder, focused = false, showCaret = true, style, ...rest }) {
   const empty = !value;

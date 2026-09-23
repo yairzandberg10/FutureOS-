@@ -40,6 +40,7 @@ object DefaultApps {
         "com.future.assistant",
         "com.future.flashlight",
         "com.future.frixa",
+        "com.future.translate",
         "com.alert.meserhadash"
     )
 

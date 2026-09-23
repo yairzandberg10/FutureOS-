@@ -1,4 +1,6 @@
 package com.future.fitness.ui.screens
+import com.future.sharednav.components.AvatarListSize
+import com.future.sharednav.components.FutureAvatar
 import com.future.sharednav.theme.elevatedSurfaceColor
 import com.future.sharednav.theme.idleFieldColor
 import com.future.sharednav.theme.idleChipColor
@@ -113,7 +115,7 @@ fun WorkoutsScreen(
         ) {
             items(DIFFICULTIES) { difficulty ->
                 val selected = difficulty == selectedDifficulty
-                FocusableItem(onClick = { selectedDifficulty = difficulty }, theme = theme) { isFocused ->
+                FocusableItem(onClick = { selectedDifficulty = difficulty }, theme = theme, cornerRadius = FutureShapes.radiusXxl) { isFocused ->
                     Box(
                         modifier = Modifier
                             .background(
@@ -208,12 +210,7 @@ private fun QuickActionCard(icon: androidx.compose.ui.graphics.vector.ImageVecto
                 .padding(14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(
-                modifier = Modifier.size(52.dp).background(theme.idleFieldColor, CircleShape),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(icon, contentDescription = null, tint = theme.textColor, modifier = Modifier.size(26.dp))
-            }
+            FutureAvatar(theme = theme, icon = icon, size = AvatarListSize)
             Spacer(Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(title, color = theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Bold, maxLines = 1)
@@ -236,12 +233,7 @@ private fun WorkoutCard(workout: Workout, weightKg: Int, theme: FutureTheme, onC
                     .padding(14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Box(
-                    modifier = Modifier.size(52.dp).background(theme.idleFieldColor, CircleShape),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(Icons.Rounded.FitnessCenter, contentDescription = null, tint = theme.textColor, modifier = Modifier.size(26.dp))
-                }
+                FutureAvatar(theme = theme, icon = Icons.Rounded.FitnessCenter, size = AvatarListSize)
                 Spacer(Modifier.width(14.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(workout.name, color = theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Bold, maxLines = 1)
@@ -269,7 +261,7 @@ private fun WorkoutCard(workout: Workout, weightKg: Int, theme: FutureTheme, onC
         }
         if (onDelete != null) {
             Spacer(Modifier.width(8.dp))
-            FocusableItem(onClick = onDelete, theme = theme, modifier = Modifier.size(44.dp)) { isFocused ->
+            FocusableItem(onClick = onDelete, theme = theme, modifier = Modifier.size(44.dp), cornerRadius = FutureShapes.radiusMd) { isFocused ->
                 Box(
                     modifier = Modifier
                         .fillMaxSize()

@@ -30,13 +30,12 @@ import com.future.sharednav.theme.FutureShapes
  * הצבעוני/צורני הוא פרמטרים פרימיטיביים (Color/Dp/Boolean) ולא תלוי בשום
  * FutureTheme ספציפי-לאפליקציה, כדי שכל אפליקציה תעביר את צבעיה.
  *
- * ברירות המחדל הן הטוקנים של המערכת: פינות [FutureShapes.radiusSm] - 8dp,
- * הדרגה שהדיזיין סיסטם קובע לשורת רשימה (--fos-radius-item ב-
+ * ברירות המחדל הן הטוקנים של המערכת: פינות [FutureShapes.radiusRow] -
+ * 20dp, הדרגה שהדיזיין סיסטם קובע לשורת רשימה (--fos-radius-row ב-
  * tokens/shape.css, ו-components/core/ListItem.jsx) - ומסגרת
  * [FutureDimens.focusBorderItem], 1.5dp, העובי שמפרט הפוקוס מייחד לשורת
- * רשימה להבדיל מפקד. (ברירת המחדל הועברה בעבר ל-16dp "כמו שורות
- * ההגדרות" - אבל 16dp היא הדרגה של כרטיס ושל שורת מחוון, לא של שורת
- * רשימה.)
+ * רשימה להבדיל מפקד. פריט שאינו שורה (מקש, אריח ברשת) מעביר את הדרגה
+ * שלו ב-[cornerRadius].
  *
  * תנועה: הרקע והמסגרת נצבעים פנימה ב-[FutureMotion.focusColorSpec] (קודם
  * המסגרת קפצה בבת אחת, רק הרקע הונפש), הפריט גדל מעט בפוקוס ומתכווץ לרגע
@@ -54,7 +53,7 @@ fun FocusableItem(
     focusedBackgroundColor: Color = accentColor.copy(alpha = 0.14f),
     borderColor: Color = accentColor,
     borderWidth: Dp = FutureDimens.focusBorderItem,
-    cornerRadius: Dp = FutureShapes.radiusSm,
+    cornerRadius: Dp = FutureShapes.radiusRow,
     scaleOnFocus: Boolean = true,
     focusedScale: Float = FutureDimens.focusScale,
     showBorderOnFocus: Boolean = true,

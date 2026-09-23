@@ -1,4 +1,8 @@
 package com.future.sfarim.ui.screens
+import com.future.sharednav.components.FutureListItem
+import com.future.sharednav.components.FutureAvatar
+import com.future.sharednav.components.FutureSectionHeader
+import com.future.sharednav.theme.FutureDimens
 
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
@@ -33,7 +37,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.future.sfarim.data.BookSearchEntry
 import com.future.sfarim.data.SegmentSearchResult
-import com.future.sfarim.ui.components.FocusableItem
 import com.future.sfarim.ui.components.ScreenTopBar
 import com.future.sharednav.focus.escapeTextFieldFocusTrap
 import com.future.sharednav.theme.FutureTheme
@@ -102,7 +105,7 @@ fun SearchScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp)
-                        .background(theme.textColor.copy(alpha = 0.08f), FutureShapes.sm)
+                        .background(theme.textColor.copy(alpha = 0.08f), FutureShapes.textField)
                         .padding(horizontal = 14.dp, vertical = 12.dp),
                 ) {
                     if (query.isEmpty()) {
@@ -136,49 +139,33 @@ fun SearchScreen(
                     }
                 } else {
                     LazyColumn(
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                        verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp),
+                        contentPadding = PaddingValues(horizontal = FutureDimens.screenPadding, vertical = FutureDimens.spacingSm),
+                        verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(FutureDimens.itemSpacing),
                     ) {
                         if (bookResults.isNotEmpty()) {
                             item {
-                                Text(
-                                    "ספרים",
-                                    color = theme.textColor.copy(alpha = 0.5f),
-                                    fontSize = FutureTypography.label,
-                                    modifier = Modifier.padding(top = 4.dp, bottom = 2.dp),
-                                )
+                                FutureSectionHeader("ספרים", theme, inset = false)
                             }
                             items(bookResults, key = { "book${it.id}" }) { entry ->
-                                FocusableItem(onClick = { onOpenBook(entry) }, theme = theme, modifier = Modifier.fillMaxWidth()) { _ ->
-                                    Text(
-                                        entry.displayTitle,
-                                        color = theme.textColor,
-                                        fontSize = FutureTypography.bodyLarge,
-                                        modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 13.dp),
-                                    )
-                                }
+                                FutureListItem(
+                                    title = entry.displayTitle,
+                                    theme = theme,
+                                    onClick = { onOpenBook(entry) },
+                                )
                             }
                         }
                         if (segmentResults.isNotEmpty()) {
                             item {
-                                Text(
-                                    "פסוקים",
-                                    color = theme.textColor.copy(alpha = 0.5f),
-                                    fontSize = FutureTypography.label,
-                                    modifier = Modifier.padding(top = 12.dp, bottom = 2.dp),
-                                )
+                                FutureSectionHeader("פסוקים", theme, inset = false)
                             }
                             items(segmentResults, key = { "seg${it.segmentId}" }) { result ->
-                                FocusableItem(onClick = { onOpenSegment(result) }, theme = theme, modifier = Modifier.fillMaxWidth()) { _ ->
-                                    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp)) {
-                                        Text(
-                                            "${result.bookTitle} · ${result.refDisplay}",
-                                            color = theme.textColor.copy(alpha = 0.5f),
-                                            fontSize = FutureTypography.caption,
-                                        )
-                                        Text(stripHtmlTags(result.snippet), color = theme.textColor, fontSize = FutureTypography.body, maxLines = 2)
-                                    }
-                                }
+                                FutureListItem(
+                                    title = "${result.bookTitle} · ${result.refDisplay}",
+                                    summary = stripHtmlTags(result.snippet),
+                                    summaryMaxLines = 2,
+                                    theme = theme,
+                                    onClick = { onOpenSegment(result) },
+                                )
                             }
                         }
                     }

@@ -1,10 +1,12 @@
 /* FutureOS corner radii. Source: FutureDimens.kt + per-component overrides.
-   Five steps plus full round. Device pixels = dp * 2. */
+   Device pixels = dp * 2. House rule: no tight corners anywhere — 24px is the
+   smallest radius in the system; text surfaces and tabs sit at 32px. */
 :root {
-  --fos-radius-item: 16px;     /* 8dp  — list row */
-  --fos-radius-textfield: 20px;/* 10dp — BasicTextField */
-  --fos-radius-tab: 24px;      /* 12dp — ViewModeTabRow item */
-  --fos-radius-chip: 28px;     /* 14dp — GalleryTabChip */
+  --fos-radius-item: 24px;     /* small controls (checkbox, action tile) */
+  --fos-radius-row: 40px;      /* 20dp — list row */
+  --fos-radius-textfield: 32px;/* BasicTextField, TextArea */
+  --fos-radius-tab: 32px;      /* ViewModeTabRow item */
+  --fos-radius-chip: 32px;     /* GalleryTabChip */
   --fos-radius-card: 32px;     /* 16dp — cardCornerRadius, slider row */
   --fos-radius-dialog: 40px;   /* 20dp — ConfirmDialog, options menu */
   --fos-radius-main: 44px;     /* 22dp — borderRadius / glassColorRadius, settings card */

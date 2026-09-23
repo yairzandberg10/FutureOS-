@@ -144,7 +144,7 @@ fun RecentAppsScreen(
 
 @Composable
 private fun RecentAppRow(app: RecentAppInfo, isFocused: Boolean, accentColor: Color, onClick: () -> Unit) {
-    val shape = FutureShapes.lg
+    val shape = FutureShapes.row
     val bgColor by animateColorAsState(
         if (isFocused) shellTheme.readableAccentColor.copy(alpha = 0.14f) else shellTheme.idleChipColor,
         FutureMotion.focusColorSpec,

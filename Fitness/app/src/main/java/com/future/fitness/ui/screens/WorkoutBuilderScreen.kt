@@ -143,6 +143,7 @@ fun WorkoutBuilderScreen(
                             onClick = { if (exercises.size > 1) exercises.removeAt(index) },
                             theme = theme,
                             modifier = Modifier.size(40.dp),
+                            cornerRadius = FutureShapes.radiusSm,
                         ) {
                             Box(
                                 modifier = Modifier

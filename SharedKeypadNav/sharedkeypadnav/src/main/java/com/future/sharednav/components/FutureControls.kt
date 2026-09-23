@@ -15,6 +15,7 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.Icon
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.Dp
 import com.future.sharednav.theme.FutureContrast
@@ -246,8 +247,8 @@ fun FutureDayChip(
 
 /**
  * ספינר - ההמתנה בלי אורך ידוע (סריקה, התחברות, שליחה). המקבילה העגולה של
- * [FutureProgressBar]: מסילה ב-10% מהטקסט, קשת של רבע עיגול בהדגשה, סיבוב
- * אחד ב-900ms (components/feedback/Spinner.jsx). מחליף את
+ * [FutureProgressBar]: מסילה ב-10% מהטקסט, קשת בהדגשה על 26% מההיקף עם
+ * קצוות מעוגלים, סיבוב אחד ב-900ms (components/feedback/Spinner.jsx). מחליף את
  * CircularProgressIndicator של Material, שקשת שלו מתארכת ומתקצרת ואין לו
  * מסילה.
  */
@@ -278,7 +279,7 @@ fun FutureSpinner(
             val arcSize = Size(this.size.width - stroke, this.size.height - stroke)
             val topLeft = Offset(inset, inset)
             drawArc(track, 0f, 360f, false, topLeft, arcSize, style = Stroke(stroke))
-            drawArc(accent, rotation - 135f, 90f, false, topLeft, arcSize, style = Stroke(stroke))
+            drawArc(accent, rotation - 90f, SpinnerSweep, false, topLeft, arcSize, style = Stroke(stroke, cap = StrokeCap.Round))
         }
         if (label != null) {
             Text(label, color = theme.mutedTextColor, fontSize = type.body)
@@ -290,11 +291,15 @@ fun FutureSpinner(
 private val SpinnerSize = 36.dp
 private val SpinnerThickness = 4.dp
 
+/** אורך הקשת - 26% מההיקף (strokeDasharray של c * 0.26 ב-Spinner.jsx). */
+private const val SpinnerSweep = 360f * 0.26f
+
 /**
  * תיבת סימון לבחירה מרובה, לחלק האחרון של שורת הגדרה או שורת רשימה
  * (components/forms/Checkbox.jsx). מסומנת = מילוי מלא בהדגשה עם סימן
- * בצבע הדיו שעליה - אותו זוג של הצ'יפ הנבחר. לא מסומנת = ריבוע ריק עם
- * מסגרת של 40% מהטקסט, שנשאר גלוי גם כשההדגשה לבנה.
+ * בצבע הדיו שעליה - אותו זוג של הצ'יפ הנבחר. לא מסומנת = ריקה עם מסגרת
+ * של 40% מהטקסט, שנשארת גלויה גם כשההדגשה לבנה. הפינות הן --fos-radius-item
+ * (12dp) על צלע של 24dp - כלומר עיגול, כמו ב-Checkbox.jsx.
  */
 @Composable
 fun FutureCheckbox(
@@ -334,6 +339,47 @@ fun FutureCheckbox(
 
 /** 24dp - הצלע של תיבת הסימון (48px ב-Checkbox.jsx). */
 private val CheckboxSize = 24.dp
+
+/**
+ * פס התקדמות בלי ערך ידוע - חיפוש מכשירים, התחברות. אותה מסילה בדיוק כמו
+ * [FutureProgressBar], ומקטע של שליש ממנה נע עליה **מימין לשמאל** בקצב
+ * לינארי, כמו כיוון ההתקדמות במערכת RTL.
+ */
+@Composable
+fun FutureIndeterminateProgressBar(
+    theme: FutureTheme,
+    modifier: Modifier = Modifier,
+    mini: Boolean = false,
+) {
+    val accent = LocalFutureAccent.current ?: theme.readableAccentColor
+    val track = theme.textAlpha(10)
+    val height = if (mini) 2.dp else 4.dp
+    val sweep by rememberInfiniteTransition(label = "progressSweep").animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(FutureMotion.ProgressSweepMillis, easing = LinearEasing)),
+        label = "progressSweepValue",
+    )
+    Canvas(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(height)
+            .clip(RoundedCornerShape(height / 2)),
+    ) {
+        val h = size.height
+        drawRoundRect(track, cornerRadius = androidx.compose.ui.geometry.CornerRadius(h / 2))
+        val segment = size.width / 3f
+        // המקטע נכנס מהשפה הימנית ויוצא מהשמאלית; החיתוך של הפס מסתיר
+        // את מה שבחוץ, כך שהוא "זורם" פנימה והחוצה.
+        val right = size.width + segment - sweep * (size.width + 2 * segment)
+        drawRoundRect(
+            accent,
+            topLeft = Offset(right - segment, 0f),
+            size = Size(segment, h),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(h / 2),
+        )
+    }
+}
 
 /**
  * פס התקדמות. 4dp (2dp בנגן), מסילה ב-10% מצבע הטקסט, והמילוי גדל
