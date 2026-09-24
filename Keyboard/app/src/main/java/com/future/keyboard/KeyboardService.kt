@@ -89,8 +89,10 @@ class KeyboardService : InputMethodService() {
         private const val MAX_VISIBLE_CANDIDATES = 12
 
         // אם אחרי שחרור 0 התמלול לא החזיר תוצאה בזמן הזה - סוגרים בכל זאת,
-        // כדי שהפאנל לא יישאר תקוע במצב "מתמלל".
-        private const val VOICE_RESULT_TIMEOUT_MS = 9_000L
+        // כדי שהפאנל לא יישאר תקוע במצב "מתמלל". Whisper המקומי (Assistant)
+        // מתמלל אחרי השחרור ועל המכשיר זה לוקח יותר מ-9 שניות למשפט ארוך -
+        // ה-timeout הקודם חתך תמלולים תקינים באמצע.
+        private const val VOICE_RESULT_TIMEOUT_MS = 40_000L
 
         private const val ASSISTANT_PACKAGE = "com.future.assistant"
     }
@@ -216,7 +218,6 @@ class KeyboardService : InputMethodService() {
     private lateinit var voiceTitle: TextView
     private lateinit var voiceSubtitle: TextView
     private lateinit var voiceWave: VoiceWaveView
-    private var micPulse: android.animation.Animator? = null
     private lateinit var legendBar: LinearLayout
     private lateinit var legendRow: LinearLayout
 
@@ -953,8 +954,7 @@ class KeyboardService : InputMethodService() {
         renderedPanelState = state
         if (state != 3) {
             voiceWave.active = false
-            micPulse?.cancel()
-            micPulse = null
+            micView.animate().cancel()
             micView.scaleX = 1f
             micView.scaleY = 1f
         }
@@ -1047,13 +1047,9 @@ class KeyboardService : InputMethodService() {
                 setOnClickListener { selectCandidate(index) }
             }
             candidatesRow.addView(chip, gap(if (index == windowStart) 0 else dp(8)))
-            if (isSelected) {
-                selectedChip = chip
-                chip.scaleX = 0.9f
-                chip.scaleY = 0.9f
-                chip.animate().scaleX(1f).scaleY(1f).setDuration(120)
-                    .setInterpolator(android.view.animation.DecelerateInterpolator()).start()
-            }
+            // בלי אנימציית "קפיצה" - השורה נבנית מחדש בכל הקשה, והאנימציה רצה
+            // על כל אות והרגישה כמו תקיעה.
+            if (isSelected) selectedChip = chip
         }
         if (windowEnd < total) candidatesRow.addView(ellipsisChip(), gap(dp(4)))
 
@@ -1190,22 +1186,9 @@ class KeyboardService : InputMethodService() {
         voiceSubtitle.text = voicePartial?.takeLast(42) ?: modeFullName(currentMode())
         voiceWave.processing = isVoiceProcessing
         if (!voiceWave.active) voiceWave.active = true
+        // בלי "נשימה" קבועה של המיקרופון - הוא מגיב רק לקול עצמו (updateVoiceLevel).
         if (isVoiceProcessing) {
-            micPulse?.cancel()
-            micPulse = null
-        } else if (micPulse == null) {
-            // "נשימה" עדינה של המיקרופון בזמן ההקלטה.
-            micPulse = android.animation.AnimatorSet().apply {
-                val sx = android.animation.ObjectAnimator.ofFloat(micView, View.SCALE_X, 1f, 1.1f)
-                val sy = android.animation.ObjectAnimator.ofFloat(micView, View.SCALE_Y, 1f, 1.1f)
-                listOf(sx, sy).forEach {
-                    it.repeatCount = android.animation.ValueAnimator.INFINITE
-                    it.repeatMode = android.animation.ValueAnimator.REVERSE
-                }
-                playTogether(sx, sy)
-                duration = 620
-                start()
-            }
+            micView.animate().scaleX(1f).scaleY(1f).setDuration(120).start()
         }
         if (isVoiceProcessing) {
             renderLegend(LegendItem("←", "ביטול"))
@@ -1217,7 +1200,10 @@ class KeyboardService : InputMethodService() {
     /** עוצמת הקול בפועל (ר' onRmsChanged) - מזינה את גלי הקול. */
     private fun updateVoiceLevel(rmsdB: Float) {
         if (!::voiceWave.isInitialized || !isListening || isVoiceProcessing) return
-        voiceWave.setLevel(((rmsdB + 2f) / 12f).coerceIn(0f, 1f))
+        val level = ((rmsdB + 2f) / 12f).coerceIn(0f, 1f)
+        voiceWave.setLevel(level)
+        val scale = 1f + 0.12f * level
+        micView.animate().scaleX(scale).scaleY(scale).setDuration(90).start()
     }
 
     private fun ellipsisChip(): TextView = TextView(this).apply {

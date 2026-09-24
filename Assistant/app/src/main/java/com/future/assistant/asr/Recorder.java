@@ -32,6 +32,12 @@ public class Recorder {
         void onDataReceived(float[] samples);
     }
 
+    /** עוצמת הקול בזמן אמת, באותה סקאלה של RecognitionListener.onRmsChanged
+     *  (בערך -2..10) - מזינה את גלי הקול במקלדת. */
+    public interface LevelListener {
+        void onLevel(float rmsdB);
+    }
+
     private static final String TAG = "Recorder";
     public static final String ACTION_STOP = "Stop";
     public static final String ACTION_RECORD = "Record";
@@ -48,6 +54,10 @@ public class Recorder {
     private final Object fileSavedLock = new Object(); // Lock object for wait/notify
 
     private volatile boolean shouldStartRecording = false;
+    // נקבע רק כשהקובץ נכתב (או שההקלטה נכשלה) - stop() מחכה לו ולא ל-notify
+    // בודד, שהיה הולך לאיבוד אם ההקלטה הסתיימה לפני ש-stop() התחיל לחכות.
+    private volatile boolean recordingFinished = true;
+    private volatile LevelListener mLevelListener;
 
     private final Thread workerThread;
 
@@ -63,6 +73,10 @@ public class Recorder {
         this.mListener = listener;
     }
 
+    public void setLevelListener(LevelListener listener) {
+        this.mLevelListener = listener;
+    }
+
     public void setFilePath(String wavFile) {
         this.mWavFilePath = wavFile;
     }
@@ -72,6 +86,7 @@ public class Recorder {
             Log.d(TAG, "Recording is already in progress...");
             return;
         }
+        recordingFinished = false;
         lock.lock();
         try {
             shouldStartRecording = true;
@@ -87,11 +102,17 @@ public class Recorder {
         // Wait for the recording thread to finish - עם timeout, כדי שקריאה
         // ל-stop() לא תיתקע לנצח אם recordAudio() זרק חריגה לפני שהספיק
         // להגיע ל-notify (למשל אם AudioRecord נכשל לאתחל).
+        long deadline = System.currentTimeMillis() + 10000;
         synchronized (fileSavedLock) {
-            try {
-                fileSavedLock.wait(10000);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt(); // Restore interrupted status
+            while (!recordingFinished) {
+                long left = deadline - System.currentTimeMillis();
+                if (left <= 0) break;
+                try {
+                    fileSavedLock.wait(left);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt(); // Restore interrupted status
+                    break;
+                }
             }
         }
     }
@@ -133,6 +154,10 @@ public class Recorder {
                 sendUpdate(e.getMessage());
             } finally {
                 mInProgress.set(false);
+                synchronized (fileSavedLock) {
+                    recordingFinished = true;
+                    fileSavedLock.notifyAll();
+                }
             }
         }
     }
@@ -170,6 +195,7 @@ public class Recorder {
         while (mInProgress.get() && totalBytesRead < bytesForThirtySeconds) {
             int bytesRead = audioRecord.read(audioData, 0, bufferSize);
             if (bytesRead > 0) {
+                reportLevel(audioData, bytesRead);
                 outputBuffer.write(audioData, 0, bytesRead);  // Save all bytes read up to 30 seconds
                 realtimeBuffer.write(audioData, 0, bytesRead); // Accumulate real-time audio data
                 totalBytesRead += bytesRead;
@@ -193,12 +219,25 @@ public class Recorder {
         WaveUtil.createWaveFile(mWavFilePath, outputBuffer.toByteArray(), sampleRateInHz, channels, bytesPerSample);
         sendUpdate(MSG_RECORDING_DONE);
 
-        // Notify the waiting thread that recording is complete
-        synchronized (fileSavedLock) {
-            fileSavedLock.notify(); // Notify that recording is finished
-        }
 
 //        moveFileToSdcard(mWavFilePath);
+    }
+
+    private void reportLevel(byte[] data, int length) {
+        LevelListener listener = mLevelListener;
+        if (listener == null) return;
+        ByteBuffer buffer = ByteBuffer.wrap(data, 0, length).order(ByteOrder.nativeOrder());
+        int count = length / 2;
+        if (count == 0) return;
+        double sum = 0;
+        for (int i = 0; i < count; i++) {
+            double v = buffer.getShort() / 32768.0;
+            sum += v * v;
+        }
+        double dbfs = 10 * Math.log10(sum / count + 1e-12);
+        // שקט בחדר ≈ -55dBFS, דיבור קרוב ≈ -12dBFS -> 0..1 -> סקאלת onRmsChanged.
+        double level = Math.max(0, Math.min(1, (dbfs + 55) / 43));
+        listener.onLevel((float) (-2 + 12 * level));
     }
 
     private float[] convertToFloatArray(ByteBuffer buffer) {

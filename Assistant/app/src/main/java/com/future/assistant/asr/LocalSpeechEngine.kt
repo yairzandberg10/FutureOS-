@@ -31,7 +31,9 @@ class LocalSpeechEngine(private val context: Context) {
         }
     }
 
-    fun startRecording() {
+    /** [onLevel] - עוצמת הקול בזמן אמת (סקאלת onRmsChanged), מ-thread ההקלטה. */
+    fun startRecording(onLevel: ((Float) -> Unit)? = null) {
+        recorder.setLevelListener(onLevel?.let { cb -> Recorder.LevelListener { cb(it) } })
         recorder.setFilePath(wavFile.absolutePath)
         recorder.start()
     }

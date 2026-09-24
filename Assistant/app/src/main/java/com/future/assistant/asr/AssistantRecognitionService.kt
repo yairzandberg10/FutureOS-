@@ -59,8 +59,17 @@ class AssistantRecognitionService : RecognitionService() {
             try {
                 // המודל עוד לא נטען (בקשה ראשונה, מיד אחרי onCreate) - מחכים לו
                 // באותו thread רקע במקום להיכשל, כדי לא "לאבד" את הבקשה הראשונה.
-                while (!modelReady) Thread.sleep(50)
-                speechEngine.startRecording()
+                // אם טעינת המודל נכשלה - לא מחכים לנצח (המקלדת הייתה נתקעת על "מקשיב…").
+                val waitUntil = System.currentTimeMillis() + MODEL_WAIT_MS
+                while (!modelReady && System.currentTimeMillis() < waitUntil) Thread.sleep(50)
+                if (!modelReady) {
+                    safeError(listener, SpeechRecognizer.ERROR_SERVER)
+                    return@execute
+                }
+                // עוצמת הקול האמיתית -> onRmsChanged אצל הלקוח (גלי הקול במקלדת).
+                speechEngine.startRecording { rms ->
+                    if (isRecording) try { listener.rmsChanged(rms) } catch (e: Exception) { /* הלקוח נסגר */ }
+                }
                 isRecording = true
                 listener.beginningOfSpeech()
             } catch (e: Exception) {
@@ -116,5 +125,6 @@ class AssistantRecognitionService : RecognitionService() {
 
     companion object {
         private const val TAG = "AssistantRecognition"
+        private const val MODEL_WAIT_MS = 60_000L
     }
 }
