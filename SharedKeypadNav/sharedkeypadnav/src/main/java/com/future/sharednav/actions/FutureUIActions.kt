@@ -38,15 +38,15 @@ object FutureUIActions {
     const val ACTION_POUND_SHORT_PRESS = "${SystemUiTarget.PACKAGE}.ACTION_POUND_SHORT_PRESS"
 
     /**
-     * נשלח מ-CallService של dialer כששיחה נכנסת מתחילה/מפסיקה לצלצל, כדי שמסך הנעילה
-     * המותאם-אישית (LockScreenAccessibilityService) יידע לפנות את עצמו זמנית - אחרת
-     * הוא היה נשאר החלון הממוקד/העליון ביותר גם מעל מסך השיחה שנפתח מתחתיו.
+     * נשלח מ-CallService של dialer כששיחה נכנסת מתחילה/מפסיקה לצלצל, כדי ששירות
+     * שורת המצב (StatusBarAccessibilityService) יידע להפנות את מקשי CALL/ENDCALL
+     * לשיחה ולפתוח את מסך השיחה כשמסך הבית בחזית.
      */
     const val ACTION_CALL_RINGING = "${SystemUiTarget.PACKAGE}.ACTION_CALL_RINGING"
     const val ACTION_CALL_ENDED = "${SystemUiTarget.PACKAGE}.ACTION_CALL_ENDED"
 
     /**
-     * נשלחים מ-LockScreenAccessibilityService אל dialer כשמקש CALL/ENDCALL הפיזי נלחץ תוך
+     * נשלחים מ-StatusBarAccessibilityService אל dialer כשמקש CALL/ENDCALL הפיזי נלחץ תוך
      * כדי שיחה מצלצלת - נחוצים כי מקש גלובלי לא בהכרח מגיע ל-onKeyDown של dialer כשהוא
      * אינו האפליקציה בחזית (למשל כשרק הבאנר heads-up מוצג מעל אפליקציה אחרת).
      */
@@ -54,7 +54,7 @@ object FutureUIActions {
     const val ACTION_REJECT_CALL = "com.future.dialer.ACTION_REJECT_CALL"
 
     /**
-     * נשלח מ-LockScreenAccessibilityService אל dialer כששיחה מתחילה לצלצל בזמן שמסך
+     * נשלח מ-StatusBarAccessibilityService אל dialer כששיחה מתחילה לצלצל בזמן שמסך
      * הבית (FutureLauncher) הוא האפליקציה בחזית - ה-fullScreenIntent הרגיל של ההתראה
      * לא מופעל אוטומטית ע"י המערכת כשהמסך דלוק ולא נעול (רק כשהוא כבוי/נעול), אז
      * זו הדרך היחידה לפתוח את מסך השיחה במסך מלא גם מעל מסך הבית.

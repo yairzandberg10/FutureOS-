@@ -7,15 +7,14 @@ import com.future.sharednav.systemui.SystemUiTarget
 
 /**
  * לקוח ל-SystemUiSettingsProvider של FutureUI - שולט ישירות בהגדרות שורת
- * המצב ומסך הנעילה בלי להפנות את המשתמש ל-FutureUI עצמה או לבקש הרשאת
+ * המצב בלי להפנות את המשתמש ל-FutureUI עצמה או לבקש הרשאת
  * נגישות מתוך ההגדרות (FutureUI מוגדרת כ-System UI בפני עצמה).
  */
 data class SystemUiSettings(
     val showBattery: Boolean,
     val showBluetooth: Boolean,
     val use24HourClock: Boolean,
-    val suppressSystemBars: Boolean,
-    val clockStyle: Int
+    val suppressSystemBars: Boolean
 )
 
 object SystemUiSettingsClient {
@@ -29,13 +28,12 @@ object SystemUiSettingsClient {
                         showBattery = cursor.getInt(cursor.getColumnIndexOrThrow("show_battery")) == 1,
                         showBluetooth = cursor.getInt(cursor.getColumnIndexOrThrow("show_bluetooth")) == 1,
                         use24HourClock = cursor.getInt(cursor.getColumnIndexOrThrow("use_24_hour_clock")) == 1,
-                        suppressSystemBars = cursor.getInt(cursor.getColumnIndexOrThrow("suppress_system_bars")) == 1,
-                        clockStyle = cursor.getInt(cursor.getColumnIndexOrThrow("clock_style"))
+                        suppressSystemBars = cursor.getInt(cursor.getColumnIndexOrThrow("suppress_system_bars")) == 1
                     )
                 } else null
-            } ?: SystemUiSettings(true, true, true, true, 0)
+            } ?: SystemUiSettings(true, true, true, true)
         } catch (e: Exception) {
-            SystemUiSettings(true, true, true, true, 0)
+            SystemUiSettings(true, true, true, true)
         }
     }
 
@@ -43,7 +41,6 @@ object SystemUiSettingsClient {
     fun setShowBluetooth(context: Context, value: Boolean) = update(context, "show_bluetooth", if (value) 1 else 0)
     fun setUse24HourClock(context: Context, value: Boolean) = update(context, "use_24_hour_clock", if (value) 1 else 0)
     fun setSuppressSystemBars(context: Context, value: Boolean) = update(context, "suppress_system_bars", if (value) 1 else 0)
-    fun setClockStyle(context: Context, value: Int) = update(context, "clock_style", value)
 
     private fun update(context: Context, key: String, value: Int) {
         try {

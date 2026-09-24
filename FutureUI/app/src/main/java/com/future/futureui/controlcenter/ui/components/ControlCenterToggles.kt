@@ -122,7 +122,8 @@ fun FocusableIcon(
     isEditMode: Boolean = false,
     isRemove: Boolean = false,
     onMenuClick: () -> Unit = {},
-    labelColor: Color = Color.Black
+    labelColor: Color = Color.Black,
+    focusRequester: FocusRequester? = null
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
@@ -149,6 +150,7 @@ fun FocusableIcon(
                         } else false
                     } else false
                 }
+                .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
                 .clickable(
                     interactionSource = interactionSource,
                     indication = null,

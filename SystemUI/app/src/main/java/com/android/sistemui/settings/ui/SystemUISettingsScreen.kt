@@ -25,58 +25,26 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.android.sistemui.controlcenter.ui.components.focusEffect
 import com.android.sistemui.dnd.DndScheduleManager
-import com.android.sistemui.lockscreen.logic.LockScreenLayoutManager
 import com.android.sistemui.statusbar.logic.StatusBarLayoutManager
-
-private val CLOCK_STYLE_LABELS = listOf("עבה ובולט", "דק ואלגנטי", "קוביה (שעות/דקות)", "בינוני")
-private val SHORTCUT_LABELS = mapOf(
-    "phone" to "טלפון",
-    "camera" to "מצלמה",
-    "flashlight" to "פנס",
-    "settings" to "הגדרות",
-    "emergency" to "חירום (בלי קוד נעילה)"
-)
-private val SHORTCUT_ORDER = listOf("phone", "camera", "flashlight", "settings", "emergency")
 
 /**
  * מסך ההתאמה האישית המרכזי של SystemUI - מרכז במקום אחד את כל ההגדרות
- * שאפשר לכוונן בכל חלקי המערכת (שורת מצב, מסך נעילה וכו'), כדי שלא יהיה
+ * שאפשר לכוונן בכל חלקי המערכת (שורת מצב וכו'), כדי שלא יהיה
  * צריך לחפש כל הגדרה בנפרד. מרכז הבקרה עצמו כבר תומך בעריכה ישירה
  * (לחיצה ארוכה בתוכו) ולכן לא מופיע כאן.
  */
 @Composable
 fun SystemUISettingsScreen(
-    modifier: Modifier = Modifier,
-    onSetPinClick: () -> Unit = {},
-    onRemovePinClick: () -> Unit = {}
+    modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val statusBarLayout = remember { StatusBarLayoutManager(context) }
-    val lockScreenLayout = remember { LockScreenLayoutManager(context) }
-    var hasPin by remember { mutableStateOf(lockScreenLayout.hasPin()) }
-
-    // מתעדכן כשחוזרים ממסך הגדרת/ביטול הקוד
-    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner) {
-        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
-            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
-                hasPin = lockScreenLayout.hasPin()
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-    }
-
     var showBattery by remember { mutableStateOf(statusBarLayout.getShowBattery()) }
     var showBluetooth by remember { mutableStateOf(statusBarLayout.getShowBluetooth()) }
     var showWifi by remember { mutableStateOf(statusBarLayout.getShowWifi()) }
     var showCellularSignal by remember { mutableStateOf(statusBarLayout.getShowCellularSignal()) }
     var use24Hour by remember { mutableStateOf(statusBarLayout.getUse24HourClock()) }
     var suppressSystemBars by remember { mutableStateOf(statusBarLayout.getSuppressSystemBars()) }
-
-    var clockStyle by remember { mutableIntStateOf(lockScreenLayout.getClockStyle()) }
-    var leftShortcut by remember { mutableStateOf(lockScreenLayout.getLeftShortcut()) }
-    var rightShortcut by remember { mutableStateOf(lockScreenLayout.getRightShortcut()) }
 
     val dndScheduleManager = remember { DndScheduleManager(context) }
     var dndScheduleEnabled by remember { mutableStateOf(dndScheduleManager.isEnabled()) }
@@ -122,40 +90,6 @@ fun SystemUISettingsScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            SettingsSection(title = "מסך נעילה") {
-                SettingsCycleRow(
-                    label = "סגנון שעון",
-                    value = CLOCK_STYLE_LABELS[clockStyle.coerceIn(0, CLOCK_STYLE_LABELS.size - 1)],
-                    onNext = {
-                        clockStyle = (clockStyle + 1) % CLOCK_STYLE_LABELS.size
-                        lockScreenLayout.saveClockStyle(clockStyle)
-                    }
-                )
-                SettingsCycleRow(
-                    label = "קיצור שמאלי",
-                    value = SHORTCUT_LABELS[leftShortcut] ?: leftShortcut,
-                    onNext = {
-                        leftShortcut = nextInOrder(leftShortcut)
-                        lockScreenLayout.saveLeftShortcut(leftShortcut)
-                    }
-                )
-                SettingsCycleRow(
-                    label = "קיצור ימני",
-                    value = SHORTCUT_LABELS[rightShortcut] ?: rightShortcut,
-                    onNext = {
-                        rightShortcut = nextInOrder(rightShortcut)
-                        lockScreenLayout.saveRightShortcut(rightShortcut)
-                    }
-                )
-                SettingsCycleRow(
-                    label = "קוד נעילה",
-                    value = if (hasPin) "מוגדר - הקש לביטול" else "לא מוגדר - הקש להגדרה",
-                    onNext = { if (hasPin) onRemovePinClick() else onSetPinClick() }
-                )
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
             SettingsSection(title = "נא לא להפריע - תזמון") {
                 SettingsToggleRow("הפעלה אוטומטית לפי שעון", dndScheduleEnabled) {
                     dndScheduleEnabled = it
@@ -187,11 +121,6 @@ fun SystemUISettingsScreen(
             )
         }
     }
-}
-
-private fun nextInOrder(current: String): String {
-    val idx = SHORTCUT_ORDER.indexOf(current)
-    return SHORTCUT_ORDER[(idx + 1).mod(SHORTCUT_ORDER.size)]
 }
 
 private fun formatMinutesOfDay(minutes: Int): String = "%02d:%02d".format(minutes / 60, minutes % 60)

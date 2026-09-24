@@ -6,7 +6,7 @@ import android.content.Intent
 import com.future.dialer.MainActivity
 
 /**
- * מקבל את מקשי CALL/ENDCALL הפיזיים ששודרו גלובלית ע"י LockScreenAccessibilityService של
+ * מקבל את מקשי CALL/ENDCALL הפיזיים ששודרו גלובלית ע"י StatusBarAccessibilityService של
  * FutureUI - נחוץ כשהמכשיר נמצא בתוך אפליקציה אחרת ורק הבאנר (heads-up) מוצג, לא מסך
  * השיחה עצמו, כי אז onKeyDown של MainActivity לא מקבל את הלחיצה בכלל (הוא לא בחזית).
  *

@@ -26,7 +26,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.android.sistemui.controlcenter.service.ControlCenterAccessibilityService
-import com.android.sistemui.lockscreen.service.LockScreenAccessibilityService
 import com.android.sistemui.notificationcenter.service.NotificationCenterAccessibilityService
 import com.android.sistemui.statusbar.service.StatusBarAccessibilityService
 import com.android.sistemui.ui.theme.SystemUITheme
@@ -45,14 +44,12 @@ class MainActivity : ComponentActivity() {
             SystemUITheme {
                 var isControlEnabled by remember { mutableStateOf(false) }
                 var isNotificationEnabled by remember { mutableStateOf(false) }
-                var isLockEnabled by remember { mutableStateOf(false) }
                 var isStatusBarEnabled by remember { mutableStateOf(false) }
 
                 // Update status when returning to app
                 LaunchedEffect(Unit) {
                     isControlEnabled = isAccessibilityServiceEnabled(this@MainActivity, ControlCenterAccessibilityService::class.java)
                     isNotificationEnabled = isAccessibilityServiceEnabled(this@MainActivity, NotificationCenterAccessibilityService::class.java)
-                    isLockEnabled = isAccessibilityServiceEnabled(this@MainActivity, LockScreenAccessibilityService::class.java)
                     isStatusBarEnabled = isAccessibilityServiceEnabled(this@MainActivity, StatusBarAccessibilityService::class.java)
                 }
 
@@ -90,7 +87,6 @@ class MainActivity : ComponentActivity() {
                         ServiceStatusRow("שורת מצב", isStatusBarEnabled)
                         ServiceStatusRow("מרכז בקרה", isControlEnabled)
                         ServiceStatusRow("מרכז התראות", isNotificationEnabled)
-                        ServiceStatusRow("מסך נעילה", isLockEnabled)
                         
                         Spacer(modifier = Modifier.height(24.dp))
                         

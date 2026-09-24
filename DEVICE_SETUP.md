@@ -81,7 +81,7 @@ adb push "Sfarim/tools/output/sefaria.db" /sdcard/Android/data/com.future.sfarim
 
 | אפליקציה | פעולה נדרשת |
 |---|---|
-| **FutureUI** | הגדרות → נגישות (Accessibility) → הפעילי את שירותי ה-Accessibility של FutureUI (status bar / lock screen / control center). אשרי הרשאת "הצג מעל אפליקציות אחרות" (`SYSTEM_ALERT_WINDOW`) ו-Notification access (עבור notification center). אותו שירות Accessibility של מסך הנעילה (`LockScreenAccessibilityService`) גם אחראי על דאבל-קליק גלובלי על OK שפותח את Assistant (עוזר קולי) מכל מסך במערכת - בלי להפעיל את השירות הזה, הקיצור הגלובלי לא יעבוד (Assistant עדיין נפתחת כרגיל כאפליקציה עצמאית מהלאנצ'ר). |
+| **FutureUI** | הגדרות → נגישות (Accessibility) → הפעילי את שירותי ה-Accessibility של FutureUI (status bar / control center / notification center). אשרי הרשאת "הצג מעל אפליקציות אחרות" (`SYSTEM_ALERT_WINDOW`) ו-Notification access (עבור notification center). שירות שורת המצב (`StatusBarAccessibilityService`) גם אחראי על דאבל-קליק גלובלי על OK שפותח את Assistant (עוזר קולי) מכל מסך במערכת, ועל מקשי CALL/ENDCALL בזמן שיחה מצלצלת - בלי להפעיל אותו, הקיצורים הגלובליים לא יעבדו (Assistant עדיין נפתחת כרגיל כאפליקציה עצמאית מהלאנצ'ר). |
 | **FutureLauncher** | לחצי על כפתור Home → בחרי FutureLauncher → "תמיד" (set as default launcher). |
 | **Keyboard** | פתחי את האפליקציה → המסך יוביל אוטומטית ל-Settings → Input methods → הפעילי את מקלדת FutureOS ובחרי אותה כברירת מחדל. באותו מסך יש גם כפתור למתן הרשאת `RECORD_AUDIO` (ל-hold-0 voice input). |
 | **dialer** | פתחי את האפליקציה — היא תבקש (`RoleManager.ROLE_DIALER`) להיות ברירת המחדל לחיוג; אשרי בדיאלוג המערכת. |

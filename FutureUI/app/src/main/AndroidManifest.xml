@@ -18,6 +18,9 @@
     <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions" />
     <!-- לצורך צ'יפ "שיחה פעילה" בשורת המצב (StatusBarScreen, TelecomManager.isInCall) -->
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <!-- גלולת "סנכרון אוטומטי" במרכז הבקרה (ContentResolver.setMasterSyncAutomatically) -->
+    <uses-permission android:name="android.permission.READ_SYNC_SETTINGS" />
+    <uses-permission android:name="android.permission.WRITE_SYNC_SETTINGS" />
 
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
@@ -92,19 +95,6 @@
             <meta-data
                 android:name="android.accessibilityservice"
                 android:resource="@xml/accessibility_service_keys" />
-        </service>
-
-        <service
-            android:name=".lockscreen.service.LockScreenAccessibilityService"
-            android:exported="true"
-            android:label="FutureUI Lock Screen"
-            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
-            <intent-filter>
-                <action android:name="android.accessibilityservice.AccessibilityService" />
-            </intent-filter>
-            <meta-data
-                android:name="android.accessibilityservice"
-                android:resource="@xml/accessibility_service_config" />
         </service>
 
         <service

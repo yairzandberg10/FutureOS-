@@ -8,12 +8,11 @@ import android.database.MatrixCursor
 import android.net.Uri
 
 /**
- * מקור אמת יחיד להגדרות שורת המצב ומסך הנעילה, נגיש מבחוץ - כדי שאפליקציית
+ * מקור אמת יחיד להגדרות שורת המצב, נגיש מבחוץ - כדי שאפליקציית
  * ההגדרות תוכל לשלוט בהן ישירות במקום להפנות את המשתמש ל-FutureUI עצמה.
- * כותב לאותם shared_prefs שהשירותים ב-FutureUI כבר קוראים מהם (status_bar_prefs,
- * lock_screen_prefs), אז שינוי מבחוץ מתעדכן אצלם בלולאת הפולינג הרגילה שלהם -
- * בלי צורך במנגנון סנכרון נוסף. לא חושף כאן כלום שקשור לקוד PIN בכוונה - זה
- * נשאר רגיש מדי בשביל ContentProvider משותף בלי הרשאות ייעודיות.
+ * כותב לאותם shared_prefs שהשירותים ב-FutureUI כבר קוראים מהם (status_bar_prefs),
+ * אז שינוי מבחוץ מתעדכן אצלם בלולאת הפולינג הרגילה שלהם -
+ * בלי צורך במנגנון סנכרון נוסף.
  */
 class SystemUiSettingsProvider : ContentProvider() {
 
@@ -25,27 +24,23 @@ class SystemUiSettingsProvider : ContentProvider() {
         const val COL_SHOW_BLUETOOTH = "show_bluetooth"
         const val COL_USE_24_HOUR_CLOCK = "use_24_hour_clock"
         const val COL_SUPPRESS_SYSTEM_BARS = "suppress_system_bars"
-        const val COL_CLOCK_STYLE = "clock_style"
     }
 
     private lateinit var statusBarPrefs: android.content.SharedPreferences
-    private lateinit var lockScreenPrefs: android.content.SharedPreferences
 
     override fun onCreate(): Boolean {
         statusBarPrefs = context!!.getSharedPreferences("status_bar_prefs", Context.MODE_PRIVATE)
-        lockScreenPrefs = context!!.getSharedPreferences("lock_screen_prefs", Context.MODE_PRIVATE)
         return true
     }
 
     override fun query(uri: Uri, projection: Array<out String>?, selection: String?, selectionArgs: Array<out String>?, sortOrder: String?): Cursor {
-        val cursor = MatrixCursor(arrayOf(COL_SHOW_BATTERY, COL_SHOW_BLUETOOTH, COL_USE_24_HOUR_CLOCK, COL_SUPPRESS_SYSTEM_BARS, COL_CLOCK_STYLE))
+        val cursor = MatrixCursor(arrayOf(COL_SHOW_BATTERY, COL_SHOW_BLUETOOTH, COL_USE_24_HOUR_CLOCK, COL_SUPPRESS_SYSTEM_BARS))
         cursor.addRow(
             arrayOf(
                 if (statusBarPrefs.getBoolean(COL_SHOW_BATTERY, true)) 1 else 0,
                 if (statusBarPrefs.getBoolean(COL_SHOW_BLUETOOTH, true)) 1 else 0,
                 if (statusBarPrefs.getBoolean(COL_USE_24_HOUR_CLOCK, true)) 1 else 0,
-                if (statusBarPrefs.getBoolean(COL_SUPPRESS_SYSTEM_BARS, true)) 1 else 0,
-                lockScreenPrefs.getInt(COL_CLOCK_STYLE, 0)
+                if (statusBarPrefs.getBoolean(COL_SUPPRESS_SYSTEM_BARS, true)) 1 else 0
             )
         )
         return cursor
@@ -59,9 +54,6 @@ class SystemUiSettingsProvider : ContentProvider() {
             if (values.containsKey(COL_USE_24_HOUR_CLOCK)) putBoolean(COL_USE_24_HOUR_CLOCK, values.getAsInteger(COL_USE_24_HOUR_CLOCK) == 1)
             if (values.containsKey(COL_SUPPRESS_SYSTEM_BARS)) putBoolean(COL_SUPPRESS_SYSTEM_BARS, values.getAsInteger(COL_SUPPRESS_SYSTEM_BARS) == 1)
         }.apply()
-        if (values.containsKey(COL_CLOCK_STYLE)) {
-            lockScreenPrefs.edit().putInt(COL_CLOCK_STYLE, values.getAsInteger(COL_CLOCK_STYLE)).apply()
-        }
         context?.contentResolver?.notifyChange(CONTENT_URI, null)
         return 1
     }

@@ -205,7 +205,8 @@ class ControlCenterAccessibilityService : AccessibilityService(), LifecycleOwner
                                     intent.setPackage(packageName)
                                     sendBroadcast(intent)
                                     mainHandler.postDelayed({ hideControlCenter() }, 50)
-                                }
+                                },
+                                onRequestClose = { hideControlCenter() }
                             )
 
                             if (powerMenuVisible.value) {

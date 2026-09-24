@@ -4,6 +4,30 @@ This repo has no carried-over git history (see root [README](README.md)), so thi
 
 ## Unreleased
 
+### Control Center pills and lock screen removal
+
+- **FutureUI: the two fixed pill rows in the Control Center are gone.** The
+  Wi-Fi/Bluetooth and airplane/DND pills are replaced by one "pills" section
+  that is empty by default. In edit mode an "add" pill appears; OK on it adds
+  a pill, Options on a pill swaps it for the next unused control, OK on a pill
+  removes it. Up to 50 pills, from a new catalog of 50 controls
+  (`controlcenter/logic/PillControls.kt`) that does not repeat any grid
+  control: 24 real toggles with state read from the system (dark theme,
+  battery saver, data saver, silent/vibrate, night light, extra dim, font
+  size, grayscale, invert colours, animations, and more — written through
+  root `settings`/`cmd`, falling back to the public API), 6 actions
+  (screenshot, screen off, media play/pause/next/previous, clear memory),
+  13 FutureOS app shortcuts and 7 system settings pages. Saved section orders
+  migrate: `toggles` becomes `pills`, `bottom_toggles` is dropped.
+- **The lock screen is deleted from FutureUI and SystemUI.** Its service,
+  screen, layout manager, PIN store and PIN screens are gone, as are the lock
+  screen rows in "התאמה אישית" and the clock style row in the Settings app
+  (`clock_style` is no longer in the SystemUI settings provider). The lock
+  screen service also handled non-lock-screen work: foreground-app tracking,
+  CALL/ENDCALL for a ringing call, opening the call screen over the home
+  screen, and double-OK for Assistant. All of that moved to
+  `StatusBarAccessibilityService`, which is always enabled.
+
 ### Performance: release builds, a quieter system shell, draw-phase focus
 
 A pass over the whole system for speed and smoothness. Nothing here changes

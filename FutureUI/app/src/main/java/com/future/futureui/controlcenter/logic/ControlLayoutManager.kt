@@ -35,7 +35,7 @@ class ControlLayoutManager(context: Context) {
         "search", "music", "account", "calendar", "security", "predictive_text"
     )
 
-    private val defaultSectionOrder = listOf("toggles", "media", "grid", "sliders", "bottom_toggles")
+    private val defaultSectionOrder = listOf("pills", "media", "grid", "sliders")
 
     fun getActiveLayout(): List<String> {
         val saved = prefs.getString("layout_ids", null)
@@ -46,31 +46,33 @@ class ControlLayoutManager(context: Context) {
         prefs.edit().putString("layout_ids", ids.joinToString(",")).apply()
     }
 
+    /** סדר שנשמר לפני הגלולות החדשות מכיל "toggles"/"bottom_toggles" (שתי שורות
+     *  הגלולות הקבועות שהוסרו) - הראשונה הופכת ל-"pills" והשנייה נמחקת. */
     fun getSectionOrder(): List<String> {
-        val saved = prefs.getString("section_order", null)
-        return saved?.split(",") ?: defaultSectionOrder
+        val saved = prefs.getString("section_order", null)?.split(",") ?: return defaultSectionOrder
+        val migrated = saved
+            .filter { it != "bottom_toggles" }
+            .map { if (it == "toggles") "pills" else it }
+            .distinct()
+        return if ("pills" in migrated) migrated else listOf("pills") + migrated
     }
 
     fun saveSectionOrder(order: List<String>) {
         prefs.edit().putString("section_order", order.joinToString(",")).apply()
     }
 
-    fun getTopToggleIds(): List<String> {
-        val saved = prefs.getString("top_toggle_ids", "wifi,bluetooth")
-        return saved?.split(",") ?: listOf("wifi", "bluetooth")
+    /** גלולות שהמשתמש הוסיף (עד PillCatalog.MAX_PILLS) - ריק כברירת מחדל. */
+    fun getPillIds(): List<String> {
+        val saved = prefs.getString("pill_ids", null) ?: return emptyList()
+        return saved.split(",").filter { PillCatalog.get(it) != null }.take(PillCatalog.MAX_PILLS)
     }
 
-    fun saveTopToggleIds(ids: List<String>) {
-        prefs.edit().putString("top_toggle_ids", ids.joinToString(",")).apply()
-    }
-
-    fun getBottomToggleIds(): List<String> {
-        val saved = prefs.getString("bottom_toggle_ids", "airplane,dnd")
-        return saved?.split(",") ?: listOf("airplane", "dnd")
-    }
-
-    fun saveBottomToggleIds(ids: List<String>) {
-        prefs.edit().putString("bottom_toggle_ids", ids.joinToString(",")).apply()
+    fun savePillIds(ids: List<String>) {
+        prefs.edit()
+            .putString("pill_ids", ids.joinToString(","))
+            .remove("top_toggle_ids")
+            .remove("bottom_toggle_ids")
+            .apply()
     }
 
     fun getControlById(id: String): ControlInfo? {

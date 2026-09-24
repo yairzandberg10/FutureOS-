@@ -144,7 +144,7 @@ val FUTURE_OS_APPS = listOf(
     FutureApp("com.future.sfarim", "ספרים", Icons.AutoMirrored.Rounded.MenuBook)
 )
 
-/** חבילת האפליקציה של FutureUI (מרכז בקרה/מסך נעילה/שורת מצב) - להתאמה אישית שלהם. */
+/** חבילת האפליקציה של FutureUI (מרכז בקרה/שורת מצב) - להתאמה אישית שלהם. */
 private const val FUTURE_UI_PACKAGE = "com.future.futureui"
 private const val FUTURE_UI_SETTINGS_ACTIVITY = "com.future.futureui.SettingsActivity"
 
@@ -267,7 +267,7 @@ private val SEARCHABLE_SETTINGS = listOf(
     SearchableSetting("חיבורים", "bluetooth בלוטות' מצב טיסה נתונים סלולריים sim מיקום location airplane", Icons.Rounded.Hub, Screen.Connections.route),
     SearchableSetting("צלילים", "עוצמת שמע צליל רינגטון volume sound ringtone", FutureIcons.AutoMirrored.VolumeUp, Screen.Sound.route),
     SearchableSetting("תצוגה", "בהירות מסך עיצוב brightness display", FutureIcons.Brightness6, Screen.Display.route),
-    SearchableSetting("מסך נעילה ורקע", "שורת מצב סטטוס בר שעון lockscreen status bar clock טפט wallpaper", Icons.Rounded.Widgets, Screen.SystemUi.route),
+    SearchableSetting("שורת מצב ורקע", "שורת מצב סטטוס בר שעון status bar clock טפט wallpaper", Icons.Rounded.Widgets, Screen.SystemUi.route),
     SearchableSetting("סוללה", "battery חיסכון טעינה אחוז", Icons.Rounded.BatteryFull, Screen.Battery.route),
     SearchableSetting("אחסון", "storage זיכרון פנוי מקום", Icons.Rounded.Storage, Screen.Storage.route),
     SearchableSetting("ביצועים ותחזוקה", "performance מעבד ram ניקוי אופטימיזציה", Icons.Rounded.Speed, Screen.Performance.route),
@@ -363,7 +363,7 @@ fun MainMenu(navController: NavController, theme: ThemeConfig, viewModel: Settin
                 item { SettingHeader("מכשיר", theme) }
                 item {
                     SettingsCard(theme) {
-                        SettingItem("מסך נעילה ורקע", "שורת מצב, שעון, טפט", Icons.Rounded.Widgets, theme) { navController.navigate(Screen.SystemUi.route) }
+                        SettingItem("שורת מצב ורקע", "שורת מצב, שעון, טפט", Icons.Rounded.Widgets, theme) { navController.navigate(Screen.SystemUi.route) }
                         SettingDivider(theme)
                         SettingItem("סוללה", "חיסכון בחשמל, אחוז טעינה", Icons.Rounded.BatteryFull, theme) { navController.navigate(Screen.Battery.route) }
                         SettingDivider(theme)
@@ -785,10 +785,10 @@ fun DisplayScreen(navController: NavController, theme: ThemeConfig, viewModel: S
                 item {
                     val context = LocalContext.current
                     SettingsCard(theme) {
-                        // FutureUI (מרכז בקרה, מסך נעילה, שורת מצב) הוא SystemUI בלי אייקון
+                        // FutureUI (מרכז בקרה, שורת מצב) הוא SystemUI בלי אייקון
                         // ברשימת האפליקציות - בלי הפריט הזה אין דרך להגיע להגדרות שלו
                         // מלבד קוד ה-PIN שקבור במסך "אבטחה" (ראו SecurityScreen).
-                        SettingItem("ממשק המערכת", "מרכז בקרה, מסך נעילה ושורת מצב", Icons.Rounded.Widgets, theme) {
+                        SettingItem("ממשק המערכת", "מרכז בקרה ושורת מצב", Icons.Rounded.Widgets, theme) {
                             safeStartActivity(
                                 context,
                                 Intent().setClassName(FUTURE_UI_PACKAGE, FUTURE_UI_SETTINGS_ACTIVITY),
@@ -921,7 +921,6 @@ fun ColorPicker(currentColor: Color, theme: ThemeConfig, onColorChange: (Color) 
 fun SystemUiScreen(navController: NavController, theme: ThemeConfig, viewModel: SettingsViewModel) {
     val context = LocalContext.current
     var settings by remember { mutableStateOf(com.future.settings.theme.SystemUiSettingsClient.get(context)) }
-    val clockStyleNames = listOf("קלאסי", "דיגיטלי", "מינימלי", "גדול")
 
     fun reload() { settings = com.future.settings.theme.SystemUiSettingsClient.get(context) }
 
@@ -932,7 +931,7 @@ fun SystemUiScreen(navController: NavController, theme: ThemeConfig, viewModel: 
 
     Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
         Column {
-            SmallHeader("מסך נעילה ורקע", theme) { navController.popBackStack() }
+            SmallHeader("שורת מצב ורקע", theme) { navController.popBackStack() }
             LazyColumn {
                 item { SettingHeader("שורת מצב", theme) }
                 item {
@@ -952,16 +951,6 @@ fun SystemUiScreen(navController: NavController, theme: ThemeConfig, viewModel: 
                         SettingSwitch("הסתר סרגלי מערכת", "מסתיר את סרגל הניווט המקורי של אנדרואיד", settings.suppressSystemBars, {
                             com.future.settings.theme.SystemUiSettingsClient.setSuppressSystemBars(context, it); reload()
                         }, theme)
-                    }
-                }
-                item { SettingHeader("מסך נעילה", theme) }
-                item {
-                    SettingsCard(theme) {
-                        SettingItem("סגנון שעון", clockStyleNames.getOrElse(settings.clockStyle) { "קלאסי" }, FutureIcons.Schedule, theme) {
-                            val next = (settings.clockStyle + 1) % clockStyleNames.size
-                            com.future.settings.theme.SystemUiSettingsClient.setClockStyle(context, next)
-                            reload()
-                        }
                     }
                 }
                 item { SettingHeader("רקע מסך", theme) }

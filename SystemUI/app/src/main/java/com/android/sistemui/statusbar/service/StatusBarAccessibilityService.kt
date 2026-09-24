@@ -11,6 +11,7 @@ import android.media.AudioManager
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.util.Log
 import android.view.Gravity
 import android.view.KeyEvent
@@ -39,6 +40,7 @@ import com.android.sistemui.statusbar.ui.VolumeOverlay
 import com.android.sistemui.theme.ThemeProvider
 import com.android.sistemui.ui.theme.SystemUITheme
 import com.android.sistemui.utils.SystemUIActions
+import com.android.sistemui.utils.SystemUIState
 
 /**
  * שירות "עמוד השדרה" של FutureOS: מציג שורת מצב קבועה (לא רק לפי דרישה, כמו שאר
@@ -97,6 +99,35 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
         }
     }
 
+    // מוגדר ע"י שידורי ACTION_CALL_RINGING/ACTION_CALL_ENDED מ-CallService של dialer -
+    // ראו SystemUIActions.ACTION_CALL_RINGING לפירוט. כל עוד שיחה מצלצלת, מקשי
+    // CALL/ENDCALL עונים/דוחים אותה מכל מסך, ודאבל-קליק על OK לא פותח את העוזר.
+    @Volatile
+    private var suppressForActiveCall = false
+
+    private val callReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            when (intent?.action) {
+                SystemUIActions.ACTION_CALL_RINGING -> {
+                    suppressForActiveCall = true
+                    // ה-fullScreenIntent הרגיל של ההתראה מופעל אוטומטית ע"י המערכת רק
+                    // כשהמסך כבוי - כשמסך הבית עצמו הוא האפליקציה בחזית צריך לפתוח את
+                    // מסך השיחה במפורש כדי שגם שם השיחה תתקבל במסך מלא, לא רק כהתראה.
+                    if (SystemUIState.foregroundPackage == HOME_PACKAGE) {
+                        sendBroadcast(Intent(SystemUIActions.ACTION_LAUNCH_CALL_UI).setPackage(DIALER_PACKAGE))
+                    }
+                }
+                SystemUIActions.ACTION_CALL_ENDED -> suppressForActiveCall = false
+            }
+        }
+    }
+
+    // דאבל-קליק גלובלי על OK (בכל מסך במערכת) פותח את העוזר הקולי. הלחיצה
+    // הראשונה תמיד עוברת הלאה מיד בלי לחכות - רק אם מגיעה לחיצה שנייה בתוך
+    // החלון נבלע אותה (כדי שהאפליקציה מתחת לא תפעיל את הפעולה שלה פעמיים).
+    private var lastOkDownTime = 0L
+    private var swallowNextOkUp = false
+
     private val lifecycleRegistry = LifecycleRegistry(this)
     private val savedStateRegistryController = SavedStateRegistryController.create(this)
     private val store = ViewModelStore()
@@ -130,6 +161,19 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
             } else {
                 registerReceiver(batteryLowReceiver, batteryLowFilter)
             }
+
+            // ACTION_CALL_RINGING/ENDED מגיעים משידור מפורש (setPackage) של dialer -
+            // מ-API 33 חובה להצהיר EXPORTED כדי לקבל שידור כזה מאפליקציה אחרת.
+            val callFilter = IntentFilter().apply {
+                addAction(SystemUIActions.ACTION_CALL_RINGING)
+                addAction(SystemUIActions.ACTION_CALL_ENDED)
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                registerReceiver(callReceiver, callFilter, Context.RECEIVER_EXPORTED)
+            } else {
+                @Suppress("UnspecifiedRegisterReceiverFlag")
+                registerReceiver(callReceiver, callFilter)
+            }
         } catch (e: Exception) {
             Log.e("SystemUI", "Error in StatusBar onCreate", e)
         }
@@ -144,7 +188,11 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
         showStatusBar()
     }
 
-    override fun onAccessibilityEvent(event: AccessibilityEvent?) {}
+    override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        if (event?.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+            event.packageName?.toString()?.let { SystemUIState.foregroundPackage = it }
+        }
+    }
     override fun onInterrupt() {}
 
     override fun onKeyEvent(event: KeyEvent): Boolean {
@@ -169,16 +217,11 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
         }
 
         // לחיצה ארוכה על מקש Options/Menu פותחת "אפליקציות אחרונות" מכל מקום
-        // בטלפון - חוץ ממסך הנעילה, ששם לאותו מקש כבר יש משמעות (מצב עריכה).
-        // כשמסך הנעילה גלוי לא נוגעים במקש בכלל, כדי שהוא יגיע אליו כרגיל.
-        // לחיצה קצרה (משוחררת לפני שהריצה הארוכה הספיקה לרוץ) לא עושה כלום
+        // בטלפון. לחיצה קצרה (משוחררת לפני שהריצה הארוכה הספיקה לרוץ) לא עושה כלום
         // בעצמה - במקום זאת משודרת ב-ACTION_OPTIONS_SHORT_PRESS כדי שהאפליקציה
         // שבחזית תוכל להגיב (למשל לפתוח תפריט משלה), כי המקש עצמו תמיד נחסם
         // כאן ולא יכול להגיע לאף אפליקציה בשום צורה אחרת.
         if (keyCode == KeyEvent.KEYCODE_MENU || keyCode == KeyEvent.KEYCODE_SETTINGS) {
-            if (com.android.sistemui.utils.SystemUIState.isLockScreenVisible) {
-                return super.onKeyEvent(event)
-            }
             if (event.action == KeyEvent.ACTION_DOWN) {
                 if (event.repeatCount == 0) {
                     recentAppsTriggered = false
@@ -194,7 +237,44 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
             return true
         }
 
+        // מקשי CALL/ENDCALL הפיזיים חייבים לענות/לדחות שיחה מצלצלת גם כשה-dialer אינו
+        // בחזית. לא נצרכים, כדי לא לשבור את הטיפול הישיר ב-dialer כשהוא כן בחזית -
+        // answer/reject אידמפוטנטיים.
+        if (suppressForActiveCall && event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+            when (keyCode) {
+                KeyEvent.KEYCODE_CALL -> sendBroadcast(Intent(SystemUIActions.ACTION_ANSWER_CALL).setPackage(DIALER_PACKAGE))
+                KeyEvent.KEYCODE_ENDCALL -> sendBroadcast(Intent(SystemUIActions.ACTION_REJECT_CALL).setPackage(DIALER_PACKAGE))
+            }
+        }
+
+        val isOkKey = keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER
+        if (isOkKey && !suppressForActiveCall) {
+            if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                val now = SystemClock.elapsedRealtime()
+                if (lastOkDownTime != 0L && now - lastOkDownTime < DOUBLE_CLICK_WINDOW_MS) {
+                    lastOkDownTime = 0L
+                    swallowNextOkUp = true
+                    launchVoiceAssistant()
+                    return true
+                }
+                lastOkDownTime = now
+            } else if (event.action == KeyEvent.ACTION_UP && swallowNextOkUp) {
+                swallowNextOkUp = false
+                return true
+            }
+        }
+
         return super.onKeyEvent(event)
+    }
+
+    private fun launchVoiceAssistant() {
+        try {
+            val intent = packageManager.getLaunchIntentForPackage(VOICE_ASSISTANT_PACKAGE) ?: return
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            startActivity(intent)
+        } catch (e: Exception) {
+            Log.e("SystemUI", "Failed to launch voice assistant", e)
+        }
     }
 
     /** לחיצה קצרה על Options/Menu - לא סקופ לחבילה שלנו בכוונה (בניגוד ל-
@@ -483,6 +563,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
         } catch (e: Exception) {}
         try {
             unregisterReceiver(batteryLowReceiver)
+            unregisterReceiver(callReceiver)
         } catch (e: Exception) {}
         try {
             themePrefs.unregisterOnSharedPreferenceChangeListener(themePrefsListener)
@@ -490,5 +571,12 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
         store.clear()
         super.onDestroy()
+    }
+
+    companion object {
+        private const val VOICE_ASSISTANT_PACKAGE = "com.future.assistant"
+        private const val DIALER_PACKAGE = "com.future.dialer"
+        private const val HOME_PACKAGE = "com.future.futurelauncher"
+        private const val DOUBLE_CLICK_WINDOW_MS = 300L
     }
 }
