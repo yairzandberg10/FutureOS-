@@ -21,11 +21,13 @@ class LibraryRepository(private val db: SQLiteDatabase) {
     }
 
     companion object {
-        /** תנאי EXISTS על ספר בשם החלופי b - "יש לספר הזה טקסט בפועל". כ-14% מהספרים
-         * בסכמת ספריא (875 מתוך 6211) נוצרו מהתוכן העניינים אבל בלי שום קטע טקסט
-         * (אין להם גרסה עברית בייצוא), ובלי הסינון הזה הם מופיעים ברשימות ונפתחים
-         * למסך ריק עם "אין תוכן זמין בפרק זה". הבדיקה היא חיפוש באינדקס
-         * idx_segments_book - זולה גם על טבלה של ~1.75 מיליון שורות. */
+        /** תנאי EXISTS על ספר בשם החלופי b - "יש לספר הזה טקסט בפועל". ספר שנוצר
+         * מתוכן העניינים של ספריא אבל שום קטע טקסט לא נכנס אליו מופיע אחרת
+         * ברשימות ונפתח למסך ריק עם "אין תוכן זמין בפרק זה". הבדיקה היא חיפוש
+         * באינדקס idx_segments_book - זולה גם על טבלה של מיליוני שורות.
+         *
+         * (עד שהייבוא למד לקרוא ספרים מורכבים היו כאן 875 ספרים כאלה מתוך 6211,
+         * כלומר 14% מהספרייה; היום נשארים רק בודדים שאין להם טקסט עברי כלל.) */
         private const val BOOK_HAS_SEGMENTS =
             "EXISTS (SELECT 1 FROM segments s WHERE s.book_id = b.id)"
     }
@@ -104,9 +106,40 @@ class LibraryRepository(private val db: SQLiteDatabase) {
         rootCategory = c.getString(6),
     )
 
+    /** האם ה-DB שבמכשיר נבנה עם טבלת chapters (ספרים מורכבים). קובץ ישן יותר
+     * עדיין נפתח ועובד - פשוט בלי החלוקה לחלקים - במקום לקרוס על "no such table". */
+    private val hasChaptersTable: Boolean by lazy {
+        db.rawQuery("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'chapters'", null)
+            .use { it.moveToFirst() }
+    }
+
     /** עצמאי (לא תלוי באובייקט LibraryBook שנטען אסינכרונית בנפרד) - שולף את
-     * section_names בעצמו, כדי שלא תהיה שרשרת תלות בין שתי טעינות אסינכרוניות. */
+     * section_names בעצמו, כדי שלא תהיה שרשרת תלות בין שתי טעינות אסינכרוניות.
+     *
+     * ספר מורכב (ר' BookChapter) מביא את הפרקים מטבלת chapters עם התווית והחלק
+     * שאליו הם שייכים; ספר פשוט נגזר כמקודם מ-DISTINCT top_index. */
     fun getChapters(bookId: Long): List<BookChapter> {
+        if (hasChaptersTable) {
+            val chapters = db.rawQuery(
+                "SELECT top_index, group_path, label, number FROM chapters WHERE book_id = ? ORDER BY top_index",
+                arrayOf(bookId.toString()),
+            ).use { c ->
+                buildList {
+                    while (c.moveToNext()) {
+                        add(
+                            BookChapter(
+                                bookId = bookId,
+                                topIndex = c.getInt(0),
+                                label = c.getString(2),
+                                groupPath = parseStringList(c.getString(1)),
+                                number = if (c.isNull(3)) null else c.getInt(3),
+                            )
+                        )
+                    }
+                }
+            }
+            if (chapters.isNotEmpty()) return chapters
+        }
         val sectionNames = db.rawQuery("SELECT section_names FROM books WHERE id = ?", arrayOf(bookId.toString()))
             .use { c -> if (c.moveToFirst()) parseStringList(c.getString(0)) else emptyList() }
         val cursor = db.rawQuery(

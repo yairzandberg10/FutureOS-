@@ -196,16 +196,20 @@ def build_category_tree(conn: sqlite3.Connection, toc: list) -> dict:
 
 
 def build_hebrew_text_map(books_json: dict) -> dict:
-    """title -> best Hebrew json_url (prefers versionTitle == 'merged')."""
+    """title -> Hebrew json_urls to try, the 'merged' version first. More than
+    one because books.json sometimes lists a merged file that is not actually in
+    the bucket (Chovat HaTalmidim: 404) - the next version of the same book is a
+    better fallback than dropping it from the library."""
     by_title = {}
     for b in books_json["books"]:
         if b.get("language") != "Hebrew":
             continue
-        title = b["title"]
-        is_merged = b.get("versionTitle", "").lower() == "merged"
-        if title not in by_title or (is_merged and not by_title[title][1]):
-            by_title[title] = (b["json_url"], is_merged)
-    return {title: url for title, (url, _merged) in by_title.items()}
+        urls = by_title.setdefault(b["title"], [])
+        if b.get("versionTitle", "").lower() == "merged":
+            urls.insert(0, b["json_url"])
+        else:
+            urls.append(b["json_url"])
+    return by_title
 
 
 def flatten_text(node, section_names, path, out):
@@ -322,8 +326,16 @@ def split_complex_book(title_he: str, parts: list):
     return segments, chapters, book_section_names
 
 
-def fetch_book_text(title: str, json_url: str, index_cache_dir: Path):
-    data = fetch_json(json_url)
+def fetch_book_text(title: str, json_urls, index_cache_dir: Path):
+    if isinstance(json_urls, str):
+        json_urls = [json_urls]
+    for attempt, url in enumerate(json_urls):
+        try:
+            data = fetch_json(url)
+            break
+        except RuntimeError:
+            if attempt == len(json_urls) - 1:
+                raise
     title_he = data.get("heTitle")
     text = data.get("text")
     if isinstance(text, dict):
@@ -451,7 +463,7 @@ def main():
     print("[3/4] building/verifying category tree (idempotent) ...", flush=True)
     book_category = build_category_tree(conn, toc)
 
-    to_import = [(title, url) for title, url in hebrew_map.items() if title in book_category]
+    to_import = [(title, urls) for title, urls in hebrew_map.items() if title in book_category]
     if args.limit:
         to_import = to_import[: args.limit]
     pending = [(t, u) for t, u in to_import if not already_imported(conn, t)]

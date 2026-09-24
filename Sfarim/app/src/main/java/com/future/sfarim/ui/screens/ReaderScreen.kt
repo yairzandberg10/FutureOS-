@@ -89,6 +89,10 @@ import kotlinx.coroutines.launch
 fun ReaderScreen(
     book: LibraryBook,
     topIndex: Int,
+    // שם הפרק מרשימת הפרקים של הספר (BookChapter.fullLabel) - חובה בספר מורכב,
+    // שבו אין קשר בין top_index למספור שהמשתמש מכיר. null עד שהרשימה נטענת,
+    // ואז נגזר מ-section_names כמו תמיד.
+    chapterLabel: String? = null,
     segments: List<LibrarySegment>,
     // true כל עוד שאילתת הקטעים עדיין רצה. בלי זה, "אין תוכן זמין בפרק זה"
     // מוצג בכל כניסה לפרק בזמן הקריאה מה-DB (קובץ של ~2GB על אחסון של מכשיר
@@ -146,7 +150,8 @@ fun ReaderScreen(
         commentaryResults = if (prefix != null) onLoadCommentaries(prefix) else null
     }
 
-    val chapterLabel = remember(book, topIndex) { HebrewNumerals.chapterLabel(book.sectionNames, topIndex) }
+    val displayChapterLabel = chapterLabel
+        ?: remember(book, topIndex) { HebrewNumerals.chapterLabel(book.sectionNames, topIndex) }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Box(
@@ -173,7 +178,7 @@ fun ReaderScreen(
                 },
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                ScreenTopBar(title = "${book.displayTitle} · $chapterLabel", theme = theme, onBack = onBack)
+                ScreenTopBar(title = "${book.displayTitle} · $displayChapterLabel", theme = theme, onBack = onBack)
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp),
                     horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween,
@@ -266,7 +271,7 @@ fun ReaderScreen(
             if (showPageMenu) {
                 val anchor = segments.firstOrNull()
                 ContentOptionsMenu(
-                    refDisplay = "${book.displayTitle} · $chapterLabel",
+                    refDisplay = "${book.displayTitle} · $displayChapterLabel",
                     contentLabel = book.contentLabel,
                     isBookmarked = anchor?.id in bookmarkedSegmentIds,
                     theme = theme,
@@ -277,7 +282,13 @@ fun ReaderScreen(
                         val fullText = segments.joinToString("\n\n") { stripHtmlTags(it.textHe) }
                         shareText(context, "${book.displayTitle} · $chapterLabel\n\n$fullText")
                     },
-                    onShowCommentaries = { showPageMenu = false; commentaryPrefix = listOf(topIndex) },
+                    onShowCommentaries = {
+                        showPageMenu = false
+                        // בספר מורכב top_index הוא מספור רץ של הספר כולו ולא path[0]
+                        // של הקטע - התאמת המפרשים (ר' getCommentaries) חייבת לצאת
+                        // מה-path של הקטע הראשון בעמוד.
+                        commentaryPrefix = segments.firstOrNull()?.path?.take(1) ?: listOf(topIndex)
+                    },
                     onIncreaseFont = { fontSize = (fontSize + 2f).coerceAtMost(32f) },
                     onDecreaseFont = { fontSize = (fontSize - 2f).coerceAtLeast(12f) },
                 )
@@ -377,7 +388,7 @@ private fun ContentOptionsMenu(
             onToggleBookmark,
         )
         FutureMenuRow("שתף $contentLabel", FutureIcons.Share, theme, onShare)
-        FutureMenuRow("מפרשים על ה$contentLabel", Icons.AutoMirrored.Rounded.Comment, theme, onShowCommentaries)
+        FutureMenuRow("מפרשים על ה$contentLabel", FutureIcons.Forum, theme, onShowCommentaries)
         FutureMenuRow("הגדל גופן", Icons.Rounded.TextIncrease, theme, onIncreaseFont)
         FutureMenuRow("הקטן גופן", Icons.Rounded.TextDecrease, theme, onDecreaseFont)
     }

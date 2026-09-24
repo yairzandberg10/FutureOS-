@@ -11,6 +11,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import com.future.sfarim.data.LibraryRepository
 import com.future.sfarim.ui.screens.BookChaptersScreen
+import com.future.sfarim.ui.screens.ChapterEntry
+import com.future.sfarim.ui.screens.chapterEntries
 import com.future.sfarim.ui.screens.BookmarksScreen
 import com.future.sfarim.ui.screens.BrowseScreen
 import com.future.sfarim.ui.screens.HomeScreen
@@ -41,14 +43,21 @@ fun LibraryNavHost(repository: LibraryRepository, theme: FutureTheme) {
     fun pop() { if (backStack.size > 1) backStack.removeAt(backStack.lastIndex) }
 
     /** פותח ספר: אם יש רק "פרק" אחד (או אפס, למשל טקסט קצר בלי חלוקה) קופצים
-     * ישר לקורא, אחרת מציגים את רשימת הפרקים. */
+     * ישר לקורא, אחרת מציגים את רשימת הפרקים - ובספר שכולו חלק אחד ("שולחן
+     * ערוך" שיש בו רק אורח חיים למשל) יורדים ישר לתוכו, בלי מסך שיש בו פריט
+     * בודד שהמשתמש חייב ללחוץ עליו. */
     fun openBook(bookId: Long) {
         scope.launch {
             val chapters = withContext(Dispatchers.IO) { repository.getChapters(bookId) }
             if (chapters.size <= 1) {
                 push(Route.Reader(bookId, chapters.firstOrNull()?.topIndex ?: 1))
             } else {
-                push(Route.BookChapters(bookId))
+                var groupPath = emptyList<String>()
+                while (true) {
+                    val only = chapterEntries(chapters, groupPath).singleOrNull()
+                    if (only is ChapterEntry.Part) groupPath = only.path else break
+                }
+                push(Route.BookChapters(bookId, groupPath))
             }
         }
     }
@@ -106,10 +115,12 @@ fun LibraryNavHost(repository: LibraryRepository, theme: FutureTheme) {
                 BookChaptersScreen(
                     book = book,
                     chapters = chaptersState ?: emptyList(),
+                    groupPath = route.groupPath,
                     isLoading = chaptersState == null,
                     theme = theme,
                     onBack = ::pop,
                     onOpenChapter = { topIndex -> push(Route.Reader(route.bookId, topIndex)) },
+                    onOpenPart = { path -> push(Route.BookChapters(route.bookId, path)) },
                 )
             }
         }
@@ -120,9 +131,8 @@ fun LibraryNavHost(repository: LibraryRepository, theme: FutureTheme) {
                 repository.getSegments(route.bookId, route.topIndex)
             }
             val segments = segmentsState ?: emptyList()
-            val allChapterIndices = rememberIoState(route.bookId) {
-                repository.getChapters(route.bookId).map { c -> c.topIndex }
-            } ?: emptyList()
+            val allChapters = rememberIoState(route.bookId) { repository.getChapters(route.bookId) } ?: emptyList()
+            val allChapterIndices = remember(allChapters) { allChapters.map { c -> c.topIndex } }
             val bookmarkedIds = rememberIoState(Triple(route.bookId, route.topIndex, dataVersion)) {
                 repository.getBookmarkedSegmentIds(route.bookId)
             } ?: emptySet()
@@ -132,6 +142,10 @@ fun LibraryNavHost(repository: LibraryRepository, theme: FutureTheme) {
                 ReaderScreen(
                     book = book,
                     topIndex = route.topIndex,
+                    // בספר מורכב אי אפשר לגזור את שם הפרק מ-section_names (ר'
+                    // BookChapter) - הוא מגיע מרשימת הפרקים, ועד שהיא נטענת
+                    // הכותרת מציגה רק את שם הספר.
+                    chapterLabel = allChapters.firstOrNull { it.topIndex == route.topIndex }?.fullLabel,
                     segments = segments,
                     isLoading = segmentsState == null,
                     hasPrevChapter = currentPos > 0,

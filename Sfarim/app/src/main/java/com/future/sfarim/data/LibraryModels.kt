@@ -40,12 +40,24 @@ data class LibraryBook(
         }
 }
 
-/** פרק בתוך ספר - נגזר מ-DISTINCT top_index, לא שורה אמיתית בטבלה. */
+/** פרק בתוך ספר. בספר "פשוט" הוא נגזר מ-DISTINCT top_index ואין לו שורה
+ * משלו בטבלה; בספר "מורכב" (ערוך השולחן, סידור, עקידת יצחק - ספר שמחולק
+ * לחלקים בעלי שם) התווית וההשתייכות לחלק מגיעות מטבלת chapters, כי אי אפשר
+ * לגזור אותן מ-section_names של הספר.
+ *
+ * groupPath = שרשרת שמות החלקים שמעל הפרק (למשל ["ימי חול", "תפילת שחרית"]),
+ * ריקה בספר פשוט. number = מספר הפרק בתוך החלק שלו, לקפיצה לפי מספר -
+ * null כשהפרק הוא חלק שלם בעל שם ("הקדמה", "מודה אני"). */
 data class BookChapter(
     val bookId: Long,
     val topIndex: Int,
     val label: String,
-)
+    val groupPath: List<String> = emptyList(),
+    val number: Int? = topIndex,
+) {
+    /** התווית המלאה לכותרת מסך הקריאה - כולל שמות החלקים שמעל הפרק. */
+    val fullLabel: String get() = (groupPath + label).joinToString(", ")
+}
 
 /** קטע טקסט בודד (פסוק/הלכה/שורה) - יחידת הקריאה הבסיסית. */
 data class LibrarySegment(

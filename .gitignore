@@ -27,6 +27,11 @@ local.properties
 Sfarim/tools/output/sefaria.db*
 Sfarim/tools/output/sefaria_db_parts/
 
+# מטמון ההורדות של build_library.py (תוכן עניינים, books.json ורשומות
+# אינדקס של ספריא - כ-900 קבצים, עשרות MB). נטען מחדש מהרשת בכל מכונה,
+# ובלי השורה הזו `git add -A` של סשן אחר גורף אותו לתוך המאגר.
+Sfarim/tools/output/_cache/
+
 # קבצי crash dump של JVM (hs_err_pid*.log) - נוצרים אוטומטית כשתהליך
 # Gradle/Kotlin daemon קורס, לא חלק מהפרויקט ולא אמורים להיכנס ל-git.
 hs_err_pid*.log
