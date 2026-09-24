@@ -5,6 +5,8 @@ import android.content.ContentUris
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.ImageDecoder
 import android.net.Uri
 import android.provider.ContactsContract
 import android.provider.Telephony
@@ -22,6 +24,7 @@ import com.future.messages.mms.pdu_alt.SendReq
 import com.future.messages.receiver.MmsSentReceiver
 import com.future.messages.receiver.SmsDeliveredReceiver
 import com.future.messages.receiver.SmsSentReceiver
+import java.io.ByteArrayOutputStream
 import java.io.File
 
 /**
@@ -365,17 +368,22 @@ class SmsRepository(private val context: Context) {
             val body = PduBody()
             var imageMime: String? = null
 
+            var imageBytes: ByteArray? = null
             if (imageUri != null) {
-                imageMime = context.contentResolver.getType(imageUri) ?: "image/jpeg"
-                val bytes = context.contentResolver.openInputStream(imageUri)?.use { it.readBytes() }
-                if (bytes != null) {
-                    val imagePart = PduPart()
-                    imagePart.setContentType(imageMime.toByteArray())
-                    imagePart.setContentLocation("image.jpg".toByteArray())
-                    imagePart.setContentId("image".toByteArray())
-                    imagePart.setData(bytes)
-                    body.addPart(imagePart)
-                }
+                // ה-MmsService דוחה PDU שגדול ממגבלת הספק (לרוב 300KB-1MB) עם
+                // MMS_ERROR_IO_ERROR - תמונת מצלמה מקורית (כמה MB) תמיד נכשלת. לכן
+                // מקטינים ודוחסים ל-JPEG שנכנס במגבלה, עם מרווח לטקסט/SMIL/כותרות.
+                val budget = (mmsMaxMessageSize() - 8 * 1024 - text.toByteArray(Charsets.UTF_8).size)
+                    .coerceAtLeast(50 * 1024)
+                imageBytes = compressImageForMms(imageUri, budget)
+                imageMime = "image/jpeg"
+                val bytes = imageBytes ?: return false
+                val imagePart = PduPart()
+                imagePart.setContentType(imageMime.toByteArray())
+                imagePart.setContentLocation("image.jpg".toByteArray())
+                imagePart.setContentId("image".toByteArray())
+                imagePart.setData(bytes)
+                body.addPart(imagePart)
             }
             if (text.isNotBlank()) {
                 val textPart = PduPart()
@@ -395,7 +403,7 @@ class SmsRepository(private val context: Context) {
             smilPart.setContentId("smil".toByteArray())
             smilPart.setContentLocation("smil.xml".toByteArray())
             smilPart.setContentType("application/smil".toByteArray())
-            smilPart.setData(buildSmilDocument(hasImage = imageUri != null, hasText = text.isNotBlank()).toByteArray())
+            smilPart.setData(buildSmilDocument(hasImage = imageBytes != null, hasText = text.isNotBlank()).toByteArray())
             body.addPart(0, smilPart)
 
             sendReq.setBody(body)
@@ -426,7 +434,7 @@ class SmsRepository(private val context: Context) {
             // נרשם מיד כ-OUTBOX ("שולח...") - לא כ-SENT - כדי שהמשתמש יראה
             // משוב אמיתי; MmsSentReceiver מעדכן ל-SENT/FAILED לפי תוצאת השליחה
             // בפועל שמגיעה אסינכרונית מהמערכת.
-            val mmsId = insertPendingMms(threadId, address, text, imageUri, imageMime) ?: return false
+            val mmsId = insertPendingMms(threadId, address, text, imageBytes, imageMime) ?: return false
 
             val sentIntent = Intent(context, MmsSentReceiver::class.java).apply {
                 action = MmsSentReceiver.ACTION_MMS_SENT
@@ -463,6 +471,53 @@ class SmsRepository(private val context: Context) {
         }
     }
 
+    /** מגבלת גודל ה-MMS של הספק (מה-carrier config של המערכת); 300KB אם לא ידוע.
+     * חסום ב-1MB כי ספקים מסוימים מדווחים גבוה ממה שה-MMSC באמת מקבל. */
+    private fun mmsMaxMessageSize(): Int {
+        val fromCarrier = runCatching {
+            context.getSystemService(SmsManager::class.java)
+                .carrierConfigValues.getInt(SmsManager.MMS_CONFIG_MAX_MESSAGE_SIZE, 0)
+        }.getOrDefault(0)
+        return if (fromCarrier > 0) fromCarrier.coerceAtMost(1024 * 1024) else 300 * 1024
+    }
+
+    /** מפענח את התמונה (ImageDecoder מיישם את סיבוב ה-EXIF), מקטין לצלע ארוכה
+     * של 1280px לכל היותר, ודוחס ל-JPEG - מוריד איכות ואז רזולוציה עד שנכנס ב-maxBytes. */
+    private fun compressImageForMms(imageUri: Uri, maxBytes: Int): ByteArray? {
+        return try {
+            var maxSide = 1280
+            val source = ImageDecoder.createSource(context.contentResolver, imageUri)
+            var bitmap = ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
+                decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
+                val w = info.size.width
+                val h = info.size.height
+                val scale = maxSide.toFloat() / maxOf(w, h)
+                if (scale < 1f) decoder.setTargetSize((w * scale).toInt().coerceAtLeast(1), (h * scale).toInt().coerceAtLeast(1))
+            }
+            var result: ByteArray? = null
+            while (result == null && maxSide >= 240) {
+                for (quality in intArrayOf(85, 70, 55, 40)) {
+                    val out = ByteArrayOutputStream()
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, quality, out)
+                    if (out.size() <= maxBytes) { result = out.toByteArray(); break }
+                }
+                if (result != null) break
+                maxSide = (maxSide * 0.75f).toInt()
+                val scale = maxSide.toFloat() / maxOf(bitmap.width, bitmap.height)
+                bitmap = Bitmap.createScaledBitmap(
+                    bitmap,
+                    (bitmap.width * scale).toInt().coerceAtLeast(1),
+                    (bitmap.height * scale).toInt().coerceAtLeast(1),
+                    true
+                )
+            }
+            result
+        } catch (e: Exception) {
+            Log.e("SmsRepository", "Error compressing image for MMS", e)
+            null
+        }
+    }
+
     /** שקופית SMIL בודדת עם תמונה ו/או טקסט - תואם multipart/related. */
     private fun buildSmilDocument(hasImage: Boolean, hasText: Boolean): String {
         val body = buildString {
@@ -481,7 +536,7 @@ class SmsRepository(private val context: Context) {
     /** רושם את ה-MMS ב-content://mms במצב OUTBOX ("שולח...") כדי שיופיע מיד
      * בהיסטוריית השיחה, עוד לפני שידועה תוצאת השליחה בפועל. מחזירה את מזהה
      * השורה שנוצרה כדי ש-sendMmsMessage יוכל להעביר אותו ל-MmsSentReceiver. */
-    private fun insertPendingMms(threadId: Long, address: String, text: String, imageUri: Uri?, imageMimeType: String?): Long? {
+    private fun insertPendingMms(threadId: Long, address: String, text: String, imageBytes: ByteArray?, imageMimeType: String?): Long? {
         try {
             val mmsValues = ContentValues().apply {
                 put(Telephony.Mms.THREAD_ID, threadId)
@@ -491,7 +546,7 @@ class SmsRepository(private val context: Context) {
                 put(Telephony.Mms.MESSAGE_TYPE, PduHeaders.MESSAGE_TYPE_SEND_REQ)
                 put(Telephony.Mms.MMS_VERSION, PduHeaders.CURRENT_MMS_VERSION)
                 put(Telephony.Mms.CONTENT_TYPE, ContentType.MULTIPART_RELATED)
-                put(Telephony.Mms.TEXT_ONLY, if (imageUri == null) 1 else 0)
+                put(Telephony.Mms.TEXT_ONLY, if (imageBytes == null) 1 else 0)
             }
             val mmsUri = context.contentResolver.insert(Telephony.Mms.CONTENT_URI, mmsValues) ?: run {
                 Log.e("SmsRepository", "Failed to insert pending MMS record")
@@ -510,7 +565,7 @@ class SmsRepository(private val context: Context) {
                 context.contentResolver.insert(partsUri, textValues)
             }
 
-            if (imageUri != null) {
+            if (imageBytes != null) {
                 val imageValues = ContentValues().apply {
                     put(Telephony.Mms.Part.MSG_ID, mmsId)
                     put(Telephony.Mms.Part.CONTENT_TYPE, imageMimeType ?: "image/jpeg")
@@ -518,9 +573,7 @@ class SmsRepository(private val context: Context) {
                 }
                 val partUri = context.contentResolver.insert(partsUri, imageValues)
                 if (partUri != null) {
-                    context.contentResolver.openOutputStream(partUri)?.use { out ->
-                        context.contentResolver.openInputStream(imageUri)?.use { input -> input.copyTo(out) }
-                    }
+                    context.contentResolver.openOutputStream(partUri)?.use { out -> out.write(imageBytes) }
                 }
             }
 
