@@ -41,7 +41,7 @@ import com.future.sharednav.theme.FutureTheme
 fun ArtistsScreen(artists: List<ArtistGroup>, theme: FutureTheme, onBack: () -> Unit, onOpenArtist: (String) -> Unit) {
     val type = rememberFutureType()
     val firstItemFocusRequester = remember { FocusRequester() }
-    LaunchedEffect(Unit) { firstItemFocusRequester.requestFocus() }
+    LaunchedEffect(Unit) { runCatching { firstItemFocusRequester.requestFocus() } }
 
     Column(modifier = Modifier.fillMaxSize()) {
         ScreenTopBar(title = "אמנים", theme = theme, onBack = onBack)

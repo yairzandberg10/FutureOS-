@@ -1,5 +1,6 @@
 package com.future.music.ui.screens
 import androidx.compose.material.icons.rounded.Album
+import androidx.compose.material.icons.rounded.Equalizer
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material.icons.automirrored.rounded.QueueMusic
@@ -62,6 +63,9 @@ fun HomeScreen(
     onOpenPlaylists: () -> Unit,
     onOpenFavorites: () -> Unit,
     onOpenSearch: () -> Unit,
+    onOpenEqualizer: () -> Unit,
+    onOpenDevices: () -> Unit,
+    onOpenQueue: () -> Unit,
     onOpenNowPlaying: () -> Unit,
     onTogglePlay: () -> Unit,
     // הפריט שנפתח לאחרונה מהתפריט הזה (לפי digit) - כשחוזרים "אחורה", הפוקוס
@@ -75,7 +79,10 @@ fun HomeScreen(
         HomeItem("3", Icons.Rounded.Album, "אלבומים", "לפי אלבום", onOpenAlbums),
         HomeItem("4", Icons.AutoMirrored.Rounded.QueueMusic, "פלייליסטים", "הרשימות שלי", onOpenPlaylists),
         HomeItem("5", Icons.Rounded.Favorite, "מועדפים", "השירים שאהבת", onOpenFavorites),
-        HomeItem("6", FutureIcons.Search, "חיפוש", "חיפוש T9 מהיר", onOpenSearch),
+        HomeItem("6", FutureIcons.Search, "חיפוש", "שיר, אמן או אלבום", onOpenSearch),
+        HomeItem("7", Icons.Rounded.Equalizer, "אקולייזר", "אקולייזר מלא ואפקטים", onOpenEqualizer),
+        HomeItem("8", FutureIcons.Headphones, "התקני שמע", "Bluetooth, אוזניות ורמקולים", onOpenDevices),
+        HomeItem("9", Icons.AutoMirrored.Rounded.QueueMusic, "תור הניגון", "מה מתנגן הבא", onOpenQueue),
     )
 
     // פוקוס אוטומטי ומלא על הפריט הראשון בתפריט מיד כשהוא נפתח - בלי צורך

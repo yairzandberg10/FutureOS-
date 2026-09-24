@@ -42,7 +42,7 @@ import com.future.sharednav.theme.FutureTheme
 fun AlbumsScreen(albums: List<AlbumGroup>, theme: FutureTheme, onBack: () -> Unit, onOpenAlbum: (Long, String) -> Unit) {
     val type = rememberFutureType()
     val firstItemFocusRequester = remember { FocusRequester() }
-    LaunchedEffect(Unit) { firstItemFocusRequester.requestFocus() }
+    LaunchedEffect(Unit) { runCatching { firstItemFocusRequester.requestFocus() } }
 
     Column(modifier = Modifier.fillMaxSize()) {
         ScreenTopBar(title = "אלבומים", theme = theme, onBack = onBack)

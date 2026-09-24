@@ -16,4 +16,6 @@ sealed class Route {
     data object NowPlaying : Route()
     data object Queue : Route()
     data object Sound : Route()
+    data object Devices : Route()
+    data class PlaylistAdd(val playlistId: Long, val name: String) : Route()
 }

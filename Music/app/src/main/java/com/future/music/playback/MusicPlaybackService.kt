@@ -2,7 +2,6 @@ package com.future.music.playback
 
 import android.app.PendingIntent
 import android.content.Intent
-import android.media.audiofx.Equalizer
 import android.os.Bundle
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
@@ -27,7 +26,6 @@ import kotlinx.coroutines.flow.StateFlow
 class MusicPlaybackService : MediaSessionService() {
 
     private var mediaSession: MediaSession? = null
-    private var equalizer: Equalizer? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -43,7 +41,11 @@ class MusicPlaybackService : MediaSessionService() {
             .setWakeMode(C.WAKE_MODE_LOCAL)
             .build()
 
-        setupEqualizer(player.audioSessionId)
+        // אקולייזר מלא, באס, 3D והגברה - ופרופיל סאונד לכל התקן פלט (ר' AudioFx).
+        AudioFx.attach(this, player.audioSessionId)
+        AudioFx.onResumeRequested = {
+            if (player.mediaItemCount > 0 && !player.isPlaying) player.play()
+        }
 
         val sessionActivityIntent = packageManager?.getLaunchIntentForPackage(packageName)?.let {
             PendingIntent.getActivity(this, 0, it, PendingIntent.FLAG_IMMUTABLE)
@@ -65,8 +67,8 @@ class MusicPlaybackService : MediaSessionService() {
     }
 
     override fun onDestroy() {
-        equalizer?.release()
-        equalizer = null
+        AudioFx.onResumeRequested = null
+        AudioFx.release()
         mediaSession?.run {
             player.release()
             release()
@@ -75,39 +77,17 @@ class MusicPlaybackService : MediaSessionService() {
         super.onDestroy()
     }
 
-    private fun setupEqualizer(audioSessionId: Int) {
-        equalizer = try {
-            Equalizer(0, audioSessionId).apply { enabled = true }
-        } catch (e: Exception) {
-            null
-        }
-    }
-
+    /** הפריסטים הישנים (פקודת session) ממופים לאפקטים של AudioFx. */
     private fun applyEqPreset(preset: Int) {
-        val eq = equalizer ?: return
-        try {
-            // עדכון המקור-האמת המשותף - כדי ש-SoundScreen יוכל לאתחל את הבחירה
-            // המודגשת לפי הפריסט האמיתי הפעיל, גם אחרי חזרה למסך מבלי לעבור
-            // דרך המסך הזה (בלי זה הוא תמיד אתחל בטעות ל"רגיל").
-            _currentEqPreset.value = preset
-            val bands = eq.numberOfBands
-            val maxLevel: Int = eq.bandLevelRange[1].toInt()
-            val minLevel: Int = eq.bandLevelRange[0].toInt()
-            val partialLevel: Int = maxLevel / 3
-            for (b in 0 until bands) {
-                val band = b.toShort()
-                val centerFreqHz = eq.getCenterFreq(band) / 1000
-                val level: Int = when (preset) {
-                    EQ_PRESET_BASS -> if (centerFreqHz < 500) maxLevel else partialLevel
-                    EQ_PRESET_TREBLE -> if (centerFreqHz > 4000) maxLevel else partialLevel
-                    EQ_PRESET_VOCAL -> if (centerFreqHz in 1000..4000) maxLevel else partialLevel
-                    else -> 0
-                }
-                eq.setBandLevel(band, level.coerceIn(minLevel, maxLevel).toShort())
+        _currentEqPreset.value = preset
+        AudioFx.useEffect(
+            when (preset) {
+                EQ_PRESET_BASS -> AudioFx.Effect.BASS
+                EQ_PRESET_TREBLE -> AudioFx.Effect.CLEAR
+                EQ_PRESET_VOCAL -> AudioFx.Effect.VOCAL
+                else -> AudioFx.Effect.FLAT
             }
-        } catch (e: Exception) {
-            android.util.Log.e("MusicPlaybackService", "Error applying EQ preset", e)
-        }
+        )
     }
 
     private val sessionCallback = object : MediaSession.Callback {

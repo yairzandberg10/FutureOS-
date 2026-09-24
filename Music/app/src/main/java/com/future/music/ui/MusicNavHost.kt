@@ -1,5 +1,6 @@
 package com.future.music.ui
 
+import com.future.sharednav.icons.FutureIcons
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -25,6 +26,8 @@ import com.future.music.data.PlaylistStore
 import com.future.music.data.SongRepository
 import com.future.music.playback.PlayerController
 import com.future.music.ui.components.ConfirmDialog
+import com.future.music.ui.components.NameInputDialog
+import androidx.compose.runtime.DisposableEffect
 import com.future.music.ui.screens.AlbumsScreen
 import com.future.music.ui.screens.ArtistsScreen
 import com.future.music.ui.screens.HomeScreen
@@ -33,7 +36,9 @@ import com.future.music.ui.screens.PlaylistsScreen
 import com.future.music.ui.screens.QueueScreen
 import com.future.music.ui.screens.SearchScreen
 import com.future.music.ui.screens.SongListScreen
-import com.future.music.ui.screens.SoundScreen
+import com.future.music.ui.screens.EqualizerScreen
+import com.future.music.ui.screens.AudioDevicesScreen
+import com.future.music.ui.screens.PlaylistAddSongsScreen
 import com.future.sharednav.theme.FutureTheme
 import kotlinx.coroutines.delay
 
@@ -56,7 +61,44 @@ fun MusicNavHost(
     fun push(route: Route) = backStack.add(route)
     fun pop() { if (backStack.size > 1) backStack.removeAt(backStack.lastIndex) }
 
-    val allSongs = rememberIoState(Unit) { repository.getAllSongs() } ?: emptyList()
+    // גרסת הספרייה - עולה כשמשהו משתנה ב-MediaStore (שיר שהורד, הקלטה חדשה,
+    // קובץ שנמחק) או כשחוזרים לאפליקציה, והרשימות נטענות מחדש לבד.
+    var libraryVersion by remember { mutableIntStateOf(0) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    DisposableEffect(Unit) {
+        val handler = android.os.Handler(android.os.Looper.getMainLooper())
+        val bump = Runnable { libraryVersion++ }
+        val observer = object : android.database.ContentObserver(handler) {
+            override fun onChange(selfChange: Boolean) {
+                // שינויים מגיעים בצרורות (סריקה של תיקייה) - טעינה אחת בסוף.
+                handler.removeCallbacks(bump)
+                handler.postDelayed(bump, 800)
+            }
+        }
+        context.contentResolver.registerContentObserver(android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, true, observer)
+        onDispose {
+            handler.removeCallbacks(bump)
+            context.contentResolver.unregisterContentObserver(observer)
+        }
+    }
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val obs = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                kotlin.concurrent.thread { runCatching { repository.scanMediaFolders() } }
+                libraryVersion++
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(obs)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(obs) }
+    }
+    // הרשימה הקודמת נשארת עד שהחדשה מוכנה - בלי הבהוב ובלי לאבד את הפוקוס.
+    var allSongs by remember { mutableStateOf(emptyList<com.future.music.data.Song>()) }
+    LaunchedEffect(libraryVersion) {
+        val fresh = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { repository.getAllSongs() }
+        if (fresh != allSongs) allSongs = fresh
+    }
+    var renamingArtist by remember { mutableStateOf<String?>(null) }
     val playerState = playerController.state
 
     val artists = remember(allSongs) {
@@ -154,6 +196,9 @@ fun MusicNavHost(
             onOpenPlaylists = { lastOpenedHomeItemId = "4"; push(Route.Playlists) },
             onOpenFavorites = { lastOpenedHomeItemId = "5"; push(Route.Favorites) },
             onOpenSearch = { lastOpenedHomeItemId = "6"; push(Route.Search) },
+            onOpenEqualizer = { lastOpenedHomeItemId = "7"; push(Route.Sound) },
+            onOpenDevices = { lastOpenedHomeItemId = "8"; push(Route.Devices) },
+            onOpenQueue = { lastOpenedHomeItemId = "9"; push(Route.Queue) },
             onOpenNowPlaying = { push(Route.NowPlaying) },
             onTogglePlay = playerController::togglePlayPause,
             lastOpenedItemId = lastOpenedHomeItemId,
@@ -189,7 +234,27 @@ fun MusicNavHost(
                 onPlaySong = { index -> playerController.playQueue(songs, index) },
                 onOpenNowPlaying = { push(Route.NowPlaying) },
                 onTogglePlay = playerController::togglePlayPause,
+                topBarTrailingIcon = FutureIcons.Edit,
+                topBarTrailingDescription = "שינוי שם האמן",
+                onTopBarTrailingClick = { renamingArtist = route.artist },
             )
+            renamingArtist?.let { artist ->
+                NameInputDialog(
+                    title = "שינוי שם האמן",
+                    theme = theme,
+                    initialValue = artist,
+                    confirmLabel = "שמור",
+                    onDismiss = { renamingArtist = null },
+                    onConfirm = { newName ->
+                        renamingArtist = null
+                        if (newName.isNotBlank() && newName != artist) {
+                            repository.renameArtist(artist, newName)
+                            backStack[backStack.lastIndex] = Route.ArtistSongs(newName.trim())
+                            libraryVersion++
+                        }
+                    },
+                )
+            }
         }
 
         is Route.Albums -> AlbumsScreen(
@@ -239,8 +304,10 @@ fun MusicNavHost(
                 onPlaySong = { index -> playerController.playQueue(songs, index) },
                 onOpenNowPlaying = { push(Route.NowPlaying) },
                 onTogglePlay = playerController::togglePlayPause,
-                emptyMessage = "אין שירים בפלייליסט הזה עדיין - הוסיפו ממסך הניגון",
-                topBarTrailingIcon = Icons.Rounded.DeleteOutline,
+                emptyMessage = "אין שירים בפלייליסט הזה עדיין",
+                headerActionLabel = "הוספת שירים",
+                onHeaderAction = { push(Route.PlaylistAdd(route.playlistId, route.name)) },
+                topBarTrailingIcon = FutureIcons.Delete,
                 topBarTrailingDescription = "מחק פלייליסט",
                 onTopBarTrailingClick = { showDeleteConfirm = true },
             )
@@ -258,6 +325,18 @@ fun MusicNavHost(
                     },
                 )
             }
+        }
+
+        is Route.PlaylistAdd -> {
+            val playlist = playlists.find { it.id == route.playlistId }
+            PlaylistAddSongsScreen(
+                playlistName = route.name,
+                allSongs = allSongs,
+                memberIds = playlist?.songIds ?: emptyList(),
+                theme = theme,
+                onToggle = { songId -> togglePlaylistMembership(route.playlistId, songId) },
+                onBack = ::pop,
+            )
         }
 
         is Route.Favorites -> SongListScreen(
@@ -299,7 +378,7 @@ fun MusicNavHost(
                 onCycleRepeat = playerController::cycleRepeatMode,
                 onToggleFavorite = { currentSongId?.let(::toggleFavorite) },
                 onTogglePlaylistMembership = { playlistId -> currentSongId?.let { togglePlaylistMembership(playlistId, it) } },
-                onOpenQueue = { push(Route.Queue) },
+                onOpenDevices = { push(Route.Devices) },
                 onOpenSound = { push(Route.Sound) },
                 onOpenMenu = ::openMainMenu,
             )
@@ -312,10 +391,12 @@ fun MusicNavHost(
             onPlayAt = playerController::playAtQueueIndex,
         )
 
-        is Route.Sound -> SoundScreen(
+        is Route.Sound -> EqualizerScreen(theme = theme, onBack = ::pop)
+
+        is Route.Devices -> AudioDevicesScreen(
             theme = theme,
             onBack = ::pop,
-            onSelectPreset = playerController::setEqPreset,
+            onOpenEqualizer = { push(Route.Sound) },
         )
     }
     }

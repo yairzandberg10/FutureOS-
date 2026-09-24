@@ -26,7 +26,7 @@ import com.future.sharednav.theme.FutureTheme
 @Composable
 fun QueueScreen(playerState: PlayerUiState, theme: FutureTheme, onBack: () -> Unit, onPlayAt: (Int) -> Unit) {
     val firstItemFocusRequester = remember { FocusRequester() }
-    LaunchedEffect(Unit) { firstItemFocusRequester.requestFocus() }
+    LaunchedEffect(Unit) { runCatching { firstItemFocusRequester.requestFocus() } }
 
     Column(modifier = Modifier.fillMaxSize()) {
         ScreenTopBar(title = "תור הניגון", theme = theme, onBack = onBack)

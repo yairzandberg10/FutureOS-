@@ -1,51 +1,38 @@
 package com.future.music.ui.screens
-import com.future.sharednav.theme.FutureDimens
 
-import com.future.sharednav.theme.FutureTypography
-import com.future.sharednav.theme.FutureShapes
-import androidx.compose.foundation.background
-import androidx.compose.foundation.focusable
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Text
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onKeyEvent
-import androidx.compose.ui.input.key.type
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.future.music.data.Song
 import com.future.music.playback.PlayerUiState
 import com.future.music.ui.components.MiniPlayerBar
 import com.future.music.ui.components.ScreenTopBar
 import com.future.music.ui.components.SongListItem
-
-import com.future.sharednav.nav.digitForKey
+import com.future.sharednav.components.EmptyState
+import com.future.sharednav.components.FutureTextField
+import com.future.sharednav.focus.escapeTextFieldFocusTrap
+import com.future.sharednav.icons.FutureIcons
+import com.future.sharednav.theme.FutureDimens
 import com.future.sharednav.theme.FutureTheme
-import com.future.music.util.T9Search
+import com.future.sharednav.theme.mutedTextColor
 
-/** חיפוש T9: מקשי הספרות הפיזיים בונים רצף, ומתאמים חי מול כותרת/אמן של
- * כל שיר (בלי מקלדת מסך - עקבי עם אילוץ "בלי מסך מגע" של כל הסוויטה). */
+/**
+ * חיפוש רגיל - שדה טקסט (המקלדת של המערכת), ותוצאות חיות לפי שם השיר,
+ * האמן או האלבום, בלי תלות באותיות גדולות/קטנות. חץ למטה עובר לתוצאות.
+ */
 @Composable
 fun SearchScreen(
     allSongs: List<Song>,
@@ -56,84 +43,56 @@ fun SearchScreen(
     onOpenNowPlaying: () -> Unit,
     onTogglePlay: () -> Unit,
 ) {
-    var query by remember { mutableStateOf("") }
+    var query by rememberSaveable { mutableStateOf("") }
     val results = remember(query, allSongs) {
-        if (query.isEmpty()) emptyList() else allSongs.filter {
-            T9Search.matchesAnyWord(it.title, query) || T9Search.matchesAnyWord(it.artist, query)
+        val q = query.trim()
+        if (q.isEmpty()) emptyList() else allSongs.filter {
+            it.title.contains(q, ignoreCase = true) || it.artist.contains(q, ignoreCase = true) || it.album.contains(q, ignoreCase = true)
         }
     }
 
-    val focusRequester = remember { FocusRequester() }
-    LaunchedEffect(Unit) { focusRequester.requestFocus() }
-    val firstResultFocusRequester = remember { FocusRequester() }
-    LaunchedEffect(results) {
-        if (results.isNotEmpty()) firstResultFocusRequester.requestFocus()
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .focusRequester(focusRequester)
-            .focusable()
-            .onKeyEvent { event ->
-                if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
-                val digit = digitForKey(event.key)
-                if (digit != null) {
-                    query += digit
-                    return@onKeyEvent true
-                }
-                if (event.key == Key.Backspace || event.key == Key.Delete) {
-                    if (query.isNotEmpty()) query = query.dropLast(1)
-                    return@onKeyEvent true
-                }
-                false
-            }
-    ) {
+    Column(modifier = Modifier.fillMaxSize().escapeTextFieldFocusTrap()) {
         ScreenTopBar(title = "חיפוש", theme = theme, onBack = onBack)
 
-        Row(
+        FutureTextField(
+            value = query,
+            onValueChange = { query = it },
+            theme = theme,
+            placeholder = "שיר, אמן או אלבום",
+            autoFocus = true,
+            leading = {
+                Icon(FutureIcons.Search, contentDescription = null, tint = theme.mutedTextColor, modifier = Modifier.size(FutureDimens.iconTopBar))
+            },
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 4.dp)
-                .clip(FutureShapes.textField)
-                .background(theme.textColor.copy(alpha = 0.08f))
-                .padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                if (query.isEmpty()) "הקלד ספרות לחיפוש" else query,
-                color = if (query.isEmpty()) theme.textColor.copy(alpha = 0.4f) else theme.textColor,
-                fontSize = FutureTypography.title,
-                fontWeight = FontWeight.Medium,
+                .padding(horizontal = FutureDimens.screenPadding, vertical = FutureDimens.spacingSm),
+        )
+
+        when {
+            query.isBlank() -> EmptyState(
+                icon = FutureIcons.Search,
+                title = "מה לנגן?",
+                subtitle = "הקלידו שם של שיר, אמן או אלבום",
+                textColor = theme.textColor,
                 modifier = Modifier.weight(1f),
             )
-            if (query.isNotEmpty()) {
-                Text("${results.size} תוצאות", color = theme.textColor.copy(alpha = 0.4f), fontSize = FutureTypography.label)
-            }
-        }
-
-        if (query.isEmpty()) {
-            Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Text("לחצו על מקשי הספרות כדי לחפש", color = theme.textColor.copy(alpha = 0.4f), fontSize = FutureTypography.summary)
-            }
-        } else if (results.isEmpty()) {
-            Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Text("לא נמצאו שירים", color = theme.textColor.copy(alpha = 0.4f), fontSize = FutureTypography.summary)
-            }
-        } else {
-            LazyColumn(
+            results.isEmpty() -> EmptyState(
+                icon = FutureIcons.SearchOff,
+                title = "לא נמצאו שירים",
+                textColor = theme.textColor,
+                modifier = Modifier.weight(1f),
+            )
+            else -> LazyColumn(
                 modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = FutureDimens.screenPadding, vertical = FutureDimens.spacingSm),
-                verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(FutureDimens.itemSpacing),
+                verticalArrangement = Arrangement.spacedBy(FutureDimens.itemSpacing),
             ) {
                 itemsIndexed(results, key = { _, song -> song.id }) { index, song ->
-                    val isCurrent = playerState.currentSong?.id == song.id
                     SongListItem(
                         song = song,
-                        isCurrent = isCurrent,
+                        isCurrent = playerState.currentSong?.id == song.id,
                         isPlaying = playerState.isPlaying,
                         theme = theme,
                         onClick = { onPlayResults(results, index) },
-                        focusRequester = if (index == 0) firstResultFocusRequester else null,
                     )
                 }
             }

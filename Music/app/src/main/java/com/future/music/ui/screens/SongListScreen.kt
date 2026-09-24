@@ -43,6 +43,9 @@ fun SongListScreen(
     topBarTrailingIcon: ImageVector? = null,
     topBarTrailingDescription: String? = null,
     onTopBarTrailingClick: (() -> Unit)? = null,
+    // שורת פעולה בראש הרשימה (למשל "הוספת שירים" בפלייליסט) - מקבלת פוקוס ראשונה.
+    headerActionLabel: String? = null,
+    onHeaderAction: (() -> Unit)? = null,
 ) {
     // פוקוס-בפתיחה חוזר לשיר שמתנגן כרגע (אם הוא ברשימה הזו) ולא תמיד לשיר
     // הראשון - כדי שחזרה ממסך "מתנגן עכשיו" לא תאבד את המיקום ברשימה. אם
@@ -82,6 +85,19 @@ fun SongListScreen(
             trailingContentDescription = topBarTrailingDescription,
             onTrailingClick = onTopBarTrailingClick,
         )
+
+        if (headerActionLabel != null && onHeaderAction != null) {
+            val headerFocus = remember { FocusRequester() }
+            LaunchedEffect(songs.isEmpty()) { if (songs.isEmpty()) runCatching { headerFocus.requestFocus() } }
+            com.future.sharednav.components.FutureListItem(
+                title = headerActionLabel,
+                theme = theme,
+                onClick = onHeaderAction,
+                focusRequester = headerFocus,
+                leading = { com.future.sharednav.components.FutureAvatar(theme = theme, icon = com.future.sharednav.icons.FutureIcons.Add) },
+                modifier = Modifier.padding(horizontal = FutureDimens.screenPadding, vertical = FutureDimens.spacingXs),
+            )
+        }
 
         if (songs.isEmpty()) {
             Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {

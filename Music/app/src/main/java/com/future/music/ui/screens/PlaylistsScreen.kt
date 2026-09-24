@@ -55,7 +55,7 @@ fun PlaylistsScreen(
     val type = rememberFutureType()
     var showCreateDialog by remember { mutableStateOf(false) }
     val firstItemFocusRequester = remember { FocusRequester() }
-    LaunchedEffect(Unit) { firstItemFocusRequester.requestFocus() }
+    LaunchedEffect(Unit) { runCatching { firstItemFocusRequester.requestFocus() } }
 
     Column(modifier = Modifier.fillMaxSize()) {
         ScreenTopBar(

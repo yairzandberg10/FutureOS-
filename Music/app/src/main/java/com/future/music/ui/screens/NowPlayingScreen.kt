@@ -16,6 +16,8 @@ import com.future.sharednav.components.FutureDialog
 import com.future.sharednav.components.FutureButton
 import com.future.sharednav.components.FutureListItem
 import com.future.sharednav.components.FutureCheckbox
+import com.future.sharednav.components.FutureActionCell
+import androidx.compose.ui.focus.onFocusChanged
 import com.future.sharednav.theme.FutureDimens
 import com.future.sharednav.theme.FutureMotion
 import com.future.sharednav.theme.idleFieldColor
@@ -104,7 +106,7 @@ fun NowPlayingScreen(
     onCycleRepeat: () -> Unit,
     onToggleFavorite: () -> Unit,
     onTogglePlaylistMembership: (Long) -> Unit,
-    onOpenQueue: () -> Unit,
+    onOpenDevices: () -> Unit,
     onOpenSound: () -> Unit,
     onOpenMenu: () -> Unit,
 ) {
@@ -124,8 +126,12 @@ fun NowPlayingScreen(
     // להיתפס במרוץ בין "איבוד פוקוס בכפתור הישן" ל"קבלת פוקוס בכפתור החדש").
     // כשאחד מהם ממוקד, שמאל/ימין אמורים לזוז בין הכפתורים הצמודים - לא
     // "לחטוף" תמיד את הלחיצה ל-seek, אחרת אין דרך לזוז ביניהם ב-D-pad בכלל.
-    var focusedControlCount by remember { mutableStateOf(0) }
-    LaunchedEffect(Unit) { playButtonFocusRequester.requestFocus() }
+    var focusedControl by remember { mutableStateOf<String?>(null) }
+    // פוקוס אוטומטי על נגן/השהה - וגם כשהשיר הראשון נטען אחרי שהמסך כבר
+    // פתוח. בלי שיר אין כפתורים, והפוקוס נשאר על המסך עצמו (מקשי הספרות).
+    LaunchedEffect(song != null) {
+        runCatching { if (song != null) playButtonFocusRequester.requestFocus() else focusRequester.requestFocus() }
+    }
 
     Column(
         modifier = Modifier
@@ -144,9 +150,9 @@ fun NowPlayingScreen(
                         "6" -> { onNext(); return@onKeyEvent true }
                         "7" -> { onToggleShuffle(); return@onKeyEvent true }
                         "8" -> { onCycleRepeat(); return@onKeyEvent true }
-                        "9" -> { onOpenQueue(); return@onKeyEvent true }
+                        "9" -> { onOpenDevices(); return@onKeyEvent true }
                     }
-                    if (focusedControlCount <= 0) {
+                    if (focusedControl == null) {
                         when (event.key) {
                             Key.DirectionLeft -> { onSeekRelative(-10_000); return@onKeyEvent true }
                             Key.DirectionRight -> { onSeekRelative(10_000); return@onKeyEvent true }
@@ -175,7 +181,8 @@ fun NowPlayingScreen(
             Spacer(modifier = Modifier.height(6.dp))
             Box(
                 modifier = Modifier
-                    .fillMaxWidth(0.5f)
+                    // תמונת השיר גדולה - כמעט כל רוחב המסך.
+                    .fillMaxWidth(0.8f)
                     .aspectRatio(1f)
                     .clip(FutureShapes.xl)
                     .background(theme.accentColor.copy(alpha = 0.15f)),
@@ -209,53 +216,71 @@ fun NowPlayingScreen(
             if (song != null) {
                 Spacer(modifier = Modifier.height(10.dp))
                 val progress = if (playerState.durationMs > 0) (playerState.positionMs.toFloat() / playerState.durationMs.toFloat()).coerceIn(0f, 1f) else 0f
+                fun track(key: String): (Boolean) -> Unit = { focused ->
+                    if (focused) focusedControl = key else if (focusedControl == key) focusedControl = null
+                }
+
+                // פקדי ניגון לא מתהפכים ב-RTL (כמו בכל נגן): הקודם משמאל, הבא
+                // מימין, כמו מקשי 4 ו-6, וההתקדמות זורמת משמאל לימין.
+                androidx.compose.runtime.CompositionLocalProvider(
+                    androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Ltr,
+                ) {
+                Column {
                 FutureProgressBar(progress = progress, theme = theme)
                 Row(modifier = Modifier.fillMaxWidth().padding(top = 2.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(formatDuration(playerState.positionMs), color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.caption)
                     Text(formatDuration(playerState.durationMs), color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.caption)
                 }
 
-                val trackControlFocus: (Boolean) -> Unit = { focused -> focusedControlCount += if (focused) 1 else -1 }
-
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                    RoundIconButton(Icons.Rounded.SkipPrevious, "קודם (4)", theme, size = 42.dp, onClick = onPrevious, onFocusChanged = trackControlFocus)
-                    Spacer(modifier = Modifier.width(14.dp))
+                    RoundIconButton(Icons.Rounded.SkipPrevious, "קודם (4)", theme, size = 46.dp, onClick = onPrevious, onFocusChanged = track("prev"))
+                    Spacer(modifier = Modifier.width(18.dp))
                     RoundIconButton(
                         if (playerState.isPlaying) FutureIcons.Pause else FutureIcons.PlayArrow,
                         if (playerState.isPlaying) "השהה (5)" else "נגן (5)",
-                        theme, size = 54.dp, filled = true, onClick = onTogglePlay,
-                        focusRequester = playButtonFocusRequester, onFocusChanged = trackControlFocus,
+                        theme, size = 58.dp, filled = true, onClick = onTogglePlay,
+                        focusRequester = playButtonFocusRequester, onFocusChanged = track("play"),
                     )
-                    Spacer(modifier = Modifier.width(14.dp))
-                    RoundIconButton(Icons.Rounded.SkipNext, "הבא (6)", theme, size = 42.dp, onClick = onNext, onFocusChanged = trackControlFocus)
+                    Spacer(modifier = Modifier.width(18.dp))
+                    RoundIconButton(Icons.Rounded.SkipNext, "הבא (6)", theme, size = 46.dp, onClick = onNext, onFocusChanged = track("next"))
+                }
+                }
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                    RoundIconButton(
-                        if (isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
-                        "מועדפים (1)", theme, size = 32.dp,
-                        active = isFavorite,
-                        onClick = onToggleFavorite,
-                        onFocusChanged = trackControlFocus,
-                    )
-                    RoundIconButton(Icons.AutoMirrored.Rounded.PlaylistAdd, "הוסף לפלייליסט (2)", theme, size = 32.dp, onClick = { showPlaylistDialog = true }, onFocusChanged = trackControlFocus)
-                    RoundIconButton(Icons.Rounded.Equalizer, "סאונד (3)", theme, size = 32.dp, onClick = onOpenSound, onFocusChanged = trackControlFocus)
-                    RoundIconButton(
-                        Icons.Rounded.Shuffle, "ערבוב (7)", theme, size = 32.dp,
-                        active = playerState.shuffleEnabled,
-                        onClick = onToggleShuffle,
-                        onFocusChanged = trackControlFocus,
-                    )
-                    RoundIconButton(
+                // פעולות המסך - אריחי ActionGrid, כמו פקדי השיחה בחייגן.
+                Spacer(modifier = Modifier.height(14.dp))
+                val actions = listOf(
+                    NowPlayingAction("fav", if (isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder, "מועדף", isFavorite, onToggleFavorite),
+                    NowPlayingAction("playlist", Icons.AutoMirrored.Rounded.PlaylistAdd, "פלייליסט", false) { showPlaylistDialog = true },
+                    NowPlayingAction("sound", Icons.Rounded.Equalizer, "סאונד", false, onOpenSound),
+                    NowPlayingAction("shuffle", Icons.Rounded.Shuffle, "ערבוב", playerState.shuffleEnabled, onToggleShuffle),
+                    NowPlayingAction(
+                        "repeat",
                         if (playerState.repeatMode == Player.REPEAT_MODE_ONE) Icons.Rounded.RepeatOne else Icons.Rounded.Repeat,
-                        "חזרה (8)", theme, size = 32.dp,
-                        active = playerState.repeatMode != Player.REPEAT_MODE_OFF,
-                        onClick = onCycleRepeat,
-                        onFocusChanged = trackControlFocus,
-                    )
-                    RoundIconButton(Icons.AutoMirrored.Rounded.QueueMusic, "תור (9)", theme, size = 32.dp, onClick = onOpenQueue, onFocusChanged = trackControlFocus)
+                        "חזרה", playerState.repeatMode != Player.REPEAT_MODE_OFF, onCycleRepeat,
+                    ),
+                    NowPlayingAction("bt", FutureIcons.Bluetooth, "Bluetooth", false, onOpenDevices),
+                )
+                Column(verticalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm)) {
+                    actions.chunked(3).forEach { row ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm)) {
+                            row.forEach { action ->
+                                val onFocus = track(action.key)
+                                FutureActionCell(
+                                    icon = action.icon,
+                                    label = action.label,
+                                    theme = theme,
+                                    onClick = action.onClick,
+                                    active = action.active,
+                                    height = 72.dp,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .onFocusChanged { onFocus(it.hasFocus) },
+                                )
+                            }
+                        }
+                    }
                 }
             }
             Spacer(modifier = Modifier.height(10.dp))
@@ -272,6 +297,14 @@ fun NowPlayingScreen(
         )
     }
 }
+
+private data class NowPlayingAction(
+    val key: String,
+    val icon: ImageVector,
+    val label: String,
+    val active: Boolean,
+    val onClick: () -> Unit,
+)
 
 @Composable
 private fun RoundIconButton(
@@ -302,18 +335,19 @@ private fun RoundIconButton(
     // שמתאים לה, ובפוקוס מסגרת 2dp בצבע הטקסט. "פעיל" (ערבוב/חזרה) = נבחר,
     // ולכן האייקון בהדגשה.
     val accent = theme.readableAccentColor
+    // פוקוס כמו בשאר המערכת (פקדי השיחה): מסגרת 2dp בהדגשה, בלי שינוי מילוי.
     val bg by animateColorAsState(
-        when {
-            filled -> accent
-            isFocused -> accent.copy(alpha = 0.30f)
-            else -> theme.idleFieldColor
-        },
+        if (filled) accent else theme.idleFieldColor,
         FutureMotion.focusColorSpec,
         label = "roundIconBtnBg",
     )
     val tint = if (filled) theme.onReadableAccentColor else if (active) accent else theme.textColor
     val focusBorderColor by animateColorAsState(
-        if (isFocused && filled) theme.textColor else androidx.compose.ui.graphics.Color.Transparent,
+        when {
+            !isFocused -> androidx.compose.ui.graphics.Color.Transparent
+            filled -> theme.textColor
+            else -> accent
+        },
         FutureMotion.focusColorSpec,
         label = "roundIconBtnFocusBorder",
     )
