@@ -364,11 +364,14 @@ private fun MessageBubble(message: Message, theme: FutureTheme, onClick: () -> U
 @Composable
 private fun MessageMeta(message: Message, time: String, theme: FutureTheme) {
     val status = message.status
+    // הודעה שעברה בצ'אט RCS מסומנת בסיומת - כדי שיהיה ברור מתי זה לא SMS.
+    val via = if (message.isRcs) " · RCS" else ""
     val (icon, label, color) = when (status) {
-        null -> Triple(null, time, theme.subtleTextColor)
+        null -> Triple(null, "$time$via", theme.subtleTextColor)
         com.future.messages.data.MessageStatus.SENDING -> Triple(FutureIcons.Schedule, "שולח", theme.mutedTextColor)
-        com.future.messages.data.MessageStatus.SENT -> Triple(FutureIcons.Check, "נשלח · $time", theme.readableAccentColor)
-        com.future.messages.data.MessageStatus.DELIVERED -> Triple(FutureIcons.Check, "נמסר · $time", theme.readableAccentColor)
+        com.future.messages.data.MessageStatus.SENT -> Triple(FutureIcons.Check, "נשלח · $time$via", theme.readableAccentColor)
+        com.future.messages.data.MessageStatus.DELIVERED -> Triple(FutureIcons.Check, "נמסר · $time$via", theme.readableAccentColor)
+        com.future.messages.data.MessageStatus.READ -> Triple(FutureIcons.Visibility, "נקרא · $time$via", theme.readableAccentColor)
         com.future.messages.data.MessageStatus.FAILED -> Triple(FutureIcons.Error, "לא נשלח", theme.dangerColor)
     }
     Row(

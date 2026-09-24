@@ -38,34 +38,37 @@ class SmsDeliverReceiver : BroadcastReceiver() {
         }
         context.contentResolver.insert(Telephony.Sms.CONTENT_URI, values)
 
-        showNotification(context, address, body)
+        notifyIncoming(context, address, body)
     }
 
-    private fun showNotification(context: Context, address: String, body: String) {
-        val channelId = "sms_incoming"
-        val manager = context.getSystemService(NotificationManager::class.java)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(channelId, "הודעות נכנסות", NotificationManager.IMPORTANCE_HIGH)
-            manager.createNotificationChannel(channel)
+    companion object {
+        /** התראה על הודעה נכנסת - משותפת ל-SMS ול-RCS (RcsStack). */
+        fun notifyIncoming(context: Context, address: String, body: String) {
+            val channelId = "sms_incoming"
+            val manager = context.getSystemService(NotificationManager::class.java)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val channel = NotificationChannel(channelId, "הודעות נכנסות", NotificationManager.IMPORTANCE_HIGH)
+                manager.createNotificationChannel(channel)
+            }
+
+            val contact = SmsRepository(context).resolveContact(address)
+            val openIntent = Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            val pendingIntent = PendingIntent.getActivity(
+                context, address.hashCode(), openIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+
+            val notification = NotificationCompat.Builder(context, channelId)
+                .setSmallIcon(android.R.drawable.sym_action_chat)
+                .setContentTitle(contact.name)
+                .setContentText(body)
+                .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setAutoCancel(true)
+                .setContentIntent(pendingIntent)
+                .build()
+
+            manager.notify(address.hashCode(), notification)
         }
-
-        val contact = SmsRepository(context).resolveContact(address)
-        val openIntent = Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        val pendingIntent = PendingIntent.getActivity(
-            context, address.hashCode(), openIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        val notification = NotificationCompat.Builder(context, channelId)
-            .setSmallIcon(android.R.drawable.sym_action_chat)
-            .setContentTitle(contact.name)
-            .setContentText(body)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setAutoCancel(true)
-            .setContentIntent(pendingIntent)
-            .build()
-
-        manager.notify(address.hashCode(), notification)
     }
 }

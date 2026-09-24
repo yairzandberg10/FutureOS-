@@ -88,6 +88,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // צ'אט RCS - לא עושה כלום כשאין הרשאת IMS (כלומר מחוץ לתמונת מערכת).
+        com.future.messages.rcs.RcsService.start(this)
         setContent {
             var sharedTheme by remember { mutableStateOf(ThemeClient.getTheme(this)) }
             val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current

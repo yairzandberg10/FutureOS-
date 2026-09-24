@@ -33,6 +33,19 @@
          החיוג הפיזי - אם לא תאושר, נופלים חזרה ל-ACTION_DIAL (פתיחת מסך חיוג). -->
     <uses-permission android:name="android.permission.CALL_PHONE" />
 
+    <!-- RCS: ערוץ SIP על רישום ה-IMS של המודם (SipDelegate) ובדיקת יכולות
+         (UCE). ניתנות רק בתמונת FutureOS (ראו aosp/README.md); מחוץ לה הן
+         פשוט לא ניתנות, ו-Messages נשארת ב-SMS/MMS. -->
+    <uses-permission android:name="android.permission.PERFORM_IMS_SINGLE_REGISTRATION"
+        tools:ignore="ProtectedPermissions" />
+    <uses-permission android:name="android.permission.ACCESS_RCS_USER_CAPABILITY_EXCHANGE"
+        tools:ignore="ProtectedPermissions" />
+    <!-- privileged - ניתנת רק כאפליקציית מערכת (aosp/privapp-permissions). -->
+    <uses-permission android:name="android.permission.READ_PRIVILEGED_PHONE_STATE"
+        tools:ignore="ProtectedPermissions" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
     <uses-permission android:name="com.future.futureui.permission.SYSTEM_SETTINGS" />
     <uses-permission android:name="com.future.keyboard.permission.SETTINGS" />
     <application
@@ -132,6 +145,19 @@
         <receiver
             android:name=".receiver.SmsDeliveredReceiver"
             android:exported="false" />
+
+        <!-- RCS: מחזיק את ה-SipDelegate פתוח כדי שהודעות נכנסות יגיעו. -->
+        <service
+            android:name=".rcs.RcsService"
+            android:exported="false" />
+
+        <receiver
+            android:name=".rcs.RcsService$BootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
 
         <!-- חושף את קובץ ה-PDU הזמני שנכתב ל-cache כ-content:// URI, כדי שנוכל
              למסור אותו ל-SmsManager.sendMultimediaMessage (שדורש content URI). -->

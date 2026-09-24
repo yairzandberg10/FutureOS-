@@ -1,0 +1,18 @@
+FutureOS: let the privileged SMS app hold the RCS/IMS permissions.
+
+On Android 12 these are internal|role and only the SYSTEM_SHELL role grants
+them, so no messaging app can open a SipDelegate. Adding "privileged" lets
+com.future.messages get them through its privapp-permissions allowlist.
+
+Apply in frameworks/base:  git apply <this file>
+
+--- a/core/res/AndroidManifest.xml
++++ b/core/res/AndroidManifest.xml
+@@
+     <permission android:name="android.permission.PERFORM_IMS_SINGLE_REGISTRATION"
+-        android:protectionLevel="internal|role" />
++        android:protectionLevel="internal|role|privileged" />
+@@
+     <permission android:name="android.permission.ACCESS_RCS_USER_CAPABILITY_EXCHANGE"
+-        android:protectionLevel="internal|role" />
++        android:protectionLevel="internal|role|privileged" />

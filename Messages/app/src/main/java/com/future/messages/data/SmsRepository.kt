@@ -14,6 +14,8 @@ import android.telephony.SmsManager
 import android.util.Log
 import androidx.core.content.FileProvider
 import com.future.messages.mms.ContentType
+import com.future.messages.rcs.RcsStack
+import com.future.messages.rcs.RcsStore
 import com.future.messages.mms.pdu_alt.CharacterSets
 import com.future.messages.mms.pdu_alt.EncodedStringValue
 import com.future.messages.mms.pdu_alt.PduBody
@@ -114,6 +116,8 @@ class SmsRepository(private val context: Context) {
 
     fun getMessages(threadId: Long): List<Message> {
         val messages = mutableListOf<Message>()
+        // sms_id → האם הנמען כבר קרא, להודעות שעברו ב-RCS.
+        val rcs = try { RcsStore.get(context).rcsMessages(threadId) } catch (e: Exception) { emptyMap() }
         val uri = Telephony.Sms.CONTENT_URI
         val projection = arrayOf(
             Telephony.Sms._ID, Telephony.Sms.BODY, Telephony.Sms.DATE, Telephony.Sms.TYPE,
@@ -131,14 +135,18 @@ class SmsRepository(private val context: Context) {
                 val statusCol = cursor.getColumnIndex(Telephony.Sms.STATUS)
                 while (cursor.moveToNext()) {
                     val type = cursor.getInt(typeCol)
+                    val id = cursor.getLong(idCol)
+                    val readByRecipient = rcs[id]
+                    val status = smsStatusFor(type, cursor.getInt(statusCol))
                     messages.add(
                         Message(
-                            id = cursor.getLong(idCol),
+                            id = id,
                             text = cursor.getString(bodyCol) ?: "",
                             timestamp = cursor.getLong(dateCol),
                             isFromMe = type != Telephony.Sms.MESSAGE_TYPE_INBOX,
                             isRead = cursor.getInt(readCol) == 1,
-                            status = smsStatusFor(type, cursor.getInt(statusCol))
+                            status = if (readByRecipient == true && status != null) MessageStatus.READ else status,
+                            isRcs = readByRecipient != null
                         )
                     )
                 }
@@ -272,6 +280,22 @@ class SmsRepository(private val context: Context) {
             val insertedUri = context.contentResolver.insert(Telephony.Sms.CONTENT_URI, values) ?: return null
             val messageId = ContentUris.parseId(insertedUri)
 
+            // RCS קודם כשהוא זמין; אם הנמען לא תומך או שהשליחה נכשלת, אותה
+            // שורה יוצאת כ-SMS (ראו RcsStack.trySend).
+            val viaRcs = RcsStack.trySend(context, messageId, address, text) {
+                dispatchSms(messageId, address, text)
+            }
+            if (!viaRcs) dispatchSms(messageId, address, text)
+            messageId
+        } catch (e: Exception) {
+            Log.e("SmsRepository", "Error sending message to $address", e)
+            null
+        }
+    }
+
+    /** שולח כ-SMS שורה שכבר רשומה ב-OUTBOX. כישלון מסמן אותה FAILED. */
+    private fun dispatchSms(messageId: Long, address: String, text: String) {
+        try {
             val smsManager = context.getSystemService(SmsManager::class.java)
             val parts = smsManager.divideMessage(text)
             val sentIntents = ArrayList(parts.indices.map { index ->
@@ -281,10 +305,9 @@ class SmsRepository(private val context: Context) {
                 deliveryPendingIntent(messageId, index)
             })
             smsManager.sendMultipartTextMessage(address, null, parts, sentIntents, deliveryIntents)
-            messageId
         } catch (e: Exception) {
-            Log.e("SmsRepository", "Error sending message to $address", e)
-            null
+            Log.e("SmsRepository", "Error sending SMS to $address", e)
+            updateSentMessageStatus(messageId, false)
         }
     }
 
@@ -600,6 +623,7 @@ class SmsRepository(private val context: Context) {
         } catch (e: Exception) {
             Log.e("SmsRepository", "Error marking thread $threadId read", e)
         }
+        RcsStack.onThreadRead(context, threadId)
     }
 
     /** מזהה שם איש קשר אמיתי לפי מספר טלפון; אם לא נמצא, מציג את המספר עצמו. */

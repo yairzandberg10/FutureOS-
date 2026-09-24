@@ -1,0 +1,23 @@
+// FutureOS Messages כאפליקציית מערכת בתמונת AOSP.
+//
+// ה-APK נבנה ב-Gradle (./gradlew assembleRelease) ומועתק לכאן כ-FutureMessages.apk.
+// הוא נחתם מחדש במפתח הפלטפורמה: זה מה שנותן גישה ל-System API של IMS
+// (SipDelegateManager, RcsUceAdapter) שדרכם עובר ה-RCS.
+android_app_import {
+    name: "FutureMessages",
+    apk: "FutureMessages.apk",
+    certificate: "platform",
+    privileged: true,
+    dex_preopt: {
+        enabled: true,
+    },
+    required: ["privapp-permissions-com.future.messages"],
+    overrides: ["messaging", "Mms"],
+}
+
+prebuilt_etc {
+    name: "privapp-permissions-com.future.messages",
+    sub_dir: "permissions",
+    src: "privapp-permissions-com.future.messages.xml",
+    filename_from_src: true,
+}
