@@ -496,7 +496,7 @@ class SmsRepository(private val context: Context) {
             }
             var result: ByteArray? = null
             while (result == null && maxSide >= 240) {
-                for (quality in intArrayOf(85, 70, 55, 40)) {
+                for (quality in intArrayOf(95, 90, 85, 75, 65, 50)) {
                     val out = ByteArrayOutputStream()
                     bitmap.compress(Bitmap.CompressFormat.JPEG, quality, out)
                     if (out.size() <= maxBytes) { result = out.toByteArray(); break }
