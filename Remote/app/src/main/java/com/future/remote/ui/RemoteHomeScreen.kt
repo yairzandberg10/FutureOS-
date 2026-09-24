@@ -97,7 +97,7 @@ fun RemoteHomeScreen(
                             RemoteRow(
                                 icon = Icons.Rounded.AcUnit,
                                 label = "שלט מוכן למזגן",
-                                subtitle = "אלקטרה ומותגים תואמים - בלי להזין קודים בעצמך",
+                                subtitle = "אלקטרה, תדיראן, טורנדו, מיצובישי, פוג'יטסו",
                                 theme = theme,
                                 onClick = onAddAcPreset
                             )

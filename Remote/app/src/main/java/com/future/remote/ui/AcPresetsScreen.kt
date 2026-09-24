@@ -1,4 +1,10 @@
 package com.future.remote.ui
+
+import com.future.remote.data.AcCompany
+import com.future.remote.data.AcState
+import com.future.remote.data.DeviceCategory
+import com.future.remote.data.RemoteDevice
+import androidx.compose.foundation.lazy.itemsIndexed
 import com.future.sharednav.theme.subtleTextColor
 
 import com.future.sharednav.theme.FutureTypography
@@ -23,8 +29,6 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.future.remote.data.AcBrand
-import com.future.remote.data.AcPresets
 import com.future.remote.data.RemoteRepository
 import com.future.sharednav.theme.FutureTheme
 
@@ -32,6 +36,8 @@ import com.future.sharednav.theme.FutureTheme
 fun AcPresetsScreen(theme: FutureTheme, onBack: () -> Unit, onDeviceCreated: (String) -> Unit) {
     val context = LocalContext.current
     val repository = remember { RemoteRepository(context) }
+    val firstFocus = remember { androidx.compose.ui.focus.FocusRequester() }
+    androidx.compose.runtime.LaunchedEffect(Unit) { runCatching { firstFocus.requestFocus() } }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
@@ -39,8 +45,8 @@ fun AcPresetsScreen(theme: FutureTheme, onBack: () -> Unit, onDeviceCreated: (St
                 RemoteHeader(title = "שלט מוכן למזגן", theme = theme, onBack = onBack)
 
                 Text(
-                    "כפתורי הפעלה/כיבוי, קירור וחימום בטמפרטורות נפוצות - כבר מוכנים לשידור. " +
-                        "בלי גישה למזגן אמיתי לבדיקה, ייתכן שיידרש כיוונון - אם כפתור לא עובד, נסי מקרוב לחיישן של המזגן.",
+                    "חמש החברות הגדולות בישראל. בחרו חברה - ייפתח שלט מלא. " +
+                        "אם המזגן לא מגיב, בשלט: Options ← דגם שלט אחר.",
                     color = theme.textColor.copy(alpha = 0.55f),
                     fontSize = FutureTypography.summary,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
@@ -51,14 +57,21 @@ fun AcPresetsScreen(theme: FutureTheme, onBack: () -> Unit, onDeviceCreated: (St
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(AcBrand.entries) { brand ->
+                    itemsIndexed(AcCompany.entries) { index, company ->
                         RemoteRow(
                             icon = Icons.Rounded.AcUnit,
-                            label = brand.label,
-                            subtitle = "מוסיף מכשיר עם כפתורים מוכנים",
+                            label = company.label,
+                            subtitle = company.protocols.joinToString(" / ") { it.label },
                             theme = theme,
+                            focusRequester = if (index == 0) firstFocus else null,
                             onClick = {
-                                val device = AcPresets.buildDevice(brand, name = brand.label.substringBefore(" ("))
+                                val device = RemoteDevice(
+                                    name = "מזגן ${company.label}",
+                                    category = DeviceCategory.AC,
+                                    acCompany = company,
+                                    acProtocol = company.protocols.first(),
+                                    acState = AcState(),
+                                )
                                 repository.addDevice(device)
                                 onDeviceCreated(device.id)
                             }

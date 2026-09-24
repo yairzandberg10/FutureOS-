@@ -42,5 +42,9 @@ data class RemoteDevice(
     val id: String = UUID.randomUUID().toString(),
     val name: String,
     val category: DeviceCategory,
-    val buttons: List<RemoteButton> = emptyList()
+    val buttons: List<RemoteButton> = emptyList(),
+    /** שלט מזגן מוכן: החברה, דגם השלט (פרוטוקול) והמצב האחרון שנשלח. */
+    val acCompany: AcCompany? = null,
+    val acProtocol: AcProtocol? = null,
+    val acState: AcState? = null,
 )

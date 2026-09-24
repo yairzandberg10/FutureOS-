@@ -44,6 +44,10 @@ class RemoteRepository(context: Context) {
         })
     }
 
+    fun updateDevice(deviceId: String, transform: (RemoteDevice) -> RemoteDevice) {
+        saveDevices(loadDevices().map { if (it.id == deviceId) transform(it) else it })
+    }
+
     companion object {
         private const val KEY_DEVICES = "devices_json"
     }

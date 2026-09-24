@@ -45,9 +45,14 @@ fun DeviceScreen(theme: FutureTheme, deviceId: String, refreshKey: Int, onBack: 
     LaunchedEffect(refreshKey) {
         device = repository.loadDevices().firstOrNull { it.id == deviceId }
     }
-    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+    LaunchedEffect(Unit) { runCatching { focusRequester.requestFocus() } }
 
     val currentDevice = device
+    // מזגן מחברה מוכרת - שלט בצורת שלט, לא רשימת כפתורים.
+    if (currentDevice?.acProtocol != null) {
+        AcRemoteScreen(theme = theme, device = currentDevice, onBack = onBack)
+        return
+    }
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize()) {
