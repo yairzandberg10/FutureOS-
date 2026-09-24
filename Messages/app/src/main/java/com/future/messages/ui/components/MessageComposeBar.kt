@@ -83,6 +83,8 @@ fun MessageComposeBar(
     onDictate: (() -> Unit)?,
     fieldFocusRequester: FocusRequester,
     modifier: Modifier = Modifier,
+    dictationListening: Boolean = false,
+    dictationProcessing: Boolean = false,
 ) {
     val type = rememberFutureType()
     val accent = LocalFutureAccent.current ?: theme.readableAccentColor
@@ -168,14 +170,25 @@ fun MessageComposeBar(
                     decorationBox = { inner ->
                         Box {
                             if (text.isEmpty()) {
-                                Text("הודעה", color = theme.subtleTextColor, fontSize = type.dialog, maxLines = 1)
+                                val hint = when {
+                                    dictationListening -> "מקשיב… לחצו שוב על המיקרופון לסיום"
+                                    dictationProcessing -> "מתמלל…"
+                                    else -> "הודעה"
+                                }
+                                Text(hint, color = theme.subtleTextColor, fontSize = type.dialog, maxLines = 1)
                             }
                             inner()
                         }
                     },
                 )
                 if (onDictate != null) {
-                    ComposeIconButton(FutureIcons.Mic, "הכתבה", theme, onDictate)
+                    ComposeIconButton(
+                        FutureIcons.Mic,
+                        if (dictationListening) "סיום הכתבה" else "הכתבה",
+                        theme,
+                        onDictate,
+                        active = dictationListening || dictationProcessing,
+                    )
                 }
             }
 
@@ -186,7 +199,13 @@ fun MessageComposeBar(
 
 /** כפתור בתוך הגלולה - עיגול 28dp בלי רקע, אייקון 20dp ב-40%, וטבעת 1.5dp בהדגשה בפוקוס. */
 @Composable
-private fun ComposeIconButton(icon: ImageVector, contentDescription: String, theme: FutureTheme, onClick: () -> Unit) {
+private fun ComposeIconButton(
+    icon: ImageVector,
+    contentDescription: String,
+    theme: FutureTheme,
+    onClick: () -> Unit,
+    active: Boolean = false,
+) {
     val accent = LocalFutureAccent.current ?: theme.readableAccentColor
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
@@ -204,7 +223,8 @@ private fun ComposeIconButton(icon: ImageVector, contentDescription: String, the
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(icon, contentDescription = contentDescription, tint = theme.subtleTextColor, modifier = Modifier.size(20.dp))
+        // פעיל (הכתבה רצה) - האייקון בהדגשה, כדי שיהיה ברור שהמיקרופון פתוח.
+        Icon(icon, contentDescription = contentDescription, tint = if (active) accent else theme.subtleTextColor, modifier = Modifier.size(20.dp))
     }
 }
 

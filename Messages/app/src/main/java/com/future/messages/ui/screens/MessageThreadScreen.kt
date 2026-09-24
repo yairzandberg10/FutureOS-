@@ -102,24 +102,12 @@ fun MessageThreadScreen(
     // באותו דפוס שקיים בכל שאר האפליקציות (ראו ConversationListScreen).
     com.future.sharednav.nav.onOptionsKeyPress { if (focusedMessage != null) actionMenuMessage = focusedMessage }
 
-    val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        if (uri != null) attachedImageUri = uri
-    }
+    val imagePicker = com.future.messages.ui.components.rememberGalleryImagePicker { uri -> attachedImageUri = uri }
 
-    // הכתבה - המיקרופון שבתוך שורת הכתיבה (templates/message-compose). רק אם
-    // יש במכשיר מי שמטפל ב-RECOGNIZE_SPEECH; אחרת הכפתור לא מוצג בכלל.
-    val context = LocalContext.current
-    val canDictate = remember {
-        android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-            .resolveActivity(context.packageManager) != null
-    }
-    val dictation = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        val spoken = result.data
-            ?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)
-            ?.firstOrNull()
-        if (!spoken.isNullOrBlank()) {
-            textState = if (textState.isBlank()) spoken else "$textState $spoken"
-        }
+    // הכתבה - המיקרופון שבתוך שורת הכתיבה (templates/message-compose), דרך
+    // התמלול המקומי של Assistant. בלי Assistant במכשיר הכפתור לא מוצג בכלל.
+    val dictation = com.future.messages.ui.components.rememberLocalDictation { spoken ->
+        textState = if (textState.isBlank()) spoken else "$textState $spoken"
         textFieldFocusRequester.requestFocus()
     }
 
@@ -211,18 +199,12 @@ fun MessageThreadScreen(
                         textFieldFocusRequester.requestFocus()
                     }
                 },
-                onAttach = { imagePicker.launch("image/*") },
-                onDictate = if (canDictate) {
-                    {
-                        dictation.launch(
-                            android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-                                .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                                .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, "he-IL")
-                        )
-                    }
-                } else null,
+                onAttach = imagePicker,
+                onDictate = if (dictation.available) dictation::toggle else null,
                 fieldFocusRequester = textFieldFocusRequester,
                 modifier = Modifier.escapeTextFieldFocusTrap(),
+                dictationListening = dictation.listening,
+                dictationProcessing = dictation.processing,
             )
         }
     }
@@ -373,7 +355,7 @@ private fun MessageMeta(message: Message, time: String, theme: FutureTheme) {
         com.future.messages.data.MessageStatus.SENDING -> Triple(FutureIcons.Schedule, "שולח", theme.mutedTextColor)
         com.future.messages.data.MessageStatus.SENT -> Triple(FutureIcons.Check, "נשלח · $time", theme.readableAccentColor)
         com.future.messages.data.MessageStatus.DELIVERED -> Triple(FutureIcons.Check, "נמסר · $time", theme.readableAccentColor)
-        com.future.messages.data.MessageStatus.FAILED -> Triple(Icons.Rounded.ErrorOutline, "לא נשלח", theme.dangerColor)
+        com.future.messages.data.MessageStatus.FAILED -> Triple(FutureIcons.Error, "לא נשלח", theme.dangerColor)
     }
     Row(
         modifier = Modifier.padding(horizontal = 3.dp, vertical = FutureDimens.spacingXs),

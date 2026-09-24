@@ -7,10 +7,12 @@
          את העיצוב המשותף (כהה/בהיר, צבע הדגשה) מ-FutureUI. -->
     <queries>
         <package android:name="com.future.futureui" />
-        <!-- כפתור ההכתבה בשורת הכתיבה מוצג רק אם יש מי שמטפל בזיהוי דיבור;
-             בלי ההצהרה resolveActivity מחזיר תמיד null מאנדרואיד 11. -->
+        <!-- צירוף תמונה - ישר מהגלריה של FutureOS במצב בחירה. -->
+        <package android:name="com.future.gallery" />
+        <!-- הכתבה - שירות התמלול המקומי של Assistant (Whisper), לא Google. -->
+        <package android:name="com.future.assistant" />
         <intent>
-            <action android:name="android.speech.action.RECOGNIZE_SPEECH" />
+            <action android:name="android.speech.RecognitionService" />
         </intent>
     </queries>
 
@@ -20,6 +22,10 @@
     <uses-permission android:name="android.permission.RECEIVE_WAP_PUSH" />
     <uses-permission android:name="android.permission.RECEIVE_MMS" />
     <uses-permission android:name="android.permission.READ_CONTACTS" />
+    <!-- מסך "הודעה חדשה": הוספת מספר למועדפים (STARRED). -->
+    <uses-permission android:name="android.permission.WRITE_CONTACTS" />
+    <!-- הכתבה: שירות זיהוי הדיבור בודק שללקוח עצמו יש הרשאת מיקרופון. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- חיוג ישיר (ACTION_CALL) לאיש קשר ממוקד ברשימת השיחות באמצעות מקש
          החיוג הפיזי - אם לא תאושר, נופלים חזרה ל-ACTION_DIAL (פתיחת מסך חיוג). -->
