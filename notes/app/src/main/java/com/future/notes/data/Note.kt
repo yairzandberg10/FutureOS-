@@ -9,5 +9,9 @@ data class Note(
     val title: String,
     val content: String,
     val timestamp: Long = System.currentTimeMillis(),
-    val isPinned: Boolean = false
+    val isPinned: Boolean = false,
+    /** פתק-רשימה: content מחזיק שורה לכל פריט, ר' [Checklist]. */
+    val isChecklist: Boolean = false,
+    /** הקלטה קולית מצורפת - קובץ בתיקיית audio של האפליקציה. */
+    val audioPath: String? = null,
 )

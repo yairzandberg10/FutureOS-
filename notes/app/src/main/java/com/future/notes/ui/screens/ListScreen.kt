@@ -5,6 +5,22 @@ import androidx.compose.material.icons.automirrored.rounded.Notes
 import com.future.sharednav.icons.FutureIcons
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.material.icons.rounded.Checklist
+import androidx.compose.material.icons.rounded.GridView
+import androidx.compose.material.icons.rounded.ViewAgenda
+import androidx.compose.material3.Text
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import com.future.notes.data.Checklist
+import com.future.sharednav.components.ConfirmDialog
+import com.future.sharednav.components.FutureFocusCard
+import com.future.sharednav.theme.FutureTypography
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -59,6 +75,10 @@ fun ListScreen(
     onNoteClick: (Note) -> Unit,
     onAddNote: () -> Unit,
     onTogglePin: (Note) -> Unit,
+    onAddChecklist: () -> Unit,
+    onDeleteNote: (Note) -> Unit,
+    gridView: Boolean,
+    onToggleGrid: () -> Unit,
     // הפתק שנפתח לאחרונה - כשחוזרים "אחורה" מהעורך, הפוקוס צריך לשוב אליו
     // בדיוק, לא תמיד לפתק הראשון ברשימה.
     lastSelectedNoteId: Int? = null,
@@ -80,6 +100,7 @@ fun ListScreen(
 
     var focusedNote by remember { mutableStateOf<Note?>(null) }
     var showMenu by remember { mutableStateOf(false) }
+    var pendingDelete by remember { mutableStateOf<Note?>(null) }
     onOptionsKeyPress { showMenu = true }
 
     ScreenScaffold(
@@ -114,14 +135,23 @@ fun ListScreen(
 
             if (notes.isEmpty()) {
                 EmptyState(
-                    icon = Icons.AutoMirrored.Rounded.Notes,
+                    icon = FutureIcons.Description,
                     title = stringResource(if (searchQuery.isBlank()) R.string.no_notes else R.string.no_notes_found),
                     subtitle = if (searchQuery.isBlank()) stringResource(R.string.no_notes_hint) else null,
                     textColor = theme.textColor,
                     modifier = Modifier.weight(1f),
                 )
             } else {
-                LazyColumn(
+                if (gridView) {
+                    NotesGrid(
+                        notes = notes,
+                        theme = theme,
+                        onNoteClick = onNoteClick,
+                        focusRequesterFor = { rowFocusRequesters.getOrPut(it) { FocusRequester() } },
+                        onFocused = { focusedNote = it },
+                        modifier = Modifier.weight(1f),
+                    )
+                } else LazyColumn(
                     modifier = Modifier.weight(1f),
                     contentPadding = PaddingValues(horizontal = FutureDimens.screenPadding, vertical = FutureDimens.spacingSm),
                     verticalArrangement = Arrangement.spacedBy(FutureDimens.itemSpacing),
@@ -129,21 +159,14 @@ fun ListScreen(
                     itemsIndexed(notes, key = { _, note -> note.id }) { _, note ->
                         FutureListItem(
                             title = note.title.ifEmpty { stringResource(R.string.untitled) },
-                            summary = note.content.ifEmpty { stringResource(R.string.no_content) },
+                            summary = notePreview(note).ifEmpty { stringResource(R.string.no_content) },
                             summaryMaxLines = 2,
                             theme = theme,
                             onClick = { onNoteClick(note) },
                             focusRequester = rowFocusRequesters.getOrPut(note.id) { FocusRequester() },
                             modifier = Modifier.onFocusChanged { if (it.hasFocus) focusedNote = note },
-                            trailing = if (note.isPinned) {
-                                {
-                                    Icon(
-                                        Icons.Rounded.PushPin,
-                                        contentDescription = stringResource(R.string.pinned),
-                                        tint = theme.subtleTextColor,
-                                        modifier = Modifier.size(FutureDimens.iconTopBar),
-                                    )
-                                }
+                            trailing = if (note.isPinned || note.audioPath != null) {
+                                { NoteBadges(note, theme) }
                             } else null,
                         )
                     }
@@ -163,6 +186,10 @@ fun ListScreen(
                 showMenu = false
                 onAddNote()
             })
+            FutureMenuRow("רשימה חדשה", Icons.Rounded.Checklist, theme, {
+                showMenu = false
+                onAddChecklist()
+            })
             if (note != null) {
                 FutureMenuRow(
                     stringResource(if (note.isPinned) R.string.unpin else R.string.pin),
@@ -173,6 +200,96 @@ fun ListScreen(
                         onTogglePin(note)
                     },
                 )
+            }
+            FutureMenuRow(if (gridView) "תצוגת רשימה" else "תצוגת רשת", if (gridView) Icons.Rounded.ViewAgenda else Icons.Rounded.GridView, theme, {
+                showMenu = false
+                onToggleGrid()
+            })
+            if (note != null) {
+                FutureMenuRow(stringResource(R.string.delete), FutureIcons.Delete, theme, {
+                    showMenu = false
+                    pendingDelete = note
+                }, destructive = true)
+            }
+        }
+    }
+
+    pendingDelete?.let { note ->
+        ConfirmDialog(
+            message = stringResource(R.string.delete_note_confirm_message),
+            theme = theme,
+            onCancel = { pendingDelete = null },
+            onConfirm = {
+                pendingDelete = null
+                onDeleteNote(note)
+            },
+            confirmLabel = stringResource(R.string.delete_confirm),
+            cancelLabel = stringResource(R.string.cancel),
+        )
+    }
+}
+
+/** תקציר לשורה/כרטיס - ברשימה עם ☐/☑, כך שרואים כמה סומן. */
+private fun notePreview(note: Note): String =
+    if (note.isChecklist) Checklist.display(note.content) else note.content
+
+@Composable
+private fun NoteBadges(note: Note, theme: FutureTheme) {
+    if (note.audioPath != null) {
+        Icon(FutureIcons.Mic, contentDescription = "הקלטה", tint = theme.subtleTextColor, modifier = Modifier.size(FutureDimens.iconTopBar))
+    }
+    if (note.isPinned) {
+        Icon(Icons.Rounded.PushPin, contentDescription = stringResource(R.string.pinned), tint = theme.subtleTextColor, modifier = Modifier.size(FutureDimens.iconTopBar))
+    }
+}
+
+/** תצוגת רשת - שני טורים של כרטיסים, ניווט בחיצים בכל ארבעת הכיוונים. */
+@Composable
+private fun NotesGrid(
+    notes: List<Note>,
+    theme: FutureTheme,
+    onNoteClick: (Note) -> Unit,
+    focusRequesterFor: (Int) -> FocusRequester,
+    onFocused: (Note) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(2),
+        modifier = modifier,
+        contentPadding = PaddingValues(horizontal = FutureDimens.screenPadding, vertical = FutureDimens.spacingSm),
+        horizontalArrangement = Arrangement.spacedBy(FutureDimens.itemSpacing),
+        verticalArrangement = Arrangement.spacedBy(FutureDimens.itemSpacing),
+    ) {
+        items(notes, key = { it.id }) { note ->
+            FutureFocusCard(
+                theme = theme,
+                onClick = { onNoteClick(note) },
+                focusRequester = focusRequesterFor(note.id),
+                minHeight = 140.dp,
+                modifier = Modifier.onFocusChanged { if (it.hasFocus) onFocused(note) },
+            ) { _ ->
+                Column(modifier = Modifier.fillMaxWidth().heightIn(min = 116.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            note.title.ifEmpty { stringResource(R.string.untitled) },
+                            color = theme.textColor,
+                            fontSize = FutureTypography.body,
+                            fontWeight = FutureTypography.weightMedium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f),
+                        )
+                        NoteBadges(note, theme)
+                    }
+                    Text(
+                        notePreview(note).ifEmpty { stringResource(R.string.no_content) },
+                        color = theme.subtleTextColor,
+                        fontSize = FutureTypography.label,
+                        maxLines = 5,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(top = FutureDimens.spacingXs),
+                    )
+                }
             }
         }
     }

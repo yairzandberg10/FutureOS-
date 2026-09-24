@@ -10,6 +10,8 @@
     </queries>
 
     <uses-permission android:name="com.future.futureui.permission.SYSTEM_SETTINGS" />
+    <!-- הקלטה קולית בפתק. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="com.future.keyboard.permission.SETTINGS" />
     <application
         android:name=".NotesApp"
@@ -31,6 +33,13 @@
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- פתק ששותף מ-FuturePhone אחר ("שמור בפתקים" בהודעות), או כל טקסט
+                 משותף - נשמר כפתק חדש. -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
             </intent-filter>
         </activity>
         <receiver

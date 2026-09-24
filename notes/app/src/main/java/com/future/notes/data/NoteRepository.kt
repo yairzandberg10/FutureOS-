@@ -7,7 +7,8 @@ class NoteRepository(private val noteDao: NoteDao) {
 
     fun searchNotes(query: String): Flow<List<Note>> = noteDao.searchNotes(query)
 
-    suspend fun insert(note: Note) = noteDao.insertNote(note)
+    suspend fun insert(note: Note): Long = noteDao.insertNote(note)
+    suspend fun get(id: Int): Note? = noteDao.getNote(id)
     suspend fun update(note: Note) = noteDao.updateNote(note)
     suspend fun delete(note: Note) = noteDao.deleteNote(note)
 }

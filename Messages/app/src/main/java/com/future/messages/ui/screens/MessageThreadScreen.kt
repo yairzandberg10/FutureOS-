@@ -106,6 +106,7 @@ fun MessageThreadScreen(
 
     // הכתבה - המיקרופון שבתוך שורת הכתיבה (templates/message-compose), דרך
     // התמלול המקומי של Assistant. בלי Assistant במכשיר הכפתור לא מוצג בכלל.
+    val context = LocalContext.current
     val dictation = com.future.messages.ui.components.rememberLocalDictation { spoken ->
         textState = if (textState.isBlank()) spoken else "$textState $spoken"
         textFieldFocusRequester.requestFocus()
@@ -220,6 +221,19 @@ fun MessageThreadScreen(
                 actionMenuMessage = null
                 pendingDelete = message
             },
+            // פתק ששותף מ-FuturePhone אחר מגיע כהודעה - נשמר באפליקציית הפתקים.
+            onSaveToNotes = if (message.text.isNotBlank()) {
+                {
+                    actionMenuMessage = null
+                    val intent = android.content.Intent(android.content.Intent.ACTION_SEND)
+                        .setType("text/plain")
+                        .setPackage("com.future.notes")
+                        .putExtra(android.content.Intent.EXTRA_TEXT, message.text)
+                    runCatching { context.startActivity(intent) }.onFailure {
+                        android.widget.Toast.makeText(context, "אפליקציית הפתקים לא מותקנת", android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } else null,
             onDismiss = { actionMenuMessage = null }
         )
     }
@@ -376,9 +390,16 @@ private val BubbleMaxWidth = 220.dp
 private val BubbleGap = 10.dp
 
 @Composable
-private fun MessageActionDialog(theme: FutureTheme, onForward: () -> Unit, onDelete: () -> Unit, onDismiss: () -> Unit) {
+private fun MessageActionDialog(
+    theme: FutureTheme,
+    onForward: () -> Unit,
+    onDelete: () -> Unit,
+    onDismiss: () -> Unit,
+    onSaveToNotes: (() -> Unit)? = null,
+) {
     FutureOptionsMenu(theme = theme, onDismissRequest = onDismiss, header = "הודעה") {
         FutureMenuRow("העבר הודעה", FutureIcons.AutoMirrored.Send, theme, onForward)
+        if (onSaveToNotes != null) FutureMenuRow("שמירה בפתקים", FutureIcons.Description, theme, onSaveToNotes)
         FutureMenuRow("מחק הודעה", FutureIcons.Delete, theme, onDelete, destructive = true)
     }
 }

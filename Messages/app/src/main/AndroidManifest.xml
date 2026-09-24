@@ -9,6 +9,8 @@
         <package android:name="com.future.futureui" />
         <!-- צירוף תמונה - ישר מהגלריה של FutureOS במצב בחירה. -->
         <package android:name="com.future.gallery" />
+        <!-- "שמירה בפתקים" על הודעה (פתק ששותף מ-FuturePhone אחר). -->
+        <package android:name="com.future.notes" />
         <!-- הכתבה - שירות התמלול המקומי של Assistant (Whisper), לא Google. -->
         <package android:name="com.future.assistant" />
         <intent>

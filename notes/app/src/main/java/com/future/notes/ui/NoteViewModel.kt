@@ -7,6 +7,7 @@ import com.future.notes.data.NoteRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.io.File
 
 class NoteViewModel(private val repository: NoteRepository) : ViewModel() {
 
@@ -26,23 +27,39 @@ class NoteViewModel(private val repository: NoteRepository) : ViewModel() {
         _searchQuery.value = query
     }
 
-    fun addOrUpdateNote(id: Int = 0, title: String, content: String, isPinned: Boolean = false) {
-        viewModelScope.launch {
-            val note = Note(id = id, title = title, content = content, isPinned = isPinned, timestamp = System.currentTimeMillis())
-            if (id == 0) repository.insert(note)
-            else repository.update(note)
+    suspend fun getNote(id: Int): Note? = repository.get(id)
+
+    /**
+     * שמירה אוטומטית מהעורך: פתק חדש (id 0) נוצר בשמירה הראשונה, ומוחזר
+     * ה-id שלו כדי שהשמירות הבאות יעדכנו אותו במקום ליצור עוד פתק.
+     */
+    suspend fun save(note: Note): Int {
+        val stamped = note.copy(timestamp = System.currentTimeMillis())
+        return if (note.id == 0) {
+            repository.insert(stamped).toInt()
+        } else {
+            repository.update(stamped)
+            note.id
         }
     }
 
     fun deleteNote(note: Note) {
         viewModelScope.launch {
             repository.delete(note)
+            note.audioPath?.let { runCatching { File(it).delete() } }
         }
     }
 
     fun togglePin(note: Note) {
         viewModelScope.launch {
             repository.update(note.copy(isPinned = !note.isPinned))
+        }
+    }
+
+    /** פתק שהגיע משיתוף (ACTION_SEND) - בדרך כלל מ-FuturePhone אחר דרך הודעות. */
+    fun importShared(title: String, content: String, isChecklist: Boolean) {
+        viewModelScope.launch {
+            repository.insert(Note(title = title, content = content, isChecklist = isChecklist))
         }
     }
 }
