@@ -26,15 +26,15 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * הקטלוג של פקדי ה"גלולה" במרכז הבקרה - עד [MAX_PILLS] גלולות שהמשתמש מוסיף
- * בעצמו במצב עריכה. מופרד מהרשת (ControlLayoutManager.allAvailableControls):
- * אף פקד כאן לא משכפל פקד של הרשת.
+ * הקטלוג של רשת האייקונים במרכז הבקרה - עד [GridCatalog.MAX_CONTROLS] פקדים
+ * שהמשתמש מוסיף בעצמו במצב עריכה (הרשת ריקה כברירת מחדל). שורות הגלולות
+ * הקבועות ממשיכות להשתמש ב-ControlLayoutManager.allAvailableControls.
  *
  * [isToggle] - פקד עם מצב פועל/כבוי אמיתי שנקרא מהמערכת. השאר הם פעולות:
  * פתיחת אפליקציה או מסך הגדרות, או פקודה חד-פעמית. פעולה שפותחת משהו
  * מעל מרכז הבקרה מסומנת ב-[closesPanel] כדי שהפאנל ייסגר ולא יסתיר אותה.
  */
-data class PillControl(
+data class GridControl(
     val id: String,
     val label: String,
     val icon: androidx.compose.ui.graphics.vector.ImageVector,
@@ -42,84 +42,84 @@ data class PillControl(
     val closesPanel: Boolean = !isToggle
 )
 
-object PillCatalog {
-    const val MAX_PILLS = 50
+object GridCatalog {
+    const val MAX_CONTROLS = 50
 
-    val all: List<PillControl> = listOf(
+    val all: List<GridControl> = listOf(
         // מצבי מערכת
-        PillControl("dark_theme", "ערכת נושא כהה", Icons.Rounded.DarkMode, true),
-        PillControl("power_saver", "חיסכון בסוללה", Icons.Rounded.EnergySavingsLeaf, true),
-        PillControl("data_saver", "חוסך נתונים", Icons.Rounded.DataSaverOn, true),
-        PillControl("auto_sync", "סנכרון אוטומטי", Icons.Rounded.Sync, true),
-        PillControl("auto_time", "שעה אוטומטית", Icons.Rounded.AccessTime, true),
-        PillControl("heads_up", "התראות קופצות", Icons.Rounded.NotificationsActive, true),
+        GridControl("dark_theme", "ערכת נושא כהה", Icons.Rounded.DarkMode, true),
+        GridControl("power_saver", "חיסכון בסוללה", Icons.Rounded.EnergySavingsLeaf, true),
+        GridControl("data_saver", "חוסך נתונים", Icons.Rounded.DataSaverOn, true),
+        GridControl("auto_sync", "סנכרון אוטומטי", Icons.Rounded.Sync, true),
+        GridControl("auto_time", "שעה אוטומטית", Icons.Rounded.AccessTime, true),
+        GridControl("heads_up", "התראות קופצות", Icons.Rounded.NotificationsActive, true),
         // קול ורטט
-        PillControl("silent", "מצב שקט", Icons.Rounded.NotificationsOff, true),
-        PillControl("vibrate", "מצב רטט", Icons.Rounded.Vibration, true),
-        PillControl("mute_media", "השתקת מדיה", Icons.Rounded.MusicOff, true),
-        PillControl("vibrate_ring", "רטט בצלצול", Icons.Rounded.RingVolume, true),
-        PillControl("haptic", "משוב רטט", Icons.Rounded.TouchApp, true),
-        PillControl("touch_sounds", "צלילי מקשים", Icons.Rounded.SurroundSound, true),
-        PillControl("dial_tones", "צלילי חייגן", Icons.Rounded.Dialpad, true),
-        PillControl("mono_audio", "שמע מונו", Icons.Rounded.Hearing, true),
+        GridControl("silent", "מצב שקט", Icons.Rounded.NotificationsOff, true),
+        GridControl("vibrate", "מצב רטט", Icons.Rounded.Vibration, true),
+        GridControl("mute_media", "השתקת מדיה", Icons.Rounded.MusicOff, true),
+        GridControl("vibrate_ring", "רטט בצלצול", Icons.Rounded.RingVolume, true),
+        GridControl("haptic", "משוב רטט", Icons.Rounded.TouchApp, true),
+        GridControl("touch_sounds", "צלילי מקשים", Icons.Rounded.SurroundSound, true),
+        GridControl("dial_tones", "צלילי חייגן", Icons.Rounded.Dialpad, true),
+        GridControl("mono_audio", "שמע מונו", Icons.Rounded.Hearing, true),
         // מסך
-        PillControl("auto_brightness", "בהירות אוטומטית", Icons.Rounded.BrightnessAuto, true),
-        PillControl("night_light", "תאורת לילה", Icons.Rounded.Bedtime, true),
-        PillControl("extra_dim", "עמעום נוסף", Icons.Rounded.BrightnessLow, true),
-        PillControl("long_timeout", "מסך דלוק 10 דק'", Icons.Rounded.Timer, true),
-        PillControl("stay_awake", "דלוק בטעינה", Icons.Rounded.Coffee, true),
-        PillControl("animations_off", "ללא אנימציות", Icons.Rounded.Animation, true),
+        GridControl("auto_brightness", "בהירות אוטומטית", Icons.Rounded.BrightnessAuto, true),
+        GridControl("night_light", "תאורת לילה", Icons.Rounded.Bedtime, true),
+        GridControl("extra_dim", "עמעום נוסף", Icons.Rounded.BrightnessLow, true),
+        GridControl("long_timeout", "מסך דלוק 10 דק'", Icons.Rounded.Timer, true),
+        GridControl("stay_awake", "דלוק בטעינה", Icons.Rounded.Coffee, true),
+        GridControl("animations_off", "ללא אנימציות", Icons.Rounded.Animation, true),
         // נגישות
-        PillControl("large_text", "טקסט גדול", Icons.Rounded.FormatSize, true),
-        PillControl("high_contrast", "ניגודיות גבוהה", Icons.Rounded.Contrast, true),
-        PillControl("invert_colors", "היפוך צבעים", Icons.Rounded.InvertColors, true),
-        PillControl("grayscale", "גווני אפור", Icons.Rounded.Tonality, true),
+        GridControl("large_text", "טקסט גדול", Icons.Rounded.FormatSize, true),
+        GridControl("high_contrast", "ניגודיות גבוהה", Icons.Rounded.Contrast, true),
+        GridControl("invert_colors", "היפוך צבעים", Icons.Rounded.InvertColors, true),
+        GridControl("grayscale", "גווני אפור", Icons.Rounded.Tonality, true),
         // פעולות
-        PillControl("screenshot", "צילום מסך", Icons.Rounded.Screenshot, false),
-        PillControl("screen_off", "כיבוי מסך", Icons.Rounded.MobileOff, false),
-        PillControl("play_pause", "נגן / השהה", Icons.Rounded.PlayArrow, true, closesPanel = false),
-        PillControl("next_track", "שיר הבא", Icons.Rounded.SkipNext, false, closesPanel = false),
-        PillControl("prev_track", "שיר קודם", Icons.Rounded.SkipPrevious, false, closesPanel = false),
-        PillControl("kill_background", "ניקוי זיכרון", Icons.Rounded.CleaningServices, false, closesPanel = false),
+        GridControl("screenshot", "צילום מסך", Icons.Rounded.Screenshot, false),
+        GridControl("screen_off", "כיבוי מסך", Icons.Rounded.MobileOff, false),
+        GridControl("play_pause", "נגן / השהה", Icons.Rounded.PlayArrow, true, closesPanel = false),
+        GridControl("next_track", "שיר הבא", Icons.Rounded.SkipNext, false, closesPanel = false),
+        GridControl("prev_track", "שיר קודם", Icons.Rounded.SkipPrevious, false, closesPanel = false),
+        GridControl("kill_background", "ניקוי זיכרון", Icons.Rounded.CleaningServices, false, closesPanel = false),
         // אפליקציות FutureOS
-        PillControl("app_calculator", "מחשבון", Icons.Rounded.Calculate, false),
-        PillControl("app_clock", "שעון", Icons.Rounded.Alarm, false),
-        PillControl("app_notes", "פתקים", Icons.Rounded.StickyNote2, false),
-        PillControl("app_messages", "הודעות", Icons.Rounded.Sms, false),
-        PillControl("app_dialer", "טלפון", Icons.Rounded.Call, false),
-        PillControl("app_contacts", "אנשי קשר", Icons.Rounded.Contacts, false),
-        PillControl("app_gallery", "גלריה", Icons.Rounded.PhotoLibrary, false),
-        PillControl("app_files", "קבצים", Icons.Rounded.Folder, false),
-        PillControl("app_navigation", "ניווט", Icons.Rounded.Navigation, false),
-        PillControl("app_translate", "תרגום", Icons.Rounded.Translate, false),
-        PillControl("app_assistant", "עוזר קולי", Icons.Rounded.Mic, false),
-        PillControl("app_remote", "שלט", Icons.Rounded.SettingsRemote, false),
-        PillControl("app_tasks", "משימות", Icons.Rounded.Checklist, false),
+        GridControl("app_calculator", "מחשבון", Icons.Rounded.Calculate, false),
+        GridControl("app_clock", "שעון", Icons.Rounded.Alarm, false),
+        GridControl("app_notes", "פתקים", Icons.Rounded.StickyNote2, false),
+        GridControl("app_messages", "הודעות", Icons.Rounded.Sms, false),
+        GridControl("app_dialer", "טלפון", Icons.Rounded.Call, false),
+        GridControl("app_contacts", "אנשי קשר", Icons.Rounded.Contacts, false),
+        GridControl("app_gallery", "גלריה", Icons.Rounded.PhotoLibrary, false),
+        GridControl("app_files", "קבצים", Icons.Rounded.Folder, false),
+        GridControl("app_navigation", "ניווט", Icons.Rounded.Navigation, false),
+        GridControl("app_translate", "תרגום", Icons.Rounded.Translate, false),
+        GridControl("app_assistant", "עוזר קולי", Icons.Rounded.Mic, false),
+        GridControl("app_remote", "שלט", Icons.Rounded.SettingsRemote, false),
+        GridControl("app_tasks", "משימות", Icons.Rounded.Checklist, false),
         // מסכי הגדרות
-        PillControl("set_wifi", "רשתות Wi-Fi", Icons.Rounded.NetworkWifi, false),
-        PillControl("set_sound", "הגדרות צליל", Icons.Rounded.Tune, false),
-        PillControl("set_display", "הגדרות תצוגה", Icons.Rounded.DisplaySettings, false),
-        PillControl("set_storage", "אחסון", Icons.Rounded.Storage, false),
-        PillControl("set_apps", "ניהול אפליקציות", Icons.Rounded.Apps, false),
-        PillControl("set_accessibility", "נגישות", Icons.Rounded.Accessibility, false),
-        PillControl("set_date_time", "תאריך ושעה", Icons.Rounded.Schedule, false),
+        GridControl("set_wifi", "רשתות Wi-Fi", Icons.Rounded.NetworkWifi, false),
+        GridControl("set_sound", "הגדרות צליל", Icons.Rounded.Tune, false),
+        GridControl("set_display", "הגדרות תצוגה", Icons.Rounded.DisplaySettings, false),
+        GridControl("set_storage", "אחסון", Icons.Rounded.Storage, false),
+        GridControl("set_apps", "ניהול אפליקציות", Icons.Rounded.Apps, false),
+        GridControl("set_accessibility", "נגישות", Icons.Rounded.Accessibility, false),
+        GridControl("set_date_time", "תאריך ושעה", Icons.Rounded.Schedule, false),
     )
 
     private val byId = all.associateBy { it.id }
 
-    fun get(id: String): PillControl? = byId[id]
+    fun get(id: String): GridControl? = byId[id]
 }
 
 /**
- * מבצע את פקדי הגלולה וקורא את מצבם. כל הכתיבות להגדרות מערכת עוברות קודם
+ * מבצע את פקדי הרשת וקורא את מצבם. כל הכתיבות להגדרות מערכת עוברות קודם
  * דרך root (`settings put` - המכשיר rooted ורוב המפתחות כאן לא ניתנים לכתיבה
  * לאפליקציה רגילה), עם נפילה ל-API הציבורי כשיש כזה.
  *
  * קריאת המצב רצה ברקע: מפתחות Settings מוסתרים זורקים SecurityException על
  * targetSdk 31, ואז הקריאה נופלת ל-`settings get` דרך root - לכן הרענון
- * נעשה רק על הגלולות שמוצגות, ולא בקצב של לולאת 500ms של מרכז הבקרה.
+ * נעשה רק על הפקדים שברשת, ולא בקצב של לולאת 500ms של מרכז הבקרה.
  */
-class PillControlManager(private val context: Context) {
+class GridControlManager(private val context: Context) {
 
     private val resolver: ContentResolver = context.contentResolver
     private val audio by lazy { context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager }
@@ -137,7 +137,7 @@ class PillControlManager(private val context: Context) {
     fun isOn(id: String): Boolean = states[id] ?: false
 
     fun refresh(ids: List<String>) {
-        val toggles = ids.filter { PillCatalog.get(it)?.isToggle == true }
+        val toggles = ids.filter { GridCatalog.get(it)?.isToggle == true }
         if (toggles.isEmpty() || refreshJob?.isActive == true) return
         refreshJob = scope.launch {
             val read = withContext(Dispatchers.IO) { toggles.associateWith { readState(it) } }
@@ -148,7 +148,7 @@ class PillControlManager(private val context: Context) {
     fun dispose() = scope.cancel()
 
     fun activate(id: String) {
-        val control = PillCatalog.get(id) ?: return
+        val control = GridCatalog.get(id) ?: return
         if (control.isToggle) states[id] = !isOn(id)
         val target = isOn(id)
         scope.launch {
@@ -278,7 +278,7 @@ class PillControlManager(private val context: Context) {
                 else "settings put secure accessibility_display_daltonizer_enabled 0"
             )
 
-            // הפאנל נסגר קודם ([PillControl.closesPanel]) - מחכים שייעלם מהמסך
+            // הפאנל נסגר קודם ([GridControl.closesPanel]) - מחכים שייעלם מהמסך
             "screenshot" -> { SystemClock.sleep(700); root("input keyevent ${KeyEvent.KEYCODE_SYSRQ}") }
             "screen_off" -> { SystemClock.sleep(300); root("input keyevent ${KeyEvent.KEYCODE_SLEEP}") }
             "play_pause" -> mediaKey(KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE)
@@ -361,7 +361,7 @@ class PillControlManager(private val context: Context) {
     }
 
     companion object {
-        private const val TAG = "PillControls"
+        private const val TAG = "GridControls"
         private const val NS_SYSTEM = "system"
         private const val NS_SECURE = "secure"
         private const val NS_GLOBAL = "global"

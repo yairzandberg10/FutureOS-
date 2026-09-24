@@ -4,21 +4,20 @@ This repo has no carried-over git history (see root [README](README.md)), so thi
 
 ## Unreleased
 
-### Control Center pills and lock screen removal
+### Control Center grid and lock screen removal
 
-- **FutureUI: the two fixed pill rows in the Control Center are gone.** The
-  Wi-Fi/Bluetooth and airplane/DND pills are replaced by one "pills" section
-  that is empty by default. In edit mode an "add" pill appears; OK on it adds
-  a pill, Options on a pill swaps it for the next unused control, OK on a pill
-  removes it. Up to 50 pills, from a new catalog of 50 controls
-  (`controlcenter/logic/PillControls.kt`) that does not repeat any grid
-  control: 24 real toggles with state read from the system (dark theme,
-  battery saver, data saver, silent/vibrate, night light, extra dim, font
-  size, grayscale, invert colours, animations, and more — written through
-  root `settings`/`cmd`, falling back to the public API), 6 actions
-  (screenshot, screen off, media play/pause/next/previous, clear memory),
-  13 FutureOS app shortcuts and 7 system settings pages. Saved section orders
-  migrate: `toggles` becomes `pills`, `bottom_toggles` is dropped.
+- **FutureUI: the Control Center icon grid has a new set of controls.** The
+  18 old grid controls are gone and the grid starts empty. In edit mode,
+  Options on the grid opens the add list; up to 50 controls, from a new
+  catalog of 50 (`controlcenter/logic/GridControls.kt`): 24 real toggles with
+  state read from the system (dark theme, battery saver, data saver,
+  silent/vibrate, night light, extra dim, font size, grayscale, invert
+  colours, animations, and more - written through root `settings`/`cmd`,
+  falling back to the public API), 6 actions (screenshot, screen off, media
+  play/pause/next/previous, clear memory), 13 FutureOS app shortcuts and 7
+  system settings pages. The fixed pill rows (Wi-Fi/Bluetooth,
+  airplane/DND) stay as they were. (2c8a22f had applied this to the pills by
+  mistake; a section order saved with `pills` migrates back.)
 - **The lock screen is deleted from FutureUI and SystemUI.** Its service,
   screen, layout manager, PIN store and PIN screens are gone, as are the lock
   screen rows in "התאמה אישית" and the clock style row in the Settings app

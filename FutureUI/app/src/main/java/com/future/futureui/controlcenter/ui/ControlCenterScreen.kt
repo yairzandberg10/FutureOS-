@@ -40,8 +40,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.future.futureui.controlcenter.logic.ControlLayoutManager
 import com.future.futureui.controlcenter.logic.ControlManager
-import com.future.futureui.controlcenter.logic.PillCatalog
-import com.future.futureui.controlcenter.logic.PillControlManager
+import com.future.futureui.controlcenter.logic.GridCatalog
+import com.future.futureui.controlcenter.logic.GridControlManager
 import com.future.futureui.controlcenter.ui.components.*
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
@@ -69,10 +69,11 @@ fun ControlCenterScreen(
     var isGridEditing by remember { mutableStateOf(isEditModeByDefault) }
     var isCenterKeyPressed by remember { mutableStateOf(false) }
 
-    val pillManager = remember { PillControlManager(context) }
-    DisposableEffect(pillManager) { onDispose { pillManager.dispose() } }
-    var pillIds by remember { mutableStateOf(layoutManager.getPillIds()) }
+    var topToggleIds by remember { mutableStateOf(layoutManager.getTopToggleIds()) }
+    var bottomToggleIds by remember { mutableStateOf(layoutManager.getBottomToggleIds()) }
     var activeControlIds by remember { mutableStateOf(layoutManager.getActiveLayout()) }
+    val gridManager = remember { GridControlManager(context) }
+    DisposableEffect(gridManager) { onDispose { gridManager.dispose() } }
     var sectionOrder by remember { mutableStateOf(layoutManager.getSectionOrder()) }
     var movingSectionId by remember { mutableStateOf<String?>(null) }
 
@@ -91,17 +92,13 @@ fun ControlCenterScreen(
         }
     }
 
-    // מצב הגלולות נקרא בקצב איטי יותר מהלולאה למעלה - חלק מהקריאות עוברות דרך root
-    LaunchedEffect(pillIds) {
+    // מצב פקדי הרשת נקרא בקצב איטי יותר מהלולאה למעלה - חלק מהקריאות עוברות דרך root
+    LaunchedEffect(activeControlIds) {
         while (true) {
-            pillManager.refresh(pillIds)
+            gridManager.refresh(activeControlIds)
             delay(2000)
         }
     }
-
-    // null = גלולת "הוספת פקד", שמופיעה רק במצב עריכה וכל עוד לא הגענו למקסימום
-    val pillCells: List<String?> =
-        if (isEditMode && pillIds.size < PillCatalog.MAX_PILLS) pillIds + null else pillIds
 
     var currentTime by remember { mutableStateOf("") }
     var currentDate by remember { mutableStateOf("") }
@@ -226,7 +223,8 @@ fun ControlCenterScreen(
                                     if (isEditMode) {
                                         layoutManager.saveLayout(activeControlIds)
                                         layoutManager.saveSectionOrder(sectionOrder)
-                                        layoutManager.savePillIds(pillIds)
+                                        layoutManager.saveTopToggleIds(topToggleIds)
+                                        layoutManager.saveBottomToggleIds(bottomToggleIds)
                                         movingSectionId = null
                                         isGridEditing = false
                                     }
@@ -269,75 +267,31 @@ fun ControlCenterScreen(
                             }
                         ) {
                             when (sectionId) {
-                                "pills" -> {
-                                    if (pillCells.isNotEmpty()) {
-                                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                                            if (isEditMode) {
-                                                Text(
-                                                    text = "פקדים ${pillIds.size}/${PillCatalog.MAX_PILLS} · OK מסיר · Options מחליף",
-                                                    color = clockColor.copy(alpha = 0.7f),
-                                                    fontSize = FutureTypography.label,
-                                                    fontWeight = FontWeight.Bold
-                                                )
-                                            }
-                                            pillCells.chunked(2).forEachIndexed { rowIndex, row ->
-                                                Row(
-                                                    modifier = Modifier.fillMaxWidth(),
-                                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                                                ) {
-                                                    row.forEachIndexed { colIndex, id ->
-                                                        val index = rowIndex * 2 + colIndex
-                                                        val requester = if (index == 0) initialFocusRequester else null
-                                                        val info = id?.let { PillCatalog.get(it) }
-                                                        if (id == null || info == null) {
-                                                            TogglePill(
-                                                                label = "הוספת פקד",
-                                                                icon = Icons.Rounded.Add,
-                                                                isOn = false,
-                                                                onToggle = {
-                                                                    val next = PillCatalog.all.firstOrNull { it.id !in pillIds }
-                                                                    if (next != null && pillIds.size < PillCatalog.MAX_PILLS) {
-                                                                        pillIds = pillIds + next.id
-                                                                    }
-                                                                },
-                                                                modifier = Modifier.weight(1f),
-                                                                focusRequester = requester,
-                                                                labelColor = clockColor
-                                                            )
-                                                        } else {
-                                                            TogglePill(
-                                                                label = info.label,
-                                                                icon = info.icon,
-                                                                isOn = info.isToggle && pillManager.isOn(id),
-                                                                onToggle = {
-                                                                    if (isEditMode) {
-                                                                        pillIds = pillIds.filterIndexed { i, _ -> i != index }
-                                                                    } else {
-                                                                        pillManager.activate(id)
-                                                                        if (info.closesPanel) onRequestClose()
-                                                                    }
-                                                                },
-                                                                modifier = Modifier.weight(1f),
-                                                                isEditMode = isEditMode,
-                                                                onOptionPressed = {
-                                                                    // מחליף לפקד הבא בקטלוג שעוד לא מוצג
-                                                                    val all = PillCatalog.all
-                                                                    val start = all.indexOfFirst { it.id == id }
-                                                                    val replacement = (1 until all.size)
-                                                                        .map { all[(start + it) % all.size] }
-                                                                        .firstOrNull { it.id !in pillIds }
-                                                                    if (replacement != null) {
-                                                                        pillIds = pillIds.toMutableList().also { it[index] = replacement.id }
-                                                                    }
-                                                                },
-                                                                focusRequester = requester,
-                                                                labelColor = clockColor
-                                                            )
-                                                        }
-                                                    }
-                                                    if (row.size == 1) Spacer(modifier = Modifier.weight(1f))
-                                                }
-                                            }
+                                "toggles" -> {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                    ) {
+                                        topToggleIds.forEachIndexed { index, id ->
+                                            val info = layoutManager.getControlById(id) ?: return@forEachIndexed
+                                            TogglePill(
+                                                label = info.label,
+                                                icon = info.icon,
+                                                isOn = manager.getControlState(id),
+                                                onToggle = { manager.handleControlToggle(id) },
+                                                modifier = Modifier.weight(1f),
+                                                isEditMode = isEditMode,
+                                                onOptionPressed = {
+                                                    val all = layoutManager.allAvailableControls
+                                                    val currIdx = all.indexOfFirst { it.id == id }
+                                                    val nextIdx = (currIdx + 1) % all.size
+                                                    val newList = topToggleIds.toMutableList()
+                                                    newList[index] = all[nextIdx].id
+                                                    topToggleIds = newList
+                                                },
+                                                focusRequester = if (index == 0) initialFocusRequester else null,
+                                                labelColor = clockColor
+                                            )
                                         }
                                     }
                                 }
@@ -367,7 +321,7 @@ fun ControlCenterScreen(
                                         horizontalAlignment = Alignment.CenterHorizontally
                                     ) {
                                         if (isGridEditing) {
-                                            val availableControls = layoutManager.allAvailableControls.filter { 
+                                            val availableControls = GridCatalog.all.filter { 
                                                 it.id !in activeControlIds 
                                             }
                                             if (availableControls.isNotEmpty()) {
@@ -393,7 +347,9 @@ fun ControlCenterScreen(
                                                                     label = control.label,
                                                                     isOn = false,
                                                                     onToggle = {
-                                                                        activeControlIds = activeControlIds + control.id
+                                                                        if (activeControlIds.size < GridCatalog.MAX_CONTROLS) {
+                                                                            activeControlIds = activeControlIds + control.id
+                                                                        }
                                                                     },
                                                                     showLabel = true,
                                                                     isEditMode = true,
@@ -418,17 +374,31 @@ fun ControlCenterScreen(
                                         }
 
                                         val gridControls = activeControlIds.mapNotNull { id ->
-                                            val info = layoutManager.getControlById(id) ?: return@mapNotNull null
+                                            val info = GridCatalog.get(id) ?: return@mapNotNull null
                                             object {
                                                 val id = id
                                                 val label = info.label
                                                 val icon = info.icon
-                                                val isOn = manager.getControlState(id)
-                                                val onToggle = { manager.handleControlToggle(id) }
+                                                val isOn = info.isToggle && gridManager.isOn(id)
+                                                val onToggle = {
+                                                    gridManager.activate(id)
+                                                    if (info.closesPanel) onRequestClose()
+                                                }
                                             }
                                         }
 
-                                        val maxRows = if (isExpanded || isEditMode) (gridControls.size + 4) / 5 else 2
+                                        if (gridControls.isEmpty() && !isGridEditing) {
+                                            Text(
+                                                text = "אין פקדים - היכנס לעריכה ולחץ Options על הרשת כדי להוסיף (עד ${GridCatalog.MAX_CONTROLS})",
+                                                color = clockColor.copy(alpha = 0.7f),
+                                                fontSize = FutureTypography.label,
+                                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                                modifier = Modifier.padding(vertical = 8.dp)
+                                            )
+                                        }
+
+                                        val totalRows = (gridControls.size + 4) / 5
+                                        val maxRows = if (isExpanded || isEditMode) totalRows else minOf(2, totalRows)
                                         repeat(maxRows) { rowIndex ->
                                             AnimatedVisibility(
                                                 visible = isExpanded || isEditMode || rowIndex < 2,
@@ -458,9 +428,7 @@ fun ControlCenterScreen(
                                                                 isEditMode = isGridEditing,
                                                                 isRemove = true,
                                                                 onMenuClick = { if (isGridEditing) isGridEditing = false },
-                                                                labelColor = clockColor,
-                                                                // בלי גלולות, הפוקוס הראשוני נוחת על האייקון הראשון ברשת
-                                                                focusRequester = if (pillCells.isEmpty() && index == 0) initialFocusRequester else null
+                                                                labelColor = clockColor
                                                             )
                                                         } else {
                                                             Spacer(modifier = Modifier.width(54.dp))
@@ -496,6 +464,33 @@ fun ControlCenterScreen(
                                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                         SliderBar(icon = Icons.Rounded.Brightness6, value = manager.brightnessLevel, onValueChange = { manager.setBrightness(it) }, isDarkBackground = isDarkBackground)
                                         SliderBar(icon = Icons.AutoMirrored.Rounded.VolumeUp, value = manager.volumeLevel, onValueChange = { manager.setVolume(it) }, isDarkBackground = isDarkBackground)
+                                    }
+                                }
+                                "bottom_toggles" -> {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                    ) {
+                                        bottomToggleIds.forEachIndexed { index, id ->
+                                            val info = layoutManager.getControlById(id) ?: return@forEachIndexed
+                                            TogglePill(
+                                                label = info.label,
+                                                icon = info.icon,
+                                                isOn = manager.getControlState(id),
+                                                onToggle = { manager.handleControlToggle(id) },
+                                                modifier = Modifier.weight(1f),
+                                                isEditMode = isEditMode,
+                                                onOptionPressed = {
+                                                    val all = layoutManager.allAvailableControls
+                                                    val currIdx = all.indexOfFirst { it.id == id }
+                                                    val nextIdx = (currIdx + 1) % all.size
+                                                    val newList = bottomToggleIds.toMutableList()
+                                                    newList[index] = all[nextIdx].id
+                                                    bottomToggleIds = newList
+                                                },
+                                                labelColor = clockColor
+                                            )
+                                        }
                                     }
                                 }
                             }
