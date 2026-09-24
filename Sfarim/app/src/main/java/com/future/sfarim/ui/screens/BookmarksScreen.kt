@@ -127,7 +127,7 @@ private fun BookmarkRow(
                 onDelete(); true
             } else false
         },
-        leading = { FutureAvatar(theme = theme, icon = FutureIcons.Bookmark) },
+        leading = { com.future.sfarim.ui.components.RowIcon(FutureIcons.Bookmark, theme) },
         // אייקון תצוגתי בלבד (לא focusable) - המחיקה זמינה דרך מקש Menu על
         // השורה עצמה. שני יעדי פוקוס על אותה שורה לא נגישים שניהם ב-D-pad.
         trailing = {

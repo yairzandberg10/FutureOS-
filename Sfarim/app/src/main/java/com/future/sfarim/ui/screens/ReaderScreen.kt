@@ -1,8 +1,4 @@
 package com.future.sfarim.ui.screens
-import androidx.compose.material.icons.rounded.BookmarkBorder
-import androidx.compose.material.icons.rounded.TextDecrease
-import androidx.compose.material.icons.rounded.TextIncrease
-import androidx.compose.material.icons.automirrored.rounded.Comment
 
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureOptionsMenu
@@ -43,7 +39,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -121,6 +116,12 @@ fun ReaderScreen(
     // מקש Options הפיזי נחסם ברמת המערכת ולעולם לא מגיע כ-Key.Menu לאפליקציה -
     // בלי השורה הזו תפריט האפשרויות של המסך לא היה נגיש בכלל במכשיר אמיתי.
     com.future.sharednav.nav.onOptionsKeyPress { showPageMenu = true }
+    // * ו-# נצרכים ברמת המערכת ומגיעים רק כשידור (ר' onStarKeyPress) - ה-KEYCODE_STAR/
+    // KEYCODE_POUND ב-onKeyEvent למטה נשארים רק לאמולטור/מקלדת בלי FutureUI.
+    // כשתפריט/חלון מפרשים פתוח, הלחיצה לא מחליפה את הפרק שמתחתיו.
+    val overlayOpen = showPageMenu || menuSegment != null
+    com.future.sharednav.nav.onStarKeyPress { if (hasPrevChapter && !overlayOpen) onPrevChapter() }
+    com.future.sharednav.nav.onPoundKeyPress { if (hasNextChapter && !overlayOpen) onNextChapter() }
     var commentaryPrefix by remember { mutableStateOf<List<Int>?>(null) }
     var commentaryResults by remember { mutableStateOf<List<CommentaryEntry>?>(null) }
     val listState = rememberLazyListState()
@@ -383,14 +384,14 @@ private fun ContentOptionsMenu(
     FutureOptionsMenu(theme = theme, onDismissRequest = onDismiss, header = refDisplay) {
         FutureMenuRow(
             if (isBookmarked) "הסר $contentLabel מהסימניות" else "הוסף $contentLabel לסימניות",
-            if (isBookmarked) FutureIcons.Bookmark else Icons.Rounded.BookmarkBorder,
+            if (isBookmarked) FutureIcons.Bookmark else FutureIcons.BookmarkBorder,
             theme,
             onToggleBookmark,
         )
         FutureMenuRow("שתף $contentLabel", FutureIcons.Share, theme, onShare)
         FutureMenuRow("מפרשים על ה$contentLabel", FutureIcons.Forum, theme, onShowCommentaries)
-        FutureMenuRow("הגדל גופן", Icons.Rounded.TextIncrease, theme, onIncreaseFont)
-        FutureMenuRow("הקטן גופן", Icons.Rounded.TextDecrease, theme, onDecreaseFont)
+        FutureMenuRow("הגדל גופן", FutureIcons.TextIncrease, theme, onIncreaseFont)
+        FutureMenuRow("הקטן גופן", FutureIcons.TextDecrease, theme, onDecreaseFont)
     }
 }
 

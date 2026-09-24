@@ -17,9 +17,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.LibraryBooks
-import androidx.compose.material.icons.rounded.Book
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -36,7 +33,9 @@ import androidx.compose.runtime.CompositionLocalProvider
 import com.future.sfarim.data.LibraryBook
 import com.future.sfarim.data.LibraryCategory
 import com.future.sfarim.ui.components.ScreenTopBar
+import com.future.sfarim.ui.components.RowIcon
 import com.future.sharednav.theme.FutureTheme
+import com.future.sharednav.icons.FutureIcons
 
 sealed class BrowseEntry {
     abstract val sortOrder: Int
@@ -98,14 +97,14 @@ fun BrowseScreen(
                             val rowFocusRequester = rowFocusRequesters.getOrPut(keyOf(entry)) { FocusRequester() }
                             when (entry) {
                                 is BrowseEntry.Cat -> BrowseRow(
-                                    icon = Icons.AutoMirrored.Rounded.LibraryBooks,
+                                    icon = FutureIcons.Book,
                                     label = entry.category.nameHe?.takeIf { it.isNotBlank() } ?: entry.category.nameEn,
                                     theme = theme,
                                     focusRequester = rowFocusRequester,
                                     onClick = { onOpenCategory(entry.category) },
                                 )
                                 is BrowseEntry.Bk -> BrowseRow(
-                                    icon = Icons.Rounded.Book,
+                                    icon = FutureIcons.AutoMirrored.MenuBook,
                                     label = entry.book.displayTitle,
                                     theme = theme,
                                     focusRequester = rowFocusRequester,
@@ -133,6 +132,6 @@ private fun BrowseRow(
         theme = theme,
         onClick = onClick,
         focusRequester = focusRequester,
-        leading = { FutureAvatar(theme = theme, icon = icon) },
+        leading = { RowIcon(icon, theme) },
     )
 }

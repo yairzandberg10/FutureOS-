@@ -1,6 +1,4 @@
 package com.future.sfarim.ui.screens
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.LibraryBooks
 import com.future.sharednav.components.FutureListItem
 import com.future.sharednav.components.FutureAvatar
 import com.future.sharednav.components.FutureSectionHeader
@@ -41,9 +39,11 @@ import androidx.compose.ui.unit.sp
 import com.future.sfarim.data.BookChapter
 import com.future.sfarim.data.LibraryBook
 import com.future.sfarim.ui.components.ScreenTopBar
+import com.future.sfarim.ui.components.RowIcon
 
 import com.future.sharednav.nav.digitForKey
 import com.future.sharednav.theme.FutureTheme
+import com.future.sharednav.icons.FutureIcons
 
 /** פריט ברשימה: פרק להיכנס אליו, או חלק בספר (למשל "אורח חיים" בערוך השולחן,
  * "תפילת שחרית" בסידור) שפותח רשימה משלו. */
@@ -97,6 +97,13 @@ fun BookChaptersScreen(
             .mapNotNull { e -> e.chapter.number?.let { it to e.chapter.topIndex } }
             .toMap()
     }
+    // * ו-# מגיעים במכשיר רק כשידור מ-FutureUI (ר' onStarKeyPress).
+    com.future.sharednav.nav.onPoundKeyPress {
+        val target = jumpBuffer.toIntOrNull()
+        jumpBuffer = ""
+        jumpTargets[target]?.let(onOpenChapter)
+    }
+    com.future.sharednav.nav.onStarKeyPress { jumpBuffer = "" }
     val firstFocusRequester = remember(entries.firstOrNull()) { FocusRequester() }
     LaunchedEffect(entries.firstOrNull()) {
         if (entries.isNotEmpty()) firstFocusRequester.requestFocus()
@@ -178,12 +185,7 @@ fun BookChaptersScreen(
                                     theme = theme,
                                     onClick = { onOpenPart(entry.path) },
                                     focusRequester = focusRequester,
-                                    leading = {
-                                        FutureAvatar(
-                                            theme = theme,
-                                            icon = Icons.AutoMirrored.Rounded.LibraryBooks,
-                                        )
-                                    },
+                                    leading = { RowIcon(FutureIcons.AutoMirrored.MenuBook, theme) },
                                 )
                             }
                         }

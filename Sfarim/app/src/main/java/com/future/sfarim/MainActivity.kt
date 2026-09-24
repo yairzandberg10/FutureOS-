@@ -6,6 +6,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -28,6 +30,7 @@ import com.future.sharednav.theme.ThemeClient
 import com.future.sfarim.ui.LibraryNavHost
 import com.future.sfarim.ui.screens.LibraryNotInstalledScreen
 import com.future.sharednav.theme.FutureTheme
+import com.future.sharednav.theme.FutureDimens
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -84,7 +87,17 @@ private fun SfarimApp() {
     }
     val repository = remember(db) { db?.let { LibraryRepository(it) } }
 
-    Surface(modifier = Modifier.fillMaxSize(), color = theme.backgroundColor) {
+    // מרווח קטן מתחת לשורת המצב - בלעדיו הכותרת העליונה ישבה צמודה אליה.
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = theme.backgroundColor,
+    ) {
+      Box(
+          modifier = Modifier
+              .fillMaxSize()
+              .statusBarsPadding()
+              .padding(top = FutureDimens.spacingSm),
+      ) {
         when {
             isLoadingDb -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -102,5 +115,6 @@ private fun SfarimApp() {
                 LibraryNavHost(repository = repository, theme = theme)
             }
         }
+      }
     }
 }

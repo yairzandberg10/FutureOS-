@@ -1,10 +1,8 @@
 package com.future.sfarim.ui.screens
-import androidx.compose.material.icons.rounded.AutoStories
-import androidx.compose.material.icons.automirrored.rounded.LibraryBooks
 
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureListItem
-import com.future.sharednav.components.FutureAvatar
+import com.future.sfarim.ui.components.RowIcon
 import com.future.sharednav.components.FutureSectionHeader
 import com.future.sharednav.theme.FutureDimens
 import com.future.sharednav.components.FutureActionCell
@@ -24,7 +22,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -76,7 +73,7 @@ fun HomeScreen(
                         theme = theme,
                         onClick = { onContinueReading(continueReading) },
                         focusRequester = firstFocusRequester,
-                        leading = { FutureAvatar(theme = theme, icon = Icons.Rounded.AutoStories) },
+                        leading = { RowIcon(FutureIcons.AutoStories, theme) },
                     )
                 }
             }
@@ -98,7 +95,7 @@ fun HomeScreen(
                     title = category.nameHe?.takeIf { it.isNotBlank() } ?: category.nameEn,
                     theme = theme,
                     onClick = { onOpenCategory(category) },
-                    leading = { FutureAvatar(theme = theme, icon = Icons.AutoMirrored.Rounded.LibraryBooks) },
+                    leading = { RowIcon(FutureIcons.BookShelf, theme) },
                 )
             }
         }
