@@ -992,6 +992,17 @@ fun SystemUiScreen(navController: NavController, theme: ThemeConfig, viewModel: 
         Column {
             SmallHeader("שורת מצב ורקע", theme) { navController.popBackStack() }
             LazyColumn {
+                item { SettingHeader("סגנון שורת המצב", theme) }
+                item {
+                    SettingsCard(theme) {
+                        StatusBarStyles.forEachIndexed { index, style ->
+                            if (index > 0) SettingDivider(theme)
+                            StatusBarStyleOption(style, selected = settings.barStyle == style.id, theme = theme) {
+                                com.future.settings.theme.SystemUiSettingsClient.setBarStyle(context, style.id); reload()
+                            }
+                        }
+                    }
+                }
                 item { SettingHeader("שורת מצב", theme) }
                 item {
                     SettingsCard(theme) {
@@ -1043,6 +1054,70 @@ fun SystemUiScreen(navController: NavController, theme: ThemeConfig, viewModel: 
             Box(modifier = Modifier.fillMaxSize().background(theme.futureTheme.scrimColor), contentAlignment = Alignment.Center) {
                 FutureSpinner(theme = theme.futureTheme)
             }
+        }
+    }
+}
+
+/** ארבעת סגנונות שורת המצב, עם תמונה של כל אחד מתוך העיצוב (drawable-nodpi, 640×64). */
+private data class StatusBarStyle(val id: String, val title: String, val summary: String, val preview: Int)
+
+private val StatusBarStyles = listOf(
+    StatusBarStyle("classic", "קלאסי", "השורה המוכרת, עם נקודה כשיש התראות", com.future.settings.R.drawable.statusbar_style_classic),
+    StatusBarStyle("quiet", "שקט", "שעה ואייקוני האפליקציות עם התראות, בלי קישוטים", com.future.settings.R.drawable.statusbar_style_quiet),
+    StatusBarStyle("capsules", "כמוסות", "השעה וההתראות בכמוסה אחת, מצב המכשיר בשנייה", com.future.settings.R.drawable.statusbar_style_capsules),
+    StatusBarStyle("centered", "שעון במרכז", "תאריך והתראות בצד, השעה באמצע השורה", com.future.settings.R.drawable.statusbar_style_centered),
+)
+
+/** שורת בחירה בכרטיס: תמונה של הסגנון, שם, הסבר וסימון בחירה - אישור בוחר. */
+@Composable
+private fun StatusBarStyleOption(style: StatusBarStyle, selected: Boolean, theme: ThemeConfig, onSelect: () -> Unit) {
+    var isFocused by remember { mutableStateOf(false) }
+    val bgColor = animateColorAsState(
+        if (isFocused) theme.textColor.copy(alpha = 0.06f) else Color.Transparent,
+        FutureMotion.focusColorSpec,
+        label = "barStyleBg"
+    )
+    val borderColor = animateColorAsState(
+        if (isFocused) theme.futureTheme.readableAccentColor else Color.Transparent,
+        FutureMotion.focusColorSpec,
+        label = "barStyleBorder"
+    )
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .onFocusChanged { isFocused = it.isFocused }
+            .onKeyEvent {
+                if (it.type == KeyEventType.KeyDown && (it.key == Key.DirectionCenter || it.key == Key.Enter || it.key == Key.NumPadEnter)) {
+                    onSelect(); true
+                } else false
+            }
+            .focusable().bringIntoViewOnFocus()
+            .cardRowFocus({ bgColor.value }, { borderColor.value }, fallbackShape = FutureShapes.lg)
+            .clickable { onSelect() }
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        // התמונה מצוירת על שחור כמו שורת המצב האמיתית, גם בערכת נושא בהירה
+        androidx.compose.foundation.Image(
+            painter = androidx.compose.ui.res.painterResource(style.preview),
+            contentDescription = style.title,
+            contentScale = androidx.compose.ui.layout.ContentScale.FillWidth,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(FutureShapes.md)
+                .background(Color.Black)
+        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = style.title, fontSize = theme.titleFontSize, color = theme.textColor, fontWeight = FontWeight.SemiBold)
+                Text(text = style.summary, fontSize = theme.summaryFontSize, color = theme.textColor.copy(alpha = 0.6f))
+            }
+            Icon(
+                imageVector = if (selected) FutureIcons.RadioButtonChecked else FutureIcons.RadioButtonUnchecked,
+                contentDescription = if (selected) "נבחר" else null,
+                tint = if (selected) theme.textColor else theme.textColor.copy(alpha = 0.3f),
+                modifier = Modifier.size(22.dp)
+            )
         }
     }
 }

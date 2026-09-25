@@ -14,7 +14,9 @@ data class SystemUiSettings(
     val showBattery: Boolean,
     val showBluetooth: Boolean,
     val use24HourClock: Boolean,
-    val suppressSystemBars: Boolean
+    val suppressSystemBars: Boolean,
+    // "classic" / "quiet" / "capsules" / "centered" - ר' StatusBarLayoutManager ב-FutureUI
+    val barStyle: String = "classic"
 )
 
 object SystemUiSettingsClient {
@@ -28,7 +30,9 @@ object SystemUiSettingsClient {
                         showBattery = cursor.getInt(cursor.getColumnIndexOrThrow("show_battery")) == 1,
                         showBluetooth = cursor.getInt(cursor.getColumnIndexOrThrow("show_bluetooth")) == 1,
                         use24HourClock = cursor.getInt(cursor.getColumnIndexOrThrow("use_24_hour_clock")) == 1,
-                        suppressSystemBars = cursor.getInt(cursor.getColumnIndexOrThrow("suppress_system_bars")) == 1
+                        suppressSystemBars = cursor.getInt(cursor.getColumnIndexOrThrow("suppress_system_bars")) == 1,
+                        // FutureUI ישנה בלי העמודה - נשארים על הסגנון הקלאסי
+                        barStyle = cursor.getColumnIndex("bar_style").takeIf { it >= 0 }?.let { cursor.getString(it) } ?: "classic"
                     )
                 } else null
             } ?: SystemUiSettings(true, true, true, true)
@@ -42,9 +46,12 @@ object SystemUiSettingsClient {
     fun setUse24HourClock(context: Context, value: Boolean) = update(context, "use_24_hour_clock", if (value) 1 else 0)
     fun setSuppressSystemBars(context: Context, value: Boolean) = update(context, "suppress_system_bars", if (value) 1 else 0)
 
-    private fun update(context: Context, key: String, value: Int) {
+    fun setBarStyle(context: Context, value: String) = update(context, ContentValues().apply { put("bar_style", value) })
+
+    private fun update(context: Context, key: String, value: Int) = update(context, ContentValues().apply { put(key, value) })
+
+    private fun update(context: Context, values: ContentValues) {
         try {
-            val values = ContentValues().apply { put(key, value) }
             context.contentResolver.update(URI, values, null, null)
         } catch (e: Exception) {
             android.util.Log.w("SystemUiSettingsClient", "update failed", e)

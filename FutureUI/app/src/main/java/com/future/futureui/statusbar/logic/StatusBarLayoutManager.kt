@@ -8,6 +8,14 @@ class StatusBarLayoutManager(context: Context) {
         // גובה שורת המצב הקבועה, בדפ"י - צריך להיות זהה בין השירות (שמגדיר את גובה
         // חלון ה-overlay) לבין כל מסך אחר שצריך padding עליון כדי לא להיחסם על ידה.
         const val HEIGHT_DP = 28
+
+        // ארבעת סגנונות שורת המצב שאפשר לבחור בהגדרות (ר' עיצוב "FutureOS Status Bar").
+        const val STYLE_CLASSIC = "classic"
+        const val STYLE_QUIET = "quiet"
+        const val STYLE_CAPSULES = "capsules"
+        const val STYLE_CENTERED = "centered"
+        val STYLES = listOf(STYLE_CLASSIC, STYLE_QUIET, STYLE_CAPSULES, STYLE_CENTERED)
+        const val KEY_BAR_STYLE = "bar_style"
     }
 
     private val prefs: SharedPreferences = context.getSharedPreferences("status_bar_prefs", Context.MODE_PRIVATE)
@@ -24,6 +32,12 @@ class StatusBarLayoutManager(context: Context) {
     // האם לבקש מהשירות להסתיר את שורת המצב/ניווט המקורית של אנדרואיד (דורש root)
     fun getSuppressSystemBars(): Boolean = prefs.getBoolean("suppress_system_bars", true)
     fun saveSuppressSystemBars(value: Boolean) = prefs.edit().putBoolean("suppress_system_bars", value).apply()
+
+    fun getBarStyle(): String = prefs.getString(KEY_BAR_STYLE, STYLE_CLASSIC)?.takeIf { it in STYLES } ?: STYLE_CLASSIC
+    fun saveBarStyle(value: String) = prefs.edit().putString(KEY_BAR_STYLE, value).apply()
+
+    fun registerListener(listener: SharedPreferences.OnSharedPreferenceChangeListener) = prefs.registerOnSharedPreferenceChangeListener(listener)
+    fun unregisterListener(listener: SharedPreferences.OnSharedPreferenceChangeListener) = prefs.unregisterOnSharedPreferenceChangeListener(listener)
 
     fun getBarOpacity(): Float = prefs.getFloat("bar_opacity", 0.55f)
     fun saveBarOpacity(value: Float) = prefs.edit().putFloat("bar_opacity", value).apply()
