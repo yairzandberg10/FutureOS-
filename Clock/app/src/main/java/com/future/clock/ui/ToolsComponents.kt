@@ -34,6 +34,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import com.future.sharednav.components.FutureAvatar
 import com.future.sharednav.components.FutureButton
 import com.future.sharednav.components.FutureButtonVariant
@@ -111,10 +112,10 @@ fun ToolRow(
 }
 
 /**
- * שורת הפעולות של שעון העצר והטיימר: שני כפתורי מערכת ([FutureButton],
- * components/core/Button.jsx) ברוחב שווה - הראשי מימין, המשני לצידו -
- * עם אותו מרווח כמו כפתורי בורר השעה. הריפוד מהצדדים משאיר מקום לטבעת
- * הפוקוס שנמתחת מחוץ לגלולה.
+ * שורת הפעולות של שעון העצר והטיימר: שני כפתורי מערכת עגולים
+ * ([FutureButton] עם diameter) - הראשי מימין, המשני לצידו. מילוי אטום
+ * ואותו מילוי בפוקוס, טבעת פוקוס בצבע הכפתור מחוץ לעיגול והגדלה ל-1.02
+ * (Button.jsx) - לא ה-70% שקיפות והטבעת בצבע הטקסט שהיו כאן קודם.
  */
 @Composable
 fun ClockActionRow(
@@ -127,10 +128,13 @@ fun ClockActionRow(
     primaryFocus: FocusRequester? = null,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = FutureDimens.spacingXl),
-        horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingLg),
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingXxl, Alignment.CenterHorizontally),
     ) {
-        FutureButton(primaryLabel, theme, onPrimary, modifier = Modifier.weight(1f), variant = primaryVariant, focusRequester = primaryFocus)
-        FutureButton(secondaryLabel, theme, onSecondary, modifier = Modifier.weight(1f), variant = FutureButtonVariant.Secondary)
+        FutureButton(primaryLabel, theme, onPrimary, variant = primaryVariant, focusRequester = primaryFocus, diameter = ClockActionDiameter)
+        FutureButton(secondaryLabel, theme, onSecondary, variant = FutureButtonVariant.Secondary, diameter = ClockActionDiameter)
     }
 }
+
+/** 76dp - עיגול הפעולה; שעון העצר עם רשימת הקפות והטיימר עם הטבעת נכנסים ב-320x480dp. */
+private val ClockActionDiameter = 76.dp

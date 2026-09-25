@@ -242,6 +242,8 @@ tab chips, each slightly off the spec). Use these instead of Material's
   a 2dp focus ring drawn inside the box so focus never changes the height.
   `enabled = false` also removes focus (the DS rule: what cannot be activated
   cannot be focused). `ConfirmDialog` is built from the same button.
+  `diameter` draws the same button as a circle (a pill with equal sides) for
+  large action buttons such as the Clock's start/stop.
 - **`FutureTextField`** (`TextField.jsx`) — 8% fill, 16dp radius, 15sp, 2dp
   accent ring; `leading`/`trailing` slots, `autoFocus` that works inside a
   Dialog. **`FutureFormField`** adds a 12sp label row for multi-field forms.

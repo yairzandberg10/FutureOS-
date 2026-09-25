@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -27,6 +28,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.unit.Dp
 import com.future.sharednav.focus.bringIntoViewOnFocus
 import com.future.sharednav.theme.FutureContrast
 import com.future.sharednav.theme.FutureDimens
@@ -49,6 +51,9 @@ import com.future.sharednav.theme.rememberFutureType
  * אחרי מרווח 2dp (כמו outline + outline-offset - לא משנה layout), ועוד
  * הגדלה ל-1.02. המשני (ביטול) הוא גוון 20% של צבע הטקסט עם תווית בצבע
  * הטקסט; השקט גוון 10% במשקל בינוני. אין מצב מושבת.
+ *
+ * [diameter] - אותו כפתור בדיוק כעיגול (גלולה שרוחבה שווה לגובהה), בשביל
+ * כפתורי פעולה גדולים כמו התחל/עצור בשעון. המילוי, הטבעת וההגדלה זהים.
  */
 enum class FutureButtonVariant { Primary, Destructive, Secondary, Quiet }
 
@@ -62,6 +67,7 @@ fun FutureButton(
     fillMaxWidth: Boolean = false,
     focusRequester: FocusRequester? = null,
     enabled: Boolean = true,
+    diameter: Dp? = null,
 ) {
     val accent = LocalFutureAccent.current ?: theme.readableAccentColor
     val fill = when (variant) {
@@ -87,6 +93,7 @@ fun FutureButton(
         fillMaxWidth = fillMaxWidth,
         focusRequester = focusRequester,
         enabled = enabled,
+        diameter = diameter,
     )
 }
 
@@ -106,6 +113,7 @@ internal fun FutureButtonCore(
     fillMaxWidth: Boolean = false,
     focusRequester: FocusRequester? = null,
     enabled: Boolean = true,
+    diameter: Dp? = null,
 ) {
     val type = rememberFutureType()
     val interactionSource = remember { MutableInteractionSource() }
@@ -124,8 +132,10 @@ internal fun FutureButtonCore(
     Box(
         modifier = modifier
             .then(if (fillMaxWidth) Modifier.fillMaxWidth() else Modifier)
-            .height(FutureDimens.rowHeightDialogButton)
-            .widthIn(min = FutureDimens.rowHeightDialogButton * 2)
+            .then(
+                if (diameter != null) Modifier.size(diameter)
+                else Modifier.height(FutureDimens.rowHeightDialogButton).widthIn(min = FutureDimens.rowHeightDialogButton * 2)
+            )
             .graphicsLayer { scaleX = scale.value; scaleY = scale.value }
             .drawWithCache {
                 val outline = shape.createOutline(size, layoutDirection, this)
@@ -145,7 +155,7 @@ internal fun FutureButtonCore(
             .focusable(enabled = enabled, interactionSource = interactionSource)
             .bringIntoViewOnFocus()
             .clickable(interactionSource = interactionSource, indication = null, enabled = enabled, onClick = onClick)
-            .padding(horizontal = FutureDimens.spacingXl),
+            .padding(horizontal = if (diameter != null) FutureDimens.spacingSm else FutureDimens.spacingXl),
         contentAlignment = Alignment.Center,
     ) {
         Text(
