@@ -56,13 +56,14 @@ val TOOL_ENTRIES = listOf(
     // כלים קיימים - המחשבון, השעון עצר/טיימר והפנס עברו לאפליקציות עצמאיות
     // משלהם (Calculator, Clock, Flashlight) ואינם חלק מ-Tools יותר.
     ToolEntry(FutureIcons.SwapHoriz, "ממיר יחידות", "אורך, משקל, טמפרטורה, נפח", ToolRoute.UnitConverter),
-    ToolEntry(FutureIcons.Explore, "מצפן וגובה", "כיוון מגנטי וגובה ברומטרי", ToolRoute.Compass),
+    ToolEntry(FutureIcons.Explore, "מצפן", "צפון אמיתי לפי המיקום, קואורדינטות וגובה", ToolRoute.Compass),
     ToolEntry(FutureIcons.Straighten, "פלס", "איזון אופקי לפי חיישן תאוצה", ToolRoute.Level),
 
     // מדידה וחיישנים
     ToolEntry(FutureIcons.GraphicEq, "מד רעש", "עוצמת קול בדציבלים מהמיקרופון", ToolRoute.NoiseMeter),
     ToolEntry(FutureIcons.WbSunny, "מד אור", "עוצמת תאורה בלוקס מהחיישן הקדמי", ToolRoute.LuxMeter),
     ToolEntry(FutureIcons.Architecture, "סרגל וזווית", "סרגל וירטואלי ומד זווית הטיה", ToolRoute.AngleRuler),
+    ToolEntry(FutureIcons.MusicNote, "מכוון גיטרה", "כיוון מיתרים לפי המיקרופון", ToolRoute.GuitarTuner),
 
     // מחשבונים וממירים
     ToolEntry(FutureIcons.Receipt, "טיפים ופיצול חשבון", "תשר וחלוקה בין סועדים", ToolRoute.TipSplitCalculator),
@@ -73,7 +74,6 @@ val TOOL_ENTRIES = listOf(
     ToolEntry(FutureIcons.QrCodeScanner, "סורק קודים", "QR וברקוד ללא פרסומות", ToolRoute.QrScanner),
     ToolEntry(FutureIcons.LocalCafe, "פומודורו", "מחזורי מיקוד והפסקה", ToolRoute.Pomodoro),
     ToolEntry(FutureIcons.VpnKey, "מחולל סיסמאות", "סיסמאות חזקות ואקראיות", ToolRoute.PasswordGenerator),
-    ToolEntry(FutureIcons.Checklist, "רשימה מהירה", "פתקים ורשימת מטלות", ToolRoute.QuickNotes),
 
     // כלי עזר אקראיים ופנאי
     ToolEntry(FutureIcons.Casino, "מטבע וקובייה", "הטלת מטבע או קוביות", ToolRoute.CoinDice),
@@ -81,8 +81,7 @@ val TOOL_ENTRIES = listOf(
     ToolEntry(FutureIcons.Numbers, "מספר אקראי", "הגרלת מספר בטווח שתבחר", ToolRoute.RandomNumber),
 
     // שדרוגי AI
-    ToolEntry(FutureIcons.DocumentScanner, "סורק טקסט", "צילום מסמך והפיכתו לטקסט", ToolRoute.TextScanner),
-    ToolEntry(FutureIcons.RecordVoiceOver, "תמלול קולי", "הקלטה קצרה והפיכתה לטקסט", ToolRoute.VoiceTranscribe)
+    ToolEntry(FutureIcons.DocumentScanner, "סורק טקסט", "צילום מסמך והפיכתו לטקסט", ToolRoute.TextScanner)
 )
 
 @Composable

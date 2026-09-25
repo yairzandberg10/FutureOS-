@@ -29,6 +29,7 @@ Since there's no custom ROM, "System UI" (status bar, lock screen, control cente
 |[Terminal](Terminal/)|טרמינל|`com.future.terminal`|Root shell terminal|
 |[Tools](Tools/)|כלים|`com.future.tools`|Unit converter, QR/text scanner, quick notes, random picker and other small utilities|
 |[Flashlight](Flashlight/)|פנס|`com.future.flashlight`|Standalone flashlight — the duplicate inside Tools was removed; FutureUI keeps a torch toggle in the control center, which is the system shell, not a second app|
+|[Recorder](Recorder/)|רשמקול|`com.future.recorder`|Voice recorder — records in a foreground service (keeps going with the screen off), live level bars, pause/resume, playback with key seeking, rename/share/delete from the Options menu|
 |[Calculator](Calculator/)|מחשבון|`com.future.calculator`|Calculator|
 |[Clock](Clock/)|שעון|`com.future.clock`|Alarms, world clock, stopwatch, timer|
 |[Fitness](Fitness/)|כושר|`com.future.fitness`|Workout tracking, Bluetooth heart-rate monitor|

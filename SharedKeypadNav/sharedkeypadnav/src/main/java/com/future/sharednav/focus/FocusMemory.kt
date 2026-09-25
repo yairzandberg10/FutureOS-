@@ -28,16 +28,29 @@ import java.util.WeakHashMap
  * זה, כי יש פריטים חיים כל הזמן. השחזור פתוח לזמן קצר בלבד, כך שפריט שנטען
  * מאוחר מאוד לא חוטף פוקוס מהמשתמש.
  *
+ * מסכים רבים מבקשים פוקוס לשורה הראשונה בעצמם (LaunchedEffect, לפעמים אחרי
+ * delay קצר), ובקשה כזו שהגיעה אחרי השחזור הייתה דורסת אותו - ולכן "חזרה
+ * אחורה" עבדה רק בחלק מהמסכים. עכשיו, זמן קצר אחרי השחזור, פוקוס שקפץ לפריט
+ * אחר מוחזר לפריט המשוחזר ([guardUntil]).
+ *
  * איפה הזיכרון חי: AnimatedScreenHost נותן זיכרון לכל מסך ומאפס אותו בכניסה
  * קדימה; ב-NavHost כל יעד הוא LifecycleOwner משלו (NavBackStackEntry) ששורד
  * כל עוד הוא במחסנית, ולכן הזיכרון נקשר אליו; דיאלוג מקבל זיכרון נפרד כדי
- * שהפוקוס בתוכו לא יימחק את זה של המסך שמתחתיו.
+ * שהפוקוס בתוכו לא יימחק את זה של המסך שמתחתיו. באפליקציה בלי אף אחד מאלה
+ * (`when (screen)` ישיר) כל המסכים חולקים זיכרון אחד - לכן נשמרת גם
+ * היסטוריה ([history]) של הפריט האחרון בכל מסך שעזבנו, וחזרה למסך הקודם
+ * מוצאת שם את הפריט שלו.
  */
 class FocusMemory {
     internal var lastKey: Long? = null
     private var liveItems = 0
     private var armedUntil = 0L
     private val ordinals = HashMap<Int, Int>()
+    private val history = ArrayDeque<Long>()
+
+    private var restoredKey: Long? = null
+    private var restoredRequester: FocusRequester? = null
+    private var guardUntil = 0L
 
     internal fun ordinalFor(hash: Int): Int {
         val next = ordinals[hash] ?: 0
@@ -46,7 +59,9 @@ class FocusMemory {
     }
 
     internal fun onItemAttached() {
-        if (liveItems == 0 && lastKey != null) armedUntil = SystemClock.uptimeMillis() + RestoreWindowMs
+        if (liveItems == 0 && (lastKey != null || history.isNotEmpty())) {
+            armedUntil = SystemClock.uptimeMillis() + RestoreWindowMs
+        }
         liveItems++
     }
 
@@ -56,18 +71,58 @@ class FocusMemory {
         if (liveItems <= 0) {
             liveItems = 0
             ordinals.clear()
+            // המסך עזב - הפריט האחרון שלו נשמר, למקרה שנחזור אליו אחרי מסך אחר
+            lastKey?.let { key ->
+                history.remove(key)
+                history.addLast(key)
+                while (history.size > MaxHistory) history.removeFirst()
+            }
         }
     }
 
     /** true פעם אחת בלבד - לפריט שהיה ממוקד אחרון, בזמן חלון השחזור. */
-    internal fun claimRestore(key: Long): Boolean {
-        if (key != lastKey || SystemClock.uptimeMillis() > armedUntil) return false
+    internal fun claimRestore(key: Long, requester: FocusRequester): Boolean {
+        if (SystemClock.uptimeMillis() > armedUntil) return false
+        if (key != lastKey) {
+            val index = history.lastIndexOf(key)
+            if (index < 0) return false
+            // חזרנו למסך מההיסטוריה - מה שאחריו שייך למסכים שכבר נסגרו
+            while (history.size > index) history.removeLast()
+        }
         armedUntil = 0L
+        lastKey = key
+        restoredKey = key
+        restoredRequester = requester
+        guardUntil = SystemClock.uptimeMillis() + GuardWindowMs
         return true
+    }
+
+    /** פריט קיבל פוקוס. אם זה קרה מיד אחרי שחזור ולפריט אחר - מחזירים. */
+    internal fun onFocused(key: Long) {
+        val restored = restoredKey
+        if (restored != null && key != restored && SystemClock.uptimeMillis() <= guardUntil) {
+            val requester = restoredRequester
+            mainHandler.post { runCatching { requester?.requestFocus() } }
+            return
+        }
+        if (restored != null && SystemClock.uptimeMillis() > guardUntil) {
+            restoredKey = null
+            restoredRequester = null
+        }
+        lastKey = key
+    }
+
+    internal fun onItemDisposed(key: Long) {
+        if (key == restoredKey) {
+            restoredKey = null
+            restoredRequester = null
+        }
     }
 
     private companion object {
         const val RestoreWindowMs = 1500L
+        const val GuardWindowMs = 450L
+        const val MaxHistory = 16
     }
 }
 
@@ -95,12 +150,15 @@ internal fun rememberFocusRestore(requester: FocusRequester, enabled: Boolean): 
     val key = remember(memory, hash) { (hash.toLong() shl 16) or memory.ordinalFor(hash).toLong() }
     DisposableEffect(memory, key) {
         memory.onItemAttached()
-        if (enabled && memory.claimRestore(key)) {
+        if (enabled && memory.claimRestore(key, requester)) {
             // אחרי הפריים: מסכים מבקשים פוקוס לשורה הראשונה ב-LaunchedEffect
-            // משלהם, והבקשה הזו צריכה לבוא אחריהם.
+            // משלהם, והבקשה הזו צריכה לבוא אחריהם (ואם לא - onFocused מחזיר).
             mainHandler.post { runCatching { requester.requestFocus() } }
         }
-        onDispose { memory.onItemDetached(hash) }
+        onDispose {
+            memory.onItemDisposed(key)
+            memory.onItemDetached(hash)
+        }
     }
-    return remember(memory, key) { { memory.lastKey = key } }
+    return remember(memory, key) { { memory.onFocused(key) } }
 }

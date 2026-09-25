@@ -12,10 +12,9 @@
     <string name="tool_qr_scanner">סורק קודים</string>
     <string name="tool_pomodoro">פומודורו</string>
     <string name="tool_password_generator">מחולל סיסמאות</string>
-    <string name="tool_quick_notes">רשימה מהירה</string>
     <string name="tool_coin_dice">מטבע וקובייה</string>
     <string name="tool_random_picker">בורר אקראי</string>
     <string name="tool_random_number">מספר אקראי</string>
     <string name="tool_text_scanner">סורק טקסט</string>
-    <string name="tool_voice_transcribe">תמלול קולי</string>
+    <string name="tool_guitar_tuner">מכוון גיטרה</string>
 </resources>

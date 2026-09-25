@@ -26,7 +26,6 @@ import com.future.tools.ui.PasswordGeneratorScreen
 import com.future.tools.ui.PomodoroScreen
 import com.future.tools.ui.QrScannerScreen
 import com.future.tools.ui.QuickFinanceCalculatorScreen
-import com.future.tools.ui.QuickNotesScreen
 import com.future.tools.ui.RandomNumberScreen
 import com.future.tools.ui.RandomPickerScreen
 import com.future.tools.ui.TextScannerScreen
@@ -35,7 +34,7 @@ import com.future.tools.ui.TipSplitCalculatorScreen
 import com.future.tools.ui.ToolRoute
 import com.future.tools.ui.ToolsHomeScreen
 import com.future.tools.ui.UnitConverterScreen
-import com.future.tools.ui.VoiceTranscribeScreen
+import com.future.tools.ui.GuitarTunerScreen
 
 class MainActivity : ComponentActivity() {
     // המכשיר האמיתי הוא מקלדת T9 בלבד בלי מסך מגע - מבטלים קלט מגע לגמרי כדי
@@ -81,12 +80,11 @@ class MainActivity : ComponentActivity() {
                             ToolRoute.QrScanner -> QrScannerScreen(theme = theme, onBack = goBack)
                             ToolRoute.Pomodoro -> PomodoroScreen(theme = theme, onBack = goBack)
                             ToolRoute.PasswordGenerator -> PasswordGeneratorScreen(theme = theme, onBack = goBack)
-                            ToolRoute.QuickNotes -> QuickNotesScreen(theme = theme, onBack = goBack)
                             ToolRoute.CoinDice -> CoinDiceScreen(theme = theme, onBack = goBack)
                             ToolRoute.RandomPicker -> RandomPickerScreen(theme = theme, onBack = goBack)
                             ToolRoute.RandomNumber -> RandomNumberScreen(theme = theme, onBack = goBack)
                             ToolRoute.TextScanner -> TextScannerScreen(theme = theme, onBack = goBack)
-                            ToolRoute.VoiceTranscribe -> VoiceTranscribeScreen(theme = theme, onBack = goBack)
+                            ToolRoute.GuitarTuner -> GuitarTunerScreen(theme = theme, onBack = goBack)
                         }
                     }
                 }

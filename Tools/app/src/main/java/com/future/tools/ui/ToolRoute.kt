@@ -10,6 +10,7 @@ sealed class ToolRoute {
     object NoiseMeter : ToolRoute()
     object LuxMeter : ToolRoute()
     object AngleRuler : ToolRoute()
+    object GuitarTuner : ToolRoute()
 
     // מחשבונים וממירים
     object TipSplitCalculator : ToolRoute()
@@ -20,7 +21,6 @@ sealed class ToolRoute {
     object QrScanner : ToolRoute()
     object Pomodoro : ToolRoute()
     object PasswordGenerator : ToolRoute()
-    object QuickNotes : ToolRoute()
 
     // כלי עזר אקראיים ופנאי
     object CoinDice : ToolRoute()
@@ -29,5 +29,4 @@ sealed class ToolRoute {
 
     // שדרוגי AI
     object TextScanner : ToolRoute()
-    object VoiceTranscribe : ToolRoute()
 }

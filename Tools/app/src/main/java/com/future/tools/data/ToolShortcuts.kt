@@ -29,12 +29,11 @@ object ToolShortcuts {
         ToolRoute.QrScanner to "$PACKAGE.ToolShortcutQrScanner",
         ToolRoute.Pomodoro to "$PACKAGE.ToolShortcutPomodoro",
         ToolRoute.PasswordGenerator to "$PACKAGE.ToolShortcutPasswordGenerator",
-        ToolRoute.QuickNotes to "$PACKAGE.ToolShortcutQuickNotes",
         ToolRoute.CoinDice to "$PACKAGE.ToolShortcutCoinDice",
         ToolRoute.RandomPicker to "$PACKAGE.ToolShortcutRandomPicker",
         ToolRoute.RandomNumber to "$PACKAGE.ToolShortcutRandomNumber",
-        ToolRoute.TextScanner to "$PACKAGE.ToolShortcutTextScanner",
-        ToolRoute.VoiceTranscribe to "$PACKAGE.ToolShortcutVoiceTranscribe"
+        ToolRoute.GuitarTuner to "$PACKAGE.ToolShortcutGuitarTuner",
+        ToolRoute.TextScanner to "$PACKAGE.ToolShortcutTextScanner"
     )
 
     val ROUTE_BY_ALIAS: Map<String, ToolRoute> =

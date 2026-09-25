@@ -4,6 +4,35 @@ This repo has no carried-over git history (see root [README](README.md)), so thi
 
 ## Unreleased
 
+### Recorder app, tuner, location compass, screenshots in recents, back keeps focus
+
+- **New app: Recorder (רשמקול, `com.future.recorder`).** Records AAC/m4a in a
+  foreground service, so it keeps going with the screen off or in another app,
+  with a stop action in its notification. Live level bars, pause/resume, a
+  list of recordings (date and length), a player (OK play/pause, arrows 5s,
+  4/6 half a minute) and rename/share/delete from the Options menu. Added to
+  the launcher's default apps.
+- **Tools: guitar tuner.** YIN pitch detection from the microphone, auto mode
+  (nearest string) or a chosen string (keys 1-6 = string number, 0 = auto),
+  a ±50 cent meter and "tighten/loosen" guidance.
+- **Tools: removed "voice transcription" and "quick list".**
+- **Tools: the compass uses location.** With a GPS/network fix it shows true
+  north (magnetic heading plus the local declination), coordinates and
+  accuracy, the course from GPS while moving, and a marker toward Jerusalem.
+  Without location it falls back to magnetic north as before.
+- **Recents shows each app's last screen.** The status bar service takes a
+  screenshot of the app in front (`AccessibilityService.takeScreenshot`, new
+  `canTakeScreenshot` config for that service only) shortly after it opens,
+  after the user stops pressing keys, and right before recents opens; the
+  cards show it, cropped from the top. The close-all X now floats over the
+  cards instead of taking its own row.
+- **Back returns to the same place, system-wide.** `FocusMemory` already
+  restored the last focused item, but a screen's own "focus the first row"
+  request that arrived after the restore won, so it only worked on some
+  screens. For a short moment after a restore, focus that jumps elsewhere is
+  now sent back. Apps without AnimatedScreenHost/NavHost share one memory, so
+  it now also keeps a history of the last item of every screen left behind.
+
 ### System pass: share window, recents, power menu, widgets
 
 - **One share window for the whole system.** `FutureShare` (SharedKeypadNav)
