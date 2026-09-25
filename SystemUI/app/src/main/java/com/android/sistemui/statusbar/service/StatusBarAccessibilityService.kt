@@ -32,6 +32,7 @@ import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.android.sistemui.controlcenter.logic.ControlManager
 import com.android.sistemui.recents.logic.RecentAppInfo
 import com.android.sistemui.recents.logic.RecentAppsManager
+import com.android.sistemui.recents.logic.RecentSnapshots
 import com.android.sistemui.recents.ui.RecentAppsScreen
 import com.android.sistemui.statusbar.logic.StatusBarLayoutManager
 import com.android.sistemui.statusbar.ui.StatusBarScreen
@@ -66,8 +67,15 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
     private var recentAppsTriggered = false
     private val recentAppsRunnable = Runnable {
         recentAppsTriggered = true
-        showRecentApps()
+        showRecentAppsWithFreshSnapshot()
     }
+    private val recentSnapshots by lazy {
+        RecentSnapshots(this, (com.android.sistemui.statusbar.logic.StatusBarLayoutManager.HEIGHT_DP * resources.displayMetrics.density).toInt())
+    }
+
+    /** האם אפשר לצלם עכשיו את [pkg]: היא בחזית, רשומה באחרונות, ואין מעליה חלון שלנו. */
+    private fun isSnapshotTarget(pkg: String): Boolean =
+        FutureUIState.foregroundPackage == pkg && !recentsVisible && powerMenuView == null && recentAppsManager.isTop(pkg)
 
     // צבע ההדגשה/פוקוס המשותף בין כל אפליקציות FutureOS (ThemeProvider). כאן
     // ניגשים ל-SharedPreferences ישירות במקום דרך ContentResolver כי השירות
@@ -179,6 +187,8 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
             pkg?.let { FutureUIState.foregroundPackage = it }
             // "אחרונות" = רק אפליקציות שהמשתמש באמת פתח (ר' RecentAppsManager.record).
             runCatching { recentAppsManager.record(pkg, event.className?.toString()) }
+            // צילום המסך לכרטיס שלה באחרונות - אחרי שהחלון סיים להיפתח
+            if (pkg != null && recentAppsManager.isTop(pkg)) recentSnapshots.schedule(pkg, 900, ::isSnapshotTarget)
             maybeReplaceSystemPowerMenu(pkg, event.className?.toString())
         }
     }
@@ -186,6 +196,11 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
 
     override fun onKeyEvent(event: KeyEvent): Boolean {
         val keyCode = event.keyCode
+        // כשהמשתמש מפסיק ללחוץ - מצלמים שוב, כדי שכרטיס האחרונות יראה איפה עזבנו
+        if (event.action == KeyEvent.ACTION_UP && !recentsVisible) {
+            val fg = FutureUIState.foregroundPackage
+            if (fg != null && recentAppsManager.isTop(fg)) recentSnapshots.schedule(fg, 1500, ::isSnapshotTarget)
+        }
         if (keyCode == KeyEvent.KEYCODE_VOLUME_UP || keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
             if (event.action == KeyEvent.ACTION_DOWN) {
                 adjustVolume(if (keyCode == KeyEvent.KEYCODE_VOLUME_UP) 1 else -1)
@@ -414,10 +429,19 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
      * מזהים את החלון כשהוא עולה, סוגרים אותו ב-BACK ופותחים את שלנו במקומו.
      */
     private fun maybeReplaceSystemPowerMenu(pkg: String?, cls: String?) {
-        if (pkg != "com.android.systemui" || cls == null) return
-        if (!cls.contains("globalactions", ignoreCase = true)) return
+        // ב-ROM של Duoqin התפריט הוא הגרסה הישנה שחיה ב-system_server (חבילה
+        // "android", com.android.internal.globalactions.ActionsDialog) ולא
+        // GlobalActionsDialog של com.android.systemui - קודם נבדקה רק systemui,
+        // ולכן התפריט של אנדרואיד המשיך להיפתח.
+        if (pkg != "android" && pkg != "com.android.systemui") return
+        if (cls == null) return
+        Log.i("FutureUI", "system window: $pkg / $cls")
+        val isPowerMenu = POWER_MENU_CLASS_HINTS.any { cls.contains(it, ignoreCase = true) }
+        if (!isPowerMenu) return
         performGlobalAction(GLOBAL_ACTION_BACK)
-        mainHandler.postDelayed({ showPowerMenu() }, 120)
+        // גיבוי: אם BACK לא סגר (חלון מערכת לא תמיד מקבל אותו מנגישות), root סוגר דיאלוגי מערכת.
+        controlManager?.runRootCommandAsync("am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS")
+        mainHandler.postDelayed({ showPowerMenu() }, 150)
     }
 
     private val powerAirplaneState = mutableStateOf(false)
@@ -507,6 +531,20 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
         powerMenuView = null
     }
 
+    /**
+     * מצלם קודם את האפליקציה שבחזית ורק אז פותח את מסך האחרונות - אחרת הצילום
+     * (שמתבצע באיחור קל בצד המערכת) עלול לתפוס את מסך האחרונות עצמו.
+     */
+    private fun showRecentAppsWithFreshSnapshot() {
+        val fg = FutureUIState.foregroundPackage
+        if (fg == null || !isSnapshotTarget(fg)) { showRecentApps(); return }
+        recentSnapshots.cancelPending()
+        var shown = false
+        val show = { if (!shown) { shown = true; showRecentApps() } }
+        mainHandler.postDelayed({ show() }, 600)
+        recentSnapshots.capture(fg) { show() }
+    }
+
     /** מסך "אפליקציות אחרונות" עצמאי מבוסס UsageStatsManager, במקום GLOBAL_ACTION_RECENTS המכוער. */
     private fun showRecentApps() {
         if (recentsVisible) return
@@ -535,6 +573,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
                     FutureUITheme {
                         RecentAppsScreen(
                             apps = recentAppsList,
+                            snapshots = recentSnapshots.images,
                             accentColor = recentsAccentColor.value,
                             onLaunch = { app ->
                                 try {
@@ -549,6 +588,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
                             onClose = { app ->
                                 controlManager?.runRootCommandAsync("am force-stop ${app.packageName}")
                                 recentAppsManager.remove(app.packageName)
+                                recentSnapshots.remove(app.packageName)
                                 recentAppsList.remove(app)
                             },
                             onCloseAll = {
@@ -557,6 +597,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
                                     controlManager?.runRootCommandAsync(all.joinToString("; ") { "am force-stop ${it.packageName}" })
                                 }
                                 recentAppsManager.clear()
+                                recentSnapshots.clear()
                                 recentAppsList.clear()
                                 hideRecentApps()
                             },
@@ -635,5 +676,6 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
         private const val HOME_PACKAGE = "com.future.futurelauncher"
         private const val DOUBLE_CLICK_WINDOW_MS = 300L
         const val ACTION_SHOW_POWER_MENU = "com.future.futureui.ACTION_SHOW_POWER_MENU"
+        private val POWER_MENU_CLASS_HINTS = listOf("globalactions", "ActionsDialog", "PowerMenu", "ShutdownDialog")
     }
 }
