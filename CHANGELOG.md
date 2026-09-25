@@ -4,6 +4,37 @@ This repo has no carried-over git history (see root [README](README.md)), so thi
 
 ## Unreleased
 
+### Stability pass: package visibility, recents, commentaries
+
+Found by reading the device's own crash/ANR history (`dumpsys dropbox`) and
+logcat. The R8 crashes there (Translate ML Kit, Sfarim JNI) and the Dialer ANRs
+were already fixed; these are the remaining real faults.
+
+- **Apps lost sight of the keyboard and FutureUI (package visibility).**
+  targetSdk 31 hides other packages unless they are declared. FutureUI saw the
+  keyboard's settings provider only by accident (while it was the IME, or right
+  after it touched FutureUI); after a keyboard reinstall with Gboard as the IME
+  the Control Center logged "Failed to find provider info" every 15 seconds and
+  its predictive-text pill showed a default for an hour. `<queries>` for
+  `com.future.futureui` and `com.future.keyboard` now sit in the SharedKeypadNav
+  manifest, so every app gets them on its next build.
+- **FutureUI recents showed only a handful of apps.** It could see about ten
+  packages, so Dialer, Contacts, Settings, Camera and every third-party app were
+  missing from recents, and notification labels/icons fell back. FutureUI (and
+  SystemUI) now hold `QUERY_ALL_PACKAGES`, as a system UI does. Recents also
+  skips the current home app, whichever launcher that is, and loads icons only
+  for the 15 apps it shows: it runs on the main thread of the service that
+  filters every key press, and used to load an icon for every app used in three
+  days.
+- **Sfarim: opening commentaries is faster.** Each "X on Y" book was scanned
+  from its first segment to find the verse. Simple books now narrow to the one
+  chapter through `idx_segments_book_chapter` (`top_index` is `path[0]` there);
+  complex books keep the old query. Same results, 2-4x faster on the real
+  database even cold.
+- **Settings: the keyboard languages screen no longer freezes on open.** It
+  queried the keyboard's provider (another process, sometimes cold) on the main
+  thread during composition; it now loads on IO.
+
 ### Control Center grid and lock screen removal
 
 - **FutureUI: the Control Center icon grid has a new set of controls.** The

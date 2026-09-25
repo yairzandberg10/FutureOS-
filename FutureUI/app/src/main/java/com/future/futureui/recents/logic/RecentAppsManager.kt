@@ -3,6 +3,8 @@ package com.future.futureui.recents.logic
 import android.app.AppOpsManager
 import android.app.usage.UsageStatsManager
 import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.drawable.Drawable
 import android.os.Build
 import android.os.Process
@@ -38,6 +40,13 @@ class RecentAppsManager(private val context: Context) {
         val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager
             ?: return emptyList()
         val pm = context.packageManager
+        // מסך הבית הפעיל (גם כשזה לא FutureLauncher) הוא לא "אפליקציה אחרונה".
+        val home = try {
+            pm.resolveActivity(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME), PackageManager.MATCH_DEFAULT_ONLY)
+                ?.activityInfo?.packageName
+        } catch (e: Exception) {
+            null
+        }
         val end = System.currentTimeMillis()
         val start = end - 1000L * 60 * 60 * 24 * 3
 
@@ -47,8 +56,12 @@ class RecentAppsManager(private val context: Context) {
             null
         } ?: return emptyList()
 
+        // נקרא על ה-main thread של שירות הנגישות (זה שמסנן את כל המקשים), אז
+        // אייקונים נטענים רק ל-limit הראשונות - sequence עוצר ב-take במקום לטעון
+        // אייקון לכל אפליקציה שרצה בשלושת הימים האחרונים.
         return stats
-            .filter { it.lastTimeUsed > 0 && it.packageName !in excludedPackages && it.totalTimeInForeground > 0 }
+            .asSequence()
+            .filter { it.lastTimeUsed > 0 && it.packageName !in excludedPackages && it.packageName != home && it.totalTimeInForeground > 0 }
             .sortedByDescending { it.lastTimeUsed }
             .distinctBy { it.packageName }
             .mapNotNull { usage ->
@@ -66,5 +79,6 @@ class RecentAppsManager(private val context: Context) {
                 }
             }
             .take(limit)
+            .toList()
     }
 }

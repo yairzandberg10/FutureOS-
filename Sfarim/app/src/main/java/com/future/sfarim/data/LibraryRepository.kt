@@ -210,10 +210,19 @@ class LibraryRepository(private val db: SQLiteDatabase) {
             for (cand in candidates) {
                 val matchDepth = (cand.sectionNames.size - 1).coerceIn(1, pathPrefix.size)
                 val likePattern = "[" + pathPrefix.take(matchDepth).joinToString(", ") + ",%"
-                db.rawQuery(
+                // בספר פשוט top_index הוא path[0], אז מצמצמים לפרק אחד דרך
+                // idx_segments_book_chapter במקום לסרוק את כל הספר לפי sort_order
+                // עד ההתאמה. לספר מורכב (יש לו שורות ב-chapters) top_index רץ ברצף.
+                val complex = db.rawQuery("SELECT 1 FROM chapters WHERE book_id = ? LIMIT 1", arrayOf(cand.id.toString()))
+                    .use { it.moveToFirst() }
+                val cursor = if (complex) db.rawQuery(
                     "SELECT id, top_index, text_he FROM segments WHERE book_id = ? AND path LIKE ? ORDER BY sort_order LIMIT 1",
                     arrayOf(cand.id.toString(), likePattern),
-                ).use { c ->
+                ) else db.rawQuery(
+                    "SELECT id, top_index, text_he FROM segments WHERE book_id = ? AND top_index = ? AND path LIKE ? ORDER BY sort_order LIMIT 1",
+                    arrayOf(cand.id.toString(), pathPrefix[0].toString(), likePattern),
+                )
+                cursor.use { c ->
                     if (c.moveToFirst()) {
                         val preview = stripHtmlTags(c.getString(2)).take(80)
                         add(CommentaryEntry(cand.id, cand.title, c.getInt(1), c.getLong(0), preview))

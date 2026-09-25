@@ -1406,8 +1406,20 @@ fun GeneralScreen(navController: NavController, theme: ThemeConfig, viewModel: S
 @Composable
 fun KeyboardLanguagesScreen(navController: NavController, theme: ThemeConfig) {
     val context = LocalContext.current
-    var languages by remember { mutableStateOf(com.future.sharednav.keyboard.KeyboardSettingsClient.languages(context)) }
-    var predictive by remember { mutableStateOf(com.future.sharednav.keyboard.KeyboardSettingsClient.isPredictiveEnabled(context)) }
+    var languages by remember { mutableStateOf(emptyList<com.future.sharednav.keyboard.KeyboardLanguage>()) }
+    var predictive by remember { mutableStateOf(true) }
+    var loaded by remember { mutableStateOf(false) }
+    // ה-ContentProvider של המקלדת בתהליך אחר, שלפעמים צריך לעלות מאפס - לא על
+    // ה-main thread בזמן ה-composition (המסך קפא עד שהמקלדת עלתה).
+    LaunchedEffect(Unit) {
+        val (langs, pred) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            com.future.sharednav.keyboard.KeyboardSettingsClient.languages(context) to
+                com.future.sharednav.keyboard.KeyboardSettingsClient.isPredictiveEnabled(context)
+        }
+        languages = langs
+        predictive = pred
+        loaded = true
+    }
     Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
         Column {
             SmallHeader("מקלדת ושפות הקלדה", theme) { navController.popBackStack() }
@@ -1429,7 +1441,9 @@ fun KeyboardLanguagesScreen(navController: NavController, theme: ThemeConfig) {
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp)
                     )
                 }
-                if (languages.isEmpty()) {
+                if (!loaded) {
+                    // עד שהמקלדת עונה - בלי "המקלדת לא מותקנת" מהבהב.
+                } else if (languages.isEmpty()) {
                     item {
                         Text(
                             "המקלדת לא מותקנת",

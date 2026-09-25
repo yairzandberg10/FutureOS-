@@ -16,6 +16,10 @@
     <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions" />
+    <!-- ממשק מערכת: אפליקציות אחרונות, התראות (אייקון/שם של כל אפליקציה) ופתיחת
+         אפליקציות. בלי זה Package Visibility מסתיר את רוב החבילות, ו-Recents
+         הראה רק את מי ש"דיבר" איתנו קודם. -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" tools:ignore="QueryAllPackagesPermission" />
     <!-- לצורך צ'יפ "שיחה פעילה" בשורת המצב (StatusBarScreen, TelecomManager.isInCall) -->
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <!-- גלולת "סנכרון אוטומטי" במרכז הבקרה (ContentResolver.setMasterSyncAutomatically) -->

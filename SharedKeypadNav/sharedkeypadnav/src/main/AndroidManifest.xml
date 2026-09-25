@@ -1,6 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Package visibility (targetSdk 30+): בלי זה ה-ContentProvider-ים של
+         FutureUI (ThemeClient) ושל המקלדת (KeyboardSettingsClient) נראים רק
+         במקרה - כשהצד השני ניגש אלינו, או כשהמקלדת היא ה-IME הפעיל. אחרי
+         התקנה מחדש של המקלדת זה נשבר: "Failed to find provider info" כל 15
+         שניות, ומתג הניבוי במרכז הבקרה הראה ערך ברירת מחדל שעה שלמה. -->
+    <queries>
+        <package android:name="com.future.futureui" />
+        <package android:name="com.future.keyboard" />
+    </queries>
+
     <application>
         <!-- מתקין את המרווח משורת המצב של FutureUI בכל Activity של האפליקציה
              הצורכת (StatusBarInset.kt). initOrder גבוה כדי לרוץ לפני ספקים
