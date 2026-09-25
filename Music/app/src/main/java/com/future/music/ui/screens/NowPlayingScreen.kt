@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -55,6 +56,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -159,28 +161,33 @@ fun NowPlayingScreen(
 
         val artBitmap = rememberAlbumArt(song?.uri)
 
+        // בלי גלילה: כל הפקדים בגובה קבוע, ותמונת האלבום לוקחת את כל הגובה
+        // שנשאר (ריבוע, עד רוחב המסך).
         Column(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 18.dp),
+                .padding(horizontal = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             Box(
-                modifier = Modifier
-                    // תמונת השיר גדולה - כמעט כל רוחב המסך.
-                    .fillMaxWidth(0.8f)
-                    .aspectRatio(1f)
-                    .clip(FutureShapes.xl)
-                    .background(theme.accentColor.copy(alpha = 0.15f)),
+                modifier = Modifier.weight(1f).fillMaxWidth(),
                 contentAlignment = Alignment.Center,
             ) {
-                if (artBitmap != null) {
-                    Image(bitmap = artBitmap, contentDescription = null, modifier = Modifier.fillMaxSize())
-                } else {
-                    Icon(FutureIcons.MusicNote, contentDescription = null, tint = theme.accentColor, modifier = Modifier.size(48.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .aspectRatio(1f, matchHeightConstraintsFirst = true)
+                        .clip(FutureShapes.xl)
+                        .background(theme.accentColor.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (artBitmap != null) {
+                        Image(bitmap = artBitmap, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                    } else {
+                        Icon(FutureIcons.MusicNote, contentDescription = null, tint = theme.accentColor, modifier = Modifier.size(56.dp))
+                    }
                 }
             }
 
@@ -215,64 +222,53 @@ fun NowPlayingScreen(
                     androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Ltr,
                 ) {
                 Column {
-                FutureProgressBar(progress = progress, theme = theme)
-                Row(modifier = Modifier.fillMaxWidth().padding(top = 2.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                // זמנים משני צדי הפס, בשורה אחת - חוסך גובה לתמונה.
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text(formatDuration(playerState.positionMs), color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.caption)
+                    FutureProgressBar(progress = progress, theme = theme, modifier = Modifier.weight(1f).padding(horizontal = 8.dp))
                     Text(formatDuration(playerState.durationMs), color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.caption)
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(10.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                    RoundIconButton(FutureIcons.SkipPrevious, "קודם (4)", theme, size = 46.dp, onClick = onPrevious, onFocusChanged = track("prev"))
-                    Spacer(modifier = Modifier.width(18.dp))
+                    RoundIconButton(FutureIcons.SkipPrevious, "קודם (4)", theme, size = 50.dp, onClick = onPrevious, onFocusChanged = track("prev"))
+                    Spacer(modifier = Modifier.width(24.dp))
                     RoundIconButton(
                         if (playerState.isPlaying) FutureIcons.Pause else FutureIcons.PlayArrow,
                         if (playerState.isPlaying) "השהה (5)" else "נגן (5)",
                         theme, size = 58.dp, filled = true, onClick = onTogglePlay,
                         focusRequester = playButtonFocusRequester, onFocusChanged = track("play"),
                     )
-                    Spacer(modifier = Modifier.width(18.dp))
-                    RoundIconButton(FutureIcons.SkipNext, "הבא (6)", theme, size = 46.dp, onClick = onNext, onFocusChanged = track("next"))
+                    Spacer(modifier = Modifier.width(24.dp))
+                    RoundIconButton(FutureIcons.SkipNext, "הבא (6)", theme, size = 50.dp, onClick = onNext, onFocusChanged = track("next"))
                 }
                 }
                 }
 
-                // פעולות המסך - אריחי ActionGrid, כמו פקדי השיחה בחייגן.
-                Spacer(modifier = Modifier.height(14.dp))
+                // שאר הפעולות - שורה אחת של כפתורים עגולים מתחת לנגן והדילוג.
+                Spacer(modifier = Modifier.height(12.dp))
                 val actions = listOf(
-                    NowPlayingAction("fav", if (isFavorite) FutureIcons.Favorite else FutureIcons.FavoriteBorder, "מועדף", isFavorite, onToggleFavorite),
-                    NowPlayingAction("playlist", FutureIcons.AutoMirrored.PlaylistAdd, "פלייליסט", false) { showPlaylistDialog = true },
-                    NowPlayingAction("sound", FutureIcons.Equalizer, "סאונד", false, onOpenSound),
-                    NowPlayingAction("shuffle", FutureIcons.Shuffle, "ערבוב", playerState.shuffleEnabled, onToggleShuffle),
+                    NowPlayingAction("fav", if (isFavorite) FutureIcons.Favorite else FutureIcons.FavoriteBorder, "מועדף (1)", isFavorite, onToggleFavorite),
+                    NowPlayingAction("playlist", FutureIcons.AutoMirrored.PlaylistAdd, "פלייליסט (2)", false) { showPlaylistDialog = true },
+                    NowPlayingAction("sound", FutureIcons.Equalizer, "סאונד (3)", false, onOpenSound),
+                    NowPlayingAction("shuffle", FutureIcons.Shuffle, "ערבוב (7)", playerState.shuffleEnabled, onToggleShuffle),
                     NowPlayingAction(
                         "repeat",
                         if (playerState.repeatMode == Player.REPEAT_MODE_ONE) FutureIcons.RepeatOne else FutureIcons.Repeat,
-                        "חזרה", playerState.repeatMode != Player.REPEAT_MODE_OFF, onCycleRepeat,
+                        "חזרה (8)", playerState.repeatMode != Player.REPEAT_MODE_OFF, onCycleRepeat,
                     ),
-                    NowPlayingAction("bt", FutureIcons.Bluetooth, "Bluetooth", false, onOpenDevices),
+                    NowPlayingAction("bt", FutureIcons.Bluetooth, "Bluetooth (9)", false, onOpenDevices),
                 )
-                Column(verticalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm)) {
-                    actions.chunked(3).forEach { row ->
-                        Row(horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm)) {
-                            row.forEach { action ->
-                                val onFocus = track(action.key)
-                                FutureActionCell(
-                                    icon = action.icon,
-                                    label = action.label,
-                                    theme = theme,
-                                    onClick = action.onClick,
-                                    active = action.active,
-                                    height = 72.dp,
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .onFocusChanged { onFocus(it.hasFocus) },
-                                )
-                            }
-                        }
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    actions.forEach { action ->
+                        RoundIconButton(
+                            action.icon, action.label, theme, size = 40.dp,
+                            active = action.active, onClick = action.onClick, onFocusChanged = track(action.key),
+                        )
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(12.dp))
         }
     }
 
@@ -326,26 +322,30 @@ private fun RoundIconButton(
     val accent = theme.readableAccentColor
     // פוקוס כמו בשאר המערכת (פקדי השיחה): מסגרת 2dp בהדגשה, בלי שינוי מילוי.
     val bg by animateColorAsState(
-        if (filled) accent else theme.idleFieldColor,
+        when {
+            filled -> accent
+            active -> accent.copy(alpha = 0.20f)
+            else -> theme.idleFieldColor
+        },
         FutureMotion.focusColorSpec,
         label = "roundIconBtnBg",
     )
     val tint = if (filled) theme.onReadableAccentColor else if (active) accent else theme.textColor
+    // פוקוס = מסגרת בהדגשה. בכפתור המלא (נגן/השהה) זו טבעת עם רווח מסביב
+    // לעיגול, כדי שתיראה גם כשההדגשה לבנה והמילוי לבן.
     val focusBorderColor by animateColorAsState(
-        when {
-            !isFocused -> androidx.compose.ui.graphics.Color.Transparent
-            filled -> theme.textColor
-            else -> accent
-        },
+        if (isFocused) accent else androidx.compose.ui.graphics.Color.Transparent,
         FutureMotion.focusColorSpec,
         label = "roundIconBtnFocusBorder",
     )
+    val ringGap = if (filled) 4.dp else 0.dp
     Box(
         modifier = Modifier
-            .size(size)
+            .size(size + ringGap * 2)
+            .border(width = FutureDimens.focusBorderControl, color = focusBorderColor, shape = CircleShape)
+            .padding(ringGap)
             .clip(CircleShape)
             .background(bg)
-            .border(width = FutureDimens.focusBorderControl, color = focusBorderColor, shape = CircleShape)
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
             .focusable(interactionSource = interactionSource).bringIntoViewOnFocus(),
