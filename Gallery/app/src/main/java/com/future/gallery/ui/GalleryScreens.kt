@@ -354,6 +354,8 @@ fun MediaViewerScreen(
     var showHint by remember { mutableStateOf(true) }
     var immersive by rememberSaveable { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
+    val actionBarFocus = remember { FocusRequester() }
+    var actionBarFocused by remember { mutableStateOf(false) }
 
     val zoom by animateFloatAsState(zoomTarget, FutureMotion.standard(), label = "mediaZoom")
     val animatedPanX by animateFloatAsState(panX, FutureMotion.fast(), label = "mediaPanX")
@@ -363,6 +365,8 @@ fun MediaViewerScreen(
 
     com.future.sharednav.nav.onOptionsKeyPress { showMenu = !showMenu }
     BackHandler(enabled = zoomTarget > 1f) { zoomTarget = 1f }
+    // BACK מהסרגל מחזיר לתמונה ולא יוצא מהצפייה.
+    BackHandler(enabled = actionBarFocused && zoomTarget <= 1f) { runCatching { focusRequester.requestFocus() } }
 
     LaunchedEffect(item.id) { runCatching { focusRequester.requestFocus() } }
     LaunchedEffect(Unit) { delay(2600); showHint = false }
@@ -466,6 +470,14 @@ fun MediaViewerScreen(
                 .focusable()
                 .onKeyEvent { event ->
                     if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
+                    // הסרגל ממוקד: החצים שייכים לו (ימינה/שמאלה בין הפעולות) ולא
+                    // מחליפים תמונה; למעלה חוזר לתמונה.
+                    if (actionBarFocused) {
+                        return@onKeyEvent if (event.key == Key.DirectionUp) {
+                            runCatching { focusRequester.requestFocus() }
+                            true
+                        } else false
+                    }
                     val zoomed = zoomTarget > 1f
                     val panStep = 60f * zoomTarget
                     when (event.key) {
@@ -489,7 +501,11 @@ fun MediaViewerScreen(
                             true
                         }
                         Key.DirectionUp, Key.Two -> { if (zoomed) { panY += panStep; clampPan() }; true }
-                        Key.DirectionDown, Key.Eight -> { if (zoomed) { panY -= panStep; clampPan() }; true }
+                        Key.DirectionDown, Key.Eight -> {
+                            if (zoomed) { panY -= panStep; clampPan() }
+                            else if (event.key == Key.DirectionDown && !immersive) runCatching { actionBarFocus.requestFocus() }
+                            true
+                        }
                         else -> false
                     }
                 }
@@ -567,20 +583,22 @@ fun MediaViewerScreen(
                     enter = fadeIn(), exit = fadeOut(),
                     modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = FutureDimens.spacingMd),
                 ) {
-                    ViewerBadge(if (items.size > 1) "‹ › תמונה אחרת · 5 מסך מלא" else "5 מסך מלא", theme)
+                    ViewerBadge(if (items.size > 1) "‹ › תמונה אחרת · ↓ פעולות" else "↓ פעולות · 5 מסך מלא", theme)
                 }
             }
 
+            // סרגל הפעולות (במקום סרגל המקשים הרכים): חץ למטה נכנס אליו.
             AnimatedVisibility(visible = !immersive, enter = fadeIn(), exit = fadeOut()) {
-                com.future.sharednav.components.FutureSoftKeyBar(
+                com.future.sharednav.components.FutureActionBar(
                     theme = theme,
-                    left = "תפריט",
-                    center = when {
-                        bitmap == null -> null
-                        zoomTarget >= ZOOM_PRESETS.last() -> "הקטן"
-                        else -> "הגדל"
-                    },
-                    right = if (zoomTarget > 1f) "תמונה מלאה" else "חזור",
+                    firstFocusRequester = actionBarFocus,
+                    onFocusChanged = { actionBarFocused = it },
+                    actions = listOf(
+                        com.future.sharednav.components.FutureAction("שיתוף", FutureIcons.Share) { share() },
+                        com.future.sharednav.components.FutureAction("עריכה", FutureIcons.Edit, enabled = bitmap != null) { onEdit() },
+                        com.future.sharednav.components.FutureAction("פרטים", FutureIcons.Info) { showInfo = true },
+                        com.future.sharednav.components.FutureAction("מחיקה", FutureIcons.Delete, destructive = true) { showDeleteConfirm = true },
+                    ),
                 )
             }
         }

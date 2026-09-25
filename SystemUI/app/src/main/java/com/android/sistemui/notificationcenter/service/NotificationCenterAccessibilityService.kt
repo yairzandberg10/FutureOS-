@@ -19,7 +19,6 @@ import android.view.KeyEvent
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
 import android.widget.Toast
-import com.future.sharednav.actions.FutureUIActions
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
@@ -31,8 +30,8 @@ import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.android.sistemui.notificationcenter.ui.NotificationCenterScreen
 import com.android.sistemui.notificationcenter.logic.NotificationCenterManager
-import com.android.sistemui.ui.theme.SystemUITheme
-import com.android.sistemui.utils.SystemUIActions
+import com.android.sistemui.ui.theme.FutureUITheme
+import com.android.sistemui.utils.FutureUIActions
 
 class NotificationCenterAccessibilityService : AccessibilityService(), LifecycleOwner, SavedStateRegistryOwner, ViewModelStoreOwner {
 
@@ -45,7 +44,7 @@ class NotificationCenterAccessibilityService : AccessibilityService(), Lifecycle
 
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action == SystemUIActions.ACTION_SHOW_NOTIFICATION_CENTER) {
+            if (intent?.action == FutureUIActions.ACTION_SHOW_NOTIFICATION_CENTER) {
                 showNotificationCenter()
             }
         }
@@ -60,7 +59,7 @@ class NotificationCenterAccessibilityService : AccessibilityService(), Lifecycle
     override val viewModelStore: ViewModelStore get() = store
 
     private val longPressRunnable = Runnable {
-        Log.d("SystemUI", "NC Long Press Triggered")
+        Log.d("FutureUI", "NC Long Press Triggered")
         longPressPending = false
         toggleNotificationCenter()
     }
@@ -72,14 +71,14 @@ class NotificationCenterAccessibilityService : AccessibilityService(), Lifecycle
             lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
             windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
             
-            val filter = IntentFilter(SystemUIActions.ACTION_SHOW_NOTIFICATION_CENTER)
+            val filter = IntentFilter(FutureUIActions.ACTION_SHOW_NOTIFICATION_CENTER)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)
             } else {
                 registerReceiver(receiver, filter)
             }
         } catch (e: Exception) {
-            Log.e("SystemUI", "Error in NC onCreate", e)
+            Log.e("FutureUI", "Error in NC onCreate", e)
         }
     }
 
@@ -145,7 +144,6 @@ class NotificationCenterAccessibilityService : AccessibilityService(), Lifecycle
             if (notificationManager == null) {
                 notificationManager = NotificationCenterManager(this)
             }
-            notificationManager?.controlManager?.startRootShell()
 
             val wallpaperManager = WallpaperManager.getInstance(this)
             val wallpaperDrawable = wallpaperManager.drawable
@@ -174,13 +172,13 @@ class NotificationCenterAccessibilityService : AccessibilityService(), Lifecycle
                 setViewTreeViewModelStoreOwner(this@NotificationCenterAccessibilityService)
                 
                 setContent {
-                    SystemUITheme {
+                    FutureUITheme {
                         NotificationCenterScreen(
                             modifier = Modifier.fillMaxSize(),
                             wallpaper = wallpaperBitmap?.asImageBitmap(),
                             manager = notificationManager,
                             onSwitchToControlCenter = {
-                                val intent = Intent(SystemUIActions.ACTION_SHOW_CONTROL_CENTER)
+                                val intent = Intent(FutureUIActions.ACTION_SHOW_CONTROL_CENTER)
                                 intent.setPackage(packageName)
                                 sendBroadcast(intent)
                                 mainHandler.postDelayed({ hideNotificationCenter() }, 50)
@@ -198,11 +196,11 @@ class NotificationCenterAccessibilityService : AccessibilityService(), Lifecycle
             windowManager.addView(composeView, params)
             isVisible = true
 
-            val bringFrontIntent = Intent(SystemUIActions.ACTION_BRING_STATUS_BAR_FRONT)
+            val bringFrontIntent = Intent(FutureUIActions.ACTION_BRING_STATUS_BAR_FRONT)
             bringFrontIntent.setPackage(packageName)
             sendBroadcast(bringFrontIntent)
         } catch (e: Exception) {
-            Log.e("SystemUI", "Error showing NC overlay", e)
+            Log.e("FutureUI", "Error showing NC overlay", e)
         }
     }
 
@@ -222,14 +220,13 @@ class NotificationCenterAccessibilityService : AccessibilityService(), Lifecycle
     private fun hideNotificationCenter() {
         if (!isVisible) return
         try {
-            notificationManager?.controlManager?.stopRootShell()
             lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
             lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
             windowManager.removeView(composeView)
             composeView = null
             isVisible = false
         } catch (e: Exception) {
-            Log.e("SystemUI", "Error hiding NC overlay", e)
+            Log.e("FutureUI", "Error hiding NC overlay", e)
         }
     }
 
@@ -237,7 +234,9 @@ class NotificationCenterAccessibilityService : AccessibilityService(), Lifecycle
         hideNotificationCenter()
         try {
             unregisterReceiver(receiver)
-        } catch (e: Exception) {}
+        } catch (e: Exception) {
+            android.util.Log.w("NotificationCenterAcces", "onDestroy failed", e)
+        }
         notificationManager?.dispose()
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
         store.clear()

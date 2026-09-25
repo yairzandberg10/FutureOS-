@@ -1,5 +1,7 @@
 package com.android.sistemui.controlcenter.ui.components
 
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -49,7 +51,7 @@ fun TogglePill(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    val shape = RoundedCornerShape(35.dp)
+    val shape = FutureShapes.xxl
 
     // מקש Options הפיזי נחסם ברמת המערכת ולעולם לא מגיע כ-Key.Menu לכאן - זו הדרך
     // האמיתית שהוא מפעיל את "החלפת הקיצור" הזה כשהוא ממוקד במצב עריכה.
@@ -100,7 +102,7 @@ fun TogglePill(
             Spacer(modifier = Modifier.width(10.dp))
             Text(
                 text = label,
-                fontSize = 12.sp,
+                fontSize = FutureTypography.label,
                 color = labelColor,
                 fontWeight = FontWeight.Medium,
                 maxLines = 1,
@@ -191,7 +193,7 @@ fun FocusableIcon(
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = label,
-                    fontSize = 8.sp,
+                    fontSize = FutureTypography.caption,
                     color = labelColor,
                     textAlign = TextAlign.Center,
                     maxLines = 1,
@@ -215,7 +217,7 @@ fun FocusableSection(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    val shape = RoundedCornerShape(24.dp)
+    val shape = FutureShapes.xl
 
     // מקש Options הפיזי נחסם ברמת המערכת ולעולם לא מגיע כ-Key.Menu לכאן - זו הדרך
     // האמיתית שהוא מפעיל את onMenuClick (עריכת אריחי הרשת) כשהסקשן ממוקד במצב עריכה.

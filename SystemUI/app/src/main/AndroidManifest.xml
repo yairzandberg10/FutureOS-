@@ -22,16 +22,30 @@
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" tools:ignore="QueryAllPackagesPermission" />
     <!-- לצורך צ'יפ "שיחה פעילה" בשורת המצב (StatusBarScreen, TelecomManager.isInCall) -->
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
-    <!-- לתזמון האזעקות המדויקות של DndScheduleManager - הרשאה "רגילה" (לא runtime) ב-API 31 -->
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
-    <!-- כדי לחדש את תזמון ה-DND אחרי הפעלה מחדש (AlarmManager מתאפס באתחול) -->
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- גלולת "סנכרון אוטומטי" במרכז הבקרה (ContentResolver.setMasterSyncAutomatically) -->
+    <uses-permission android:name="android.permission.READ_SYNC_SETTINGS" />
+    <uses-permission android:name="android.permission.WRITE_SYNC_SETTINGS" />
 
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
 
-    <uses-permission android:name="com.future.futureui.permission.SYSTEM_SETTINGS" />
+    <permission
+        android:name="com.android.sistemui.permission.SYSTEM_SETTINGS"
+        android:protectionLevel="signature" />
+
     <uses-permission android:name="com.future.keyboard.permission.SETTINGS" />
+
+    <!-- חלון השיתוף צריך לראות את כל האפליקציות שמקבלות שיתוף -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.SEND" />
+            <data android:mimeType="*/*" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.SEND_MULTIPLE" />
+            <data android:mimeType="*/*" />
+        </intent>
+    </queries>
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -42,16 +56,22 @@
         android:supportsRtl="true"
         android:appCategory="productivity"
         android:isGame="false"
-        android:theme="@style/Theme.SystemUI">
+        android:theme="@style/Theme.FutureUI">
 
+        <!-- שני הספקים היו exported בלי הרשאה כלל: כל APK שהותקן על המכשיר
+             יכול היה לשנות את עיצוב המערכת ואת תצורת שורת המצב. protectionLevel
+             signature מגביל אותם לאפליקציות שחתומות באותו מפתח, כלומר לסוויטת
+             FutureOS בלבד. -->
         <provider
             android:name=".theme.ThemeProvider"
             android:authorities="com.android.sistemui.theme"
+            android:permission="com.android.sistemui.permission.SYSTEM_SETTINGS"
             android:exported="true" />
 
         <provider
-            android:name=".provider.SystemUiSettingsProvider"
-            android:authorities="com.android.sistemui.provider"
+            android:name=".systemui.SystemUiSettingsProvider"
+            android:authorities="com.android.sistemui.systemui"
+            android:permission="com.android.sistemui.permission.SYSTEM_SETTINGS"
             android:exported="true" />
 
         <service
@@ -64,7 +84,7 @@
             </intent-filter>
             <meta-data
                 android:name="android.accessibilityservice"
-                android:resource="@xml/accessibility_service_config" />
+                android:resource="@xml/accessibility_service_keys" />
         </service>
 
         <service
@@ -77,7 +97,7 @@
             </intent-filter>
             <meta-data
                 android:name="android.accessibilityservice"
-                android:resource="@xml/accessibility_service_config" />
+                android:resource="@xml/accessibility_service_keys" />
         </service>
 
         <service
@@ -90,24 +110,12 @@
             </intent-filter>
             <meta-data
                 android:name="android.accessibilityservice"
-                android:resource="@xml/accessibility_service_config" />
+                android:resource="@xml/accessibility_service_keys" />
         </service>
 
         <service
             android:name=".notificationcenter.service.HeadsUpNotificationService"
             android:exported="false" />
-
-        <receiver
-            android:name=".dnd.DndScheduleReceiver"
-            android:exported="false" />
-
-        <receiver
-            android:name=".dnd.DndBootReceiver"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
-            </intent-filter>
-        </receiver>
 
         <service
             android:name=".controlcenter.service.MediaControlService"
@@ -119,20 +127,34 @@
             </intent-filter>
         </service>
 
+        <!-- חלון השיתוף המרכזי - כל האפליקציות משתפות דרכו (FutureShare). -->
+        <activity
+            android:name=".share.ShareActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@style/Theme.FutureUI.Translucent">
+            <intent-filter>
+                <action android:name="com.future.futureui.ACTION_SHARE" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
         <activity
             android:name=".SettingsActivity"
             android:exported="true"
             android:label="התאמה אישית"
-            android:theme="@style/Theme.SystemUI" />
+            android:theme="@style/Theme.FutureUI" />
 
-        <!-- בכוונה בלי CATEGORY_LAUNCHER: SystemUI הוא SystemUI, לא אפליקציה שהמשתמש
+        <!-- בכוונה בלי CATEGORY_LAUNCHER: FutureUI הוא SystemUI, לא אפליקציה שהמשתמש
              פותח ישירות - אין לו אייקון ברשימת האפליקציות. ACTION_MAIN נשאר כדי
              שאפשר עדיין להפעיל אותו במפורש (adb / debugging) בלי חשיפה בלאנצ'ר. -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:label="@string/app_name"
-            android:theme="@style/Theme.SystemUI"
+            android:theme="@style/Theme.FutureUI"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

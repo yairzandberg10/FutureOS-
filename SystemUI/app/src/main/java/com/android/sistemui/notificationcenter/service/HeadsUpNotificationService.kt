@@ -24,8 +24,8 @@ import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import com.android.sistemui.controlcenter.service.MediaControlService
 import com.android.sistemui.notificationcenter.ui.HeadsUpNotificationScreen
-import com.android.sistemui.ui.theme.SystemUITheme
-import com.android.sistemui.utils.SystemUIActions
+import com.android.sistemui.ui.theme.FutureUITheme
+import com.android.sistemui.utils.FutureUIActions
 
 /**
  * שירות קל-משקל שמציג באנר קופץ (heads-up) חד-פעמי כשמגיעה התראה חדשה, בלי
@@ -94,7 +94,7 @@ class HeadsUpNotificationService : Service(), LifecycleOwner, SavedStateRegistry
                 setViewTreeSavedStateRegistryOwner(this@HeadsUpNotificationService)
                 setViewTreeViewModelStoreOwner(this@HeadsUpNotificationService)
                 setContent {
-                    SystemUITheme {
+                    FutureUITheme {
                         // התראת שיחה נכנסת (CATEGORY_CALL) נשארת על המסך הרבה יותר זמן מבאנר
                         // רגיל - שיחה ממשיכה לצלצל עשרות שניות, ובאנר שנעלם אחרי 4.5 שניות
                         // בזמן שהיא עדיין מצלצלת נראה כאילו השיחה נגמרה.
@@ -118,7 +118,7 @@ class HeadsUpNotificationService : Service(), LifecycleOwner, SavedStateRegistry
 
             windowManager.addView(composeView, params)
 
-            val bringFrontIntent = Intent(SystemUIActions.ACTION_BRING_STATUS_BAR_FRONT)
+            val bringFrontIntent = Intent(FutureUIActions.ACTION_BRING_STATUS_BAR_FRONT)
             bringFrontIntent.setPackage(packageName)
             sendBroadcast(bringFrontIntent)
         } catch (e: Exception) {
@@ -131,7 +131,9 @@ class HeadsUpNotificationService : Service(), LifecycleOwner, SavedStateRegistry
         val view = composeView ?: return
         try {
             windowManager.removeView(view)
-        } catch (e: Exception) {}
+        } catch (e: Exception) {
+            android.util.Log.w("HeadsUpNotificationServ", "removeBanner failed", e)
+        }
         composeView = null
     }
 

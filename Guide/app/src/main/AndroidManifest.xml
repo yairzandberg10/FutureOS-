@@ -30,6 +30,13 @@
         <package android:name="com.future.assistant" />
         <package android:name="com.future.translate" />
         <package android:name="com.future.settings" />
+        <!-- חסרו כאן, ולכן במדריך הופיע להן גליף במקום האייקון האמיתי:
+             Package Visibility מסתיר חבילה שלא הוצהרה. -->
+        <package android:name="com.future.clock" />
+        <package android:name="com.future.calculator" />
+        <package android:name="com.future.flashlight" />
+        <package android:name="com.future.frixa" />
+        <package android:name="com.future.wallpapers" />
     </queries>
 
     <uses-permission android:name="com.future.futureui.permission.SYSTEM_SETTINGS" />

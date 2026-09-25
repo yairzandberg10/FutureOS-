@@ -1,5 +1,7 @@
 package com.android.sistemui.settings.ui
 
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
@@ -24,32 +26,24 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.android.sistemui.controlcenter.ui.components.focusEffect
-import com.android.sistemui.dnd.DndScheduleManager
 import com.android.sistemui.statusbar.logic.StatusBarLayoutManager
 
 /**
- * מסך ההתאמה האישית המרכזי של SystemUI - מרכז במקום אחד את כל ההגדרות
+ * מסך ההתאמה האישית המרכזי של FutureUI - מרכז במקום אחד את כל ההגדרות
  * שאפשר לכוונן בכל חלקי המערכת (שורת מצב וכו'), כדי שלא יהיה
  * צריך לחפש כל הגדרה בנפרד. מרכז הבקרה עצמו כבר תומך בעריכה ישירה
  * (לחיצה ארוכה בתוכו) ולכן לא מופיע כאן.
  */
 @Composable
-fun SystemUISettingsScreen(
+fun FutureUISettingsScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val statusBarLayout = remember { StatusBarLayoutManager(context) }
     var showBattery by remember { mutableStateOf(statusBarLayout.getShowBattery()) }
     var showBluetooth by remember { mutableStateOf(statusBarLayout.getShowBluetooth()) }
-    var showWifi by remember { mutableStateOf(statusBarLayout.getShowWifi()) }
-    var showCellularSignal by remember { mutableStateOf(statusBarLayout.getShowCellularSignal()) }
     var use24Hour by remember { mutableStateOf(statusBarLayout.getUse24HourClock()) }
     var suppressSystemBars by remember { mutableStateOf(statusBarLayout.getSuppressSystemBars()) }
-
-    val dndScheduleManager = remember { DndScheduleManager(context) }
-    var dndScheduleEnabled by remember { mutableStateOf(dndScheduleManager.isEnabled()) }
-    var dndStartMinutes by remember { mutableIntStateOf(dndScheduleManager.getStartMinutes()) }
-    var dndEndMinutes by remember { mutableIntStateOf(dndScheduleManager.getEndMinutes()) }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Column(
@@ -62,7 +56,7 @@ fun SystemUISettingsScreen(
             Text(
                 text = "התאמה אישית",
                 color = Color.White,
-                fontSize = 24.sp,
+                fontSize = FutureTypography.headline,
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(24.dp))
@@ -74,12 +68,6 @@ fun SystemUISettingsScreen(
                 SettingsToggleRow("הצג Bluetooth", showBluetooth) {
                     showBluetooth = it; statusBarLayout.saveShowBluetooth(it)
                 }
-                SettingsToggleRow("הצג Wi-Fi", showWifi) {
-                    showWifi = it; statusBarLayout.saveShowWifi(it)
-                }
-                SettingsToggleRow("הצג עוצמת קליטה סלולרית", showCellularSignal) {
-                    showCellularSignal = it; statusBarLayout.saveShowCellularSignal(it)
-                }
                 SettingsToggleRow("שעון 24 שעות", use24Hour) {
                     use24Hour = it; statusBarLayout.saveUse24HourClock(it)
                 }
@@ -89,55 +77,28 @@ fun SystemUISettingsScreen(
             }
 
             Spacer(modifier = Modifier.height(24.dp))
-
-            SettingsSection(title = "נא לא להפריע - תזמון") {
-                SettingsToggleRow("הפעלה אוטומטית לפי שעון", dndScheduleEnabled) {
-                    dndScheduleEnabled = it
-                    dndScheduleManager.setEnabled(it)
-                }
-                SettingsCycleRow(
-                    label = "שעת התחלה",
-                    value = formatMinutesOfDay(dndStartMinutes),
-                    onNext = {
-                        dndStartMinutes = (dndStartMinutes + 30).mod(24 * 60)
-                        dndScheduleManager.setStartMinutes(dndStartMinutes)
-                    }
-                )
-                SettingsCycleRow(
-                    label = "שעת סיום",
-                    value = formatMinutesOfDay(dndEndMinutes),
-                    onNext = {
-                        dndEndMinutes = (dndEndMinutes + 30).mod(24 * 60)
-                        dndScheduleManager.setEndMinutes(dndEndMinutes)
-                    }
-                )
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
             Text(
                 text = "מרכז הבקרה ניתן לעריכה ישירות בתוכו - לחיצה ארוכה על כפתור העריכה מאפשרת להוסיף, להסיר ולסדר מחדש כפתורים.",
                 color = Color.White.copy(alpha = 0.6f),
-                fontSize = 12.sp
+                fontSize = FutureTypography.label
             )
         }
     }
 }
-
-private fun formatMinutesOfDay(minutes: Int): String = "%02d:%02d".format(minutes / 60, minutes % 60)
 
 @Composable
 private fun SettingsSection(title: String, content: @Composable ColumnScope.() -> Unit) {
     Text(
         text = title,
         color = Color.White.copy(alpha = 0.6f),
-        fontSize = 13.sp,
+        fontSize = FutureTypography.summary,
         fontWeight = FontWeight.Bold
     )
     Spacer(modifier = Modifier.height(8.dp))
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
+            .clip(FutureShapes.xl)
             .background(Color.White.copy(alpha = 0.08f))
     ) {
         content()
@@ -148,7 +109,7 @@ private fun SettingsSection(title: String, content: @Composable ColumnScope.() -
 private fun SettingsToggleRow(label: String, value: Boolean, onChange: (Boolean) -> Unit) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    val shape = RoundedCornerShape(16.dp)
+    val shape = FutureShapes.lg
 
     Row(
         modifier = Modifier
@@ -165,37 +126,11 @@ private fun SettingsToggleRow(label: String, value: Boolean, onChange: (Boolean)
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(text = label, color = Color.White, fontSize = 14.sp, modifier = Modifier.weight(1f))
+        Text(text = label, color = Color.White, fontSize = FutureTypography.body, modifier = Modifier.weight(1f))
         Switch(
             checked = value,
             onCheckedChange = onChange,
             colors = SwitchDefaults.colors(checkedTrackColor = Color.White, checkedThumbColor = Color.Black)
         )
-    }
-}
-
-@Composable
-private fun SettingsCycleRow(label: String, value: String, onNext: () -> Unit) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val shape = RoundedCornerShape(16.dp)
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .focusEffect(isFocused, shape)
-            .clip(shape)
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = onNext
-            )
-            .focusable(interactionSource = interactionSource)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(text = label, color = Color.White, fontSize = 14.sp, modifier = Modifier.weight(1f))
-        Text(text = value, color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp)
     }
 }

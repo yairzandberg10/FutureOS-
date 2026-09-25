@@ -58,9 +58,11 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
     private var hideVolumeRunnable: Runnable? = null
     private var statusBarParams: WindowManager.LayoutParams? = null
     private var recentsView: ComposeView? = null
+    private var powerMenuView: ComposeView? = null
     private var recentsVisible = false
     private val recentAppsList = androidx.compose.runtime.mutableStateListOf<RecentAppInfo>()
     private val recentAppsManager by lazy { RecentAppsManager(this) }
+    private val recentsMemory = mutableStateOf<String?>(null)
     private var recentAppsTriggered = false
     private val recentAppsRunnable = Runnable {
         recentAppsTriggered = true
@@ -80,8 +82,10 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
 
     private val bringToFrontReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action == FutureUIActions.ACTION_BRING_STATUS_BAR_FRONT) {
-                bringStatusBarToFront()
+            when (intent?.action) {
+                FutureUIActions.ACTION_BRING_STATUS_BAR_FRONT -> bringStatusBarToFront()
+                // כפתור הכיבוי במרכז הבקרה פותח את אותו תפריט כיבוי אחד.
+                ACTION_SHOW_POWER_MENU -> mainHandler.post { showPowerMenu() }
             }
         }
     }
@@ -135,7 +139,9 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
             recentsAccentColor.value = Color(themePrefs.getInt(ThemeProvider.COL_PRIMARY_COLOR, android.graphics.Color.WHITE))
             themePrefs.registerOnSharedPreferenceChangeListener(themePrefsListener)
 
-            val filter = IntentFilter(FutureUIActions.ACTION_BRING_STATUS_BAR_FRONT)
+            val filter = IntentFilter(FutureUIActions.ACTION_BRING_STATUS_BAR_FRONT).apply {
+                addAction(ACTION_SHOW_POWER_MENU)
+            }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 registerReceiver(bringToFrontReceiver, filter, Context.RECEIVER_EXPORTED)
             } else {
@@ -169,7 +175,11 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event?.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
-            event.packageName?.toString()?.let { FutureUIState.foregroundPackage = it }
+            val pkg = event.packageName?.toString()
+            pkg?.let { FutureUIState.foregroundPackage = it }
+            // "אחרונות" = רק אפליקציות שהמשתמש באמת פתח (ר' RecentAppsManager.record).
+            runCatching { recentAppsManager.record(pkg, event.className?.toString()) }
+            maybeReplaceSystemPowerMenu(pkg, event.className?.toString())
         }
     }
     override fun onInterrupt() {}
@@ -182,6 +192,15 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
             }
             // צורכים תמיד את אירוע המקש כדי שחלונית הווליום המקורית של אנדרואיד לא תופיע
             return true
+        }
+
+        // תפריט הכיבוי (החזקת מקש ההפעלה): BACK סוגר, השאר עוברים לחלון שלו.
+        if (powerMenuView != null) {
+            if (keyCode == KeyEvent.KEYCODE_BACK) {
+                if (event.action == KeyEvent.ACTION_UP) hidePowerMenu()
+                return true
+            }
+            return false
         }
 
         // כשמסך "אפליקציות אחרונות" שלנו גלוי, BACK סוגר אותו וכל שאר המקשים
@@ -389,6 +408,105 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
         volumeOverlayView = null
     }
 
+    /**
+     * החזקת מקש ההפעלה פותחת את חלון הכיבוי של אנדרואיד (GlobalActionsDialog
+     * של com.android.systemui) - מקש ההפעלה עצמו לא מגיע לשירותי נגישות, אז
+     * מזהים את החלון כשהוא עולה, סוגרים אותו ב-BACK ופותחים את שלנו במקומו.
+     */
+    private fun maybeReplaceSystemPowerMenu(pkg: String?, cls: String?) {
+        if (pkg != "com.android.systemui" || cls == null) return
+        if (!cls.contains("globalactions", ignoreCase = true)) return
+        performGlobalAction(GLOBAL_ACTION_BACK)
+        mainHandler.postDelayed({ showPowerMenu() }, 120)
+    }
+
+    private val powerAirplaneState = mutableStateOf(false)
+    private val powerSilentState = mutableStateOf(false)
+
+    private fun showPowerMenu() {
+        if (powerMenuView != null) return
+        try {
+            val audio = getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+            powerAirplaneState.value = android.provider.Settings.Global.getInt(contentResolver, android.provider.Settings.Global.AIRPLANE_MODE_ON, 0) != 0
+            powerSilentState.value = audio?.ringerMode == AudioManager.RINGER_MODE_SILENT
+
+            val params = WindowManager.LayoutParams(
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
+                PixelFormat.TRANSLUCENT
+            )
+            powerMenuView = ComposeView(this).apply {
+                setViewTreeLifecycleOwner(this@StatusBarAccessibilityService)
+                setViewTreeSavedStateRegistryOwner(this@StatusBarAccessibilityService)
+                setViewTreeViewModelStoreOwner(this@StatusBarAccessibilityService)
+                setContent {
+                    FutureUITheme {
+                        com.future.futureui.controlcenter.ui.PowerMenuScreen(
+                            onPowerOff = {
+                                hidePowerMenu()
+                                android.widget.Toast.makeText(this@StatusBarAccessibilityService, "מכבה את המכשיר...", android.widget.Toast.LENGTH_SHORT).show()
+                                controlManager?.runRootCommandAsync("reboot -p")
+                            },
+                            onRestart = {
+                                hidePowerMenu()
+                                android.widget.Toast.makeText(this@StatusBarAccessibilityService, "מפעיל מחדש...", android.widget.Toast.LENGTH_SHORT).show()
+                                controlManager?.runRootCommandAsync("reboot")
+                            },
+                            onCancel = { hidePowerMenu() },
+                            airplaneOn = powerAirplaneState.value,
+                            onAirplane = {
+                                val next = !powerAirplaneState.value
+                                powerAirplaneState.value = next
+                                controlManager?.let { cm ->
+                                    cm.isAirplaneOn = next
+                                    cm.toggleAirplane()
+                                }
+                            },
+                            silentOn = powerSilentState.value,
+                            onSilent = {
+                                val next = !powerSilentState.value
+                                val mode = if (next) AudioManager.RINGER_MODE_SILENT else AudioManager.RINGER_MODE_NORMAL
+                                val ok = runCatching { audio?.ringerMode = mode }.isSuccess
+                                if (ok) {
+                                    powerSilentState.value = next
+                                } else {
+                                    controlManager?.runRootCommandAsync("cmd notification allow_dnd $packageName")
+                                }
+                            },
+                            onScreenshot = {
+                                hidePowerMenu()
+                                // אחרי שהתפריט ירד מהמסך - אחרת הוא ייכנס לצילום.
+                                mainHandler.postDelayed({
+                                    controlManager?.runRootCommandAsync(
+                                        "d=/sdcard/Pictures/Screenshots; mkdir -p \$d; " +
+                                            "f=\$d/Screenshot_\$(date +%Y%m%d-%H%M%S).png; screencap -p \$f; " +
+                                            "am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file://\$f"
+                                    )
+                                }, 600)
+                            },
+                        )
+                    }
+                }
+            }
+            windowManager.addView(powerMenuView, params)
+        } catch (e: Exception) {
+            Log.e("FutureUI", "Error showing power menu", e)
+            powerMenuView = null
+        }
+    }
+
+    private fun hidePowerMenu() {
+        try {
+            powerMenuView?.let { windowManager.removeView(it) }
+        } catch (e: Exception) {
+            Log.e("FutureUI", "Error hiding power menu", e)
+        }
+        powerMenuView = null
+    }
+
     /** מסך "אפליקציות אחרונות" עצמאי מבוסס UsageStatsManager, במקום GLOBAL_ACTION_RECENTS המכוער. */
     private fun showRecentApps() {
         if (recentsVisible) return
@@ -398,6 +516,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
             }
             recentAppsList.clear()
             recentAppsList.addAll(recentAppsManager.getRecentApps())
+            recentsMemory.value = recentAppsManager.memorySummary()
 
             val params = WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT,
@@ -429,8 +548,19 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
                             },
                             onClose = { app ->
                                 controlManager?.runRootCommandAsync("am force-stop ${app.packageName}")
+                                recentAppsManager.remove(app.packageName)
                                 recentAppsList.remove(app)
                             },
+                            onCloseAll = {
+                                val all = recentAppsList.toList()
+                                if (all.isNotEmpty()) {
+                                    controlManager?.runRootCommandAsync(all.joinToString("; ") { "am force-stop ${it.packageName}" })
+                                }
+                                recentAppsManager.clear()
+                                recentAppsList.clear()
+                                hideRecentApps()
+                            },
+                            memorySummary = recentsMemory.value,
                             onDismiss = { hideRecentApps() }
                         )
                     }
@@ -475,6 +605,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
         try {
             hideVolumeOverlay()
             hideRecentApps()
+            hidePowerMenu()
             statusBarView?.let { windowManager.removeView(it) }
             statusBarView = null
         } catch (e: Exception) {
@@ -503,5 +634,6 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
         private const val DIALER_PACKAGE = "com.future.dialer"
         private const val HOME_PACKAGE = "com.future.futurelauncher"
         private const val DOUBLE_CLICK_WINDOW_MS = 300L
+        const val ACTION_SHOW_POWER_MENU = "com.future.futureui.ACTION_SHOW_POWER_MENU"
     }
 }

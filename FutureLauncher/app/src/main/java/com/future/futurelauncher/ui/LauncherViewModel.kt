@@ -34,6 +34,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     
     var pages by mutableStateOf<List<List<LauncherItem>>>(listOf(List(16) { LauncherItem.Empty() }))
     var homePageIndex by mutableStateOf(0)
+    /** הדף שמוצג כרגע (מתעדכן מה-Pager) - ווידג'ט חדש נכנס לדף הזה, לא לדף הבית. */
+    var visiblePage by mutableStateOf(0)
     var dialogState by mutableStateOf<LauncherDialog>(LauncherDialog.None)
     var focusedIndex by mutableStateOf(0)
     var pendingSlot by mutableStateOf<Pair<Int, Int>?>(null)
@@ -57,6 +59,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         private const val KEY_HOME_PAGE = "home_page"
         private const val KEY_REMOVED_APPS = "removed_app_ids"
         private const val UNLOCK_DURATION_MS = 60_000L
+        const val GRID_COLUMNS = 4
+        const val GRID_ROWS = 4
     }
 
     init {
@@ -290,28 +294,70 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         editor.apply()
     }
 
-    fun addWidget(widgetId: Int, currentPage: Int) {
+    /**
+     * גודל הווידג'ט ברשת 4x4 לפי מה שהספק מבקש: targetCellWidth/Height (API 31)
+     * אם הוגדרו, אחרת הנוסחה הקלאסית של אנדרואיד ((dp + 30) / 70). קודם כל
+     * ווידג'ט נכנס בתא אחד של 1x1 - שעון או לוח שנה נדחסו לגודל אייקון.
+     */
+    private fun spanFor(info: android.appwidget.AppWidgetProviderInfo): Pair<Int, Int> {
+        val density = context.resources.displayMetrics.density
+        val w = if (info.targetCellWidth > 0) info.targetCellWidth else (((info.minWidth / density) + 30) / 70).toInt()
+        val h = if (info.targetCellHeight > 0) info.targetCellHeight else (((info.minHeight / density) + 30) / 70).toInt()
+        return w.coerceIn(1, GRID_COLUMNS) to h.coerceIn(1, GRID_ROWS)
+    }
+
+    /** התא הראשון (משמאל-למעלה ברשת) שממנו ווידג'ט בגודל הזה נכנס כולו לתאים ריקים. */
+    private fun findPlacement(items: List<LauncherItem>, spanX: Int, spanY: Int, preferred: Int?): Int {
+        fun fits(start: Int): Boolean {
+            val col = start % GRID_COLUMNS
+            val row = start / GRID_COLUMNS
+            if (col + spanX > GRID_COLUMNS || row + spanY > GRID_ROWS) return false
+            for (y in 0 until spanY) for (x in 0 until spanX) {
+                val cell = items.getOrNull(start + y * GRID_COLUMNS + x) ?: return false
+                if (cell !is LauncherItem.Empty || cell.isOccupiedBy != null) return false
+            }
+            return true
+        }
+        if (preferred != null && fits(preferred)) return preferred
+        return items.indices.firstOrNull { fits(it) } ?: -1
+    }
+
+    /** מחזיר false אם אין בדף מקום פנוי בגודל של הווידג'ט. */
+    fun addWidget(widgetId: Int, currentPage: Int): Boolean {
         val appWidgetManager = AppWidgetManager.getInstance(context)
-        val widgetInfo = appWidgetManager.getAppWidgetInfo(widgetId) ?: return
+        val widgetInfo = appWidgetManager.getAppWidgetInfo(widgetId) ?: return false
+        val (spanX, spanY) = spanFor(widgetInfo)
+        val page = currentPage.coerceIn(0, (pages.size - 1).coerceAtLeast(0))
+
+        val newPages = pages.toMutableList()
+        val currentPageItems = newPages[page].toMutableList()
+        val preferred = pendingSlot?.let { if (it.first == page) it.second else null }
+
+        // אם לא נכנס בגודל המלא - מנסים לצמצם (קודם גובה, אחר כך רוחב) לפני שמוותרים.
+        var sx = spanX
+        var sy = spanY
+        var targetIndex = findPlacement(currentPageItems, sx, sy, preferred)
+        while (targetIndex == -1 && (sx > 1 || sy > 1)) {
+            if (sy > 1) sy-- else sx--
+            targetIndex = findPlacement(currentPageItems, sx, sy, preferred)
+        }
+        if (targetIndex == -1) return false
+
         val newWidget = LauncherItem.Widget(
             id = "widget:${UUID.randomUUID()}",
             widgetId = widgetId,
-            label = widgetInfo.loadLabel(pm) ?: "Widget"
+            label = widgetInfo.loadLabel(pm) ?: "Widget",
+            spanX = sx,
+            spanY = sy,
         )
-
-        val newPages = pages.toMutableList()
-        val currentPageItems = newPages[currentPage].toMutableList()
-        
-        val targetIndex = pendingSlot?.let { if (it.first == currentPage) it.second else null } ?: 
-                         currentPageItems.indexOfFirst { it is LauncherItem.Empty && it.isOccupiedBy == null }
-
-        if (targetIndex != -1) {
-            currentPageItems[targetIndex] = newWidget
-            newPages[currentPage] = currentPageItems
-            pages = newPages
-            savePages()
-            pendingSlot = null
-        }
+        currentPageItems[targetIndex] = newWidget
+        recalculateOccupiedSlots(currentPageItems)
+        newPages[page] = currentPageItems
+        pages = newPages
+        focusedIndex = targetIndex
+        savePages()
+        pendingSlot = null
+        return true
     }
 
     fun addFolder(pageIndex: Int, itemIndex: Int, name: String) {

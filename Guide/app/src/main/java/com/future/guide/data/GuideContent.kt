@@ -30,6 +30,8 @@ data class GuideApp(
 }
 
 private val PACKAGE_BY_ID = mapOf(
+    // "יסודות" אינו אפליקציה - מקבל את האייקון של המדריך עצמו.
+    "basics" to "guide",
     "system" to "futureui",
     "launcher" to "futurelauncher",
 )

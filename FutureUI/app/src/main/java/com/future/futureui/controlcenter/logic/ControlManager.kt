@@ -341,7 +341,7 @@ class ControlManager(private val context: Context) {
         try {
             val audio = audioManager ?: return
             val max = audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
-            val target = (fraction * max).toInt()
+            val target = kotlin.math.round(fraction * max).toInt().coerceIn(0, max)
             audio.setStreamVolume(AudioManager.STREAM_MUSIC, target, 0)
             volumeLevel = fraction
         } catch (t: Throwable) {

@@ -55,6 +55,21 @@ import com.future.sharednav.components.FutureSwitch
 import com.future.sharednav.components.ScreenTopBar
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.nav.digitForKey
+import com.future.sharednav.components.AppDialog
+import com.future.sharednav.focus.bringIntoViewOnFocus
+import com.future.sharednav.focus.focusMotion
+import com.future.sharednav.theme.FutureShapes
+import com.future.sharednav.theme.focusFillMenuColor
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import com.future.sharednav.t9.T9DigitMap
 import com.future.sharednav.theme.FutureTheme
 import com.future.sharednav.theme.FutureTypography
@@ -227,9 +242,10 @@ private fun matchesT9(label: String, digits: String): Boolean =
     }
 
 /**
- * בחירת אפליקציה להוספה - רשימה במסך מלא (במקום רשת צפופה בחלון): שורת
- * רשימה של המערכת לכל אפליקציה, שם בגודל גוף רגיל, פוקוס של שורה. ספרות
- * מסננות ב-T9 (עברית ואנגלית).
+ * בחירת אפליקציה להוספה (אדיט מוד) - חלון במעטפת של תפריט האפשרויות
+ * (AppDialog + משטח ורדיוס של FutureOptionsMenu), לא מסך מלא: כל
+ * האפליקציות ברשת של 4 בשורה, אייקון ושם מתחתיו. החצים זזים ברשת, OK
+ * מוסיף, BACK סוגר. ספרות מסננות ב-T9 (עברית ואנגלית).
  */
 @Composable
 fun AppPickerScreen(
@@ -238,6 +254,7 @@ fun AppPickerScreen(
     restrictToDefaultApps: Boolean,
     onUnlockCode: () -> Unit,
     onPick: (LauncherItem.App) -> Unit,
+    onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
     var apps by remember { mutableStateOf<List<LauncherItem.App>>(emptyList()) }
@@ -268,37 +285,111 @@ fun AppPickerScreen(
         digits = ""
     }
     val shown = remember(apps, digits) { if (digits.isEmpty()) apps else apps.filter { matchesT9(it.label, digits) } }
-    LaunchedEffect(shown.firstOrNull()?.id) { if (shown.isNotEmpty()) runCatching { first.requestFocus() } }
 
-    LauncherOverlay(theme, if (digits.isEmpty()) "הוספת אפליקציה" else "הוספת אפליקציה · $digits") {
-        if (shown.isEmpty()) {
-            EmptyState(icon = FutureIcons.Apps, title = if (apps.isEmpty()) "טוען" else "אין התאמות", textColor = theme.textColor)
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().onKeyEvent { event ->
+    AppDialog(onDismissRequest = onDismiss, anchorTop = true) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(FutureShapes.dialog)
+                .background(theme.surfaceColor)
+                .padding(vertical = 8.dp)
+                .onKeyEvent { event ->
                     if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
                     val d = digitForKey(event.key) ?: return@onKeyEvent false
                     digits += d
                     true
                 },
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-            ) {
-                itemsIndexed(shown, key = { _, app -> app.id }) { index, app ->
-                    FutureListItem(
-                        title = app.label,
-                        theme = theme,
-                        onClick = { onPick(app) },
-                        focusRequester = if (index == 0) first else null,
-                        leading = {
-                            val icon = rememberAppIcon(app.resolveInfo, pm)
-                            if (icon != null) {
-                                Image(icon, contentDescription = null, modifier = Modifier.size(36.dp).clip(RoundedCornerShape(percent = 28)))
+        ) {
+            Text(
+                if (digits.isEmpty()) "הוספת אפליקציה" else "הוספת אפליקציה · $digits",
+                color = theme.mutedTextColor,
+                fontSize = FutureTypography.label,
+                maxLines = 1,
+                modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 6.dp, bottom = 8.dp),
+            )
+            if (shown.isEmpty()) {
+                Text(
+                    if (apps.isEmpty()) "טוען…" else "אין התאמות",
+                    color = theme.mutedTextColor,
+                    fontSize = FutureTypography.body,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
+                )
+            } else {
+                LaunchedEffect(shown.firstOrNull()?.id) {
+                    // הדיאלוג רץ בחלון משלו - בקשת פוקוס בפריים הראשון נבלעת.
+                    delay(60)
+                    runCatching { first.requestFocus() }
+                }
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 8.dp),
+                ) {
+                    shown.chunked(PICKER_COLUMNS).forEachIndexed { rowIndex, row ->
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            row.forEachIndexed { colIndex, app ->
+                                AppPickerCell(
+                                    app = app,
+                                    pm = pm,
+                                    theme = theme,
+                                    focusRequester = if (rowIndex == 0 && colIndex == 0) first else null,
+                                    onClick = { onPick(app) },
+                                    modifier = Modifier.weight(1f),
+                                )
                             }
-                        },
-                    )
+                            repeat(PICKER_COLUMNS - row.size) {
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
+                        }
+                    }
                 }
             }
         }
+    }
+}
+
+private const val PICKER_COLUMNS = 4
+
+@Composable
+private fun AppPickerCell(
+    app: LauncherItem.App,
+    pm: PackageManager,
+    theme: FutureTheme,
+    focusRequester: FocusRequester?,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val interaction = remember { MutableInteractionSource() }
+    val focused by interaction.collectIsFocusedAsState()
+    val shape = FutureShapes.sm
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = modifier
+            .padding(2.dp)
+            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
+            .focusMotion(interaction)
+            .clip(shape)
+            .background(if (focused) theme.focusFillMenuColor else Color.Transparent)
+            .clickable(interactionSource = interaction, indication = null, onClick = onClick)
+            .bringIntoViewOnFocus()
+            .padding(vertical = 8.dp, horizontal = 2.dp),
+    ) {
+        val icon = rememberAppIcon(app.resolveInfo, pm)
+        Box(modifier = Modifier.size(44.dp), contentAlignment = Alignment.Center) {
+            if (icon != null) {
+                Image(icon, contentDescription = null, modifier = Modifier.size(44.dp).clip(RoundedCornerShape(percent = 28)))
+            }
+        }
+        Text(
+            app.label,
+            color = if (focused) theme.textColor else theme.mutedTextColor,
+            fontSize = FutureTypography.caption,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 4.dp),
+        )
     }
 }
 

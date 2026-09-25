@@ -18,12 +18,6 @@ class StatusBarLayoutManager(context: Context) {
     fun getShowBluetooth(): Boolean = prefs.getBoolean("show_bluetooth", true)
     fun saveShowBluetooth(value: Boolean) = prefs.edit().putBoolean("show_bluetooth", value).apply()
 
-    fun getShowWifi(): Boolean = prefs.getBoolean("show_wifi", true)
-    fun saveShowWifi(value: Boolean) = prefs.edit().putBoolean("show_wifi", value).apply()
-
-    fun getShowCellularSignal(): Boolean = prefs.getBoolean("show_cellular_signal", true)
-    fun saveShowCellularSignal(value: Boolean) = prefs.edit().putBoolean("show_cellular_signal", value).apply()
-
     fun getUse24HourClock(): Boolean = prefs.getBoolean("use_24_hour_clock", true)
     fun saveUse24HourClock(value: Boolean) = prefs.edit().putBoolean("use_24_hour_clock", value).apply()
 

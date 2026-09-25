@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    התצורה של שלושת השירותים שמשתמשים בנגישות אך ורק כדי לקבל אירועי מקש
+    (שורת המצב, מרכז הבקרה, מרכז ההתראות) - ה-onAccessibilityEvent שלהם ריק.
+
+    עד עכשיו כל ארבעת השירותים חלקו תצורה אחת עם typeAllMask, כלומר המערכת
+    שידרה לכל אחד מהם *כל* אירוע נגישות בטלפון - כולל
+    TYPE_WINDOW_CONTENT_CHANGED ו-TYPE_VIEW_SCROLLED, ש-Compose מייצר בקצב
+    גבוה בכל גלילה ובכל אנימציה. כל אירוע כזה הוא קריאת binder לתהליך של
+    FutureUI ועבודה על ה-main thread שלו - אותו thread בדיוק שחייב לענות
+    למסנן המקשים. כלומר הצפת האירועים תורגמה ישירות להשהיה בכל לחיצת מקש
+    במערכת כולה.
+
+    typeWindowStateChanged הוא האירוע הכי נדיר (החלפת חלון/מסך בלבד) והוא
+    נשאר כאן בכוונה ולא 0: שירות בלי סוג אירוע כלל עלול לא להופיע ברשימת
+    הנגישות של חלק מה-ROM-ים, ואז אי אפשר להפעיל אותו. flagIncludeNotImportantViews
+    הוסר כי canRetrieveWindowContent=false ממילא - השירותים האלה לא קוראים
+    תוכן חלונות בכלל.
+-->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityEventTypes="typeWindowStateChanged"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:accessibilityFlags="flagDefault|flagRequestFilterKeyEvents"
+    android:canRetrieveWindowContent="false"
+    android:canRequestFilterKeyEvents="true"
+    android:notificationTimeout="500" />

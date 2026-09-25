@@ -24,6 +24,10 @@ class ThemeProvider : ContentProvider() {
 
         const val COL_IS_DARK_MODE = "is_dark_mode"
         const val COL_PRIMARY_COLOR = "primary_color"
+
+        /** מכפיל גודל הגופן שהמשתמש בחר בהגדרות. עד שהוא עבר לכאן, המחוון
+         *  בהגדרות השפיע רק על מסך ההגדרות עצמו (ראו FutureType). */
+        const val COL_FONT_SIZE_MULTIPLIER = "font_size_multiplier"
     }
 
     private lateinit var prefs: SharedPreferences
@@ -37,10 +41,11 @@ class ThemeProvider : ContentProvider() {
         uri: Uri, projection: Array<out String>?, selection: String?,
         selectionArgs: Array<out String>?, sortOrder: String?
     ): Cursor {
-        val cursor = MatrixCursor(arrayOf(COL_IS_DARK_MODE, COL_PRIMARY_COLOR))
+        val cursor = MatrixCursor(arrayOf(COL_IS_DARK_MODE, COL_PRIMARY_COLOR, COL_FONT_SIZE_MULTIPLIER))
         val isDark = if (prefs.getBoolean(COL_IS_DARK_MODE, true)) 1 else 0
         val color = prefs.getInt(COL_PRIMARY_COLOR, android.graphics.Color.WHITE)
-        cursor.addRow(arrayOf(isDark, color))
+        val fontMultiplier = prefs.getFloat(COL_FONT_SIZE_MULTIPLIER, 1.0f)
+        cursor.addRow(arrayOf(isDark, color, fontMultiplier))
         return cursor
     }
 
@@ -52,6 +57,9 @@ class ThemeProvider : ContentProvider() {
         }
         if (values.containsKey(COL_PRIMARY_COLOR)) {
             editor.putInt(COL_PRIMARY_COLOR, values.getAsInteger(COL_PRIMARY_COLOR))
+        }
+        if (values.containsKey(COL_FONT_SIZE_MULTIPLIER)) {
+            editor.putFloat(COL_FONT_SIZE_MULTIPLIER, values.getAsFloat(COL_FONT_SIZE_MULTIPLIER))
         }
         editor.apply()
         // מודיע לכל מי שרשום כ"צופה" ב-Uri הזה (למשל ContentObserver) שהעיצוב השתנה

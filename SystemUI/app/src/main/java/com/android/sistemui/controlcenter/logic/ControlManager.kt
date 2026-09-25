@@ -18,18 +18,17 @@ import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
-import android.telephony.TelephonyManager
 import android.util.Log
-import java.io.DataOutputStream
-import java.io.BufferedWriter
-import java.io.OutputStreamWriter
+import com.future.sharednav.root.RootShell
 import androidx.compose.runtime.getValue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.setValue
@@ -50,7 +49,6 @@ class ControlManager(private val context: Context) {
     private val locationManager by lazy { try { context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager } catch(t: Throwable) { null } }
     private val connectivityManager by lazy { try { context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager } catch(t: Throwable) { null } }
     private val wifiManager by lazy { try { context.applicationContext.getSystemService(Context.WIFI_SERVICE) as? android.net.wifi.WifiManager } catch(t: Throwable) { null } }
-    private val telephonyManager by lazy { try { context.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager } catch(t: Throwable) { null } }
 
     var volumeLevel by mutableFloatStateOf(0.5f)
     var brightnessLevel by mutableFloatStateOf(0.5f)
@@ -66,11 +64,6 @@ class ControlManager(private val context: Context) {
     var isNightModeOn by mutableStateOf(false)
     var isBatterySaverOn by mutableStateOf(false)
     var isPredictiveTextOn by mutableStateOf(true)
-    var isHotspotOn by mutableStateOf(false)
-    var ringerMode by mutableIntStateOf(AudioManager.RINGER_MODE_NORMAL)
-    /** -1 = אין קליטה/לא ידוע (למשל בלי הרשאת READ_PHONE_STATE). 0-4 = עוצמת אות. */
-    var cellularSignalLevel by mutableIntStateOf(-1)
-    var cellularGeneration by mutableStateOf("")
 
     // Media States
     var isPlaying by mutableStateOf(false)
@@ -85,68 +78,53 @@ class ControlManager(private val context: Context) {
     private var cameraId: String? = null
     private var activeController: MediaController? = null
     
-    private var rootProcess: Process? = null
-    private var rootWriter: BufferedWriter? = null
     private val scope = CoroutineScope(Dispatchers.IO)
 
-    fun startRootShell() {
-        scope.launch {
-            try {
-                if (rootProcess != null) return@launch
-                rootProcess = Runtime.getRuntime().exec("su")
-                rootWriter = BufferedWriter(OutputStreamWriter(rootProcess!!.outputStream))
-                Log.d("ControlManager", "Root shell started")
-            } catch (e: Exception) {
-                Log.e("ControlManager", "Failed to start root shell: ${e.message}")
-            }
+    // מוגדרים כאן, לפני init, ולא ליד updateStates שמשתמשת בהם: init קורא ל-
+    // updateStates, ו-Kotlin מאתחל שדות לפי סדר הופעתם בקובץ - שדה שמוגדר אחרי
+    // init עדיין null כשהוא רץ. אותו דבר ל-lazy: אובייקט ה-delegate עצמו
+    // נוצר במקומו בקובץ, וה-thread ברקע ניגש אליו מיד.
+    private val mainScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private var refreshJob: Job? = null
+    private var refreshQueued = false
+    private var mediaRefreshJob: Job? = null
+
+    // ה-Method של ה-reflection נמצא פעם אחת ונשמר. קודם getDeclaredMethod רץ
+    // מחדש בכל ריענון (כל 500ms במרכז הבקרה), וכשהמתודה חסומה ב-hidden API
+    // של אנדרואיד 12 כל ניסיון כזה גם בנה NoSuchMethodException עם stack trace.
+    // null פירושו "חיפשנו ואין" - לא מחפשים שוב.
+    private val mobileDataMethod: java.lang.reflect.Method? by lazy {
+        try {
+            connectivityManager?.javaClass?.getDeclaredMethod("getMobileDataEnabled")?.apply { isAccessible = true }
+        } catch (t: Throwable) {
+            null
         }
     }
 
-    fun stopRootShell() {
-        scope.launch {
-            try {
-                rootWriter?.write("exit\n")
-                rootWriter?.flush()
-                rootWriter?.close()
-                rootProcess?.destroy()
-                rootProcess = null
-                rootWriter = null
-                Log.d("ControlManager", "Root shell stopped")
-            } catch (e: Exception) {
-                Log.e("ControlManager", "Error stopping root shell: ${e.message}")
-            }
+    private val bluetoothIsConnectedMethod: java.lang.reflect.Method? by lazy {
+        try {
+            android.bluetooth.BluetoothDevice::class.java.getMethod("isConnected")
+        } catch (t: Throwable) {
+            null
         }
     }
 
-    fun runRootCommand(command: String): Boolean = executeRoot(command)
+    /**
+     * מריץ פקודת root ומחזיר אם היא באמת הצליחה.
+     *
+     * קודם לכן היה כאן shell מתמשך שאליו רק כתבנו: בלי להמתין, בלי
+     * לבדוק exit code, ובלי לקרוא את stdout/stderr כלל - כך שכל מתג
+     * הראה "פועל" גם כשהפקודה נכשלה, והצינור יכול היה להתמלא
+     * ולתקוע את התהליך. עכשיו זה מימוש אחד משותף (RootShell),
+     * שגם Settings משתמש בו.
+     *
+     * חוסם - להריץ מ-Dispatchers.IO, לא מה-main thread.
+     */
+    fun runRootCommand(command: String): Boolean = RootShell.run(command).success
 
-    private fun executeRoot(command: String): Boolean {
-        val writer = rootWriter
-        if (writer != null) {
-            scope.launch {
-                try {
-                    writer.write(command + "\n")
-                    writer.flush()
-                } catch (e: Exception) {
-                    Log.e("ControlManager", "Streaming root failed: ${e.message}")
-                }
-            }
-            return true
-        }
-        
-        // Fallback to one-shot su if persistent shell not ready
-        return try {
-            val process = Runtime.getRuntime().exec("su")
-            val os = DataOutputStream(process.outputStream)
-            os.writeBytes(command + "\n")
-            os.writeBytes("exit\n")
-            os.flush()
-            // We don't wait for one-shot commands either to keep UI fast
-            true
-        } catch (e: Exception) {
-            Log.e("ControlManager", "Root execution failed: ${e.message}")
-            false
-        }
+    /** גרסה לא-חוסמת לקוראים שרצים על ה-main thread (שירותי הנגישות). */
+    fun runRootCommandAsync(command: String) {
+        scope.launch { RootShell.run(command) }
     }
 
     private val torchCallback = object : CameraManager.TorchCallback() {
@@ -206,6 +184,7 @@ class ControlManager(private val context: Context) {
      * יש לקרוא לזה מתוך onDestroy()/onInterrupt() של השירות שמחזיק את המופע הזה.
      */
     fun dispose() {
+        mainScope.cancel()
         try {
             context.contentResolver.unregisterContentObserver(settingsObserver)
         } catch (t: Throwable) {
@@ -233,7 +212,6 @@ class ControlManager(private val context: Context) {
             "night" -> isNightModeOn = !isNightModeOn
             "battery" -> isBatterySaverOn = !isBatterySaverOn
             "predictive_text" -> isPredictiveTextOn = !isPredictiveTextOn
-            "hotspot" -> isHotspotOn = !isHotspotOn
         }
 
         when (id) {
@@ -255,8 +233,6 @@ class ControlManager(private val context: Context) {
             "calendar" -> openCalendar()
             "security" -> openSecurity()
             "predictive_text" -> togglePredictiveText()
-            "hotspot" -> toggleHotspot()
-            "screenshot" -> takeScreenshot()
         }
         // Poll state after a short delay to sync with actual system result
         Handler(Looper.getMainLooper()).postDelayed({ updateStates() }, 800)
@@ -275,17 +251,31 @@ class ControlManager(private val context: Context) {
             "night" -> isNightModeOn
             "battery" -> isBatterySaverOn
             "predictive_text" -> isPredictiveTextOn
-            "hotspot" -> isHotspotOn
             else -> false
         }
     }
 
+    /**
+     * מרכז הבקרה קורא לזה כל 500ms. החיפוש עצמו (הגדרת Secure וקריאת binder
+     * ל-MediaSessionManager) רץ ברקע, כמו ב-[updateStates]; רק ההחלפה של
+     * ה-controller חוזרת ל-main thread, כי registerCallback בלי Handler נרשם
+     * על ה-Looper של ה-thread שקורא לו.
+     */
     fun updateMediaController() {
-        isMediaServiceEnabled = MediaControlService.isEnabled(context)
+        if (mediaRefreshJob?.isActive == true) return
+        mediaRefreshJob = mainScope.launch {
+            val (enabled, controllers) = withContext(Dispatchers.IO) {
+                val enabled = MediaControlService.isEnabled(context)
+                enabled to if (enabled) MediaControlService.getActiveControllers(context) else emptyList()
+            }
+            applyMediaController(enabled, controllers.firstOrNull())
+        }
+    }
+
+    private fun applyMediaController(enabled: Boolean, newController: MediaController?) {
+        isMediaServiceEnabled = enabled
         if (!isMediaServiceEnabled) return
 
-        val controllers = MediaControlService.getActiveControllers(context)
-        val newController = controllers.firstOrNull()
         hasActiveMedia = newController != null
 
         if (newController?.packageName != activeController?.packageName) {
@@ -351,10 +341,12 @@ class ControlManager(private val context: Context) {
         try {
             val audio = audioManager ?: return
             val max = audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
-            val target = (fraction * max).toInt()
+            val target = kotlin.math.round(fraction * max).toInt().coerceIn(0, max)
             audio.setStreamVolume(AudioManager.STREAM_MUSIC, target, 0)
             volumeLevel = fraction
-        } catch(t: Throwable) {}
+        } catch (t: Throwable) {
+            android.util.Log.w("ControlManager", "setVolume failed", t)
+        }
     }
 
     private fun getCurrentBrightness(): Float {
@@ -392,15 +384,6 @@ class ControlManager(private val context: Context) {
         }
     }
 
-    /** אין API ציבורי לצילום מסך על מכשיר בלי מסך מגע/גישה ל-MediaProjection UI רגיל
-     *  (הדיאלוג הרגיל דורש אינטראקציית מגע לאישור) - screencap דרך root, בדיוק כמו
-     *  שאר הפעולות שאין להן API ציבורי ב-ControlManager, הוא הדרך היחידה שעובדת כאן. */
-    fun takeScreenshot() {
-        val timestamp = java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US).format(java.util.Date())
-        executeRoot("mkdir -p /sdcard/Pictures/Screenshots")
-        executeRoot("screencap -p /sdcard/Pictures/Screenshots/SystemUI_$timestamp.png")
-    }
-
     fun toggleDnd() {
         try {
             val nm = notificationManager ?: return
@@ -413,13 +396,17 @@ class ControlManager(private val context: Context) {
             val newFilter = if (isDndOn) NotificationManager.INTERRUPTION_FILTER_ALL else NotificationManager.INTERRUPTION_FILTER_PRIORITY
             nm.setInterruptionFilter(newFilter)
             isDndOn = !isDndOn
-        } catch (t: Throwable) {}
+        } catch (t: Throwable) {
+            android.util.Log.w("ControlManager", "toggleDnd failed", t)
+        }
     }
 
     fun togglePredictiveText() {
         try {
             com.future.sharednav.keyboard.KeyboardSettingsClient.setPredictiveEnabled(context, isPredictiveTextOn)
-        } catch (t: Throwable) {}
+        } catch (t: Throwable) {
+            android.util.Log.w("ControlManager", "togglePredictiveText failed", t)
+        }
     }
 
     fun toggleRotation() {
@@ -432,14 +419,16 @@ class ControlManager(private val context: Context) {
             }
             val newValue = if (isRotateOn) 1 else 0
             Settings.System.putInt(context.contentResolver, Settings.System.ACCELEROMETER_ROTATION, newValue)
-        } catch(t: Throwable) {}
+        } catch (t: Throwable) {
+            android.util.Log.w("ControlManager", "toggleRotation failed", t)
+        }
     }
 
     /** מ-API 29 ואילך WifiManager.setWifiEnabled() חסום לאפליקציות רגילות ומחזיר
      * false בשקט - בדיוק כמו bluetooth/data, נופלים ל-root ואז למסך ההגדרות. */
-    fun toggleWifi() {
+    fun toggleWifi() = scope.launch {
         val newState = isWifiOn
-        if (!executeRoot("svc wifi ${if (newState) "enable" else "disable"}")) {
+        if (!runRootCommand("svc wifi ${if (newState) "enable" else "disable"}")) {
             try {
                 @Suppress("DEPRECATION")
                 if (wifiManager?.setWifiEnabled(newState) != true) openWifiSettings()
@@ -449,34 +438,21 @@ class ControlManager(private val context: Context) {
         }
     }
 
-    /** אין API ציבורי להפעלת/כיבוי נקודה חמה (WifiManager.startTetheredHotspot דורש
-     *  TetheringManager.StartTetheringCallback ולא "fire and forget" פשוט) - `cmd wifi
-     *  start-softap`/`stop-softap` הוא הפקודה התקנית דרך shell מ-Android 11 ואילך,
-     *  בדיוק כמו `svc wifi`/`svc bluetooth` לשאר הרכיבים כאן. */
-    fun toggleHotspot() {
-        val newState = isHotspotOn
-        if (!executeRoot(if (newState) "cmd wifi start-softap" else "cmd wifi stop-softap")) {
-            try {
-                val intent = Intent(Settings.ACTION_WIRELESS_SETTINGS)
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                context.startActivity(intent)
-            } catch (t: Throwable) {}
-        }
-    }
-
     private fun openWifiSettings() {
         try {
             val intent = Intent(Settings.ACTION_WIFI_SETTINGS)
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             context.startActivity(intent)
-        } catch (t: Throwable) {}
+        } catch (t: Throwable) {
+            android.util.Log.w("ControlManager", "openWifiSettings failed", t)
+        }
     }
 
-    fun toggleBluetooth() {
+    fun toggleBluetooth() = scope.launch {
         val newState = isBluetoothOn
-        if (!executeRoot("svc bluetooth ${if (newState) "enable" else "disable"}")) {
+        if (!runRootCommand("svc bluetooth ${if (newState) "enable" else "disable"}")) {
             try {
-                val adapter = bluetoothAdapter ?: return
+                val adapter = bluetoothAdapter ?: return@launch
                 @Suppress("DEPRECATION")
                 if (newState) {
                     adapter.enable()
@@ -489,35 +465,39 @@ class ControlManager(private val context: Context) {
         }
     }
 
-    fun toggleData() {
+    fun toggleData() = scope.launch {
         val newState = isDataOn
-        if (!executeRoot("svc data ${if (newState) "enable" else "disable"}")) {
+        if (!runRootCommand("svc data ${if (newState) "enable" else "disable"}")) {
             openDataSettings()
         }
     }
 
-    fun toggleLocation() {
+    fun toggleLocation() = scope.launch {
         val newState = isLocationOn
-        if (!executeRoot("cmd location set-location-enabled ${if (newState) "true" else "false"}")) {
+        if (!runRootCommand("cmd location set-location-enabled ${if (newState) "true" else "false"}")) {
             try {
                 val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 context.startActivity(intent)
-            } catch (t: Throwable) {}
+            } catch (t: Throwable) {
+                android.util.Log.w("ControlManager", "toggleLocation failed", t)
+            }
         }
     }
 
-    fun toggleAirplane() {
+    fun toggleAirplane() = scope.launch {
         val newState = isAirplaneOn
         val value = if (newState) 1 else 0
-        val rootOk = executeRoot("settings put global airplane_mode_on $value") &&
-            executeRoot("am broadcast -a android.intent.action.AIRPLANE_MODE --ez state ${if (newState) "true" else "false"}")
+        val rootOk = runRootCommand("settings put global airplane_mode_on $value") &&
+            runRootCommand("am broadcast -a android.intent.action.AIRPLANE_MODE --ez state ${if (newState) "true" else "false"}")
         if (!rootOk) {
             try {
                 val intent = Intent(Settings.ACTION_AIRPLANE_MODE_SETTINGS)
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 context.startActivity(intent)
-            } catch (t: Throwable) {}
+            } catch (t: Throwable) {
+                android.util.Log.w("ControlManager", "toggleAirplane failed", t)
+            }
         }
     }
 
@@ -540,7 +520,9 @@ class ControlManager(private val context: Context) {
                 val intent = Intent(Settings.ACTION_WIRELESS_SETTINGS)
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 context.startActivity(intent)
-            } catch (t2: Throwable) {}
+            } catch (t2: Throwable) {
+                android.util.Log.w("ControlManager", "openDataSettings failed", t2)
+            }
         }
     }
 
@@ -549,7 +531,9 @@ class ControlManager(private val context: Context) {
             val intent = Intent(Settings.ACTION_BLUETOOTH_SETTINGS)
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             context.startActivity(intent)
-        } catch(t: Throwable) {}
+        } catch (t: Throwable) {
+            android.util.Log.w("ControlManager", "openBluetoothSettings failed", t)
+        }
     }
 
     /** Intent סתמי (android.settings.SETTINGS) משאיר לרזולוור של אנדרואיד לבחור
@@ -566,7 +550,9 @@ class ControlManager(private val context: Context) {
                 val intent = Intent(Settings.ACTION_SETTINGS)
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 context.startActivity(intent)
-            } catch (t2: Throwable) {}
+            } catch (t2: Throwable) {
+                android.util.Log.w("ControlManager", "openMainSettings failed", t2)
+            }
         }
     }
 
@@ -575,7 +561,9 @@ class ControlManager(private val context: Context) {
             val intent = Intent(Settings.ACTION_DISPLAY_SETTINGS)
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             context.startActivity(intent)
-        } catch(t: Throwable) {}
+        } catch (t: Throwable) {
+            android.util.Log.w("ControlManager", "toggleNightMode failed", t)
+        }
     }
 
     fun openBatterySettings() {
@@ -583,7 +571,9 @@ class ControlManager(private val context: Context) {
             val intent = Intent(Intent.ACTION_POWER_USAGE_SUMMARY)
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             context.startActivity(intent)
-        } catch(t: Throwable) {}
+        } catch (t: Throwable) {
+            android.util.Log.w("ControlManager", "openBatterySettings failed", t)
+        }
     }
 
     fun openCamera() {
@@ -591,7 +581,9 @@ class ControlManager(private val context: Context) {
             val intent = Intent(android.provider.MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA)
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             context.startActivity(intent)
-        } catch(t: Throwable) {}
+        } catch (t: Throwable) {
+            android.util.Log.w("ControlManager", "openCamera failed", t)
+        }
     }
 
     fun openSearch() {
@@ -599,7 +591,9 @@ class ControlManager(private val context: Context) {
             val intent = Intent(Intent.ACTION_WEB_SEARCH)
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             context.startActivity(intent)
-        } catch(t: Throwable) {}
+        } catch (t: Throwable) {
+            android.util.Log.w("ControlManager", "openSearch failed", t)
+        }
     }
 
     fun openMusic() {
@@ -608,7 +602,9 @@ class ControlManager(private val context: Context) {
             intent.addCategory(Intent.CATEGORY_APP_MUSIC)
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             context.startActivity(intent)
-        } catch(t: Throwable) {}
+        } catch (t: Throwable) {
+            android.util.Log.w("ControlManager", "openMusic failed", t)
+        }
     }
 
     fun openAccount() {
@@ -616,7 +612,9 @@ class ControlManager(private val context: Context) {
             val intent = Intent(Settings.ACTION_SYNC_SETTINGS)
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             context.startActivity(intent)
-        } catch(t: Throwable) {}
+        } catch (t: Throwable) {
+            android.util.Log.w("ControlManager", "openAccount failed", t)
+        }
     }
 
     fun openCalendar() {
@@ -625,7 +623,9 @@ class ControlManager(private val context: Context) {
             intent.addCategory(Intent.CATEGORY_APP_CALENDAR)
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             context.startActivity(intent)
-        } catch(t: Throwable) {}
+        } catch (t: Throwable) {
+            android.util.Log.w("ControlManager", "openCalendar failed", t)
+        }
     }
 
     fun openSecurity() {
@@ -633,81 +633,119 @@ class ControlManager(private val context: Context) {
             val intent = Intent(Settings.ACTION_SECURITY_SETTINGS)
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             context.startActivity(intent)
-        } catch(t: Throwable) {}
-    }
-
-    fun updateStates() {
-        volumeLevel = getCurrentVolume()
-        brightnessLevel = getCurrentBrightness()
-        isDndOn = notificationManager?.currentInterruptionFilter?.let { it != NotificationManager.INTERRUPTION_FILTER_ALL } ?: false
-        isRotateOn = try { Settings.System.getInt(context.contentResolver, Settings.System.ACCELEROMETER_ROTATION, 0) == 1 } catch(t: Throwable) { false }
-        isPredictiveTextOn = try { com.future.sharednav.keyboard.KeyboardSettingsClient.isPredictiveEnabled(context) } catch (t: Throwable) { true }
-        isBluetoothOn = bluetoothAdapter?.isEnabled ?: false
-        isWifiOn = try { wifiManager?.isWifiEnabled ?: false } catch (t: Throwable) { false }
-        isAirplaneOn = try { Settings.Global.getInt(context.contentResolver, Settings.Global.AIRPLANE_MODE_ON, 0) != 0 } catch(t: Throwable) { false }
-        
-        isLocationOn = try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                locationManager?.isLocationEnabled ?: false
-            } else {
-                @Suppress("DEPRECATION")
-                val mode = Settings.Secure.getInt(context.contentResolver, Settings.Secure.LOCATION_MODE, Settings.Secure.LOCATION_MODE_OFF)
-                mode != Settings.Secure.LOCATION_MODE_OFF
-            }
-        } catch(t: Throwable) { false }
-
-        isDataOn = try {
-            val method = connectivityManager?.javaClass?.getDeclaredMethod("getMobileDataEnabled")
-            method?.isAccessible = true
-            method?.invoke(connectivityManager) as? Boolean ?: false
-        } catch(t: Throwable) {
-            // Fallback for newer Android or if reflection fails
-            false
-        }
-
-        isNightModeOn = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-        isBatterySaverOn = powerManager?.isPowerSaveMode ?: false
-        isBluetoothDeviceConnected = isBluetoothOn && isAnyBluetoothDeviceConnected()
-
-        ringerMode = try { audioManager?.ringerMode ?: AudioManager.RINGER_MODE_NORMAL } catch (t: Throwable) { AudioManager.RINGER_MODE_NORMAL }
-        isHotspotOn = isWifiApEnabled()
-
-        try {
-            cellularSignalLevel = telephonyManager?.signalStrength?.level ?: -1
-            cellularGeneration = networkGenerationLabel(telephonyManager?.dataNetworkType ?: TelephonyManager.NETWORK_TYPE_UNKNOWN)
         } catch (t: Throwable) {
-            // כולל SecurityException אם אין הרשאת READ_PHONE_STATE - נופל בשקט ל"אין קליטה"
-            cellularSignalLevel = -1
-            cellularGeneration = ""
+            android.util.Log.w("ControlManager", "openSecurity failed", t)
         }
     }
 
-    /** אין API ציבורי לקרוא מצב נקודה חמה (WifiManager.isWifiApEnabled() קיים מאז
-     *  API 1 אבל @hide) - אותו דפוס reflection בדיוק כמו isDataOn למטה. */
-    private fun isWifiApEnabled(): Boolean = try {
-        val method = wifiManager?.javaClass?.getDeclaredMethod("isWifiApEnabled")
-        method?.isAccessible = true
-        method?.invoke(wifiManager) as? Boolean ?: false
-    } catch (t: Throwable) { false }
+    /**
+     * מרענן את כל מצבי המערכת. לא חוסם: הקריאות עצמן רצות ב-thread רקע,
+     * ורק ההשמה לשדות חוזרת ל-main thread.
+     *
+     * קודם כל הקריאה הזו רצה על ה-main thread - בערך תריסר קריאות binder
+     * (אודיו, התראות, Bluetooth, Wi-Fi, מיקום, חשמל), שתי קריאות reflection,
+     * ושאילתת ContentProvider לתהליך של המקלדת. מרכז הבקרה קרא לה כל 500ms
+     * כל עוד הוא פתוח, ושורת המצב כל 15 שניות תמיד. ה-main thread של FutureUI
+     * הוא גם זה שעונה למסנן המקשים של שירותי הנגישות, כך שכל ריענון כזה
+     * עיכב את לחיצת המקש הבאה בכל הטלפון, והפוקוס במרכז הבקרה קפץ בגמגום.
+     *
+     * קריאות שמגיעות בזמן שריענון כבר רץ לא פותחות ריענון מקביל - הן רק
+     * מסמנות שצריך עוד סבב אחד כשהנוכחי מסתיים, כדי שהתוצאה האחרונה תמיד
+     * תשקף את המצב אחרי הקריאה האחרונה.
+     *
+     * נקראת רק מה-main thread (LaunchedEffect, ה-ContentObserver שרשום על
+     * ה-main looper, ו-init מתוך onCreate של השירות) - לכן refreshJob ו-
+     * refreshQueued לא צריכים סנכרון.
+     */
+    fun updateStates() {
+        if (refreshJob?.isActive == true) {
+            refreshQueued = true
+            return
+        }
+        refreshJob = mainScope.launch {
+            do {
+                refreshQueued = false
+                val states = withContext(Dispatchers.IO) { readSystemStates() }
+                applySystemStates(states)
+            } while (refreshQueued)
+        }
+    }
 
-    private fun networkGenerationLabel(networkType: Int): String = when (networkType) {
-        TelephonyManager.NETWORK_TYPE_NR -> "5G"
-        TelephonyManager.NETWORK_TYPE_LTE, TelephonyManager.NETWORK_TYPE_IWLAN -> "4G"
-        TelephonyManager.NETWORK_TYPE_UMTS, TelephonyManager.NETWORK_TYPE_HSDPA, TelephonyManager.NETWORK_TYPE_HSUPA,
-        TelephonyManager.NETWORK_TYPE_HSPA, TelephonyManager.NETWORK_TYPE_HSPAP, TelephonyManager.NETWORK_TYPE_EVDO_0,
-        TelephonyManager.NETWORK_TYPE_EVDO_A, TelephonyManager.NETWORK_TYPE_EVDO_B -> "3G"
-        TelephonyManager.NETWORK_TYPE_GPRS, TelephonyManager.NETWORK_TYPE_EDGE,
-        TelephonyManager.NETWORK_TYPE_CDMA, TelephonyManager.NETWORK_TYPE_1xRTT -> "2G"
-        else -> ""
+    /** צילום של כל מצבי המערכת - נבנה ב-thread רקע ומוחל בבת אחת על ה-main thread. */
+    private class SystemStates(
+        val volume: Float,
+        val brightness: Float,
+        val dnd: Boolean,
+        val rotate: Boolean,
+        val predictiveText: Boolean,
+        val bluetooth: Boolean,
+        val wifi: Boolean,
+        val airplane: Boolean,
+        val location: Boolean,
+        val data: Boolean,
+        val nightMode: Boolean,
+        val batterySaver: Boolean,
+        val bluetoothDeviceConnected: Boolean,
+    )
+
+    private fun readSystemStates(): SystemStates {
+        val bluetooth = try { bluetoothAdapter?.isEnabled ?: false } catch (t: Throwable) { false }
+        return SystemStates(
+            volume = getCurrentVolume(),
+            brightness = getCurrentBrightness(),
+            dnd = try {
+                notificationManager?.currentInterruptionFilter?.let { it != NotificationManager.INTERRUPTION_FILTER_ALL } ?: false
+            } catch (t: Throwable) { false },
+            rotate = try { Settings.System.getInt(context.contentResolver, Settings.System.ACCELEROMETER_ROTATION, 0) == 1 } catch (t: Throwable) { false },
+            predictiveText = try { com.future.sharednav.keyboard.KeyboardSettingsClient.isPredictiveEnabled(context) } catch (t: Throwable) { true },
+            bluetooth = bluetooth,
+            wifi = try { wifiManager?.isWifiEnabled ?: false } catch (t: Throwable) { false },
+            airplane = try { Settings.Global.getInt(context.contentResolver, Settings.Global.AIRPLANE_MODE_ON, 0) != 0 } catch (t: Throwable) { false },
+            location = try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    locationManager?.isLocationEnabled ?: false
+                } else {
+                    @Suppress("DEPRECATION")
+                    val mode = Settings.Secure.getInt(context.contentResolver, Settings.Secure.LOCATION_MODE, Settings.Secure.LOCATION_MODE_OFF)
+                    mode != Settings.Secure.LOCATION_MODE_OFF
+                }
+            } catch (t: Throwable) { false },
+            data = isMobileDataEnabled(),
+            nightMode = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES,
+            batterySaver = try { powerManager?.isPowerSaveMode ?: false } catch (t: Throwable) { false },
+            bluetoothDeviceConnected = bluetooth && isAnyBluetoothDeviceConnected(),
+        )
+    }
+
+    private fun applySystemStates(states: SystemStates) {
+        volumeLevel = states.volume
+        brightnessLevel = states.brightness
+        isDndOn = states.dnd
+        isRotateOn = states.rotate
+        isPredictiveTextOn = states.predictiveText
+        isBluetoothOn = states.bluetooth
+        isWifiOn = states.wifi
+        isAirplaneOn = states.airplane
+        isLocationOn = states.location
+        isDataOn = states.data
+        isNightModeOn = states.nightMode
+        isBatterySaverOn = states.batterySaver
+        isBluetoothDeviceConnected = states.bluetoothDeviceConnected
+    }
+
+    private fun isMobileDataEnabled(): Boolean = try {
+        mobileDataMethod?.invoke(connectivityManager) as? Boolean ?: false
+    } catch (t: Throwable) {
+        false
     }
 
     /** בודק אם יש מכשיר Bluetooth מחובר בפועל, לא רק מקושר (paired) - אין API
      * ציבורי ישיר לזה, אז משתמשים ב-BluetoothDevice.isConnected() המוסתרת
      * אבל יציבה, בדיוק כמו שהמערכת עצמה עושה בשורת המצב האמיתית שלה. */
     private fun isAnyBluetoothDeviceConnected(): Boolean {
+        val method = bluetoothIsConnectedMethod ?: return false
         return try {
             bluetoothAdapter?.bondedDevices?.any { device ->
-                val method = device.javaClass.getMethod("isConnected")
                 method.invoke(device) as? Boolean ?: false
             } ?: false
         } catch (e: Exception) {

@@ -1,9 +1,10 @@
 package com.android.sistemui.statusbar.ui
 
+import com.future.sharednav.theme.FutureTypography
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.media.AudioManager
 import android.os.BatteryManager
 import android.telecom.TelecomManager
 import android.util.Log
@@ -12,7 +13,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.VolumeOff
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -36,7 +36,9 @@ import androidx.compose.ui.unit.sp
 import com.android.sistemui.controlcenter.logic.ControlManager
 import com.android.sistemui.controlcenter.service.MediaControlService
 import com.android.sistemui.statusbar.logic.StatusBarLayoutManager
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -66,38 +68,86 @@ fun StatusBarScreen(
 
     val showBattery = layout.getShowBattery()
     val showBluetooth = layout.getShowBluetooth()
-    val showWifi = layout.getShowWifi()
-    val showCellularSignal = layout.getShowCellularSignal()
     val use24Hour = layout.getUse24HourClock()
     val opacity = layout.getBarOpacity()
 
+    // השעון והסוללה מתעדכנים מאירועי מערכת ולא מסקר: TIME_TICK מגיע בדיוק
+    // בתחילת כל דקה (קודם השעון יכול היה לפגר עד 15 שניות אחרי החלפת הדקה),
+    // ו-BATTERY_CHANGED מגיע רק כשמשהו בסוללה באמת משתנה. registerReceiver
+    // מחזיר מיד את ה-BATTERY_CHANGED האחרון (sticky), אז הערך הראשון לא מחכה.
+    DisposableEffect(use24Hour) {
+        val pattern = if (use24Hour) "HH:mm" else "h:mm a"
+        val timeFormat = SimpleDateFormat(pattern, Locale.getDefault())
+        fun refreshTime() {
+            currentTime = timeFormat.format(Date())
+        }
+        fun applyBattery(intent: Intent?) {
+            if (intent == null) return
+            val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+            val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
+            if (level >= 0 && scale > 0) batteryPercent = (level * 100) / scale
+            val status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
+            isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL
+        }
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(receiverContext: Context?, intent: Intent?) {
+                when (intent?.action) {
+                    Intent.ACTION_BATTERY_CHANGED -> applyBattery(intent)
+                    Intent.ACTION_TIMEZONE_CHANGED -> {
+                        timeFormat.timeZone = TimeZone.getDefault()
+                        refreshTime()
+                    }
+                    else -> refreshTime()
+                }
+            }
+        }
+        val filter = IntentFilter().apply {
+            addAction(Intent.ACTION_TIME_TICK)
+            addAction(Intent.ACTION_TIME_CHANGED)
+            addAction(Intent.ACTION_TIMEZONE_CHANGED)
+            addAction(Intent.ACTION_BATTERY_CHANGED)
+        }
+        refreshTime()
+        applyBattery(context.registerReceiver(receiver, filter))
+        onDispose {
+            try {
+                context.unregisterReceiver(receiver)
+            } catch (e: IllegalArgumentException) {
+                Log.w("StatusBarScreen", "receiver already unregistered", e)
+            }
+        }
+    }
+
+    // שאר האינדיקטורים (DND, טיסה, Bluetooth, נתונים, התראות, שיחה) עדיין
+    // בסקר של 15 שניות - אבל כל הקריאות רצות ב-thread רקע. קודם כולן רצו על
+    // ה-main thread של FutureUI, שהוא גם זה שמסנן את כל לחיצות המקשים בטלפון.
     LaunchedEffect(Unit) {
         while (true) {
             manager.updateStates()
 
-            val batteryIntent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
-            val level = batteryIntent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
-            val scale = batteryIntent?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: -1
-            if (level >= 0 && scale > 0) batteryPercent = (level * 100) / scale
-            val status = batteryIntent?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ?: -1
-            isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL
+            val (notifications, inCall) = withContext(Dispatchers.IO) {
+                val count = if (MediaControlService.isEnabled(context)) {
+                    try {
+                        MediaControlService.instance?.activeNotifications?.size ?: 0
+                    } catch (e: Exception) {
+                        Log.w("StatusBarScreen", "activeNotifications failed", e)
+                        0
+                    }
+                } else 0
 
-            val pattern = if (use24Hour) "HH:mm" else "h:mm a"
-            currentTime = SimpleDateFormat(pattern, Locale.getDefault()).format(Calendar.getInstance().time)
-
-            notificationCount = if (MediaControlService.isEnabled(context)) {
-                MediaControlService.instance?.activeNotifications?.size ?: 0
-            } else 0
-
-            // dialer שומר את מצב השיחה בתהליך שלו בלבד (CallService.activeCall) - אין
-            // לו ערוץ IPC החוצה, אז כאן פשוט שואלים את המערכת ישירות (כמו כל אינדיקטור
-            // אחר בשורה הזו), באותו דפוס "משיכה ממקור מערכת" שכבר קיים למדיה.
-            isCallActive = try {
-                (context.getSystemService(Context.TELECOM_SERVICE) as? TelecomManager)?.isInCall == true
-            } catch (e: SecurityException) {
-                Log.w("StatusBarScreen", "missing READ_PHONE_STATE, hiding call indicator", e)
-                false
+                // dialer שומר את מצב השיחה בתהליך שלו בלבד (CallService.activeCall) - אין
+                // לו ערוץ IPC החוצה, אז כאן פשוט שואלים את המערכת ישירות (כמו כל אינדיקטור
+                // אחר בשורה הזו), באותו דפוס "משיכה ממקור מערכת" שכבר קיים למדיה.
+                val call = try {
+                    (context.getSystemService(Context.TELECOM_SERVICE) as? TelecomManager)?.isInCall == true
+                } catch (e: SecurityException) {
+                    Log.w("StatusBarScreen", "missing READ_PHONE_STATE, hiding call indicator", e)
+                    false
+                }
+                count to call
             }
+            notificationCount = notifications
+            isCallActive = inCall
 
             delay(15_000)
         }
@@ -131,7 +181,7 @@ fun StatusBarScreen(
                 Text(
                     text = currentTime,
                     color = Color.White,
-                    fontSize = 13.sp,
+                    fontSize = FutureTypography.summary,
                     fontWeight = FontWeight.SemiBold,
                     letterSpacing = 0.2.sp
                 )
@@ -146,16 +196,9 @@ fun StatusBarScreen(
                 }
                 if (manager.isDndOn) {
                     Icon(Icons.Rounded.DoNotDisturbOn, contentDescription = null, tint = Color.White.copy(alpha = 0.9f), modifier = Modifier.size(13.dp))
-                } else if (manager.ringerMode == AudioManager.RINGER_MODE_SILENT) {
-                    Icon(Icons.AutoMirrored.Rounded.VolumeOff, contentDescription = null, tint = Color.White.copy(alpha = 0.9f), modifier = Modifier.size(13.dp))
-                } else if (manager.ringerMode == AudioManager.RINGER_MODE_VIBRATE) {
-                    Icon(Icons.Rounded.Vibration, contentDescription = null, tint = Color.White.copy(alpha = 0.9f), modifier = Modifier.size(13.dp))
                 }
                 if (manager.isAirplaneOn) {
                     Icon(Icons.Rounded.AirplanemodeActive, contentDescription = null, tint = Color.White.copy(alpha = 0.9f), modifier = Modifier.size(13.dp))
-                }
-                if (showWifi && manager.isWifiOn) {
-                    Icon(Icons.Rounded.Wifi, contentDescription = null, tint = Color.White.copy(alpha = 0.9f), modifier = Modifier.size(13.dp))
                 }
                 if (showBluetooth && manager.isBluetoothOn) {
                     Icon(
@@ -168,17 +211,11 @@ fun StatusBarScreen(
                 if (manager.isDataOn) {
                     Icon(Icons.Rounded.SignalCellularAlt, contentDescription = null, tint = Color.White.copy(alpha = 0.9f), modifier = Modifier.size(13.dp))
                 }
-                if (showCellularSignal && manager.cellularSignalLevel >= 0) {
-                    if (manager.cellularGeneration.isNotEmpty()) {
-                        Text(text = manager.cellularGeneration, color = Color.White.copy(alpha = 0.9f), fontSize = 9.sp, fontWeight = FontWeight.Medium)
-                    }
-                    SignalBars(level = manager.cellularSignalLevel, modifier = Modifier.padding(start = 1.dp))
-                }
                 if (manager.isBatterySaverOn) {
                     Icon(Icons.Rounded.BatterySaver, contentDescription = null, tint = Color(0xFFFFD60A), modifier = Modifier.size(13.dp))
                 }
                 if (showBattery) {
-                    Text(text = "$batteryPercent%", color = Color.White.copy(alpha = 0.9f), fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                    Text(text = "$batteryPercent%", color = Color.White.copy(alpha = 0.9f), fontSize = FutureTypography.caption, fontWeight = FontWeight.Medium)
                     BatteryPill(
                         percent = batteryPercent,
                         isCharging = isCharging,
@@ -245,30 +282,6 @@ private fun BatteryPill(percent: Int, isCharging: Boolean, accentColor: Color, m
                 topLeft = Offset(inset, inset),
                 size = Size(fillWidth, size.height - inset * 2),
                 cornerRadius = CornerRadius(1.2.dp.toPx())
-            )
-        }
-    }
-}
-
-/**
- * אינדיקטור עוצמת קליטה סלולרית - 4 עמודות עולות בגובה, כמו ב-BatteryPill מצוירות
- * ידנית במקום אייקוני Material (אין להם רמת דיוק 0-4 מובנית תואמת ל-SignalStrength.level).
- */
-@Composable
-private fun SignalBars(level: Int, modifier: Modifier = Modifier) {
-    val filledColor = Color.White.copy(alpha = 0.9f)
-    val emptyColor = Color.White.copy(alpha = 0.3f)
-    Canvas(modifier = modifier.size(width = 15.dp, height = 11.dp)) {
-        val barCount = 4
-        val gap = 1.5.dp.toPx()
-        val barWidth = (size.width - gap * (barCount - 1)) / barCount
-        for (i in 0 until barCount) {
-            val barHeight = size.height * ((i + 1) / barCount.toFloat())
-            drawRoundRect(
-                color = if (i < level.coerceIn(0, barCount)) filledColor else emptyColor,
-                topLeft = Offset(i * (barWidth + gap), size.height - barHeight),
-                size = Size(barWidth, barHeight),
-                cornerRadius = CornerRadius(0.8.dp.toPx())
             )
         }
     }

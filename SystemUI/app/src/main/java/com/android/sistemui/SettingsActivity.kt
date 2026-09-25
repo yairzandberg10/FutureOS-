@@ -6,8 +6,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
-import com.android.sistemui.settings.ui.SystemUISettingsScreen
-import com.android.sistemui.ui.theme.SystemUITheme
+import com.android.sistemui.settings.ui.FutureUISettingsScreen
+import com.android.sistemui.ui.theme.FutureUITheme
 
 class SettingsActivity : ComponentActivity() {
     // המכשיר האמיתי הוא מקלדת T9 בלבד בלי מסך מגע - מבטלים קלט מגע לגמרי כדי
@@ -19,8 +19,8 @@ class SettingsActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            SystemUITheme {
-                SystemUISettingsScreen(modifier = Modifier.fillMaxSize())
+            FutureUITheme {
+                FutureUISettingsScreen(modifier = Modifier.fillMaxSize())
             }
         }
     }

@@ -1,5 +1,6 @@
 package com.android.sistemui.controlcenter.ui.components
 
+import com.future.sharednav.theme.FutureShapes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -23,7 +24,7 @@ import androidx.compose.ui.zIndex
 @Composable
 fun HeaderActionButton(icon: ImageVector, color: Color, onClick: () -> Unit, isPower: Boolean = false) {
     // עטיפה דקה סביב TopBarIconButton המשותף (מודול SharedKeypadNav) - חתימת
-    // הקריאה נשארת זהה כדי שקריאות קיימות ב-SystemUI לא ישתנו.
+    // הקריאה נשארת זהה כדי שקריאות קיימות ב-FutureUI לא ישתנו.
     com.future.sharednav.components.TopBarIconButton(
         icon = icon,
         contentDescription = "",
@@ -33,7 +34,7 @@ fun HeaderActionButton(icon: ImageVector, color: Color, onClick: () -> Unit, isP
     )
 }
 
-fun Modifier.focusEffect(isFocused: Boolean, shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(16.dp)): Modifier = this
+fun Modifier.focusEffect(isFocused: Boolean, shape: androidx.compose.ui.graphics.Shape = FutureShapes.lg): Modifier = this
     .zIndex(if (isFocused) 1f else 0f)
     .then(
         if (isFocused) {

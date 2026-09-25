@@ -29,7 +29,6 @@ import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.future.futureui.controlcenter.ui.ControlCenterScreen
-import com.future.futureui.controlcenter.ui.PowerMenuScreen
 import com.future.futureui.controlcenter.logic.ControlManager
 import com.future.futureui.ui.theme.FutureUITheme
 import com.future.futureui.utils.FutureUIActions
@@ -195,7 +194,15 @@ class ControlCenterAccessibilityService : AccessibilityService(), LifecycleOwner
                                 isVisibleByDefault = true,
                                 wallpaper = wallpaperBitmap?.asImageBitmap(),
                                 controlManager = controlManager,
-                                onPowerClick = { powerMenuVisible.value = true },
+                                // תפריט כיבוי אחד לכל המערכת - של שירות שורת המצב (גם החזקת
+                                // מקש ההפעלה פותחת אותו). מרכז הבקרה נסגר קודם.
+                                onPowerClick = {
+                                    hideControlCenter()
+                                    sendBroadcast(
+                                        Intent(com.future.futureui.statusbar.service.StatusBarAccessibilityService.ACTION_SHOW_POWER_MENU)
+                                            .setPackage(packageName)
+                                    )
+                                },
                                 onSettingsClick = {
                                     controlManager?.openMainSettings()
                                     hideControlCenter()
@@ -209,26 +216,6 @@ class ControlCenterAccessibilityService : AccessibilityService(), LifecycleOwner
                                 onRequestClose = { hideControlCenter() }
                             )
 
-                            if (powerMenuVisible.value) {
-                                PowerMenuScreen(
-                                    onPowerOff = {
-                                        powerMenuVisible.value = false
-                                        Toast.makeText(this@ControlCenterAccessibilityService, "מכבה את המכשיר...", Toast.LENGTH_SHORT).show()
-                                        controlManager?.runRootCommandAsync("reboot -p")
-                                        // hideControlCenter() עוצר את מעטפת ה-root (stopRootShell, כותבת "exit")
-                                        // - צריך רגע כדי שפקודת ה-reboot תספיק להיכתב ולהתבצע קודם, אחרת
-                                        // ה-exit עלול "לרוץ" לפניה ולבטל את הכיבוי בפועל.
-                                        mainHandler.postDelayed({ hideControlCenter() }, 400)
-                                    },
-                                    onRestart = {
-                                        powerMenuVisible.value = false
-                                        Toast.makeText(this@ControlCenterAccessibilityService, "מפעיל מחדש...", Toast.LENGTH_SHORT).show()
-                                        controlManager?.runRootCommandAsync("reboot")
-                                        mainHandler.postDelayed({ hideControlCenter() }, 400)
-                                    },
-                                    onCancel = { powerMenuVisible.value = false }
-                                )
-                            }
                         }
                     }
                 }

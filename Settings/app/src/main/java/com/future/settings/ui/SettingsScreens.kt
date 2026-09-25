@@ -39,6 +39,8 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import com.future.sharednav.focus.focusMotion
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
@@ -191,7 +193,7 @@ private fun shareFileViaBluetooth(context: android.content.Context, uri: android
     } catch (e: Exception) {
         try {
             sendIntent.setPackage(null)
-            context.startActivity(Intent.createChooser(sendIntent, "שתף קובץ").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            com.future.sharednav.share.FutureShare.open(context, sendIntent, "שיתוף קובץ")
         } catch (e2: Exception) {
             android.widget.Toast.makeText(context, "לא ניתן לשתף את הקובץ", android.widget.Toast.LENGTH_SHORT).show()
         }
@@ -2164,25 +2166,48 @@ fun AboutScreen(navController: NavController, theme: ThemeConfig, viewModel: Set
     }
 }
 
+/** כפתור מצב שמע (צליל/רטט/השתק). קודם היו כאן שתי מטרות פוקוס: העמודה
+ * עם clickable (מקבלת פוקוס בלי שום סימון) והעיגול עם focusable (מסומן אבל
+ * OK עליו לא עושה כלום) - הפוקוס נחת פעם על זה ופעם על זה. עכשיו מטרה אחת:
+ * העמודה כולה ממוקדת ולוחצת, והעיגול רק מצייר את הטבעת. */
 @Composable
 fun SoundModeItem(label: String, icon: ImageVector, selected: Boolean, theme: ThemeConfig, onClick: () -> Unit) {
     var isFocused by remember { mutableStateOf(false) }
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable { onClick() }.padding(8.dp)) {
+    val interaction = remember { MutableInteractionSource() }
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .onFocusChanged { isFocused = it.isFocused }
+            .focusMotion(interaction)
+            .clickable(interactionSource = interaction, indication = null) { onClick() }
+            .bringIntoViewOnFocus()
+            .padding(8.dp),
+    ) {
         Box(
             modifier = Modifier
                 .size(56.dp)
                 .clip(CircleShape)
                 // נבחר = ההדגשה המתוקנת (ההדגשה הגולמית הלבנה נעלמת על משטח לבן במצב בהיר);
                 // טבעת הפוקוס בצבע הטקסט כשהעיגול כבר מלא בהדגשה, אחרת בהדגשה.
-                .background(if (selected) theme.futureTheme.readableAccentColor else theme.surfaceColor)
-                .then(if (isFocused) Modifier.border(FutureDimens.focusBorderControl, if (selected) theme.textColor else theme.futureTheme.readableAccentColor, CircleShape) else Modifier)
-                .onFocusChanged { isFocused = it.isFocused }
-                .focusable().bringIntoViewOnFocus(),
+                .background(
+                    when {
+                        selected -> theme.futureTheme.readableAccentColor
+                        isFocused -> theme.futureTheme.readableAccentColor.copy(alpha = 0.14f)
+                        else -> theme.textColor.copy(alpha = 0.06f)
+                    }
+                )
+                .then(if (isFocused) Modifier.border(FutureDimens.focusBorderControl, if (selected) theme.textColor else theme.futureTheme.readableAccentColor, CircleShape) else Modifier),
             contentAlignment = Alignment.Center
         ) {
             Icon(icon, contentDescription = null, tint = if (selected) theme.futureTheme.onReadableAccentColor else theme.textColor)
         }
-        Text(label, fontSize = FutureTypography.label, color = theme.textColor, modifier = Modifier.padding(top = 4.dp))
+        Text(
+            label,
+            fontSize = FutureTypography.label,
+            color = if (isFocused) theme.futureTheme.readableAccentColor else theme.textColor,
+            fontWeight = if (isFocused || selected) FontWeight.SemiBold else FontWeight.Normal,
+            modifier = Modifier.padding(top = 4.dp),
+        )
     }
 }
 

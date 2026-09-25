@@ -17,20 +17,15 @@ class NotificationCenterManager(private val context: Context) {
         controlManager.dispose()
     }
 
-    /** מקבץ התראות לפי אפליקציה (כדי שכמה התראות מאותה אפליקציה יופיעו רצופות
-     *  עם כותרת קבוצה אחת, במקום מפוזרות ברשימה שטוחה לפי סדר הגעה) - קבוצת
-     *  האפליקציה עם ההתראה החדשה ביותר עולה ראשונה, ובתוך כל קבוצה הכי חדש קודם. */
     fun updateNotifications() {
         if (MediaControlService.isEnabled(context)) {
             val activeNotifications = MediaControlService.instance?.activeNotifications
-            val visible = activeNotifications?.filter { isShowingNotification(it) } ?: emptyList()
-            val grouped = visible
-                .groupBy { it.packageName }
-                .toList()
-                .sortedByDescending { (_, sbns) -> sbns.maxOf { it.postTime } }
-                .flatMap { (_, sbns) -> sbns.sortedByDescending { it.postTime } }
             notifications.clear()
-            notifications.addAll(grouped)
+            activeNotifications?.forEach { sbn ->
+                if (isShowingNotification(sbn)) {
+                    notifications.add(sbn)
+                }
+            }
         }
     }
 
@@ -52,7 +47,9 @@ class NotificationCenterManager(private val context: Context) {
             val intent = Intent(android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             context.startActivity(intent)
-        } catch (e: Exception) {}
+        } catch (e: Exception) {
+            android.util.Log.w("NotificationCenterManag", "requestListenerAccessIfNeeded failed", e)
+        }
         return false
     }
 
@@ -66,14 +63,6 @@ class NotificationCenterManager(private val context: Context) {
         if (!requestListenerAccessIfNeeded()) return
         MediaControlService.instance?.cancelNotification(sbn.key)
         notifications.remove(sbn)
-    }
-
-    /** מסמן כ"נצפתה" בלי לבטל אותה - setNotificationsShown הוא ה-API הציבורי התקני
-     *  של NotificationListenerService בדיוק לזה (לא hack; ההתראה עצמה נשארת ברשימה). */
-    fun markAsRead(sbn: StatusBarNotification) {
-        try {
-            MediaControlService.instance?.setNotificationsShown(arrayOf(sbn.key))
-        } catch (t: Throwable) {}
     }
 
     fun toggleDnd() {

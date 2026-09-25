@@ -2,20 +2,26 @@ package com.future.futureui.recents.ui
 
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
-import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Apps
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -25,8 +31,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -34,52 +42,81 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
 import com.future.futureui.recents.logic.RecentAppInfo
 
+/**
+ * "אפליקציות אחרונות" בפריסה של Redmi: רשת של שני חלונות בשורה - שם
+ * האפליקציה ואייקון קטן מעל כל כרטיס, הכרטיס עצמו בצבע האפליקציה עם
+ * האייקון במרכזו (אין גישה לצילומי המשימות בלי הרשאת מערכת), וכפתור X עגול
+ * בתחתית לסגירת הכל. בראש המסך - הזיכרון הפנוי.
+ *
+ * מקשים (RTL): חצים ברשת; OK פותח; Options/מחיקה סוגרים את החלון הממוקד;
+ * 0 סוגר הכל; חץ למטה מהשורה האחרונה מגיע לכפתור X; BACK יוצא.
+ */
 @Composable
 fun RecentAppsScreen(
     apps: List<RecentAppInfo>,
     onLaunch: (RecentAppInfo) -> Unit,
     onClose: (RecentAppInfo) -> Unit,
     onDismiss: () -> Unit,
+    onCloseAll: () -> Unit = {},
+    memorySummary: String? = null,
     accentColor: Color = MaterialTheme.colorScheme.primary
 ) {
+    // -1 = כפתור "סגור הכל".
     var focusedIndex by remember { mutableIntStateOf(0) }
-    val listState = rememberLazyListState()
+    val gridState = rememberLazyGridState()
     val focusRequester = remember { FocusRequester() }
+    val clearFocused = focusedIndex == CLEAR_ALL && apps.isNotEmpty()
 
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
     LaunchedEffect(apps.size) {
         if (focusedIndex > apps.lastIndex) focusedIndex = apps.lastIndex.coerceAtLeast(0)
     }
     LaunchedEffect(focusedIndex) {
-        if (apps.isNotEmpty()) listState.animateScrollToItem(focusedIndex)
+        if (focusedIndex >= 0 && apps.isNotEmpty()) gridState.animateScrollToItem(focusedIndex)
+    }
+
+    fun move(delta: Int) {
+        if (apps.isEmpty()) return
+        if (focusedIndex == CLEAR_ALL) {
+            if (delta < 0) focusedIndex = apps.lastIndex
+            return
+        }
+        val next = focusedIndex + delta
+        focusedIndex = when {
+            next > apps.lastIndex && delta >= COLUMNS -> CLEAR_ALL
+            next > apps.lastIndex -> apps.lastIndex
+            next < 0 -> focusedIndex
+            else -> next
+        }
     }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.94f))
+                .background(Color(0xF20E0E10))
                 .focusRequester(focusRequester)
                 .focusable()
                 .onKeyEvent { event ->
                     if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
                     when (event.key) {
-                        Key.DirectionDown -> {
-                            if (apps.isNotEmpty()) focusedIndex = (focusedIndex + 1).coerceAtMost(apps.size - 1)
-                            true
-                        }
+                        // RTL: הכרטיס הבא משמאל.
+                        Key.DirectionLeft -> { move(1); true }
+                        Key.DirectionRight -> { move(-1); true }
+                        Key.DirectionDown -> { move(COLUMNS); true }
                         Key.DirectionUp -> {
-                            if (apps.isNotEmpty()) focusedIndex = (focusedIndex - 1).coerceAtLeast(0)
+                            if (focusedIndex == CLEAR_ALL) move(-1) else move(-COLUMNS)
                             true
                         }
                         Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> {
-                            apps.getOrNull(focusedIndex)?.let(onLaunch)
+                            if (focusedIndex == CLEAR_ALL) onCloseAll() else apps.getOrNull(focusedIndex)?.let(onLaunch)
                             true
                         }
                         Key.Back -> {
@@ -87,7 +124,11 @@ fun RecentAppsScreen(
                             true
                         }
                         Key.Menu, Key.Settings, Key.Delete, Key.Backspace -> {
-                            apps.getOrNull(focusedIndex)?.let(onClose)
+                            if (focusedIndex == CLEAR_ALL) onCloseAll() else apps.getOrNull(focusedIndex)?.let(onClose)
+                            true
+                        }
+                        Key.Zero -> {
+                            onCloseAll()
                             true
                         }
                         else -> false
@@ -95,42 +136,70 @@ fun RecentAppsScreen(
                 }
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 20.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = com.future.futureui.statusbar.logic.StatusBarLayoutManager.HEIGHT_DP.dp + 10.dp, bottom = 6.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Icon(Icons.Rounded.Apps, contentDescription = null, tint = accentColor, modifier = Modifier.size(22.dp))
-                    Spacer(modifier = Modifier.width(10.dp))
                     Text("אפליקציות אחרונות", color = Color.White, fontSize = FutureTypography.title, fontWeight = FontWeight.Bold)
+                    if (memorySummary != null) {
+                        Text(memorySummary, color = Color.White.copy(alpha = 0.5f), fontSize = FutureTypography.caption, modifier = Modifier.padding(top = 2.dp))
+                    }
                 }
 
                 if (apps.isEmpty()) {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                         Text("אין אפליקציות אחרונות", color = Color.White.copy(alpha = 0.5f), fontSize = FutureTypography.body)
                     }
                 } else {
-                    LazyColumn(
-                        state = listState,
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(COLUMNS),
+                        state = gridState,
+                        modifier = Modifier.weight(1f).fillMaxWidth(),
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp),
+                        userScrollEnabled = false,
                     ) {
                         itemsIndexed(apps, key = { _, app -> app.packageName }) { index, app ->
-                            RecentAppRow(
+                            RecentAppCard(
                                 app = app,
                                 isFocused = index == focusedIndex,
-                                accentColor = accentColor,
-                                onClick = { focusedIndex = index; onLaunch(app) }
+                                modifier = Modifier.animateItem(),
                             )
+                        }
+                        item(span = { GridItemSpan(maxLineSpan) }) { Spacer(modifier = Modifier.height(4.dp)) }
+                    }
+                }
+
+                // כפתור X עגול לסגירת הכל, כמו ב-Redmi.
+                Box(
+                    modifier = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 8.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (apps.isNotEmpty()) {
+                        val scale by animateFloatAsState(if (clearFocused) 1.12f else 1f, label = "clearAllScale")
+                        Box(
+                            modifier = Modifier
+                                .size(52.dp)
+                                .graphicsLayer { scaleX = scale; scaleY = scale }
+                                .clip(CircleShape)
+                                .background(if (clearFocused) Color.White.copy(alpha = 0.28f) else Color.White.copy(alpha = 0.12f))
+                                .then(if (clearFocused) Modifier.border(2.dp, Color.LightGray, CircleShape) else Modifier),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(Icons.Rounded.Close, contentDescription = "סגור הכל", tint = Color.White, modifier = Modifier.size(26.dp))
                         }
                     }
                 }
 
                 Text(
-                    "אישור לפתיחה · אפשרויות לסגירה · חזרה ליציאה",
+                    "OK פתיחה · אפשרויות סגירת חלון · 0 סגירת הכל",
                     color = Color.White.copy(alpha = 0.35f),
                     fontSize = FutureTypography.caption,
-                    modifier = Modifier.fillMaxWidth().padding(16.dp),
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
+                    textAlign = TextAlign.Center
                 )
             }
         }
@@ -138,31 +207,47 @@ fun RecentAppsScreen(
 }
 
 @Composable
-private fun RecentAppRow(app: RecentAppInfo, isFocused: Boolean, accentColor: Color, onClick: () -> Unit) {
-    val shape = FutureShapes.lg
-    val bgColor by animateColorAsState(
-        if (isFocused) Color.White.copy(alpha = 0.14f) else Color.White.copy(alpha = 0.05f),
-        label = "recentRowBg"
-    )
-    val scale by animateFloatAsState(if (isFocused) 1.02f else 1f, label = "recentRowScale")
+private fun RecentAppCard(app: RecentAppInfo, isFocused: Boolean, modifier: Modifier = Modifier) {
+    val shape = RoundedCornerShape(FutureShapes.radiusXl)
+    val scale by animateFloatAsState(if (isFocused) 1.03f else 1f, label = "recentCardScale")
     val icon = remember(app.packageName) { app.icon.toBitmap().asImageBitmap() }
+    val tint = Color(app.tint)
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(shape)
-            .background(bgColor)
-            .then(if (isFocused) Modifier.border(width = 2.dp, color = accentColor, shape = shape) else Modifier)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
+    Column(
+        modifier = modifier.graphicsLayer { scaleX = scale; scaleY = scale },
     ) {
-        Image(
-            bitmap = icon,
-            contentDescription = null,
-            modifier = Modifier.size(if (isFocused) 44.dp else 40.dp).clip(RoundedCornerShape(percent = 28))
-        )
-        Spacer(modifier = Modifier.width(14.dp))
-        Text(app.label, color = Color.White, fontSize = FutureTypography.bodyLarge, maxLines = 1, modifier = Modifier.weight(1f))
+        // כותרת החלון: אייקון קטן ושם, מעל הכרטיס.
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Image(icon, contentDescription = null, modifier = Modifier.size(20.dp).clip(RoundedCornerShape(percent = 28)))
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                app.label,
+                color = if (isFocused) Color.White else Color.White.copy(alpha = 0.8f),
+                fontSize = FutureTypography.summary,
+                fontWeight = if (isFocused) FontWeight.Bold else FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(CardHeight)
+                .clip(shape)
+                .background(Brush.verticalGradient(listOf(tint, tint.copy(alpha = 0.75f).compositeOverBlack())))
+                .border(if (isFocused) 2.5.dp else 0.5.dp, if (isFocused) Color.White else Color.White.copy(alpha = 0.12f), shape),
+            contentAlignment = Alignment.Center,
+        ) {
+            Image(icon, contentDescription = null, modifier = Modifier.size(64.dp).clip(RoundedCornerShape(percent = 28)))
+        }
     }
 }
+
+private fun Color.compositeOverBlack(): Color = Color(red * alpha, green * alpha, blue * alpha, 1f)
+
+private const val COLUMNS = 2
+private const val CLEAR_ALL = -1
+private val CardHeight = 150.dp

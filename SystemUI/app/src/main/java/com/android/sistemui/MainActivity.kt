@@ -1,5 +1,6 @@
 package com.android.sistemui
 
+import com.future.sharednav.theme.FutureTypography
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.Context
@@ -28,7 +29,7 @@ import androidx.compose.ui.unit.sp
 import com.android.sistemui.controlcenter.service.ControlCenterAccessibilityService
 import com.android.sistemui.notificationcenter.service.NotificationCenterAccessibilityService
 import com.android.sistemui.statusbar.service.StatusBarAccessibilityService
-import com.android.sistemui.ui.theme.SystemUITheme
+import com.android.sistemui.ui.theme.FutureUITheme
 
 class MainActivity : ComponentActivity() {
     // המכשיר האמיתי הוא מקלדת T9 בלבד בלי מסך מגע - מבטלים קלט מגע לגמרי כדי
@@ -41,7 +42,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            SystemUITheme {
+            FutureUITheme {
                 var isControlEnabled by remember { mutableStateOf(false) }
                 var isNotificationEnabled by remember { mutableStateOf(false) }
                 var isStatusBarEnabled by remember { mutableStateOf(false) }
@@ -81,7 +82,7 @@ class MainActivity : ComponentActivity() {
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        Text(text = "ניהול SystemUI", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                        Text(text = "ניהול FutureUI", fontSize = FutureTypography.headline, fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.height(24.dp))
                         
                         ServiceStatusRow("שורת מצב", isStatusBarEnabled)

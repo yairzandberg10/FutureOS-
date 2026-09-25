@@ -366,7 +366,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     fun setVolume(stream: Int, fraction: Float) {
         val max = systemInteractor.getStreamMaxVolume(stream).coerceAtLeast(1)
-        val level = (fraction * max).toInt()
+        val level = volumeLevelFor(fraction, max, systemInteractor.getStreamVolume(stream))
         systemInteractor.setVolume(stream, level)
         val actualFraction = level.toFloat() / max
         if (stream == AudioManager.STREAM_MUSIC) _mediaVolume.value = actualFraction
@@ -513,23 +513,38 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    /** המחוון זז ב-5% לכל לחיצת חץ, אבל לזרם יש רק 7-15 דרגות. קודם השבר
+     * נחתך עם toInt(): 5% לא הספיקו לעבור דרגה (ו-7/15*15 יוצא 6.9999), כך
+     * שהגברה נתקעה במקום והנמכה דווקא עבדה. עכשיו מעגלים, וכל לחיצה שלא
+     * הזיזה את הדרגה זזה דרגה אחת בכיוון הלחיצה. */
+    private fun volumeLevelFor(fraction: Float, max: Int, current: Int): Int {
+        val rounded = kotlin.math.round(fraction * max).toInt().coerceIn(0, max)
+        if (rounded != current) return rounded
+        val currentFraction = current.toFloat() / max
+        return when {
+            fraction > currentFraction + 0.001f -> (current + 1).coerceAtMost(max)
+            fraction < currentFraction - 0.001f -> (current - 1).coerceAtLeast(0)
+            else -> current
+        }
+    }
+
     fun setNotificationVolume(fraction: Float) {
         val max = systemInteractor.getStreamMaxVolume(AudioManager.STREAM_NOTIFICATION).coerceAtLeast(1)
-        val level = (fraction * max).toInt()
+        val level = volumeLevelFor(fraction, max, systemInteractor.getStreamVolume(AudioManager.STREAM_NOTIFICATION))
         systemInteractor.setVolume(AudioManager.STREAM_NOTIFICATION, level)
         _notificationVolume.value = level.toFloat() / max
     }
 
     fun setAlarmVolume(fraction: Float) {
         val max = systemInteractor.getStreamMaxVolume(AudioManager.STREAM_ALARM).coerceAtLeast(1)
-        val level = (fraction * max).toInt()
+        val level = volumeLevelFor(fraction, max, systemInteractor.getStreamVolume(AudioManager.STREAM_ALARM))
         systemInteractor.setVolume(AudioManager.STREAM_ALARM, level)
         _alarmVolume.value = level.toFloat() / max
     }
 
     fun setCallVolume(fraction: Float) {
         val max = systemInteractor.getStreamMaxVolume(AudioManager.STREAM_VOICE_CALL).coerceAtLeast(1)
-        val level = (fraction * max).toInt()
+        val level = volumeLevelFor(fraction, max, systemInteractor.getStreamVolume(AudioManager.STREAM_VOICE_CALL))
         systemInteractor.setVolume(AudioManager.STREAM_VOICE_CALL, level)
         _callVolume.value = level.toFloat() / max
     }

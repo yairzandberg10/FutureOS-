@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.core.graphics.drawable.toBitmap
 import com.future.sharednav.theme.FutureTheme
 import com.future.sharednav.icons.FutureIcons
@@ -188,7 +189,9 @@ fun ItemPanel(
 ) {
     val baseIcon = when (iconSizeStep) { 0 -> 40.dp; 2 -> 56.dp; else -> 48.dp }
     val iconSize = if (isEditMode) baseIcon - 8.dp else baseIcon
-    val scale by animateFloatAsState(if (isFocused || isMoving) 1.15f else 1f)
+    // ווידג'ט הוא משטח גדול - הגדלה של 15% הייתה מוציאה אותו מהמסך ומעל שכניו.
+    val focusScale = if (item is LauncherItem.Widget) 1.03f else 1.15f
+    val scale by animateFloatAsState(if (isFocused || isMoving) focusScale else 1f)
     val borderColor = when {
         isMoving -> theme.dangerColor
         isFocused -> theme.accentColor
@@ -205,13 +208,13 @@ fun ItemPanel(
                 // אינדיקציה חזותית שהפוקוס בכלל נמצא שם.
                 alpha = if (isMoving) 0.7f else if (item is LauncherItem.Empty && !isEditMode && !isFocused) 0f else 1f
             }
-            .clip(FutureShapes.md)
+            .clip(if (item is LauncherItem.Widget) FutureShapes.xl else FutureShapes.md)
             .border(
                 width = if (item is LauncherItem.Empty && isEditMode) 1.dp else 2.5.dp,
                 color = borderColor,
-                shape = FutureShapes.md
+                shape = if (item is LauncherItem.Widget) FutureShapes.xl else FutureShapes.md
             )
-            .padding(4.dp),
+            .padding(if (item is LauncherItem.Widget) 2.dp else 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -224,8 +227,8 @@ fun ItemPanel(
                         Modifier.size(iconSize)
                     }
                 )
-                .clip(RoundedCornerShape(percent = 28))
-                .background(if (item is LauncherItem.Empty) Color.Transparent else OnWallpaperColor.copy(alpha = 0.05f))
+                .clip(if (item is LauncherItem.Widget) FutureShapes.xl else RoundedCornerShape(percent = 28))
+                .background(if (item is LauncherItem.Empty || item is LauncherItem.Widget) Color.Transparent else OnWallpaperColor.copy(alpha = 0.05f))
         ) {
             when (item) {
                 is LauncherItem.App -> {
@@ -257,14 +260,26 @@ fun ItemPanel(
                 }
                 is LauncherItem.Widget -> {
                     if (appWidgetHost != null) {
+                        val density = androidx.compose.ui.platform.LocalDensity.current
                         AndroidView(
                             factory = { ctx ->
-                                appWidgetHost.createView(ctx, item.widgetId, null).apply {
+                                val info = android.appwidget.AppWidgetManager.getInstance(ctx).getAppWidgetInfo(item.widgetId)
+                                appWidgetHost.createView(ctx, item.widgetId, info).apply {
                                     setPadding(0, 0, 0, 0)
+                                    WidgetViews.register(item.widgetId, this)
                                 }
                             },
                             update = { _ -> },
-                            modifier = Modifier.fillMaxSize()
+                            onRelease = { WidgetViews.unregister(item.widgetId, it) },
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .onSizeChanged { size ->
+                                    // בלי זה הספק לא יודע באיזה גודל הוא מוצג, ומצייר את
+                                    // הפריסה הקטנה ביותר שלו גם בתא 4x2.
+                                    val w = with(density) { size.width.toDp().value.toInt() }
+                                    val h = with(density) { size.height.toDp().value.toInt() }
+                                    if (w > 0 && h > 0) WidgetViews.updateSize(item.widgetId, w, h)
+                                }
                         )
                     } else {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -342,5 +357,42 @@ fun EditModeButton(label: String, icon: ImageVector, isSelected: Boolean, theme:
                 shadow = Shadow(color = Color.Black, offset = Offset(0.5f, 0.5f), blurRadius = 1f)
             )
         )
+    }
+}
+
+
+/**
+ * ה-AppWidgetHostView החיים לפי widgetId - כדי ש-OK על ווידג'ט ממוקד יפעיל
+ * אותו (אין מגע במכשיר), ושהגודל האמיתי שלו יגיע לספק.
+ */
+object WidgetViews {
+    private val views = HashMap<Int, java.lang.ref.WeakReference<android.appwidget.AppWidgetHostView>>()
+
+    fun register(widgetId: Int, view: android.appwidget.AppWidgetHostView) {
+        views[widgetId] = java.lang.ref.WeakReference(view)
+    }
+
+    fun unregister(widgetId: Int, view: android.view.View) {
+        if (views[widgetId]?.get() === view) views.remove(widgetId)
+    }
+
+    @Suppress("DEPRECATION")
+    fun updateSize(widgetId: Int, widthDp: Int, heightDp: Int) {
+        val view = views[widgetId]?.get() ?: return
+        runCatching { view.updateAppWidgetSize(android.os.Bundle(), widthDp, heightDp, widthDp, heightDp) }
+    }
+
+    /** לוחץ על הצאצא הלחיץ הראשון (בסדר קריאה), או על הווידג'ט כולו. */
+    fun activate(widgetId: Int): Boolean {
+        val root = views[widgetId]?.get() ?: return false
+        fun find(v: android.view.View): android.view.View? {
+            if (v.isClickable && v.isEnabled && v !== root) return v
+            if (v is android.view.ViewGroup) {
+                for (i in 0 until v.childCount) find(v.getChildAt(i))?.let { return it }
+            }
+            return null
+        }
+        val target = find(root) ?: root
+        return target.performClick()
     }
 }

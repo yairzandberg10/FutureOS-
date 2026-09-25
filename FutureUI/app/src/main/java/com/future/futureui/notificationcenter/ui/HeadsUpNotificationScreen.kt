@@ -131,12 +131,13 @@ fun HeadsUpNotificationScreen(
                     .clip(shape)
                     .background(Color(0xE61C1C1E))
                     .border(0.5.dp, Color.White.copy(alpha = 0.15f), shape)
-                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                    // מעט "שמנה" יותר מבעבר (10dp -> 15dp, אייקון 34 -> 40, טקסט בשתי שורות).
+                    .padding(horizontal = 16.dp, vertical = 15.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
                     modifier = Modifier
-                        .size(34.dp)
+                        .size(40.dp)
                         .clip(CircleShape)
                         .background(Color.White.copy(alpha = 0.12f)),
                     contentAlignment = Alignment.Center
@@ -145,10 +146,10 @@ fun HeadsUpNotificationScreen(
                     if (icon != null) {
                         Image(bitmap = icon, contentDescription = null, modifier = Modifier.fillMaxSize())
                     } else {
-                        Icon(Icons.Rounded.Notifications, contentDescription = null, tint = textColor, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Rounded.Notifications, contentDescription = null, tint = textColor, modifier = Modifier.size(20.dp))
                     }
                 }
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(14.dp))
                 // שיחה נכנסת (CATEGORY_CALL) היא ההתראה הכי דחופה שיכולה להופיע - במקום
                 // כותרת/טקסט קטנים כמו כל התראה אחרת, שם/מספר המתקשר גדול וברור, עם רמז
                 // מקשים מפורש (טלפון = מענה, ניתוק = דחייה), כי אין כאן זמן לקרוא פרטים.
@@ -181,7 +182,7 @@ fun HeadsUpNotificationScreen(
                     Column {
                         Text(
                             text = if (title.isNotBlank()) "$appName: $title" else appName,
-                            fontSize = FutureTypography.summary,
+                            fontSize = FutureTypography.body,
                             fontWeight = FontWeight.Bold,
                             color = textColor,
                             maxLines = 1,
@@ -190,9 +191,9 @@ fun HeadsUpNotificationScreen(
                         if (text.isNotBlank()) {
                             Text(
                                 text = text,
-                                fontSize = FutureTypography.label,
-                                color = textColor.copy(alpha = 0.7f),
-                                maxLines = 1,
+                                fontSize = FutureTypography.summary,
+                                color = textColor.copy(alpha = 0.72f),
+                                maxLines = 2,
                                 overflow = TextOverflow.Ellipsis
                             )
                         }

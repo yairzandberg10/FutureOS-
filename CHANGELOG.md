@@ -4,6 +4,51 @@ This repo has no carried-over git history (see root [README](README.md)), so thi
 
 ## Unreleased
 
+### System pass: share window, recents, power menu, widgets
+
+- **One share window for the whole system.** `FutureShare` (SharedKeypadNav)
+  already pointed every app at `com.future.futureui.ACTION_SHARE`, but the
+  window had been reverted, so every share fell back to Android's chooser.
+  FutureUI has a `ShareActivity` again, in FutureUI's own look: a bottom sheet
+  with what is being shared, a "copy" chip for text, and a 4-column grid of the
+  apps that accept it, most recently used first. Settings' Bluetooth fallback
+  now uses it too.
+- **Gallery viewer: action bar instead of the soft-key bar.** New shared
+  component `FutureActionBar` (not in the design system before): share, edit,
+  details, delete. Down arrow from the photo enters it, left/right move, Up or
+  BACK return to the photo.
+- **Recents shows only apps you opened, laid out like Redmi.** The list used to
+  come from three days of UsageStats, so apps that only surfaced briefly showed
+  up. The status bar service now records each window that comes to the front
+  and keeps it only if it is a real activity of a launchable app. Two-column
+  cards (icon and name above, app-colored card), free memory at the top, a round
+  X to close everything; Options closes the focused app, 0 closes all.
+- **Power menu.** Holding the power key opened Android's dialog; the status bar
+  service now recognises it, closes it and opens FutureUI's menu instead. The
+  Control Center power button opens the same menu. Power off and restart ask
+  for a second OK; airplane mode, silent mode and screenshot were added.
+- **Control Center sliders**: dark track, near-opaque white fill, percentage
+  shown. The old light-gray-on-gray was barely readable.
+- **Notifications are a little larger** (heads-up and Notification Center):
+  more padding, bigger icon, text on two lines.
+- **Launcher widgets are sized by the widget.** Every widget used to go into a
+  single 1x1 cell on the home page. Now the span comes from the provider
+  (`targetCellWidth/Height`, else the classic `(dp + 30) / 70`), it goes to the
+  first free area that fits on the page you are on, the provider is told its
+  real size, and OK on a focused widget clicks it.
+- **Launcher edit mode: the apps window is a window.** Instead of a full-screen
+  list, a window in the Options-menu shell with all apps in a 4-column grid.
+- **Settings > Sounds.** Sound / vibrate / mute had two focus targets each (one
+  invisible, one that ignored OK); now one. Volume sliders could not go up: the
+  5% step was truncated to the same stream level (and 7/15*15 came out as
+  6.9999). Levels are rounded, and a press always moves at least one level.
+- **Guide**: Clock, Calculator, Flashlight, Fricasse and Wallpapers showed a
+  glyph instead of their icon, because they were missing from `<queries>`.
+- **SystemUI is a mirror of FutureUI.** `SystemUI/sync-from-futureui.sh` copies
+  every source file, the manifest and the non-icon resources, renaming only the
+  package. SystemUI's own DND schedules and low-battery overlay were not in
+  FutureUI and are gone from SystemUI with this (they are in git history).
+
 ### Stability pass: package visibility, recents, commentaries
 
 Found by reading the device's own crash/ANR history (`dumpsys dropbox`) and

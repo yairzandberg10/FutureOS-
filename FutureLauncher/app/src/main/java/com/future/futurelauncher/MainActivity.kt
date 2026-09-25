@@ -258,7 +258,10 @@ class MainActivity : ComponentActivity() {
         // Find the current page to add the widget to
         // This is a bit tricky without direct access to pager state here, but we can assume ViewModel knows or just pass 0
         // A better way is for LauncherScreen to observe a "PendingWidget" state in ViewModel.
-        viewModel.addWidget(appWidgetId, viewModel.homePageIndex)
+        if (!viewModel.addWidget(appWidgetId, viewModel.visiblePage)) {
+            appWidgetHost.deleteAppWidgetId(appWidgetId)
+            Toast.makeText(this, "אין מספיק מקום פנוי בדף הזה לווידג'ט", Toast.LENGTH_SHORT).show()
+        }
     }
 }
 
@@ -284,6 +287,7 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
 
     val currentPage = pagerState.currentPage
     val currentItems = pages.getOrNull(currentPage) ?: emptyList()
+    LaunchedEffect(currentPage) { viewModel.visiblePage = currentPage }
     val theme = viewModel.theme
     val prefs = remember { LauncherPrefs(context) }
     val activity = context as MainActivity
@@ -438,6 +442,9 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                                             viewModel.dialogState = LauncherDialog.EmptySlotOptions(currentPage, index)
                                         }
                                     }
+                                    // ווידג'ט במכשיר בלי מגע: OK לוחץ על הפריט הלחיץ הראשון בו
+                                    // (בדרך כלל הווידג'ט כולו פותח את האפליקציה שלו).
+                                    is LauncherItem.Widget -> com.future.futurelauncher.ui.WidgetViews.activate(item.widgetId)
                                     else -> {}
                                 }
                             }
@@ -1044,6 +1051,10 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                             viewModel.savePages()
                             viewModel.pendingSlot = null
                         }
+                        viewModel.dialogState = LauncherDialog.None
+                    },
+                    onDismiss = {
+                        viewModel.pendingSlot = null
                         viewModel.dialogState = LauncherDialog.None
                     },
                 )

@@ -1,5 +1,8 @@
 package com.android.sistemui.controlcenter.ui
 
+import com.future.sharednav.theme.FutureMotion
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
@@ -37,6 +40,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.android.sistemui.controlcenter.logic.ControlLayoutManager
 import com.android.sistemui.controlcenter.logic.ControlManager
+import com.android.sistemui.controlcenter.logic.GridCatalog
+import com.android.sistemui.controlcenter.logic.GridControlManager
 import com.android.sistemui.controlcenter.ui.components.*
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
@@ -51,7 +56,8 @@ fun ControlCenterScreen(
     controlManager: ControlManager? = null,
     onPowerClick: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
-    onSwitchToNotificationCenter: () -> Unit = {}
+    onSwitchToNotificationCenter: () -> Unit = {},
+    onRequestClose: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val manager = controlManager ?: remember { ControlManager(context) }
@@ -66,6 +72,8 @@ fun ControlCenterScreen(
     var topToggleIds by remember { mutableStateOf(layoutManager.getTopToggleIds()) }
     var bottomToggleIds by remember { mutableStateOf(layoutManager.getBottomToggleIds()) }
     var activeControlIds by remember { mutableStateOf(layoutManager.getActiveLayout()) }
+    val gridManager = remember { GridControlManager(context) }
+    DisposableEffect(gridManager) { onDispose { gridManager.dispose() } }
     var sectionOrder by remember { mutableStateOf(layoutManager.getSectionOrder()) }
     var movingSectionId by remember { mutableStateOf<String?>(null) }
 
@@ -81,6 +89,14 @@ fun ControlCenterScreen(
             manager.updateProgress()
             // Faster update when visible for responsive toggles
             delay(500)
+        }
+    }
+
+    // מצב פקדי הרשת נקרא בקצב איטי יותר מהלולאה למעלה - חלק מהקריאות עוברות דרך root
+    LaunchedEffect(activeControlIds) {
+        while (true) {
+            gridManager.refresh(activeControlIds)
+            delay(2000)
         }
     }
 
@@ -106,7 +122,9 @@ fun ControlCenterScreen(
     LaunchedEffect(isVisible) {
         if (isVisible) {
             delay(150)
-            try { initialFocusRequester.requestFocus() } catch (t: Throwable) {}
+            try { initialFocusRequester.requestFocus() } catch (t: Throwable) {
+                android.util.Log.w("ControlCenterScreen", "ControlCenterScreen failed", t)
+            }
         }
     }
 
@@ -120,12 +138,12 @@ fun ControlCenterScreen(
             visible = isVisible,
             enter = slideInVertically(
                 initialOffsetY = { -it },
-                animationSpec = tween(durationMillis = 300, easing = LinearOutSlowInEasing)
-            ) + fadeIn(animationSpec = tween(durationMillis = 300)),
+                animationSpec = tween(FutureMotion.DurationSlow, easing = FutureMotion.EasingDecelerate)
+            ) + fadeIn(animationSpec = tween(FutureMotion.DurationSlow)),
             exit = slideOutVertically(
                 targetOffsetY = { -it },
-                animationSpec = tween(durationMillis = 250, easing = FastOutLinearInEasing)
-            ) + fadeOut(animationSpec = tween(durationMillis = 250))
+                animationSpec = tween(FutureMotion.DurationSlow, easing = FutureMotion.EasingAccelerate)
+            ) + fadeOut(animationSpec = tween(FutureMotion.DurationSlow))
         ) {
             Box(
                 modifier = modifier
@@ -177,7 +195,7 @@ fun ControlCenterScreen(
                         Column(horizontalAlignment = Alignment.Start) {
                             Text(
                                 text = currentTime,
-                                fontSize = 28.sp,
+                                fontSize = FutureTypography.display,
                                 fontWeight = FontWeight.Bold,
                                 color = clockColor,
                                 style = androidx.compose.ui.text.TextStyle(
@@ -186,7 +204,7 @@ fun ControlCenterScreen(
                             )
                             Text(
                                 text = currentDate,
-                                fontSize = 11.sp,
+                                fontSize = FutureTypography.caption,
                                 color = dateColor,
                                 style = androidx.compose.ui.text.TextStyle(
                                     shadow = androidx.compose.ui.graphics.Shadow(color = Color.Black.copy(alpha = 0.3f), blurRadius = 8f)
@@ -281,13 +299,13 @@ fun ControlCenterScreen(
                                     Column(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .animateContentSize(animationSpec = tween(durationMillis = 300))
-                                            .clip(RoundedCornerShape(35.dp))
+                                            .animateContentSize(animationSpec = tween(FutureMotion.DurationSlow))
+                                            .clip(FutureShapes.xxl)
                                             .background(Color(0x80E0E0E0))
                                             .border(
                                                 width = if (isGridEditing) 2.dp else 0.5.dp, 
                                                 color = if (isGridEditing) Color.Red else Color.White.copy(alpha = 0.5f), 
-                                                shape = RoundedCornerShape(35.dp)
+                                                shape = FutureShapes.xxl
                                             )
                                             .onKeyEvent { event ->
                                                 if (isEditMode && (event.key == Key.DirectionCenter || event.key == Key.Enter)) {
@@ -303,14 +321,14 @@ fun ControlCenterScreen(
                                         horizontalAlignment = Alignment.CenterHorizontally
                                     ) {
                                         if (isGridEditing) {
-                                            val availableControls = layoutManager.allAvailableControls.filter { 
+                                            val availableControls = GridCatalog.all.filter { 
                                                 it.id !in activeControlIds 
                                             }
                                             if (availableControls.isNotEmpty()) {
                                                 Text(
                                                     text = "הוספת כפתורים",
                                                     color = clockColor.copy(alpha = 0.7f),
-                                                    fontSize = 12.sp,
+                                                    fontSize = FutureTypography.label,
                                                     fontWeight = FontWeight.Bold,
                                                     modifier = Modifier.padding(bottom = 8.dp)
                                                 )
@@ -329,7 +347,9 @@ fun ControlCenterScreen(
                                                                     label = control.label,
                                                                     isOn = false,
                                                                     onToggle = {
-                                                                        activeControlIds = activeControlIds + control.id
+                                                                        if (activeControlIds.size < GridCatalog.MAX_CONTROLS) {
+                                                                            activeControlIds = activeControlIds + control.id
+                                                                        }
                                                                     },
                                                                     showLabel = true,
                                                                     isEditMode = true,
@@ -354,17 +374,31 @@ fun ControlCenterScreen(
                                         }
 
                                         val gridControls = activeControlIds.mapNotNull { id ->
-                                            val info = layoutManager.getControlById(id) ?: return@mapNotNull null
+                                            val info = GridCatalog.get(id) ?: return@mapNotNull null
                                             object {
                                                 val id = id
                                                 val label = info.label
                                                 val icon = info.icon
-                                                val isOn = manager.getControlState(id)
-                                                val onToggle = { manager.handleControlToggle(id) }
+                                                val isOn = info.isToggle && gridManager.isOn(id)
+                                                val onToggle = {
+                                                    gridManager.activate(id)
+                                                    if (info.closesPanel) onRequestClose()
+                                                }
                                             }
                                         }
 
-                                        val maxRows = if (isExpanded || isEditMode) (gridControls.size + 4) / 5 else 2
+                                        if (gridControls.isEmpty() && !isGridEditing) {
+                                            Text(
+                                                text = "אין פקדים - היכנס לעריכה ולחץ Options על הרשת כדי להוסיף (עד ${GridCatalog.MAX_CONTROLS})",
+                                                color = clockColor.copy(alpha = 0.7f),
+                                                fontSize = FutureTypography.label,
+                                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                                modifier = Modifier.padding(vertical = 8.dp)
+                                            )
+                                        }
+
+                                        val totalRows = (gridControls.size + 4) / 5
+                                        val maxRows = if (isExpanded || isEditMode) totalRows else minOf(2, totalRows)
                                         repeat(maxRows) { rowIndex ->
                                             AnimatedVisibility(
                                                 visible = isExpanded || isEditMode || rowIndex < 2,
@@ -407,7 +441,7 @@ fun ControlCenterScreen(
                                         if (!isEditMode) {
                                             val indicatorInteractionSource = remember { MutableInteractionSource() }
                                             val isIndicatorFocused by indicatorInteractionSource.collectIsFocusedAsState()
-                                            val indicatorShape = RoundedCornerShape(12.dp)
+                                            val indicatorShape = FutureShapes.md
                                             Box(
                                                 modifier = Modifier.width(80.dp).height(20.dp).focusEffect(isIndicatorFocused, indicatorShape)
                                                     .clip(indicatorShape)

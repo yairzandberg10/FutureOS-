@@ -19,7 +19,6 @@ import android.view.KeyEvent
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
 import android.widget.Toast
-import com.future.sharednav.actions.FutureUIActions
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
@@ -30,10 +29,9 @@ import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.android.sistemui.controlcenter.ui.ControlCenterScreen
-import com.android.sistemui.controlcenter.ui.PowerMenuScreen
 import com.android.sistemui.controlcenter.logic.ControlManager
-import com.android.sistemui.ui.theme.SystemUITheme
-import com.android.sistemui.utils.SystemUIActions
+import com.android.sistemui.ui.theme.FutureUITheme
+import com.android.sistemui.utils.FutureUIActions
 
 class ControlCenterAccessibilityService : AccessibilityService(), LifecycleOwner, SavedStateRegistryOwner, ViewModelStoreOwner {
 
@@ -47,7 +45,7 @@ class ControlCenterAccessibilityService : AccessibilityService(), LifecycleOwner
 
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action == SystemUIActions.ACTION_SHOW_CONTROL_CENTER) {
+            if (intent?.action == FutureUIActions.ACTION_SHOW_CONTROL_CENTER) {
                 showControlCenter()
             }
         }
@@ -62,7 +60,7 @@ class ControlCenterAccessibilityService : AccessibilityService(), LifecycleOwner
     override val viewModelStore: ViewModelStore get() = store
 
     private val longPressRunnable = Runnable {
-        Log.d("SystemUI", "Long Press Triggered via Runnable")
+        Log.d("FutureUI", "Long Press Triggered via Runnable")
         longPressPending = false
         toggleControlCenter()
     }
@@ -74,20 +72,20 @@ class ControlCenterAccessibilityService : AccessibilityService(), LifecycleOwner
             lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
             windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
             
-            val filter = IntentFilter(SystemUIActions.ACTION_SHOW_CONTROL_CENTER)
+            val filter = IntentFilter(FutureUIActions.ACTION_SHOW_CONTROL_CENTER)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)
             } else {
                 registerReceiver(receiver, filter)
             }
         } catch (e: Exception) {
-            Log.e("SystemUI", "Error in onCreate", e)
+            Log.e("FutureUI", "Error in onCreate", e)
         }
     }
 
     override fun onServiceConnected() {
         super.onServiceConnected()
-        Toast.makeText(this, "SystemUI מוכן: לחיצה ארוכה על כוכבית", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "FutureUI מוכן: לחיצה ארוכה על כוכבית", Toast.LENGTH_SHORT).show()
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
@@ -159,7 +157,6 @@ class ControlCenterAccessibilityService : AccessibilityService(), LifecycleOwner
             if (controlManager == null) {
                 controlManager = ControlManager(this)
             }
-            controlManager?.startRootShell()
 
             val wallpaperManager = WallpaperManager.getInstance(this)
             val wallpaperDrawable = wallpaperManager.drawable
@@ -190,56 +187,35 @@ class ControlCenterAccessibilityService : AccessibilityService(), LifecycleOwner
                 setViewTreeViewModelStoreOwner(this@ControlCenterAccessibilityService)
                 
                 setContent {
-                    SystemUITheme {
+                    FutureUITheme {
                         androidx.compose.foundation.layout.Box(modifier = Modifier.fillMaxSize()) {
                             ControlCenterScreen(
                                 modifier = Modifier.fillMaxSize(),
                                 isVisibleByDefault = true,
                                 wallpaper = wallpaperBitmap?.asImageBitmap(),
                                 controlManager = controlManager,
-                                onPowerClick = { powerMenuVisible.value = true },
+                                // תפריט כיבוי אחד לכל המערכת - של שירות שורת המצב (גם החזקת
+                                // מקש ההפעלה פותחת אותו). מרכז הבקרה נסגר קודם.
+                                onPowerClick = {
+                                    hideControlCenter()
+                                    sendBroadcast(
+                                        Intent(com.android.sistemui.statusbar.service.StatusBarAccessibilityService.ACTION_SHOW_POWER_MENU)
+                                            .setPackage(packageName)
+                                    )
+                                },
                                 onSettingsClick = {
                                     controlManager?.openMainSettings()
                                     hideControlCenter()
                                 },
                                 onSwitchToNotificationCenter = {
-                                    val intent = Intent(SystemUIActions.ACTION_SHOW_NOTIFICATION_CENTER)
+                                    val intent = Intent(FutureUIActions.ACTION_SHOW_NOTIFICATION_CENTER)
                                     intent.setPackage(packageName)
                                     sendBroadcast(intent)
                                     mainHandler.postDelayed({ hideControlCenter() }, 50)
-                                }
+                                },
+                                onRequestClose = { hideControlCenter() }
                             )
 
-                            if (powerMenuVisible.value) {
-                                PowerMenuScreen(
-                                    onPowerOff = {
-                                        powerMenuVisible.value = false
-                                        Toast.makeText(this@ControlCenterAccessibilityService, "מכבה את המכשיר...", Toast.LENGTH_SHORT).show()
-                                        controlManager?.runRootCommand("reboot -p")
-                                        // hideControlCenter() עוצר את מעטפת ה-root (stopRootShell, כותבת "exit")
-                                        // - צריך רגע כדי שפקודת ה-reboot תספיק להיכתב ולהתבצע קודם, אחרת
-                                        // ה-exit עלול "לרוץ" לפניה ולבטל את הכיבוי בפועל.
-                                        mainHandler.postDelayed({ hideControlCenter() }, 400)
-                                    },
-                                    onRestart = {
-                                        powerMenuVisible.value = false
-                                        Toast.makeText(this@ControlCenterAccessibilityService, "מפעיל מחדש...", Toast.LENGTH_SHORT).show()
-                                        controlManager?.runRootCommand("reboot")
-                                        mainHandler.postDelayed({ hideControlCenter() }, 400)
-                                    },
-                                    onScreenshot = {
-                                        powerMenuVisible.value = false
-                                        // סוגרים את התפריט/מרכז הבקרה לפני הצילום כדי שהם עצמם לא
-                                        // ייכנסו לתמונה - צריך רגע עד שה-overlay באמת יורד מהמסך.
-                                        hideControlCenter()
-                                        mainHandler.postDelayed({
-                                            controlManager?.takeScreenshot()
-                                            Toast.makeText(this@ControlCenterAccessibilityService, "צילום המסך נשמר בגלריה", Toast.LENGTH_SHORT).show()
-                                        }, 300)
-                                    },
-                                    onCancel = { powerMenuVisible.value = false }
-                                )
-                            }
                         }
                     }
                 }
@@ -253,11 +229,11 @@ class ControlCenterAccessibilityService : AccessibilityService(), LifecycleOwner
             windowManager.addView(composeView, params)
             isVisible = true
 
-            val bringFrontIntent = Intent(SystemUIActions.ACTION_BRING_STATUS_BAR_FRONT)
+            val bringFrontIntent = Intent(FutureUIActions.ACTION_BRING_STATUS_BAR_FRONT)
             bringFrontIntent.setPackage(packageName)
             sendBroadcast(bringFrontIntent)
         } catch (e: Exception) {
-            Log.e("SystemUI", "Error showing overlay", e)
+            Log.e("FutureUI", "Error showing overlay", e)
         }
     }
 
@@ -279,14 +255,13 @@ class ControlCenterAccessibilityService : AccessibilityService(), LifecycleOwner
         if (!isVisible) return
         try {
             powerMenuVisible.value = false
-            controlManager?.stopRootShell()
             lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
             lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
             windowManager.removeView(composeView)
             composeView = null
             isVisible = false
         } catch (e: Exception) {
-            Log.e("SystemUI", "Error hiding overlay", e)
+            Log.e("FutureUI", "Error hiding overlay", e)
         }
     }
 
@@ -294,7 +269,9 @@ class ControlCenterAccessibilityService : AccessibilityService(), LifecycleOwner
         hideControlCenter()
         try {
             unregisterReceiver(receiver)
-        } catch (e: Exception) {}
+        } catch (e: Exception) {
+            android.util.Log.w("ControlCenterAccessibil", "onDestroy failed", e)
+        }
         controlManager?.dispose()
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
         store.clear()

@@ -462,7 +462,8 @@ fun NotificationItem(
                 if (showOptions) showOptions = false else isExpanded = !isExpanded
             })
             .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
-            .padding(horizontal = 12.dp, vertical = 8.dp)
+            // כרטיס מעט "שמן" יותר (8dp -> 13dp, אייקון 32 -> 38, תקציר בשתי שורות).
+            .padding(horizontal = 14.dp, vertical = 13.dp)
     ) {
         // מעבר חלק (fade צולב) בין תוכן ההתראה הרגיל לתפריט האפשרויות, במקום
         // חיתוך קשה - כך שפתיחת/סגירת התפריט מרגישה כמו טרנזישן מכוון ולא כמו
@@ -507,7 +508,7 @@ fun NotificationItem(
                     // אייקון האפליקציה (בצד ימין ב-RTL)
                     Box(
                         modifier = Modifier
-                            .size(32.dp)
+                            .size(38.dp)
                             .clip(CircleShape)
                             .background(Color.White.copy(alpha = 0.2f)),
                         contentAlignment = Alignment.Center
@@ -523,13 +524,13 @@ fun NotificationItem(
                         }
                     }
 
-                    Spacer(modifier = Modifier.width(12.dp))
+                    Spacer(modifier = Modifier.width(14.dp))
 
                     // תוכן ההתראה: שם אפליקציה ותקציר הודעה
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = if (title.isNotBlank()) "$appName: $title" else appName,
-                            fontSize = FutureTypography.summary,
+                            fontSize = FutureTypography.body,
                             fontWeight = FontWeight.Bold,
                             color = textColor,
                             maxLines = 1,
@@ -537,10 +538,10 @@ fun NotificationItem(
                             style = androidx.compose.ui.text.TextStyle(shadow = legibilityShadow)
                         )
                         Text(
-                            text = if (isExpanded) text else if (text.length > 40) text.take(40) + "..." else text,
-                            fontSize = FutureTypography.caption,
+                            text = text,
+                            fontSize = FutureTypography.summary,
                             color = subTextColor,
-                            maxLines = if (isExpanded) Int.MAX_VALUE else 1,
+                            maxLines = if (isExpanded) Int.MAX_VALUE else 2,
                             overflow = TextOverflow.Ellipsis,
                             style = androidx.compose.ui.text.TextStyle(shadow = legibilityShadow)
                         )

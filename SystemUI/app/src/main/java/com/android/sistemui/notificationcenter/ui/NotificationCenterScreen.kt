@@ -1,4 +1,7 @@
 package com.android.sistemui.notificationcenter.ui
+import com.future.sharednav.theme.FutureMotion
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.focus.bringIntoViewOnFocus
 
 import android.app.Notification
@@ -104,13 +107,17 @@ fun NotificationCenterScreen(
     LaunchedEffect(isVisible, ncManager.notifications.size) {
         if (isVisible && ncManager.notifications.isNotEmpty()) {
             delay(150)
-            try { initialFocusRequester.requestFocus() } catch (e: Exception) {}
+            try { initialFocusRequester.requestFocus() } catch (e: Exception) {
+                android.util.Log.w("NotificationCenterScree", "NotificationCenterScreen failed", e)
+            }
         }
     }
     LaunchedEffect(isVisible, ncManager.notifications.size) {
         if (isVisible && ncManager.notifications.isEmpty()) {
             delay(150)
-            try { clearAllFocusRequester.requestFocus() } catch (e: Exception) {}
+            try { clearAllFocusRequester.requestFocus() } catch (e: Exception) {
+                android.util.Log.w("NotificationCenterScree", "NotificationCenterScreen failed", e)
+            }
         }
     }
 
@@ -122,11 +129,11 @@ fun NotificationCenterScreen(
             enter = slideInVertically(
                 initialOffsetY = { -it },
                 animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
-            ) + fadeIn(animationSpec = tween(durationMillis = 220)),
+            ) + fadeIn(animationSpec = tween(FutureMotion.DurationStandard)),
             exit = slideOutVertically(
                 targetOffsetY = { -it },
-                animationSpec = tween(durationMillis = 220, easing = FastOutLinearInEasing)
-            ) + fadeOut(animationSpec = tween(durationMillis = 180))
+                animationSpec = tween(FutureMotion.DurationStandard, easing = FutureMotion.EasingAccelerate)
+            ) + fadeOut(animationSpec = tween(FutureMotion.DurationStandard))
         ) {
             Box(modifier = modifier.fillMaxSize()) {
                 // רקע עם טשטוש (Blur) אם קיימת תמונת רקע
@@ -165,7 +172,7 @@ fun NotificationCenterScreen(
                         Column(horizontalAlignment = Alignment.Start) {
                             Text(
                                 text = currentTime,
-                                fontSize = 32.sp,
+                                fontSize = FutureTypography.display,
                                 fontWeight = FontWeight.Bold,
                                 color = textColor,
                                 style = androidx.compose.ui.text.TextStyle(
@@ -174,7 +181,7 @@ fun NotificationCenterScreen(
                             )
                             Text(
                                 text = currentDate,
-                                fontSize = 12.sp,
+                                fontSize = FutureTypography.label,
                                 color = subTextColor,
                                 style = androidx.compose.ui.text.TextStyle(
                                     shadow = androidx.compose.ui.graphics.Shadow(color = Color.Black.copy(alpha = 0.3f), blurRadius = 8f)
@@ -201,7 +208,7 @@ fun NotificationCenterScreen(
                                     Text(
                                         text = "אין התראות חדשות",
                                         color = subTextColor,
-                                        fontSize = 16.sp
+                                        fontSize = FutureTypography.bodyLarge
                                     )
                                 }
                             }
@@ -213,7 +220,6 @@ fun NotificationCenterScreen(
                                 MutableTransitionState(false)
                             }
                             var isDismissing by remember { mutableStateOf(false) }
-                            val isGroupStart = index == 0 || ncManager.notifications[index - 1].packageName != sbn.packageName
 
                             LaunchedEffect(Unit) {
                                 delay((index * 45L).coerceAtMost(360L))
@@ -229,33 +235,27 @@ fun NotificationCenterScreen(
 
                             AnimatedVisibility(
                                 visibleState = visibleState,
-                                enter = fadeIn(animationSpec = tween(220)) +
+                                enter = fadeIn(animationSpec = tween(FutureMotion.DurationStandard)) +
                                     slideInVertically(
                                         initialOffsetY = { -it / 3 },
                                         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow)
                                     ) +
                                     expandVertically(animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow)),
-                                exit = fadeOut(animationSpec = tween(180)) +
-                                    slideOutHorizontally(targetOffsetX = { it / 4 }, animationSpec = tween(200)) +
-                                    shrinkVertically(animationSpec = tween(200))
+                                exit = fadeOut(animationSpec = tween(FutureMotion.DurationStandard)) +
+                                    slideOutHorizontally(targetOffsetX = { it / 4 }, animationSpec = tween(FutureMotion.DurationStandard)) +
+                                    shrinkVertically(animationSpec = tween(FutureMotion.DurationStandard))
                             ) {
-                                Column {
-                                    if (isGroupStart) {
-                                        NotificationGroupHeader(packageName = sbn.packageName, textColor = subTextColor)
-                                    }
-                                    NotificationItem(
-                                        sbn = sbn,
-                                        onSwitchToControlCenter = onSwitchToControlCenter,
-                                        onDismiss = { isDismissing = true },
-                                        onOpen = { ncManager.launchApp(sbn.packageName) },
-                                        onMuteApp = { ncManager.openNotificationSettings(sbn.packageName) },
-                                        onMarkAsRead = { ncManager.markAsRead(sbn) },
-                                        textColor = textColor,
-                                        subTextColor = subTextColor,
-                                        isDarkBackground = isDarkBackground,
-                                        focusRequester = if (index == 0) initialFocusRequester else null
-                                    )
-                                }
+                                NotificationItem(
+                                    sbn = sbn,
+                                    onSwitchToControlCenter = onSwitchToControlCenter,
+                                    onDismiss = { isDismissing = true },
+                                    onOpen = { ncManager.launchApp(sbn.packageName) },
+                                    onMuteApp = { ncManager.openNotificationSettings(sbn.packageName) },
+                                    textColor = textColor,
+                                    subTextColor = subTextColor,
+                                    isDarkBackground = isDarkBackground,
+                                    focusRequester = if (index == 0) initialFocusRequester else null
+                                )
                             }
                         }
                         }
@@ -292,30 +292,6 @@ fun NotificationCenterScreen(
 }
 
 /**
- * כותרת קבוצה קטנה - שם האפליקציה - מוצגת רק מעל ההתראה הראשונה בכל קבוצה
- * רצופה (ר' isGroupStart למעלה), כדי לקבץ ויזואלית התראות מאותה אפליקציה.
- */
-@Composable
-private fun NotificationGroupHeader(packageName: String, textColor: Color) {
-    val context = LocalContext.current
-    val appName = remember(packageName) {
-        try {
-            val ai = context.packageManager.getApplicationInfo(packageName, 0)
-            context.packageManager.getApplicationLabel(ai).toString()
-        } catch (e: Exception) {
-            packageName.substringAfterLast(".")
-        }
-    }
-    Text(
-        text = appName,
-        color = textColor,
-        fontSize = 11.sp,
-        fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(start = 14.dp, top = 6.dp, bottom = 2.dp)
-    )
-}
-
-/**
  * פריט התראה בודד ברשימה
  */
 @Composable
@@ -325,7 +301,6 @@ fun NotificationItem(
     onDismiss: () -> Unit,
     onOpen: () -> Unit,
     onMuteApp: () -> Unit,
-    onMarkAsRead: () -> Unit,
     textColor: Color,
     subTextColor: Color,
     isDarkBackground: Boolean = false,
@@ -352,10 +327,11 @@ fun NotificationItem(
         buildList {
             notificationActions.forEach { act ->
                 add(NotificationOption(label = act.title?.toString() ?: "") {
-                    try { act.actionIntent?.send() } catch (e: PendingIntent.CanceledException) {}
+                    try { act.actionIntent?.send() } catch (e: PendingIntent.CanceledException) {
+                        android.util.Log.w("NotificationCenterScree", "NotificationItem failed", e)
+                    }
                 })
             }
-            add(NotificationOption(label = "סמן כנקרא") { onMarkAsRead() })
             add(NotificationOption(label = "כבה התראות", isDestructive = true) { onMuteApp() })
             add(NotificationOption(label = "חזור") { })
         }
@@ -385,10 +361,12 @@ fun NotificationItem(
         try {
             val icon = context.packageManager.getApplicationIcon(sbn.packageName)
             appIcon = icon.toBitmap(width = 64, height = 64).asImageBitmap()
-        } catch (e: Exception) {}
+        } catch (e: Exception) {
+            android.util.Log.w("NotificationCenterScree", "NotificationItem failed", e)
+        }
     }
 
-    val shape = RoundedCornerShape(35.dp)
+    val shape = FutureShapes.xxl
     // הרקע של הכרטיס נגזר מכיוון הטקסט (isDarkBackground) ולא מהטפט עצמו, כדי
     // שהניגודיות טקסט-מול-כרטיס תישמר גם כשהטפט שמתחת בהיר או כהה באופן בלתי צפוי.
     val cardBackground = if (isDarkBackground) {
@@ -401,7 +379,7 @@ fun NotificationItem(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .animateContentSize(animationSpec = tween(durationMillis = 200))
+            .animateContentSize(animationSpec = tween(FutureMotion.DurationStandard))
             .focusEffect(isFocused, shape)
             .clip(shape)
             .background(cardBackground)
@@ -484,12 +462,13 @@ fun NotificationItem(
                 if (showOptions) showOptions = false else isExpanded = !isExpanded
             })
             .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
-            .padding(horizontal = 12.dp, vertical = 8.dp)
+            // כרטיס מעט "שמן" יותר (8dp -> 13dp, אייקון 32 -> 38, תקציר בשתי שורות).
+            .padding(horizontal = 14.dp, vertical = 13.dp)
     ) {
         // מעבר חלק (fade צולב) בין תוכן ההתראה הרגיל לתפריט האפשרויות, במקום
         // חיתוך קשה - כך שפתיחת/סגירת התפריט מרגישה כמו טרנזישן מכוון ולא כמו
         // "קפיצה" של הממשק.
-        Crossfade(targetState = showOptions, animationSpec = tween(180), label = "notificationItemContent") { optionsVisible ->
+        Crossfade(targetState = showOptions, animationSpec = tween(FutureMotion.DurationStandard), label = "notificationItemContent") { optionsVisible ->
             if (optionsVisible) {
                 // תפריט אפשרויות (Overlay) - פעולות אמיתיות מההתראה + השתקה/חזרה,
                 // ניתנות לניווט בין הכפתורים עם חצי כיוון ובחירה עם OK.
@@ -504,7 +483,7 @@ fun NotificationItem(
                         Text(
                             text = option.label,
                             color = textColor,
-                            fontSize = 13.sp,
+                            fontSize = FutureTypography.summary,
                             fontWeight = FontWeight.Bold,
                             style = androidx.compose.ui.text.TextStyle(shadow = legibilityShadow),
                             modifier = Modifier
@@ -529,7 +508,7 @@ fun NotificationItem(
                     // אייקון האפליקציה (בצד ימין ב-RTL)
                     Box(
                         modifier = Modifier
-                            .size(32.dp)
+                            .size(38.dp)
                             .clip(CircleShape)
                             .background(Color.White.copy(alpha = 0.2f)),
                         contentAlignment = Alignment.Center
@@ -545,13 +524,13 @@ fun NotificationItem(
                         }
                     }
 
-                    Spacer(modifier = Modifier.width(12.dp))
+                    Spacer(modifier = Modifier.width(14.dp))
 
                     // תוכן ההתראה: שם אפליקציה ותקציר הודעה
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = if (title.isNotBlank()) "$appName: $title" else appName,
-                            fontSize = 13.sp,
+                            fontSize = FutureTypography.body,
                             fontWeight = FontWeight.Bold,
                             color = textColor,
                             maxLines = 1,
@@ -559,10 +538,10 @@ fun NotificationItem(
                             style = androidx.compose.ui.text.TextStyle(shadow = legibilityShadow)
                         )
                         Text(
-                            text = if (isExpanded) text else if (text.length > 40) text.take(40) + "..." else text,
-                            fontSize = 11.sp,
+                            text = text,
+                            fontSize = FutureTypography.summary,
                             color = subTextColor,
-                            maxLines = if (isExpanded) Int.MAX_VALUE else 1,
+                            maxLines = if (isExpanded) Int.MAX_VALUE else 2,
                             overflow = TextOverflow.Ellipsis,
                             style = androidx.compose.ui.text.TextStyle(shadow = legibilityShadow)
                         )
@@ -609,7 +588,7 @@ fun NotificationCenterButton(
         ) {
             Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(6.dp))
-            Text(text = text, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+            Text(text = text, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = FutureTypography.label)
         }
     }
 }

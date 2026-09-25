@@ -1,4 +1,4 @@
-package com.android.sistemui.provider
+package com.android.sistemui.systemui
 
 import android.content.ContentProvider
 import android.content.ContentValues
@@ -9,15 +9,15 @@ import android.net.Uri
 
 /**
  * מקור אמת יחיד להגדרות שורת המצב, נגיש מבחוץ - כדי שאפליקציית
- * ההגדרות תוכל לשלוט בהן ישירות במקום להפנות את המשתמש ל-SystemUI עצמה.
- * כותב לאותם shared_prefs שהשירותים ב-SystemUI כבר קוראים מהם (status_bar_prefs),
+ * ההגדרות תוכל לשלוט בהן ישירות במקום להפנות את המשתמש ל-FutureUI עצמה.
+ * כותב לאותם shared_prefs שהשירותים ב-FutureUI כבר קוראים מהם (status_bar_prefs),
  * אז שינוי מבחוץ מתעדכן אצלם בלולאת הפולינג הרגילה שלהם -
  * בלי צורך במנגנון סנכרון נוסף.
  */
 class SystemUiSettingsProvider : ContentProvider() {
 
     companion object {
-        const val AUTHORITY = "com.android.sistemui.provider"
+        const val AUTHORITY = "com.android.sistemui.systemui"
         val CONTENT_URI: Uri = Uri.parse("content://$AUTHORITY/settings")
 
         const val COL_SHOW_BATTERY = "show_battery"

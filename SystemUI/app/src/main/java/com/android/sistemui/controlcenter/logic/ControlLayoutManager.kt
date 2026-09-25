@@ -26,32 +26,29 @@ class ControlLayoutManager(context: Context) {
         ControlInfo("account", "חשבון", Icons.Rounded.Person),
         ControlInfo("calendar", "יומן", Icons.Rounded.CalendarMonth),
         ControlInfo("security", "אבטחה", Icons.Rounded.Security),
-        ControlInfo("predictive_text", "ניבוי טקסט", Icons.Rounded.Spellcheck),
-        ControlInfo("hotspot", "נקודה חמה", Icons.Rounded.WifiTethering),
-        ControlInfo("screenshot", "צילום מסך", Icons.Rounded.Screenshot)
-    )
-
-    private val defaultLayout = listOf(
-        "wifi", "bluetooth", "flashlight", "airplane", "data", "dnd", "location",
-        "rotation", "battery", "night", "settings", "camera",
-        "search", "music", "account", "calendar", "security", "predictive_text",
-        "hotspot", "screenshot"
+        ControlInfo("predictive_text", "ניבוי טקסט", Icons.Rounded.Spellcheck)
     )
 
     private val defaultSectionOrder = listOf("toggles", "media", "grid", "sliders", "bottom_toggles")
 
+    /** פקדי הרשת (מתוך GridCatalog) - ריקה כברירת מחדל. הפריסה הישנה ("layout_ids",
+     *  מתוך allAvailableControls) נמחקת בשמירה הראשונה. */
     fun getActiveLayout(): List<String> {
-        val saved = prefs.getString("layout_ids", null)
-        return saved?.split(",") ?: defaultLayout
+        val saved = prefs.getString("grid_ids", null) ?: return emptyList()
+        return saved.split(",").filter { GridCatalog.get(it) != null }.distinct().take(GridCatalog.MAX_CONTROLS)
     }
 
     fun saveLayout(ids: List<String>) {
-        prefs.edit().putString("layout_ids", ids.joinToString(",")).apply()
+        prefs.edit().putString("grid_ids", ids.joinToString(",")).remove("layout_ids").apply()
     }
 
+    /** גרסה קודמת (2c8a22f) שמרה "pills" במקום שתי שורות הגלולות - מחזירים אותן. */
     fun getSectionOrder(): List<String> {
-        val saved = prefs.getString("section_order", null)
-        return saved?.split(",") ?: defaultSectionOrder
+        val saved = prefs.getString("section_order", null)?.split(",") ?: return defaultSectionOrder
+        val migrated = saved.map { if (it == "pills") "toggles" else it }.distinct().toMutableList()
+        if ("toggles" !in migrated) migrated.add(0, "toggles")
+        if ("bottom_toggles" !in migrated) migrated.add("bottom_toggles")
+        return migrated
     }
 
     fun saveSectionOrder(order: List<String>) {
