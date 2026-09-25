@@ -189,7 +189,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
             runCatching { recentAppsManager.record(pkg, event.className?.toString()) }
             // צילום המסך לכרטיס שלה באחרונות - אחרי שהחלון סיים להיפתח
             if (pkg != null && recentAppsManager.isTop(pkg)) recentSnapshots.schedule(pkg, 900, ::isSnapshotTarget)
-            maybeReplaceSystemPowerMenu(pkg, event.className?.toString())
+            maybeReplaceSystemPowerMenu(pkg, event.className?.toString(), event)
         }
     }
     override fun onInterrupt() {}
@@ -428,20 +428,37 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
      * של com.android.systemui) - מקש ההפעלה עצמו לא מגיע לשירותי נגישות, אז
      * מזהים את החלון כשהוא עולה, סוגרים אותו ב-BACK ופותחים את שלנו במקומו.
      */
-    private fun maybeReplaceSystemPowerMenu(pkg: String?, cls: String?) {
-        // ב-ROM של Duoqin התפריט הוא הגרסה הישנה שחיה ב-system_server (חבילה
-        // "android", com.android.internal.globalactions.ActionsDialog) ולא
-        // GlobalActionsDialog של com.android.systemui - קודם נבדקה רק systemui,
-        // ולכן התפריט של אנדרואיד המשיך להיפתח.
+    private fun maybeReplaceSystemPowerMenu(pkg: String?, cls: String?, event: AccessibilityEvent) {
+        // ב-ROM של Duoqin התפריט הוא AlertDialog כללי של system_server (חבילה
+        // "android") - לא GlobalActionsDialog של com.android.systemui. שם המחלקה
+        // לא מבדיל אותו מדיאלוגים אחרים של המערכת, אז בודקים את הטקסט שבו.
         if (pkg != "android" && pkg != "com.android.systemui") return
         if (cls == null) return
-        Log.i("FutureUI", "system window: $pkg / $cls")
-        val isPowerMenu = POWER_MENU_CLASS_HINTS.any { cls.contains(it, ignoreCase = true) }
-        if (!isPowerMenu) return
+        val byClass = POWER_MENU_CLASS_HINTS.any { cls.contains(it, ignoreCase = true) }
+        val texts = if (byClass) emptyList() else windowTexts(event)
+        Log.i("FutureUI", "system window: $pkg / $cls / ${texts.take(8)}")
+        val byText = texts.count { t -> POWER_MENU_LABELS.any { t.equals(it, ignoreCase = true) } } >= 1 &&
+            texts.any { t -> POWER_OFF_LABELS.any { t.equals(it, ignoreCase = true) } }
+        if (!byClass && !byText) return
         performGlobalAction(GLOBAL_ACTION_BACK)
-        // גיבוי: אם BACK לא סגר (חלון מערכת לא תמיד מקבל אותו מנגישות), root סוגר דיאלוגי מערכת.
+        // גיבוי: אם BACK לא סגר, root סוגר דיאלוגי מערכת.
         controlManager?.runRootCommandAsync("am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS")
         mainHandler.postDelayed({ showPowerMenu() }, 150)
+    }
+
+    /** כל הטקסטים בחלון שעלה (טקסט האירוע + עץ הצמתים, עד עומק מוגבל). */
+    private fun windowTexts(event: AccessibilityEvent): List<String> {
+        val out = ArrayList<String>()
+        event.text?.forEach { t -> t?.toString()?.trim()?.takeIf { it.isNotEmpty() }?.let(out::add) }
+        val root = runCatching { event.source ?: rootInActiveWindow }.getOrNull() ?: return out
+        fun walk(node: android.view.accessibility.AccessibilityNodeInfo?, depth: Int) {
+            if (node == null || depth > 12 || out.size > 40) return
+            node.text?.toString()?.trim()?.takeIf { it.isNotEmpty() }?.let(out::add)
+            node.contentDescription?.toString()?.trim()?.takeIf { it.isNotEmpty() }?.let(out::add)
+            for (i in 0 until node.childCount) walk(runCatching { node.getChild(i) }.getOrNull(), depth + 1)
+        }
+        runCatching { walk(root, 0) }
+        return out
     }
 
     private val powerAirplaneState = mutableStateOf(false)
@@ -677,5 +694,8 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
         private const val DOUBLE_CLICK_WINDOW_MS = 300L
         const val ACTION_SHOW_POWER_MENU = "com.future.futureui.ACTION_SHOW_POWER_MENU"
         private val POWER_MENU_CLASS_HINTS = listOf("globalactions", "ActionsDialog", "PowerMenu", "ShutdownDialog")
+        /** השורות של תפריט הכיבוי של אנדרואיד, עברית ואנגלית. */
+        private val POWER_OFF_LABELS = listOf("כיבוי", "כבה", "Power off", "Shut down", "Shutdown")
+        private val POWER_MENU_LABELS = POWER_OFF_LABELS + listOf("הפעלה מחדש", "אתחול", "Restart", "Reboot", "מצב טיסה", "Airplane mode")
     }
 }

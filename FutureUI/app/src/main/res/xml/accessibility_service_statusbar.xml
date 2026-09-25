@@ -1,14 +1,16 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <!--
     כמו accessibility_service_keys, ובנוסף canTakeScreenshot: שירות שורת המצב
     מצלם את האפליקציה שבחזית (AccessibilityService.takeScreenshot) כדי שמסך
     "אפליקציות אחרונות" יציג את המסך האחרון של כל אפליקציה ולא רק אייקון.
+    canRetrieveWindowContent: תפריט הכיבוי של ה-ROM הוא AlertDialog כללי של
+    החבילה "android" - מזהים אותו רק לפי הטקסט שבו (כיבוי / הפעלה מחדש).
 -->
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
     android:accessibilityEventTypes="typeWindowStateChanged"
     android:accessibilityFeedbackType="feedbackGeneric"
     android:accessibilityFlags="flagDefault|flagRequestFilterKeyEvents"
-    android:canRetrieveWindowContent="false"
+    android:canRetrieveWindowContent="true"
     android:canRequestFilterKeyEvents="true"
     android:canTakeScreenshot="true"
     android:notificationTimeout="500" />
