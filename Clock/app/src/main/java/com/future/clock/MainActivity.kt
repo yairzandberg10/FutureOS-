@@ -62,6 +62,9 @@ class MainActivity : ComponentActivity() {
             val goBack = { if (launchedAsShortcut) finish() else route = ClockRoute.Alarms }
             BackHandler(enabled = route != ClockRoute.Alarms || launchedAsShortcut) { goBack() }
             val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+            // בורר השעה של המעוררים פתוח - שכבה על כל המסך: בלי סרגל תחתון,
+            // וחצים לא מחליפים לשונית (הם עוברים בין ימי השבוע בבורר).
+            var overlayOpen by remember { mutableStateOf(false) }
 
             // מתעדכן בזמן אמת כשמצב כהה/בהיר או צבע ההדגשה משתנים (ר' rememberFutureTheme).
             val theme = rememberFutureTheme()
@@ -72,7 +75,7 @@ class MainActivity : ComponentActivity() {
             val tabs = listOf(
                 Triple(ClockRoute.Alarms, "מעוררים", FutureIcons.Alarm),
                 Triple(ClockRoute.WorldClock, "עולמי", FutureIcons.Public),
-                Triple(ClockRoute.Stopwatch, "עצר", Icons.Rounded.AvTimer),
+                Triple(ClockRoute.Stopwatch, "עצר", FutureIcons.Timer),
                 Triple(ClockRoute.Timer, "טיימר", FutureIcons.Timer),
             )
             val currentTabIndex = tabs.indexOfFirst { it.first == route }.coerceAtLeast(0)
@@ -94,6 +97,7 @@ class MainActivity : ComponentActivity() {
                             // קודם הפוקוס זז בתוך המסך (למשל מ"התחל" ל"איפוס" בשעון
                             // העצר) - רק כשאין לאן לזוז בכיוון הזה עוברים לשונית.
                             if (focusManager.moveFocus(direction)) return@onKeyEvent true
+                            if (overlayOpen) return@onKeyEvent true
                             val nextIndex = if (event.key == Key.DirectionRight) currentTabIndex - 1 else currentTabIndex + 1
                             if (nextIndex !in tabs.indices) return@onKeyEvent false
                             route = tabs[nextIndex].first
@@ -103,7 +107,7 @@ class MainActivity : ComponentActivity() {
                     bottomBar = {
                         // הסרגל המשותף (FutureBottomNav) ולא NavigationBar של
                         // Material3: פס מרחף בצורת גלולה, ותווית רק על הנבחר.
-                        FutureBottomNav(
+                        if (!overlayOpen) FutureBottomNav(
                             items = tabs.map { (_, label, icon) ->
                                 FutureNavItem(label = label, icon = icon)
                             },
@@ -120,7 +124,7 @@ class MainActivity : ComponentActivity() {
                         AnimatedScreenHost(targetState = route, depthOf = { 0 }) { shown ->
                             when (shown) {
                                 // הלשונית הראשונה - BACK ממנה יוצא מהאפליקציה.
-                                ClockRoute.Alarms -> AlarmScreen(theme = theme, onBack = { finish() })
+                                ClockRoute.Alarms -> AlarmScreen(theme = theme, onBack = { finish() }, onOverlayChange = { overlayOpen = it })
                                 ClockRoute.WorldClock -> WorldClockScreen(theme = theme, onBack = goBack)
                                 ClockRoute.Stopwatch -> StopwatchScreen(theme = theme, onBack = goBack)
                                 ClockRoute.Timer -> TimerScreen(theme = theme, onBack = goBack)

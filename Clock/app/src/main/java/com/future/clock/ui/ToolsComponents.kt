@@ -10,6 +10,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -34,6 +35,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import com.future.sharednav.components.FutureAvatar
+import com.future.sharednav.components.FutureButton
+import com.future.sharednav.components.FutureButtonVariant
 import com.future.sharednav.components.FutureListItem
 import com.future.sharednav.components.ScreenTopBar as SharedScreenTopBar
 import com.future.sharednav.components.TopBarIconButton as SharedTopBarIconButton
@@ -108,38 +111,26 @@ fun ToolRow(
 }
 
 /**
- * כפתור פעולה עגול וגדול (התחל/עצור). ההתנהגות של כפתור הדיזיין סיסטם:
- * 70% במנוחה, מלא בפוקוס, מסגרת 2dp בצבע הטקסט. הדיו נגזר מהמילוי - לא
- * Color.Black קבוע, שנעלם על מילוי כהה.
+ * שורת הפעולות של שעון העצר והטיימר: שני כפתורי מערכת ([FutureButton],
+ * components/core/Button.jsx) ברוחב שווה - הראשי מימין, המשני לצידו -
+ * עם אותו מרווח כמו כפתורי בורר השעה. הריפוד מהצדדים משאיר מקום לטבעת
+ * הפוקוס שנמתחת מחוץ לגלולה.
  */
 @Composable
-fun RoundActionButton(
-    label: String,
-    fill: Color,
+fun ClockActionRow(
+    primaryLabel: String,
+    primaryVariant: FutureButtonVariant,
+    onPrimary: () -> Unit,
+    secondaryLabel: String,
+    onSecondary: () -> Unit,
     theme: FutureTheme,
-    size: Dp,
-    focusRequester: FocusRequester? = null,
-    onClick: () -> Unit,
+    primaryFocus: FocusRequester? = null,
 ) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val opacity by animateFloatAsState(if (isFocused) 1f else 0.7f, FutureMotion.fast(), label = "roundActionOpacity")
-    val ring by animateColorAsState(if (isFocused) theme.textColor else Color.Transparent, FutureMotion.focusColorSpec, label = "roundActionRing")
-    // מילוי שקוף (12% מהטקסט) יושב על הרקע, ולכן הדיו שלו הוא צבע הטקסט.
-    val ink = if (fill.alpha < 0.5f) theme.textColor else FutureContrast.onColor(fill)
-    Box(
-        modifier = Modifier
-            .size(size)
-            .clip(CircleShape)
-            .alpha(opacity)
-            .background(fill)
-            .border(FutureDimens.focusBorderControl, ring, CircleShape)
-            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource)
-            .bringIntoViewOnFocus(),
-        contentAlignment = Alignment.Center
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = FutureDimens.spacingXl),
+        horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingLg),
     ) {
-        Text(label, color = ink, fontSize = FutureTypography.summary, fontWeight = FutureTypography.weightBold)
+        FutureButton(primaryLabel, theme, onPrimary, modifier = Modifier.weight(1f), variant = primaryVariant, focusRequester = primaryFocus)
+        FutureButton(secondaryLabel, theme, onSecondary, modifier = Modifier.weight(1f), variant = FutureButtonVariant.Secondary)
     }
 }

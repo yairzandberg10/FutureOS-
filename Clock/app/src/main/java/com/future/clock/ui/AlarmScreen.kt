@@ -59,10 +59,16 @@ import com.future.clock.logic.AlarmLogic
 import com.future.sharednav.theme.FutureTheme
 
 @Composable
-fun AlarmScreen(theme: FutureTheme, onBack: () -> Unit) {
+fun AlarmScreen(theme: FutureTheme, onBack: () -> Unit, onOverlayChange: (Boolean) -> Unit = {}) {
     val context = LocalContext.current
     val alarms = remember { mutableStateListOf<Alarm>() }
     var editingAlarm by remember { mutableStateOf<Alarm?>(null) }
+    // בורר השעה הוא שכבה על כל המסך (TimePicker.jsx) - בלי השורה העליונה
+    // ובלי הסרגל התחתון. בתוך 480dp פחות שניהם הוא לא נכנס, וכפתורי
+    // ביטול/שמור נחתכו מלמטה.
+    val overlayOpen = editingAlarm != null
+    LaunchedEffect(overlayOpen) { onOverlayChange(overlayOpen) }
+    DisposableEffect(Unit) { onDispose { onOverlayChange(false) } }
     // מחיקה היא בלתי הפיכה, ומקש OK הוא מקש בודד - בלי אישור, לחיצה בשוגג
     // על שורת השעון מוחקת אותו.
     var pendingDelete by remember { mutableStateOf<Alarm?>(null) }
@@ -93,10 +99,10 @@ fun AlarmScreen(theme: FutureTheme, onBack: () -> Unit) {
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize()) {
-                ToolsHeader(
+                if (!overlayOpen) ToolsHeader(
                     title = "שעונים מעוררים",
                     theme = theme,
-                    onBack = if (editingAlarm == null) onBack else null,
+                    onBack = onBack,
                     trailing = {
                         if (editingAlarm == null) {
                             ToolsIconButton(FutureIcons.Add, "הוסף שעון", theme) {
@@ -125,7 +131,7 @@ fun AlarmScreen(theme: FutureTheme, onBack: () -> Unit) {
                 } else {
                     if (alarms.isEmpty()) {
                         com.future.sharednav.components.EmptyState(
-                            icon = Icons.Rounded.AccessTime,
+                            icon = FutureIcons.Schedule,
                             title = "אין שעונים מעוררים",
                             subtitle = "נווטו לכפתור ההוספה למעלה ולחצו OK כדי להוסיף אחד",
                             textColor = theme.textColor,
@@ -162,7 +168,7 @@ fun AlarmScreen(theme: FutureTheme, onBack: () -> Unit) {
                                 fontSize = FutureTypography.summary,
                                 modifier = Modifier.padding(
                                     horizontal = FutureDimens.spacingXl,
-                                    vertical = 20.dp,
+                                    vertical = FutureDimens.spacingXl,
                                 ),
                             )
                         }
@@ -192,7 +198,7 @@ fun AlarmRow(alarm: Alarm, theme: FutureTheme, onToggle: (Boolean) -> Unit, onDe
     FutureSettingItem(
         title = "%02d:%02d".format(alarm.hour, alarm.minute),
         summary = recurrenceSummary(alarm),
-        icon = Icons.Rounded.AccessTime,
+        icon = FutureIcons.Schedule,
         theme = theme,
         onClick = onClick,
         trailing = {
@@ -213,14 +219,16 @@ fun TimePickerOverlay(alarm: Alarm, theme: FutureTheme, onSave: (Alarm) -> Unit,
     var hour by remember { mutableIntStateOf(alarm.hour) }
     var minute by remember { mutableIntStateOf(alarm.minute) }
     var days by remember { mutableStateOf(alarm.days) }
+    // BACK סוגר את הבורר בלי לשמור, כמו ביטול - ולא יוצא מהאפליקציה.
+    androidx.activity.compose.BackHandler(onBack = onCancel)
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
+        modifier = Modifier.fillMaxSize().padding(FutureDimens.spacingLg),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text("ערוך שעה", color = theme.textColor, fontSize = FutureTypography.screenTitle, fontWeight = FontWeight.Bold)
-        Spacer(modifier = Modifier.height(24.dp))
+        Text("ערוך שעה", color = theme.textColor, fontSize = FutureTypography.screenTitle, fontWeight = FutureTypography.weightBold)
+        Spacer(modifier = Modifier.height(FutureDimens.spacingXl))
 
         TimeGrid(
             hour = hour,
@@ -230,13 +238,13 @@ fun TimePickerOverlay(alarm: Alarm, theme: FutureTheme, onSave: (Alarm) -> Unit,
             onMinuteChange = { minute = it },
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(FutureDimens.spacingXl))
         Text(
             if (days.isEmpty()) "חד-פעמית" else "חוזרת",
-            color = theme.textColor.copy(alpha = 0.6f),
+            color = theme.textAlpha(60),
             fontSize = FutureTypography.summary
         )
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(FutureDimens.spacingSm))
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             DAY_LABELS.forEach { (dayValue, label) ->
                 DayToggleChip(
@@ -250,10 +258,10 @@ fun TimePickerOverlay(alarm: Alarm, theme: FutureTheme, onSave: (Alarm) -> Unit,
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(FutureDimens.spacingXl))
 
         // TimePicker.jsx: הביטול כאן הוא הכפתור השקט - זה המקום היחיד במערכת שבו הוא מופיע.
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingLg)) {
             FutureButton("ביטול", theme, onCancel, modifier = Modifier.weight(1f), variant = FutureButtonVariant.Quiet)
             FutureButton("שמור", theme, { onSave(alarm.copy(hour = hour, minute = minute, days = days, isEnabled = true)) }, modifier = Modifier.weight(1f))
         }

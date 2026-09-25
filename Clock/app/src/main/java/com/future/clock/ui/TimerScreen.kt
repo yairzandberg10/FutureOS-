@@ -37,6 +37,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.future.sharednav.nav.digitForKey
 import com.future.sharednav.theme.FutureTheme
+import com.future.sharednav.theme.FutureDimens
+import com.future.sharednav.theme.mutedTextColor
+import com.future.sharednav.components.FutureButtonVariant
 import kotlinx.coroutines.delay
 
 private fun mmssToText(mmss: Int): String = "%02d:%02d".format(mmss / 100, mmss % 100)
@@ -144,7 +147,7 @@ fun TimerScreen(theme: FutureTheme, onBack: () -> Unit) {
                 }
                 val ringColor = if (isFinished) theme.dangerColor else theme.readableAccentColor
                 Box(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = FutureDimens.spacingLg),
                     contentAlignment = Alignment.Center
                 ) {
                     TimerRing(
@@ -162,7 +165,7 @@ fun TimerScreen(theme: FutureTheme, onBack: () -> Unit) {
                             } else mmssToText(mmss),
                             color = if (isFinished) theme.dangerColor else theme.textColor,
                             fontSize = FutureTypography.hero,
-                            fontWeight = FontWeight.Light,
+                            fontWeight = FutureTypography.weightLight,
                             fontFamily = FutureTypography.monoFamily
                         )
                         val caption = when {
@@ -177,22 +180,17 @@ fun TimerScreen(theme: FutureTheme, onBack: () -> Unit) {
                         if (caption.isNotEmpty()) {
                             Text(
                                 caption,
-                                color = if (isFinished) theme.dangerColor else theme.textColor.copy(alpha = 0.5f),
+                                color = if (isFinished) theme.dangerColor else theme.mutedTextColor,
                                 fontSize = FutureTypography.summary,
                             )
                         }
                     }
                 }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    TimerActionButton(
-                        label = if (isRunning) "השהה" else "התחל",
-                        color = if (isRunning) theme.warningColor else theme.successColor,
-                        focusRequester = focusRequester
-                    ) {
+                ClockActionRow(
+                    primaryLabel = if (isRunning) "השהה" else "התחל",
+                    primaryVariant = FutureButtonVariant.Primary,
+                    onPrimary = {
                         if (isRunning) {
                             // עוצרים זמנית - שומרים את הזמן שנותר במקום להמשיך
                             // לגזור אותו מ-deadline ישן שכבר לא רלוונטי.
@@ -204,9 +202,12 @@ fun TimerScreen(theme: FutureTheme, onBack: () -> Unit) {
                         } else {
                             startTimer()
                         }
-                    }
-                    TimerActionButton(label = "איפוס", color = theme.textColor.copy(alpha = 0.12f)) { resetTimer() }
-                }
+                    },
+                    secondaryLabel = "איפוס",
+                    onSecondary = { resetTimer() },
+                    theme = theme,
+                    primaryFocus = focusRequester,
+                )
             }
             FutureSnackbarHost(snackbar, theme)
         }
@@ -241,9 +242,4 @@ private fun TimerRing(progress: Float, active: Boolean, color: Color, track: Col
             )
         }
     }
-}
-
-@Composable
-private fun TimerActionButton(label: String, color: Color, focusRequester: FocusRequester? = null, onClick: () -> Unit) {
-    RoundActionButton(label, color, LocalFutureTheme.current, 72.dp, focusRequester, onClick)
 }

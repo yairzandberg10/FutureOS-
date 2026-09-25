@@ -30,6 +30,9 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.future.sharednav.theme.FutureTheme
+import com.future.sharednav.theme.FutureDimens
+import com.future.sharednav.theme.mutedTextColor
+import com.future.sharednav.components.FutureButtonVariant
 import kotlinx.coroutines.delay
 
 private fun formatElapsed(millis: Long): String {
@@ -64,12 +67,12 @@ fun StopwatchScreen(theme: FutureTheme, onBack: () -> Unit) {
             Column(modifier = Modifier.fillMaxSize()) {
                 ToolsHeader(title = "שעון עצר", theme = theme, onBack = onBack)
 
-                Box(modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp), contentAlignment = Alignment.Center) {
+                Box(modifier = Modifier.fillMaxWidth().padding(vertical = FutureDimens.spacingXl), contentAlignment = Alignment.Center) {
                     Text(
                         formatElapsed(displayedElapsed),
                         color = theme.textColor,
                         fontSize = FutureTypography.hero,
-                        fontWeight = FontWeight.Light,
+                        fontWeight = FutureTypography.weightLight,
                         fontFamily = FutureTypography.monoFamily
                     )
                 }
@@ -80,21 +83,17 @@ fun StopwatchScreen(theme: FutureTheme, onBack: () -> Unit) {
                     FutureProgressBar(
                         progress = (displayedElapsed % 60_000L) / 60_000f,
                         theme = theme,
-                        modifier = Modifier.padding(horizontal = 32.dp, vertical = 8.dp),
+                        modifier = Modifier.padding(start = FutureDimens.spacingXxl, end = FutureDimens.spacingXxl, bottom = FutureDimens.spacingLg),
                     )
                 }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    StopwatchActionButton(
-                        label = if (isRunning) "עצור" else "התחל",
-                        isPrimary = true,
-                        color = if (isRunning) theme.dangerColor else theme.successColor,
-                        theme = theme,
-                        focusRequester = focusRequester
-                    ) {
+                // כפתורי המערכת (Button.jsx) - גלולה אטומה 44dp, ולא העיגולים
+                // השקופים של 84dp שהיו כאן: אלה לא היו בדיזיין סיסטם ולקחו
+                // חצי מגובה המסך, כך שכמעט לא נשאר מקום לרשימת ההקפות.
+                ClockActionRow(
+                    primaryLabel = if (isRunning) "עצור" else "התחל",
+                    primaryVariant = if (isRunning) FutureButtonVariant.Destructive else FutureButtonVariant.Primary,
+                    onPrimary = {
                         if (isRunning) {
                             elapsedBeforeStart = displayedElapsed
                             isRunning = false
@@ -102,38 +101,34 @@ fun StopwatchScreen(theme: FutureTheme, onBack: () -> Unit) {
                             startedAtElapsedRealtime = android.os.SystemClock.elapsedRealtime()
                             isRunning = true
                         }
-                    }
-                    StopwatchActionButton(
-                        label = if (isRunning) "הקפה" else "איפוס",
-                        isPrimary = false,
-                        color = theme.textColor.copy(alpha = 0.12f),
-                        theme = theme
-                    ) {
+                    },
+                    secondaryLabel = if (isRunning) "הקפה" else "איפוס",
+                    onSecondary = {
                         if (isRunning) {
                             laps.add(0, displayedElapsed)
                         } else {
-                            isRunning = false
                             elapsedBeforeStart = 0L
                             displayedElapsed = 0L
                             laps.clear()
                         }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(20.dp))
+                    },
+                    theme = theme,
+                    primaryFocus = focusRequester,
+                )
 
                 if (laps.isNotEmpty()) {
                     LazyColumn(
-                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 4.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                        modifier = Modifier.weight(1f).padding(top = FutureDimens.spacingLg),
+                        contentPadding = PaddingValues(horizontal = FutureDimens.spacingXl, vertical = FutureDimens.spacingXs),
                     ) {
                         itemsIndexed(laps) { index, lap ->
                             Row(
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween
+                                modifier = Modifier.fillMaxWidth().padding(vertical = FutureDimens.spacingSm),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                Text("הקפה ${laps.size - index}", color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.summary)
-                                Text(formatElapsed(lap), color = theme.textColor, fontSize = FutureTypography.bodyLarge)
+                                Text("הקפה ${laps.size - index}", color = theme.mutedTextColor, fontSize = FutureTypography.summary)
+                                Text(formatElapsed(lap), color = theme.textColor, fontSize = FutureTypography.bodyLarge, fontFamily = FutureTypography.monoFamily)
                             }
                         }
                     }
@@ -143,9 +138,4 @@ fun StopwatchScreen(theme: FutureTheme, onBack: () -> Unit) {
         }
     }
     ClockShortcutMenu(route = ClockRoute.Stopwatch, title = "שעון עצר", theme = theme, onMessage = snackbar::show)
-}
-
-@Composable
-private fun StopwatchActionButton(label: String, isPrimary: Boolean, color: Color, theme: FutureTheme, focusRequester: FocusRequester? = null, onClick: () -> Unit) {
-    RoundActionButton(label, if (isPrimary && color == theme.accentColor) theme.readableAccentColor else color, theme, 84.dp, focusRequester, onClick)
 }
