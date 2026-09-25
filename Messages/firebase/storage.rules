@@ -1,0 +1,15 @@
+rules_version = '2';
+
+// Encrypted chat images, one folder per recipient. The encryption key travels
+// inside the (also encrypted) message, so the stored blob is unreadable here.
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /media/{uid}/{id} {
+      allow read, delete: if request.auth != null && request.auth.uid == uid;
+      allow create: if request.auth != null
+        && request.auth.token.get('phone_number', null) != null
+        && request.resource.size < 25 * 1024 * 1024
+        && request.resource.metadata.from == request.auth.uid;
+    }
+  }
+}

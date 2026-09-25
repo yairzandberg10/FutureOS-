@@ -17,6 +17,7 @@ import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.components.MarqueeText
 import com.future.sharednav.focus.bringIntoViewOnFocus
+import com.future.sharednav.focus.escapeTextFieldFocusTrap
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -68,6 +69,7 @@ fun ConversationListScreen(
     onConversationClick: (Conversation) -> Unit,
     onComposeClick: () -> Unit,
     onGroupComposeClick: () -> Unit,
+    onChatSetupClick: () -> Unit,
     onCallConversation: (Conversation) -> Unit,
     onAddToContacts: (Conversation) -> Unit,
     onDeleteConversation: (Conversation) -> Unit,
@@ -79,12 +81,48 @@ fun ConversationListScreen(
     // השיחה שממנה נכנסנו לאחרונה למסך ה-thread - כשחוזרים "אחורה" הפוקוס
     // צריך לשוב לשורה הזו בדיוק, לא תמיד לשורה הראשונה ברשימה.
     lastSelectedThreadId: Long? = null,
+    // ארכיון: השיחות שהועברו אליו לא מופיעות ברשימה הראשית, ו"ארכיון" בכותרת
+    // מציג רק אותן (ר' ArchiveStore).
+    archivedThreadIds: Set<Long> = emptySet(),
+    showingArchive: Boolean = false,
+    onShowArchive: (Boolean) -> Unit = {},
+    onToggleArchive: (Conversation) -> Unit = {},
+    onMarkAllRead: () -> Unit = {},
 ) {
     val rowFocusRequesters = remember { mutableMapOf<Long, FocusRequester>() }
     val composeButtonFocusRequester = remember { FocusRequester() }
     var focusedConversation by remember { mutableStateOf<Conversation?>(null) }
     var menuFor by remember { mutableStateOf<Conversation?>(null) }
+    var listMenuOpen by remember { mutableStateOf(false) }
     var pendingDelete by remember { mutableStateOf<Conversation?>(null) }
+    var searchOpen by remember { mutableStateOf(false) }
+    var searchText by remember { mutableStateOf("") }
+
+    androidx.activity.compose.BackHandler(enabled = searchOpen || showingArchive) {
+        if (searchOpen) {
+            searchOpen = false
+            searchText = ""
+        } else {
+            onShowArchive(false)
+        }
+    }
+
+    // מה שמוצג בפועל: הרשימה הראשית או הארכיון, מסוננים לפי החיפוש (שם,
+    // מספר או תוכן ההודעה האחרונה).
+    val shown = remember(conversations, archivedThreadIds, showingArchive, searchText) {
+        val query = searchText.trim()
+        val digits = query.filter(Char::isDigit)
+        conversations
+            .filter { (it.threadId in archivedThreadIds) == showingArchive }
+            .filter { c ->
+                query.isEmpty() ||
+                    c.contact.name.contains(query, ignoreCase = true) ||
+                    c.lastMessageText.contains(query, ignoreCase = true) ||
+                    (digits.isNotEmpty() && c.contact.phoneNumber.filter(Char::isDigit).contains(digits))
+            }
+    }
+    val archivedCount = remember(conversations, archivedThreadIds) { conversations.count { it.threadId in archivedThreadIds } }
+    val unreadCount = remember(conversations) { conversations.sumOf { it.unreadCount } }
 
     LaunchedEffect(focusedConversation) {
         onFocusedConversationChanged(focusedConversation?.contact?.phoneNumber)
@@ -98,15 +136,35 @@ fun ConversationListScreen(
     // מקש Options הפיזי נחסם ברמת המערכת ולא מגיע כ-Key.Menu לאפליקציה -
     // זו הדרך האמיתית שהוא פותח את תפריט הפעולות של השיחה הממוקדת (ראו
     // אותו דפוס ב-Contact/ContactsScreens.kt וב-Files/FilesScreen.kt).
-    com.future.sharednav.nav.onOptionsKeyPress { if (focusedConversation != null) menuFor = focusedConversation }
+    // שיחה ממוקדת - תפריט השיחה (עם פעולות הרשימה בסופו); אחרת - תפריט הרשימה.
+    com.future.sharednav.nav.onOptionsKeyPress {
+        val focused = focusedConversation?.takeIf { f -> shown.any { it.threadId == f.threadId } }
+        if (focused != null) menuFor = focused else listMenuOpen = true
+    }
 
-    LaunchedEffect(conversations.isEmpty()) {
-        if (conversations.isEmpty()) {
+    LaunchedEffect(shown.isEmpty(), showingArchive) {
+        if (shown.isEmpty()) {
             focusedConversation = null
-            composeButtonFocusRequester.requestFocus()
-        } else {
-            val target = conversations.firstOrNull { it.threadId == lastSelectedThreadId } ?: conversations.first()
-            rowFocusRequesters.getOrPut(target.threadId) { FocusRequester() }.requestFocus()
+            if (!searchOpen) runCatching { composeButtonFocusRequester.requestFocus() }
+        } else if (!searchOpen) {
+            val target = shown.firstOrNull { it.threadId == lastSelectedThreadId } ?: shown.first()
+            runCatching { rowFocusRequesters.getOrPut(target.threadId) { FocusRequester() }.requestFocus() }
+        }
+    }
+
+    if (listMenuOpen) {
+        FutureOptionsMenu(theme = theme, onDismissRequest = { listMenuOpen = false }, header = if (showingArchive) "ארכיון" else "הודעות") {
+            ListMenuRows(
+                theme = theme,
+                unreadCount = unreadCount,
+                archivedCount = archivedCount,
+                showingArchive = showingArchive,
+                onPick = { listMenuOpen = false },
+                onCompose = onComposeClick,
+                onSearch = { searchOpen = true },
+                onMarkAllRead = onMarkAllRead,
+                onShowArchive = onShowArchive,
+            )
         }
     }
 
@@ -119,8 +177,22 @@ fun ConversationListScreen(
             onAddToContacts = if (conversation.contact.name == conversation.contact.phoneNumber) {
                 { onAddToContacts(conversation); menuFor = null }
             } else null,
+            isArchived = conversation.threadId in archivedThreadIds,
+            onToggleArchive = { onToggleArchive(conversation); menuFor = null },
             onDelete = { pendingDelete = conversation; menuFor = null },
-        )
+        ) {
+            ListMenuRows(
+                theme = theme,
+                unreadCount = unreadCount,
+                archivedCount = archivedCount,
+                showingArchive = showingArchive,
+                onPick = { menuFor = null },
+                onCompose = onComposeClick,
+                onSearch = { searchOpen = true },
+                onMarkAllRead = onMarkAllRead,
+                onShowArchive = onShowArchive,
+            )
+        }
     }
 
     pendingDelete?.let { conversation ->
@@ -139,29 +211,77 @@ fun ConversationListScreen(
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                // השורה העליונה של הדיזיין סיסטם (TopBar: 16/12dp, כותרת 20sp) עם שני
-                // כפתורי אייקון. הכותרת הייתה 24sp בריפוד 20dp - אחרת מכל מסך אחר.
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = FutureDimens.spacingLg, vertical = FutureDimens.spacingMd),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("הודעות", fontSize = FutureTypography.screenTitle, fontWeight = FontWeight.Bold, color = theme.textColor, modifier = Modifier.weight(1f))
-                    Row(horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm)) {
-                        TopBarIconButton(FutureIcons.Groups, "הודעה קבוצתית", theme.textColor, theme.accentColor, onGroupComposeClick)
-                        TopBarIconButton(FutureIcons.AutoMirrored.Chat, "הודעה חדשה", theme.textColor, theme.accentColor, onComposeClick, composeButtonFocusRequester)
+            Column(modifier = Modifier.fillMaxSize().padding(top = com.future.sharednav.systemui.StatusBarInset.HEIGHT_DP.dp)) {
+                // השורה העליונה של הדיזיין סיסטם (TopBar: 16/12dp, כותרת 20sp). מתחתיה
+                // כפתור "הודעה חדשה" ראשי ברוחב מלא - קודם הוא היה אייקון אחד מתוך
+                // שלושה בפינה, וקשה היה למצוא אותו.
+                androidx.compose.animation.AnimatedContent(
+                    targetState = searchOpen,
+                    transitionSpec = { com.future.sharednav.theme.FutureTransitions.appear() },
+                    label = "messagesHeader",
+                ) { open ->
+                    if (open) {
+                        com.future.sharednav.components.FutureTextField(
+                            value = searchText,
+                            onValueChange = { searchText = it },
+                            theme = theme,
+                            placeholder = if (showingArchive) "חיפוש בארכיון" else "חיפוש בהודעות",
+                            autoFocus = true,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = FutureDimens.spacingLg, vertical = FutureDimens.spacingMd)
+                                .escapeTextFieldFocusTrap(),
+                            leading = { Icon(FutureIcons.Search, contentDescription = null, tint = theme.mutedTextColor, modifier = Modifier.size(FutureDimens.iconMenuRow)) },
+                        )
+                    } else {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = FutureDimens.spacingLg, vertical = FutureDimens.spacingMd),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(if (showingArchive) "ארכיון" else "הודעות", fontSize = FutureTypography.screenTitle, fontWeight = FontWeight.Bold, color = theme.textColor, modifier = Modifier.weight(1f))
+                            Row(horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm)) {
+                                TopBarIconButton(FutureIcons.Search, "חיפוש", theme.textColor, theme.accentColor, { searchOpen = true })
+                                if (!showingArchive) {
+                                    TopBarIconButton(FutureIcons.Folder, "ארכיון", theme.textColor, theme.accentColor, { onShowArchive(true) })
+                                    TopBarIconButton(FutureIcons.Lock, "צ'אט FutureOS", theme.textColor, theme.accentColor, onChatSetupClick)
+                                    TopBarIconButton(FutureIcons.Groups, "הודעה קבוצתית", theme.textColor, theme.accentColor, onGroupComposeClick)
+                                }
+                            }
+                        }
                     }
+                }
+                if (!showingArchive) {
+                    com.future.sharednav.components.FutureButton(
+                        text = "הודעה חדשה",
+                        theme = theme,
+                        onClick = onComposeClick,
+                        fillMaxWidth = true,
+                        focusRequester = composeButtonFocusRequester,
+                        modifier = Modifier.padding(horizontal = FutureDimens.screenPadding).padding(bottom = FutureDimens.spacingSm),
+                    )
                 }
 
                 if (isLoading && conversations.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         FutureSpinner(theme = theme)
                     }
-                } else if (conversations.isEmpty()) {
+                } else if (shown.isEmpty()) {
                     EmptyState(
-                        icon = FutureIcons.AutoMirrored.Chat,
-                        title = "אין הודעות",
-                        subtitle = "כפתור ההודעה החדשה נמצא בראש המסך",
+                        icon = when {
+                            searchText.isNotBlank() -> FutureIcons.SearchOff
+                            showingArchive -> FutureIcons.Folder
+                            else -> FutureIcons.AutoMirrored.Chat
+                        },
+                        title = when {
+                            searchText.isNotBlank() -> "לא נמצאו הודעות"
+                            showingArchive -> "הארכיון ריק"
+                            else -> "אין הודעות"
+                        },
+                        subtitle = when {
+                            searchText.isNotBlank() -> null
+                            showingArchive -> "Options על שיחה - \"העבר לארכיון\""
+                            else -> "\"הודעה חדשה\" למעלה מתחיל שיחה"
+                        },
                         textColor = theme.textColor,
                     )
                 } else {
@@ -170,7 +290,7 @@ fun ConversationListScreen(
                         contentPadding = PaddingValues(horizontal = FutureDimens.screenPadding, vertical = FutureDimens.spacingSm),
                         verticalArrangement = Arrangement.spacedBy(FutureDimens.itemSpacing),
                     ) {
-                        itemsIndexed(conversations, key = { _, it -> it.threadId }) { index, conversation ->
+                        itemsIndexed(shown, key = { _, it -> it.threadId }) { index, conversation ->
                             ConversationRow(
                                 conversation,
                                 theme,
@@ -179,7 +299,7 @@ fun ConversationListScreen(
                                 focusRequester = rowFocusRequesters.getOrPut(conversation.threadId) { FocusRequester() },
                                 // בשורה העליונה, מקש למעלה תמיד קופץ במפורש לכפתור "הודעה חדשה" -
                                 // לא מסתמכים על חיפוש פוקוס גיאומטרי שנשבר אחרי גלילה למטה ואז למעלה
-                                onNavigateUpFromTop = if (index == 0) {
+                                onNavigateUpFromTop = if (index == 0 && !showingArchive && !searchOpen) {
                                     { composeButtonFocusRequester.requestFocus() }
                                 } else null
                             )
@@ -188,6 +308,29 @@ fun ConversationListScreen(
                 }
             }
         }
+    }
+}
+
+/** פעולות על כל הרשימה - בתפריט הרשימה, ובסוף תפריט השיחה. */
+@Composable
+private fun ListMenuRows(
+    theme: FutureTheme,
+    unreadCount: Int,
+    archivedCount: Int,
+    showingArchive: Boolean,
+    onPick: () -> Unit,
+    onCompose: () -> Unit,
+    onSearch: () -> Unit,
+    onMarkAllRead: () -> Unit,
+    onShowArchive: (Boolean) -> Unit,
+) {
+    if (!showingArchive) FutureMenuRow("הודעה חדשה", FutureIcons.Edit, theme, { onPick(); onCompose() })
+    FutureMenuRow("חיפוש", FutureIcons.Search, theme, { onPick(); onSearch() })
+    if (unreadCount > 0) FutureMenuRow("סמן הכל כנקרא ($unreadCount)", FutureIcons.MarkEmailRead, theme, { onPick(); onMarkAllRead() })
+    if (showingArchive) {
+        FutureMenuRow("חזרה להודעות", FutureIcons.AutoMirrored.Chat, theme, { onPick(); onShowArchive(false) })
+    } else {
+        FutureMenuRow(if (archivedCount > 0) "ארכיון ($archivedCount)" else "ארכיון", FutureIcons.Folder, theme, { onPick(); onShowArchive(true) })
     }
 }
 
@@ -275,14 +418,19 @@ private fun ConversationOptionsMenu(
     onDismiss: () -> Unit,
     onCall: () -> Unit,
     onAddToContacts: (() -> Unit)?,
+    isArchived: Boolean,
+    onToggleArchive: () -> Unit,
     onDelete: () -> Unit,
+    listRows: @Composable () -> Unit,
 ) {
     FutureOptionsMenu(theme = theme, onDismissRequest = onDismiss, header = conversation.contact.name) {
         FutureMenuRow("התקשר", FutureIcons.Call, theme, onCall)
         if (onAddToContacts != null) {
             FutureMenuRow("הוסף לאנשי קשר", FutureIcons.PersonAdd, theme, onAddToContacts)
         }
+        FutureMenuRow(if (isArchived) "הוצא מהארכיון" else "העבר לארכיון", FutureIcons.Folder, theme, onToggleArchive)
         FutureMenuRow("מחק שיחה", FutureIcons.Delete, theme, onDelete, destructive = true)
+        listRows()
     }
 }
 

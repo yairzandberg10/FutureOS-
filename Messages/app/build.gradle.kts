@@ -14,6 +14,16 @@ if (keystorePropertiesFile.exists()) {
     keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
 }
 
+/**
+ * צ'אט FutureOS רץ על Firebase. תוסף google-services מוחל רק כש-app/google-services.json
+ * קיים: הקובץ פרטי לפרויקט של המשתמש ולא נכנס ל-git, והתוסף נכשל בלעדיו. עד
+ * שהקובץ מתווסף, Messages נבנית ועובדת ב-SMS/MMS בדיוק כמו קודם. ראו firebase/README.md.
+ */
+val googleServicesJson = file("google-services.json")
+if (googleServicesJson.exists()) {
+    apply(plugin = "com.google.gms.google-services")
+}
+
 android {
     namespace = "com.future.messages"
     compileSdk = 37
@@ -26,6 +36,9 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // נקרא ב-ChatBackend: בלי google-services.json אין FirebaseApp, וכל קריאה
+        // ל-Firebase הייתה זורקת חריגה.
+        buildConfigField("boolean", "FIREBASE_CONFIGURED", googleServicesJson.exists().toString())
     }
 
     signingConfigs {
@@ -74,6 +87,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -89,6 +103,16 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+
+    // צ'אט FutureOS: אימות מספר (Auth), תור הודעות מוצפנות (Firestore),
+    // התראות מיידיות (FCM) ותמונות מוצפנות (Storage). לא עושים כלום בלי
+    // google-services.json (ראו ChatBackend).
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.auth)
+    implementation(libs.firebase.firestore)
+    implementation(libs.firebase.messaging)
+    implementation(libs.firebase.storage)
+    implementation(libs.kotlinx.coroutines.play.services)
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)

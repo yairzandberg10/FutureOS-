@@ -52,4 +52,6 @@ firebase-debug.log
 # תלויות Node של ה-Cloud Functions ותוצרי הקומפילציה שלהן
 Navigation/firebase/functions/node_modules/
 Navigation/firebase/functions/lib/
+Messages/firebase/functions/node_modules/
+Messages/firebase/functions/lib/
 replay_pid*.log

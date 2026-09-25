@@ -134,6 +134,20 @@ fun MessageThreadScreen(
                 trailingContentDescription = "התקשר",
                 onTrailingClick = onCall,
             )
+            // "מקליד..." - מגיע רק מצ'אט FutureOS, כשהצד השני כותב עכשיו.
+            val typingMap by com.future.messages.chat.FutureChat.typing.collectAsState()
+            val peerTyping = remember(typingMap) {
+                com.future.messages.chat.FutureChat.isTyping(context, conversation.contact.phoneNumber)
+            }
+            if (peerTyping) {
+                Text(
+                    "מקליד…",
+                    color = theme.readableAccentColor,
+                    fontSize = FutureTypography.caption,
+                    fontWeight = FutureTypography.weightMedium,
+                    modifier = Modifier.padding(horizontal = FutureDimens.spacingLg),
+                )
+            }
 
             val messageListState = rememberLazyListState()
             val messageListScope = rememberCoroutineScope()
@@ -190,7 +204,10 @@ fun MessageThreadScreen(
                 theme = theme,
                 recipient = conversation.contact.name,
                 text = textState,
-                onTextChange = { textState = it },
+                onTextChange = {
+                    textState = it
+                    if (it.isNotEmpty()) com.future.messages.chat.FutureChat.onTyping(context, conversation.contact.phoneNumber)
+                },
                 canSend = textState.isNotBlank() || attachedImageUri != null,
                 onSend = {
                     if (textState.isNotBlank() || attachedImageUri != null) {
@@ -364,8 +381,12 @@ private fun MessageBubble(message: Message, theme: FutureTheme, onClick: () -> U
 @Composable
 private fun MessageMeta(message: Message, time: String, theme: FutureTheme) {
     val status = message.status
-    // הודעה שעברה בצ'אט RCS מסומנת בסיומת - כדי שיהיה ברור מתי זה לא SMS.
-    val via = if (message.isRcs) " · RCS" else ""
+    // הודעה שעברה בצ'אט (FutureOS או RCS) מסומנת בסיומת - כדי שיהיה ברור מתי זה לא SMS.
+    val via = when {
+        message.isChat -> " · צ'אט"
+        message.isRcs -> " · RCS"
+        else -> ""
+    }
     val (icon, label, color) = when (status) {
         null -> Triple(null, "$time$via", theme.subtleTextColor)
         com.future.messages.data.MessageStatus.SENDING -> Triple(FutureIcons.Schedule, "שולח", theme.mutedTextColor)

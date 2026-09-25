@@ -146,6 +146,15 @@
             android:name=".receiver.SmsDeliveredReceiver"
             android:exported="false" />
 
+        <!-- צ'אט FutureOS: Push מ-FCM ("יש הודעה בתור") - מושך ומפענח במכשיר. -->
+        <service
+            android:name=".chat.ChatPushService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
         <!-- RCS: מחזיק את ה-SipDelegate פתוח כדי שהודעות נכנסות יגיעו. -->
         <service
             android:name=".rcs.RcsService"

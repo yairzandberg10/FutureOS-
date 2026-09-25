@@ -22,7 +22,9 @@ data class Message(
     val imageUri: Uri? = null,
     val status: MessageStatus? = null,
     /** עברה בצ'אט RCS (דרך רשת ה-IMS) ולא כ-SMS. */
-    val isRcs: Boolean = false
+    val isRcs: Boolean = false,
+    /** עברה בצ'אט FutureOS (אינטרנט, מוצפנת מקצה לקצה) ולא כ-SMS. */
+    val isChat: Boolean = false
 )
 
 data class Conversation(

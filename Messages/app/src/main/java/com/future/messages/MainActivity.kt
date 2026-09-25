@@ -90,6 +90,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         // צ'אט RCS - לא עושה כלום כשאין הרשאת IMS (כלומר מחוץ לתמונת מערכת).
         com.future.messages.rcs.RcsService.start(this)
+        // צ'אט FutureOS - מעדכן מפתחות/טוקן ומושך מה שהצטבר. לא עושה כלום בלי Firebase.
+        com.future.messages.chat.FutureChat.refreshRegistration(this)
         setContent {
             var sharedTheme by remember { mutableStateOf(ThemeClient.getTheme(this)) }
             val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
@@ -97,6 +99,10 @@ class MainActivity : ComponentActivity() {
                 val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
                     if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
                         sharedTheme = ThemeClient.getTheme(this@MainActivity)
+                        // צ'אט: האזנה חיה בזמן שהמסך פתוח ("מקליד...", קבלות).
+                        com.future.messages.chat.FutureChat.attach(this@MainActivity)
+                    } else if (event == androidx.lifecycle.Lifecycle.Event.ON_PAUSE) {
+                        com.future.messages.chat.FutureChat.detach()
                     }
                 }
                 lifecycleOwner.lifecycle.addObserver(observer)
@@ -119,6 +125,7 @@ private sealed class MessagesScreen {
     ) : MessagesScreen()
     data class Compose(val forwardText: String = "", val forwardImageUri: Uri? = null) : MessagesScreen()
     object GroupCompose : MessagesScreen()
+    object ChatSetup : MessagesScreen()
 }
 
 @Composable
@@ -164,6 +171,9 @@ fun MessagesApp(theme: FutureTheme) {
     // נשמר גם אחרי שחוזרים ל-List - כדי שהפוקוס יחזור לשיחה שממנה נכנסנו,
     // לא תמיד לשורה הראשונה ברשימה.
     var lastSelectedThreadId by remember { mutableStateOf<Long?>(null) }
+    val archiveStore = remember { com.future.messages.data.ArchiveStore(context) }
+    var archivedThreadIds by remember { mutableStateOf(archiveStore.archivedIds()) }
+    var showingArchive by remember { mutableStateOf(false) }
 
     fun refreshConversations() {
         if (!hasPermissions) return
@@ -220,6 +230,7 @@ fun MessagesApp(theme: FutureTheme) {
                 },
                 onComposeClick = { screen = MessagesScreen.Compose() },
                 onGroupComposeClick = { screen = MessagesScreen.GroupCompose },
+                onChatSetupClick = { screen = MessagesScreen.ChatSetup },
                 onCallConversation = { conversation ->
                     context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:${conversation.contact.phoneNumber}")))
                 },
@@ -241,6 +252,25 @@ fun MessagesApp(theme: FutureTheme) {
                 },
                 onFocusedConversationChanged = { phone -> activity?.focusedConversationPhone = phone },
                 lastSelectedThreadId = lastSelectedThreadId,
+                archivedThreadIds = archivedThreadIds,
+                showingArchive = showingArchive,
+                onShowArchive = { showingArchive = it },
+                onToggleArchive = { conversation ->
+                    val archive = conversation.threadId !in archivedThreadIds
+                    archivedThreadIds = archiveStore.setArchived(conversation.threadId, archive)
+                    android.widget.Toast.makeText(
+                        context,
+                        if (archive) "השיחה הועברה לארכיון" else "השיחה הוצאה מהארכיון",
+                        android.widget.Toast.LENGTH_SHORT,
+                    ).show()
+                },
+                onMarkAllRead = {
+                    val unread = conversations.filter { it.unreadCount > 0 }.map { it.threadId }
+                    ioScope.launch {
+                        withContext(Dispatchers.IO) { unread.forEach { repository.markThreadRead(it) } }
+                        refreshConversations()
+                    }
+                },
             )
             is MessagesScreen.Thread -> {
                 // סטטוס השליחה (SENDING/SENT/FAILED) מתעדכן אסינכרונית ע"י
@@ -329,6 +359,10 @@ fun MessagesApp(theme: FutureTheme) {
                         )
                     }
                 }
+            )
+            is MessagesScreen.ChatSetup -> com.future.messages.ui.screens.ChatSetupScreen(
+                theme = theme,
+                onBack = { screen = MessagesScreen.List },
             )
             is MessagesScreen.GroupCompose -> GroupComposeScreen(
                 theme = theme,
