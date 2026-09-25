@@ -31,7 +31,9 @@ private const val TAG = "SharedNav/FutureTheme"
 @Composable
 fun rememberFutureTheme(): FutureTheme {
     val context = LocalContext.current
-    var shared by remember(context) { mutableStateOf(ThemeClient.getTheme(context)) }
+    // מהמטמון: כל מסך/דיאלוג שקורא לזה לא משלם IPC נוסף. ב-onChange למטה
+    // נקרא טרי, כי ה-observer של המטמון אולי עוד לא איפס אותו.
+    var shared by remember(context) { mutableStateOf(ThemeClient.cachedTheme(context)) }
 
     DisposableEffect(context) {
         val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {

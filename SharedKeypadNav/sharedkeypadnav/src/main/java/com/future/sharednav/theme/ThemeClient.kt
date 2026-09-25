@@ -2,6 +2,7 @@ package com.future.sharednav.theme
 
 import android.content.ContentValues
 import android.content.Context
+import android.database.ContentObserver
 import android.graphics.Color
 import android.net.Uri
 import android.util.Log
@@ -31,7 +32,62 @@ object ThemeClient {
     /** ציבורי כדי ש-rememberFutureTheme יוכל להירשם לשינויים בו. */
     val THEME_URI: Uri = Uri.parse("content://${SystemUiTarget.THEME_AUTHORITY}/theme")
 
+    /**
+     * עותק אחרון של הערכה לכל התהליך, לנתיבים החמים ([cachedTheme]). כל query
+     * ל-ThemeProvider הוא IPC לתהליך של FutureUI ועוד הקצאת CursorWindow -
+     * ו-rememberFutureType קרא אותו פעם לכל מופע רכיב (כל כרטיס ברשימה),
+     * על ה-main thread, בזמן ה-composition הראשון של המסך.
+     * מתאפס ב-ContentObserver ברגע ש-FutureUI מודיע על שינוי.
+     */
+    @Volatile private var cached: SharedTheme? = null
+    @Volatile private var observing = false
+    /** עולה בכל שינוי - קריאה שהתחילה לפני השינוי לא תשמור ערך ישן במטמון. */
+    @Volatile private var generation = 0
+
+    /** קריאה טרייה מה-ThemeProvider (IPC). מעדכנת גם את המטמון. */
     fun getTheme(context: Context): SharedTheme {
+        val gen = generation
+        // null = FutureUI לא ענה. ברירת המחדל לא נשמרת, כדי שנפילה רגעית של
+        // התהליך שלו לא תקבע ערכה שגויה עד השינוי הבא.
+        val theme = queryTheme(context) ?: return SharedTheme(true, Color.WHITE)
+        if (observing && gen == generation) cached = theme
+        return theme
+    }
+
+    /**
+     * הערכה מהמטמון, או קריאה אחת ל-ThemeProvider אם הוא ריק. טרי כמו
+     * [getTheme] כל עוד ה-observer רשום; אם ההרשאה נכשלה (FutureUI לא מותקן)
+     * לא שומרים כלום וכל קריאה חוזרת ל-[getTheme].
+     */
+    fun cachedTheme(context: Context): SharedTheme {
+        cached?.let { return it }
+        ensureObserving(context)
+        return getTheme(context)
+    }
+
+    private fun ensureObserving(context: Context) {
+        if (observing) return
+        synchronized(this) {
+            if (observing) return
+            try {
+                // handler null: ה-onChange רץ על thread של binder, לא תלוי ב-main.
+                context.applicationContext.contentResolver.registerContentObserver(
+                    THEME_URI, false,
+                    object : ContentObserver(null) {
+                        override fun onChange(selfChange: Boolean) {
+                            generation++
+                            cached = null
+                        }
+                    },
+                )
+                observing = true
+            } catch (e: Exception) {
+                Log.w(TAG, "registerContentObserver נכשל, בלי מטמון לערכה", e)
+            }
+        }
+    }
+
+    private fun queryTheme(context: Context): SharedTheme? {
         return try {
             context.contentResolver.query(THEME_URI, null, null, null, null)?.use { cursor ->
                 if (cursor.moveToFirst()) {
@@ -43,10 +99,10 @@ object ThemeClient {
                     val fontMultiplier = if (fontCol >= 0) cursor.getFloat(fontCol) else 1.0f
                     SharedTheme(isDark, color, fontMultiplier)
                 } else null
-            } ?: SharedTheme(true, Color.WHITE)
+            }
         } catch (e: Exception) {
             Log.w(TAG, "getTheme נכשל, נופל לברירת מחדל (כהה/לבן)", e)
-            SharedTheme(true, Color.WHITE)
+            null
         }
     }
 
@@ -60,8 +116,8 @@ object ThemeClient {
     }
 
     /** מכפיל גודל הגופן בלבד - הדרך שבה רכיבים משותפים קוראים את הסקאלה
-     *  בלי לשלם על בניית SharedTheme שלם (ראו FutureType.rememberFutureType). */
-    fun getFontSizeMultiplier(context: Context): Float = getTheme(context).fontSizeMultiplier
+     *  מהמטמון - בלי IPC בכל מופע רכיב (ראו FutureType.rememberFutureType). */
+    fun getFontSizeMultiplier(context: Context): Float = cachedTheme(context).fontSizeMultiplier
 
     fun setFontSizeMultiplier(context: Context, multiplier: Float) {
         try {
