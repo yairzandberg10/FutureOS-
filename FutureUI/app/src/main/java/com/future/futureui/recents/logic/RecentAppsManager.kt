@@ -90,6 +90,9 @@ class RecentAppsManager(private val context: Context) {
         save()
     }
 
+    /** האם [packageName] היא האפליקציה האחרונה שנרשמה - כלומר זו שבחזית עכשיו. */
+    fun isTop(packageName: String): Boolean = order.firstOrNull() == packageName
+
     fun remove(packageName: String) {
         if (order.remove(packageName)) save()
     }

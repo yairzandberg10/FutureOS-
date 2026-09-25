@@ -34,7 +34,9 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -51,9 +53,9 @@ import com.future.futureui.recents.logic.RecentAppInfo
 
 /**
  * "אפליקציות אחרונות" בפריסה של Redmi: רשת של שני חלונות בשורה - שם
- * האפליקציה ואייקון קטן מעל כל כרטיס, הכרטיס עצמו בצבע האפליקציה עם
- * האייקון במרכזו (אין גישה לצילומי המשימות בלי הרשאת מערכת), וכפתור X עגול
- * בתחתית לסגירת הכל. בראש המסך - הזיכרון הפנוי.
+ * האפליקציה ואייקון קטן מעל כל כרטיס, הכרטיס עצמו הוא צילום המסך האחרון של
+ * האפליקציה (ר' RecentSnapshots; בלי צילום - צבע האפליקציה עם האייקון במרכז),
+ * וכפתור X עגול שמרחף מעל הרשת בתחתית לסגירת הכל. בראש המסך - הזיכרון הפנוי.
  *
  * מקשים (RTL): חצים ברשת; OK פותח; Options/מחיקה סוגרים את החלון הממוקד;
  * 0 סוגר הכל; חץ למטה מהשורה האחרונה מגיע לכפתור X; BACK יוצא.
@@ -61,6 +63,7 @@ import com.future.futureui.recents.logic.RecentAppInfo
 @Composable
 fun RecentAppsScreen(
     apps: List<RecentAppInfo>,
+    snapshots: Map<String, ImageBitmap> = emptyMap(),
     onLaunch: (RecentAppInfo) -> Unit,
     onClose: (RecentAppInfo) -> Unit,
     onDismiss: () -> Unit,
@@ -148,16 +151,18 @@ fun RecentAppsScreen(
                     }
                 }
 
+                Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 if (apps.isEmpty()) {
-                    Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text("אין אפליקציות אחרונות", color = Color.White.copy(alpha = 0.5f), fontSize = FutureTypography.body)
                     }
                 } else {
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(COLUMNS),
                         state = gridState,
-                        modifier = Modifier.weight(1f).fillMaxWidth(),
-                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+                        modifier = Modifier.fillMaxSize(),
+                        // ריווח תחתון כדי שהשורה האחרונה תוכל לעלות מעל כפתור ה-X המרחף
+                        contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 8.dp, bottom = 84.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         verticalArrangement = Arrangement.spacedBy(14.dp),
                         userScrollEnabled = false,
@@ -165,6 +170,7 @@ fun RecentAppsScreen(
                         itemsIndexed(apps, key = { _, app -> app.packageName }) { index, app ->
                             RecentAppCard(
                                 app = app,
+                                snapshot = snapshots[app.packageName],
                                 isFocused = index == focusedIndex,
                                 modifier = Modifier.animateItem(),
                             )
@@ -173,25 +179,25 @@ fun RecentAppsScreen(
                     }
                 }
 
-                // כפתור X עגול לסגירת הכל, כמו ב-Redmi.
-                Box(
-                    modifier = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 8.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    if (apps.isNotEmpty()) {
-                        val scale by animateFloatAsState(if (clearFocused) 1.12f else 1f, label = "clearAllScale")
-                        Box(
-                            modifier = Modifier
-                                .size(52.dp)
-                                .graphicsLayer { scaleX = scale; scaleY = scale }
-                                .clip(CircleShape)
-                                .background(if (clearFocused) Color.White.copy(alpha = 0.28f) else Color.White.copy(alpha = 0.12f))
-                                .then(if (clearFocused) Modifier.border(2.dp, Color.LightGray, CircleShape) else Modifier),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Icon(Icons.Rounded.Close, contentDescription = "סגור הכל", tint = Color.White, modifier = Modifier.size(26.dp))
-                        }
+                // כפתור X עגול לסגירת הכל, כמו ב-Redmi - מרחף מעל הכרטיסים ולא תופס שורה משלו.
+                if (apps.isNotEmpty()) {
+                    val scale by animateFloatAsState(if (clearFocused) 1.12f else 1f, label = "clearAllScale")
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = 14.dp)
+                            .size(56.dp)
+                            .graphicsLayer {
+                                scaleX = scale; scaleY = scale
+                                shadowElevation = 12.dp.toPx(); shape = CircleShape; clip = true
+                            }
+                            .background(if (clearFocused) Color(0xFF4A4A50) else Color(0xE62C2C30))
+                            .border(if (clearFocused) 2.dp else 1.dp, if (clearFocused) Color.LightGray else Color.White.copy(alpha = 0.18f), CircleShape),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(Icons.Rounded.Close, contentDescription = "סגור הכל", tint = Color.White, modifier = Modifier.size(28.dp))
                     }
+                }
                 }
 
                 Text(
@@ -207,7 +213,7 @@ fun RecentAppsScreen(
 }
 
 @Composable
-private fun RecentAppCard(app: RecentAppInfo, isFocused: Boolean, modifier: Modifier = Modifier) {
+private fun RecentAppCard(app: RecentAppInfo, snapshot: ImageBitmap?, isFocused: Boolean, modifier: Modifier = Modifier) {
     val shape = RoundedCornerShape(FutureShapes.radiusXl)
     val scale by animateFloatAsState(if (isFocused) 1.03f else 1f, label = "recentCardScale")
     val icon = remember(app.packageName) { app.icon.toBitmap().asImageBitmap() }
@@ -237,11 +243,26 @@ private fun RecentAppCard(app: RecentAppInfo, isFocused: Boolean, modifier: Modi
                 .fillMaxWidth()
                 .height(CardHeight)
                 .clip(shape)
-                .background(Brush.verticalGradient(listOf(tint, tint.copy(alpha = 0.75f).compositeOverBlack())))
-                .border(if (isFocused) 2.5.dp else 0.5.dp, if (isFocused) Color.White else Color.White.copy(alpha = 0.12f), shape),
+                .background(Brush.verticalGradient(listOf(tint, tint.copy(alpha = 0.75f).compositeOverBlack()))),
             contentAlignment = Alignment.Center,
         ) {
-            Image(icon, contentDescription = null, modifier = Modifier.size(64.dp).clip(RoundedCornerShape(percent = 28)))
+            if (snapshot != null) {
+                // המסך האחרון של האפליקציה, מיושר לראש (שם בדרך כלל הכותרת והתוכן)
+                Image(
+                    snapshot,
+                    contentDescription = app.label,
+                    contentScale = ContentScale.Crop,
+                    alignment = Alignment.TopCenter,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            } else {
+                Image(icon, contentDescription = null, modifier = Modifier.size(64.dp).clip(RoundedCornerShape(percent = 28)))
+            }
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .border(if (isFocused) 2.5.dp else 0.5.dp, if (isFocused) Color.White else Color.White.copy(alpha = 0.12f), shape)
+            )
         }
     }
 }
@@ -250,4 +271,6 @@ private fun Color.compositeOverBlack(): Color = Color(red * alpha, green * alpha
 
 private const val COLUMNS = 2
 private const val CLEAR_ALL = -1
-private val CardHeight = 150.dp
+// מסך 640x960 ב-320dpi = 320x480dp: כרטיס ברוחב ~140dp; 156dp מראה את רוב
+// המסך של האפליקציה (החלק התחתון נחתך) ועדיין שתי שורות כמעט שלמות נכנסות
+private val CardHeight = 156.dp

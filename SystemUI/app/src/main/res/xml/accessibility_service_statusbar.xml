@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+    כמו accessibility_service_keys, ובנוסף canTakeScreenshot: שירות שורת המצב
+    מצלם את האפליקציה שבחזית (AccessibilityService.takeScreenshot) כדי שמסך
+    "אפליקציות אחרונות" יציג את המסך האחרון של כל אפליקציה ולא רק אייקון.
+-->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityEventTypes="typeWindowStateChanged"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:accessibilityFlags="flagDefault|flagRequestFilterKeyEvents"
+    android:canRetrieveWindowContent="false"
+    android:canRequestFilterKeyEvents="true"
+    android:canTakeScreenshot="true"
+    android:notificationTimeout="500" />
