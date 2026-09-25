@@ -21,6 +21,7 @@
         <package android:name="com.future.mikdash" />
         <package android:name="com.future.music" />
         <package android:name="com.future.sfarim" />
+        <package android:name="com.future.assistant" />
         <!-- Find My Device של גוגל - להעברה (pass-through) ממסך האבטחה, כמו שכבר
              נעשה עם FutureUI; אם האפליקציה לא מותקנת, safeStartActivity תופס את זה. -->
         <package android:name="com.google.android.apps.adm" />

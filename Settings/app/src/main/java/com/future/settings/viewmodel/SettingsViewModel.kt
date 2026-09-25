@@ -879,6 +879,29 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    // --- הגדרות מערכת מתקדמות (ExtraSystemSettings) ---
+
+    /** id של הגדרה -> הערך הנוכחי שלה. ריק עד שהקריאה ברקע מסתיימת. */
+    val extraValues = androidx.compose.runtime.mutableStateMapOf<String, String>()
+
+    fun loadExtraSettings(screen: com.future.settings.utils.SysScreen) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val values = com.future.settings.utils.ExtraSystemSettings.readAll(systemInteractor, screen.allSettings)
+            withContext(Dispatchers.Main) { extraValues.putAll(values) }
+        }
+    }
+
+    /** כמו applyRootToggle: הערך במסך מתעדכן רק אם הכתיבה באמת הצליחה. */
+    fun setExtraSetting(setting: com.future.settings.utils.SysSetting, value: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val success = com.future.settings.utils.ExtraSystemSettings.write(systemInteractor, setting, value)
+            withContext(Dispatchers.Main) {
+                if (success) extraValues[setting.id] = value
+                else showToast("לא ניתן לשנות הגדרה זו - נדרשת הרשאת root")
+            }
+        }
+    }
+
     // --- אבחון מכשיר ---
 
     fun testVibration() = systemInteractor.testVibration()

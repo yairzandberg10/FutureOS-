@@ -92,7 +92,7 @@ object GridCatalog {
         GridControl("app_files", "קבצים", Icons.Rounded.Folder, false),
         GridControl("app_navigation", "ניווט", Icons.Rounded.Navigation, false),
         GridControl("app_translate", "תרגום", Icons.Rounded.Translate, false),
-        GridControl("app_assistant", "עוזר קולי", Icons.Rounded.Mic, false),
+        GridControl("app_assistant", "עוזרי", Icons.Rounded.Mic, false),
         GridControl("app_remote", "שלט", Icons.Rounded.SettingsRemote, false),
         GridControl("app_tasks", "משימות", Icons.Rounded.Checklist, false),
         // מסכי הגדרות

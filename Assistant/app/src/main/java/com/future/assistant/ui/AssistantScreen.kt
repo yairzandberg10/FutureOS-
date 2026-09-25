@@ -69,7 +69,7 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
 
     var state by remember { mutableStateOf(AssistantState.IDLE) }
     var heardText by remember { mutableStateOf("") }
-    var responseText by remember { mutableStateOf("במה אפשר לעזור?") }
+    var responseText by remember { mutableStateOf("היי, אני עוזרי. במה אפשר לעזור?") }
     var pendingClose by remember { mutableStateOf(false) }
     var modelReady by remember { mutableStateOf(false) }
     var modelFailed by remember { mutableStateOf(false) }
@@ -187,7 +187,7 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Box(modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp)) {
-                    Text("עוזר קולי", color = theme.textColor, fontSize = FutureTypography.title, fontWeight = FontWeight.Bold)
+                    Text("עוזרי", color = theme.textColor, fontSize = FutureTypography.title, fontWeight = FontWeight.Bold)
                 }
 
                 Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {

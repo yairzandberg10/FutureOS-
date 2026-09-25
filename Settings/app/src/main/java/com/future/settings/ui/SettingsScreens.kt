@@ -259,6 +259,9 @@ fun SettingsApp(viewModel: SettingsViewModel) {
             composable(Screen.AppTimers.route) { AppTimersScreen(navController, theme, viewModel) }
             composable(Screen.Diagnostics.route) { DiagnosticsScreen(navController, theme, viewModel) }
             composable(Screen.Sos.route) { SosScreen(navController, theme, viewModel) }
+            com.future.settings.utils.ExtraSystemSettings.ALL_SCREENS.forEach { extra ->
+                composable(extra.route) { ExtraSettingsScreen(navController, theme, viewModel, extra) }
+            }
         }
     }
 }
@@ -282,7 +285,11 @@ private val SEARCHABLE_SETTINGS = listOf(
     SearchableSetting("כללי", "general תאריך שעה שפה נגישות accessibility date time language", FutureIcons.Language, Screen.General.route),
     SearchableSetting("אפליקציות", "apps אפליקציה", FutureIcons.Apps, Screen.Apps.route),
     SearchableSetting("אודות הטלפון", "about imei גרסה מספר טלפון version", FutureIcons.Info, Screen.About.route)
-)
+) + com.future.settings.utils.ExtraSystemSettings.ALL_SCREENS.flatMap { screen ->
+    // המסך עצמו, ואז כל הגדרה שבו בנפרד - חיפוש "תאורת לילה" מוביל ישר למסך שלה.
+    listOf(SearchableSetting(screen.title, screen.keywords, FutureIcons.Tune, screen.route)) +
+        screen.allSettings.map { SearchableSetting(it.title, screen.title, FutureIcons.Tune, screen.route) }
+}
 
 @Composable
 fun MainMenu(navController: NavController, theme: ThemeConfig, viewModel: SettingsViewModel) {
@@ -412,6 +419,21 @@ fun MainMenu(navController: NavController, theme: ThemeConfig, viewModel: Settin
                         SettingItem("אודות הטלפון", "גרסה, דגם ומספר טלפון", FutureIcons.Info, theme, modifier = menuFocus(Screen.About.route)) { navController.navigate(Screen.About.route) }
                     }
                 }
+
+                item { SettingHeader("עוד", theme) }
+                item {
+                    val context = LocalContext.current
+                    val accessibilityRoute = com.future.settings.utils.ExtraSystemSettings.ACCESSIBILITY.route
+                    SettingsCard(theme) {
+                        SettingItem("נגישות", "ניגודיות, תיקון צבעים, שמע והקראה", FutureIcons.Accessibility, theme, modifier = menuFocus(accessibilityRoute)) { navController.navigate(accessibilityRoute) }
+                        SettingDivider(theme)
+                        SettingItem("עוזרי", "העוזר הקולי - שואלים אותו כל דבר", FutureIcons.Mic, theme) {
+                            val intent = context.packageManager.getLaunchIntentForPackage("com.future.assistant")
+                            if (intent != null) safeStartActivity(context, intent, "לא ניתן לפתוח את עוזרי")
+                            else android.widget.Toast.makeText(context, "עוזרי לא מותקן על המכשיר", android.widget.Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
             } else {
                 val query = searchQuery.trim()
                 val matches = SEARCHABLE_SETTINGS.filter { it.title.contains(query, ignoreCase = true) || it.keywords.contains(query, ignoreCase = true) }
@@ -470,6 +492,8 @@ fun ConnectionsScreen(navController: NavController, theme: ThemeConfig, viewMode
                         SettingItem("Bluetooth", if (viewModel.bluetoothEnabled.value) "מופעל" else "כבוי", FutureIcons.Bluetooth, theme) { openBluetoothApp(context, navController) }
                         SettingDivider(theme)
                         SettingSwitch("מצב טיסה", "מנתק שיחות, נתונים ו-Bluetooth בבת אחת", viewModel.airplaneMode.value, { viewModel.toggleAirplaneMode() }, theme)
+                        SettingDivider(theme)
+                        SettingItem("רשת מתקדמת", "Wi-Fi, DNS פרטי וחיסכון בנתונים", FutureIcons.Wifi, theme) { navController.navigate(com.future.settings.utils.ExtraSystemSettings.NETWORK.route) }
                     }
                 }
                 item { SettingHeader("רשת סלולרית", theme) }
@@ -751,6 +775,8 @@ fun SoundScreen(navController: NavController, theme: ThemeConfig, viewModel: Set
                         SettingSwitch("צליל נעילת מסך", "צליל כשהמסך נכבה או נדלק", viewModel.lockSound.value, { viewModel.toggleLockSound() }, theme)
                         SettingDivider(theme)
                         SettingSwitch("צליל טעינה", "צליל בחיבור/ניתוק מטען", viewModel.chargingSound.value, { viewModel.toggleChargingSound() }, theme)
+                        SettingDivider(theme)
+                        SettingItem("צלילים ורטט מתקדם", "נא לא להפריע ועוצמת רטט", FutureIcons.Tune, theme) { navController.navigate(com.future.settings.utils.ExtraSystemSettings.SOUND.route) }
                     }
                 }
             }
@@ -793,6 +819,8 @@ fun DisplayScreen(navController: NavController, theme: ThemeConfig, viewModel: S
                         SettingItem("כיבוי מסך אוטומטי", "נכבה אחרי " + viewModel.screenTimeoutLabel(viewModel.screenTimeout.value) + " בלי שימוש", FutureIcons.Timer, theme) {
                             viewModel.cycleScreenTimeout()
                         }
+                        SettingDivider(theme)
+                        SettingItem("תצוגה מתקדמת", "תאורת לילה, צבעים ושומר מסך", FutureIcons.Nightlight, theme) { navController.navigate(com.future.settings.utils.ExtraSystemSettings.DISPLAY.route) }
                     }
                 }
                 item { SettingHeader("צבע הדגשה", theme) }
@@ -1137,6 +1165,8 @@ fun BatteryScreen(navController: NavController, theme: ThemeConfig, viewModel: S
                             theme,
                             "חיסכון בחשמל יידלק לבד כשהסוללה יורדת לרמה הזו"
                         ) { viewModel.setLowBatteryWarningLevel((it * 100).toInt().coerceIn(0, 100)) }
+                        SettingDivider(theme)
+                        SettingItem("חשמל מתקדם", "סוללה מותאמת והמתנה לאפליקציות", FutureIcons.BatterySaver, theme) { navController.navigate(com.future.settings.utils.ExtraSystemSettings.POWER.route) }
                     }
                 }
                 item { SettingHeader("מצב הסוללה", theme) }
@@ -1306,6 +1336,8 @@ fun GeneralScreen(navController: NavController, theme: ThemeConfig, viewModel: S
                         SettingItem("גודל טקסט", "נמצא במסך תצוגה", FutureIcons.Accessibility, theme) { navController.navigate(Screen.Display.route) }
                         SettingDivider(theme)
                         SettingSwitch("היפוך צבעים", "לבן הופך לשחור ולהפך, לניגודיות חזקה", viewModel.colorInversion.value, { viewModel.toggleColorInversion() }, theme)
+                        SettingDivider(theme)
+                        SettingItem("נגישות", "ניגודיות, תיקון צבעים, שמע והקראה", FutureIcons.Accessibility, theme) { navController.navigate(com.future.settings.utils.ExtraSystemSettings.ACCESSIBILITY.route) }
                         SettingDivider(theme)
                         SettingItem("הגדרות נגישות נוספות", "מסך הנגישות המלא של אנדרואיד", FutureIcons.Accessibility, theme) {
                             safeStartActivity(context, Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS), "לא ניתן לפתוח הגדרות נגישות")
@@ -1988,6 +2020,8 @@ fun NotificationsFocusScreen(navController: NavController, theme: ThemeConfig, v
                         SettingItem("גישת מדיניות התראות", "נדרש כדי לשלוט על מצב שקט/רטט", FutureIcons.Notifications, theme) {
                             safeStartActivity(context, Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS), "לא ניתן לפתוח הגדרות התראות")
                         }
+                        SettingDivider(theme)
+                        SettingItem("התראות מתקדמות", "התראות קופצות, היסטוריה ונורית", FutureIcons.Tune, theme) { navController.navigate(com.future.settings.utils.ExtraSystemSettings.NOTIFICATIONS.route) }
                     }
                 }
                 item { SettingHeader("מיקוד עכשיו", theme) }
@@ -2130,6 +2164,10 @@ fun AboutScreen(navController: NavController, theme: ThemeConfig, viewModel: Set
                     item { SettingHeader("מפתחים", theme) }
                     item {
                         SettingsCard(theme) {
+                            SettingItem("כלי מפתחים", "אנימציות, גבולות פריסה ורינדור", FutureIcons.Code, theme) {
+                                navController.navigate(com.future.settings.utils.ExtraSystemSettings.DEVELOPER.route)
+                            }
+                            SettingDivider(theme)
                             SettingItem("אפשרויות למפתחים", "USB, ניפוי באגים, ביצועים", FutureIcons.Code, theme) {
                                 safeStartActivity(context, Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS), "לא ניתן לפתוח אפשרויות למפתחים")
                             }

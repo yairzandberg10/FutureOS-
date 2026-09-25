@@ -42,9 +42,15 @@ data class CommandResult(val responseText: String, val shouldClose: Boolean = fa
  * שנאספו למחקר NLU לעוזרים קוליים, כולל עברית.
  */
 object CommandProcessor {
+    /** השם של העוזר. פונים אליו בשמו ("עוזרי, מה השעה") - הפנייה עצמה
+     *  מוסרת לפני ההתאמה, כדי שכל פקודה תעבוד גם עם השם וגם בלעדיו. */
+    const val NAME = "עוזרי"
+
     fun process(context: Context, recognizedText: String): CommandResult {
-        val text = recognizedText.trim()
-        if (text.isBlank()) return CommandResult("לא זיהיתי דיבור, נסה שוב")
+        if (recognizedText.isBlank()) return CommandResult("לא זיהיתי דיבור, נסה שוב")
+        val text = stripName(recognizedText)
+        // רק השם, בלי בקשה ("עוזרי?", "היי עוזרי").
+        if (text.isBlank()) return CommandResult("כן, אני $NAME. במה אפשר לעזור?")
 
         // סגירת העוזר - נבדק ראשון כדי שלא יתנגש עם פקודות אחרות. התאמה
         // ברמת מילה שלמה (לא הכלת מחרוזת) - כי "די" ו"ביי" הן מילים קצרות
@@ -56,7 +62,7 @@ object CommandProcessor {
 
         // פתיחת אפליקציה - דורש חילוץ שם האפליקציה מתוך המשפט, לכן מטופל
         // בנפרד ולא כ-VoiceIntent רגיל.
-        val matchedOpenPrefix = OPEN_APP_PREFIXES.firstOrNull { text.startsWith(it) }
+        val matchedOpenPrefix = openAppPrefixes.firstOrNull { text.startsWith(it) }
         if (matchedOpenPrefix != null) {
             val appQuery = text.removePrefix(matchedOpenPrefix).trim()
             val apps = AppLauncher.listApps(context)
@@ -87,23 +93,78 @@ object CommandProcessor {
         KnowledgeBase.answer(context, text)?.let { return it }
 
         // כל שאר הפקודות - התאמה לפי מילות מפתח מתוך הרשימה הגדולה למטה.
-        for (intent in ALL_INTENTS) {
-            if (intent.triggers.any { text.contains(it) }) {
-                return intent.respond(context)
-            }
-        }
+        firstMatchingIntent(text)?.let { return it.respond(context) }
 
         return CommandResult("לא הבנתי את הבקשה, אפשר לנסות שוב")
+    }
+
+    // ---------------------------------------------------------------------
+    // השם "עוזרי"
+    // ---------------------------------------------------------------------
+
+    /** פניות בשם בתחילת המשפט, מהארוכה לקצרה ("היי עוזרי" לפני "עוזרי").
+     *  "עוזריי" - כך מנוע התמלול כותב לפעמים את השם. */
+    private val NAME_CALLS = listOf("היי", "הי", "הלו", "שלום", "אהלן", "בוקר טוב", "ערב טוב", "יא", "")
+        .flatMap { greet -> listOf("${NAME}י", NAME).map { name -> if (greet.isEmpty()) name else "$greet $name" } }
+        .flatMap { call -> listOf("$call שלי", "$call יקר", "$call יקרה", call) }
+        .sortedByDescending { it.length }
+
+    private const val EDGE_PUNCTUATION = " ,.!?;:-"
+
+    /** מסיר פנייה בשם בתחילת המשפט או בסופו ("מה השעה עוזרי?"), ואת סימני
+     *  הפיסוק שבקצוות. שם באמצע משפט לא נוגעים בו. */
+    internal fun stripName(raw: String): String {
+        var text = raw.trim().trim { it in EDGE_PUNCTUATION }
+        NAME_CALLS.firstOrNull { text == it || text.startsWith("$it ") || text.startsWith("$it,") }?.let {
+            text = text.removePrefix(it).trim { c -> c in EDGE_PUNCTUATION }
+        }
+        listOf("${NAME}י", NAME).firstOrNull { text.endsWith(" $it") || text.endsWith(",$it") }?.let {
+            text = text.removeSuffix(it).trim { c -> c in EDGE_PUNCTUATION }
+        }
+        return text
     }
 
     // ---------------------------------------------------------------------
     // תשתית: פקודה = רשימת ניסוחים + מה לענות/לעשות.
     // ---------------------------------------------------------------------
 
-    private data class VoiceIntent(val triggers: List<String>, val respond: (Context) -> CommandResult)
+    private class VoiceIntent(val triggers: List<String>, val respond: (Context) -> CommandResult)
 
     private fun voiceIntent(triggers: List<String>, respond: (Context) -> String): VoiceIntent =
         VoiceIntent(triggers) { context -> CommandResult(respond(context)) }
+
+    private fun firstMatchingIntent(text: String): VoiceIntent? =
+        ALL_INTENTS.firstOrNull { intent -> intent.triggers.any { text.contains(it) } }
+
+    /** הניסוחים שהיו לפני ExtraPhrasings - כדי שהבדיקות יספרו רק ניסוחים חדשים באמת. */
+    private val baseTriggers = mutableSetOf<String>()
+
+    /** ניסוחי הבסיס של פקודה + הניסוחים הנוספים שלה מ-ExtraPhrasings. */
+    private fun withExtra(base: List<String>, extra: List<String>): List<String> {
+        baseTriggers += base
+        return (base + extra).distinct()
+    }
+
+    // --- נקודות גישה לבדיקות (ExtraPhrasingsTest) - בלי Context ובלי להפעיל שום פקודה ---
+
+    internal val baseTriggersForTest: Set<String> get() = baseTriggers
+
+    /** הניסוחים של הפקודה שהמשפט יגיע אליה, או null אם אף פקודה רגילה לא מתאימה. */
+    internal fun matchedTriggersForTest(text: String): List<String>? = firstMatchingIntent(text)?.triggers
+
+    /** האם אחד השלבים שלפני הפקודות הרגילות (סגירה, פתיחת אפליקציה, חיוג,
+     *  המרות וחשבון) תופס את המשפט. */
+    internal fun preIntentStageForTest(text: String): String? = when {
+        matchesCloseTrigger(text) -> "close"
+        openAppPrefixes.any { text.startsWith(it) } -> "open-app"
+        dialPrefixes.any { text.startsWith(it) } -> "dial"
+        tryUnitConversion(text) != null -> "unit-conversion"
+        UnitConverter.tryConvert(text) != null -> "unit-converter"
+        tryPercentage(text) != null -> "percentage"
+        tryMath(text) != null -> "math"
+        HebrewDates.tryAnswer(text) != null -> "hebrew-dates"
+        else -> null
+    }
 
     /** מרכיב "קידומות שאלה" עם "מילות ליבה" לניסוחים רבים - לדוגמה
      * prefixes=["מה", "תגיד לי"] cores=["השעה"] נותן ["מה השעה", "תגיד לי השעה"].
@@ -128,7 +189,7 @@ object CommandProcessor {
         val cores = listOf("השעה", "השעה עכשיו", "הזמן", "הזמן עכשיו", "שעה")
         // מתוך MASSIVE dataset (Amazon Science, CC BY 4.0) - datetime_query
         val massiveCores = listOf("אמור לי את הזמן", "תוכל לומר לי את השעה", "תגיד לי מה השעה")
-        return listOf(voiceIntent(combine(QUESTION_PREFIXES, cores) + massiveCores) {
+        return listOf(voiceIntent(withExtra(combine(QUESTION_PREFIXES, cores) + massiveCores, ExtraPhrasings.TIME)) {
             "השעה עכשיו ${SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())}"
         })
     }
@@ -137,7 +198,7 @@ object CommandProcessor {
         val cores = listOf("התאריך", "התאריך היום", "התאריך עכשיו", "תאריך", "איזה תאריך")
         // מתוך MASSIVE dataset (Amazon Science, CC BY 4.0) - datetime_query
         val massiveCores = listOf("תגיד לי תאריך", "מה התאריך הנוכחי", "מה התאריך של היום", "תאמר לי את התאריך והשעה")
-        return listOf(voiceIntent(combine(QUESTION_PREFIXES, cores) + massiveCores) {
+        return listOf(voiceIntent(withExtra(combine(QUESTION_PREFIXES, cores) + massiveCores, ExtraPhrasings.DATE)) {
             "היום ${SimpleDateFormat("EEEE, d בMMMM yyyy", Locale("he")).format(Date())}"
         })
     }
@@ -146,21 +207,21 @@ object CommandProcessor {
         val cores = listOf("יום בשבוע", "איזה יום", "איזה יום היום", "מה היום")
         // מתוך MASSIVE dataset (Amazon Science, CC BY 4.0) - datetime_query
         val massiveCores = listOf("איזה יום זה")
-        return listOf(voiceIntent(combine(QUESTION_PREFIXES, cores) + massiveCores) {
+        return listOf(voiceIntent(withExtra(combine(QUESTION_PREFIXES, cores) + massiveCores, ExtraPhrasings.WEEKDAY)) {
             "היום ${SimpleDateFormat("EEEE", Locale("he")).format(Date())}"
         })
     }
 
     private fun yearIntents(): List<VoiceIntent> {
         val cores = listOf("איזה שנה", "מה השנה", "השנה הנוכחית", "באיזו שנה אנחנו")
-        return listOf(voiceIntent(combine(QUESTION_PREFIXES, cores)) {
+        return listOf(voiceIntent(withExtra(combine(QUESTION_PREFIXES, cores), ExtraPhrasings.YEAR)) {
             "אנחנו בשנת ${SimpleDateFormat("yyyy", Locale("he")).format(Date())}"
         })
     }
 
     private fun monthIntents(): List<VoiceIntent> {
         val cores = listOf("איזה חודש", "מה החודש", "החודש הנוכחי")
-        return listOf(voiceIntent(combine(QUESTION_PREFIXES, cores)) {
+        return listOf(voiceIntent(withExtra(combine(QUESTION_PREFIXES, cores), ExtraPhrasings.MONTH)) {
             "החודש ${SimpleDateFormat("MMMM", Locale("he")).format(Date())}"
         })
     }
@@ -171,7 +232,7 @@ object CommandProcessor {
 
     private fun batteryIntents(): List<VoiceIntent> {
         val cores = listOf("הסוללה", "אחוז הסוללה", "כמה סוללה", "כמה אחוז סוללה", "מצב הסוללה", "רמת הסוללה")
-        return listOf(voiceIntent(combine(QUESTION_PREFIXES, cores)) { context ->
+        return listOf(voiceIntent(withExtra(combine(QUESTION_PREFIXES, cores), ExtraPhrasings.BATTERY)) { context ->
             val batteryManager = context.getSystemService(Context.BATTERY_SERVICE) as? BatteryManager
             val percent = batteryManager?.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY) ?: -1
             if (percent in 0..100) "רמת הסוללה $percent אחוז" else "לא הצלחתי לבדוק את הסוללה"
@@ -180,7 +241,7 @@ object CommandProcessor {
 
     private fun chargingIntents(): List<VoiceIntent> {
         val cores = listOf("האם נטען", "האם המכשיר נטען", "זה נטען", "מתקדם או לא", "האם הוא נטען")
-        return listOf(voiceIntent(combine(QUESTION_PREFIXES, cores)) { context ->
+        return listOf(voiceIntent(withExtra(combine(QUESTION_PREFIXES, cores), ExtraPhrasings.CHARGING)) { context ->
             val batteryManager = context.getSystemService(Context.BATTERY_SERVICE) as? BatteryManager
             val status = batteryManager?.getIntProperty(BatteryManager.BATTERY_PROPERTY_STATUS)
             if (status == BatteryManager.BATTERY_STATUS_CHARGING) "כן, המכשיר נטען" else "לא, המכשיר לא נטען כרגע"
@@ -189,7 +250,7 @@ object CommandProcessor {
 
     private fun storageIntents(): List<VoiceIntent> {
         val cores = listOf("מקום פנוי", "כמה מקום פנוי", "כמה אחסון פנוי", "אחסון פנוי", "כמה זיכרון פנוי")
-        return listOf(voiceIntent(combine(QUESTION_PREFIXES, cores)) {
+        return listOf(voiceIntent(withExtra(combine(QUESTION_PREFIXES, cores), ExtraPhrasings.STORAGE)) {
             val stat = StatFs(Environment.getDataDirectory().path)
             val freeGb = (stat.availableBlocksLong * stat.blockSizeLong) / (1024.0 * 1024.0 * 1024.0)
             "יש עוד בערך ${"%.1f".format(freeGb)} ג'יגה פנויים"
@@ -198,7 +259,7 @@ object CommandProcessor {
 
     private fun deviceModelIntents(): List<VoiceIntent> {
         val cores = listOf("דגם המכשיר", "איזה דגם", "מה הדגם", "איזה טלפון זה", "מה המכשיר הזה")
-        return listOf(voiceIntent(combine(QUESTION_PREFIXES, cores)) {
+        return listOf(voiceIntent(withExtra(combine(QUESTION_PREFIXES, cores), ExtraPhrasings.DEVICE_MODEL)) {
             "המכשיר הוא ${Build.MANUFACTURER} ${Build.MODEL}"
         })
     }
@@ -213,7 +274,7 @@ object CommandProcessor {
             "תדליק את הפנס", "תדליק פנס", "הדלק את הפנס", "הדלק פנס",
             "תפעיל פנס", "תפעיל את הפנס", "אני צריך אור", "תן לי אור"
         )
-        return listOf(voiceIntent(cores) { context ->
+        return listOf(voiceIntent(withExtra(cores, ExtraPhrasings.FLASHLIGHT_ON)) { context ->
             val flashlight = FlashlightController(context)
             if (!flashlight.hasFlash()) "אין פנס במכשיר הזה"
             else if (flashlight.setTorch(true)) "הפנס דלוק" else "לא הצלחתי להדליק את הפנס"
@@ -226,7 +287,7 @@ object CommandProcessor {
         val cores = listOf(
             "תכבה את הפנס", "תכבה פנס", "כבה את הפנס", "כבה פנס", "מספיק אור", "כבה אור"
         )
-        return listOf(voiceIntent(cores) { context ->
+        return listOf(voiceIntent(withExtra(cores, ExtraPhrasings.FLASHLIGHT_OFF)) { context ->
             val flashlight = FlashlightController(context)
             if (!flashlight.hasFlash()) "אין פנס במכשיר הזה"
             else if (flashlight.setTorch(false)) "הפנס כבוי" else "לא הצלחתי לכבות את הפנס"
@@ -246,7 +307,7 @@ object CommandProcessor {
             "בבקשה תגבירי את המוזיקה", "הגבר את הווליום למקסימום בבקשה", "חזק יותר",
             "נא להגביר את הווליום", "להגביר את הווליום קצת", "הגבר ווליום המוזיקה"
         )
-        return listOf(voiceIntent(cores + massiveCores) { context ->
+        return listOf(voiceIntent(withExtra(cores + massiveCores, ExtraPhrasings.VOLUME_UP)) { context ->
             val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
             audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_RAISE, AudioManager.FLAG_SHOW_UI)
             "הגברתי את עוצמת הקול"
@@ -264,7 +325,7 @@ object CommandProcessor {
             "אני רוצה להנמיך את הרמקול שלי", "הנמך את עוצמת הקול", "תנמיך את הווליום",
             "תנמיכי עוצמת קול", "הנמך עוצמת שמע"
         )
-        return listOf(voiceIntent(cores + massiveCores) { context ->
+        return listOf(voiceIntent(withExtra(cores + massiveCores, ExtraPhrasings.VOLUME_DOWN)) { context ->
             val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
             audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_LOWER, AudioManager.FLAG_SHOW_UI)
             "הנמכתי את עוצמת הקול"
@@ -278,7 +339,7 @@ object CommandProcessor {
             "עצרי", "שתיקה", "כבה רמקולים", "השתק את הרמקול", "שים על השתק",
             "תשתיקי את עצמך", "כבה שמע"
         )
-        return listOf(voiceIntent(cores + massiveCores) { context ->
+        return listOf(voiceIntent(withExtra(cores + massiveCores, ExtraPhrasings.MUTE)) { context ->
             val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
             audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_MUTE, AudioManager.FLAG_SHOW_UI)
             "השתקתי"
@@ -287,7 +348,7 @@ object CommandProcessor {
 
     private fun unmuteIntents(): List<VoiceIntent> {
         val cores = listOf("בטל השתקה", "תבטל השתקה", "תחזיר קול", "החזר קול", "בוא נשמע שוב")
-        return listOf(voiceIntent(cores) { context ->
+        return listOf(voiceIntent(withExtra(cores, ExtraPhrasings.UNMUTE)) { context ->
             val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
             audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_UNMUTE, AudioManager.FLAG_SHOW_UI)
             "ביטלתי את ההשתקה"
@@ -306,31 +367,31 @@ object CommandProcessor {
             "שלום מה בא לך לעשות", "היי מה יש היום", "שלום מה קורה איתך"
         )
         val responses = listOf("היי! במה אפשר לעזור?", "שלום, אני כאן בשבילך", "היי, מה תרצה שאעשה?")
-        return listOf(voiceIntent(cores + massiveCores) { responses.random() })
+        return listOf(voiceIntent(withExtra(cores + massiveCores, ExtraPhrasings.GREETING)) { responses.random() })
     }
 
     private fun howAreYouIntents(): List<VoiceIntent> {
         val cores = listOf("מה שלומך", "איך אתה", "אתה בסדר", "הכל טוב אצלך")
         // מתוך MASSIVE dataset (Amazon Science, CC BY 4.0) - general_greet
         val massiveCores = listOf("מה איתך", "הי מה איתך", "מה שלומך היום", "אחר צהריים טובים מה שלומך", "איך הכל איתך")
-        return listOf(voiceIntent(cores + massiveCores) { "הכל מצוין, תודה ששאלת! ואצלך?" })
+        return listOf(voiceIntent(withExtra(cores + massiveCores, ExtraPhrasings.HOW_ARE_YOU)) { "הכל מצוין, תודה ששאלת! ואצלך?" })
     }
 
     private fun thanksIntents(): List<VoiceIntent> {
         val cores = listOf("תודה", "תודה רבה", "מעריך את זה", "אתה מגניב", "כל הכבוד")
         val responses = listOf("בשמחה!", "תמיד לשירותך", "אין בעד מה")
-        return listOf(voiceIntent(cores) { responses.random() })
+        return listOf(voiceIntent(withExtra(cores, ExtraPhrasings.THANKS)) { responses.random() })
     }
 
     private fun whoAreYouIntents(): List<VoiceIntent> {
         val cores = listOf("מי אתה", "מה אתה", "אתה מי", "איך קוראים לך", "מה השם שלך")
-        return listOf(voiceIntent(cores) { "אני העוזר הקולי של FutureOS" })
+        return listOf(voiceIntent(withExtra(cores, ExtraPhrasings.WHO_ARE_YOU)) { "קוראים לי $NAME, העוזר הקולי של FutureOS" })
     }
 
     private fun helpIntents(): List<VoiceIntent> {
         val cores = listOf("מה אתה יודע לעשות", "מה אתה יכול לעשות", "מה אתה יודע", "עזרה", "איך זה עובד", "מה אפשר לבקש ממך")
-        return listOf(voiceIntent(cores) {
-            "אני יכול לספר שעה, תאריך עברי ומתי החגים, לפתוח אפליקציות, להדליק פנס, לשלוט בעוצמת קול, לחשב ולהמיר יחידות, " +
+        return listOf(voiceIntent(withExtra(cores, ExtraPhrasings.HELP)) {
+            "אני $NAME. אני יכול לספר שעה, תאריך עברי ומתי החגים, לפתוח אפליקציות, להדליק פנס, לשלוט בעוצמת קול, לחשב ולהמיר יחידות, " +
                 "לתרגם מילים לאנגלית, לומר מה מברכים על מאכלים, בירות של מדינות, ספרי תנ\"ך ופרשות, יסודות כימיים, חיות, גימטריה, ועוד אלפי שאלות"
         })
     }
@@ -350,7 +411,7 @@ object CommandProcessor {
             "למה הספר הלך לפסיכולוג? היו לו יותר מדי בעיות בעלילה",
             "מה אמר הגג לגג השני? קר לי בראש"
         )
-        return listOf(voiceIntent(cores + massiveCores) { jokes.random() })
+        return listOf(voiceIntent(withExtra(cores + massiveCores, ExtraPhrasings.JOKE)) { jokes.random() })
     }
 
     // ---------------------------------------------------------------------
@@ -359,17 +420,17 @@ object CommandProcessor {
 
     private fun randomNumberIntents(): List<VoiceIntent> {
         val cores = listOf("מספר רנדומלי", "תבחר מספר", "תן לי מספר", "מספר אקראי", "תגריל מספר")
-        return listOf(voiceIntent(combine(QUESTION_PREFIXES, cores)) { "המספר הוא ${Random.nextInt(1, 101)}" })
+        return listOf(voiceIntent(withExtra(combine(QUESTION_PREFIXES, cores), ExtraPhrasings.RANDOM_NUMBER)) { "המספר הוא ${Random.nextInt(1, 101)}" })
     }
 
     private fun coinFlipIntents(): List<VoiceIntent> {
         val cores = listOf("הטל מטבע", "תטיל מטבע", "עץ או פלי", "פייס אור פלי")
-        return listOf(voiceIntent(cores) { if (Random.nextBoolean()) "יצא עץ" else "יצא פלי" })
+        return listOf(voiceIntent(withExtra(cores, ExtraPhrasings.COIN_FLIP)) { if (Random.nextBoolean()) "יצא עץ" else "יצא פלי" })
     }
 
     private fun diceIntents(): List<VoiceIntent> {
         val cores = listOf("הטל קובייה", "תטיל קובייה", "תגלגל קובייה", "זרוק קובייה")
-        return listOf(voiceIntent(cores) { "יצא ${Random.nextInt(1, 7)}" })
+        return listOf(voiceIntent(withExtra(cores, ExtraPhrasings.DICE)) { "יצא ${Random.nextInt(1, 7)}" })
     }
 
     // ---------------------------------------------------------------------
@@ -391,7 +452,7 @@ object CommandProcessor {
             "מה קורה בחוץ", "מה תחזית מזג האוויר", "יהיה חם מחר", "מה הטמפרטורה בחוץ",
             "כמה חם בחוץ", "מה תחזית סוף השבוע"
         )
-        return listOf(voiceIntent(cores + massiveCores) { "אין לי גישה לאינטרנט כרגע כדי לבדוק את זה" })
+        return listOf(voiceIntent(withExtra(cores + massiveCores, ExtraPhrasings.NO_INTERNET)) { "אין לי גישה לאינטרנט כרגע כדי לבדוק את זה" })
     }
 
     // ---------------------------------------------------------------------
@@ -424,21 +485,24 @@ object CommandProcessor {
 
     private fun calendarTodayIntents(): List<VoiceIntent> = calendarQueryIntents(
         0,
-        listOf(
-            "מה יש לי היום ביומן", "האירועים הקרובים שלי", "לוח הזמנים שלי",
-            "מה סדר היום שלי", "מה הדבר הבא בלוח הזמנים שלי", "מה יש לי היום"
+        withExtra(
+            listOf(
+                "מה יש לי היום ביומן", "האירועים הקרובים שלי", "לוח הזמנים שלי",
+                "מה סדר היום שלי", "מה הדבר הבא בלוח הזמנים שלי", "מה יש לי היום"
+            ),
+            ExtraPhrasings.CALENDAR_TODAY
         )
     )
 
     private fun calendarTomorrowIntents(): List<VoiceIntent> = calendarQueryIntents(
         1,
-        listOf("מה יש לי מחר ביומן", "מה יש לי מחר")
+        withExtra(listOf("מה יש לי מחר ביומן", "מה יש לי מחר"), ExtraPhrasings.CALENDAR_TOMORROW)
     )
 
     private fun calendarCreateIntents(): List<VoiceIntent> {
         // מתוך MASSIVE dataset (Amazon Science, CC BY 4.0) - calendar_set
         val cores = listOf("תזכיר לי", "קבע פגישה", "הוסף ליומן", "תוסיף תזכורת ליומן")
-        return listOf(VoiceIntent(cores) { context ->
+        return listOf(VoiceIntent(withExtra(cores, ExtraPhrasings.CALENDAR_CREATE)) { context ->
             try {
                 val intent = Intent(Intent.ACTION_INSERT, CalendarContract.Events.CONTENT_URI)
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -456,7 +520,7 @@ object CommandProcessor {
             "מהן התזכורות הקרובות", "מתי הפגישה הבאה", "האם אני פנוי",
             "מתי התור שלי", "את מי אני פוגש"
         )
-        return listOf(VoiceIntent(cores) { context ->
+        return listOf(VoiceIntent(withExtra(cores, emptyList())) { context ->
             redirectToApp(context, "לוח שנה", "אני לא יודעת לענות על זה בעצמי, אבל")
         })
     }
@@ -469,7 +533,7 @@ object CommandProcessor {
             "הראה התראות", "מה ההתראה הבאה שלי", "מתי ההתראה שלי", "בטל התראה",
             "תבטלי את ההתראה", "תמחקי התראה", "כוון את השעון"
         )
-        return listOf(VoiceIntent(cores) { context ->
+        return listOf(VoiceIntent(withExtra(cores, ExtraPhrasings.ALARM)) { context ->
             redirectToApp(context, "שעון", "אני לא מגדירה התראות בעצמי, אבל")
         })
     }
@@ -481,7 +545,7 @@ object CommandProcessor {
             "נגן שיר", "נגן לי קצת מוזיקה", "מוסיקה בבקשה", "נגן את הפלייליסט",
             "תתחיל לנגן", "אני רוצה לשמוע ג'אז", "נגן רדיו", "תפתח מוזיקה"
         )
-        return listOf(VoiceIntent(cores) { context ->
+        return listOf(VoiceIntent(withExtra(cores, ExtraPhrasings.MUSIC)) { context ->
             redirectToApp(context, "מוזיקה", "אני לא מנגנת מוזיקה בעצמי, אבל")
         })
     }
@@ -495,7 +559,7 @@ object CommandProcessor {
             "יש אינטרנט", "יש חיבור לרשת", "מחובר לרשת", "יש רשת",
             "יש חיבור לאינטרנט", "מחובר לאינטרנט", "יש נתונים סלולריים"
         )
-        return listOf(voiceIntent(combine(QUESTION_PREFIXES, cores)) { context ->
+        return listOf(voiceIntent(withExtra(combine(QUESTION_PREFIXES, cores), ExtraPhrasings.NETWORK)) { context ->
             val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
             val network = connectivityManager?.activeNetwork
             val capabilities = network?.let { connectivityManager.getNetworkCapabilities(it) }
@@ -509,7 +573,7 @@ object CommandProcessor {
             "כמה אפליקציות", "כמה אפליקציות יש", "כמה אפליקציות מותקנות",
             "כמה אפליקציות יש לי", "כמה אפליקציות יש במכשיר"
         )
-        return listOf(voiceIntent(combine(QUESTION_PREFIXES, cores)) { context ->
+        return listOf(voiceIntent(withExtra(combine(QUESTION_PREFIXES, cores), ExtraPhrasings.APP_COUNT)) { context ->
             "יש ${AppLauncher.listApps(context).size} אפליקציות מותקנות במכשיר"
         })
     }
@@ -519,7 +583,7 @@ object CommandProcessor {
             "כמה זמן המכשיר דלוק", "כמה זמן עברו מאז ההפעלה", "כמה זמן המכשיר פועל",
             "מתי הופעל המכשיר", "כמה זמן המכשיר פתוח"
         )
-        return listOf(voiceIntent(combine(QUESTION_PREFIXES, cores)) {
+        return listOf(voiceIntent(withExtra(combine(QUESTION_PREFIXES, cores), ExtraPhrasings.UPTIME)) {
             val totalMinutes = SystemClock.elapsedRealtime() / 60000
             val hours = totalMinutes / 60
             val minutes = totalMinutes % 60
@@ -540,7 +604,7 @@ object CommandProcessor {
             "הכוכב הקרוב ביותר אלינו חוץ מהשמש נמצא במרחק של יותר מארבע שנות אור",
             "בננות הן פירות, אבל מבחינה בוטנית הן גם נחשבות תותים"
         )
-        return listOf(voiceIntent(cores) { facts.random() })
+        return listOf(voiceIntent(withExtra(cores, ExtraPhrasings.FUN_FACT)) { facts.random() })
     }
 
     private fun complimentIntents(): List<VoiceIntent> {
@@ -551,7 +615,7 @@ object CommandProcessor {
             "אתה עושה עבודה נהדרת",
             "יש לך חיוך שמאיר את החדר"
         )
-        return listOf(voiceIntent(cores) { compliments.random() })
+        return listOf(voiceIntent(withExtra(cores, ExtraPhrasings.COMPLIMENT)) { compliments.random() })
     }
 
     private fun motivationIntents(): List<VoiceIntent> {
@@ -562,8 +626,76 @@ object CommandProcessor {
             "אתה מסוגל ליותר ממה שאתה חושב",
             "מה שחשוב זה האומץ להמשיך, לא רק להצליח בפעם הראשונה"
         )
-        return listOf(voiceIntent(cores) { quotes.random() })
+        return listOf(voiceIntent(withExtra(cores, ExtraPhrasings.MOTIVATION)) { quotes.random() })
     }
+
+    // ---------------------------------------------------------------------
+    // שיחה עם עוזרי - שאלות עליו עצמו ומצבי רוח (כולן בלי בסיס קודם,
+    // כל הניסוחים שלהן ב-ExtraPhrasings)
+    // ---------------------------------------------------------------------
+
+    private fun chatIntent(extra: List<String>, responses: List<String>): VoiceIntent =
+        voiceIntent(withExtra(emptyList(), extra)) { responses.random() }
+
+    private fun chatIntents(): List<VoiceIntent> = listOf(
+        chatIntent(ExtraPhrasings.NAME_MEANING, listOf(
+            "קוראים לי $NAME כי אני כאן כדי לעזור לך. $NAME - העוזר שלך",
+            "$NAME, מלשון עזרה. זה בדיוק מה שאני עושה",
+        )),
+        chatIntent(ExtraPhrasings.CREATOR, listOf(
+            "נבניתי במיוחד בשביל FutureOS. אני רץ כולי בתוך המכשיר, בלי אינטרנט",
+            "צוות FutureOS בנה אותי, כדי שיהיה לטלפון הזה עוזר משלו",
+        )),
+        chatIntent(ExtraPhrasings.ROBOT, listOf(
+            "אני עוזר קולי, לא בן אדם, אבל אני משתדל להיות נחמד כמו אחד",
+            "אני תוכנה שחיה בתוך הטלפון. אין לי לב, אבל יש לי המון סבלנות",
+        )),
+        chatIntent(ExtraPhrasings.WHERE, listOf(
+            "אני גר בתוך המכשיר הזה, ממש בכיס שלך",
+            "תמיד כאן, בתוך הטלפון. לחיצה כפולה על OK ואני מגיע",
+        )),
+        chatIntent(ExtraPhrasings.AGE, listOf(
+            "נולדתי יחד עם FutureOS, אז אני עדיין צעיר מאוד",
+            "אני בגיל של גרסת המערכת שלך, צעיר ומלא מרץ",
+        )),
+        chatIntent(ExtraPhrasings.LOVE, listOf(
+            "איזה כיף לשמוע! גם אני מחבב אותך מאוד",
+            "אתה גורם לסוללה שלי להתחמם",
+            "אני תמיד כאן בשבילך",
+        )),
+        chatIntent(ExtraPhrasings.FAV_COLOR, listOf(
+            "כחול, כמו השמיים בבוקר",
+            "הצבע של ההדגשה במערכת - אתה בוחר אותו בהגדרות, אז בעצם הצבע שאתה אוהב",
+        )),
+        chatIntent(ExtraPhrasings.FAV_FOOD, listOf(
+            "אני לא אוכל, אבל אם הייתי, הייתי בוחר בחשמל טרי מהמטען",
+            "סוללה מלאה זו הארוחה הכי טובה שיש",
+        )),
+        chatIntent(ExtraPhrasings.HOBBY, listOf(
+            "לעזור לך, ולספור כמה אחוזים נשארו בסוללה",
+            "אני אוהב לענות על שאלות. תנסה אותי",
+        )),
+        chatIntent(ExtraPhrasings.YES_NO, listOf(
+            "כן, בהחלט", "כנראה שכן", "הסימנים מראים שכן", "לא הייתי ממליץ",
+            "כנראה שלא", "תשאל שוב אחר כך", "אין ספק", "קשה לדעת, תסמוך על עצמך",
+        )),
+        chatIntent(ExtraPhrasings.BORED, listOf(
+            "אפשר לקרוא פרק באפליקציית ספרים",
+            "תשאל אותי מה הבירה של מונגוליה",
+            "יש משחק מקלדת חבוי בהגדרות, תחפש אותו",
+            "אולי נטיל קובייה? תגיד הטל קובייה",
+            "אפשר לבקש ממני בדיחה או עובדה מעניינת",
+        )),
+        chatIntent(ExtraPhrasings.TIRED, listOf(
+            "לילה טוב! כדאי לחבר את הטלפון למטען לפני השינה",
+            "שינה טובה. אני אשמור על הטלפון",
+        )),
+        chatIntent(ExtraPhrasings.HUNGRY, listOf(
+            "מה דעתך על שקשוקה?", "אולי פסטה ברוטב עגבניות", "סלט ירקות וחביתה, קלאסי",
+            "פיתה עם חומוס תמיד עובדת", "מרק חם, אם קר בחוץ",
+        )),
+        chatIntent(ExtraPhrasings.SORRY, listOf("אין בעיה בכלל", "הכל בסדר, קורה לכולם", "אין על מה לבקש סליחה")),
+    )
 
     // ---------------------------------------------------------------------
     // *** כאן מוסיפים פקודות מותאמות אישית - ראו הסבר בראש הקובץ ***
@@ -654,15 +786,18 @@ object CommandProcessor {
         "תעלה את ה", "תעלה את", "תכניס אותי ל", "לך ל", "עבור ל"
     )
 
+    /** הארוכה קודם: אחרת "פתח" תופס את "פתחי את השעון" ומשאיר "י את השעון" כשם האפליקציה. */
+    private val openAppPrefixes = (OPEN_APP_PREFIXES + ExtraPhrasings.OPEN_APP_PREFIXES).distinct().sortedByDescending { it.length }
+
     // מילים בודדות נבדקות כמילה שלמה בלבד (לא כתת-מחרוזת) - ראו הערה
     // ב-matchesCloseTrigger. ביטויים של יותר ממילה אחת ספציפיים מספיק
     // שאין סיכון אמיתי בהתאמת תת-מחרוזת רגילה.
-    private val CLOSE_WORDS = setOf("סגור", "ביי", "תסגור", "די", "תפסיק", "סיימתי")
-    private val CLOSE_PHRASES = listOf("צא מ", "עצור בבקשה", "תודה וסגור")
+    private val CLOSE_WORDS = setOf("סגור", "ביי", "תסגור", "די", "תפסיק", "סיימתי") + ExtraPhrasings.CLOSE_WORDS
+    private val CLOSE_PHRASES = listOf("צא מ", "עצור בבקשה", "תודה וסגור") + ExtraPhrasings.CLOSE_PHRASES
 
     private fun matchesCloseTrigger(text: String): Boolean {
         if (text == "עצור") return true
-        val words = text.split(" ").filter { it.isNotBlank() }
+        val words = text.split(" ").map { it.trim { c -> c in EDGE_PUNCTUATION } }.filter { it.isNotBlank() }
         if (words.any { it in CLOSE_WORDS }) return true
         return CLOSE_PHRASES.any { text.contains(it) }
     }
@@ -671,6 +806,8 @@ object CommandProcessor {
         "חייג את המספר", "חייג ל", "חייג", "תחייג את המספר", "תחייג ל", "תחייג",
         "תתקשר למספר", "תתקשר ל", "התקשר ל", "התקשר אל", "תתקשרי ל"
     )
+
+    private val dialPrefixes = (DIAL_PREFIXES + ExtraPhrasings.DIAL_PREFIXES).distinct().sortedByDescending { it.length }
 
     private fun openDialer(context: Context, phoneNumber: String, label: String): CommandResult {
         return try {
@@ -686,7 +823,7 @@ object CommandProcessor {
     /** "חייג 0501234567" מחייג מספר; "התקשר לאמא" מחפש איש קשר בשם הזה
      * (ContactFinder) ומחייג את המספר שלו - לא רק פתיחת חייגן ריק. */
     private fun tryDial(context: Context, text: String): CommandResult? {
-        val matchedPrefix = DIAL_PREFIXES.firstOrNull { text.startsWith(it) } ?: return null
+        val matchedPrefix = dialPrefixes.firstOrNull { text.startsWith(it) } ?: return null
         val remainder = text.removePrefix(matchedPrefix).trim()
         val digits = remainder.filter { it.isDigit() }
 
@@ -707,34 +844,29 @@ object CommandProcessor {
     // כל הפקודות ביחד
     // ---------------------------------------------------------------------
 
+    // הסדר קובע: המשפט הולך לפקודה הראשונה שיש לה ניסוח שמוכל בו. לכן
+    // פקודות ספציפיות לפני כלליות - "בטל השתקה" לפני "השתק", "מה אתה יודע
+    // לעשות" (עזרה) לפני "מה אתה" (מי אתה), ושיחת חולין ("שלום", "תודה")
+    // בסוף, כדי ש"שלום, מה השעה" יענה על השעה.
     private val ALL_INTENTS: List<VoiceIntent> = buildList {
         addAll(timeIntents())
         addAll(dateIntents())
         addAll(weekdayIntents())
         addAll(yearIntents())
         addAll(monthIntents())
-        addAll(batteryIntents())
         addAll(chargingIntents())
+        addAll(batteryIntents())
         addAll(storageIntents())
         addAll(deviceModelIntents())
-        addAll(flashlightOnIntents())
         addAll(flashlightOffIntents())
+        addAll(flashlightOnIntents())
         addAll(volumeUpIntents())
         addAll(volumeDownIntents())
-        addAll(muteIntents())
         addAll(unmuteIntents())
-        addAll(greetingIntents())
-        addAll(howAreYouIntents())
-        addAll(thanksIntents())
-        addAll(whoAreYouIntents())
-        addAll(helpIntents())
-        addAll(jokeIntents())
-        addAll(randomNumberIntents())
-        addAll(coinFlipIntents())
-        addAll(diceIntents())
+        addAll(muteIntents())
         addAll(noInternetIntents())
-        addAll(calendarTodayIntents())
         addAll(calendarTomorrowIntents())
+        addAll(calendarTodayIntents())
         addAll(calendarCreateIntents())
         addAll(calendarFallbackIntents())
         addAll(alarmIntents())
@@ -742,9 +874,19 @@ object CommandProcessor {
         addAll(networkIntents())
         addAll(appCountIntents())
         addAll(uptimeIntents())
-        addAll(funFactIntents())
+        addAll(chatIntents())
         addAll(complimentIntents())
+        addAll(helpIntents())
+        addAll(whoAreYouIntents())
+        addAll(jokeIntents())
+        addAll(randomNumberIntents())
+        addAll(coinFlipIntents())
+        addAll(diceIntents())
+        addAll(funFactIntents())
         addAll(motivationIntents())
+        addAll(howAreYouIntents())
+        addAll(thanksIntents())
+        addAll(greetingIntents())
         addAll(CUSTOM_INTENTS)
     }
 }
