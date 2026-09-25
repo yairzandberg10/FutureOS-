@@ -33,3 +33,9 @@
     <init>(...);
     <fields>;
 }
+
+# ML Kit מאתר את הרכיבים שלו דרך ComponentDiscovery: שמות ה-Registrar
+# כתובים במניפסט ונוצרים ב-reflection דרך הבנאי הריק. R8 לא רואה את
+# הקריאה ומוחק את הבנאי, ML Kit עולה בלי רכיבים והאפליקציה קורסת בפתיחה.
+-keep class * implements com.google.firebase.components.ComponentRegistrar { <init>(); }
+-keep class com.google.mlkit.**.*Registrar { <init>(); }
