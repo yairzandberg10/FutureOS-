@@ -1,6 +1,4 @@
 package com.future.navigation.ui.saved
-import androidx.compose.material.icons.rounded.Place
-import androidx.compose.material.icons.rounded.Work
 
 import com.future.sharednav.icons.FutureIcons
 
@@ -14,7 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -88,7 +85,7 @@ fun SavedPlacesScreen(viewModel: SavedPlacesViewModel, onBack: () -> Unit, onNav
                     PinTile(FutureIcons.Home, stringResource(R.string.quick_home), homePlace, stringResource(R.string.add_home_address), theme, modifier = Modifier.weight(1f), focusRequester = homeCardFocusRequester) {
                         viewModel.startEditing(EditingSlot.HOME)
                     }
-                    PinTile(Icons.Rounded.Work, stringResource(R.string.quick_work), workPlace, stringResource(R.string.add_work_address), theme, modifier = Modifier.weight(1f)) {
+                    PinTile(FutureIcons.Work, stringResource(R.string.quick_work), workPlace, stringResource(R.string.add_work_address), theme, modifier = Modifier.weight(1f)) {
                         viewModel.startEditing(EditingSlot.WORK)
                     }
                 }
@@ -116,7 +113,7 @@ fun SavedPlacesScreen(viewModel: SavedPlacesViewModel, onBack: () -> Unit, onNav
                         summary = place.address,
                         theme = theme,
                         onClick = { onNavigateToPlace(place) },
-                        leading = { RowIcon(Icons.Rounded.Place, theme) },
+                        leading = { RowIcon(FutureIcons.LocationOn, theme) },
                         modifier = Modifier.weight(1f),
                     )
                     // כוכב המועדפים הוא החריג היחיד לכלל "אייקון לא נושא צבע משלו"
@@ -218,7 +215,7 @@ private fun AddressSearchScreen(viewModel: SavedPlacesViewModel, onBack: () -> U
                     summary = parts.getOrNull(1),
                     theme = theme,
                     onClick = { viewModel.pickResult(result) },
-                    leading = { RowIcon(Icons.Rounded.Place, theme) },
+                    leading = { RowIcon(FutureIcons.LocationOn, theme) },
                 )
             }
         }

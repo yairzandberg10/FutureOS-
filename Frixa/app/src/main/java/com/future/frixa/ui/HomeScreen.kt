@@ -5,10 +5,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Calculate
-import androidx.compose.material.icons.rounded.Restaurant
-import androidx.compose.material.icons.rounded.Storefront
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -24,6 +20,7 @@ import com.future.sharednav.components.FutureListItem
 import com.future.sharednav.theme.FutureTheme
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.mutedTextColor
+import com.future.sharednav.icons.FutureIcons
 
 /**
  * מסך הבית של Fricassé: הפריקסה בתלת-ממד, והכניסות לשלושת החלקים - מתכונים,
@@ -48,7 +45,7 @@ fun HomeScreen(theme: FutureTheme, onOpenRecipes: () -> Unit, onOpenTool: () -> 
             onClick = onOpenRecipes,
             focusRequester = first,
             modifier = Modifier.fillMaxWidth(),
-            leading = { FutureAvatar(theme = theme, icon = Icons.Rounded.Restaurant) },
+            leading = { FutureAvatar(theme = theme, icon = FutureIcons.Restaurant) },
         )
         FutureListItem(
             title = "כלי הכנה",
@@ -56,7 +53,7 @@ fun HomeScreen(theme: FutureTheme, onOpenRecipes: () -> Unit, onOpenTool: () -> 
             theme = theme,
             onClick = onOpenTool,
             modifier = Modifier.fillMaxWidth(),
-            leading = { FutureAvatar(theme = theme, icon = Icons.Rounded.Calculate) },
+            leading = { FutureAvatar(theme = theme, icon = FutureIcons.Calculate) },
         )
         FutureListItem(
             title = "איפה קונים",
@@ -64,7 +61,7 @@ fun HomeScreen(theme: FutureTheme, onOpenRecipes: () -> Unit, onOpenTool: () -> 
             theme = theme,
             onClick = onOpenStores,
             modifier = Modifier.fillMaxWidth(),
-            leading = { FutureAvatar(theme = theme, icon = Icons.Rounded.Storefront) },
+            leading = { FutureAvatar(theme = theme, icon = FutureIcons.Storefront) },
         )
     }
 }

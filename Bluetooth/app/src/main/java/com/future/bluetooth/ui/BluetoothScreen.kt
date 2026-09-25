@@ -1,5 +1,4 @@
 package com.future.bluetooth.ui
-import androidx.compose.material.icons.rounded.Mouse
 import androidx.compose.material.icons.automirrored.rounded.BluetoothSearching
 
 import com.future.sharednav.icons.FutureIcons
@@ -801,7 +800,7 @@ private fun iconOf(kind: DeviceKind): ImageVector = when (kind) {
     DeviceKind.Phone -> FutureIcons.Smartphone
     DeviceKind.Computer -> FutureIcons.LaptopMac
     DeviceKind.Keyboard -> FutureIcons.Keyboard
-    DeviceKind.Mouse -> Icons.Rounded.Mouse
+    DeviceKind.Mouse -> FutureIcons.Mouse
     DeviceKind.Watch -> FutureIcons.Watch
     DeviceKind.Other -> FutureIcons.Bluetooth
 }

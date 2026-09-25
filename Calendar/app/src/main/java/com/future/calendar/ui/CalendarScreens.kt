@@ -1,9 +1,5 @@
 package com.future.calendar.ui
-import androidx.compose.material.icons.rounded.LocationOn
-import androidx.compose.material.icons.rounded.MenuBook
-import androidx.compose.material.icons.rounded.MyLocation
 import androidx.compose.material.icons.rounded.Today
-import androidx.compose.material.icons.rounded.WbTwilight
 
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureSwitch
@@ -601,7 +597,7 @@ private fun ZmanimPanel(zmanim: DayZmanim, theme: FutureTheme) {
         modifier = Modifier.fillMaxWidth().clip(FutureShapes.lg).background(theme.textColor.copy(alpha = 0.06f)).padding(14.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Rounded.WbTwilight, contentDescription = null, tint = theme.accentColor, modifier = Modifier.size(16.dp))
+            Icon(FutureIcons.WbTwilight, contentDescription = null, tint = theme.accentColor, modifier = Modifier.size(16.dp))
             Spacer(modifier = Modifier.width(6.dp))
             Text("זמני היום", fontSize = FutureTypography.label, fontWeight = FontWeight.SemiBold, color = theme.textColor.copy(alpha = 0.7f))
         }
@@ -634,7 +630,7 @@ private fun DafYomiPanel(masechet: String, daf: Int, theme: FutureTheme) {
         modifier = Modifier.fillMaxWidth().clip(FutureShapes.lg).background(theme.accentColor.copy(alpha = 0.12f)).padding(14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(Icons.Rounded.MenuBook, contentDescription = null, tint = theme.accentColor, modifier = Modifier.size(18.dp))
+        Icon(FutureIcons.MenuBook, contentDescription = null, tint = theme.accentColor, modifier = Modifier.size(18.dp))
         Spacer(modifier = Modifier.width(10.dp))
         Column {
             Text("דף יומי", fontSize = FutureTypography.caption, color = theme.mutedTextColor)
@@ -1046,7 +1042,7 @@ fun CalendarSettingsScreen(
                 FutureSettingItem(
                     title = "מיקום",
                     summary = locationSummary,
-                    icon = Icons.Rounded.LocationOn,
+                    icon = FutureIcons.LocationOn,
                     theme = theme,
                     onClick = onOpenLocation,
                 )
@@ -1054,7 +1050,7 @@ fun CalendarSettingsScreen(
                 FutureSettingItem(
                     title = "תחזית מזג אוויר",
                     summary = if (showWeather) "מוצגת בתצוגת היום" else "כבויה",
-                    icon = Icons.Rounded.WbTwilight,
+                    icon = FutureIcons.WbTwilight,
                     theme = theme,
                     showChevron = false,
                     onClick = onToggleShowWeather,
@@ -1093,7 +1089,7 @@ fun CalendarLocationScreen(
                         useGps -> "מיקום המכשיר בפועל"
                         else -> "כבוי"
                     },
-                    icon = Icons.Rounded.MyLocation,
+                    icon = FutureIcons.MyLocation,
                     theme = theme,
                     showChevron = false,
                     focusRequester = first,

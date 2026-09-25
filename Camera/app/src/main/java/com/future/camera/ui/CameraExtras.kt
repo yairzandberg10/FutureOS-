@@ -12,12 +12,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.AspectRatio
-import androidx.compose.material.icons.rounded.AutoAwesome
-import androidx.compose.material.icons.rounded.GridOn
-import androidx.compose.material.icons.rounded.HighQuality
-import androidx.compose.material.icons.rounded.Videocam
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -89,7 +83,7 @@ fun CameraSettingsScreen(
                     FutureSettingItem(
                         title = "יחס תמונה",
                         summary = options.aspect.label,
-                        icon = Icons.Rounded.AspectRatio,
+                        icon = FutureIcons.AspectRatio,
                         theme = theme,
                         showChevron = false,
                         focusRequester = first,
@@ -99,7 +93,7 @@ fun CameraSettingsScreen(
                     FutureSettingItem(
                         title = "איכות צילום",
                         summary = options.photoQuality.label,
-                        icon = Icons.Rounded.HighQuality,
+                        icon = FutureIcons.HighQuality,
                         theme = theme,
                         showChevron = false,
                         onClick = { onChange(options.copy(photoQuality = PhotoQualityOption.entries.after(options.photoQuality))) },
@@ -110,7 +104,7 @@ fun CameraSettingsScreen(
                         FutureSettingItem(
                             title = "מצב צילום",
                             summary = options.scene.label,
-                            icon = Icons.Rounded.AutoAwesome,
+                            icon = FutureIcons.AutoAwesome,
                             theme = theme,
                             showChevron = false,
                             onClick = { onChange(options.copy(scene = availableScenes.after(options.scene))) },
@@ -129,7 +123,7 @@ fun CameraSettingsScreen(
                     FutureSettingItem(
                         title = "קווי רשת",
                         summary = if (options.showGrid) "מוצגים" else "כבויים",
-                        icon = Icons.Rounded.GridOn,
+                        icon = FutureIcons.GridOn,
                         theme = theme,
                         showChevron = false,
                         onClick = { onChange(options.copy(showGrid = !options.showGrid)) },
@@ -141,7 +135,7 @@ fun CameraSettingsScreen(
                     FutureSettingItem(
                         title = "איכות וידאו",
                         summary = options.videoQuality.label,
-                        icon = Icons.Rounded.Videocam,
+                        icon = FutureIcons.Videocam,
                         theme = theme,
                         showChevron = false,
                         onClick = { onChange(options.copy(videoQuality = VideoQualityOption.entries.after(options.videoQuality))) },

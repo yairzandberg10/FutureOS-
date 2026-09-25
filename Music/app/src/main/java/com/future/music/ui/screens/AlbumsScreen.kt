@@ -20,8 +20,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Album
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -37,6 +35,7 @@ import androidx.compose.ui.unit.sp
 import com.future.music.data.AlbumGroup
 import com.future.music.ui.components.ScreenTopBar
 import com.future.sharednav.theme.FutureTheme
+import com.future.sharednav.icons.FutureIcons
 
 @Composable
 fun AlbumsScreen(albums: List<AlbumGroup>, theme: FutureTheme, onBack: () -> Unit, onOpenAlbum: (Long, String) -> Unit) {
@@ -62,7 +61,7 @@ fun AlbumsScreen(albums: List<AlbumGroup>, theme: FutureTheme, onBack: () -> Uni
                         theme = theme,
                         onClick = { onOpenAlbum(album.albumId, album.name) },
                         focusRequester = if (index == 0) firstItemFocusRequester else null,
-                        leading = { FutureAvatar(theme = theme, icon = Icons.Rounded.Album) },
+                        leading = { FutureAvatar(theme = theme, icon = FutureIcons.Album) },
                         trailing = { Text("${album.songCount}", color = theme.subtleTextColor, fontSize = type.summary) },
                     )
                 }

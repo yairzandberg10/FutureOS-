@@ -21,15 +21,15 @@ data class DailyWeather(val date: LocalDate, val maxTemp: Double, val minTemp: D
 }
 
 private fun weatherIcon(code: Int): androidx.compose.ui.graphics.vector.ImageVector = when (code) {
-    0 -> androidx.compose.material.icons.Icons.Rounded.WbSunny
-    1, 2 -> androidx.compose.material.icons.Icons.Rounded.WbCloudy
-    3 -> androidx.compose.material.icons.Icons.Rounded.Cloud
-    45, 48 -> androidx.compose.material.icons.Icons.Rounded.Dehaze
-    51, 53, 55, 56, 57 -> androidx.compose.material.icons.Icons.Rounded.Grain
-    61, 63, 65, 66, 67, 80, 81, 82 -> androidx.compose.material.icons.Icons.Rounded.Umbrella
-    71, 73, 75, 77, 85, 86 -> androidx.compose.material.icons.Icons.Rounded.AcUnit
-    95, 96, 99 -> androidx.compose.material.icons.Icons.Rounded.FlashOn
-    else -> androidx.compose.material.icons.Icons.Rounded.Thermostat
+    0 -> com.future.sharednav.icons.FutureIcons.WbSunny
+    1, 2 -> com.future.sharednav.icons.FutureIcons.WbCloudy
+    3 -> com.future.sharednav.icons.FutureIcons.Cloud
+    45, 48 -> com.future.sharednav.icons.FutureIcons.Dehaze
+    51, 53, 55, 56, 57 -> com.future.sharednav.icons.FutureIcons.Grain
+    61, 63, 65, 66, 67, 80, 81, 82 -> com.future.sharednav.icons.FutureIcons.Umbrella
+    71, 73, 75, 77, 85, 86 -> com.future.sharednav.icons.FutureIcons.AcUnit
+    95, 96, 99 -> com.future.sharednav.icons.FutureIcons.FlashOn
+    else -> com.future.sharednav.icons.FutureIcons.Thermostat
 }
 
 private fun weatherDescription(code: Int): String = when (code) {

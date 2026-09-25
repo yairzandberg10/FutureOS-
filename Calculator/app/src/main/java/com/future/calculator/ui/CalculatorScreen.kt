@@ -1,6 +1,5 @@
 package com.future.calculator.ui
 import androidx.activity.compose.BackHandler
-import androidx.compose.material.icons.rounded.Functions
 import androidx.compose.material.icons.rounded.DeleteSweep
 
 import com.future.sharednav.icons.FutureIcons
@@ -588,7 +587,7 @@ private fun CalculatorOptionsMenu(
     onClearHistory: () -> Unit,
 ) {
     FutureOptionsMenu(theme = theme, onDismissRequest = onDismiss, header = "מחשבון") {
-        FutureMenuRow(if (scientific) "מחשבון רגיל" else "מחשבון מדעי", Icons.Rounded.Functions, theme, onToggleMode)
+        FutureMenuRow(if (scientific) "מחשבון רגיל" else "מחשבון מדעי", FutureIcons.Functions, theme, onToggleMode)
         FutureMenuRow("העתק תוצאה", FutureIcons.ContentCopy, theme, onCopyResult)
         FutureMenuRow("נקה היסטוריה", Icons.Rounded.DeleteSweep, theme, onClearHistory, destructive = true)
     }

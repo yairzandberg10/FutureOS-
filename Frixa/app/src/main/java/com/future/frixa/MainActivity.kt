@@ -1,8 +1,5 @@
 package com.future.frixa
-import androidx.compose.material.icons.rounded.Calculate
 import com.future.frixa.ui.ToolScreen
-import androidx.compose.material.icons.rounded.Restaurant
-import androidx.compose.material.icons.rounded.Storefront
 
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureBottomNav
@@ -18,7 +15,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -79,9 +75,9 @@ class MainActivity : ComponentActivity() {
 
             val tabs = listOf(
                 Triple(FrixaRoute.Home, "ראשי", FutureIcons.Home),
-                Triple(FrixaRoute.Recipes, "מתכונים", Icons.Rounded.Restaurant),
-                Triple(FrixaRoute.Tool, "הכנה", Icons.Rounded.Calculate),
-                Triple(FrixaRoute.Stores, "חנויות", Icons.Rounded.Storefront),
+                Triple(FrixaRoute.Recipes, "מתכונים", FutureIcons.Restaurant),
+                Triple(FrixaRoute.Tool, "הכנה", FutureIcons.Calculate),
+                Triple(FrixaRoute.Stores, "חנויות", FutureIcons.Storefront),
             )
             val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
             val currentTabRoute = if (route is FrixaRoute.RecipeDetail) FrixaRoute.Recipes else route

@@ -1,7 +1,4 @@
 package com.future.fitness.ui.screens
-import androidx.compose.material.icons.rounded.FavoriteBorder
-import androidx.compose.material.icons.rounded.LocalFireDepartment
-import androidx.compose.material.icons.rounded.PlayCircle
 
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.AvatarListSize
@@ -42,7 +39,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -95,7 +91,7 @@ fun HomeScreen(
 ) {
     val items = listOf(
         MenuItem("1", FutureIcons.History, "היסטוריה", "אימונים קודמים", onOpenHistory),
-        MenuItem("2", Icons.Rounded.FavoriteBorder, "בריאות", "הסברים ואזורי דופק", onOpenHealth),
+        MenuItem("2", FutureIcons.FavoriteBorder, "בריאות", "הסברים ואזורי דופק", onOpenHealth),
         MenuItem("3", FutureIcons.Settings, "הגדרות", "עיצוב, פרופיל ושעון חכם", onOpenSettings),
     )
 
@@ -218,8 +214,8 @@ fun HomeScreen(
                     }
                     Spacer(Modifier.width(16.dp))
                     Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        MiniStatRow(Icons.Rounded.LocalFireDepartment, "${stats.caloriesToday} קק״ל היום", theme.dangerColor, theme)
-                        MiniStatRow(Icons.Rounded.LocalFireDepartment, "${stats.streakDays} ימי רצף", theme.readableAccentColor, theme)
+                        MiniStatRow(FutureIcons.LocalFireDepartment, "${stats.caloriesToday} קק״ל היום", theme.dangerColor, theme)
+                        MiniStatRow(FutureIcons.LocalFireDepartment, "${stats.streakDays} ימי רצף", theme.readableAccentColor, theme)
                         Text(
                             "יעד יומי מומלץ (WHO): $WHO_DAILY_ACTIVE_MINUTES_TARGET דק׳ פעילות",
                             color = theme.mutedTextColor,
@@ -270,7 +266,7 @@ fun HomeScreen(
                             horizontalArrangement = Arrangement.Center,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Icon(Icons.Rounded.PlayCircle, contentDescription = null, tint = theme.backgroundColor, modifier = Modifier.size(20.dp))
+                            Icon(FutureIcons.PlayCircle, contentDescription = null, tint = theme.backgroundColor, modifier = Modifier.size(20.dp))
                             Spacer(Modifier.width(8.dp))
                             Text("פתח והתחל אימון", color = theme.backgroundColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Bold)
                         }

@@ -1,10 +1,4 @@
 package com.future.fitness.ui.screens
-import androidx.compose.material.icons.rounded.Favorite
-import androidx.compose.material.icons.rounded.LocationOn
-import androidx.compose.material.icons.rounded.SkipNext
-import androidx.compose.material.icons.rounded.SkipPrevious
-import androidx.compose.material.icons.rounded.Terrain
-import androidx.compose.material.icons.automirrored.rounded.VolumeDown
 
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.theme.elevatedSurfaceColor
@@ -47,7 +41,6 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -324,7 +317,7 @@ private fun MainPage(
         verticalArrangement = Arrangement.Center,
     ) {
         if (usesGps && !hasLocationPermission) {
-            Icon(Icons.Rounded.LocationOn, contentDescription = null, tint = theme.textColor.copy(alpha = 0.4f), modifier = Modifier.size(48.dp))
+            Icon(FutureIcons.LocationOn, contentDescription = null, tint = theme.textColor.copy(alpha = 0.4f), modifier = Modifier.size(48.dp))
             Text(
                 "כדי למדוד מרחק וקצב צריך הרשאת מיקום",
                 color = theme.textColor.copy(alpha = 0.6f),
@@ -356,7 +349,7 @@ private fun MainPage(
             }
             StatColumn(calories.toString(), "קלוריות", theme)
             if (isHrConnected && bpm != null) {
-                StatColumn(bpm.toString(), "דופק", theme, icon = Icons.Rounded.Favorite)
+                StatColumn(bpm.toString(), "דופק", theme, icon = FutureIcons.Favorite)
             }
         }
     }
@@ -399,7 +392,7 @@ private fun CyclingPowerPage(theme: FutureTheme, heartRateMonitor: HeartRateMoni
 @Composable
 private fun ElevationPage(theme: FutureTheme, tracker: RunTracker) {
     Column(modifier = Modifier.fillMaxSize().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-        Icon(Icons.Rounded.Terrain, contentDescription = null, tint = theme.textColor, modifier = Modifier.size(32.dp))
+        Icon(FutureIcons.Terrain, contentDescription = null, tint = theme.textColor, modifier = Modifier.size(32.dp))
         Spacer(Modifier.height(12.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
             StatColumn(tracker.currentAltitudeMeters?.let { "%.0f".format(it) } ?: "--", "מ' גובה", theme)
@@ -463,13 +456,13 @@ private fun MusicControlPage(theme: FutureTheme) {
             modifier = Modifier.padding(bottom = 20.dp),
         )
         Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            MediaButton(theme, Icons.Rounded.SkipPrevious, "הקודם") { sendMediaKey(context, AndroidKeyEvent.KEYCODE_MEDIA_PREVIOUS) }
+            MediaButton(theme, FutureIcons.SkipPrevious, "הקודם") { sendMediaKey(context, AndroidKeyEvent.KEYCODE_MEDIA_PREVIOUS) }
             MediaButton(theme, FutureIcons.PlayArrow, "נגן/השהה", primary = true) { sendMediaKey(context, AndroidKeyEvent.KEYCODE_MEDIA_PLAY_PAUSE) }
-            MediaButton(theme, Icons.Rounded.SkipNext, "הבא") { sendMediaKey(context, AndroidKeyEvent.KEYCODE_MEDIA_NEXT) }
+            MediaButton(theme, FutureIcons.SkipNext, "הבא") { sendMediaKey(context, AndroidKeyEvent.KEYCODE_MEDIA_NEXT) }
         }
         Spacer(Modifier.height(20.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            MediaButton(theme, Icons.AutoMirrored.Rounded.VolumeDown, "הנמך") { adjustVolume(context, AudioManager.ADJUST_LOWER) }
+            MediaButton(theme, FutureIcons.AutoMirrored.VolumeDown, "הנמך") { adjustVolume(context, AudioManager.ADJUST_LOWER) }
             MediaButton(theme, FutureIcons.AutoMirrored.VolumeUp, "הגבר") { adjustVolume(context, AudioManager.ADJUST_RAISE) }
         }
     }

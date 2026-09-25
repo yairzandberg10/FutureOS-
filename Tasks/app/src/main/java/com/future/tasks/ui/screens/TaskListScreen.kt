@@ -1,8 +1,6 @@
 package com.future.tasks.ui.screens
-import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material.icons.rounded.Checklist
-import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 
+import androidx.compose.material.icons.rounded.CheckCircle
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureTextField
 import com.future.sharednav.components.FutureListItem
@@ -80,7 +78,7 @@ fun TaskListScreen(
 
             if (tasks.isEmpty()) {
                 EmptyState(
-                    icon = Icons.Rounded.Checklist,
+                    icon = FutureIcons.Checklist,
                     title = if (searchQuery.isBlank()) "אין משימות" else "לא נמצאו משימות",
                     subtitle = if (searchQuery.isBlank()) "נווט לכפתור ההוספה שלמעלה ולחץ OK" else null,
                     textColor = theme.textColor,
@@ -135,7 +133,7 @@ private fun TaskRow(task: Task, theme: FutureTheme, focusRequester: FocusRequest
         titleDecoration = if (task.isDone) TextDecoration.LineThrough else null,
         leading = {
             Icon(
-                if (task.isDone) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
+                if (task.isDone) Icons.Rounded.CheckCircle else FutureIcons.RadioButtonUnchecked,
                 contentDescription = null,
                 tint = if (task.isDone) theme.successColor else theme.subtleTextColor,
                 modifier = Modifier.size(FutureDimens.iconSettingRow),

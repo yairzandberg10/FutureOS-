@@ -1,14 +1,8 @@
 package com.future.guide.data
-import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.CalendarMonth
-import androidx.compose.material.icons.rounded.Checklist
-import androidx.compose.material.icons.rounded.Navigation
 import androidx.compose.material.icons.rounded.PhoneAndroid
 import androidx.compose.material.icons.rounded.PhotoCamera
 import androidx.compose.material.icons.rounded.PhotoLibrary
-import androidx.compose.material.icons.rounded.SettingsRemote
-import androidx.compose.material.icons.rounded.Terminal
-import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.automirrored.rounded.Message
 import androidx.compose.material.icons.automirrored.rounded.Notes
 
@@ -171,7 +165,7 @@ val GUIDE_APPS = listOf(
     ),
     GuideApp(
         id = "sfarim",
-        icon = Icons.AutoMirrored.Rounded.MenuBook,
+        icon = FutureIcons.AutoMirrored.MenuBook,
         name = "בלכתך בדרך",
         subtitle = "ספריית טקסטים תורניים",
         steps = listOf(
@@ -183,7 +177,7 @@ val GUIDE_APPS = listOf(
     ),
     GuideApp(
         id = "terminal",
-        icon = Icons.Rounded.Terminal,
+        icon = FutureIcons.Terminal,
         name = "טרמינל",
         subtitle = "שורת פקודה עם הרשאות root",
         steps = listOf(
@@ -195,7 +189,7 @@ val GUIDE_APPS = listOf(
     ),
     GuideApp(
         id = "tools",
-        icon = Icons.Rounded.Build,
+        icon = FutureIcons.Build,
         name = "כלים",
         subtitle = "ממיר יחידות, סורק QR, פתקים מהירים וכלים קטנים נוספים",
         steps = listOf(
@@ -207,7 +201,7 @@ val GUIDE_APPS = listOf(
     ),
     GuideApp(
         id = "tasks",
-        icon = Icons.Rounded.Checklist,
+        icon = FutureIcons.Checklist,
         name = "משימות",
         subtitle = "רשימת מטלות",
         steps = listOf(
@@ -232,7 +226,7 @@ val GUIDE_APPS = listOf(
     ),
     GuideApp(
         id = "navigation",
-        icon = Icons.Rounded.Navigation,
+        icon = FutureIcons.Navigation,
         name = "ניווט",
         subtitle = "מפות, מסלול ותחבורה ציבורית",
         steps = listOf(
@@ -269,7 +263,7 @@ val GUIDE_APPS = listOf(
     ),
     GuideApp(
         id = "remote",
-        icon = Icons.Rounded.SettingsRemote,
+        icon = FutureIcons.SettingsRemote,
         name = "שלט רחוק",
         subtitle = "שליטה במזגן ובמכשירי אינפרא-אדום",
         steps = listOf(

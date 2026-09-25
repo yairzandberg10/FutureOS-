@@ -20,9 +20,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Widgets
-import androidx.compose.material.icons.rounded.Wallpaper
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -142,7 +139,7 @@ fun LauncherSettingsScreen(
         Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 24.dp)) {
             FutureSectionHeader("מראה", theme)
             FutureCard(theme = theme) {
-                FutureSettingItem(title = "רקע", summary = "בחירת תמונת רקע", icon = Icons.Rounded.Wallpaper, theme = theme, focusRequester = first, onClick = onOpenWallpapers)
+                FutureSettingItem(title = "רקע", summary = "בחירת תמונת רקע", icon = FutureIcons.Wallpaper, theme = theme, focusRequester = first, onClick = onOpenWallpapers)
                 FutureDivider(theme = theme)
                 FutureSettingItem(title = "גודל אייקונים", summary = prefs.iconSizeLabel, icon = FutureIcons.Apps, theme = theme, showChevron = false, onClick = prefs::cycleIconSize)
                 FutureDivider(theme = theme)
@@ -179,7 +176,7 @@ fun LauncherSettingsScreen(
                 FutureDivider(theme = theme)
                 FutureSettingItem(title = "הוסף דף", summary = "$pageCount דפים", icon = FutureIcons.Add, theme = theme, showChevron = false, onClick = onAddPage)
                 FutureDivider(theme = theme)
-                FutureSettingItem(title = "ווידג'טים", summary = "הוספת ווידג'ט לדף הנוכחי", icon = Icons.Rounded.Widgets, theme = theme, onClick = onOpenWidgets)
+                FutureSettingItem(title = "ווידג'טים", summary = "הוספת ווידג'ט לדף הנוכחי", icon = FutureIcons.Widgets, theme = theme, onClick = onOpenWidgets)
             }
 
             FutureSectionHeader("מתקדם", theme)
@@ -350,8 +347,8 @@ fun WidgetPickerScreen(
     LauncherOverlay(theme, "ווידג'טים") {
         val list = options
         when {
-            list == null -> EmptyState(icon = Icons.Rounded.Widgets, title = "טוען", textColor = theme.textColor)
-            list.isEmpty() -> EmptyState(icon = Icons.Rounded.Widgets, title = "אין ווידג'טים", subtitle = "אף אפליקציה מותקנת לא מציעה ווידג'ט", textColor = theme.textColor)
+            list == null -> EmptyState(icon = FutureIcons.Widgets, title = "טוען", textColor = theme.textColor)
+            list.isEmpty() -> EmptyState(icon = FutureIcons.Widgets, title = "אין ווידג'טים", subtitle = "אף אפליקציה מותקנת לא מציעה ווידג'ט", textColor = theme.textColor)
             else -> LazyColumn(contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)) {
                 itemsIndexed(list, key = { _, o -> o.info.provider.flattenToString() }) { index, option ->
                     val showHeader = index == 0 || list[index - 1].appLabel != option.appLabel

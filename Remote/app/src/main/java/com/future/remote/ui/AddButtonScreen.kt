@@ -1,5 +1,4 @@
 package com.future.remote.ui
-import androidx.compose.material.icons.rounded.Save
 
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.theme.subtleTextColor
@@ -27,7 +26,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
@@ -148,7 +146,7 @@ fun AddButtonScreen(theme: FutureTheme, deviceId: String, onBack: () -> Unit, on
                     }
                     Box(modifier = Modifier.weight(1f)) {
                         RemoteRow(
-                            icon = Icons.Rounded.Save,
+                            icon = FutureIcons.Save,
                             label = "שמור",
                             subtitle = "",
                             theme = theme,

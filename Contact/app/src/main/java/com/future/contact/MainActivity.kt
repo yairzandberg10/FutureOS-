@@ -16,8 +16,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -323,7 +321,7 @@ private fun ContactsHome(
             items = listOf(
                 FutureNavItem("מועדפים", FutureIcons.Star),
                 FutureNavItem("אנשי קשר", FutureIcons.Contacts),
-                FutureNavItem("חסומים", Icons.Rounded.Block),
+                FutureNavItem("חסומים", FutureIcons.Block),
             ),
             selectedIndex = tab.ordinal,
             theme = theme,

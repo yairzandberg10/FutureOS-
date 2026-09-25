@@ -1,9 +1,7 @@
 package com.future.music.ui.components
-import androidx.compose.material.icons.rounded.Equalizer
 
 import com.future.sharednav.icons.FutureIcons
 
-import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -50,7 +48,7 @@ fun SongListItem(
         leading = {
             FutureAvatar(
                 theme = theme,
-                icon = if (isCurrent && isPlaying) Icons.Rounded.Equalizer else FutureIcons.MusicNote,
+                icon = if (isCurrent && isPlaying) FutureIcons.Equalizer else FutureIcons.MusicNote,
             )
         },
         trailing = { Text(formatDuration(song.durationMs), color = theme.subtleTextColor, fontSize = type.summary) },

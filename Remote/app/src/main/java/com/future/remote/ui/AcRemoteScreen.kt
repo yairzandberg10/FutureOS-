@@ -21,15 +21,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.AcUnit
-import androidx.compose.material.icons.rounded.Air
-import androidx.compose.material.icons.rounded.AutoMode
-import androidx.compose.material.icons.rounded.KeyboardArrowDown
-import androidx.compose.material.icons.rounded.KeyboardArrowUp
-import androidx.compose.material.icons.rounded.PowerSettingsNew
-import androidx.compose.material.icons.rounded.SwapVert
-import androidx.compose.material.icons.rounded.WaterDrop
-import androidx.compose.material.icons.rounded.WbSunny
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -66,6 +57,8 @@ import com.future.remote.data.RemoteRepository
 import com.future.sharednav.components.FutureActionCell
 import com.future.sharednav.components.FutureMenuRow
 import com.future.sharednav.components.FutureOptionsMenu
+import androidx.compose.material.icons.rounded.WaterDrop
+import androidx.compose.material.icons.rounded.AutoMode
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.nav.digitForKey
 import com.future.sharednav.nav.onOptionsKeyPress
@@ -144,7 +137,7 @@ fun AcRemoteScreen(theme: FutureTheme, device: RemoteDevice, onBack: () -> Unit)
 
                 // מקש ההפעלה - רחב, באדום כשהמזגן דלוק (כמו בשלט).
                 FutureActionCell(
-                    icon = Icons.Rounded.PowerSettingsNew,
+                    icon = FutureIcons.PowerSettingsNew,
                     label = if (state.power) "כיבוי (5)" else "הפעלה (5)",
                     theme = theme,
                     onClick = ::power,
@@ -156,14 +149,14 @@ fun AcRemoteScreen(theme: FutureTheme, device: RemoteDevice, onBack: () -> Unit)
                 )
                 Spacer(Modifier.height(FutureDimens.spacingSm))
                 Row(horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm)) {
-                    FutureActionCell(Icons.Rounded.KeyboardArrowUp, "חם יותר (2)", theme, { temp(+1) }, height = 72.dp, modifier = Modifier.weight(1f))
-                    FutureActionCell(Icons.Rounded.KeyboardArrowDown, "קר יותר (8)", theme, { temp(-1) }, height = 72.dp, modifier = Modifier.weight(1f))
+                    FutureActionCell(FutureIcons.KeyboardArrowUp, "חם יותר (2)", theme, { temp(+1) }, height = 72.dp, modifier = Modifier.weight(1f))
+                    FutureActionCell(FutureIcons.KeyboardArrowDown, "קר יותר (8)", theme, { temp(-1) }, height = 72.dp, modifier = Modifier.weight(1f))
                 }
                 Spacer(Modifier.height(FutureDimens.spacingSm))
                 Row(horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm)) {
                     FutureActionCell(modeIcon(state.mode), "מצב (1)", theme, ::mode, height = 72.dp, modifier = Modifier.weight(1f))
-                    FutureActionCell(Icons.Rounded.Air, "מאוורר (3)", theme, ::fan, height = 72.dp, modifier = Modifier.weight(1f))
-                    FutureActionCell(Icons.Rounded.SwapVert, "תנודה (7)", theme, ::swing, active = state.swing, height = 72.dp, modifier = Modifier.weight(1f))
+                    FutureActionCell(FutureIcons.Air, "מאוורר (3)", theme, ::fan, height = 72.dp, modifier = Modifier.weight(1f))
+                    FutureActionCell(FutureIcons.SwapVert, "תנודה (7)", theme, ::swing, active = state.swing, height = 72.dp, modifier = Modifier.weight(1f))
                 }
                 Spacer(Modifier.height(FutureDimens.spacingMd))
                 Text(
@@ -240,7 +233,7 @@ private fun FanBars(fan: AcFan, color: Color, theme: FutureTheme) {
         return
     }
     Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-        Icon(Icons.Rounded.Air, contentDescription = null, tint = theme.textColor, modifier = Modifier.size(18.dp))
+        Icon(FutureIcons.Air, contentDescription = null, tint = theme.textColor, modifier = Modifier.size(18.dp))
         for (level in 1..3) {
             Box(
                 Modifier
@@ -254,9 +247,9 @@ private fun FanBars(fan: AcFan, color: Color, theme: FutureTheme) {
 }
 
 private fun modeIcon(mode: AcMode): ImageVector = when (mode) {
-    AcMode.COOL -> Icons.Rounded.AcUnit
-    AcMode.HEAT -> Icons.Rounded.WbSunny
-    AcMode.FAN -> Icons.Rounded.Air
+    AcMode.COOL -> FutureIcons.AcUnit
+    AcMode.HEAT -> FutureIcons.WbSunny
+    AcMode.FAN -> FutureIcons.Air
     AcMode.DRY -> Icons.Rounded.WaterDrop
     AcMode.AUTO -> Icons.Rounded.AutoMode
 }

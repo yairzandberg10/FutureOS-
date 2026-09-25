@@ -1,7 +1,4 @@
 package com.future.remote.ui
-import androidx.compose.material.icons.rounded.AcUnit
-import androidx.compose.material.icons.rounded.Air
-import androidx.compose.material.icons.rounded.Tune
 
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.theme.subtleTextColor
@@ -15,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -39,10 +35,10 @@ import com.future.remote.data.RemoteRepository
 import com.future.sharednav.theme.FutureTheme
 
 fun iconForCategory(category: DeviceCategory): ImageVector = when (category) {
-    DeviceCategory.AC -> Icons.Rounded.AcUnit
-    DeviceCategory.FAN -> Icons.Rounded.Air
+    DeviceCategory.AC -> FutureIcons.AcUnit
+    DeviceCategory.FAN -> FutureIcons.Air
     DeviceCategory.AUDIO -> FutureIcons.Speaker
-    DeviceCategory.CUSTOM -> Icons.Rounded.Tune
+    DeviceCategory.CUSTOM -> FutureIcons.Tune
 }
 
 @Composable
@@ -95,7 +91,7 @@ fun RemoteHomeScreen(
                         }
                         item {
                             RemoteRow(
-                                icon = Icons.Rounded.AcUnit,
+                                icon = FutureIcons.AcUnit,
                                 label = "שלט מוכן למזגן",
                                 subtitle = "אלקטרה, תדיראן, טורנדו, מיצובישי, פוג'יטסו",
                                 theme = theme,

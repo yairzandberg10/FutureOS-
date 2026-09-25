@@ -1,5 +1,4 @@
 package com.future.terminal
-import androidx.compose.material.icons.rounded.Cancel
 import androidx.compose.material.icons.rounded.DeleteSweep
 
 import com.future.sharednav.icons.FutureIcons
@@ -264,7 +263,7 @@ class MainActivity : ComponentActivity() {
                                 // ואין שום דרך אחרת (בלי מסך מגע, בלי Ctrl+C) לעצור אותה -
                                 // בלעדיו תהליך su תקוע יכול להישאר רץ ברקע ללא הגבלה.
                                 TerminalIconButton(
-                                    icon = Icons.Rounded.Cancel,
+                                    icon = FutureIcons.Cancel,
                                     contentDescription = "בטל",
                                     onClick = { shell.cancelCurrent() },
                                     theme = theme,

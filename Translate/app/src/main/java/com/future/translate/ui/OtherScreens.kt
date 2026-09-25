@@ -1,6 +1,4 @@
 package com.future.translate.ui
-import androidx.compose.material.icons.rounded.DownloadDone
-import androidx.compose.material.icons.rounded.StarBorder
 
 import com.future.sharednav.icons.FutureIcons
 
@@ -16,7 +14,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -209,7 +206,7 @@ fun HistoryScreen(
             if (list.isEmpty()) {
                 if (tab == 1) {
                     EmptyState(
-                        icon = Icons.Rounded.StarBorder,
+                        icon = FutureIcons.StarBorder,
                         title = "אין תרגומים שמורים",
                         subtitle = "לחץ על שמור בתרגום כדי להוסיף",
                         textColor = theme.textColor,
@@ -434,7 +431,7 @@ fun DownloadsScreen(
                         FutureSettingItem(
                             title = language.name,
                             summary = "זמינה בלי רשת",
-                            icon = Icons.Rounded.DownloadDone,
+                            icon = FutureIcons.DownloadDone,
                             theme = theme,
                             showChevron = false,
                             focusRequester = if (index == 0) first else null,

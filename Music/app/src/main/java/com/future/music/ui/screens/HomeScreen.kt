@@ -1,10 +1,6 @@
 package com.future.music.ui.screens
-import androidx.compose.material.icons.rounded.Album
-import androidx.compose.material.icons.rounded.Equalizer
-import androidx.compose.material.icons.rounded.Favorite
-import androidx.compose.material.icons.rounded.LibraryMusic
-import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 
+import androidx.compose.material.icons.rounded.LibraryMusic
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureListItem
 import com.future.sharednav.components.FutureAvatar
@@ -76,13 +72,13 @@ fun HomeScreen(
     val items = listOf(
         HomeItem("1", Icons.Rounded.LibraryMusic, "כל השירים", "כל המוזיקה שבטלפון", onOpenAllSongs),
         HomeItem("2", FutureIcons.Person, "אמנים", "לפי זמר/זמרת", onOpenArtists),
-        HomeItem("3", Icons.Rounded.Album, "אלבומים", "לפי אלבום", onOpenAlbums),
-        HomeItem("4", Icons.AutoMirrored.Rounded.QueueMusic, "פלייליסטים", "הרשימות שלי", onOpenPlaylists),
-        HomeItem("5", Icons.Rounded.Favorite, "מועדפים", "השירים שאהבת", onOpenFavorites),
+        HomeItem("3", FutureIcons.Album, "אלבומים", "לפי אלבום", onOpenAlbums),
+        HomeItem("4", FutureIcons.AutoMirrored.QueueMusic, "פלייליסטים", "הרשימות שלי", onOpenPlaylists),
+        HomeItem("5", FutureIcons.Favorite, "מועדפים", "השירים שאהבת", onOpenFavorites),
         HomeItem("6", FutureIcons.Search, "חיפוש", "שיר, אמן או אלבום", onOpenSearch),
-        HomeItem("7", Icons.Rounded.Equalizer, "אקולייזר", "אקולייזר מלא ואפקטים", onOpenEqualizer),
+        HomeItem("7", FutureIcons.Equalizer, "אקולייזר", "אקולייזר מלא ואפקטים", onOpenEqualizer),
         HomeItem("8", FutureIcons.Headphones, "התקני שמע", "Bluetooth, אוזניות ורמקולים", onOpenDevices),
-        HomeItem("9", Icons.AutoMirrored.Rounded.QueueMusic, "תור הניגון", "מה מתנגן הבא", onOpenQueue),
+        HomeItem("9", FutureIcons.AutoMirrored.QueueMusic, "תור הניגון", "מה מתנגן הבא", onOpenQueue),
     )
 
     // פוקוס אוטומטי ומלא על הפריט הראשון בתפריט מיד כשהוא נפתח - בלי צורך

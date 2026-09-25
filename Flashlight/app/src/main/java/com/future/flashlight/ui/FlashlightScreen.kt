@@ -23,9 +23,6 @@ import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.FlashlightOff
-import androidx.compose.material.icons.rounded.FlashlightOn
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -46,6 +43,7 @@ import androidx.compose.ui.unit.sp
 import com.future.flashlight.data.FlashlightController
 import com.future.sharednav.components.ScreenTopBar
 import com.future.sharednav.theme.FutureTheme
+import com.future.sharednav.icons.FutureIcons
 
 @Composable
 fun FlashlightScreen(theme: FutureTheme) {
@@ -127,7 +125,7 @@ private fun FlashlightToggle(isOn: Boolean, theme: FutureTheme, onToggle: () -> 
         contentAlignment = Alignment.Center
     ) {
         Icon(
-            if (isOn) Icons.Rounded.FlashlightOn else Icons.Rounded.FlashlightOff,
+            if (isOn) FutureIcons.FlashlightOn else FutureIcons.FlashlightOff,
             contentDescription = "הפעל/כבה פנס",
             tint = if (isOn) theme.onStatusColor(theme.warningColor) else theme.textColor,
             modifier = Modifier.size(64.dp)

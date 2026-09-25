@@ -1,6 +1,4 @@
 package com.future.dialer.ui
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Block
 import androidx.compose.ui.graphics.Color
 import com.future.sharednav.theme.FutureTheme
 import com.future.sharednav.theme.callMissedColor
@@ -26,7 +24,7 @@ object CallFormat {
         CallType.INCOMING, CallType.VOICEMAIL -> FutureIcons.CallReceived
         CallType.OUTGOING -> FutureIcons.CallMade
         CallType.MISSED, CallType.REJECTED -> FutureIcons.CallMissed
-        CallType.BLOCKED -> Icons.Rounded.Block
+        CallType.BLOCKED -> FutureIcons.Block
     }
 
     fun labelOf(type: CallType): String = when (type) {

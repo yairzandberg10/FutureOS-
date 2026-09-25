@@ -1,5 +1,4 @@
 package com.future.frixa.ui
-import androidx.compose.material.icons.rounded.Restaurant
 
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.theme.readableAccentColor
@@ -18,7 +17,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -74,7 +72,7 @@ private fun RecipeRow(recipe: Recipe, theme: FutureTheme, isFocused: Boolean) {
             .padding(14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(Icons.Rounded.Restaurant, contentDescription = null, tint = theme.mutedTextColor)
+        Icon(FutureIcons.Restaurant, contentDescription = null, tint = theme.mutedTextColor)
         Column(modifier = Modifier.weight(1f).padding(horizontal = 12.dp)) {
             Text(recipe.title, color = theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Bold)
             Row(verticalAlignment = Alignment.CenterVertically) {

@@ -17,9 +17,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Checklist
-import androidx.compose.material.icons.rounded.PushPin
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -302,11 +299,11 @@ fun EditorScreen(
                     setItems(items.filterIndexed { i, _ -> i != itemIndex })
                 })
             }
-            FutureMenuRow(stringResource(if (isPinned) R.string.unpin else R.string.pin), Icons.Rounded.PushPin, theme, {
+            FutureMenuRow(stringResource(if (isPinned) R.string.unpin else R.string.pin), FutureIcons.PushPin, theme, {
                 showMenu = false
                 isPinned = !isPinned
             })
-            FutureMenuRow(if (isChecklist) "הפוך לפתק טקסט" else "הפוך לרשימה", Icons.Rounded.Checklist, theme, {
+            FutureMenuRow(if (isChecklist) "הפוך לפתק טקסט" else "הפוך לרשימה", FutureIcons.Checklist, theme, {
                 showMenu = false
                 if (isChecklist) {
                     content = Checklist.parse(content).joinToString("\n") { it.text }

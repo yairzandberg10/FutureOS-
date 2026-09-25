@@ -1,5 +1,4 @@
 package com.future.translate.ui
-import androidx.compose.material.icons.rounded.StarBorder
 
 import com.future.sharednav.icons.FutureIcons
 
@@ -12,7 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -309,7 +307,7 @@ private fun ResultCard(
                     modifier = Modifier.weight(1f),
                 )
                 FutureActionCell(
-                    icon = if (saved) FutureIcons.Star else Icons.Rounded.StarBorder,
+                    icon = if (saved) FutureIcons.Star else FutureIcons.StarBorder,
                     label = "שמור",
                     theme = theme,
                     iconColor = if (saved) theme.favoriteColor else null,

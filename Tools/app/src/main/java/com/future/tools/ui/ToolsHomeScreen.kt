@@ -1,20 +1,4 @@
 package com.future.tools.ui
-import androidx.compose.material.icons.rounded.Architecture
-import androidx.compose.material.icons.rounded.Casino
-import androidx.compose.material.icons.rounded.Checklist
-import androidx.compose.material.icons.rounded.DocumentScanner
-import androidx.compose.material.icons.rounded.Explore
-import androidx.compose.material.icons.rounded.LocalCafe
-import androidx.compose.material.icons.rounded.Numbers
-import androidx.compose.material.icons.rounded.Percent
-import androidx.compose.material.icons.rounded.PushPin
-import androidx.compose.material.icons.rounded.QrCodeScanner
-import androidx.compose.material.icons.rounded.Receipt
-import androidx.compose.material.icons.rounded.RecordVoiceOver
-import androidx.compose.material.icons.rounded.Shuffle
-import androidx.compose.material.icons.rounded.Straighten
-import androidx.compose.material.icons.rounded.VpnKey
-import androidx.compose.material.icons.rounded.WbSunny
 
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.theme.FutureDimens
@@ -43,7 +27,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -69,33 +52,33 @@ val TOOL_ENTRIES = listOf(
     // כלים קיימים - המחשבון, השעון עצר/טיימר והפנס עברו לאפליקציות עצמאיות
     // משלהם (Calculator, Clock, Flashlight) ואינם חלק מ-Tools יותר.
     ToolEntry(FutureIcons.SwapHoriz, "ממיר יחידות", "אורך, משקל, טמפרטורה, נפח", ToolRoute.UnitConverter),
-    ToolEntry(Icons.Rounded.Explore, "מצפן וגובה", "כיוון מגנטי וגובה ברומטרי", ToolRoute.Compass),
-    ToolEntry(Icons.Rounded.Straighten, "פלס", "איזון אופקי לפי חיישן תאוצה", ToolRoute.Level),
+    ToolEntry(FutureIcons.Explore, "מצפן וגובה", "כיוון מגנטי וגובה ברומטרי", ToolRoute.Compass),
+    ToolEntry(FutureIcons.Straighten, "פלס", "איזון אופקי לפי חיישן תאוצה", ToolRoute.Level),
 
     // מדידה וחיישנים
     ToolEntry(FutureIcons.GraphicEq, "מד רעש", "עוצמת קול בדציבלים מהמיקרופון", ToolRoute.NoiseMeter),
-    ToolEntry(Icons.Rounded.WbSunny, "מד אור", "עוצמת תאורה בלוקס מהחיישן הקדמי", ToolRoute.LuxMeter),
-    ToolEntry(Icons.Rounded.Architecture, "סרגל וזווית", "סרגל וירטואלי ומד זווית הטיה", ToolRoute.AngleRuler),
+    ToolEntry(FutureIcons.WbSunny, "מד אור", "עוצמת תאורה בלוקס מהחיישן הקדמי", ToolRoute.LuxMeter),
+    ToolEntry(FutureIcons.Architecture, "סרגל וזווית", "סרגל וירטואלי ומד זווית הטיה", ToolRoute.AngleRuler),
 
     // מחשבונים וממירים
-    ToolEntry(Icons.Rounded.Receipt, "טיפים ופיצול חשבון", "תשר וחלוקה בין סועדים", ToolRoute.TipSplitCalculator),
-    ToolEntry(Icons.Rounded.Percent, "מחשבון פיננסי", "הנחות, מע\"מ והחזרי הלוואה", ToolRoute.QuickFinanceCalculator),
+    ToolEntry(FutureIcons.Receipt, "טיפים ופיצול חשבון", "תשר וחלוקה בין סועדים", ToolRoute.TipSplitCalculator),
+    ToolEntry(FutureIcons.Percent, "מחשבון פיננסי", "הנחות, מע\"מ והחזרי הלוואה", ToolRoute.QuickFinanceCalculator),
     ToolEntry(FutureIcons.Public, "ממיר אזורי זמן", "השעה הנוכחית בכל העולם", ToolRoute.TimeZoneConverter),
 
     // פרודוקטיביות
-    ToolEntry(Icons.Rounded.QrCodeScanner, "סורק קודים", "QR וברקוד ללא פרסומות", ToolRoute.QrScanner),
-    ToolEntry(Icons.Rounded.LocalCafe, "פומודורו", "מחזורי מיקוד והפסקה", ToolRoute.Pomodoro),
-    ToolEntry(Icons.Rounded.VpnKey, "מחולל סיסמאות", "סיסמאות חזקות ואקראיות", ToolRoute.PasswordGenerator),
-    ToolEntry(Icons.Rounded.Checklist, "רשימה מהירה", "פתקים ורשימת מטלות", ToolRoute.QuickNotes),
+    ToolEntry(FutureIcons.QrCodeScanner, "סורק קודים", "QR וברקוד ללא פרסומות", ToolRoute.QrScanner),
+    ToolEntry(FutureIcons.LocalCafe, "פומודורו", "מחזורי מיקוד והפסקה", ToolRoute.Pomodoro),
+    ToolEntry(FutureIcons.VpnKey, "מחולל סיסמאות", "סיסמאות חזקות ואקראיות", ToolRoute.PasswordGenerator),
+    ToolEntry(FutureIcons.Checklist, "רשימה מהירה", "פתקים ורשימת מטלות", ToolRoute.QuickNotes),
 
     // כלי עזר אקראיים ופנאי
-    ToolEntry(Icons.Rounded.Casino, "מטבע וקובייה", "הטלת מטבע או קוביות", ToolRoute.CoinDice),
-    ToolEntry(Icons.Rounded.Shuffle, "בורר אקראי", "בחירת אפשרות אקראית מרשימה", ToolRoute.RandomPicker),
-    ToolEntry(Icons.Rounded.Numbers, "מספר אקראי", "הגרלת מספר בטווח שתבחר", ToolRoute.RandomNumber),
+    ToolEntry(FutureIcons.Casino, "מטבע וקובייה", "הטלת מטבע או קוביות", ToolRoute.CoinDice),
+    ToolEntry(FutureIcons.Shuffle, "בורר אקראי", "בחירת אפשרות אקראית מרשימה", ToolRoute.RandomPicker),
+    ToolEntry(FutureIcons.Numbers, "מספר אקראי", "הגרלת מספר בטווח שתבחר", ToolRoute.RandomNumber),
 
     // שדרוגי AI
-    ToolEntry(Icons.Rounded.DocumentScanner, "סורק טקסט", "צילום מסמך והפיכתו לטקסט", ToolRoute.TextScanner),
-    ToolEntry(Icons.Rounded.RecordVoiceOver, "תמלול קולי", "הקלטה קצרה והפיכתה לטקסט", ToolRoute.VoiceTranscribe)
+    ToolEntry(FutureIcons.DocumentScanner, "סורק טקסט", "צילום מסמך והפיכתו לטקסט", ToolRoute.TextScanner),
+    ToolEntry(FutureIcons.RecordVoiceOver, "תמלול קולי", "הקלטה קצרה והפיכתה לטקסט", ToolRoute.VoiceTranscribe)
 )
 
 @Composable
@@ -168,6 +151,6 @@ private fun PinToHomeButton(entry: ToolEntry, theme: FutureTheme) {
             .focusable(interactionSource = interactionSource).bringIntoViewOnFocus(),
         contentAlignment = androidx.compose.ui.Alignment.Center
     ) {
-        Icon(Icons.Rounded.PushPin, contentDescription = "הוסף/הסר ממסך הבית", tint = tint, modifier = Modifier.size(FutureDimens.iconTopBar))
+        Icon(FutureIcons.PushPin, contentDescription = "הוסף/הסר ממסך הבית", tint = tint, modifier = Modifier.size(FutureDimens.iconTopBar))
     }
 }

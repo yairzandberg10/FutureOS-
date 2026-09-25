@@ -1,5 +1,4 @@
 package com.future.tools.ui
-import androidx.compose.material.icons.rounded.Remove
 
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureAvatar
@@ -19,7 +18,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.animation.animateColorAsState
@@ -126,7 +124,7 @@ fun ToolIcon(icon: ImageVector, theme: FutureTheme, size: Dp = AvatarListSize) {
 /** כפתור +/- ליד ערך מספרי - כפתור אייקון רגיל (8% במנוחה, 30% הדגשה בפוקוס). */
 @Composable
 fun ToolsStepperButton(label: String, theme: FutureTheme, onClick: () -> Unit) {
-    val icon = if (label.trim() == "+") FutureIcons.Add else Icons.Rounded.Remove
+    val icon = if (label.trim() == "+") FutureIcons.Add else FutureIcons.Remove
     SharedTopBarIconButton(icon, label, theme.textColor, theme.accentColor, onClick)
 }
 

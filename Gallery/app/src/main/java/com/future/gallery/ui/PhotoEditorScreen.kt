@@ -14,13 +14,6 @@ import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.AutoAwesome
-import androidx.compose.material.icons.rounded.Crop
-import androidx.compose.material.icons.rounded.FilterVintage
-import androidx.compose.material.icons.rounded.Flip
-import androidx.compose.material.icons.rounded.RotateLeft
-import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -77,12 +70,12 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 private enum class EditorTool(val label: String, val icon: ImageVector) {
-    ROTATE("סיבוב", Icons.Rounded.RotateLeft),
-    FLIP("היפוך", Icons.Rounded.Flip),
-    CROP("חיתוך", Icons.Rounded.Crop),
-    ADJUST("כוונון", Icons.Rounded.Tune),
-    FILTER("מסנן", Icons.Rounded.FilterVintage),
-    EFFECTS("אפקטים", Icons.Rounded.AutoAwesome),
+    ROTATE("סיבוב", FutureIcons.RotateLeft),
+    FLIP("היפוך", FutureIcons.Flip),
+    CROP("חיתוך", FutureIcons.Crop),
+    ADJUST("כוונון", FutureIcons.Tune),
+    FILTER("מסנן", FutureIcons.FilterVintage),
+    EFFECTS("אפקטים", FutureIcons.AutoAwesome),
 }
 
 private enum class AdjustParam(val label: String) {

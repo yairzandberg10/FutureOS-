@@ -1,5 +1,4 @@
 package com.future.remote.ui
-import androidx.compose.material.icons.rounded.RadioButtonChecked
 
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.theme.subtleTextColor
@@ -13,7 +12,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -79,7 +77,7 @@ fun DeviceScreen(theme: FutureTheme, deviceId: String, refreshKey: Int, onBack: 
                 ) {
                     itemsIndexed(currentDevice.buttons) { index, button ->
                         RemoteRow(
-                            icon = Icons.Rounded.RadioButtonChecked,
+                            icon = FutureIcons.RadioButtonChecked,
                             label = button.label,
                             subtitle = "",
                             theme = theme,

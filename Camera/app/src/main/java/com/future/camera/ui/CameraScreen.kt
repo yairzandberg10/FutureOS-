@@ -48,12 +48,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.FlashAuto
-import androidx.compose.material.icons.rounded.FlashOff
-import androidx.compose.material.icons.rounded.FlashOn
 import androidx.compose.material.icons.rounded.PhotoLibrary
-import androidx.compose.material.icons.rounded.Stop
-import androidx.compose.material.icons.rounded.Videocam
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -475,7 +470,7 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
                     PreviewThumbButton(thumb = lastThumb, accentColor = theme.accentColor, onClick = ::openPreview)
                     CameraIconButton(
                         icon = if (captureMode == CaptureMode.VIDEO) {
-                            if (isRecording) Icons.Rounded.Stop else Icons.Rounded.Videocam
+                            if (isRecording) FutureIcons.Stop else FutureIcons.Videocam
                         } else FutureIcons.Camera,
                         contentDescription = if (captureMode == CaptureMode.VIDEO) "הקלט וידאו" else "צלם",
                         accentColor = if (isRecording) CameraDanger else theme.accentColor,
@@ -529,9 +524,9 @@ private fun nextFlash(mode: Int): Int = when (mode) {
 }
 
 private fun flashIcon(mode: Int) = when (mode) {
-    ImageCapture.FLASH_MODE_ON -> Icons.Rounded.FlashOn
-    ImageCapture.FLASH_MODE_AUTO -> Icons.Rounded.FlashAuto
-    else -> Icons.Rounded.FlashOff
+    ImageCapture.FLASH_MODE_ON -> FutureIcons.FlashOn
+    ImageCapture.FLASH_MODE_AUTO -> FutureIcons.FlashAuto
+    else -> FutureIcons.FlashOff
 }
 
 private fun resolutionFor(aspect: AspectOption): ResolutionSelector = ResolutionSelector.Builder()

@@ -1,7 +1,6 @@
 package com.future.notes.ui.screens
-import androidx.compose.material.icons.rounded.PushPin
-import androidx.compose.material.icons.automirrored.rounded.Notes
 
+import androidx.compose.material.icons.rounded.ViewAgenda
 import com.future.sharednav.icons.FutureIcons
 
 import androidx.compose.foundation.layout.Arrangement
@@ -10,9 +9,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.material.icons.rounded.Checklist
-import androidx.compose.material.icons.rounded.GridView
-import androidx.compose.material.icons.rounded.ViewAgenda
 import androidx.compose.material3.Text
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.style.TextOverflow
@@ -186,14 +182,14 @@ fun ListScreen(
                 showMenu = false
                 onAddNote()
             })
-            FutureMenuRow("רשימה חדשה", Icons.Rounded.Checklist, theme, {
+            FutureMenuRow("רשימה חדשה", FutureIcons.Checklist, theme, {
                 showMenu = false
                 onAddChecklist()
             })
             if (note != null) {
                 FutureMenuRow(
                     stringResource(if (note.isPinned) R.string.unpin else R.string.pin),
-                    Icons.Rounded.PushPin,
+                    FutureIcons.PushPin,
                     theme,
                     {
                         showMenu = false
@@ -201,7 +197,7 @@ fun ListScreen(
                     },
                 )
             }
-            FutureMenuRow(if (gridView) "תצוגת רשימה" else "תצוגת רשת", if (gridView) Icons.Rounded.ViewAgenda else Icons.Rounded.GridView, theme, {
+            FutureMenuRow(if (gridView) "תצוגת רשימה" else "תצוגת רשת", if (gridView) Icons.Rounded.ViewAgenda else FutureIcons.GridView, theme, {
                 showMenu = false
                 onToggleGrid()
             })
@@ -239,7 +235,7 @@ private fun NoteBadges(note: Note, theme: FutureTheme) {
         Icon(FutureIcons.Mic, contentDescription = "הקלטה", tint = theme.subtleTextColor, modifier = Modifier.size(FutureDimens.iconTopBar))
     }
     if (note.isPinned) {
-        Icon(Icons.Rounded.PushPin, contentDescription = stringResource(R.string.pinned), tint = theme.subtleTextColor, modifier = Modifier.size(FutureDimens.iconTopBar))
+        Icon(FutureIcons.PushPin, contentDescription = stringResource(R.string.pinned), tint = theme.subtleTextColor, modifier = Modifier.size(FutureDimens.iconTopBar))
     }
 }
 

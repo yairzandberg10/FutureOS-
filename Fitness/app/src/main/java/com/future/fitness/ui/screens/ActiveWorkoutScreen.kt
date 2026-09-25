@@ -1,6 +1,4 @@
 package com.future.fitness.ui.screens
-import androidx.compose.material.icons.rounded.Favorite
-import androidx.compose.material.icons.rounded.LocalFireDepartment
 
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureAvatar
@@ -36,7 +34,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
@@ -183,8 +180,8 @@ fun ActiveWorkoutScreen(
                     WorkoutStore.estimateCalories(workout.met, weightKg, maxOf(1, state.elapsedSec / 60))
                 }
                 Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    MetricChip(Icons.Rounded.Favorite, if (isHrConnected && liveBpm != null) "$liveBpm" else "--", "BPM", theme.dangerColor, theme)
-                    MetricChip(Icons.Rounded.LocalFireDepartment, "$liveCalories", "קק״ל", theme.textColor, theme)
+                    MetricChip(FutureIcons.Favorite, if (isHrConnected && liveBpm != null) "$liveBpm" else "--", "BPM", theme.dangerColor, theme)
+                    MetricChip(FutureIcons.LocalFireDepartment, "$liveCalories", "קק״ל", theme.textColor, theme)
                 }
             }
 

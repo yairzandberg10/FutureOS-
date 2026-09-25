@@ -1,5 +1,4 @@
 package com.future.messages.ui.screens
-import androidx.compose.material.icons.rounded.Groups
 
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.TopBarIconButton
@@ -32,7 +31,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -150,7 +148,7 @@ fun ConversationListScreen(
                 ) {
                     Text("הודעות", fontSize = FutureTypography.screenTitle, fontWeight = FontWeight.Bold, color = theme.textColor, modifier = Modifier.weight(1f))
                     Row(horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm)) {
-                        TopBarIconButton(Icons.Rounded.Groups, "הודעה קבוצתית", theme.textColor, theme.accentColor, onGroupComposeClick)
+                        TopBarIconButton(FutureIcons.Groups, "הודעה קבוצתית", theme.textColor, theme.accentColor, onGroupComposeClick)
                         TopBarIconButton(FutureIcons.AutoMirrored.Chat, "הודעה חדשה", theme.textColor, theme.accentColor, onComposeClick, composeButtonFocusRequester)
                     }
                 }

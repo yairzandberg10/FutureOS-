@@ -1,7 +1,4 @@
 package com.future.navigation.ui.home
-import androidx.compose.material.icons.rounded.LocationOn
-import androidx.compose.material.icons.rounded.Place
-import androidx.compose.material.icons.rounded.Work
 
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureAvatar
@@ -20,7 +17,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -100,7 +96,7 @@ fun HomeScreen(
             horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm),
         ) {
             Icon(
-                Icons.Rounded.LocationOn,
+                FutureIcons.LocationOn,
                 contentDescription = null,
                 tint = theme.mutedTextColor,
                 modifier = Modifier.size(FutureDimens.iconTopBar),
@@ -115,7 +111,7 @@ fun HomeScreen(
                 modifier = Modifier.weight(1f)
             )
             TopBarIconButton(
-                icon = Icons.Rounded.Place,
+                icon = FutureIcons.LocationOn,
                 contentDescription = stringResource(R.string.gtfs_setup_title),
                 textColor = theme.textColor,
                 accentColor = theme.accentColor,
@@ -188,7 +184,7 @@ fun HomeScreen(
                         summary = parts.getOrNull(1),
                         theme = theme,
                         onClick = { onDestinationPicked(result) },
-                        leading = { RowIcon(Icons.Rounded.Place, theme) },
+                        leading = { RowIcon(FutureIcons.LocationOn, theme) },
                     )
                 }
             } else {
@@ -203,7 +199,7 @@ fun HomeScreen(
                             modifier = Modifier.weight(1f)
                         ) { homePlace?.let { onDestinationPicked(GeocodeResult(it.address, LatLng(it.lat, it.lon))) } ?: onOpenSavedPlaces() }
                         QuickPlaceTile(
-                            icon = Icons.Rounded.Work,
+                            icon = FutureIcons.Work,
                             label = stringResource(R.string.quick_work),
                             emptyHint = stringResource(R.string.add_work_address),
                             place = workPlace,
@@ -225,7 +221,7 @@ fun HomeScreen(
                             onClick = {
                                 onDestinationPicked(GeocodeResult(nearby.stop.name, LatLng(nearby.stop.lat, nearby.stop.lon)))
                             },
-                            leading = { RowIcon(Icons.Rounded.Place, theme) },
+                            leading = { RowIcon(FutureIcons.LocationOn, theme) },
                         )
                     }
                 }

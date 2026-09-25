@@ -7,8 +7,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Equalizer
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -59,7 +57,7 @@ fun EqualizerScreen(theme: FutureTheme, onBack: () -> Unit) {
                     title = "אקולייזר ואפקטים",
                     summary = "פרופיל: $deviceName",
                     theme = theme,
-                    icon = Icons.Rounded.Equalizer,
+                    icon = FutureIcons.Equalizer,
                     showChevron = false,
                     focusRequester = first,
                     onClick = { AudioFx.update { it.copy(enabled = !it.enabled) } },

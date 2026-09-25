@@ -226,7 +226,7 @@ fun FitnessNavHost(store: WorkoutStore, heartRateMonitor: HeartRateMonitor, them
                         displayName = "ריצה חופשית",
                         category = com.future.fitness.data.ActivityCategory.RUNNING,
                         met = 9.0,
-                        icon = androidx.compose.material.icons.Icons.AutoMirrored.Rounded.DirectionsRun,
+                        icon = com.future.sharednav.icons.FutureIcons.AutoMirrored.DirectionsRun,
                         usesGps = true,
                     )
                 }

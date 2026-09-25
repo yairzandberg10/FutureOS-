@@ -1,8 +1,4 @@
 package com.future.fitness.ui.screens
-import androidx.compose.material.icons.rounded.EmojiEvents
-import androidx.compose.material.icons.rounded.LocalFireDepartment
-import androidx.compose.material.icons.rounded.MilitaryTech
-import androidx.compose.material.icons.rounded.Route
 
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.theme.FutureShapes
@@ -42,7 +38,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -179,7 +174,7 @@ fun ProgressScreen(
                 item {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Row {
-                            Icon(Icons.Rounded.EmojiEvents, contentDescription = null, tint = theme.dangerColor, modifier = Modifier.size(20.dp))
+                            Icon(FutureIcons.EmojiEvents, contentDescription = null, tint = theme.dangerColor, modifier = Modifier.size(20.dp))
                             Spacer(Modifier.width(6.dp))
                             Text("שיאים אישיים", color = theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Bold)
                         }
@@ -220,7 +215,7 @@ fun ProgressScreen(
                         modifier = Modifier.size(44.dp).background(theme.successColor.copy(alpha = 0.18f), CircleShape),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Icon(Icons.Rounded.MilitaryTech, contentDescription = null, tint = theme.successColor, modifier = Modifier.size(22.dp))
+                        Icon(FutureIcons.MilitaryTech, contentDescription = null, tint = theme.successColor, modifier = Modifier.size(22.dp))
                     }
                     Spacer(Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
@@ -260,12 +255,12 @@ private fun buildPersonalRecords(history: List<WorkoutHistoryEntry>, theme: Futu
 
     val mostCalories = history.maxByOrNull { it.calories }
     if (mostCalories != null) {
-        records.add(PersonalRecord(Icons.Rounded.LocalFireDepartment, "שריפת הקלוריות הגדולה ביותר", mostCalories.name, mostCalories.calories.toString(), "קק״ל", theme.dangerColor))
+        records.add(PersonalRecord(FutureIcons.LocalFireDepartment, "שריפת הקלוריות הגדולה ביותר", mostCalories.name, mostCalories.calories.toString(), "קק״ל", theme.dangerColor))
     }
 
     val longestRun = history.filter { it.distanceKm != null }.maxByOrNull { it.distanceKm!! }
     if (longestRun?.distanceKm != null) {
-        records.add(PersonalRecord(Icons.Rounded.Route, "המרחק הארוך ביותר", longestRun.name, "%.2f".format(longestRun.distanceKm), "ק״מ", theme.successColor))
+        records.add(PersonalRecord(FutureIcons.Route, "המרחק הארוך ביותר", longestRun.name, "%.2f".format(longestRun.distanceKm), "ק״מ", theme.successColor))
     }
 
     return records

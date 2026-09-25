@@ -1,9 +1,7 @@
 package com.future.fitness.ui
-import androidx.compose.material.icons.rounded.Dashboard
 
 import com.future.sharednav.icons.FutureIcons
 
-import androidx.compose.material.icons.Icons
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.future.sharednav.components.FutureBottomNav
@@ -14,7 +12,7 @@ import com.future.sharednav.components.FutureNavItem
  * הפריטים עצמם *לא* פוקוסביליים - הכלל הזה נאכף עכשיו בתוך
  * [FutureBottomNav] ולא בכל אפליקציה בנפרד. */
 enum class FitnessTab(val label: String, val icon: ImageVector) {
-    HOME("ראשי", Icons.Rounded.Dashboard),
+    HOME("ראשי", FutureIcons.Dashboard),
     WORKOUTS("אימונים", FutureIcons.FitnessCenter),
     PROGRESS("התקדמות", FutureIcons.AutoMirrored.TrendingUp),
 }

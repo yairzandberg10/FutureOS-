@@ -12,9 +12,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Equalizer
-import androidx.compose.material.icons.rounded.Speaker
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -140,7 +137,7 @@ fun AudioDevicesScreen(theme: FutureTheme, onBack: () -> Unit, onOpenEqualizer: 
                         leading = {
                             FutureAvatar(
                                 theme = theme,
-                                icon = if (device.isHeadphones) FutureIcons.Headphones else Icons.Rounded.Speaker,
+                                icon = if (device.isHeadphones) FutureIcons.Headphones else FutureIcons.Speaker,
                                 contentColor = if (device.connected) theme.readableAccentColor else null,
                             )
                         },
@@ -163,7 +160,7 @@ fun AudioDevicesScreen(theme: FutureTheme, onBack: () -> Unit, onOpenEqualizer: 
                     title = "אקולייזר מלא",
                     summary = "כל התדרים, באס, 3D והגברה",
                     theme = theme,
-                    icon = Icons.Rounded.Equalizer,
+                    icon = FutureIcons.Equalizer,
                     onClick = onOpenEqualizer,
                 )
             }

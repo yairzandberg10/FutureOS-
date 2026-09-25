@@ -1,7 +1,4 @@
 package com.future.fitness.ui.screens
-import androidx.compose.material.icons.rounded.GridView
-import androidx.compose.material.icons.rounded.LocalFireDepartment
-import androidx.compose.material.icons.automirrored.rounded.DirectionsRun
 
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.AvatarListSize
@@ -40,7 +37,6 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -164,7 +160,7 @@ fun WorkoutsScreen(
 
             item {
                 QuickActionCard(
-                    icon = Icons.AutoMirrored.Rounded.DirectionsRun,
+                    icon = FutureIcons.AutoMirrored.DirectionsRun,
                     title = "ריצה חופשית",
                     subtitle = "מעקב GPS חי - מרחק וקצב",
                     theme = theme,
@@ -174,7 +170,7 @@ fun WorkoutsScreen(
 
             item {
                 QuickActionCard(
-                    icon = Icons.Rounded.GridView,
+                    icon = FutureIcons.GridView,
                     title = "כל סוגי הפעילות",
                     subtitle = "כל סוגי הפעילות, כמו בשעון חכם",
                     theme = theme,
@@ -240,7 +236,7 @@ private fun WorkoutCard(workout: Workout, weightKg: Int, theme: FutureTheme, onC
                         Icon(FutureIcons.Schedule, contentDescription = null, tint = theme.textColor.copy(alpha = 0.5f), modifier = Modifier.size(13.dp))
                         Text(" ${workout.durationMin} דק׳", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.label)
                         Text(" · ", color = theme.textColor.copy(alpha = 0.4f), fontSize = FutureTypography.label)
-                        Icon(Icons.Rounded.LocalFireDepartment, contentDescription = null, tint = theme.dangerColor, modifier = Modifier.size(13.dp))
+                        Icon(FutureIcons.LocalFireDepartment, contentDescription = null, tint = theme.dangerColor, modifier = Modifier.size(13.dp))
                         Text(" $calories קק״ל", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.label)
                     }
                     if (workout.isCustom) {

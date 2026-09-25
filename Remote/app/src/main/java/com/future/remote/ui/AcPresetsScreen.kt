@@ -17,8 +17,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.AcUnit
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -31,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.future.remote.data.RemoteRepository
 import com.future.sharednav.theme.FutureTheme
+import com.future.sharednav.icons.FutureIcons
 
 @Composable
 fun AcPresetsScreen(theme: FutureTheme, onBack: () -> Unit, onDeviceCreated: (String) -> Unit) {
@@ -59,7 +58,7 @@ fun AcPresetsScreen(theme: FutureTheme, onBack: () -> Unit, onDeviceCreated: (St
                 ) {
                     itemsIndexed(AcCompany.entries) { index, company ->
                         RemoteRow(
-                            icon = Icons.Rounded.AcUnit,
+                            icon = FutureIcons.AcUnit,
                             label = company.label,
                             subtitle = company.protocols.joinToString(" / ") { it.label },
                             theme = theme,

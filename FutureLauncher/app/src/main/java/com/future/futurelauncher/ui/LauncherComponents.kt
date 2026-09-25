@@ -6,8 +6,6 @@ import kotlinx.coroutines.Dispatchers
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import android.content.pm.ResolveInfo
-import androidx.compose.material.icons.rounded.Widgets
-import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Icon
 
 import com.future.sharednav.theme.FutureTypography
@@ -45,6 +43,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.graphics.drawable.toBitmap
 import com.future.sharednav.theme.FutureTheme
+import com.future.sharednav.icons.FutureIcons
 
 /**
  * מטמון גלובלי לאייקוני אפליקציות - לא תלוי ב-composition של דף ספציפי ב-
@@ -269,7 +268,7 @@ fun ItemPanel(
                         )
                     } else {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Icon(Icons.Rounded.Widgets, contentDescription = null, tint = OnWallpaperColor.copy(alpha = 0.6f), modifier = Modifier.size(24.dp))
+                            Icon(FutureIcons.Widgets, contentDescription = null, tint = OnWallpaperColor.copy(alpha = 0.6f), modifier = Modifier.size(24.dp))
                         }
                     }
                 }

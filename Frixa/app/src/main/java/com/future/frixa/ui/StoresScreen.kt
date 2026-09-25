@@ -10,8 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Storefront
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -99,7 +97,7 @@ fun StoresScreen(theme: FutureTheme) {
                 Text("מחפש מקומות", color = theme.mutedTextColor, fontSize = FutureTypography.body)
             }
             sorted.isEmpty() -> EmptyState(
-                icon = Icons.Rounded.Storefront,
+                icon = FutureIcons.Storefront,
                 title = if (offline) "אין חיבור לרשת" else "לא נמצאו מקומות",
                 subtitle = "לחץ על מקש התפריט כדי לרענן",
                 textColor = theme.textColor,
@@ -113,7 +111,7 @@ fun StoresScreen(theme: FutureTheme) {
                         onClick = { navigate(store) },
                         focusRequester = if (index == 0) first else null,
                         modifier = Modifier.onFocusChanged { if (it.isFocused) focused = store },
-                        leading = { FutureAvatar(theme = theme, icon = Icons.Rounded.Storefront) },
+                        leading = { FutureAvatar(theme = theme, icon = FutureIcons.Storefront) },
                         trailing = {
                             distance?.let {
                                 Text(formatDistance(it), color = theme.readableAccentColor, fontSize = FutureTypography.body, fontWeight = FutureTypography.weightBold)

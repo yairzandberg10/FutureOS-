@@ -12,8 +12,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.AttachFile
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -111,7 +109,7 @@ fun ComposeScreen(
                 textColor = theme.textColor,
                 accentColor = theme.accentColor,
                 onBack = onCancel,
-                trailingIcon = Icons.Rounded.AttachFile,
+                trailingIcon = FutureIcons.AttachFile,
                 trailingContentDescription = "צרף תמונה",
                 onTrailingClick = imagePicker,
             )

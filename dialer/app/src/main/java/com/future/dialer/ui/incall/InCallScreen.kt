@@ -1,5 +1,4 @@
 package com.future.dialer.ui.incall
-import androidx.compose.material.icons.rounded.FiberManualRecord
 import androidx.compose.material.icons.rounded.Sms
 
 import com.future.sharednav.icons.FutureIcons
@@ -265,7 +264,7 @@ private fun ActiveCall(
             }
             if (isRecording) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Icon(Icons.Rounded.FiberManualRecord, contentDescription = null, tint = theme.dangerColor, modifier = Modifier.size(12.dp))
+                    Icon(FutureIcons.FiberManualRecord, contentDescription = null, tint = theme.dangerColor, modifier = Modifier.size(12.dp))
                     Text(stringResource(R.string.recording_in_progress), color = theme.dangerColor, fontSize = type.summary)
                 }
             }
@@ -280,7 +279,7 @@ private fun ActiveCall(
             Control(if (isOnHold) FutureIcons.PlayArrow else FutureIcons.Pause,
                 if (isOnHold) "המשך" else "המתנה", isOnHold) { if (!viewModel.toggleHold()) onHoldUnsupported() },
             Control(FutureIcons.Dialpad, stringResource(R.string.keypad), isDialpadVisible) { viewModel.toggleDialpad() },
-            Control(Icons.Rounded.FiberManualRecord,
+            Control(FutureIcons.FiberManualRecord,
                 stringResource(if (isRecording) R.string.stop_recording else R.string.record), isRecording,
                 iconColor = if (isRecording) theme.dangerColor else null) { viewModel.toggleRecording(context) },
             Control(Icons.Rounded.Sms, stringResource(R.string.send_message), quickMessage) { viewModel.toggleQuickMessage() },

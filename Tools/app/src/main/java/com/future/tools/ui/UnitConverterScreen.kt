@@ -16,8 +16,6 @@ import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.SwapVert
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -38,6 +36,7 @@ import androidx.compose.ui.unit.sp
 import com.future.sharednav.nav.digitForKey
 import com.future.sharednav.theme.FutureTheme
 import java.text.DecimalFormat
+import com.future.sharednav.icons.FutureIcons
 
 private data class UnitDef(val label: String, val toBase: (Double) -> Double, val fromBase: (Double) -> Double)
 
@@ -211,5 +210,5 @@ private fun UnitChip(label: String, theme: FutureTheme, onClick: () -> Unit) {
 
 @Composable
 private fun SwapButton(theme: FutureTheme, onClick: () -> Unit) {
-    ToolsIconButton(Icons.Rounded.SwapVert, "החלף כיוון", theme, onClick = onClick)
+    ToolsIconButton(FutureIcons.SwapVert, "החלף כיוון", theme, onClick = onClick)
 }

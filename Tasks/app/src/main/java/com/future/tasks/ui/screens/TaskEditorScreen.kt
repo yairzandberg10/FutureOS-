@@ -1,8 +1,6 @@
 package com.future.tasks.ui.screens
-import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material.icons.rounded.RadioButtonUnchecked
-import androidx.compose.material.icons.rounded.Save
 
+import androidx.compose.material.icons.rounded.CheckCircle
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureTextField
 import com.future.sharednav.components.FutureChip
@@ -82,7 +80,7 @@ fun TaskEditorScreen(
                         modifier = Modifier.weight(1f),
                     )
                     TopBarIconButton(
-                        if (isDone) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
+                        if (isDone) Icons.Rounded.CheckCircle else FutureIcons.RadioButtonUnchecked,
                         "בוצע",
                         theme.textColor,
                         theme.successColor,
@@ -93,7 +91,7 @@ fun TaskEditorScreen(
                         TopBarIconButton(FutureIcons.Delete, "מחק", theme.textColor, theme.dangerColor) { showDeleteConfirm = true }
                         Spacer(modifier = Modifier.width(8.dp))
                     }
-                    TopBarIconButton(Icons.Rounded.Save, "שמור", theme.textColor, theme.accentColor) {
+                    TopBarIconButton(FutureIcons.Save, "שמור", theme.textColor, theme.accentColor) {
                         onSave(title, notes, priority, isDone)
                     }
                 }

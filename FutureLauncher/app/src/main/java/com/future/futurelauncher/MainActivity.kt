@@ -1,6 +1,4 @@
 package com.future.futurelauncher
-import androidx.compose.material.icons.rounded.Wallpaper
-import androidx.compose.material.icons.rounded.Widgets
 
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.theme.scrimColor
@@ -867,10 +865,10 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                         EditModeButton(stringResource(R.string.settings), FutureIcons.Settings, viewModel.isEditModeBottomBarFocused && viewModel.editModeSelectedIndex == 0, theme = theme) {
                             viewModel.dialogState = LauncherDialog.LauncherSettings
                         }
-                        EditModeButton(stringResource(R.string.widgets), Icons.Rounded.Widgets, viewModel.isEditModeBottomBarFocused && viewModel.editModeSelectedIndex == 1, theme = theme) {
+                        EditModeButton(stringResource(R.string.widgets), FutureIcons.Widgets, viewModel.isEditModeBottomBarFocused && viewModel.editModeSelectedIndex == 1, theme = theme) {
                             viewModel.dialogState = LauncherDialog.Widgets
                         }
-                        EditModeButton(stringResource(R.string.wallpaper), Icons.Rounded.Wallpaper, viewModel.isEditModeBottomBarFocused && viewModel.editModeSelectedIndex == 2, theme = theme) {
+                        EditModeButton(stringResource(R.string.wallpaper), FutureIcons.Wallpaper, viewModel.isEditModeBottomBarFocused && viewModel.editModeSelectedIndex == 2, theme = theme) {
                             activity.openWallpapers()
                         }
                         EditModeButton(stringResource(R.string.apps), FutureIcons.Apps, viewModel.isEditModeBottomBarFocused && viewModel.editModeSelectedIndex == 3, theme = theme) {

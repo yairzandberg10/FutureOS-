@@ -1,5 +1,4 @@
 package com.future.dialer.ui.contact
-import androidx.compose.material.icons.rounded.StarBorder
 
 import com.future.sharednav.icons.FutureIcons
 
@@ -10,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -135,7 +133,7 @@ fun ContactScreen(
                 if (contact != null) {
                     FutureSettingItem(
                         title = if (contact.isFavorite) "הסר ממועדפים" else "הוסף למועדפים",
-                        icon = if (contact.isFavorite) FutureIcons.Star else Icons.Rounded.StarBorder,
+                        icon = if (contact.isFavorite) FutureIcons.Star else FutureIcons.StarBorder,
                         theme = theme,
                         showChevron = false,
                         onClick = { viewModel.toggleFavorite(contact) },

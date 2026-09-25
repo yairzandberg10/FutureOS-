@@ -1,14 +1,4 @@
 package com.future.music.ui.screens
-import androidx.compose.material.icons.rounded.Equalizer
-import androidx.compose.material.icons.rounded.Favorite
-import androidx.compose.material.icons.rounded.FavoriteBorder
-import androidx.compose.material.icons.rounded.Repeat
-import androidx.compose.material.icons.rounded.RepeatOne
-import androidx.compose.material.icons.rounded.Shuffle
-import androidx.compose.material.icons.rounded.SkipNext
-import androidx.compose.material.icons.rounded.SkipPrevious
-import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
-import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureProgressBar
@@ -51,7 +41,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Icon
@@ -234,7 +223,7 @@ fun NowPlayingScreen(
 
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                    RoundIconButton(Icons.Rounded.SkipPrevious, "קודם (4)", theme, size = 46.dp, onClick = onPrevious, onFocusChanged = track("prev"))
+                    RoundIconButton(FutureIcons.SkipPrevious, "קודם (4)", theme, size = 46.dp, onClick = onPrevious, onFocusChanged = track("prev"))
                     Spacer(modifier = Modifier.width(18.dp))
                     RoundIconButton(
                         if (playerState.isPlaying) FutureIcons.Pause else FutureIcons.PlayArrow,
@@ -243,7 +232,7 @@ fun NowPlayingScreen(
                         focusRequester = playButtonFocusRequester, onFocusChanged = track("play"),
                     )
                     Spacer(modifier = Modifier.width(18.dp))
-                    RoundIconButton(Icons.Rounded.SkipNext, "הבא (6)", theme, size = 46.dp, onClick = onNext, onFocusChanged = track("next"))
+                    RoundIconButton(FutureIcons.SkipNext, "הבא (6)", theme, size = 46.dp, onClick = onNext, onFocusChanged = track("next"))
                 }
                 }
                 }
@@ -251,13 +240,13 @@ fun NowPlayingScreen(
                 // פעולות המסך - אריחי ActionGrid, כמו פקדי השיחה בחייגן.
                 Spacer(modifier = Modifier.height(14.dp))
                 val actions = listOf(
-                    NowPlayingAction("fav", if (isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder, "מועדף", isFavorite, onToggleFavorite),
-                    NowPlayingAction("playlist", Icons.AutoMirrored.Rounded.PlaylistAdd, "פלייליסט", false) { showPlaylistDialog = true },
-                    NowPlayingAction("sound", Icons.Rounded.Equalizer, "סאונד", false, onOpenSound),
-                    NowPlayingAction("shuffle", Icons.Rounded.Shuffle, "ערבוב", playerState.shuffleEnabled, onToggleShuffle),
+                    NowPlayingAction("fav", if (isFavorite) FutureIcons.Favorite else FutureIcons.FavoriteBorder, "מועדף", isFavorite, onToggleFavorite),
+                    NowPlayingAction("playlist", FutureIcons.AutoMirrored.PlaylistAdd, "פלייליסט", false) { showPlaylistDialog = true },
+                    NowPlayingAction("sound", FutureIcons.Equalizer, "סאונד", false, onOpenSound),
+                    NowPlayingAction("shuffle", FutureIcons.Shuffle, "ערבוב", playerState.shuffleEnabled, onToggleShuffle),
                     NowPlayingAction(
                         "repeat",
-                        if (playerState.repeatMode == Player.REPEAT_MODE_ONE) Icons.Rounded.RepeatOne else Icons.Rounded.Repeat,
+                        if (playerState.repeatMode == Player.REPEAT_MODE_ONE) FutureIcons.RepeatOne else FutureIcons.Repeat,
                         "חזרה", playerState.repeatMode != Player.REPEAT_MODE_OFF, onCycleRepeat,
                     ),
                     NowPlayingAction("bt", FutureIcons.Bluetooth, "Bluetooth", false, onOpenDevices),

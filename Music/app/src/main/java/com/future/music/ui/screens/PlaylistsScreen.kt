@@ -1,5 +1,4 @@
 package com.future.music.ui.screens
-import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureListItem
@@ -23,7 +22,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -82,7 +80,7 @@ fun PlaylistsScreen(
                         theme = theme,
                         onClick = { onOpenPlaylist(playlist) },
                         focusRequester = if (index == 0) firstItemFocusRequester else null,
-                        leading = { FutureAvatar(theme = theme, icon = Icons.AutoMirrored.Rounded.QueueMusic) },
+                        leading = { FutureAvatar(theme = theme, icon = FutureIcons.AutoMirrored.QueueMusic) },
                         trailing = { Text("${playlist.songIds.size} שירים", color = theme.subtleTextColor, fontSize = type.summary) },
                     )
                 }

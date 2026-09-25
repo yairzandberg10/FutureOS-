@@ -1,18 +1,8 @@
 package com.future.files.ui
-import androidx.compose.material.icons.rounded.Code
-import androidx.compose.material.icons.rounded.GridView
-import androidx.compose.material.icons.automirrored.rounded.ViewList
 import com.future.sharednav.theme.idleChipColor
 import com.future.sharednav.theme.readableAccentColor
-import androidx.compose.material.icons.rounded.Android
-import androidx.compose.material.icons.rounded.ContentPaste
-import androidx.compose.material.icons.rounded.CreateNewFolder
-import androidx.compose.material.icons.rounded.DriveFileMove
-import androidx.compose.material.icons.rounded.DriveFileRenameOutline
-import androidx.compose.material.icons.rounded.Movie
-import androidx.compose.material.icons.rounded.OpenInNew
-import androidx.compose.material.icons.rounded.PictureAsPdf
 
+import androidx.compose.material.icons.rounded.OpenInNew
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureButton
 import com.future.sharednav.components.EmptyState
@@ -478,10 +468,10 @@ private fun FilePreviewIcon(entry: FileEntry, theme: FutureTheme, size: androidx
     } else {
         val icon = when (category) {
             FileCategory.AUDIO -> FutureIcons.MusicNote
-            FileCategory.VIDEO -> Icons.Rounded.Movie
-            FileCategory.PDF -> Icons.Rounded.PictureAsPdf
-            FileCategory.APK -> Icons.Rounded.Android
-            else -> if (com.future.files.data.isScript(entry.file)) Icons.Rounded.Code else FutureIcons.Description
+            FileCategory.VIDEO -> FutureIcons.Movie
+            FileCategory.PDF -> FutureIcons.PictureAsPdf
+            FileCategory.APK -> FutureIcons.Android
+            else -> if (com.future.files.data.isScript(entry.file)) FutureIcons.Code else FutureIcons.Description
         }
         Box(modifier = Modifier.size(size), contentAlignment = Alignment.Center) {
             Icon(icon, contentDescription = null, tint = theme.mutedTextColor, modifier = Modifier.size(size * 0.7f))
@@ -509,9 +499,9 @@ private fun FileOptionsMenu(
             FutureMenuRow("שתף", FutureIcons.Share, theme, onShare)
             FutureMenuRow("פתח באפליקציה חיצונית", Icons.Rounded.OpenInNew, theme, onOpenExternally)
         }
-        FutureMenuRow("שנה שם", Icons.Rounded.DriveFileRenameOutline, theme, onRename)
+        FutureMenuRow("שנה שם", FutureIcons.DriveFileRenameOutline, theme, onRename)
         FutureMenuRow("העתק", FutureIcons.ContentCopy, theme, onCopy)
-        FutureMenuRow("העבר", Icons.Rounded.DriveFileMove, theme, onMove)
+        FutureMenuRow("העבר", FutureIcons.DriveFileMove, theme, onMove)
         FutureMenuRow("פרטים", FutureIcons.Info, theme, onDetails)
         FutureMenuRow("מחק", FutureIcons.Delete, theme, onDelete, destructive = true)
         folderRows()
@@ -530,11 +520,11 @@ private fun FolderMenuRows(
     onToggleGridView: () -> Unit,
 ) {
     fun pick(action: () -> Unit): () -> Unit = { onDone(); action() }
-    if (hasClipboard) FutureMenuRow("הדבק כאן", Icons.Rounded.ContentPaste, theme, pick(onPaste))
-    FutureMenuRow("תיקייה חדשה", Icons.Rounded.CreateNewFolder, theme, pick(onNewFolder))
+    if (hasClipboard) FutureMenuRow("הדבק כאן", FutureIcons.ContentPaste, theme, pick(onPaste))
+    FutureMenuRow("תיקייה חדשה", FutureIcons.CreateNewFolder, theme, pick(onNewFolder))
     FutureMenuRow(
         if (gridView) "תצוגת רשימה" else "תצוגת רשת",
-        if (gridView) Icons.AutoMirrored.Rounded.ViewList else Icons.Rounded.GridView,
+        if (gridView) FutureIcons.AutoMirrored.ViewList else FutureIcons.GridView,
         theme,
         pick(onToggleGridView),
     )
