@@ -1,73 +1,61 @@
 package com.future.flashlight.ui
 
-import android.app.Activity
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.focusable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Icon
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.BlurredEdgeTreatment
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.future.flashlight.data.FlashlightController
 import com.future.flashlight.data.TorchService
-import com.future.sharednav.icons.FutureIcons
-import com.future.sharednav.nav.onOptionsKeyPress
+import com.future.sharednav.components.FutureButton
+import com.future.sharednav.components.ScreenTopBar
 import com.future.sharednav.theme.FutureTheme
+import com.future.sharednav.theme.FutureTypography
 
-// העיצוב הקלאסי (קנבס "פנס תלת מימד", artboard Classic): רקע כחול, ראש פנס
-// מתכתי במבט חזיתי, אלומה לבנה כשדולק, ופאנל לבן עם כפתור הפעלה עגול.
-// כל הקואורדינטות כאן בפיקסלים של מסך 640x960 ומוקטנות לגודל המסך בפועל.
+// העיצוב מהקנבס "פנס תלת מימד" (artboard Main/On): פנס מתכת באלכסון, ראשו
+// מופנה למעלה-שמאלה ומעט אל הצופה. כשדולק - העדשה בוהקת ואלומה יוצאת ממנה.
+// כל הקואורדינטות בפיקסלים של מסך 640x960 ומוקטנות לגודל המסך בפועל. בתוך
+// inTorch הציר הוא ציר הפנס: x מהזנב (0) אל העדשה (470), y לרוחב (למעלה = הצד המואר).
 private const val DESIGN_W = 640f
 private const val DESIGN_H = 960f
 
 @Composable
-fun FlashlightScreen(@Suppress("UNUSED_PARAMETER") theme: FutureTheme) {
+fun FlashlightScreen(theme: FutureTheme) {
     val context = LocalContext.current
     val controller = remember { FlashlightController(context) }
     var isOn by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    // המסך תמיד כהה - הפנס מצויר על במה שחורה גם כשהמערכת במצב בהיר
+    val dark = remember(theme.accentColor) { FutureTheme(isDarkMode = true, accentColor = theme.accentColor) }
 
     // אין כאן בקשת הרשאה: setTorchMode לא צריך הרשאת CAMERA. המצב נקרא
     // מהמערכת (TorchCallback), כולל הדלקה/כיבוי ממרכז הבקרה, וכשהמצלמה
@@ -81,285 +69,229 @@ fun FlashlightScreen(@Suppress("UNUSED_PARAMETER") theme: FutureTheme) {
     }
 
     val hasFlash = remember { controller.hasFlash() }
-    // הדלקה דרך שירות קדמי - כך הפנס נשאר דלוק גם כשהמסך נכבה/ננעל.
-    val toggle = { if (isOn) TorchService.turnOff(context) else TorchService.turnOn(context) }
-
-    // מקש Options (התווית "סגירה"): מכבה את הפנס ויוצא. Back ("אחורה") יוצא
-    // ומשאיר את הפנס במצבו.
-    onOptionsKeyPress {
-        if (isOn) TorchService.turnOff(context)
-        (context as? Activity)?.finish()
-    }
-
     val on by animateFloatAsState(if (isOn) 1f else 0f, tween(260), label = "torchOn")
     val focusRequester = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { focusRequester.requestFocus() } }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-        BoxWithConstraints(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Brush.verticalGradient(0f to Color(0xFF1C2466), 0.45f to Color(0xFF131B52), 1f to Color(0xFF0A0F33)))
-        ) {
-            // יחידת עיצוב אחת (פיקסל ב-640x960) ב-dp של המסך בפועל
+        BoxWithConstraints(modifier = Modifier.fillMaxSize().background(Color.Black)) {
             val u = maxWidth / DESIGN_W
             val v = maxHeight / DESIGN_H
 
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            0f to Color(0xFFD5DCF5), 0.22f to Color(0xFFA3B1E6), 0.5f to Color(0xFF6376CC),
-                            0.75f to Color(0xFF2D3FA0), 1f to Color(0xFF17217A)
-                        ),
-                        alpha = on
-                    )
-            )
-
-            Canvas(Modifier.fillMaxSize()) {
-                withTransform({ scale(size.width / DESIGN_W, size.height / DESIGN_H, pivot = Offset.Zero) }) {
-                    drawTorch(on)
+            DesignLayer(Modifier) { drawStage(on) }
+            if (on > 0f) {
+                DesignLayer(Modifier.glow(u * 40, on)) {
+                    inTorch { drawOval(Color(0xFFFFD60A), Offset(350f, -230f), Size(300f, 460f), alpha = 0.35f) }
+                }
+                DesignLayer(Modifier.glow(u * 6, on)) { inTorch { drawBeam() } }
+                DesignLayer(Modifier.glow(u * 14, on)) { inTorch { drawBeamCore() } }
+            }
+            DesignLayer(Modifier) { inTorch { drawTorch(on) } }
+            if (on > 0f) {
+                DesignLayer(Modifier.glow(u * 14, on)) {
+                    inTorch { drawOval(Color(0xFFFFFBEA), Offset(440f, -86f), Size(68f, 172f), alpha = 0.7f) }
                 }
             }
 
-            // הפאנל הלבן בתחתית
-            val panelShape = RoundedCornerShape(topStart = u * 44, topEnd = u * 44)
-            Box(
-                Modifier
-                    .offset(y = v * 720)
-                    .fillMaxWidth()
-                    .height(v * 240)
-                    .shadow(14.dp, panelShape)
-                    .clip(panelShape)
-                    .background(Brush.verticalGradient(0f to Color.White, 0.55f to Color(0xFFF2F4FA), 1f to Color(0xFFDDE2EE)))
-            )
+            ScreenTopBar(title = "פנס", textColor = dark.textColor, accentColor = dark.accentColor, onBack = null)
 
-            // שקע הכפתור
-            Box(
-                Modifier
-                    .offset(x = u * 252, y = v * 740)
-                    .size(u * 136)
-                    .clip(CircleShape)
-                    .background(Brush.verticalGradient(listOf(Color(0xFFC7CBD6), Color.White)))
-            )
-
-            if (hasFlash) {
-                PowerButton(
-                    isOn = isOn,
-                    focusRequester = focusRequester,
-                    onToggle = toggle,
-                    modifier = Modifier.offset(x = u * 262, y = v * 750),
-                    diameter = u * 116,
-                    ringGap = u * 10,
-                    ringWidth = u * 4,
-                )
-            } else {
-                Text(
-                    "לא נמצא פנס במכשיר הזה",
-                    color = Color(0xFF3A3A3C),
-                    fontSize = 16.sp,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.offset(y = v * 790).fillMaxWidth()
-                )
-            }
-
-            errorMessage?.let {
-                Text(
-                    it,
-                    color = Color(0xFFD32F2F),
-                    fontSize = 13.sp,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.offset(y = v * 878).fillMaxWidth()
-                )
-            }
-
-            // תוויות המקשים הרכים: ב-RTL הראשונה מימין (Options), השנייה משמאל (Back)
-            Row(
-                modifier = Modifier
-                    .offset(y = v * 896)
-                    .fillMaxWidth()
-                    .height(v * 44)
-                    .padding(horizontal = u * 32),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
+            Column(
+                modifier = Modifier.offset(y = v * 772).fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(v * 20),
             ) {
-                Text("סגירה", color = Color(0xFF3A3A3C), fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                Text("אחורה", color = Color(0xFF3A3A3C), fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                if (!hasFlash) {
+                    Text("לא נמצא פנס במכשיר הזה", color = dark.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.body, textAlign = TextAlign.Center)
+                } else {
+                    Text(
+                        errorMessage ?: if (isOn) "דלוק" else "כבוי",
+                        color = if (errorMessage != null) dark.dangerColor else dark.textColor.copy(alpha = 0.6f),
+                        fontSize = FutureTypography.body,
+                        textAlign = TextAlign.Center,
+                    )
+                    FutureButton(
+                        text = if (isOn) "כבה פנס" else "הדלק פנס",
+                        theme = dark,
+                        // הדלקה דרך שירות קדמי - כך הפנס נשאר דלוק גם כשהמסך נכבה/ננעל.
+                        onClick = { if (isOn) TorchService.turnOff(context) else TorchService.turnOn(context) },
+                        focusRequester = focusRequester,
+                        modifier = Modifier.width(u * 320),
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-private fun PowerButton(
-    isOn: Boolean,
-    focusRequester: FocusRequester,
-    onToggle: () -> Unit,
-    modifier: Modifier,
-    diameter: Dp,
-    ringGap: Dp,
-    ringWidth: Dp,
-) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val ring = if (isOn) Color(0xFFE53935) else Color(0xFF6E6E73)
-    val fill = if (isOn) {
-        listOf(Color(0xFFFF8A80), Color(0xFFF2453D), Color(0xFFB71C1C))
-    } else {
-        listOf(Color(0xFFAEAEB2), Color(0xFF6E6E73), Color(0xFF3A3A3C))
-    }
-
-    Box(
-        modifier = modifier
-            .size(diameter)
-            .drawBehind {
-                if (isFocused) {
-                    val w = ringWidth.toPx()
-                    drawCircle(ring, radius = size.minDimension / 2 + ringGap.toPx() + w / 2, style = Stroke(w))
-                }
-            }
-            .shadow(6.dp, CircleShape)
-            .clip(CircleShape)
-            .drawBehind {
-                drawRect(
-                    Brush.radialGradient(
-                        0f to fill[0], 0.45f to fill[1], 1f to fill[2],
-                        center = Offset(size.width / 2, size.height * 0.3f),
-                        radius = size.maxDimension * 0.85f
-                    )
-                )
-                // בליטה: הבהרה למעלה והצללה למטה
-                drawRect(Brush.verticalGradient(0f to Color.White.copy(alpha = 0.45f), 0.3f to Color.Transparent))
-                drawRect(Brush.verticalGradient(0.7f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.28f)))
-            }
-            .focusRequester(focusRequester)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onToggle)
-            .focusable(interactionSource = interactionSource),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            FutureIcons.PowerSettingsNew,
-            contentDescription = if (isOn) "כבה פנס" else "הדלק פנס",
-            tint = Color.White,
-            modifier = Modifier.size(diameter / 2)
-        )
+private fun DesignLayer(modifier: Modifier, draw: DrawScope.() -> Unit) {
+    Canvas(modifier.fillMaxSize()) {
+        withTransform({ scale(size.width / DESIGN_W, size.height / DESIGN_H, pivot = Offset.Zero) }) { draw() }
     }
 }
 
-/** ציור ראש הפנס והאלומה במרחב 640x960. [on] בין 0 ל-1 (מונפש). */
-private fun DrawScope.drawTorch(on: Float) {
-    if (on > 0f) {
-        // האלומה החיצונית - שכבות מורחבות בשקיפות יורדת במקום טשטוש (blur לא קיים לפני API 31)
-        val outer = Brush.verticalGradient(
-            0f to Color.White.copy(alpha = 0.98f), 0.35f to Color.White.copy(alpha = 0.8f),
-            0.75f to Color.White.copy(alpha = 0.35f), 1f to Color.White.copy(alpha = 0.1f),
-            startY = 410f, endY = -20f
-        )
-        for ((grow, a) in listOf(14f to 0.18f, 7f to 0.3f, 0f to 1f)) {
-            drawPath(trapezoid(30f - grow, 610f + grow, 169f - grow * 0.6f, 471f + grow * 0.6f, -20f, 410f), outer, alpha = a * on)
-        }
-        val core = Brush.verticalGradient(
-            0f to Color.White, 0.6f to Color.White.copy(alpha = 0.6f), 1f to Color.Transparent,
-            startY = 410f, endY = 150f
-        )
-        for ((grow, a) in listOf(24f to 0.15f, 12f to 0.3f, 0f to 0.7f)) {
-            drawPath(trapezoid(200f - grow, 440f + grow, 230f - grow * 0.6f, 410f + grow * 0.6f, 150f, 410f), core, alpha = a * on)
-        }
-        // הילה מעל קצה הראש
-        withTransform({ scale(1f, 0.25f, pivot = Offset(320f, 405f)) }) {
-            drawCircle(
-                Brush.radialGradient(
-                    0f to Color.White, 0.55f to Color.White.copy(alpha = 0.8f), 1f to Color.Transparent,
-                    center = Offset(320f, 405f), radius = 180f
-                ),
-                radius = 180f, center = Offset(320f, 405f), alpha = on
-            )
-        }
-    }
+private fun Modifier.glow(radius: Dp, alpha: Float) =
+    graphicsLayer { this.alpha = alpha }.blur(radius, BlurredEdgeTreatment.Unbounded)
 
-    // גוף וצוואר
+private inline fun DrawScope.inTorch(block: DrawScope.() -> Unit) {
+    withTransform({
+        translate(468f, 722f)
+        rotate(-130f, pivot = Offset.Zero)
+        scale(1f, -1f, pivot = Offset.Zero)
+    }) { block() }
+}
+
+// --- צבעים (גווני האפור של מערכת העיצוב + הצהוב שלה לאור) ---
+private fun alu(r: Float) = Brush.verticalGradient(
+    0f to Color(0xFF2C2C2E), 0.05f to Color(0xFF8E8E93), 0.10f to Color(0xFFE5E5EA), 0.16f to Color(0xFF6E6E73),
+    0.34f to Color(0xFF2C2C2E), 0.62f to Color(0xFF141416), 0.86f to Color(0xFF08080A), 0.94f to Color(0xFF3A3A3C),
+    1f to Color(0xFF111113), startY = -r, endY = r
+)
+private fun steel(r: Float) = Brush.verticalGradient(
+    0f to Color(0xFF636366), 0.07f to Color.White, 0.16f to Color(0xFFD1D1D6), 0.38f to Color(0xFF8E8E93),
+    0.66f to Color(0xFF3A3A3C), 0.88f to Color(0xFF1C1C1E), 0.95f to Color(0xFF636366), 1f to Color(0xFF2C2C2E),
+    startY = -r, endY = r
+)
+private fun rubber(r: Float) = Brush.verticalGradient(
+    0f to Color(0xFF1C1C1E), 0.10f to Color(0xFF48484A), 0.30f to Color(0xFF1C1C1E), 0.80f to Color(0xFF050506),
+    1f to Color(0xFF1C1C1E), startY = -r, endY = r
+)
+
+private fun DrawScope.drawStage(on: Float) {
     drawRect(
-        Brush.horizontalGradient(
-            0f to Color(0xFF070B26), 0.22f to Color(0xFF1B2562), 0.38f to Color(0xFF4A5AA8),
-            0.6f to Color(0xFF1B2562), 1f to Color(0xFF070B26), startX = 240f, endX = 400f
-        ),
-        topLeft = Offset(240f, 690f), size = Size(160f, 120f)
+        Brush.radialGradient(0f to Color(0xFF1C1C1E), 0.6f to Color(0xFF0B0B0C), 1f to Color.Black, center = Offset(330f, 540f), radius = 440f),
+        size = Size(DESIGN_W, DESIGN_H)
     )
-    drawPath(
-        trapezoid(196f, 444f, 240.6f, 399.4f, 628f, 700f),
-        Brush.horizontalGradient(
-            0f to Color(0xFF070B26), 0.18f to Color(0xFF1F2A6E), 0.34f to Color(0xFF5363B4), 0.42f to Color(0xFF9AA6DC),
-            0.56f to Color(0xFF3A4A9E), 0.8f to Color(0xFF141D55), 1f to Color(0xFF070B26), startX = 196f, endX = 444f
-        )
-    )
-
-    // טבעת כהה מתחת לראש
-    val band = Path().apply {
-        addRoundRect(
-            RoundRect(
-                left = 180f, top = 596f, right = 460f, bottom = 640f,
-                topLeftCornerRadius = CornerRadius.Zero, topRightCornerRadius = CornerRadius.Zero,
-                bottomRightCornerRadius = CornerRadius(30f), bottomLeftCornerRadius = CornerRadius(30f)
-            )
-        )
-    }
-    drawPath(
-        band,
-        Brush.horizontalGradient(
-            0f to Color(0xFF04071C), 0.16f to Color(0xFF111A4E), 0.34f to Color(0xFF2E3C88), 0.42f to Color(0xFF5A69B4),
-            0.58f to Color(0xFF222F78), 0.82f to Color(0xFF0B1240), 1f to Color(0xFF04071C), startX = 180f, endX = 460f
-        )
-    )
-    clipPath(band) {
-        drawRect(Brush.verticalGradient(0f to Color.Black.copy(alpha = 0.55f), 1f to Color.Transparent, startY = 596f, endY = 612f),
-            topLeft = Offset(180f, 596f), size = Size(280f, 16f))
-    }
-
-    // צל רך מתחת לראש
-    for ((grow, a) in listOf(24f to 0.08f, 14f to 0.12f, 6f to 0.16f)) {
-        drawRoundRect(Color.Black, Offset(168f - grow, 420f - grow), Size(304f + grow * 2, 200f + grow * 2), CornerRadius(40f + grow), alpha = a)
-    }
-
-    // ראש הפנס
-    val head = Path().apply { addRoundRect(RoundRect(168f, 404f, 472f, 604f, CornerRadius(40f))) }
-    drawPath(
-        head,
-        Brush.horizontalGradient(
-            0f to Color(0xFF111B5A), 0.08f to Color(0xFF26359A), 0.2f to Color(0xFF4F62C4), 0.34f to Color(0xFF9DAAE4),
-            0.43f to Color(0xFFE3E8FA), 0.52f to Color(0xFFA7B3E8), 0.68f to Color(0xFF5064C0), 0.86f to Color(0xFF2A3890),
-            1f to Color(0xFF111B5A), startX = 168f, endX = 472f
-        )
-    )
-    clipPath(head) {
-        drawRect(Color.White.copy(alpha = 0.35f), Offset(168f, 404f), Size(304f, 4f))
-        drawRect(Brush.verticalGradient(0f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.45f), startY = 574f, endY = 604f),
-            Offset(168f, 574f), Size(304f, 30f))
-        // כבוי: הראש מעומעם. דלוק: האור מאיר את חלקו העליון
-        drawRect(Color(0xFF04071C), Offset(168f, 404f), Size(304f, 200f), alpha = 0.38f * (1f - on))
-        drawRect(
-            Brush.verticalGradient(
-                0f to Color.White.copy(alpha = 0.55f), 0.3f to Color.White.copy(alpha = 0.12f), 0.55f to Color.Transparent,
-                startY = 404f, endY = 604f
-            ),
-            Offset(168f, 404f), Size(304f, 200f), alpha = on
-        )
-    }
-
-    // קצה הראש הזוהר
     if (on > 0f) {
-        for ((grow, a) in listOf(18f to 0.15f, 10f to 0.3f, 4f to 0.5f)) {
-            drawRoundRect(Color.White, Offset(196f - grow, 404f - grow), Size(248f + grow * 2, 6f + grow * 2), CornerRadius(3f + grow), alpha = a * on)
-        }
-        drawRoundRect(Color.White, Offset(196f, 404f), Size(248f, 6f), CornerRadius(3f), alpha = on)
+        drawRect(
+            Brush.radialGradient(
+                0f to Color(0xFFFFE9A0).copy(alpha = 0.34f), 0.35f to Color(0xFFFFD60A).copy(alpha = 0.12f),
+                1f to Color(0xFFFFD60A).copy(alpha = 0f), center = Offset(150f, 330f), radius = 560f
+            ),
+            size = Size(DESIGN_W, DESIGN_H), alpha = on
+        )
     }
 }
 
-/** טרפז: קצה עליון [topL]..[topR] בגובה [top], קצה תחתון [botL]..[botR] בגובה [bottom]. */
-private fun trapezoid(topL: Float, topR: Float, botL: Float, botR: Float, top: Float, bottom: Float) = Path().apply {
-    moveTo(topL, top)
-    lineTo(topR, top)
-    lineTo(botR, bottom)
-    lineTo(botL, bottom)
+private fun DrawScope.drawBeam() {
+    drawPath(
+        polygon(470f to -58f, 1250f to -440f, 1250f to 440f, 470f to 58f),
+        Brush.horizontalGradient(
+            0f to Color(0xFFFFF8E1).copy(alpha = 0.9f), 0.14f to Color(0xFFFFF1BF).copy(alpha = 0.55f),
+            0.45f to Color(0xFFFFE58A).copy(alpha = 0.2f), 1f to Color(0xFFFFD60A).copy(alpha = 0f),
+            startX = 470f, endX = 1250f
+        )
+    )
+}
+
+private fun DrawScope.drawBeamCore() {
+    drawPath(
+        polygon(470f to -30f, 1250f to -150f, 1250f to 150f, 470f to 30f),
+        Brush.horizontalGradient(
+            0f to Color.White.copy(alpha = 0.85f), 0.3f to Color.White.copy(alpha = 0.3f), 1f to Color.White.copy(alpha = 0f),
+            startX = 470f, endX = 1250f
+        )
+    )
+}
+
+/** קטע גלילי מ-[x0] (רדיוס [r0]) עד [x1] (רדיוס [r1]); הקצה האחורי מעוגל כחצי אליפסה לפי הפרספקטיבה. */
+private fun section(x0: Float, x1: Float, r0: Float, r1: Float = r0) = Path().apply {
+    moveTo(x0, -r0)
+    lineTo(x1, -r1)
+    lineTo(x1, r1)
+    lineTo(x0, r0)
+    arcTo(Rect(x0 - r0 * 0.36f, -r0, x0 + r0 * 0.36f, r0), 90f, 180f, false)
     close()
 }
+
+private fun DrawScope.drawSection(path: Path, brush: Brush) {
+    drawPath(path, brush)
+    drawPath(path, Color.Black.copy(alpha = 0.5f), style = Stroke(1f))
+}
+
+/** חריץ היקפי: חצי האליפסה שפונה לזנב, קו כהה ולידו קו אור דק. */
+private fun DrawScope.groove(x: Float, r: Float, width: Float) {
+    val rx = r * 0.36f
+    drawArc(Color.Black.copy(alpha = 0.8f), 90f, 180f, false, Offset(x - rx, -r), Size(rx * 2, r * 2), style = Stroke(width))
+    drawArc(Color.White.copy(alpha = 0.13f), 90f, 180f, false, Offset(x + 3f - rx, -r), Size(rx * 2, r * 2), style = Stroke(1.5f))
+}
+
+private fun DrawScope.drawTorch(on: Float) {
+    drawSection(section(0f, 36f, 38f), rubber(38f))
+    drawSection(section(36f, 44f, 41f), steel(41f))
+    drawSection(section(44f, 302f, 40f), alu(40f))
+
+    // אחיזה מחורצת (knurling)
+    clipRect(88f, -40f, 234f, 40f) {
+        val knurl = Color.Black.copy(alpha = 0.6f)
+        var c = 42f
+        while (c <= 280f) {
+            drawLine(knurl, Offset(c - 40f, -40f), Offset(c + 40f, 40f), 1.7f)
+            drawLine(knurl, Offset(c + 40f, -40f), Offset(c - 40f, 40f), 1.7f)
+            c += 7f
+        }
+    }
+    groove(88f, 40f, 3f)
+    groove(234f, 40f, 3f)
+
+    // מתג צד
+    drawOval(Color(0xFF1C1C1E), Offset(255f, -46f), Size(30f, 12f))
+    drawOval(Color.White.copy(alpha = 0.25f), Offset(259f, -44.2f), Size(18f, 4.4f))
+
+    drawSection(section(302f, 312f, 43f), steel(43f))
+    drawSection(section(312f, 372f, 43f, 68f), alu(68f))
+    drawSection(section(372f, 452f, 68f), alu(68f))
+    for (x in listOf(388f, 404f, 420f, 436f)) groove(x, 68f, 4f)
+    drawSection(section(452f, 470f, 72f), steel(72f))
+    if (on > 0f) {
+        drawPath(
+            section(372f, 470f, 68f, 72f),
+            Brush.horizontalGradient(0f to Color(0x00FFD60A), 1f to Color(0x59FFD60A), startX = 347f, endX = 470f),
+            alpha = on
+        )
+    }
+
+    // חזית: טבעת פלדה, זכוכית, רפלקטור / אור
+    drawOval(
+        Brush.linearGradient(
+            0f to Color.White, 0.25f to Color(0xFFAEAEB2), 0.55f to Color(0xFF3A3A3C), 0.8f to Color(0xFF1C1C1E),
+            1f to Color(0xFF8E8E93), start = Offset(444f, -72f), end = Offset(496f, 72f)
+        ),
+        Offset(444f, -72f), Size(52f, 144f)
+    )
+    drawOval(Color(0xFF050506), Offset(447f, -65f), Size(46f, 130f))
+    lens(
+        on = 1f - on,
+        stops = arrayOf(
+            0f to Color(0xFF1C1C1E), 0.12f to Color(0xFF48484A), 0.2f to Color(0xFFC7C7CC), 0.3f to Color(0xFF3A3A3C),
+            0.44f to Color(0xFFAEAEB2), 0.56f to Color(0xFF2C2C2E), 0.7f to Color(0xFF8E8E93), 0.82f to Color(0xFF1C1C1E),
+            0.93f to Color(0xFF636366), 1f to Color(0xFF0A0A0A)
+        )
+    )
+    if (on < 1f) {
+        drawOval(Color(0xFF1C1C1E), Offset(464f, -14f), Size(12f, 28f), alpha = 1f - on)
+        drawOval(Color(0xFFD9C877), Offset(466.6f, -8f), Size(6.8f, 16f), alpha = 1f - on)
+    }
+    lens(
+        on = on,
+        stops = arrayOf(
+            0f to Color.White, 0.4f to Color.White, 0.62f to Color(0xFFFFF8DC), 0.85f to Color(0xFFFFE580), 1f to Color(0xFFFFC800)
+        )
+    )
+    // השתקפות על הזכוכית
+    drawOval(Color.White.copy(alpha = 0.2f), Offset(459f, -50f), Size(14f, 40f))
+}
+
+/** העדשה: גרדיאנט עגול שנמתח לאליפסה (21.5x61). */
+private fun DrawScope.lens(on: Float, stops: Array<Pair<Float, Color>>) {
+    if (on <= 0f) return
+    withTransform({ scale(21.5f / 61f, 1f, pivot = Offset(470f, 0f)) }) {
+        drawCircle(Brush.radialGradient(*stops, center = Offset(470f, 0f), radius = 61f), 61f, Offset(470f, 0f), alpha = on)
+    }
+}
+
+private fun polygon(vararg points: Pair<Float, Float>) = Path().apply {
+    points.forEachIndexed { i, (x, y) -> if (i == 0) moveTo(x, y) else lineTo(x, y) }
+    close()
+}
+
