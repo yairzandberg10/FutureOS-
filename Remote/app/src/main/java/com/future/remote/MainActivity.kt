@@ -9,10 +9,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import com.future.remote.ui.AcPresetsScreen
-import com.future.remote.ui.AddButtonScreen
-import com.future.remote.ui.AddDeviceScreen
-import com.future.remote.ui.DeviceScreen
+import androidx.compose.ui.platform.LocalContext
+import com.future.remote.data.RemoteRepository
+import com.future.remote.ui.AcRemoteScreen
 import com.future.remote.ui.RemoteHomeScreen
 import com.future.remote.ui.RemoteRoute
 import com.future.sharednav.components.AnimatedScreenHost
@@ -31,64 +30,37 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             var route by remember { mutableStateOf<RemoteRoute>(RemoteRoute.Home) }
-            // עולה בכל שינוי שנשמר ל-Repository כדי שהמסכים ירעננו את הרשימה
-            // בלי צורך במנגנון תצפית מלא (ViewModel/Flow) לאפליקציה כה קטנה.
+            // עולה בכל חזרה למסך הראשי כדי שהרשימה תציג את המצב האחרון של כל שלט.
             var refreshKey by remember { mutableStateOf(0) }
-            val goBack = { route = RemoteRoute.Home }
-            BackHandler(enabled = route != RemoteRoute.Home) {
-                route = when (val current = route) {
-                    is RemoteRoute.AddButton -> RemoteRoute.Device(current.deviceId)
-                    else -> RemoteRoute.Home
-                }
-            }
+            val goHome = { refreshKey++; route = RemoteRoute.Home }
+            BackHandler(enabled = route != RemoteRoute.Home) { goHome() }
 
             // מתעדכן בזמן אמת כשמצב כהה/בהיר או צבע ההדגשה משתנים (ר' rememberFutureTheme).
             val theme = rememberFutureTheme()
 
             FutureMaterialTheme(theme) {
                 Surface(modifier = Modifier.fillMaxSize(), color = theme.backgroundColor) {
-                    // בית 0 -> מכשיר/הוספה 1 -> הוספת כפתור 2.
                     AnimatedScreenHost(
                         targetState = route,
-                        depthOf = {
-                            when (it) {
-                                RemoteRoute.Home -> 0
-                                is RemoteRoute.AddButton -> 2
-                                else -> 1
-                            }
-                        },
+                        depthOf = { if (it == RemoteRoute.Home) 0 else 1 },
                     ) { current ->
                         when (current) {
                             RemoteRoute.Home -> RemoteHomeScreen(
                                 theme = theme,
                                 refreshKey = refreshKey,
-                                onOpenDevice = { route = RemoteRoute.Device(it.id) },
-                                onAddDevice = { route = RemoteRoute.AddDevice },
-                                onAddAcPreset = { route = RemoteRoute.AcPresets }
+                                onOpenRemote = { route = RemoteRoute.Ac(it) },
                             )
-                            RemoteRoute.AddDevice -> AddDeviceScreen(
-                                theme = theme,
-                                onBack = goBack,
-                                onSaved = { refreshKey++; route = RemoteRoute.Home }
-                            )
-                            RemoteRoute.AcPresets -> AcPresetsScreen(
-                                theme = theme,
-                                onBack = goBack,
-                                onDeviceCreated = { deviceId -> refreshKey++; route = RemoteRoute.Device(deviceId) }
-                            )
-                            is RemoteRoute.Device -> DeviceScreen(
-                                theme = theme,
-                                deviceId = current.deviceId,
-                                refreshKey = refreshKey,
-                                onBack = goBack,
-                                onAddButton = { route = RemoteRoute.AddButton(current.deviceId) }
-                            )
-                            is RemoteRoute.AddButton -> AddButtonScreen(
-                                theme = theme,
-                                deviceId = current.deviceId,
-                                onBack = { route = RemoteRoute.Device(current.deviceId) },
-                                onSaved = { refreshKey++; route = RemoteRoute.Device(current.deviceId) }
-                            )
+                            is RemoteRoute.Ac -> {
+                                val context = LocalContext.current
+                                val device = remember(current.deviceId) {
+                                    RemoteRepository(context).loadDevices().firstOrNull { it.id == current.deviceId }
+                                }
+                                if (device?.acProtocol != null) {
+                                    AcRemoteScreen(theme = theme, device = device, onBack = goHome)
+                                } else {
+                                    LaunchedEffect(Unit) { goHome() }
+                                }
+                            }
                         }
                     }
                 }

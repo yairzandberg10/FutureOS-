@@ -76,7 +76,7 @@ import com.future.sharednav.theme.subtleTextColor
  * שולחת את כל המצב למזגן, כמו שלט אמיתי.
  *
  * מקשים: 5 הפעלה/כיבוי, 2/8 טמפרטורה, 1 מצב, 3 מאוורר, 7 תנודה. Options -
- * דגם שלט אחר (אם המזגן לא מגיב), ומחיקת המכשיר.
+ * דגם שלט אחר (אם המזגן לא מגיב), ואיפוס השלט.
  */
 @Composable
 fun AcRemoteScreen(theme: FutureTheme, device: RemoteDevice, onBack: () -> Unit) {
@@ -179,7 +179,7 @@ fun AcRemoteScreen(theme: FutureTheme, device: RemoteDevice, onBack: () -> Unit)
                     Toast.makeText(context, "עכשיו: ${other.label}", Toast.LENGTH_SHORT).show()
                 })
             }
-            FutureMenuRow("מחיקת השלט", FutureIcons.Delete, theme, {
+            FutureMenuRow("איפוס השלט", FutureIcons.Delete, theme, {
                 showMenu = false
                 repository.deleteDevice(device.id)
                 onBack()

@@ -1,7 +1,6 @@
 package com.future.remote.ui
 
 import com.future.sharednav.icons.FutureIcons
-import com.future.sharednav.theme.subtleTextColor
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -23,47 +22,64 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import com.future.remote.data.AcCompany
+import com.future.remote.data.AcState
 import com.future.remote.data.DeviceCategory
 import com.future.remote.data.IrTransmitter
 import com.future.remote.data.RemoteDevice
 import com.future.remote.data.RemoteRepository
 import com.future.sharednav.theme.FutureTheme
+import com.future.sharednav.theme.FutureTypography
 
-fun iconForCategory(category: DeviceCategory): ImageVector = when (category) {
-    DeviceCategory.AC -> FutureIcons.AcUnit
-    DeviceCategory.FAN -> FutureIcons.Air
-    DeviceCategory.AUDIO -> FutureIcons.Speaker
-    DeviceCategory.CUSTOM -> FutureIcons.Tune
-}
-
+/**
+ * האפליקציה היא שלט למזגן בלבד: המסך הראשי הוא רשימת החברות הגדולות
+ * בישראל, וכל חברה היא שלט. בפתיחה הראשונה נוצר לחברה שלט שמור (עם
+ * המצב האחרון ודגם השלט שנבחר), ובפעמים הבאות נפתח אותו שלט.
+ */
 @Composable
 fun RemoteHomeScreen(
     theme: FutureTheme,
     refreshKey: Int,
-    onOpenDevice: (RemoteDevice) -> Unit,
-    onAddDevice: () -> Unit,
-    onAddAcPreset: () -> Unit
+    onOpenRemote: (deviceId: String) -> Unit,
 ) {
     val context = LocalContext.current
     val repository = remember { RemoteRepository(context) }
     val irTransmitter = remember { IrTransmitter(context) }
-    var devices by remember { mutableStateOf(listOf<RemoteDevice>()) }
+    var remotes by remember { mutableStateOf(mapOf<AcCompany, RemoteDevice>()) }
     val focusRequester = remember { FocusRequester() }
 
     LaunchedEffect(refreshKey) {
-        devices = repository.loadDevices()
+        remotes = repository.loadDevices()
+            .filter { it.acCompany != null && it.acProtocol != null }
+            .associateBy { it.acCompany!! }
     }
-    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+    LaunchedEffect(Unit) { runCatching { focusRequester.requestFocus() } }
+
+    fun open(company: AcCompany) {
+        val existing = remotes[company]
+        if (existing != null) {
+            onOpenRemote(existing.id)
+            return
+        }
+        val device = RemoteDevice(
+            name = "מזגן ${company.label}",
+            category = DeviceCategory.AC,
+            acCompany = company,
+            acProtocol = company.protocols.first(),
+            acState = AcState(),
+        )
+        repository.addDevice(device)
+        onOpenRemote(device.id)
+    }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize()) {
-                RemoteHeader(title = "שלט אינפרא אדום", theme = theme)
+                RemoteHeader(title = "שלט למזגן", theme = theme)
 
                 if (!irTransmitter.isAvailable) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -74,38 +90,30 @@ fun RemoteHomeScreen(
                         )
                     }
                 } else {
+                    Text(
+                        "בחרו את החברה של המזגן. לא מגיב? בשלט: Options ← דגם שלט אחר.",
+                        color = theme.textColor.copy(alpha = 0.55f),
+                        fontSize = FutureTypography.summary,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                    )
                     LazyColumn(
                         modifier = Modifier.weight(1f),
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        itemsIndexed(devices) { index, device ->
-                            RemoteRow(
-                                icon = iconForCategory(device.category),
-                                label = device.name,
-                                subtitle = "${device.category.label} · ${device.buttons.size} כפתורים",
-                                theme = theme,
-                                onClick = { onOpenDevice(device) },
-                                focusRequester = if (index == 0) focusRequester else null
-                            )
-                        }
-                        item {
+                        itemsIndexed(AcCompany.entries) { index, company ->
+                            val state = remotes[company]?.acState
                             RemoteRow(
                                 icon = FutureIcons.AcUnit,
-                                label = "שלט מוכן למזגן",
-                                subtitle = "אלקטרה, תדיראן, טורנדו, מיצובישי, פוג'יטסו",
+                                label = company.label,
+                                subtitle = when {
+                                    state == null -> company.protocols.joinToString(" / ") { it.label }
+                                    state.power -> "דלוק · ${state.temp}° · ${state.mode.label}"
+                                    else -> "כבוי · ${state.temp}° · ${state.mode.label}"
+                                },
                                 theme = theme,
-                                onClick = onAddAcPreset
-                            )
-                        }
-                        item {
-                            RemoteRow(
-                                icon = FutureIcons.Add,
-                                label = "הוסף מכשיר חדש",
-                                subtitle = "מזגן, מאוורר, מערכת שמע או מותאם אישית",
-                                theme = theme,
-                                onClick = onAddDevice,
-                                focusRequester = if (devices.isEmpty()) focusRequester else null
+                                onClick = { open(company) },
+                                focusRequester = if (index == 0) focusRequester else null
                             )
                         }
                     }

@@ -1,8 +1,8 @@
 package com.future.remote.data
 
 /**
- * שלטי מזגנים של חמש החברות הגדולות בישראל (אלקטרה, תדיראן, טורנדו,
- * מיצובישי אלקטריק, פוג'יטסו) והדגמים הנפוצים שלהן.
+ * שלטי מזגנים של החברות הגדולות בישראל (אלקטרה, תדיראן, טורנדו,
+ * מיצובישי אלקטריק, פוג'יטסו, LG, Gree, Midea) והדגמים הנפוצים שלהן.
  *
  * שלט מזגן לא שולח "כפתור" - כל לחיצה שולחת את כל המצב (הפעלה, מצב,
  * טמפרטורה, מאוורר, תנודה) כחבילה אחת. לכן השלט באפליקציה מחזיק מצב
@@ -20,6 +20,7 @@ enum class AcProtocol(val label: String) {
     GREE("שלט Gree"),
     MITSUBISHI("שלט Mitsubishi Electric"),
     FUJITSU("שלט Fujitsu ARRAH2E"),
+    LG("שלט LG"),
 }
 
 enum class AcCompany(val label: String, val protocols: List<AcProtocol>) {
@@ -28,6 +29,9 @@ enum class AcCompany(val label: String, val protocols: List<AcProtocol>) {
     TORNADO("טורנדו", listOf(AcProtocol.GREE, AcProtocol.MIDEA)),
     MITSUBISHI("מיצובישי אלקטריק", listOf(AcProtocol.MITSUBISHI)),
     FUJITSU("פוג'יטסו", listOf(AcProtocol.FUJITSU)),
+    LG("LG", listOf(AcProtocol.LG)),
+    GREE("Gree", listOf(AcProtocol.GREE)),
+    MIDEA("Midea", listOf(AcProtocol.MIDEA)),
 }
 
 enum class AcMode(val label: String) { COOL("קירור"), HEAT("חימום"), FAN("מאוורר"), DRY("ייבוש"), AUTO("אוטומטי") }
@@ -69,6 +73,7 @@ object AcProtocols {
         AcProtocol.GREE -> gree(s)
         AcProtocol.MITSUBISHI -> mitsubishi(s)
         AcProtocol.FUJITSU -> fujitsu(s)
+        AcProtocol.LG -> lg(s)
     }
 
     // ---- כלי עזר ----
@@ -231,6 +236,26 @@ object AcProtocols {
         p.mark(3324); p.space(1574)
         p.bytesLsb(bytes, 448, 1182, 390)
         p.mark(448)
+        return p.toArray()
+    }
+
+    // ---- LG (28 סיביות, מהסיבית הגבוהה) ----
+
+    private fun lg(s: AcState): IntArray {
+        val power = if (s.power) 0 else 3
+        val mode = when (s.mode) { AcMode.COOL -> 0; AcMode.DRY -> 1; AcMode.FAN -> 2; AcMode.AUTO -> 3; AcMode.HEAT -> 4 }
+        val fan = when (s.fan) { AcFan.LOW -> 0; AcFan.MED -> 2; AcFan.HIGH -> 4; AcFan.AUTO -> 5 }
+        val temp = s.temp.coerceIn(16, 30) - 15
+        // כיבוי הוא קוד קבוע (0x88C0051); הפעלה נושאת את כל המצב.
+        var v = if (!s.power) 0x88C005 else
+            (0x88 shl 16) or (power shl 14) or (mode shl 8) or (temp shl 4) or fan
+        var sum = 0
+        for (i in 0 until 6) sum += (v shr (i * 4)) and 0xF
+        v = (v shl 4) or (sum and 0xF)
+        val p = Pulses()
+        p.mark(8500); p.space(4250)
+        for (bit in 27 downTo 0) { p.mark(550); p.space(if ((v shr bit) and 1 == 1) 1600 else 550) }
+        p.mark(550)
         return p.toArray()
     }
 }
