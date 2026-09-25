@@ -46,8 +46,8 @@ import com.future.sharednav.theme.ThemeClient
  *   בתוכו 1 פותח את הלוח: העתק, גזור, הדבק, בחר הכל, והעתקות אחרונות.
  * - 0 קצר: רווח. 0 ארוך (מוחזק): תמלול קולי.
  * - מחיקה (DEL): מוחקת אות אחרונה מהמילה בהרכבה, ואז תווים מהטקסט שכבר הוצב.
- * - Options (מקש פיזי, דרך שידור גלובלי - ר' optionsKeyReceiver): מוסיף את
- *   המילה בהרכבה הנוכחית לניבוי, אם אין לה כבר התאמה במילון.
+ * - Options (מקש פיזי, דרך שידור גלובלי - ר' optionsKeyReceiver): פותח/סוגר את
+ *   הלוח. כשבהרכבה מילה בלי התאמה במילון - מוסיף אותה לניבוי במקום.
  * - ניבוי הטקסט ניתן לכיבוי/הדלקה ממרכז הבקרה של FutureUI (ר' KeyboardSettingsProvider).
  */
 class KeyboardService : InputMethodService() {
@@ -283,10 +283,10 @@ class KeyboardService : InputMethodService() {
     // מקש Options הפיזי נחסם ברמת המערכת (StatusBarAccessibilityService של
     // FutureUI צורך אותו) ולעולם לא מגיע ל-onKeyDown כאן - בדיוק כמו בכל שאר
     // האפליקציות בסוויטה, הדרך האמיתית שהוא עובד היא האזנה לשידור הגלובלי.
-    // כאן הוא מוסיף את המילה בהרכבה הנוכחית לניבוי (ר' addCurrentWordToDictionary).
+    // כאן הוא פותח/סוגר את הלוח (ר' onOptionsShortPress).
     private val optionsKeyReceiver = object : android.content.BroadcastReceiver() {
         override fun onReceive(context: android.content.Context?, intent: Intent?) {
-            addCurrentWordToDictionary()
+            onOptionsShortPress()
         }
     }
 
@@ -352,6 +352,7 @@ class KeyboardService : InputMethodService() {
 
     override fun onDestroy() {
         super.onDestroy()
+        releaseRecognizer()
         unregisterReceiver(optionsKeyReceiver)
         unregisterReceiver(starKeyReceiver)
         unregisterReceiver(poundKeyReceiver)
@@ -842,6 +843,7 @@ class KeyboardService : InputMethodService() {
         ensureModeIsActive()
         val inputClass = attribute?.inputType?.and(InputType.TYPE_MASK_CLASS)
         isPredictiveField = inputClass == InputType.TYPE_CLASS_TEXT
+        if (isPredictiveField) warmUpVoiceEngine()
         renderPanel()
     }
 
@@ -1630,12 +1632,13 @@ class KeyboardService : InputMethodService() {
         voicePartial = null
         renderPanel()
 
-        val recognizer = if (assistantComponent != null) {
+        // המזהה נשמר בין הקלטות (ר' stopListening): החיבור לשירות התמלול של
+        // העוזר נשאר פתוח, התהליך שלו לא נהרג והמודל נשאר טעון בזיכרון.
+        val recognizer = speechRecognizer ?: (if (assistantComponent != null) {
             SpeechRecognizer.createSpeechRecognizer(this, assistantComponent)
         } else {
             SpeechRecognizer.createSpeechRecognizer(this)
-        }
-        speechRecognizer = recognizer
+        }).also { speechRecognizer = it }
         recognizer.setRecognitionListener(object : RecognitionListener {
             override fun onReadyForSpeech(params: Bundle?) {}
             override fun onBeginningOfSpeech() {}
@@ -1648,6 +1651,8 @@ class KeyboardService : InputMethodService() {
                     SpeechRecognizer.ERROR_AUDIO -> "שגיאה במיקרופון"
                     else -> null
                 }
+                // שגיאה שאינה "לא זוהה דיבור" - החיבור עצמו אולי שבור, אז בפעם הבאה יוצרים חדש.
+                if (error != SpeechRecognizer.ERROR_NO_MATCH && error != SpeechRecognizer.ERROR_SPEECH_TIMEOUT) releaseRecognizer()
                 stopListening()
                 message?.let { showPanelMessage(it) }
             }
@@ -1690,12 +1695,31 @@ class KeyboardService : InputMethodService() {
 
     private fun stopListening() {
         voiceHandler.removeCallbacks(voiceTimeout)
+        // ביטול באמצע (חזרה/מחיקה, או תוצאה שלא הגיעה בזמן) - עוצרים את ההקלטה/התמלול
+        // אבל לא הורסים את המזהה, כדי שההקלטה הבאה לא תתחיל מחיבור ומודל קרים.
+        if (isListening) runCatching { speechRecognizer?.cancel() }
         isListening = false
         isVoiceProcessing = false
         voicePartial = null
-        speechRecognizer?.destroy()
-        speechRecognizer = null
         renderPanel()
+    }
+
+    private fun releaseRecognizer() {
+        runCatching { speechRecognizer?.destroy() }
+        speechRecognizer = null
+    }
+
+    private var lastAsrWarmUp = 0L
+
+    /** מבקש מהעוזר לטעון את מודל התמלול כבר עכשיו (ר' AsrWarmupReceiver), כדי
+     *  שהחזקת 0 לא תחכה לטעינה של 264MB. זול כשהמודל כבר טעון. */
+    private fun warmUpVoiceEngine() {
+        val now = android.os.SystemClock.elapsedRealtime()
+        if (now - lastAsrWarmUp < 30_000L) return
+        lastAsrWarmUp = now
+        runCatching {
+            sendBroadcast(Intent("com.future.assistant.action.WARM_UP_ASR").setPackage(ASSISTANT_PACKAGE))
+        }
     }
 
     /**
@@ -1713,6 +1737,30 @@ class KeyboardService : InputMethodService() {
             return
         }
         if (isPunctuationMenuOpen) closePunctuationMenu() else openPunctuationMenu(ic)
+    }
+
+    /**
+     * לחיצה קצרה על Options - פותחת וסוגרת את הלוח ישירות, בלי לעבור דרך
+     * תפריט הפיסוק. חריג אחד: כשבהרכבה מילה שאין לה התאמה במילון, Options
+     * עדיין מוסיף אותה לניבוי (ר' addCurrentWordToDictionary) - זה המקרה היחיד
+     * שבו לפעולה הזו יש משמעות, ובלעדיו לא הייתה דרך להוסיף מילים.
+     */
+    private fun onOptionsShortPress() {
+        val ic = currentInputConnection ?: return
+        if (isListening) return
+        if (isClipboardOpen) {
+            closeClipboard()
+            return
+        }
+        if (!isLanguageMenuOpen && !isPunctuationMenuOpen &&
+            candidates.isEmpty() && digitSequence.isNotEmpty() && fallbackLetters.isNotBlank()
+        ) {
+            addCurrentWordToDictionary()
+            return
+        }
+        isLanguageMenuOpen = false
+        if (digitSequence.isNotEmpty()) commitCurrentWord(ic, appendSpace = false)
+        openClipboard()
     }
 
     /** לחיצה קצרה על # - השפה הבאה במחזור, או סגירת תפריט השפה אם הוא פתוח. */
