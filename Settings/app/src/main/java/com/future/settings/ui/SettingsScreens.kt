@@ -5,6 +5,8 @@ import com.future.sharednav.theme.FutureMotion
 import com.future.sharednav.theme.readableAccentColor
 import com.future.sharednav.theme.onReadableAccentColor
 import com.future.sharednav.components.FutureTextField
+import com.future.sharednav.components.LocalFutureCard
+import com.future.sharednav.components.cardRowFocus
 import com.future.sharednav.components.TopBarIconButton
 import com.future.sharednav.components.ScreenTopBar
 import com.future.sharednav.components.InputDialog
@@ -52,10 +54,13 @@ import androidx.compose.material.icons.automirrored.rounded.*
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -297,6 +302,21 @@ fun MainMenu(navController: NavController, theme: ThemeConfig, viewModel: Settin
     }
     val partyActive = now < viewModel.partyModeExpiresAt.value
 
+    // הפוקוס הראשוני הוא על "חיבורים" ולא על שדה החיפוש: שדה טקסט שמקבל
+    // פוקוס תופס את המקשים, כך שכל כניסה להגדרות התחילה בהקלדה במקום
+    // בתפריט. בחזרה ממסך פנימי הפוקוס חוזר לפריט שממנו נכנסו.
+    var lastFocusedRoute by rememberSaveable { mutableStateOf(Screen.Connections.route) }
+    val menuFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
+    val menuFocus: (String) -> Modifier = { route ->
+        Modifier
+            .focusRequester(menuFocusRequesters.getOrPut(route) { FocusRequester() })
+            .onFocusChanged { if (it.isFocused) lastFocusedRoute = route }
+    }
+    LaunchedEffect(Unit) {
+        runCatching { menuFocusRequesters[lastFocusedRoute]?.requestFocus() }
+            .onFailure { runCatching { menuFocusRequesters[Screen.Connections.route]?.requestFocus() } }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -352,44 +372,44 @@ fun MainMenu(navController: NavController, theme: ThemeConfig, viewModel: Settin
                 item { SettingHeader("עיקרי", theme) }
                 item {
                     SettingsCard(theme) {
-                        SettingItem("חיבורים", "Bluetooth, רשת, מיקום", FutureIcons.Hub, theme) { navController.navigate(Screen.Connections.route) }
+                        SettingItem("חיבורים", "Bluetooth, נתונים, SIM ומיקום", FutureIcons.Hub, theme, modifier = menuFocus(Screen.Connections.route)) { navController.navigate(Screen.Connections.route) }
                         SettingDivider(theme)
-                        SettingItem("צלילים", "עוצמה, רינגטון, רטט", FutureIcons.AutoMirrored.VolumeUp, theme) { navController.navigate(Screen.Sound.route) }
+                        SettingItem("צלילים", "עוצמה, רינגטון ורטט", FutureIcons.AutoMirrored.VolumeUp, theme, modifier = menuFocus(Screen.Sound.route)) { navController.navigate(Screen.Sound.route) }
                         SettingDivider(theme)
-                        SettingItem("תצוגה", "בהירות, מצב כהה, טקסט", FutureIcons.Brightness6, theme) { navController.navigate(Screen.Display.route) }
+                        SettingItem("תצוגה", "בהירות, מצב כהה וגודל טקסט", FutureIcons.Brightness6, theme, modifier = menuFocus(Screen.Display.route)) { navController.navigate(Screen.Display.route) }
                     }
                 }
 
                 item { SettingHeader("מכשיר", theme) }
                 item {
                     SettingsCard(theme) {
-                        SettingItem("שורת מצב ורקע", "שורת מצב, שעון, טפט", FutureIcons.Widgets, theme) { navController.navigate(Screen.SystemUi.route) }
+                        SettingItem("שורת מצב ורקע", "מה מופיע למעלה ותמונת הרקע", FutureIcons.Widgets, theme, modifier = menuFocus(Screen.SystemUi.route)) { navController.navigate(Screen.SystemUi.route) }
                         SettingDivider(theme)
-                        SettingItem("סוללה", "חיסכון בחשמל, אחוז טעינה", FutureIcons.BatteryFull, theme) { navController.navigate(Screen.Battery.route) }
+                        SettingItem("סוללה", "מצב הסוללה וחיסכון בחשמל", FutureIcons.BatteryFull, theme, modifier = menuFocus(Screen.Battery.route)) { navController.navigate(Screen.Battery.route) }
                         SettingDivider(theme)
-                        SettingItem("אחסון", "מקום פנוי בזיכרון", FutureIcons.Storage, theme) { navController.navigate(Screen.Storage.route) }
+                        SettingItem("אחסון", "כמה מקום תפוס ומה תופס אותו", FutureIcons.Storage, theme, modifier = menuFocus(Screen.Storage.route)) { navController.navigate(Screen.Storage.route) }
                         SettingDivider(theme)
-                        SettingItem("ביצועים ותחזוקה", "זיכרון, מעבד, אופטימיזציה", FutureIcons.Speed, theme) { navController.navigate(Screen.Performance.route) }
+                        SettingItem("ביצועים ותחזוקה", "זיכרון, מעבד וניקוי", FutureIcons.Speed, theme, modifier = menuFocus(Screen.Performance.route)) { navController.navigate(Screen.Performance.route) }
                     }
                 }
 
                 item { SettingHeader("שימוש", theme) }
                 item {
                     SettingsCard(theme) {
-                        SettingItem("התראות ומיקוד", "מצב מיקוד, שעות שינה", FutureIcons.Notifications, theme) { navController.navigate(Screen.NotificationsFocus.route) }
+                        SettingItem("התראות ומיקוד", "מצב מיקוד ושעות שינה", FutureIcons.Notifications, theme, modifier = menuFocus(Screen.NotificationsFocus.route)) { navController.navigate(Screen.NotificationsFocus.route) }
                         SettingDivider(theme)
-                        SettingItem("זמן מסך", "שימוש יומי באפליקציות", FutureIcons.HourglassEmpty, theme) { navController.navigate(Screen.ScreenTime.route) }
+                        SettingItem("זמן מסך", "כמה זמן בכל אפליקציה, והגבלות", FutureIcons.HourglassEmpty, theme, modifier = menuFocus(Screen.ScreenTime.route)) { navController.navigate(Screen.ScreenTime.route) }
                     }
                 }
 
                 item { SettingHeader("מערכת", theme) }
                 item {
                     SettingsCard(theme) {
-                        SettingItem("כללי", "תאריך, שעה, שפה, נגישות", FutureIcons.Language, theme) { navController.navigate(Screen.General.route) }
+                        SettingItem("כללי", "תאריך ושעה, שפה, נגישות ואבטחה", FutureIcons.Language, theme, modifier = menuFocus(Screen.General.route)) { navController.navigate(Screen.General.route) }
                         SettingDivider(theme)
-                        SettingItem("אפליקציות", "כל אפליקציות FutureOS", FutureIcons.Apps, theme) { navController.navigate(Screen.Apps.route) }
+                        SettingItem("אפליקציות", "פתיחה, עצירה, הרשאות ונתונים", FutureIcons.Apps, theme, modifier = menuFocus(Screen.Apps.route)) { navController.navigate(Screen.Apps.route) }
                         SettingDivider(theme)
-                        SettingItem("אודות הטלפון", "גרסה, דגם, סטטוס", FutureIcons.Info, theme) { navController.navigate(Screen.About.route) }
+                        SettingItem("אודות הטלפון", "גרסה, דגם ומספר טלפון", FutureIcons.Info, theme, modifier = menuFocus(Screen.About.route)) { navController.navigate(Screen.About.route) }
                     }
                 }
             } else {
@@ -449,13 +469,13 @@ fun ConnectionsScreen(navController: NavController, theme: ThemeConfig, viewMode
                     SettingsCard(theme) {
                         SettingItem("Bluetooth", if (viewModel.bluetoothEnabled.value) "מופעל" else "כבוי", FutureIcons.Bluetooth, theme) { openBluetoothApp(context, navController) }
                         SettingDivider(theme)
-                        SettingSwitch("מצב טיסה", null, viewModel.airplaneMode.value, { viewModel.toggleAirplaneMode() }, theme)
+                        SettingSwitch("מצב טיסה", "מנתק שיחות, נתונים ו-Bluetooth בבת אחת", viewModel.airplaneMode.value, { viewModel.toggleAirplaneMode() }, theme)
                     }
                 }
                 item { SettingHeader("רשת סלולרית", theme) }
                 item {
                     SettingsCard(theme) {
-                        SettingSwitch("נתונים סלולריים", null, viewModel.mobileData.value, { viewModel.toggleMobileData() }, theme)
+                        SettingSwitch("נתונים סלולריים", "אינטרנט דרך כרטיס ה-SIM", viewModel.mobileData.value, { viewModel.toggleMobileData() }, theme)
                         SettingDivider(theme)
                         SettingSwitch("נדידה (רומינג)", "נתונים סלולריים גם מחוץ לארץ", viewModel.dataRoaming.value, { viewModel.toggleDataRoaming() }, theme)
                         SettingDivider(theme)
@@ -465,7 +485,7 @@ fun ConnectionsScreen(navController: NavController, theme: ThemeConfig, viewMode
                 item { SettingHeader("מיקום", theme) }
                 item {
                     SettingsCard(theme) {
-                        SettingSwitch("שירותי מיקום", null, viewModel.locationEnabled.value, { viewModel.toggleLocationEnabled() }, theme)
+                        SettingSwitch("שירותי מיקום", "נדרש לניווט, לזמני היום ולמזג האוויר", viewModel.locationEnabled.value, { viewModel.toggleLocationEnabled() }, theme)
                     }
                 }
             }
@@ -700,35 +720,35 @@ fun SoundScreen(navController: NavController, theme: ThemeConfig, viewModel: Set
                 item { SettingHeader("עוצמת שמע", theme) }
                 item {
                     SettingsCard(theme) {
-                        VolumeSlider("מדיה", viewModel.mediaVolume.value, theme) { viewModel.setVolume(AudioManager.STREAM_MUSIC, it) }
+                        VolumeSlider("מדיה", viewModel.mediaVolume.value, theme, "מוזיקה, סרטונים ומשחקים") { viewModel.setVolume(AudioManager.STREAM_MUSIC, it) }
                         SettingDivider(theme)
-                        VolumeSlider("מערכת", viewModel.systemVolume.value, theme) { viewModel.setVolume(AudioManager.STREAM_SYSTEM, it) }
+                        VolumeSlider("מערכת", viewModel.systemVolume.value, theme, "צלילי מקשים ותפריטים") { viewModel.setVolume(AudioManager.STREAM_SYSTEM, it) }
                         SettingDivider(theme)
-                        VolumeSlider("התראות", viewModel.notificationVolume.value, theme) { viewModel.setNotificationVolume(it) }
+                        VolumeSlider("התראות", viewModel.notificationVolume.value, theme, "הודעות והתראות מאפליקציות") { viewModel.setNotificationVolume(it) }
                         SettingDivider(theme)
-                        VolumeSlider("אזעקה", viewModel.alarmVolume.value, theme) { viewModel.setAlarmVolume(it) }
+                        VolumeSlider("אזעקה", viewModel.alarmVolume.value, theme, "השעון המעורר והטיימרים") { viewModel.setAlarmVolume(it) }
                         SettingDivider(theme)
-                        VolumeSlider("שיחות", viewModel.callVolume.value, theme) { viewModel.setCallVolume(it) }
+                        VolumeSlider("שיחות", viewModel.callVolume.value, theme, "הקול של הצד השני בשיחה") { viewModel.setCallVolume(it) }
                     }
                 }
                 item { SettingHeader("קול ורטט", theme) }
                 item {
                     SettingsCard(theme) {
-                        SettingItem("רינגטון", null, FutureIcons.MusicNote, theme) { navController.navigate(Screen.Ringtone.route) }
+                        SettingItem("רינגטון", "הצליל של שיחה נכנסת", FutureIcons.MusicNote, theme) { navController.navigate(Screen.Ringtone.route) }
                         SettingDivider(theme)
-                        SettingItem("צליל התראות", null, FutureIcons.Notifications, theme) { navController.navigate(Screen.NotificationSound.route) }
+                        SettingItem("צליל התראות", "הצליל של הודעה או התראה חדשה", FutureIcons.Notifications, theme) { navController.navigate(Screen.NotificationSound.route) }
                         SettingDivider(theme)
-                        SettingItem("צליל אזעקה", null, FutureIcons.Alarm, theme) { navController.navigate(Screen.AlarmSound.route) }
+                        SettingItem("צליל אזעקה", "הצליל של השעון המעורר", FutureIcons.Alarm, theme) { navController.navigate(Screen.AlarmSound.route) }
                         SettingDivider(theme)
-                        SettingSwitch("רטט בצלצול", null, viewModel.vibrateWhenRinging.value, { viewModel.toggleVibrateWhenRinging() }, theme)
+                        SettingSwitch("רטט בצלצול", "הטלפון רוטט גם כשהוא מצלצל", viewModel.vibrateWhenRinging.value, { viewModel.toggleVibrateWhenRinging() }, theme)
                         SettingDivider(theme)
-                        SettingSwitch("צלילי מקשים", null, viewModel.soundEffects.value, { viewModel.toggleSoundEffects() }, theme)
+                        SettingSwitch("צלילי מקשים", "צליל קצר בכל לחיצה בתפריטים", viewModel.soundEffects.value, { viewModel.toggleSoundEffects() }, theme)
                         SettingDivider(theme)
                         SettingSwitch("צלילי חיוג", "צליל בלחיצה על מקש בחייגן", viewModel.dialPadTones.value, { viewModel.toggleDialPadTones() }, theme)
                         SettingDivider(theme)
-                        SettingSwitch("משוב רטט", null, viewModel.hapticFeedback.value, { viewModel.toggleHapticFeedback() }, theme)
+                        SettingSwitch("משוב רטט", "רטט קל בלחיצה על מקש", viewModel.hapticFeedback.value, { viewModel.toggleHapticFeedback() }, theme)
                         SettingDivider(theme)
-                        SettingSwitch("צליל נעילת מסך", null, viewModel.lockSound.value, { viewModel.toggleLockSound() }, theme)
+                        SettingSwitch("צליל נעילת מסך", "צליל כשהמסך נכבה או נדלק", viewModel.lockSound.value, { viewModel.toggleLockSound() }, theme)
                         SettingDivider(theme)
                         SettingSwitch("צליל טעינה", "צליל בחיבור/ניתוק מטען", viewModel.chargingSound.value, { viewModel.toggleChargingSound() }, theme)
                     }
@@ -747,30 +767,30 @@ fun DisplayScreen(navController: NavController, theme: ThemeConfig, viewModel: S
                 item { SettingHeader("תצוגה", theme) }
                 item {
                     SettingsCard(theme) {
-                        VolumeSlider("בהירות מסך", viewModel.brightness.value, theme) { viewModel.setBrightness(it) }
+                        VolumeSlider("בהירות מסך", viewModel.brightness.value, theme, "חץ שמאלה מבהיר, ימינה מעמעם") { viewModel.setBrightness(it) }
                         SettingDivider(theme)
-                        SettingSwitch("בהירות אדפטיבית", "התאמה אוטומטית לתאורת הסביבה", viewModel.adaptiveBrightness.value, { viewModel.toggleAdaptiveBrightness() }, theme)
+                        SettingSwitch("בהירות אוטומטית", "המסך מתאים את עצמו לאור בחדר", viewModel.adaptiveBrightness.value, { viewModel.toggleAdaptiveBrightness() }, theme)
                         SettingDivider(theme)
-                        VolumeSlider("גודל טקסט", (theme.fontSizeMultiplier - 0.8f) / 0.6f, theme) {
+                        VolumeSlider("גודל טקסט", (theme.fontSizeMultiplier - 0.8f) / 0.6f, theme, "גודל האותיות באפליקציות FutureOS") {
                             viewModel.updateFontSize(0.8f + (it.coerceIn(0f, 1f) * 0.6f))
                         }
                         SettingDivider(theme)
-                        SettingSwitch("מצב כהה", if (theme.isDarkMode) "מופעל" else "כבוי", theme.isDarkMode, { viewModel.toggleDarkMode() }, theme)
+                        SettingSwitch("מצב כהה", "רקע כהה בכל אפליקציות FutureOS", theme.isDarkMode, { viewModel.toggleDarkMode() }, theme)
                         SettingDivider(theme)
-                        SettingSwitch("הפחתת אנימציות", "מסכים יעברו בלי הנפשה", viewModel.animationsReduced.value, { viewModel.toggleAnimationsReduced() }, theme)
+                        SettingSwitch("הפחתת אנימציות", "מעברים מיידיים בין מסכים, בלי תנועה", viewModel.animationsReduced.value, { viewModel.toggleAnimationsReduced() }, theme)
                         SettingDivider(theme)
                         val zoomStep = remember(viewModel.densityDpi.value) {
                             ((viewModel.densityDpi.value.toFloat() / viewModel.defaultDensityDpi - 0.88f) / 0.06f).toInt().coerceIn(0, viewModel.densityPresetsCount - 1)
                         }
-                        VolumeSlider("זום מסך", zoomStep.toFloat() / (viewModel.densityPresetsCount - 1), theme) {
+                        VolumeSlider("זום מסך", zoomStep.toFloat() / (viewModel.densityPresetsCount - 1), theme, "מגדיל או מקטין את כל מה שעל המסך") {
                             viewModel.setScreenZoomStep((it * (viewModel.densityPresetsCount - 1)).toInt())
                         }
                         if (viewModel.densityDpi.value != viewModel.defaultDensityDpi) {
                             SettingDivider(theme)
-                            SettingItem("איפוס זום מסך", null, FutureIcons.RestartAlt, theme, showChevron = false) { viewModel.resetScreenZoom() }
+                            SettingItem("איפוס זום מסך", "חזרה לגודל המקורי", FutureIcons.RestartAlt, theme, showChevron = false) { viewModel.resetScreenZoom() }
                         }
                         SettingDivider(theme)
-                        SettingItem("כיבוי מסך אוטומטי", viewModel.screenTimeoutLabel(viewModel.screenTimeout.value), FutureIcons.Timer, theme) {
+                        SettingItem("כיבוי מסך אוטומטי", "נכבה אחרי " + viewModel.screenTimeoutLabel(viewModel.screenTimeout.value) + " בלי שימוש", FutureIcons.Timer, theme) {
                             viewModel.cycleScreenTimeout()
                         }
                     }
@@ -867,8 +887,10 @@ fun ColorPicker(currentColor: Color, theme: ThemeConfig, onColorChange: (Color) 
         onColorChange(Color(android.graphics.Color.HSVToColor(floatArrayOf(h, s, v))))
     }
 
-    Column(modifier = Modifier.padding(16.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+    // המחוונים הם שורות מלאות בכרטיס (כמו בשאר המסכים), ולכן רק התצוגה
+    // המקדימה ושורת הצבעים המוכנים מקבלות ריפוד משלהן.
+    Column {
+        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(
                 modifier = Modifier
                     .size(48.dp)
@@ -883,13 +905,15 @@ fun ColorPicker(currentColor: Color, theme: ThemeConfig, onColorChange: (Color) 
                 fontWeight = FontWeight.Bold
             )
         }
-        Spacer(modifier = Modifier.height(8.dp))
-        VolumeSlider("גוון", hue / 360f, theme) { hue = it * 360f; apply(h = hue) }
-        VolumeSlider("רוויה", saturation, theme) { saturation = it; apply(s = it) }
-        VolumeSlider("בהירות", value, theme) { value = it; apply(v = it) }
+        SettingDivider(theme)
+        VolumeSlider("גוון", hue / 360f, theme, "איזה צבע: אדום, ירוק, כחול וכו'") { hue = it * 360f; apply(h = hue) }
+        SettingDivider(theme)
+        VolumeSlider("רוויה", saturation, theme, "כמה הצבע חי - מאפור ועד צבע מלא") { saturation = it; apply(s = it) }
+        SettingDivider(theme)
+        VolumeSlider("בהירות", value, theme, "כמה הצבע בהיר - משחור ועד בוהק") { value = it; apply(v = it) }
+        SettingDivider(theme)
 
-        Spacer(modifier = Modifier.height(4.dp))
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+        Row(modifier = Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
             val presets = FutureAccents.presets
             presets.forEach { color ->
                 var isFocused by remember { mutableStateOf(false) }
@@ -936,15 +960,15 @@ fun SystemUiScreen(navController: NavController, theme: ThemeConfig, viewModel: 
                 item { SettingHeader("שורת מצב", theme) }
                 item {
                     SettingsCard(theme) {
-                        SettingSwitch("הצג אחוז סוללה", null, settings.showBattery, {
+                        SettingSwitch("הצג אחוז סוללה", "מספר לצד סמל הסוללה בשורת המצב", settings.showBattery, {
                             com.future.settings.theme.SystemUiSettingsClient.setShowBattery(context, it); reload()
                         }, theme)
                         SettingDivider(theme)
-                        SettingSwitch("הצג סמל Bluetooth", null, settings.showBluetooth, {
+                        SettingSwitch("הצג סמל Bluetooth", "סמל בשורת המצב כש-Bluetooth דולק", settings.showBluetooth, {
                             com.future.settings.theme.SystemUiSettingsClient.setShowBluetooth(context, it); reload()
                         }, theme)
                         SettingDivider(theme)
-                        SettingSwitch("שעון 24 שעות", null, settings.use24HourClock, {
+                        SettingSwitch("שעון 24 שעות", "17:00 במקום 5:00", settings.use24HourClock, {
                             com.future.settings.theme.SystemUiSettingsClient.setUse24HourClock(context, it); reload()
                         }, theme)
                         SettingDivider(theme)
@@ -1105,12 +1129,13 @@ fun BatteryScreen(navController: NavController, theme: ThemeConfig, viewModel: S
                 }
                 item {
                     SettingsCard(theme) {
-                        SettingSwitch("חיסכון בחשמל", "הגבל ביצועים כדי לחסוך סוללה", viewModel.batterySaver.value, { viewModel.toggleBatterySaver() }, theme)
+                        SettingSwitch("חיסכון בחשמל", "מאט רקע ואנימציות כדי שהסוללה תחזיק יותר", viewModel.batterySaver.value, { viewModel.toggleBatterySaver() }, theme)
                         SettingDivider(theme)
                         VolumeSlider(
-                            "סף חיסכון אוטומטי (${viewModel.lowBatteryWarningLevel.value}%)",
+                            "חיסכון אוטומטי ב-${viewModel.lowBatteryWarningLevel.value}%",
                             viewModel.lowBatteryWarningLevel.value / 100f,
-                            theme
+                            theme,
+                            "חיסכון בחשמל יידלק לבד כשהסוללה יורדת לרמה הזו"
                         ) { viewModel.setLowBatteryWarningLevel((it * 100).toInt().coerceIn(0, 100)) }
                     }
                 }
@@ -1264,25 +1289,25 @@ fun GeneralScreen(navController: NavController, theme: ThemeConfig, viewModel: S
                     SettingsCard(theme) {
                         SettingSwitch("תצוגת 24 שעות", if (viewModel.use24Hour.value) "14:30" else "2:30 PM", viewModel.use24Hour.value, { viewModel.toggle24Hour() }, theme)
                         SettingDivider(theme)
-                        SettingSwitch("עדכון אוטומטי", "לפי הרשת הסלולרית", viewModel.autoTime.value, { viewModel.toggleAutoTime() }, theme)
+                        SettingSwitch("שעה ותאריך אוטומטיים", "נלקחים מהרשת הסלולרית", viewModel.autoTime.value, { viewModel.toggleAutoTime() }, theme)
                         SettingDivider(theme)
-                        SettingSwitch("אזור זמן אוטומטי", "לפי הרשת הסלולרית", viewModel.autoTimeZone.value, { viewModel.toggleAutoTimeZone() }, theme)
+                        SettingSwitch("אזור זמן אוטומטי", "מתעדכן לבד כשעוברים מדינה", viewModel.autoTimeZone.value, { viewModel.toggleAutoTimeZone() }, theme)
                     }
                 }
                 item { SettingHeader("שפה ונגישות", theme) }
                 item {
                     SettingsCard(theme) {
-                        SettingItem("שפת מערכת", null, FutureIcons.Translate, theme) { navController.navigate(Screen.Language.route) }
+                        SettingItem("שפת מערכת", "השפה של התפריטים וההודעות", FutureIcons.Translate, theme) { navController.navigate(Screen.Language.route) }
                         SettingDivider(theme)
                         SettingItem("מקלדת ושפות הקלדה", "באילו שפות מקלידים ובאילו יש ניבוי", FutureIcons.Keyboard, theme) {
                             navController.navigate(Screen.KeyboardLanguages.route)
                         }
                         SettingDivider(theme)
-                        SettingItem("גודל טקסט", "מתוך תצוגה", FutureIcons.Accessibility, theme) { navController.navigate(Screen.Display.route) }
+                        SettingItem("גודל טקסט", "נמצא במסך תצוגה", FutureIcons.Accessibility, theme) { navController.navigate(Screen.Display.route) }
                         SettingDivider(theme)
-                        SettingSwitch("היפוך צבעים", "לניגודיות גבוהה יותר", viewModel.colorInversion.value, { viewModel.toggleColorInversion() }, theme)
+                        SettingSwitch("היפוך צבעים", "לבן הופך לשחור ולהפך, לניגודיות חזקה", viewModel.colorInversion.value, { viewModel.toggleColorInversion() }, theme)
                         SettingDivider(theme)
-                        SettingItem("הגדרות נגישות נוספות", null, FutureIcons.Accessibility, theme) {
+                        SettingItem("הגדרות נגישות נוספות", "מסך הנגישות המלא של אנדרואיד", FutureIcons.Accessibility, theme) {
                             safeStartActivity(context, Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS), "לא ניתן לפתוח הגדרות נגישות")
                         }
                     }
@@ -1290,9 +1315,9 @@ fun GeneralScreen(navController: NavController, theme: ThemeConfig, viewModel: S
                 item { SettingHeader("אבטחה", theme) }
                 item {
                     SettingsCard(theme) {
-                        SettingItem("אבטחה", "נעילת מסך FutureOS", FutureIcons.Security, theme) { navController.navigate(Screen.Security.route) }
+                        SettingItem("אבטחה", "ביומטריה, איתור המכשיר ואזור פרטי", FutureIcons.Security, theme) { navController.navigate(Screen.Security.route) }
                         SettingDivider(theme)
-                        SettingItem("התראות ומיקוד", "גישת מדיניות התראות, מצב מיקוד", FutureIcons.Notifications, theme) {
+                        SettingItem("התראות ומיקוד", "השתקה בזמן מיקוד ובשעות שינה", FutureIcons.Notifications, theme) {
                             navController.navigate(Screen.NotificationsFocus.route)
                         }
                     }
@@ -1308,7 +1333,7 @@ fun GeneralScreen(navController: NavController, theme: ThemeConfig, viewModel: S
                 item { SettingHeader("FutureOS", theme) }
                 item {
                     SettingsCard(theme) {
-                        SettingItem("איפוס הגדרות FutureOS", "מצב כהה, צבע הדגשה, גודל טקסט", FutureIcons.RestartAlt, theme) {
+                        SettingItem("איפוס הגדרות FutureOS", "מחזיר מצב כהה, צבע הדגשה וגודל טקסט לברירת המחדל", FutureIcons.RestartAlt, theme) {
                             viewModel.resetFutureOsSettings()
                         }
                     }
@@ -1318,7 +1343,7 @@ fun GeneralScreen(navController: NavController, theme: ThemeConfig, viewModel: S
                     SettingsCard(theme) {
                         val nfcAvailable = remember { viewModel.getSystemInteractor().isNfcAvailable() }
                         if (nfcAvailable) {
-                            SettingSwitch("NFC", null, viewModel.nfcEnabled.value, { viewModel.toggleNfc() }, theme)
+                            SettingSwitch("NFC", "תקשורת מגע קצרה, למשל לתשלום", viewModel.nfcEnabled.value, { viewModel.toggleNfc() }, theme)
                             SettingDivider(theme)
                         }
                         SettingSwitch("השאר פעיל בזמן טעינה", "המסך לא יכבה כשהמכשיר מחובר למטען", viewModel.stayAwakeWhileCharging.value, { viewModel.toggleStayAwakeWhileCharging() }, theme)
@@ -1332,9 +1357,9 @@ fun GeneralScreen(navController: NavController, theme: ThemeConfig, viewModel: S
                             }
                         }, theme)
                         SettingDivider(theme)
-                        SettingItem("הפעלה מחדש", null, FutureIcons.RestartAlt, theme, showChevron = false) { showRestartConfirm = true }
+                        SettingItem("הפעלה מחדש", "כיבוי והדלקה של המכשיר", FutureIcons.RestartAlt, theme, showChevron = false) { showRestartConfirm = true }
                         SettingDivider(theme)
-                        SettingItem("כיבוי המכשיר", null, FutureIcons.PowerSettingsNew, theme, showChevron = false) { showShutdownConfirm = true }
+                        SettingItem("כיבוי המכשיר", "יבקש אישור לפני הכיבוי", FutureIcons.PowerSettingsNew, theme, showChevron = false) { showShutdownConfirm = true }
                     }
                 }
             }
@@ -1450,25 +1475,19 @@ fun SecurityScreen(navController: NavController, theme: ThemeConfig) {
                     SettingsCard(theme) {
                         SettingItem(
                             if (isSecure) "המכשיר מאובטח" else "המכשיר לא מאובטח",
-                            if (isSecure) "נעילת מסך פעילה" else "לא הוגדר קוד נעילה",
+                            if (isSecure) "הוגדר קוד נעילה של אנדרואיד" else "לא הוגדר קוד נעילה של אנדרואיד",
                             if (isSecure) FutureIcons.Lock else FutureIcons.LockOpen,
                             theme,
                             showChevron = false
-                        ) { }
+                        )
                     }
                 }
-                item { SettingHeader("נעילת מסך", theme) }
+                // מסך הנעילה וקוד ה-PIN של FutureUI הוסרו מהמערכת; השורה "קוד PIN
+                // של FutureUI" שהייתה כאן רק פתחה את הגדרות FutureUI, בלי שום PIN.
+                item { SettingHeader("ביומטריה", theme) }
                 item {
                     SettingsCard(theme) {
-                        SettingItem("קוד PIN של FutureUI", "הגדרת/שינוי קוד הנעילה", FutureIcons.Pin, theme) {
-                            safeStartActivity(
-                                context,
-                                Intent().setClassName(FUTURE_UI_PACKAGE, FUTURE_UI_SETTINGS_ACTIVITY),
-                                "FutureUI לא מותקן על המכשיר"
-                            )
-                        }
-                        SettingDivider(theme)
-                        SettingItem("זיהוי פנים וביומטריה", "פותח את הרשמת הביומטריה של המערכת", FutureIcons.Face, theme) {
+                        SettingItem("זיהוי פנים וביומטריה", "רישום טביעת אצבע או פנים באנדרואיד", FutureIcons.Face, theme) {
                             safeStartActivity(
                                 context,
                                 Intent(Settings.ACTION_BIOMETRIC_ENROLL),
@@ -2146,17 +2165,27 @@ fun SoundModeItem(label: String, icon: ImageVector, selected: Boolean, theme: Th
 }
 
 /** מחוון בנוי-בעצמנו במקום Slider של Material3 - ל-Slider יש נקודות סימון
- * שלב מובנות שאי אפשר לכבות (מציירות "נקודות" לאורך כל המסלול, לא רק בערך
- * הנוכחי) וללא אינדיקציית פוקוס אמיתית. גרסה זו שולטת בשני הדברים ותואמת
- * לשפת העיצוב של שאר ההגדרות (מסגרת הדגשה על פוקוס, כמו ב-SettingItem). */
+ * שלב מובנות שאי אפשר לכבות וללא אינדיקציית פוקוס אמיתית.
+ *
+ * המחוון הוא שורה בכרטיס בדיוק כמו SettingItem/SettingSwitch: שקוף על
+ * הכרטיס, כותרת באותו גודל ומשקל, קו מפריד בינו לבין השורה הבאה, והפוקוס
+ * הוא אותו מילוי ומסגרת שלוקחים את פינות הכרטיס (cardRowFocus). קודם היה
+ * לכל מחוון מילוי אפור ופינות משלו, כך שבתוך הכרטיס הוא נראה כמו גלולה
+ * נפרדת שצפה בו ולא כמו עוד פריט ברשימה. המסילה עצמה לא השתנתה (Slider.jsx):
+ * 12dp, 15% מצבע הטקסט, מילוי בהדגשה שגדל מימין, 5% לכל לחיצת חץ. */
 @Composable
-fun VolumeSlider(label: String, value: Float, theme: ThemeConfig, onValueChange: (Float) -> Unit) {
+fun VolumeSlider(label: String, value: Float, theme: ThemeConfig, summary: String? = null, onValueChange: (Float) -> Unit) {
     var isFocused by remember { mutableStateOf(false) }
-    val shape = FutureShapes.lg
-    val bgColor by animateColorAsState(
-        if (isFocused) theme.primaryColor.copy(alpha = 0.18f) else theme.textColor.copy(alpha = 0.06f),
+    val inCard = LocalFutureCard.current != null
+    val bgColor = animateColorAsState(
+        if (isFocused) theme.textColor.copy(alpha = 0.06f) else Color.Transparent,
         FutureMotion.focusColorSpec,
         label = "volumeSliderBg"
+    )
+    val borderColor = animateColorAsState(
+        if (isFocused) theme.futureTheme.readableAccentColor else Color.Transparent,
+        FutureMotion.focusColorSpec,
+        label = "volumeSliderBorder"
     )
 
     Column(
@@ -2173,12 +2202,14 @@ fun VolumeSlider(label: String, value: Float, theme: ThemeConfig, onValueChange:
                 }
             }
             .focusable().bringIntoViewOnFocus()
-            .clip(shape)
-            .background(bgColor)
-            .then(if (isFocused) Modifier.border(width = 2.dp, color = theme.primaryColor, shape = shape) else Modifier)
-            .padding(16.dp)
+            .then(if (inCard) Modifier else Modifier.padding(horizontal = 4.dp, vertical = 2.dp))
+            .cardRowFocus({ bgColor.value }, { borderColor.value }, fallbackShape = FutureShapes.lg)
+            .padding(horizontal = 16.dp, vertical = 14.dp)
     ) {
-        Text(label, fontSize = FutureTypography.body, color = theme.textColor.copy(alpha = 0.6f))
+        Text(label, fontSize = theme.titleFontSize, color = theme.textColor, fontWeight = FontWeight.SemiBold)
+        if (summary != null) {
+            Text(summary, fontSize = theme.summaryFontSize, color = theme.textColor.copy(alpha = 0.6f))
+        }
         Spacer(modifier = Modifier.height(10.dp))
         val fill by androidx.compose.animation.core.animateFloatAsState(
             value.coerceIn(0f, 1f), FutureMotion.fast(), label = "volumeSliderFill"

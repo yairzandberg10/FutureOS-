@@ -39,6 +39,7 @@ fun SettingItem(
     icon: ImageVector? = null,
     theme: ThemeConfig,
     showChevron: Boolean = true,
+    modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null
 ) {
     var isFocused by remember { mutableStateOf(false) }
@@ -69,7 +70,7 @@ fun SettingItem(
     )
 
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .then(if (isInteractive) Modifier.onFocusChanged { isFocused = it.isFocused } else Modifier)
             .then(

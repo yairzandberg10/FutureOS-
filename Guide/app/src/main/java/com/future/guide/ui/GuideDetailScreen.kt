@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -37,6 +38,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.future.guide.data.GuideApp
+import com.future.guide.data.GuideKey
 import com.future.sharednav.theme.FutureTheme
 import kotlinx.coroutines.launch
 
@@ -88,10 +90,26 @@ fun GuideDetailScreen(app: GuideApp, theme: FutureTheme, onBack: () -> Unit) {
                         }
                     }
 
+                    // משפט הפתיחה: מה האפליקציה עושה, לפני שמסבירים איך.
+                    Text(
+                        app.intro,
+                        color = theme.textColor,
+                        fontSize = FutureTypography.body,
+                        lineHeight = FutureTypography.body * FutureTypography.lineHeightRatio,
+                        modifier = Modifier.padding(top = 14.dp)
+                    )
+
                     GuideSectionTitle("איך משתמשים", theme = theme)
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         app.steps.forEachIndexed { index, step ->
                             GuideStepRow(number = index + 1, text = step, theme = theme)
+                        }
+                    }
+
+                    if (app.keys.isNotEmpty()) {
+                        GuideSectionTitle("מקשים", theme = theme)
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            app.keys.forEach { key -> GuideKeyRow(key, theme = theme) }
                         }
                     }
 
@@ -121,6 +139,30 @@ private fun GuideStepRow(number: Int, text: String, theme: FutureTheme) {
         }
         Text(
             text,
+            color = theme.textColor,
+            fontSize = FutureTypography.body,
+            lineHeight = FutureTypography.body * FutureTypography.lineHeightRatio,
+            modifier = Modifier.padding(start = 12.dp).weight(1f, fill = true)
+        )
+    }
+}
+
+/** שורה בקטע "מקשים": שם המקש בתגית (כמו מקש פיזי), ולצידו מה הוא עושה. */
+@Composable
+private fun GuideKeyRow(key: GuideKey, theme: FutureTheme) {
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            modifier = Modifier
+                .widthIn(min = 64.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(theme.elevatedSurfaceColor)
+                .padding(horizontal = 8.dp, vertical = 4.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(key.key, color = theme.textColor, fontSize = FutureTypography.label, fontWeight = FontWeight.Bold)
+        }
+        Text(
+            key.action,
             color = theme.textColor,
             fontSize = FutureTypography.body,
             lineHeight = FutureTypography.body * FutureTypography.lineHeightRatio,

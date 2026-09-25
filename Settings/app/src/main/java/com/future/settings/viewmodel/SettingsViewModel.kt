@@ -451,6 +451,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     fun screenTimeoutLabel(millis: Int): String = when {
         millis < 60000 -> "${millis / 1000} שניות"
+        millis < 120000 -> "דקה"
         millis < 3600000 -> "${millis / 60000} דקות"
         else -> "${millis / 3600000} שעות"
     }
