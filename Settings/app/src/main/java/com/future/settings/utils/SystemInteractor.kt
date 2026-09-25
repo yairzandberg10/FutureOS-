@@ -37,7 +37,16 @@ class SystemInteractor(private val context: Context) {
     /** מצב שקט/רטט דורש הרשאת "גישה למדיניות התראות" - בלעדיה השינוי פשוט לא קורה בשקט. */
     fun hasNotificationPolicyAccess(): Boolean = notificationManager.isNotificationPolicyAccessGranted
 
+    /** מעניק לעצמנו גישה למדיניות התראות דרך root, בלי לשלוח את המשתמש
+     *  להגדרות האמיתיות של אנדרואיד. מחזיר true אם הגישה קיימת בסוף. */
+    fun grantNotificationPolicyAccessViaRoot(): Boolean {
+        if (hasNotificationPolicyAccess()) return true
+        runRootCommand("cmd notification allow_dnd ${context.packageName}")
+        return hasNotificationPolicyAccess()
+    }
+
     fun openNotificationPolicyAccessSettings() {
+        if (grantNotificationPolicyAccessViaRoot()) return
         try {
             val intent = Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

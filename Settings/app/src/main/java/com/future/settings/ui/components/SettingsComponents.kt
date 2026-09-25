@@ -40,6 +40,9 @@ fun SettingItem(
     theme: ThemeConfig,
     showChevron: Boolean = true,
     modifier: Modifier = Modifier,
+    // שורת מידע שבכל זאת מקבלת פוקוס (אודות, אבחון) - כדי שאפשר יהיה לעבור
+    // עליה במקשים ולגלול אליה, בלי שתהיה לה פעולת לחיצה.
+    infoFocusable: Boolean = false,
     onClick: (() -> Unit)? = null
 ) {
     var isFocused by remember { mutableStateOf(false) }
@@ -48,7 +51,8 @@ fun SettingItem(
     // שורות מידע-בלבד (onClick == null) לא מקבלות אף אחד מהאפקטים של פוקוס/לחיצה
     // למטה - בלעדי זה שורה שלחיצה עליה היא no-op הייתה מקבלת בדיוק אותה הדגשת
     // פוקוס מלאה כמו פריט לחיץ אמיתי, ומטעה את המשתמש לחשוב שיש לה פעולה.
-    val isInteractive = onClick != null
+    val isClickable = onClick != null
+    val isInteractive = isClickable || infoFocusable
     // שורה רגילה שקופה ויושבת ישירות על הכרטיס, ורק קו מפריד דק מפריד בינה
     // לבין הבאה אחריה (ר' העיצוב). קודם היה הפוך - לכל שורה היה מילוי אפור
     // משלה, מה שהפך כרטיס אחד עם שלוש שורות לשלוש גלולות נפרדות שנראות כמו
@@ -74,7 +78,7 @@ fun SettingItem(
             .fillMaxWidth()
             .then(if (isInteractive) Modifier.onFocusChanged { isFocused = it.isFocused } else Modifier)
             .then(
-                if (isInteractive) Modifier.onKeyEvent {
+                if (isClickable) Modifier.onKeyEvent {
                     if (it.type == KeyEventType.KeyDown && (it.key == Key.DirectionCenter || it.key == Key.Enter || it.key == Key.NumPadEnter)) {
                         onClick!!()
                         true
@@ -86,7 +90,7 @@ fun SettingItem(
             // שהגובה והמיקום של הטקסט לא זזו). מחוץ לכרטיס - מוסטת כמו קודם.
             .then(if (inCard) Modifier else Modifier.padding(horizontal = 4.dp, vertical = 2.dp))
             .cardRowFocus({ bgColor.value }, { borderColor.value }, fallbackShape = shape)
-            .then(if (isInteractive) Modifier.clickable { onClick!!() } else Modifier)
+            .then(if (isClickable) Modifier.clickable { onClick!!() } else Modifier)
     ) {
         Row(
             modifier = Modifier

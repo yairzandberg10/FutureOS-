@@ -32,6 +32,11 @@ Java_com_future_assistant_asr_WhisperCpp_nativeTranscribe(JNIEnv *env, jobject /
     wparams.print_realtime = false;
     wparams.print_special = false;
     wparams.single_segment = false;
+    // בלי "temperature fallback": כשהמודל לא בטוח (קורה הרבה בעברית) ברירת
+    // המחדל מפענחת מחדש עד 5 פעמים בטמפרטורות עולות, עם 5 מפענחים בכל פעם -
+    // זה מה שהפך תמלול של משפט קצר לשניות ארוכות. פענוח greedy יחיד מספיק.
+    wparams.temperature_inc = 0.0f;
+    wparams.greedy.best_of = 1;
     // כל הליבות: במדידה על ה-MT6768 (2 ליבות A75 + 6 A55) 8 threads היו
     // מהירים מ-4 ומ-6, למרות שהליבות הקטנות איטיות.
     wparams.n_threads = std::max(1, static_cast<int>(std::thread::hardware_concurrency()));

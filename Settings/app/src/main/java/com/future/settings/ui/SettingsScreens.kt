@@ -411,17 +411,6 @@ fun MainMenu(navController: NavController, theme: ThemeConfig, viewModel: Settin
                     }
                 }
 
-                item { SettingHeader("מערכת", theme) }
-                item {
-                    SettingsCard(theme) {
-                        SettingItem("כללי", "תאריך ושעה, שפה, נגישות ואבטחה", FutureIcons.Language, theme, modifier = menuFocus(Screen.General.route)) { navController.navigate(Screen.General.route) }
-                        SettingDivider(theme)
-                        SettingItem("אפליקציות", "פתיחה, עצירה, הרשאות ונתונים", FutureIcons.Apps, theme, modifier = menuFocus(Screen.Apps.route)) { navController.navigate(Screen.Apps.route) }
-                        SettingDivider(theme)
-                        SettingItem("אודות הטלפון", "גרסה, דגם ומספר טלפון", FutureIcons.Info, theme, modifier = menuFocus(Screen.About.route)) { navController.navigate(Screen.About.route) }
-                    }
-                }
-
                 item { SettingHeader("עוד", theme) }
                 item {
                     val context = LocalContext.current
@@ -436,6 +425,17 @@ fun MainMenu(navController: NavController, theme: ThemeConfig, viewModel: Settin
                         }
                     }
                 }
+                item { SettingHeader("מערכת", theme) }
+                item {
+                    SettingsCard(theme) {
+                        SettingItem("כללי", "תאריך ושעה, שפה, נגישות ואבטחה", FutureIcons.Language, theme, modifier = menuFocus(Screen.General.route)) { navController.navigate(Screen.General.route) }
+                        SettingDivider(theme)
+                        SettingItem("אפליקציות", "פתיחה, עצירה, הרשאות ונתונים", FutureIcons.Apps, theme, modifier = menuFocus(Screen.Apps.route)) { navController.navigate(Screen.Apps.route) }
+                        SettingDivider(theme)
+                        SettingItem("אודות הטלפון", "גרסה, דגם ומספר טלפון", FutureIcons.Info, theme, modifier = menuFocus(Screen.About.route)) { navController.navigate(Screen.About.route) }
+                    }
+                }
+
             } else {
                 val query = searchQuery.trim()
                 val matches = SEARCHABLE_SETTINGS.filter { it.title.contains(query, ignoreCase = true) || it.keywords.contains(query, ignoreCase = true) }
@@ -1323,10 +1323,6 @@ fun GeneralScreen(navController: NavController, theme: ThemeConfig, viewModel: S
                         SettingSwitch("היפוך צבעים", "לבן הופך לשחור ולהפך, לניגודיות חזקה", viewModel.colorInversion.value, { viewModel.toggleColorInversion() }, theme)
                         SettingDivider(theme)
                         SettingItem("נגישות", "ניגודיות, תיקון צבעים, שמע והקראה", FutureIcons.Accessibility, theme) { navController.navigate(com.future.settings.utils.ExtraSystemSettings.ACCESSIBILITY.route) }
-                        SettingDivider(theme)
-                        SettingItem("הגדרות נגישות נוספות", "מסך הנגישות המלא של אנדרואיד", FutureIcons.Accessibility, theme) {
-                            safeStartActivity(context, Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS), "לא ניתן לפתוח הגדרות נגישות")
-                        }
                     }
                 }
                 item { SettingHeader("אבטחה", theme) }
@@ -1946,13 +1942,6 @@ fun PrivacyScreen(navController: NavController, theme: ThemeConfig) {
         Column {
             SmallHeader("פרטיות", theme) { navController.popBackStack() }
             LazyColumn {
-                item {
-                    SettingsCard(theme) {
-                        SettingItem("לוח בקרת פרטיות", "שימוש אחרון בהרשאות רגישות", FutureIcons.PrivacyTip, theme) {
-                            safeStartActivity(context, Intent("android.settings.PRIVACY_SETTINGS"), "לא ניתן לפתוח לוח בקרת פרטיות")
-                        }
-                    }
-                }
                 item { SettingHeader("הרשאות לפי אפליקציה", theme) }
                 item {
                     SettingsCard(theme) {
@@ -2017,7 +2006,7 @@ fun NotificationsFocusScreen(navController: NavController, theme: ThemeConfig, v
                 item {
                     SettingsCard(theme) {
                         SettingItem("גישת מדיניות התראות", "נדרש כדי לשלוט על מצב שקט/רטט", FutureIcons.Notifications, theme) {
-                            safeStartActivity(context, Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS), "לא ניתן לפתוח הגדרות התראות")
+                            viewModel.requestNotificationPolicyAccess()
                         }
                         SettingDivider(theme)
                         SettingItem("התראות מתקדמות", "התראות קופצות, היסטוריה ונורית", FutureIcons.Tune, theme) { navController.navigate(com.future.settings.utils.ExtraSystemSettings.NOTIFICATIONS.route) }
@@ -2138,37 +2127,33 @@ fun AboutScreen(navController: NavController, theme: ThemeConfig, viewModel: Set
                             }
                         }
                         SettingDivider(theme)
-                        SettingItem("גרסת קרנל", kernel, null, theme, showChevron = false)
+                        SettingItem("גרסת קרנל", kernel, null, theme, showChevron = false, infoFocusable = true)
                     }
                 }
                 item { SettingHeader("סטטוס", theme) }
                 item {
                     SettingsCard(theme) {
-                        SettingItem("זמן פעולה", uptime, FutureIcons.Schedule, theme, showChevron = false)
+                        SettingItem("זמן פעולה", uptime, FutureIcons.Schedule, theme, showChevron = false, infoFocusable = true)
                         SettingDivider(theme)
-                        SettingItem("זיכרון RAM", ram, FutureIcons.Memory, theme, showChevron = false)
+                        SettingItem("זיכרון RAM", ram, FutureIcons.Memory, theme, showChevron = false, infoFocusable = true)
                     }
                 }
                 item { SettingHeader("זיהוי המכשיר", theme) }
                 item {
                     SettingsCard(theme) {
-                        SettingItem("IMEI", viewModel.imei.value ?: "לא זמין במכשיר זה", FutureIcons.Pin, theme, showChevron = false)
+                        SettingItem("IMEI", viewModel.imei.value ?: "לא זמין במכשיר זה", FutureIcons.Pin, theme, showChevron = false, infoFocusable = true)
                         SettingDivider(theme)
-                        SettingItem("מספר טלפון", viewModel.phoneNumber.value ?: "לא זמין", FutureIcons.Call, theme, showChevron = false)
+                        SettingItem("מספר טלפון", viewModel.phoneNumber.value ?: "לא זמין", FutureIcons.Call, theme, showChevron = false, infoFocusable = true)
                         SettingDivider(theme)
-                        SettingItem("מידע רגולטורי ומשפטי", null, FutureIcons.Gavel, theme) { viewModel.openRegulatoryInfo() }
+                        SettingItem("יצרן וחומרה", "${Build.MANUFACTURER} ${Build.MODEL} · ${Build.HARDWARE}", FutureIcons.Gavel, theme, showChevron = false, infoFocusable = true)
                     }
                 }
                 if (viewModel.developerModeEnabled.value) {
                     item { SettingHeader("מפתחים", theme) }
                     item {
                         SettingsCard(theme) {
-                            SettingItem("כלי מפתחים", "אנימציות, גבולות פריסה ורינדור", FutureIcons.Code, theme) {
+                            SettingItem("אפשרויות למפתחים", "USB, ניפוי באגים, אנימציות ורינדור", FutureIcons.Code, theme) {
                                 navController.navigate(com.future.settings.utils.ExtraSystemSettings.DEVELOPER.route)
-                            }
-                            SettingDivider(theme)
-                            SettingItem("אפשרויות למפתחים", "USB, ניפוי באגים, ביצועים", FutureIcons.Code, theme) {
-                                safeStartActivity(context, Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS), "לא ניתן לפתוח אפשרויות למפתחים")
                             }
                         }
                     }
@@ -2478,11 +2463,11 @@ fun DiagnosticsScreen(navController: NavController, theme: ThemeConfig, viewMode
                 item { SettingHeader("חיישנים חיים", theme) }
                 item {
                     SettingsCard(theme) {
-                        SettingItem("תאוצה (Accelerometer)", accelText, FutureIcons.Speed, theme, showChevron = false)
+                        SettingItem("תאוצה (Accelerometer)", accelText, FutureIcons.Speed, theme, showChevron = false, infoFocusable = true)
                         SettingDivider(theme)
-                        SettingItem("חיישן אור", lightText, FutureIcons.Brightness6, theme, showChevron = false)
+                        SettingItem("חיישן אור", lightText, FutureIcons.Brightness6, theme, showChevron = false, infoFocusable = true)
                         SettingDivider(theme)
-                        SettingItem("חיישן קרבה", proximityText, FutureIcons.Sensors, theme, showChevron = false)
+                        SettingItem("חיישן קרבה", proximityText, FutureIcons.Sensors, theme, showChevron = false, infoFocusable = true)
                     }
                 }
                 // "מסך מגע" (בדיקת גרירה חיה) הוסרה - dispatchTouchEvent ב-MainActivity

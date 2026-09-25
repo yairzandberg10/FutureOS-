@@ -368,6 +368,15 @@ object ExtraSystemSettings {
         title = "כלי מפתחים",
         keywords = "developer מפתחים אנימציות גבולות פריסה gpu מצב כהה לוג",
         sections = listOf(
+            // מה שקודם נפתח רק דרך "אפשרויות למפתחים" של אנדרואיד - עכשיו כאן,
+            // כדי לא להיות תלויים באפליקציית ההגדרות האמיתית.
+            SysSection("USB וניפוי באגים", listOf(
+                toggle("dev_enabled", "אפשרויות מפתחים פעילות", "מפעיל את מצב המפתחים של המערכת", "global", "development_settings_enabled"),
+                toggle("adb_usb", "ניפוי באגים ב-USB", "חיבור ADB דרך כבל", "global", "adb_enabled"),
+                toggle("adb_wifi", "ניפוי באגים אלחוטי", "חיבור ADB דרך Wi-Fi", "global", "adb_wifi_enabled"),
+                toggle("stay_awake", "מסך דלוק בזמן טעינה", "המסך לא נכבה כשהמכשיר מחובר", "global", "stay_on_while_plugged_in", on = "7"),
+                toggle("verify_adb", "אימות אפליקציות דרך USB", "בדיקת אפליקציות שמותקנות דרך ADB", "global", "verifier_verify_adb_installs", defaultOn = true),
+            )),
             SysSection("אנימציות", listOf(
                 cycle(
                     "anim_speed", "מהירות אנימציות", "", "global", "animator_duration_scale",

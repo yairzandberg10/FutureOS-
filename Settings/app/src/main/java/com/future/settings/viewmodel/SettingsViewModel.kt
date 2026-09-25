@@ -353,7 +353,8 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             AudioManager.RINGER_MODE_VIBRATE -> "רטט"
             else -> "השתק"
         }
-        val succeeded = systemInteractor.setRingerMode(mode)
+        val succeeded = systemInteractor.setRingerMode(mode) ||
+            (systemInteractor.grantNotificationPolicyAccessViaRoot() && systemInteractor.setRingerMode(mode))
         if (succeeded) {
             _ringerMode.value = mode
             showToast("מצב שמע שונה ל: $modeStr")
@@ -653,8 +654,14 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         systemInteractor.setSleepModeEnabled(newValue)
     }
 
+    fun requestNotificationPolicyAccess() {
+        if (systemInteractor.grantNotificationPolicyAccessViaRoot()) showToast("גישה למדיניות התראות פעילה")
+        else systemInteractor.openNotificationPolicyAccessSettings()
+    }
+
     fun focusNow(minutes: Int) {
-        val succeeded = systemInteractor.scheduleFocusNow(minutes)
+        val succeeded = systemInteractor.scheduleFocusNow(minutes) ||
+            (systemInteractor.grantNotificationPolicyAccessViaRoot() && systemInteractor.scheduleFocusNow(minutes))
         if (succeeded) {
             showToast("מצב מיקוד הופעל ל-$minutes דקות")
         } else {

@@ -44,12 +44,42 @@ class LocalSpeechEngine(private val context: Context) {
      * שמעביר כאן את שפת המקלדת הנוכחית כשמקלדת T9 מבקשת תמלול). */
     fun stopRecordingAndTranscribe(language: String = "he"): String {
         recorder.stop()
-        val samples = WaveUtil.getSamples(wavFile.absolutePath)
+        val samples = trimSilence(WaveUtil.getSamples(wavFile.absolutePath))
         if (samples.isEmpty()) return ""
         val whisper = sharedWhisper ?: return ""
         // העוזר והשירות (AssistantRecognitionService) רצים באותו תהליך וחולקים
         // את אותו context, ש-whisper_full לא בטוח להריץ עליו במקביל.
         return synchronized(lock) { whisper.transcribe(samples, language) }
+    }
+
+    /**
+     * חותך שקט מתחילת ההקלטה ומסופה: עלות ה-encoder תלויה באורך האודיו
+     * (audio_ctx), ובדרך כלל יש שנייה-שתיים של שקט עד שמתחילים לדבר ואחרי
+     * שמסיימים. הקלטה שכולה שקט מחזירה מערך ריק - בלי לבזבז זמן (ובלי
+     * ש-Whisper "ימציא" טקסט על שקט).
+     */
+    private fun trimSilence(samples: FloatArray): FloatArray {
+        if (samples.isEmpty()) return samples
+        val window = SAMPLE_RATE / 50 // 20ms
+        val count = samples.size / window
+        if (count == 0) return samples
+        val rms = FloatArray(count) { w ->
+            var sum = 0f
+            for (i in w * window until (w + 1) * window) sum += samples[i] * samples[i]
+            kotlin.math.sqrt(sum / window)
+        }
+        val peak = rms.maxOrNull() ?: 0f
+        if (peak < MIN_SPEECH_RMS) return FloatArray(0)
+        val threshold = maxOf(MIN_SPEECH_RMS, peak * 0.08f)
+        val first = rms.indexOfFirst { it >= threshold }
+        val last = rms.indexOfLast { it >= threshold }
+        val pad = SAMPLE_RATE * 3 / 10 // 300ms שוליים, כדי לא לקטוע הברה
+        val start = (first * window - pad).coerceAtLeast(0)
+        val end = ((last + 1) * window + pad).coerceAtMost(samples.size)
+        val trimmed = samples.copyOfRange(start, end)
+        // Whisper מחזיר תוצאה ריקה על פחות משנייה של אודיו - משלימים באפסים.
+        val minLen = SAMPLE_RATE * 11 / 10
+        return if (trimmed.size >= minLen) trimmed else trimmed.copyOf(minLen)
     }
 
     private fun copyAssetIfNeeded(name: String): File {
@@ -73,6 +103,10 @@ class LocalSpeechEngine(private val context: Context) {
          * פי 4 על המכשיר (הפענוח של q5_1 כבד).
          */
         private const val MODEL_FILE = "ggml-small-q8_0.bin"
+
+        private const val SAMPLE_RATE = 16000
+        // מתחת לזה ההקלטה כולה נחשבת שקט (רעש רקע של המיקרופון).
+        private const val MIN_SPEECH_RMS = 0.006f
 
         // מודל אחד לכל התהליך - העוזר והשירות טוענים אותו שניהם, ושני עותקים
         // של המודל בזיכרון הם כחצי ג'יגה על מכשיר עם 4GB.
