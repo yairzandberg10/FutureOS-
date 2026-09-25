@@ -1,6 +1,4 @@
 package com.future.clock
-import androidx.compose.material.icons.rounded.AccessTime
-import androidx.compose.material.icons.rounded.AvTimer
 
 import com.future.sharednav.icons.FutureIcons
 
@@ -76,7 +74,9 @@ class MainActivity : ComponentActivity() {
                 Triple(ClockRoute.Alarms, "מעוררים", FutureIcons.Alarm),
                 Triple(ClockRoute.WorldClock, "עולמי", FutureIcons.Public),
                 Triple(ClockRoute.Stopwatch, "עצר", FutureIcons.Timer),
-                Triple(ClockRoute.Timer, "טיימר", FutureIcons.Timer),
+                // כמו ב-ui_kits/clock: הגליף "timer" מצויר כשעון עצר (חוגה עם
+                // כפתור למעלה) ושייך לעצר; לטיימר - שעון החול (hourglass_empty).
+                Triple(ClockRoute.Timer, "טיימר", FutureIcons.HourglassEmpty),
             )
             val currentTabIndex = tabs.indexOfFirst { it.first == route }.coerceAtLeast(0)
 
