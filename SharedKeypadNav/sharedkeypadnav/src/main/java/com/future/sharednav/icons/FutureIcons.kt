@@ -69,6 +69,8 @@ object FutureIcons {
     val TrendingUp: ImageVector by lazy { futureGlyph("TrendingUp", listOf("M4.2 16.2 9.2 11.2l3.4 3.4L19.8 7.4", "M14.6 7.4h5.2v5.2")) }
     val Folder: ImageVector by lazy { futureGlyph("Folder", listOf("M3.6 7a2 2 0 0 1 2-2h3.6l2.1 2.4h7.1a2 2 0 0 1 2 2v7.6a2 2 0 0 1-2 2H5.6a2 2 0 0 1-2-2Z")) }
     val FolderOff: ImageVector by lazy { futureGlyph("FolderOff", listOf("M3.6 7a2 2 0 0 1 2-2h3.6l2.1 2.4h7.1a2 2 0 0 1 2 2v7.6a2 2 0 0 1-2 2H5.6a2 2 0 0 1-2-2Z", "M4.4 4.4l15.2 15.2")) }
+    val Archive: ImageVector by lazy { futureGlyph("Archive", listOf("M3.6 6.2a1.6 1.6 0 0 1 1.6-1.6h13.6a1.6 1.6 0 0 1 1.6 1.6v1.4a1.6 1.6 0 0 1-1.6 1.6H5.2a1.6 1.6 0 0 1-1.6-1.6Z", "M5 9.2v8.8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9.2", "M12 11.6v5.2", "M9.6 14.4 12 16.8l2.4-2.4")) }
+    val Unarchive: ImageVector by lazy { futureGlyph("Unarchive", listOf("M3.6 6.2a1.6 1.6 0 0 1 1.6-1.6h13.6a1.6 1.6 0 0 1 1.6 1.6v1.4a1.6 1.6 0 0 1-1.6 1.6H5.2a1.6 1.6 0 0 1-1.6-1.6Z", "M5 9.2v8.8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9.2", "M12 16.8v-5.2", "M9.6 14 12 11.6l2.4 2.4")) }
     val Image: ImageVector by lazy { futureGlyph("Image", listOf("M3.8 6.6a2.2 2.2 0 0 1 2.2-2.2h12a2.2 2.2 0 0 1 2.2 2.2v10.8a2.2 2.2 0 0 1-2.2 2.2H6a2.2 2.2 0 0 1-2.2-2.2Z", "d:8.6 9.2", "M4.4 16.8 9.2 12l3.4 3.4 3-3 4.2 4.2")) }
     val Description: ImageVector by lazy { futureGlyph("Description", listOf("M6.8 3.8h6.4L18.4 9v10.8a1.6 1.6 0 0 1-1.6 1.6H6.8a1.6 1.6 0 0 1-1.6-1.6V5.4a1.6 1.6 0 0 1 1.6-1.6Z", "M13.2 3.8V9h5.2", "M8.4 13.2h7.2", "M8.4 16.6h4.6")) }
     val MusicNote: ImageVector by lazy { futureGlyph("MusicNote", listOf("M9.8 17.2V7.2l8.4-2.2v10", "M7 14.4a2.8 2.8 0 1 0 0 5.6 2.8 2.8 0 0 0 0-5.6Z", "M15.4 12.2a2.8 2.8 0 1 0 0 5.6 2.8 2.8 0 0 0 0-5.6Z")) }
