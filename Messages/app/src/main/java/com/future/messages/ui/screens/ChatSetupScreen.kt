@@ -1,4 +1,6 @@
 package com.future.messages.ui.screens
+import com.future.sharednav.systemui.StatusBarInset
+import androidx.compose.ui.unit.dp
 
 import android.app.Activity
 import android.telephony.TelephonyManager
@@ -65,7 +67,7 @@ fun ChatSetupScreen(theme: FutureTheme, onBack: () -> Unit) {
     }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-        Column(Modifier.fillMaxSize().background(theme.backgroundColor)) {
+        Column(Modifier.fillMaxSize().background(theme.backgroundColor).padding(top = StatusBarInset.TITLE_GAP_DP.dp)) {
             ScreenTopBar(title = "צ'אט FutureOS", textColor = theme.textColor, accentColor = theme.accentColor, onBack = onBack)
             Column(
                 Modifier.fillMaxWidth().padding(horizontal = FutureDimens.spacingLg),

@@ -47,14 +47,25 @@ object StatusBarInset {
     /** גובה שורת המצב של FutureUI. FutureUI קורא את אותו קבוע לגובה החלון שלה. */
     const val HEIGHT_DP = 28
 
+    /**
+     * ריווח קטן מעל כותרת שהייתה נחתכת מתחת לשורת המצב (2026-09-25). מוסף
+     * ידנית רק במסכים שהכותרת שלהם יושבת בראש החלון - ScreenTopBar מתחיל
+     * ב-12dp, ועם 16dp נוספים הכותרת מתחילה בדיוק מתחת לשורה בגובה 28dp.
+     * מסכים שכבר רחוקים ממנה (Scaffold של Material, מסכים ממורכזים) לא צריכים.
+     */
+    const val TITLE_GAP_DP = 16
+
     const val META_DATA_KEY = "com.future.sharednav.STATUS_BAR_INSET"
+
+    /** כבוי לבקשת המשתמש (2026-09-23): בלי מרווח עליון באף אפליקציה. */
+    private const val ENABLED = false
 
     private val callbacks = object : Application.ActivityLifecycleCallbacks {
         private val observers = HashMap<Activity, ContentObserver>()
 
         override fun onActivityPostCreated(activity: Activity, savedInstanceState: Bundle?) {
             OptionsKeyFallback.install(activity)
-            if (!isEnabledFor(activity)) return
+            if (!ENABLED || !isEnabledFor(activity)) return
             val content = activity.findViewById<ViewGroup>(android.R.id.content) ?: return
             apply(activity, content)
             val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {

@@ -1,5 +1,5 @@
 package com.future.bluetooth.ui
-import androidx.compose.material.icons.automirrored.rounded.BluetoothSearching
+import com.future.sharednav.systemui.StatusBarInset
 
 import com.future.sharednav.icons.FutureIcons
 
@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -292,6 +291,7 @@ private fun RootScreen(
     onPair: (BluetoothDeviceInfo) -> Unit,
 ) {
     ScreenScaffold(
+        modifier = Modifier.padding(top = StatusBarInset.TITLE_GAP_DP.dp),
         backgroundColor = theme.backgroundColor,
         title = "בלוטות'",
         textColor = theme.textColor,
@@ -418,7 +418,7 @@ private fun DeviceLists(
         }
         if (nearby.isEmpty() && !controller.isScanning) {
             EmptyState(
-                icon = Icons.AutoMirrored.Rounded.BluetoothSearching,
+                icon = FutureIcons.Bluetooth,
                 title = "לא נמצאו מכשירים",
                 subtitle = "לחץ על חפש מכשירים כדי לחפש שוב",
                 textColor = theme.textColor,
@@ -443,6 +443,7 @@ private fun AllPairedScreen(
         runCatching { target?.let { focusFor(it.address).requestFocus() } }
     }
     ScreenScaffold(
+        modifier = Modifier.padding(top = StatusBarInset.TITLE_GAP_DP.dp),
         backgroundColor = theme.backgroundColor,
         title = "מכשירים מותאמים",
         textColor = theme.textColor,
@@ -563,7 +564,7 @@ private fun ScanCard(scanning: Boolean, found: Int, theme: FutureTheme, onClick:
     val type = rememberFutureType()
     FutureFocusCard(theme = theme, onClick = onClick, minHeight = FutureDimens.rowHeightSetting) {
         Icon(
-            if (scanning) Icons.AutoMirrored.Rounded.BluetoothSearching else FutureIcons.Refresh,
+            if (scanning) FutureIcons.Bluetooth else FutureIcons.Refresh,
             contentDescription = null,
             tint = if (scanning) accentOf(theme) else theme.textColor,
             modifier = Modifier.size(FutureDimens.iconSettingRow),
@@ -623,6 +624,7 @@ private fun DeviceScreen(
     val connected = device.connection == Connection.Connected
 
     ScreenScaffold(
+        modifier = Modifier.padding(top = StatusBarInset.TITLE_GAP_DP.dp),
         backgroundColor = theme.backgroundColor,
         title = "מכשיר",
         textColor = theme.textColor,

@@ -1,6 +1,6 @@
 package com.future.calculator.ui
+import com.future.sharednav.systemui.StatusBarInset
 import androidx.activity.compose.BackHandler
-import androidx.compose.material.icons.rounded.DeleteSweep
 
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.ScreenTopBar
@@ -33,7 +33,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -310,7 +309,7 @@ fun CalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
                 }
             }
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize().padding(top = StatusBarInset.TITLE_GAP_DP.dp)) {
             ScreenTopBar(
                 title = if (calcMode == CalculatorMode.SCIENTIFIC) "מחשבון מדעי" else "מחשבון",
                 textColor = theme.textColor,
@@ -589,6 +588,6 @@ private fun CalculatorOptionsMenu(
     FutureOptionsMenu(theme = theme, onDismissRequest = onDismiss, header = "מחשבון") {
         FutureMenuRow(if (scientific) "מחשבון רגיל" else "מחשבון מדעי", FutureIcons.Functions, theme, onToggleMode)
         FutureMenuRow("העתק תוצאה", FutureIcons.ContentCopy, theme, onCopyResult)
-        FutureMenuRow("נקה היסטוריה", Icons.Rounded.DeleteSweep, theme, onClearHistory, destructive = true)
+        FutureMenuRow("נקה היסטוריה", FutureIcons.Delete, theme, onClearHistory, destructive = true)
     }
 }

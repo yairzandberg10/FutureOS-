@@ -1,4 +1,7 @@
 package com.future.music
+import com.future.sharednav.systemui.StatusBarInset
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.padding
 
 import android.os.Build
 import android.os.Bundle
@@ -137,10 +140,13 @@ private fun MusicApp(openUri: android.net.Uri?, onOpened: () -> Unit) {
     }
 
     Surface(modifier = Modifier.fillMaxSize(), color = theme.backgroundColor) {
-        if (!hasAudioPermission) {
-            PermissionScreen(theme = theme, onRequestPermission = { audioPermissionLauncher.launch(repository.requiredPermission()) })
-        } else {
-            MusicNavHost(repository = repository, playlistStore = playlistStore, playerController = playerController, theme = theme)
+        // ריווח קטן - כותרות המסכים ישבו מתחת לשורת המצב.
+        androidx.compose.foundation.layout.Box(modifier = Modifier.fillMaxSize().padding(top = StatusBarInset.TITLE_GAP_DP.dp)) {
+            if (!hasAudioPermission) {
+                PermissionScreen(theme = theme, onRequestPermission = { audioPermissionLauncher.launch(repository.requiredPermission()) })
+            } else {
+                MusicNavHost(repository = repository, playlistStore = playlistStore, playerController = playerController, theme = theme)
+            }
         }
     }
 }

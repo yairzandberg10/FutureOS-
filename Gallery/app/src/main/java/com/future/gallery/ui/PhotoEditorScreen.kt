@@ -1,4 +1,5 @@
 package com.future.gallery.ui
+import com.future.sharednav.systemui.StatusBarInset
 
 import android.graphics.Bitmap
 import androidx.compose.animation.animateColorAsState
@@ -236,7 +237,7 @@ fun PhotoEditorScreen(item: MediaItem, theme: FutureTheme, onBack: () -> Unit, o
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = FutureDimens.spacingLg, vertical = FutureDimens.spacingSm),
+                    modifier = Modifier.fillMaxWidth().padding(top = StatusBarInset.TITLE_GAP_DP.dp).padding(horizontal = FutureDimens.spacingLg, vertical = FutureDimens.spacingSm),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text("עריכת תמונה", color = theme.textColor, fontWeight = FontWeight.Bold, fontSize = FutureTypography.screenTitle, modifier = Modifier.weight(1f))

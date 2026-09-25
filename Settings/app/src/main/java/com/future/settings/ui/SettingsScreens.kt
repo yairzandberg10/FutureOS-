@@ -1,4 +1,5 @@
 package com.future.settings.ui
+import com.future.sharednav.systemui.StatusBarInset
 
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.theme.FutureMotion
@@ -470,7 +471,10 @@ fun MainMenu(navController: NavController, theme: ThemeConfig, viewModel: Settin
 /** השורה העליונה של מסך פנימי - ScreenTopBar של הדיזיין סיסטם (היה IconButton של Material). */
 @Composable
 fun SmallHeader(title: String, theme: ThemeConfig, onBack: () -> Unit) {
-    ScreenTopBar(title = title, textColor = theme.textColor, accentColor = theme.primaryColor, onBack = onBack)
+    // ריווח קטן - הכותרת ישבה מתחת לשורת המצב (במסך הראשי הכותרת כבר רחוקה ממנה).
+    Column(Modifier.padding(top = StatusBarInset.TITLE_GAP_DP.dp)) {
+        ScreenTopBar(title = title, textColor = theme.textColor, accentColor = theme.primaryColor, onBack = onBack)
+    }
 }
 
 /** Bluetooth נפתח באפליקציית ה-Bluetooth של FutureOS; המסך הפנימי נשאר רק

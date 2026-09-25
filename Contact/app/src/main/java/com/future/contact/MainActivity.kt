@@ -1,4 +1,7 @@
 package com.future.contact
+import com.future.sharednav.systemui.StatusBarInset
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.padding
 
 import android.Manifest
 import android.content.Intent
@@ -219,7 +222,8 @@ class MainActivity : ComponentActivity() {
 
             FutureMaterialTheme(theme) {
                 Surface(modifier = Modifier.fillMaxSize(), color = theme.backgroundColor) {
-                    Box(modifier = Modifier.fillMaxSize()) {
+                    // ריווח קטן - הכותרות (אנשי קשר/אני/איש קשר) ישבו מתחת לשורת המצב.
+                    Box(modifier = Modifier.fillMaxSize().padding(top = StatusBarInset.TITLE_GAP_DP.dp)) {
                         // איש הקשר נמסר כמצב: הכרטיס שיוצא באנימציה ממשיך לצייר את שלו.
                         AnimatedScreenHost(
                             targetState = selected,

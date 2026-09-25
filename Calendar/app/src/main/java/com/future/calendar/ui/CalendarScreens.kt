@@ -1,5 +1,5 @@
 package com.future.calendar.ui
-import androidx.compose.material.icons.rounded.Today
+import com.future.sharednav.systemui.StatusBarInset
 
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureSwitch
@@ -37,7 +37,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -135,7 +134,7 @@ fun CalendarHomeScreen(
                 ) {
                     FocusableIconButton(icon = FutureIcons.Settings, theme = theme, onClick = onOpenSettings)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FocusableIconButton(icon = Icons.Rounded.Today, theme = theme, onClick = onGoToday)
+                        FocusableIconButton(icon = FutureIcons.CalendarToday, theme = theme, onClick = onGoToday)
                         FocusableIconButton(icon = FutureIcons.Add, theme = theme, onClick = onAddEvent)
                     }
                 }
@@ -1006,6 +1005,7 @@ fun CalendarSettingsScreen(
     LaunchedEffect(Unit) { runCatching { first.requestFocus() } }
 
     com.future.sharednav.components.ScreenScaffold(
+        modifier = Modifier.padding(top = StatusBarInset.TITLE_GAP_DP.dp),
         backgroundColor = theme.backgroundColor,
         title = "הגדרות לוח שנה",
         textColor = theme.textColor,
@@ -1075,6 +1075,7 @@ fun CalendarLocationScreen(
     LaunchedEffect(Unit) { runCatching { first.requestFocus() } }
 
     com.future.sharednav.components.ScreenScaffold(
+        modifier = Modifier.padding(top = StatusBarInset.TITLE_GAP_DP.dp),
         backgroundColor = theme.backgroundColor,
         title = "מיקום",
         textColor = theme.textColor,

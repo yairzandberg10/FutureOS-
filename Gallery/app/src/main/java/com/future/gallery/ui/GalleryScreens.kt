@@ -1,4 +1,5 @@
 package com.future.gallery.ui
+import com.future.sharednav.systemui.StatusBarInset
 
 import android.app.RecoverableSecurityException
 import android.content.Intent
@@ -119,7 +120,7 @@ fun GalleryHomeScreen(
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize()) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 14.dp + StatusBarInset.TITLE_GAP_DP.dp, bottom = 8.dp),
                     verticalAlignment = Alignment.Bottom
                 ) {
                     Text("גלריה", fontSize = FutureTypography.headline, fontWeight = FontWeight.Bold, color = theme.textColor, modifier = Modifier.weight(1f))
@@ -210,7 +211,7 @@ fun AlbumDetailScreen(
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize()) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp),
+                    modifier = Modifier.fillMaxWidth().padding(top = StatusBarInset.TITLE_GAP_DP.dp).padding(horizontal = 20.dp, vertical = 14.dp),
                     verticalAlignment = Alignment.Bottom
                 ) {
                     Text(albumName, fontSize = FutureTypography.screenTitle, fontWeight = FontWeight.Bold, color = theme.textColor, modifier = Modifier.weight(1f), maxLines = 1)

@@ -1,4 +1,5 @@
 package com.future.messages.ui.screens
+import com.future.sharednav.systemui.StatusBarInset
 import androidx.compose.material.icons.rounded.ErrorOutline
 
 import com.future.sharednav.icons.FutureIcons
@@ -124,7 +125,7 @@ fun MessageThreadScreen(
         // הסדר כאן חשוב: background *לפני* imePadding. הפוך, הרקע צויר רק
         // באזור שנשאר אחרי הריפוד, והשטח שמאחורי המקלדת - כולל מה שנראה דרך
         // עיגול הפינות שלה - נשאר רקע החלון, שקבוע לשחור ב-themes.xml.
-        Column(modifier = Modifier.fillMaxSize().background(theme.backgroundColor).imePadding()) {
+        Column(modifier = Modifier.fillMaxSize().background(theme.backgroundColor).imePadding().padding(top = StatusBarInset.TITLE_GAP_DP.dp)) {
             ScreenTopBar(
                 title = conversation.contact.name,
                 textColor = theme.textColor,

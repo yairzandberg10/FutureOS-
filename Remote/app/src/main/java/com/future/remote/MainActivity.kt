@@ -1,4 +1,7 @@
 package com.future.remote
+import com.future.sharednav.systemui.StatusBarInset
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.padding
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -41,6 +44,7 @@ class MainActivity : ComponentActivity() {
             FutureMaterialTheme(theme) {
                 Surface(modifier = Modifier.fillMaxSize(), color = theme.backgroundColor) {
                     AnimatedScreenHost(
+                        modifier = Modifier.padding(top = StatusBarInset.TITLE_GAP_DP.dp),
                         targetState = route,
                         depthOf = { if (it == RemoteRoute.Home) 0 else 1 },
                     ) { current ->

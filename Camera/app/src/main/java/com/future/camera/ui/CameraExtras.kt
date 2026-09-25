@@ -1,4 +1,5 @@
 package com.future.camera.ui
+import com.future.sharednav.systemui.StatusBarInset
 
 import android.graphics.Bitmap
 import android.net.Uri
@@ -47,7 +48,6 @@ import com.future.sharednav.components.FutureSettingItem
 import com.future.sharednav.components.FutureSwitch
 import com.future.sharednav.components.ScreenScaffold
 import com.future.sharednav.icons.FutureIcons
-import com.future.sharednav.systemui.StatusBarInset
 import com.future.sharednav.theme.FutureTheme
 import com.future.sharednav.theme.FutureTransitions
 import com.future.sharednav.theme.FutureTypography
@@ -70,8 +70,9 @@ fun CameraSettingsScreen(
 ) {
     val first = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { first.requestFocus() } }
-    Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor).padding(top = StatusBarInset.HEIGHT_DP.dp)) {
+    Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
         ScreenScaffold(
+            modifier = Modifier.padding(top = StatusBarInset.TITLE_GAP_DP.dp),
             backgroundColor = theme.backgroundColor,
             title = "הגדרות מצלמה",
             textColor = theme.textColor,
@@ -231,7 +232,7 @@ fun PhotoViewer(theme: FutureTheme, startUri: Uri?) {
                 fontSize = FutureTypography.summary,
                 modifier = Modifier
                     .align(Alignment.TopCenter)
-                    .padding(top = StatusBarInset.HEIGHT_DP.dp + 12.dp)
+                    .padding(top = 12.dp)
                     .background(ScrimOverPreview, com.future.sharednav.theme.FutureShapes.pill)
                     .padding(horizontal = 12.dp, vertical = 4.dp),
             )

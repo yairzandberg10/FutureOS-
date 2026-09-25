@@ -47,8 +47,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.PhotoLibrary
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -98,7 +96,6 @@ import com.future.camera.data.VideoStorage
 import com.future.sharednav.components.FutureSnackbarHost
 import com.future.sharednav.components.rememberFutureSnackbarState
 import com.future.sharednav.icons.FutureIcons
-import com.future.sharednav.systemui.StatusBarInset
 import com.future.sharednav.theme.FutureContrast
 import com.future.sharednav.theme.FutureDimens
 import com.future.sharednav.theme.FutureMotion
@@ -422,7 +419,7 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.TopCenter)
-                    .padding(start = 16.dp, end = 16.dp, top = StatusBarInset.HEIGHT_DP.dp + 10.dp),
+                    .padding(start = 16.dp, end = 16.dp, top = 10.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -608,7 +605,7 @@ private fun PreviewThumbButton(thumb: Bitmap?, accentColor: Color, onClick: () -
         if (thumb != null) {
             Image(thumb.asImageBitmap(), contentDescription = "התמונה האחרונה", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
         } else {
-            Icon(Icons.Rounded.PhotoLibrary, contentDescription = "התמונה האחרונה", tint = Color.White, modifier = Modifier.size(24.dp))
+            Icon(FutureIcons.Image, contentDescription = "התמונה האחרונה", tint = Color.White, modifier = Modifier.size(24.dp))
         }
     }
 }

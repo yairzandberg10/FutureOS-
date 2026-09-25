@@ -1,4 +1,5 @@
 package com.future.translate.ui
+import com.future.sharednav.systemui.StatusBarInset
 
 import com.future.sharednav.icons.FutureIcons
 
@@ -80,6 +81,7 @@ fun TranslateScreen(
     LaunchedEffect(Unit) { runCatching { fromCapsule.requestFocus() } }
 
     ScreenScaffold(
+        modifier = Modifier.padding(top = StatusBarInset.TITLE_GAP_DP.dp),
         backgroundColor = theme.backgroundColor,
         title = "תרגום",
         textColor = theme.textColor,

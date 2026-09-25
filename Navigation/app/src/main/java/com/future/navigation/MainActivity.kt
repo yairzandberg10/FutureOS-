@@ -1,4 +1,5 @@
 package com.future.navigation
+import com.future.sharednav.systemui.StatusBarInset
 
 import android.Manifest
 import android.content.pm.PackageManager
@@ -194,6 +195,8 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
+                  // ריווח קטן - הכותרות ושורת החיפוש ישבו מתחת לשורת המצב.
+                  androidx.compose.foundation.layout.Box(modifier = Modifier.fillMaxSize().padding(top = StatusBarInset.TITLE_GAP_DP.dp)) {
                     if (!hasLocationPermission) {
                         MissingLocationPermissionScreen { locationPermissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)) }
                     } else {
@@ -206,6 +209,7 @@ class MainActivity : ComponentActivity() {
                             routingRepository = routingRepository
                         )
                     }
+                  }
                 }
             }
         }

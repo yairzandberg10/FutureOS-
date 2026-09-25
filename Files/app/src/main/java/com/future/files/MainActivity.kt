@@ -1,4 +1,7 @@
 package com.future.files
+import com.future.sharednav.systemui.StatusBarInset
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.padding
 
 import android.content.Intent
 import android.net.Uri
@@ -107,7 +110,8 @@ class MainActivity : ComponentActivity() {
             }
 
             Surface(modifier = Modifier.fillMaxSize(), color = theme.backgroundColor) {
-              androidx.compose.foundation.layout.Box(modifier = Modifier.fillMaxSize()) {
+              // ריווח קטן - הכותרת (שם התיקייה) ישבה מתחת לשורת המצב.
+              androidx.compose.foundation.layout.Box(modifier = Modifier.fillMaxSize().padding(top = StatusBarInset.TITLE_GAP_DP.dp)) {
                 // המציג והרשימה מחליקים זה מול זה. מעבר בין תיקיות נשאר בתוך
                 // אותו מסך בכוונה (FilesScreen שומר מצב בחירה/חיפוש פנימי), והשם
                 // בכותרת מתחלף ב-crossfade של ScreenTopBar.

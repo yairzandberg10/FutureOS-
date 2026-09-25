@@ -1,4 +1,5 @@
 package com.future.translate.ui
+import com.future.sharednav.systemui.StatusBarInset
 
 import com.future.sharednav.icons.FutureIcons
 
@@ -94,6 +95,7 @@ fun LanguagePickerScreen(
     val recents = if (q.isEmpty()) recentCodes.map { Languages.of(it) } else emptyList()
 
     ScreenScaffold(
+        modifier = Modifier.padding(top = StatusBarInset.TITLE_GAP_DP.dp),
         backgroundColor = theme.backgroundColor,
         title = if (source) "תרגם מ" else "תרגם אל",
         textColor = theme.textColor,
@@ -177,6 +179,7 @@ fun HistoryScreen(
     LaunchedEffect(Unit) { runCatching { firstTab.requestFocus() } }
 
     ScreenScaffold(
+        modifier = Modifier.padding(top = StatusBarInset.TITLE_GAP_DP.dp),
         backgroundColor = theme.backgroundColor,
         title = "היסטוריה",
         textColor = theme.textColor,
@@ -272,6 +275,7 @@ fun TalkScreen(
     }
 
     ScreenScaffold(
+        modifier = Modifier.padding(top = StatusBarInset.TITLE_GAP_DP.dp),
         backgroundColor = theme.backgroundColor,
         title = "שיחה",
         textColor = theme.textColor,
@@ -416,6 +420,7 @@ fun DownloadsScreen(
     LaunchedEffect(Unit) { runCatching { first.requestFocus() } }
 
     ScreenScaffold(
+        modifier = Modifier.padding(top = StatusBarInset.TITLE_GAP_DP.dp),
         backgroundColor = theme.backgroundColor,
         title = "הורדת שפה",
         textColor = theme.textColor,
@@ -489,6 +494,7 @@ fun SettingsScreen(viewModel: TranslateViewModel, theme: FutureTheme, onBack: ()
     LaunchedEffect(Unit) { runCatching { first.requestFocus() } }
 
     ScreenScaffold(
+        modifier = Modifier.padding(top = StatusBarInset.TITLE_GAP_DP.dp),
         backgroundColor = theme.backgroundColor,
         title = "הגדרות",
         textColor = theme.textColor,

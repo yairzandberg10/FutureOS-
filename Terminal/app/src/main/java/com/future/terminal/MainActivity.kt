@@ -1,5 +1,5 @@
 package com.future.terminal
-import androidx.compose.material.icons.rounded.DeleteSweep
+import com.future.sharednav.systemui.StatusBarInset
 
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureOptionsMenu
@@ -34,7 +34,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -175,7 +174,7 @@ class MainActivity : ComponentActivity() {
                         },
                     color = theme.backgroundColor
                 ) {
-                    Column(modifier = Modifier.fillMaxSize()) {
+                    Column(modifier = Modifier.fillMaxSize().padding(top = StatusBarInset.TITLE_GAP_DP.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
@@ -334,7 +333,7 @@ private fun TerminalOptionsMenu(theme: FutureTheme, onDismiss: () -> Unit, onCle
     FutureOptionsMenu(theme = theme, onDismissRequest = onDismiss, header = "טרמינל") {
         FutureMenuRow("העתק פלט אחרון", FutureIcons.ContentCopy, theme, onCopyLastOutput)
         FutureMenuRow("שתף היסטוריה", FutureIcons.Share, theme, onShareHistory)
-        FutureMenuRow("נקה היסטוריה", Icons.Rounded.DeleteSweep, theme, onClear, destructive = true)
+        FutureMenuRow("נקה היסטוריה", FutureIcons.Delete, theme, onClear, destructive = true)
     }
 }
 

@@ -1,4 +1,5 @@
 package com.future.futurelauncher.ui
+import com.future.sharednav.systemui.StatusBarInset
 
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProviderInfo
@@ -54,7 +55,6 @@ import com.future.sharednav.components.FutureSwitch
 import com.future.sharednav.components.ScreenTopBar
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.nav.digitForKey
-import com.future.sharednav.systemui.StatusBarInset
 import com.future.sharednav.t9.T9DigitMap
 import com.future.sharednav.theme.FutureTheme
 import com.future.sharednav.theme.FutureTypography
@@ -105,7 +105,7 @@ private fun LauncherOverlay(theme: FutureTheme, title: String, content: @Composa
             modifier = Modifier
                 .fillMaxSize()
                 .background(theme.backgroundColor)
-                .padding(top = StatusBarInset.HEIGHT_DP.dp),
+                .padding(top = StatusBarInset.TITLE_GAP_DP.dp),
         ) {
             ScreenTopBar(title = title, textColor = theme.textColor, accentColor = theme.accentColor)
             Box(modifier = Modifier.fillMaxSize()) { content() }

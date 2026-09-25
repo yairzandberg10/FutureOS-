@@ -1,4 +1,5 @@
 package com.future.messages.ui.screens
+import com.future.sharednav.systemui.StatusBarInset
 
 import android.Manifest
 import android.content.Intent
@@ -102,7 +103,7 @@ fun ComposeScreen(
                 .imePadding()
                 .escapeTextFieldFocusTrap()
                 // מעט אוויר מעל הכותרת - בלי זה המסך נצמד לקצה העליון.
-                .padding(top = FutureDimens.spacingMd),
+                .padding(top = StatusBarInset.TITLE_GAP_DP.dp),
         ) {
             ScreenTopBar(
                 title = "הודעה חדשה",

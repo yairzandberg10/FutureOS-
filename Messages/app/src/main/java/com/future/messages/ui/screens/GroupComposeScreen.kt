@@ -1,4 +1,5 @@
 package com.future.messages.ui.screens
+import com.future.sharednav.systemui.StatusBarInset
 
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.TopBarIconButton
@@ -89,7 +90,7 @@ fun GroupComposeScreen(
         // ראו MessageThreadScreen: edge-to-edge מנטרל את adjustResize, ובלי
         // imePadding שדה החיפוש/הנמען נחבא מתחת למקלדת. background לפני
         // imePadding כדי שהרקע ימלא גם את השטח שמאחורי המקלדת.
-        Column(modifier = Modifier.fillMaxSize().background(theme.backgroundColor).imePadding()) {
+        Column(modifier = Modifier.fillMaxSize().background(theme.backgroundColor).imePadding().padding(top = StatusBarInset.TITLE_GAP_DP.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = FutureDimens.spacingLg, vertical = FutureDimens.spacingMd),
                 verticalAlignment = Alignment.CenterVertically

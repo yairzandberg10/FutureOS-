@@ -1,4 +1,5 @@
 package com.future.wallpapers
+import com.future.sharednav.systemui.StatusBarInset
 
 import android.app.WallpaperManager
 import android.graphics.Bitmap
@@ -113,7 +114,7 @@ private fun WallpapersApp(theme: FutureTheme) {
         if (open != null) {
             PreviewScreen(open, theme)
         } else {
-            Column(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
+            Column(modifier = Modifier.fillMaxSize().background(theme.backgroundColor).padding(top = StatusBarInset.TITLE_GAP_DP.dp)) {
                 ScreenTopBar(title = "רקעים", textColor = theme.textColor, accentColor = theme.accentColor)
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = FutureDimens.spacingLg),
