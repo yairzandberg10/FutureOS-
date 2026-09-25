@@ -35,14 +35,16 @@ class AssistantRecognitionService : RecognitionService() {
         speechEngine = LocalSpeechEngine(this)
         // טעינת המודל לוקחת זמן (העתקה מ-assets בפעם הראשונה) - עושים את זה
         // מראש ברקע כדי שהיא כבר תהיה מוכנה עד שבקשת תמלול ראשונה תגיע.
-        workerThread.execute {
+        // thread נפרד ולא workerThread: אחרת ההקלטה של הבקשה הראשונה הייתה
+        // מחכה בתור עד סוף הטעינה (שניות), והמילים הראשונות היו הולכות לאיבוד.
+        Thread {
             try {
                 speechEngine.loadModel()
                 modelReady = true
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to load Whisper model", e)
             }
-        }
+        }.start()
     }
 
     override fun onStartListening(recognizerIntent: Intent?, listener: Callback) {
@@ -57,15 +59,8 @@ class AssistantRecognitionService : RecognitionService() {
         }
         workerThread.execute {
             try {
-                // המודל עוד לא נטען (בקשה ראשונה, מיד אחרי onCreate) - מחכים לו
-                // באותו thread רקע במקום להיכשל, כדי לא "לאבד" את הבקשה הראשונה.
-                // אם טעינת המודל נכשלה - לא מחכים לנצח (המקלדת הייתה נתקעת על "מקשיב…").
-                val waitUntil = System.currentTimeMillis() + MODEL_WAIT_MS
-                while (!modelReady && System.currentTimeMillis() < waitUntil) Thread.sleep(50)
-                if (!modelReady) {
-                    safeError(listener, SpeechRecognizer.ERROR_SERVER)
-                    return@execute
-                }
+                // מקליטים מיד, גם אם המודל עוד נטען: הטעינה רצה במקביל לדיבור,
+                // ומחכים לה רק ב-onStopListening, לפני התמלול עצמו.
                 // עוצמת הקול האמיתית -> onRmsChanged אצל הלקוח (גלי הקול במקלדת).
                 speechEngine.startRecording { rms ->
                     if (isRecording) try { listener.rmsChanged(rms) } catch (e: Exception) { /* הלקוח נסגר */ }
@@ -88,6 +83,14 @@ class AssistantRecognitionService : RecognitionService() {
             isRecording = false
             try {
                 listener.endOfSpeech()
+                // אם טעינת המודל נכשלה - לא מחכים לנצח (המקלדת הייתה נתקעת על "מתמלל…").
+                val waitUntil = System.currentTimeMillis() + MODEL_WAIT_MS
+                while (!modelReady && System.currentTimeMillis() < waitUntil) Thread.sleep(20)
+                if (!modelReady) {
+                    speechEngine.cancelRecording()
+                    safeError(listener, SpeechRecognizer.ERROR_SERVER)
+                    return@execute
+                }
                 val language = currentLanguage
                 val text = speechEngine.stopRecordingAndTranscribe(language)
                 if (text.isBlank()) {
@@ -109,7 +112,8 @@ class AssistantRecognitionService : RecognitionService() {
         workerThread.execute {
             if (isRecording) {
                 isRecording = false
-                try { speechEngine.stopRecordingAndTranscribe(currentLanguage) } catch (e: Exception) { /* מבטלים - התוצאה לא רלוונטית */ }
+                // רק עוצרים את ההקלטה - בלי להריץ תמלול שלם שהתוצאה שלו נזרקת.
+                try { speechEngine.cancelRecording() } catch (e: Exception) { /* מבטלים */ }
             }
         }
     }

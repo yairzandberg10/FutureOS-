@@ -68,6 +68,14 @@
                 android:name="android.speech"
                 android:resource="@xml/recognition_service" />
         </service>
+        <!-- המקלדת מחממת את מודל התמלול כשהיא נפתחת (ר' AsrWarmupReceiver). -->
+        <receiver
+            android:name=".asr.AsrWarmupReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.future.assistant.action.WARM_UP_ASR" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>

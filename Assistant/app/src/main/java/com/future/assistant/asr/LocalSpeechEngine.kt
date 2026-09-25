@@ -18,24 +18,18 @@ class LocalSpeechEngine(private val context: Context) {
     private val wavFile = File(context.filesDir, "assistant_recording.wav")
 
     /** טוען את המודל מה-assets (מעתיק לאחסון פנימי בפעם הראשונה). חוסם - יש לקרוא מ-thread ברקע. */
-    fun loadModel() {
-        synchronized(lock) {
-            if (sharedWhisper != null) return
-            // המודל הקודם (tiny) - לא נמצא יותר ב-assets, אבל העותק שלו נשאר
-            // באחסון הפנימי מהתקנות קודמות.
-            File(context.filesDir, "ggml-tiny-q8_0.bin").delete()
-            val modelFile = copyAssetIfNeeded(MODEL_FILE)
-            val whisper = WhisperCpp()
-            check(whisper.init(modelFile.absolutePath)) { "whisper_init_from_file_with_params failed" }
-            sharedWhisper = whisper
-        }
-    }
+    fun loadModel() = preload(context)
 
     /** [onLevel] - עוצמת הקול בזמן אמת (סקאלת onRmsChanged), מ-thread ההקלטה. */
     fun startRecording(onLevel: ((Float) -> Unit)? = null) {
         recorder.setLevelListener(onLevel?.let { cb -> Recorder.LevelListener { cb(it) } })
         recorder.setFilePath(wavFile.absolutePath)
         recorder.start()
+    }
+
+    /** עוצר את ההקלטה בלי לתמלל (ביטול). */
+    fun cancelRecording() {
+        recorder.stop()
     }
 
     /** עוצר את ההקלטה ומתמלל. חוסם - יש לקרוא מ-thread ברקע. מחזיר טקסט ריק אם נכשל.
@@ -82,20 +76,6 @@ class LocalSpeechEngine(private val context: Context) {
         return if (trimmed.size >= minLen) trimmed else trimmed.copyOf(minLen)
     }
 
-    private fun copyAssetIfNeeded(name: String): File {
-        val outFile = File(context.filesDir, name)
-        if (!outFile.exists() || outFile.length() == 0L) {
-            // העתקה לקובץ זמני ואז rename: אם התהליך נהרג באמצע ההעתקה (264MB),
-            // לא נשאר קובץ חלקי שנראה תקין בהפעלה הבאה.
-            val tmp = File(context.filesDir, "$name.tmp")
-            context.assets.open(name).use { input ->
-                FileOutputStream(tmp).use { output -> input.copyTo(output) }
-            }
-            check(tmp.renameTo(outFile)) { "rename $tmp failed" }
-        }
-        return outFile
-    }
-
     companion object {
         /**
          * Whisper small (רב-לשוני, מכומת 8 ביט, 264MB). tiny, שהיה כאן קודם,
@@ -112,5 +92,33 @@ class LocalSpeechEngine(private val context: Context) {
         // של המודל בזיכרון הם כחצי ג'יגה על מכשיר עם 4GB.
         private val lock = Any()
         @Volatile private var sharedWhisper: WhisperCpp? = null
+
+        /** כמו loadModel, בלי ליצור Recorder (ר' AsrWarmupReceiver). */
+        fun preload(context: Context) {
+            synchronized(lock) {
+                if (sharedWhisper != null) return
+                // המודל הקודם (tiny) - לא נמצא יותר ב-assets, אבל העותק שלו נשאר
+                // באחסון הפנימי מהתקנות קודמות.
+                File(context.filesDir, "ggml-tiny-q8_0.bin").delete()
+                val modelFile = copyAssetIfNeeded(context, MODEL_FILE)
+                val whisper = WhisperCpp()
+                check(whisper.init(modelFile.absolutePath)) { "whisper_init_from_file_with_params failed" }
+                sharedWhisper = whisper
+            }
+        }
+
+        private fun copyAssetIfNeeded(context: Context, name: String): File {
+            val outFile = File(context.filesDir, name)
+            if (!outFile.exists() || outFile.length() == 0L) {
+                // העתקה לקובץ זמני ואז rename: אם התהליך נהרג באמצע ההעתקה (264MB),
+                // לא נשאר קובץ חלקי שנראה תקין בהפעלה הבאה.
+                val tmp = File(context.filesDir, "$name.tmp")
+                context.assets.open(name).use { input ->
+                    FileOutputStream(tmp).use { output -> input.copyTo(output) }
+                }
+                check(tmp.renameTo(outFile)) { "rename $tmp failed" }
+            }
+            return outFile
+        }
     }
 }
