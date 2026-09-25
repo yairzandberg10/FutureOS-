@@ -4,6 +4,34 @@ This repo has no carried-over git history (see root [README](README.md)), so thi
 
 ## Unreleased
 
+### Audit pass: bug fixes across Clock, Messages, Recorder and five other apps
+
+- **Clock: the timer rings with the screen off.** It used to live only in the
+  screen's coroutine, so it went silent when the CPU slept or the user left
+  the screen. It is now scheduled in AlarmManager, rings on the alarm screen
+  (with no snooze button), and the screen resumes a running countdown.
+- **Clock: alarms after a time or timezone change.** The receiver now also
+  reschedules on `TIME_SET`, `TIMEZONE_CHANGED` and `MY_PACKAGE_REPLACED`, so
+  a 07:00 alarm no longer rings at 06:00 or 08:00 after a clock change.
+  Deleted alarms (and their snooze) are cancelled in AlarmManager, and alarms
+  use `setAlarmClock` so the system knows about the next one.
+- **Messages opens the conversation from `sms:`/`smsto:`.** "Send message"
+  from Contacts, Dialer and the in-call screen used to open the list and drop
+  the number. It now opens that conversation (creating it if needed) with the
+  text as a draft. Tapping an incoming-SMS notification opens the sender's
+  conversation too.
+- **Recorder:** playback pauses when the app goes to the background, and the
+  file being recorded no longer shows in the list, so it can't be played or
+  deleted while it is still being written.
+- **Calculator:** long results switch to scientific notation (170! used to be
+  307 digits and 10^-20 twenty zeros, far wider than the screen).
+- **Bluetooth:** leaving the app no longer crashes when the scan permission
+  was denied.
+- **Music:** unplugging headphones pauses playback instead of moving it to the
+  loudspeaker.
+- **Camera:** leaving the screen mid-video closes the recording.
+- **Files:** a new folder name with `/` no longer creates nested folders.
+
 ### Recorder app, tuner, location compass, screenshots in recents, back keeps focus
 
 - **New app: Recorder (רשמקול, `com.future.recorder`).** Records AAC/m4a in a

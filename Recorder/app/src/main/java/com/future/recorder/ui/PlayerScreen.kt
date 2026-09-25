@@ -81,6 +81,19 @@ fun PlayerScreen(theme: FutureTheme, file: File, onBack: () -> Unit) {
         }
         onDispose { runCatching { player.stop() }; player.release() }
     }
+    // אין שירות מאחורי הנגן - ביציאה מהאפליקציה (בית/שיחה נכנסת) ההשמעה נעצרת,
+    // אחרת היא המשיכה ברקע בלי שום דרך לעצור אותה חוץ מלחזור לאפליקציה.
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val obs = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP && isPlaying) {
+                runCatching { player.pause() }
+                isPlaying = false
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(obs)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(obs) }
+    }
     LaunchedEffect(isPlaying) {
         while (isPlaying) {
             positionMs = runCatching { player.currentPosition }.getOrDefault(positionMs)

@@ -147,7 +147,9 @@ fun RecorderHomeScreen(theme: FutureTheme, onPlay: (File) -> Unit) {
                         modifier = Modifier.onFocusChanged { if (it.hasFocus) focused = null },
                     )
                 }
-                val list = recordings
+                // הקובץ שמוקלט עכשיו כבר קיים בתיקייה - בלי הסינון הוא הופיע ברשימה
+                // אחרי רענון (שינוי שם/מחיקה תוך כדי הקלטה) ואפשר היה להשמיע או למחוק אותו.
+                val list = recordings?.filter { it.file != state.file }
                 if (list != null && list.isEmpty() && state.status == RecorderStatus.Idle) {
                     item(key = "empty") {
                         EmptyState(

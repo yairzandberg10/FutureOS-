@@ -151,14 +151,17 @@ class AlarmRingActivity : ComponentActivity() {
                             fillMaxWidth = true,
                             focusRequester = stopFocus,
                         )
-                        Spacer(modifier = Modifier.height(FutureDimens.spacingMd))
-                        FutureButton(
-                            text = "נודניק · $SNOOZE_MINUTES דקות",
-                            theme = theme,
-                            onClick = ::snooze,
-                            variant = FutureButtonVariant.Secondary,
-                            fillMaxWidth = true,
-                        )
+                        // לטיימר (בלי מזהה אזעקה) אין נודניק - הכפתור לא היה עושה כלום
+                        if (alarmId != -1) {
+                            Spacer(modifier = Modifier.height(FutureDimens.spacingMd))
+                            FutureButton(
+                                text = "נודניק · $SNOOZE_MINUTES דקות",
+                                theme = theme,
+                                onClick = ::snooze,
+                                variant = FutureButtonVariant.Secondary,
+                                fillMaxWidth = true,
+                            )
+                        }
                     }
                 }
             }

@@ -83,6 +83,18 @@ private const val MAX_INPUT_DIGITS = 15
  * לא יכיל בלי חיתוך שקט על המסך הקבוע של 640px. */
 private val CALC_PRECISION = MathContext(12)
 
+/**
+ * תצוגת מספר: רגילה כשהיא קצרה, וכתיב מדעי (1.23456789012E+30) כשהיא ארוכה מ-16
+ * תווים. קודם toPlainString הדפיס כל ספרה - 170! היה 307 ספרות, ו-10^-20 היה
+ * עשרים אפסים, הרבה מעבר למה שנכנס במסך גם בגופן הקטן ביותר.
+ */
+private fun BigDecimal.toDisplay(): String {
+    val stripped = stripTrailingZeros()
+    val plain = stripped.toPlainString()
+    if (plain.length <= 16) return plain
+    return stripped.round(CALC_PRECISION).stripTrailingZeros().toString()
+}
+
 @Composable
 fun CalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
     var display by remember { mutableStateOf("0") }
@@ -151,7 +163,7 @@ fun CalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
                     // ממירים ל-Double כמו בכל פונקציה מדעית אחרת כאן (ר' applyUnaryFunction).
                     CalcOp.POW -> BigDecimal(Math.pow(pv.toDouble(), cur.toDouble()), CALC_PRECISION)
                 }
-                result.stripTrailingZeros().toPlainString()
+                result.toDisplay()
             } catch (e: Exception) {
                 "שגיאה"
             }
@@ -165,21 +177,21 @@ fun CalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
         // מחשב 5+5=10 מוקדם מדי, בניגוד להתנהגות מחשבון רגילה.
         if (startFresh && pendingOp != null && pendingValue != null) {
             pendingOp = op
-            expressionLine = "${pendingValue!!.stripTrailingZeros().toPlainString()} ${op.symbol()}"
+            expressionLine = "${pendingValue!!.toDisplay()} ${op.symbol()}"
             return
         }
         applyPending()
         pendingValue = currentValue()
         pendingOp = op
         startFresh = true
-        expressionLine = "${pendingValue!!.stripTrailingZeros().toPlainString()} ${op.symbol()}"
+        expressionLine = "${pendingValue!!.toDisplay()} ${op.symbol()}"
     }
 
     fun onEquals() {
         val pv = pendingValue
         val op = pendingOp
         if (pv != null && op != null) {
-            val expression = "${pv.stripTrailingZeros().toPlainString()} ${op.symbol()} ${currentValue().stripTrailingZeros().toPlainString()}"
+            val expression = "${pv.toDisplay()} ${op.symbol()} ${currentValue().toDisplay()}"
             applyPending()
             history.add(0, CalcHistoryEntry(expression, display))
         }
@@ -199,7 +211,7 @@ fun CalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
 
     fun onPercent() {
         display = try {
-            currentValue().divide(BigDecimal(100), MathContext(12)).stripTrailingZeros().toPlainString()
+            currentValue().divide(BigDecimal(100), MathContext(12)).toDisplay()
         } catch (e: Exception) {
             "0"
         }
@@ -214,7 +226,7 @@ fun CalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
         display = try {
             val result = fn(currentValue().toDouble())
             if (result.isNaN() || result.isInfinite()) "שגיאה"
-            else BigDecimal(result, CALC_PRECISION).stripTrailingZeros().toPlainString()
+            else BigDecimal(result, CALC_PRECISION).toDisplay()
         } catch (e: Exception) {
             "שגיאה"
         }
@@ -229,7 +241,7 @@ fun CalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
             } else {
                 var result = BigDecimal.ONE
                 for (i in 2..n.toInt()) result = result.multiply(BigDecimal(i))
-                result.toPlainString()
+                result.toDisplay()
             }
         } catch (e: Exception) {
             "שגיאה"
@@ -238,7 +250,7 @@ fun CalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
     }
 
     fun onConstant(value: Double) {
-        display = BigDecimal(value, CALC_PRECISION).stripTrailingZeros().toPlainString()
+        display = BigDecimal(value, CALC_PRECISION).toDisplay()
         startFresh = true
     }
 

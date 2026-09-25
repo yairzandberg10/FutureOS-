@@ -25,6 +25,9 @@ const val SNOOZE_MINUTES = 5
  */
 const val ACTION_ALARM_FIRED = "com.future.clock.ACTION_ALARM_FIRED"
 
+/** הטיימר הסתיים - מתוזמן ב-AlarmManager כדי שיצלצל גם כשהמסך כבוי או כשיצאו מהמסך. */
+const val ACTION_TIMER_FIRED = "com.future.clock.ACTION_TIMER_FIRED"
+
 /** מפתח תוסף ה-Intent שנושא את מזהה האזעקה שצריכה לצלצל/להתנדנד. */
 const val EXTRA_ALARM_ID = "ALARM_ID"
 
@@ -61,10 +64,18 @@ object AlarmLogic {
     }
 
     fun saveAlarms(context: Context, alarms: List<Alarm>) {
+        val previous = getAlarms(context)
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putString(ALARMS_KEY, gson.toJson(alarms)).apply()
 
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        // אזעקה שנמחקה כבר לא ברשימה החדשה, ולכן הלולאה למטה לא ביטלה אותה -
+        // ה-PendingIntent שלה (וגם נודניק פתוח) נשאר מתוזמן ב-AlarmManager.
+        val keptIds = alarms.mapTo(HashSet()) { it.id }
+        previous.filter { it.id !in keptIds }.forEach { removed ->
+            cancelAlarm(context, alarmManager, removed)
+            cancelRequestCode(context, alarmManager, snoozeRequestCode(removed.id))
+        }
         alarms.forEach { alarm ->
             if (alarm.isEnabled) scheduleAlarm(context, alarmManager, alarm) else cancelAlarm(context, alarmManager, alarm)
         }
@@ -145,7 +156,18 @@ object AlarmLogic {
         val pendingIntent = PendingIntent.getBroadcast(
             context, alarm.id, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        setExactSafely(context, alarmManager, nextTriggerMillis(alarm), pendingIntent)
+        val triggerAt = nextTriggerMillis(alarm)
+        if (alarmManager.canScheduleExactAlarms()) {
+            // setAlarmClock ולא setExactAndAllowWhileIdle: זה ה-API של שעון מעורר -
+            // לא נדחה במצב Doze עמוק, והמערכת יודעת שיש אזעקה קרובה (getNextAlarmClock).
+            val show = PendingIntent.getActivity(
+                context, alarm.id, Intent(context, com.future.clock.MainActivity::class.java),
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            alarmManager.setAlarmClock(AlarmManager.AlarmClockInfo(triggerAt, show), pendingIntent)
+        } else {
+            setExactSafely(context, alarmManager, triggerAt, pendingIntent)
+        }
     }
 
     private fun setExactSafely(context: Context, alarmManager: AlarmManager, triggerAtMillis: Long, pendingIntent: PendingIntent) {
@@ -166,6 +188,48 @@ object AlarmLogic {
             context, alarm.id, intent, PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
         )
         if (pendingIntent != null) alarmManager.cancel(pendingIntent)
+    }
+
+    /**
+     * הטיימר רץ בתוך המסך בלבד - delay של קורוטינה לא מתעורר כשהמעבד ישן, וכשיוצאים
+     * מהמסך המצב נעלם. לכן סיום הטיימר מתוזמן גם ב-AlarmManager, ושעת הסיום (שעון
+     * קיר, שורד אתחול) נשמרת כדי שהמסך ימשיך את הספירה כשחוזרים אליו.
+     */
+    fun scheduleTimer(context: Context, endWallMillis: Long, totalMillis: Long) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
+            .putLong(TIMER_END_KEY, endWallMillis).putLong(TIMER_TOTAL_KEY, totalMillis).apply()
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        setExactSafely(context, alarmManager, endWallMillis, timerIntent(context))
+    }
+
+    fun cancelTimer(context: Context) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
+            .remove(TIMER_END_KEY).remove(TIMER_TOTAL_KEY).apply()
+        (context.getSystemService(Context.ALARM_SERVICE) as AlarmManager).cancel(timerIntent(context))
+    }
+
+    /** (שעת סיום בשעון קיר, אורך מלא) של טיימר שעדיין רץ, או null. */
+    fun runningTimer(context: Context): Pair<Long, Long>? {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val end = prefs.getLong(TIMER_END_KEY, 0L)
+        if (end <= System.currentTimeMillis()) return null
+        return end to prefs.getLong(TIMER_TOTAL_KEY, 0L)
+    }
+
+    private fun timerIntent(context: Context): PendingIntent = PendingIntent.getBroadcast(
+        context, TIMER_REQUEST_CODE,
+        Intent(context, AlarmReceiver::class.java).setAction(ACTION_TIMER_FIRED),
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+    )
+
+    private const val TIMER_END_KEY = "timer_end_wall"
+    private const val TIMER_TOTAL_KEY = "timer_total"
+    private const val TIMER_REQUEST_CODE = 2_000_000
+
+    private fun cancelRequestCode(context: Context, alarmManager: AlarmManager, requestCode: Int) {
+        val intent = Intent(context, AlarmReceiver::class.java).apply { action = ACTION_ALARM_FIRED }
+        PendingIntent.getBroadcast(context, requestCode, intent, PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE)
+            ?.let { alarmManager.cancel(it) }
     }
 
     /**

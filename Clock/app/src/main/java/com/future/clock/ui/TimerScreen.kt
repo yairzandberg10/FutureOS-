@@ -41,6 +41,7 @@ import com.future.sharednav.theme.FutureDimens
 import com.future.sharednav.theme.mutedTextColor
 import com.future.sharednav.components.FutureButtonVariant
 import kotlinx.coroutines.delay
+import com.future.clock.logic.AlarmLogic
 
 private fun mmssToText(mmss: Int): String = "%02d:%02d".format(mmss / 100, mmss % 100)
 
@@ -80,6 +81,22 @@ fun TimerScreen(theme: FutureTheme, onBack: () -> Unit) {
     val focusRequester = remember { FocusRequester() }
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
 
+    // טיימר שהתחיל קודם ועדיין מתוזמן ב-AlarmManager - ממשיכים להציג את הספירה שלו
+    LaunchedEffect(Unit) {
+        AlarmLogic.runningTimer(context)?.let { (endWall, total) ->
+            val left = endWall - System.currentTimeMillis()
+            deadlineElapsedRealtime = android.os.SystemClock.elapsedRealtime() + left
+            remainingMillis = left
+            totalMillis = if (total > 0) total else left
+            isRunning = true
+        }
+    }
+    // כל התחלה/המשך מתזמנת את הצלצול במערכת; השהיה/איפוס מבטלים אותו
+    fun armSystemTimer() {
+        val left = deadlineElapsedRealtime - android.os.SystemClock.elapsedRealtime()
+        AlarmLogic.scheduleTimer(context, System.currentTimeMillis() + left, totalMillis)
+    }
+
     LaunchedEffect(isRunning) {
         while (isRunning) {
             val remaining = deadlineElapsedRealtime - android.os.SystemClock.elapsedRealtime()
@@ -105,9 +122,11 @@ fun TimerScreen(theme: FutureTheme, onBack: () -> Unit) {
         deadlineElapsedRealtime = android.os.SystemClock.elapsedRealtime() + totalMs
         isFinished = false
         isRunning = true
+        armSystemTimer()
     }
 
     fun resetTimer() {
+        AlarmLogic.cancelTimer(context)
         isRunning = false
         isFinished = false
         remainingMillis = 0
@@ -196,9 +215,11 @@ fun TimerScreen(theme: FutureTheme, onBack: () -> Unit) {
                             // לגזור אותו מ-deadline ישן שכבר לא רלוונטי.
                             remainingMillis = (deadlineElapsedRealtime - android.os.SystemClock.elapsedRealtime()).coerceAtLeast(0L)
                             isRunning = false
+                            AlarmLogic.cancelTimer(context)
                         } else if (remainingMillis > 0) {
                             deadlineElapsedRealtime = android.os.SystemClock.elapsedRealtime() + remainingMillis
                             isRunning = true
+                            armSystemTimer()
                         } else {
                             startTimer()
                         }

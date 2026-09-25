@@ -52,7 +52,10 @@ class SmsDeliverReceiver : BroadcastReceiver() {
             }
 
             val contact = SmsRepository(context).resolveContact(address)
-            val openIntent = Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            // נפתח ישר בשיחה עם השולח (MainActivity קורא smsto:), לא ברשימה הכללית
+            val openIntent = Intent(Intent.ACTION_SENDTO, android.net.Uri.parse("smsto:" + android.net.Uri.encode(address)))
+                .setClass(context, MainActivity::class.java)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
             val pendingIntent = PendingIntent.getActivity(
                 context, address.hashCode(), openIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE

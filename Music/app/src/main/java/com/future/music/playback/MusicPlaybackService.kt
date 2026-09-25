@@ -39,6 +39,8 @@ class MusicPlaybackService : MediaSessionService() {
                 /* handleAudioFocus= */ true
             )
             .setWakeMode(C.WAKE_MODE_LOCAL)
+            // ניתוק אוזניות/בלוטות' עוצר את הנגינה - בלי זה המוזיקה עברה לרמקול באמצע הרחוב
+            .setHandleAudioBecomingNoisy(true)
             .build()
 
         // אקולייזר מלא, באס, 3D והגברה - ופרופיל סאונד לכל התקן פלט (ר' AudioFx).

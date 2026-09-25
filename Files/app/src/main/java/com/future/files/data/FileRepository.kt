@@ -165,6 +165,8 @@ class FileRepository {
     }
 
     fun createFolder(parent: File, name: String): Boolean {
+        // אותה בדיקה כמו בשינוי שם - "a/b" יצר קודם שתי תיקיות מקוננות בשקט
+        if (!isValidEntryName(name)) return false
         return try {
             val target = File(parent, name)
             if (target.exists()) false else target.mkdirs()

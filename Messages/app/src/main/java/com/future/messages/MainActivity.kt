@@ -70,6 +70,30 @@ class MainActivity : ComponentActivity() {
     // יחייג בטעות למספר ישן מרשימה שכבר לא מוצגת.
     var focusedConversationPhone: String? = null
 
+    /**
+     * נמען (וטקסט) מ-Intent של sms:/smsto: - "שלח הודעה" מאנשי קשר/חייגן/שיחה
+     * ולחיצה על התראה. קודם ה-Intent לא נקרא בכלל: Messages נפתחה ברשימה והמספר
+     * אבד, והמשתמש נאלץ לחפש את השיחה בעצמו.
+     */
+    val pendingSendTo = mutableStateOf<Pair<String, String>?>(null)
+
+    private fun readSendTo(intent: Intent?) {
+        val data = intent?.data ?: return
+        if (intent.action != Intent.ACTION_SENDTO && intent.action != Intent.ACTION_VIEW) return
+        if (data.scheme?.lowercase() !in setOf("sms", "smsto", "mms", "mmsto")) return
+        val address = Uri.decode(data.schemeSpecificPart.orEmpty().substringBefore('?')).trim()
+        val body = intent.getStringExtra("sms_body")
+            ?: intent.getStringExtra(Intent.EXTRA_TEXT)
+            ?: data.schemeSpecificPart.orEmpty().substringAfter("?body=", "").let(Uri::decode)
+        pendingSendTo.value = address to body.orEmpty()
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        readSendTo(intent)
+    }
+
     override fun onKeyDown(keyCode: Int, event: android.view.KeyEvent?): Boolean {
         if (keyCode == android.view.KeyEvent.KEYCODE_CALL) {
             val phone = focusedConversationPhone
@@ -88,6 +112,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        if (savedInstanceState == null) readSendTo(intent)
         // צ'אט RCS - לא עושה כלום כשאין הרשאת IMS (כלומר מחוץ לתמונת מערכת).
         com.future.messages.rcs.RcsService.start(this)
         // צ'אט FutureOS - מעדכן מפתחות/טוקן ומושך מה שהצטבר. לא עושה כלום בלי Firebase.
@@ -197,6 +222,36 @@ fun MessagesApp(theme: FutureTheme) {
 
     LaunchedEffect(hasPermissions, isDefaultSmsApp) {
         if (hasPermissions && isDefaultSmsApp) refreshConversations()
+    }
+
+    // sms:/smsto: - פותחים ישר את השיחה עם הנמען (נוצרת אם אין), עם הטקסט כטיוטה.
+    // כמה נמענים או בלי מספר - מסך הודעה חדשה.
+    val sendTo = activity?.pendingSendTo?.value
+    LaunchedEffect(sendTo, hasPermissions, isDefaultSmsApp) {
+        val (address, body) = sendTo ?: return@LaunchedEffect
+        if (!hasPermissions || !isDefaultSmsApp) return@LaunchedEffect
+        activity?.pendingSendTo?.value = null
+        if (address.isBlank() || address.contains(',') || address.contains(';')) {
+            screen = MessagesScreen.Compose(forwardText = body)
+            return@LaunchedEffect
+        }
+        val conversation = withContext(Dispatchers.IO) {
+            runCatching {
+                val threadId = Telephony.Threads.getOrCreateThreadId(context, address)
+                com.future.messages.data.Conversation(threadId, repository.resolveContact(address), "", 0L, 0)
+            }.getOrNull()
+        }
+        if (conversation == null) {
+            screen = MessagesScreen.Compose(forwardText = body)
+            return@LaunchedEffect
+        }
+        lastSelectedThreadId = conversation.threadId
+        messages = emptyList()
+        screen = MessagesScreen.Thread(conversation, draftText = body)
+        messages = withContext(Dispatchers.IO) {
+            repository.markThreadRead(conversation.threadId)
+            repository.getMessages(conversation.threadId)
+        }
     }
 
     when {

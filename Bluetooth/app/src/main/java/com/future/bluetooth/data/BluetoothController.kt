@@ -178,16 +178,26 @@ class BluetoothController(private val context: Context) {
 
     // ---- סריקה ----
 
+    // בלי BLUETOOTH_SCAN כל קריאה כאן זורקת SecurityException - וה-onDispose של
+    // MainActivity קורא ל-stopDiscovery גם כשההרשאה נדחתה, כך שיציאה מהאפליקציה קרסה.
     fun startDiscovery() {
         val a = adapter ?: return
         if (!a.isEnabled) return
         discoveredDevices.clear()
-        if (a.isDiscovering) a.cancelDiscovery()
-        isScanning = a.startDiscovery()
+        isScanning = try {
+            if (a.isDiscovering) a.cancelDiscovery()
+            a.startDiscovery()
+        } catch (e: SecurityException) {
+            false
+        }
     }
 
     fun stopDiscovery() {
-        adapter?.let { if (it.isDiscovering) it.cancelDiscovery() }
+        try {
+            adapter?.let { if (it.isDiscovering) it.cancelDiscovery() }
+        } catch (e: SecurityException) {
+            // אין הרשאת סריקה - ממילא אין סריקה פעילה
+        }
         isScanning = false
     }
 
@@ -197,7 +207,7 @@ class BluetoothController(private val context: Context) {
         val device = remoteDevice(address) ?: return false
         // הסריקה מאטה את ההתאמה, ובחלק מהמכשירים מכשילה אותה.
         stopDiscovery()
-        val ok = device.createBond()
+        val ok = try { device.createBond() } catch (e: SecurityException) { false }
         if (ok) {
             pairing.add(address)
             refreshPairedDevices()

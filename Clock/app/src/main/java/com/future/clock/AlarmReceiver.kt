@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import com.future.clock.logic.ACTION_ALARM_FIRED
+import com.future.clock.logic.ACTION_TIMER_FIRED
 import com.future.clock.logic.AlarmLogic
 import com.future.clock.logic.EXTRA_ALARM_ID
 
@@ -20,8 +21,13 @@ private const val TAG = "Clock/AlarmReceiver"
 class AlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
-            Intent.ACTION_BOOT_COMPLETED -> {
-                Log.i(TAG, "אתחול מכשיר - מתזמן מחדש את כל האזעקות הפעילות")
+            // אחרי שינוי שעה/אזור זמן מועד ההפעלה המוחלט (RTC) כבר לא מתאים לשעה
+            // המקומית שנבחרה - אזעקת 07:00 הייתה מצלצלת ב-06:00 או ב-08:00.
+            Intent.ACTION_BOOT_COMPLETED,
+            Intent.ACTION_TIME_CHANGED,
+            Intent.ACTION_TIMEZONE_CHANGED,
+            Intent.ACTION_MY_PACKAGE_REPLACED -> {
+                Log.i(TAG, "${intent.action} - rescheduling all enabled alarms")
                 AlarmLogic.rescheduleAll(context)
             }
             ACTION_ALARM_FIRED -> {
@@ -42,6 +48,16 @@ class AlarmReceiver : BroadcastReceiver() {
                     putExtra(AlarmRingActivity.EXTRA_LABEL, alarm.label)
                 }
                 context.startActivity(ringIntent)
+            }
+            ACTION_TIMER_FIRED -> {
+                AlarmLogic.cancelTimer(context)
+                val now = java.util.Calendar.getInstance()
+                context.startActivity(Intent(context, AlarmRingActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    putExtra(AlarmRingActivity.EXTRA_HOUR, now.get(java.util.Calendar.HOUR_OF_DAY))
+                    putExtra(AlarmRingActivity.EXTRA_MINUTE, now.get(java.util.Calendar.MINUTE))
+                    putExtra(AlarmRingActivity.EXTRA_LABEL, "הטיימר הסתיים")
+                })
             }
             else -> Log.w(TAG, "פעולה לא צפויה התקבלה: ${intent.action}")
         }
