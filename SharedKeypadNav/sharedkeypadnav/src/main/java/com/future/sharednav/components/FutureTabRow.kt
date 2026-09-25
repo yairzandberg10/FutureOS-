@@ -110,9 +110,9 @@ fun FutureTabItem(
             .clip(FutureShapes.md)
             .animatedFill { background.value }
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
+            .bringIntoViewOnFocus()
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
             .focusable(interactionSource = interactionSource)
-            .bringIntoViewOnFocus()
             .padding(vertical = FutureDimens.spacingSm),
         contentAlignment = Alignment.Center,
     ) {

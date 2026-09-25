@@ -43,6 +43,7 @@ import com.future.sharednav.theme.ThemeClient
  * - # קצר: מעביר בין מצבי הקלט במחזור קבוע - עברית (ללא ניבוי) → עברית
  *   (עם ניבוי) → אנגלית ABC → אנגלית Abc → אנגלית abc → מספרים - ובחזרה.
  * - * קצר: פותח תפריט סימני פיסוק (ניווט בחצים, אישור במרכז, ביטול בחזור/מחיקה).
+ *   בתוכו 1 פותח את הלוח: העתק, גזור, הדבק, בחר הכל, והעתקות אחרונות.
  * - 0 קצר: רווח. 0 ארוך (מוחזק): תמלול קולי.
  * - מחיקה (DEL): מוחקת אות אחרונה מהמילה בהרכבה, ואז תווים מהטקסט שכבר הוצב.
  * - Options (מקש פיזי, דרך שידור גלובלי - ר' optionsKeyReceiver): מוסיף את
@@ -95,6 +96,9 @@ class KeyboardService : InputMethodService() {
         private const val VOICE_RESULT_TIMEOUT_MS = 40_000L
 
         private const val ASSISTANT_PACKAGE = "com.future.assistant"
+
+        private const val MAX_CLIP_HISTORY = 8
+        private const val MAX_FIELD_CHARS = 100_000
     }
 
     private lateinit var prefs: SharedPreferences
@@ -194,6 +198,15 @@ class KeyboardService : InputMethodService() {
     private var languageMenuIndex = 0
     private var poundArmedForLanguageMenu = false
 
+    // הלוח (1 בתוך תפריט הפיסוק): פעולות העתק/גזור/הדבק על השדה, ומתחתן
+    // ההעתקות האחרונות להדבקה. ההיסטוריה בזיכרון בלבד - היא יכולה להכיל
+    // סיסמאות, ולכן לא נשמרת לדיסק ונעלמת כשהמקלדת נסגרת.
+    private var isClipboardOpen = false
+    private var clipboardIndex = 0
+    private val clipHistory = ArrayDeque<String>()
+    private val clipboardManager by lazy { getSystemService(android.content.ClipboardManager::class.java) }
+    private val clipListener = android.content.ClipboardManager.OnPrimaryClipChangedListener { rememberCurrentClip() }
+
     // חלקי פאנל המקלדת (ר' onCreateInputView). כל ארבעת המצבים בנויים מראש
     // ומוחלפים בהצגה/הסתרה (showOnly), ולא נבנים מחדש בכל מעבר מצב.
     private lateinit var panelRoot: LinearLayout
@@ -213,6 +226,10 @@ class KeyboardService : InputMethodService() {
     private lateinit var languageCounter: TextView
     private lateinit var languageMenuList: LinearLayout
     private lateinit var languageMenuScroll: ScrollView
+    private lateinit var clipboardRail: LinearLayout
+    private lateinit var clipboardCounter: TextView
+    private lateinit var clipboardList: LinearLayout
+    private lateinit var clipboardScroll: ScrollView
     private lateinit var voiceRow: LinearLayout
     private lateinit var micView: ImageView
     private lateinit var voiceTitle: TextView
@@ -320,6 +337,7 @@ class KeyboardService : InputMethodService() {
         registerSystemKeyReceiver(optionsKeyReceiver, com.future.sharednav.actions.FutureUIActions.ACTION_OPTIONS_SHORT_PRESS)
         registerSystemKeyReceiver(starKeyReceiver, com.future.sharednav.actions.FutureUIActions.ACTION_STAR_SHORT_PRESS)
         registerSystemKeyReceiver(poundKeyReceiver, com.future.sharednav.actions.FutureUIActions.ACTION_POUND_SHORT_PRESS)
+        runCatching { clipboardManager.addPrimaryClipChangedListener(clipListener) }
     }
 
     private fun registerSystemKeyReceiver(receiver: android.content.BroadcastReceiver, action: String) {
@@ -337,6 +355,7 @@ class KeyboardService : InputMethodService() {
         unregisterReceiver(optionsKeyReceiver)
         unregisterReceiver(starKeyReceiver)
         unregisterReceiver(poundKeyReceiver)
+        runCatching { clipboardManager.removePrimaryClipChangedListener(clipListener) }
     }
 
     private fun currentMode(): InputMode {
@@ -670,6 +689,26 @@ class KeyboardService : InputMethodService() {
             )
         }
 
+        // ---- מצב 5: לוח (העתק/גזור/הדבק) ----------------------------------------
+        clipboardCounter = counterChip()
+        clipboardRail = rail().apply {
+            addView(railTitle("לוח"))
+            addView(spacer(), spacerParams())
+            addView(clipboardCounter)
+        }
+        clipboardList = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(16), 0, dp(16), 0)
+        }
+        clipboardScroll = ScrollView(this).apply {
+            isVerticalScrollBarEnabled = false
+            overScrollMode = View.OVER_SCROLL_NEVER
+            addView(
+                clipboardList,
+                LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT),
+            )
+        }
+
         // ---- מצב 4: תמלול קולי ------------------------------------------------
         micView = ImageView(this).apply {
             setImageResource(R.drawable.ic_panel_mic)
@@ -745,11 +784,13 @@ class KeyboardService : InputMethodService() {
             addView(typeRail, panelChildParams(dp(28), 0))
             addView(punctuationRail, panelChildParams(dp(28), 0))
             addView(languageRail, panelChildParams(dp(28), 0))
+            addView(clipboardRail, panelChildParams(dp(28), 0))
             addView(voiceRow, panelChildParams(ViewGroup.LayoutParams.WRAP_CONTENT, 0))
             addView(candidatesScroll, panelChildParams(dp(42), dp(7)))
             addView(emptyHintView, panelChildParams(dp(42), dp(7)))
             addView(punctuationGrid, panelChildParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(7)))
             addView(languageMenuScroll, panelChildParams(dp(178), dp(7)))
+            addView(clipboardScroll, panelChildParams(dp(178), dp(7)))
             addView(legendBar, panelChildParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(7)))
         }
         renderPanel()
@@ -794,6 +835,7 @@ class KeyboardService : InputMethodService() {
         resetComposing()
         isPunctuationMenuOpen = false
         isLanguageMenuOpen = false
+        isClipboardOpen = false
         panelMessage = null
         predictiveEnabled = prefs.getBoolean("predictive_enabled", true)
         loadLanguageSettings()
@@ -940,6 +982,7 @@ class KeyboardService : InputMethodService() {
         if (!::panelRoot.isInitialized) return
         val state = when {
             isListening -> 3
+            isClipboardOpen -> 4
             isLanguageMenuOpen -> 2
             isPunctuationMenuOpen -> 1
             else -> 0
@@ -960,6 +1003,7 @@ class KeyboardService : InputMethodService() {
         }
         when {
             isListening -> renderVoiceState()
+            isClipboardOpen -> renderClipboardState()
             isLanguageMenuOpen -> renderLanguageState()
             isPunctuationMenuOpen -> renderPunctuationState()
             else -> renderTypingState()
@@ -978,6 +1022,7 @@ class KeyboardService : InputMethodService() {
         get() = listOf(
             typeRail, punctuationRail, languageRail, voiceRow,
             candidatesScroll, emptyHintView, punctuationGrid, languageMenuScroll,
+            clipboardRail, clipboardScroll,
         )
 
     private fun renderTypingState() {
@@ -1098,6 +1143,7 @@ class KeyboardService : InputMethodService() {
         renderLegend(
             LegendItem("●", "הוסף"),
             LegendItem("+", "ניווט בחצים"),
+            LegendItem("1", "לוח"),
             LegendItem("*", "סגור"),
         )
     }
@@ -1170,6 +1216,83 @@ class KeyboardService : InputMethodService() {
                     android.graphics.Rect(0, 0, row.width, row.height),
                     false,
                 )
+            }
+        }
+
+        renderLegend(
+            LegendItem("↕", "ניווט"),
+            LegendItem("●", "בחר"),
+            LegendItem("←", "ביטול"),
+        )
+    }
+
+    /** שורה בלוח: פעולה על השדה, או העתקה קודמת להדבקה. */
+    private data class ClipAction(val title: String, val detail: String?, val run: (InputConnection) -> Unit)
+
+    private fun clipActions(): List<ClipAction> {
+        val current = currentClipText()
+        val actions = mutableListOf<ClipAction>()
+        if (current != null) actions += ClipAction("הדבק", preview(current)) { ic -> ic.commitText(current, 1) }
+        actions += ClipAction("העתק", "המסומן, או את כל הטקסט") { ic -> copyFromField(ic, cut = false) }
+        actions += ClipAction("גזור", "המסומן, או את כל הטקסט") { ic -> copyFromField(ic, cut = true) }
+        actions += ClipAction("בחר הכל", null) { ic -> ic.performContextMenuAction(android.R.id.selectAll) }
+        clipHistory.filter { it != current }.forEach { text ->
+            actions += ClipAction(preview(text), "הדבק העתקה קודמת") { ic -> ic.commitText(text, 1) }
+        }
+        return actions
+    }
+
+    private fun renderClipboardState() {
+        showOnly(clipboardRail, clipboardScroll)
+        val actions = clipActions()
+        clipboardIndex = clipboardIndex.coerceIn(0, actions.size - 1)
+        clipboardCounter.text = "${clipboardIndex + 1}/${actions.size}"
+
+        clipboardList.removeAllViews()
+        var selectedRow: View? = null
+        actions.forEachIndexed { index, action ->
+            val isSelected = index == clipboardIndex
+            val ink = if (isSelected) onSelectionColor else textColor
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(11), 0, dp(11), 0)
+                background = itemDrawable(12, isSelected)
+                setOnClickListener { runClipAction(index) }
+                addView(
+                    TextView(this@KeyboardService).apply {
+                        text = action.title
+                        textSize = 13f
+                        maxLines = 1
+                        ellipsize = android.text.TextUtils.TruncateAt.END
+                        setTextColor(ink)
+                        typeface = if (isSelected) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
+                    },
+                    LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f),
+                )
+                action.detail?.let { detail ->
+                    addView(
+                        TextView(this@KeyboardService).apply {
+                            text = detail
+                            textSize = 10f
+                            maxLines = 1
+                            ellipsize = android.text.TextUtils.TruncateAt.END
+                            alpha = 0.7f
+                            setTextColor(ink)
+                        },
+                        gap(dp(7)),
+                    )
+                }
+            }
+            clipboardList.addView(
+                row,
+                LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(38)).apply { bottomMargin = dp(4) },
+            )
+            if (isSelected) selectedRow = row
+        }
+        selectedRow?.let { row ->
+            clipboardList.post {
+                clipboardScroll.requestChildRectangleOnScreen(row, android.graphics.Rect(0, 0, row.width, row.height), false)
             }
         }
 
@@ -1263,6 +1386,18 @@ class KeyboardService : InputMethodService() {
             return true
         }
 
+        if (isClipboardOpen) {
+            when (keyCode) {
+                KeyEvent.KEYCODE_DPAD_UP -> moveClipboardSelection(-1)
+                KeyEvent.KEYCODE_DPAD_DOWN -> moveClipboardSelection(1)
+                KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> runClipAction(clipboardIndex)
+                KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_DEL,
+                KeyEvent.KEYCODE_STAR, KeyEvent.KEYCODE_NUMPAD_MULTIPLY -> closeClipboard()
+                else -> { /* נבלע - שום פעולה */ }
+            }
+            return true
+        }
+
         if (isPunctuationMenuOpen) {
             // כשתפריט הפיסוק פתוח, רק הניווט/האישור/הביטול פעילים - כל מקש אחר
             // נבלע כדי שלא יקרו פעולות לא צפויות על טקסט שכבר הורכב לפני הפתיחה.
@@ -1270,6 +1405,7 @@ class KeyboardService : InputMethodService() {
                 KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT,
                 KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN -> movePunctuationSelection(keyCode)
                 KeyEvent.KEYCODE_DPAD_CENTER -> insertPunctuation(punctuationIndex)
+                KeyEvent.KEYCODE_1 -> openClipboard()
                 KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_DEL,
                 KeyEvent.KEYCODE_STAR, KeyEvent.KEYCODE_NUMPAD_MULTIPLY -> closePunctuationMenu()
                 else -> { /* נבלע - שום פעולה */ }
@@ -1572,13 +1708,17 @@ class KeyboardService : InputMethodService() {
         val ic = currentInputConnection ?: return
         // כשתפריט השפה פתוח, * לא עושה כלום - בדיוק כמו במסלול המקש עצמו.
         if (isLanguageMenuOpen) return
+        if (isClipboardOpen) {
+            closeClipboard()
+            return
+        }
         if (isPunctuationMenuOpen) closePunctuationMenu() else openPunctuationMenu(ic)
     }
 
     /** לחיצה קצרה על # - השפה הבאה במחזור, או סגירת תפריט השפה אם הוא פתוח. */
     private fun onPoundShortPress() {
         val ic = currentInputConnection ?: return
-        if (isPunctuationMenuOpen) return
+        if (isPunctuationMenuOpen || isClipboardOpen) return
         if (isLanguageMenuOpen) {
             closeLanguageMenu()
             return
@@ -1628,6 +1768,77 @@ class KeyboardService : InputMethodService() {
         ic.commitText(PUNCTUATION_SYMBOLS[index].toString(), 1)
         closePunctuationMenu()
     }
+
+    private fun openClipboard() {
+        isPunctuationMenuOpen = false
+        isClipboardOpen = true
+        clipboardIndex = 0
+        renderPanel()
+    }
+
+    private fun closeClipboard() {
+        isClipboardOpen = false
+        renderPanel()
+    }
+
+    private fun moveClipboardSelection(direction: Int) {
+        val count = clipActions().size
+        clipboardIndex = (clipboardIndex + direction + count) % count
+        renderPanel()
+    }
+
+    private fun runClipAction(index: Int) {
+        val ic = currentInputConnection ?: return
+        val action = clipActions().getOrNull(index) ?: return
+        isClipboardOpen = false
+        ic.beginBatchEdit()
+        runCatching { action.run(ic) }
+        ic.endBatchEdit()
+        renderPanel()
+    }
+
+    /** העתק/גזור: הטקסט המסומן, ואם אין סימון - כל הטקסט בשדה. */
+    private fun copyFromField(ic: InputConnection, cut: Boolean) {
+        val selected = ic.getSelectedText(0)?.toString()
+        if (!selected.isNullOrEmpty()) {
+            setClip(selected)
+            if (cut) ic.commitText("", 1)
+            showPanelMessage(if (cut) "נגזר ללוח" else "הועתק ללוח")
+            return
+        }
+        val before = ic.getTextBeforeCursor(MAX_FIELD_CHARS, 0)?.toString().orEmpty()
+        val after = ic.getTextAfterCursor(MAX_FIELD_CHARS, 0)?.toString().orEmpty()
+        val all = before + after
+        if (all.isEmpty()) {
+            showPanelMessage("אין טקסט להעתקה")
+            return
+        }
+        setClip(all)
+        if (cut) ic.deleteSurroundingText(before.length, after.length)
+        showPanelMessage(if (cut) "כל הטקסט נגזר ללוח" else "כל הטקסט הועתק ללוח")
+    }
+
+    private fun setClip(text: String) {
+        runCatching { clipboardManager.setPrimaryClip(android.content.ClipData.newPlainText("FutureOS", text)) }
+        rememberClip(text)
+    }
+
+    private fun currentClipText(): String? = runCatching {
+        clipboardManager.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(this)?.toString()
+    }.getOrNull()?.takeIf { it.isNotEmpty() }
+
+    private fun rememberCurrentClip() {
+        currentClipText()?.let(::rememberClip)
+    }
+
+    private fun rememberClip(text: String) {
+        clipHistory.remove(text)
+        clipHistory.addFirst(text)
+        while (clipHistory.size > MAX_CLIP_HISTORY) clipHistory.removeLast()
+    }
+
+    private fun preview(text: String): String =
+        text.replace('\n', ' ').trim().let { if (it.length > 40) it.take(40) + "…" else it }
 
     /** תפריט בחירת שפה (החזקת # ארוכה) - גישה ישירה לכל שפה, בלי לעבור עליהן
      * אחת-אחת עם # קצר. נפתח על השפה הנוכחית כדי שאפשר יהיה לבטל בלי לזוז. */

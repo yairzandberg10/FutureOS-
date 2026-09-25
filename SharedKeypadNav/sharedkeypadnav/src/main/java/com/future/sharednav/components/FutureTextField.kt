@@ -178,7 +178,7 @@ private fun FieldFrame(
                 }
             } else Modifier
         )
-        .bringIntoViewOnFocus()
+        .bringIntoViewOnFocus(restoreFocus = false)
         .padding(FutureDimens.spacingMd)
 
     field(

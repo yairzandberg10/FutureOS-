@@ -313,11 +313,16 @@ private fun MediaThumbnail(item: MediaItem, onClick: () -> Unit, theme: FutureTh
 }
 
 /**
- * צפייה בתמונה. אין כפתורים על המסך - הכל במקשים ובתפריט Options:
- * - ימינה/שמאלה: התמונה הקודמת/הבאה (רק כשלא בזום).
+ * צפייה בתמונה - כותרת (שם, תאריך, מיקום ברשימה), התמונה, וסרגל מקשים רכים
+ * (SoftKeyBar) שאומר תמיד מה עושים OK, Options וחזור. קודם המסך היה ריק
+ * מכל הסבר חוץ מרמז שנעלם אחרי שתי שניות, ולא היה ברור איך עוברים תמונה
+ * או יוצאים מזום.
+ * - ימינה/שמאלה: התמונה הקודמת/הבאה (רק כשלא בזום) - חיצים בצדי התמונה
+ *   מראים לאן אפשר לעבור.
  * - OK: דילוג בין 1x/2x/4x; 3 מגדיל ו-1 מקטין בצעדים (החזקה = רציף), עד 8x.
  * - בזום: החצים (או 2/4/6/8) מזיזים בתוך התמונה ולא עוברים לתמונה אחרת;
  *   0 או BACK מחזירים לתמונה המלאה.
+ * - 5: מסך מלא - מסתיר את הכותרת והסרגל, ו-5 שוב מחזיר.
  * - Options: עריכה, שיתוף, פרטים, רקע, מחיקה.
  */
 @Composable
@@ -346,6 +351,7 @@ fun MediaViewerScreen(
     var zoomBadgeTick by remember { mutableIntStateOf(0) }
     var showZoomBadge by remember { mutableStateOf(false) }
     var showHint by remember { mutableStateOf(true) }
+    var immersive by rememberSaveable { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
 
     val zoom by animateFloatAsState(zoomTarget, FutureMotion.standard(), label = "mediaZoom")
@@ -451,11 +457,10 @@ fun MediaViewerScreen(
     }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .background(theme.backgroundColor)
-                .onSizeChanged { boxSize = it }
                 .focusRequester(focusRequester)
                 .focusable()
                 .onKeyEvent { event ->
@@ -472,6 +477,7 @@ fun MediaViewerScreen(
                         Key.Three, Key.VolumeUp -> { if (bitmap != null) setZoom(zoomTarget * ZOOM_STEP); true }
                         Key.One, Key.VolumeDown -> { if (bitmap != null) setZoom(zoomTarget / ZOOM_STEP); true }
                         Key.Zero -> { setZoom(1f); true }
+                        Key.Five -> { if (event.nativeKeyEvent.repeatCount == 0) immersive = !immersive; true }
                         // בזום נשארים בתוך התמונה - גם בקצה, החץ לא מחליף תמונה.
                         Key.DirectionRight, Key.Six -> {
                             if (zoomed) { panX -= panStep; clampPan() } else if (event.key == Key.DirectionRight) goTo(-1)
@@ -487,59 +493,94 @@ fun MediaViewerScreen(
                     }
                 }
         ) {
-            AnimatedContent(
-                targetState = item.id,
-                transitionSpec = {
-                    // RTL: "הבאה" נכנסת משמאל.
-                    val sign = if (direction > 0) -1 else 1
-                    (slideInHorizontally(FutureMotion.enter()) { sign * it / 5 } + fadeIn(FutureMotion.enter()) + scaleIn(FutureMotion.enter(), initialScale = 0.96f))
-                        .togetherWith(slideOutHorizontally(FutureMotion.exit()) { -sign * it / 5 } + fadeOut(FutureMotion.exit()))
-                },
-                label = "photoSwap",
-                modifier = Modifier.fillMaxSize(),
-            ) { id ->
-                val bmp = if (id == item.id) bitmap else null
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    when {
-                        id == item.id && loadFailed -> Text("לא ניתן לטעון את התמונה", color = theme.mutedTextColor, fontSize = FutureTypography.body)
-                        bmp != null -> Image(
-                            bitmap = bmp.asImageBitmap(),
-                            contentDescription = null,
-                            modifier = Modifier.fillMaxSize().graphicsLayer {
-                                scaleX = zoom; scaleY = zoom
-                                translationX = animatedPanX; translationY = animatedPanY
-                            },
-                            contentScale = ContentScale.Fit
-                        )
+            AnimatedVisibility(visible = !immersive, enter = fadeIn(), exit = fadeOut()) {
+                ViewerHeader(item = item, position = if (items.size > 1 && currentIndex >= 0) "${currentIndex + 1} / ${items.size}" else null, theme = theme)
+            }
+
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .clip(androidx.compose.ui.graphics.RectangleShape)
+                    .onSizeChanged { boxSize = it }
+            ) {
+                AnimatedContent(
+                    targetState = item.id,
+                    transitionSpec = {
+                        // RTL: "הבאה" נכנסת משמאל.
+                        val sign = if (direction > 0) -1 else 1
+                        (slideInHorizontally(FutureMotion.enter()) { sign * it / 5 } + fadeIn(FutureMotion.enter()) + scaleIn(FutureMotion.enter(), initialScale = 0.96f))
+                            .togetherWith(slideOutHorizontally(FutureMotion.exit()) { -sign * it / 5 } + fadeOut(FutureMotion.exit()))
+                    },
+                    label = "photoSwap",
+                    modifier = Modifier.fillMaxSize(),
+                ) { id ->
+                    val bmp = if (id == item.id) bitmap else null
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        when {
+                            id == item.id && loadFailed -> Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm),
+                            ) {
+                                Icon(FutureIcons.Image, contentDescription = null, tint = theme.mutedTextColor, modifier = Modifier.size(FutureDimens.iconEmptyState))
+                                Text("לא ניתן לטעון את התמונה", color = theme.mutedTextColor, fontSize = FutureTypography.body)
+                            }
+                            bmp != null -> Image(
+                                bitmap = bmp.asImageBitmap(),
+                                contentDescription = null,
+                                modifier = Modifier.fillMaxSize().graphicsLayer {
+                                    scaleX = zoom; scaleY = zoom
+                                    translationX = animatedPanX; translationY = animatedPanY
+                                },
+                                contentScale = ContentScale.Fit
+                            )
+                            id == item.id -> com.future.sharednav.components.FutureSpinner(theme = theme)
+                        }
                     }
                 }
-            }
 
-            // מונה + זום בפינה העליונה
-            Row(
-                modifier = Modifier.align(Alignment.TopCenter).padding(top = 10.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                if (items.size > 1 && currentIndex >= 0) ViewerBadge("${currentIndex + 1} / ${items.size}", theme)
-                AnimatedVisibility(visible = showZoomBadge || zoomTarget > 1f, enter = fadeIn() + scaleIn(initialScale = 0.8f), exit = fadeOut()) {
+                // חיצים בצדי התמונה: יש תמונה קודמת/הבאה (RTL - הבאה משמאל).
+                if (zoomTarget <= 1f && currentIndex >= 0) {
+                    if (currentIndex > 0) ViewerEdgeArrow(FutureIcons.ChevronRight, theme, Modifier.align(Alignment.CenterStart))
+                    if (currentIndex < items.size - 1) ViewerEdgeArrow(FutureIcons.ChevronLeft, theme, Modifier.align(Alignment.CenterEnd))
+                }
+
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = showZoomBadge || zoomTarget > 1f,
+                    enter = fadeIn() + scaleIn(initialScale = 0.8f), exit = fadeOut(),
+                    modifier = Modifier.align(Alignment.TopCenter).padding(top = FutureDimens.spacingSm),
+                ) {
                     ViewerBadge("${"%.1f".format(zoomTarget)}x", theme)
+                }
+
+                // מפת מיקום קטנה בזום - איפה בתוך התמונה נמצאים
+                if (zoomTarget > 1f && renderedW > 0f && renderedH > 0f) {
+                    ZoomMiniMap(
+                        zoom = zoomTarget, panX = panX, panY = panY, renderedW = renderedW, renderedH = renderedH, theme = theme,
+                        modifier = Modifier.align(Alignment.BottomStart).padding(FutureDimens.spacingMd),
+                    )
+                }
+
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = showHint && bitmap != null && !immersive,
+                    enter = fadeIn(), exit = fadeOut(),
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = FutureDimens.spacingMd),
+                ) {
+                    ViewerBadge(if (items.size > 1) "‹ › תמונה אחרת · 5 מסך מלא" else "5 מסך מלא", theme)
                 }
             }
 
-            // מפת מיקום קטנה בזום - איפה בתוך התמונה נמצאים
-            if (zoomTarget > 1f && renderedW > 0f && renderedH > 0f) {
-                ZoomMiniMap(
-                    zoom = zoomTarget, panX = panX, panY = panY, renderedW = renderedW, renderedH = renderedH, theme = theme,
-                    modifier = Modifier.align(Alignment.BottomStart).padding(12.dp),
+            AnimatedVisibility(visible = !immersive, enter = fadeIn(), exit = fadeOut()) {
+                com.future.sharednav.components.FutureSoftKeyBar(
+                    theme = theme,
+                    left = "תפריט",
+                    center = when {
+                        bitmap == null -> null
+                        zoomTarget >= ZOOM_PRESETS.last() -> "הקטן"
+                        else -> "הגדל"
+                    },
+                    right = if (zoomTarget > 1f) "תמונה מלאה" else "חזור",
                 )
-            }
-
-            AnimatedVisibility(
-                visible = showHint && bitmap != null,
-                enter = fadeIn(), exit = fadeOut(),
-                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 14.dp),
-            ) {
-                ViewerBadge("OK / 1 / 3 זום · Options תפריט", theme)
             }
         }
 
@@ -616,6 +657,48 @@ private fun InfoRow(label: String, value: String, theme: FutureTheme, onClick: (
         onClick = onClick,
         trailing = { Text(value, color = theme.mutedTextColor, fontSize = FutureTypography.summary, maxLines = 1) },
     )
+}
+
+/** כותרת הצופה (TopBar של הדיזיין סיסטם): שם הקובץ, תאריך ואלבום, והמיקום ברשימה. */
+@Composable
+private fun ViewerHeader(item: MediaItem, position: String?, theme: FutureTheme) {
+    val subtitle = remember(item.id) {
+        val date = java.text.SimpleDateFormat("d.M.yyyy · HH:mm", java.util.Locale.getDefault()).format(java.util.Date(item.dateAdded * 1000))
+        listOf(date, item.bucketName).filter { it.isNotBlank() }.joinToString(" · ")
+    }
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = FutureDimens.spacingLg, vertical = FutureDimens.spacingMd),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingMd),
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                item.displayName.ifBlank { "תמונה" },
+                color = theme.textColor,
+                fontSize = FutureTypography.title,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            )
+            Text(subtitle, color = theme.mutedTextColor, fontSize = FutureTypography.summary, maxLines = 1)
+        }
+        if (position != null) ViewerBadge(position, theme)
+    }
+}
+
+/** חץ קטן בצד התמונה - אפשר לעבור לתמונה בכיוון הזה. */
+@Composable
+private fun ViewerEdgeArrow(icon: androidx.compose.ui.graphics.vector.ImageVector, theme: FutureTheme, modifier: Modifier) {
+    Box(
+        modifier = modifier
+            .padding(horizontal = FutureDimens.spacingSm)
+            .size(FutureDimens.rowHeightTopBarButton)
+            .clip(FutureShapes.pill)
+            .background(theme.surfaceColor.copy(alpha = 0.72f)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(icon, contentDescription = null, tint = theme.textColor, modifier = Modifier.size(FutureDimens.iconMenuRow))
+    }
 }
 
 @Composable

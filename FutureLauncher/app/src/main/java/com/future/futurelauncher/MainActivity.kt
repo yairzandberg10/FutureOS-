@@ -314,6 +314,9 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
     DisposableEffect(Unit) {
         val receiver = object : android.content.BroadcastReceiver() {
             override fun onReceive(ctx: android.content.Context?, intent: Intent?) {
+                // השידור גלובלי: Options בתוך אפליקציה אחרת הגיע גם לכאן ופתח ברקע
+                // את תפריט האפליקציה הממוקדת - והוא חיכה פתוח ביציאה למסך הבית.
+                if (!lifecycleOwner.lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) return
                 val now = SystemClock.elapsedRealtime()
                 val isDoubleClick = now - lastMenuKeyUpTime < 350L
                 lastMenuKeyUpTime = now
@@ -707,7 +710,7 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
         if (prefs.dimWallpaper > 0) {
             Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = prefs.dimWallpaper / 100f)))
         }
-        Column(modifier = Modifier.fillMaxSize().padding(top = com.future.sharednav.systemui.StatusBarInset.HEIGHT_DP.dp)) {
+        Column(modifier = Modifier.fillMaxSize()) {
             if (viewModel.isEditMode) {
                 Row(
                     modifier = Modifier

@@ -170,13 +170,13 @@ fun FutureChip(
             .then(
                 if (onClick != null) {
                     Modifier
+                        .bringIntoViewOnFocus()
                         .clickable(
                             interactionSource = interactionSource,
                             indication = null,
                             onClick = onClick,
                         )
                         .focusable(interactionSource = interactionSource)
-                        .bringIntoViewOnFocus()
                 } else Modifier
             )
             .padding(horizontal = ChipHorizontalPadding, vertical = FutureDimens.spacingSm),
@@ -223,6 +223,7 @@ fun FutureDayChip(
             .size(36.dp)
             .clip(FutureShapes.pill)
             .animatedFocusSurface(FutureShapes.pill, FutureDimens.focusBorderControl, fill = { background.value }, ring = { ring.value })
+            .bringIntoViewOnFocus()
             .then(
                 if (onClick != null) {
                     Modifier.clickable(
@@ -232,8 +233,7 @@ fun FutureDayChip(
                     )
                 } else Modifier
             )
-            .focusable(interactionSource = interactionSource)
-            .bringIntoViewOnFocus(),
+            .focusable(interactionSource = interactionSource),
         contentAlignment = Alignment.Center,
     ) {
         Text(

@@ -304,7 +304,9 @@ private fun ContactsHome(
     ) {
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             AnimatedScreenHost(targetState = tab, depthOf = { 0 }) { shownTab ->
-                ContactsListScreen(
+                if (shownTab == ContactsTab.ME) {
+                    com.future.contact.ui.MyProfileScreen(theme = theme)
+                } else ContactsListScreen(
                     tab = shownTab,
                     contacts = contacts,
                     hasPermission = hasPermission,
@@ -321,7 +323,7 @@ private fun ContactsHome(
             items = listOf(
                 FutureNavItem("מועדפים", FutureIcons.Star),
                 FutureNavItem("אנשי קשר", FutureIcons.Contacts),
-                FutureNavItem("חסומים", FutureIcons.Block),
+                FutureNavItem("אני", FutureIcons.Person),
             ),
             selectedIndex = tab.ordinal,
             theme = theme,

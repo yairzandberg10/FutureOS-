@@ -28,6 +28,7 @@ class ContactRepository(private val context: Context) {
     suspend fun getAllContacts(): List<Contact> = withContext(Dispatchers.IO) {
         val contacts = mutableListOf<Contact>()
         val seenIds = HashSet<String>()
+        val numbersById = HashMap<String, MutableList<String>>()
         try {
             val cursor = context.contentResolver.query(
                 ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
@@ -52,11 +53,14 @@ class ContactRepository(private val context: Context) {
 
                 while (it.moveToNext()) {
                     val id = if (idIndex != -1) it.getString(idIndex) else ""
-                    // מספר טלפון אחד לכל איש קשר ברשימה - אנשי קשר עם כמה מספרים
+                    val number = if (numberIndex != -1) it.getString(numberIndex) ?: "" else ""
+                    // כל המספרים נאספים לזיהוי שיחות - קודם רק הראשון נשמר, ושיחה
+                    // מהמספר השני של איש קשר הוצגה כמספר בלי שם.
+                    if (id.isNotEmpty() && number.isNotBlank()) numbersById.getOrPut(id) { mutableListOf() }.add(number)
+                    // שורה אחת לכל איש קשר ברשימה - אנשי קשר עם כמה מספרים
                     // חוזרים כמה פעמים ב-Phone.CONTENT_URI, זה שובר את המיון האלפביתי.
                     if (id.isEmpty() || !seenIds.add(id)) continue
                     val name = if (nameIndex != -1) it.getString(nameIndex) ?: "Unknown" else "Unknown"
-                    val number = if (numberIndex != -1) it.getString(numberIndex) ?: "" else ""
                     val photo = if (photoIndex != -1) it.getString(photoIndex) else null
                     val starred = starredIndex != -1 && it.getInt(starredIndex) == 1
 
@@ -76,7 +80,9 @@ class ContactRepository(private val context: Context) {
         } catch (e: Exception) {
             Log.e("ContactRepository", "Error reading contacts", e)
         }
-        contacts.sortedWith(compareByDescending<Contact> { it.isFavorite }.thenBy { it.name.lowercase() })
+        contacts
+            .map { c -> c.copy(allNumbers = numbersById[c.id]?.distinct() ?: listOf(c.phoneNumber)) }
+            .sortedWith(compareByDescending<Contact> { it.isFavorite }.thenBy { it.name.lowercase() })
     }
 
     suspend fun setFavorite(contactId: String, isFavorite: Boolean) = withContext(Dispatchers.IO) {

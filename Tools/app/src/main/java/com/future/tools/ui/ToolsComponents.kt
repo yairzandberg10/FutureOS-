@@ -102,7 +102,8 @@ fun ToolRow(
     theme: FutureTheme,
     onClick: () -> Unit,
     trailing: (@Composable () -> Unit)? = null,
-    focusRequester: FocusRequester? = null
+    focusRequester: FocusRequester? = null,
+    modifier: Modifier = Modifier,
 ) {
     FutureListItem(
         title = label,
@@ -110,6 +111,7 @@ fun ToolRow(
         theme = theme,
         onClick = onClick,
         focusRequester = focusRequester,
+        modifier = modifier,
         leading = { ToolIcon(icon, theme) },
         trailing = trailing?.let { content -> { content() } },
     )

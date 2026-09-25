@@ -42,6 +42,9 @@ fun AppDialog(
         onDismissRequest = onDismissRequest,
         properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
+        // הפוקוס בתוך הדיאלוג לא נרשם בזיכרון של המסך שמתחתיו (ר' FocusMemory).
+        val focusMemory = remember { com.future.sharednav.focus.FocusMemory() }
+        androidx.compose.runtime.CompositionLocalProvider(com.future.sharednav.focus.LocalFocusMemory provides focusMemory) {
         val visibility = remember { MutableTransitionState(false) }
         visibility.targetState = true
         // תפריט האפשרויות לא ממורכז כמו דיאלוג אלא תלוי 40dp מראש המסך
@@ -66,6 +69,7 @@ fun AppDialog(
                     content = content,
                 )
             }
+        }
         }
     }
 }

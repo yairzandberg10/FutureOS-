@@ -21,8 +21,14 @@ class TorchService : Service() {
     override fun onCreate() {
         super.onCreate()
         controller = FlashlightController(this)
-        // כובה ממקום אחר (מרכז הבקרה, המצלמה) - השירות נסגר איתו.
-        stopObserving = controller.observe { on, _ -> if (!on) stopSelf() }
+        // כובה ממקום אחר (מרכז הבקרה, המצלמה) - השירות נסגר איתו. רק אחרי
+        // שהפנס נראה דלוק: registerTorchCallback מדווח מיד את המצב הנוכחי
+        // ("כבוי"), והדיווח הזה הגיע אחרי ההדלקה - השירות נסגר וכיבה את הפנס
+        // מיד, כך שהפנס לא נדלק בכלל.
+        var seenOn = false
+        stopObserving = controller.observe { on, _ ->
+            if (on) seenOn = true else if (seenOn) stopSelf()
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {

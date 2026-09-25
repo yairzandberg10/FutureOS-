@@ -38,6 +38,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import com.future.sharednav.components.FutureMenuRow
+import com.future.sharednav.components.FutureOptionsMenu
+import com.future.sharednav.nav.onOptionsKeyPress
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -87,11 +91,18 @@ fun ToolsHomeScreen(theme: FutureTheme, onOpen: (ToolRoute) -> Unit, lastOpenedR
     // מסך הבית של כל האפליקציה, כך שהתיקון קריטי במיוחד: בלעדיו נחיתה על המסך
     // הזה משאירה D-pad בלי שום פריט מודגש. כשחוזרים "אחורה" מכלי שנפתח, הפוקוס
     // חוזר בדיוק לשורה של אותו כלי, לא תמיד לשורה הראשונה.
+    val context = LocalContext.current
     val rowFocusRequesters = remember { mutableMapOf<ToolRoute, FocusRequester>() }
     LaunchedEffect(Unit) {
         val target = TOOL_ENTRIES.firstOrNull { it.route == lastOpenedRoute } ?: TOOL_ENTRIES.firstOrNull()
         target?.let { rowFocusRequesters.getOrPut(it.route) { FocusRequester() }.requestFocus() }
     }
+
+    // ההצמדה למסך הבית עברה מכפתור בכל שורה למקש Options - שורה עם כפתור
+    // נוסף דרשה שתי לחיצות חץ לכל כלי, והכפתור בלבל עם פתיחת הכלי עצמו.
+    var focusedEntry by remember { mutableStateOf<ToolEntry?>(null) }
+    var menuFor by remember { mutableStateOf<ToolEntry?>(null) }
+    onOptionsKeyPress { menuFor = if (menuFor == null) focusedEntry else null }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
@@ -105,52 +116,34 @@ fun ToolsHomeScreen(theme: FutureTheme, onOpen: (ToolRoute) -> Unit, lastOpenedR
                         ToolRow(
                             entry.icon, entry.label, entry.subtitle, theme = theme,
                             onClick = { onOpen(entry.route) },
-                            trailing = { PinToHomeButton(entry = entry, theme = theme) },
-                            focusRequester = rowFocusRequesters.getOrPut(entry.route) { FocusRequester() }
+                            focusRequester = rowFocusRequesters.getOrPut(entry.route) { FocusRequester() },
+                            modifier = Modifier.onFocusChanged { if (it.isFocused) focusedEntry = entry },
                         )
                     }
                 }
             }
         }
     }
-}
 
-/** מוסיף/מסיר את הכלי כאייקון עצמאי במסך הבית (activity-alias נפרד, ראו ToolShortcuts). */
-@Composable
-private fun PinToHomeButton(entry: ToolEntry, theme: FutureTheme) {
-    val context = LocalContext.current
-    var isPinned by remember(entry.route) { mutableStateOf(ToolShortcuts.isPinnedToHome(context, entry.route)) }
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val accent = theme.readableAccentColor
-    // כפתור אייקון (IconButton.jsx): 8% במנוחה, 30% הדגשה בפוקוס. נעוץ = נבחר,
-    // ולכן האייקון בהדגשה; לא נעוץ = צבע הטקסט.
-    val tint = if (isPinned) accent else theme.textColor
-    val bgColor by animateColorAsState(
-        if (isFocused) accent.copy(alpha = 0.30f) else theme.idleFieldColor,
-        FutureMotion.focusColorSpec,
-        label = "pinBg"
-    )
-
-    Box(
-        modifier = Modifier
-            .size(FutureDimens.rowHeightTopBarButton)
-            .clip(CircleShape)
-            .background(bgColor)
-            .clickable(interactionSource = interactionSource, indication = null) {
-                val next = !isPinned
-                ToolShortcuts.setPinnedToHome(context, entry.route, next)
-                isPinned = next
-                Toast.makeText(
-                    context,
-                    if (next) "${entry.label} נוסף כאפליקציה עצמאית - אפשר להוסיף אותו למסך הבית דרך \"הוספת אפליקציה\" בלאנצ'ר"
-                    else "${entry.label} הוסר מרשימת האפליקציות העצמאיות",
-                    Toast.LENGTH_LONG
-                ).show()
-            }
-            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus(),
-        contentAlignment = androidx.compose.ui.Alignment.Center
-    ) {
-        Icon(FutureIcons.PushPin, contentDescription = "הוסף/הסר ממסך הבית", tint = tint, modifier = Modifier.size(FutureDimens.iconTopBar))
+    menuFor?.let { entry ->
+        val isPinned = ToolShortcuts.isPinnedToHome(context, entry.route)
+        FutureOptionsMenu(theme = theme, onDismissRequest = { menuFor = null }, header = entry.label) {
+            FutureMenuRow("פתח", entry.icon, theme, { menuFor = null; onOpen(entry.route) })
+            FutureMenuRow(
+                if (isPinned) "הסר ממסך הבית" else "הצמד למסך הבית",
+                FutureIcons.PushPin,
+                theme,
+                {
+                    menuFor = null
+                    ToolShortcuts.setPinnedToHome(context, entry.route, !isPinned)
+                    Toast.makeText(
+                        context,
+                        if (!isPinned) "${entry.label} נוסף כאפליקציה עצמאית - אפשר להוסיף אותו למסך הבית דרך \"הוספת אפליקציה\" בלאנצ'ר"
+                        else "${entry.label} הוסר מרשימת האפליקציות העצמאיות",
+                        Toast.LENGTH_LONG
+                    ).show()
+                },
+            )
+        }
     }
 }

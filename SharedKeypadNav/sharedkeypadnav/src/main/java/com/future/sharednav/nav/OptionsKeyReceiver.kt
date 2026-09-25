@@ -10,6 +10,8 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleOwner
 import com.future.sharednav.actions.FutureUIActions
 
 /**
@@ -24,11 +26,16 @@ import com.future.sharednav.actions.FutureUIActions
 @Composable
 fun onOptionsKeyPress(onTrigger: () -> Unit) {
     val context = LocalContext.current
+    val lifecycle = context.lifecycleOwner()?.lifecycle
     val currentOnTrigger by rememberUpdatedState(onTrigger)
     DisposableEffect(context) {
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(ctx: Context?, intent: Intent?) {
-                currentOnTrigger()
+                // השידור גלובלי ומגיע לכל אפליקציה שה-composition שלה חי - גם
+                // כשהיא ברקע. בלי הבדיקה הזו, Options בתוך אפליקציה אחת פתח
+                // ברקע את תפריט האפליקציה של מסך הבית, והוא חיכה פתוח ביציאה
+                // למסך הבית.
+                if (lifecycle?.currentState?.isAtLeast(Lifecycle.State.RESUMED) != false) currentOnTrigger()
             }
         }
         val filter = IntentFilter(FutureUIActions.ACTION_OPTIONS_SHORT_PRESS)
@@ -39,4 +46,14 @@ fun onOptionsKeyPress(onTrigger: () -> Unit) {
         }
         onDispose { context.unregisterReceiver(receiver) }
     }
+}
+
+/** ה-Activity שמאחורי ה-Context - גם מתוך דיאלוג, שה-Context שלו עטוף. */
+internal fun Context.lifecycleOwner(): LifecycleOwner? {
+    var current: Context? = this
+    while (current != null) {
+        if (current is LifecycleOwner) return current
+        current = (current as? android.content.ContextWrapper)?.baseContext
+    }
+    return null
 }

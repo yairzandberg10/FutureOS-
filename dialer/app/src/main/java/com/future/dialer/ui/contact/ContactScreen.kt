@@ -43,7 +43,9 @@ import com.future.sharednav.theme.subtleTextColor
  * שלח הודעה, מועדפים); והשיחות האחרונות עם המספר. מספר שאינו איש קשר מקבל
  * "הוסף לאנשי קשר" במקום המועדפים.
  *
- * שורות ההיסטוריה הן מידע בלבד - בלי פוקוס, כי אין להן פעולה.
+ * שורות ההיסטוריה מקבלות פוקוס (OK מחייג חזרה): במכשיר מקשים עמודה נגללת
+ * רק אל פריט שמקבל פוקוס, וכששורות ההיסטוריה היו מידע בלבד אי אפשר היה
+ * לגלול אליהן בכלל.
  */
 @Composable
 fun ContactScreen(
@@ -161,7 +163,7 @@ fun ContactScreen(
                             iconTint = CallFormat.colorOf(call.type, theme),
                             theme = theme,
                             showChevron = false,
-                            onClick = null,
+                            onClick = onCall,
                             trailing = {
                                 Text(CallFormat.whenOf(call), color = theme.subtleTextColor, fontSize = type.summary)
                             },

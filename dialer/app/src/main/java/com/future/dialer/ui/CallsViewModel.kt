@@ -64,7 +64,7 @@ class CallsViewModel(
      */
     val callDays: StateFlow<List<CallDay>> = combine(_recentCalls, _contacts, _filter) { calls, contacts, filter ->
         val byKey = HashMap<String, String>()
-        contacts.forEach { c -> matchKey(c.phoneNumber)?.let { k -> byKey.putIfAbsent(k, c.name) } }
+        contacts.forEach { c -> c.allNumbers.forEach { n -> matchKey(n)?.let { k -> byKey.putIfAbsent(k, c.name) } } }
         groupByDay(calls.filter { filter.matches(it.type) }) { call ->
             call.name
                 ?: matchKey(call.phoneNumber)?.let(byKey::get)
@@ -158,11 +158,11 @@ class CallsViewModel(
     /** איש הקשר של מספר, לפי תשע הספרות האחרונות (052... מול +97252...). */
     fun contactFor(number: String): Contact? {
         val key = matchKey(number) ?: return null
-        return _contacts.value.firstOrNull { matchKey(it.phoneNumber) == key }
+        return _contacts.value.firstOrNull { c -> c.allNumbers.any { matchKey(it) == key } }
     }
 
     /** השיחות האחרונות עם מספר - ההיסטוריה שבמסך איש הקשר. */
-    fun historyFor(number: String, limit: Int = 3): List<CallRecord> {
+    fun historyFor(number: String, limit: Int = 30): List<CallRecord> {
         val key = matchKey(number) ?: return emptyList()
         return _recentCalls.value.filter { matchKey(it.phoneNumber) == key }.take(limit)
     }

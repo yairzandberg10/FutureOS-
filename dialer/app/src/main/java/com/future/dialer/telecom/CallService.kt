@@ -55,6 +55,7 @@ class CallService : InCallService() {
             stopRecording()
         }
         notifyCallNoLongerRinging()
+        cancelOngoingNotification()
     }
 
     /**
@@ -64,11 +65,77 @@ class CallService : InCallService() {
      * נראית לגמרי בלי הקוד הזה.
      */
     private fun onCallStateKnown(state: Int) {
-        if (state == Call.STATE_RINGING) {
-            notifyCallRinging()
-        } else {
-            notifyCallNoLongerRinging()
+        when (state) {
+            Call.STATE_RINGING -> notifyCallRinging()
+            Call.STATE_ACTIVE, Call.STATE_DIALING, Call.STATE_CONNECTING, Call.STATE_HOLDING -> {
+                notifyCallNoLongerRinging()
+                showOngoingNotification(state)
+            }
+            else -> {
+                notifyCallNoLongerRinging()
+                cancelOngoingNotification()
+            }
         }
+    }
+
+    /** שם איש הקשר של השיחה, ואם אין - המספר. קודם ההתראה הציגה תמיד מספר. */
+    private fun callerLabel(): String {
+        val number = _activeCall.value?.details?.handle?.schemeSpecificPart
+        if (number.isNullOrBlank()) return "מספר חסוי"
+        val name = runCatching {
+            val uri = android.net.Uri.withAppendedPath(android.provider.ContactsContract.PhoneLookup.CONTENT_FILTER_URI, android.net.Uri.encode(number))
+            contentResolver.query(uri, arrayOf(android.provider.ContactsContract.PhoneLookup.DISPLAY_NAME), null, null, null)?.use { c ->
+                if (c.moveToFirst()) c.getString(0) else null
+            }
+        }.getOrNull()
+        return name?.takeIf { it.isNotBlank() } ?: number
+    }
+
+    private fun callUiIntent(requestCode: Int): PendingIntent {
+        val launchIntent = Intent(applicationContext, MainActivity::class.java)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        return PendingIntent.getActivity(applicationContext, requestCode, launchIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+    }
+
+    private fun actionIntent(action: String, requestCode: Int): PendingIntent = PendingIntent.getBroadcast(
+        applicationContext, requestCode,
+        Intent(action).setClass(applicationContext, CallActionReceiver::class.java),
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+    )
+
+    /**
+     * שיחה פעילה מחוץ לאפליקציה: התראה קבועה עם השם, "חזרה לשיחה" ו"נתק".
+     * בלעדיה, מי שיצא ממסך השיחה לא ראה שיש שיחה ולא היה לו איך לחזור אליה.
+     */
+    private fun showOngoingNotification(state: Int) {
+        val manager = applicationContext.getSystemService(NotificationManager::class.java) ?: return
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            manager.createNotificationChannel(NotificationChannel(ONGOING_CHANNEL_ID, "שיחה פעילה", NotificationManager.IMPORTANCE_LOW))
+        }
+        val title = when (state) {
+            Call.STATE_HOLDING -> "שיחה בהמתנה"
+            Call.STATE_ACTIVE -> "שיחה פעילה"
+            else -> "מחייג…"
+        }
+        val builder = NotificationCompat.Builder(applicationContext, ONGOING_CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.sym_action_call)
+            .setContentTitle(title)
+            .setContentText(callerLabel())
+            .setCategory(NotificationCompat.CATEGORY_CALL)
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .setContentIntent(callUiIntent(1))
+            .addAction(0, "חזרה לשיחה", callUiIntent(1))
+            .addAction(0, "נתק", actionIntent(CallActionReceiver.ACTION_HANGUP_CALL, 3))
+        if (state == Call.STATE_ACTIVE) {
+            builder.setUsesChronometer(true).setWhen(_activeCall.value?.details?.connectTimeMillis?.takeIf { it > 0 } ?: System.currentTimeMillis())
+        }
+        runCatching { manager.notify(ONGOING_NOTIFICATION_ID, builder.build()) }
+            .onFailure { Log.e(TAG, "failed to post ongoing-call notification", it) }
+    }
+
+    private fun cancelOngoingNotification() {
+        applicationContext.getSystemService(NotificationManager::class.java)?.cancel(ONGOING_NOTIFICATION_ID)
     }
 
     /**
@@ -96,11 +163,14 @@ class CallService : InCallService() {
             manager.createNotificationChannel(channel)
         }
 
-        val number = _activeCall.value?.details?.handle?.schemeSpecificPart ?: "מספר לא ידוע"
+        // מענה ודחייה ישירות מההתראה - כשהמסך לא עבר לאפליקציה (למשל כשהמערכת
+        // חסמה את פתיחת המסך מהרקע), זו הדרך לענות בלי לחפש את האפליקציה.
         val notification = NotificationCompat.Builder(applicationContext, CALL_CHANNEL_ID)
             .setSmallIcon(android.R.drawable.sym_call_incoming)
             .setContentTitle("שיחה נכנסת")
-            .setContentText(number)
+            .setContentText(callerLabel())
+            .addAction(0, "דחה", actionIntent(CallActionReceiver.ACTION_REJECT_CALL, 4))
+            .addAction(0, "ענה", actionIntent(CallActionReceiver.ACTION_ANSWER_CALL, 5))
             .setCategory(NotificationCompat.CATEGORY_CALL)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setOngoing(true)
@@ -122,6 +192,13 @@ class CallService : InCallService() {
             startActivity(launchIntent)
         } catch (e: Exception) {
             Log.w(TAG, "failed to bring the call screen up", e)
+        }
+        // גיבוי: דרך ה-PendingIntent של ההתראה, שהמערכת מתייחסת אליו כפעולה של
+        // האפליקציה עצמה - אם startActivity הישיר נחסם בשקט ברקע.
+        try {
+            fullScreenPendingIntent.send()
+        } catch (e: Exception) {
+            Log.w(TAG, "failed to send the call screen intent", e)
         }
 
         // FutureUI (מסך הנעילה המותאם-אישית) לא בהכרח מותקן בכל build - אם השידור
@@ -164,6 +241,8 @@ class CallService : InCallService() {
         private const val TAG = "CallService"
         private const val CALL_CHANNEL_ID = "incoming_call"
         private const val CALL_NOTIFICATION_ID = 7001
+        private const val ONGOING_CHANNEL_ID = "ongoing_call"
+        private const val ONGOING_NOTIFICATION_ID = 7002
         private var instance: CallService? = null
 
         private val _activeCall = MutableStateFlow<Call?>(null)

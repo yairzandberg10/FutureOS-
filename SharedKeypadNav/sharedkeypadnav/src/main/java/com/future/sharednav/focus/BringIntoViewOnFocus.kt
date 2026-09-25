@@ -6,6 +6,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusEvent
 import kotlinx.coroutines.launch
 
@@ -23,15 +25,24 @@ import kotlinx.coroutines.launch
  * רכיב פוקוס-ניתן קיים (FocusableItem, שורה מקומית וכו') בלי לשנות את
  * מבנה ה-state של המסך שמכיל אותו - זו הסיבה שהוא נבחר כאן במקום לאלץ
  * מיגרציה מלאה של כל 59 הקבצים לרכיב חדש.
+ *
+ * מאותה סיבה בדיוק הוא גם המקום של "חזרה אחורה מחזירה את הפוקוס לאותו
+ * פריט" (ר' [FocusMemory]): כמעט כל פריט פוקוס במערכת עובר כאן. זה עובד
+ * כשהמודיפייר בא לפני focusable/clickable של הפריט, כמו ברכיבים המשותפים.
+ * [restoreFocus] = false לשדות טקסט - שחזור פוקוס לשדה פותח מקלדת.
  */
 @Composable
-fun Modifier.bringIntoViewOnFocus(): Modifier {
+fun Modifier.bringIntoViewOnFocus(restoreFocus: Boolean = true): Modifier {
     val bringIntoViewRequester = remember { BringIntoViewRequester() }
     val coroutineScope = rememberCoroutineScope()
+    val restoreRequester = remember { FocusRequester() }
+    val markFocused = rememberFocusRestore(restoreRequester, restoreFocus)
     return this
+        .focusRequester(restoreRequester)
         .bringIntoViewRequester(bringIntoViewRequester)
         .onFocusEvent { focusState ->
             if (focusState.isFocused) {
+                markFocused()
                 coroutineScope.launch { bringIntoViewRequester.bringIntoView() }
             }
         }

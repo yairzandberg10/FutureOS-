@@ -4,7 +4,12 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
+import com.future.sharednav.focus.FocusMemory
+import com.future.sharednav.focus.LocalFocusMemory
 import com.future.sharednav.theme.FutureTransitions
 
 /**
@@ -37,6 +42,21 @@ fun <S> AnimatedScreenHost(
     contentKey: (S) -> Any? = { it },
     content: @Composable (S) -> Unit,
 ) {
+    // חזרה אחורה למסך מחזירה אותו כמו שהיה: הגלילה (rememberLazyListState
+    // ושאר rememberSaveable) והפריט שהיה ממוקד (FocusMemory). כניסה קדימה או
+    // לרוחב (טאבים) מתחילה נקי, כמו קודם - אחרת שיחה חדשה הייתה נפתחת
+    // בגלילה של השיחה הקודמת שהייתה באותו סוג מסך.
+    val stateHolder = rememberSaveableStateHolder()
+    val host = remember { HostMemory<S>(targetState) }
+    val targetKey = contentKey(targetState)
+    if (contentKey(host.current) != targetKey) {
+        if (depthOf(targetState) >= depthOf(host.current)) {
+            stateHolder.removeState(host.idOf(targetKey))
+            host.focus.remove(targetKey)
+        }
+    }
+    host.current = targetState
+
     AnimatedContent(
         targetState = targetState,
         modifier = modifier,
@@ -52,8 +72,25 @@ fun <S> AnimatedScreenHost(
         },
         label = "futureScreen",
     ) { state ->
-        Box(modifier = Modifier.fillMaxSize()) { content(state) }
+        val key = contentKey(state)
+        val focusMemory = remember(key) { host.focus.getOrPut(key) { FocusMemory() } }
+        stateHolder.SaveableStateProvider(host.idOf(key)) {
+            CompositionLocalProvider(LocalFocusMemory provides focusMemory) {
+                Box(modifier = Modifier.fillMaxSize()) { content(state) }
+            }
+        }
     }
+}
+
+/**
+ * המצב של AnimatedScreenHost בין מעברים. המפתח של SaveableStateHolder חייב
+ * להיכנס ל-Bundle, והמצבים עצמם (object/data class) לא נכנסים - לכן כל
+ * contentKey מקבל מחרוזת קבועה משלו.
+ */
+private class HostMemory<S>(var current: S) {
+    val focus = HashMap<Any?, FocusMemory>()
+    private val ids = HashMap<Any?, String>()
+    fun idOf(key: Any?): String = ids.getOrPut(key) { "screen_${ids.size}" }
 }
 
 /**

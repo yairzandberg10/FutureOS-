@@ -4,6 +4,10 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.unit.dp
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -55,6 +59,14 @@ class MainActivity : ComponentActivity() {
             BackHandler(enabled = editingTaskId != null) { editingTaskId = null }
 
             FutureMaterialTheme(theme) {
+                // ריווח משורת המצב של FutureUI - במשימות לבקשת המשתמש (2026-09-25),
+                // אף ש-StatusBarInset כבוי בשאר האפליקציות.
+                androidx.compose.foundation.layout.Box(
+                    modifier = androidx.compose.ui.Modifier
+                        .fillMaxSize()
+                        .background(theme.backgroundColor)
+                        .padding(top = com.future.sharednav.systemui.StatusBarInset.HEIGHT_DP.dp),
+                ) {
                 // ה-id נמסר כמצב: העורך שיוצא באנימציה ממשיך לצייר את המשימה שלו
                 // גם אחרי ש-editingTaskId כבר חזר ל-null.
                 AnimatedScreenHost(
@@ -87,6 +99,7 @@ class MainActivity : ComponentActivity() {
                             lastSelectedTaskId = lastSelectedTaskId,
                         )
                     }
+                }
                 }
             }
         }

@@ -19,8 +19,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.Notes
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -83,8 +81,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/** שלוש הלשוניות בסרגל התחתון, בסדר RTL (הראשונה מימין). */
-enum class ContactsTab(val title: String) { FAVORITES("מועדפים"), CONTACTS("אנשי קשר"), BLOCKED("חסומים") }
+/** שלוש הלשוניות בסרגל התחתון, בסדר RTL (הראשונה מימין). "אני" החליפה את
+ * "חסומים" - חסומים מופיעים ברשימה הרגילה עם סימן חסימה. */
+enum class ContactsTab(val title: String) { FAVORITES("מועדפים"), CONTACTS("אנשי קשר"), ME("אני") }
 
 /** פעולות על איש קשר - MainActivity מממש (Intent-ים, הרשאות, בוחר תמונות). */
 class ContactActions(
@@ -140,8 +139,7 @@ fun ContactsListScreen(
     val inTab = remember(contacts, tab) {
         when (tab) {
             ContactsTab.FAVORITES -> contacts.filter { it.isFavorite && !it.isBlocked }
-            ContactsTab.CONTACTS -> contacts.filter { !it.isBlocked }
-            ContactsTab.BLOCKED -> contacts.filter { it.isBlocked }
+            ContactsTab.CONTACTS, ContactsTab.ME -> contacts
         }
     }
     val shown = remember(inTab, searchText, t9Query) {
@@ -155,9 +153,16 @@ fun ContactsListScreen(
     val rowFocus = remember { mutableMapOf<String, FocusRequester>() }
     fun focusFor(id: String) = rowFocus.getOrPut(id) { FocusRequester() }
     val searchButtonFocus = remember { FocusRequester() }
+    val addButtonFocus = remember { FocusRequester() }
     LaunchedEffect(hasPermission, tab, inTab.isEmpty()) {
         val target = inTab.firstOrNull { it.id == lastSelectedContactId } ?: inTab.firstOrNull()
-        runCatching { if (target != null) focusFor(target.id).requestFocus() else searchButtonFocus.requestFocus() }
+        runCatching {
+            when {
+                target != null -> focusFor(target.id).requestFocus()
+                tab == ContactsTab.CONTACTS && hasPermission -> addButtonFocus.requestFocus()
+                else -> searchButtonFocus.requestFocus()
+            }
+        }
     }
 
     val type = rememberFutureType()
@@ -200,6 +205,17 @@ fun ContactsListScreen(
                     }
                 }
             }
+            // כפתור ראשי ברוחב מלא - קודם הוספת איש קשר הייתה רק בתפריט Options.
+            if (tab == ContactsTab.CONTACTS && hasPermission && !searchOpen) {
+                FutureButton(
+                    "איש קשר חדש",
+                    theme,
+                    { adding = true },
+                    fillMaxWidth = true,
+                    focusRequester = addButtonFocus,
+                    modifier = Modifier.padding(horizontal = FutureDimens.screenPadding).padding(bottom = FutureDimens.spacingSm),
+                )
+            }
             if (t9Query.isNotEmpty() && !searchOpen) {
                 Text(
                     "$t9Query · ${shown.size} תוצאות",
@@ -222,14 +238,14 @@ fun ContactsListScreen(
                     icon = when (tab) {
                         ContactsTab.FAVORITES -> FutureIcons.Star
                         ContactsTab.CONTACTS -> FutureIcons.Person
-                        ContactsTab.BLOCKED -> FutureIcons.Block
+                        ContactsTab.ME -> FutureIcons.Person
                     },
                     title = when (tab) {
                         ContactsTab.FAVORITES -> "אין מועדפים"
                         ContactsTab.CONTACTS -> "אין אנשי קשר"
-                        ContactsTab.BLOCKED -> "אין אנשי קשר חסומים"
+                        ContactsTab.ME -> "אין אנשי קשר"
                     },
-                    subtitle = if (tab == ContactsTab.CONTACTS) "לחץ על מקש התפריט כדי להוסיף" else null,
+                    subtitle = if (tab == ContactsTab.CONTACTS) "\"איש קשר חדש\" למעלה מוסיף" else null,
                     textColor = theme.textColor,
                 )
                 shown.isEmpty() -> EmptyState(icon = FutureIcons.SearchOff, title = "לא נמצאו תוצאות", textColor = theme.textColor)
@@ -375,7 +391,7 @@ fun ContactDetailScreen(contact: Contact, theme: FutureTheme, actions: ContactAc
                     details.email.takeIf { it.isNotBlank() }?.let { FutureIcons.Email to it },
                     listOf(details.jobTitle, details.organization).filter { it.isNotBlank() }.joinToString(" · ").takeIf { it.isNotBlank() }?.let { FutureIcons.Business to it },
                     details.address.takeIf { it.isNotBlank() }?.let { FutureIcons.LocationOn to it },
-                    details.notes.takeIf { it.isNotBlank() }?.let { Icons.AutoMirrored.Rounded.Notes to it },
+                    details.notes.takeIf { it.isNotBlank() }?.let { FutureIcons.Description to it },
                 )
                 FutureSectionHeader("פרטים", theme)
                 FutureCard(theme = theme) {

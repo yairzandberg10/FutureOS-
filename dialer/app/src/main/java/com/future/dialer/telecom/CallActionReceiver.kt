@@ -17,8 +17,18 @@ import com.future.dialer.MainActivity
 class CallActionReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
-            ACTION_ANSWER_CALL -> CallService.answer()
+            ACTION_ANSWER_CALL -> {
+                CallService.answer()
+                // נענתה מחוץ לאפליקציה (מקש CALL, כפתור בהתראה) - מסך השיחה נפתח.
+                runCatching {
+                    context.startActivity(
+                        Intent(context, MainActivity::class.java)
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                    )
+                }
+            }
             ACTION_REJECT_CALL -> CallService.reject()
+            ACTION_HANGUP_CALL -> CallService.disconnect()
             ACTION_LAUNCH_CALL_UI -> {
                 val launchIntent = Intent(context, MainActivity::class.java)
                 launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
@@ -31,5 +41,6 @@ class CallActionReceiver : BroadcastReceiver() {
         const val ACTION_ANSWER_CALL = "com.future.dialer.ACTION_ANSWER_CALL"
         const val ACTION_REJECT_CALL = "com.future.dialer.ACTION_REJECT_CALL"
         const val ACTION_LAUNCH_CALL_UI = "com.future.dialer.ACTION_LAUNCH_CALL_UI"
+        const val ACTION_HANGUP_CALL = "com.future.dialer.ACTION_HANGUP_CALL"
     }
 }
