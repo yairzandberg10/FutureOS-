@@ -414,6 +414,23 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    /** טפט מהקטלוג של אפליקציית הטפטים - מוריד את התמונה המלאה (640x960) ומחיל. */
+    fun applyWallpaperPhoto(photo: com.future.settings.utils.WallpaperPhoto) {
+        _isApplyingWallpaper.value = true
+        viewModelScope.launch(Dispatchers.IO) {
+            val bitmap = com.future.settings.utils.WallpaperPhotos.load(getApplication<Application>(), photo.url, 960)
+            val success = bitmap != null && systemInteractor.setWallpaperBitmap(bitmap)
+            viewModelScope.launch(Dispatchers.Main) {
+                _isApplyingWallpaper.value = false
+                showToast(
+                    if (success) "הטפט הוחל"
+                    else if (bitmap == null) "אין חיבור לרשת - לא ניתן היה להוריד את הטפט"
+                    else "החלת הטפט נכשלה"
+                )
+            }
+        }
+    }
+
     fun applyWallpaperFromUri(uri: android.net.Uri) {
         _isApplyingWallpaper.value = true
         viewModelScope.launch(Dispatchers.IO) {

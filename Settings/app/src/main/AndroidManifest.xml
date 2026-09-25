@@ -46,6 +46,8 @@
     <!-- הגדרת טפט בפועל (מסך בית + מסך נעילה) דרך WallpaperManager -->
     <uses-permission android:name="android.permission.SET_WALLPAPER" />
     <uses-permission android:name="android.permission.SET_WALLPAPER_HINTS" />
+    <!-- הורדת הטפטים המובנים (אותו קטלוג צילומים של אפליקציית הטפטים) -->
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <uses-permission android:name="com.future.futureui.permission.SYSTEM_SETTINGS" />
     <uses-permission android:name="com.future.keyboard.permission.SETTINGS" />

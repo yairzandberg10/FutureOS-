@@ -66,6 +66,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -980,7 +981,7 @@ fun SystemUiScreen(navController: NavController, theme: ThemeConfig, viewModel: 
 
     fun reload() { settings = com.future.settings.theme.SystemUiSettingsClient.get(context) }
 
-    val presets = remember(theme.primaryColor) { wallpaperPresets(theme.primaryColor) }
+    val wallpaperRows = remember { com.future.settings.utils.WallpaperPhotos.all.chunked(3) }
     val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) viewModel.applyWallpaperFromUri(uri)
     }
@@ -1003,10 +1004,6 @@ fun SystemUiScreen(navController: NavController, theme: ThemeConfig, viewModel: 
                         SettingSwitch("שעון 24 שעות", "17:00 במקום 5:00", settings.use24HourClock, {
                             com.future.settings.theme.SystemUiSettingsClient.setUse24HourClock(context, it); reload()
                         }, theme)
-                        SettingDivider(theme)
-                        SettingSwitch("הסתר סרגלי מערכת", "מסתיר את סרגל הניווט המקורי של אנדרואיד", settings.suppressSystemBars, {
-                            com.future.settings.theme.SystemUiSettingsClient.setSuppressSystemBars(context, it); reload()
-                        }, theme)
                     }
                 }
                 item { SettingHeader("רקע מסך", theme) }
@@ -1018,17 +1015,16 @@ fun SystemUiScreen(navController: NavController, theme: ThemeConfig, viewModel: 
                     }
                 }
                 item { SettingHeader("טפטים מובנים", theme) }
-                item {
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(3),
-                        modifier = Modifier.fillMaxWidth().height(420.dp).padding(horizontal = 12.dp),
-                        userScrollEnabled = false
-                    ) {
-                        items(presets) { preset ->
-                            WallpaperPresetTile(preset, theme) {
-                                viewModel.applyWallpaperBitmap(renderGradientWallpaperBitmap(context, preset.colors))
+                // שורות של 3 (ולא LazyVerticalGrid בגובה קבוע) - כך 100 הטפטים נטענים
+                // בעצלות תוך כדי גלילה, והמיקוד בחצים זורם בתוך הרשימה הרגילה.
+                items(wallpaperRows, key = { row -> "wp-" + row.first().id }) { row ->
+                    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
+                        row.forEach { photo ->
+                            Box(modifier = Modifier.weight(1f)) {
+                                WallpaperPhotoTile(photo, theme) { viewModel.applyWallpaperPhoto(photo) }
                             }
                         }
+                        repeat(3 - row.size) { Spacer(modifier = Modifier.weight(1f)) }
                     }
                 }
                 item {
@@ -1049,42 +1045,18 @@ fun SystemUiScreen(navController: NavController, theme: ThemeConfig, viewModel: 
     }
 }
 
-/** רשימת טפטי הגרדיאנט המובנים - מוגדרים כצבעים בקוד (לא כקבצי תמונה בינאריים),
- *  ומוצגים כתצוגה מקדימה חיה עם Brush; בבחירה הם מצוירים ל-Bitmap אמיתי בגודל המסך
- *  ומוחלים דרך WallpaperManager. הפריסט האחרון עוקב אחרי צבע ההדגשה הנוכחי של המשתמש
- *  כדי שתמיד יהיה טפט אחד שמתאים אוטומטית לעיצוב שהוא בחר. */
-private data class WallpaperPreset(val name: String, val colors: List<Color>)
-
-private fun wallpaperPresets(accentColor: Color): List<WallpaperPreset> = listOf(
-    WallpaperPreset("כחול עמוק", listOf(Color(0xFF123A5E), Color(0xFF040B14), Color.Black)),
-    WallpaperPreset("סגול לילה", listOf(Color(0xFF4A1D6E), Color(0xFF12051C), Color.Black)),
-    WallpaperPreset("שקיעה כתומה", listOf(Color(0xFF8C3A10), Color(0xFF230D05), Color.Black)),
-    WallpaperPreset("ירוק ניאון", listOf(Color(0xFF0F5C34), Color(0xFF03130A), Color.Black)),
-    WallpaperPreset("מונוכרום", listOf(Color(0xFF3A3A40), Color(0xFF0E0E10), Color.Black)),
-    WallpaperPreset("צבע ההדגשה שלי", listOf(accentColor, Color(0xFF0A0A0C), Color.Black))
-)
-
-/** מצייר את הגרדיאנט לביטמאפ אמיתי בגודל המסך הפיזי - כך שהטפט המוחל לא מפוקסל
- *  ומכסה את כל המסך, לא רק את שטח תצוגת המקדימה הקטנה בתוך הרשימה. */
-private fun renderGradientWallpaperBitmap(context: android.content.Context, colors: List<Color>): android.graphics.Bitmap {
-    val metrics = context.resources.displayMetrics
-    val width = metrics.widthPixels.coerceAtLeast(1)
-    val height = metrics.heightPixels.coerceAtLeast(1)
-    val bitmap = android.graphics.Bitmap.createBitmap(width, height, android.graphics.Bitmap.Config.ARGB_8888)
-    val canvas = android.graphics.Canvas(bitmap)
-    val paint = android.graphics.Paint().apply {
-        shader = android.graphics.LinearGradient(
-            0f, 0f, width.toFloat(), height.toFloat(),
-            colors.map { it.toArgb() }.toIntArray(), null, android.graphics.Shader.TileMode.CLAMP
-        )
-    }
-    canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), paint)
-    return bitmap
-}
-
 @Composable
-private fun WallpaperPresetTile(preset: WallpaperPreset, theme: ThemeConfig, onClick: () -> Unit) {
+private fun WallpaperPhotoTile(photo: com.future.settings.utils.WallpaperPhoto, theme: ThemeConfig, onClick: () -> Unit) {
+    val context = LocalContext.current
     var isFocused by remember { mutableStateOf(false) }
+    // תמונה ממוזערת מהרשת (200x300), עם מטמון בזיכרון ובדיסק - כמו באפליקציית הטפטים.
+    val thumb by produceState(com.future.settings.utils.WallpaperPhotos.peek(photo.thumbUrl), photo.thumbUrl) {
+        if (value == null) {
+            value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                com.future.settings.utils.WallpaperPhotos.load(context, photo.thumbUrl, 300)
+            }
+        }
+    }
     Column(
         modifier = Modifier
             .padding(6.dp)
@@ -1102,14 +1074,23 @@ private fun WallpaperPresetTile(preset: WallpaperPreset, theme: ThemeConfig, onC
                 .fillMaxWidth()
                 .aspectRatio(0.62f)
                 .clip(FutureShapes.lg)
-                .background(Brush.linearGradient(preset.colors))
+                .background(theme.textColor.copy(alpha = 0.08f))
                 .then(
                     if (isFocused) Modifier.border(width = FutureDimens.focusBorderControl, color = theme.futureTheme.readableAccentColor, shape = FutureShapes.lg)
                     else Modifier
                 )
-        )
+        ) {
+            thumb?.let {
+                androidx.compose.foundation.Image(
+                    bitmap = it.asImageBitmap(),
+                    contentDescription = photo.title,
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                    modifier = Modifier.matchParentSize().clip(FutureShapes.lg)
+                )
+            }
+        }
         Text(
-            text = preset.name,
+            text = photo.title,
             fontSize = FutureTypography.label,
             color = theme.textColor.copy(alpha = 0.7f),
             modifier = Modifier.padding(top = 4.dp).fillMaxWidth(),
