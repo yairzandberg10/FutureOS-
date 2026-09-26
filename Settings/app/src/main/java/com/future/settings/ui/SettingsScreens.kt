@@ -156,6 +156,7 @@ val FUTURE_OS_APPS = listOf(
 /** חבילת האפליקציה של FutureUI (מרכז בקרה/שורת מצב) - להתאמה אישית שלהם. */
 private const val FUTURE_UI_PACKAGE = "com.future.futureui"
 private const val FUTURE_UI_SETTINGS_ACTIVITY = "com.future.futureui.SettingsActivity"
+private const val FUTURE_UI_LOCK_SETTINGS_ACTION = "com.future.futureui.ACTION_LOCK_SETTINGS"
 
 /**
  * מפעיל Intent בבטחה: תופס ActivityNotFoundException/SecurityException (שאחרת
@@ -287,6 +288,7 @@ private val SEARCHABLE_SETTINGS = listOf(
     SearchableSetting("זמן מסך", "screen time שימוש טיימר אפליקציות", FutureIcons.HourglassEmpty, Screen.ScreenTime.route),
     SearchableSetting("מקלדת ושפות הקלדה", "keyboard מקלדת ניבוי prediction t9 שפות הקלדה", FutureIcons.Keyboard, Screen.KeyboardLanguages.route),
     SearchableSetting("כללי", "general תאריך שעה שפה נגישות accessibility date time language", FutureIcons.Language, Screen.General.route),
+    SearchableSetting("אבטחה", "security מסך נעילה קוד pin סיסמה זיהוי פנים face lock", FutureIcons.Security, Screen.Security.route),
     SearchableSetting("אפליקציות", "apps אפליקציה", FutureIcons.Apps, Screen.Apps.route),
     SearchableSetting("אודות הטלפון", "about imei גרסה מספר טלפון version", FutureIcons.Info, Screen.About.route)
 ) + com.future.settings.utils.ExtraSystemSettings.ALL_SCREENS.flatMap { screen ->
@@ -404,6 +406,13 @@ fun MainMenu(navController: NavController, theme: ThemeConfig, viewModel: Settin
                     }
                 }
 
+                item { SettingHeader("אבטחה", theme) }
+                item {
+                    SettingsCard(theme) {
+                        SettingItem("אבטחה", "מסך נעילה, קוד וזיהוי פנים", FutureIcons.Security, theme, modifier = menuFocus(Screen.Security.route)) { navController.navigate(Screen.Security.route) }
+                    }
+                }
+
                 item { SettingHeader("שימוש", theme) }
                 item {
                     SettingsCard(theme) {
@@ -430,7 +439,7 @@ fun MainMenu(navController: NavController, theme: ThemeConfig, viewModel: Settin
                 item { SettingHeader("מערכת", theme) }
                 item {
                     SettingsCard(theme) {
-                        SettingItem("כללי", "תאריך ושעה, שפה, נגישות ואבטחה", FutureIcons.Language, theme, modifier = menuFocus(Screen.General.route)) { navController.navigate(Screen.General.route) }
+                        SettingItem("כללי", "תאריך ושעה, שפה ונגישות", FutureIcons.Language, theme, modifier = menuFocus(Screen.General.route)) { navController.navigate(Screen.General.route) }
                         SettingDivider(theme)
                         SettingItem("אפליקציות", "פתיחה, עצירה, הרשאות ונתונים", FutureIcons.Apps, theme, modifier = menuFocus(Screen.Apps.route)) { navController.navigate(Screen.Apps.route) }
                         SettingDivider(theme)
@@ -1405,8 +1414,6 @@ fun GeneralScreen(navController: NavController, theme: ThemeConfig, viewModel: S
                 item { SettingHeader("אבטחה", theme) }
                 item {
                     SettingsCard(theme) {
-                        SettingItem("אבטחה", "ביומטריה, איתור המכשיר ואזור פרטי", FutureIcons.Security, theme) { navController.navigate(Screen.Security.route) }
-                        SettingDivider(theme)
                         SettingItem("התראות ומיקוד", "השתקה בזמן מיקוד ובשעות שינה", FutureIcons.Notifications, theme) {
                             navController.navigate(Screen.NotificationsFocus.route)
                         }
@@ -1586,8 +1593,21 @@ fun SecurityScreen(navController: NavController, theme: ThemeConfig) {
                         )
                     }
                 }
-                // מסך הנעילה וקוד ה-PIN של FutureUI הוסרו מהמערכת; השורה "קוד PIN
-                // של FutureUI" שהייתה כאן רק פתחה את הגדרות FutureUI, בלי שום PIN.
+                // מסך הנעילה של FutureOS. ההגדרות עצמן רצות בתוך FutureUI, כי הקוד
+                // ונתוני הפנים מוצפנים במפתח Keystore של FutureUI בלבד; המסך שם
+                // דורש את הקוד הנוכחי לפני כל שינוי.
+                item { SettingHeader("מסך נעילה", theme) }
+                item {
+                    SettingsCard(theme) {
+                        SettingItem("מסך נעילה, קוד וזיהוי פנים", "קוד, פתיחה בפנים, שעון, ווידג'טים והתראות", FutureIcons.Lock, theme) {
+                            safeStartActivity(
+                                context,
+                                Intent(FUTURE_UI_LOCK_SETTINGS_ACTION).setPackage(FUTURE_UI_PACKAGE),
+                                "לא ניתן לפתוח את הגדרות מסך הנעילה"
+                            )
+                        }
+                    }
+                }
                 item { SettingHeader("ביומטריה", theme) }
                 item {
                     SettingsCard(theme) {

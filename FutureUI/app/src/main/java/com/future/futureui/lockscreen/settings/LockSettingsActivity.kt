@@ -11,7 +11,7 @@ import com.future.futureui.ui.theme.FutureUITheme
 /**
  * הגדרות מסך הנעילה והאבטחה. אם מוגדר קוד - צריך להזין אותו לפני שרואים
  * משהו כאן (אחרת כל מי שמחזיק את הטלפון פתוח יכול לכבות את הנעילה).
- * נפתח מ"התאמה אישית" של FutureUI, או מאפליקציית ההגדרות ב-ACTION_LOCK_SETTINGS.
+ * נפתח מאפליקציית ההגדרות (אבטחה) ב-ACTION_LOCK_SETTINGS.
  */
 class LockSettingsActivity : ComponentActivity() {
     override fun dispatchTouchEvent(ev: android.view.MotionEvent): Boolean = true

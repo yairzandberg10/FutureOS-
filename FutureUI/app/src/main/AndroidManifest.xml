@@ -144,8 +144,8 @@
             </intent-filter>
         </activity>
 
-        <!-- הגדרות מסך הנעילה. דורש את הקוד הנוכחי לפני כל שינוי; מיוצא כדי
-             שאפליקציית ההגדרות תוכל לפתוח אותו ב-ACTION_LOCK_SETTINGS. -->
+        <!-- הגדרות מסך הנעילה - נפתח רק מאפליקציית ההגדרות (אבטחה) ב-ACTION_LOCK_SETTINGS.
+             דורש את הקוד הנוכחי לפני כל שינוי. -->
         <activity
             android:name=".lockscreen.settings.LockSettingsActivity"
             android:exported="true"
