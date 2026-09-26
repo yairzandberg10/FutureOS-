@@ -12,14 +12,26 @@ service cloud.firestore {
     function verified() {
       return phone() != null;
     }
+    // Base64 public key / signature / IV with a sane upper bound, so nobody can
+    // park megabytes of junk in someone else's inbox or in the key directory.
+    function b64(v, max) {
+      return v is string && v.size() > 0 && v.size() <= max;
+    }
 
     // Public keys. Anyone verified can read them (needed to encrypt to a user),
     // only the owner can publish, and only for their own verified number.
+    // `get` only: `list` would hand any verified user the phone number of every
+    // FutureChat user in one query (the phones directory below is get-only for
+    // the same reason).
     match /users/{uid} {
-      allow read: if verified();
-      allow write: if verified() && request.auth.uid == uid
+      allow get: if verified();
+      allow list: if false;
+      allow delete: if verified() && request.auth.uid == uid;
+      allow create, update: if verified() && request.auth.uid == uid
         && request.resource.data.phone == phone()
-        && request.resource.data.keys().hasOnly(['phone', 'agreeKey', 'signKey', 'updatedAt']);
+        && request.resource.data.keys().hasOnly(['phone', 'agreeKey', 'signKey', 'updatedAt'])
+        && b64(request.resource.data.agreeKey, 256)
+        && b64(request.resource.data.signKey, 256);
     }
 
     // Directory: phone number -> uid. Nobody can claim a number they did not verify.
@@ -34,8 +46,10 @@ service cloud.firestore {
     // Push token. Written by the owner, read only by the Cloud Function (admin).
     match /private/{uid} {
       allow read: if false;
-      allow write: if verified() && request.auth.uid == uid
-        && request.resource.data.keys().hasOnly(['fcmToken']);
+      allow delete: if verified() && request.auth.uid == uid;
+      allow create, update: if verified() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['fcmToken'])
+        && b64(request.resource.data.fcmToken, 4096);
     }
 
     // Encrypted inbox. Senders can only create, stamped with their real identity.
@@ -48,7 +62,14 @@ service cloud.firestore {
         && request.resource.data.fromPhone == phone()
         && request.resource.data.kind in ['m', 'r', 't']
         && request.resource.data.ct is string && request.resource.data.ct.size() < 20000
-        && request.resource.data.sentAt == request.time;
+        && b64(request.resource.data.eph, 256)
+        && b64(request.resource.data.iv, 32)
+        && b64(request.resource.data.sig, 160)
+        && request.resource.data.sentAt == request.time
+        // The TTL policy deletes on expireAt; a sender must not be able to pin a
+        // message in the recipient's inbox forever (30 days + clock skew).
+        && request.resource.data.expireAt is timestamp
+        && request.resource.data.expireAt <= request.time + duration.value(31, 'd');
       allow update: if false;
     }
   }

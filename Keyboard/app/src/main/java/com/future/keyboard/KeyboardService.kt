@@ -98,6 +98,11 @@ class KeyboardService : InputMethodService() {
         private const val ASSISTANT_PACKAGE = "com.future.assistant"
 
         private const val MAX_CLIP_HISTORY = 8
+        /** העתקות ישנות נמחקות מההיסטוריה אחרי 10 דקות - סיסמה שהועתקה פעם
+         *  לא אמורה לחכות בלוח שעות לכל מי שמרים את המכשיר. */
+        private const val CLIP_TTL_MS = 10 * 60_000L
+        /** ClipDescription.EXTRA_IS_SENSITIVE (API 33) - כמחרוזת כי minSdk הוא 31. */
+        private const val EXTRA_CLIP_SENSITIVE = "android.content.extra.IS_SENSITIVE"
         private const val MAX_FIELD_CHARS = 100_000
     }
 
@@ -127,6 +132,10 @@ class KeyboardService : InputMethodService() {
     private var candidateIndex: Int = 0
     private var candidates: List<String> = emptyList()
     private var isPredictiveField = true
+    // שדה פרטי: סיסמה/PIN, או שהאפליקציה ביקשה IME_FLAG_NO_PERSONALIZED_LEARNING
+    // (למשל גלישה בסתר). בשדה כזה המקלדת לא לומדת מילים, לא שומרת העתקות
+    // להיסטוריה ולא מחממת את מנוע הדיבור.
+    private var isPrivateField = false
 
     // מצב multi-tap (כשאין התאמה במילון): האות שנבחרה בפועל בכל מיקום (מקביל
     // ל-digitSequence), האינדקס הנוכחי בתוך אותיות המקש האחרון, וזמן הלחיצה
@@ -529,6 +538,7 @@ class KeyboardService : InputMethodService() {
     }
 
     private fun recordWordUsage(word: String) {
+        if (isPrivateField) return
         wordFrequency[word] = (wordFrequency[word] ?: 0) + 1
         saveFrequencies()
     }
@@ -563,6 +573,10 @@ class KeyboardService : InputMethodService() {
         if (candidates.isNotEmpty() || digitSequence.isEmpty()) return
         val word = fallbackLetters.toString()
         if (word.isBlank()) return
+        if (isPrivateField) {
+            showPanelMessage("לא נשמרות מילים משדה פרטי")
+            return
+        }
         val list = customWords.getOrPut(digitSequence) { mutableListOf() }
         if (word !in list) {
             list.add(0, word)
@@ -843,8 +857,23 @@ class KeyboardService : InputMethodService() {
         ensureModeIsActive()
         val inputClass = attribute?.inputType?.and(InputType.TYPE_MASK_CLASS)
         isPredictiveField = inputClass == InputType.TYPE_CLASS_TEXT
-        if (isPredictiveField) warmUpVoiceEngine()
+        isPrivateField = isPrivateInput(attribute)
+        if (isPredictiveField && !isPrivateField) warmUpVoiceEngine()
         renderPanel()
+    }
+
+    private fun isPrivateInput(attribute: EditorInfo?): Boolean {
+        if (attribute == null) return false
+        if (attribute.imeOptions and EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING != 0) return true
+        val type = attribute.inputType
+        val variation = type and InputType.TYPE_MASK_VARIATION
+        return when (type and InputType.TYPE_MASK_CLASS) {
+            InputType.TYPE_CLASS_TEXT -> variation == InputType.TYPE_TEXT_VARIATION_PASSWORD ||
+                variation == InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD ||
+                variation == InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD
+            InputType.TYPE_CLASS_NUMBER -> variation == InputType.TYPE_NUMBER_VARIATION_PASSWORD
+            else -> false
+        }
     }
 
     private fun resetComposing() {
@@ -1238,6 +1267,7 @@ class KeyboardService : InputMethodService() {
         actions += ClipAction("העתק", "המסומן, או את כל הטקסט") { ic -> copyFromField(ic, cut = false) }
         actions += ClipAction("גזור", "המסומן, או את כל הטקסט") { ic -> copyFromField(ic, cut = true) }
         actions += ClipAction("בחר הכל", null) { ic -> ic.performContextMenuAction(android.R.id.selectAll) }
+        expireClipHistory()
         clipHistory.filter { it != current }.forEach { text ->
             actions += ClipAction(preview(text), "הדבק העתקה קודמת") { ic -> ic.commitText(text, 1) }
         }
@@ -1867,8 +1897,14 @@ class KeyboardService : InputMethodService() {
     }
 
     private fun setClip(text: String) {
-        runCatching { clipboardManager.setPrimaryClip(android.content.ClipData.newPlainText("FutureOS", text)) }
-        rememberClip(text)
+        val clip = android.content.ClipData.newPlainText("FutureOS", text)
+        if (isPrivateField) {
+            // טקסט משדה סיסמה: מסומן רגיש (לא מוצג בתצוגה המקדימה של המערכת)
+            // ולא נכנס להיסטוריית ההעתקות.
+            clip.description.extras = android.os.PersistableBundle().apply { putBoolean(EXTRA_CLIP_SENSITIVE, true) }
+        }
+        runCatching { clipboardManager.setPrimaryClip(clip) }
+        if (!isPrivateField) rememberClip(text)
     }
 
     private fun currentClipText(): String? = runCatching {
@@ -1876,10 +1912,24 @@ class KeyboardService : InputMethodService() {
     }.getOrNull()?.takeIf { it.isNotEmpty() }
 
     private fun rememberCurrentClip() {
+        val sensitive = runCatching {
+            clipboardManager.primaryClipDescription?.extras?.getBoolean(EXTRA_CLIP_SENSITIVE, false) == true
+        }.getOrDefault(false)
+        if (sensitive || isPrivateField) return
         currentClipText()?.let(::rememberClip)
     }
 
+    private var clipHistoryTouchedAt = 0L
+
+    /** מוחק את ההיסטוריה אם עברו יותר מ-[CLIP_TTL_MS] מההעתקה האחרונה. */
+    private fun expireClipHistory() {
+        if (clipHistory.isNotEmpty() && android.os.SystemClock.elapsedRealtime() - clipHistoryTouchedAt > CLIP_TTL_MS) {
+            clipHistory.clear()
+        }
+    }
+
     private fun rememberClip(text: String) {
+        clipHistoryTouchedAt = android.os.SystemClock.elapsedRealtime()
         clipHistory.remove(text)
         clipHistory.addFirst(text)
         while (clipHistory.size > MAX_CLIP_HISTORY) clipHistory.removeLast()

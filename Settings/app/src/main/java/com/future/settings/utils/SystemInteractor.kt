@@ -530,13 +530,15 @@ class SystemInteractor(private val context: Context) {
     }
 
     fun forceStopApp(packageName: String) {
-        runRootCommand("am force-stop $packageName")
+        if (!RootShell.isSafeToken(packageName)) return
+        runRootCommand("am force-stop ${RootShell.quote(packageName)}")
     }
 
     /** מוחק את כל הנתונים המקומיים של האפליקציה (כמו "ניקוי נתונים" באנדרואיד המקורי) -
      *  פעולה הרסנית ובלתי הפיכה, חייבת אישור מהמשתמש לפני הקריאה לפונקציה הזו. */
     fun clearAppData(packageName: String) {
-        runRootCommand("pm clear $packageName")
+        if (!RootShell.isSafeToken(packageName)) return
+        runRootCommand("pm clear ${RootShell.quote(packageName)}")
     }
 
     private var previewRingtone: Ringtone? = null
@@ -587,7 +589,8 @@ class SystemInteractor(private val context: Context) {
     // --- שפת מערכת - שינוי אמיתי דרך פקודת root, בלי לקפוץ להגדרות אנדרואיד ---
 
     fun setSystemLocale(languageTag: String): Boolean {
-        val r1 = runRootCommand("settings put system system_locales $languageTag")
+        if (!RootShell.isSafeToken(languageTag)) return false
+        val r1 = runRootCommand("settings put system system_locales ${RootShell.quote(languageTag)}")
         val r2 = runRootCommand("am broadcast -a android.intent.action.LOCALE_CHANGED")
         return r1.success && r2.success
     }
@@ -662,7 +665,7 @@ class SystemInteractor(private val context: Context) {
     fun cleanBackgroundApps(): Int {
         val targets = FUTURE_OS_PACKAGES.filter { it !in ramCleanupProtectedPackages && isAppInstalled(it) }
         if (targets.isEmpty()) return 0
-        runRootCommands(targets.map { "am force-stop $it" })
+        runRootCommands(targets.filter(RootShell::isSafeToken).map { "am force-stop ${RootShell.quote(it)}" })
         return targets.size
     }
 
@@ -778,7 +781,8 @@ class SystemInteractor(private val context: Context) {
     }
 
     fun revokePermission(packageName: String, permission: String) {
-        runRootCommand("pm revoke $packageName $permission")
+        if (!RootShell.isSafeToken(packageName) || !RootShell.isSafeToken(permission)) return
+        runRootCommand("pm revoke ${RootShell.quote(packageName)} ${RootShell.quote(permission)}")
     }
 
     // --- NFC ---
@@ -910,7 +914,8 @@ class SystemInteractor(private val context: Context) {
 
     fun isAppAudioMuted(packageName: String): Boolean {
         return try {
-            val result = runRootCommand("appops get $packageName PLAY_AUDIO").output.trim()
+            if (!RootShell.isSafeToken(packageName)) return false
+            val result = runRootCommand("appops get ${RootShell.quote(packageName)} PLAY_AUDIO").output.trim()
             result.contains("ignore", ignoreCase = true) || result.contains("deny", ignoreCase = true)
         } catch (e: Exception) {
             false
@@ -918,7 +923,8 @@ class SystemInteractor(private val context: Context) {
     }
 
     fun setAppAudioMuted(packageName: String, muted: Boolean): Boolean {
-        return runRootCommand("appops set $packageName PLAY_AUDIO ${if (muted) "ignore" else "allow"}").success
+        if (!RootShell.isSafeToken(packageName)) return false
+        return runRootCommand("appops set ${RootShell.quote(packageName)} PLAY_AUDIO ${if (muted) "ignore" else "allow"}").success
     }
 
     // --- ניהול כרטיסי SIM ---

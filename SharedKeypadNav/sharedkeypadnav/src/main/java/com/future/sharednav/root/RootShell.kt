@@ -48,6 +48,21 @@ object RootShell {
         val isShellUnavailable: Boolean get() = exitCode == EXIT_NO_SHELL
     }
 
+    /**
+     * מצטט ארגומנט לשורת פקודה של shell כך שלא יפורש כתחביר: כל ערך שמגיע
+     * מבחוץ (שם חבילה, הרשאה, תג שפה) חייב לעבור כאן לפני שהוא משורשר לפקודת
+     * root. `pkg; reboot` הופך ל-`'pkg; reboot'` - ארגומנט אחד ולא שתי פקודות.
+     */
+    fun quote(arg: String): String = "'" + arg.replace("'", "'\\''") + "'"
+
+    private val SAFE_TOKEN = Regex("^[A-Za-z0-9._:/@+=-]{1,255}$")
+
+    /**
+     * בדיקה קשיחה לשמות חבילה/הרשאה/תגי שפה: אם יש בערך משהו מחוץ לתווים
+     * האלה, זה לא שם חוקי - הפקודה לא תרוץ בכלל (עדיף מלהסתמך רק על ציטוט).
+     */
+    fun isSafeToken(value: String): Boolean = SAFE_TOKEN.matches(value)
+
     /** מריץ פקודה אחת כ-root. */
     fun run(command: String, timeoutMs: Long = DEFAULT_TIMEOUT_MS): Result =
         run(listOf(command), timeoutMs)
@@ -98,7 +113,7 @@ object RootShell {
                 process.destroy()
                 outReader.join(READER_JOIN_MS)
                 errReader.join(READER_JOIN_MS)
-                Log.w(TAG, "Command timed out after ${timeoutMs}ms: ${commands.firstOrNull()}")
+                Log.w(TAG, "Command timed out after ${timeoutMs}ms: ${describe(commands)}")
                 return Result(out.toString(), "timeout after ${timeoutMs}ms", EXIT_TIMEOUT)
             }
             outReader.join(READER_JOIN_MS)
@@ -107,13 +122,23 @@ object RootShell {
         } catch (e: Exception) {
             // ה-shell עצמו לא ניתן להרצה (למשל מכשיר לא rooted) - זה לעולם
             // לא יכול להידווח כהצלחה.
-            Log.w(TAG, "Shell unavailable for: ${commands.firstOrNull()}", e)
+            Log.w(TAG, "Shell unavailable for: ${describe(commands)}", e)
             process?.destroy()
             return Result("", e.message ?: "shell unavailable", EXIT_NO_SHELL)
         }
     }
 
     private const val READER_JOIN_MS = 2_000L
+
+    /**
+     * לוג בלי הארגומנטים: רק שם התוכנית של הפקודה הראשונה ("settings") ומספר
+     * הפקודות. פקודה מלאה יכולה להכיל ערכים רגישים (שם רשת, DNS פרטי, שם
+     * מכשיר), והלוג קריא לכל מי שמחובר ב-adb.
+     */
+    private fun describe(commands: List<String>): String {
+        val first = commands.firstOrNull()?.trim()?.substringBefore(' ').orEmpty()
+        return if (commands.size > 1) "$first (+${commands.size - 1} more)" else first
+    }
 
     private fun drain(stream: InputStream, into: StringBuilder, name: String): Thread =
         Thread({
