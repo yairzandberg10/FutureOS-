@@ -216,7 +216,9 @@ fun TranslateScreen(
                 FutureCard(theme = theme) {
                     recent.forEachIndexed { index, entry ->
                         if (index > 0) FutureDivider(theme = theme)
-                        HistoryRow(entry, theme, showLanguages = false, onClick = onOpenHistory)
+                        // OK על תרגום אחרון מחזיר אותו למסך - קודם פתח את כל ההיסטוריה
+                        // ושם היה צריך לחפש אותו שוב.
+                        HistoryRow(entry, theme, showLanguages = false, onClick = { viewModel.commit(); viewModel.load(entry) })
                     }
                 }
             }

@@ -92,6 +92,12 @@ class TranslateViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun setFrom(code: String) {
+        // בחירת שפת המקור ששווה ליעד הייתה נותנת "תרגום" זהה לטקסט - מחליפים
+        // כיוון במקום זאת, כמו בכל מתרגם.
+        if (code == _to.value && code != Languages.AUTO) {
+            val old = _from.value
+            if (old != Languages.AUTO) { _to.value = old; prefs.to = old }
+        }
         _from.value = code
         prefs.from = code
         prefs.rememberLanguage(code)
@@ -100,6 +106,10 @@ class TranslateViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun setTo(code: String) {
+        if (code == _from.value) {
+            val old = _to.value
+            _from.value = old; prefs.from = old
+        }
         _to.value = code
         prefs.to = code
         prefs.rememberLanguage(code)
@@ -119,6 +129,8 @@ class TranslateViewModel(application: Application) : AndroidViewModel(applicatio
         _to.value = oldFrom
         prefs.from = oldTo
         prefs.to = oldFrom
+        // אחרי החלפה, התווית "זוהתה: ..." של הכיוון הקודם כבר לא נכונה
+        _detected.value = null
         if (done != null) _text.value = done.text
         scheduleTranslate(immediate = true)
     }
@@ -290,13 +302,15 @@ class TranslateViewModel(application: Application) : AndroidViewModel(applicatio
         val second = _talkSecondSpeaker.value
         val lang = if (second) b else a
         val target = if (second) a else b
-        val index = _talk.value.size
-        _talk.value = _talk.value + TalkLine(text, lang, null, target)
+        val line = TalkLine(text, lang, null, target)
+        _talk.value = _talk.value + line
         _talkSecondSpeaker.value = !second
         viewModelScope.launch {
             val translated = (translate(text, lang, target) as? Result.Done)?.text
-            _talk.value = _talk.value.mapIndexed { i, line ->
-                if (i == index) line.copy(translation = translated ?: "התרגום נכשל") else line
+            // לפי זהות השורה ולא לפי אינדקס - אם השיחה נוקתה בינתיים, האינדקס
+            // הישן היה כותב את התרגום לשורה אחרת
+            _talk.value = _talk.value.map {
+                if (it === line) it.copy(translation = translated ?: "התרגום נכשל") else it
             }
             if (translated != null) speaker.speak(translated, target)
         }

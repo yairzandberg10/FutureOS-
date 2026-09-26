@@ -61,6 +61,8 @@ object DafYomi {
 
     private val CYCLE_LENGTH_DAYS = MASECHTOS.sumOf { it.second }
 
+    private val FIRST_DAF = mapOf("קינים" to 23, "תמיד" to 26, "מדות" to 34)
+
     /**
      * @param afterNightfall יום הדף היומי מתחלף בצאת הכוכבים, לא בחצות - אם
      * ה"עכשיו" בפועל כבר אחרי צאת הכוכבים המחושב של date, יש להעביר true
@@ -75,7 +77,11 @@ object DafYomi {
         var remaining = dayInCycle
         for ((name, days) in MASECHTOS) {
             if (remaining < days) {
-                val daf = if (name in setOf("קינים", "תמיד", "מדות")) (remaining + 1).toInt() else (remaining + 2).toInt()
+                // קינים, תמיד ומדות ממשיכים את מספור הדפים של מעילה בש"ס וילנא (קינים
+                // מ-22, תמיד מ-25:, מדות מ-34) - הדף היומי שלהם הוא קינים 23-25, תמיד
+                // 26-33 ומדות 34-37, לא "דף 1" (כך הוצג קודם).
+                val first = FIRST_DAF[name] ?: 2
+                val daf = (remaining + first).toInt()
                 return DafYomiEntry(name, daf)
             }
             remaining -= days

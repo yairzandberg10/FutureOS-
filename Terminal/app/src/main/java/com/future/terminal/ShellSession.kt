@@ -17,7 +17,13 @@ class ShellSession {
     var currentProcess: Process? = null
         private set
 
+    // מסומן ע"י cancelCurrent - כך פקודה שבוטלה מדווחת "בוטל" ולא "שגיאה: Stream closed"
+    // (הזרמים נסגרים באמצע הקריאה כשהתהליך נהרג).
+    @Volatile
+    private var cancelled = false
+
     suspend fun runCommand(command: String): String {
+        cancelled = false
         return try {
             val proc = Runtime.getRuntime().exec(arrayOf("su", "-c", command))
             currentProcess = proc
@@ -33,10 +39,17 @@ class ShellSession {
                 }
                 outDeferred.await() to errDeferred.await()
             }
-            proc.waitFor()
-            (out + err)
+            val exit = proc.waitFor()
+            val text = out + err
+            when {
+                cancelled -> text + "^C (בוטל)"
+                // פקודה שנכשלה בלי שום פלט (למשל `test -f x`) נראתה בדיוק כמו פקודה
+                // שהצליחה - קוד היציאה הוא המידע היחיד שיש.
+                exit != 0 && text.isBlank() -> "[קוד יציאה $exit]"
+                else -> text
+            }
         } catch (e: Exception) {
-            "שגיאה: ${e.message}"
+            if (cancelled) "^C (בוטל)" else "שגיאה: ${e.message}"
         } finally {
             currentProcess = null
         }
@@ -44,7 +57,12 @@ class ShellSession {
 
     /** מבטל את הפקודה הרצה כרגע (אם יש), למשל פקודה תקועה/ללא מענה. */
     fun cancelCurrent() {
-        currentProcess?.destroyForcibly()
+        val proc = currentProcess ?: return
+        cancelled = true
+        proc.destroyForcibly()
         currentProcess = null
     }
 }
+
+/** מצטט מחרוזת למעטפת בגרשיים בודדים - בתוך "..." נתיב עם $, ` או " היה מתפרש/נשבר. */
+internal fun shellQuote(value: String): String = "'" + value.replace("'", "'\\''") + "'"

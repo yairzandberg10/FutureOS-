@@ -65,7 +65,7 @@ fun LibraryNavHost(repository: LibraryRepository, theme: FutureTheme) {
     fun openSegment(bookId: Long, segmentId: Long) {
         scope.launch {
             val segment = withContext(Dispatchers.IO) { repository.getSegment(segmentId) } ?: return@launch
-            push(Route.Reader(bookId, segment.topIndex))
+            push(Route.Reader(bookId, segment.topIndex, segmentId))
         }
     }
 
@@ -147,6 +147,7 @@ fun LibraryNavHost(repository: LibraryRepository, theme: FutureTheme) {
                     // הכותרת מציגה רק את שם הספר.
                     chapterLabel = allChapters.firstOrNull { it.topIndex == route.topIndex }?.fullLabel,
                     segments = segments,
+                    focusSegmentId = route.focusSegmentId,
                     isLoading = segmentsState == null,
                     hasPrevChapter = currentPos > 0,
                     hasNextChapter = currentPos in 0 until allChapterIndices.lastIndex,
@@ -183,7 +184,7 @@ fun LibraryNavHost(repository: LibraryRepository, theme: FutureTheme) {
                     onLoadCommentaries = { prefix ->
                         withContext(Dispatchers.IO) { repository.getCommentaries(book, prefix) }
                     },
-                    onOpenCommentary = { entry -> push(Route.Reader(entry.bookId, entry.topIndex)) },
+                    onOpenCommentary = { entry -> push(Route.Reader(entry.bookId, entry.topIndex, entry.segmentId)) },
                 )
             }
         }
@@ -195,7 +196,7 @@ fun LibraryNavHost(repository: LibraryRepository, theme: FutureTheme) {
                 onSearchBooks = { query -> repository.searchBooks(query) },
                 onSearchSegments = { query -> repository.searchSegments(query) },
                 onOpenBook = { openBook(it.id) },
-                onOpenSegment = { push(Route.Reader(it.bookId, it.topIndex)) },
+                onOpenSegment = { push(Route.Reader(it.bookId, it.topIndex, it.segmentId)) },
             )
         }
 

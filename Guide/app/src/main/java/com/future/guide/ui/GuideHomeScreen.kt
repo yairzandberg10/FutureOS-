@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -21,15 +22,19 @@ import com.future.guide.data.GUIDE_APPS
 import com.future.sharednav.theme.FutureTheme
 
 @Composable
-fun GuideHomeScreen(theme: FutureTheme, onOpen: (String) -> Unit) {
+fun GuideHomeScreen(theme: FutureTheme, focusedAppId: String? = null, onOpen: (String) -> Unit) {
     val firstRowFocusRequester = remember { FocusRequester() }
-    LaunchedEffect(Unit) { firstRowFocusRequester.requestFocus() }
+    val focusIndex = GUIDE_APPS.indexOfFirst { it.id == focusedAppId }.coerceAtLeast(0)
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = focusIndex)
+    // runCatching: בזמן אנימציית המעבר השורה עוד לא מחוברת, ו-requestFocus זורק
+    LaunchedEffect(Unit) { runCatching { firstRowFocusRequester.requestFocus() } }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize()) {
                 GuideHeader(title = "מדריך למשתמש", theme = theme)
                 LazyColumn(
+                    state = listState,
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
@@ -41,7 +46,7 @@ fun GuideHomeScreen(theme: FutureTheme, onOpen: (String) -> Unit) {
                             app.subtitle,
                             theme = theme,
                             onClick = { onOpen(app.id) },
-                            focusRequester = if (index == 0) firstRowFocusRequester else null,
+                            focusRequester = if (index == focusIndex) firstRowFocusRequester else null,
                         )
                     }
                 }

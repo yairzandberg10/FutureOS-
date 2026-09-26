@@ -9,7 +9,9 @@ sealed class Route {
      * ריק ברמה העליונה של הספר. כל ירידה לחלק היא push נוסף, כך שמקש חזרה
      * מטפס חזרה במבנה הספר בדיוק כמו בעץ הקטגוריות. */
     data class BookChapters(val bookId: Long, val groupPath: List<String> = emptyList()) : Route()
-    data class Reader(val bookId: Long, val topIndex: Int) : Route()
+    /** focusSegmentId - הקטע לפתוח עליו (תוצאת חיפוש, סימניה, "המשך קריאה",
+     * מפרש). בלעדיו הקורא נפתח תמיד בראש הפרק, והמשתמש חיפש שוב את המקום. */
+    data class Reader(val bookId: Long, val topIndex: Int, val focusSegmentId: Long? = null) : Route()
     data object Search : Route()
     data object Bookmarks : Route()
 }

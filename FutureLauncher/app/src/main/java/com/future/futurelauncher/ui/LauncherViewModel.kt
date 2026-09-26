@@ -52,6 +52,13 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         private set
     private var relockJob: Job? = null
 
+    /**
+     * נקרא כשווידג'ט יורד ממסך הבית, כדי שה-Activity ישחרר את המזהה שלו ב-
+     * AppWidgetHost. בלי זה המזהה נשאר רשום, והספק המשיך לקבל עדכונים (ולהתעורר
+     * ברקע) בשביל ווידג'ט שכבר לא מוצג בשום מקום.
+     */
+    var onWidgetRemoved: ((Int) -> Unit)? = null
+
     companion object {
         private const val PREFS_NAME = "launcher_prefs"
         private const val KEY_PAGES_COUNT = "pages_count"
@@ -136,10 +143,14 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
                 savedPagesJsons.forEach { pageJson ->
                     val pageItems = mutableListOf<LauncherItem>()
-                    val jsonArray = JSONArray(pageJson)
+                    // דף שנשמר חלקית (כתיבה שנקטעה כשהדיסק מלא) זרק קודם JSONException
+                    // בכל פתיחה - לאנצ'ר שקורס בלולאה משאיר את המכשיר בלי מסך בית.
+                    // דף פגום נטען כדף ריק, והאפליקציות שלו חוזרות לעמוד חדש.
+                    val jsonArray = runCatching { JSONArray(pageJson) }.getOrElse { JSONArray() }
 
                     for (i in 0 until jsonArray.length()) {
-                        val obj = jsonArray.getJSONObject(i)
+                        val obj = jsonArray.optJSONObject(i) ?: continue
+                        if (!obj.has("id")) continue
                         val id = obj.getString("id")
                         val type = obj.optString("type", "app")
                         val label = obj.optString("label", "")
@@ -172,13 +183,13 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                                 folder
                             }
                             "widget" -> {
-                                val widgetId = obj.getInt("widgetId")
+                                val widgetId = obj.optInt("widgetId", -1)
                                 // ספק שהוסר/הושבת מאז ההוספה משאיר widgetId "רפאים" -
                                 // getAppWidgetInfo מחזיר null עבורו, ובלי הבדיקה הזו
                                 // המשבצת הייתה נשארת ריבוע שבור לצמיתות (ראו גם
                                 // MainActivity.pruneOrphanedWidgetIds לתיקון המקביל
                                 // בצד ה-host).
-                                if (appWidgetManager.getAppWidgetInfo(widgetId) == null) {
+                                if (widgetId == -1 || appWidgetManager.getAppWidgetInfo(widgetId) == null) {
                                     LauncherItem.Empty(id = id)
                                 } else {
                                     LauncherItem.Widget(
@@ -372,6 +383,27 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         savePages()
     }
 
+    /**
+     * האם כל ווידג'ט בדף נכנס כולו לרשת ולא מכסה פריט אחר. החלפה/העברה שבה
+     * ווידג'ט 2x2 נחת ליד הקצה או על אפליקציות הציגה קודם ווידג'ט שגולש
+     * מהרשת או מצויר מעל אייקונים (recalculateOccupiedSlots מסמן רק תאים ריקים).
+     */
+    private fun widgetsFit(items: List<LauncherItem>): Boolean {
+        items.forEachIndexed { idx, item ->
+            if (item !is LauncherItem.Widget) return@forEachIndexed
+            val col = idx % GRID_COLUMNS
+            val row = idx / GRID_COLUMNS
+            if (col + item.spanX > GRID_COLUMNS || row + item.spanY > GRID_ROWS) return false
+            for (y in 0 until item.spanY) for (x in 0 until item.spanX) {
+                if (x == 0 && y == 0) continue
+                val cell = items.getOrNull(idx + y * GRID_COLUMNS + x) ?: return false
+                if (cell !is LauncherItem.Empty) return false
+                if (cell.isOccupiedBy != null && cell.isOccupiedBy != item.id) return false
+            }
+        }
+        return true
+    }
+
     fun recalculateOccupiedSlots(items: MutableList<LauncherItem>) {
         items.forEachIndexed { _, item ->
             if (item is LauncherItem.Empty) item.isOccupiedBy = null
@@ -381,7 +413,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 for (y in 0 until item.spanY) {
                     for (x in 0 until item.spanX) {
                         if (x == 0 && y == 0) continue
-                        val occupiedIndex = idx + y * 4 + x
+                        val occupiedIndex = idx + y * GRID_COLUMNS + x
                         if (occupiedIndex < items.size && items[occupiedIndex] is LauncherItem.Empty) {
                             (items[occupiedIndex] as LauncherItem.Empty).isOccupiedBy = item.id
                         }
@@ -399,8 +431,14 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         if (item is LauncherItem.App) {
             markAppRemoved(item.id)
         }
+        // האפליקציות שבתוך תיקייה שנמחקה - כמו ב-removePage. קודם הן חזרו בטעינה
+        // הבאה לעמוד חדש בסוף, כאילו הותקנו עכשיו.
+        if (item is LauncherItem.Folder) {
+            item.apps.forEach { markAppRemoved(it.id) }
+        }
 
         if (item is LauncherItem.Widget) {
+            onWidgetRemoved?.invoke(item.widgetId)
             // Remove all associated occupied slots
             pageItems.forEachIndexed { idx, it ->
                 if (it is LauncherItem.Empty && it.isOccupiedBy == item.id) {
@@ -440,6 +478,12 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         
         recalculateOccupiedSlots(fromPageItems)
         recalculateOccupiedSlots(toPageItems)
+        if (!widgetsFit(fromPageItems) || !widgetsFit(toPageItems)) {
+            // התאים הריקים משותפים עם הדפים הנוכחיים - מחזירים את הסימון שלהם
+            recalculateOccupiedSlots(pages[fromPage].toMutableList())
+            recalculateOccupiedSlots(pages[toPage].toMutableList())
+            return
+        }
         
         newPages[fromPage] = fromPageItems
         newPages[toPage] = toPageItems
@@ -462,6 +506,10 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
         Collections.swap(pageItems, from, to)
         recalculateOccupiedSlots(pageItems)
+        if (!widgetsFit(pageItems)) {
+            recalculateOccupiedSlots(pages[pageIndex].toMutableList())
+            return
+        }
         newPages[pageIndex] = pageItems
         pages = newPages
         focusedIndex = to
@@ -488,9 +536,13 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                     else -> {}
                 }
             }
+            pages[index].forEach { if (it is LauncherItem.Widget) onWidgetRemoved?.invoke(it.widgetId) }
             val newPages = pages.toMutableList()
             newPages.removeAt(index)
             pages = newPages
+            // דף שנמחק לפני דף הבית מזיז את דף הבית אחד אחורה - קודם הבית "קפץ"
+            // לדף שאחריו
+            if (index < homePageIndex) homePageIndex--
             homePageIndex = homePageIndex.coerceIn(0, newPages.size - 1)
             savePages()
         }

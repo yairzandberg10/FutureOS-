@@ -65,6 +65,14 @@ import kotlinx.coroutines.delay
 
 private const val REST_SECONDS = 15
 
+private fun restOverBeep() {
+    runCatching {
+        val tone = android.media.ToneGenerator(android.media.AudioManager.STREAM_NOTIFICATION, 90)
+        tone.startTone(android.media.ToneGenerator.TONE_PROP_BEEP2, 400)
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ tone.release() }, 800)
+    }
+}
+
 private class ActiveWorkoutState(workout: Workout) {
     var exerciseIndex by mutableIntStateOf(0)
     var setIndex by mutableIntStateOf(0)
@@ -132,18 +140,22 @@ fun ActiveWorkoutScreen(
     LaunchedEffect(state) {
         while (true) {
             delay(1000)
+            // המנוחה היא חלק מהאימון: קודם השעון עצר בכל מנוחה, ומשך האימון
+            // והקלוריות שנשמרו יצאו קצרים ממה שבאמת היה.
+            if (state.running) state.elapsedSec += 1
             if (state.resting) {
                 if (state.restRemaining <= 1) {
                     state.resting = false
                     state.exerciseIndex = state.pendingExerciseIndex
                     state.setIndex = state.pendingSetIndex
+                    // בזמן מנוחה לא מסתכלים על המסך - צפצוף קצר כשצריך לחזור לסט
+                    restOverBeep()
                 } else {
                     state.restRemaining -= 1
                 }
-            } else if (state.running) {
-                state.elapsedSec += 1
             }
-            heartRateMonitor.currentBpm?.let { state.sampleHr(it) }
+            // דופק נדגם רק בזמן אימון פעיל - לא בהשהיה, שם הוא יורד ומוריד את הממוצע
+            if (state.running) heartRateMonitor.currentBpm?.let { state.sampleHr(it) }
         }
     }
 

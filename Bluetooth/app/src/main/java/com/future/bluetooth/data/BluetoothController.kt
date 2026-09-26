@@ -354,7 +354,8 @@ class BluetoothController(private val context: Context) {
                         refreshPairedDevices()
                     }
                     BluetoothDevice.ACTION_ACL_DISCONNECTED -> {
-                        device?.address?.let { aclConnected.remove(it); connecting.remove(it) }
+                        // גם רמת הסוללה האחרונה - אחרת בחיבור הבא הוצגה סוללה ישנה עד השידור הבא
+                        device?.address?.let { aclConnected.remove(it); connecting.remove(it); batteryLevels.remove(it) }
                         refreshPairedDevices()
                     }
                     BluetoothHeadset.ACTION_CONNECTION_STATE_CHANGED,

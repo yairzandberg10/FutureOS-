@@ -92,7 +92,7 @@ class MainActivity : ComponentActivity() {
             // מסכים עם רשימה (מתכונים/חנויות/פרטי מתכון) גוזלים את הפוקוס בחזרה
             // מיד עם ה-LaunchedEffect(Unit) הפנימי שלהם.
             val rootFocusRequester = remember { FocusRequester() }
-            LaunchedEffect(route) { rootFocusRequester.requestFocus() }
+            LaunchedEffect(route) { runCatching { rootFocusRequester.requestFocus() } }
 
             FutureAppTheme(theme) {
                 Scaffold(

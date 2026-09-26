@@ -74,6 +74,7 @@ class MainActivity : ComponentActivity() {
         appWidgetManager = AppWidgetManager.getInstance(this)
         appWidgetHost = AppWidgetHost(this, APPWIDGET_HOST_ID)
         pruneOrphanedWidgetIds()
+        viewModel.onWidgetRemoved = { id -> runCatching { appWidgetHost.deleteAppWidgetId(id) } }
 
         pickWidgetLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             // ACTION_APPWIDGET_BIND לא תמיד מחזיר את המזהה - שומרים אותו בצד.

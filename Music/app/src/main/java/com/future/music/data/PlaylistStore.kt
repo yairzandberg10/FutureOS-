@@ -12,11 +12,15 @@ data class LastQueueState(val songIds: List<Long>, val index: Int, val positionM
 class PlaylistStore(context: Context) {
     private val prefs = context.getSharedPreferences("music_store", Context.MODE_PRIVATE)
 
+    // JSON פגום (כתיבה שנקטעה, דיסק מלא) זרק קודם חריגה בכל פתיחה - האפליקציה
+    // קרסה לתמיד עד מחיקת הנתונים. עכשיו רשומה פגומה נקראת כריקה.
     private fun favoritesSet(): MutableSet<Long> {
         val raw = prefs.getString(KEY_FAVORITES, null) ?: return linkedSetOf()
-        val arr = JSONArray(raw)
         val set = linkedSetOf<Long>()
-        for (i in 0 until arr.length()) set.add(arr.getLong(i))
+        runCatching {
+            val arr = JSONArray(raw)
+            for (i in 0 until arr.length()) set.add(arr.getLong(i))
+        }
         return set
     }
 
@@ -38,13 +42,15 @@ class PlaylistStore(context: Context) {
 
     fun getPlaylists(): List<Playlist> {
         val raw = prefs.getString(KEY_PLAYLISTS, null) ?: return emptyList()
-        val arr = JSONArray(raw)
+        val arr = runCatching { JSONArray(raw) }.getOrNull() ?: return emptyList()
         val result = mutableListOf<Playlist>()
         for (i in 0 until arr.length()) {
-            val obj = arr.getJSONObject(i)
-            val songIdsArr = obj.getJSONArray("songIds")
-            val songIds = (0 until songIdsArr.length()).map { songIdsArr.getLong(it) }
-            result.add(Playlist(obj.getLong("id"), obj.getString("name"), songIds))
+            runCatching {
+                val obj = arr.getJSONObject(i)
+                val songIdsArr = obj.getJSONArray("songIds")
+                val songIds = (0 until songIdsArr.length()).map { songIdsArr.getLong(it) }
+                result.add(Playlist(obj.getLong("id"), obj.getString("name"), songIds))
+            }
         }
         return result
     }
@@ -101,9 +107,11 @@ class PlaylistStore(context: Context) {
 
     fun getLastQueue(): LastQueueState? {
         val raw = prefs.getString(KEY_LAST_QUEUE, null) ?: return null
-        val arr = JSONArray(raw)
-        if (arr.length() == 0) return null
-        val songIds = (0 until arr.length()).map { arr.getLong(it) }
+        val songIds = runCatching {
+            val arr = JSONArray(raw)
+            (0 until arr.length()).map { arr.getLong(it) }
+        }.getOrNull().orEmpty()
+        if (songIds.isEmpty()) return null
         return LastQueueState(
             songIds = songIds,
             index = prefs.getInt(KEY_LAST_INDEX, 0),

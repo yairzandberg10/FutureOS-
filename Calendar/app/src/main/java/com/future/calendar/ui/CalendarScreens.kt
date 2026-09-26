@@ -582,7 +582,7 @@ private fun DayView(
                     }
                 }
             } else {
-                items(events, key = { it.id }) { event ->
+                items(events, key = { "${it.id}-${it.startMillis}" }) { event ->
                     EventRow(event = event, theme = theme, onClick = { onEditEvent(event) }, onMenu = { menuFor = event }, onFocusChanged = { isFocused -> if (isFocused) focusedEvent = event })
                 }
             }

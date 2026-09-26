@@ -26,10 +26,27 @@ data class CalendarEvent(
     val startMillis: Long,
     val endMillis: Long,
     val allDay: Boolean,
-    val color: Int
+    val color: Int,
+    /** אירוע חוזר (יש לו RRULE) - עריכת זמנים ומחיקה חלים על כל הסדרה. */
+    val isRecurring: Boolean = false
 ) {
     val startDate: LocalDate get() = Instant.ofEpochMilli(startMillis).atZone(if (allDay) ZoneId.of("UTC") else ZoneId.systemDefault()).toLocalDate()
     val endDate: LocalDate get() = Instant.ofEpochMilli(endMillis).atZone(if (allDay) ZoneId.of("UTC") else ZoneId.systemDefault()).toLocalDate()
+
+    /**
+     * כל הימים שהאירוע תופס. קודם אירוע רב-יומי (כנס, חופשה) הופיע רק ביום
+     * הראשון שלו. הסוף בלעדי: אירוע כל-היום נגמר בחצות של היום שאחריו, ואירוע
+     * שנגמר בדיוק בחצות לא "גולש" ליום הבא.
+     */
+    val days: List<LocalDate> get() {
+        val zone = if (allDay) ZoneId.of("UTC") else ZoneId.systemDefault()
+        val end = Instant.ofEpochMilli(endMillis).atZone(zone)
+        var last = end.toLocalDate()
+        if (endMillis > startMillis && end.toLocalTime() == java.time.LocalTime.MIDNIGHT) last = last.minusDays(1)
+        if (last.isBefore(startDate)) return listOf(startDate)
+        // תקרה - אירוע ארוך מאוד לא יפוצל לאלפי ימים
+        return generateSequence(startDate) { it.plusDays(1) }.takeWhile { !it.isAfter(last) }.take(62).toList()
+    }
 }
 
 /** גישה אמיתית לספק לוח השנה של אנדרואיד (CalendarContract) - בלי נתונים מדומים. */
@@ -73,7 +90,11 @@ class CalendarRepository(private val context: Context) {
 
     /** לוח השנה הראשי שאירועים חדשים נוצרים בו כברירת מחדל - הראשון הניתן לכתיבה. */
     fun getDefaultWritableCalendarId(): Long? {
-        return getCalendars().firstOrNull { it.isWritable }?.id ?: getCalendars().firstOrNull()?.id
+        // קודם לוח גלוי שאפשר לכתוב בו. לוח לקריאה בלבד (חגים, ימי הולדת) לא
+        // מתאים - ההוספה אליו נכשלת - אז הוא כבר לא ברירת מחדל אחרונה.
+        val calendars = getCalendars()
+        return calendars.firstOrNull { it.isWritable && it.isVisible }?.id
+            ?: calendars.firstOrNull { it.isWritable }?.id
     }
 
     /** שולף אירועים בטווח נתון תוך הרחבת אירועים חוזרים, דרך טבלת Instances -
@@ -89,13 +110,16 @@ class CalendarRepository(private val context: Context) {
             CalendarContract.Instances.BEGIN,
             CalendarContract.Instances.END,
             CalendarContract.Instances.ALL_DAY,
-            CalendarContract.Instances.DISPLAY_COLOR
+            CalendarContract.Instances.DISPLAY_COLOR,
+            CalendarContract.Instances.RRULE
         )
         val builder = CalendarContract.Instances.CONTENT_URI.buildUpon()
         ContentUris.appendId(builder, startMillis)
         ContentUris.appendId(builder, endMillis)
         try {
-            context.contentResolver.query(builder.build(), projection, null, null, "${CalendarContract.Instances.BEGIN} ASC")?.use { cursor ->
+            // רק לוחות גלויים - לוח שהמשתמש הסתיר הופיע כאן בכל זאת.
+            val visibleOnly = "${CalendarContract.Instances.VISIBLE} = 1"
+            context.contentResolver.query(builder.build(), projection, visibleOnly, null, "${CalendarContract.Instances.BEGIN} ASC")?.use { cursor ->
                 while (cursor.moveToNext()) {
                     result.add(
                         CalendarEvent(
@@ -107,7 +131,8 @@ class CalendarRepository(private val context: Context) {
                             startMillis = cursor.getLong(5),
                             endMillis = cursor.getLong(6),
                             allDay = cursor.getInt(7) == 1,
-                            color = cursor.getInt(8)
+                            color = cursor.getInt(8),
+                            isRecurring = !cursor.getString(9).isNullOrBlank()
                         )
                     )
                 }
@@ -136,7 +161,8 @@ class CalendarRepository(private val context: Context) {
                 put(CalendarContract.Events.DTSTART, startMillis)
                 put(CalendarContract.Events.DTEND, endMillis)
                 put(CalendarContract.Events.ALL_DAY, if (allDay) 1 else 0)
-                put(CalendarContract.Events.EVENT_TIMEZONE, java.util.TimeZone.getDefault().id)
+                // אירוע כל-היום חייב להיות ב-UTC (הזמנים עצמם הם חצות UTC)
+                put(CalendarContract.Events.EVENT_TIMEZONE, if (allDay) "UTC" else java.util.TimeZone.getDefault().id)
             }
             val uri = context.contentResolver.insert(CalendarContract.Events.CONTENT_URI, values)
             uri?.lastPathSegment?.toLongOrNull()
@@ -153,7 +179,8 @@ class CalendarRepository(private val context: Context) {
         location: String,
         startMillis: Long,
         endMillis: Long,
-        allDay: Boolean
+        allDay: Boolean,
+        recurring: Boolean = false
     ): Boolean {
         return try {
             val uri = ContentUris.withAppendedId(CalendarContract.Events.CONTENT_URI, eventId)
@@ -161,9 +188,15 @@ class CalendarRepository(private val context: Context) {
                 put(CalendarContract.Events.TITLE, title)
                 put(CalendarContract.Events.DESCRIPTION, description)
                 put(CalendarContract.Events.EVENT_LOCATION, location)
-                put(CalendarContract.Events.DTSTART, startMillis)
-                put(CalendarContract.Events.DTEND, endMillis)
-                put(CalendarContract.Events.ALL_DAY, if (allDay) 1 else 0)
+                // באירוע חוזר DTEND אסור (יש DURATION) והספק דחה את כל העדכון, ו-
+                // DTSTART של המופע שנערך היה מזיז את תחילת כל הסדרה. בסדרה נערכים
+                // רק הטקסטים.
+                if (!recurring) {
+                    put(CalendarContract.Events.DTSTART, startMillis)
+                    put(CalendarContract.Events.DTEND, endMillis)
+                    put(CalendarContract.Events.ALL_DAY, if (allDay) 1 else 0)
+                    put(CalendarContract.Events.EVENT_TIMEZONE, if (allDay) "UTC" else java.util.TimeZone.getDefault().id)
+                }
             }
             context.contentResolver.update(uri, values, null, null) > 0
         } catch (e: Exception) {

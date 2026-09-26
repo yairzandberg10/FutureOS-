@@ -47,7 +47,7 @@ fun GuideDetailScreen(app: GuideApp, theme: FutureTheme, onBack: () -> Unit) {
     val scrollState = rememberScrollState()
     val scope = rememberCoroutineScope()
     val contentFocusRequester = remember { FocusRequester() }
-    LaunchedEffect(app.id) { contentFocusRequester.requestFocus() }
+    LaunchedEffect(app.id) { runCatching { contentFocusRequester.requestFocus() } }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
@@ -154,7 +154,7 @@ private fun GuideKeyRow(key: GuideKey, theme: FutureTheme) {
         Box(
             modifier = Modifier
                 .widthIn(min = 64.dp)
-                .clip(RoundedCornerShape(8.dp))
+                .clip(com.future.sharednav.theme.FutureShapes.xs)
                 .background(theme.elevatedSurfaceColor)
                 .padding(horizontal = 8.dp, vertical = 4.dp),
             contentAlignment = Alignment.Center

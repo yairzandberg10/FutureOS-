@@ -32,6 +32,9 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             var route by remember { mutableStateOf<GuideRoute>(GuideRoute.Home) }
+            // האפליקציה שנפתחה אחרונה - החזרה מהמדריך שלה מסמנת אותה שוב, לא את
+            // השורה הראשונה (עם 29 שורות, לחזור לראש הרשימה אחרי כל פריט מתיש).
+            var lastOpened by remember { mutableStateOf<String?>(null) }
             BackHandler(enabled = route != GuideRoute.Home) { route = GuideRoute.Home }
 
             // מתעדכן בזמן אמת כשמצב כהה/בהיר או צבע ההדגשה משתנים (ר' rememberFutureTheme).
@@ -45,13 +48,18 @@ class MainActivity : ComponentActivity() {
                         depthOf = { if (it is GuideRoute.Detail) 1 else 0 },
                     ) { currentRoute ->
                         when (currentRoute) {
-                            GuideRoute.Home -> GuideHomeScreen(theme = theme, onOpen = { route = GuideRoute.Detail(it) })
+                            GuideRoute.Home -> GuideHomeScreen(
+                                theme = theme,
+                                focusedAppId = lastOpened,
+                                onOpen = { lastOpened = it; route = GuideRoute.Detail(it) },
+                            )
                             is GuideRoute.Detail -> {
                                 val app = findGuideApp(currentRoute.appId)
                                 if (app != null) {
                                     GuideDetailScreen(app = app, theme = theme, onBack = { route = GuideRoute.Home })
                                 } else {
-                                    route = GuideRoute.Home
+                                    // שינוי state בתוך הקומפוזיציה עצמה הוא side effect אסור
+                                    LaunchedEffect(currentRoute) { route = GuideRoute.Home }
                                 }
                             }
                         }

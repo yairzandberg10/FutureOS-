@@ -118,6 +118,7 @@ fun MusicNavHost(
     // שחזור התור מהפעם הקודמת - רק פעם אחת, ורק אם עדיין אין ניגון פעיל
     // (למשל אם ה-service כבר רץ מריצה קודמת של התהליך).
     LaunchedEffect(allSongs, playerState.isConnected) {
+        if (playerState.isConnected) playerController.adoptLibrary(allSongs)
         if (!restoredLastQueue && allSongs.isNotEmpty() && playerState.isConnected && playerState.currentSong == null) {
             restoredLastQueue = true
             val last = playlistStore.getLastQueue()

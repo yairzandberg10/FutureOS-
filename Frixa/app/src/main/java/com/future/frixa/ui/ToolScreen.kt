@@ -33,6 +33,7 @@ import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.mutedTextColor
 import com.future.sharednav.theme.readableAccentColor
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlin.math.ceil
 import kotlin.math.roundToInt
 
@@ -61,6 +62,44 @@ private val FILLING = listOf(
 /** שלבי ההכנה שיש להם זמן - כל אחד טיימר שמתחיל ב-OK. */
 private data class Stage(val title: String, val minutes: Int)
 
+/**
+ * הטיימר חי מחוץ למסך: קודם הוא היה state של ToolScreen, ומעבר לטאב
+ * "מתכונים" באמצע התפחה של שעה איפס אותו בשקט. בסיום - צפצוף, כי טיימר
+ * בישול שנגמר בלי שום סימן לא עוזר לאף אחד.
+ */
+private object StageTimer {
+    var stage by mutableStateOf<Stage?>(null)
+        private set
+    var remaining by mutableIntStateOf(0)
+        private set
+    private var job: kotlinx.coroutines.Job? = null
+
+    fun toggle(target: Stage) {
+        job?.cancel()
+        if (stage == target) { stage = null; return }
+        stage = target
+        val endAt = android.os.SystemClock.elapsedRealtime() + target.minutes * 60_000L
+        job = kotlinx.coroutines.MainScope().launch {
+            while (true) {
+                val left = ((endAt - android.os.SystemClock.elapsedRealtime()) / 1000).toInt()
+                remaining = left.coerceAtLeast(0)
+                if (left <= 0) break
+                delay(250)
+            }
+            stage = null
+            beep()
+        }
+    }
+
+    private fun beep() {
+        runCatching {
+            val tone = android.media.ToneGenerator(android.media.AudioManager.STREAM_ALARM, 100)
+            tone.startTone(android.media.ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, 2500)
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ tone.release() }, 3000)
+        }
+    }
+}
+
 private val STAGES = listOf(
     Stage("התפחה ראשונה", 60),
     Stage("התפחה שנייה", 20),
@@ -83,20 +122,10 @@ private fun format(value: Double, whole: Boolean): String =
 fun ToolScreen(theme: FutureTheme) {
     var count by rememberSaveable { mutableIntStateOf(12) }
     var typed by remember { mutableStateOf("") }
-    var runningStage by remember { mutableStateOf<Stage?>(null) }
-    var remaining by remember { mutableIntStateOf(0) }
+    val runningStage = StageTimer.stage
+    val remaining = StageTimer.remaining
     val countFocus = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { countFocus.requestFocus() } }
-
-    LaunchedEffect(runningStage) {
-        val stage = runningStage ?: return@LaunchedEffect
-        remaining = stage.minutes * 60
-        while (remaining > 0) {
-            delay(1000)
-            remaining--
-        }
-        runningStage = null
-    }
     // ספרות שהוקלדו מתחלפות במספר חדש אחרי הפסקה קצרה.
     LaunchedEffect(typed) {
         if (typed.isEmpty()) return@LaunchedEffect
@@ -115,7 +144,7 @@ fun ToolScreen(theme: FutureTheme) {
                 theme = theme,
                 showChevron = false,
                 focusRequester = countFocus,
-                onClick = { count += 1 },
+                onClick = { count = (count + 1).coerceAtMost(200) },
                 modifier = Modifier.onKeyEvent { event ->
                     if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
                     digitForKey(event.key)?.let { digit ->
@@ -150,7 +179,7 @@ fun ToolScreen(theme: FutureTheme) {
                     iconTint = if (active) theme.readableAccentColor else null,
                     theme = theme,
                     showChevron = false,
-                    onClick = { runningStage = if (active) null else stage },
+                    onClick = { StageTimer.toggle(stage) },
                     trailing = {
                         Text(if (active) "עצור" else "התחל", color = if (active) theme.readableAccentColor else theme.mutedTextColor, fontSize = FutureTypography.summary)
                     },

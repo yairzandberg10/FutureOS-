@@ -50,6 +50,12 @@ object AcProtocols {
     const val MIN_TEMP = 16
     const val MAX_TEMP = 30
 
+    /** הטווח שהפרוטוקול באמת יודע לשלוח - Midea מתחיל ב-17, אז 16 בצג נשלח כ-17. */
+    fun tempRange(protocol: AcProtocol): IntRange = when (protocol) {
+        AcProtocol.MIDEA -> 17..MAX_TEMP
+        else -> MIN_TEMP..MAX_TEMP
+    }
+
     fun encode(protocol: AcProtocol, s: AcState): IntArray = when (protocol) {
         AcProtocol.ELECTRA -> ElectraEncoder.encode(
             power = s.power,

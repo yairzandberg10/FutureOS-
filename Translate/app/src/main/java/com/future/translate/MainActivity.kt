@@ -51,7 +51,9 @@ class MainActivity : ComponentActivity() {
                 )
             }
             // טקסט שהגיע מבחוץ ("תרגם" על טקסט מסומן, או שיתוף) נכנס לשדה.
-            LaunchedEffect(Unit) {
+            // רק ביצירה הראשונה: אחרי שחזור ה-Activity (שינוי תצורה, חזרה מהרקע אחרי
+            // שהתהליך נהרג) אותו intent היה דורס שוב את מה שהמשתמש כבר ערך.
+            if (savedInstanceState == null) LaunchedEffect(Unit) {
                 sharedText(intent)?.let { viewModel.setText(it) }
             }
 

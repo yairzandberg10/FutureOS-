@@ -52,7 +52,8 @@ class RunTracker(private val context: Context) {
             val provider = when {
                 manager.isProviderEnabled(LocationManager.GPS_PROVIDER) -> LocationManager.GPS_PROVIDER
                 manager.isProviderEnabled(LocationManager.NETWORK_PROVIDER) -> LocationManager.NETWORK_PROVIDER
-                else -> return
+                // המיקום כבוי - קודם isTracking נשאר true והמסך "עקב" בלי לקבל כלום
+                else -> { isTracking = false; return }
             }
             manager.requestLocationUpdates(provider, 2000L, 3f, listener)
         } catch (e: SecurityException) {
@@ -71,9 +72,16 @@ class RunTracker(private val context: Context) {
 
     private val listener = LocationListener { location ->
         hasFix = true
+        // קיבוע לא מדויק (בתוך בניין, תחילת ריצה) קופץ עשרות מטרים הלוך וחזור,
+        // וכל קפיצה נספרה כמרחק - גם בעמידה במקום. מדלגים על קיבועים גרועים,
+        // ועל תזוזה קטנה מטווח השגיאה של שני הקיבועים.
+        if (location.hasAccuracy() && location.accuracy > MAX_ACCURACY_METERS) return@LocationListener
         val last = lastLocation
         if (last != null) {
-            distanceMeters += last.distanceTo(location)
+            val step = last.distanceTo(location)
+            val noise = maxOf(if (last.hasAccuracy()) last.accuracy else 0f, if (location.hasAccuracy()) location.accuracy else 0f)
+            if (step < noise / 2) return@LocationListener
+            distanceMeters += step
         }
         if (location.hasAltitude()) {
             val previousAltitude = if (last?.hasAltitude() == true) last.altitude else null
@@ -88,6 +96,10 @@ class RunTracker(private val context: Context) {
     }
 
     fun distanceKm(): Double = distanceMeters / 1000.0
+
+    private companion object {
+        const val MAX_ACCURACY_METERS = 35f
+    }
 
     /** קצב ריצה בדקות לק"מ - null אם עדיין אין מרחק משמעותי כדי לא להציג
      * ערך שקרי-מדויק בתחילת הריצה. */

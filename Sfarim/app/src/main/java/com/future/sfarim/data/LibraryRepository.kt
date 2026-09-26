@@ -47,23 +47,36 @@ class LibraryRepository(private val db: SQLiteDatabase) {
         SELECT id FROM ancestors
     """.trimIndent()
 
+    /**
+     * הקטגוריות שיש תוכן בתת-העץ שלהן. ה-CTE עובר על כל הספרים עם EXISTS על
+     * טבלת הקטעים, והוא רץ קודם מחדש בכל כניסה לקטגוריה - על DB של 2GB זה
+     * עיכוב מורגש בכל לחיצה. התוכן לא משתנה בזמן ריצה, אז מחשבים פעם אחת.
+     */
+    private val categoriesWithContent: Set<Long> by lazy {
+        db.rawQuery(hasContentSubquery, null).use { c ->
+            buildSet { while (c.moveToNext()) if (!c.isNull(0)) add(c.getLong(0)) }
+        }
+    }
+
     fun getChildCategories(parentId: Long?): List<LibraryCategory> {
         val cursor = if (parentId == null) {
             db.rawQuery(
                 "SELECT id, parent_id, name_en, name_he, sort_order FROM categories " +
-                    "WHERE parent_id IS NULL AND id IN ($hasContentSubquery) ORDER BY sort_order",
+                    "WHERE parent_id IS NULL ORDER BY sort_order",
                 null,
             )
         } else {
             db.rawQuery(
                 "SELECT id, parent_id, name_en, name_he, sort_order FROM categories " +
-                    "WHERE parent_id = ? AND id IN ($hasContentSubquery) ORDER BY sort_order",
+                    "WHERE parent_id = ? ORDER BY sort_order",
                 arrayOf(parentId.toString()),
             )
         }
+        val withContent = categoriesWithContent
         return cursor.use { c ->
             buildList {
                 while (c.moveToNext()) {
+                    if (c.getLong(0) !in withContent) continue
                     add(
                         LibraryCategory(
                             id = c.getLong(0),
@@ -213,8 +226,11 @@ class LibraryRepository(private val db: SQLiteDatabase) {
                 // בספר פשוט top_index הוא path[0], אז מצמצמים לפרק אחד דרך
                 // idx_segments_book_chapter במקום לסרוק את כל הספר לפי sort_order
                 // עד ההתאמה. לספר מורכב (יש לו שורות ב-chapters) top_index רץ ברצף.
-                val complex = db.rawQuery("SELECT 1 FROM chapters WHERE book_id = ? LIMIT 1", arrayOf(cand.id.toString()))
-                    .use { it.moveToFirst() }
+                // ב-DB ישן בלי טבלת chapters השאילתה הזו זרקה "no such table" ו"מפרשים"
+                // קרס - בדיוק המקרה ש-hasChaptersTable נועד להגן עליו.
+                val complex = hasChaptersTable &&
+                    db.rawQuery("SELECT 1 FROM chapters WHERE book_id = ? LIMIT 1", arrayOf(cand.id.toString()))
+                        .use { it.moveToFirst() }
                 val cursor = if (complex) db.rawQuery(
                     "SELECT id, top_index, text_he FROM segments WHERE book_id = ? AND path LIKE ? ORDER BY sort_order LIMIT 1",
                     arrayOf(cand.id.toString(), likePattern),

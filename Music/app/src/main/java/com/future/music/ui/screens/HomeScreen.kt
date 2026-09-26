@@ -86,7 +86,7 @@ fun HomeScreen(
     val itemFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
     LaunchedEffect(Unit) {
         val target = items.firstOrNull { it.digit == lastOpenedItemId } ?: items.firstOrNull()
-        target?.let { itemFocusRequesters.getOrPut(it.digit) { FocusRequester() }.requestFocus() }
+        target?.let { runCatching { itemFocusRequesters.getOrPut(it.digit) { FocusRequester() }.requestFocus() } }
     }
 
     Column(

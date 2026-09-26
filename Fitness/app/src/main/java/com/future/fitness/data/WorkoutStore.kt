@@ -37,15 +37,17 @@ class WorkoutStore(context: Context) {
 
     fun getHistory(): List<WorkoutHistoryEntry> {
         val raw = prefs.getString(KEY_HISTORY, null) ?: return emptyList()
-        val arr = JSONArray(raw)
+        // JSON פגום (כתיבה שנקטעה כשהדיסק מלא) הקריס קודם כל פתיחה של האפליקציה
+        val arr = runCatching { JSONArray(raw) }.getOrNull() ?: return emptyList()
         val result = mutableListOf<WorkoutHistoryEntry>()
         for (i in 0 until arr.length()) {
-            val o = arr.getJSONObject(i)
+            val o = arr.optJSONObject(i) ?: continue
+            if (!o.has("name") || !o.has("date")) continue
             result.add(
                 WorkoutHistoryEntry(
                     name = o.getString("name"),
-                    minutes = o.getInt("minutes"),
-                    calories = o.getInt("calories"),
+                    minutes = o.optInt("minutes"),
+                    calories = o.optInt("calories"),
                     dateMillis = o.getLong("date"),
                     avgHr = if (o.has("avgHr") && !o.isNull("avgHr")) o.getInt("avgHr") else null,
                     maxHr = if (o.has("maxHr") && !o.isNull("maxHr")) o.getInt("maxHr") else null,
@@ -90,19 +92,21 @@ class WorkoutStore(context: Context) {
         val editor = prefs.edit()
         editor.putInt(KEY_CALORIES_TODAY, 0)
         editor.putInt(KEY_MINUTES_TODAY, 0)
-        if (lastDay != null && !isYesterday(lastDay, today)) {
+        // הרצף נשבר לפי יום האימון האחרון, לא לפי היום האחרון שבו האפליקציה
+        // נפתחה: מי שפתח אותה כל יום בלי להתאמן שמר קודם על רצף ישן לנצח.
+        val lastWorkoutDay = prefs.getString(KEY_LAST_WORKOUT_DAY, null)
+        if (lastWorkoutDay == null || (lastWorkoutDay != today && !isYesterday(lastWorkoutDay, today))) {
             editor.putInt(KEY_STREAK, 0)
         }
         editor.putString(KEY_LAST_DAY, today)
         editor.apply()
     }
 
+    // לפי תאריכים ולא לפי הפרש מילישניות: ביום המעבר לשעון קיץ יש 23 שעות,
+    // החלוקה ב-24 יצאה 0 והרצף נשבר למרות אימון אתמול.
     private fun isYesterday(lastDay: String, today: String): Boolean {
         return try {
-            val last = dayFormat.parse(lastDay) ?: return false
-            val cur = dayFormat.parse(today) ?: return false
-            val diffDays = (cur.time - last.time) / (24 * 60 * 60 * 1000)
-            diffDays == 1L
+            java.time.LocalDate.parse(lastDay).plusDays(1) == java.time.LocalDate.parse(today)
         } catch (e: Exception) {
             false
         }
@@ -164,9 +168,9 @@ class WorkoutStore(context: Context) {
 
     fun getCustomWorkouts(): List<Workout> {
         val raw = prefs.getString(KEY_CUSTOM_WORKOUTS, null) ?: return emptyList()
-        val arr = JSONArray(raw)
+        val arr = runCatching { JSONArray(raw) }.getOrNull() ?: return emptyList()
         val result = mutableListOf<Workout>()
-        for (i in 0 until arr.length()) {
+        for (i in 0 until arr.length()) runCatching {
             val o = arr.getJSONObject(i)
             val exercisesJson = o.getJSONArray("exercises")
             val exercises = mutableListOf<Exercise>()

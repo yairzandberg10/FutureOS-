@@ -55,10 +55,17 @@ object FricasseStores {
         connection.doOutput = true
         connection.setRequestProperty("User-Agent", "FutureOS-Fricasse/1.0")
         connection.outputStream.use { it.write(("data=" + URLEncoder.encode(query, "UTF-8")).toByteArray()) }
-        val body = connection.inputStream.bufferedReader().use { it.readText() }
-        connection.disconnect()
+        val body = try {
+            // Overpass מחזיר 429/504 כשהוא עמוס - זו לא "אין רשת", אבל גם לא תוצאה
+            if (connection.responseCode !in 200..299) error("overpass ${connection.responseCode}")
+            connection.inputStream.bufferedReader().use { it.readText() }
+        } finally {
+            connection.disconnect()
+        }
         val stores = parse(body)
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY, body).apply()
+        // תשובה ריקה (שגיאת ריצה של Overpass מגיעה כ-JSON בלי elements) לא דורסת
+        // את הרשימה השמורה - קודם היא מחקה אותה, והמסך נשאר ריק גם בלי רשת.
+        if (stores.isNotEmpty()) context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY, body).apply()
         return stores
     }
 

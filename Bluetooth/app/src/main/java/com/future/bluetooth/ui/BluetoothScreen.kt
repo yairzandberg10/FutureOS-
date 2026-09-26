@@ -126,6 +126,16 @@ fun BluetoothApp(
         if (!controller.setEnabled(on) && on) actions.requestEnable()
     }
 
+    /** סריקה - כשהרדיו כבוי startDiscovery לא עושה כלום, וההודעה "מחפש" הטעתה. */
+    fun scan() {
+        if (!controller.isEnabled) {
+            snackbar.show("הבלוטות' כבוי")
+            return
+        }
+        controller.startDiscovery()
+        snackbar.show("מחפש מכשירים")
+    }
+
     /** פעולה שהמכשיר לא מאפשר מכאן נפתחת במסך של המערכת, עם הסבר קצר. */
     fun orSystem(ok: Boolean) {
         if (!ok) {
@@ -170,10 +180,7 @@ fun BluetoothApp(
                     onRenamePhone = { dialog = Dialog.RenamePhone },
                     onOpenDevice = openFromList,
                     onShowAll = { lastOpened = SHOW_ALL_ROW; showAllPaired = true },
-                    onScan = {
-                        controller.startDiscovery()
-                        snackbar.show("מחפש מכשירים")
-                    },
+                    onScan = ::scan,
                     onPair = { dialog = Dialog.Pair(it) },
                 )
             } else {
@@ -207,8 +214,7 @@ fun BluetoothApp(
             onDismiss = { menuOpen = false },
             onRefresh = {
                 controller.refreshState()
-                controller.startDiscovery()
-                snackbar.show("מחפש מכשירים")
+                scan()
             },
             onRenamePhone = { dialog = Dialog.RenamePhone },
             onReceivedFiles = { if (!actions.openReceivedFiles()) snackbar.show("אין קבצים שהתקבלו") },
@@ -254,7 +260,9 @@ fun BluetoothApp(
             onDismiss = { dialog = null },
             onConfirm = { name ->
                 dialog = null
-                if (controller.renameAdapter(name.trim())) snackbar.show("שם המכשיר עודכן")
+                // שם ריק היה נשלח כמו שהוא, והטלפון הופיע בלי שם אצל מכשירים אחרים
+                if (name.isBlank()) snackbar.show("השם לא יכול להיות ריק")
+                else if (controller.renameAdapter(name.trim())) snackbar.show("שם המכשיר עודכן")
                 else snackbar.show("השם לא עודכן")
             },
         )
@@ -265,8 +273,12 @@ fun BluetoothApp(
             onDismiss = { dialog = null },
             onConfirm = { name ->
                 dialog = null
-                controller.renameDevice(d.device.address, name.trim())
-                snackbar.show("השם עודכן")
+                if (name.isBlank()) {
+                    snackbar.show("השם לא יכול להיות ריק")
+                } else {
+                    controller.renameDevice(d.device.address, name.trim())
+                    snackbar.show("השם עודכן")
+                }
             },
         )
         null -> Unit

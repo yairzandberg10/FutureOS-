@@ -38,10 +38,28 @@ object ZmanimCalculator {
             sunrise.plusMinutes((shaahZmanitMinutes * 3).toLong())
         } else null
 
-        val candleLighting = if (date.dayOfWeek == DayOfWeek.FRIDAY && sunset != null) sunset.minusMinutes(18) else null
+        val candleLighting = if (date.dayOfWeek == DayOfWeek.FRIDAY && sunset != null) sunset.minusMinutes(candleLightingMinutes(lat, lon)) else null
         val motzeiShabbat = if (date.dayOfWeek == DayOfWeek.SATURDAY && sunset != null) sunset.plusMinutes(40) else null
 
         return DayZmanim(sunrise, sunset, chatzot, sofZmanShema, candleLighting, motzeiShabbat)
+    }
+
+    /**
+     * כמה דקות לפני השקיעה מדליקים נרות: 40 בירושלים ו-30 בחיפה לפי המנהג
+     * המקובל, 18 בשאר הארץ. קודם 18 לכולם - בירושלים זה הקדים ב-22 דקות את
+     * השעה שכל לוח שנה ישראלי מציג.
+     */
+    private fun candleLightingMinutes(lat: Double, lon: Double): Long = when {
+        near(lat, lon, 31.7683, 35.2137) -> 40
+        near(lat, lon, 32.7940, 34.9896) -> 30
+        else -> 18
+    }
+
+    /** בערך 15 ק"מ - מספיק כדי לכלול את העיר ולא את הערים הסמוכות. */
+    private fun near(lat: Double, lon: Double, cLat: Double, cLon: Double): Boolean {
+        val dLat = (lat - cLat) * 111.0
+        val dLon = (lon - cLon) * 111.0 * cos(Math.toRadians(cLat))
+        return dLat * dLat + dLon * dLon < 15.0 * 15.0
     }
 
     private fun midpoint(a: LocalTime, b: LocalTime): LocalTime {
@@ -93,13 +111,10 @@ object ZmanimCalculator {
         val solarNoonMinutesUtc = 720.0 - 4.0 * lon - eqTimeMinutes
         val eventMinutesUtc = if (rising) solarNoonMinutesUtc - 4.0 * hourAngleDeg else solarNoonMinutesUtc + 4.0 * hourAngleDeg
 
-        val offsetHours = zone.rules.getOffset(date.atStartOfDay(zone).toInstant()).totalSeconds / 3600.0
-        var localMinutes = eventMinutesUtc + offsetHours * 60.0
-        localMinutes = ((localMinutes % 1440.0) + 1440.0) % 1440.0
-
-        val hour = (localMinutes / 60.0).toInt().coerceIn(0, 23)
-        val minute = (localMinutes % 60.0).toInt().coerceIn(0, 59)
-        return LocalTime.of(hour, minute)
+        // ההפרש מ-UTC נלקח ברגע האירוע עצמו ולא בחצות: ביום המעבר לשעון קיץ/חורף
+        // (בישראל ב-02:00) הזריחה והשקיעה יצאו קודם בהפרש של שעה.
+        val eventInstant = date.atStartOfDay(ZoneId.of("UTC")).toInstant().plusSeconds((eventMinutesUtc * 60.0).toLong())
+        return eventInstant.atZone(zone).toLocalTime().withSecond(0).withNano(0)
     }
 
     private fun julianDay(date: LocalDate): Double {

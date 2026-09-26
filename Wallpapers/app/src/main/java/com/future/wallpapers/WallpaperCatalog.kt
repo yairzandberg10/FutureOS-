@@ -131,16 +131,28 @@ object ImageLoader {
         memory.get(url)?.let { return it }
         val file = File(File(context.cacheDir, "images").apply { mkdirs() }, sha1(url))
         if (!file.exists()) {
+            // הורדה לקובץ זמני ייחודי ואז rename: הורדה שנקטעה (תהליך נהרג, רשת נפלה)
+            // השאירה קודם קובץ חתוך בשם הסופי, ושתי טעינות במקביל של אותה תמונה (רשת
+            // + תצוגה מלאה) כתבו לאותו קובץ בו-זמנית.
+            val tmp = File(file.parentFile, "${file.name}.${Thread.currentThread().id}.part")
             try {
                 val connection = URL(url).openConnection() as HttpURLConnection
-                connection.connectTimeout = 10_000
-                connection.readTimeout = 20_000
-                connection.instanceFollowRedirects = true
-                connection.inputStream.use { input -> file.outputStream().use { input.copyTo(it) } }
-                connection.disconnect()
+                try {
+                    connection.connectTimeout = 10_000
+                    connection.readTimeout = 20_000
+                    connection.instanceFollowRedirects = true
+                    // דף שגיאה (404/500) לא נשמר במטמון כאילו היה תמונה
+                    if (connection.responseCode !in 200..299) return null
+                    connection.inputStream.use { input -> tmp.outputStream().use { input.copyTo(it) } }
+                } finally {
+                    connection.disconnect()
+                }
+                if (!tmp.renameTo(file) && !file.exists()) return null
+                trimDiskCache(file.parentFile!!)
             } catch (e: Exception) {
-                file.delete()
                 return null
+            } finally {
+                tmp.delete()
             }
         }
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
@@ -154,6 +166,20 @@ object ImageLoader {
         memory.put(url, bitmap)
         return bitmap
     }
+
+    /** מטמון הדיסק גדל בלי גבול (כל רקע שנצפה); שומרים את ה-[DISK_LIMIT] האחרונים. */
+    private fun trimDiskCache(dir: File) {
+        val files = dir.listFiles { f -> !f.name.endsWith(".part") } ?: return
+        var total = files.sumOf { it.length() }
+        if (total <= DISK_LIMIT) return
+        for (f in files.sortedBy { it.lastModified() }) {
+            if (total <= DISK_LIMIT) break
+            total -= f.length()
+            f.delete()
+        }
+    }
+
+    private const val DISK_LIMIT = 60L * 1024 * 1024
 
     private fun sha1(text: String): String =
         MessageDigest.getInstance("SHA-1").digest(text.toByteArray()).joinToString("") { "%02x".format(it) }

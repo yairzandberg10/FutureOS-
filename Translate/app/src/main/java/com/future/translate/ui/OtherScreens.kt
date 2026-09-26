@@ -357,7 +357,8 @@ fun TalkScreen(
             onDismiss = { typing = false },
             onConfirm = { typed ->
                 typing = false
-                viewModel.addTalkLine(typed.trim())
+                // אישור על שדה ריק הוסיף בועה ריקה ו"תרגם" אותה
+                if (typed.isNotBlank()) viewModel.addTalkLine(typed.trim())
             },
         )
     }

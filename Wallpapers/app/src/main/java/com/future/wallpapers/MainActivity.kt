@@ -131,11 +131,14 @@ private fun WallpapersApp(theme: FutureTheme) {
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    itemsIndexed(shown, key = { _, w -> w.id }) { index, wallpaper ->
+                    // אחרי מעבר קטגוריה הרקע האחרון שנבחר כבר לא ברשימה - אז אף תמונה לא
+                    // קיבלה את ה-FocusRequester והפוקוס נשאר תקוע על הצ'יפים.
+                    val focusId = lastFocused?.takeIf { id -> shown.any { it.id == id } } ?: shown.firstOrNull()?.id
+                    itemsIndexed(shown, key = { _, w -> w.id }) { _, wallpaper ->
                         Thumbnail(
                             wallpaper = wallpaper,
                             theme = theme,
-                            focusRequester = if (wallpaper.id == lastFocused || (lastFocused == null && index == 0)) first else null,
+                            focusRequester = if (wallpaper.id == focusId) first else null,
                             onClick = { lastFocused = wallpaper.id; preview = wallpaper },
                         )
                     }
@@ -199,6 +202,8 @@ private fun PreviewScreen(wallpaper: Wallpaper, theme: FutureTheme) {
     onOptionsKeyPress { if (bitmap != null) menuOpen = !menuOpen }
 
     fun apply(target: Target) {
+        // גם מהתפריט - לא רק מ-OK - לא מתחילים הגדרה שנייה באמצע הראשונה
+        if (applying) return
         val b = bitmap ?: return
         applying = true
         scope.launch {

@@ -39,7 +39,7 @@ import com.future.sharednav.theme.FutureTheme
 @Composable
 fun PermissionScreen(theme: FutureTheme, onRequestPermission: () -> Unit) {
     val buttonFocusRequester = remember { FocusRequester() }
-    LaunchedEffect(Unit) { buttonFocusRequester.requestFocus() }
+    LaunchedEffect(Unit) { runCatching { buttonFocusRequester.requestFocus() } }
 
     Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor), contentAlignment = Alignment.Center) {
         Column(modifier = Modifier.padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally) {

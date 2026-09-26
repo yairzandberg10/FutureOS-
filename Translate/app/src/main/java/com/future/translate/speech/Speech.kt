@@ -1,5 +1,6 @@
 package com.future.translate.speech
 
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -71,7 +72,22 @@ class Speaker(context: Context) {
  * בלי שירות כזה [available] הוא false, ומצב השיחה עובר להקלדה.
  */
 class Listener(private val context: Context) {
-    val available: Boolean = SpeechRecognizer.isRecognitionAvailable(context)
+    /**
+     * שירות התמלול המקומי של העוזר הקולי (Whisper, רב-לשוני), אם מותקן - כמו
+     * במקלדת ובהודעות. ברירת המחדל של המערכת במכשיר היא של Google, שפותחת UI
+     * משלה או לא זמינה בלי רשת/חשבון.
+     */
+    private val assistantService: ComponentName? = try {
+        context.packageManager
+            .queryIntentServices(Intent("android.speech.RecognitionService").setPackage("com.future.assistant"), 0)
+            .firstOrNull()
+            ?.serviceInfo
+            ?.let { ComponentName(it.packageName, it.name) }
+    } catch (e: Exception) {
+        null
+    }
+
+    val available: Boolean = assistantService != null || SpeechRecognizer.isRecognitionAvailable(context)
 
     private val _listening = MutableStateFlow(false)
     val listening: StateFlow<Boolean> = _listening.asStateFlow()
@@ -85,7 +101,8 @@ class Listener(private val context: Context) {
             return
         }
         stop()
-        val r = SpeechRecognizer.createSpeechRecognizer(context)
+        val r = assistantService?.let { SpeechRecognizer.createSpeechRecognizer(context, it) }
+            ?: SpeechRecognizer.createSpeechRecognizer(context)
         recognizer = r
         r.setRecognitionListener(object : RecognitionListener {
             override fun onReadyForSpeech(params: Bundle?) {

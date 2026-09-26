@@ -9,6 +9,7 @@ import com.future.sharednav.components.FutureSpinner
 import com.future.sharednav.theme.FutureDimens
 import com.future.sharednav.theme.mutedTextColor
 import com.future.sharednav.theme.subtleTextColor
+import com.future.sharednav.theme.readableAccentColor
 import androidx.compose.foundation.layout.Arrangement
 
 import com.future.sharednav.theme.FutureTypography
@@ -89,6 +90,7 @@ fun ReaderScreen(
     // ואז נגזר מ-section_names כמו תמיד.
     chapterLabel: String? = null,
     segments: List<LibrarySegment>,
+    focusSegmentId: Long? = null,
     // true כל עוד שאילתת הקטעים עדיין רצה. בלי זה, "אין תוכן זמין בפרק זה"
     // מוצג בכל כניסה לפרק בזמן הקריאה מה-DB (קובץ של ~2GB על אחסון של מכשיר
     // בסיסי) - הודעת שגיאה על מצב תקין לגמרי.
@@ -108,7 +110,8 @@ fun ReaderScreen(
     // גודל הגופן נשמר בין פתיחות ספר. קודם הוא היה remember בלבד, כלומר
     // ההתאמה שהמשתמש עשה נעלמה בכל כניסה מחדש - באפליקציית קריאה זו בדיוק
     // ההגדרה שאי אפשר לאבד.
-    val readerPrefs = LocalContext.current.getSharedPreferences("sfarim_reader_prefs", android.content.Context.MODE_PRIVATE)
+    val prefsContext = LocalContext.current
+    val readerPrefs = remember { prefsContext.getSharedPreferences("sfarim_reader_prefs", android.content.Context.MODE_PRIVATE) }
     var fontSize by remember { mutableStateOf(readerPrefs.getFloat("font_size", 18f)) }
     LaunchedEffect(fontSize) { readerPrefs.edit().putFloat("font_size", fontSize).apply() }
     var menuSegment by remember { mutableStateOf<LibrarySegment?>(null) }
@@ -134,15 +137,24 @@ fun ReaderScreen(
     val pageFocusRequester = remember { FocusRequester() }
     val firstSegmentFocusRequester = remember(book.id, topIndex) { FocusRequester() }
 
-    LaunchedEffect(book.id, topIndex) {
-        segments.firstOrNull()?.let { onSegmentShown(it) }
+    // גם לפי הקטע הראשון: בכניסה לפרק הקטעים עוד נטענים (רשימה ריקה), והאפקט
+    // רץ רק פעם אחת - כך שבספר שוטף (גמרא) ההתקדמות לא נשמרה בכלל.
+    // הקטע שנפתחים עליו (אם נמצא בפרק), אחרת הראשון
+    val focusIndex = remember(segments, focusSegmentId) {
+        segments.indexOfFirst { it.id == focusSegmentId }.coerceAtLeast(0)
+    }
+
+    LaunchedEffect(book.id, topIndex, segments.firstOrNull()?.id) {
+        segments.getOrNull(focusIndex)?.let { onSegmentShown(it) }
     }
 
     LaunchedEffect(book.id, topIndex, book.isVerseStyle, segments.firstOrNull()?.id) {
-        if (!book.isVerseStyle) {
-            pageFocusRequester.requestFocus()
-        } else if (segments.isNotEmpty()) {
-            firstSegmentFocusRequester.requestFocus()
+        // בזמן הטעינה העמוד עצמו לא מורכב (מוצג "טוען"), ו-requestFocus על
+        // FocusRequester שלא מחובר זורק - קריסה בכל כניסה לפרק בספר שוטף.
+        if (segments.isEmpty()) return@LaunchedEffect
+        if (book.isVerseStyle && focusIndex > 0) listState.scrollToItem(focusIndex)
+        runCatching {
+            if (!book.isVerseStyle) pageFocusRequester.requestFocus() else firstSegmentFocusRequester.requestFocus()
         }
     }
 
@@ -215,7 +227,7 @@ fun ReaderScreen(
                                 fontSize = fontSize,
                                 isBookmarked = segment.id in bookmarkedSegmentIds,
                                 theme = theme,
-                                focusRequester = if (index == 0) firstSegmentFocusRequester else null,
+                                focusRequester = if (index == focusIndex) firstSegmentFocusRequester else null,
                                 onFocusedShown = { onSegmentShown(segment) },
                                 onMenu = { menuSegment = segment },
                             )
@@ -281,7 +293,7 @@ fun ReaderScreen(
                     onShare = {
                         showPageMenu = false
                         val fullText = segments.joinToString("\n\n") { stripHtmlTags(it.textHe) }
-                        shareText(context, "${book.displayTitle} · $chapterLabel\n\n$fullText")
+                        shareText(context, "${book.displayTitle} · $displayChapterLabel\n\n$fullText")
                     },
                     onShowCommentaries = {
                         showPageMenu = false
@@ -339,8 +351,8 @@ private fun SegmentRow(
             .fillMaxWidth()
             .graphicsLayer { scaleX = scale; scaleY = scale }
             .clip(shape)
-            .background(if (isFocused) theme.accentColor.copy(alpha = 0.12f) else Color.Transparent)
-            .then(if (isFocused) Modifier.border(width = 1.5.dp, color = theme.accentColor, shape = shape) else Modifier)
+            .background(if (isFocused) theme.readableAccentColor.copy(alpha = 0.12f) else Color.Transparent)
+            .then(if (isFocused) Modifier.border(width = FutureDimens.focusBorderItem, color = theme.readableAccentColor, shape = shape) else Modifier)
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             // לחיצת OK/מרכז הייתה no-op בלי שום רמז על המסך - עכשיו פותחת את
             // אותו תפריט אפשרויות (סימניה/שיתוף/פרשנים) שמקש Menu כבר מספק,

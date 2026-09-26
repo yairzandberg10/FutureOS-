@@ -132,7 +132,9 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            val eventsByDate = remember(events) { events.groupBy { it.startDate } }
+            val eventsByDate = remember(events) {
+                events.flatMap { e -> e.days.map { it to e } }.groupBy({ it.first }, { it.second })
+            }
 
             BackHandler(enabled = editorState != null || settingsPage != 0 || viewMode != CalendarViewMode.MONTH) {
                 when {
@@ -171,7 +173,11 @@ class MainActivity : ComponentActivity() {
             }
 
             fun saveEvent(date: LocalDate, editing: CalendarEvent?, title: String, description: String, location: String, startHour: Int, startMinute: Int, endHour: Int, endMinute: Int, allDay: Boolean) {
-                if (title.isBlank()) { editorState = null; return }
+                if (title.isBlank()) {
+                    // קודם הדיאלוג נסגר בשקט וכל מה שהוקלד (מיקום, תיאור) אבד
+                    android.widget.Toast.makeText(this@MainActivity, "צריך כותרת לאירוע", android.widget.Toast.LENGTH_SHORT).show()
+                    return
+                }
                 val startMillis: Long
                 val endMillis: Long
                 if (allDay) {
@@ -185,11 +191,15 @@ class MainActivity : ComponentActivity() {
                 }
 
                 if (editing != null) {
-                    repository.updateEvent(editing.id, title, description, location, startMillis, endMillis, allDay)
+                    if (!repository.updateEvent(editing.id, title, description, location, startMillis, endMillis, allDay, editing.isRecurring)) {
+                        android.widget.Toast.makeText(this@MainActivity, "השינויים לא נשמרו", android.widget.Toast.LENGTH_SHORT).show()
+                    }
                 } else {
                     val calendarId = repository.getDefaultWritableCalendarId()
                     if (calendarId != null) {
-                        repository.addEvent(calendarId, title, description, location, startMillis, endMillis, allDay)
+                        if (repository.addEvent(calendarId, title, description, location, startMillis, endMillis, allDay) == null) {
+                            android.widget.Toast.makeText(this@MainActivity, "האירוע לא נשמר", android.widget.Toast.LENGTH_SHORT).show()
+                        }
                     } else {
                         android.widget.Toast.makeText(this@MainActivity, "לא נמצא לוח שנה זמין לשמירה - האירוע לא נשמר", android.widget.Toast.LENGTH_SHORT).show()
                     }
@@ -268,7 +278,8 @@ class MainActivity : ComponentActivity() {
                             viewMode = CalendarViewMode.MONTH
                         },
                         onAddEvent = { editorState = selectedDate to null },
-                        onEditEvent = { editorState = selectedDate to it },
+                        // תאריך האירוע עצמו - אירוע רב-יומי שנפתח מאמצע התקופה "זז" קודם ליום שנבחר
+                        onEditEvent = { editorState = it.startDate to it },
                         onDeleteEvent = { pendingDelete = it },
                         onGoToday = {
                             currentMonth = YearMonth.from(today)
@@ -290,13 +301,15 @@ class MainActivity : ComponentActivity() {
             // של אירוע ודיאלוג העריכה) - שניהם עוברים דרך אישור אחד כאן.
             pendingDelete?.let { event ->
                 ConfirmDialog(
-                    message = "למחוק את האירוע \"${event.title}\"?",
+                    message = if (event.isRecurring) "למחוק את כל המופעים של \"${event.title}\"?" else "למחוק את האירוע \"${event.title}\"?",
                     surfaceColor = theme.surfaceColor,
                     textColor = theme.textColor,
                     dangerColor = theme.dangerColor,
                     onCancel = { pendingDelete = null },
                     onConfirm = {
-                        repository.deleteEvent(event.id)
+                        if (!repository.deleteEvent(event.id)) {
+                            android.widget.Toast.makeText(this@MainActivity, "האירוע לא נמחק", android.widget.Toast.LENGTH_SHORT).show()
+                        }
                         pendingDelete = null
                         editorState = null
                         refreshEvents()

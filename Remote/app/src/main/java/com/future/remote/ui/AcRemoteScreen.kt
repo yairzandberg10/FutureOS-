@@ -29,6 +29,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -89,15 +92,30 @@ fun AcRemoteScreen(theme: FutureTheme, device: RemoteDevice, onBack: () -> Unit)
     var showMenu by remember { mutableStateOf(false) }
     onOptionsKeyPress { showMenu = true }
 
+    val scope = rememberCoroutineScope()
     fun send(next: AcState) {
         state = next
         repository.updateDevice(device.id) { it.copy(acState = next, acProtocol = protocol) }
-        val ok = ir.isAvailable && ir.transmit(AcProtocols.CARRIER_HZ, AcProtocols.encode(protocol, next))
-        if (ok) buzz(context) else Toast.makeText(context, "אין משדר אינפרא-אדום", Toast.LENGTH_SHORT).show()
+        val pattern = AcProtocols.encode(protocol, next)
+        // transmit חוסם עד סוף השידור (עד ~200ms בפרוטוקולים הארוכים); על ה-main
+        // thread, עם חזרת מקש (החזקת 2), זה הקפיא את המסך. שליחות עוברות בתור
+        // יחיד ברקע כדי שהסדר יישמר.
+        scope.launch {
+            val hasEmitter = ir.isAvailable
+            val ok = withContext(irDispatcher) { hasEmitter && ir.transmit(AcProtocols.CARRIER_HZ, pattern) }
+            when {
+                ok -> buzz(context)
+                !hasEmitter -> Toast.makeText(context, "אין משדר אינפרא-אדום", Toast.LENGTH_SHORT).show()
+                else -> Toast.makeText(context, "השליחה נכשלה", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     fun power() = send(state.copy(power = !state.power))
-    fun temp(delta: Int) = send(state.copy(power = true, temp = (state.temp + delta).coerceIn(AcProtocols.MIN_TEMP, AcProtocols.MAX_TEMP)))
+    fun temp(delta: Int) {
+        val range = AcProtocols.tempRange(protocol)
+        send(state.copy(power = true, temp = (state.temp.coerceIn(range) + delta).coerceIn(range)))
+    }
     fun mode() = send(state.copy(power = true, mode = AcMode.entries[(state.mode.ordinal + 1) % AcMode.entries.size]))
     fun fan() = send(state.copy(power = true, fan = AcFan.entries[(state.fan.ordinal + 1) % AcFan.entries.size]))
     fun swing() = send(state.copy(power = true, swing = !state.swing))
@@ -253,6 +271,10 @@ private fun modeIcon(mode: AcMode): ImageVector = when (mode) {
     AcMode.DRY -> Icons.Rounded.WaterDrop
     AcMode.AUTO -> Icons.Rounded.AutoMode
 }
+
+/** תור יחיד לשידורי IR: שידורים לא נחתכים זה בזה ויוצאים לפי סדר הלחיצות. */
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+private val irDispatcher = kotlinx.coroutines.Dispatchers.IO.limitedParallelism(1)
 
 private fun buzz(context: Context) {
     runCatching {

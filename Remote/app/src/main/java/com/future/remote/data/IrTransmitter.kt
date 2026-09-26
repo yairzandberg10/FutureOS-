@@ -14,9 +14,15 @@ class IrTransmitter(context: Context) {
             false
         }
 
+    /**
+     * שולח ומחזיר אם השליחה הצליחה. חוסם עד סוף השידור (עשרות עד מאות ms) -
+     * לקרוא מחוץ ל-main thread. בלי משדר מחזיר false (קודם: `manager?.transmit`
+     * החזיר null בשקט והפונקציה דיווחה הצלחה).
+     */
     fun transmit(carrierFrequencyHz: Int, pattern: IntArray): Boolean {
+        val m = manager ?: return false
         return try {
-            manager?.transmit(carrierFrequencyHz, pattern)
+            m.transmit(carrierFrequencyHz, pattern)
             true
         } catch (e: Exception) {
             false

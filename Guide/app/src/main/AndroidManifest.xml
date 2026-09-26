@@ -37,6 +37,7 @@
         <package android:name="com.future.flashlight" />
         <package android:name="com.future.frixa" />
         <package android:name="com.future.wallpapers" />
+        <package android:name="com.future.recorder" />
     </queries>
 
     <uses-permission android:name="com.future.futureui.permission.SYSTEM_SETTINGS" />

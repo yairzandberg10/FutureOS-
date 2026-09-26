@@ -126,7 +126,45 @@ class PlayerController(private val context: Context) {
         controller?.let { refreshState(it) }
     }
 
+    /**
+     * כשהאפליקציה נפתחת מחדש בזמן שהשירות עדיין מנגן, ה-PlayerController חדש
+     * והתור שלו ריק - המסך הראה "לא מתנגן כלום", ושחזור "המשך מהיכן שהפסקת"
+     * קרא ל-setMediaItems ועצר את השיר שהתנגן באמצע. בונים את התור מהנגן עצמו.
+     */
+    private fun syncQueueFrom(player: Player) {
+        if (currentQueue.size == player.mediaItemCount) return
+        currentQueue = (0 until player.mediaItemCount).map { player.getMediaItemAt(it).toSong() }
+    }
+
+    /** מחליף את שירי התור המשוחזרים (בלי אלבום/משך) בשירים המלאים מהספרייה. */
+    fun adoptLibrary(library: List<Song>) {
+        if (currentQueue.isEmpty() || library.isEmpty()) return
+        val byId = library.associateBy { it.id }
+        val updated = currentQueue.map { byId[it.id] ?: it }
+        if (updated != currentQueue) {
+            currentQueue = updated
+            controller?.let { refreshState(it) }
+        }
+    }
+
+    private fun MediaItem.toSong(): Song {
+        val id = mediaId.toLongOrNull() ?: -1L
+        val uri = localConfiguration?.uri
+            ?: if (id >= 0) android.content.ContentUris.withAppendedId(android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, id)
+            else android.net.Uri.EMPTY
+        return Song(
+            id = id,
+            uri = uri,
+            title = mediaMetadata.title?.toString().orEmpty(),
+            artist = mediaMetadata.artist?.toString().orEmpty(),
+            album = mediaMetadata.albumTitle?.toString().orEmpty(),
+            albumId = -1L,
+            durationMs = 0L,
+        )
+    }
+
     private fun refreshState(player: Player) {
+        syncQueueFrom(player)
         val index = player.currentMediaItemIndex
         state = PlayerUiState(
             currentSong = currentQueue.getOrNull(index),

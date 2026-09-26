@@ -69,6 +69,9 @@ import kotlinx.coroutines.withContext
 
 data class TerminalLine(val text: String, val isCommand: Boolean)
 
+private const val MAX_LINES = 2000
+private const val MAX_HISTORY = 50
+
 class MainActivity : ComponentActivity() {
     // המכשיר האמיתי הוא מקלדת T9 בלבד בלי מסך מגע - מבטלים קלט מגע לגמרי כדי
     // שההתנהגות תישאר תואמת לחומרה האמיתית. לא פוגע בניווט/הפעלה במקשים -
@@ -91,6 +94,8 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             var cwd by remember { mutableStateOf("/sdcard") }
+            var previousCwd by remember { mutableStateOf("/sdcard") }
+            val history = remember { mutableStateListOf<String>() }
             var input by remember { mutableStateOf("") }
             val lines = remember { mutableStateListOf<TerminalLine>() }
             val listState = rememberLazyListState()
@@ -132,28 +137,49 @@ class MainActivity : ComponentActivity() {
                 val cmd = cmdRaw.trim()
                 if (cmd.isEmpty() || isRunning) return
                 lines.add(TerminalLine("$cwd $ $cmd", isCommand = true))
+                if (history.lastOrNull() != cmd) history.add(cmd)
+                if (history.size > MAX_HISTORY) history.removeAt(0)
                 input = ""
                 isRunning = true
+                val dir = cwd
                 scope.launch {
+                    var newCwd: String? = null
                     val output = withContext(Dispatchers.IO) {
                         when {
                             cmd == "clear" -> null
                             cmd.startsWith("cd ") || cmd == "cd" -> {
-                                val target = cmd.removePrefix("cd").trim()
-                                val newDir = shell.runCommand(
-                                    "cd \"$cwd\" 2>/dev/null; cd \"${target.ifBlank { "/sdcard" }}\" 2>/dev/null && pwd"
+                                // "~" ו-"cd" לבד מובילים ל-/sdcard (הבית של המשתמש כאן); "cd -"
+                                // חוזר לתיקייה הקודמת. היעד מצוטט בגרשיים בודדים - בגרשיים
+                                // כפולים "~" לא הורחב בכלל ונתיב עם " שבר את הפקודה.
+                                val target = cmd.removePrefix("cd").trim().let {
+                                    when {
+                                        it.isBlank() || it == "~" -> "/sdcard"
+                                        it.startsWith("~/") -> "/sdcard/" + it.removePrefix("~/")
+                                        it == "-" -> previousCwd
+                                        else -> it
+                                    }
+                                }
+                                val result = shell.runCommand(
+                                    "cd ${shellQuote(dir)} 2>/dev/null; cd ${shellQuote(target)} && pwd"
                                 ).trim()
-                                if (newDir.isNotBlank()) cwd = newDir
-                                ""
+                                // pwd מחזיר נתיב מוחלט; כל דבר אחר הוא הודעת שגיאה של cd
+                                if (result.startsWith("/") && !result.contains('\n')) {
+                                    newCwd = result
+                                    ""
+                                } else result
                             }
-                            else -> shell.runCommand("cd \"$cwd\" 2>/dev/null; $cmd")
+                            else -> shell.runCommand("cd ${shellQuote(dir)} 2>/dev/null; $cmd")
                         }
                     }
+                    // מצב Compose משתנה רק כאן, על ה-main thread (לא מתוך Dispatchers.IO)
+                    newCwd?.let { if (it != cwd) { previousCwd = cwd; cwd = it } }
                     if (cmd == "clear") {
                         lines.clear()
                     } else if (!output.isNullOrBlank()) {
                         lines.add(TerminalLine(output.trimEnd('\n'), isCommand = false))
                     }
+                    // היסטוריה ארוכה בלי הגבלה (למשל logcat) ממלאת את הזיכרון ומאטה את הרשימה
+                    if (lines.size > MAX_LINES) lines.removeRange(0, lines.size - MAX_LINES)
                     isRunning = false
                     listState.animateScrollToItem((lines.size - 1).coerceAtLeast(0))
                 }
@@ -286,6 +312,15 @@ class MainActivity : ComponentActivity() {
                         TerminalOptionsMenu(
                             theme = theme,
                             onDismiss = { showMenu = false },
+                            // אין חיצים למעלה/למטה פנויים (הם מנווטים), אז שחזור פקודה
+                            // קודמת - הדבר הנפוץ ביותר בטרמינל - עובר דרך התפריט.
+                            onRecallLast = history.lastOrNull()?.let { last ->
+                                {
+                                    showMenu = false
+                                    input = last
+                                    runCatching { inputFocusRequester.requestFocus() }
+                                }
+                            },
                             onClear = {
                                 showMenu = false
                                 lines.clear()
@@ -329,8 +364,9 @@ private fun TerminalIconButton(
 }
 
 @Composable
-private fun TerminalOptionsMenu(theme: FutureTheme, onDismiss: () -> Unit, onClear: () -> Unit, onCopyLastOutput: () -> Unit, onShareHistory: () -> Unit) {
+private fun TerminalOptionsMenu(theme: FutureTheme, onDismiss: () -> Unit, onRecallLast: (() -> Unit)?, onClear: () -> Unit, onCopyLastOutput: () -> Unit, onShareHistory: () -> Unit) {
     FutureOptionsMenu(theme = theme, onDismissRequest = onDismiss, header = "טרמינל") {
+        if (onRecallLast != null) FutureMenuRow("פקודה קודמת", FutureIcons.Refresh, theme, onRecallLast)
         FutureMenuRow("העתק פלט אחרון", FutureIcons.ContentCopy, theme, onCopyLastOutput)
         FutureMenuRow("שתף היסטוריה", FutureIcons.Share, theme, onShareHistory)
         FutureMenuRow("נקה היסטוריה", FutureIcons.Delete, theme, onClear, destructive = true)
