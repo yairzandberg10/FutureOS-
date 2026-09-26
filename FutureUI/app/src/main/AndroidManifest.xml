@@ -34,6 +34,9 @@
         android:protectionLevel="signature" />
 
     <uses-permission android:name="com.future.keyboard.permission.SETTINGS" />
+    <!-- מקשי CALL/ENDCALL נשלחים ל-dialer (CallActionReceiver), שדורש את ההרשאה הזו
+         מהשולח. SystemUI (עותק) שומר את השם הזה כמו שהוא - ר' sync-from-futureui.sh. -->
+    <uses-permission android:name="com.future.futureui.permission.SYSTEM_SETTINGS" />
 
     <!-- חלון השיתוף צריך לראות את כל האפליקציות שמקבלות שיתוף -->
     <queries>
@@ -137,6 +140,20 @@
             android:theme="@style/Theme.FutureUI.Translucent">
             <intent-filter>
                 <action android:name="com.future.futureui.ACTION_SHARE" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <!-- הגדרות מסך הנעילה. דורש את הקוד הנוכחי לפני כל שינוי; מיוצא כדי
+             שאפליקציית ההגדרות תוכל לפתוח אותו ב-ACTION_LOCK_SETTINGS. -->
+        <activity
+            android:name=".lockscreen.settings.LockSettingsActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:label="מסך נעילה"
+            android:theme="@style/Theme.FutureUI">
+            <intent-filter>
+                <action android:name="com.future.futureui.ACTION_LOCK_SETTINGS" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>

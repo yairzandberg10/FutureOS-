@@ -57,6 +57,8 @@ class MediaControlService : NotificationListenerService() {
      * התראות "מתמשכות" (למשל התקדמות נגן מוזיקה, שירותים ברקע), והכל כשה-DND פעיל. */
     private fun shouldShowHeadsUp(sbn: StatusBarNotification): Boolean {
         if (sbn.packageName == packageName) return false
+        // במסך הנעילה ההתראה מופיעה ברשימה שלו (עם הגדרת הפרטיות) - לא כבאנר
+        if (com.future.futureui.utils.FutureUIState.isLocked) return false
         val n = sbn.notification
         // שיחה נכנסת היא "מתמשכת" (isOngoing) לכל אורך הצלצול, אבל היא בדיוק ההפך
         // מהתראות מתמשכות רגילות (התקדמות נגן וכו') שהמסנן הזה נועד לחסום - היא

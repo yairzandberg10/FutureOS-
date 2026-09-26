@@ -95,6 +95,8 @@ class ControlCenterAccessibilityService : AccessibilityService(), LifecycleOwner
     override fun onInterrupt() {}
 
     override fun onKeyEvent(event: KeyEvent): Boolean {
+        // מסך הנעילה מוצג - הוא מטפל בכל המקשים
+        if (com.future.futureui.utils.FutureUIState.isLocked) return false
         val keyCode = event.keyCode
         val action = event.action
 

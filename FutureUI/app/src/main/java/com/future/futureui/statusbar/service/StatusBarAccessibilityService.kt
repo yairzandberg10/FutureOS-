@@ -65,6 +65,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
     private val recentAppsManager by lazy { RecentAppsManager(this) }
     private val recentsMemory = mutableStateOf<String?>(null)
     private var recentAppsTriggered = false
+    private var lockController: com.future.futureui.lockscreen.LockScreenController? = null
     private val recentAppsRunnable = Runnable {
         recentAppsTriggered = true
         showRecentAppsWithFreshSnapshot()
@@ -94,6 +95,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
                 FutureUIActions.ACTION_BRING_STATUS_BAR_FRONT -> bringStatusBarToFront()
                 // כפתור הכיבוי במרכז הבקרה פותח את אותו תפריט כיבוי אחד.
                 ACTION_SHOW_POWER_MENU -> mainHandler.post { showPowerMenu() }
+                ACTION_LOCK_NOW -> mainHandler.post { lockController?.lock() }
             }
         }
     }
@@ -109,6 +111,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
             when (intent?.action) {
                 FutureUIActions.ACTION_CALL_RINGING -> {
                     suppressForActiveCall = true
+                    lockController?.onCallRinging()
                     // ה-fullScreenIntent הרגיל של ההתראה מופעל אוטומטית ע"י המערכת רק
                     // כשהמסך כבוי - כשמסך הבית עצמו הוא האפליקציה בחזית צריך לפתוח את
                     // מסך השיחה במפורש כדי שגם שם השיחה תתקבל במסך מלא, לא רק כהתראה.
@@ -149,6 +152,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
 
             val filter = IntentFilter(FutureUIActions.ACTION_BRING_STATUS_BAR_FRONT).apply {
                 addAction(ACTION_SHOW_POWER_MENU)
+                addAction(ACTION_LOCK_NOW)
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 registerReceiver(bringToFrontReceiver, filter, Context.RECEIVER_EXPORTED)
@@ -179,6 +183,16 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
             suppressSystemBars()
         }
         showStatusBar()
+        if (lockController == null) {
+            lockController = com.future.futureui.lockscreen.LockScreenController(
+                service = this,
+                owner = this,
+                windowManager = windowManager,
+                controlManager = { controlManager },
+                accentColor = { recentsAccentColor.value },
+                bringStatusBarFront = { bringStatusBarToFront() },
+            ).also { it.start() }
+        }
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
@@ -190,6 +204,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
             // צילום המסך לכרטיס שלה באחרונות - אחרי שהחלון סיים להיפתח
             if (pkg != null && recentAppsManager.isTop(pkg)) recentSnapshots.schedule(pkg, 900, ::isSnapshotTarget)
             maybeReplaceSystemPowerMenu(pkg, event.className?.toString(), event)
+            lockController?.onForegroundChanged(pkg, event.className?.toString())
         }
     }
     override fun onInterrupt() {}
@@ -217,6 +232,9 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
             }
             return false
         }
+
+        // מסך הנעילה תופס את כל שאר המקשים (ר' LockScreenController.onKey)
+        if (lockController?.onKey(event) == true) return true
 
         // כשמסך "אפליקציות אחרונות" שלנו גלוי, BACK סוגר אותו וכל שאר המקשים
         // (חצים, אישור, Menu לסגירת פריט) עוברים ישירות לחלון שלו כדי שהניווט
@@ -664,6 +682,8 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
             hideVolumeOverlay()
             hideRecentApps()
             hidePowerMenu()
+            lockController?.dispose()
+            lockController = null
             statusBarView?.let { windowManager.removeView(it) }
             statusBarView = null
         } catch (e: Exception) {
@@ -693,6 +713,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
         private const val HOME_PACKAGE = "com.future.futurelauncher"
         private const val DOUBLE_CLICK_WINDOW_MS = 300L
         const val ACTION_SHOW_POWER_MENU = "com.future.futureui.ACTION_SHOW_POWER_MENU"
+        const val ACTION_LOCK_NOW = "com.future.futureui.ACTION_LOCK_NOW"
         private val POWER_MENU_CLASS_HINTS = listOf("globalactions", "ActionsDialog", "PowerMenu", "ShutdownDialog")
         /** השורות של תפריט הכיבוי של אנדרואיד, עברית ואנגלית. */
         private val POWER_OFF_LABELS = listOf("כיבוי", "כבה", "Power off", "Shut down", "Shutdown")

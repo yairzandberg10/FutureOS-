@@ -77,6 +77,15 @@ fun FutureUISettingsScreen(
             }
 
             Spacer(modifier = Modifier.height(24.dp))
+            SettingsSection(title = "מסך נעילה") {
+                SettingsLinkRow("מסך נעילה, קוד וזיהוי פנים") {
+                    context.startActivity(
+                        android.content.Intent(context, com.future.futureui.lockscreen.settings.LockSettingsActivity::class.java)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
             Text(
                 text = "מרכז הבקרה ניתן לעריכה ישירות בתוכו - לחיצה ארוכה על כפתור העריכה מאפשרת להוסיף, להסיר ולסדר מחדש כפתורים.",
                 color = Color.White.copy(alpha = 0.6f),
@@ -102,6 +111,26 @@ private fun SettingsSection(title: String, content: @Composable ColumnScope.() -
             .background(Color.White.copy(alpha = 0.08f))
     ) {
         content()
+    }
+}
+
+@Composable
+private fun SettingsLinkRow(label: String, onClick: () -> Unit) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
+    val shape = FutureShapes.lg
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .focusEffect(isFocused, shape)
+            .clip(shape)
+            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
+            .focusable(interactionSource = interactionSource)
+            .padding(horizontal = 16.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(text = label, color = Color.White, fontSize = FutureTypography.body, modifier = Modifier.weight(1f))
+        Text(text = "›", color = Color.White.copy(alpha = 0.5f), fontSize = FutureTypography.title)
     }
 }
 

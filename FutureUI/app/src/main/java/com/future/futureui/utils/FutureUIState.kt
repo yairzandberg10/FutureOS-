@@ -7,4 +7,9 @@ object FutureUIState {
     // אם שיחה נכנסת צריכה לפתוח את מסך השיחה במסך מלא (ר' FutureUIActions.ACTION_LAUNCH_CALL_UI).
     @Volatile
     var foregroundPackage: String? = null
+
+    // מסך הנעילה מוצג (ר' LockScreenController). מרכז הבקרה/ההתראות לא נפתחים
+    // והתראות קופצות לא מוצגות כל עוד הוא true.
+    @Volatile
+    var isLocked: Boolean = false
 }

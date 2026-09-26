@@ -4,6 +4,32 @@ This repo has no carried-over git history (see root [README](README.md)), so thi
 
 ## Unreleased
 
+### New lock screen: PIN, face unlock, One UI / iOS style customisation
+
+- **Security.** A 4-8 digit PIN, stored only as an HMAC in an Android
+  Keystore key (never the PIN itself), compared in constant time, with an
+  escalating lockout after 5 wrong tries (30 s doubling up to 15 min).
+  Auto-lock immediately or after 5 s / 30 s / 1 min / 5 min. The lock
+  settings screen asks for the current PIN and is FLAG_SECURE.
+- **Face unlock, fully on-device.** Camera2 front camera from the status bar
+  accessibility service, Android's built-in FaceDetector for the eyes, a
+  64x64 aligned patch and uniform-LBP histograms compared by chi-square.
+  Enrolment takes 12 samples and self-calibrates the threshold; two frames in
+  a row must match. Templates (never images) are AES-GCM encrypted with a
+  Keystore key. After a failed scan followed by the right PIN, a near-miss
+  sample is learned (up to 10). The PIN is still required after a reboot,
+  after 48 hours and after 5 failed face scans. This is "basic" face unlock
+  (no depth sensor): a good photo may pass, and the settings say so.
+- **Customisation.** Five clock styles (classic, thin, stacked, analog,
+  side), six clock colours from the accent presets, four backgrounds, three
+  widget slots (battery, next alarm, Hebrew date, music, notification count),
+  two shortcuts (flashlight works without unlocking), and an owner message.
+  Long-press Menu on the lock screen opens a quick editor after unlocking.
+- **Notifications** are listed on the lock screen (up to 4) with a privacy
+  setting: show all, content only after face/PIN, or never. Heads-up banners,
+  Control Center and Notification Center are blocked while locked. Incoming
+  calls and the alarm screen show over the lock; it returns afterwards.
+
 ### Audit pass: bug fixes across Clock, Messages, Recorder and five other apps
 
 - **Clock: the timer rings with the screen off.** It used to live only in the
