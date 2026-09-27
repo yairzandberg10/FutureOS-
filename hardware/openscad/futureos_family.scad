@@ -69,6 +69,11 @@ VOL_FLANGE_T = 0.4;
 VOL_PLUNGER = 0.2;               // בליטה קטנה מאחורי המקש שלוחצת על הכיפה
 VOL_FPC_T   = 0.7;               // כיפה 0.3 + FPC 0.12 + stiffener פלדה 0.2 + דבק
 VOL_NUB     = 1.0;               // נקודה מורגשת על Vol+ - לזיהוי בלי להסתכל
+// מקש הפעלה: באותה דופן, מתחת ל-Vol-, קצר יותר ועם מרווח גדול כדי שלא יתבלבל
+// עם הווליום במגע. אותו גובה, אותה שפה ואותו FPC צד (הכיפה שלו מחוברת ל-PWRKEY).
+PWR_L       = sel([7, 8, 8]);
+PWR_GAP     = sel([5, 6, 6]);   // מרווח בין Vol- למקש ההפעלה
+PWR_GROOVE  = 0.3;              // עומק חריץ לאורך מקש ההפעלה - מורגש באצבע
 
 // ---------------------------------------------------------------------
 // פריסה אנכית (מלמטה למעלה, Y=0 בתחתית הגוף)
@@ -87,20 +92,26 @@ echo(str("MODEL=", MODEL,
          "  body W x L x T = ", BODY_W, " x ", BODY_L, " x ", BODY_T, " mm",
          "  active area = ", SCR_W, " x ", SCR_H));
 
-// מקשי ווליום: Z במערכת ההרכבה (0 = פני החזית), בגובה אמצע הסוללה - מתחת
+// מקשי צד: Z במערכת ההרכבה (0 = פני החזית), בגובה אמצע הסוללה - מתחת
 // למודול המסך ומעל עיגול הקצה האחורי. Y: [Vol+, Vol-]
 BATT_TOP_Z = -(LCD_SINK + LCD_T + MIDFRAME);  // הסוללה יושבת ישר מאחורי מודול המסך
 VOL_Z  = BATT_TOP_Z - BATT[2] / 2;
 VOL_Y  = [BODY_L - VOL_FROM_TOP + (VOL_L + VOL_SPACING) / 2,
           BODY_L - VOL_FROM_TOP - (VOL_L + VOL_SPACING) / 2];
+PWR_Y  = VOL_Y[1] - VOL_L / 2 - PWR_GAP - PWR_L / 2;
+// [מרכז Y, אורך, סוג] - מלמעלה למטה
+SIDE_KEYS = [[VOL_Y[0], VOL_L, "vol+"], [VOL_Y[1], VOL_L, "vol-"], [PWR_Y, PWR_L, "power"]];
+SK_Y0  = PWR_Y - PWR_L / 2;       // קצה תחתון של מקש ההפעלה
+SK_Y1  = VOL_Y[0] + VOL_L / 2;    // קצה עליון של Vol+
 VOL_IN = VOL_FLANGE_T + VOL_PLUNGER + VOL_FPC_T; // עומק המכלול מתחת לדופן הפנימית
 VOL_BATT_CLEAR = (BODY_W - WALL - VOL_IN) - (BODY_W / 2 + BATT[0] / 2);
 
-echo(str("side keys: Vol+ y=", VOL_Y[0], "  Vol- y=", VOL_Y[1], "  z=", VOL_Z,
+echo(str("side keys: Vol+ y=", VOL_Y[0], "  Vol- y=", VOL_Y[1], "  Power y=", PWR_Y, "  z=", VOL_Z,
          "  battery clearance = ", VOL_BATT_CLEAR, " mm"));
-assert(VOL_BATT_CLEAR >= 0.25, "מקשי הווליום נכנסים לסוללה - להקטין את BATT[0]");
-assert(VOL_Z - VOL_H / 2 > -BODY_T + FILLET_BACK, "מקשי הווליום יושבים על עיגול הקצה האחורי");
-assert(VOL_Z + VOL_H / 2 + VOL_FLANGE < -LCD_T - LCD_SINK, "מקשי הווליום נכנסים למודול המסך");
+assert(VOL_BATT_CLEAR >= 0.25, "מקשי הצד נכנסים לסוללה - להקטין את BATT[0]");
+assert(VOL_Z - VOL_H / 2 > -BODY_T + FILLET_BACK, "מקשי הצד יושבים על עיגול הקצה האחורי");
+assert(VOL_Z + VOL_H / 2 + VOL_FLANGE < -LCD_T - LCD_SINK, "מקשי הצד נכנסים למודול המסך");
+assert(SK_Y0 - VOL_FLANGE > BOARD[1] + BOTTOM_BAND - 1, "מקש ההפעלה יורד לאזור ה-PCBA");
 BATT_BACK_CLEAR = (BATT_TOP_Z - BATT[2]) - (-BODY_T + WALL);
 echo(str("battery to back wall clearance = ", BATT_BACK_CLEAR, " mm"));
 assert(BATT_BACK_CLEAR >= 0.2, "הסוללה נכנסת בדופן האחורית - להגדיל את BODY_T או להקטין את BATT[2]");
@@ -203,14 +214,14 @@ module back_shell() {
         // מצלמה אחורית + פלאש
         translate([BODY_W - 11, BODY_L - 12, -0.01]) cylinder(d = sel([7, 8, 11]), h = WALL + 0.02);
         translate([BODY_W - 11, BODY_L - 22, -0.01]) cylinder(d = 3, h = WALL + 0.02);
-        // חריצי מקשי ווליום בדופן הימנית
-        for (y = VOL_Y) translate([BODY_W - WALL - 0.01, y, VOL_Z + BODY_T])
-            pill_x(VOL_L + 2 * GAP, VOL_H + 2 * GAP, WALL + 0.02);
+        // חריצי מקשי הצד (ווליום + הפעלה) בדופן הימנית
+        for (k = SIDE_KEYS) translate([BODY_W - WALL - 0.01, k[0], VOL_Z + BODY_T])
+            pill_x(k[1] + 2 * GAP, VOL_H + 2 * GAP, WALL + 0.02);
     }
 }
 
 // ---------------------------------------------------------------------
-// מקשי ווליום
+// מקשי צד: ווליום + הפעלה
 // ---------------------------------------------------------------------
 // גלולה (צורת מקש צד) שהציר שלה לאורך X, מ-x=0 עד x=len, ממורכזת ב-Y וב-Z
 module pill_x(l, h, len) {
@@ -219,29 +230,36 @@ module pill_x(l, h, len) {
 }
 
 // מקש צד במערכת מקומית: x=0 הוא פני הדופן הפנימיים, X חיובי החוצה
-module side_key(nub = false, plunger = true) {
+// l = אורך המקש, kind = "vol+" (עם נקודה) / "vol-" (חלק) / "power" (עם חריץ)
+module side_key(l, kind, plunger = true) {
     tip = WALL + VOL_PROUD;
-    translate([-VOL_FLANGE_T, 0, 0]) pill_x(VOL_L + 2 * VOL_FLANGE, VOL_H + 2 * VOL_FLANGE, VOL_FLANGE_T);
-    pill_x(VOL_L, VOL_H, tip - 0.3);
-    hull() { // קצה חיצוני מעוגל
-        translate([tip - 0.31, 0, 0]) pill_x(VOL_L, VOL_H, 0.01);
-        translate([tip - 0.01, 0, 0]) pill_x(VOL_L - 0.6, VOL_H - 0.6, 0.01);
+    translate([-VOL_FLANGE_T, 0, 0]) pill_x(l + 2 * VOL_FLANGE, VOL_H + 2 * VOL_FLANGE, VOL_FLANGE_T);
+    difference() {
+        union() {
+            pill_x(l, VOL_H, tip - 0.3);
+            hull() { // קצה חיצוני מעוגל
+                translate([tip - 0.31, 0, 0]) pill_x(l, VOL_H, 0.01);
+                translate([tip - 0.01, 0, 0]) pill_x(l - 0.6, VOL_H - 0.6, 0.01);
+            }
+        }
+        if (kind == "power")
+            translate([tip - PWR_GROOVE, -(l - VOL_H) / 2, -0.3]) cube([1, l - VOL_H, 0.6]);
     }
     if (plunger)
         translate([-VOL_FLANGE_T - VOL_PLUNGER, 0, 0]) rotate([0, 90, 0]) cylinder(d = 1.5, h = VOL_PLUNGER + 0.01);
-    if (nub) translate([tip - 0.05, 0, 0]) scale([0.5, 1, 1]) sphere(d = VOL_NUB);
+    if (kind == "vol+") translate([tip - 0.05, 0, 0]) scale([0.5, 1, 1]) sphere(d = VOL_NUB);
 }
 
 // במקום, במערכת ההרכבה
 module side_keys_placed() {
-    for (i = [0, 1]) translate([BODY_W - WALL, VOL_Y[i], VOL_Z]) side_key(i == 0);
+    for (k = SIDE_KEYS) translate([BODY_W - WALL, k[0], VOL_Z]) side_key(k[1], k[2]);
 }
 
-// להדפסה: השפה על המגש, הקצה כלפי מעלה. השמאלי הוא Vol+ (עם הנקודה).
+// להדפסה: השפה על המגש, הקצה כלפי מעלה. משמאל לימין: Vol+ (נקודה), Vol-, הפעלה (חריץ).
 // בלי הבליטה האחורית - בדמה מודפסת אין כיפות, והיא רק הייתה מרימה את השפה מהמגש
 module side_keys_print() {
-    for (i = [0, 1]) translate([i * (VOL_H + 2 * VOL_FLANGE + 3), 0, VOL_FLANGE_T])
-        rotate([0, -90, 0]) side_key(i == 0, plunger = false);
+    for (i = [0 : len(SIDE_KEYS) - 1]) translate([i * (VOL_H + 2 * VOL_FLANGE + 3), 0, VOL_FLANGE_T])
+        rotate([0, -90, 0]) side_key(SIDE_KEYS[i][1], SIDE_KEYS[i][2], plunger = false);
 }
 
 // ---------------------------------------------------------------------
@@ -256,7 +274,8 @@ FLANGE     = 1.2;   // שפה מתחת לחזית שמחזיקה את הממבר
 FLANGE_T   = 0.6;
 
 LATIN  = ["", "ABC", "DEF", "GHI", "JKL", "MNO", "PQRS", "TUV", "WXYZ"];
-HEBREW = ["", "אבג", "דהו", "זחט", "יכל", "מנס", "עפצ", "קרש", "ת"];
+// התקן הישראלי, זהה ל-T9 של המערכת (SharedKeypadNav/t9/T9DigitMap.kt). אותיות סופיות לא מודפסות
+HEBREW = ["", "דהו", "אבג", "מנ", "יכל", "זחט", "רשת", "צק", "סעפ"];
 
 function kp_x0(ks) = min([for (k = ks) k[0] - k[2] / 2]);
 function kp_x1(ks) = max([for (k = ks) k[0] + k[2] / 2]);
@@ -289,7 +308,7 @@ module key_body(k) {
 
 // אייקונים מהפונט המובנה של Windows (Segoe MDL2 Assets), מעובים מעט כדי שיהיו ניתנים להדפסה
 ICON_FONT = "Segoe MDL2 Assets";
-ICONS = [["softL", 59136], ["call", 59159], ["softR", 59303], ["end", 59368]]; // תפריט, שיחה, חזרה, הפעלה
+ICONS = [["softL", 59136], ["call", 59159], ["softR", 59303], ["end", 59256]]; // תפריט, שיחה, חזרה, ניתוק (ההפעלה במקש צד)
 
 module icon2d(code, size) {
     offset(r = 0.15) text(chr(code), size = size, font = ICON_FONT, halign = "center", valign = "center");
@@ -366,10 +385,10 @@ module keepouts() {
     // PCBA - מאחורי אזור המקלדת
     color("ForestGreen", 0.8)
         translate([CX - BOARD[0] / 2, BOTTOM_BAND - 1, -BOARD_Z - 1.5]) cube([BOARD[0], BOARD[1], BOARD_Z]);
-    // FPC צד של מקשי הווליום (כיפות + stiffener), מודבק לדופן הימנית מבפנים
+    // FPC צד של מקשי הצד (כיפות + stiffener), מודבק לדופן הימנית מבפנים
     color("Gold", 0.8)
-        translate([BODY_W - WALL - VOL_IN, VOL_Y[1] - VOL_L / 2 - VOL_FLANGE, VOL_Z + FRONT_T - VOL_H / 2 - VOL_FLANGE])
-            cube([VOL_FPC_T, VOL_Y[0] - VOL_Y[1] + VOL_L + 2 * VOL_FLANGE, VOL_H + 2 * VOL_FLANGE]);
+        translate([BODY_W - WALL - VOL_IN, SK_Y0 - VOL_FLANGE, VOL_Z + FRONT_T - VOL_H / 2 - VOL_FLANGE])
+            cube([VOL_FPC_T, SK_Y1 - SK_Y0 + 2 * VOL_FLANGE, VOL_H + 2 * VOL_FLANGE]);
 }
 
 // ---------------------------------------------------------------------

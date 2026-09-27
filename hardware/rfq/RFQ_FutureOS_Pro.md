@@ -26,7 +26,8 @@ Closest reference products: Unihertz Titan / BlackBerry Passport (square 1440×1
 | microSD | Yes |
 | OS | Android 13 or newer (AOSP-based, GMS **not** required) |
 | Display | 4.5" IPS, **1440×1440 (square, 1:1)**, MIPI-DSI, ≈453 ppi, active area ≈80.8 × 80.8 mm. **No touch panel**. Existing panel class (as used in Unihertz Titan / BlackBerry Passport) preferred - please name the panel you propose. 1080×1080 acceptable as a cost option |
-| Keypad | 21 keys, metal domes, white backlight: D-pad 4-way + OK, 0-9, `*`, `#`, Call, End, 2 soft keys. **No Home key**. Side: Vol+, Vol-, Power. Volume = two separate keys (11 × 3 mm, 0.6 mm proud) on the right side, centre ≈38 mm below the top edge, Vol+ above Vol- with a tactile dot; metal domes on a side-key FPC with steel stiffener, max 1.3 mm deep inside the wall. Key pitch 21 × 10 mm |
+| Keypad | 21 keys, metal domes, white backlight: D-pad 4-way + OK, 0-9, `*`, `#`, Call, End, 2 soft keys. **No Home key**. Side: Vol+, Vol-, Power. Volume = two separate keys (11 × 3 mm, 0.6 mm proud) on the right side, centre ≈38 mm below the top edge, Vol+ above Vol- with a tactile dot. Power = separate key below Vol- (8 × 3 mm, 6 mm gap, lengthwise groove), wired to PMIC PWRKEY. All three on metal domes on one side-key FPC with steel stiffener, max 1.3 mm deep inside the wall. Key pitch 21 × 10 mm |
+| Key legends | Digit + Hebrew + Latin on 2-9. Hebrew per the Israeli standard (same as our T9): 2 דהו, 3 אבג, 4 מנ, 5 יכל, 6 זחט, 7 רשת, 8 צק, 9 סעפ (final forms not printed). Latin: 2 ABC, 3 DEF, 4 GHI, 5 JKL, 6 MNO, 7 PQRS, 8 TUV, 9 WXYZ. End key shows a hang-up icon (Power is the side key) |
 | Cellular | 4G LTE, **VoLTE/IMS required**, Dual SIM. Bands: B1/B3/B7/B8/B20/B28 (Israel). 5G variant: n1/n3/n7/n8/n28/n78 |
 | Wi-Fi / BT / GNSS | Wi-Fi 5 (2.4/5GHz); BT 5.x + BLE; GPS + GLONASS + Galileo + BeiDou |
 | NFC | Yes (HCE) |

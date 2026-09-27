@@ -24,7 +24,8 @@ Closest reference product: **Duoqin Qin F22 Pro** (same screen, same SoC family)
 | microSD | Yes |
 | OS | Android 12 or newer (AOSP-based, GMS **not** required) |
 | Display | 3.5" IPS, **640×960**, MIPI-DSI, 320dpi (same panel as Qin F22 Pro). **No touch panel** |
-| Keypad | 21 keys, metal domes, white backlight: D-pad 4-way + OK, 0-9, `*`, `#`, Call, End, 2 soft keys. **No Home key**. Side: Vol+, Vol-, Power. Volume = two separate keys (10 × 3 mm, 0.6 mm proud) on the right side, centre ≈36 mm below the top edge, Vol+ above Vol- with a tactile dot; metal domes on a side-key FPC with steel stiffener, max 1.3 mm deep inside the wall. A working 5×5 matrix keyboard prototype (KiCad + gerbers) is available as layout reference |
+| Keypad | 21 keys, metal domes, white backlight: D-pad 4-way + OK, 0-9, `*`, `#`, Call, End, 2 soft keys. **No Home key**. Side: Vol+, Vol-, Power. Volume = two separate keys (10 × 3 mm, 0.6 mm proud) on the right side, centre ≈36 mm below the top edge, Vol+ above Vol- with a tactile dot. Power = separate key below Vol- (8 × 3 mm, 6 mm gap, lengthwise groove), wired to PMIC PWRKEY. All three on metal domes on one side-key FPC with steel stiffener, max 1.3 mm deep inside the wall. A working 5×5 matrix keyboard prototype (KiCad + gerbers) is available as layout reference |
+| Key legends | Digit + Hebrew + Latin on 2-9. Hebrew per the Israeli standard (same as our T9): 2 דהו, 3 אבג, 4 מנ, 5 יכל, 6 זחט, 7 רשת, 8 צק, 9 סעפ (final forms not printed). Latin: 2 ABC, 3 DEF, 4 GHI, 5 JKL, 6 MNO, 7 PQRS, 8 TUV, 9 WXYZ. End key shows a hang-up icon (Power is the side key) |
 | Cellular | 4G LTE, **VoLTE/IMS required**, Dual SIM. Bands: B1/B3/B7/B8/B20/B28 (Israel) |
 | Wi-Fi | Two SKUs on the same board: with Wi-Fi 2.4/5GHz, and without (Wi-Fi chip DNP) |
 | Bluetooth / GNSS | BT 5.x + BLE; GPS + GLONASS + Galileo |
