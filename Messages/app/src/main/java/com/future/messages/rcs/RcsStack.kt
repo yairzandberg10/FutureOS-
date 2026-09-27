@@ -204,7 +204,7 @@ object RcsStack {
         val imdnId = Sip.uuid()
         store.putOutgoing(smsId, imdnId, address, threadIdOf(context, smsId))
         val code = sendRequest(number, Cpim.buildText(imdnId, text))
-        Log.i(TAG, "RCS MESSAGE to $number -> $code")
+        Log.i(TAG, "RCS MESSAGE -> $code") // בלי המספר: logcat קריא לכל מי שמחובר ב-adb
         return if (code in 200..299) {
             store.putCapability(number, true)
             updateSms(context, smsId) { put(Telephony.Sms.TYPE, Telephony.Sms.MESSAGE_TYPE_SENT) }
@@ -220,7 +220,7 @@ object RcsStack {
 
     private suspend fun queryCapability(number: String): Boolean? = withTimeoutOrNull(CAPABILITY_TIMEOUT_MS) {
         suspendCancellableCoroutine { cont ->
-            ImsApi.requestCapabilities(appContext, subId, Uri.parse("tel:$number"), executor) { result ->
+            ImsApi.requestCapabilities(appContext, subId, Uri.fromParts("tel", number, null), executor) { result ->
                 if (cont.isActive) cont.resume(result)
             }
         }
@@ -272,7 +272,7 @@ object RcsStack {
             }
             reply?.let { config?.let { cfg -> ImsApi.send(conn, it, cfg.version) } }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed handling incoming ${sip.startLine}", e)
+            Log.e(TAG, "Failed handling incoming ${sip.startLine.substringBefore(' ')}", e)
         } finally {
             if (branch.isNotEmpty()) ImsApi.notifyReceived(conn, branch)
         }
@@ -307,7 +307,7 @@ object RcsStack {
                 }
                 SmsDeliverReceiver.notifyIncoming(context, sender, body)
             }
-            else -> Log.i(TAG, "Unsupported RCS content $innerType from $sender")
+            else -> Log.i(TAG, "Unsupported RCS content $innerType")
         }
     }
 

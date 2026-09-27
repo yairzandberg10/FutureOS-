@@ -358,13 +358,10 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                 }
             }
         }
-        val filter = android.content.IntentFilter("com.future.futureui.ACTION_OPTIONS_SHORT_PRESS")
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            context.registerReceiver(receiver, filter, android.content.Context.RECEIVER_EXPORTED)
-        } else {
-            context.registerReceiver(receiver, filter)
-        }
-        onDispose { context.unregisterReceiver(receiver) }
+        // רק FutureUI (או adb) - לא כל אפליקציה שמשדרת את הפעולה (ר' KeyPressBroadcasts)
+        val filter = android.content.IntentFilter(com.future.sharednav.actions.FutureUIActions.ACTION_OPTIONS_SHORT_PRESS)
+        com.future.sharednav.nav.KeyPressBroadcasts.register(context, receiver, filter)
+        onDispose { com.future.sharednav.nav.KeyPressBroadcasts.unregister(context, receiver) }
     }
 
     Box(

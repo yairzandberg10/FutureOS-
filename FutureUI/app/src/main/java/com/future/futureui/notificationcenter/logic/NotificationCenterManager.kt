@@ -1,5 +1,6 @@
 package com.future.futureui.notificationcenter.logic
 
+import com.future.futureui.utils.safeText
 import android.app.Notification
 import android.content.Context
 import android.content.Intent
@@ -33,8 +34,8 @@ class NotificationCenterManager(private val context: Context) {
         val n = sbn.notification
         // Filter out ongoing or system notifications that might be noisy if desired
         // For now, show everything that has a title or text
-        val title = n.extras.getCharSequence(Notification.EXTRA_TITLE)
-        val text = n.extras.getCharSequence(Notification.EXTRA_TEXT)
+        val title = n.safeText(Notification.EXTRA_TITLE)
+        val text = n.safeText(Notification.EXTRA_TEXT)
         return !title.isNullOrBlank() || !text.isNullOrBlank()
     }
 

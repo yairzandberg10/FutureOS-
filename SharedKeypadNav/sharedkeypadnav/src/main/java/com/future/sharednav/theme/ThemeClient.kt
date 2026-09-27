@@ -87,9 +87,13 @@ object ThemeClient {
         }
     }
 
+    /** רק מול FutureUI האמיתי (ר' TrustedProviders), לא מול אפליקציה שתפסה את הכתובת. */
+    private fun trusted(context: Context) =
+        com.future.sharednav.systemui.TrustedProviders.isTrusted(context, SystemUiTarget.THEME_AUTHORITY)
+
     private fun queryTheme(context: Context): SharedTheme? {
         return try {
-            context.contentResolver.query(THEME_URI, null, null, null, null)?.use { cursor ->
+            (if (trusted(context)) context.contentResolver else null)?.query(THEME_URI, null, null, null, null)?.use { cursor ->
                 if (cursor.moveToFirst()) {
                     val isDark = cursor.getInt(cursor.getColumnIndexOrThrow("is_dark_mode")) == 1
                     val color = cursor.getInt(cursor.getColumnIndexOrThrow("primary_color"))
@@ -97,7 +101,10 @@ object ThemeClient {
                     // (ולא ...OrThrow) כדי שהאפליקציה תמשיך לעבוד מולה.
                     val fontCol = cursor.getColumnIndex("font_size_multiplier")
                     val fontMultiplier = if (fontCol >= 0) cursor.getFloat(fontCol) else 1.0f
-                    SharedTheme(isDark, color, fontMultiplier)
+                    // ערך הרסני (NaN, 0, 1000) - מספק מזויף או פגום - היה הופך את כל
+                    // הטקסט בכל האפליקציות לבלתי קריא. אותו טווח כמו ב-ThemeProvider.
+                    val safeFont = if (fontMultiplier.isFinite()) fontMultiplier.coerceIn(0.7f, 2.0f) else 1.0f
+                    SharedTheme(isDark, color, safeFont)
                 } else null
             }
         } catch (e: Exception) {
@@ -109,7 +116,7 @@ object ThemeClient {
     fun setDarkMode(context: Context, isDark: Boolean) {
         try {
             val values = ContentValues().apply { put("is_dark_mode", if (isDark) 1 else 0) }
-            context.contentResolver.update(THEME_URI, values, null, null)
+            if (trusted(context)) context.contentResolver.update(THEME_URI, values, null, null)
         } catch (e: Exception) {
             Log.w(TAG, "setDarkMode נכשל", e)
         }
@@ -122,7 +129,7 @@ object ThemeClient {
     fun setFontSizeMultiplier(context: Context, multiplier: Float) {
         try {
             val values = ContentValues().apply { put("font_size_multiplier", multiplier) }
-            context.contentResolver.update(THEME_URI, values, null, null)
+            if (trusted(context)) context.contentResolver.update(THEME_URI, values, null, null)
         } catch (e: Exception) {
             Log.w(TAG, "setFontSizeMultiplier נכשל", e)
         }
@@ -131,7 +138,7 @@ object ThemeClient {
     fun setPrimaryColor(context: Context, color: Int) {
         try {
             val values = ContentValues().apply { put("primary_color", color) }
-            context.contentResolver.update(THEME_URI, values, null, null)
+            if (trusted(context)) context.contentResolver.update(THEME_URI, values, null, null)
         } catch (e: Exception) {
             Log.w(TAG, "setPrimaryColor נכשל", e)
         }

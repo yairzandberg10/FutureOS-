@@ -39,3 +39,10 @@
 # הקריאה ומוחק את הבנאי, ML Kit עולה בלי רכיבים והאפליקציה קורסת בפתיחה.
 -keep class * implements com.google.firebase.components.ComponentRegistrar { <init>(); }
 -keep class com.google.mlkit.**.*Registrar { <init>(); }
+
+# Security: debug/verbose logs never ship in release builds (logcat is readable
+# over adb and by crash reporters; several call sites log numbers, paths and text).
+-assumenosideeffects class android.util.Log {
+    public static int v(...);
+    public static int d(...);
+}

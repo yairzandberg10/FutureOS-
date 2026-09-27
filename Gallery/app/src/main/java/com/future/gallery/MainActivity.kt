@@ -61,7 +61,18 @@ class MainActivity : ComponentActivity() {
             var lastSelectedAlbumId by remember { mutableStateOf<String?>(null) }
             var editingItem by remember { mutableStateOf<MediaItem?>(null) }
             // תמונה שנפתחה מאפליקציה אחרת (VIEW) - נפתחת ישר לצפייה, ו-BACK סוגר.
-            val viewUri = remember { intent?.takeIf { it.action == Intent.ACTION_VIEW }?.data }
+            // רק content:// - ומספק זר רק אם השולח נתן עליו הרשאה. בלי זה אפליקציה אחרת
+            // יכלה לפתוח כאן file:// או ספק שרק לגלריה יש גישה אליו (ומשם למחוק/לערוך
+            // אותו בשם הגלריה).
+            val viewUri = remember {
+                intent?.takeIf { it.action == Intent.ACTION_VIEW }?.let { i ->
+                    i.data?.takeIf { uri ->
+                        uri.scheme == "content" &&
+                            (uri.authority == android.provider.MediaStore.AUTHORITY ||
+                                i.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION != 0)
+                    }
+                }
+            }
             LaunchedEffect(viewUri) {
                 val uri = viewUri ?: return@LaunchedEffect
                 val single = MediaItem(

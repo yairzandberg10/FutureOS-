@@ -23,6 +23,8 @@ class AssistantRecognitionService : RecognitionService() {
 
     private lateinit var speechEngine: LocalSpeechEngine
     @Volatile private var modelReady = false
+    /** נפתח כשהטעינה נגמרה - בהצלחה או בכישלון, כך שכישלון לא מחכה דקה שלמה. */
+    private val modelLoaded = java.util.concurrent.CountDownLatch(1)
     private val workerThread = java.util.concurrent.Executors.newSingleThreadExecutor()
     private var isRecording = false
 
@@ -43,6 +45,8 @@ class AssistantRecognitionService : RecognitionService() {
                 modelReady = true
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to load Whisper model", e)
+            } finally {
+                modelLoaded.countDown()
             }
         }.start()
     }
@@ -51,7 +55,9 @@ class AssistantRecognitionService : RecognitionService() {
         // קוד השפה (ISO 639-1 דו-אותי, כמו "he"/"en"/"es") שהלקוח (המקלדת) ביקש -
         // ר' KeyboardService.localeFor, ששולח שם locale מלא (he-IL) ש-Keyboard
         // עצמו חותך לקידומת לפני השליחה (ר' startVoiceTranscription).
-        currentLanguage = recognizerIntent?.getStringExtra(RecognizerIntent.EXTRA_LANGUAGE)?.substringBefore('-') ?: "he"
+        // מגיע מכל אפליקציה שמתחברת לשירות ועובר לקוד native של Whisper - רק קוד שפה תקין.
+        currentLanguage = recognizerIntent?.getStringExtra(RecognizerIntent.EXTRA_LANGUAGE)?.substringBefore('-')
+            ?.lowercase()?.takeIf { it.matches(Regex("[a-z]{2,3}")) } ?: "he"
         try {
             listener.readyForSpeech(Bundle())
         } catch (e: Exception) {
@@ -84,8 +90,7 @@ class AssistantRecognitionService : RecognitionService() {
             try {
                 listener.endOfSpeech()
                 // אם טעינת המודל נכשלה - לא מחכים לנצח (המקלדת הייתה נתקעת על "מתמלל…").
-                val waitUntil = System.currentTimeMillis() + MODEL_WAIT_MS
-                while (!modelReady && System.currentTimeMillis() < waitUntil) Thread.sleep(20)
+                modelLoaded.await(MODEL_WAIT_MS, java.util.concurrent.TimeUnit.MILLISECONDS)
                 if (!modelReady) {
                     speechEngine.cancelRecording()
                     safeError(listener, SpeechRecognizer.ERROR_SERVER)

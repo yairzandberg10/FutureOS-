@@ -1112,7 +1112,8 @@ class SystemInteractor(private val context: Context) {
             usedMinutes >= timer.dailyLimitMinutes
         }
         if (exceeded.isNotEmpty()) {
-            runRootCommands(exceeded.map { "am force-stop ${it.packageName}" })
+            // שם חבילה מההעדפות נכנס לפקודת root - מסוננים ומצוטטים כמו בשאר המקומות
+            runRootCommands(exceeded.map { it.packageName }.filter(RootShell::isSafeToken).map { "am force-stop ${RootShell.quote(it)}" })
         }
         return exceeded.map { it.packageName }
     }

@@ -57,6 +57,8 @@ private val OPTIONAL_PERMISSIONS = buildList {
 
 private val REQUIRED_PERMISSIONS = CORE_PERMISSIONS + OPTIONAL_PERMISSIONS
 
+private const val MAX_PREFILL_BODY = 5000
+
 class MainActivity : ComponentActivity() {
     // המכשיר האמיתי הוא מקלדת T9 בלבד בלי מסך מגע - מבטלים קלט מגע לגמרי כדי
     // שההתנהגות תישאר תואמת לחומרה האמיתית. לא פוגע בניווט/הפעלה במקשים -
@@ -81,11 +83,12 @@ class MainActivity : ComponentActivity() {
         val data = intent?.data ?: return
         if (intent.action != Intent.ACTION_SENDTO && intent.action != Intent.ACTION_VIEW) return
         if (data.scheme?.lowercase() !in setOf("sms", "smsto", "mms", "mmsto")) return
-        val address = Uri.decode(data.schemeSpecificPart.orEmpty().substringBefore('?')).trim()
+        val (address, bodyFromUri) = com.future.messages.data.SmsTarget.parse(data.schemeSpecificPart.orEmpty())
         val body = intent.getStringExtra("sms_body")
             ?: intent.getStringExtra(Intent.EXTRA_TEXT)
-            ?: data.schemeSpecificPart.orEmpty().substringAfter("?body=", "").let(Uri::decode)
-        pendingSendTo.value = address to body.orEmpty()
+            ?: bodyFromUri
+        // מגיע מכל אפליקציה: אורך סביר, לא מגה-בייט של טקסט שנתקע בשדה הכתיבה
+        pendingSendTo.value = address.take(200) to body.take(MAX_PREFILL_BODY)
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -101,8 +104,11 @@ class MainActivity : ComponentActivity() {
                 val hasCallPermission = androidx.core.content.ContextCompat.checkSelfPermission(
                     this, android.Manifest.permission.CALL_PHONE
                 ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-                val action = if (hasCallPermission) Intent.ACTION_CALL else Intent.ACTION_DIAL
-                startActivity(Intent(action, Uri.parse("tel:$phone")))
+                // חיוג ישיר רק למספר רגיל. כתובת שולח עם * או # (למשל "*21*...#") היא קוד
+                // MMI - חיוג ישיר שלה היה מפעיל פעולה ברשת (כמו הפניית שיחות) בלחיצה אחת.
+                val plainNumber = phone.all { it.isDigit() || it == '+' || it == ' ' || it == '-' }
+                val action = if (hasCallPermission && plainNumber) Intent.ACTION_CALL else Intent.ACTION_DIAL
+                startActivity(Intent(action, Uri.fromParts("tel", phone, null)))
                 return true
             }
         }
@@ -231,7 +237,7 @@ fun MessagesApp(theme: FutureTheme) {
         val (address, body) = sendTo ?: return@LaunchedEffect
         if (!hasPermissions || !isDefaultSmsApp) return@LaunchedEffect
         activity?.pendingSendTo?.value = null
-        if (address.isBlank() || address.contains(',') || address.contains(';')) {
+        if (address.isBlank() || com.future.messages.data.SmsTarget.isGroup(address)) {
             screen = MessagesScreen.Compose(forwardText = body)
             return@LaunchedEffect
         }
@@ -287,7 +293,7 @@ fun MessagesApp(theme: FutureTheme) {
                 onGroupComposeClick = { screen = MessagesScreen.GroupCompose },
                 onChatSetupClick = { screen = MessagesScreen.ChatSetup },
                 onCallConversation = { conversation ->
-                    context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:${conversation.contact.phoneNumber}")))
+                    context.startActivity(Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", conversation.contact.phoneNumber, null)))
                 },
                 onAddToContacts = { conversation ->
                     val intent = Intent(Intent.ACTION_INSERT).apply {
@@ -372,7 +378,7 @@ fun MessagesApp(theme: FutureTheme) {
                     messages = withContext(Dispatchers.IO) { repository.getMessages(current.conversation.threadId) }
                 } },
                 onCall = {
-                    val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${current.conversation.contact.phoneNumber}"))
+                    val intent = Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", current.conversation.contact.phoneNumber, null))
                     context.startActivity(intent)
                 },
                 onDeleteMessage = { message ->

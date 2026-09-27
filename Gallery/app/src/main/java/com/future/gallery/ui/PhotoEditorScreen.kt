@@ -99,6 +99,8 @@ private fun EditState.with(p: AdjustParam, v: Float) = when (p) {
     AdjustParam.VIGNETTE -> copy(vignette = v.coerceAtLeast(0f))
 }
 
+private const val MAX_FULL_SIDE = 4096
+
 /**
  * עורך התמונות. בתחתית שורת כלים (הכלי נבחר כשהפוקוס עליו), ומעליה
  * האפשרויות של הכלי - שורה נגללת, כך שאף אפשרות לא נחתכת מחוץ למסך.
@@ -164,10 +166,17 @@ fun PhotoEditorScreen(item: MediaItem, theme: FutureTheme, onBack: () -> Unit, o
         val uri = withContext(Dispatchers.IO) {
             val fullSource = try {
                 val full = android.graphics.ImageDecoder.createSource(context.contentResolver, item.uri)
-                android.graphics.ImageDecoder.decodeBitmap(full) { decoder, _, _ ->
+                android.graphics.ImageDecoder.decodeBitmap(full) { decoder, info, _ ->
                     decoder.allocator = android.graphics.ImageDecoder.ALLOCATOR_SOFTWARE
+                    // "רזולוציה מלאה" עד גבול: תמונה שהגיעה מבחוץ (MMS, הורדה) יכולה להצהיר
+                    // על מימדים עצומים, ופענוח מלא שלה היה מפיל את העורך מחוסר זיכרון
+                    val longest = maxOf(info.size.width, info.size.height)
+                    if (longest > MAX_FULL_SIDE) {
+                        val scale = MAX_FULL_SIDE.toFloat() / longest
+                        decoder.setTargetSize((info.size.width * scale).toInt().coerceAtLeast(1), (info.size.height * scale).toInt().coerceAtLeast(1))
+                    }
                 }
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 src
             }
             val rendered = ImageEditor.renderFinal(fullSource, state)

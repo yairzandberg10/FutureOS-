@@ -48,11 +48,15 @@ private fun weatherDescription(code: Int): String = when (code) {
 
 /** תחזית מזג אוויר אמיתית ל-16 יום קדימה, דרך Open-Meteo - שירות ציבורי ללא צורך במפתח API. */
 object WeatherService {
+    private fun coarse(v: Double): String = String.format(java.util.Locale.US, "%.2f", v)
+
     /** מפה מתאריך לתחזית אותו יום - מאפשר לתאם לתאריך שמוצג במסך היום, לא רק "עכשיו". */
     fun fetchForecast(lat: Double, lon: Double): Map<LocalDate, DailyWeather>? {
         return try {
             val url = URL(
-                "https://api.open-meteo.com/v1/forecast?latitude=$lat&longitude=$lon" +
+                // מעוגל לשתי ספרות (~1 ק"מ): לתחזית זה לא משנה, ושירות חיצוני לא מקבל
+                // את המיקום המדויק של המשתמש (הבית, העבודה) בכל רענון.
+                "https://api.open-meteo.com/v1/forecast?latitude=${coarse(lat)}&longitude=${coarse(lon)}" +
                     "&current_weather=true&daily=weathercode,temperature_2m_max,temperature_2m_min" +
                     "&forecast_days=16&timezone=auto"
             )

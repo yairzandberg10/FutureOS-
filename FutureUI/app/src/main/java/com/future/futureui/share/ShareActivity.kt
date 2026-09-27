@@ -100,9 +100,22 @@ class ShareActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // החלון חשוף לכל אפליקציה: Intent פנימי עם Parcelable לא מוכר זורק כבר
+        // בפריסה. רץ בתהליך נפרד (:share) - קריסה כאן לא מפילה את שורת המצב ואת
+        // מסך הנעילה - ובכל זאת נסגרים בשקט במקום לקרוס.
         @Suppress("DEPRECATION")
-        val send: Intent? = intent.getParcelableExtra(Intent.EXTRA_INTENT)
-        if (send == null) {
+        val send: Intent? = runCatching { intent.getParcelableExtra<Intent>(Intent.EXTRA_INTENT) }.getOrNull()
+        // החלון חשוף לכל אפליקציה - מקבלים רק שיתוף אמיתי, לא Intent שרירותי
+        // שיופעל בשם FutureUI.
+        if (send == null || send.action != Intent.ACTION_SEND && send.action != Intent.ACTION_SEND_MULTIPLE) {
+            finish()
+            return
+        }
+        // קבצים עוברים הלאה רק אם השולח עצמו נתן לנו גישה אליהם (ClipData של החלון
+        // עם FLAG_GRANT_READ - כך FutureShare שולח). בלי זה, אפליקציה זרה יכלה לבקש
+        // "שתף את content://media/..." ולקבל לעצמה גישה לקבצים דרך ההרשאות של
+        // FutureUI (READ_EXTERNAL_STORAGE), שלה עצמה אין.
+        if (runCatching { !streamsGrantedByCaller(send) }.getOrDefault(true)) {
             finish()
             return
         }
@@ -113,6 +126,19 @@ class ShareActivity : ComponentActivity() {
         setContent {
             FutureUITheme { ShareSheet(title, summary, quick, apps, onClose = { finish() }) }
         }
+    }
+
+    private fun streamsGrantedByCaller(send: Intent): Boolean {
+        @Suppress("DEPRECATION")
+        val streams: List<Uri> = send.getParcelableArrayListExtra<Uri>(Intent.EXTRA_STREAM)
+            ?: listOfNotNull(runCatching { send.getParcelableExtra<Uri>(Intent.EXTRA_STREAM) }.getOrNull())
+        val inner = send.clipData
+        val innerUris = if (inner == null) emptyList() else (0 until inner.itemCount).mapNotNull { inner.getItemAt(it).uri }
+        val all = streams + innerUris
+        if (all.isEmpty()) return true
+        val granted = intent.clipData?.let { clip -> (0 until clip.itemCount).mapNotNull { clip.getItemAt(it).uri } }.orEmpty().toSet()
+        if (intent.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION == 0) return false
+        return all.all { it.scheme == "content" && it in granted }
     }
 
     /** שורה אחת שאומרת מה משותף: תחילת הטקסט, שם הקובץ, או מספר הפריטים. */
@@ -169,10 +195,12 @@ class ShareActivity : ComponentActivity() {
                 glyph = null,
                 run = {
                     prefs.edit().putLong(key, System.currentTimeMillis()).apply()
-                    val out = Intent(send).setComponent(component).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    // הרשאת הקריאה לקובץ עוברת הלאה ליעד (ה-ClipData הגיע עם החלון).
+                    val out = Intent(send).setComponent(component)
+                    out.selector = null
+                    // רק קריאה עוברת הלאה ליעד (ה-ClipData הגיע עם החלון) - לא כתיבה ולא
+                    // הרשאה קבועה שהשולח ניסה להבריח בדגלים של ה-Intent הפנימי.
                     intent.clipData?.let { out.clipData = it }
-                    out.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    out.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
                     try {
                         startActivity(out)
                     } catch (e: Exception) {

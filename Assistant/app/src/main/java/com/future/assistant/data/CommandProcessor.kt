@@ -811,7 +811,7 @@ object CommandProcessor {
 
     private fun openDialer(context: Context, phoneNumber: String, label: String): CommandResult {
         return try {
-            val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phoneNumber"))
+            val intent = Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", phoneNumber, null))
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             context.startActivity(intent)
             CommandResult("פותח חיוג ל$label", shouldClose = true)

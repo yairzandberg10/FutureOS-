@@ -89,7 +89,7 @@ fun SearchScreen(
         } catch (e: Exception) {
             // שאילתת חיפוש שנכשלת (טבלת אינדקס חסרה ב-sefaria.db, DB פגום וכו')
             // לא מפילה את האפליקציה - מוצגת הודעה במקום.
-            android.util.Log.w("SearchScreen", "search failed for '$query'", e)
+            android.util.Log.w("SearchScreen", "search failed", e)
             bookResults = emptyList()
             segmentResults = emptyList()
             failed = true

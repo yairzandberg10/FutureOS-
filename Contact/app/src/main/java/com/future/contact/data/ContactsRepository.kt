@@ -102,13 +102,7 @@ class ContactsRepository(private val context: Context) {
     }
 
     fun setFavorite(contactId: String, isFavorite: Boolean) {
-        try {
-            val uri = ContentUris.withAppendedId(ContactsContract.Contacts.CONTENT_URI, contactId.toLong())
-            val values = ContentValues().apply { put(ContactsContract.Contacts.STARRED, if (isFavorite) 1 else 0) }
-            context.contentResolver.update(uri, values, null, null)
-        } catch (e: Exception) {
-            android.util.Log.e("ContactsRepository", "Error setting favorite", e)
-        }
+        com.future.sharednav.contacts.ContactLookup.setStarred(context, contactId, isFavorite)
     }
 
     /**
@@ -144,7 +138,10 @@ class ContactsRepository(private val context: Context) {
         val rawId = findRawContactId(contactId)?.toLong() ?: error("no raw contact")
         val source = ImageDecoder.createSource(context.contentResolver, image)
         val bitmap = ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
-            val scale = maxOf(1, minOf(info.size.width, info.size.height) / PHOTO_PX)
+            // גם לפי הצלע הארוכה: תמונה צרה וארוכה מאוד (100000x700) לא הוקטנה בכלל
+            // לפי הצלע הקצרה, והפענוח שלה הפיל את האפליקציה מחוסר זיכרון
+            val scale = maxOf(1, minOf(info.size.width, info.size.height) / PHOTO_PX,
+                maxOf(info.size.width, info.size.height) / (PHOTO_PX * 4))
             decoder.setTargetSize(info.size.width / scale, info.size.height / scale)
             decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
         }

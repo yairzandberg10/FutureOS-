@@ -16,6 +16,11 @@ already bitten this project once:
   * a trust-all TrustManager / HostnameVerifier, or a WebView JS bridge
   * user-controlled strings concatenated into a root shell command without
     RootShell.quote()
+  * key-press broadcasts (Options / * / #) sent or received without the suite
+    signature permission (any app could inject key presses)
+  * tel: URIs built by string concatenation ("#" truncates the number)
+  * an exported *SettingsActivity without android:permission, and
+    allowBackup="true" on the System UI (lock-screen data in backups)
 
 Output is English on purpose: the Windows terminal renders Hebrew reversed.
 """
@@ -44,8 +49,12 @@ SYSTEM_ACTIONS = {
 
 # Deliberate exceptions, each with the reason it is safe.
 ALLOWED_EXPORTS = {
-    # Key-press relays stay open so adb `am broadcast` can drive UI tests.
+    # Key-press relays are protected in code (KeyPressBroadcasts): suite
+    # signature permission, or android.permission.DUMP so adb still works.
 }
+
+KEY_PRESS = re.compile(r"ACTION_(OPTIONS|STAR|POUND)_SHORT_PRESS")
+SYSTEM_UI_APPS = {"FutureUI", "SystemUI"}
 
 # Git-ignored local config: holding keys is exactly their job, so they are not
 # scanned. What matters is that they never get committed (see .gitignore).
@@ -68,10 +77,10 @@ CODE_RULES = [
 ]
 
 # `pm`/`am`/`settings` with a bare $variable that is not a Boolean/Int switch.
-ROOT_CMD = re.compile(r'(runRootCommands?|RootShell\.run|root)\(\s*"(am|pm|settings put|appops)')
+ROOT_CMD = re.compile(r'(runRootCommand(s|Async)?|RootShell\.run|root)\(\s*"(am|pm|settings put|appops)|"am force-stop \$')
 ROOT_VAR = re.compile(r'\$\{?([a-zA-Z_]+)')
 # Booleans, Ints and constants - nothing an outside caller can shape into shell syntax.
-ROOT_SAFE_VARS = {"v", "on", "value", "state", "enabled", "percent", "dpi", "ns", "key",
+ROOT_SAFE_VARS = {"v", "on", "value", "state", "enabled", "percent", "dpi", "ns", "key", "packageName",
                   "if", "context", "subscriptionId", "Settings"}
 
 
@@ -99,11 +108,20 @@ def check_manifests(problems):
             problems.append(f"{rel}: usesCleartextTraffic=true")
         if app.get(ANDROID + "debuggable") == "true":
             problems.append(f"{rel}: android:debuggable=true")
+        if rel.split("/")[0] in SYSTEM_UI_APPS and app.get(ANDROID + "allowBackup") != "false":
+            problems.append(f"{rel}: System UI must set allowBackup=false (lock-screen PIN state)")
         for comp in app:
             kind = comp.tag
+            if (kind == "activity" and comp.get(ANDROID + "exported") == "true"
+                    and comp.get(ANDROID + "name", "").endswith("SettingsActivity")
+                    and not comp.get(ANDROID + "permission")
+                    and rel.split("/")[0] in SYSTEM_UI_APPS):
+                problems.append(f"{rel}: exported {comp.get(ANDROID + 'name')} has no android:permission")
             if kind not in ("receiver", "service", "provider"):
                 continue
             if comp.get(ANDROID + "exported") != "true" or comp.get(ANDROID + "permission"):
+                continue
+            if kind == "provider" and comp.get(ANDROID + "readPermission") and comp.get(ANDROID + "writePermission"):
                 continue
             name = comp.get(ANDROID + "name", "?")
             if f"{rel}#{name}" in ALLOWED_EXPORTS:
@@ -143,8 +161,14 @@ def check_sources(problems):
                     problems.append(f"{rel}:{lineno}: cleartext http:// endpoint")
                 if "FLAG_MUTABLE" in line and "setComponent" not in text and "::class.java" not in text:
                     problems.append(f"{rel}:{lineno}: FLAG_MUTABLE PendingIntent without an explicit component")
+                if re.search(r'Uri\.parse\(\s*"tel:\s*\$', line):
+                    problems.append(f"{rel}:{lineno}: tel: URI built by concatenation - use Uri.fromParts(\"tel\", n, null)")
+                if KEY_PRESS.search(line) and "sendBroadcast(" in line and "PERMISSION_SYSTEM" not in line and "setPackage(" not in line:
+                    problems.append(f"{rel}:{lineno}: key-press broadcast sent without FutureUIActions.PERMISSION_SYSTEM")
+                if "RECEIVER_EXPORTED" in line and "PERMISSION" not in line and KEY_PRESS.search(text) and not rel.endswith("KeyPressBroadcasts.kt"):
+                    problems.append(f"{rel}:{lineno}: exported key-press receiver - register it through KeyPressBroadcasts")
                 if ROOT_CMD.search(line):
-                    for var in ROOT_VAR.findall(re.sub(r"\$\{RootShell\.quote\([^)]*\)\}", "", line)):
+                    for var in ROOT_VAR.findall(re.sub(r"\$\{(?:[\w.]+\.)?RootShell\.quote\([^)]*\)\}", "", line)):
                         if var not in ROOT_SAFE_VARS:
                             problems.append(f"{rel}:{lineno}: root command interpolates ${var} without RootShell.quote()")
 

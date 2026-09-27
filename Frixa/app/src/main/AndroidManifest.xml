@@ -7,7 +7,7 @@
     <!-- חיפוש מקומות שמוכרים פריקסה (OpenStreetMap) -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <!-- מיקום משוער בלבד: מספיק לתחזית/לחיפוש ברדיוס, בלי לתת לאפליקציה את המיקום המדויק -->
 
     <uses-permission android:name="com.future.futureui.permission.SYSTEM_SETTINGS" />
     <uses-permission android:name="com.future.keyboard.permission.SETTINGS" />

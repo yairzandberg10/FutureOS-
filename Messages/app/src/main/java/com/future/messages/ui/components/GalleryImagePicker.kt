@@ -24,7 +24,9 @@ fun rememberGalleryImagePicker(onPicked: (Uri) -> Unit): () -> Unit {
     val context = LocalContext.current
     val currentOnPicked by rememberUpdatedState(onPicked)
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        val uri = result.data?.data
+        // רק content:// שלא שייך לנו: בורר מזויף בשם החבילה של הגלריה יכל להחזיר
+        // file:// או URI של ה-FileProvider שלנו, וקובץ פרטי היה יוצא כקובץ מצורף.
+        val uri = result.data?.data?.takeIf { it.scheme == "content" && it.authority?.startsWith(context.packageName) != true }
         if (result.resultCode == Activity.RESULT_OK && uri != null) currentOnPicked(uri)
     }
     return remember {

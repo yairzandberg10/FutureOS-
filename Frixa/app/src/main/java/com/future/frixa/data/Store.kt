@@ -36,7 +36,8 @@ object FricasseStores {
     fun search(context: Context, near: Pair<Double, Double>?): List<Store> {
         val filter = if (near != null) {
             val (lat, lon) = near
-            "(around:30000,$lat,$lon)"
+            // רדיוס של 30 ק"מ - המיקום המדויק לא נחוץ ולא נשלח לשרת ציבורי (~1 ק"מ)
+            "(around:30000,${String.format(java.util.Locale.US, "%.2f", lat)},${String.format(java.util.Locale.US, "%.2f", lon)})"
         } else {
             "(area.il)"
         }

@@ -242,7 +242,7 @@ class MainActivity : ComponentActivity() {
                             useGps = newValue
                             CalendarSettings.setUseGps(this@MainActivity, newValue)
                             if (newValue && !hasLocationPermission) {
-                                locationPermissionLauncher.launch(arrayOf(android.Manifest.permission.ACCESS_COARSE_LOCATION, android.Manifest.permission.ACCESS_FINE_LOCATION))
+                                locationPermissionLauncher.launch(arrayOf(android.Manifest.permission.ACCESS_COARSE_LOCATION))
                             }
                         },
                         onSelectRegion = {

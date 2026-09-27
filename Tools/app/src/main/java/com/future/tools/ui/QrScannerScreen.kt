@@ -127,7 +127,9 @@ private fun QrResultView(value: String, theme: FutureTheme, onScanAgain: () -> U
         if (isUrl) {
             QrActionButton("פתח קישור", theme = theme) {
                 try {
-                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(value)))
+                    // BROWSABLE: קישור מקוד QR זר נפתח רק במה שמוכן לקבל קישורים מהרשת,
+                    // לא בכל Activity שבמקרה רשום לסכמה.
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(value)).addCategory(Intent.CATEGORY_BROWSABLE))
                 } catch (e: Exception) {
                     android.util.Log.w("QrScannerScreen", "QrResultView failed", e)
                 }

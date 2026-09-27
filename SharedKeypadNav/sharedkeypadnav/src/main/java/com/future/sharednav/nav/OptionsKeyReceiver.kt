@@ -38,13 +38,8 @@ fun onOptionsKeyPress(onTrigger: () -> Unit) {
                 if (lifecycle?.currentState?.isAtLeast(Lifecycle.State.RESUMED) != false) currentOnTrigger()
             }
         }
-        val filter = IntentFilter(FutureUIActions.ACTION_OPTIONS_SHORT_PRESS)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            context.registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)
-        } else {
-            context.registerReceiver(receiver, filter)
-        }
-        onDispose { context.unregisterReceiver(receiver) }
+        KeyPressBroadcasts.register(context, receiver, IntentFilter(FutureUIActions.ACTION_OPTIONS_SHORT_PRESS))
+        onDispose { KeyPressBroadcasts.unregister(context, receiver) }
     }
 }
 

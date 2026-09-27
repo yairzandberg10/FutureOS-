@@ -70,7 +70,9 @@ class MainActivity : ComponentActivity() {
                 LaunchedEffect(pendingShare) {
                     val share = pendingShare ?: return@LaunchedEffect
                     pendingShare = null
-                    val text = share.getStringExtra(Intent.EXTRA_TEXT).orEmpty()
+                    // כל אפליקציה יכולה לשתף לכאן - פתק נשמר מיד, אז אורך סביר בלבד
+                    // (מגה-בייטים של טקסט היו נשמרים ומאטים את כל רשימת הפתקים)
+                    val text = runCatching { share.getStringExtra(Intent.EXTRA_TEXT) }.getOrNull().orEmpty().take(100_000)
                     if (text.isNotBlank()) {
                         val parsed = NoteShare.parse(text, share.getStringExtra(Intent.EXTRA_SUBJECT))
                         viewModel.importShared(parsed.title, parsed.content, parsed.isChecklist)

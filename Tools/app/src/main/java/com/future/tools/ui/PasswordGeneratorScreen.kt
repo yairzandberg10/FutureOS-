@@ -104,7 +104,12 @@ fun PasswordGeneratorScreen(theme: FutureTheme, onBack: () -> Unit) {
                     PwActionButton(FutureIcons.Refresh, "חדש", theme = theme, modifier = Modifier.weight(1f), primary = false) { regenerate() }
                     PwActionButton(FutureIcons.ContentCopy, "העתק", theme = theme, modifier = Modifier.weight(1f)) {
                         val clipboard = context.getSystemService(ClipboardManager::class.java)
-                        clipboard.setPrimaryClip(ClipData.newPlainText("password", password))
+                        // מסומן כרגיש: לא נשמר בהיסטוריית הלוח של המקלדת ולא מוצג בתצוגה המקדימה של המערכת.
+                        clipboard.setPrimaryClip(ClipData.newPlainText("password", password).apply {
+                            description.extras = android.os.PersistableBundle().apply {
+                                putBoolean("android.content.extra.IS_SENSITIVE", true)
+                            }
+                        })
                         Toast.makeText(context, "הסיסמה הועתקה", Toast.LENGTH_SHORT).show()
                     }
                 }

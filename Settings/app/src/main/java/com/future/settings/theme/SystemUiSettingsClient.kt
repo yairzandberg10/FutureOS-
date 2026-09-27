@@ -22,9 +22,13 @@ data class SystemUiSettings(
 object SystemUiSettingsClient {
     private val URI = Uri.parse("content://${SystemUiTarget.SETTINGS_AUTHORITY}/settings")
 
+    /** רק מול FutureUI האמיתי, לא מול אפליקציה שתפסה את הכתובת (ר' TrustedProviders). */
+    private fun trusted(context: Context) =
+        com.future.sharednav.systemui.TrustedProviders.isTrusted(context, SystemUiTarget.SETTINGS_AUTHORITY)
+
     fun get(context: Context): SystemUiSettings {
         return try {
-            context.contentResolver.query(URI, null, null, null, null)?.use { cursor ->
+            (if (trusted(context)) context.contentResolver else null)?.query(URI, null, null, null, null)?.use { cursor ->
                 if (cursor.moveToFirst()) {
                     SystemUiSettings(
                         showBattery = cursor.getInt(cursor.getColumnIndexOrThrow("show_battery")) == 1,
@@ -52,7 +56,7 @@ object SystemUiSettingsClient {
 
     private fun update(context: Context, values: ContentValues) {
         try {
-            context.contentResolver.update(URI, values, null, null)
+            if (trusted(context)) context.contentResolver.update(URI, values, null, null)
         } catch (e: Exception) {
             android.util.Log.w("SystemUiSettingsClient", "update failed", e)
         }

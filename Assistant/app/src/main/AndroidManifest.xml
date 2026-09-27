@@ -31,7 +31,7 @@
     <uses-permission android:name="com.future.futureui.permission.SYSTEM_SETTINGS" />
     <uses-permission android:name="com.future.keyboard.permission.SETTINGS" />
     <application
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
@@ -71,7 +71,8 @@
         <!-- המקלדת מחממת את מודל התמלול כשהיא נפתחת (ר' AsrWarmupReceiver). -->
         <receiver
             android:name=".asr.AsrWarmupReceiver"
-            android:exported="true">
+            android:exported="true"
+            android:permission="com.future.futureui.permission.SYSTEM_SETTINGS">
             <intent-filter>
                 <action android:name="com.future.assistant.action.WARM_UP_ASR" />
             </intent-filter>

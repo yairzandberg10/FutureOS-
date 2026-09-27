@@ -33,3 +33,10 @@
     <init>(...);
     <fields>;
 }
+
+# Security: debug/verbose logs never ship in release builds (logcat is readable
+# over adb and by crash reporters).
+-assumenosideeffects class android.util.Log {
+    public static int v(...);
+    public static int d(...);
+}

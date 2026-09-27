@@ -128,7 +128,8 @@ internal object ChatBackend {
     /** מוריד ומוחק - הקובץ המוצפן לא נשאר בשרת אחרי שהנמען קיבל אותו. */
     suspend fun downloadAndDelete(path: String): ByteArray {
         val ref = storage.reference.child(path)
-        val bytes = ref.getBytes(40L * 1024 * 1024).await()
+        // כמו מגבלת ההעלאה ב-storage.rules (25MB) - לא יותר מזה בזיכרון בבת אחת
+        val bytes = ref.getBytes(25L * 1024 * 1024).await()
         runCatching { ref.delete().await() }
         return bytes
     }

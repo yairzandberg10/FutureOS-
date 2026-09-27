@@ -130,7 +130,7 @@ fun StoresScreen(theme: FutureTheme) {
                 store.phone?.let { phone ->
                     FutureMenuRow("התקשר", FutureIcons.Call, theme, {
                         menuOpen = false
-                        runCatching { context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                        runCatching { context.startActivity(Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", phone, null)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
                     })
                 }
             }

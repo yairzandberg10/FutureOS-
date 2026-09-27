@@ -58,7 +58,25 @@ object WallpaperPhotos {
                 connection.connectTimeout = 10_000
                 connection.readTimeout = 20_000
                 connection.instanceFollowRedirects = true
-                connection.inputStream.use { input -> file.outputStream().use { input.copyTo(it) } }
+                // דף שגיאה/פורטל של רשת ציבורית לא נשמר כ"תמונה", הפניה לא יוצאת מ-https,
+                // ותשובה ענקית לא ממלאת את האחסון
+                if (connection.responseCode !in 200..299 || connection.url.protocol != "https") {
+                    connection.disconnect()
+                    return null
+                }
+                connection.inputStream.use { input ->
+                    file.outputStream().use { out ->
+                        val buf = ByteArray(64 * 1024)
+                        var total = 0L
+                        while (true) {
+                            val n = input.read(buf)
+                            if (n < 0) break
+                            total += n
+                            if (total > 15L * 1024 * 1024) error("too large")
+                            out.write(buf, 0, n)
+                        }
+                    }
+                }
                 connection.disconnect()
             } catch (e: Exception) {
                 file.delete()

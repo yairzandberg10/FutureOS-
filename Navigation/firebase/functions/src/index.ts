@@ -17,6 +17,7 @@ import { onSchedule } from "firebase-functions/v2/scheduler";
 import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
 import * as admin from "firebase-admin";
+import { createHash, timingSafeEqual } from "crypto";
 
 import { REGIONS, buildRegionBundle } from "./gtfs";
 
@@ -41,6 +42,33 @@ const HERE_ROUTES_URL = "https://router.hereapi.com/v8/routes";
 function requireCaller(request: CallableRequest<unknown>): void {
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "sign in first (the app signs in anonymously)");
+  }
+}
+
+/**
+ * Daily cap on paid upstream calls. The app signs in anonymously, so anyone
+ * who pulls the Firebase config out of the APK can mint callers at will; a
+ * per-uid limit would not stop them. A project-wide ceiling at least bounds
+ * the bill (HERE is metered). Counts in one Firestore document per service.
+ */
+const DAILY_LIMITS: Record<string, number> = { here: 5000, siri: 20000 };
+
+async function takeDailyQuota(service: string): Promise<void> {
+  const limit = DAILY_LIMITS[service];
+  if (!limit) return;
+  const today = new Date().toISOString().slice(0, 10);
+  const ref = admin.firestore().collection("service_state").doc(`quota_${service}`);
+  const allowed = await admin.firestore().runTransaction(async (tx) => {
+    const snapshot = await tx.get(ref);
+    const data = snapshot.data() ?? {};
+    const count = data.day === today ? ((data.count as number | undefined) ?? 0) : 0;
+    if (count >= limit) return false;
+    tx.set(ref, { day: today, count: count + 1 });
+    return true;
+  });
+  if (!allowed) {
+    logger.warn("daily quota reached", { service });
+    throw new HttpsError("resource-exhausted", "daily limit reached, try again tomorrow");
   }
 }
 
@@ -82,12 +110,14 @@ interface GeocodePlace {
  */
 export const geocodeSearch = onCall(async (request: CallableRequest<{ query?: string }>) => {
   requireCaller(request);
-  const query = (request.data?.query ?? "").trim();
+  const query = String(request.data?.query ?? "").trim().slice(0, 200);
   if (query.length === 0) {
     return { results: [] as GeocodePlace[] };
   }
 
-  const cacheId = Buffer.from(query.toLowerCase()).toString("base64url").slice(0, 400);
+  // A hash, not base64: base64 of the query is the query itself, readable by
+  // anyone who can list document ids. And the query is not stored in the doc.
+  const cacheId = createHash("sha256").update(query.toLowerCase()).digest("base64url");
   const cacheRef = admin.firestore().collection("geocode_cache").doc(cacheId);
   const cached = await cacheRef.get();
   const cachedAt = cached.data()?.cachedAt as number | undefined;
@@ -124,7 +154,7 @@ export const geocodeSearch = onCall(async (request: CallableRequest<{ query?: st
     results.push({ label, lat, lon });
   }
 
-  await cacheRef.set({ query, results, cachedAt: Date.now() });
+  await cacheRef.set({ results, cachedAt: Date.now() });
   return { results };
 });
 
@@ -151,11 +181,17 @@ export const drivingRoute = onCall(
     ) {
       throw new HttpsError("invalid-argument", "origin and destination coordinates are required");
     }
+    const validLat = (v: number) => Number.isFinite(v) && v >= -90 && v <= 90;
+    const validLon = (v: number) => Number.isFinite(v) && v >= -180 && v <= 180;
+    if (!validLat(originLat) || !validLat(destinationLat) || !validLon(originLon) || !validLon(destinationLon)) {
+      throw new HttpsError("invalid-argument", "coordinates out of range");
+    }
 
     const apiKey = HERE_API_KEY.value();
     if (!apiKey) {
       throw new HttpsError("failed-precondition", "HERE_API_KEY secret is not set");
     }
+    await takeDailyQuota("here");
 
     const url = new URL(HERE_ROUTES_URL);
     url.searchParams.set("origin", `${originLat},${originLon}`);
@@ -197,8 +233,10 @@ export const siriStopMonitoring = onCall(
   { secrets: [SIRI_BASE_URL, SIRI_API_KEY] },
   async (request: CallableRequest<{ stopId?: string; lineRef?: string | null }>) => {
     requireCaller(request);
+    // Checked for type and shape, not just presence: an object here made
+    // escapeXml throw (500), and an unbounded string went straight upstream.
     const stopId = request.data?.stopId;
-    if (!stopId) {
+    if (typeof stopId !== "string" || !/^[0-9A-Za-z_-]{1,32}$/.test(stopId)) {
       throw new HttpsError("invalid-argument", "stopId is required");
     }
     const baseUrl = SIRI_BASE_URL.value();
@@ -207,8 +245,13 @@ export const siriStopMonitoring = onCall(
       throw new HttpsError("failed-precondition", "SIRI_BASE_URL / SIRI_API_KEY secrets are not set");
     }
 
+    await takeDailyQuota("siri");
     const timestamp = new Date().toISOString();
-    const lineRef = request.data?.lineRef;
+    const rawLineRef = request.data?.lineRef;
+    if (rawLineRef != null && (typeof rawLineRef !== "string" || !/^[0-9A-Za-z_-]{1,32}$/.test(rawLineRef))) {
+      throw new HttpsError("invalid-argument", "bad lineRef");
+    }
+    const lineRef = rawLineRef;
     const lineRefXml = lineRef ? `<LineRef>${escapeXml(lineRef)}</LineRef>` : "";
     const body = `<?xml version="1.0" encoding="UTF-8"?>
 <Siri xmlns="http://www.siri.org.uk/siri" version="2.0">
@@ -274,8 +317,10 @@ export const refreshTransitBundleNow = onRequest(
     timeoutSeconds: 1800,
   },
   async (request, response) => {
-    const token = request.query.token ?? request.get("x-admin-token");
-    if (!ADMIN_TOKEN.value() || token !== ADMIN_TOKEN.value()) {
+    // Header only: a token in the query string ends up in request logs.
+    const token = Buffer.from(request.get("x-admin-token") ?? "");
+    const expected = Buffer.from(ADMIN_TOKEN.value() ?? "");
+    if (expected.length === 0 || token.length !== expected.length || !timingSafeEqual(token, expected)) {
       response.status(403).send("forbidden");
       return;
     }

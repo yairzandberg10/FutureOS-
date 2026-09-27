@@ -214,10 +214,12 @@ class LockScreenController(
     }
 
     private fun showWindow() {
-        if (view != null) { refreshDynamic(); return }
+        if (view != null) { runCatching { refreshDynamic() }; return }
+        // תקלה בטפט או בווידג'טים לא יכולה למנוע את החלון עצמו - אחרת המכשיר
+        // "נעול" בלי מסך נעילה (פתוח לגמרי).
+        runCatching { loadWallpaper() }.onFailure { Log.e(TAG, "wallpaper failed", it) }
+        runCatching { refreshDynamic() }.onFailure { Log.e(TAG, "refresh failed", it) }
         try {
-            loadWallpaper()
-            refreshDynamic()
             val params = WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT,
                 WindowManager.LayoutParams.MATCH_PARENT,
@@ -248,6 +250,8 @@ class LockScreenController(
             main.postDelayed(ticker, 3_000)
         } catch (e: Exception) {
             Log.e(TAG, "Error showing lock screen", e)
+            // לא נשארים נעולים-בלי-חלון: מנסים שוב עד שהחלון עולה
+            if (locked && !suspended) main.postDelayed({ if (locked && !suspended && view == null) showWindow() }, 500)
         }
     }
 

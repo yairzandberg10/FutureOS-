@@ -62,7 +62,7 @@ class GeocodingRepository {
             synchronized(cache) { cache[key] = results }
             results
         } catch (e: Exception) {
-            android.util.Log.w("GeocodingRepository", "search failed for $query", e)
+            android.util.Log.w("GeocodingRepository", "search failed" /* בלי החיפוש עצמו: כתובת/מקום של המשתמש */, e)
             emptyList()
         }
     }

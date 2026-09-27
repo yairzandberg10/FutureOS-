@@ -50,7 +50,7 @@
         </intent>
     </queries>
     <application
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
@@ -134,6 +134,7 @@
         <activity
             android:name=".share.ShareActivity"
             android:exported="true"
+            android:process=":share"
             android:excludeFromRecents="true"
             android:noHistory="true"
             android:taskAffinity=""
@@ -149,6 +150,7 @@
         <activity
             android:name=".lockscreen.settings.LockSettingsActivity"
             android:exported="true"
+            android:permission="com.future.futureui.permission.SYSTEM_SETTINGS"
             android:excludeFromRecents="true"
             android:label="מסך נעילה"
             android:theme="@style/Theme.FutureUI">
@@ -161,6 +163,7 @@
         <activity
             android:name=".SettingsActivity"
             android:exported="true"
+            android:permission="com.future.futureui.permission.SYSTEM_SETTINGS"
             android:label="התאמה אישית"
             android:theme="@style/Theme.FutureUI" />
 

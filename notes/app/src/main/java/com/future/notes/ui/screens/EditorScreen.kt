@@ -147,6 +147,17 @@ fun EditorScreen(
         audioPath = path
     }
 
+    // יציאה מהפתק באמצע הקלטה (HOME, שיחה): ההקלטה נשמרת ונעצרת, ולא ממשיכה
+    // להקליט ברקע בלי הגבלת זמן כשאף מסך לא מראה שהמיקרופון פתוח
+    val recordLifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(recordLifecycle) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP && recording) stopRecording()
+        }
+        recordLifecycle.lifecycle.addObserver(observer)
+        onDispose { recordLifecycle.lifecycle.removeObserver(observer) }
+    }
+
     val micPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) startRecording() else Toast.makeText(context, "צריך הרשאת מיקרופון להקלטה", Toast.LENGTH_SHORT).show()
     }
@@ -168,6 +179,19 @@ fun EditorScreen(
     }
 
     BackHandler { exit() }
+
+    // בית/שיחה נכנסת בתוך חצי השנייה של השמירה האוטומטית - שומרים מיד, אחרת
+    // המילים האחרונות אבדו אם המערכת סגרה את התהליך ברקע.
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val obs = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP) {
+                scope.launch(kotlinx.coroutines.NonCancellable) { saveNow() }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(obs)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(obs) }
+    }
 
     var items by remember(isChecklist, content) { mutableStateOf(Checklist.parse(content)) }
     fun setItems(newItems: List<ChecklistItem>) {

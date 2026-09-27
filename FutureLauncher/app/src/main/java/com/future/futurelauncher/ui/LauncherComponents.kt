@@ -55,6 +55,7 @@ import com.future.sharednav.icons.FutureIcons
 internal object AppIconCache {
     // ConcurrentHashMap: האייקונים נטענים ב-Dispatchers.IO (rememberAppIcon,
     // ו-preload מתוך LauncherViewModel.loadData) ונקראים מה-main thread.
+    private const val MAX_ICON_PX = 256
     private val cache = java.util.concurrent.ConcurrentHashMap<String, ImageBitmap>()
 
     fun peek(packageName: String): ImageBitmap? = cache[packageName]
@@ -63,7 +64,11 @@ internal object AppIconCache {
     fun load(pm: PackageManager, resolveInfo: ResolveInfo): ImageBitmap {
         val packageName = resolveInfo.activityInfo.packageName
         cache[packageName]?.let { return it }
-        return resolveInfo.loadIcon(pm).toBitmap().asImageBitmap().also { cache[packageName] = it }
+        // גודל קבוע: אפליקציה זרה יכולה להצהיר על אייקון בגודל עצום, ו-toBitmap() בגודל
+        // המקורי מפיל את מסך הבית מחוסר זיכרון (בכל פתיחה - כלומר מסך בית שלא עולה)
+        val icon = resolveInfo.loadIcon(pm)
+        val side = maxOf(icon.intrinsicWidth, icon.intrinsicHeight).coerceIn(1, MAX_ICON_PX)
+        return icon.toBitmap(side, side).asImageBitmap().also { cache[packageName] = it }
     }
 
     fun evict(packageName: String) {

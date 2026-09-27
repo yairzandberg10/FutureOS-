@@ -46,7 +46,10 @@ private val AssistantRecognizer = ComponentName(
     "com.future.assistant.asr.AssistantRecognitionService",
 )
 
+// רק העוזר האמיתי של FutureOS (אותה חתימה): מה שמוכתב עובר אליו, והטקסט שחוזר נכנס להודעה
 private fun assistantRecognizerInstalled(context: Context): Boolean =
+    context.packageManager.checkSignatures(context.packageName, AssistantRecognizer.packageName) ==
+        android.content.pm.PackageManager.SIGNATURE_MATCH &&
     context.packageManager.queryIntentServices(
         Intent("android.speech.RecognitionService").setPackage(AssistantRecognizer.packageName), 0,
     ).isNotEmpty()
@@ -126,8 +129,18 @@ fun rememberLocalDictation(onText: (String) -> Unit): LocalDictation {
         }
     }
 
-    DisposableEffect(Unit) {
+    // יציאה מהמסך באמצע הכתבה (HOME, שיחה) - ההקלטה נעצרת ולא נמשכת ברקע
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP && (dictation.listening || dictation.processing)) {
+                recognizerHolder[0]?.cancel()
+                finish()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
             recognizerHolder[0]?.destroy()
             recognizerHolder[0] = null
         }

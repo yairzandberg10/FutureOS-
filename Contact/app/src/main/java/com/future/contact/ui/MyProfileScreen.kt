@@ -87,7 +87,9 @@ fun MyProfileScreen(theme: FutureTheme) {
 
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { reload() }
     val photoPicker = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        val uri = result.data?.data ?: return@rememberLauncherForActivityResult
+        // רק content:// שלא שייך לנו (בורר זר יכל להחזיר file:// לקובץ פרטי שלנו)
+        val uri = result.data?.data?.takeIf { it.scheme == "content" && it.authority?.startsWith(context.packageName) != true }
+            ?: return@rememberLauncherForActivityResult
         scope.launch {
             val ok = withContext(Dispatchers.IO) { store.setPhoto(uri) }
             if (!ok) android.widget.Toast.makeText(context, "לא ניתן לשמור את התמונה", android.widget.Toast.LENGTH_SHORT).show()

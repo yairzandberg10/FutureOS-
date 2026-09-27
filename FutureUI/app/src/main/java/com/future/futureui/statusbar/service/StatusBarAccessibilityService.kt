@@ -24,6 +24,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ComposeView
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.*
 import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
@@ -40,6 +41,7 @@ import com.future.futureui.statusbar.ui.VolumeOverlay
 import com.future.futureui.theme.ThemeProvider
 import com.future.futureui.ui.theme.FutureUITheme
 import com.future.futureui.utils.FutureUIActions
+import com.future.sharednav.actions.FutureUIActions as SharedActions
 import com.future.futureui.utils.FutureUIState
 
 /**
@@ -76,7 +78,14 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
 
     /** האם אפשר לצלם עכשיו את [pkg]: היא בחזית, רשומה באחרונות, ואין מעליה חלון שלנו. */
     private fun isSnapshotTarget(pkg: String): Boolean =
-        FutureUIState.foregroundPackage == pkg && !recentsVisible && powerMenuView == null && recentAppsManager.isTop(pkg)
+        FutureUIState.foregroundPackage == pkg && !recentsVisible && powerMenuView == null && recentAppsManager.isTop(pkg) &&
+            // צילום נשמר לדיסק ומוצג באחרונות: לא כשהמכשיר נעול, ולא כשהמקלדת
+            // פתוחה - סיסמה או קוד שמוקלדים עכשיו היו נכנסים לתמונה.
+            !FutureUIState.isLocked && !FutureUIState.isSecured && !isKeyboardShowing()
+
+    private fun isKeyboardShowing(): Boolean = runCatching {
+        windows.any { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD }
+    }.getOrDefault(true)
 
     // צבע ההדגשה/פוקוס המשותף בין כל אפליקציות FutureOS (ThemeProvider). כאן
     // ניגשים ל-SharedPreferences ישירות במקום דרך ContentResolver כי השירות
@@ -119,7 +128,10 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
                         sendBroadcast(Intent(FutureUIActions.ACTION_LAUNCH_CALL_UI).setPackage(DIALER_PACKAGE))
                     }
                 }
-                FutureUIActions.ACTION_CALL_ENDED -> suppressForActiveCall = false
+                FutureUIActions.ACTION_CALL_ENDED -> {
+                    suppressForActiveCall = false
+                    lockController?.onCallEnded()
+                }
             }
         }
     }
@@ -154,24 +166,20 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
                 addAction(ACTION_SHOW_POWER_MENU)
                 addAction(ACTION_LOCK_NOW)
             }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                registerReceiver(bringToFrontReceiver, filter, Context.RECEIVER_EXPORTED)
-            } else {
-                registerReceiver(bringToFrontReceiver, filter)
-            }
+            // שני השידורים נשלחים רק מתוך FutureUI עצמו (מסכי overlay, מרכז הבקרה) -
+            // NOT_EXPORTED כדי שאפליקציה זרה לא תוכל להקפיץ את תפריט הכיבוי.
+            ContextCompat.registerReceiver(this, bringToFrontReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
 
-            // ACTION_CALL_RINGING/ENDED מגיעים משידור מפורש (setPackage) של dialer -
-            // מ-API 33 חובה להצהיר EXPORTED כדי לקבל שידור כזה מאפליקציה אחרת.
+            // ACTION_CALL_RINGING/ENDED מגיעים משידור מפורש (setPackage) של dialer.
+            // השולח חייב להחזיק את הרשאת המערכת - אחרת כל אפליקציה יכלה לזייף "שיחה
+            // מצלצלת" ולנטרל את הדאבל-קליק על OK / לפתוח את מסך השיחה.
             val callFilter = IntentFilter().apply {
                 addAction(FutureUIActions.ACTION_CALL_RINGING)
                 addAction(FutureUIActions.ACTION_CALL_ENDED)
             }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                registerReceiver(callReceiver, callFilter, Context.RECEIVER_EXPORTED)
-            } else {
-                @Suppress("UnspecifiedRegisterReceiverFlag")
-                registerReceiver(callReceiver, callFilter)
-            }
+            ContextCompat.registerReceiver(
+                this, callReceiver, callFilter, SharedActions.PERMISSION_SYSTEM, null, ContextCompat.RECEIVER_EXPORTED
+            )
         } catch (e: Exception) {
             Log.e("FutureUI", "Error in StatusBar onCreate", e)
         }
@@ -313,6 +321,8 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
     }
 
     private fun launchVoiceAssistant() {
+        // נעול (גם כשמסך הנעילה פינה מקום לשיחה/מעורר): לא פותחים אפליקציה מעליו
+        if (FutureUIState.isSecured) return
         try {
             val intent = packageManager.getLaunchIntentForPackage(VOICE_ASSISTANT_PACKAGE) ?: return
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -326,7 +336,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
      * bringFrontIntent), כדי שכל אפליקציה בחזית תוכל להאזין ולהגיב. */
     private fun sendOptionsShortPressBroadcast() {
         try {
-            sendBroadcast(Intent(FutureUIActions.ACTION_OPTIONS_SHORT_PRESS))
+            sendBroadcast(Intent(FutureUIActions.ACTION_OPTIONS_SHORT_PRESS), FutureUIActions.PERMISSION_SYSTEM)
         } catch (e: Exception) {
             Log.e("FutureUI", "Error sending options short-press broadcast", e)
         }
@@ -468,7 +478,8 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
         if (cls == null) return
         val byClass = POWER_MENU_CLASS_HINTS.any { cls.contains(it, ignoreCase = true) }
         val texts = if (byClass) emptyList() else windowTexts(event)
-        Log.i("FutureUI", "system window: $pkg / $cls / ${texts.take(8)}")
+        // בלי הטקסטים עצמם: חלון מערכת יכול להציג תוכן פרטי (שם, מספר, הודעה).
+        Log.i("FutureUI", "system window: $pkg / $cls / ${texts.size} texts")
         val byText = texts.count { t -> POWER_MENU_LABELS.any { t.equals(it, ignoreCase = true) } } >= 1 &&
             texts.any { t -> POWER_OFF_LABELS.any { t.equals(it, ignoreCase = true) } }
         if (!byClass && !byText) return
@@ -530,7 +541,13 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
                             },
                             onCancel = { hidePowerMenu() },
                             airplaneOn = powerAirplaneState.value,
-                            onAirplane = {
+                            onAirplane = onAirplane@{
+                                // מצב טיסה מהמכשיר נעול = גנב מנתק אותו מהרשת ומאיתור. כמו
+                                // "נעילת רשת ואבטחה" בסמסונג: רק אחרי פתיחה.
+                                if (FutureUIState.isSecured) {
+                                    android.widget.Toast.makeText(this@StatusBarAccessibilityService, "צריך לפתוח את הנעילה קודם", android.widget.Toast.LENGTH_SHORT).show()
+                                    return@onAirplane
+                                }
                                 val next = !powerAirplaneState.value
                                 powerAirplaneState.value = next
                                 controlManager?.let { cm ->
@@ -597,6 +614,8 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
     /** מסך "אפליקציות אחרונות" עצמאי מבוסס UsageStatsManager, במקום GLOBAL_ACTION_RECENTS המכוער. */
     private fun showRecentApps() {
         if (recentsVisible) return
+        // נעול (גם כשמסך הנעילה פינה מקום לשיחה): האחרונות מציגות צילומים של כל האפליקציות
+        if (FutureUIState.isSecured) return
         try {
             if (!recentAppsManager.hasUsageAccess()) {
                 controlManager?.runRootCommandAsync("appops set $packageName GET_USAGE_STATS allow")
@@ -635,7 +654,9 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
                                 hideRecentApps()
                             },
                             onClose = { app ->
-                                controlManager?.runRootCommandAsync("am force-stop ${app.packageName}")
+                                if (com.future.sharednav.root.RootShell.isSafeToken(app.packageName)) {
+                                    controlManager?.runRootCommandAsync("am force-stop ${com.future.sharednav.root.RootShell.quote(app.packageName)}")
+                                }
                                 recentAppsManager.remove(app.packageName)
                                 recentSnapshots.remove(app.packageName)
                                 recentAppsList.remove(app)
@@ -643,7 +664,10 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
                             onCloseAll = {
                                 val all = recentAppsList.toList()
                                 if (all.isNotEmpty()) {
-                                    controlManager?.runRootCommandAsync(all.joinToString("; ") { "am force-stop ${it.packageName}" })
+                                    controlManager?.runRootCommandAsync(
+                                        all.map { it.packageName }.filter(com.future.sharednav.root.RootShell::isSafeToken)
+                                            .joinToString("; ") { "am force-stop ${com.future.sharednav.root.RootShell.quote(it)}" }
+                                    )
                                 }
                                 recentAppsManager.clear()
                                 recentSnapshots.clear()

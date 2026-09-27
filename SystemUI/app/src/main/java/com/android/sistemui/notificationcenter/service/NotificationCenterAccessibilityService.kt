@@ -6,6 +6,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import androidx.core.content.ContextCompat
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.PixelFormat
@@ -72,11 +73,8 @@ class NotificationCenterAccessibilityService : AccessibilityService(), Lifecycle
             windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
             
             val filter = IntentFilter(FutureUIActions.ACTION_SHOW_NOTIFICATION_CENTER)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)
-            } else {
-                registerReceiver(receiver, filter)
-            }
+            // נשלח רק מתוך FutureUI עצמו - אפליקציה זרה לא צריכה לפתוח את המסך הזה.
+            ContextCompat.registerReceiver(this, receiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
         } catch (e: Exception) {
             Log.e("FutureUI", "Error in NC onCreate", e)
         }
@@ -111,7 +109,7 @@ class NotificationCenterAccessibilityService : AccessibilityService(), Lifecycle
                     // אותה סיבה כמו ב-* (ר' ControlCenterAccessibilityService): המקש נצרך כאן
                     // גם בלחיצה קצרה, ולכן החלפת שפת ההקלדה במקלדת לא עבדה בפועל.
                     try {
-                        sendBroadcast(Intent(FutureUIActions.ACTION_POUND_SHORT_PRESS))
+                        sendBroadcast(Intent(FutureUIActions.ACTION_POUND_SHORT_PRESS), FutureUIActions.PERMISSION_SYSTEM)
                     } catch (e: Exception) {
                         Log.w("FutureUI", "pound short-press broadcast failed", e)
                     }

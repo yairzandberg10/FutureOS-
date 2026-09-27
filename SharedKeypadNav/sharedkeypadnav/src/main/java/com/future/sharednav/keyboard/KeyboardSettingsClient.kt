@@ -20,9 +20,13 @@ object KeyboardSettingsClient {
     private val PREDICTIVE_URI: Uri = Uri.parse("content://com.future.keyboard.settings/predictive")
     private val LANGUAGES_URI: Uri = Uri.parse("content://com.future.keyboard.settings/languages")
 
+    /** רק מול המקלדת האמיתית (ר' TrustedProviders), לא מול אפליקציה שתפסה את הכתובת. */
+    private fun trusted(context: Context) =
+        com.future.sharednav.systemui.TrustedProviders.isTrusted(context, "com.future.keyboard.settings")
+
     fun isPredictiveEnabled(context: Context): Boolean {
         return try {
-            context.contentResolver.query(PREDICTIVE_URI, null, null, null, null)?.use { cursor ->
+            (if (trusted(context)) context.contentResolver else null)?.query(PREDICTIVE_URI, null, null, null, null)?.use { cursor ->
                 if (cursor.moveToFirst()) cursor.getInt(cursor.getColumnIndexOrThrow("predictive_enabled")) == 1 else null
             } ?: true
         } catch (e: Exception) {
@@ -34,7 +38,7 @@ object KeyboardSettingsClient {
     fun setPredictiveEnabled(context: Context, enabled: Boolean) {
         try {
             val values = ContentValues().apply { put("predictive_enabled", if (enabled) 1 else 0) }
-            context.contentResolver.update(PREDICTIVE_URI, values, null, null)
+            if (trusted(context)) context.contentResolver.update(PREDICTIVE_URI, values, null, null)
         } catch (e: Exception) {
             Log.w(TAG, "setPredictiveEnabled נכשל", e)
         }
@@ -43,7 +47,7 @@ object KeyboardSettingsClient {
     /** כל שפות המקלדת עם המצב שלהן; רשימה ריקה אם המקלדת לא מותקנת. */
     fun languages(context: Context): List<KeyboardLanguage> {
         return try {
-            context.contentResolver.query(LANGUAGES_URI, null, null, null, null)?.use { c ->
+            (if (trusted(context)) context.contentResolver else null)?.query(LANGUAGES_URI, null, null, null, null)?.use { c ->
                 val code = c.getColumnIndexOrThrow("code")
                 val name = c.getColumnIndexOrThrow("name")
                 val enabled = c.getColumnIndexOrThrow("enabled")
@@ -65,7 +69,7 @@ object KeyboardSettingsClient {
                 enabled?.let { put("enabled", if (it) 1 else 0) }
                 predict?.let { put("predict", if (it) 1 else 0) }
             }
-            context.contentResolver.update(LANGUAGES_URI, values, null, null)
+            if (trusted(context)) context.contentResolver.update(LANGUAGES_URI, values, null, null)
         } catch (e: Exception) {
             Log.w(TAG, "setLanguage נכשל", e)
         }

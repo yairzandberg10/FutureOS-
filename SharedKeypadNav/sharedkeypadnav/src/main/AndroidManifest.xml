@@ -6,6 +6,16 @@
          במקרה - כשהצד השני ניגש אלינו, או כשהמקלדת היא ה-IME הפעיל. אחרי
          התקנה מחדש של המקלדת זה נשבר: "Failed to find provider info" כל 15
          שניות, ומתג הניבוי במרכז הבקרה הראה ערך ברירת מחדל שעה שלמה. -->
+    <!-- הרשאות החתימה של הסוויטה מוגדרות בכל אפליקציה, לא רק ב-FutureUI/במקלדת.
+         אחרת, כשהן לא מותקנות, אפליקציה זרה יכלה להגדיר ראשונה הרשאה באותו שם
+         ברמת normal - ולקבל כך גישה לכל מה שמוגן בה (מקלטים, ספקים, שידורים). -->
+    <permission
+        android:name="com.future.futureui.permission.SYSTEM_SETTINGS"
+        android:protectionLevel="signature" />
+    <permission
+        android:name="com.future.keyboard.permission.SETTINGS"
+        android:protectionLevel="signature" />
+
     <queries>
         <package android:name="com.future.futureui" />
         <package android:name="com.future.keyboard" />

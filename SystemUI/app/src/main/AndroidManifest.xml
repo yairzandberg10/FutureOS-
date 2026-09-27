@@ -34,6 +34,9 @@
         android:protectionLevel="signature" />
 
     <uses-permission android:name="com.future.keyboard.permission.SETTINGS" />
+    <!-- מקשי CALL/ENDCALL נשלחים ל-dialer (CallActionReceiver), שדורש את ההרשאה הזו
+         מהשולח. SystemUI (עותק) שומר את השם הזה כמו שהוא - ר' sync-from-futureui.sh. -->
+    <uses-permission android:name="com.future.futureui.permission.SYSTEM_SETTINGS" />
 
     <!-- חלון השיתוף צריך לראות את כל האפליקציות שמקבלות שיתוף -->
     <queries>
@@ -47,7 +50,7 @@
         </intent>
     </queries>
     <application
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
@@ -131,6 +134,7 @@
         <activity
             android:name=".share.ShareActivity"
             android:exported="true"
+            android:process=":share"
             android:excludeFromRecents="true"
             android:noHistory="true"
             android:taskAffinity=""
@@ -144,6 +148,7 @@
         <activity
             android:name=".SettingsActivity"
             android:exported="true"
+            android:permission="com.android.sistemui.permission.SYSTEM_SETTINGS"
             android:label="התאמה אישית"
             android:theme="@style/Theme.FutureUI" />
 

@@ -14,12 +14,13 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // Server-side geocoding cache. The device does not read it directly (it
-    // calls the geocodeSearch function), but leaving it readable costs
-    // nothing and helps when debugging from the console.
+    // Server-side geocoding cache. The device never reads it (it calls the
+    // geocodeSearch function). It holds what other users searched for -
+    // home addresses, clinics - so with anonymous sign-in "readable by any
+    // signed-in client" meant readable by anyone. The console uses admin
+    // access and does not need this rule.
     match /geocode_cache/{queryId} {
-      allow read: if request.auth != null;
-      allow write: if false;
+      allow read, write: if false;
     }
 
     match /{document=**} {

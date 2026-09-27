@@ -147,6 +147,20 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
         if (hasPermission && modelReady) micFocus.requestFocus()
     }
 
+    // יציאה מהעוזר באמצע האזנה (HOME, שיחה נכנסת) - המיקרופון נסגר מיד ולא ממשיך
+    // להקליט ברקע עד מגבלת 30 השניות; ההקלטה נמחקת בלי תמלול.
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP && state == AssistantState.LISTENING) {
+                state = AssistantState.IDLE
+                scope.launch(Dispatchers.IO) { speechEngine.cancelRecording() }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
     fun onMicClick() {
         when (state) {
             AssistantState.IDLE -> {

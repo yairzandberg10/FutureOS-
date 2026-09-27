@@ -128,7 +128,7 @@ class InCallViewModel : ViewModel() {
         if (phoneNumber.isBlank()) return
 
         val appContext = context.applicationContext
-        val uri = Uri.parse("smsto:$phoneNumber")
+        val uri = Uri.fromParts("smsto", phoneNumber, null)
         val smsPackage = try {
             Telephony.Sms.getDefaultSmsPackage(appContext)
         } catch (e: Exception) {

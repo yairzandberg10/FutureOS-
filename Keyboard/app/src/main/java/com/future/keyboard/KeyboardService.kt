@@ -98,6 +98,7 @@ class KeyboardService : InputMethodService() {
         private const val ASSISTANT_PACKAGE = "com.future.assistant"
 
         private const val MAX_CLIP_HISTORY = 8
+        private const val MAX_LEARNED_WORDS = 3000
         /** העתקות ישנות נמחקות מההיסטוריה אחרי 10 דקות - סיסמה שהועתקה פעם
          *  לא אמורה לחכות בלוח שעות לכל מי שמרים את המכשיר. */
         private const val CLIP_TTL_MS = 10 * 60_000L
@@ -350,21 +351,15 @@ class KeyboardService : InputMethodService() {
     }
 
     private fun registerSystemKeyReceiver(receiver: android.content.BroadcastReceiver, action: String) {
-        val filter = android.content.IntentFilter(action)
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(receiver, filter, RECEIVER_EXPORTED)
-        } else {
-            @Suppress("UnspecifiedRegisterReceiverFlag")
-            registerReceiver(receiver, filter)
-        }
+        com.future.sharednav.nav.KeyPressBroadcasts.register(this, receiver, android.content.IntentFilter(action))
     }
 
     override fun onDestroy() {
         super.onDestroy()
         releaseRecognizer()
-        unregisterReceiver(optionsKeyReceiver)
-        unregisterReceiver(starKeyReceiver)
-        unregisterReceiver(poundKeyReceiver)
+        com.future.sharednav.nav.KeyPressBroadcasts.unregister(this, optionsKeyReceiver)
+        com.future.sharednav.nav.KeyPressBroadcasts.unregister(this, starKeyReceiver)
+        com.future.sharednav.nav.KeyPressBroadcasts.unregister(this, poundKeyReceiver)
         runCatching { clipboardManager.removePrimaryClipChangedListener(clipListener) }
     }
 
@@ -539,7 +534,14 @@ class KeyboardService : InputMethodService() {
 
     private fun recordWordUsage(word: String) {
         if (isPrivateField) return
+        // תווי ההפרדה של הקובץ השמור - מילה כזו הייתה משבשת את כל הרשימה בטעינה
+        if (word.any { it == ';' || it == '=' }) return
         wordFrequency[word] = (wordFrequency[word] ?: 0) + 1
+        // לא שומרים לנצח כל מילה שהוקלדה אי פעם (שמות, כתובות...): רק השכיחות ביותר
+        if (wordFrequency.size > MAX_LEARNED_WORDS) {
+            wordFrequency.entries.sortedBy { it.value }.take(wordFrequency.size - MAX_LEARNED_WORDS)
+                .map { it.key }.forEach { wordFrequency.remove(it) }
+        }
         saveFrequencies()
     }
 
@@ -1630,6 +1632,9 @@ class KeyboardService : InputMethodService() {
      * נוספת. מחזיר null אם העוזר הקולי לא מותקן בכלל (נופלים לברירת המחדל). */
     private fun findAssistantRecognitionService(): android.content.ComponentName? {
         return try {
+            // כל מה שמוכתב עובר לשירות הזה - רק אם הוא באמת העוזר של FutureOS (אותה
+            // חתימה), ולא אפליקציה זרה שהותקנה בשם החבילה שלו.
+            if (packageManager.checkSignatures(packageName, ASSISTANT_PACKAGE) != PackageManager.SIGNATURE_MATCH) return null
             val intent = Intent("android.speech.RecognitionService").setPackage(ASSISTANT_PACKAGE)
             val resolved = packageManager.queryIntentServices(intent, 0).firstOrNull() ?: return null
             android.content.ComponentName(resolved.serviceInfo.packageName, resolved.serviceInfo.name)

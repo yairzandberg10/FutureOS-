@@ -44,12 +44,7 @@ private fun onSystemKeyBroadcast(action: String, onTrigger: () -> Unit) {
                 if (lifecycle?.currentState?.isAtLeast(Lifecycle.State.RESUMED) != false) currentOnTrigger()
             }
         }
-        val filter = IntentFilter(action)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            context.registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)
-        } else {
-            context.registerReceiver(receiver, filter)
-        }
-        onDispose { context.unregisterReceiver(receiver) }
+        KeyPressBroadcasts.register(context, receiver, IntentFilter(action))
+        onDispose { KeyPressBroadcasts.unregister(context, receiver) }
     }
 }

@@ -1,5 +1,6 @@
 package com.future.futureui.controlcenter.service
 
+import com.future.futureui.utils.safeText
 import android.app.NotificationManager
 import android.content.Intent
 import android.service.notification.NotificationListenerService
@@ -66,6 +67,8 @@ class MediaControlService : NotificationListenerService() {
         // במסך הנעילה ההתראה מופיעה ברשימה שלו (עם הגדרת הפרטיות) - לא כבאנר
         if (com.future.futureui.utils.FutureUIState.isLocked) return false
         val n = sbn.notification
+        // נעול ומסך הנעילה פינה מקום לשיחה/מעורר: רק שיחות מקבלות באנר, לא תוכן הודעות
+        if (com.future.futureui.utils.FutureUIState.isSecured && n.category != android.app.Notification.CATEGORY_CALL) return false
         // שיחה נכנסת היא "מתמשכת" (isOngoing) לכל אורך הצלצול, אבל היא בדיוק ההפך
         // מהתראות מתמשכות רגילות (התקדמות נגן וכו') שהמסנן הזה נועד לחסום - היא
         // חייבת להופיע כבאנר, אחרת אין שום אינדיקציה לשיחה נכנסת מעל אפליקציה אחרת.
@@ -74,8 +77,8 @@ class MediaControlService : NotificationListenerService() {
         // בכל שיחה יוצאת ובכל שינוי מצב.
         val isRingingCall = n.category == android.app.Notification.CATEGORY_CALL && n.fullScreenIntent != null
         if (sbn.isOngoing && !isRingingCall) return false
-        val title = n.extras.getCharSequence(android.app.Notification.EXTRA_TITLE)
-        val text = n.extras.getCharSequence(android.app.Notification.EXTRA_TEXT)
+        val title = n.safeText(android.app.Notification.EXTRA_TITLE)
+        val text = n.safeText(android.app.Notification.EXTRA_TEXT)
         if (title.isNullOrBlank() && text.isNullOrBlank()) return false
         val nm = getSystemService(NotificationManager::class.java)
         if (nm != null && nm.currentInterruptionFilter != NotificationManager.INTERRUPTION_FILTER_ALL) return false

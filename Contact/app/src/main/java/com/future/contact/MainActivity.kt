@@ -84,7 +84,9 @@ class MainActivity : ComponentActivity() {
             // המערכת מושבת במכשיר, אז הוא נפתח כאן כדיאלוג עם המספר מוכן.
             var insertNumber by remember {
                 mutableStateOf(intent?.takeIf { it.action == Intent.ACTION_INSERT }?.let {
+                    // INSERT חשוף לכל אפליקציה: רק תווי מספר טלפון, ובאורך סביר
                     it.getStringExtra(ContactsContract.Intents.Insert.PHONE).orEmpty()
+                        .filter { c -> c.isDigit() || c in "+*#,;() -" }.take(64)
                 })
             }
 
@@ -103,7 +105,8 @@ class MainActivity : ComponentActivity() {
             }
             // בחירת תמונה מהגלריה של FutureOS (PICK), ואם אין - מכל בורר תמונות.
             val photoPicker = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-                val uri = result.data?.data
+                // בורר זר יכול להחזיר file:// לקובץ פרטי שלנו - רק content:// של מישהו אחר
+                val uri = result.data?.data?.takeIf { it.scheme == "content" && it.authority?.startsWith(packageName) != true }
                 val contact = photoTarget
                 photoTarget = null
                 if (uri != null && contact != null) {
@@ -141,7 +144,7 @@ class MainActivity : ComponentActivity() {
                     },
                     message = { number ->
                         runCatching {
-                            startActivity(Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:$number")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                            startActivity(Intent(Intent.ACTION_SENDTO, Uri.fromParts("smsto", number, null)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                         }.onFailure { snackbar.show("אין אפליקציית הודעות") }
                     },
                     share = { contact ->
@@ -268,8 +271,11 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun placeCall(number: String, direct: Boolean) {
-        val action = if (direct) Intent.ACTION_CALL else Intent.ACTION_DIAL
-        runCatching { startActivity(Intent(action, Uri.parse("tel:$number")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+        // Uri.fromParts: "#" במספר ("*31#050...") נחתך קודם כ-fragment וחויג מספר אחר.
+        // קוד MMI (* / #) לא מחויג ישירות - נפתח בחייגן לאישור.
+        val plain = number.all { it.isDigit() || it in "+ -()" }
+        val action = if (direct && plain) Intent.ACTION_CALL else Intent.ACTION_DIAL
+        runCatching { startActivity(Intent(action, Uri.fromParts("tel", number, null)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
     }
 }
 

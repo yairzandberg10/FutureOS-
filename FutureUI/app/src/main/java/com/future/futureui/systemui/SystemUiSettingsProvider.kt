@@ -26,6 +26,9 @@ class SystemUiSettingsProvider : ContentProvider() {
         const val COL_USE_24_HOUR_CLOCK = "use_24_hour_clock"
         const val COL_SUPPRESS_SYSTEM_BARS = "suppress_system_bars"
         const val COL_BAR_STYLE = StatusBarLayoutManager.KEY_BAR_STYLE
+        // קריאה בלבד: המכשיר נעול (גם כשמסך הנעילה פינה מקום לשיחה). החייגן בודק
+        // את זה כדי לא לחשוף יומן/אנשי קשר מתוך שיחה במכשיר נעול.
+        const val COL_DEVICE_SECURED = "device_secured"
     }
 
     private lateinit var statusBarPrefs: android.content.SharedPreferences
@@ -36,14 +39,15 @@ class SystemUiSettingsProvider : ContentProvider() {
     }
 
     override fun query(uri: Uri, projection: Array<out String>?, selection: String?, selectionArgs: Array<out String>?, sortOrder: String?): Cursor {
-        val cursor = MatrixCursor(arrayOf(COL_SHOW_BATTERY, COL_SHOW_BLUETOOTH, COL_USE_24_HOUR_CLOCK, COL_SUPPRESS_SYSTEM_BARS, COL_BAR_STYLE))
+        val cursor = MatrixCursor(arrayOf(COL_SHOW_BATTERY, COL_SHOW_BLUETOOTH, COL_USE_24_HOUR_CLOCK, COL_SUPPRESS_SYSTEM_BARS, COL_BAR_STYLE, COL_DEVICE_SECURED))
         cursor.addRow(
             arrayOf(
                 if (statusBarPrefs.getBoolean(COL_SHOW_BATTERY, true)) 1 else 0,
                 if (statusBarPrefs.getBoolean(COL_SHOW_BLUETOOTH, true)) 1 else 0,
                 if (statusBarPrefs.getBoolean(COL_USE_24_HOUR_CLOCK, true)) 1 else 0,
                 if (statusBarPrefs.getBoolean(COL_SUPPRESS_SYSTEM_BARS, true)) 1 else 0,
-                statusBarPrefs.getString(COL_BAR_STYLE, StatusBarLayoutManager.STYLE_CLASSIC)
+                statusBarPrefs.getString(COL_BAR_STYLE, StatusBarLayoutManager.STYLE_CLASSIC),
+                if (com.future.futureui.utils.FutureUIState.isSecured) 1 else 0,
             )
         )
         return cursor

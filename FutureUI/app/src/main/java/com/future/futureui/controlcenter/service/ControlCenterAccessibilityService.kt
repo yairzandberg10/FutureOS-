@@ -6,6 +6,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import androidx.core.content.ContextCompat
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.PixelFormat
@@ -73,11 +74,8 @@ class ControlCenterAccessibilityService : AccessibilityService(), LifecycleOwner
             windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
             
             val filter = IntentFilter(FutureUIActions.ACTION_SHOW_CONTROL_CENTER)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)
-            } else {
-                registerReceiver(receiver, filter)
-            }
+            // נשלח רק מתוך FutureUI עצמו - אפליקציה זרה לא צריכה לפתוח את המסך הזה.
+            ContextCompat.registerReceiver(this, receiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
         } catch (e: Exception) {
             Log.e("FutureUI", "Error in onCreate", e)
         }
@@ -96,7 +94,8 @@ class ControlCenterAccessibilityService : AccessibilityService(), LifecycleOwner
 
     override fun onKeyEvent(event: KeyEvent): Boolean {
         // מסך הנעילה מוצג - הוא מטפל בכל המקשים
-        if (com.future.futureui.utils.FutureUIState.isLocked) return false
+        // גם כשהמכשיר נעול ומסך הנעילה פינה מקום לשיחה/מעורר: לא מתגים (טיסה, רשת...)
+        if (com.future.futureui.utils.FutureUIState.isLocked || com.future.futureui.utils.FutureUIState.isSecured) return false
         val keyCode = event.keyCode
         val action = event.action
 
@@ -121,7 +120,7 @@ class ControlCenterAccessibilityService : AccessibilityService(), LifecycleOwner
                     // נפתח. הלחיצה הקצרה משודרת גלובלית, בדיוק כמו מקש Options (ר'
                     // FutureUIActions), כדי שהאפליקציה שבחזית תוכל להגיב - בלי לגעת בהחזקה הארוכה.
                     try {
-                        sendBroadcast(Intent(FutureUIActions.ACTION_STAR_SHORT_PRESS))
+                        sendBroadcast(Intent(FutureUIActions.ACTION_STAR_SHORT_PRESS), FutureUIActions.PERMISSION_SYSTEM)
                     } catch (e: Exception) {
                         Log.w("FutureUI", "star short-press broadcast failed", e)
                     }
@@ -155,6 +154,8 @@ class ControlCenterAccessibilityService : AccessibilityService(), LifecycleOwner
 
     private fun showControlCenter() {
         if (isVisible) return
+        // כל דרך פתיחה (מקש, שידור פנימי, מעבר מהפאנל השני) - לא כשהמכשיר נעול
+        if (com.future.futureui.utils.FutureUIState.isLocked || com.future.futureui.utils.FutureUIState.isSecured) return
         try {
             if (controlManager == null) {
                 controlManager = ControlManager(this)

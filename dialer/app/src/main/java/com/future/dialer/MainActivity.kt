@@ -223,7 +223,12 @@ class MainActivity : ComponentActivity() {
         if (intent?.action != Intent.ACTION_DIAL && intent?.action != Intent.ACTION_VIEW) return null
         val data = intent.data ?: return null
         if (data.scheme != "tel") return null
+        // DIAL חשוף לכל אפליקציה: רק תווי חיוג, ובאורך סביר - לא טקסט שרירותי
+        // שיושב בשדה ומחכה ללחיצה על מקש החיוג.
         return data.schemeSpecificPart
+            ?.filter { it.isDigit() || it in "+*#,;" }
+            ?.take(MAX_DIAL_LENGTH)
+            ?.takeIf { it.isNotEmpty() }
     }
 
     private val providerObservers = mutableListOf<android.database.ContentObserver>()
@@ -445,6 +450,7 @@ class MainActivity : ComponentActivity() {
 
     private companion object {
         const val CONTACTS_PACKAGE = "com.future.contact"
+        const val MAX_DIAL_LENGTH = 64
         val TabRoutes = setOf(Screen.CallLog.route, Screen.Contacts.route, Screen.Dialpad.route)
     }
 }
@@ -683,11 +689,19 @@ fun MainScreen(
                 ) { entry ->
                     val number = decodeArg(entry.arguments?.getString("number"))
                     val name = decodeArg(entry.arguments?.getString("name")).ifEmpty { number.ifEmpty { stringResource(R.string.unknown) } }
+                    val context = androidx.compose.ui.platform.LocalContext.current
+                    // מכשיר נעול: מסך השיחה בלבד. BACK לא מוביל ליומן/לאנשי הקשר, ובסוף
+                    // השיחה החייגן נסגר ומסך הנעילה חוזר (ר' DeviceLock).
+                    val secured = remember { com.future.dialer.telecom.DeviceLock.isSecured(context) }
+                    BackHandler(enabled = secured) { }
                     InCallScreen(
                         name = name,
                         phoneNumber = number,
                         viewModel = inCallViewModel,
-                        onCallEnded = { navController.popBackStack() },
+                        onCallEnded = {
+                            if (com.future.dialer.telecom.DeviceLock.isSecured(context)) (context as? android.app.Activity)?.finish()
+                            else navController.popBackStack()
+                        },
                         onCallAgain = { again ->
                             navController.popBackStack()
                             actions.placeCall(again)

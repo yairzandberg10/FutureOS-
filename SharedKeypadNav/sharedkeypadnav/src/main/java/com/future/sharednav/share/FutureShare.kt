@@ -24,7 +24,15 @@ object FutureShare {
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             .addFlags(send.flags and (Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION))
         // ה-ClipData של ה-Intent הפנימי נושא את הרשאת הקריאה לקובץ דרך חלון השיתוף.
-        send.clipData?.let { window.clipData = it }
+        // חלון השיתוף מעביר הלאה רק קבצים שקיבל עליהם הרשאה כך - אז גם כשהקורא
+        // שם רק EXTRA_STREAM, בונים ממנו ClipData.
+        (send.clipData ?: streamClip(send))?.let { window.clipData = it }
+        // חלון השיתוף מקבל את הקבצים ואת הטקסט - רק אם הוא באמת FutureUI (אותה
+        // חתימה), ולא אפליקציה זרה שהותקנה בשם החבילה שלו כשהוא לא מותקן.
+        if (!isTrusted(context)) {
+            context.startActivity(Intent.createChooser(send, title).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            return
+        }
         try {
             context.startActivity(window)
         } catch (e: ActivityNotFoundException) {
@@ -33,6 +41,22 @@ object FutureShare {
             context.startActivity(Intent.createChooser(send, title).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         }
     }
+
+    private fun streamClip(send: Intent): android.content.ClipData? {
+        @Suppress("DEPRECATION")
+        val uris: List<android.net.Uri> = send.getParcelableArrayListExtra<android.net.Uri>(Intent.EXTRA_STREAM)
+            ?: listOfNotNull(runCatching { send.getParcelableExtra<android.net.Uri>(Intent.EXTRA_STREAM) }.getOrNull())
+        if (uris.isEmpty()) return null
+        return android.content.ClipData.newRawUri("", uris.first()).also { clip ->
+            uris.drop(1).forEach { clip.addItem(android.content.ClipData.Item(it)) }
+        }
+    }
+
+    private fun isTrusted(context: Context): Boolean =
+        runCatching {
+            context.packageManager.checkSignatures(context.packageName, SystemUiTarget.PACKAGE) ==
+                android.content.pm.PackageManager.SIGNATURE_MATCH
+        }.getOrDefault(false)
 
     /** שיתוף טקסט בלבד. */
     fun text(context: Context, text: String, title: String = "שיתוף") {

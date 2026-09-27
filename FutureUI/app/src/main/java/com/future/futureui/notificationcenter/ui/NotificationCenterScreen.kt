@@ -1,4 +1,5 @@
 package com.future.futureui.notificationcenter.ui
+import com.future.futureui.utils.safeText
 import com.future.sharednav.theme.FutureMotion
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
@@ -314,8 +315,8 @@ fun NotificationItem(
     var selectedOptionIndex by remember { mutableStateOf(0) }
 
     val n = sbn.notification
-    val title = n.extras.getCharSequence(Notification.EXTRA_TITLE)?.toString() ?: ""
-    val text = n.extras.getCharSequence(Notification.EXTRA_TEXT)?.toString() ?: ""
+    val title = n.safeText(Notification.EXTRA_TITLE)?.toString() ?: ""
+    val text = n.safeText(Notification.EXTRA_TEXT)?.toString() ?: ""
 
     // הפעולות האמיתיות שההתראה הביאה איתה מהאפליקציה המקורית (למשל "ענה"/"דחה"
     // בהתראת שיחה, או "סמן כנקרא") - בלי RemoteInput כי אין מקלדת מגע להקליד תשובה.

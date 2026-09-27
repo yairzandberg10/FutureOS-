@@ -50,7 +50,10 @@ class MyProfileStore(private val context: Context) {
     fun setPhoto(image: Uri): Boolean = try {
         val source = ImageDecoder.createSource(context.contentResolver, image)
         val bitmap = ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
-            val scale = maxOf(1, minOf(info.size.width, info.size.height) / PHOTO_PX)
+            // גם לפי הצלע הארוכה: תמונה צרה וארוכה מאוד (100000x700) לא הוקטנה בכלל
+            // לפי הצלע הקצרה, והפענוח שלה הפיל את האפליקציה מחוסר זיכרון
+            val scale = maxOf(1, minOf(info.size.width, info.size.height) / PHOTO_PX,
+                maxOf(info.size.width, info.size.height) / (PHOTO_PX * 4))
             decoder.setTargetSize(info.size.width / scale, info.size.height / scale)
             decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
         }
