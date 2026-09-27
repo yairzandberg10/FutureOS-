@@ -1,0 +1,23 @@
+{
+    "parameterSets": {
+        "design default values": {
+            "$fn": "48",
+            "BOTTOM_BAND": "5",
+            "DIGIT_ROWS": "4",
+            "FILLET_FRONT": "0.6",
+            "FRONT_T": "1.4",
+            "LCD_BOTTOM": "3.5",
+            "LCD_SIDE": "0.8",
+            "MODEL": "regular",
+            "NAV_GAP": "1.5",
+            "PART": "assembly",
+            "PRO_FORM": "slider",
+            "PUNCH_D": "3.2",
+            "SIDE_WALL": "1",
+            "SLED_T": "6",
+            "SLIDE_OPEN": "1",
+            "WALL": "1.4"
+        }
+    },
+    "fileFormatVersion": "1"
+}

@@ -1,0 +1,4 @@
+(fp_lib_table
+	(version 7)
+	(lib (name "keyboard_prototype")(type "KiCad")(uri "${KIPRJMOD}/keyboard_prototype.pretty")(options "")(descr "Project footprints"))
+)

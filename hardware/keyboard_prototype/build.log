@@ -1,0 +1,159 @@
+schematic written
+נמצאו 0 הפרות
+דוח ERC נשמר אל erc.rpt
+הופק פלט אל 'keyboard_prototype_schematic.pdf'.
+הסתיים.
+attempt 0: 152 connections routed, 2 failed ['/COL1', '/LED_K']
+attempt 1: 151 connections routed, 2 failed ['/LED_PWR', '/LED_PWR']
+attempt 2: 132 connections routed, 20 failed ['/COL0', '/COL0', '/COL0', '/COL0', '/COL0', '/COL0', '/COL0', '/COL0']
+attempt 3: 151 connections routed, 2 failed ['/LED_PWR', '/LED_PWR']
+attempt 4: 140 connections routed, 11 failed ['/COL0', '/COL0', '/COL0', '/COL0', '/COL0', '/COL0', '/COL0', '/COL0']
+attempt 5: 152 connections routed, 0 failed []
+saved C:\Users\yairz\Downloads\FutureOS--main\FutureOS--main\hardware\keyboard_prototype\keyboard_prototype.kicad_pcb failed: []
+נמצאו 21 הפרות
+נמצאו 0 פריטים לא מחוברים
+נמצאו 0 בעיות תאימות סכימה
+דוח DRC נשמר אל drc.rpt
+נמצאו 0 הפרות
+נמצאו 0 פריטים לא מחוברים
+נמצאו 0 בעיות תאימות סכימה
+דוח DRC נשמר אל drc_errors.rpt
+הופק פלט אל 'fab\gerbers\keyboard_prototype-F_Cu.gtl'.
+הופק פלט אל 'fab\gerbers\keyboard_prototype-B_Cu.gbl'.
+הופק פלט אל 'fab\gerbers\keyboard_prototype-F_Paste.gtp'.
+הופק פלט אל 'fab\gerbers\keyboard_prototype-B_Paste.gbp'.
+הופק פלט אל 'fab\gerbers\keyboard_prototype-F_Silkscreen.gto'.
+הופק פלט אל 'fab\gerbers\keyboard_prototype-B_Silkscreen.gbo'.
+הופק פלט אל 'fab\gerbers\keyboard_prototype-F_Mask.gts'.
+הופק פלט אל 'fab\gerbers\keyboard_prototype-B_Mask.gbs'.
+הופק פלט אל 'fab\gerbers\keyboard_prototype-Edge_Cuts.gm1'.
+נוצר קובץ 'fab\gerbers\keyboard_prototype-PTH.drl'
+נוצר קובץ 'fab\gerbers\keyboard_prototype-NPTH.drl'
+נוצר קובץ 'fab\gerbers\keyboard_prototype-PTH-drl_map.gbr'.
+נוצר קובץ 'fab\gerbers\keyboard_prototype-NPTH-drl_map.gbr'.
+הסתיים.
+Wrote position data to 'fab\pos_raw.csv'.
+BOM groups: {'1N4148W': 21, 'White': 8, 'AO3400A': 1, '1k': 8, '100k': 1, 'TS-1187A': 21}
+Could not add 3D model for SW14.
+File not found: ${KICAD10_3DMODEL_DIR}/Button_Switch_SMD.3dshapes/SW_Push_1P1T_XKB_TS-1187A.step
+Could not add 3D model for SW2.
+File not found: ${KICAD10_3DMODEL_DIR}/Button_Switch_SMD.3dshapes/SW_Push_1P1T_XKB_TS-1187A.step
+Could not add 3D model for SW18.
+File not found: ${KICAD10_3DMODEL_DIR}/Button_Switch_SMD.3dshapes/SW_Push_1P1T_XKB_TS-1187A.step
+Could not add 3D model for SW1.
+File not found: ${KICAD10_3DMODEL_DIR}/Button_Switch_SMD.3dshapes/SW_Push_1P1T_XKB_TS-1187A.step
+Could not add 3D model for SW20.
+File not found: ${KICAD10_3DMODEL_DIR}/Button_Switch_SMD.3dshapes/SW_Push_1P1T_XKB_TS-1187A.step
+Could not add 3D model for SW9.
+File not found: ${KICAD10_3DMODEL_DIR}/Button_Switch_SMD.3dshapes/SW_Push_1P1T_XKB_TS-1187A.step
+Could not add 3D model for SW11.
+File not found: ${KICAD10_3DMODEL_DIR}/Button_Switch_SMD.3dshapes/SW_Push_1P1T_XKB_TS-1187A.step
+Could not add 3D model for SW15.
+File not found: ${KICAD10_3DMODEL_DIR}/Button_Switch_SMD.3dshapes/SW_Push_1P1T_XKB_TS-1187A.step
+Could not add 3D model for SW3.
+File not found: ${KICAD10_3DMODEL_DIR}/Button_Switch_SMD.3dshapes/SW_Push_1P1T_XKB_TS-1187A.step
+Could not add 3D model for SW7.
+File not found: ${KICAD10_3DMODEL_DIR}/Button_Switch_SMD.3dshapes/SW_Push_1P1T_XKB_TS-1187A.step
+Could not add 3D model for SW19.
+File not found: ${KICAD10_3DMODEL_DIR}/Button_Switch_SMD.3dshapes/SW_Push_1P1T_XKB_TS-1187A.step
+Could not add 3D model for SW6.
+File not found: ${KICAD10_3DMODEL_DIR}/Button_Switch_SMD.3dshapes/SW_Push_1P1T_XKB_TS-1187A.step
+Could not add 3D model for SW12.
+File not found: ${KICAD10_3DMODEL_DIR}/Button_Switch_SMD.3dshapes/SW_Push_1P1T_XKB_TS-1187A.step
+Could not add 3D model for SW10.
+File not found: ${KICAD10_3DMODEL_DIR}/Button_Switch_SMD.3dshapes/SW_Push_1P1T_XKB_TS-1187A.step
+Could not add 3D model for SW21.
+File not found: ${KICAD10_3DMODEL_DIR}/Button_Switch_SMD.3dshapes/SW_Push_1P1T_XKB_TS-1187A.step
+Could not add 3D model for SW17.
+File not found: ${KICAD10_3DMODEL_DIR}/Button_Switch_SMD.3dshapes/SW_Push_1P1T_XKB_TS-1187A.step
+Could not add 3D model for SW5.
+File not found: ${KICAD10_3DMODEL_DIR}/Button_Switch_SMD.3dshapes/SW_Push_1P1T_XKB_TS-1187A.step
+Could not add 3D model for SW4.
+File not found: ${KICAD10_3DMODEL_DIR}/Button_Switch_SMD.3dshapes/SW_Push_1P1T_XKB_TS-1187A.step
+Could not add 3D model for SW8.
+File not found: ${KICAD10_3DMODEL_DIR}/Button_Switch_SMD.3dshapes/SW_Push_1P1T_XKB_TS-1187A.step
+Could not add 3D model for SW16.
+File not found: ${KICAD10_3DMODEL_DIR}/Button_Switch_SMD.3dshapes/SW_Push_1P1T_XKB_TS-1187A.step
+Could not add 3D model for SW13.
+File not found: ${KICAD10_3DMODEL_DIR}/Button_Switch_SMD.3dshapes/SW_Push_1P1T_XKB_TS-1187A.step
+STEP file 'fab/keyboard_prototype.step' created.
+
+Export time 2.175 s
+טוען...
+בנה קו מתאר של הלוח
+
+צור שכבות
+צור מוליכים וקדחי מעבר
+צור אזורי מילוי
+בנה שכבות טכניות
+בנה שכבה טכנית 11
+בנה שכבה טכנית 9
+בנה שכבה טכנית 15
+בנה שכבה טכנית 13
+בנה שכבה טכנית 7
+בנה שכבה טכנית 5
+בנה שכבה טכנית 3
+בנה שכבה טכנית 1
+בנה שכבה טכנית 17
+בנה שכבה טכנית 19
+בנה שכבה טכנית 21
+בנה שכבה טכנית 23
+בנה שכבה טכנית 39
+בנה שכבה טכנית 41
+בנה שכבה טכנית 43
+בנה שכבה טכנית 45
+בנה שכבה טכנית 47
+בנה שכבה טכנית 49
+בנה שכבה טכנית 51
+בנה שכבה טכנית 53
+בנה שכבה טכנית 55
+בנה שכבה טכנית 57
+בנה שכבה טכנית 59
+בנה שכבה טכנית 61
+בנה שכבה טכנית 63
+בנה שכבה טכנית 65
+בנה שכבה טכנית 67
+בנה שכבה טכנית 69
+בנה שכבה טכנית 71
+בנה שכבה טכנית 73
+בנה שכבה טכנית 75
+בנה שכבה טכנית 77
+בנה שכבה טכנית 79
+בנה שכבה טכנית 81
+בנה שכבה טכנית 83
+בנה שכבה טכנית 85
+בנה שכבה טכנית 87
+בנה שכבה טכנית 89
+בנה שכבה טכנית 91
+בנה שכבה טכנית 93
+בנה שכבה טכנית 95
+בנה שכבה טכנית 97
+בנה שכבה טכנית 99
+בנה שכבה טכנית 101
+בנה שכבה טכנית 103
+בנה שכבה טכנית 105
+בנה שכבה טכנית 107
+בנה שכבה טכנית 109
+בנה שכבה טכנית 111
+בנה שכבה טכנית 113
+בנה שכבה טכנית 115
+בנה שכבה טכנית 117
+בנה שכבה טכנית 119
+בנה שכבה טכנית 121
+בנה שכבה טכנית 123
+בנה שכבה טכנית 125
+בנה שכבה טכנית 127
+מפשט מצולעים בשכבת נחושת
+מחשב ציפוי נחושת
+פשט קווי מתאר של חורים
+בנה BVH עבור חורים וקדחי מעבר
+טעינת מעקב קרניים: לוח
+טעינת מעקב קרניים: שכבות
+טוען מודלים תלת-ממדיים...
+זמן טעינה מחדש 0.879 שניות
+רינדור: 1 
+רינדור: 1 
+רינדור: 2 
+רינדור: 2 
+רינדור: 3 
+רינדור: 4 

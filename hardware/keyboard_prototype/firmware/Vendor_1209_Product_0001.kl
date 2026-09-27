@@ -1,0 +1,31 @@
+# FutureOS Keyboard Prototype - Android key layout
+# Linux scan codes (from the HID usages sent by code.py) -> Android keycodes.
+# Install (rooted device):
+#   adb push Vendor_1209_Product_0001.kl /sdcard/
+#   adb shell su -c "mkdir -p /data/system/devices/keylayout && cp /sdcard/Vendor_1209_Product_0001.kl /data/system/devices/keylayout/ && chmod 644 /data/system/devices/keylayout/Vendor_1209_Product_0001.kl"
+#   then unplug / replug the keyboard.
+
+key 2     1
+key 3     2
+key 4     3
+key 5     4
+key 6     5
+key 7     6
+key 8     7
+key 9     8
+key 10    9
+key 11    0
+
+key 103   DPAD_UP
+key 108   DPAD_DOWN
+key 105   DPAD_LEFT
+key 106   DPAD_RIGHT
+key 28    DPAD_CENTER
+
+# F1..F6
+key 59    STAR
+key 60    POUND
+key 61    CALL
+key 62    ENDCALL
+key 63    MENU
+key 64    BACK
