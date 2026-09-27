@@ -6,21 +6,34 @@
 
 ## הצעדים
 
-1. **שולחים את `RFQ_FutureOS_Regular.md`** (בקשה להצעת מחיר, באנגלית) ל-3 עד 5 מפעלים. נוסח המייל נמצא למטה.
+1. **שולחים את ה-RFQ** (בקשה להצעת מחיר, באנגלית) ל-3 עד 5 מפעלים. נוסחי המייל נמצאים למטה.
+   | דגם | קובץ | יעד ליחידה | הזמנה ראשונה |
+   |---|---|---|---|
+   | **Regular** ‏3.5" (מתחילים ממנו) | `RFQ_FutureOS_Regular.md` | $90 (₪335) | 3,000 |
+   | **Mini** ‏2.8" | `RFQ_FutureOS_Mini.md` | $70 (₪260), עם 4GB ‏$77 | 5,000 |
+   | **Pro** ‏5" slider | `RFQ_FutureOS_Pro.md` | $135 (₪500), 5G בנפרד | 5,000 |
+
+   ב-Mini וב-Pro המסך בהזמנה אישית (אין פאנל 2:3 מדף), ולכן ההזמנה הראשונה גדולה יותר. אפשר לשלוח לאותו מפעל את שלושת הקבצים ביחד.
 2. **את מי שואלים:**
    - **Duoqin** (היצרן של Qin F22 Pro). הם כבר מייצרים כמעט את המכשיר הזה, ולכן הם המועמד הכי טוב. יוצרים קשר דרך האתר הרשמי שלהם.
    - **Alibaba** ו-**Global Sources**: מחפשים `4G keypad android phone ODM` ובוחרים ספקים עם תג "Verified Manufacturer" ושנות ניסיון.
    - לא פונים למפעלי ענק (Huaqin, Wingtech, Longcheer). הם לא עובדים בכמויות של 3,000 יחידות.
-3. **משווים הצעות** לפי 3 דברים: עלות חד-פעמית (NRE), מחיר ליחידה, ו**האם הם מסכימים לתת root וקוד קרנל**. בלי הסעיף האחרון המערכת לא תעבוד (FutureUI, Settings ו-Terminal צריכים `su`).
+3. **משווים הצעות** בטבלה `quote_comparison.csv` (נפתחת ב-Excel), לפי 3 דברים עיקריים: עלות חד-פעמית (NRE), מחיר ליחידה, ו**האם הם מסכימים לתת root וקוד קרנל**. בלי הסעיף האחרון המערכת לא תעבוד (FutureUI, Settings ו-Terminal צריכים `su`).
 4. **מזמינים דוגמאות (EVT)** ובודקים אותן עם כל 30 האפליקציות.
 5. **הסמכות בישראל**: אישור סוג ממשרד התקשורת ובדיקות VoLTE מול המפעילים. המפעל מספק דוחות, ויועץ רגולציה ישראלי מגיש.
 
 ## לכמה כסף ולכמה זמן להתכונן
-- **חד-פעמי:** כ-$150K עד $400K לדגם Regular. אם המפעל משתמש בפלטפורמה קיימת שלו, זה יכול לרדת הרבה.
-- **ליחידה:** כ-$90.
-- **זמן:** 9 עד 15 חודשים עד ייצור.
+| | Regular | Mini | Pro |
+|---|---|---|---|
+| **חד-פעמי (NRE)** | $150K-400K | $200K-450K (כולל פיתוח מסך) | $350K-650K (מסך + מנגנון slider) |
+| **ליחידה** | ~$90 | ~$70 | ~$135 |
+| **זמן עד ייצור** | 9-15 חודשים | 12-18 חודשים | 12-18 חודשים |
 
-## המייל לשליחה (להעתיק כמו שהוא)
+אם המפעל משתמש בפלטפורמה קיימת שלו, ה-NRE יכול לרדת הרבה. הסדר המומלץ: Regular, אחריו Mini, ואחריו Pro.
+
+## המיילים לשליחה (להעתיק כמו שהם)
+
+### מייל ל-Regular
 
 > **Subject:** RFQ - 4G keypad Android phone, ODM, 3,000-10,000 units
 >
@@ -31,6 +44,36 @@
 > The attached RFQ has the full specification. Key points: VoLTE with Israeli operators, root access and kernel source for our own AOSP build, first order of 3,000 units, target unit price around USD 90.
 >
 > Please send your quotation (NRE + unit price + schedule), and tell us whether you already have a keypad phone platform we could reuse.
+>
+> Best regards,
+> [השם שלך]
+
+### מייל ל-Mini
+
+> **Subject:** RFQ - small 4G keypad Android phone (2.8"), ODM, 5,000-10,000 units
+>
+> Hello,
+>
+> We are developing a compact 4G Android keypad phone (2.8" 480×720, no touchscreen, Unisoc T606 class) for the Israeli market. The software is complete. We are looking for an ODM partner for the hardware, BSP, custom display sourcing and mass production.
+>
+> The attached RFQ has the full specification. Key points: VoLTE with Israeli operators, root access and kernel source for our own AOSP build, first order of 5,000 units, target unit price around USD 70.
+>
+> Please send your quotation (NRE + unit price + schedule), and tell us whether you already have a small keypad phone platform or a 2:3 panel we could reuse.
+>
+> Best regards,
+> [השם שלך]
+
+### מייל ל-Pro
+
+> **Subject:** RFQ - 4G slider keypad Android phone (5"), ODM, 5,000-10,000 units
+>
+> Hello,
+>
+> We are developing a 4G Android slider phone (5" 960×1440, no touchscreen, slide-out numeric keypad, Helio G99 class) for the Israeli market. The software is complete. We are looking for an ODM partner for the hardware, BSP, slide mechanism, custom display sourcing and mass production.
+>
+> The attached RFQ has the full specification. Key points: VoLTE with Israeli operators, root access and kernel source for our own AOSP build, first order of 5,000 units, target unit price around USD 135 (please also quote a 5G variant).
+>
+> Please send your quotation (NRE + unit price + schedule), and tell us whether you have produced slider phones before.
 >
 > Best regards,
 > [השם שלך]
