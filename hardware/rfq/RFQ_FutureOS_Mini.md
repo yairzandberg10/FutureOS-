@@ -35,7 +35,7 @@ Closest reference products: Duoqin Qin F21 Pro / similar 2.8" Android keypad pho
 | Sensors | Accelerometer, **calibrated magnetometer**, ambient light, proximity. Step counter preferred (accelerometer with built-in pedometer is fine). Barometer and gyroscope not required |
 | Other | Vibration motor. No IR, no NFC |
 | Battery | Li-Po 1,500mAh, IEC 62133 |
-| Size target | ≈ 51 × 129 × 12 mm, ≈110 g (3D enclosure model supplied) |
+| Size target | ≈ 51 × 129 mm, **thickness 10 mm maximum** (9.5 mm preferred), ≈100 g (3D enclosure model supplied) |
 | Housing | PC/ABS |
 
 ## 3. Software / firmware requirements (important)

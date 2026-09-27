@@ -36,8 +36,8 @@ Closest reference products: Unihertz Titan / BlackBerry Passport (square 1440×1
 | Cameras | Rear 13MP AF + LED flash; front 5MP |
 | Sensors | Accelerometer + gyroscope, **calibrated magnetometer**, **barometer**, ambient light, proximity, hardware step counter |
 | Other | IR transmitter (consumer IR), vibration motor |
-| Battery | Li-Po 4,000mAh, IEC 62133 |
-| Size target | ≈ 84 × 155 × 12.5 mm, ≈185 g (3D enclosure model supplied) |
+| Battery | Li-Po 3,500mAh, IEC 62133, max 66 × 74 × 4.2 mm (the 10 mm body limits the thickness) |
+| Size target | ≈ 84 × 155 mm, **thickness 10 mm maximum**, ≈165 g (3D enclosure model supplied) |
 | Housing | PC/ABS |
 
 ## 3. Software / firmware requirements (important)
@@ -54,7 +54,7 @@ Closest reference products: Unihertz Titan / BlackBerry Passport (square 1440×1
 
 - 4.5" 1440×1440 square panel instead of 3.5" 640×960, wider body (84 mm)
 - Helio G99 instead of G85, 6GB/128GB instead of 4GB/64GB
-- NFC, Wi-Fi 5, 18W charging, 13MP + 5MP cameras, 4,000mAh
+- NFC, Wi-Fi 5, 18W charging, 13MP + 5MP cameras, 3,500mAh
 
 ## 5. Certification
 
