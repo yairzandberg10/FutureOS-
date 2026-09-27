@@ -77,6 +77,9 @@ private fun rememberAltitudeState(): AltitudeState {
     return AltitudeState(meters, hasSensor)
 }
 
+/** שדה כדור הארץ ≈ 25-65µT, כך שסיבוב מלא נותן טווח של כ-50µT ומעלה בציר אופקי. */
+private const val HARD_IRON_MIN_RANGE_UT = 40f
+
 /**
  * מחזיר את הכיוון הנוכחי (0-360, 0=צפון) על בסיס חיישני תאוצה ומגנטומטר, מוחלק
  * בפילטר low-pass, וכן האם החיישנים הנדרשים בכלל קיימים במכשיר.
@@ -90,11 +93,17 @@ private fun rememberCompassState(): CompassState {
     DisposableEffect(Unit) {
         val sensorManager = context.getSystemService(android.content.Context.SENSOR_SERVICE) as SensorManager
         val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+        // F22 Pro חושף רק מגנטומטר לא-מכויל (UNCALI_MAG). במקרה כזה מחסרים את
+        // ה-bias שהחיישן מדווח, ומכיילים hard-iron בעצמנו: מרכז טווח ה-min/max
+        // שנצפה בכל ציר, ברגע שהטווח רחב מספיק (אחרי סיבוב המכשיר).
         val magnetometer = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
+            ?: sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD_UNCALIBRATED)
         hasSensors = accelerometer != null && magnetometer != null
 
         val gravity = FloatArray(3)
         val geomagnetic = FloatArray(3)
+        val magMin = FloatArray(3) { Float.MAX_VALUE }
+        val magMax = FloatArray(3) { -Float.MAX_VALUE }
         var hasGravity = false
         var hasGeomagnetic = false
         var smoothed = 0f
@@ -111,6 +120,17 @@ private fun rememberCompassState(): CompassState {
                     }
                     Sensor.TYPE_MAGNETIC_FIELD -> {
                         System.arraycopy(event.values, 0, geomagnetic, 0, 3)
+                        hasGeomagnetic = true
+                    }
+                    Sensor.TYPE_MAGNETIC_FIELD_UNCALIBRATED -> {
+                        for (i in 0..2) {
+                            val v = event.values[i] - event.values[i + 3]
+                            if (v < magMin[i]) magMin[i] = v
+                            if (v > magMax[i]) magMax[i] = v
+                            geomagnetic[i] = if (magMax[i] - magMin[i] >= HARD_IRON_MIN_RANGE_UT) {
+                                v - (magMax[i] + magMin[i]) / 2f
+                            } else v
+                        }
                         hasGeomagnetic = true
                     }
                 }
