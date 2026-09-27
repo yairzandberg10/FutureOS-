@@ -24,7 +24,7 @@ Closest reference products: Duoqin Qin F21 Pro / similar 2.8" Android keypad pho
 | microSD | Yes |
 | OS | Android 12 or newer (AOSP-based, GMS **not** required) |
 | Display | 2.8" IPS, **480×720 (exact 2:3)**, MIPI-DSI, ≈309 ppi, active area ≈39.5 × 59.2 mm. **No touch panel**. This is a custom panel - please propose a panel vendor, MOQ and tooling cost. If a stock 2:3 panel close to this exists, propose it |
-| Keypad | 21 keys, metal domes, white backlight: D-pad 4-way + OK, 0-9, `*`, `#`, Call, End, 2 soft keys. **No Home key**. Side: Vol+, Vol-, Power. Key pitch 14 × 8 mm |
+| Keypad | 21 keys, metal domes, white backlight: D-pad 4-way + OK, 0-9, `*`, `#`, Call, End, 2 soft keys. **No Home key**. Side: Vol+, Vol-, Power. Volume = two separate keys (9 × 3 mm, 0.6 mm proud) on the right side, centre ≈30 mm below the top edge, Vol+ above Vol- with a tactile dot; metal domes on a side-key FPC with steel stiffener, max 1.3 mm deep inside the wall. Key pitch 14 × 8 mm |
 | Cellular | 4G LTE, **VoLTE/IMS required**, Dual SIM. Bands: B1/B3/B7/B8/B20/B28 (Israel) |
 | Wi-Fi | Two SKUs on the same board: with Wi-Fi 2.4/5GHz, and without (Wi-Fi chip DNP) |
 | Bluetooth / GNSS | BT 5.x + BLE; GPS + GLONASS + Galileo |

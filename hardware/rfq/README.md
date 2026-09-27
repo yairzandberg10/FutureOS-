@@ -11,9 +11,9 @@
    |---|---|---|---|
    | **Regular** ‏3.5" (מתחילים ממנו) | `RFQ_FutureOS_Regular.md` | $90 (₪335) | 3,000 |
    | **Mini** ‏2.8" | `RFQ_FutureOS_Mini.md` | $70 (₪260), עם 4GB ‏$77 | 5,000 |
-   | **Pro** ‏5" slider | `RFQ_FutureOS_Pro.md` | $135 (₪500), 5G בנפרד | 5,000 |
+   | **Pro** ‏4.5" ריבועי | `RFQ_FutureOS_Pro.md` | $122 (₪450), 5G בנפרד | 3,000-5,000 |
 
-   ב-Mini וב-Pro המסך בהזמנה אישית (אין פאנל 2:3 מדף), ולכן ההזמנה הראשונה גדולה יותר. אפשר לשלוח לאותו מפעל את שלושת הקבצים ביחד.
+   ב-Mini המסך בהזמנה אישית (אין פאנל 2:3 מדף), ולכן ההזמנה הראשונה גדולה יותר. ב-Pro יש פאנל ריבועי קיים. אפשר לשלוח לאותו מפעל את שלושת הקבצים ביחד.
 2. **את מי שואלים:**
    - **Duoqin** (היצרן של Qin F22 Pro). הם כבר מייצרים כמעט את המכשיר הזה, ולכן הם המועמד הכי טוב. יוצרים קשר דרך האתר הרשמי שלהם.
    - **Alibaba** ו-**Global Sources**: מחפשים `4G keypad android phone ODM` ובוחרים ספקים עם תג "Verified Manufacturer" ושנות ניסיון.
@@ -25,8 +25,8 @@
 ## לכמה כסף ולכמה זמן להתכונן
 | | Regular | Mini | Pro |
 |---|---|---|---|
-| **חד-פעמי (NRE)** | $150K-400K | $200K-450K (כולל פיתוח מסך) | $350K-650K (מסך + מנגנון slider) |
-| **ליחידה** | ~$90 | ~$70 | ~$135 |
+| **חד-פעמי (NRE)** | $150K-400K | $200K-450K (כולל פיתוח מסך) | $200K-450K |
+| **ליחידה** | ~$90 | ~$70 | ~$122 |
 | **זמן עד ייצור** | 9-15 חודשים | 12-18 חודשים | 12-18 חודשים |
 
 אם המפעל משתמש בפלטפורמה קיימת שלו, ה-NRE יכול לרדת הרבה. הסדר המומלץ: Regular, אחריו Mini, ואחריו Pro.
@@ -65,15 +65,15 @@
 
 ### מייל ל-Pro
 
-> **Subject:** RFQ - 4G slider keypad Android phone (5"), ODM, 5,000-10,000 units
+> **Subject:** RFQ - 4G square-screen keypad Android phone (4.5"), ODM, 3,000-10,000 units
 >
 > Hello,
 >
-> We are developing a 4G Android slider phone (5" 960×1440, no touchscreen, slide-out numeric keypad, Helio G99 class) for the Israeli market. The software is complete. We are looking for an ODM partner for the hardware, BSP, slide mechanism, custom display sourcing and mass production.
+> We are developing a 4G Android keypad phone (4.5" 1440×1440 square screen, no touchscreen, full numeric keypad, Helio G99 class) for the Israeli market. The software is complete. We are looking for an ODM partner for the hardware, BSP, display sourcing and mass production.
 >
-> The attached RFQ has the full specification. Key points: VoLTE with Israeli operators, root access and kernel source for our own AOSP build, first order of 5,000 units, target unit price around USD 135 (please also quote a 5G variant).
+> The attached RFQ has the full specification. Key points: VoLTE with Israeli operators, root access and kernel source for our own AOSP build, first order of 3,000-5,000 units, target unit price around USD 122 (please also quote a 5G variant).
 >
-> Please send your quotation (NRE + unit price + schedule), and tell us whether you have produced slider phones before.
+> Please send your quotation (NRE + unit price + schedule), and tell us whether you have worked with square 1440×1440 panels before.
 >
 > Best regards,
 > [השם שלך]
