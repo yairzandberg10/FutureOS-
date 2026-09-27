@@ -324,7 +324,7 @@ module key_label2d(k) {
     } else if (n == "ok") {
         text("OK", size = ts * 0.28, font = "Arial:style=Bold", halign = "center", valign = "center");
     } else if (len(ic) > 0) {
-        icon2d(ic[0], ts * 0.55);
+        icon2d(ic[0], ts * 0.45);
     } else {
         if (n >= "2" && n <= "9") {
             i = ord(n) - 49;
