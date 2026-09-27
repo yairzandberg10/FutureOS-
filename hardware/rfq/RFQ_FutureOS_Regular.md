@@ -24,7 +24,7 @@ Closest reference product: **Duoqin Qin F22 Pro** (same screen, same SoC family)
 | microSD | Yes |
 | OS | Android 12 or newer (AOSP-based, GMS **not** required) |
 | Display | 3.5" IPS, **640×960**, MIPI-DSI, 320dpi (same panel as Qin F22 Pro). **No touch panel** |
-| Keypad | 21 keys, metal domes, white backlight: D-pad 4-way + OK, 0-9, `*`, `#`, Call, End, 2 soft keys. **No Home key** (End acts as Home, see 3.8). Side: Vol+, Vol-, Power. A working 5×5 matrix keyboard prototype (KiCad + gerbers) is available as layout reference |
+| Keypad | 21 keys, metal domes, white backlight: D-pad 4-way + OK, 0-9, `*`, `#`, Call, End, 2 soft keys. **No Home key**. Side: Vol+, Vol-, Power. A working 5×5 matrix keyboard prototype (KiCad + gerbers) is available as layout reference |
 | Cellular | 4G LTE, **VoLTE/IMS required**, Dual SIM. Bands: B1/B3/B7/B8/B20/B28 (Israel) |
 | Wi-Fi | Two SKUs on the same board: with Wi-Fi 2.4/5GHz, and without (Wi-Fi chip DNP) |
 | Bluetooth / GNSS | BT 5.x + BLE; GPS + GLONASS + Galileo |
@@ -46,7 +46,6 @@ Closest reference product: **Duoqin Qin F22 Pro** (same screen, same SoC family)
 5. Sensor HAL must expose `TYPE_MAGNETIC_FIELD` (calibrated) and `TYPE_PRESSURE`.
 6. VoLTE working with Israeli operators (Partner, Cellcom, Pelephone, HOT Mobile, Golan). Please state your experience with Israeli VoLTE whitelisting.
 7. Security patches / OTA mechanism - please describe.
-8. Keypad driver (mtk-kpd or equivalent) mapped to standard Android keycodes: `DPAD_*`, `DPAD_CENTER`, `0`-`9`, `STAR`, `POUND`, `CALL`, `ENDCALL`, `MENU` (left soft key), `BACK` (right soft key). There is no Home key: End must go Home outside a call and sleep when already Home (`Settings.System.end_button_behavior` default = 3).
 
 ## 4. Gaps vs. Qin F22 Pro that the new device must close
 
