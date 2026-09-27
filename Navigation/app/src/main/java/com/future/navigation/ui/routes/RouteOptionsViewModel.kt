@@ -59,6 +59,9 @@ class RouteOptionsViewModel(
         searchJob?.cancel()
         _loading.value = true
         _error.value = null
+        // תוצאות של יעד קודם לא נשארות על המסך מתחת להודעת שגיאה של היעד החדש
+        _drivingRoute.value = null
+        _itineraries.value = emptyList()
         searchJob = viewModelScope.launch {
             try {
                 when (mode) {
@@ -98,12 +101,16 @@ class RouteOptionsViewModel(
         if (alreadyImported != null && alreadyImported.covers(neededBbox)) return
 
         _downloadFraction.value = 0f
-        gtfsImporter.importFeed(appContext, neededBbox).collect { progress ->
-            _downloadFraction.value = if (progress.phase == ImportPhase.DOWNLOADING) progress.fraction else null
-            if (progress.phase == ImportPhase.DONE) {
-                GtfsImportState.recordImportedBoundingBox(appContext, neededBbox)
+        // finally: הורדה שנקטעה (רשת, ביטול) השאירה קודם את פס ההורדה על המסך לתמיד
+        try {
+            gtfsImporter.importFeed(appContext, neededBbox).collect { progress ->
+                _downloadFraction.value = if (progress.phase == ImportPhase.DOWNLOADING) progress.fraction else null
+                if (progress.phase == ImportPhase.DONE) {
+                    GtfsImportState.recordImportedBoundingBox(appContext, neededBbox)
+                }
             }
+        } finally {
+            _downloadFraction.value = null
         }
-        _downloadFraction.value = null
     }
 }

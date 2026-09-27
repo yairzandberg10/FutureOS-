@@ -60,7 +60,10 @@ class TransitJourneyPlanner(private val dao: GtfsDao) {
         val results = mutableListOf<TransitItinerary>()
 
         for (origin in originStops) {
-            val departures = dao.departuresFromStop(origin.stop.stopId, secondsSinceMidnight, limit = MAX_DIRECT_CANDIDATES)
+            // רק אוטובוסים שאפשר להספיק ברגל: קודם חיפשנו יציאות מ"עכשיו", והוצע
+            // קו שיוצא עוד דקה מתחנה במרחק 10 דקות הליכה ("צא לפני 9 דקות").
+            val earliest = secondsSinceMidnight + walkDurationSeconds(origin.distanceMeters)
+            val departures = dao.departuresFromStop(origin.stop.stopId, earliest, limit = MAX_DIRECT_CANDIDATES)
                 .filter { isServiceActive(it.serviceId, dateInt, dayOfWeek) }
 
             for (dep in departures) {

@@ -56,9 +56,12 @@ class HomeViewModel(
                 flowOf(emptyList())
             } else {
                 val radiusDeg = NEARBY_STOP_RADIUS_METERS / 111_320.0
+                // מעלת אורך קצרה ממעלת רוחב (בישראל בערך 85%) - בלי התיקון התיבה
+                // הייתה צרה מדי מזרח-מערב, ותחנות במרחק 600-700 מ' לא הופיעו.
+                val lonRadiusDeg = radiusDeg / kotlin.math.cos(Math.toRadians(location.lat)).coerceAtLeast(0.1)
                 gtfsDao.nearbyStops(
                     minLat = location.lat - radiusDeg, maxLat = location.lat + radiusDeg,
-                    minLon = location.lon - radiusDeg, maxLon = location.lon + radiusDeg
+                    minLon = location.lon - lonRadiusDeg, maxLon = location.lon + lonRadiusDeg
                 ).map { stops ->
                     stops
                         .map { NearbyStopUi(it, location.distanceMetersTo(LatLng(it.lat, it.lon))) }
@@ -94,9 +97,14 @@ class HomeViewModel(
         }
         searchJob = viewModelScope.launch {
             _searching.value = true
-            delay(SEARCH_DEBOUNCE_MS)
-            _searchResults.value = geocodingRepository.search(query)
-            _searching.value = false
+            try {
+                delay(SEARCH_DEBOUNCE_MS)
+                // שגיאת רשת זרקה קודם מתוך ה-coroutine והפילה את האפליקציה
+                _searchResults.value = runCatching { geocodingRepository.search(query) }
+                    .getOrElse { if (it is kotlinx.coroutines.CancellationException) throw it else emptyList() }
+            } finally {
+                if (_searchQuery.value == query) _searching.value = false
+            }
         }
     }
 

@@ -237,12 +237,19 @@ class MainActivity : ComponentActivity() {
 
         transitPrefetchStarted = true
         lifecycleScope.launch {
-            gtfsImporter.importFeed(applicationContext, neededBbox).collect { progress ->
-                if (progress.phase == ImportPhase.DONE) {
-                    GtfsImportState.recordImportedBoundingBox(applicationContext, neededBbox)
-                } else if (progress.phase == ImportPhase.ERROR) {
-                    transitPrefetchStarted = false
+            // הורדה ברקע שנכשלה בחריגה (ולא בשלב ERROR) הפילה קודם את כל האפליקציה
+            try {
+                gtfsImporter.importFeed(applicationContext, neededBbox).collect { progress ->
+                    if (progress.phase == ImportPhase.DONE) {
+                        GtfsImportState.recordImportedBoundingBox(applicationContext, neededBbox)
+                    } else if (progress.phase == ImportPhase.ERROR) {
+                        transitPrefetchStarted = false
+                    }
                 }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                transitPrefetchStarted = false
             }
         }
     }
@@ -259,7 +266,7 @@ private fun MissingLocationPermissionScreen(onRequest: () -> Unit) {
     // ב-Music/ui/screens/PermissionScreen.kt).
     val buttonFocusRequester = remember { FocusRequester() }
     LaunchedEffect(Unit) {
-        buttonFocusRequester.requestFocus()
+        runCatching { buttonFocusRequester.requestFocus() }
     }
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {

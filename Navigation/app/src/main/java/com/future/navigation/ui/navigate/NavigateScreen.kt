@@ -52,6 +52,13 @@ fun NavigateScreen(viewModel: NavigateViewModel, onClose: () -> Unit = {}) {
     val cameraController = remember { MapCameraController() }
     var followMode by remember { mutableStateOf(true) }
 
+    // המסך לא נכבה באמצע ניווט (קודם הוא כבה אחרי זמן ההמתנה הרגיל)
+    val view = androidx.compose.ui.platform.LocalView.current
+    androidx.compose.runtime.DisposableEffect(view) {
+        view.keepScreenOn = true
+        onDispose { view.keepScreenOn = false }
+    }
+
     androidx.compose.runtime.LaunchedEffect(state.currentLocation, followMode) {
         val loc = state.currentLocation
         if (loc != null && followMode) {
@@ -96,8 +103,9 @@ fun NavigateScreen(viewModel: NavigateViewModel, onClose: () -> Unit = {}) {
                         color = theme.textColor
                     )
                     Text(
-                        text = "בעוד %d מ׳%s".format(
-                            state.distanceToManeuverMeters.toInt(),
+                        // מעל קילומטר - בק"מ ("בעוד 12400 מ׳" לא נקרא במבט אחד בנהיגה)
+                        text = "בעוד %s%s".format(
+                            state.distanceToManeuverMeters.let { if (it >= 1000) "%.1f ק״מ".format(it / 1000) else "${it.toInt()} מ׳" },
                             state.currentStep.streetName.takeIf { it.isNotBlank() }?.let { " · ל$it" } ?: ""
                         ),
                         style = MaterialTheme.typography.bodyMedium,
@@ -114,7 +122,8 @@ fun NavigateScreen(viewModel: NavigateViewModel, onClose: () -> Unit = {}) {
                         TopBarIconButton(if (state.muted) FutureIcons.AutoMirrored.VolumeOff else FutureIcons.AutoMirrored.VolumeUp, "השתק", theme.textColor, theme.accentColor, viewModel::toggleMute)
                         Spacer(modifier = Modifier.width(12.dp))
                         Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("%d דק׳".format((state.remainingDurationSeconds / 60).toInt()), fontWeight = FontWeight.Bold)
+                            // עיגול למעלה - בדקה האחרונה הוצג "0 דק׳"
+                            Text("%d דק׳".format(kotlin.math.ceil(state.remainingDurationSeconds / 60).toInt()), fontWeight = FontWeight.Bold)
                             Text("·", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f))
                             Text("%.1f ק״מ".format(state.remainingDistanceMeters / 1000.0))
                         }
@@ -162,7 +171,7 @@ private fun ManeuverIcon(step: Maneuver) {
     )
 }
 
-private fun maneuverText(step: Maneuver): String = when (step.type) {
+internal fun maneuverText(step: Maneuver): String = when (step.type) {
     "depart" -> "יציאה לדרך"
     "arrive" -> "הגעה ליעד"
     "roundabout", "rotary" -> "כיכר - המשך לפי השילוט"

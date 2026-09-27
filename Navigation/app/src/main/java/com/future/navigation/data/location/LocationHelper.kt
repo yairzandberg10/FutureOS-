@@ -54,24 +54,38 @@ object LocationHelper {
             override fun onProviderDisabled(provider: String) {}
         }
 
-        val provider = when {
-            manager.isProviderEnabled(LocationManager.GPS_PROVIDER) -> LocationManager.GPS_PROVIDER
-            manager.isProviderEnabled(LocationManager.NETWORK_PROVIDER) -> LocationManager.NETWORK_PROVIDER
-            else -> null
+        // שני הספקים יחד: קודם נבחר רק GPS כשהוא דולק, ובחניון/מנהרה/תחילת
+        // נסיעה בלי קליטת לוויין לא הגיע שום מיקום. מיקום רשת מתקבל רק כשאין
+        // קיבוע GPS טרי, כדי שלא "יקפיץ" את הסמן אחורה.
+        var lastGpsFixAt = 0L
+        val merging = object : LocationListener by listener {
+            override fun onLocationChanged(location: Location) {
+                val now = android.os.SystemClock.elapsedRealtime()
+                if (location.provider == LocationManager.GPS_PROVIDER) {
+                    lastGpsFixAt = now
+                    trySend(location)
+                } else if (now - lastGpsFixAt > GPS_STALE_MS) {
+                    trySend(location)
+                }
+            }
         }
+        val providers = listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)
+            .filter { runCatching { manager.isProviderEnabled(it) }.getOrDefault(false) }
 
-        if (provider == null) {
+        if (providers.isEmpty()) {
             close()
             return@callbackFlow
         }
 
         try {
-            manager.requestLocationUpdates(provider, minIntervalMs, minDistanceMeters, listener)
-            manager.getLastKnownLocation(provider)?.let { trySend(it) }
+            providers.forEach { manager.requestLocationUpdates(it, minIntervalMs, minDistanceMeters, merging, android.os.Looper.getMainLooper()) }
+            providers.firstNotNullOfOrNull { manager.getLastKnownLocation(it) }?.let { trySend(it) }
         } catch (e: SecurityException) {
             close(e)
         }
 
-        awaitClose { manager.removeUpdates(listener) }
+        awaitClose { manager.removeUpdates(merging) }
     }
+
+    private const val GPS_STALE_MS = 10_000L
 }

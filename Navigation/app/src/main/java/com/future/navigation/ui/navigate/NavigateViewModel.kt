@@ -51,10 +51,35 @@ class NavigateViewModel(
     val uiState = _uiState.asStateFlow()
 
     private var rerouting = false
+    // אחרי חישוב מסלול שנכשל (אין רשת) לא מנסים שוב בכל עדכון מיקום - קודם
+    // נשלחה בקשה כל שתי שניות לאורך כל הנסיעה בלי קליטה.
+    private var lastRerouteAttemptMs = 0L
+
+    /**
+     * הנחיה קולית. קודם כפתור ההשתקה החליף רק את האייקון - לא הייתה הנחיה
+     * קולית בכלל, ומי שנוהג לא יכול להסתכל על המסך. מנוע ה-TTS של המערכת
+     * בעברית; אם אין קול עברי מותקן, פשוט שקט.
+     */
+    private var tts: android.speech.tts.TextToSpeech? = null
+    private var ttsReady = false
+    private var announcedStep = -1
+    private var announcedNearStep = -1
 
     init {
+        tts = android.speech.tts.TextToSpeech(appContext) { status ->
+            if (status == android.speech.tts.TextToSpeech.SUCCESS) {
+                val result = tts?.setLanguage(java.util.Locale.forLanguageTag("he-IL"))
+                ttsReady = result != null && result >= android.speech.tts.TextToSpeech.LANG_AVAILABLE
+            }
+        }
+
         LocationHelper.observeLocation(appContext)
-            .onEach { location -> onLocationUpdate(LatLng(location.latitude, location.longitude)) }
+            .onEach { location ->
+                onLocationUpdate(
+                    LatLng(location.latitude, location.longitude),
+                    if (location.hasAccuracy()) location.accuracy.toDouble() else null
+                )
+            }
             .launchIn(viewModelScope)
 
         // בדיקה תקופתית של עומס פתאומי בכביש שכבר עליו המשתמש (Dynamic Rerouting) -
@@ -72,7 +97,25 @@ class NavigateViewModel(
         }
     }
 
-    private fun onLocationUpdate(location: LatLng) {
+    private fun speak(text: String) {
+        if (!ttsReady || _uiState.value.muted) return
+        tts?.speak(text, android.speech.tts.TextToSpeech.QUEUE_FLUSH, null, "nav")
+    }
+
+    private fun announce(state: NavigateUiState) {
+        if (state.ended) return
+        val step = state.currentStep
+        if (state.currentStepIndex != announcedStep) {
+            announcedStep = state.currentStepIndex
+            announcedNearStep = -1
+            speak("בעוד ${spokenDistance(state.distanceToManeuverMeters)}, ${maneuverPhrase(step)}")
+        } else if (state.distanceToManeuverMeters < NEAR_MANEUVER_METERS && announcedNearStep != state.currentStepIndex) {
+            announcedNearStep = state.currentStepIndex
+            speak(maneuverPhrase(step))
+        }
+    }
+
+    private fun onLocationUpdate(location: LatLng, accuracyMeters: Double? = null) {
         val state = _uiState.value
         if (state.ended) return
 
@@ -86,14 +129,16 @@ class NavigateViewModel(
         }
 
         val distanceToManeuver = location.distanceMetersTo(route.steps[stepIndex].location)
-        val remainingDistance = distanceToManeuver + route.steps.drop(stepIndex + 1).sumOf { it.distanceMeters }
+        // אורך של מקטע הוא מהתמרון שלו עד הבא - המקטע שמתחיל בתמרון הקרוב עוד
+        // לפנינו. קודם הוא לא נספר, והמרחק/הזמן שנותרו יצאו קצרים במקטע שלם.
+        val remainingDistance = distanceToManeuver + route.steps.drop(stepIndex).sumOf { it.distanceMeters }
         val avgSpeed = if (route.durationSeconds > 0) route.distanceMeters / route.durationSeconds else 10.0
         val remainingDuration = if (avgSpeed > 0) remainingDistance / avgSpeed else 0.0
 
         val deviation = nearestDistanceMetersToPolyline(location, route.polyline)
         val arrivedAtDestination = location.distanceMetersTo(destination) < ARRIVAL_THRESHOLD_METERS
 
-        _uiState.value = state.copy(
+        val newState = state.copy(
             currentLocation = location,
             currentStepIndex = stepIndex,
             distanceToManeuverMeters = distanceToManeuver,
@@ -101,26 +146,44 @@ class NavigateViewModel(
             remainingDurationSeconds = remainingDuration,
             ended = state.ended || arrivedAtDestination
         )
+        _uiState.value = newState
+        if (arrivedAtDestination && !state.ended) speak("הגעת ליעד") else announce(newState)
 
-        if (!rerouting && deviation > REROUTE_THRESHOLD_METERS && !arrivedAtDestination) {
+        // קיבוע לא מדויק (בין בניינים גבוהים, במנהרה) "סוטה" עשרות מטרים מהכביש
+        // בלי שהרכב זז ממנו - לא מחשבים מסלול חדש לפיו.
+        val reliable = accuracyMeters == null || accuracyMeters <= REROUTE_THRESHOLD_METERS
+        val cooledDown = System.currentTimeMillis() - lastRerouteAttemptMs > REROUTE_COOLDOWN_MS
+        if (!rerouting && reliable && cooledDown && deviation > REROUTE_THRESHOLD_METERS && !arrivedAtDestination) {
             triggerReroute(location)
         }
     }
 
     private fun triggerReroute(from: LatLng) {
         rerouting = true
+        lastRerouteAttemptMs = System.currentTimeMillis()
         viewModelScope.launch {
-            val newRoute = routingRepository.getDrivingRoute(from, destination)
-            if (newRoute != null) {
-                _uiState.value = _uiState.value.copy(
-                    route = newRoute,
-                    currentStepIndex = 0,
-                    remainingDistanceMeters = newRoute.distanceMeters,
-                    remainingDurationSeconds = newRoute.durationSeconds
-                )
+            // finally: חריגה בחישוב השאירה קודם rerouting=true לתמיד, ומאז אף
+            // סטייה מהמסלול לא חושבה מחדש עד סוף הנסיעה
+            try {
+                val newRoute = runCatching { routingRepository.getDrivingRoute(from, destination) }.getOrNull()
+                if (newRoute != null && !_uiState.value.ended) {
+                    applyNewRoute(newRoute)
+                    speak("מחשב מסלול מחדש")
+                }
+            } finally {
+                rerouting = false
             }
-            rerouting = false
         }
+    }
+
+    private fun applyNewRoute(newRoute: DrivingRoute) {
+        announcedStep = -1
+        _uiState.value = _uiState.value.copy(
+            route = newRoute,
+            currentStepIndex = 0,
+            remainingDistanceMeters = newRoute.distanceMeters,
+            remainingDurationSeconds = newRoute.durationSeconds
+        )
     }
 
     /**
@@ -133,16 +196,12 @@ class NavigateViewModel(
         if (rerouting || _uiState.value.ended) return
         rerouting = true
         try {
-            val candidate = routingRepository.getDrivingRoute(from, destination) ?: return
+            val candidate = runCatching { routingRepository.getDrivingRoute(from, destination) }.getOrNull() ?: return
             val state = _uiState.value
             if (state.ended) return
             if (candidate.durationSeconds < state.remainingDurationSeconds * TRAFFIC_REROUTE_IMPROVEMENT_FACTOR) {
-                _uiState.value = state.copy(
-                    route = candidate,
-                    currentStepIndex = 0,
-                    remainingDistanceMeters = candidate.distanceMeters,
-                    remainingDurationSeconds = candidate.durationSeconds
-                )
+                applyNewRoute(candidate)
+                speak("נמצא מסלול מהיר יותר")
             }
         } finally {
             rerouting = false
@@ -151,6 +210,13 @@ class NavigateViewModel(
 
     fun toggleMute() {
         _uiState.value = _uiState.value.copy(muted = !_uiState.value.muted)
+        if (_uiState.value.muted) tts?.stop()
+    }
+
+    override fun onCleared() {
+        tts?.stop()
+        tts?.shutdown()
+        tts = null
     }
 
     fun endNavigation() {
@@ -162,5 +228,18 @@ class NavigateViewModel(
         private const val REROUTE_THRESHOLD_METERS = 40.0
         private const val TRAFFIC_RECHECK_INTERVAL_MS = 90_000L
         private const val TRAFFIC_REROUTE_IMPROVEMENT_FACTOR = 0.9
+        private const val REROUTE_COOLDOWN_MS = 10_000L
+        private const val NEAR_MANEUVER_METERS = 120.0
     }
+}
+
+private fun spokenDistance(meters: Double): String = when {
+    meters >= 1000 -> "%.1f קילומטר".format(meters / 1000).replace(".0 ", " ")
+    meters >= 100 -> "${(meters / 50).toInt() * 50} מטר"
+    else -> "${meters.toInt().coerceAtLeast(10) / 10 * 10} מטר"
+}
+
+private fun maneuverPhrase(step: Maneuver): String {
+    val base = maneuverText(step)
+    return step.streetName.takeIf { it.isNotBlank() && step.type != "arrive" }?.let { "$base ל$it" } ?: base
 }

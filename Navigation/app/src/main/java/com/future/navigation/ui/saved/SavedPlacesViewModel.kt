@@ -52,7 +52,8 @@ class SavedPlacesViewModel(
         }
         searchJob = viewModelScope.launch {
             delay(500)
-            _searchResults.value = geocodingRepository.search(query)
+            _searchResults.value = runCatching { geocodingRepository.search(query) }
+                .getOrElse { if (it is kotlinx.coroutines.CancellationException) throw it else emptyList() }
         }
     }
 
