@@ -183,6 +183,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
             suppressSystemBars()
         }
         showStatusBar()
+        exemptCallAppsFromBackgroundRestriction()
         if (lockController == null) {
             lockController = com.future.futureui.lockscreen.LockScreenController(
                 service = this,
@@ -193,6 +194,19 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
                 bringStatusBarFront = { bringStatusBarToFront() },
             ).also { it.start() }
         }
+    }
+
+    /**
+     * מנהל הסוללה של היצרן מסמן כמעט כל אפליקציה כ"מוגבלת ברקע" (RUN_ANY_IN_BACKGROUND
+     * ignore). על החייגן זה קטלני: כשהתהליך שלו לא רץ, Telecom לא מצליח להעיר את
+     * ה-InCallService בשיחה נכנסת - אין מסך, אין באנר, והשיחה נראית רק מתוך החייגן.
+     * כאן (שרץ תמיד) מחזירים את ההיתר בכל הפעלה, כי היצרן עלול להחיל את ההגבלה מחדש.
+     */
+    private fun exemptCallAppsFromBackgroundRestriction() {
+        val packages = listOf("com.future.dialer", "com.future.messages", "com.future.clock", packageName)
+        controlManager?.runRootCommandAsync(
+            packages.joinToString("; ") { "cmd appops set $it RUN_ANY_IN_BACKGROUND allow; dumpsys deviceidle whitelist +$it" }
+        )
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {

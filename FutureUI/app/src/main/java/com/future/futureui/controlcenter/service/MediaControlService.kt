@@ -53,6 +53,12 @@ class MediaControlService : NotificationListenerService() {
         }
     }
 
+    /** שיחה שנענתה/נדחתה מוחקת את התראת הצלצול - הבאנר שלה נסגר מיד במקום להישאר 30 שניות. */
+    override fun onNotificationRemoved(sbn: StatusBarNotification) {
+        super.onNotificationRemoved(sbn)
+        HeadsUpNotificationService.dismiss(this, sbn.key)
+    }
+
     /** מסנן התראות שלא צריכות להציג באנר קופץ: ההתראות של האפליקציה עצמה,
      * התראות "מתמשכות" (למשל התקדמות נגן מוזיקה, שירותים ברקע), והכל כשה-DND פעיל. */
     private fun shouldShowHeadsUp(sbn: StatusBarNotification): Boolean {
@@ -63,7 +69,11 @@ class MediaControlService : NotificationListenerService() {
         // שיחה נכנסת היא "מתמשכת" (isOngoing) לכל אורך הצלצול, אבל היא בדיוק ההפך
         // מהתראות מתמשכות רגילות (התקדמות נגן וכו') שהמסנן הזה נועד לחסום - היא
         // חייבת להופיע כבאנר, אחרת אין שום אינדיקציה לשיחה נכנסת מעל אפליקציה אחרת.
-        if (sbn.isOngoing && n.category != android.app.Notification.CATEGORY_CALL) return false
+        // רק שיחה *מצלצלת* (עם fullScreenIntent): גם התראת "מחייג…"/"שיחה פעילה" של
+        // החייגן היא CATEGORY_CALL ומתמשכת, והיא קפצה כבאנר של 30 שניות עם "טלפון = מענה"
+        // בכל שיחה יוצאת ובכל שינוי מצב.
+        val isRingingCall = n.category == android.app.Notification.CATEGORY_CALL && n.fullScreenIntent != null
+        if (sbn.isOngoing && !isRingingCall) return false
         val title = n.extras.getCharSequence(android.app.Notification.EXTRA_TITLE)
         val text = n.extras.getCharSequence(android.app.Notification.EXTRA_TEXT)
         if (title.isNullOrBlank() && text.isNullOrBlank()) return false

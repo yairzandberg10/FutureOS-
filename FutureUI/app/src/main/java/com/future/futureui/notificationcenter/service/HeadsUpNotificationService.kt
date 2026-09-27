@@ -42,6 +42,19 @@ class HeadsUpNotificationService : Service(), LifecycleOwner, SavedStateRegistry
             intent.putExtra(EXTRA_KEY, notificationKey)
             context.startService(intent)
         }
+
+        private const val EXTRA_DISMISS_KEY = "dismiss_key"
+
+        /** המפתח של הבאנר שמוצג כרגע - כדי לא להעיר את השירות על כל התראה שנמחקת. */
+        @Volatile
+        private var shownKey: String? = null
+
+        fun dismiss(context: Context, notificationKey: String) {
+            if (shownKey != notificationKey) return
+            runCatching {
+                context.startService(Intent(context, HeadsUpNotificationService::class.java).putExtra(EXTRA_DISMISS_KEY, notificationKey))
+            }
+        }
     }
 
     private lateinit var windowManager: WindowManager
@@ -65,6 +78,12 @@ class HeadsUpNotificationService : Service(), LifecycleOwner, SavedStateRegistry
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val dismissKey = intent?.getStringExtra(EXTRA_DISMISS_KEY)
+        if (dismissKey != null) {
+            if (dismissKey == shownKey) removeBanner()
+            stopSelf(startId)
+            return START_NOT_STICKY
+        }
         val key = intent?.getStringExtra(EXTRA_KEY)
         val sbn = key?.let { k -> MediaControlService.instance?.activeNotifications?.firstOrNull { it.key == k } }
         if (sbn == null) {
@@ -78,6 +97,13 @@ class HeadsUpNotificationService : Service(), LifecycleOwner, SavedStateRegistry
     private fun showBanner(sbn: android.service.notification.StatusBarNotification, startId: Int) {
         try {
             removeBanner()
+            // המכשיר ננעל בין פרסום ההתראה להצגה - לא מציגים תוכן מעל מסך הנעילה
+            // (שיחה נכנסת היא החריג: היא חייבת להופיע)
+            val st = com.future.futureui.utils.FutureUIState
+            if ((st.isLocked || st.isSecured) && sbn.notification.category != android.app.Notification.CATEGORY_CALL) {
+                stopSelf(startId)
+                return
+            }
 
             val params = WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT,
@@ -117,6 +143,7 @@ class HeadsUpNotificationService : Service(), LifecycleOwner, SavedStateRegistry
             lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
 
             windowManager.addView(composeView, params)
+            shownKey = sbn.key
 
             val bringFrontIntent = Intent(FutureUIActions.ACTION_BRING_STATUS_BAR_FRONT)
             bringFrontIntent.setPackage(packageName)
@@ -128,6 +155,7 @@ class HeadsUpNotificationService : Service(), LifecycleOwner, SavedStateRegistry
     }
 
     private fun removeBanner() {
+        shownKey = null
         val view = composeView ?: return
         try {
             windowManager.removeView(view)
