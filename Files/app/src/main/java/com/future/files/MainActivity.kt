@@ -4,6 +4,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.padding
 
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -66,6 +67,17 @@ class MainActivity : ComponentActivity() {
             val snackbar = com.future.sharednav.components.rememberFutureSnackbarState()
             val uiPrefs = remember { getSharedPreferences("files_ui", MODE_PRIVATE) }
             var gridView by remember { mutableStateOf(uiPrefs.getBoolean("grid", false)) }
+            var sortOrder by remember {
+                mutableStateOf(runCatching { com.future.files.data.SortOrder.valueOf(uiPrefs.getString("sort", "NAME")!!) }
+                    .getOrDefault(com.future.files.data.SortOrder.NAME))
+            }
+            // ההעתקה הרצה כרגע - מקור ההתקדמות וה"ביטול" במסך ההמתנה
+            var copyProgress by remember { mutableStateOf<com.future.files.data.CopyProgress?>(null) }
+            var progressValue by remember { mutableStateOf(0f) }
+            LaunchedEffect(copyProgress) {
+                val p = copyProgress ?: return@LaunchedEffect
+                while (true) { progressValue = p.fraction; kotlinx.coroutines.delay(200) }
+            }
             // התקנת APK מחכה לאישור מפורש של המשתמש.
             var pendingApk by remember { mutableStateOf<FileEntry?>(null) }
             fun message(text: String) = snackbar.show(text)
@@ -94,8 +106,8 @@ class MainActivity : ComponentActivity() {
             val isRootDir = currentDir.absolutePath == root.absolutePath
             val isCurrentDirTopLevel = currentDir.parentFile?.absolutePath == root.absolutePath
 
-            LaunchedEffect(hasAccess, currentDir) {
-                if (hasAccess) entries = repository.listDirectory(currentDir, isRootDir)
+            LaunchedEffect(hasAccess, currentDir, sortOrder) {
+                if (hasAccess) entries = repository.listDirectory(currentDir, isRootDir, sortOrder)
             }
 
             fun goUp() {
@@ -165,6 +177,13 @@ class MainActivity : ComponentActivity() {
                         }
                     },
                     gridView = gridView,
+                    sortOrder = sortOrder,
+                    onCycleSort = {
+                        sortOrder = com.future.files.data.SortOrder.entries[(sortOrder.ordinal + 1) % com.future.files.data.SortOrder.entries.size]
+                        uiPrefs.edit().putString("sort", sortOrder.name).apply()
+                    },
+                    busyProgress = copyProgress?.let { progressValue },
+                    onCancelBusy = copyProgress?.let { p -> { p.cancel() } },
                     onToggleGridView = {
                         gridView = !gridView
                         uiPrefs.edit().putBoolean("grid", gridView).apply()
@@ -173,14 +192,14 @@ class MainActivity : ComponentActivity() {
                     onBack = { goUp() },
                     onNewFolder = { name ->
                         if (repository.createFolder(currentDir, name)) {
-                            entries = repository.listDirectory(currentDir, isRootDir)
+                            entries = repository.listDirectory(currentDir, isRootDir, sortOrder)
                         } else {
                             message("לא ניתן ליצור את התיקייה")
                         }
                     },
                     onRename = { entry, newName ->
                         if (repository.renameEntry(entry.file, newName)) {
-                            entries = repository.listDirectory(currentDir, isRootDir)
+                            entries = repository.listDirectory(currentDir, isRootDir, sortOrder)
                         } else {
                             message("לא ניתן לשנות את השם")
                         }
@@ -192,7 +211,7 @@ class MainActivity : ComponentActivity() {
                             coroutineScope.launch {
                                 val ok = withContext(Dispatchers.IO) { repository.deleteEntry(entry.file) }
                                 if (ok) {
-                                    entries = repository.listDirectory(currentDir, isRootDir)
+                                    entries = repository.listDirectory(currentDir, isRootDir, sortOrder)
                                 } else {
                                     message("לא ניתן למחוק")
                                 }
@@ -222,17 +241,22 @@ class MainActivity : ComponentActivity() {
                         val toPaste = clipboardEntry
                         if (toPaste != null && !isBusy) {
                             isBusy = true
+                            val progress = com.future.files.data.CopyProgress()
+                            progressValue = 0f
+                            copyProgress = progress
                             coroutineScope.launch {
                                 val ok = withContext(Dispatchers.IO) {
-                                    if (clipboardIsMove) repository.moveEntry(toPaste.file, currentDir)
-                                    else repository.copyEntry(toPaste.file, currentDir)
+                                    if (clipboardIsMove) repository.moveEntry(toPaste.file, currentDir, progress)
+                                    else repository.copyEntry(toPaste.file, currentDir, progress)
                                 }
-                                if (ok) {
-                                    entries = repository.listDirectory(currentDir, isRootDir)
-                                } else {
-                                    message("לא ניתן להדביק כאן")
+                                entries = repository.listDirectory(currentDir, isRootDir, sortOrder)
+                                when {
+                                    progress.cancelled -> message("הפעולה בוטלה")
+                                    !ok -> message("לא ניתן להדביק כאן")
                                 }
-                                clipboardEntry = null
+                                // ביטול משאיר את הפריט בלוח - אפשר להדביק שוב
+                                if (!progress.cancelled) clipboardEntry = null
+                                copyProgress = null
                                 isBusy = false
                             }
                         }
@@ -244,7 +268,7 @@ class MainActivity : ComponentActivity() {
                                 val allOk = withContext(Dispatchers.IO) {
                                     selected.all { repository.deleteEntry(it.file) }
                                 }
-                                entries = repository.listDirectory(currentDir, isRootDir)
+                                entries = repository.listDirectory(currentDir, isRootDir, sortOrder)
                                 if (!allOk) {
                                     message("חלק מהפריטים לא נמחקו")
                                 }
@@ -335,9 +359,15 @@ class MainActivity : ComponentActivity() {
         }
         return try {
             val uri = FileProvider.getUriForFile(this, "$packageName.fileprovider", file)
+            val intent = Intent(Intent.ACTION_VIEW)
+                .setDataAndType(uri, "application/vnd.android.package-archive")
+            // רק למתקין של המערכת - כוונה מרומזת עם הרשאת קריאה ניתנת לחטיפה
+            // ע"י כל אפליקציה שמצהירה על מסנן לצפייה ב-APK.
+            val installer = packageManager
+                .queryIntentActivities(intent, PackageManager.MATCH_SYSTEM_ONLY)
+                .firstOrNull()?.activityInfo?.packageName ?: return false
             startActivity(
-                Intent(Intent.ACTION_VIEW)
-                    .setDataAndType(uri, "application/vnd.android.package-archive")
+                intent.setPackage(installer)
                     .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             )

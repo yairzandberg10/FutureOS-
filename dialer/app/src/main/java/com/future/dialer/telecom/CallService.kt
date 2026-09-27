@@ -82,13 +82,7 @@ class CallService : InCallService() {
     private fun callerLabel(): String {
         val number = _activeCall.value?.details?.handle?.schemeSpecificPart
         if (number.isNullOrBlank()) return "מספר חסוי"
-        val name = runCatching {
-            val uri = android.net.Uri.withAppendedPath(android.provider.ContactsContract.PhoneLookup.CONTENT_FILTER_URI, android.net.Uri.encode(number))
-            contentResolver.query(uri, arrayOf(android.provider.ContactsContract.PhoneLookup.DISPLAY_NAME), null, null, null)?.use { c ->
-                if (c.moveToFirst()) c.getString(0) else null
-            }
-        }.getOrNull()
-        return name?.takeIf { it.isNotBlank() } ?: number
+        return com.future.sharednav.contacts.ContactLookup.nameForNumber(this, number) ?: number
     }
 
     private fun callUiIntent(requestCode: Int): PendingIntent {
@@ -215,6 +209,8 @@ class CallService : InCallService() {
         if (!ringingNotified) return
         ringingNotified = false
         applicationContext.getSystemService(NotificationManager::class.java)?.cancel(CALL_NOTIFICATION_ID)
+        // למרות השם, ACTION_CALL_ENDED פירושו "הצלצול נגמר" - נשלח גם כשעונים.
+        // מי שצריך לדעת שהשיחה באמת הסתיימה בודק TelephonyManager.callState.
         try {
             val intent = Intent("${SystemUiTarget.PACKAGE}.ACTION_CALL_ENDED").setPackage(SystemUiTarget.PACKAGE)
             applicationContext.sendBroadcast(intent)

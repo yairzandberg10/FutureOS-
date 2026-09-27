@@ -299,7 +299,7 @@ class SmsRepository(private val context: Context) {
             if (!viaChat) smsOrRcs()
             messageId
         } catch (e: Exception) {
-            Log.e("SmsRepository", "Error sending message to $address", e)
+            Log.e("SmsRepository", "Error sending message", e)
             null
         }
     }
@@ -317,7 +317,7 @@ class SmsRepository(private val context: Context) {
             })
             smsManager.sendMultipartTextMessage(address, null, parts, sentIntents, deliveryIntents)
         } catch (e: Exception) {
-            Log.e("SmsRepository", "Error sending SMS to $address", e)
+            Log.e("SmsRepository", "Error sending SMS", e)
             updateSentMessageStatus(messageId, false)
         }
     }
@@ -391,7 +391,7 @@ class SmsRepository(private val context: Context) {
      * מחזירה true אם המסירה למערכת הצליחה (לא מבטיחה מסירה סופית ל-MMSC בפועל -
      * זה מגיע אסינכרונית ב-MmsSentReceiver, שמציג Toast אם השליחה נכשלה).
      */
-    fun sendMmsMessage(address: String, text: String, imageUri: Uri?): Boolean {
+    suspend fun sendMmsMessage(address: String, text: String, imageUri: Uri?): Boolean {
         // לנמען שרשום לצ'אט FutureOS התמונה יוצאת בצ'אט, מוצפנת ובאיכות מלאה.
         // אם זה נכשל - בחזרה ל-MMS הרגיל.
         if (imageUri != null &&
@@ -493,7 +493,7 @@ class SmsRepository(private val context: Context) {
             smsManager.sendMultimediaMessage(context, contentUri, null, null, pendingIntent)
             true
         } catch (e: Exception) {
-            Log.e("SmsRepository", "Error sending MMS to $address", e)
+            Log.e("SmsRepository", "Error sending MMS", e)
             false
         }
     }
@@ -655,20 +655,8 @@ class SmsRepository(private val context: Context) {
         return resolved
     }
 
-    private fun lookupContact(address: String): Contact {
-        try {
-            val uri = Uri.withAppendedPath(ContactsContract.PhoneLookup.CONTENT_FILTER_URI, Uri.encode(address))
-            context.contentResolver.query(uri, arrayOf(ContactsContract.PhoneLookup.DISPLAY_NAME), null, null, null)?.use { cursor ->
-                if (cursor.moveToFirst()) {
-                    val name = cursor.getString(0)
-                    if (!name.isNullOrBlank()) return Contact(name = name, phoneNumber = address)
-                }
-            }
-        } catch (e: Exception) {
-            Log.e("SmsRepository", "Error resolving contact for $address", e)
-        }
-        return Contact(name = address, phoneNumber = address)
-    }
+    private fun lookupContact(address: String): Contact =
+        Contact(name = com.future.sharednav.contacts.ContactLookup.nameForNumber(context, address) ?: address, phoneNumber = address)
 
     /** חיפוש אנשי קשר לפי שם/מספר בזמן הקלדה - להתחלת שיחה חדשה בלי לזכור מספר
      * בעל-פה. CONTENT_FILTER_URI של Phone (לא של Contacts) מחזיר כבר את שם + מספר
@@ -693,7 +681,7 @@ class SmsRepository(private val context: Context) {
                 }
             }
         } catch (e: Exception) {
-            Log.e("SmsRepository", "Error searching contacts for '$query'", e)
+            Log.e("SmsRepository", "Error searching contacts", e)
         }
         return results
     }
