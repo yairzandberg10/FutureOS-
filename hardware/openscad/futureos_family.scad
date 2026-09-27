@@ -7,8 +7,13 @@
 //  משמש לבדיקת ארגונומיה, הדפסת דמה (dummy) להחזקה ביד, ובסיס ל-RFQ מול ODM.
 //  מה זה לא: CAD לייצור. קבצי STEP לתבניות הזרקה מייצר ה-ODM מהמודל הזה.
 //
-//  הקנבס של ה-UI הוא 320x480dp (FutureDimens.screenWidth/Height), לכן Mini
-//  ו-Regular ביחס 2:3 בדיוק. Pro הוא bar עם מסך רחב יותר, ריבועי (1:1):
+//  מהדורת אב-טיפוס (10 יחידות): גוף מודפס (MJF PA12), מסכים וסוללות מחלקי חילוף,
+//  ומודול Android מוכן (SoM) על לוח נושא. בלי תבניות ובלי פאנל בהזמנה אישית.
+//  עובי 8 מ"מ בכל הדגמים (היה 10). ר' hardware/PROTOTYPE_10_UNITS.md
+//
+//  הקנבס של ה-UI הוא 320x480dp (FutureDimens.screenWidth/Height), לכן Regular
+//  ביחס 2:3 בדיוק. Mini: אין פאנל 2:3 קטן מדף, אז פאנל החילוף של Qin F21 Pro
+//  (2.8" 480x640, יחס 3:4) בצפיפות 213 = 360x480dp - אותו גובה, 40dp רוחב עודף. Pro הוא bar עם מסך רחב יותר, ריבועי (1:1):
 //  480x480dp - אותו גובה, רוחב גדול ב-160dp.
 //
 //  שימוש: לבחור MODEL ו-PART (או דרך ה-Customizer). F5 לתצוגה, F6+STL להדפסה.
@@ -26,12 +31,12 @@ PART  = "assembly"; // [assembly, front_shell, back_shell, keypad, markings, sid
 function sel(v) = MODEL == "mini" ? v[0] : MODEL == "regular" ? v[1] : v[2];
 
 DIAG_IN     = sel([2.8, 3.5, 4.5]);
-SCR_AR      = sel([2 / 3, 2 / 3, 1]);          // רוחב/גובה: 2:3, ו-Pro ריבועי
+SCR_AR      = sel([3 / 4, 2 / 3, 1]);          // רוחב/גובה: Mini 3:4 (פאנל F21 Pro), Regular 2:3, Pro ריבועי
 SCR_W       = DIAG_IN * 25.4 * SCR_AR / sqrt(1 + SCR_AR * SCR_AR); // רוחב אזור פעיל
 SCR_H       = DIAG_IN * 25.4 / sqrt(1 + SCR_AR * SCR_AR);          // גובה אזור פעיל
 LCD_SIDE    = 0.8;   // שוליים של מודול המסך בצדדים ולמעלה (מודול narrow-bezel)
 LCD_BOTTOM  = 3.5;   // שוליים למטה (FPC / IC של המסך)
-LCD_T       = sel([2.6, 2.8, 3.2]);            // עובי מודול מסך כולל זכוכית
+LCD_T       = sel([2.6, 2.8, 3.2]);            // עובי מודול מסך כולל זכוכית - למדוד על חלק החילוף שנקנה
 
 TOP_BAND    = sel([2.5, 2.5, 3]); // פס דק מעל הזכוכית: חריץ רמקול שיחה בלבד (מצלמה קדמית = punch-hole במסך)
 NAV_GAP     = 1.5;                // מרווח בין תחתית הזכוכית לאזור הניווט
@@ -41,17 +46,19 @@ KEY_P       = sel([14, 17, 21]);  // פסיעת עמודות
 BOTTOM_BAND = 5;                  // מיקרופון, USB-C
 SIDE_WALL   = 1.0;                // מסגרת סביב הזכוכית - מסך מקצה לקצה
 CORNER_R    = sel([6, 7, 8]);
-FILLET_BACK  = sel([2.5, 2.0, 2.0]); // עיגול קצה אחורי של הגוף (Regular/Pro: 2.0 - בגוף של 10 מ"מ מקשי הצד יורדים נמוך יותר)
+FILLET_BACK  = sel([1.5, 1.5, 1.5]); // עיגול קצה אחורי של הגוף - קטן, כי בגוף של 8 מ"מ מקשי הצד קרובים לגב
 FILLET_FRONT = 0.6;                // עיגול קצה קדמי (סביב הזכוכית)
 PUNCH_D      = 3.2;                // חור מצלמה קדמית בתוך המסך
-BODY_T      = sel([10, 10, 10]);     // 10 מ"מ מקסימום בכל הדגמים
-FRONT_T     = 1.4;                 // עובי דופן פנים
-MIDFRAME    = 0.6;                 // לוחית תמיכה + דבק בין תחתית מודול המסך לסוללה
-LCD_SINK    = 0.35;                // הזכוכית שקועה מתחת לפני החזית
-WALL        = 1.4;
+BODY_T      = sel([8, 8, 8.5]);     // היה 10. Pro: ‏8.5 - מודול המסך שלו עבה יותר, וה-SoM צריך לעבור מאחוריו
+FRONT_T     = 1.0;                 // עובי דופן פנים (MJF PA12: 1.0 מספיק; היה 1.4)
+MIDFRAME    = 0.4;                 // לוחית נירוסטה 0.2 + דבק, עם תעלה ל-FPC, בין מודול המסך לסוללה
+LCD_SINK    = 0.2;                 // הזכוכית שקועה מתחת לפני החזית
+WALL        = 1.0;                 // דפנות וגב (היה 1.4)
 
-// Regular: 47 ולא 48 - מפנה מקום למקשי הווליום בדופן הימנית (ר' VOL_* למטה)
-BATT        = sel([[36, 62, 4.0], [47, 83, 4.5], [66, 74, 4.2]]); // Li-Po, מ"מ (1500/3000/3500mAh)
+// מעטפת מקסימלית לסוללה, מ"מ. האורך נגזר מהלוח הראשי (futureos_mainboard.scad), העובי מ-BODY_T.
+// ב-10 יחידות: תא Li-Po מדף או מחלק חילוף בגודל הכי קרוב שלא עובר את המעטפת.
+// הערכה ב-~150mAh לסמ"ק: Mini ~900, Regular ~1,700, Pro ~2,700mAh
+BATT        = sel([[40, 44, 3.5], [47, 70, 3.4], [66, 79, 3.5]]);
 BOARD       = sel([[40, 55, 1.0], [48, 70, 1.0], [76, 58, 1.0]]); // PCBA (ללא מגנים) - צר מספיק לגוף מקצה לקצה
 BOARD_Z     = sel([3.2, 3.5, 3.5]); // גובה רכיבים + מגני RF
 
@@ -60,11 +67,11 @@ DIGIT_ROWS  = 4;
 // מקשי ווליום: שני מקשים נפרדים (Vol+ למעלה, Vol- למטה) בדופן הימנית,
 // כמו ב-F22 Pro. נלחצים על כיפות מתכת על FPC צד שמודבק לדופן מבפנים.
 VOL_L       = sel([9, 10, 11]);  // אורך כל מקש (לאורך הגוף)
-VOL_H       = 3.0;               // גובה המקש (בעובי הגוף)
+VOL_H       = 2.4;               // גובה המקש (בעובי הגוף) - היה 3.0, הגוף דק יותר
 VOL_SPACING = 1.6;               // מרווח בין Vol+ ל-Vol-
 VOL_FROM_TOP = sel([30, 36, 38]); // מרכז הזוג, מ"מ מהקצה העליון - בהישג האצבע כשמחזיקים ביד
 VOL_PROUD   = 0.6;               // כמה המקש בולט מהדופן
-VOL_FLANGE  = 0.8;               // שפה פנימית סביב המקש שמונעת ממנו ליפול החוצה
+VOL_FLANGE  = 0.5;               // שפה פנימית סביב המקש שמונעת ממנו ליפול החוצה
 VOL_FLANGE_T = 0.4;
 VOL_PLUNGER = 0.2;               // בליטה קטנה מאחורי המקש שלוחצת על הכיפה
 VOL_FPC_T   = 0.7;               // כיפה 0.3 + FPC 0.12 + stiffener פלדה 0.2 + דבק
@@ -114,7 +121,7 @@ assert(VOL_Z + VOL_H / 2 + VOL_FLANGE < -LCD_T - LCD_SINK, "מקשי הצד נכ
 assert(SK_Y0 - VOL_FLANGE > BOARD[1] + BOTTOM_BAND - 1, "מקש ההפעלה יורד לאזור ה-PCBA");
 BATT_BACK_CLEAR = (BATT_TOP_Z - BATT[2]) - (-BODY_T + WALL);
 echo(str("battery to back wall clearance = ", BATT_BACK_CLEAR, " mm"));
-assert(BATT_BACK_CLEAR >= 0.2, "הסוללה נכנסת בדופן האחורית - להגדיל את BODY_T או להקטין את BATT[2]");
+assert(BATT_BACK_CLEAR >= 0.2 - 1e-6, "הסוללה נכנסת בדופן האחורית - להגדיל את BODY_T או להקטין את BATT[2]");
 
 // ---------------------------------------------------------------------
 // גיאומטריה בסיסית
@@ -135,6 +142,13 @@ module sbox(w, l, t, r, fb = 0, ft = 0) {
 }
 
 CX = BODY_W / 2;
+
+// מצלמה אחורית + פלאש: בשורה העליונה של הלוח הראשי (מעל ה-SoM), ליד הקצה העליון.
+// CAM_BUMP: טבעת בולטת סביב העדשה - מודול AF לא נכנס בעובי של 8 מ"מ בלעדיה
+CAM_XY   = [BODY_W - sel([9, 10, 11]), BODY_L - sel([4.95, 5.95, 5.95])];
+FLASH_XY = [CAM_XY[0] - sel([6.5, 8, 8]), CAM_XY[1]];
+CAM_HOLE = sel([5, 6, 8]);
+CAM_BUMP = sel([0, 0.4, 0.6]);
 
 // מיקומי מקשים: [x, y, w, h, צורה, תווית]
 function digit_keys() = [
@@ -207,13 +221,17 @@ module front_shell() {
 module back_shell() {
     t = BODY_T - FRONT_T;
     difference() {
-        sbox(BODY_W, BODY_L, t, CORNER_R, FILLET_BACK, 0);
+        union() {
+            sbox(BODY_W, BODY_L, t, CORNER_R, FILLET_BACK, 0);
+            if (CAM_BUMP > 0) translate([CAM_XY[0], CAM_XY[1], -CAM_BUMP])
+                cylinder(d1 = CAM_HOLE + 2.4, d2 = CAM_HOLE + 3.2, h = CAM_BUMP + 0.5);
+        }
         translate([WALL, WALL, WALL]) rbox(BODY_W - 2 * WALL, BODY_L - 2 * WALL, t, CORNER_R - WALL);
         // USB-C בתחתית
-        translate([CX - 4.5, -0.01, t / 2 - 1.75]) cube([9, WALL + 0.02, 3.5]);
+        translate([CX - 4.5, -0.01, USB_Z + BODY_T - 1.75]) cube([9, WALL + 0.02, 3.5]);
         // מצלמה אחורית + פלאש
-        translate([BODY_W - 11, BODY_L - 12, -0.01]) cylinder(d = sel([7, 8, 11]), h = WALL + 0.02);
-        translate([BODY_W - 11, BODY_L - 22, -0.01]) cylinder(d = 3, h = WALL + 0.02);
+        translate([CAM_XY[0], CAM_XY[1], -CAM_BUMP - 0.01]) cylinder(d = CAM_HOLE, h = WALL + CAM_BUMP + 0.02);
+        translate([FLASH_XY[0], FLASH_XY[1], -0.01]) cylinder(d = 3, h = WALL + 0.02);
         // חריצי מקשי הצד (ווליום + הפעלה) בדופן הימנית
         for (k = SIDE_KEYS) translate([BODY_W - WALL - 0.01, k[0], VOL_Z + BODY_T])
             pill_x(k[1] + 2 * GAP, VOL_H + 2 * GAP, WALL + 0.02);
@@ -272,6 +290,8 @@ KEY_RISE   = 1.1;   // גובה המקש מעל הממברנה
 MARK_DEPTH = 0.4;   // עומק הסימון (שקוע בתוך המקש, ממולא בגוף הסימונים)
 FLANGE     = 1.2;   // שפה מתחת לחזית שמחזיקה את הממברנה (נחתכת לפי החלל הפנימי)
 FLANGE_T   = 0.6;
+// USB-C: במרכז הגובה של המחבר, שיושב בגב לוח המקלדת (ר' KB_* ב-futureos_mainboard.scad)
+USB_Z    = -(FRONT_T + FLANGE_T + 0.4 + 0.6) - 3.2 / 2;
 
 LATIN  = ["", "ABC", "DEF", "GHI", "JKL", "MNO", "PQRS", "TUV", "WXYZ"];
 // התקן הישראלי, זהה ל-T9 של המערכת (SharedKeypadNav/t9/T9DigitMap.kt). אותיות סופיות לא מודפסות
