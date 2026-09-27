@@ -27,6 +27,14 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
+
+        <!-- הקטלוג המובנה למסך הנעילה של FutureUI (שאין לו רשת). קריאה בלבד. -->
+        <provider
+            android:name=".WallpaperProvider"
+            android:authorities="com.future.wallpapers.catalog"
+            android:exported="true"
+            android:readPermission="com.future.futureui.permission.SYSTEM_SETTINGS"
+            android:writePermission="com.future.futureui.permission.SYSTEM_SETTINGS" />
     </application>
 
 </manifest>

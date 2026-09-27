@@ -56,9 +56,15 @@ class LockSettings(context: Context) {
         get() = prefs.getInt("clock_color", 0)
         set(v) = prefs.edit().putInt("clock_color", v).apply()
 
+    /** 0 רקע חד, 1 מטושטש (ערכים ישנים - שחור / צבע הדגשה - נקראים כחד). */
     var background: Int
-        get() = prefs.getInt("background", 1)
+        get() = prefs.getInt("background", 0).let { if (it == 1) 1 else 0 }
         set(v) = prefs.edit().putInt("background", v).apply()
+
+    /** רקע מהקטלוג של אפליקציית הטפטים ("" = הטפט של המכשיר). */
+    var wallpaperId: String
+        get() = prefs.getString("wallpaper_id", "") ?: ""
+        set(v) = prefs.edit().putString("wallpaper_id", v).apply()
 
     var widgets: List<String>
         get() = (prefs.getString("widgets", "battery,alarm,hebdate") ?: "").split(",").let { list ->
@@ -82,7 +88,9 @@ class LockSettings(context: Context) {
     fun strongAuthRequired(): Boolean {
         if (!pin.hasPin()) return false
         if (prefs.getInt("strong_boot", -1) != bootCount()) return true
-        if (System.currentTimeMillis() - prefs.getLong("strong_time", 0L) > STRONG_AUTH_TIMEOUT_MS) return true
+        val sinceStrong = System.currentTimeMillis() - prefs.getLong("strong_time", 0L)
+        // שלילי = השעון הוזז אחורה אחרי הקוד האחרון; בלי זה "48 שעות" לא נגמרות לעולם
+        if (sinceStrong < 0 || sinceStrong > STRONG_AUTH_TIMEOUT_MS) return true
         return prefs.getInt("face_failures", 0) >= MAX_FACE_FAILURES
     }
 
@@ -96,7 +104,8 @@ class LockSettings(context: Context) {
     }
 
     fun onFaceFailure() {
-        prefs.edit().putInt("face_failures", prefs.getInt("face_failures", 0) + 1).apply()
+        // commit: כישלון נספר גם אם המכשיר נכבה מיד אחריו
+        prefs.edit().putInt("face_failures", prefs.getInt("face_failures", 0) + 1).commit()
     }
 
     fun onFaceSuccess() {

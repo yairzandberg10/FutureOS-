@@ -1,7 +1,7 @@
 package com.future.futureui.lockscreen
 
+import com.future.futureui.utils.safeText
 import android.app.AlarmManager
-import android.app.WallpaperManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -35,6 +35,7 @@ import com.future.futureui.lockscreen.face.FaceAuthenticator
 import com.future.futureui.lockscreen.face.FaceStatus
 import com.future.futureui.lockscreen.logic.LockCatalog
 import com.future.futureui.lockscreen.logic.LockSettings
+import com.future.futureui.lockscreen.logic.LockWallpapers
 import com.future.futureui.lockscreen.ui.LockScreenUi
 import com.future.futureui.ui.theme.FutureUITheme
 import com.future.futureui.utils.FutureUIState
@@ -66,6 +67,8 @@ class LockScreenController(
     private val face = FaceAuthenticator(service, settings)
     private val state = LockUiState()
     private val main = Handler(Looper.getMainLooper())
+    /** קטלוג הרקעים והורדת רקע נבחר - מחוץ ל-Main. */
+    private val io = java.util.concurrent.Executors.newSingleThreadExecutor()
     private var view: ComposeView? = null
     private var screenOffAt = 0L
     private var pinBuffer = StringBuilder()
@@ -94,7 +97,10 @@ class LockScreenController(
     private val lockoutTicker = object : Runnable {
         override fun run() {
             val ms = settings.pin.remainingLockoutMs()
-            state.lockoutSeconds = ((ms + 999) / 1000).toInt()
+            val secs = ((ms + 999) / 1000).toInt()
+            // תחילת נעילה חדשה: זוכרים את האורך שלה בשביל פס ההתקדמות
+            if (state.lockoutSeconds == 0 || secs > state.lockoutTotal) state.lockoutTotal = secs
+            state.lockoutSeconds = secs
             if (ms > 0) main.postDelayed(this, 1_000) else state.pinError = false
         }
     }
@@ -123,6 +129,7 @@ class LockScreenController(
         face.stop()
         removeWindow()
         main.removeCallbacksAndMessages(null)
+        io.shutdownNow()
     }
 
     // ------------------------------------------------------------------ מסך
@@ -131,8 +138,14 @@ class LockScreenController(
         screenOffAt = SystemClock.elapsedRealtime()
         face.stop()
         if (locked) {
-            // המסך נכבה בזמן שהיה נעול: מתחילים מחדש (בלי זיהוי, בלי קוד חלקי)
+            // שיחה פעילה: המסך נכבה מחיישן הקרבה - נשארים מפונים בשביל מסך השיחה
+            if (suspended && isInCall()) return
+            // המסך נכבה בזמן שהיה נעול: מתחילים מחדש (בלי זיהוי, בלי קוד חלקי).
+            // isLocked חוזר ל-true גם אם היינו מפונים (אחרת המקשים לא הגיעו למסך הנעילה).
+            main.removeCallbacks(callWatch)
             suspended = false
+            FutureUIState.isLocked = true
+            FutureUIState.isSecured = true
             resetSession()
             showWindow()
         } else if (settings.enabled && (settings.autoLockDelayMs == 0L || !settings.pin.hasPin())) {
@@ -157,6 +170,7 @@ class LockScreenController(
         locked = true
         suspended = false
         FutureUIState.isLocked = true
+        FutureUIState.isSecured = true
         resetSession()
         showWindow()
         val pm = service.getSystemService(PowerManager::class.java)
@@ -164,7 +178,10 @@ class LockScreenController(
     }
 
     private fun resetSession() {
+        val wasEditing = state.mode == LockMode.EDIT
         state.mode = LockMode.MAIN
+        state.editPanel = EditPanel.NONE
+        state.wallpaperLoading = null
         state.unlocking = false
         state.authenticated = false
         state.faceStatus = null
@@ -174,6 +191,11 @@ class LockScreenController(
         pendingAction = null
         clearPin()
         loadSettings()
+        // עריכה שלא הסתיימה (המסך נכבה באמצע) - מבוטלת, כולל רקע שנבחר ולא נשמר
+        if (wasEditing) {
+            LockWallpapers.discardPending(service)
+            if (view != null) loadWallpaper()
+        }
     }
 
     private fun loadSettings() {
@@ -183,6 +205,7 @@ class LockScreenController(
         state.clockStyle = settings.clockStyle
         state.clockColor = settings.clockColor
         state.background = settings.background
+        state.wallpaperId = settings.wallpaperId
         state.widgets = settings.widgets
         state.leftShortcut = settings.leftShortcut
         state.rightShortcut = settings.rightShortcut
@@ -202,7 +225,10 @@ class LockScreenController(
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                     WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
                     WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
+                    // הקלטת מסך/צילום של אפליקציה אחרת לא תופסת את מסך הנעילה
+                    // (התראות, הקלדת הקוד)
+                    WindowManager.LayoutParams.FLAG_SECURE,
                 PixelFormat.OPAQUE
             )
             val v = ComposeView(service).apply {
@@ -230,6 +256,8 @@ class LockScreenController(
         view?.let { runCatching { windowManager.removeView(it) } }
         view = null
         state.wallpaper = null
+        state.deviceWallpaper = null
+        state.wallpaperCatalog.clear()
     }
 
     private fun unlock(action: (() -> Unit)? = null) {
@@ -237,6 +265,7 @@ class LockScreenController(
         locked = false
         suspended = false
         FutureUIState.isLocked = false
+        FutureUIState.isSecured = false
         state.unlocking = true
         clearPin()
         // אנימציית היציאה (המסך עולה ודועך) ואז מסירים את החלון
@@ -253,25 +282,74 @@ class LockScreenController(
         if (locked && !suspended) suspend()
     }
 
+    /**
+     * השיחה נגמרה: אם פינינו את מסך הנעילה בשבילה - הוא חוזר מיד. בלי זה החייגן
+     * (יומן, אנשי קשר, חיוג) נשאר פתוח לגמרי בלי קוד אחרי כל שיחה נכנסת.
+     */
+    fun onCallEnded() {
+        // ACTION_CALL_ENDED מגיע כשהצלצול נגמר - גם כשענו. בודקים כל שנייה עד
+        // שאין שום שיחה פעילה, ורק אז נועלים.
+        main.removeCallbacks(callWatch)
+        if (locked && suspended) main.post(callWatch)
+    }
+
+    private val callWatch = object : Runnable {
+        override fun run() {
+            if (!locked || !suspended) return
+            if (isInCall()) main.postDelayed(this, 1_000) else resume()
+        }
+    }
+
+    /**
+     * יש שיחה (מצלצלת או פעילה). TelephonyManager.callState דורש READ_PHONE_STATE
+     * מאנדרואיד 12 - אם ההרשאה לא ניתנה נופלים למצב השמע, שלא דורש הרשאה.
+     */
+    @Suppress("DEPRECATION")
+    private fun isInCall(): Boolean {
+        val telephony = runCatching {
+            service.getSystemService(android.telephony.TelephonyManager::class.java)?.callState !=
+                android.telephony.TelephonyManager.CALL_STATE_IDLE
+        }.getOrDefault(false)
+        if (telephony) return true
+        val mode = runCatching { service.getSystemService(android.media.AudioManager::class.java)?.mode }.getOrNull()
+        return mode == android.media.AudioManager.MODE_IN_CALL ||
+            mode == android.media.AudioManager.MODE_IN_COMMUNICATION ||
+            mode == android.media.AudioManager.MODE_RINGTONE
+    }
+
     fun onForegroundChanged(pkg: String?, cls: String?) {
         if (!locked || pkg == null) return
         val isAlarm = pkg == CLOCK_PACKAGE && cls?.endsWith("AlarmRingActivity") == true
         if (!suspended && isAlarm) { suspend(); return }
-        // חזרה מהשיחה/מעורר למשהו אחר - המסך חוזר
-        if (suspended && pkg != DIALER_PACKAGE && pkg != CLOCK_PACKAGE && pkg != service.packageName &&
-            pkg != "android" && pkg != "com.android.systemui"
-        ) {
-            suspended = false
-            FutureUIState.isLocked = true
-            resetSession()
-            showWindow()
-            startFaceScan()
+        if (!suspended) return
+        // בזמן שיחה/מעורר מותר רק מה שקשור אליהם. שעון: רק מסך הצלצול (לא רשימת
+        // השעונים). FutureUI: רק חלונות overlay שלו, לא מסכי ההגדרות. כל חלון אחר
+        // (ומסך הבית) מחזיר את הנעילה.
+        val allowed = when (pkg) {
+            // החייגן רק כל עוד יש שיחה - לא כדרך להגיע ליומן/אנשי הקשר מתוך מעורר
+            DIALER_PACKAGE -> isInCall()
+            "android", "com.android.systemui" -> true
+            CLOCK_PACKAGE -> isAlarm || cls == null || !cls.endsWith("Activity")
+            service.packageName -> cls == null || !cls.endsWith("Activity")
+            else -> false
         }
+        if (!allowed) resume()
+    }
+
+    private fun resume() {
+        main.removeCallbacks(callWatch)
+        suspended = false
+        FutureUIState.isLocked = true
+        FutureUIState.isSecured = true
+        resetSession()
+        showWindow()
+        startFaceScan()
     }
 
     private fun suspend() {
         suspended = true
         FutureUIState.isLocked = false
+        FutureUIState.isSecured = true
         face.stop()
         removeWindow()
     }
@@ -332,7 +410,7 @@ class LockScreenController(
             } else if (event.action == KeyEvent.ACTION_UP) {
                 main.removeCallbacks(menuLongPress)
                 if (!menuLongPressFired && state.mode == LockMode.MAIN) useShortcut(state.rightShortcut)
-                else if (!menuLongPressFired && state.mode == LockMode.EDIT) exitEdit()
+                else if (!menuLongPressFired && state.mode == LockMode.EDIT) finishEdit(save = true)
             }
             return true
         }
@@ -483,59 +561,247 @@ class LockScreenController(
     }
 
     // --------------------------------------------------------------- עריכה
+    //
+    // כמו One UI: המסך נשאר כמו שהוא, כל רכיב במסגרת. חצים בוחרים רכיב, OK
+    // פותח את הלוח שלו מלמטה, תפריט = סיום (שמירה), חזור = ביטול. השינויים
+    // נראים מיד אבל נשמרים רק בסיום.
 
     private fun enterEdit() {
         if (!locked) return
         state.mode = LockMode.EDIT
-        state.editSector = EditSector.CLOCK_STYLE
+        state.editTarget = EditTarget.CLOCK
+        state.editPanel = EditPanel.NONE
+        state.focusedNotification = -1
     }
 
-    private fun exitEdit() {
+    private fun finishEdit(save: Boolean) {
+        if (save) {
+            settings.clockStyle = state.clockStyle
+            settings.clockColor = state.clockColor
+            settings.background = state.background
+            settings.widgets = state.widgets
+            settings.leftShortcut = state.leftShortcut
+            settings.rightShortcut = state.rightShortcut
+            if (state.wallpaperId != settings.wallpaperId) {
+                LockWallpapers.commit(service, state.wallpaperId)
+                settings.wallpaperId = state.wallpaperId
+            } else {
+                LockWallpapers.discardPending(service)
+            }
+        } else {
+            LockWallpapers.discardPending(service)
+            loadSettings()
+            loadWallpaper()
+        }
+        state.editPanel = EditPanel.NONE
+        state.wallpaperLoading = null
         state.mode = LockMode.MAIN
+        refreshDynamic()
     }
 
     private fun onEditKey(code: Int) {
-        val sectors = EditSector.values()
-        when (code) {
-            KeyEvent.KEYCODE_DPAD_DOWN -> state.editSector = sectors[(state.editSector.ordinal + 1).coerceAtMost(sectors.lastIndex)]
-            KeyEvent.KEYCODE_DPAD_UP -> state.editSector = sectors[(state.editSector.ordinal - 1).coerceAtLeast(0)]
-            // RTL: שמאלה = הבא
-            KeyEvent.KEYCODE_DPAD_LEFT -> changeEditValue(1)
-            KeyEvent.KEYCODE_DPAD_RIGHT -> changeEditValue(-1)
-            KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> changeEditValue(1)
-            KeyEvent.KEYCODE_BACK -> exitEdit()
+        when (state.editPanel) {
+            EditPanel.NONE -> onEditOverviewKey(code)
+            EditPanel.CLOCK -> onClockPanelKey(code)
+            EditPanel.WIDGETS -> onWidgetsPanelKey(code)
+            EditPanel.SHORTCUTS -> onShortcutsPanelKey(code)
+            EditPanel.WALLPAPER -> onWallpaperPanelKey(code)
         }
     }
 
-    private fun changeEditValue(delta: Int) {
-        when (val s = state.editSector) {
-            EditSector.CLOCK_STYLE -> {
-                state.clockStyle = LockCatalog.cycleIndex(LockCatalog.clockStyles.size, state.clockStyle, delta)
-                settings.clockStyle = state.clockStyle
+    private fun onEditOverviewKey(code: Int) {
+        val t = state.editTarget
+        val bottom = t == EditTarget.LEFT_SHORTCUT || t == EditTarget.WALLPAPER || t == EditTarget.RIGHT_SHORTCUT
+        when (code) {
+            KeyEvent.KEYCODE_DPAD_DOWN -> state.editTarget = when (t) {
+                EditTarget.CLOCK -> EditTarget.WIDGETS
+                EditTarget.WIDGETS -> EditTarget.WALLPAPER
+                else -> t
             }
-            EditSector.CLOCK_COLOR -> {
-                state.clockColor = LockCatalog.cycleIndex(LockCatalog.clockColors.size, state.clockColor, delta)
-                settings.clockColor = state.clockColor
+            KeyEvent.KEYCODE_DPAD_UP -> state.editTarget = when {
+                bottom -> EditTarget.WIDGETS
+                t == EditTarget.WIDGETS -> EditTarget.CLOCK
+                else -> t
             }
-            EditSector.BACKGROUND -> {
-                state.background = LockCatalog.cycleIndex(LockCatalog.backgrounds.size, state.background, delta)
-                settings.background = state.background
+            // השורה התחתונה לפי המיקום הפיזי: שמאלה = הקיצור השמאלי
+            KeyEvent.KEYCODE_DPAD_LEFT -> if (bottom) state.editTarget =
+                if (t == EditTarget.RIGHT_SHORTCUT) EditTarget.WALLPAPER else EditTarget.LEFT_SHORTCUT
+            KeyEvent.KEYCODE_DPAD_RIGHT -> if (bottom) state.editTarget =
+                if (t == EditTarget.LEFT_SHORTCUT) EditTarget.WALLPAPER else EditTarget.RIGHT_SHORTCUT
+            KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> openPanel(t)
+            KeyEvent.KEYCODE_BACK -> finishEdit(save = false)
+        }
+    }
+
+    private fun openPanel(t: EditTarget) {
+        state.panelRow = 0
+        state.panelIndex = 0
+        when (t) {
+            EditTarget.CLOCK -> state.editPanel = EditPanel.CLOCK
+            EditTarget.WIDGETS -> state.editPanel = EditPanel.WIDGETS
+            EditTarget.LEFT_SHORTCUT, EditTarget.RIGHT_SHORTCUT -> {
+                state.panelRow = 1
+                setShortcutSide(if (t == EditTarget.LEFT_SHORTCUT) 0 else 1)
+                state.editPanel = EditPanel.SHORTCUTS
             }
-            EditSector.WIDGET_1, EditSector.WIDGET_2, EditSector.WIDGET_3 -> {
-                val slot = s.ordinal - EditSector.WIDGET_1.ordinal
-                val list = state.widgets.toMutableList()
-                list[slot] = LockCatalog.cycle(LockCatalog.widgets, list[slot], delta)
-                state.widgets = list
-                settings.widgets = list
-                refreshDynamic()
+            EditTarget.WALLPAPER -> {
+                state.wallpaperCategory = 0
+                state.panelRow = 1
+                state.editPanel = EditPanel.WALLPAPER
+                loadWallpaperCatalog()
             }
-            EditSector.LEFT_SHORTCUT -> {
-                state.leftShortcut = LockCatalog.cycle(LockCatalog.shortcuts, state.leftShortcut, delta)
-                settings.leftShortcut = state.leftShortcut
+        }
+    }
+
+    private fun closePanel() {
+        state.editPanel = EditPanel.NONE
+    }
+
+    /** שעון: שורה 0 סגנון, שורה 1 צבע. RTL - שמאלה = הבא. */
+    private fun onClockPanelKey(code: Int) {
+        when (code) {
+            KeyEvent.KEYCODE_DPAD_UP -> state.panelRow = 0
+            KeyEvent.KEYCODE_DPAD_DOWN -> state.panelRow = 1
+            KeyEvent.KEYCODE_DPAD_LEFT -> stepClock(1)
+            KeyEvent.KEYCODE_DPAD_RIGHT -> stepClock(-1)
+            KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_BACK -> closePanel()
+        }
+    }
+
+    private fun stepClock(delta: Int) {
+        if (state.panelRow == 0) {
+            state.clockStyle = (state.clockStyle + delta).coerceIn(0, LockCatalog.clockStyles.lastIndex)
+        } else {
+            state.clockColor = (state.clockColor + delta).coerceIn(0, LockCatalog.clockColors.lastIndex)
+        }
+    }
+
+    /** ווידג'טים: רשימה, OK מוסיף/מסיר. הסדר = סדר הבחירה, עד 3. */
+    private fun onWidgetsPanelKey(code: Int) {
+        val last = LockCatalog.widgetChoices.lastIndex
+        when (code) {
+            KeyEvent.KEYCODE_DPAD_DOWN -> state.panelIndex = (state.panelIndex + 1).coerceAtMost(last)
+            KeyEvent.KEYCODE_DPAD_UP -> state.panelIndex = (state.panelIndex - 1).coerceAtLeast(0)
+            KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> toggleWidget(LockCatalog.widgetChoices[state.panelIndex])
+            KeyEvent.KEYCODE_BACK -> closePanel()
+        }
+    }
+
+    private fun toggleWidget(id: String) {
+        val selected = state.widgets.filter { it != "none" }.toMutableList()
+        when {
+            id in selected -> selected.remove(id)
+            selected.size < LockSettings.WIDGET_SLOTS -> selected.add(id)
+            else -> return
+        }
+        state.widgets = List(LockSettings.WIDGET_SLOTS) { selected.getOrNull(it) ?: "none" }
+    }
+
+    /** קיצורים: שורה 0 בחירת צד, שורה 1 רשת 3x3. המעבר ברשת בוחר מיד. */
+    private fun onShortcutsPanelKey(code: Int) {
+        val choices = LockCatalog.shortcutChoices
+        val i = state.panelIndex
+        if (state.panelRow == 0) {
+            when (code) {
+                // הלשוניות מסודרות לפי המיקום הפיזי: שמאלית = חזור
+                KeyEvent.KEYCODE_DPAD_LEFT -> setShortcutSide(0)
+                KeyEvent.KEYCODE_DPAD_RIGHT -> setShortcutSide(1)
+                KeyEvent.KEYCODE_DPAD_DOWN -> state.panelRow = 1
+                KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_BACK -> closePanel()
             }
-            EditSector.RIGHT_SHORTCUT -> {
-                state.rightShortcut = LockCatalog.cycle(LockCatalog.shortcuts, state.rightShortcut, delta)
-                settings.rightShortcut = state.rightShortcut
+            return
+        }
+        val next = when (code) {
+            KeyEvent.KEYCODE_DPAD_LEFT -> if (i % 3 < 2 && i + 1 <= choices.lastIndex) i + 1 else i
+            KeyEvent.KEYCODE_DPAD_RIGHT -> if (i % 3 > 0) i - 1 else i
+            KeyEvent.KEYCODE_DPAD_DOWN -> if (i + 3 <= choices.lastIndex) i + 3 else i
+            KeyEvent.KEYCODE_DPAD_UP -> if (i >= 3) i - 3 else { state.panelRow = 0; i }
+            KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_BACK -> { closePanel(); return }
+            else -> return
+        }
+        if (next != i) {
+            state.panelIndex = next
+            if (state.shortcutSide == 0) state.leftShortcut = choices[next] else state.rightShortcut = choices[next]
+        }
+    }
+
+    private fun setShortcutSide(side: Int) {
+        state.shortcutSide = side
+        val current = if (side == 0) state.leftShortcut else state.rightShortcut
+        state.panelIndex = LockCatalog.shortcutChoices.indexOf(current).coerceAtLeast(0)
+    }
+
+    /** רקע: שורה 0 קטגוריות, שורה 1 רשת (3 בשורה), שורה 2 טשטוש. */
+    private fun onWallpaperPanelKey(code: Int) {
+        when (state.panelRow) {
+            0 -> when (code) {
+                KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                    val delta = if (code == KeyEvent.KEYCODE_DPAD_LEFT) 1 else -1
+                    val c = (state.wallpaperCategory + delta).coerceIn(0, state.wallpaperCategories.lastIndex)
+                    if (c != state.wallpaperCategory) { state.wallpaperCategory = c; state.panelIndex = 0 }
+                }
+                KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> state.panelRow = 1
+                KeyEvent.KEYCODE_BACK -> closePanel()
+            }
+            1 -> {
+                val tiles = state.wallpaperTiles
+                val i = state.panelIndex.coerceIn(0, tiles.lastIndex)
+                when (code) {
+                    KeyEvent.KEYCODE_DPAD_LEFT -> if (i % 3 < 2 && i + 1 <= tiles.lastIndex) state.panelIndex = i + 1
+                    KeyEvent.KEYCODE_DPAD_RIGHT -> if (i % 3 > 0) state.panelIndex = i - 1
+                    KeyEvent.KEYCODE_DPAD_DOWN -> when {
+                        i + 3 <= tiles.lastIndex -> state.panelIndex = i + 3
+                        i / 3 < tiles.lastIndex / 3 -> state.panelIndex = tiles.lastIndex
+                        else -> state.panelRow = 2
+                    }
+                    KeyEvent.KEYCODE_DPAD_UP -> if (i >= 3) state.panelIndex = i - 3 else state.panelRow = 0
+                    KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> selectWallpaper(tiles[i])
+                    KeyEvent.KEYCODE_BACK -> closePanel()
+                }
+            }
+            else -> when (code) {
+                KeyEvent.KEYCODE_DPAD_UP -> state.panelRow = 1
+                KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> state.background = if (state.background == 1) 0 else 1
+                KeyEvent.KEYCODE_BACK -> closePanel()
+            }
+        }
+    }
+
+    private fun loadWallpaperCatalog() {
+        if (state.wallpaperCatalog.isNotEmpty()) { focusCurrentWallpaper(); return }
+        io.execute {
+            val list = LockWallpapers.catalog(service)
+            main.post {
+                state.wallpaperCatalog.clear()
+                state.wallpaperCatalog.addAll(list)
+                focusCurrentWallpaper()
+            }
+        }
+    }
+
+    private fun focusCurrentWallpaper() {
+        val i = state.wallpaperTiles.indexOf(state.wallpaperId)
+        if (i >= 0 && state.editPanel == EditPanel.WALLPAPER) state.panelIndex = i
+    }
+
+    private fun selectWallpaper(id: String) {
+        if (id.isEmpty()) {
+            state.wallpaperLoading = null
+            state.wallpaperId = ""
+            state.wallpaper = state.deviceWallpaper
+            return
+        }
+        if (id == state.wallpaperId || state.wallpaperLoading != null) return
+        state.wallpaperLoading = id
+        io.execute {
+            val bmp = LockWallpapers.fetchPending(service, id)
+            main.post {
+                if (state.wallpaperLoading != id) return@post
+                state.wallpaperLoading = null
+                if (bmp != null && state.mode == LockMode.EDIT) {
+                    state.wallpaperId = id
+                    state.wallpaper = bmp.asImageBitmap()
+                }
             }
         }
     }
@@ -563,7 +829,10 @@ class LockScreenController(
         val active = runCatching { MediaControlService.instance?.activeNotifications }.getOrNull() ?: return
         val pm = service.packageManager
         val list = active
-            .filter { it.packageName != service.packageName && !it.isOngoing && it.notification.extras.getCharSequence("android.title") != null }
+            .filter { it.packageName != service.packageName && !it.isOngoing && it.notification.safeText("android.title") != null }
+            // האפליקציה ביקשה שההתראה לא תופיע במסך נעילה בכלל (VISIBILITY_SECRET) -
+            // כמו באנדרואיד, גם כשההגדרה היא "הצג הכל"
+            .filter { it.notification.visibility != android.app.Notification.VISIBILITY_SECRET }
             .sortedByDescending { it.postTime }
             .take(MAX_NOTIFICATIONS)
             .map { sbn ->
@@ -572,8 +841,8 @@ class LockScreenController(
                     key = sbn.key,
                     packageName = sbn.packageName,
                     appName = appInfo?.let { pm.getApplicationLabel(it).toString() } ?: sbn.packageName,
-                    title = sbn.notification.extras.getCharSequence("android.title")?.toString() ?: "",
-                    text = sbn.notification.extras.getCharSequence("android.text")?.toString() ?: "",
+                    title = sbn.notification.safeText("android.title")?.toString() ?: "",
+                    text = sbn.notification.safeText("android.text")?.toString() ?: "",
                     time = sbn.postTime,
                     icon = iconCache.getOrPut(sbn.packageName) {
                         appInfo?.let { runCatching { drawableToBitmap(pm.getApplicationIcon(it), 64).asImageBitmap() }.getOrNull() }
@@ -590,9 +859,11 @@ class LockScreenController(
     private val iconCache = HashMap<String, androidx.compose.ui.graphics.ImageBitmap?>()
 
     private fun loadWallpaper() {
-        state.wallpaper = runCatching {
-            WallpaperManager.getInstance(service).drawable?.let { drawableToBitmap(it, 0).asImageBitmap() }
-        }.getOrNull()
+        val device = LockWallpapers.device(service)
+        state.deviceWallpaper = device?.asImageBitmap()
+        state.wallpaper =
+            if (state.wallpaperId.isEmpty()) state.deviceWallpaper
+            else LockWallpapers.load(service, state.wallpaperId)?.asImageBitmap()
     }
 
     private fun drawableToBitmap(d: Drawable, size: Int): Bitmap {

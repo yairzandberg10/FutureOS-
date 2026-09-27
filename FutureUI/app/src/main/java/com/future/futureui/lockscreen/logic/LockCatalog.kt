@@ -7,7 +7,13 @@ object LockCatalog {
     /** 0 = צבע ההדגשה של המערכת, השאר FutureAccents.presets לפי הסדר. */
     val clockColors = listOf("הדגשה", "לבן", "תכלת", "כתום", "ירוק", "סגול")
 
-    val backgrounds = listOf("טפט", "טפט מטושטש", "שחור", "צבע הדגשה")
+    val backgrounds = listOf("טפט", "טפט מטושטש")
+
+    /** הווידג'טים שאפשר לבחור, בסדר שבלוח העריכה. */
+    val widgetChoices = listOf("battery", "alarm", "hebdate", "media", "notifications")
+
+    /** הקיצורים בסדר של רשת העריכה - "ללא" אחרון. */
+    val shortcutChoices = listOf("flashlight", "camera", "phone", "messages", "notes", "recorder", "calculator", "music", "none")
 
     val widgets = listOf("none", "battery", "alarm", "hebdate", "media", "notifications")
     fun widgetLabel(id: String) = when (id) {

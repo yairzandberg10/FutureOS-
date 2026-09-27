@@ -121,6 +121,8 @@ private val BUILT_IN_IDS: List<Pair<Int, String>> = listOf(
  * שרקע שכבר נצפה לא יירד שוב.
  */
 object ImageLoader {
+    private const val MAX_IMAGE_BYTES = 30L * 1024 * 1024
+
     private val memory = object : LruCache<String, Bitmap>(12 * 1024 * 1024) {
         override fun sizeOf(key: String, value: Bitmap) = value.byteCount
     }
@@ -129,6 +131,21 @@ object ImageLoader {
 
     fun load(context: Context, url: String, maxPx: Int): Bitmap? {
         memory.get(url)?.let { return it }
+        val file = fetchFile(context, url) ?: return null
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(file.path, bounds)
+        var sample = 1
+        while (maxOf(bounds.outWidth, bounds.outHeight) / (sample * 2) >= maxPx) sample *= 2
+        val bitmap = BitmapFactory.decodeFile(file.path, BitmapFactory.Options().apply { inSampleSize = sample }) ?: run {
+            file.delete()
+            return null
+        }
+        memory.put(url, bitmap)
+        return bitmap
+    }
+
+    /** הקובץ במטמון הדיסק - מוריד אם צריך. חוסם. null כשאין רשת. */
+    fun fetchFile(context: Context, url: String): File? {
         val file = File(File(context.cacheDir, "images").apply { mkdirs() }, sha1(url))
         if (!file.exists()) {
             // הורדה לקובץ זמני ייחודי ואז rename: הורדה שנקטעה (תהליך נהרג, רשת נפלה)
@@ -136,6 +153,9 @@ object ImageLoader {
             // + תצוגה מלאה) כתבו לאותו קובץ בו-זמנית.
             val tmp = File(file.parentFile, "${file.name}.${Thread.currentThread().id}.part")
             try {
+                // הכתובות מגיעות מהאוסף ברשת: רק https, ועד גודל סביר - אחרת רשומה אחת
+                // (או הפניה) יכלה למלא את כל האחסון של המכשיר.
+                if (!url.startsWith("https://")) return null
                 val connection = URL(url).openConnection() as HttpURLConnection
                 try {
                     connection.connectTimeout = 10_000
@@ -143,7 +163,20 @@ object ImageLoader {
                     connection.instanceFollowRedirects = true
                     // דף שגיאה (404/500) לא נשמר במטמון כאילו היה תמונה
                     if (connection.responseCode !in 200..299) return null
-                    connection.inputStream.use { input -> tmp.outputStream().use { input.copyTo(it) } }
+                    if (connection.url.protocol != "https") return null
+                    connection.inputStream.use { input ->
+                        tmp.outputStream().use { out ->
+                            val buf = ByteArray(64 * 1024)
+                            var total = 0L
+                            while (true) {
+                                val n = input.read(buf)
+                                if (n < 0) break
+                                total += n
+                                if (total > MAX_IMAGE_BYTES) return null
+                                out.write(buf, 0, n)
+                            }
+                        }
+                    }
                 } finally {
                     connection.disconnect()
                 }
@@ -155,16 +188,7 @@ object ImageLoader {
                 tmp.delete()
             }
         }
-        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        BitmapFactory.decodeFile(file.path, bounds)
-        var sample = 1
-        while (maxOf(bounds.outWidth, bounds.outHeight) / (sample * 2) >= maxPx) sample *= 2
-        val bitmap = BitmapFactory.decodeFile(file.path, BitmapFactory.Options().apply { inSampleSize = sample }) ?: run {
-            file.delete()
-            return null
-        }
-        memory.put(url, bitmap)
-        return bitmap
+        return file
     }
 
     /** מטמון הדיסק גדל בלי גבול (כל רקע שנצפה); שומרים את ה-[DISK_LIMIT] האחרונים. */
