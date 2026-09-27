@@ -34,7 +34,7 @@ Closest reference product: **Duoqin Qin F22 Pro** (same screen, same SoC family)
 | Sensors | Accelerometer + gyroscope, **calibrated magnetometer**, **barometer**, ambient light, proximity, hardware step counter |
 | Other | IR transmitter (consumer IR), vibration motor |
 | Battery | Li-Po 3,000mAh, IEC 62133, max 47 × 83 × 4.5 mm (the right side keys need the width) |
-| Size target | ≈ 62 × 156 × 12 mm, ≈145 g (3D enclosure model supplied) |
+| Size target | ≈ 62 × 156 mm, **thickness 10 mm maximum** (9.5 mm preferred), ≈135 g (3D enclosure model supplied) |
 | Housing | PC/ABS |
 
 ## 3. Software / firmware requirements (important)

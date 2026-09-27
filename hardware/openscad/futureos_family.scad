@@ -41,11 +41,13 @@ KEY_P       = sel([14, 17, 21]);  // פסיעת עמודות
 BOTTOM_BAND = 5;                  // מיקרופון, USB-C
 SIDE_WALL   = 1.0;                // מסגרת סביב הזכוכית - מסך מקצה לקצה
 CORNER_R    = sel([6, 7, 8]);
-FILLET_BACK  = sel([2.5, 2.5, 3]); // עיגול קצה אחורי של הגוף
+FILLET_BACK  = sel([2.5, 2.0, 3]); // עיגול קצה אחורי של הגוף (Regular: 2.0 - בגוף של 10 מ"מ מקשי הווליום יורדים נמוך יותר)
 FILLET_FRONT = 0.6;                // עיגול קצה קדמי (סביב הזכוכית)
 PUNCH_D      = 3.2;                // חור מצלמה קדמית בתוך המסך
-BODY_T      = sel([12, 12, 12.5]);
+BODY_T      = sel([12, 10, 12.5]);   // Regular: 10 מ"מ מקסימום
 FRONT_T     = 1.4;                 // עובי דופן פנים
+MIDFRAME    = 0.6;                 // לוחית תמיכה + דבק בין תחתית מודול המסך לסוללה
+LCD_SINK    = 0.35;                // הזכוכית שקועה מתחת לפני החזית
 WALL        = 1.4;
 
 // Regular: 47 ולא 48 - מפנה מקום למקשי הווליום בדופן הימנית (ר' VOL_* למטה)
@@ -87,7 +89,8 @@ echo(str("MODEL=", MODEL,
 
 // מקשי ווליום: Z במערכת ההרכבה (0 = פני החזית), בגובה אמצע הסוללה - מתחת
 // למודול המסך ומעל עיגול הקצה האחורי. Y: [Vol+, Vol-]
-VOL_Z  = -(FRONT_T + LCD_T + 0.65 + BATT[2] / 2);
+BATT_TOP_Z = -(LCD_SINK + LCD_T + MIDFRAME);  // הסוללה יושבת ישר מאחורי מודול המסך
+VOL_Z  = BATT_TOP_Z - BATT[2] / 2;
 VOL_Y  = [BODY_L - VOL_FROM_TOP + (VOL_L + VOL_SPACING) / 2,
           BODY_L - VOL_FROM_TOP - (VOL_L + VOL_SPACING) / 2];
 VOL_IN = VOL_FLANGE_T + VOL_PLUNGER + VOL_FPC_T; // עומק המכלול מתחת לדופן הפנימית
@@ -97,7 +100,10 @@ echo(str("side keys: Vol+ y=", VOL_Y[0], "  Vol- y=", VOL_Y[1], "  z=", VOL_Z,
          "  battery clearance = ", VOL_BATT_CLEAR, " mm"));
 assert(VOL_BATT_CLEAR >= 0.25, "מקשי הווליום נכנסים לסוללה - להקטין את BATT[0]");
 assert(VOL_Z - VOL_H / 2 > -BODY_T + FILLET_BACK, "מקשי הווליום יושבים על עיגול הקצה האחורי");
-assert(VOL_Z + VOL_H / 2 + VOL_FLANGE < -LCD_T - 0.35, "מקשי הווליום נכנסים למודול המסך");
+assert(VOL_Z + VOL_H / 2 + VOL_FLANGE < -LCD_T - LCD_SINK, "מקשי הווליום נכנסים למודול המסך");
+BATT_BACK_CLEAR = (BATT_TOP_Z - BATT[2]) - (-BODY_T + WALL);
+echo(str("battery to back wall clearance = ", BATT_BACK_CLEAR, " mm"));
+assert(BATT_BACK_CLEAR >= 0.2, "הסוללה נכנסת בדופן האחורית - להגדיל את BODY_T או להקטין את BATT[2]");
 
 // ---------------------------------------------------------------------
 // גיאומטריה בסיסית
@@ -352,10 +358,10 @@ module keepouts() {
     inner_z = FRONT_T;
     // מודול המסך
     color("SteelBlue", 0.8)
-        translate([CX - SCR_OUT_W / 2, Y_SCR, -LCD_T + FRONT_T - 0.35]) cube([SCR_OUT_W, SCR_OUT_H, LCD_T]); // מתחת לזכוכית
+        translate([CX - SCR_OUT_W / 2, Y_SCR, -LCD_T + FRONT_T - LCD_SINK]) cube([SCR_OUT_W, SCR_OUT_H, LCD_T]); // מתחת לזכוכית
     // סוללה - מאחורי המסך
     color("Orange", 0.8)
-        translate([CX - BATT[0] / 2, BODY_L - TOP_BAND - BATT[1], -LCD_T - BATT[2] - 0.65])
+        translate([CX - BATT[0] / 2, BODY_L - TOP_BAND - BATT[1], BATT_TOP_Z + FRONT_T - BATT[2]])
             cube(BATT);
     // PCBA - מאחורי אזור המקלדת
     color("ForestGreen", 0.8)
