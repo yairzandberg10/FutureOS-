@@ -1,0 +1,242 @@
+/* FutureOS colors. Source: FutureTheme.kt (core + app extensions),
+   ThemeConfig.kt (glassColor, dividerColor), SettingsScreens.kt:894 (accent choices).
+   Dark is the default theme; .fos-light scopes the light theme. */
+:root {
+  /* --- accent palette: the only user-selectable color in the whole system --- */
+  --fos-accent-white: #FFFFFF;
+  --fos-accent-cyan: #64D2FF;
+  --fos-accent-orange: #FF9F0A;
+  --fos-accent-green: #30D158;
+  --fos-accent-purple: #BF5AF2;
+  --fos-accent: var(--fos-accent-white);
+
+  /* --- dark core (default) --- */
+  --fos-bg: #000000;
+  --fos-surface: #1C1C1E;
+  --fos-glass: #2C2C2E;
+  --fos-text: #FFFFFF;
+  --fos-danger: #FF6B6B;
+  --fos-success: #32D74B;
+  --fos-warning: #FFD60A;
+  --fos-divider: #FFFFFF1F;
+
+  /* --- text alpha ladder (all observed alphas of textColor) --- */
+  --fos-text-70: #FFFFFFB2;
+  --fos-text-60: #FFFFFF99;
+  --fos-text-55: #FFFFFF8C;
+  --fos-text-50: #FFFFFF80;
+  --fos-text-40: #FFFFFF66;
+  --fos-text-30: #FFFFFF4D;
+  --fos-text-20: #FFFFFF33;
+  --fos-text-18: #FFFFFF2E;
+  --fos-text-15: #FFFFFF26;
+  --fos-text-12: #FFFFFF1F;
+  --fos-text-10: #FFFFFF1A;
+  --fos-text-08: #FFFFFF14;
+  --fos-text-06: #FFFFFF0F;
+
+  /* --- accent alphas, used for focus backgrounds only --- */
+  --fos-accent-30: color-mix(in srgb, var(--fos-accent) 30%, transparent);
+  --fos-accent-20: color-mix(in srgb, var(--fos-accent) 20%, transparent);
+  --fos-accent-14: color-mix(in srgb, var(--fos-accent) 14%, transparent);
+
+  /* --- app-specific extensions --- */
+  --fos-calc-button: #2C2C2E;
+  --fos-calc-button-muted: #3A3A3C;
+  --fos-calc-button-focused: #5A5A5C;
+  --fos-input-bar: #111111;
+  --fos-output-text: #D0D0D0;
+  --fos-favorite: #FFC107;
+
+  /* --- fixed, theme-independent --- */
+  --fos-scrim: rgba(0, 0, 0, 0.6);
+  --fos-on-accent: #000000;
+  --fos-switch-track-off: #C8C8CC;
+  --fos-headsup-bg: #E61C1C1E;
+
+  /* --- semantic aliases --- */
+  --fos-text-primary: var(--fos-text);
+  --fos-text-secondary: var(--fos-text-60);
+  --fos-text-tertiary: var(--fos-text-40);
+  --fos-surface-screen: var(--fos-bg);
+  --fos-surface-card: var(--fos-surface);
+  --fos-surface-raised: var(--fos-glass);
+  --fos-avatar-fill: #3A3A3C;   /* avatar circle — reads against both bg and surface */
+  --fos-border-divider: var(--fos-divider);
+  --fos-border-focus: var(--fos-accent);
+}
+
+.fos-light {
+  --fos-bg: #F2F2F7;
+  --fos-surface: #FFFFFF;
+  --fos-glass: #EDEDF2;
+  --fos-avatar-fill: #D3D3DC;
+  --fos-text: #000000;
+  --fos-danger: #D32F2F;
+  --fos-success: #1E8E3E;
+  --fos-warning: #B8860B;
+  --fos-divider: #0000001A;
+
+  --fos-text-70: #000000B2;
+  --fos-text-60: #00000099;
+  --fos-text-55: #0000008C;
+  --fos-text-50: #00000080;
+  --fos-text-40: #00000066;
+  --fos-text-30: #0000004D;
+  --fos-text-20: #00000033;
+  --fos-text-18: #0000002E;
+  --fos-text-15: #00000026;
+  --fos-text-12: #0000001F;
+  --fos-text-10: #0000001A;
+  --fos-text-08: #00000014;
+  --fos-text-06: #0000000F;
+
+  --fos-calc-button: #E5E5EA;
+  --fos-calc-button-muted: #D1D1D6;
+  --fos-calc-button-focused: #B8B8BE;
+  --fos-input-bar: #E5E5EA;
+  --fos-output-text: #3A3A3C;
+  --fos-favorite: #FFC107;
+}
+
+/* FutureOS spacing. Source: FutureDimens.kt (the two named tokens) plus the
+   paddings measured in each component. Device pixels = dp * 2. */
+:root {
+  --fos-space-item: 24px;    /* 12dp — itemSpacing, gap between list items */
+  --fos-space-screen: 32px;  /* 16dp — screenPadding, the screen's side gutter */
+
+  /* raw dp ladder that the components actually use */
+  --fos-space-1: 8px;   /* 4dp  — inner padding of a focusable row */
+  --fos-space-2: 12px;  /* 6dp  — day-chip gap, card vertical padding */
+  --fos-space-3: 16px;  /* 8dp  — chip gap, tab gap, top-bar gap */
+  --fos-space-4: 20px;  /* 10dp */
+  --fos-space-5: 24px;  /* 12dp */
+  --fos-space-6: 28px;  /* 14dp — menu row vertical, heads-up horizontal */
+  --fos-space-7: 32px;  /* 16dp */
+  --fos-space-8: 40px;  /* 20dp — dialog padding, menu row horizontal */
+  --fos-space-9: 48px;  /* 24dp — dialog button horizontal, section start */
+  --fos-space-10: 64px; /* 32dp — empty-state padding */
+
+  /* the one screen size: there are no breakpoints */
+  --fos-screen-w: 640px;
+  --fos-screen-h: 960px;
+  --fos-density: 2; /* @kind other */
+
+  /* focus target heights — there is no touch, so 48dp does not apply */
+  --fos-row-list: 130px;     /* FocusableItem */
+  --fos-row-setting: 108px;  /* SettingItem */
+  --fos-row-menu: 100px;     /* MenuRow */
+  --fos-row-topbar-btn: 72px;/* TopBarIconButton */
+  --fos-row-dialog-btn: 88px;/* ConfirmDialog button */
+}
+
+/* FutureOS corner radii. Source: FutureDimens.kt + per-component overrides.
+   Device pixels = dp * 2. House rule: no tight corners anywhere — 24px is the
+   smallest radius in the system; text surfaces and tabs sit at 32px. */
+:root {
+  --fos-radius-item: 24px;     /* small controls (checkbox, action tile) */
+  --fos-radius-row: 40px;      /* 20dp — list row */
+  --fos-radius-textfield: 32px;/* BasicTextField, TextArea */
+  --fos-radius-tab: 32px;      /* ViewModeTabRow item */
+  --fos-radius-chip: 32px;     /* GalleryTabChip */
+  --fos-radius-card: 32px;     /* 16dp — cardCornerRadius, slider row */
+  --fos-radius-dialog: 40px;   /* 20dp — ConfirmDialog, options menu */
+  --fos-radius-main: 44px;     /* 22dp — borderRadius / glassColorRadius, settings card */
+  --fos-radius-headsup: 56px;  /* 28dp — floating notification */
+  --fos-radius-full: 9999px;   /* buttons, switch track, day chip, nav indicator */
+
+  --fos-border-hairline: 2px;  /* 1dp */
+  --fos-border-divider-row: 2px; /* 0.8dp SettingDivider, rendered at 2px minimum */
+  --fos-border-headsup: 1px;   /* 0.5dp */
+}
+
+/* FutureOS focus. There is no touch and no pointer: focus IS the interaction model.
+   Source: FocusableItem, dpadFocusBorder, ConfirmDialog, SettingItem, MenuRow. */
+:root {
+  --fos-focus-border-item: 3px;    /* 1.5dp — list rows */
+  --fos-focus-border-control: 4px; /* 2dp  — dialogs, fields, chips, setting rows */
+  --fos-focus-scale: 1.02; /* @kind other */         /* list rows and dialogs only */
+
+  --fos-focus-bg-item: var(--fos-accent-14);   /* 14% accent behind a focused list row */
+  --fos-focus-bg-icon: var(--fos-accent-30);   /* 30% accent behind a focused icon button */
+  --fos-focus-bg-setting: var(--fos-text-06);  /* 6%  text behind a focused setting row */
+  --fos-focus-bg-menu: var(--fos-text-12);     /* 12% text behind a focused menu row */
+  --fos-focus-bg-chip: var(--fos-text-18);     /* 18% text behind a focused chip */
+  --fos-focus-bg-slider: var(--fos-text-18);   /* 18% text behind a focused slider row */
+  --fos-idle-bg-chip: var(--fos-text-06);
+  --fos-idle-bg-slider: var(--fos-text-06);
+  --fos-idle-bg-field: var(--fos-text-08);
+  --fos-idle-bg-icon: var(--fos-text-08);
+}
+
+/* FutureOS typography. Source: FutureType.kt — seven sizes, no more.
+   All px values are device pixels: sp * 2 (density 2.0).
+   The settings "text size" slider multiplies the whole scale, 0.8 to 1.4. */
+:root {
+  --fos-font: "Heebo", "Roboto", system-ui, -apple-system, sans-serif;
+  --fos-font-display: "Rubik", "Heebo", "Roboto", system-ui, sans-serif; /* headings only */
+  --fos-font-mono: "Roboto Mono", ui-monospace, monospace;
+
+  --fos-font-scale: 1;
+  --fos-line-height: 1.3;
+
+  /* seven text styles: px (sp) / weight */
+  --fos-size-header: calc(68px * var(--fos-font-scale));        /* 34sp / 700 */
+  --fos-size-screen-title: calc(40px * var(--fos-font-scale));  /* 20sp / 700 */
+  --fos-size-title: calc(34px * var(--fos-font-scale));         /* 17sp / 500 */
+  --fos-size-base: calc(32px * var(--fos-font-scale));          /* 16sp / 400 */
+  --fos-size-dialog: calc(30px * var(--fos-font-scale));        /* 15sp / 700 */
+  --fos-size-body: calc(28px * var(--fos-font-scale));          /* 14sp / 400 */
+  --fos-size-summary: calc(26px * var(--fos-font-scale));       /* 13sp / 400 */
+  /* sub-scale sizes that recur in chrome */
+  --fos-size-label: calc(24px * var(--fos-font-scale));         /* 12sp — nav label, app name */
+  --fos-size-badge: calc(20px * var(--fos-font-scale));         /* 10sp / 700 — unread count */
+  --fos-size-clock: calc(96px * var(--fos-font-scale));         /* 48sp / 300 — time picker value */
+
+  --fos-weight-regular: 400;
+  --fos-weight-medium: 500;
+  --fos-weight-semibold: 600;
+  --fos-weight-bold: 700;
+  --fos-weight-light: 300;
+
+  --fos-tracking-section: 2px; /* 1sp letter-spacing, section headers only */
+}
+
+/* FutureOS motion. The shared components declare no animationSpec, so Compose's
+   default spring (no bounce, medium stiffness) drives focus. Fifteen distinct tween
+   durations were counted across the apps; the scale below is the proposed unification,
+   clustered on what is actually in the code (200ms is by far the most common). */
+:root {
+  /* user turned animations off */
+  --fos-duration-instant: 0ms; /* @kind other */
+  /* colour or alpha change in place */
+  --fos-duration-fast: 150ms; /* @kind other */
+  /* focus move, menu open — the system default */
+  --fos-duration-standard: 200ms; /* @kind other */
+  /* screen transition */
+  --fos-duration-emphasized: 300ms; /* @kind other */
+  /* long content animation */
+  --fos-duration-slow: 450ms; /* @kind other */
+
+  /* FastOutSlowInEasing */
+  --fos-ease-standard: cubic-bezier(0.4, 0, 0.2, 1); /* @kind other */
+  /* LinearOutSlowInEasing */
+  --fos-ease-enter: cubic-bezier(0, 0, 0.2, 1); /* @kind other */
+  /* FastOutLinearInEasing */
+  --fos-ease-exit: cubic-bezier(0.4, 0, 1, 1); /* @kind other */
+  /* LinearEasing — progress bars, timers */
+  --fos-ease-linear: cubic-bezier(0, 0, 1, 1); /* @kind other */
+
+  --fos-transition-focus: 200ms cubic-bezier(0.4, 0, 0.2, 1); /* @kind other */
+}
+
+/* FutureOS elevation. Depth is built from tone, not shadow: there are exactly two
+   real shadows in the whole codebase (SettingsCard, 4dp dark / 1dp light).
+   Levels: 0 screen bg, 1-2 surface, 3 glass (tone only), 4 dialog (scrim), 5 heads-up. */
+:root {
+  --fos-shadow-none: none;
+  --fos-shadow-card: 0 8px 16px rgba(0, 0, 0, 0.5);   /* 4dp, dark theme */
+  --fos-shadow-card-light: 0 2px 6px rgba(0, 0, 0, 0.12); /* 1dp, light theme */
+  --fos-shadow-headsup: 0 8px 32px rgba(0, 0, 0, 0.45);
+}
+.fos-light { --fos-shadow-card: var(--fos-shadow-card-light); }

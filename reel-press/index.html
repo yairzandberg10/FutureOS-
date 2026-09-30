@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>FutureOS - לחץ</title>
+<link rel="stylesheet" href="fonts/fonts.css">
+<link rel="stylesheet" href="assets/ds-tokens.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="stage">
+  <div id="world"></div>
+  <div id="cap"></div>
+  <div id="fx"></div>
+</div>
+<script src="js/cues.js"></script>
+<script src="assets/fos-icons.js"></script>
+<script src="js/core.js"></script>
+<script src="js/phone.js"></script>
+<script src="js/screens.js"></script>
+<script src="js/stage.js"></script>
+<script>
+  // every image and font is loaded before the first frame, so a frame never depends on load order
+  const ICON_FILES = APPS.map((a) => a[0]);
+  window.READY = (async () => {
+    buildPhone();
+    await Promise.all(ICON_FILES.map((n) => new Promise((res) => { const i = new Image(); i.onload = i.onerror = res; i.src = `assets/icons/${n}.png`; })));
+    const faces = ['300 40px Heebo', '400 40px Heebo', '500 40px Heebo', '600 40px Heebo', '700 40px Heebo', '800 40px Heebo', '900 40px Heebo',
+      '500 40px Rubik', '700 40px Rubik', '300 40px "Roboto Mono"', '400 40px "Roboto Mono"'];
+    await Promise.all(faces.flatMap((f) => [document.fonts.load(f, 'אבג'), document.fonts.load(f, 'abc123')]));
+    await document.fonts.ready;
+    seek(0);
+    return true;
+  })();
+</script>
+</body>
+</html>

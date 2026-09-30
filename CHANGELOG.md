@@ -4,6 +4,20 @@ This repo has no carried-over git history (see root [README](README.md)), so thi
 
 ## Unreleased
 
+### New Instagram reel: "Press" (`reel-press/`)
+
+- **A new 60 s, 1080x1920 reel, built from scratch.** It is not derived from `promo-video/` or either `motion-futureos-launch*` project. The idea:
+  the system tells its own story in its own UI language (a confirm dialog that asks "delete the touch screen?", heads-up notifications,
+  setting rows, switches, focus), because with no touch screen the focus is the protagonist and the keys are the instrument.
+- **Faithful to the design system and the hardware.** Tokens, fonts (Heebo, Rubik, Roboto Mono), radii and motion come straight from
+  `design/FutureOS Design System`; components are rebuilt from it (TopBar, SettingItem, Switch, Slider, ConfirmDialog, HeadsUp, SoftKeyBar, the T9
+  panel...); the app icons are the repo's own files, only scaled; the phone is the Regular model (62 x 156 mm, 640x960 screen) with the 21 keys
+  laid out from `hardware/keyboard_prototype/SPEC.md`. Everything on screen is driven by key presses.
+- **Original music, synthesised from scratch** (`music.py`, numpy only, no samples): 120 BPM, A minor, 30 bars, with every key click taken from the
+  same timing file the picture reads (`js/cues.js`), so a key on screen is a click in the mix.
+- Screens are recreations composed from design-system components, not screen recordings from a device.
+- Render with `reel-press/make.sh`; the finished file is `reel-press/out/futureos-press-reel.mp4`. See `reel-press/README.md`.
+
 ### New lock screen: PIN, face unlock, One UI / iOS style customisation
 
 - **Security.** A 4-8 digit PIN, stored only as an HMAC in an Android
