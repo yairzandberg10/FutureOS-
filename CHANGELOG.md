@@ -4,26 +4,27 @@ This repo has no carried-over git history (see root [README](README.md)), so thi
 
 ## Unreleased
 
-### Instagram Reel promo (`promo-video/`)
+### Instagram reel (`motion-futureos-reel/`)
 
-- **New 26 s vertical film, 1080x1920 (9:16) at 30 fps**, made for Reels and
-  Stories: `promo-video/exports/futureos-reel-1080x1920.mp4` (H.264 High,
-  BT.709, AAC 48 kHz stereo, 6 MB) plus a cover frame. Story: "touch screen?"
-  is struck through, "back to keys"; the phone rises; arrows and OK on the
-  home screen; "אני בדרך" typed on the T9 keypad; a double press of OK opens
-  the voice assistant; the wall of app icons; the ftr mark draws in over the
-  FutureOS name.
-- **Same parts as the wide promo, nothing redrawn.** The `Phone` body and the
-  real screens (lock, launcher, messages with the T9 panel, assistant) run at
-  the device's 640x960 inside it, the app icons are the shipped files
-  untouched, colours are the design-system accent and surfaces. Titles stay
-  inside Instagram's safe area (250 px top, 340 px bottom, 64 px sides).
-- **Sound is synthesised from scratch** (`reel/make-audio.py`, 120 BPM, no
-  samples). Every key press in `src/reel/timeline.json` lights a key in the
-  picture and plays a click on the same frame.
-- **Renders offline**: Heebo ships in `public/fonts` (OFL) and the reel has its
-  own entry point, so `node reel/render.mjs video` needs no network. Usage is
-  in `promo-video/README.md`.
+- **New 33.5 s vertical film, 1080x1920 (9:16) at 30 fps** for Reels and
+  Stories, with sound: `motion-futureos-reel/exports/futureos-reel-1080x1920.mp4`.
+  It is an edit of the launch film, not a new drawing: the Regular body in
+  three.js built from `futureos_family.scad` (53 x 145.3 x 8 mm, punch-hole
+  camera, function keys, D-pad, T9 keypad with its printed legends), and the
+  real screens at 640x960 from the design system (FutureLauncher with the
+  apps' own icons, messages, navigation, the Sfarim library, the assistant,
+  accent colour). Nothing was redrawn for the reel.
+- **`reel-edit.js` is the cut list** (reel start, reel end, master start,
+  speed) on the 120 BPM grid; cuts fall half a frame early so motion-blur
+  sub-frames never blend two shots. The "8 mm" profile and the colour waves
+  play at film speed, the labels of the struck-out apps at 1.5x, the rest at
+  2x. `render.py check` passes (reading times, safe area, frozen frames).
+- **New sound bed** (`bed.py`, synthesised, 120 BPM) whose sections are read
+  from the cut list: the drop on the solid, half-time on the PIN, a riser
+  into the turn, a hit and a chord on the mark. -14.1 LUFS.
+- **Removes the earlier Remotion reel in `promo-video/`** (reverted): it used
+  a CSS phone in the F22 Pro case's proportions and invented screens, which
+  do not match the device or the software.
 - No Android code changed, so there is no new APK to build or install.
 
 ### New lock screen: PIN, face unlock, One UI / iOS style customisation
