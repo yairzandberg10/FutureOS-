@@ -16,6 +16,10 @@ import com.google.firebase.remoteconfig.remoteConfigSettings
  *
  * ברירות המחדל הן בדיוק הערכים הקיימים מ-local.properties, כך שבלי Firebase
  * (או לפני ה-fetch הראשון) ההתנהגות זהה למה שהיה.
+ *
+ * אזהרת אבטחה: ערכי Remote Config קריאים לכל לקוח שמחזיק את קובץ ה-google-services.json
+ * (הוא בתוך ה-APK) - זה לא אחסון סודי. מפתחות בתשלום שייכים ל-Secret Manager של ה-Cloud
+ * Functions; כאן רק מפתח שאפשר לוותר עליו. ראו embedApiKeys ב-build.gradle.kts.
  */
 object RemoteKeys {
 

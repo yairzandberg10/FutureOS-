@@ -97,7 +97,16 @@ class MusicPlaybackService : MediaSessionService() {
             val defaultResult = super.onConnect(session, controller)
             // השירות חשוף לכל אפליקציה (כך עובדים בקרי מדיה) - אבל שינוי האקולייזר
             // שמור לאפליקציית המוזיקה עצמה, לא לכל מי שמתחבר.
-            if (controller.packageName != packageName) return defaultResult
+            if (controller.packageName != packageName) {
+                // גם טעינת תוכן ושינוי רשימת ההשמעה: ברירת המחדל מאפשרת לכל אפליקציה
+                // לבקש מהנגן (שרץ עם הרשאות המוזיקה) לפתוח content:// / file:// לבחירתה.
+                // נגן/השהה/הבא/הקודם והחיפוש נשארים, אז בקרי מדיה וכפתורי אוזניות ממשיכים לעבוד.
+                val restricted = defaultResult.availablePlayerCommands.buildUpon()
+                    .remove(Player.COMMAND_SET_MEDIA_ITEM)
+                    .remove(Player.COMMAND_CHANGE_MEDIA_ITEMS)
+                    .build()
+                return MediaSession.ConnectionResult.accept(defaultResult.availableSessionCommands, restricted)
+            }
             val sessionCommands = defaultResult.availableSessionCommands.buildUpon()
                 .add(SessionCommand(CMD_SET_EQ_PRESET, Bundle.EMPTY))
                 .build()

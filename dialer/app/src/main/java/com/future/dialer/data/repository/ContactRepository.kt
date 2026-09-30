@@ -20,7 +20,8 @@ class ContactRepository(private val context: Context) {
                 if (cursor.moveToFirst()) cursor.getString(0) else null
             }
         } catch (e: Exception) {
-            Log.e("ContactRepository", "Error resolving name for $number", e)
+            // בלי המספר: Log.e נשאר ב-release ו-logcat קריא לכל מי שמחובר ב-adb
+            Log.e("ContactRepository", "Error resolving a caller name", e)
             null
         }
     }

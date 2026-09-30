@@ -1,2 +1,8 @@
 *.db filter=lfs diff=lfs merge=lfs -text
 Assistant/app/src/main/assets/*.bin filter=lfs diff=lfs merge=lfs -text
+
+# Shell scripts must keep LF endings: a CRLF shebang ("/bin/sh\r") makes
+# ./gradlew fail on Linux CI. The executable bit itself is stored in the git
+# index (git update-index --chmod=+x); security-check.py verifies it.
+gradlew text eol=lf
+*.sh text eol=lf

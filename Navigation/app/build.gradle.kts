@@ -20,6 +20,17 @@ val localProperties = Properties().apply {
 }
 fun localProperty(name: String): String = localProperties.getProperty(name) ?: ""
 
+/**
+ * מפתחות HERE/SIRI נצרבים ב-APK רק כשאין פרויקט Firebase (מצב "ישירות מול השירות"),
+ * או כשנבחר במפורש EMBED_API_KEYS=true ב-local.properties. כשיש Firebase, ה-Cloud
+ * Functions מחזיקות את המפתחות ב-Secret Manager והמכשיר לא צריך אותם: מפתח שנצרב ב-APK
+ * קריא לכל אפליקציה במכשיר (base.apk נגיש לקריאה), ומי שמחלץ אותו מנצל את המכסה ואת
+ * החשבון המחויב. המחיר: כשה-proxy נופל ואין מפתח מקומי, הניווט/התחבורה בזמן אמת
+ * לא זמינים עד שה-proxy חוזר, במקום שיפול חזרה לקריאה ישירה.
+ */
+val embedApiKeys = file("google-services.json").let { !it.exists() } || localProperties.getProperty("EMBED_API_KEYS") == "true"
+fun embeddedKey(name: String): String = if (embedApiKeys) localProperty(name) else ""
+
 // מפתח החתימה של הרילייס לא נמצא במאגר. הערכים נקראים מ-keystore.properties
 // בשורש המאגר (ראו .gitignore) או ממשתני סביבה ב-CI. בלי הקובץ,
 // בניית release עדיין רצה - היא פשוט יוצאת לא חתומה, במקום להיכשל.
@@ -54,9 +65,9 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        buildConfigField("String", "HERE_API_KEY", "\"${localProperty("HERE_API_KEY")}\"")
-        buildConfigField("String", "SIRI_API_KEY", "\"${localProperty("SIRI_API_KEY")}\"")
-        buildConfigField("String", "SIRI_BASE_URL", "\"${localProperty("SIRI_BASE_URL")}\"")
+        buildConfigField("String", "HERE_API_KEY", "\"${embeddedKey("HERE_API_KEY")}\"")
+        buildConfigField("String", "SIRI_API_KEY", "\"${embeddedKey("SIRI_API_KEY")}\"")
+        buildConfigField("String", "SIRI_BASE_URL", "\"${embeddedKey("SIRI_BASE_URL")}\"")
         // נקרא ב-FirebaseBackend כדי לדעת בזמן ריצה אם בכלל יש קונפיגורציית
         // Firebase בבנייה הזו, בלי לנחש מקיום מחלקות ב-classpath.
         buildConfigField("boolean", "FIREBASE_CONFIGURED", googleServicesJson.exists().toString())

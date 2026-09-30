@@ -1,4 +1,5 @@
 package com.future.futureui.recents.logic
+import com.future.sharednav.security.loadUntrusted
 
 import android.app.ActivityManager
 import android.app.AppOpsManager
@@ -112,7 +113,9 @@ class RecentAppsManager(private val context: Context) {
                     order.remove(pkg); dropped = true
                     return@mapIndexedNotNull null
                 }
-                val icon = pm.getApplicationIcon(appInfo)
+                // אייקון של אפליקציה זרה: ענק מדי = ללא כרטיס, לא קריסה של כל FutureUI
+                val icon = loadUntrusted("RecentApps", "app icon") { pm.getApplicationIcon(appInfo) }
+                    ?: return@mapIndexedNotNull null
                 RecentAppInfo(
                     packageName = pkg,
                     label = pm.getApplicationLabel(appInfo).toString(),

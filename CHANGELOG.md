@@ -4,6 +4,52 @@ This repo has no carried-over git history (see root [README](README.md)), so thi
 
 ## Unreleased
 
+### Security pass 3 (red-team audit): build integrity, crash-loop DoS, chat key pinning, backups
+
+Full write-up with severities, evidence and residual risks: [`SECURITY_AUDIT.md`](SECURITY_AUDIT.md).
+
+- **The committed tree did not compile.** `FutureUIActions.PERMISSION_SYSTEM` -
+  the signature permission that guards every key-press and call broadcast - was
+  used in ten places by the previous pass and defined in none. It is now defined
+  (`<System UI package>.permission.SYSTEM_SETTINGS`) and a unit test plus
+  `security-check.py` check that it is declared `protectionLevel="signature"`.
+- **The CI build jobs fail on every run that was checked** (#1 and #90-94 of 94).
+  In #94 the cause is `./gradlew: Permission denied`: all 31 `gradlew` (and
+  `build-all.sh`) were committed as mode 100644, so the build/test gate never
+  ran and the missing constant above went unnoticed. Mode is now 100755,
+  `.gitattributes` pins LF endings, and `security-check.py` fails on a script
+  committed without the executable bit.
+- **Crash loop from another app's icon (FutureUI).** Icons of other apps were
+  decoded under `catch (e: Exception)`; an oversized bitmap raises
+  `OutOfMemoryError`, which is an Error. The notification that carries the icon
+  stays posted, so FutureUI (status bar, key filter, lock screen) would crash
+  again after every restart. New `loadUntrusted()` (SharedKeypadNav) turns it
+  into "no icon"; used for the status-bar small icon, notification centre,
+  heads-up and recents (FutureUI and the SystemUI mirror).
+- **Chat: the agreement key is pinned too.** Only the signing key was pinned, so
+  a compromised server could swap the key messages are encrypted to without any
+  warning. `KeyPins` pins both; a change in either shows the existing "key
+  changed" notice (with both fingerprints). Old pins are upgraded silently.
+- **Backups.** `allowBackup` is now `false` in every app (15 had `true` with the
+  template's empty rules: chat database and decrypted chat images, keyboard
+  learned words, shell history were going to cloud backup).
+- **Lock screen window swallows touch.** `FLAG_NOT_TOUCHABLE` let touches reach the
+  stock windows under the overlay (the status-bar shade) on touch-capable
+  hardware. Needs a check on the device, see SECURITY_AUDIT.md.
+- **Music:** other apps can still control playback (play/pause/next) but can no
+  longer make the player open content of their choosing (`COMMAND_SET_MEDIA_ITEM`,
+  `COMMAND_CHANGE_MEDIA_ITEMS` removed for other packages).
+- **Navigation:** HERE/SIRI keys are no longer baked into BuildConfig when the
+  project has a Firebase configuration (the Cloud Functions hold them; `base.apk`
+  is readable by every app). `EMBED_API_KEYS=true` in local.properties opts back
+  in. `geocodeSearch` has a daily cap on upstream (cache-miss) requests.
+- **Firebase rules:** chat media uploads must be non-empty `application/octet-stream`.
+  Needs `firebase deploy` (rules and functions) by the owner.
+- **Smaller:** the dialer no longer logs the number on a failed name lookup;
+  `Wallpapers/app/src/main/assets/firebase.json` (API key) is git-ignored.
+- **security-check.py** has new rules for every item above and was run against
+  the previous commit: 61 problems there, 0 now.
+
 ### New lock screen: PIN, face unlock, One UI / iOS style customisation
 
 - **Security.** A 4-8 digit PIN, stored only as an HMAC in an Android

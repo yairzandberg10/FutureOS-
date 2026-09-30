@@ -1,4 +1,5 @@
 package com.future.futureui.statusbar.ui
+import com.future.sharednav.security.loadUntrusted
 
 import com.future.sharednav.theme.FutureTypography
 import android.content.BroadcastReceiver
@@ -172,11 +173,10 @@ fun StatusBarScreen(
                         val pkg = sbn.packageName
                         val icon = if (appGlyph(pkg) != null) null else {
                             if (!smallIconCache.containsKey(pkg)) {
-                                smallIconCache[pkg] = try {
+                                // אייקון של אפליקציה זרה: OutOfMemoryError מ-bitmap ענק הוא Error ולא
+                                // Exception - בלי loadUntrusted הוא מפיל את כל FutureUI שוב ושוב.
+                                smallIconCache[pkg] = loadUntrusted("StatusBarScreen", "small icon of $pkg") {
                                     sbn.notification.smallIcon?.loadDrawable(context)?.toBitmap(48, 48)?.asImageBitmap()
-                                } catch (e: Exception) {
-                                    Log.w("StatusBarScreen", "small icon failed for $pkg", e)
-                                    null
                                 }
                             }
                             smallIconCache[pkg]

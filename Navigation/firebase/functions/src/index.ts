@@ -52,7 +52,11 @@ function requireCaller(request: CallableRequest<unknown>): void {
  * per-uid limit would not stop them. A project-wide ceiling at least bounds
  * the bill (HERE is metered). Counts in one Firestore document per service.
  */
-const DAILY_LIMITS: Record<string, number> = { here: 5000, siri: 20000 };
+// nominatim counts only cache misses (the upstream requests): the public OSM server
+// allows about one request per second per client, and this project is that client for
+// every device - an unmetered geocodeSearch let anyone with an anonymous sign-in queue
+// requests forever and get the whole project blocked by OpenStreetMap.
+const DAILY_LIMITS: Record<string, number> = { here: 5000, siri: 20000, nominatim: 20000 };
 
 async function takeDailyQuota(service: string): Promise<void> {
   const limit = DAILY_LIMITS[service];
@@ -126,6 +130,7 @@ export const geocodeSearch = onCall(async (request: CallableRequest<{ query?: st
     return { results: (cached.data()?.results ?? []) as GeocodePlace[] };
   }
 
+  await takeDailyQuota("nominatim");
   await waitForNominatimSlot();
 
   const url = new URL(NOMINATIM_URL);

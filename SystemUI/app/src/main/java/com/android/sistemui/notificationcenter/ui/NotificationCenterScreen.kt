@@ -1,4 +1,5 @@
 package com.android.sistemui.notificationcenter.ui
+import com.future.sharednav.security.loadUntrusted
 import com.future.sharednav.theme.FutureMotion
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
@@ -358,11 +359,9 @@ fun NotificationItem(
     // טעינת אייקון האפליקציה
     var appIcon by remember { mutableStateOf<ImageBitmap?>(null) }
     LaunchedEffect(sbn.packageName) {
-        try {
-            val icon = context.packageManager.getApplicationIcon(sbn.packageName)
-            appIcon = icon.toBitmap(width = 64, height = 64).asImageBitmap()
-        } catch (e: Exception) {
-            android.util.Log.w("NotificationCenterScree", "NotificationItem failed", e)
+        // אייקון של אפליקציה זרה - ר' loadUntrusted (OutOfMemoryError לא נתפס כ-Exception)
+        appIcon = loadUntrusted("NotificationCenterScreen", "app icon") {
+            context.packageManager.getApplicationIcon(sbn.packageName).toBitmap(width = 64, height = 64).asImageBitmap()
         }
     }
 

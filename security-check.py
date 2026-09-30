@@ -23,11 +23,26 @@ already bitten this project once:
     allowBackup="true" on the System UI (lock-screen data in backups)
   * a GitHub Actions step not pinned to a commit SHA, or a workflow without a
     top-level permissions: block
+  * allowBackup="true" in ANY app (chat database, learned words and shell history
+    would be uploaded to cloud backup), not only in the System UI
+  * a gradlew / build script committed without the executable bit (CI died with
+    "Permission denied" on every job, so the build gate never ran)
+  * FutureUIActions.PERMISSION_SYSTEM missing, or not equal to the signature
+    permission the shared library manifest declares
+  * an exported media3 MediaSessionService that lets any app load content
+  * the lock-screen window letting touches through to the windows beneath it
+  * personal data (numbers, addresses, PINs) in Log.e/w/i calls, which R8 keeps
+  * Firebase rules that are open (`if true`) or accept uploads without a content type
+  * an API key baked into BuildConfig straight from local.properties
+  * the System UI decoding another app's icon without loadUntrusted() (an
+    OutOfMemoryError from a hostile bitmap would crash the lock screen's process)
+  * .gitignore missing the entries that keep local keys/config out of git
 
 Output is English on purpose: the Windows terminal renders Hebrew reversed.
 """
 import pathlib
 import re
+import subprocess
 import sys
 import xml.etree.ElementTree as ET
 
@@ -110,8 +125,9 @@ def check_manifests(problems):
             problems.append(f"{rel}: usesCleartextTraffic=true")
         if app.get(ANDROID + "debuggable") == "true":
             problems.append(f"{rel}: android:debuggable=true")
-        if rel.split("/")[0] in SYSTEM_UI_APPS and app.get(ANDROID + "allowBackup") != "false":
-            problems.append(f"{rel}: System UI must set allowBackup=false (lock-screen PIN state)")
+        # The shared library manifest has no backup policy of its own; every app does.
+        if not rel.startswith("SharedKeypadNav/") and app.get(ANDROID + "allowBackup") != "false":
+            problems.append(f"{rel}: allowBackup must be false (app data would be uploaded to cloud backup)")
         for comp in app:
             kind = comp.tag
             if (kind == "activity" and comp.get(ANDROID + "exported") == "true"
@@ -163,6 +179,8 @@ def check_sources(problems):
                     problems.append(f"{rel}:{lineno}: cleartext http:// endpoint")
                 if "FLAG_MUTABLE" in line and "setComponent" not in text and "::class.java" not in text:
                     problems.append(f"{rel}:{lineno}: FLAG_MUTABLE PendingIntent without an explicit component")
+                if re.search(r'Log\.(e|w|i)\(.*\$\{?(number|phone|phoneNumber|address|body|pin)\b', line):
+                    problems.append(f"{rel}:{lineno}: personal data in a Log.e/w/i call (R8 only strips v/d; logcat is readable over adb)")
                 if re.search(r'Uri\.parse\(\s*"tel:\s*\$', line):
                     problems.append(f"{rel}:{lineno}: tel: URI built by concatenation - use Uri.fromParts(\"tel\", n, null)")
                 if KEY_PRESS.search(line) and "sendBroadcast(" in line and "PERMISSION_SYSTEM" not in line and "setPackage(" not in line:
@@ -189,11 +207,173 @@ def check_workflows(problems):
                 problems.append(f"{rel}:{lineno}: action {m.group(1)}@{m.group(2)} not pinned to a commit SHA")
 
 
+def _git(*args):
+    try:
+        out = subprocess.run(["git", *args], cwd=ROOT, capture_output=True, text=True, timeout=60)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return out.stdout if out.returncode == 0 else None
+
+
+def _code_lines(text):
+    """(lineno, line) without whole-line // and * comments."""
+    for lineno, line in enumerate(text.splitlines(), 1):
+        stripped = line.strip()
+        if stripped.startswith("//") or stripped.startswith("*") or stripped.startswith("/*"):
+            continue
+        yield lineno, line
+
+
+def check_executable_scripts(problems):
+    """A script committed as 100644 fails with "Permission denied" on Linux CI -
+    that is exactly how every build job failed and the build gate never ran."""
+    listing = _git("ls-files", "-s")
+    if listing is None:
+        return  # not a git checkout (release tarball): nothing to verify
+    for row in listing.splitlines():
+        mode, _, rest = row.partition(" ")
+        path = rest.split("\t", 1)[-1]
+        name = path.rsplit("/", 1)[-1]
+        if name == "gradlew" or path in ("build-all.sh", "SystemUI/sync-from-futureui.sh"):
+            if mode != "100755":
+                problems.append(f"{path}: committed with mode {mode}, needs 100755 (git update-index --chmod=+x)")
+
+
+def check_gitignore(problems):
+    text = (ROOT / ".gitignore").read_text(encoding="utf-8", errors="ignore")
+    lines = {ln.strip() for ln in text.splitlines()}
+    for entry in ("keystore.properties", "*.jks", "*.keystore", "local.properties", "google-services.json",
+                  "Wallpapers/app/src/main/assets/firebase.json"):
+        if entry not in lines:
+            problems.append(f".gitignore: missing '{entry}' (local keys/config would be committed by `git add -A`)")
+
+
+def check_system_permission(problems):
+    """FutureUIActions.PERMISSION_SYSTEM guards every key-press and call broadcast.
+    It was referenced in ten places and defined in none."""
+    actions = ROOT / "SharedKeypadNav/sharedkeypadnav/src/main/java/com/future/sharednav/actions/FutureUIActions.kt"
+    target = ROOT / "SharedKeypadNav/sharedkeypadnav/src/main/java/com/future/sharednav/systemui/SystemUiTarget.kt"
+    manifest = ROOT / "SharedKeypadNav/sharedkeypadnav/src/main/AndroidManifest.xml"
+    used = any(
+        "PERMISSION_SYSTEM" in path.read_text(encoding="utf-8", errors="ignore")
+        for path in walk("*.kt") if path != actions and "/test/" not in path.as_posix()
+    )
+    text = actions.read_text(encoding="utf-8", errors="ignore")
+    m = re.search(r'const val PERMISSION_SYSTEM\s*=\s*"([^"]+)"', text)
+    if not m:
+        if used:
+            problems.append(f"{actions.relative_to(ROOT).as_posix()}: PERMISSION_SYSTEM is used but not defined")
+        return
+    name = m.group(1)
+    pkg = re.search(r'const val PACKAGE\s*=\s*"([^"]+)"', target.read_text(encoding="utf-8", errors="ignore"))
+    if pkg:
+        name = name.replace("${SystemUiTarget.PACKAGE}", pkg.group(1))
+    declared = {
+        p.get(ANDROID + "name"): p.get(ANDROID + "protectionLevel")
+        for p in ET.parse(manifest).getroot().findall("permission")
+    }
+    if declared.get(name) != "signature":
+        problems.append(f"PERMISSION_SYSTEM = {name} is not declared protectionLevel=signature in {manifest.relative_to(ROOT).as_posix()}")
+
+
+def check_media_sessions(problems):
+    """An exported MediaSessionService accepts any controller. media3's defaults let
+    that controller set media items, i.e. make the player open content:// or file://
+    of its choosing with the app's storage permissions."""
+    for manifest in walk("AndroidManifest.xml"):
+        if "src/main" not in manifest.as_posix() or manifest.parts[-5:-4] == ("sharedkeypadnav",):
+            continue
+        try:
+            app = ET.parse(manifest).getroot().find("application")
+        except ET.ParseError:
+            continue
+        if app is None:
+            continue
+        for svc in app.findall("service"):
+            actions = {a.get(ANDROID + "name") for a in svc.iter("action")}
+            if ("androidx.media3.session.MediaSessionService" not in actions
+                    or svc.get(ANDROID + "exported") != "true" or svc.get(ANDROID + "permission")):
+                continue
+            cls = svc.get(ANDROID + "name", "").rsplit(".", 1)[-1]
+            src = manifest.parents[3]
+            found = [f for f in src.rglob("*.kt") if re.search(rf"class\s+{re.escape(cls)}\b", f.read_text(encoding="utf-8", errors="ignore"))]
+            ok = any("remove(Player.COMMAND_SET_MEDIA_ITEM)" in f.read_text(encoding="utf-8", errors="ignore") for f in found)
+            if not ok:
+                problems.append(
+                    f"{manifest.relative_to(ROOT).as_posix()}: exported {cls} lets any controller set media items "
+                    "- remove Player.COMMAND_SET_MEDIA_ITEM / COMMAND_CHANGE_MEDIA_ITEMS for other packages in onConnect"
+                )
+
+
+def check_lock_window(problems):
+    """The lock screen is an accessibility overlay. With FLAG_NOT_TOUCHABLE touches fall
+    through to the windows under it (on a touch-capable device: the status-bar shade)."""
+    for path in walk("*.kt"):
+        rel = path.relative_to(ROOT).as_posix()
+        if "/lockscreen/" not in rel and not rel.lower().endswith("lockscreencontroller.kt"):
+            continue
+        text = path.read_text(encoding="utf-8", errors="ignore")
+        if "TYPE_ACCESSIBILITY_OVERLAY" not in text:
+            continue
+        for lineno, line in _code_lines(text):
+            if "FLAG_NOT_TOUCHABLE" in line:
+                problems.append(f"{rel}:{lineno}: lock-screen window must not be FLAG_NOT_TOUCHABLE (touch would reach the windows below it)")
+
+
+def check_firebase(problems):
+    for rules in walk("*.rules"):
+        rel = rules.relative_to(ROOT).as_posix()
+        text = rules.read_text(encoding="utf-8", errors="ignore")
+        for m in re.finditer(r"allow\s+([a-z, ]+):\s*if\s+([^;]+);", text):
+            methods = {x.strip() for x in m.group(1).split(",")}
+            expr = m.group(2).strip()
+            line = text[: m.start()].count("\n") + 1
+            if expr == "true":
+                problems.append(f"{rel}:{line}: open rule `allow {m.group(1)}: if true`")
+            if rel.endswith("storage.rules") and methods & {"create", "write"} and expr != "false" and "contentType" not in expr:
+                problems.append(f"{rel}:{line}: storage upload rule does not restrict request.resource.contentType")
+
+
+def check_build_config_keys(problems):
+    """A key read from local.properties straight into BuildConfig ends up in the APK,
+    and base.apk is readable by every app on the device."""
+    for gradle in walk("build.gradle.kts"):
+        rel = gradle.relative_to(ROOT).as_posix()
+        for lineno, line in enumerate(gradle.read_text(encoding="utf-8", errors="ignore").splitlines(), 1):
+            if re.search(r'buildConfigField\([^)]*(API_KEY|SECRET|TOKEN|PASSWORD)[^)]*localProperty\(', line):
+                problems.append(f"{rel}:{lineno}: secret baked into BuildConfig from local.properties - use embeddedKey() (Firebase proxy holds the key)")
+
+
+def check_untrusted_drawables(problems):
+    """The System UI decodes icons that belong to other apps. An oversized one raises
+    OutOfMemoryError - not an Exception - and `catch (e: Exception)` lets it kill the
+    process that hosts the lock screen and key filter (repeatedly, while the notification
+    that carries the icon is still posted). Such loads go through loadUntrusted()."""
+    for path in walk("*.kt"):
+        rel = path.relative_to(ROOT).as_posix()
+        if rel.split("/")[0] not in SYSTEM_UI_APPS or "/test/" in rel:
+            continue
+        text = path.read_text(encoding="utf-8", errors="ignore")
+        if "loadUntrusted(" in text or "runCatching" in text:
+            continue
+        for lineno, line in _code_lines(text):
+            if re.search(r"getApplicationIcon\(|\.loadDrawable\(|\.loadIcon\(", line):
+                problems.append(f"{rel}:{lineno}: third-party drawable decoded without loadUntrusted() (OutOfMemoryError would crash the System UI)")
+
+
 def main():
     problems = []
     check_manifests(problems)
     check_sources(problems)
     check_workflows(problems)
+    check_executable_scripts(problems)
+    check_gitignore(problems)
+    check_system_permission(problems)
+    check_media_sessions(problems)
+    check_lock_window(problems)
+    check_firebase(problems)
+    check_build_config_keys(problems)
+    check_untrusted_drawables(problems)
     if problems:
         print(f"FutureOS security check: {len(problems)} problem(s)")
         for p in problems:

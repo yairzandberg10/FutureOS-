@@ -55,3 +55,9 @@ Navigation/firebase/functions/lib/
 Messages/firebase/functions/node_modules/
 Messages/firebase/functions/lib/
 replay_pid*.log
+
+# Wallpapers: {"projectId": "...", "apiKey": "..."} for the wallpaper catalog
+# (Wallpapers/app/src/main/assets/firebase.json, see WallpaperCatalog.kt). Project
+# identifiers and a client key - never committed. The two firebase.json files under
+# Messages/firebase and Navigation/firebase are deployment config and ARE tracked.
+Wallpapers/app/src/main/assets/firebase.json

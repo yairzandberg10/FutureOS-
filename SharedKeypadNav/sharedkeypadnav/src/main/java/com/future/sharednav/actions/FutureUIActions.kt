@@ -11,6 +11,15 @@ import com.future.sharednav.systemui.SystemUiTarget
  * הקלדה ששוברת תקשורת בין שירותים בלי שגיאת קומפילציה שתתפוס את זה.
  */
 object FutureUIActions {
+    /**
+     * הרשאת החתימה של הסוויטה. מוגדרת (protectionLevel=signature) ב-AndroidManifest של
+     * SharedKeypadNav ולכן מתמזגת לכל אפליקציה. שידורי מקשים/שיחה נשלחים ונקלטים רק
+     * איתה - בלעדיה כל אפליקציה זרה יכולה "ללחוץ" על מקשים או לזייף שיחה נכנסת.
+     * הקבוע היה בשימוש בקוד אבל לא מוגדר בשום מקום (הקומפילציה נכשלה); security-check.py
+     * בודק עכשיו שהוא קיים ושהערך שלו זהה להרשאה שמוצהרת ב-Manifest.
+     */
+    const val PERMISSION_SYSTEM = "${SystemUiTarget.PACKAGE}.permission.SYSTEM_SETTINGS"
+
     const val ACTION_SHOW_CONTROL_CENTER = "${SystemUiTarget.PACKAGE}.ACTION_SHOW_CONTROL_CENTER"
     const val ACTION_SHOW_NOTIFICATION_CENTER = "${SystemUiTarget.PACKAGE}.ACTION_SHOW_NOTIFICATION_CENTER"
 

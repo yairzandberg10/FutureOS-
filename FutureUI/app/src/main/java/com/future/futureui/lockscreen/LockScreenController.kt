@@ -224,8 +224,11 @@ class LockScreenController(
                 WindowManager.LayoutParams.MATCH_PARENT,
                 WindowManager.LayoutParams.MATCH_PARENT,
                 WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+                // בלי FLAG_NOT_TOUCHABLE: חלון שאינו נוגע-בו מעביר מגע לחלונות שמתחתיו -
+                // על מכשיר עם לוח מגע (מכשיר הבדיקה) זה מאפשר למשוך את וילון ההתראות
+                // של אנדרואיד מתחת למסך הנעילה ולעקוף אותו. חלון שמקבל את המגע בולע אותו,
+                // והמקשים ממשיכים לעבור דרך מסנן המקשים של שירות הנגישות כרגיל.
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
                     WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
                     WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
                     // הקלטת מסך/צילום של אפליקציה אחרת לא תופסת את מסך הנעילה

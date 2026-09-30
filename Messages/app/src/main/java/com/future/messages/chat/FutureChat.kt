@@ -285,7 +285,7 @@ object FutureChat {
             store.putPeer(phone, null, null, null)
             return null
         }
-        checkPinnedKey(context, phone, identity.signKey)
+        checkPinnedKey(context, phone, identity.signKey, identity.agreeKey)
         store.putPeer(phone, identity.uid, identity.agreeKey, identity.signKey)
         return Peer(identity.uid, phone, identity.agreeKey)
     }
@@ -361,7 +361,7 @@ object FutureChat {
             // שולח חדש, או שהשולח התקין מחדש והמפתחות שלו התחלפו - שולפים
             // מהשרת ומנסים שוב.
             val identity = ChatBackend.lookupUid(from) ?: throw e
-            checkPinnedKey(context, identity.phone, identity.signKey)
+            checkPinnedKey(context, identity.phone, identity.signKey, identity.agreeKey)
             store.putPeer(identity.phone, identity.uid, identity.agreeKey, identity.signKey)
             peer = store.peerByUid(from)
             ChatCrypto.open(sealed, identity.signKey, contextString)
@@ -425,16 +425,19 @@ object FutureChat {
      * החדשה. בלי זה שרת פרוץ יכול היה להחליף בשקט את המפתח ולקרוא/לזייף הודעות.
      * הנעיצה נשמרת בנפרד מטבלת peers (שמתאפסת כשמספר "לא רשום") וגם אחרי התנתקות.
      */
-    private fun checkPinnedKey(context: Context, phone: String, signKey: String) {
+    private fun checkPinnedKey(context: Context, phone: String, signKey: String, agreeKey: String) {
         val pins = context.getSharedPreferences("chat_key_pins", Context.MODE_PRIVATE)
-        val old = pins.getString(phone, null)
-        if (old == signKey) return
-        pins.edit().putString(phone, signKey).commit()
-        if (old != null) {
+        // שני המפתחות ננעצים, לא רק מפתח החתימה: מפתח ההסכמה הוא זה שאליו מצפינים,
+        // ושרת פרוץ שהחליף רק אותו היה קורא כל הודעה שאנחנו שולחים בלי שום אזהרה.
+        val verdict = KeyPins.evaluate(pins.getString(phone, null), pins.getString("$phone#agree", null), signKey, agreeKey)
+        if (verdict == KeyPins.Verdict.UNCHANGED) return
+        pins.edit().putString(phone, signKey).putString("$phone#agree", agreeKey).commit()
+        if (verdict == KeyPins.Verdict.CHANGED) {
             insertSms(
                 context, phone,
                 "מפתח ההצפנה של איש הקשר הזה השתנה (למשל אחרי התקנה מחדש). " +
-                    "אם לא ציפית לזה - ודאו ביניכם את קוד האימות: ${ChatCrypto.fingerprint(signKey)}",
+                    "אם לא ציפית לזה - ודאו ביניכם את קוד האימות: " +
+                    "${ChatCrypto.fingerprint(signKey)} · ${ChatCrypto.fingerprint(agreeKey)}",
                 incoming = true,
             )
         }
