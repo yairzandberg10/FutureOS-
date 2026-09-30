@@ -11,22 +11,11 @@ import { S08Wall } from "./scenes/S08Wall";
 import { S09Privacy } from "./scenes/S09Privacy";
 import { S10Theme } from "./scenes/S10Theme";
 import { S11Outro } from "./scenes/S11Outro";
-import { Reel } from "./reel/Reel";
-import timeline from "./reel/timeline.json";
 
 export const RemotionRoot: React.FC = () => {
   return (
     <>
       <Composition id="FutureOSPromo" component={Promo} durationInFrames={1665} fps={30} width={1920} height={1080} />
-      <Composition
-        id="FutureOSReel"
-        component={Reel}
-        durationInFrames={timeline.total}
-        fps={timeline.fps}
-        width={1080}
-        height={1920}
-        defaultProps={{ showGuides: false }}
-      />
       <Folder name="Scenes">
         <Composition id="S01-Intro" component={S01Intro} durationInFrames={120} fps={30} width={1920} height={1080} />
         <Composition id="S02-Hero" component={S02Hero} durationInFrames={165} fps={30} width={1920} height={1080} />
