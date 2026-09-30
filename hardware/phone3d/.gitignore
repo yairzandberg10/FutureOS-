@@ -1,0 +1,4 @@
+out/*
+!out/futureos_regular_*.png
+!out/futureos_regular_teardown.mp4
+__pycache__/
