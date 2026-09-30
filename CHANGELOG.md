@@ -4,6 +4,19 @@ This repo has no carried-over git history (see root [README](README.md)), so thi
 
 ## Unreleased
 
+### Reel "Press": the real 3D model of the phone, full-size icons
+
+- **The phone in the reel is now the device's own 3D model.** `reel-press/make-model.py` turns the STLs of `hardware/phone3d/stl`
+  (front shell, back, side keys, glass, keypad) and the legends of `hardware/print/regular_markings.stl` into `assets/phone-model.js`,
+  and `js/phone.js` draws them with three.js: the Regular's real body (53 x 145.3 mm), its 21 keys with the printed Hebrew/Latin legends,
+  the speaker slot, the side keys and the punch hole. The UI is laid exactly onto the model's display area and clipped by the glass
+  window's rounded corners; it follows the display through a projective transform when the phone turns (it rises turned and settles
+  square before the camera goes in, and turns a little again at the end). The keypad is split per key, so every press still moves
+  and lights its own key; a D-pad direction lights its quarter of the ring.
+- **Camera and Calculator are the same size as every other icon in the launcher.** They have no play-store image, so the old
+  legacy `ic_launcher.webp` (with its own padding) was picked up and they looked like small squares. `make-assets.py` now builds
+  those two the way the launcher does: the adaptive foreground over its background, cut to the 72 dp viewport. The artwork is unchanged.
+
 ### New Instagram reel: "Press" (`reel-press/`)
 
 - **A new 60 s, 1080x1920 reel, built from scratch.** It is not derived from `promo-video/` or either `motion-futureos-launch*` project. The idea:

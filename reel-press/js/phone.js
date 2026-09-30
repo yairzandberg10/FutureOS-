@@ -1,21 +1,16 @@
-/* The phone in world units: 1 unit = 1 screen pixel (640x960 at the origin). Regular model: 62 x 156 mm, screen 49.3 x 74 mm,
-   so 12.98 px per mm. Key positions come from hardware/keyboard_prototype/SPEC.md (17 mm column pitch, 9.5 mm row pitch). */
-const MM = 640 / 49.3;
-const BODY_BOTTOM = 1895;
-const kx = (xmm) => 320 + (xmm - 28) * MM;
-const ky = (ymm) => BODY_BOTTOM - (ymm + 5) * MM;
+/* The phone: the real FutureOS Regular, drawn from the repo's own 3D model (assets/phone-model.js, built by make-model.py from
+   the STLs of hardware/phone3d and hardware/print) with three.js, into a canvas that lives in the world.
+   World units = screen px: the model's display area is the 640x960 screen at the origin, so the UI (the DOM #screen) is laid
+   exactly onto the model's display, and follows it through a projective transform when the phone turns. */
+const PM = window.PHONE_MODEL.meta;
+const CANVAS = { x0: -200, y0: -220, x1: 840, y1: 2080, pr: 1.0 };   // the world rectangle the canvas covers, and its pixel ratio
+const CAM_D = 5200;                                                   // camera distance (px): a long lens, little distortion
+const PIVOT = { x: 320, y: (PM.body.y0 + PM.body.y1) / 2, z: -4 * PM.mm };   // the middle of the body (y up, model units)
+const KEY_IDS = ['d1', 'd2', 'd3', 'd4', 'd5', 'd6', 'd7', 'd8', 'd9', 'star', 'd0', 'pound', 'soft_l', 'soft_r', 'call', 'end', 'ok'];
+const COL = { body: '#1c1c1e', key: '#2a2a2d', legend: '#f5f5f5', glass: '#020203' };   // the SCAD's colours
 
-const LEGENDS = { d1: '', d2: 'אבג ABC', d3: 'דהו DEF', d4: 'זחט GHI', d5: 'יכל JKL', d6: 'מנס MNO', d7: 'עפצ PQRS', d8: 'קרש TUV', d9: 'ת WXYZ', star: '', d0: '+', pound: '' };
-const DIGIT_LABEL = { star: '*', pound: '#' };
-const PHONE_KEYS = [];
-[['d1', 11, 35.25], ['d2', 28, 35.25], ['d3', 45, 35.25], ['d4', 11, 25.75], ['d5', 28, 25.75], ['d6', 45, 25.75],
- ['d7', 11, 16.25], ['d8', 28, 16.25], ['d9', 45, 16.25], ['star', 11, 6.75], ['d0', 28, 6.75], ['pound', 45, 6.75]]
-  .forEach(([id, x, y]) => PHONE_KEYS.push({ id, x: kx(x), y: ky(y), w: 196, h: 100, type: 'digit' }));
-PHONE_KEYS.push({ id: 'soft_l', x: kx(11), y: ky(55), w: 176, h: 72, type: 'icon', icon: 'dehaze' });
-PHONE_KEYS.push({ id: 'soft_r', x: kx(45), y: ky(55), w: 176, h: 72, type: 'icon', icon: 'arrow_back' });
-PHONE_KEYS.push({ id: 'call', x: kx(11), y: ky(45), w: 176, h: 84, type: 'icon', icon: 'call', color: 'var(--fos-success)' });
-PHONE_KEYS.push({ id: 'end', x: kx(45), y: ky(45), w: 176, h: 84, type: 'icon', icon: 'call_end', color: 'var(--fos-danger)' });
-const DPAD = { x: kx(28), y: ky(50), R: 128, r: 50 };
+/* the D-pad of the confirm dialog (3-5 s), a 2D drawing that floats in the frame, not the phone */
+const DPAD = { R: 128, r: 50 };
 
 const pressTimes = {};
 KEYS.forEach((k) => (pressTimes[k.k] = pressTimes[k.k] || []).push(k.t));
@@ -53,25 +48,176 @@ function dpadSVG(pr, size) {
   return s + '</svg>';
 }
 
-function buildPhone() {
-  const w = document.getElementById('world');
-  let h = `<div id="body"></div><div id="bezel"></div>`;
-  h += `<div class="abs" style="left:250px;top:-58px;width:140px;height:12px;border-radius:6px;background:#1C1C1E"></div>`;
-  for (const k of PHONE_KEYS) {
-    const inner = k.type === 'digit'
-      ? `<div class="kp"></div><div class="kd">${DIGIT_LABEL[k.id] || k.id.slice(1)}</div>${LEGENDS[k.id] ? `<div class="kl">${LEGENDS[k.id]}</div>` : ''}`
-      : `<div class="kp"></div><div class="ki" style="color:${k.color || 'rgba(255,255,255,0.7)'}">${ic(k.icon, 40, 'currentColor', 1, 0, 2)}</div>`;
-    h += `<div class="key" id="k-${k.id}" style="left:${k.x - k.w / 2}px;top:${k.y - k.h / 2}px;width:${k.w}px;height:${k.h}px;border-radius:${k.type === 'digit' ? 30 : 34}px">${inner}</div>`;
-  }
-  h += `<div id="dpad" class="abs" style="left:${DPAD.x - DPAD.R - 8}px;top:${DPAD.y - DPAD.R - 8}px"></div>`;
-  h += `<div id="screen"></div>`;
-  w.innerHTML = h;
-  window.$keys = PHONE_KEYS.map((k) => document.getElementById('k-' + k.id));
-  window.$dpad = document.getElementById('dpad');
-  window.$screen = document.getElementById('screen');
+/* ------------------------------------------------------------ the 3D phone */
+let R3 = null;
+
+function geometryOf(part) {
+  const b64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0)).buffer;
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(b64(part.p)), 3));
+  g.setAttribute('normal', new THREE.BufferAttribute(new Int8Array(b64(part.n)), 3, true));
+  return g;
 }
 
-function updatePhone(t) {
-  PHONE_KEYS.forEach((k, i) => { const p = pressOf(k.id, t); $keys[i].style.setProperty('--p', p.toFixed(3)); if (k.type === 'icon') $keys[i].lastChild.style.color = `color-mix(in srgb, #000 ${(p * 100).toFixed(0)}%, ${k.color || 'rgba(255,255,255,0.7)'})`; });
-  $dpad.innerHTML = dpadSVG({ up: pressOf('up', t), down: pressOf('down', t), left: pressOf('left', t), right: pressOf('right', t), ok: pressOf('ok', t) }, 2 * (DPAD.R + 8));
+function buildPhone() {
+  const w = document.getElementById('world');
+  const cw = CANVAS.x1 - CANVAS.x0, ch = CANVAS.y1 - CANVAS.y0;
+  w.innerHTML = `<canvas id="phone3d" class="abs" style="left:${CANVAS.x0}px;top:${CANVAS.y0}px;width:${cw}px;height:${ch}px"></canvas><div id="screen"></div>`;
+  window.$screen = document.getElementById('screen');
+  $screen.style.clipPath = screenClip();
+  $screen.dataset.punch = punchHTML();
+
+  const canvas = document.getElementById('phone3d');
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, preserveDrawingBuffer: true });
+  renderer.setPixelRatio(CANVAS.pr);
+  renderer.setSize(cw, ch, false);
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.NoToneMapping;
+  renderer.setClearColor(0x000000, 0);
+
+  const scene = new THREE.Scene();
+  // studio lights: a soft key above left, a cool rim from the right, a warm one from the left, and a little ambient. (No
+  // environment map: the renders run on a software GPU, where image-based lighting costs ~5x a frame.)
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x18181a, 1.1));
+  const key = new THREE.DirectionalLight(0xffffff, 2.2); key.position.set(-0.6, 0.8, 1.0); scene.add(key);
+  const rim = new THREE.DirectionalLight(0xdfe8ff, 2.4); rim.position.set(1.0, 0.25, -0.2); scene.add(rim);
+  const warm = new THREE.DirectionalLight(0xffeedd, 1.2); warm.position.set(-1.0, -0.2, -0.1); scene.add(warm);
+
+  // the camera: a perspective whose z = 0 plane lands exactly on the canvas's world rectangle
+  const cam = new THREE.PerspectiveCamera();
+  cam.position.set(PIVOT.x, PIVOT.y, CAM_D);
+  const near = 200, far = CAM_D + 3000, k = near / CAM_D;
+  cam.projectionMatrix.makePerspective((CANVAS.x0 - PIVOT.x) * k, (CANVAS.x1 - PIVOT.x) * k, (-CANVAS.y0 - PIVOT.y) * k, (-CANVAS.y1 - PIVOT.y) * k, near, far);
+  cam.projectionMatrixInverse.copy(cam.projectionMatrix).invert();
+  cam.updateMatrixWorld();
+
+  const phone = new THREE.Group();                 // turns about the middle of the body
+  phone.position.set(PIVOT.x, PIVOT.y, PIVOT.z);
+  const model = new THREE.Group();
+  model.position.set(-PIVOT.x, -PIVOT.y, -PIVOT.z);
+  phone.add(model); scene.add(phone);
+
+  const mats = {
+    body: new THREE.MeshStandardMaterial({ color: COL.body, roughness: 0.62, metalness: 0 }),
+    glass: new THREE.MeshStandardMaterial({ color: COL.glass, roughness: 0.06, metalness: 0 }),
+  };
+  const keyMat = () => new THREE.MeshStandardMaterial({ color: COL.key, roughness: 0.42, metalness: 0 });
+  // the legends are a skin inside the key's top surface: pulled forward in depth so they never fight with the key around them
+  const legMat = () => new THREE.MeshStandardMaterial({ color: COL.legend, roughness: 0.5, metalness: 0, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -8 });
+  const keys = {}, legends = {};
+  let ring = null;
+  const P = window.PHONE_MODEL.parts;
+  for (const [name, part] of Object.entries(P)) {
+    const g = geometryOf(part);
+    let m;
+    if (name.startsWith('key:')) {
+      const id = name.slice(4);
+      m = new THREE.Mesh(g, keyMat());
+      if (id === 'ring') ring = m; else keys[id] = m;
+    } else if (name.startsWith('legend:')) {
+      m = new THREE.Mesh(g, legMat());
+      legends[name.slice(7)] = m;
+    } else {
+      m = new THREE.Mesh(g, part.mat === 'key' ? keyMat() : mats[part.mat]);
+    }
+    model.add(m);
+  }
+
+  // the D-pad ring is one piece: a pressed direction lights its quarter (the same wedge the system draws)
+  const ringU = { uPr: { value: new THREE.Vector4() }, uAcc: { value: new THREE.Color() }, uC: { value: new THREE.Vector2(PM.keys.ring.x, PM.keys.ring.y) } };
+  ring.material.onBeforeCompile = (sh) => {
+    Object.assign(sh.uniforms, ringU);
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec2 vLocal;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvLocal = position.xy;');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec2 vLocal;\nuniform vec4 uPr;\nuniform vec3 uAcc;\nuniform vec2 uC;\nfloat ringW;')
+      .replace('#include <color_fragment>', `#include <color_fragment>
+        vec2 d = vLocal - uC;
+        float a = atan(d.y, d.x);
+        float q = 0.03;
+        float wr = smoothstep(-0.7854 - q, -0.7854 + q, a) * (1.0 - smoothstep(0.7854 - q, 0.7854 + q, a));
+        float wu = smoothstep(0.7854 - q, 0.7854 + q, a) * (1.0 - smoothstep(2.3562 - q, 2.3562 + q, a));
+        float wd = smoothstep(-2.3562 - q, -2.3562 + q, a) * (1.0 - smoothstep(-0.7854 - q, -0.7854 + q, a));
+        float wl = 1.0 - wr - wu - wd;
+        ringW = clamp(dot(vec4(wu, wr, wd, wl), uPr), 0.0, 1.0);
+        diffuseColor.rgb = mix(diffuseColor.rgb, uAcc, ringW);`)
+      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += uAcc * ringW * 0.8;');
+  };
+
+  R3 = { renderer, scene, cam, phone, keys, legends, ringU, last: '' };
+}
+
+/* the screen as seen through the glass window: the window's rounded top corners cut the display's top corners */
+function screenClip() {
+  const w = PM.window, r = w.rTop;
+  const cx0 = w.x0 + r, cx1 = w.x1 - r, cy = w.y0 + r;         // centres of the top corner arcs, in screen px
+  const dy = Math.sqrt(Math.max(0, r * r - cx0 * cx0));          // where each arc meets the display's side edge (x = 0 / 640)
+  const dx = Math.sqrt(Math.max(0, r * r - cy * cy));            // where it meets the top edge (y = 0)
+  const f = (v) => v.toFixed(2);
+  return `path('M${f(cx0 - dx)} 0L${f(cx1 + dx)} 0A${f(r)} ${f(r)} 0 0 1 640 ${f(cy - dy)}L640 960L0 960L0 ${f(cy - dy)}A${f(r)} ${f(r)} 0 0 1 ${f(cx0 - dx)} 0Z')`;
+}
+/* the front camera's punch hole, drawn over the UI (it is a hole in the display) */
+function punchHTML() {
+  const p = PM.punch;
+  return `<div class="punch" style="left:${(p.x - p.d / 2).toFixed(2)}px;top:${(p.y - p.d / 2).toFixed(2)}px;width:${p.d.toFixed(2)}px;height:${p.d.toFixed(2)}px"></div>`;
+}
+
+/* how the phone is turned at t (radians): it rises turned and settles square before the camera goes into the screen, and turns
+   a little again for the ending, so the body reads as the object it is */
+function phoneTurn(t) {
+  let rx = 0, ry = 0;
+  if (t < 8.4) { const p = std(inv(6.0, 8.4, t)); rx = lerp(0.42, 0, p); ry = lerp(-0.62, 0, p); }
+  if (t >= 52.4) { const p = std(inv(52.4, 54.4, t)); rx = lerp(0, 0.1, p) + 0.015 * Math.sin((t - 52.4) * 0.9); ry = lerp(0, -0.3, p) + 0.05 * Math.sin((t - 52.4) * 0.6); }
+  return { rx, ry };
+}
+
+/* 2D homography: the 640 x 960 box -> the quad p (tl, tr, br, bl), as a CSS matrix3d */
+function quadMatrix(p, w = 640, h = 960) {
+  const [[x0, y0], [x1, y1], [x2, y2], [x3, y3]] = p;
+  const dx1 = x1 - x2, dx2 = x3 - x2, dx3 = x0 - x1 + x2 - x3, dy1 = y1 - y2, dy2 = y3 - y2, dy3 = y0 - y1 + y2 - y3;
+  const den = dx1 * dy2 - dx2 * dy1;
+  const g = (dx3 * dy2 - dx2 * dy3) / den, hh = (dx1 * dy3 - dx3 * dy1) / den;
+  const a = x1 - x0 + g * x1, b = x3 - x0 + hh * x3, d = y1 - y0 + g * y1, e = y3 - y0 + hh * y3;
+  const m = [a / w, d / w, 0, g / w, b / h, e / h, 0, hh / h, 0, 0, 1, 0, x0, y0, 0, 1];
+  return `matrix3d(${m.map((v) => +v.toFixed(9)).join(',')})`;
+}
+
+const _v = [];
+function updatePhone(t, tf = t, visible = true) {
+  const cv = document.getElementById('phone3d');
+  cv.style.visibility = visible ? 'visible' : 'hidden';
+  if (!visible) return;
+  const { rx, ry } = phoneTurn(tf);
+  const acc = getComputedStyle(document.documentElement).getPropertyValue('--fos-accent').trim() || '#FFFFFF';
+  const pr = KEY_IDS.map((id) => pressOf(id, t));
+  const dir = ['up', 'right', 'down', 'left'].map((id) => pressOf(id, t));
+  const state = [rx.toFixed(5), ry.toFixed(5), acc, ...pr.map((v) => v.toFixed(3)), ...dir.map((v) => v.toFixed(3))].join('|');
+
+  R3.phone.rotation.set(rx, ry, 0);
+  R3.phone.updateMatrixWorld(true);
+  // the screen follows the display area of the model (a plane just under the glass, z = -0.02 mm)
+  const z = -0.02 * PM.mm;
+  const corners = [[0, 0], [640, 0], [640, -960], [0, -960]].map(([x, y]) => {
+    const v = (_v[0] = _v[0] || new THREE.Vector3()).set(x, y, z);
+    R3.phone.children[0].localToWorld(v);
+    v.project(R3.cam);
+    return [CANVAS.x0 + (v.x + 1) / 2 * (CANVAS.x1 - CANVAS.x0), CANVAS.y0 + (1 - v.y) / 2 * (CANVAS.y1 - CANVAS.y0)];
+  });
+  $screen.style.transform = quadMatrix(corners);
+
+  if (state === R3.last) return;       // nothing moved: the canvas keeps the last frame
+  R3.last = state;
+  const white = new THREE.Color('#ffffff'), black = new THREE.Color('#000000'), accC = new THREE.Color(acc);
+  const base = new THREE.Color(COL.key), leg = new THREE.Color(COL.legend);
+  KEY_IDS.forEach((id, i) => {
+    const m = R3.keys[id]; if (!m) return;
+    const p = pr[i], fill = id === 'ok' ? accC : white;     // a pressed key fills white (OK: the accent), its legend turns black
+    m.position.z = -p * 0.35 * PM.mm;
+    m.material.color.copy(base).lerp(fill, p);
+    m.material.emissive.copy(fill).multiplyScalar(0.85 * p);
+    const l = R3.legends[id];
+    if (l) { l.position.z = m.position.z; l.material.color.copy(leg).lerp(black, p); }
+  });
+  R3.ringU.uPr.value.set(dir[0], dir[1], dir[2], dir[3]);
+  R3.ringU.uAcc.value.copy(accC);
+  R3.renderer.render(R3.scene, R3.cam);
 }

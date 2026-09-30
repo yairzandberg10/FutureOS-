@@ -5,24 +5,13 @@ html, body { margin: 0; background: #000; }
   font-family: var(--fos-font); -webkit-font-smoothing: antialiased; }
 .abs { position: absolute; }
 
-/* ------------------------------------------------------------ the phone (world units = screen px) */
+/* ------------------------------------------------------------ the phone (world units = screen px). The body is the 3D model
+   in canvas#phone3d (js/phone.js); #screen is laid onto its display area and clipped by the glass window. */
 #world { position: absolute; left: 0; top: 0; width: 0; height: 0; transform-origin: 0 0; }
-#body { position: absolute; left: -82px; top: -100px; width: 804px; height: 1995px; box-sizing: border-box;
-  border-radius: 100px; background: #0C0C0E; border: 3px solid rgba(255,255,255,0.16); }
-#bezel { position: absolute; left: -16px; top: -16px; width: 672px; height: 992px; box-sizing: border-box;
-  border-radius: 36px; background: #000; border: 3px solid rgba(255,255,255,0.09); }
 #screen { position: absolute; left: 0; top: 0; width: 640px; height: 960px; overflow: hidden; direction: rtl;
-  background: var(--fos-bg); color: var(--fos-text); font-family: var(--fos-font); border-radius: 20px; }
+  background: var(--fos-bg); color: var(--fos-text); font-family: var(--fos-font); transform-origin: 0 0; }
 #screen * { box-sizing: border-box; }
-.key { position: absolute; border-radius: 28px; background: #2C2C2E; color: #fff; display: flex; flex-direction: column;
-  align-items: center; justify-content: center; font-family: var(--fos-font); overflow: hidden;
-  --p: 0; transform: translateY(calc(var(--p) * 5px)) scale(calc(1 - var(--p) * 0.04)); }
-.key .kp { position: absolute; inset: 0; background: var(--fos-accent-key, #fff); opacity: var(--p); border-radius: inherit; }
-.key .kd { position: relative; font-size: 46px; font-weight: 500; line-height: 1; color: color-mix(in srgb, #000 calc(var(--p) * 100%), #fff); }
-.key .kl { position: relative; font-size: 17px; font-weight: 400; letter-spacing: 1px; margin-top: 7px; line-height: 1;
-  color: color-mix(in srgb, #000 calc(var(--p) * 100%), rgba(255,255,255,0.42)); direction: rtl; }
-.key .ki { position: relative; }
-#dpad { position: absolute; }
+.punch { position: absolute; border-radius: 50%; background: #000; z-index: 1000; }
 
 /* ------------------------------------------------------------ frame overlays */
 #cap { position: absolute; left: 0; top: 0; width: 1080px; text-align: center; direction: rtl; }

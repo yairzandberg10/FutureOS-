@@ -65,18 +65,35 @@ ICONS = [
 ]
 
 
+def adaptive(main):
+    """Foreground over the background's fill, cropped to the inner 72 of the 108 dp (like AdaptiveIconDrawable)."""
+    fg = Image.open(main / "res" / "mipmap-xxxhdpi" / "ic_launcher_foreground.webp").convert("RGBA")
+    xml = (main / "res" / "drawable" / "ic_launcher_background.xml").read_text(encoding="utf-8")
+    h = re.search(r'fillColor="#([0-9A-Fa-f]{6,8})"', xml).group(1)[-6:]
+    bg = Image.new("RGBA", fg.size, tuple(int(h[i:i + 2], 16) for i in (0, 2, 4)) + (255,))
+    w = fg.size[0]
+    c = w / 6
+    return Image.alpha_composite(bg, fg).crop((round(c), round(c), round(w - c), round(w - c)))
+
+
 def copy_icons():
     out = ROOT / "assets" / "icons"
     out.mkdir(parents=True, exist_ok=True)
     n = 0
     for name, folder in ICONS:
-        play = REPO / folder / "app" / "src" / "main" / "ic_launcher-playstore.png"
-        legacy = REPO / folder / "app" / "src" / "main" / "res" / "mipmap-xxxhdpi" / "ic_launcher.webp"
-        src = play if play.exists() else legacy
-        if not src.exists():
+        main = REPO / folder / "app" / "src" / "main"
+        play = main / "ic_launcher-playstore.png"
+        fg = main / "res" / "mipmap-xxxhdpi" / "ic_launcher_foreground.webp"
+        if play.exists():
+            im = Image.open(play).convert("RGBA")
+        elif fg.exists():
+            # No play-store image (Camera, Calculator): build the icon the way the launcher does, the adaptive
+            # foreground over its background, cut to the 72 dp viewport. The legacy ic_launcher.webp has its own
+            # padding and would show up smaller than the rest of the grid.
+            im = adaptive(main)
+        else:
             print("no icon for", folder)
             continue
-        im = Image.open(src).convert("RGBA")
         if im.width > 256:
             im = im.resize((256, 256), Image.LANCZOS)   # scaling only
         im.save(out / f"{name}.png", optimize=True)

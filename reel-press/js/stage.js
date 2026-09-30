@@ -154,8 +154,8 @@ function seek(t, tf = t) {
   const c = camAt(tf);
   document.getElementById('world').style.transform = `translate(${c.ox}px,${c.oy}px) scale(${c.s})`;
   const html = t >= 6.0 ? screenAt(t) : '';
-  scr.innerHTML = html;
-  updatePhone(t);
+  scr.innerHTML = html + scr.dataset.punch;
+  updatePhone(t, tf, t >= 6.0);
   document.getElementById('cap').innerHTML = captionHTML(t, tf);
   document.getElementById('fx').innerHTML = noiseHTML(t, tf) + dialogHTML(t, tf);
   window.REPORT = { t };
