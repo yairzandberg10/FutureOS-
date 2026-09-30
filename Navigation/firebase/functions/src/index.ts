@@ -16,12 +16,13 @@ import { onCall, onRequest, HttpsError, CallableRequest } from "firebase-functio
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
-import * as admin from "firebase-admin";
+import { initializeApp } from "firebase-admin/app";
+import { getFirestore } from "firebase-admin/firestore";
 import { createHash, timingSafeEqual } from "crypto";
 
 import { REGIONS, buildRegionBundle } from "./gtfs";
 
-admin.initializeApp();
+initializeApp();
 
 // Must match FIREBASE_FUNCTIONS_REGION in Navigation/app/build.gradle.kts,
 // otherwise every call from the device comes back NOT_FOUND.
@@ -57,8 +58,8 @@ async function takeDailyQuota(service: string): Promise<void> {
   const limit = DAILY_LIMITS[service];
   if (!limit) return;
   const today = new Date().toISOString().slice(0, 10);
-  const ref = admin.firestore().collection("service_state").doc(`quota_${service}`);
-  const allowed = await admin.firestore().runTransaction(async (tx) => {
+  const ref = getFirestore().collection("service_state").doc(`quota_${service}`);
+  const allowed = await getFirestore().runTransaction(async (tx) => {
     const snapshot = await tx.get(ref);
     const data = snapshot.data() ?? {};
     const count = data.day === today ? ((data.count as number | undefined) ?? 0) : 0;
@@ -83,8 +84,8 @@ function sleep(ms: number): Promise<void> {
  * reserves the next slot and everyone else waits for theirs.
  */
 async function waitForNominatimSlot(): Promise<void> {
-  const ref = admin.firestore().collection("service_state").doc("nominatim");
-  const waitMs = await admin.firestore().runTransaction(async (tx) => {
+  const ref = getFirestore().collection("service_state").doc("nominatim");
+  const waitMs = await getFirestore().runTransaction(async (tx) => {
     const snapshot = await tx.get(ref);
     const now = Date.now();
     const nextAllowedAt = (snapshot.data()?.nextAllowedAt as number | undefined) ?? 0;
@@ -118,7 +119,7 @@ export const geocodeSearch = onCall(async (request: CallableRequest<{ query?: st
   // A hash, not base64: base64 of the query is the query itself, readable by
   // anyone who can list document ids. And the query is not stored in the doc.
   const cacheId = createHash("sha256").update(query.toLowerCase()).digest("base64url");
-  const cacheRef = admin.firestore().collection("geocode_cache").doc(cacheId);
+  const cacheRef = getFirestore().collection("geocode_cache").doc(cacheId);
   const cached = await cacheRef.get();
   const cachedAt = cached.data()?.cachedAt as number | undefined;
   if (cached.exists && cachedAt !== undefined && Date.now() - cachedAt < GEOCODE_CACHE_TTL_MS) {

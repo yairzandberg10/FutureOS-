@@ -9,9 +9,11 @@
 import { setGlobalOptions } from "firebase-functions/v2";
 import { onDocumentCreated } from "firebase-functions/v2/firestore";
 import * as logger from "firebase-functions/logger";
-import * as admin from "firebase-admin";
+import { initializeApp } from "firebase-admin/app";
+import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import { getMessaging } from "firebase-admin/messaging";
 
-admin.initializeApp();
+initializeApp();
 setGlobalOptions({ region: "europe-west1", maxInstances: 10 });
 
 export const pushOnMessage = onDocumentCreated("inbox/{uid}/messages/{id}", async (event) => {
@@ -21,12 +23,12 @@ export const pushOnMessage = onDocumentCreated("inbox/{uid}/messages/{id}", asyn
   if (!data || data.kind !== "m") return;
 
   const uid = event.params.uid;
-  const privateDoc = admin.firestore().doc(`private/${uid}`);
+  const privateDoc = getFirestore().doc(`private/${uid}`);
   const token = (await privateDoc.get()).get("fcmToken") as string | undefined;
   if (!token) return;
 
   try {
-    await admin.messaging().send({
+    await getMessaging().send({
       token,
       data: { sync: "1" },
       android: { priority: "high", ttl: 28 * 24 * 60 * 60 * 1000 },
@@ -34,7 +36,7 @@ export const pushOnMessage = onDocumentCreated("inbox/{uid}/messages/{id}", asyn
   } catch (err: unknown) {
     const code = (err as { code?: string }).code;
     if (code === "messaging/registration-token-not-registered" || code === "messaging/invalid-registration-token") {
-      await privateDoc.update({ fcmToken: admin.firestore.FieldValue.delete() });
+      await privateDoc.update({ fcmToken: FieldValue.delete() });
     } else {
       logger.error("FCM send failed", { uid, code });
     }

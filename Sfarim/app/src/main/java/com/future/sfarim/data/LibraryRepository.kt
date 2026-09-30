@@ -249,12 +249,14 @@ class LibraryRepository(private val db: SQLiteDatabase) {
     }
 
     /** הופך קלט חופשי לשאילתת FTS5 בטוחה: מסיר תווים מיוחדים של תחביר FTS5,
-     * ומוסיף * לכל מילה (חיפוש-לפי-קידומת, מתאים לחיפוש "תוך כדי הקלדה"). */
+     * ומוסיף * לכל מילה (חיפוש-לפי-קידומת, מתאים לחיפוש "תוך כדי הקלדה").
+     * כל מילה במירכאות: בלעדיהן AND / OR / NOT שהוקלדו הם אופרטורים של FTS5,
+     * והשאילתה נכשלת בשגיאת תחביר (החיפוש מציג "נכשל" במקום תוצאות). */
     private fun buildFtsQuery(userInput: String): String? {
         val cleaned = userInput.replace(Regex("[^\\p{L}\\p{N}\\s]"), " ")
         val tokens = cleaned.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
         if (tokens.isEmpty()) return null
-        return tokens.joinToString(" ") { "${it}*" }
+        return tokens.joinToString(" ") { "\"$it\"*" }
     }
 
     fun searchBooks(query: String, limit: Int = 40): List<BookSearchEntry> {

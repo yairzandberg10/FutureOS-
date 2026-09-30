@@ -21,6 +21,8 @@ already bitten this project once:
   * tel: URIs built by string concatenation ("#" truncates the number)
   * an exported *SettingsActivity without android:permission, and
     allowBackup="true" on the System UI (lock-screen data in backups)
+  * a GitHub Actions step not pinned to a commit SHA, or a workflow without a
+    top-level permissions: block
 
 Output is English on purpose: the Windows terminal renders Hebrew reversed.
 """
@@ -173,10 +175,25 @@ def check_sources(problems):
                             problems.append(f"{rel}:{lineno}: root command interpolates ${var} without RootShell.quote()")
 
 
+def check_workflows(problems):
+    """CI supply chain (OWASP A03): a tag can be moved to other code, a SHA
+    cannot, and GITHUB_TOKEN must not default to write access."""
+    for wf in (ROOT / ".github" / "workflows").glob("*.y*ml"):
+        rel = wf.relative_to(ROOT).as_posix()
+        text = wf.read_text(encoding="utf-8", errors="ignore")
+        if not re.search(r"^permissions:", text, re.M):
+            problems.append(f"{rel}: no top-level permissions: block (GITHUB_TOKEN gets the repo default)")
+        for lineno, line in enumerate(text.splitlines(), 1):
+            m = re.search(r"uses:\s*([^\s#]+)@([^\s#]+)", line)
+            if m and not m.group(1).startswith("./") and not re.fullmatch(r"[0-9a-f]{40}", m.group(2)):
+                problems.append(f"{rel}:{lineno}: action {m.group(1)}@{m.group(2)} not pinned to a commit SHA")
+
+
 def main():
     problems = []
     check_manifests(problems)
     check_sources(problems)
+    check_workflows(problems)
     if problems:
         print(f"FutureOS security check: {len(problems)} problem(s)")
         for p in problems:
