@@ -171,8 +171,7 @@ window.FOS = window.FOS || {};
       ['שעון', 'clock'], ['לוח שנה', 'calendar'], ['מוזיקה', 'music'], ['גלריה', 'gallery'],
       ['מחשבון', 'calculator'], ['פתקים', 'notes'], ['כושר', 'fitness'], ['קבצים', 'files'],
     ],
-    // [name, last message, unread, avatar colour]
-    threads: [['דני כהן', 'אתה בדרך?', 1, '#FF9F0A'], ['מיכל לוי', 'נתראה בערב', 0, '#BF5AF2'], ['נועה ברק', 'תודה רבה', 0, '#30D158'], ['אבי מזרחי', 'נדבר מחר', 0, '#64D2FF']],
+    threads: [['דני כהן', 'אתה בדרך?', 1], ['מיכל לוי', 'נתראה בערב', 0], ['נועה ברק', 'תודה רבה', 0], ['אבי מזרחי', 'נדבר מחר', 0]],
     // Pirkei Avot 1:1 to 1:4 (public domain, Sefaria's text without nikud). No divine names on these pages.
     // Pages: [1:1], [1:2, 1:3], [1:4]. Every mishnah is shown whole.
     avot: [

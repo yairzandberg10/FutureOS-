@@ -128,7 +128,9 @@ window.FOS = window.FOS || {};
       [8, 12, 16, 20].forEach((h, i) => mk(statusBar, { left: 134 + i * 7 + 'px', top: 38 - h + 'px', width: '5px', height: h + 'px', borderRadius: '2px', background: ink }));
     }
     const ITEM_H = 153, GROW = 1.15;
-    const cellXY = i => { const r = Math.floor(i / 4), c = i % 4; return [476 - 148 * c, 60 + 196 * r]; };   // RTL: column 0 on the right
+    // RTL: column 0 on the right. The rows are spread down to the page dots (the launcher packs them at the top
+    // with 20 dp between them, which left an empty band under the last row)
+    const cellXY = i => { const r = Math.floor(i / 4), c = i % 4; return [476 - 148 * c, 76 + 206 * r]; };
     const cellRect = i => {   // the focus border around item i, grown with it
       const [x, y] = cellXY(i), w = 132 * GROW, h = ITEM_H * GROW, r = 32 * GROW;
       return [x + 66 - w / 2, y + ITEM_H / 2 - h / 2, w, h, r, r, r, r];
@@ -173,7 +175,7 @@ window.FOS = window.FOS || {};
     scanLine.dataset.accent = 'bg';
     const faceText = lab(faceWrap, 'מחפש את הפנים שלך', 320, 700, { align: 'c', size: 28, alpha: 0.8 });
     const knownWrap = mk(faceWrap, { left: 0, top: 0, width: '640px', height: '960px' });
-    ico(knownWrap, 'check', 256, 700, 36, T.success, { stroke: 2.2 });
+    ico(knownWrap, 'check', 256, 700, 36, '#fff', { stroke: 2.2 }).dataset.accent = 'stroke';
     lab(knownWrap, 'זוהית', 288, 700, { align: 'l', size: 30, weight: 500 });
     // the ring around the front camera, drawn as the scan runs
     const ringSvg = svgEl2('svg', lock, { width: 640, height: 960, viewBox: '0 0 640 960' });
@@ -187,12 +189,13 @@ window.FOS = window.FOS || {};
     const msgs = layer();
     topBar(msgs, 'הודעות');
     const rowY = i => 132 + i * 154;
-    C.threads.forEach(([name, last, unread, col], i) => {
+    C.threads.forEach(([name, last, unread], i) => {
       const y = rowY(i);
-      const av = mk(msgs, { left: '504px', top: y + 25 + 'px', width: '80px', height: '80px', borderRadius: '40px', background: col });
-      lab(av, name[0], 40, 40, { align: 'c', size: 36, weight: 700, color: '#000' });
-      lab(msgs, name, 480, y + 46, { size: T.size.title, weight: 500 });
-      lab(msgs, last, 480, y + 88, { size: T.size.summary, alpha: 0.6 });
+      // FutureAvatar, as the conversation list draws it: a 44 dp grey circle, the first letters of two words
+      const av = mk(msgs, { left: '496px', top: y + 21 + 'px', width: '88px', height: '88px', borderRadius: '44px', background: T.avatar });
+      lab(av, name.split(' ').slice(0, 2).map(w => w[0]).join(''), 44, 44, { align: 'c', size: 26, weight: 500 });
+      lab(msgs, name, 472, y + 46, { size: T.size.title, weight: 500 });
+      lab(msgs, last, 472, y + 88, { size: T.size.summary, alpha: 0.6 });
       if (unread) {
         const b = mk(msgs, { left: 56 + 'px', top: y + 47 + 'px', width: '36px', height: '36px', borderRadius: '18px', background: '#fff' });
         b.dataset.accent = 'bg';
@@ -224,13 +227,10 @@ window.FOS = window.FOS || {};
     const bIn2 = mk(chatArea, { right: '32px', top: 0, width: '420px', borderRadius: '40px 40px 12px 40px', background: T.surface, overflow: 'hidden', transformOrigin: '100% 100%' });
     lab(bIn2, 'שלחתי לך את הכתובת', 392, 44, { size: 30 });
     const miniMap = svgEl2('svg', bIn2, { width: 380, height: 150, viewBox: '0 0 380 150' });
-    miniMap.style.cssText = 'position:absolute;left:20px;top:84px;border-radius:24px;background:#0A0D13;overflow:hidden';
-    svgEl2('path', miniMap, { d: 'M252 0H340L360 64L276 74Z', fill: hexA(T.accents[3], 0.26) });                       // a park
-    svgEl2('path', miniMap, { d: 'M-20 118C80 96 160 150 400 104', fill: 'none', stroke: hexA(T.accents[1], 0.3), 'stroke-width': 22 });   // the river
+    miniMap.style.cssText = 'position:absolute;left:20px;top:84px;border-radius:24px;background:#000';
     for (const [x1, y1, x2, y2, w] of [[-10, 40, 390, 10, 5], [-10, 120, 390, 85, 5], [60, -10, 110, 160, 4], [200, -10, 240, 160, 7], [300, -10, 330, 160, 4], [-10, 150, 390, 60, 3]])
       svgEl2('line', miniMap, { x1, y1, x2, y2, stroke: hexA('#FFFFFF', 0.16), 'stroke-width': w, 'stroke-linecap': 'round' });
-    svgEl2('line', miniMap, { x1: 200, y1: -10, x2: 240, y2: 160, stroke: hexA(T.accents[2], 0.55), 'stroke-width': 7, 'stroke-linecap': 'round' });   // the main road
-    ico(bIn2, 'location_on', 245, 146, 52, T.danger, { stroke: 2 });
+    ico(bIn2, 'location_on', 245, 146, 52, '#fff', { stroke: 1.8 }).dataset.accent = 'stroke';
     lab(bIn2, 'הרצל 12', 392, 268, { size: 30, weight: 500 });
     lab(bIn2, 'מיקום', 392, 310, { size: 24, alpha: 0.6 });
     bIn2.style.height = '340px';
@@ -255,17 +255,10 @@ window.FOS = window.FOS || {};
     const map = svgEl2('svg', mapWrap, { width: 640, height: 960, viewBox: '0 0 640 960' });
     const th = -14 * Math.PI / 180, O = [300, 500];
     const G = (i, j) => [O[0] + i * 118 * Math.cos(th) - j * 132 * Math.sin(th), O[1] + i * 118 * Math.sin(th) + j * 132 * Math.cos(th)];
-    svgEl2('rect', map, { x: -200, y: -200, width: 1040, height: 1360, fill: '#0A0D13' });
-    // parks: blocks between streets, in the system's green
-    const block = (i0, j0, i1, j1) => 'M' + [G(i0, j0), G(i1, j0), G(i1, j1), G(i0, j1)].map(p => p.map(v => v.toFixed(1)).join(' ')).join('L') + 'Z';
-    for (const [i0, j0, i1, j1] of [[-3.8, -2.8, -2.2, -1.2], [2.2, 1.2, 3.8, 3.8], [-1.8, 3.2, -0.2, 4.8]])
-      svgEl2('path', map, { d: block(i0, j0, i1, j1), fill: hexA(T.accents[3], 0.24) });
-    // the river
-    svgEl2('path', map, { d: 'M-60 300 C 120 360, 380 180, 700 320', fill: 'none', stroke: hexA(T.accents[1], 0.26), 'stroke-width': 46, 'stroke-linecap': 'round' });
     for (let i = -5; i <= 5; i++) { const a = G(i, -8), b = G(i, 8); svgEl2('line', map, { x1: a[0], y1: a[1], x2: b[0], y2: b[1], stroke: hexA('#FFFFFF', i % 2 ? 0.08 : 0.12), 'stroke-width': i % 2 ? 5 : 8, 'stroke-linecap': 'round' }); }
     for (let j = -8; j <= 8; j++) { const a = G(-6, j), b = G(6, j); svgEl2('line', map, { x1: a[0], y1: a[1], x2: b[0], y2: b[1], stroke: hexA('#FFFFFF', j % 3 ? 0.08 : 0.13), 'stroke-width': j % 3 ? 5 : 9, 'stroke-linecap': 'round' }); }
-    // the main road, in orange
-    svgEl2('path', map, { d: 'M-40 900 C 160 760, 260 640, 700 180', fill: 'none', stroke: hexA(T.accents[2], 0.5), 'stroke-width': 14, 'stroke-linecap': 'round' });
+    svgEl2('path', map, { d: 'M-40 900 C 160 760, 260 640, 700 180', fill: 'none', stroke: hexA('#FFFFFF', 0.14), 'stroke-width': 14, 'stroke-linecap': 'round' });
+    svgEl2('path', map, { d: 'M-60 300 C 120 360, 380 180, 700 320', fill: 'none', stroke: hexA('#FFFFFF', 0.06), 'stroke-width': 46, 'stroke-linecap': 'round' });
     const rp = [G(0, 1.35), G(0, 0), G(1, 0), G(1, -2)];   // starts above the card, ends on הרצל
     const routeD = 'M' + rp.map(p => p.map(v => v.toFixed(1)).join(' ')).join('L');
     const route = svgEl2('path', map, { d: routeD, fill: 'none', stroke: '#fff', 'stroke-width': 11, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' });
@@ -276,7 +269,7 @@ window.FOS = window.FOS || {};
     const startRing = svgEl2('circle', map, { cx: rp[0][0], cy: rp[0][1], r: 26, fill: '#fff' });
     startRing.dataset.accent = 'fill';
     const pinG = mk(mapWrap, { left: rp[3][0] - 34 + 'px', top: rp[3][1] - 62 + 'px', width: '68px', height: '68px', transformOrigin: '34px 62px' });
-    ico(pinG, 'location_on', 34, 34, 68, T.danger, { stroke: 2 });
+    ico(pinG, 'location_on', 34, 34, 68, '#fff', { stroke: 1.8 }).dataset.accent = 'stroke';
     const streetLabel = (s, p, ang) => { const l = lab(mapWrap, s, p[0], p[1], { align: 'c', size: 22, alpha: 0.45 }); l.style.transform += ` rotate(${ang}deg)`; return l; };
     streetLabel('הרצל', lerpR(G(1, -1), G(2, -1), 0.5).map((v, i) => v + (i ? -16 : 0)), -14);
     streetLabel('יפו', G(-2, 2.6), 76);
@@ -303,14 +296,12 @@ window.FOS = window.FOS || {};
     const contRect = [32, 132, 576, 196, 44, 44, 44, 44];
     lab(lib, 'הספרייה', 560, 380, { font: T.display, size: T.size.summary, weight: 700, alpha: 0.55, ls: 2 });
     const libCard = mk(lib, { left: '32px', top: '412px', width: '576px', height: `${4 * 108 + 12}px`, borderRadius: '44px', background: T.surface });
-    // each shelf in one of the system colours: a solid tile, the glyph in black on it
-    [['תנ״ך', '24 ספרים', 'menu_book', T.accents[1]], ['משנה', '63 מסכתות', 'auto_stories', T.accents[3]], ['תלמוד בבלי', '37 מסכתות', 'library_books', T.accents[2]], ['הלכה', 'משנה תורה, שולחן ערוך', 'book', T.accents[4]]].forEach(([title, sum, icon, col], i) => {
+    [['תנ״ך', '24 ספרים', 'menu_book'], ['משנה', '63 מסכתות', 'auto_stories'], ['תלמוד בבלי', '37 מסכתות', 'library_books'], ['הלכה', 'משנה תורה, שולחן ערוך', 'book']].forEach(([title, sum, icon], i) => {
       const y = 6 + i * 108;
       if (i) mk(libCard, { left: '32px', top: y + 'px', width: '512px', height: '2px', background: hexA('#FFFFFF', 0.12) });
-      const tile = mk(libCard, { left: 576 - 32 - 64 + 'px', top: y + 22 + 'px', width: '64px', height: '64px', borderRadius: '20px', background: col });
-      ico(tile, icon, 32, 32, 40, '#000', { stroke: 1.9 });
-      lab(libCard, title, 576 - 32 - 64 - 26, y + 38, { size: T.size.title, weight: 600 });
-      lab(libCard, sum, 576 - 32 - 64 - 26, y + 76, { size: T.size.summary, alpha: 0.6 });
+      const ic = ico(libCard, icon, 576 - 32 - 22, y + 54, 44, '#fff'); ic.dataset.accent = 'stroke';
+      lab(libCard, title, 576 - 32 - 44 - 32, y + 38, { size: T.size.title, weight: 600 });
+      lab(libCard, sum, 576 - 32 - 44 - 32, y + 76, { size: T.size.summary, alpha: 0.6 });
       ico(libCard, 'chevron_left', 32 + 18, y + 54, 36, '#fff', { alpha: 0.3 });
     });
 
@@ -324,8 +315,8 @@ window.FOS = window.FOS || {};
       for (const id of ids) {
         const [n, s] = C.avot[id];
         const b = mk(pg, { right: 0, top: y + 'px', width: '576px' });
-        const tag = mk(b, { right: 0, top: '6px', width: '40px', height: '40px', borderRadius: '20px', background: '#fff', fontFamily: T.font, fontSize: '24px', fontWeight: 700, color: '#000', textAlign: 'center', lineHeight: '40px' });
-        tag.textContent = n; tag.dataset.accent = 'bg';
+        const tag = mk(b, { right: 0, top: '6px', width: '40px', height: '40px', borderRadius: '20px', background: hexA('#FFFFFF', 0.1), fontFamily: T.font, fontSize: '24px', fontWeight: 700, color: '#fff', textAlign: 'center', lineHeight: '40px' });
+        tag.textContent = n;
         const para = mk(b, { right: '0', top: '0', width: '576px', fontFamily: T.font, fontSize: '33px', lineHeight: 1.62, color: hexA('#FFFFFF', 0.93), direction: 'rtl', textAlign: 'right', whiteSpace: 'normal', textIndent: '54px' });
         para.textContent = s;
         y += para.getBoundingClientRect().height + 26;
@@ -341,14 +332,12 @@ window.FOS = window.FOS || {};
     mk(micG, { left: 0, top: 0, width: '200px', height: '200px', borderRadius: '50%', border: `3px solid ${hexA('#FFFFFF', 0.22)}`, boxSizing: 'border-box' });
     const micIc = ico(micG, 'mic', 100, 100, 88, '#fff', { stroke: 1.5 }); micIc.dataset.accent = 'stroke';
     const listen = lab(asst, 'מקשיב', 320, 470, { align: 'c', size: T.size.summary, alpha: 0.6 });
-    // the voice, in the four colours of the system, mirrored from the middle out
-    const BAR_C = [T.accents[1], T.accents[4], T.accents[2], T.accents[3]];
-    const bars = Array.from({ length: 15 }, (_, i) => mk(asst, { left: 320 + (i - 7) * 22 - 5 + 'px', top: '530px', width: '10px', height: '10px', borderRadius: '5px', background: BAR_C[Math.abs(i - 7) % 4] }));
+    const bars = Array.from({ length: 15 }, (_, i) => { const b = mk(asst, { left: 320 + (i - 7) * 22 - 5 + 'px', top: '530px', width: '10px', height: '10px', borderRadius: '5px', background: '#fff' }); b.dataset.accent = 'bg'; return b; });
     const words = C.assistant.split(' ');
     const wordsBox = mk(asst, { left: '50px', top: '600px', width: '540px', height: '150px', direction: 'rtl', textAlign: 'center', whiteSpace: 'normal', fontFamily: T.font, fontSize: '40px', fontWeight: 500, lineHeight: 1.35, color: '#fff' });
     const wordEls = words.map((w, i) => { const s = document.createElement('span'); s.textContent = w + (i < words.length - 1 ? ' ' : ''); s.style.display = 'inline-block'; s.style.whiteSpace = 'pre'; wordsBox.appendChild(s); return s; });
     const savedRow = mk(asst, { left: 0, top: '800px', width: '640px', height: '60px' });
-    ico(savedRow, 'check', 214, 30, 36, T.success, { stroke: 2.2 });
+    ico(savedRow, 'check', 214, 30, 36, '#fff', { stroke: 2 }).dataset.accent = 'stroke';
     const svL = lab(savedRow, 'התזכורת נשמרה', 246, 30, { align: 'l', size: 28, weight: 500 });
 
     // ================================================================= SETTINGS: צבע הדגשה (two copies: the wave reveals the new accent)
@@ -543,7 +532,7 @@ window.FOS = window.FOS || {};
           faceIcon.style.opacity = (0.85 - 0.25 * known).toFixed(3);
           const arc = E_s(seg(t, TL.scan[0], TL.scan[1] + 0.05));
           ringArc.setAttribute('stroke-dasharray', `${(arc * ringC).toFixed(2)} ${ringC + 1}`);
-          ringArc.setAttribute('stroke', mixHex(acc, T.success, known));   // the ring turns green when the face is known
+          ringArc.setAttribute('stroke', acc);
           ringSvg.style.opacity = (fin * (1 - E(t, TL.unlock, 22))).toFixed(3);
           lockIcon.style.opacity = (0.8 * (1 - known)).toFixed(3);
           lockOpen.style.opacity = (0.8 * known).toFixed(3);

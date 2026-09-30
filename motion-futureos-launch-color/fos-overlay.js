@@ -65,8 +65,8 @@ window.FOS = window.FOS || {};
 
   FOS.buildOverlay = (parent, ph) => {
     const D = FOS.D, TL = FOS.TL, LOGO = FOS.LOGO;
-    // colour copy: the drawing is cyan, the measurements orange, the struck-out icons each in a system colour
-    const A = FOS.T.accents, LINE = A[1], DIM = A[2], FBC = [A[1], A[2], A[4], A[3]];
+    // the drawing stays white (as in the first film); only the measurements take the accent colour
+    const A = FOS.T.accents, LINE = '#FFFFFF', DIM = A[FOS.T.accent0], FBC = ['#FFFFFF', '#FFFFFF', '#FFFFFF', '#FFFFFF'];
     const E = (t, t0, wn = 18) => S(t - t0, wn, 1);
     const sm = x => x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x);
     const svg = svgEl('svg', parent, { width: W, height: H, viewBox: `0 0 ${W} ${H}` });
@@ -109,7 +109,7 @@ window.FOS = window.FOS || {};
 
     // ================================================================ dimension lines (screen space)
     const dimG = svgEl('g', svg);
-    function dimSet(label, fontSize = 24) {
+    function dimSet(label, fontSize = 28) {
       const g = svgEl('g', dimG);
       const ext1 = svgEl('line', g, { stroke: DIM, 'stroke-width': 1.2 }), ext2 = svgEl('line', g, { stroke: DIM, 'stroke-width': 1.2 });
       const main = svgEl('line', g, { stroke: DIM, 'stroke-width': 1.3 });
@@ -139,9 +139,9 @@ window.FOS = window.FOS || {};
       const lp = inside ? mid : [mid[0] + n[0] * 22, mid[1] + n[1] * 22];
       d.tx.setAttribute('transform', `translate(${lp[0].toFixed(1)} ${lp[1].toFixed(1)}) rotate(${ang.toFixed(2)})`);
       d.tx.setAttribute('x', 0); d.tx.setAttribute('y', 0); d.tx.style.opacity = kl.toFixed(3);
-      const bw = d.label.length * 15 + 18;
+      const bw = d.label.length * 17.5 + 20;
       d.bg.setAttribute('transform', d.tx.getAttribute('transform'));
-      d.bg.setAttribute('x', -bw / 2); d.bg.setAttribute('y', -16); d.bg.setAttribute('width', bw); d.bg.setAttribute('height', 32);
+      d.bg.setAttribute('x', -bw / 2); d.bg.setAttribute('y', -19); d.bg.setAttribute('width', bw); d.bg.setAttribute('height', 38);
       d.bg.style.opacity = inside ? kl.toFixed(3) : '0';
     }
     const dW = dimSet('53'), dH = dimSet('145.3'), dS = dimSet('3.5″'), dT = dimSet('8');
@@ -216,17 +216,19 @@ window.FOS = window.FOS || {};
     // ================================================================ struck-out icons (scene 9)
     const forbid = svgEl('g', svg);
     const FB = [['public', 'דפדפן'], ['storefront', 'חנות אפליקציות'], ['groups', 'רשתות חברתיות'], ['play_circle', 'וידאו']];
-    const fbPos = [[580, 420], [300, 420], [580, 700], [300, 700]];
+    // one column on the left of the vertical frame, in reading order; the phone stands on the right
+    const fbPos = FOS.FB_POS = [[270, 640], [270, 890], [270, 1140], [270, 1390]];
     const fbItems = FB.map(([icon, name], i) => {
       const g = svgEl('g', forbid);
-      const ig = svgEl('g', g, { transform: `translate(${fbPos[i][0] - 60} ${fbPos[i][1] - 60}) scale(5)` });
+      const ig = svgEl('g', g, { transform: `translate(${fbPos[i][0] - 72} ${fbPos[i][1] - 72}) scale(6)` });
       for (const part of FOS.ICONS[icon].split('|')) svgEl('path', ig, { d: part, fill: 'none', stroke: FBC[i], 'stroke-width': 0.85, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' });
-      const strike = svgEl('line', g, { stroke: FOS.T.danger, 'stroke-width': 4, 'stroke-linecap': 'round' });
+      const strike = svgEl('line', g, { stroke: FOS.T.danger, 'stroke-width': 5, 'stroke-linecap': 'round' });
       return { g, strike, x: fbPos[i][0], y: fbPos[i][1], name };
     });
 
     // ================================================================ the closing mark: the ftr logo, drawn by the same line
-    const LS = 2.25, logoW = LOGO.w * LS, logoH = LOGO.h * LS, LX = W / 2 - logoW / 2, LY = 392 - logoH / 2;
+    const LOGO_Y = 740;   // the mark's centre in the vertical frame, above the name
+    const LS = 2.4, logoW = LOGO.w * LS, logoH = LOGO.h * LS, LX = W / 2 - logoW / 2, LY = LOGO_Y - logoH / 2;
     const logoG = svgEl('g', svg);
     const logoArt = svgEl('g', logoG, { transform: `translate(${LX} ${LY}) scale(${LS})` });
     const logoPaths = LOGO.strokes.map(d => svgEl('path', logoArt, { d, fill: 'none', stroke: LOGO.color, 'stroke-width': LOGO.stroke, 'stroke-linecap': 'butt' }));
@@ -340,7 +342,7 @@ window.FOS = window.FOS || {};
             const r = rise(t, TL.forbid[i], 30), ks = t < TL.strikes[i] ? 0 : 1 - Math.pow(2, -10 * Math.min(1, (t - TL.strikes[i]) / 0.26));
             f.g.style.opacity = (r.o * (1 - 0.62 * sm(seg(t, TL.strikes[i] + 0.15, TL.strikes[i] + 0.5))) * (1 - out)).toFixed(3);
             f.g.setAttribute('transform', `translate(0 ${(r.y - 20 * out).toFixed(2)})`);
-            const a = [f.x + 76, f.y - 76], b = [f.x - 76, f.y + 76];
+            const a = [f.x + 90, f.y - 90], b = [f.x - 90, f.y + 90];
             f.strike.setAttribute('x1', a[0]); f.strike.setAttribute('y1', a[1]);
             f.strike.setAttribute('x2', (a[0] + (b[0] - a[0]) * ks).toFixed(1)); f.strike.setAttribute('y2', (a[1] + (b[1] - a[1]) * ks).toFixed(1));
             f.strike.style.visibility = ks > 0.001 ? 'inherit' : 'hidden';
@@ -363,8 +365,8 @@ window.FOS = window.FOS || {};
           });
           const k = s0 < logoTotal ? 0 : 1;
           const land = 1 + 0.045 * (1 - E(t, TL.logoEnd[1] - 0.15, 10));
-          logoG.setAttribute('transform', `translate(${W / 2} 392) scale(${land.toFixed(4)}) translate(${-W / 2} -392)`);
-          if (penAt && k < 1) { const q = penAt[0].getPointAtLength(penAt[1]); logoDot.setAttribute('cx', (W / 2 + (LX + q.x * LS - W / 2) * land).toFixed(1)); logoDot.setAttribute('cy', (392 + (LY + q.y * LS - 392) * land).toFixed(1)); logoDot.style.visibility = 'inherit'; }
+          logoG.setAttribute('transform', `translate(${W / 2} ${LOGO_Y}) scale(${land.toFixed(4)}) translate(${-W / 2} ${-LOGO_Y})`);
+          if (penAt && k < 1) { const q = penAt[0].getPointAtLength(penAt[1]); logoDot.setAttribute('cx', (W / 2 + (LX + q.x * LS - W / 2) * land).toFixed(1)); logoDot.setAttribute('cy', (LOGO_Y + (LY + q.y * LS - LOGO_Y) * land).toFixed(1)); logoDot.style.visibility = 'inherit'; }
           else logoDot.style.visibility = 'hidden';
         } else { logoG.style.visibility = 'hidden'; logoDot.style.visibility = 'hidden'; }
       },

@@ -160,8 +160,11 @@ window.FOS = window.FOS || {};
     // colour copy: the rims behind are tinted, cyan on the right and orange on the left (the system's accents), so
     // the black body picks up a cool and a warm line on its edges when it turns. Everything in front stays white:
     // the walls and the keys keep their own colour.
-    // half way to white: a tint on a black body, not a painted one
-    const CYAN = new THREE.Color(0x64d2ff).lerp(new THREE.Color(1, 1, 1), 0.5), ORANGE = new THREE.Color(0xff9f0a).lerp(new THREE.Color(1, 1, 1), 0.5);
+    // a tint on a black body, not a painted one: the strips the glass reflects are nearly white (a big peach or blue
+    // sheet across the glass read as a coloured phone), the direct rims keep more of the colour for the edges
+    const WHITE = new THREE.Color(1, 1, 1);
+    const CYAN = new THREE.Color(0x64d2ff).lerp(WHITE, 0.75), ORANGE = new THREE.Color(0xff9f0a).lerp(WHITE, 0.75);
+    const CYAN_RIM = new THREE.Color(0x64d2ff).lerp(WHITE, 0.5), ORANGE_RIM = new THREE.Color(0xff9f0a).lerp(WHITE, 0.5);
     const softbox = (w, h, p, k, tint) => {
       const c = tint ? tint.clone().multiplyScalar(k) : new THREE.Color(k, k, k);
       const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: c, side: THREE.DoubleSide }));
@@ -178,8 +181,8 @@ window.FOS = window.FOS || {};
     const pmrem = new THREE.PMREMGenerator(renderer);
     scene.environment = pmrem.fromScene(env, 0.03).texture;
     const key = new THREE.DirectionalLight(0xffffff, 1.6); key.position.set(-260, 380, 420); scene.add(key);
-    const rim = new THREE.DirectionalLight(CYAN, 2.2); rim.position.set(420, 140, -300); scene.add(rim);
-    const rim2 = new THREE.DirectionalLight(ORANGE, 1.2); rim2.position.set(-420, 60, -260); scene.add(rim2);
+    const rim = new THREE.DirectionalLight(CYAN_RIM, 2.2); rim.position.set(420, 140, -300); scene.add(rim);
+    const rim2 = new THREE.DirectionalLight(ORANGE_RIM, 1.2); rim2.position.set(-420, 60, -260); scene.add(rim2);
     // the closing turn: two coloured lamps between the phone and the camera, cyan above and orange below, so the
     // back and the infinity mark take a cool to warm sheen. Off until scene.js turns them up (lamps()).
     const lampC = new THREE.PointLight(0x64d2ff, 0, 0, 2); lampC.position.set(0, 120, 140); scene.add(lampC);

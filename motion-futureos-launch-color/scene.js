@@ -36,21 +36,24 @@
       K(TL.spin, [0, 0, 0, -196, 5, 0], 1.7),
       K(TL.backHold, [null, null, null, -204, 7, null], 1.1),
     ]);
-    const cam = track([625, 0, 0], [
-      K(0.1, [598, 0, 0], 0.9),
-      K(TL.turnSide, [640, 0, 6], 3),
-      K(9.2, [585, 0, 6], 1.1),
-      K(TL.turnBack, [600, 0, -6], 3),
-      K(TL.raise, [470, 0, 0], 3.4),
-      K(TL.screenOn, [430, 0, 6], 1.4),
-      K(TL.zoom, [345, 0, 21.5], 3.6),
-      K(TL.pullBack, [525, 0, -3], 4.2),
-      K(TL.merge, [430, 0, 36], 2.6),
-      K(TL.backIn, [345, 0, 21.5], 4.2),
-      K(TL.pullOut, [575, 0, 0], 3.2),
-      K(55.5, [535, 0, 4], 1.0),
-      K(TL.spin, [600, 0, 0], 1.5),
-      K(TL.backHold, [548, 0, 4], 1.3),
+    // 9:16 (Instagram): the captions own the band at the top (under Instagram's own 250 px), so the phone sits in the
+    // frame below it: a positive ty looks higher and lowers the phone. At 1920 px and 18 degrees, 1 mm at distance d
+    // is 1920 / (0.3168 d) px.
+    const cam = track([780, 0, 29.5], [
+      K(0.1, [746, 0, 29.5], 0.9),          // the drawing: the whole phone under the caption, the 53 just above it
+      K(TL.turnSide, [770, 0, 30], 3),
+      K(9.2, [700, 0, 29], 1.1),            // the profile, tall in the frame, the 8 above it
+      K(TL.turnBack, [720, 0, 12], 3),
+      K(TL.raise, [560, 0, 14], 3.4),
+      K(TL.screenOn, [520, 0, 20], 1.4),
+      K(TL.zoom, [415, 0, 42.6], 3.6),      // the screen 1080 px tall under the caption, the D-pad at the bottom edge
+      K(TL.pullBack, [700, 0, 29], 4.2),    // the lock: the whole phone, the keys for the code
+      K(TL.merge, [450, 0, 45], 2.6),       // up to the screen: the dots fly into the ring round the camera
+      K(TL.backIn, [415, 0, 42.6], 4.2),
+      K(TL.pullOut, [800, -26.4, 25], 3.2), // the phone on the right, the struck-out list on the left
+      K(55.5, [760, -25.1, 24], 1.0),
+      K(TL.spin, [720, 0, 6], 1.5),         // centred for the turn, the captions are gone
+      K(TL.backHold, [660, 0, 6], 1.3),
     ]);
 
     // ---------------------------------------------------------------- key presses on the body
@@ -105,19 +108,19 @@
       return `path(evenodd, "M-10 -10H${W + 10}V${H + 10}H-10Z M${f(x - r)} ${f(y)}a${f(r)} ${f(r)} 0 1 0 ${f(2 * r)} 0a${f(r)} ${f(r)} 0 1 0 ${f(-2 * r)} 0Z")`;
     };
 
-    // ---------------------------------------------------------------- captions (right side: RTL)
+    // ---------------------------------------------------------------- captions (the top band, centred over the phone)
     // colour copy: the second line of each caption takes the colour of its scene
-    const CX = W - 118, CAPS = [];
+    const CX = W / 2, CAPS = [];
     function caption(lines, tIns, tOut, o = {}) {
-      const y0 = lines.length === 1 ? [536] : [490, 590];
+      const y0 = lines.length === 1 ? [376] : [318, 434];
       lines.forEach((s, i) => {
-        const g = txt(o.parent || capG, s, { x: CX, y: y0[i], size: 86, font: F.HEEBO, weight: 700, align: 'r', color: (o.colors || [])[i] || '#FFFFFF' });
+        const g = txt(o.parent || capG, s, { x: CX, y: y0[i], size: 96, font: F.HEEBO, weight: 700, align: 'c', color: (o.colors || [])[i] || '#FFFFFF' });
         if (o.ghost) g.inner.className = 'txb';   // a colour twin of a line that is already there: the check reads the first one
         CAPS.push({ g, tIn: tIns[i], tOut });
       });
     }
     caption(['מה אם הטלפון', 'יחזור למקשים?'], [TL.cap1[0], TL.cap1[0] + 0.32], TL.cap1[1], { colors: [null, A[1]] });
-    caption(['8 מ״מ.'], [TL.cap2[0]], TL.cap2[1], { colors: [A[2]] });
+    caption(['8 מ״מ.'], [TL.cap2[0]], TL.cap2[1], { colors: [A[T.accent0]] });   // the colour of the measurement line
     caption(['בלי מגע.', 'מיקוד מלא.'], [TL.cap4[0], TL.cap4[0] + 0.6], TL.cap4[1], { colors: [null, A[1]] });
     caption(['שלך.', 'רק שלך.'], [TL.cap5[0], TL.cap5[0] + 0.6], TL.cap5[1], { colors: [null, A[3]] });
     caption(['מחובר.', 'למה שחשוב.'], [TL.cap6[0], TL.cap6[0] + 0.6], TL.cap6[1], { colors: [null, A[2]] });
@@ -128,14 +131,14 @@
     caption(['בצבע שלך.'], [TL.cap8[0]], TL.cap8[1], { parent: cap8W });
     caption(['בצבע שלך.'], [TL.cap8[0]], TL.cap8[1], { parent: cap8B, colors: ['#000000'], ghost: true });
     caption(['כל מה שצריך.', 'שום דבר שלא.'], [TL.cap9[0], TL.cap9b], TL.cap9[1], { colors: [null, A[4]] });
-    // labels under the struck-out icons (positions match fos-overlay.js)
-    const FBL = [['דפדפן', 580, 420], ['חנות אפליקציות', 300, 420], ['רשתות חברתיות', 580, 700], ['וידאו', 300, 700]]
-      .map(([s, x, y], i) => ({ g: txt(capG, s, { x, y: y + 104, size: 36, font: F.HEEBO, weight: 500, align: 'c', color: '#FFFFFF' }), i }));
+    // labels under the struck-out icons (the icons' positions come from fos-overlay.js)
+    const FBL = ['דפדפן', 'חנות אפליקציות', 'רשתות חברתיות', 'וידאו']
+      .map((s, i) => ({ g: txt(capG, s, { x: FOS.FB_POS[i][0], y: FOS.FB_POS[i][1] + 122, size: 50, font: F.HEEBO, weight: 500, align: 'c', color: '#FFFFFF' }), i }));
     // the closing lockup: FutureOS letter by letter (Latin: left to right), the slogan word by word (Hebrew: right to left)
-    const word = letters(capG, 'FutureOS', { x: W / 2, y: 646, size: 128, font: F.HEEBO, weight: 700, align: 'c', dir: 'ltr', ls: -0.015, color: '#FFFFFF' });
+    const word = letters(capG, 'FutureOS', { x: W / 2, y: 1010, size: 150, font: F.HEEBO, weight: 700, align: 'c', dir: 'ltr', ls: -0.015, color: '#FFFFFF' });
     const WORDC = [A[1], A[2], A[3], A[4]];   // each letter lands in a system colour and cools to white
-    const slogan = row(capG, ['כשר.', 'בלי', 'לרדת', 'ברמה.'], { x: W / 2, y: 770, size: 62, font: F.HEEBO, weight: 500, color: '#FFFFFF', gap: 20 });
-    const soon = txt(capG, 'בקרוב', { x: W / 2, y: 862, size: 50, font: F.HEEBO, weight: 500, align: 'c', color: A[4] });
+    const slogan = row(capG, ['כשר.', 'בלי', 'לרדת', 'ברמה.'], { x: W / 2, y: 1150, size: 68, font: F.HEEBO, weight: 500, color: '#FFFFFF', gap: 22 });
+    const soon = txt(capG, 'בקרוב', { x: W / 2, y: 1250, size: 54, font: F.HEEBO, weight: 500, align: 'c', color: A[4] });
     const lockup = [word, soon, ...slogan.map(s => s.g)];
 
     // ---------------------------------------------------------------- sound: every press is a key click; the big moves breathe
