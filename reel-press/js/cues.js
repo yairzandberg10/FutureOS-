@@ -66,10 +66,10 @@
   K(22.5, 'left'); K(22.75, 'left'); K(23.0, 'left'); K(23.25, 'ok');
 
   // 7 music
-  K(24.5, 'left'); K(25.0, 'ok'); K(25.5, 'down');
+  K(24.5, 'right'); K(25.0, 'ok'); K(25.5, 'down');
 
   // 8 fitness
-  S(26.25, 'beat'); K(27.0, 'down'); K(27.25, 'ok');
+  S(26.25, 'beat'); K(26.75, 'ok'); K(27.25, 'ok');
 
   // 9 terminal: what is typed, and when, is data (TL.term) so the ticks match the picture
   const term = [

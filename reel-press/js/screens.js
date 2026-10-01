@@ -40,8 +40,7 @@ function Launcher(t, a, b, start = 0, idle = false) {
       <img src="assets/icons/${id}.png" style="width:116px;height:116px;border-radius:30px;display:block"/>
       <div style="font-size:24px;font-weight:500;white-space:nowrap">${name}</div></div>`;
   });
-  return `${StatusBar('08:30')}
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0 0;padding:24px 20px 0;direction:rtl">${cells}</div>
+  return `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0 0;padding:16px 20px 0;direction:rtl">${cells}</div>
     <div style="position:absolute;left:0;right:0;bottom:36px;display:flex;justify-content:center;gap:16px">
       <div style="width:14px;height:14px;border-radius:9px;background:var(--fos-text)"></div>
       <div style="width:14px;height:14px;border-radius:9px;background:var(--fos-text-30)"></div>
@@ -49,25 +48,30 @@ function Launcher(t, a, b, start = 0, idle = false) {
 }
 
 /* ============================================================ 1  dialer + call */
-const KEYPAD = [['1', ''], ['2', 'ABC'], ['3', 'DEF'], ['4', 'GHI'], ['5', 'JKL'], ['6', 'MNO'], ['7', 'PQRS'], ['8', 'TUV'], ['9', 'WXYZ'], ['*', ''], ['0', '+'], ['#', '']];
+/* the system's floating bottom bar (SharedKeypadNav FutureBottomNav): a pill 66dp high, 16dp in from the edges, on the surface
+   colour; only the selected item carries its label, inside an accent pill next to its icon. Items run right to left. */
+const BottomNav = (items, sel) => `<div style="position:absolute;left:32px;right:32px;bottom:32px;height:132px;border-radius:999px;background:var(--fos-surface);display:flex;align-items:center;padding:0 16px;direction:rtl">${items.map(([i, l], k) => `
+    <div style="flex:${k === sel ? 1.4 : 1};display:flex;justify-content:center"><div style="height:92px;border-radius:999px;background:${k === sel ? 'var(--fos-accent)' : 'transparent'};display:flex;align-items:center;gap:16px;padding:${k === sel ? '0 24px' : '0'}">${ic(i, 40, k === sel ? 'var(--fos-on-accent)' : 'var(--fos-text)', k === sel ? 1 : 0.5, k === sel ? 1 : 0)}${k === sel ? `<span style="font-size:28px;font-weight:500;color:var(--fos-on-accent);white-space:nowrap">${l}</span>` : ''}</div></div>`).join('')}</div>`;
+
+/* dialer/ui/dialpad/DialpadScreen.kt: there is no keypad grid on the screen (it only copied the physical keys). The number,
+   the contact it belongs to, the contacts that match what was typed, "התקשר", and the three tabs. */
+const CONTACTS = [['מיכל לוי', '052-333-4455'], ['דני כהן', '052-718-2290'], ['אמא', '054-523-3341'], ['יוסי אברהם', '050-233-4412'], ['נועה ברק', '053-334-4508']];
 function Dialer(t) {
   const typed = keysIn(12.2, 13.5, /^d\d$/).filter((k) => k.t <= t);
   const digits = typed.map((k) => k.k.slice(1)).join('');
-  const shown = digits.length > 3 ? digits.slice(0, 3) + '-' + digits.slice(3) : digits;
-  const match = digits.length >= 10;
-  const idmap = { '*': 'star', '#': 'pound' };
-  const call = pressOf('call', t);
-  const keys = KEYPAD.map(([d, s]) => {
-    const p = pressOf(idmap[d] || 'd' + d, t);
-    return `<div style="height:116px;border-radius:32px;background:color-mix(in srgb, var(--fos-calc-button-focused) ${p * 100}%, var(--fos-calc-button));${col(2)};align-items:center;justify-content:center;flex-direction:column">
-      <span style="font-size:40px;font-weight:500">${d}</span>${s ? `<span style="font-size:20px;color:var(--fos-text-40);letter-spacing:1px">${s}</span>` : ''}</div>`;
-  }).join('');
-  return center(`${TopBar({ title: 'מקלדת' })}
-    <div style="padding:0 32px 24px;min-height:150px;${col(6)};justify-content:center;align-items:center">
-      <div style="font-size:68px;font-weight:300;letter-spacing:2px;direction:ltr;font-family:var(--fos-font-display);color:${digits ? 'var(--fos-text)' : 'var(--fos-text-30)'}">${shown || 'הקלד מספר'}</div>
-      <div style="font-size:28px;color:var(--fos-accent);min-height:34px;opacity:${match ? 1 : 0}">מיכל לוי</div></div>
-    <div style="flex:1;padding:0 48px;display:grid;direction:ltr;grid-template-columns:repeat(3,1fr);gap:16px;align-content:center">${keys}</div>
-    <div style="padding:24px 48px 32px">${Button({ label: 'התקשר', variant: 'primary', f: digits ? Math.max(0.999 * (digits.length ? 1 : 0), call) : 0 })}</div>`, '');
+  const clean = (n) => n.replace(/\D/g, '');
+  const sugg = digits.length < 2 ? [] : CONTACTS.filter(([, n]) => clean(n).includes(digits)).slice(0, 6);
+  const match = digits.length >= 3 ? CONTACTS.find(([, n]) => clean(n).includes(digits)) : null;
+  const callF = digits ? Math.max(tween(t, typed[0].t), pressOf('call', t)) : 0;
+  const rows = sugg.map(([name, num]) => `<div class="li" style="--f:0;height:130px;gap:24px">${Avatar(name, 80)}
+      <div class="li-t"><div class="li-title">${name}</div><div class="li-sum" style="direction:ltr;text-align:right">${num}</div></div></div>`).join('');
+  return `${TopBar({ title: 'מקלדת' })}
+    <div style="min-height:144px;padding:0 32px;${col(6)};justify-content:center;align-items:center">
+      <div style="direction:ltr;font-weight:300;letter-spacing:${digits ? 2 : 0}px;font-size:${digits ? 68 : 48}px;line-height:1.15;color:${digits ? 'var(--fos-text)' : 'var(--fos-text-30)'}">${digits || 'הקלד מספר'}</div>
+      <div style="font-size:28px;min-height:34px;color:var(--fos-accent)">${match ? match[0] : ''}</div></div>
+    <div style="padding:0 24px;${col(0)};height:392px;overflow:hidden">${rows}</div>
+    <div style="position:absolute;left:48px;right:48px;bottom:228px;opacity:${digits ? 1 : 0.38}">${Button({ label: 'התקשר', variant: 'primary', f: callF })}</div>
+    ${BottomNav([['call', 'יומן'], ['contacts', 'אנשי קשר'], ['dialpad', 'מקלדת']], 2)}`;
 }
 function ActiveCall(t) {
   const lt = t - 13.62;
@@ -186,47 +190,85 @@ function CalendarScreen(t) {
 }
 
 /* ============================================================ 7  music */
+/* Music/ui/screens/NowPlayingScreen.kt: "מתנגן כעת" with a back arrow, the album art filling the height left (accent at 15% with
+   a note when the song has no art), title and artist, the time on both sides of the bar, previous / play-pause / next (the
+   player row stays left to right like the 4 and 6 keys), and one row of six round actions. Focus starts on play. */
 function MusicScreen(t) {
-  const nav = navSim(t, 24.0, 26.0, 1, 3, 3);
-  const vol = navSim(t, 25.4, 26.0, 0, 1, 2);
-  const vf = vol.i === 1 ? tween(t, vol.t0) : 0;
   const next = t >= 25.0;
   const lt = next ? t - 25.0 : t - 24.0 + 72;
   const dur = next ? 214 : 220;
   const mm = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
-  const eq = beatEnv(t);
-  const btn = (icon, k, big) => `<div style="height:132px;border-radius:32px;background:var(--fos-glass);border:4px solid ${cm('var(--fos-accent)', 100 * fa(nav, k, t) * (1 - vf))};display:flex;align-items:center;justify-content:center">${ic(icon, big ? 64 : 48, 'var(--fos-text)', big ? 1 : 0.75, big ? 1 : 0, 1.5)}</div>`;
-  return `${TopBar({ title: 'מוזיקה', menu: true })}
-    <div style="${col(8)};align-items:center;padding:16px 32px 24px">
-      <div style="width:200px;height:200px;border-radius:999px;background:var(--fos-glass);display:flex;align-items:center;justify-content:center;transform:scale(${1 + 0.05 * eq})">${ic('graphic_eq', 96, 'var(--fos-accent)', 1, 0, 1.4)}</div>
-      <div style="font-family:var(--fos-font-display);font-size:40px;font-weight:700;margin-top:16px">${next ? 'עיר בלילה' : 'בדרך'}</div>
-      <div style="font-size:28px;color:var(--fos-text-60)">${next ? 'קולות מהעיר' : 'אלבום לדוגמה'}</div></div>
-    <div style="padding:0 40px;${col(12)}">${ProgressBar(lt / dur, true)}
-      <div class="mono" style="display:flex;justify-content:space-between;font-size:26px;color:var(--fos-text-60);direction:ltr"><span>${mm(lt)}</span><span>${mm(dur)}</span></div></div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;padding:28px 32px 20px">${btn('skip_previous', 0)}${btn('pause', 1, true)}${btn('skip_next', 2)}</div>
-    ${Slider({ label: 'עוצמה', value: 0.6, f: vf })}${SoftKeys('אפשרויות', 'השהה', 'חזרה')}`;
+  // focus: play, then right to next (24.5), OK skips (25.0), down to the action row (25.5)
+  const steps = [[-1e9, 'play'], [24.5, 'next'], [25.5, 'playlist']];
+  let cur = 'play', prev = null, t0 = -1e9;
+  for (const [ts, k] of steps) if (t >= ts) { prev = cur; cur = k; t0 = ts; }
+  const ff = (k) => k === cur ? (t0 < -1e8 ? 1 : tween(t, t0)) : k === prev ? 1 - tween(t, t0) : 0;
+  const round = (key, icon, size, { filled = false, active = false } = {}) => {
+    const gap = filled ? 8 : 0, d = size + gap * 2, f = ff(key);
+    const bg = filled ? 'var(--fos-accent)' : active ? cm('var(--fos-accent)', 20) : 'var(--fos-text-08)';
+    const tint = filled ? 'var(--fos-on-accent)' : active ? 'var(--fos-accent)' : 'var(--fos-text)';
+    return `<div style="width:${d}px;height:${d}px;border-radius:999px;border:4px solid ${cm('var(--fos-accent)', 100 * f)};padding:${gap - 4 > 0 ? gap - 4 : 0}px;flex:0 0 auto;box-sizing:border-box">
+      <div style="width:100%;height:100%;border-radius:999px;background:${bg};display:flex;align-items:center;justify-content:center">${ic(icon, Math.round(size * 0.45), tint, 1, filled ? 1 : 0, 2)}</div></div>`;
+  };
+  const beat = beatEnv(t);
+  return center(`${TopBar({ title: 'מתנגן כעת', back: true })}
+    <div style="flex:1;${col(0)};align-items:center;padding:16px 32px 24px;min-height:0">
+      <div style="flex:1;min-height:0;aspect-ratio:1;border-radius:48px;background:${cm('var(--fos-accent)', 15)};display:flex;align-items:center;justify-content:center">
+        <div style="transform:scale(${1 + 0.04 * beat})">${ic('music_note', 112, 'var(--fos-accent)', 1, 0, 1.6)}</div></div>
+      <div style="margin-top:20px;font-size:32px;font-weight:700">${next ? 'עיר בלילה' : 'בדרך'}</div>
+      <div style="margin-top:4px;font-size:24px;color:var(--fos-text-60)">${next ? 'קולות מהעיר' : 'הלהקה'}</div>
+      <div style="margin-top:20px;width:100%;display:flex;align-items:center;direction:ltr;font-size:22px;color:var(--fos-text-50)">
+        <span>${mm(lt)}</span><div style="flex:1;padding:0 16px">${ProgressBar(lt / dur, true, 'direction:ltr')}</div><span>${mm(dur)}</span></div>
+      <div style="margin-top:20px;display:flex;align-items:center;justify-content:center;gap:48px;direction:ltr">
+        ${round('prev', 'skip_previous', 100)}${round('play', 'pause', 116, { filled: true })}${round('next', 'skip_next', 100)}</div>
+      <div style="margin-top:24px;width:100%;display:flex;justify-content:space-between;align-items:center;direction:rtl">
+        ${round('fav', 'favorite', 80, { active: true })}${round('playlist', 'playlist_add', 80)}${round('sound', 'equalizer', 80)}${round('shuffle', 'shuffle', 80)}${round('repeat', 'repeat', 80, { active: true })}${round('bt', 'bluetooth', 80)}</div>
+    </div>`);
 }
 
 /* ============================================================ 8  fitness */
+/* Fitness/ui/screens/ActiveWorkoutScreen.kt: the live workout. The time (mm:ss, display, mono) and "זמן אימון", the heart rate
+   and calorie chips, exercise x of y with the overall bar, the exercise card with a dot per set, and pause + "סיימתי סט".
+   OK on "סיימתי סט" starts the real 15 s rest; OK on "דלג על המנוחה" goes straight to the next set. */
 function FitnessScreen(t) {
   const lt = t - 26.0;
-  const bpm = Math.round(lerp(72, 131, out3(lt / 1.8)));
+  const bpm = Math.round(lerp(96, 131, out3(lt / 1.8)));
   const eq = beatEnv(t);
-  const btnf = tween(t, 27.0), pressed = pressOf('ok', t);
-  const nav = (items, sel) => `<div style="background:var(--fos-surface);border-radius:999px;margin:0 32px 32px;height:132px;display:flex;align-items:center;padding:0 16px">${items.map(([i, l], k) => `
-    <div style="flex:${k === sel ? 1.4 : 1};display:flex;justify-content:center"><div style="height:92px;border-radius:999px;background:${k === sel ? 'var(--fos-accent)' : 'transparent'};display:flex;align-items:center;gap:16px;padding:${k === sel ? '0 28px' : '0'}">${ic(i, 40, k === sel ? 'var(--fos-on-accent)' : 'var(--fos-text)', k === sel ? 1 : 0.5, k === sel ? 1 : 0)}${k === sel ? `<span style="font-size:28px;font-weight:500;color:var(--fos-on-accent)">${l}</span>` : ''}</div></div>`).join('')}</div>`;
-  return center(`${TopBar({ title: 'כושר', menu: true })}
-    <div style="flex:1;${col(20)};align-items:center;justify-content:center;padding:0 32px">
-      <div style="font-size:24px;letter-spacing:2px;color:var(--fos-text-60)">אימון פעיל</div>
-      <div style="display:flex;align-items:center;gap:24px"><div style="transform:scale(${1 + 0.22 * eq})">${ic('favorite', 72, 'var(--fos-danger)', 1, 1, 1.6)}</div>
-        <div class="mono" style="font-size:180px;font-weight:300;line-height:1">${bpm}</div></div>
-      <div style="font-size:28px;color:var(--fos-text-60)">פעימות לדקה</div>
-      <div style="display:flex;gap:16px;margin-top:8px">${Chip('קרדיו', 'selected')}${Chip('שריפת שומן')}${Chip('מאמץ')}</div>
-      <div style="width:100%;padding:0 8px;margin-top:8px">${ProgressBar(lerp(0.2, 0.72, out3(lt / 1.8)))}</div>
-      <div class="mono" style="font-size:40px;font-weight:300;color:var(--fos-text-70)">00:${String(12 + Math.floor(lt)).padStart(2, '0')}</div>
-      <div style="display:flex;align-items:center;gap:12px;font-size:26px;color:var(--fos-success)">${ic('bluetooth', 28, 'var(--fos-success)')}חיישן דופק מחובר</div></div>
-    <div style="padding:0 32px 24px">${Button({ label: t >= 27.25 ? 'המשך' : 'השהה', variant: 'primary', f: Math.max(btnf, pressed) })}</div>
-    ${nav([['fitness_center', 'אימון'], ['history', 'היסטוריה'], ['trending_up', 'מדדים']], 0)}`);
+  const sec = 12 * 60 + 34 + Math.floor(lt);
+  const elapsed = `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(sec % 60).padStart(2, '0')}`;
+  const resting = t >= 26.75 && t < 27.25;
+  const set = t >= 27.25 ? 2 : 1;                                     // 0-based: the third set after the rest
+  const done = set;                                                    // sets already finished
+  const progress = (done) / 20;
+  const chip = (icon, color, value, unit, beatScale = 0) => `<div style="background:var(--fos-surface);border-radius:999px;padding:8px 20px;display:flex;align-items:center;gap:12px">
+      <div style="transform:scale(${1 + beatScale})">${ic(icon, 28, color, 1, 1, 1.6)}</div><span style="font-size:32px;font-weight:700">${value}</span><span style="font-size:22px;color:var(--fos-text-60)">${unit}</span></div>`;
+  const dots = Array.from({ length: 4 }, (_, i) => {
+    const d = i < done, c = i === set;
+    return `<div style="width:24px;height:24px;border-radius:999px;box-sizing:border-box;border:3px solid ${d || c ? 'var(--fos-accent)' : 'var(--fos-text-40)'};background:${d ? 'var(--fos-accent)' : 'transparent'}"></div>`;
+  }).join('');
+  const card = resting
+    ? `<div style="background:var(--fos-glass);border-radius:48px;padding:32px;${col(4)};align-items:center">
+        <div style="font-size:26px;font-weight:700">מנוחה</div>
+        <div style="font-size:96px;font-weight:700;line-height:1.1">15</div>
+        <div style="font-size:26px;color:var(--fos-text-60)">הבא: לחיצת חזה · סט 3</div>
+        <div style="margin-top:20px">${Button({ label: 'דלג על המנוחה', variant: 'secondary', f: 1, full: false })}</div></div>`
+    : `<div style="background:var(--fos-surface);border-radius:48px;padding:28px 32px;${col(4)};align-items:center">
+        <div style="font-family:var(--fos-font-display);font-size:40px;font-weight:700">לחיצת חזה</div>
+        <div style="font-size:26px;color:var(--fos-text-60)">סט ${set + 1} מתוך 4 · 10 חזרות</div>
+        <div style="display:flex;gap:16px;margin-top:20px">${dots}</div></div>`;
+  const actions = resting ? '' : `<div style="display:flex;gap:20px;align-items:center;padding:0 0 24px">
+      <div style="width:104px;height:104px;border-radius:32px;background:var(--fos-text-08);display:flex;align-items:center;justify-content:center;flex:0 0 auto">${ic('pause', 48, 'var(--fos-text)', 1, 1)}</div>
+      <div style="flex:1">${Button({ label: 'סיימתי סט', variant: 'primary', f: Math.max(t >= 27.25 ? tween(t, 27.25) : 1, pressOf('ok', t)) })}</div></div>`;
+  return center(`${TopBar({ title: 'פלג גוף עליון', back: true })}
+    <div style="flex:1;${col(0)};padding:0 32px;min-height:0">
+      <div style="display:flex;align-items:center;padding-bottom:20px">
+        <div style="flex:1;${col(2)}"><div class="mono" style="font-size:68px;font-weight:700;line-height:1.1;text-align:right">${elapsed}</div>
+          <div style="font-size:24px;color:var(--fos-text-60)">זמן אימון</div></div>
+        <div style="${col(8)};align-items:flex-end">${chip('favorite', 'var(--fos-danger)', bpm, 'BPM', 0.2 * eq)}${chip('local_fire_department', 'var(--fos-text)', 96, 'קק״ל')}</div></div>
+      <div style="display:flex;font-size:24px;color:var(--fos-text-60);padding-bottom:12px"><span style="flex:1">תרגיל 1 מתוך 6</span><span>${Math.round(progress * 100)}%</span></div>
+      ${ProgressBar(progress)}
+      <div style="height:24px"></div>${card}
+      <div style="flex:1"></div>${actions}</div>`);
 }
 
 /* ============================================================ 9  terminal */

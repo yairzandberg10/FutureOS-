@@ -35,7 +35,7 @@ const CAPS = [
   { a: -0.4, b: 2.75, kind: 'plain', top: 270, size: 92, lines: ['כמה פעמים נגעת', 'בטלפון היום?'], stagger: 0.04 },
   { a: 5.0, b: 6.0, kind: 'plain', top: 610, size: 200, lines: ['בלי מסך', 'מגע.'], dim: (t) => (t >= 5.5 ? 0.3 : 1) },
   { a: 5.5, b: 6.0, kind: 'plain', top: 1130, size: 124, lines: ['רק מקשים.'], accent: true },
-  { a: 6.5, b: 8.85, kind: 'pill', top: 268, text: 'FutureOS', ring: 6.5, fill: 7.0, sub: 'טלפון שחוזר להיות כלי.', subAt: 7.3, out: 8.55 },
+  { a: 6.5, b: 8.85, kind: 'pill', top: 268, text: 'Future OS · Future Phone', fs: 62, ring: 6.5, fill: 7.0, sub: 'טלפון שחוזר להיות כלי.', subAt: 7.3, out: 8.55 },
   { a: 9.5, b: 12.0, kind: 'plain', top: 258, size: 112, lines: ['מעל 25 אפליקציות.'], sub: 'כל אחת בנויה למקשים.' },
   ...TOUR.map(([kind, a, x, y, z]) => (kind === 'keys'
     ? { a, b: a + 2, kind, top: 262, sub: x, win: [y, z] }
@@ -50,7 +50,7 @@ const CAPS = [
   { a: 47.0, b: 48.0, kind: 'plain', top: 258, size: 150, lines: ['רק מקשים.'], accent: true },
   { a: 48.0, b: 52.0, kind: 'plain', top: 258, size: 128, lines: ['כל אפליקציה.'], sub: 'מקש אחד.' },
   { a: 52.0, b: 54.0, kind: 'plain', top: 258, size: 128, lines: ['אתה. והמקשים.'] },
-  { a: 54.0, b: 60.01, kind: 'pill', top: 268, text: 'FutureOS', ring: 54.0, fill: 56.0, sub: 'טלפון שחוזר להיות כלי.', subAt: 56.3, sub2: 'הלינק בביו.', sub2At: 57.6 },
+  { a: 54.0, b: 60.01, kind: 'pill', top: 268, text: 'Future OS · Future Phone', fs: 62, ring: 54.0, fill: 56.0, sub: 'טלפון שחוזר להיות כלי.', subAt: 56.3, sub2: 'בקרוב.', sub2At: 57.6 },
 ];
 
 const wordSpans = (line, t, a, size, stagger = 0.06, colorFn) => line.split(' ').map((w, i) => {
@@ -76,7 +76,7 @@ function captionHTML(t, tf) {
       const press = t >= 55.95 ? pressOf('ok', t) : 0;
       const fade = c.out ? 1 - inv(c.out, c.out + 0.4, tf) : 1;
       const sc = (0.9 + 0.1 * pe) * (1 - 0.02 * press);
-      h = `<div style="opacity:${pe * fade};transform:translateY(${(1 - fade) * -70}px) scale(${sc})"><span class="pill" style="background:color-mix(in srgb, var(--fos-accent) ${sel * 100}%, transparent);color:color-mix(in srgb, #000 ${sel * 100}%, #fff)">${c.text}</span></div>`;
+      h = `<div style="opacity:${pe * fade};transform:translateY(${(1 - fade) * -70}px) scale(${sc})"><span class="pill" style="${c.fs ? `font-size:${c.fs}px;height:116px;padding:0 48px;direction:ltr;` : ''}background:color-mix(in srgb, var(--fos-accent) ${sel * 100}%, transparent);color:color-mix(in srgb, #000 ${sel * 100}%, #fff)">${c.text}</span></div>`;
       if (c.sub) h += `<div class="sub" style="opacity:${out3((tf - (c.subAt || c.a + 0.2)) / 0.25) * fade};margin-top:26px">${c.sub}</div>`;
       if (c.sub2) h += `<div class="sub" style="opacity:${out3((tf - c.sub2At) / 0.3)};margin-top:14px;color:var(--fos-accent);font-weight:700">${c.sub2}</div>`;
     } else if (c.kind === 'keys') {
@@ -153,7 +153,8 @@ function seek(t, tf = t) {
   if (scr.classList.contains('fos-light') !== light) scr.classList.toggle('fos-light', light);
   const c = camAt(tf);
   document.getElementById('world').style.transform = `translate(${c.ox}px,${c.oy}px) scale(${c.s})`;
-  const html = t >= 6.0 ? screenAt(t) : '';
+  // the SystemUI status bar is an overlay over every app; the app itself starts under it (StatusBarInset, 28dp)
+  const html = t >= 6.0 ? `${StatusBar('08:30')}<div class="app">${screenAt(t)}</div>` : '';
   scr.innerHTML = html + scr.dataset.punch;
   updatePhone(t, tf, t >= 6.0);
   document.getElementById('cap').innerHTML = captionHTML(t, tf);

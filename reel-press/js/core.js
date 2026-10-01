@@ -119,8 +119,21 @@ const Avatar = (name, size = 88, icon) => `
 
 const SoftKeyBar = (l, c, r) => `<div class="softbar"><div class="sb-side" style="text-align:right">${l || ''}</div><div class="sb-c">${c || ''}</div><div class="sb-side" style="text-align:left">${r || ''}</div></div>`;
 
-const StatusBar = (time = '08:30') => `
-  <div class="statusbar"><span class="sb-time">${time}</span><span class="sb-ic">${ic('signal_cellular_alt', 26, 'var(--fos-text)', 0.9)}${ic('wifi', 26, 'var(--fos-text)', 0.9)}${ic('battery_full', 30, 'var(--fos-text)', 0.9)}</span></div>`;
+/* SystemUI/statusbar/ui/StatusBarScreen.kt: a 28dp overlay over every app, black at 55%, an accent hairline at 18%; the clock
+   (13sp SemiBold) on the right, then Bluetooth, signal, the percentage (11sp) and the drawn battery pill (21x11dp) on the left.
+   White on any theme. Icons are Material Rounded, 13dp. */
+const SB_BT = 'M17.71 7.71L12 2h-1v7.59L6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 11 14.41V22h1l5.71-5.71-4.3-4.29 4.3-4.29zM13 5.83l1.88 1.88L13 9.59V5.83zm1.88 10.46L13 18.17v-3.76l1.88 1.88z';
+const SB_SIG = 'M17 4h3v16h-3zM5 14h3v6H5zm6-5h3v11h-3z';
+const sbIcon = (d) => `<svg viewBox="0 0 24 24" width="26" height="26" style="display:block;flex:0 0 auto"><path d="${d}" fill="rgba(255,255,255,0.9)"/></svg>`;
+const BatteryPill = (pct) => {
+  const w = 42, h = 22, nub = 3.2, bw = w - nub, sw = 2.2, ins = sw + 2.4, fw = (bw - ins * 2) * pct / 100;
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" style="display:block;flex:0 0 auto;margin-right:2px">
+    <rect x="${sw / 2}" y="${sw / 2}" width="${bw - sw}" height="${h - sw}" rx="5.2" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="${sw}"/>
+    <rect x="${bw}" y="${h / 2 - 4}" width="${nub}" height="8" rx="1.6" fill="rgba(255,255,255,0.85)"/>
+    <rect x="${ins}" y="${ins}" width="${fw}" height="${h - ins * 2}" rx="2.4" fill="#FFFFFF"/></svg>`;
+};
+const StatusBar = (time = '08:30', battery = 82) => `
+  <div class="statusbar"><span class="sb-time">${time}</span><span class="sb-ic">${sbIcon(SB_BT)}${sbIcon(SB_SIG)}<span class="sb-pct">${battery}%</span>${BatteryPill(battery)}</span></div>`;
 
 const ConfirmDialog = ({ message, confirm = 'מחק', cancel = 'ביטול', focus = 'cancel', ft = 1, scrim = 1, scale = 1 }) => {
   const fc = focus === 'confirm' ? ft : (1 - ft) * (focus === 'confirm' ? 1 : 0);
