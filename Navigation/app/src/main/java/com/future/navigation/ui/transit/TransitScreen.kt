@@ -37,11 +37,13 @@ import com.future.navigation.R
 import com.future.navigation.data.gtfs.LegType
 import com.future.navigation.data.gtfs.TransitItinerary
 import com.future.navigation.data.gtfs.TransitLeg
+import com.future.navigation.data.payment.FareCalculator
+import com.future.sharednav.components.FutureButton
 import com.future.sharednav.components.ScreenTopBar
 import com.future.sharednav.focus.FocusableItem
 
 @Composable
-fun TransitScreen(itinerary: TransitItinerary, onBack: () -> Unit) {
+fun TransitScreen(itinerary: TransitItinerary, onBack: () -> Unit, onPay: () -> Unit) {
     var expandedLeg by remember { mutableStateOf(-1) }
     val firstRideFocusRequester = remember { FocusRequester() }
     val firstRideIndex = remember(itinerary) { itinerary.legs.indexOfFirst { it.type == LegType.RIDE } }
@@ -90,6 +92,19 @@ fun TransitScreen(itinerary: TransitItinerary, onBack: () -> Unit) {
                 )
             }
         }
+
+        val fare = remember(itinerary) { FareCalculator.calculate(itinerary) }
+        FutureButton(
+            text = if (fare.totalAgorot > 0) {
+                stringResource(R.string.pay_for_trip, FareCalculator.format(fare.totalAgorot))
+            } else {
+                stringResource(R.string.payment_title)
+            },
+            theme = LocalFutureTheme.current,
+            onClick = onPay,
+            fillMaxWidth = true,
+            modifier = Modifier.padding(horizontal = FutureDimens.screenPadding, vertical = FutureDimens.spacingSm)
+        )
     }
 }
 

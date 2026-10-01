@@ -4,6 +4,26 @@ This repo has no carried-over git history (see root [README](README.md)), so thi
 
 ## Unreleased
 
+### Navigation: pay for a public-transit ride
+
+- **A "Pay for the trip · ₪X" button** on the transit itinerary screen opens a
+  payment screen with the fare per ride and the total. Fares follow the
+  official "Derech Shava" tariff (air-line distance between stops, free
+  transfer within 90 minutes in the yellow radius, Israel Railways priced from
+  the rail column), taken from the Rav-Pass tariff page published for the
+  Ministry of Transport.
+- **Rav-Kav Online in an in-app browser, with the user's details filled in.**
+  The browser works without a touchscreen (arrow-driven cursor, OK clicks,
+  2/8 scroll) and auto-fills name, ID, phone, email and Rav-Kav number only
+  on `ravkavonline.co.il` over HTTPS, never into password or card fields.
+- **Licensed payment apps** (Rav-Pass, Moovit, ANYWAY, Rav-Kav Online) are
+  offered when installed.
+- **"My details"** are stored AES-GCM encrypted with a Keystore key, on the
+  device only; credit-card data is never stored. ID numbers are check-digit
+  validated.
+- Transit legs now carry stop coordinates and the GTFS route type, which the
+  fare needs.
+
 ### New lock screen: PIN, face unlock, One UI / iOS style customisation
 
 - **Security.** A 4-8 digit PIN, stored only as an HMAC in an Android

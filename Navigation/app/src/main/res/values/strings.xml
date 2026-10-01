@@ -53,4 +53,36 @@
     <string name="gtfs_parsing">מעבד נתוני תחנות וקווים</string>
     <string name="gtfs_done">הנתונים עודכנו</string>
     <string name="gtfs_wifi_hint">מומלץ להתחבר לרשת Wi-Fi - זהו קובץ גדול</string>
+    <!-- תשלום על נסיעה -->
+    <string name="pay_for_trip">תשלום על הנסיעה · %1$s</string>
+    <string name="payment_title">תשלום על הנסיעה</string>
+    <string name="payment_fare_section">מחיר הנסיעה</string>
+    <string name="payment_total">סה״כ</string>
+    <string name="payment_fare_note">מחיר לפרופיל רגיל לפי מחירון דרך שווה, לפי מרחק אווירי בין התחנות. הנחות (ותיק, נוער, סטודנט) לפי הפרופיל אצל גורם התשלום.</string>
+    <string name="payment_mode_bus">קו %1$s</string>
+    <string name="payment_mode_light_rail">רכבת קלה %1$s</string>
+    <string name="payment_mode_rail">רכבת ישראל (הערכה)</string>
+    <string name="payment_distance_radius">%1$s ק״מ · טבעת %2$s</string>
+    <string name="payment_distance_unknown">אין מיקום לתחנות - חפש את המסלול מחדש</string>
+    <string name="payment_free_transfer">מעבר בתוך 90 דקות - ללא תשלום</string>
+    <string name="payment_methods_section">איך משלמים</string>
+    <string name="payment_web_title">רב-קו אונליין</string>
+    <string name="payment_web_summary">הזמנת חוזה לכרטיס הרב-קו בדפדפן · הפרטים שלך ימולאו לבד</string>
+    <string name="payment_web_summary_card">הזמנת חוזה לרב-קו ••%1$s · הפרטים שלך ימולאו לבד</string>
+    <string name="payment_apps_missing">אפליקציות התיקוף מהנייד (רב-פס, מוביט, ANYWAY) לא מותקנות במכשיר</string>
+    <string name="payment_details_section">הפרטים שלי</string>
+    <string name="payment_details_add">הוסף את הפרטים שלך</string>
+    <string name="payment_details_title">הפרטים שלי</string>
+    <string name="payment_field_first_name">שם פרטי</string>
+    <string name="payment_field_last_name">שם משפחה</string>
+    <string name="payment_field_id">תעודת זהות</string>
+    <string name="payment_field_phone">טלפון נייד</string>
+    <string name="payment_field_email">אימייל</string>
+    <string name="payment_field_ravkav">מספר כרטיס רב-קו</string>
+    <string name="payment_field_ravkav_hint">בגב הכרטיס, בפינה הימנית התחתונה</string>
+    <string name="payment_id_invalid">מספר תעודת הזהות לא תקין</string>
+    <string name="payment_details_privacy">הפרטים נשמרים מוצפנים במכשיר הזה בלבד, וממולאים רק באתר רב-קו אונליין. פרטי כרטיס אשראי לא נשמרים - מקלידים אותם רק בעמוד התשלום.</string>
+    <string name="payment_save">שמור</string>
+    <string name="payment_clear">מחק את הפרטים</string>
+    <string name="payment_web_keys_hint">חיצים - סמן · OK - לחיצה · 2/8 - גלילה · חזור - אחורה</string>
 </resources>

@@ -25,7 +25,12 @@ data class TransitLeg(
     /** true אם departureSeconds/arrivalSeconds עודכנו מנתון SIRI חי, לא רק מהלו"ז הסטטי. */
     val isRealtime: Boolean = false,
     /** שניות איחור לעומת הלו"ז המתוכנן (שלילי = מוקדם) - תקף רק כש-isRealtime. */
-    val delaySeconds: Int? = null
+    val delaySeconds: Int? = null,
+    /** מיקומי תחנות העלייה והירידה - רק ל-RIDE. מחיר הנסיעה נקבע לפי המרחק האווירי ביניהן. */
+    val fromStopLocation: LatLng? = null,
+    val toStopLocation: LatLng? = null,
+    /** route_type של GTFS - רק ל-RIDE (ר' DepartureRow.routeType). */
+    val routeType: Int? = null
 )
 
 data class TransitItinerary(
@@ -96,9 +101,9 @@ class TransitJourneyPlanner(private val dao: GtfsDao) {
                         val onwardHit = onwardTripStops.drop(onwardOriginIndex + 1).firstOrNull { it.stopId in destStopIds }
                         if (onwardHit != null) {
                             val destStop = destStops.first { it.stop.stopId == onwardHit.stopId }
-                            val transferStopName = dao.stopById(transfer.stopId)?.name ?: transfer.stopId
+                            val transferStopEntity = dao.stopById(transfer.stopId)
                             results += buildTransferItinerary(
-                                origin, destStop, transferStopName,
+                                origin, destStop, transferStopEntity?.name ?: transfer.stopId, transferStopEntity?.location,
                                 firstLegDep = dep, firstLegTripStops = tripStops, firstLegOriginIndex = originIndex, transferStop = transfer,
                                 secondLegDep = onward, secondLegTripStops = onwardTripStops, secondLegOriginIndex = onwardOriginIndex, secondLegArrival = onwardHit
                             )
@@ -130,6 +135,8 @@ class TransitJourneyPlanner(private val dao: GtfsDao) {
     }
 
     private data class NearbyStop(val stop: StopEntity, val distanceMeters: Double)
+
+    private val StopEntity.location: LatLng get() = LatLng(lat, lon)
 
     private suspend fun nearbyWalkableStops(point: LatLng): List<NearbyStop> {
         val latDelta = WALK_RADIUS_METERS / 111_320.0
@@ -172,7 +179,10 @@ class TransitJourneyPlanner(private val dao: GtfsDao) {
             departureSeconds = dep.departureSeconds,
             arrivalSeconds = arrival.arrivalSeconds,
             intermediateStopNames = intermediate,
-            fromStopId = origin.stop.stopId
+            fromStopId = origin.stop.stopId,
+            fromStopLocation = origin.stop.location,
+            toStopLocation = dest.stop.location,
+            routeType = dep.routeType
         )
         legs += walkLeg(dest.stop.name, "היעד שלך", dest.distanceMeters)
 
@@ -187,6 +197,7 @@ class TransitJourneyPlanner(private val dao: GtfsDao) {
         origin: NearbyStop,
         dest: NearbyStop,
         transferStopEntityName: String,
+        transferStopLocation: LatLng?,
         firstLegDep: DepartureRow,
         firstLegTripStops: List<DepartureRow>,
         firstLegOriginIndex: Int,
@@ -217,7 +228,10 @@ class TransitJourneyPlanner(private val dao: GtfsDao) {
             departureSeconds = firstLegDep.departureSeconds,
             arrivalSeconds = transferStop.arrivalSeconds,
             intermediateStopNames = firstIntermediate,
-            fromStopId = origin.stop.stopId
+            fromStopId = origin.stop.stopId,
+            fromStopLocation = origin.stop.location,
+            toStopLocation = transferStopLocation,
+            routeType = firstLegDep.routeType
         )
         legs += TransitLeg(
             type = LegType.RIDE,
@@ -228,7 +242,10 @@ class TransitJourneyPlanner(private val dao: GtfsDao) {
             departureSeconds = secondLegDep.departureSeconds,
             arrivalSeconds = secondLegArrival.arrivalSeconds,
             intermediateStopNames = secondIntermediate,
-            fromStopId = transferStop.stopId
+            fromStopId = transferStop.stopId,
+            fromStopLocation = transferStopLocation,
+            toStopLocation = dest.stop.location,
+            routeType = secondLegDep.routeType
         )
         legs += walkLeg(dest.stop.name, "היעד שלך", dest.distanceMeters)
 

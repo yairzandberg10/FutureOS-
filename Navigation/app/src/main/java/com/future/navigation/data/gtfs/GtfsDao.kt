@@ -16,6 +16,8 @@ data class DepartureRow(
     val serviceId: String,
     val routeShortName: String,
     val routeLongName: String,
+    /** route_type של GTFS (0=רק"ל, 2=רכבת, 3=אוטובוס) - קובע את טבלת התעריף (ר' data/payment/FareCalculator). */
+    val routeType: Int,
     val tripHeadsign: String
 )
 
@@ -45,7 +47,7 @@ interface GtfsDao {
     @Query(
         """
         SELECT st.tripId, st.stopId, st.arrivalSeconds, st.departureSeconds, st.stopSequence,
-               t.serviceId AS serviceId, r.shortName AS routeShortName, r.longName AS routeLongName,
+               t.serviceId AS serviceId, r.shortName AS routeShortName, r.longName AS routeLongName, r.type AS routeType,
                t.headsign AS tripHeadsign
         FROM gtfs_stop_times st
         JOIN gtfs_trips t ON t.tripId = st.tripId
@@ -61,7 +63,7 @@ interface GtfsDao {
     @Query(
         """
         SELECT st.tripId, st.stopId, st.arrivalSeconds, st.departureSeconds, st.stopSequence,
-               t.serviceId AS serviceId, r.shortName AS routeShortName, r.longName AS routeLongName,
+               t.serviceId AS serviceId, r.shortName AS routeShortName, r.longName AS routeLongName, r.type AS routeType,
                t.headsign AS tripHeadsign
         FROM gtfs_stop_times st
         JOIN gtfs_trips t ON t.tripId = st.tripId
@@ -75,7 +77,7 @@ interface GtfsDao {
     @Query(
         """
         SELECT st.tripId, st.stopId, st.arrivalSeconds, st.departureSeconds, st.stopSequence,
-               t.serviceId AS serviceId, r.shortName AS routeShortName, r.longName AS routeLongName,
+               t.serviceId AS serviceId, r.shortName AS routeShortName, r.longName AS routeLongName, r.type AS routeType,
                t.headsign AS tripHeadsign
         FROM gtfs_stop_times st
         JOIN gtfs_trips t ON t.tripId = st.tripId

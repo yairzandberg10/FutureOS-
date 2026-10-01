@@ -69,6 +69,13 @@ import com.future.navigation.ui.saved.SavedPlacesScreen
 import com.future.navigation.ui.saved.SavedPlacesViewModel
 import com.future.navigation.ui.theme.NavigationTheme
 import com.future.navigation.ui.transit.TransitScreen
+import com.future.navigation.data.payment.PaymentConfig
+import com.future.navigation.data.payment.PaymentProfileStore
+import com.future.navigation.ui.payment.PaymentDetailsScreen
+import com.future.navigation.ui.payment.PaymentWebScreen
+import com.future.navigation.ui.payment.TransitPaymentScreen
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 
@@ -85,6 +92,7 @@ class MainActivity : ComponentActivity() {
     private val gtfsImporter by lazy { GtfsImporter(gtfsDatabase) }
     private val siriRealtimeRepository by lazy { SiriRealtimeRepository() }
     private val transitRealtimeEnricher by lazy { TransitRealtimeEnricher(siriRealtimeRepository) }
+    private val paymentProfileStore by lazy { PaymentProfileStore(applicationContext) }
 
     private val navSessionViewModel: NavSessionViewModel by viewModels()
 
@@ -206,7 +214,8 @@ class MainActivity : ComponentActivity() {
                             routeOptionsViewModel = routeOptionsViewModel,
                             savedPlacesViewModel = savedPlacesViewModel,
                             gtfsSetupViewModel = gtfsSetupViewModel,
-                            routingRepository = routingRepository
+                            routingRepository = routingRepository,
+                            paymentProfileStore = paymentProfileStore
                         )
                     }
                   }
@@ -293,7 +302,8 @@ private fun AppNavHost(
     routeOptionsViewModel: RouteOptionsViewModel,
     savedPlacesViewModel: SavedPlacesViewModel,
     gtfsSetupViewModel: GtfsSetupViewModel,
-    routingRepository: RoutingRepository
+    routingRepository: RoutingRepository,
+    paymentProfileStore: PaymentProfileStore
 ) {
     val navController = rememberNavController()
 
@@ -368,8 +378,55 @@ private fun AppNavHost(
             if (itinerary == null) {
                 LaunchedEffect(Unit) { navController.popBackStack() }
             } else {
-                TransitScreen(itinerary = itinerary, onBack = { navController.popBackStack() })
+                TransitScreen(
+                    itinerary = itinerary,
+                    onBack = { navController.popBackStack() },
+                    onPay = { navController.navigate(Screen.TransitPayment.route) }
+                )
             }
+        }
+
+        composable(Screen.TransitPayment.route) {
+            val itinerary = navSessionViewModel.selectedItinerary.collectAsState().value
+            val profile by paymentProfileStore.profile.collectAsState()
+            if (itinerary == null) {
+                LaunchedEffect(Unit) { navController.popBackStack() }
+            } else {
+                TransitPaymentScreen(
+                    itinerary = itinerary,
+                    profile = profile,
+                    onBack = { navController.popBackStack() },
+                    // בלי פרטים אין מה למלא - קודם טופס הפרטים, ומשם ישר לדפדפן.
+                    onPayOnWeb = {
+                        if (profile.isEmpty) navController.navigate(Screen.PaymentDetails.route(thenPay = true))
+                        else navController.navigate(Screen.PaymentWeb.route)
+                    },
+                    onEditDetails = { navController.navigate(Screen.PaymentDetails.route(thenPay = false)) }
+                )
+            }
+        }
+
+        composable(
+            Screen.PaymentDetails.route,
+            arguments = listOf(navArgument("thenPay") { type = NavType.BoolType; defaultValue = false })
+        ) { entry ->
+            val thenPay = entry.arguments?.getBoolean("thenPay") ?: false
+            PaymentDetailsScreen(
+                store = paymentProfileStore,
+                onBack = { navController.popBackStack() },
+                onSaved = {
+                    navController.popBackStack()
+                    if (thenPay) navController.navigate(Screen.PaymentWeb.route)
+                }
+            )
+        }
+
+        composable(Screen.PaymentWeb.route) {
+            val profile by paymentProfileStore.profile.collectAsState()
+            // הכתובת נקראת פעם אחת לכניסה למסך - עדכון Remote Config באמצע
+            // לא טוען מחדש את העמוד ולא מאבד את מה שהוקלד בו.
+            val url = remember { PaymentConfig.webUrl }
+            PaymentWebScreen(url = url, profile = profile, onClose = { navController.popBackStack() })
         }
 
         composable(Screen.SavedPlaces.route) {
