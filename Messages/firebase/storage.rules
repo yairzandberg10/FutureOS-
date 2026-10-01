@@ -11,5 +11,22 @@ service firebase.storage {
         && request.resource.size < 25 * 1024 * 1024
         && request.resource.metadata.from == request.auth.uid;
     }
+
+    // Jam (Music app): the songs members add to a shared queue. Only members of
+    // that jam read them; only the member who queued the song uploads it, once.
+    // Deleted by the jamCleanup function when the jam ends. Checking Firestore
+    // from here needs the one-time permission `firebase deploy` asks for.
+    match /jams/{jamId}/{itemId} {
+      function jamMember() {
+        return request.auth != null
+          && firestore.exists(/databases/(default)/documents/jams/$(jamId)/members/$(request.auth.uid));
+      }
+      allow read: if jamMember();
+      allow create: if jamMember()
+        && request.resource.size < 40 * 1024 * 1024
+        && request.resource.contentType.matches('audio/.*')
+        && firestore.get(/databases/(default)/documents/jams/$(jamId)/queue/$(itemId)).data.addedBy == request.auth.uid;
+      allow update, delete: if false;
+    }
   }
 }

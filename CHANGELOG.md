@@ -4,6 +4,35 @@ This repo has no carried-over git history (see root [README](README.md)), so thi
 
 ## Unreleased
 
+### Music: Jam - shared listening with friends, like Spotify Premium
+
+- **Open a jam, share a 6-digit code.** `0` on Now Playing (or on the main
+  menu) opens the jam screen. "Open jam" gives a code; friends pick "Join" and
+  type it. No account and no SMS: guests sign in anonymously, and a name is
+  asked once. What was playing carries on as the first song of the jam.
+- **One queue, everyone's songs.** Each member adds songs from their own
+  phone (`1`, or OK on any song in the library while in a jam). The song is
+  uploaded once; whoever added it plays it from the local file, everyone else
+  streams it. Each row shows the initials of who added it and the upload %.
+- **In sync on every phone.** The jam is one Firestore document - current
+  song, playing, position and the server time of that position - and each
+  device works out where the song is now. A device more than 1.5 s off seeks
+  back in line; server time is measured once per join. "Listen on this
+  device" can be turned off, for when everyone is next to the host's speaker.
+- **Host control.** The host plays, pauses and skips (`4`/`5`/`6` or the Now
+  Playing controls; a pause from the media notification or unplugged
+  headphones pauses everyone), reorders and removes, and can let everyone
+  control playback or close the jam to new members. The host advances to the
+  next song when one ends, and removes members.
+- **Server side, in Messages' Firebase project.** New Firestore and Storage
+  rules (members-only reads, only the adder uploads, a random jam id behind
+  the code so a reused code exposes nothing of an old jam), and two Cloud
+  Functions: `jamCleanup` deletes members, queue and files when a jam ends,
+  `jamExpiry` ends jams after 12 hours. Setup: `Messages/firebase/README.md`.
+- **Fix found on the way:** the player screen kept showing the previous
+  song's title when a one-song queue was replaced by another one-song queue
+  (`PlayerController.syncQueueFrom` only compared the queue length).
+
 ### New lock screen: PIN, face unlock, One UI / iOS style customisation
 
 - **Security.** A 4-8 digit PIN, stored only as an HMAC in an Android

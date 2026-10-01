@@ -14,6 +14,21 @@ if (keystorePropertiesFile.exists()) {
     keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
 }
 
+/**
+ * הג'אם (האזנה משותפת) רץ על אותו פרויקט Firebase של Messages. google-services.json
+ * של פרויקט מכיל את כל האפליקציות שלו, ולכן אחרי שמוסיפים את com.future.music
+ * לפרויקט מספיק קובץ אחד: אם אין קובץ ב-Music/app, משתמשים בזה של Messages.
+ * הקובץ פרטי ולא נכנס ל-git. בלי קובץ שמכיר את com.future.music התוסף לא מוחל
+ * (הוא היה נכשל), והמוזיקה עובדת בדיוק כמו קודם - רק בלי ג'אם. ראו README.
+ */
+val googleServicesJson = file("google-services.json")
+val firebaseJson = listOf(googleServicesJson, rootProject.file("../Messages/app/google-services.json"))
+    .firstOrNull { it.exists() && it.readText().contains("\"com.future.music\"") }
+if (firebaseJson != null) {
+    if (firebaseJson != googleServicesJson) firebaseJson.copyTo(googleServicesJson, overwrite = true)
+    apply(plugin = "com.google.gms.google-services")
+}
+
 android {
     namespace = "com.future.music"
     compileSdk = 37
@@ -26,6 +41,9 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // נקרא ב-JamBackend: בלי google-services.json אין FirebaseApp, וכל קריאה
+        // ל-Firebase הייתה זורקת חריגה.
+        buildConfigField("boolean", "FIREBASE_CONFIGURED", (firebaseJson != null).toString())
     }
 
     signingConfigs {
@@ -79,6 +97,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -97,6 +116,14 @@ dependencies {
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.session)
     implementation(libs.androidx.media3.common)
+
+    // ג'אם: כניסה אנונימית (Auth), התור והמצב המשותף (Firestore) וקובצי השירים
+    // שהמשתתפים מוסיפים (Storage). לא עושים כלום בלי google-services.json.
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.auth)
+    implementation(libs.firebase.firestore)
+    implementation(libs.firebase.storage)
+    implementation(libs.kotlinx.coroutines.play.services)
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)

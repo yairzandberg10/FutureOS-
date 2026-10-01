@@ -62,6 +62,8 @@ fun HomeScreen(
     onOpenEqualizer: () -> Unit,
     onOpenDevices: () -> Unit,
     onOpenQueue: () -> Unit,
+    onOpenJam: () -> Unit,
+    jamSubtitle: String,
     onOpenNowPlaying: () -> Unit,
     onTogglePlay: () -> Unit,
     // הפריט שנפתח לאחרונה מהתפריט הזה (לפי digit) - כשחוזרים "אחורה", הפוקוס
@@ -79,6 +81,7 @@ fun HomeScreen(
         HomeItem("7", FutureIcons.Equalizer, "אקולייזר", "אקולייזר מלא ואפקטים", onOpenEqualizer),
         HomeItem("8", FutureIcons.Headphones, "התקני שמע", "Bluetooth, אוזניות ורמקולים", onOpenDevices),
         HomeItem("9", FutureIcons.AutoMirrored.QueueMusic, "תור הניגון", "מה מתנגן הבא", onOpenQueue),
+        HomeItem("0", FutureIcons.Groups, "ג'אם", jamSubtitle, onOpenJam),
     )
 
     // פוקוס אוטומטי ומלא על הפריט הראשון בתפריט מיד כשהוא נפתח - בלי צורך

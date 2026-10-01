@@ -132,7 +132,12 @@ class PlayerController(private val context: Context) {
      * קרא ל-setMediaItems ועצר את השיר שהתנגן באמצע. בונים את התור מהנגן עצמו.
      */
     private fun syncQueueFrom(player: Player) {
-        if (currentQueue.size == player.mediaItemCount) return
+        // גם כשהגודל זהה: הג'אם מחליף את השיר היחיד בתור בשיר הבא, ובלי הבדיקה
+        // הזו המסך המשיך להציג את השם של השיר הקודם.
+        val index = player.currentMediaItemIndex
+        val sameCurrent = index !in currentQueue.indices || index >= player.mediaItemCount ||
+            currentQueue[index].id.toString() == player.getMediaItemAt(index).mediaId
+        if (currentQueue.size == player.mediaItemCount && sameCurrent) return
         currentQueue = (0 until player.mediaItemCount).map { player.getMediaItemAt(it).toSong() }
     }
 

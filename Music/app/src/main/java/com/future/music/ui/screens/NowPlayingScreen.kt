@@ -100,6 +100,8 @@ fun NowPlayingScreen(
     onOpenDevices: () -> Unit,
     onOpenSound: () -> Unit,
     onOpenMenu: () -> Unit,
+    onOpenJam: () -> Unit,
+    title: String = "מתנגן כעת",
 ) {
     val song = playerState.currentSong
     var showPlaylistDialog by remember { mutableStateOf(false) }
@@ -131,6 +133,10 @@ fun NowPlayingScreen(
             .focusable()
             .onKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
+                if (digitForKey(event.key) == "0") {
+                    onOpenJam()
+                    return@onKeyEvent true
+                }
                 if (song != null) {
                     when (digitForKey(event.key)) {
                         "1" -> { onToggleFavorite(); return@onKeyEvent true }
@@ -154,9 +160,12 @@ fun NowPlayingScreen(
             }
     ) {
         ScreenTopBar(
-            title = "מתנגן כעת",
+            title = title,
             theme = theme,
             onBack = onBack,
+            trailingIcon = FutureIcons.Groups,
+            trailingContentDescription = "ג'אם (0)",
+            onTrailingClick = onOpenJam,
         )
 
         val artBitmap = rememberAlbumArt(song?.uri)

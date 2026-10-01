@@ -18,4 +18,7 @@ sealed class Route {
     data object Sound : Route()
     data object Devices : Route()
     data class PlaylistAdd(val playlistId: Long, val name: String) : Route()
+    data object Jam : Route()
+    data object JamAdd : Route()
+    data object JamMembers : Route()
 }

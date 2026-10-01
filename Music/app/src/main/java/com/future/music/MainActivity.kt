@@ -53,6 +53,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // ג'אם שהיה פעיל לפני שהמערכת סגרה את האפליקציה - חוזרים אליו.
+        com.future.music.jam.JamSession.init(this)
+        com.future.music.jam.JamSession.restore()
         openUri.value = viewUriOf(intent)
         setContent { MusicApp(openUri = openUri.value, onOpened = { openUri.value = null }) }
     }

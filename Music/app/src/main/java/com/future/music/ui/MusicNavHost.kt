@@ -39,6 +39,15 @@ import com.future.music.ui.screens.SongListScreen
 import com.future.music.ui.screens.EqualizerScreen
 import com.future.music.ui.screens.AudioDevicesScreen
 import com.future.music.ui.screens.PlaylistAddSongsScreen
+import com.future.music.ui.screens.JamScreen
+import com.future.music.ui.screens.JamAddSongsScreen
+import com.future.music.ui.screens.JamMembersScreen
+import com.future.music.data.Song
+import com.future.music.jam.JamPhase
+import com.future.music.jam.JamSession
+import com.future.music.jam.isJamSongId
+import com.future.sharednav.components.FutureSnackbarHost
+import com.future.sharednav.components.rememberFutureSnackbarState
 import com.future.sharednav.theme.FutureTheme
 import kotlinx.coroutines.delay
 
@@ -60,6 +69,11 @@ fun MusicNavHost(
     BackHandler(enabled = backStack.size > 1) { backStack.removeAt(backStack.lastIndex) }
     fun push(route: Route) = backStack.add(route)
     fun pop() { if (backStack.size > 1) backStack.removeAt(backStack.lastIndex) }
+    // מעבר הלוך ושוב בין הג'אם למסך הניגון לא בונה מחסנית: אם היעד הוא המסך
+    // שמתחת, חוזרים אליו.
+    fun goTo(route: Route) {
+        if (backStack.getOrNull(backStack.lastIndex - 1) == route) pop() else push(route)
+    }
 
     // גרסת הספרייה - עולה כשמשהו משתנה ב-MediaStore (שיר שהורד, הקלטה חדשה,
     // קובץ שנמחק) או כשחוזרים לאפליקציה, והרשימות נטענות מחדש לבד.
@@ -117,9 +131,16 @@ fun MusicNavHost(
 
     // שחזור התור מהפעם הקודמת - רק פעם אחת, ורק אם עדיין אין ניגון פעיל
     // (למשל אם ה-service כבר רץ מריצה קודמת של התהליך).
-    LaunchedEffect(allSongs, playerState.isConnected) {
+    // רק השלב ומספר המשתתפים - לא כל עדכון של הג'אם (התקדמות העלאה, מיקום)
+    // צריך להרכיב מחדש את כל המסך.
+    val jamPhase by remember { androidx.compose.runtime.derivedStateOf { JamSession.state.phase } }
+    val jamMembers by remember { androidx.compose.runtime.derivedStateOf { JamSession.state.members.size } }
+    LaunchedEffect(allSongs, playerState.isConnected, jamPhase) {
         if (playerState.isConnected) playerController.adoptLibrary(allSongs)
-        if (!restoredLastQueue && allSongs.isNotEmpty() && playerState.isConnected && playerState.currentSong == null) {
+        // בזמן ג'אם (או התחברות אליו) הנגן שייך לג'אם - לא טוענים מעליו את התור הישן.
+        if (!restoredLastQueue && allSongs.isNotEmpty() && playerState.isConnected && playerState.currentSong == null &&
+            jamPhase == JamPhase.IDLE
+        ) {
             restoredLastQueue = true
             val last = playlistStore.getLastQueue()
             if (last != null) {
@@ -134,16 +155,50 @@ fun MusicNavHost(
     // שמירת מיקום/תור תקופתית כדי לתמוך בהמשך-מהיכן-שהפסקת בפתיחה הבאה.
     LaunchedEffect(playerState.currentSong?.id, playerState.queue.size) {
         val s = playerController.state
-        if (s.queue.isNotEmpty()) playlistStore.saveLastQueue(s.queue.map { it.id }, s.currentIndex, s.positionMs)
+        if (s.queue.isNotEmpty() && s.queue.none { isJamSongId(it.id) }) playlistStore.saveLastQueue(s.queue.map { it.id }, s.currentIndex, s.positionMs)
     }
     LaunchedEffect(playerState.isPlaying) {
         while (playerController.state.isPlaying) {
             delay(5000)
             playerController.tick()
             val s = playerController.state
-            if (s.queue.isNotEmpty()) playlistStore.saveLastQueue(s.queue.map { it.id }, s.currentIndex, s.positionMs)
+            if (s.queue.isNotEmpty() && s.queue.none { isJamSongId(it.id) }) playlistStore.saveLastQueue(s.queue.map { it.id }, s.currentIndex, s.positionMs)
         }
     }
+
+    // בזמן ג'אם הפקדים שולטים בג'אם (לכולם, או רק בהאזנה שלי - ראו JamSession),
+    // ו-OK על שיר מהספרייה מוסיף אותו לתור המשותף במקום להחליף את מה שמתנגן.
+    fun togglePlay() {
+        if (JamSession.isActive) JamSession.togglePlay() else playerController.togglePlayPause()
+    }
+    fun playList(songs: List<Song>, index: Int) {
+        if (JamSession.isActive) songs.getOrNull(index)?.let { JamSession.addSongs(listOf(it)) }
+        else playerController.playQueue(songs, index)
+    }
+
+    // הג'אם הסתיים (או שהוסרנו) כשאנחנו במסך ההוספה/המשתתפים - חוזרים למסך הג'אם.
+    LaunchedEffect(jamPhase) {
+        if (jamPhase == JamPhase.IDLE) {
+            while (backStack.size > 1 && (backStack.last() is Route.JamAdd || backStack.last() is Route.JamMembers)) {
+                backStack.removeAt(backStack.lastIndex)
+            }
+        }
+    }
+
+    /** מה שמתנגן עכשיו ממשיך כשיר הראשון בג'אם חדש, עם עד שלושה שירים שאחריו. */
+    fun jamCarry(): JamSession.Carry? {
+        val s = playerController.state
+        val current = s.queue.getOrNull(s.currentIndex) ?: return null
+        if (current.id < 0) return null
+        return JamSession.Carry(
+            songs = s.queue.drop(s.currentIndex).filter { it.id >= 0 }.take(4),
+            positionMs = s.positionMs,
+            playing = s.isPlaying,
+        )
+    }
+
+    val snackbar = rememberFutureSnackbarState()
+    LaunchedEffect(Unit) { JamSession.messages.collect { snackbar.show(it) } }
 
     fun toggleFavorite(songId: Long) {
         playlistStore.toggleFavorite(songId)
@@ -199,9 +254,12 @@ fun MusicNavHost(
             onOpenSearch = { lastOpenedHomeItemId = "6"; push(Route.Search) },
             onOpenEqualizer = { lastOpenedHomeItemId = "7"; push(Route.Sound) },
             onOpenDevices = { lastOpenedHomeItemId = "8"; push(Route.Devices) },
-            onOpenQueue = { lastOpenedHomeItemId = "9"; push(Route.Queue) },
+            // בזמן ג'אם התור הוא התור המשותף.
+            onOpenQueue = { lastOpenedHomeItemId = "9"; push(if (JamSession.isActive) Route.Jam else Route.Queue) },
+            onOpenJam = { lastOpenedHomeItemId = "0"; push(Route.Jam) },
+            jamSubtitle = if (jamPhase == JamPhase.ACTIVE) "פעיל · $jamMembers משתתפים" else "האזנה משותפת עם חברים",
             onOpenNowPlaying = { push(Route.NowPlaying) },
-            onTogglePlay = playerController::togglePlayPause,
+            onTogglePlay = ::togglePlay,
             lastOpenedItemId = lastOpenedHomeItemId,
         )
 
@@ -211,9 +269,9 @@ fun MusicNavHost(
             theme = theme,
             playerState = playerState,
             onBack = ::pop,
-            onPlaySong = { index -> playerController.playQueue(allSongs, index) },
+            onPlaySong = { index -> playList(allSongs, index) },
             onOpenNowPlaying = { push(Route.NowPlaying) },
-            onTogglePlay = playerController::togglePlayPause,
+            onTogglePlay = ::togglePlay,
             emptyMessage = "לא נמצאה מוזיקה בטלפון",
         )
 
@@ -232,9 +290,9 @@ fun MusicNavHost(
                 theme = theme,
                 playerState = playerState,
                 onBack = ::pop,
-                onPlaySong = { index -> playerController.playQueue(songs, index) },
+                onPlaySong = { index -> playList(songs, index) },
                 onOpenNowPlaying = { push(Route.NowPlaying) },
-                onTogglePlay = playerController::togglePlayPause,
+                onTogglePlay = ::togglePlay,
                 topBarTrailingIcon = FutureIcons.Edit,
                 topBarTrailingDescription = "שינוי שם האמן",
                 onTopBarTrailingClick = { renamingArtist = route.artist },
@@ -273,9 +331,9 @@ fun MusicNavHost(
                 theme = theme,
                 playerState = playerState,
                 onBack = ::pop,
-                onPlaySong = { index -> playerController.playQueue(songs, index) },
+                onPlaySong = { index -> playList(songs, index) },
                 onOpenNowPlaying = { push(Route.NowPlaying) },
-                onTogglePlay = playerController::togglePlayPause,
+                onTogglePlay = ::togglePlay,
             )
         }
 
@@ -302,9 +360,9 @@ fun MusicNavHost(
                 theme = theme,
                 playerState = playerState,
                 onBack = ::pop,
-                onPlaySong = { index -> playerController.playQueue(songs, index) },
+                onPlaySong = { index -> playList(songs, index) },
                 onOpenNowPlaying = { push(Route.NowPlaying) },
-                onTogglePlay = playerController::togglePlayPause,
+                onTogglePlay = ::togglePlay,
                 emptyMessage = "אין שירים בפלייליסט הזה עדיין",
                 headerActionLabel = "הוספת שירים",
                 onHeaderAction = { push(Route.PlaylistAdd(route.playlistId, route.name)) },
@@ -346,9 +404,9 @@ fun MusicNavHost(
             theme = theme,
             playerState = playerState,
             onBack = ::pop,
-            onPlaySong = { index -> playerController.playQueue(favorites, index) },
+            onPlaySong = { index -> playList(favorites, index) },
             onOpenNowPlaying = { push(Route.NowPlaying) },
-            onTogglePlay = playerController::togglePlayPause,
+            onTogglePlay = ::togglePlay,
             emptyMessage = "אין עדיין שירים מועדפים",
         )
 
@@ -357,13 +415,15 @@ fun MusicNavHost(
             theme = theme,
             playerState = playerState,
             onBack = ::pop,
-            onPlayResults = { songs, index -> playerController.playQueue(songs, index) },
+            onPlayResults = { songs, index -> playList(songs, index) },
             onOpenNowPlaying = { push(Route.NowPlaying) },
-            onTogglePlay = playerController::togglePlayPause,
+            onTogglePlay = ::togglePlay,
         )
 
         is Route.NowPlaying -> {
-            val currentSongId = playerState.currentSong?.id
+            // שיר מהג'אם (מזהה שלילי) לא נמצא בספרייה - אין לו מועדף או פלייליסט.
+            val currentSongId = playerState.currentSong?.id?.takeIf { it >= 0 }
+            val inJam = jamPhase == JamPhase.ACTIVE
             NowPlayingScreen(
                 theme = theme,
                 playerState = playerState,
@@ -371,10 +431,10 @@ fun MusicNavHost(
                 playlists = playlists,
                 onBack = if (backStack.size > 1) ::pop else null,
                 onTick = playerController::tick,
-                onTogglePlay = playerController::togglePlayPause,
-                onNext = playerController::skipToNext,
-                onPrevious = playerController::skipToPrevious,
-                onSeekRelative = playerController::seekRelative,
+                onTogglePlay = ::togglePlay,
+                onNext = { if (JamSession.isActive) JamSession.next() else playerController.skipToNext() },
+                onPrevious = { if (JamSession.isActive) JamSession.previous() else playerController.skipToPrevious() },
+                onSeekRelative = { delta -> if (JamSession.isActive) JamSession.seekRelative(delta) else playerController.seekRelative(delta) },
                 onToggleShuffle = playerController::toggleShuffle,
                 onCycleRepeat = playerController::cycleRepeatMode,
                 onToggleFavorite = { currentSongId?.let(::toggleFavorite) },
@@ -382,6 +442,8 @@ fun MusicNavHost(
                 onOpenDevices = { push(Route.Devices) },
                 onOpenSound = { push(Route.Sound) },
                 onOpenMenu = ::openMainMenu,
+                onOpenJam = { goTo(Route.Jam) },
+                title = if (inJam) "מתנגן בג'אם" else "מתנגן כעת",
             )
         }
 
@@ -399,7 +461,21 @@ fun MusicNavHost(
             onBack = ::pop,
             onOpenEqualizer = { push(Route.Sound) },
         )
+
+        is Route.Jam -> JamScreen(
+            theme = theme,
+            onBack = ::pop,
+            onOpenAdd = { push(Route.JamAdd) },
+            onOpenMembers = { push(Route.JamMembers) },
+            onOpenNowPlaying = { goTo(Route.NowPlaying) },
+            carry = ::jamCarry,
+        )
+
+        is Route.JamAdd -> JamAddSongsScreen(allSongs = allSongs, theme = theme, onBack = ::pop)
+
+        is Route.JamMembers -> JamMembersScreen(theme = theme, onBack = ::pop)
     }
     }
+    FutureSnackbarHost(snackbar, theme)
     }
 }

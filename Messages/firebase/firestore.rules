@@ -72,5 +72,135 @@ service cloud.firestore {
         && request.resource.data.expireAt <= request.time + duration.value(31, 'd');
       allow update: if false;
     }
+
+    // ------------------------------------------------------------------
+    // Jam (Music app): shared listening. Guests sign in anonymously - a jam
+    // needs nobody's phone number, only its 6-digit code. Nothing here is
+    // readable by the phone-verified chat rules above, and nothing above is
+    // reachable by an anonymous user (every chat rule requires a phone number).
+
+    function signedIn() {
+      return request.auth != null;
+    }
+    function jamName(v) {
+      return v is string && v.size() > 0 && v.size() <= 30;
+    }
+
+    // Code -> jam id. A random jam id behind a short code means a code that is
+    // freed and reused later opens nothing of the old jam to its old members.
+    match /jamCodes/{code} {
+      allow get: if signedIn();
+      allow list, update: if false;
+      allow create: if signedIn() && code.matches('^[0-9]{6}$')
+        && request.resource.data.keys().hasOnly(['jam', 'expireAt'])
+        && request.resource.data.jam is string
+        && getAfter(/databases/$(database)/documents/jams/$(request.resource.data.jam)).data.hostUid == request.auth.uid
+        && request.resource.data.expireAt is timestamp
+        && request.resource.data.expireAt <= request.time + duration.value(13, 'h');
+      allow delete: if signedIn()
+        && get(/databases/$(database)/documents/jams/$(resource.data.jam)).data.hostUid == request.auth.uid;
+    }
+
+    match /jams/{jamId} {
+      function jamDoc() {
+        return get(/databases/$(database)/documents/jams/$(jamId)).data;
+      }
+      function member() {
+        return signedIn() && exists(/databases/$(database)/documents/jams/$(jamId)/members/$(request.auth.uid));
+      }
+      // The host, or every member once the host turned on "everyone controls".
+      function controller() {
+        return member() && (jamDoc().hostUid == request.auth.uid || jamDoc().guestsControl == true);
+      }
+      // The shared playback state. `at` is the writer's estimate of server time
+      // (see JamSession.estimateClockOffset), so it is checked only when written.
+      function playbackOk(changed) {
+        let d = request.resource.data;
+        return (d.cur == null || (d.cur is string && d.cur.size() <= 40))
+          && d.playing is bool
+          && d.pos is int && d.pos >= 0 && d.pos <= 86400000
+          && d.at is timestamp
+          && (!('at' in changed)
+            || (d.at > request.time - duration.value(5, 'm') && d.at < request.time + duration.value(5, 'm')));
+      }
+
+      allow get: if member();
+      allow list: if false;
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['hostUid', 'hostName', 'code', 'open', 'guestsControl',
+             'cur', 'playing', 'pos', 'at', 'createdAt', 'expireAt'])
+        && request.resource.data.hostUid == request.auth.uid
+        && jamName(request.resource.data.hostName)
+        && request.resource.data.code is string && request.resource.data.code.matches('^[0-9]{6}$')
+        && request.resource.data.open == true
+        && request.resource.data.guestsControl == false
+        && request.resource.data.cur == null
+        && request.resource.data.playing == false
+        && request.resource.data.pos == 0
+        && request.resource.data.at == request.time
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.expireAt is timestamp
+        && request.resource.data.expireAt <= request.time + duration.value(13, 'h');
+      allow update: if signedIn() && (
+        (resource.data.hostUid == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['open', 'guestsControl', 'cur', 'playing', 'pos', 'at'])
+          && request.resource.data.open is bool
+          && request.resource.data.guestsControl is bool
+          && playbackOk(request.resource.data.diff(resource.data).affectedKeys()))
+        || (resource.data.guestsControl == true && member()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['cur', 'playing', 'pos', 'at'])
+          && playbackOk(request.resource.data.diff(resource.data).affectedKeys()))
+      );
+      // Ending the jam. The jamCleanup function removes members, queue and files.
+      allow delete: if signedIn() && resource.data.hostUid == request.auth.uid;
+
+      match /members/{uid} {
+        allow get: if signedIn() && (request.auth.uid == uid || member());
+        allow list: if member();
+        // Joining needs only the code - and an open jam. getAfter: the host joins
+        // in the same transaction that creates the jam.
+        allow create: if signedIn() && request.auth.uid == uid
+          && getAfter(/databases/$(database)/documents/jams/$(jamId)).data.open == true
+          && request.resource.data.keys().hasOnly(['name', 'joinedAt'])
+          && jamName(request.resource.data.name)
+          && request.resource.data.joinedAt == request.time;
+        // `ping` is the clock-offset probe: always the server's own time.
+        allow update: if signedIn() && request.auth.uid == uid
+          && request.resource.data.keys().hasOnly(['name', 'joinedAt', 'ping'])
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'ping'])
+          && jamName(request.resource.data.name)
+          && (!('ping' in request.resource.data.diff(resource.data).affectedKeys())
+            || request.resource.data.ping == request.time);
+        // Leaving, or the host removing someone.
+        allow delete: if signedIn() && (request.auth.uid == uid || jamDoc().hostUid == request.auth.uid);
+      }
+
+      match /queue/{itemId} {
+        allow read: if member();
+        allow create: if member()
+          && request.resource.data.keys().hasOnly(['title', 'artist', 'durationMs', 'addedBy', 'addedByName',
+               'addedAt', 'order', 'ready'])
+          && request.resource.data.addedBy == request.auth.uid
+          && request.resource.data.title is string && request.resource.data.title.size() <= 200
+          && request.resource.data.artist is string && request.resource.data.artist.size() <= 200
+          && request.resource.data.durationMs is int && request.resource.data.durationMs >= 0
+          && jamName(request.resource.data.addedByName)
+          && request.resource.data.addedAt == request.time
+          && request.resource.data.order is number
+          && request.resource.data.ready == false;
+        allow update: if member() && (
+          // The uploader marks its own song as uploaded.
+          (resource.data.addedBy == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ready'])
+            && request.resource.data.ready == true)
+          // Whoever controls playback reorders.
+          || (controller()
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['order'])
+            && request.resource.data.order is number)
+        );
+        allow delete: if member() && (resource.data.addedBy == request.auth.uid || controller());
+      }
+    }
   }
 }
