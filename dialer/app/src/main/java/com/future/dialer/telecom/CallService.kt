@@ -33,7 +33,17 @@ class CallService : InCallService() {
         override fun onStateChanged(call: Call, state: Int) {
             _activeCall.value = call
             _callState.value = state
+            if (state == Call.STATE_DISCONNECTED) _postDialWait.value = null
             onCallStateKnown(state)
+        }
+
+        /**
+         * המספר שחויג כולל ";" (למשל מספר מוקד ואחריו מספר כרטיס): Telecom עוצר
+         * אחרי שהשיחה מתחברת ומחכה לאישור לפני שהוא שולח את שאר הספרות כטונים.
+         * בלי הטיפול הזה השיחה נשארת תקועה בהמתנה והספרות לעולם לא נשלחות.
+         */
+        override fun onPostDialWait(call: Call, remainingPostDialSequence: String) {
+            if (call == _activeCall.value) _postDialWait.value = remainingPostDialSequence
         }
     }
 
@@ -52,6 +62,7 @@ class CallService : InCallService() {
         if (_activeCall.value == call) {
             _activeCall.value = null
             _callState.value = null
+            _postDialWait.value = null
             stopRecording()
         }
         notifyCallNoLongerRinging()
@@ -256,6 +267,10 @@ class CallService : InCallService() {
         private val _isRecording = MutableStateFlow(false)
         val isRecording: StateFlow<Boolean> = _isRecording.asStateFlow()
 
+        /** הספרות שמחכות לאישור אחרי ";" במספר שחויג, או null (ר' onPostDialWait). */
+        private val _postDialWait = MutableStateFlow<String?>(null)
+        val postDialWait: StateFlow<String?> = _postDialWait.asStateFlow()
+
         private var recorder: MediaRecorder? = null
         private var recordingFile: File? = null
 
@@ -301,6 +316,12 @@ class CallService : InCallService() {
 
         fun stopDtmfTone() {
             _activeCall.value?.stopDtmfTone()
+        }
+
+        /** [send] = true שולח את הספרות הממתינות; false מוותר עליהן והשיחה ממשיכה. */
+        fun continuePostDial(send: Boolean) {
+            _postDialWait.value = null
+            _activeCall.value?.postDialContinue(send)
         }
 
         /**

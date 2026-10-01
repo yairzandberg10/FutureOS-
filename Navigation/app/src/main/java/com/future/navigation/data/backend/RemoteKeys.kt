@@ -2,7 +2,6 @@ package com.future.navigation.data.backend
 
 import android.util.Log
 import com.future.navigation.BuildConfig
-import com.future.navigation.data.payment.PaymentConfig
 import com.google.firebase.remoteconfig.FirebaseRemoteConfig
 import com.google.firebase.remoteconfig.remoteConfigSettings
 
@@ -27,7 +26,6 @@ object RemoteKeys {
     const val KEY_SIRI_API_KEY = "siri_api_key"
     const val KEY_USE_PROXY = "use_functions_proxy"
     const val KEY_TRANSIT_SOURCE_SERVER = "transit_data_from_server"
-    const val KEY_PAYMENT_WEB_URL = "payment_web_url"
 
     private val config: FirebaseRemoteConfig?
         get() = if (FirebaseBackend.isAvailable) {
@@ -55,7 +53,6 @@ object RemoteKeys {
                     KEY_SIRI_API_KEY to BuildConfig.SIRI_API_KEY,
                     KEY_USE_PROXY to true,
                     KEY_TRANSIT_SOURCE_SERVER to true,
-                    KEY_PAYMENT_WEB_URL to PaymentConfig.DEFAULT_WEB_URL,
                 )
             )
             remote.fetchAndActivate().addOnFailureListener { Log.w(TAG, "remote config fetch failed", it) }
@@ -76,9 +73,6 @@ object RemoteKeys {
     val hereApiKey: String get() = string(KEY_HERE_API_KEY, BuildConfig.HERE_API_KEY)
     val siriBaseUrl: String get() = string(KEY_SIRI_BASE_URL, BuildConfig.SIRI_BASE_URL)
     val siriApiKey: String get() = string(KEY_SIRI_API_KEY, BuildConfig.SIRI_API_KEY)
-
-    /** עמוד התשלום בדפדפן (ר' PaymentConfig) - ניתן להחלפה מרחוק אם הכתובת משתנה. */
-    val paymentWebUrl: String get() = string(KEY_PAYMENT_WEB_URL, PaymentConfig.DEFAULT_WEB_URL)
 
     /** כיבוי חירום מרחוק ל-proxy (למשל אם המכסה של Cloud Functions נגמרה). */
     val useProxy: Boolean get() = FirebaseBackend.isAvailable && boolean(KEY_USE_PROXY, true)

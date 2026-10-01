@@ -24,6 +24,7 @@ class InCallViewModel : ViewModel() {
     val isMuted: StateFlow<Boolean> = CallService.isMuted
     val isSpeakerOn: StateFlow<Boolean> = CallService.isSpeakerOn
     val isRecording: StateFlow<Boolean> = CallService.isRecording
+    val postDialWait: StateFlow<String?> = CallService.postDialWait
 
     private val _callDuration = MutableStateFlow(0L)
     val callDuration: StateFlow<Long> = _callDuration.asStateFlow()
@@ -103,6 +104,8 @@ class InCallViewModel : ViewModel() {
     fun onDtmfDigitReleased() {
         CallService.stopDtmfTone()
     }
+
+    fun continuePostDial(send: Boolean) = CallService.continuePostDial(send)
 
     fun toggleRecording(context: Context) {
         if (isRecording.value) {

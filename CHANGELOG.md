@@ -4,7 +4,7 @@ This repo has no carried-over git history (see root [README](README.md)), so thi
 
 ## Unreleased
 
-### Navigation: pay for a public-transit ride
+### Navigation: pay for a public-transit ride (by phone, kosher device)
 
 - **A "Pay for the trip · ₪X" button** on the transit itinerary screen opens a
   payment screen with the fare per ride and the total. Fares follow the
@@ -12,15 +12,16 @@ This repo has no carried-over git history (see root [README](README.md)), so thi
   transfer within 90 minutes in the yellow radius, Israel Railways priced from
   the rail column), taken from the Rav-Pass tariff page published for the
   Ministry of Transport.
-- **Rav-Kav Online in an in-app browser, with the user's details filled in.**
-  The browser works without a touchscreen (arrow-driven cursor, OK clicks,
-  2/8 scroll) and auto-fills name, ID, phone, email and Rav-Kav number only
-  on `ravkavonline.co.il` over HTTPS, never into password or card fields.
-- **Licensed payment apps** (Rav-Pass, Moovit, ANYWAY, Rav-Kav Online) are
-  offered when installed.
-- **"My details"** are stored AES-GCM encrypted with a Keystore key, on the
-  device only; credit-card data is never stored. ID numbers are check-digit
-  validated.
+- **No browser and no Google services** - this is a kosher device. Payment
+  goes through the automated Rav-Kav loading line (03-7207406): the app opens
+  the dialer with the line and the saved card number after a `;`, and the
+  user presses Call.
+- **Dialer: post-dial wait.** A number with `;` used to leave the call stuck
+  waiting and the digits were never sent. The call screen now shows the
+  pending digits with Send / Don't send in place of the control grid, so the
+  card number goes out when the voice menu asks for it.
+- **My Rav-Kav number** is stored AES-GCM encrypted with a Keystore key, on
+  the device only; credit-card details are never stored.
 - Transit legs now carry stop coordinates and the GTFS route type, which the
   fare needs.
 

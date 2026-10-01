@@ -7,12 +7,6 @@
          את העיצוב המשותף (כהה/בהיר, צבע הדגשה) מ-FutureUI. -->
     <queries>
         <package android:name="com.future.futureui" />
-        <!-- אפליקציות התשלום המורשות בתחבורה הציבורית (data/payment/PaymentConfig) -
-             בלי ההצהרה getLaunchIntentForPackage מחזיר null גם כשהן מותקנות. -->
-        <package android:name="co.hopon.client" />
-        <package android:name="com.tranzmate" />
-        <package android:name="com.isracard.payments" />
-        <package android:name="com.pcentra.ravkavonlinemobile" />
     </queries>
 
     <uses-permission android:name="android.permission.INTERNET" />

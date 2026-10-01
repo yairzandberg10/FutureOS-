@@ -218,9 +218,11 @@ private fun ActiveCall(
     val isDialpadVisible by viewModel.isDialpadVisible.collectAsState()
     val quickMessage by viewModel.isQuickMessageVisible.collectAsState()
     val dtmfDigits by viewModel.dtmfDigits.collectAsState()
+    val postDialWait by viewModel.postDialWait.collectAsState()
 
     val first = remember { FocusRequester() }
-    LaunchedEffect(Unit) { runCatching { first.requestFocus() } }
+    // גם כשהבקשה לשליחת ספרות נסגרת - הפוקוס חוזר לאריח הראשון ולא נעלם.
+    LaunchedEffect(postDialWait == null) { if (postDialWait == null) runCatching { first.requestFocus() } }
 
     Column(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -284,7 +286,20 @@ private fun ActiveCall(
                 iconColor = if (isRecording) theme.dangerColor else null) { viewModel.toggleRecording(context) },
             Control(Icons.Rounded.Sms, stringResource(R.string.send_message), quickMessage) { viewModel.toggleQuickMessage() },
         )
-        Column(
+        val pendingDigits = postDialWait
+        if (pendingDigits != null) {
+            // במקום האריחים ולא בדיאלוג: OK שולח, וחזור לא מבטל בטעות.
+            PostDialPrompt(
+                digits = pendingDigits.substringBefore(';'),
+                theme = theme,
+                onSend = { viewModel.continuePostDial(true) },
+                onSkip = { viewModel.continuePostDial(false) },
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .padding(horizontal = FutureDimens.spacingXl),
+            )
+        } else Column(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
@@ -323,6 +338,35 @@ private fun ActiveCall(
                 fillMaxWidth = true,
             )
         }
+    }
+}
+
+/**
+ * ספרות שמחכות אחרי ";" במספר שחויג (למשל מספר כרטיס רב-קו למוקד הטעינה
+ * הטלפוני). שולחים כשהתפריט הקולי מבקש אותן - לא לפני.
+ */
+@Composable
+private fun PostDialPrompt(
+    digits: String,
+    theme: FutureTheme,
+    onSend: () -> Unit,
+    onSkip: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val type = rememberFutureType()
+    val send = remember { FocusRequester() }
+    LaunchedEffect(Unit) { send.requestFocusWhenAttached() }
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm, Alignment.CenterVertically),
+    ) {
+        Text(stringResource(R.string.post_dial_prompt), color = theme.mutedTextColor, fontSize = type.body, textAlign = TextAlign.Center)
+        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+            Text(digits, color = theme.textColor, fontSize = type.headline, fontWeight = FutureTypography.weightBold, maxLines = 1)
+        }
+        FutureButton(stringResource(R.string.post_dial_send), theme, onSend, fillMaxWidth = true, focusRequester = send)
+        FutureButton(stringResource(R.string.post_dial_skip), theme, onSkip, variant = FutureButtonVariant.Quiet, fillMaxWidth = true)
     }
 }
 

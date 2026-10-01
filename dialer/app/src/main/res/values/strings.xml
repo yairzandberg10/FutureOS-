@@ -32,4 +32,8 @@
     <string name="minimize_call">מזער שיחה</string>
     <string name="ongoing_call">שיחה מתקיימת</string>
     <string name="tap_to_return">חזרה לשיחה</string>
+    <!-- ספרות אחרי ";" במספר שחויג (למשל מספר כרטיס למוקד טלפוני) -->
+    <string name="post_dial_prompt">כשהמענה הקולי מבקש, שלח את הספרות</string>
+    <string name="post_dial_send">שלח</string>
+    <string name="post_dial_skip">בלי לשלוח</string>
 </resources>

@@ -17,29 +17,20 @@ import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
 /**
- * הפרטים שהדפדפן ממלא לבד בטפסי התשלום (ר' PaymentWebScreen). אין כאן
- * פרטי כרטיס אשראי בכוונה: את אלה מקלידים רק בעמוד של גורם התשלום עצמו,
- * והאפליקציה אף פעם לא רואה או שומרת אותם.
+ * מה שהמוקד הטלפוני מבקש ואפשר להקיש בשבילך: מספר כרטיס הרב-קו. פרטי
+ * אשראי לא נשמרים בכוונה - מקישים אותם בשיחה עצמה, והאפליקציה אף פעם לא
+ * רואה אותם.
  */
 @Serializable
 data class PaymentProfile(
-    val firstName: String = "",
-    val lastName: String = "",
-    val idNumber: String = "",
-    val phone: String = "",
-    val email: String = "",
     val ravKavNumber: String = "",
 ) {
-    val isEmpty: Boolean
-        get() = listOf(firstName, lastName, idNumber, phone, email, ravKavNumber).all { it.isBlank() }
-
-    val fullName: String get() = listOf(firstName, lastName).filter { it.isNotBlank() }.joinToString(" ")
+    val isEmpty: Boolean get() = ravKavNumber.isBlank()
 }
 
 /**
- * הפרטים נשמרים בקובץ פרטי של האפליקציה, מוצפנים ב-AES-GCM במפתח Android
- * Keystore שלא יוצא מהמכשיר - אותה תבנית של FaceTemplateStore במסך הנעילה.
- * תעודת זהות ומספר טלפון הם בדיוק המידע שלא אמור לשבת כטקסט גלוי בקובץ.
+ * נשמר בקובץ פרטי של האפליקציה, מוצפן ב-AES-GCM במפתח Android Keystore שלא
+ * יוצא מהמכשיר - אותה תבנית של FaceTemplateStore במסך הנעילה.
  */
 class PaymentProfileStore(context: Context) {
     private val file = File(context.filesDir, FILE_NAME)
@@ -49,14 +40,7 @@ class PaymentProfileStore(context: Context) {
     val profile: StateFlow<PaymentProfile> = _profile.asStateFlow()
 
     fun save(profile: PaymentProfile) {
-        val clean = profile.copy(
-            firstName = profile.firstName.trim(),
-            lastName = profile.lastName.trim(),
-            idNumber = profile.idNumber.filter { it.isDigit() },
-            phone = profile.phone.filter { it.isDigit() || it == '+' },
-            email = profile.email.trim(),
-            ravKavNumber = profile.ravKavNumber.filter { it.isDigit() },
-        )
+        val clean = profile.copy(ravKavNumber = profile.ravKavNumber.filter { it.isDigit() })
         try {
             val cipher = Cipher.getInstance(TRANSFORMATION)
             cipher.init(Cipher.ENCRYPT_MODE, getOrCreateKey())
@@ -103,27 +87,12 @@ class PaymentProfileStore(context: Context) {
         return gen.generateKey()
     }
 
-    companion object {
-        private const val TAG = "PaymentProfile"
-        private const val FILE_NAME = "payment_profile.bin"
-        private const val ANDROID_KEYSTORE = "AndroidKeyStore"
-        private const val KEY_ALIAS = "navigation_payment_profile"
-        private const val TRANSFORMATION = "AES/GCM/NoPadding"
-        private const val IV_LEN = 12
-
-        /**
-         * ספרת הביקורת של תעודת זהות ישראלית (משקלים 1,2 לסירוגין וסכום
-         * ספרות). מספר קצר מ-9 ספרות מרופד באפסים משמאל, כמו בטפסים הרשמיים.
-         */
-        fun isValidIsraeliId(id: String): Boolean {
-            val digits = id.filter { it.isDigit() }
-            if (digits.isEmpty() || digits.length > 9 || digits.length != id.trim().length) return false
-            val padded = digits.padStart(9, '0')
-            val sum = padded.mapIndexed { i, c ->
-                val v = (c - '0') * (if (i % 2 == 0) 1 else 2)
-                if (v > 9) v - 9 else v
-            }.sum()
-            return sum % 10 == 0
-        }
+    private companion object {
+        const val TAG = "PaymentProfile"
+        const val FILE_NAME = "payment_profile.bin"
+        const val ANDROID_KEYSTORE = "AndroidKeyStore"
+        const val KEY_ALIAS = "navigation_payment_profile"
+        const val TRANSFORMATION = "AES/GCM/NoPadding"
+        const val IV_LEN = 12
     }
 }

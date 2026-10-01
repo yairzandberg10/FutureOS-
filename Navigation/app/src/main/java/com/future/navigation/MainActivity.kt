@@ -69,11 +69,10 @@ import com.future.navigation.ui.saved.SavedPlacesScreen
 import com.future.navigation.ui.saved.SavedPlacesViewModel
 import com.future.navigation.ui.theme.NavigationTheme
 import com.future.navigation.ui.transit.TransitScreen
-import com.future.navigation.data.payment.PaymentConfig
 import com.future.navigation.data.payment.PaymentProfileStore
 import com.future.navigation.ui.payment.PaymentDetailsScreen
-import com.future.navigation.ui.payment.PaymentWebScreen
 import com.future.navigation.ui.payment.TransitPaymentScreen
+import com.future.navigation.ui.payment.dialRavKavLoading
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import androidx.lifecycle.lifecycleScope
@@ -389,6 +388,7 @@ private fun AppNavHost(
         composable(Screen.TransitPayment.route) {
             val itinerary = navSessionViewModel.selectedItinerary.collectAsState().value
             val profile by paymentProfileStore.profile.collectAsState()
+            val context = androidx.compose.ui.platform.LocalContext.current
             if (itinerary == null) {
                 LaunchedEffect(Unit) { navController.popBackStack() }
             } else {
@@ -396,37 +396,30 @@ private fun AppNavHost(
                     itinerary = itinerary,
                     profile = profile,
                     onBack = { navController.popBackStack() },
-                    // בלי פרטים אין מה למלא - קודם טופס הפרטים, ומשם ישר לדפדפן.
-                    onPayOnWeb = {
-                        if (profile.isEmpty) navController.navigate(Screen.PaymentDetails.route(thenPay = true))
-                        else navController.navigate(Screen.PaymentWeb.route)
+                    // בלי מספר רב-קו אין מה להקיש בשיחה - קודם הטופס, ומשם ישר לחייגן.
+                    onCall = {
+                        if (profile.isEmpty) navController.navigate(Screen.PaymentDetails.route(thenCall = true))
+                        else context.dialRavKavLoading(profile)
                     },
-                    onEditDetails = { navController.navigate(Screen.PaymentDetails.route(thenPay = false)) }
+                    onEditDetails = { navController.navigate(Screen.PaymentDetails.route(thenCall = false)) }
                 )
             }
         }
 
         composable(
             Screen.PaymentDetails.route,
-            arguments = listOf(navArgument("thenPay") { type = NavType.BoolType; defaultValue = false })
+            arguments = listOf(navArgument("thenCall") { type = NavType.BoolType; defaultValue = false })
         ) { entry ->
-            val thenPay = entry.arguments?.getBoolean("thenPay") ?: false
+            val thenCall = entry.arguments?.getBoolean("thenCall") ?: false
+            val context = androidx.compose.ui.platform.LocalContext.current
             PaymentDetailsScreen(
                 store = paymentProfileStore,
                 onBack = { navController.popBackStack() },
                 onSaved = {
                     navController.popBackStack()
-                    if (thenPay) navController.navigate(Screen.PaymentWeb.route)
+                    if (thenCall) context.dialRavKavLoading(paymentProfileStore.profile.value)
                 }
             )
-        }
-
-        composable(Screen.PaymentWeb.route) {
-            val profile by paymentProfileStore.profile.collectAsState()
-            // הכתובת נקראת פעם אחת לכניסה למסך - עדכון Remote Config באמצע
-            // לא טוען מחדש את העמוד ולא מאבד את מה שהוקלד בו.
-            val url = remember { PaymentConfig.webUrl }
-            PaymentWebScreen(url = url, profile = profile, onClose = { navController.popBackStack() })
         }
 
         composable(Screen.SavedPlaces.route) {
