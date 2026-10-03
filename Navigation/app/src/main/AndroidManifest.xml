@@ -16,6 +16,10 @@
 
     <uses-feature android:name="android.hardware.location.gps" android:required="false" />
 
+    <!-- סריקת הברקוד שליד דלת האוטובוס (ui/scan) -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera.any" android:required="false" />
+
     <uses-permission android:name="com.future.futureui.permission.SYSTEM_SETTINGS" />
     <uses-permission android:name="com.future.keyboard.permission.SETTINGS" />
     <application

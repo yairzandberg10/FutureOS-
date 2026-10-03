@@ -65,15 +65,16 @@ fun TransitPaymentScreen(
     itinerary: TransitItinerary,
     profile: PaymentProfile,
     onBack: () -> Unit,
+    onScan: () -> Unit,
     onCall: () -> Unit,
     onEditDetails: () -> Unit,
 ) {
     val theme = LocalFutureTheme.current
     val type = rememberFutureType()
     val fare = remember(itinerary) { FareCalculator.calculate(itinerary) }
-    val callFocusRequester = remember { FocusRequester() }
+    val scanFocusRequester = remember { FocusRequester() }
 
-    LaunchedEffect(Unit) { runCatching { callFocusRequester.requestFocus() } }
+    LaunchedEffect(Unit) { runCatching { scanFocusRequester.requestFocus() } }
 
     Column(modifier = Modifier.fillMaxSize()) {
         ScreenTopBar(
@@ -120,6 +121,18 @@ fun TransitPaymentScreen(
             item { FutureSectionHeader(stringResource(R.string.payment_methods_section), theme) }
             item {
                 FutureListItem(
+                    title = stringResource(R.string.scan_title),
+                    summary = stringResource(R.string.scan_entry_summary),
+                    summaryMaxLines = 2,
+                    theme = theme,
+                    onClick = onScan,
+                    focusRequester = scanFocusRequester,
+                    leading = { RowIcon(FutureIcons.QrCodeScanner, theme) },
+                    modifier = Modifier.padding(horizontal = FutureDimens.screenPadding),
+                )
+            }
+            item {
+                FutureListItem(
                     title = stringResource(R.string.payment_call_title),
                     summary = if (profile.isEmpty) {
                         stringResource(R.string.payment_call_summary)
@@ -129,7 +142,6 @@ fun TransitPaymentScreen(
                     summaryMaxLines = 2,
                     theme = theme,
                     onClick = onCall,
-                    focusRequester = callFocusRequester,
                     leading = { RowIcon(FutureIcons.Call, theme) },
                     modifier = Modifier.padding(horizontal = FutureDimens.screenPadding),
                 )

@@ -120,19 +120,8 @@ class TransitJourneyPlanner(private val dao: GtfsDao) {
         return results.sortedBy { it.arrivalSeconds }.take(MAX_RESULTS)
     }
 
-    private suspend fun isServiceActive(serviceId: String, dateInt: Int, dayOfWeek: java.time.DayOfWeek): Boolean {
-        val calendar = dao.calendarForService(serviceId) ?: return false
-        if (dateInt < calendar.startDate || dateInt > calendar.endDate) return false
-        return when (dayOfWeek) {
-            java.time.DayOfWeek.MONDAY -> calendar.monday
-            java.time.DayOfWeek.TUESDAY -> calendar.tuesday
-            java.time.DayOfWeek.WEDNESDAY -> calendar.wednesday
-            java.time.DayOfWeek.THURSDAY -> calendar.thursday
-            java.time.DayOfWeek.FRIDAY -> calendar.friday
-            java.time.DayOfWeek.SATURDAY -> calendar.saturday
-            java.time.DayOfWeek.SUNDAY -> calendar.sunday
-        }
-    }
+    private suspend fun isServiceActive(serviceId: String, dateInt: Int, dayOfWeek: java.time.DayOfWeek): Boolean =
+        dao.isServiceActive(serviceId, dateInt, dayOfWeek)
 
     private data class NearbyStop(val stop: StopEntity, val distanceMeters: Double)
 

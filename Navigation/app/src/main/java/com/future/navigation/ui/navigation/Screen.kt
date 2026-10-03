@@ -8,6 +8,7 @@ sealed class Screen(val route: String) {
     object SavedPlaces : Screen("saved_places")
     object GtfsSetup : Screen("gtfs_setup")
     object TransitPayment : Screen("transit_payment")
+    object BusScan : Screen("bus_scan")
     object PaymentDetails : Screen("payment_details?thenCall={thenCall}") {
         fun route(thenCall: Boolean) = "payment_details?thenCall=$thenCall"
     }

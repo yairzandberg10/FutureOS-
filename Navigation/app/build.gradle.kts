@@ -139,6 +139,14 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.google.material)
 
+    // סריקת הברקוד באוטובוס - אותן גרסאות של סורק הקודים ב-Tools. ML Kit
+    // בגרסה המובנית (המודל בתוך ה-APK), שלא צריכה Google Play Services.
+    implementation(libs.androidx.camera.core)
+    implementation(libs.androidx.camera.camera2)
+    implementation(libs.androidx.camera.lifecycle)
+    implementation(libs.androidx.camera.view)
+    implementation(libs.mlkit.barcode.scanning)
+
     // מפה (MapLibre + אריחי OpenFreeMap - חינמי, בלי מפתח, בלי Google Play Services)
     implementation(libs.maplibre.android.sdk)
 

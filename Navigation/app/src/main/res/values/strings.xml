@@ -77,4 +77,43 @@
     <string name="payment_details_privacy">המספר נשמר מוצפן במכשיר הזה בלבד. פרטי כרטיס אשראי לא נשמרים - מקישים אותם בשיחה עצמה.</string>
     <string name="payment_save">שמור</string>
     <string name="payment_clear">מחק את המספר</string>
+
+    <!-- סריקת ברקוד באוטובוס -->
+    <string name="scan_title">סריקת ברקוד באוטובוס</string>
+    <string name="scan_confirm_title">אישור נסיעה</string>
+    <string name="scan_hint">כוון את המצלמה לברקוד שליד דלת האוטובוס</string>
+    <string name="scan_skip">בחר קו בלי סריקה</string>
+    <string name="scan_camera_permission">כדי לסרוק את הברקוד צריך הרשאת מצלמה</string>
+    <string name="scan_grant_camera">אשר הרשאת מצלמה</string>
+    <string name="scan_identifying">מזהה את האוטובוס</string>
+    <string name="scan_no_location">המיקום עוד לא ידוע - צריך אותו כדי לדעת באיזו תחנה אתה</string>
+    <string name="scan_pick_line">באיזה קו אתה נוסע?</string>
+    <string name="scan_vehicle_not_matched">רכב %1$s · הקו לא זוהה אוטומטית</string>
+    <string name="scan_no_vehicle">לא זוהה מספר רכב בברקוד - בחר את הקו</string>
+    <string name="scan_no_lines">לא נמצאו קווים בתחנות הקרובות. אם נתוני התחבורה לא עודכנו לאזור הזה, עדכן אותם ממסך הבית.</string>
+    <string name="scan_line_title">קו %1$s · %2$s</string>
+    <string name="scan_line_summary">%1$s · %2$s · %3$d מ׳</string>
+    <string name="scan_identified">זוהה לפי מספר הרכב %1$s</string>
+    <string name="scan_not_my_line">זה לא הקו שלי</string>
+    <string name="scan_boarding_at">עלייה: %1$s</string>
+    <string name="scan_pick_stop">איפה יורדים?</string>
+    <string name="scan_loading_stops">טוען תחנות</string>
+    <string name="scan_no_stops">אין תחנות בהמשך הנסיעה הזו</string>
+    <string name="scan_stop_summary">%1$s · %2$s ק״מ · טבעת %3$s</string>
+    <string name="scan_row_line">קו</string>
+    <string name="scan_row_from">עלייה</string>
+    <string name="scan_row_to">ירידה</string>
+    <string name="scan_row_distance">מרחק</string>
+    <string name="scan_distance_value">%1$s ק״מ · טבעת %2$s</string>
+    <string name="scan_pay">שלם %1$s</string>
+    <string name="scan_back">חזרה</string>
+    <string name="scan_transfer_note">עד 15 ק״מ: נסיעת המשך תוך 90 דקות ללא תשלום. המחיר לפרופיל רגיל.</string>
+    <string name="scan_paying">שולח תשלום</string>
+    <string name="scan_not_connected_title">התשלום עוד לא מחובר</string>
+    <string name="scan_not_connected_body">לא חויבת ולא הונפק כרטיס. התשלום יעבוד אחרי חיבור לגורם תשלום מורשה - בינתיים משלמים על הנסיעה ברב-קו.</string>
+    <string name="scan_paid_title">שולם</string>
+    <string name="scan_declined_title">התשלום נדחה</string>
+    <string name="scan_finish">סיום</string>
+    <string name="scan_rescan">סרוק שוב</string>
+    <string name="scan_entry_summary">עולים לאוטובוס? סורקים, בוחרים תחנה ומשלמים</string>
 </resources>

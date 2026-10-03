@@ -71,7 +71,8 @@ fun HomeScreen(
     viewModel: HomeViewModel,
     onDestinationPicked: (GeocodeResult) -> Unit,
     onOpenSavedPlaces: () -> Unit,
-    onOpenGtfsSetup: () -> Unit
+    onOpenGtfsSetup: () -> Unit,
+    onOpenBusScan: () -> Unit
 ) {
     val theme = LocalFutureTheme.current
     val type = rememberFutureType()
@@ -210,6 +211,15 @@ fun HomeScreen(
                 }
 
                 if (mode == TravelMode.TRANSIT) {
+                    item {
+                        FutureListItem(
+                            title = stringResource(R.string.scan_title),
+                            summary = stringResource(R.string.scan_entry_summary),
+                            theme = theme,
+                            onClick = onOpenBusScan,
+                            leading = { RowIcon(FutureIcons.QrCodeScanner, theme) },
+                        )
+                    }
                     item {
                         FutureSectionHeader(stringResource(R.string.nearby_stops), theme, inset = false)
                     }

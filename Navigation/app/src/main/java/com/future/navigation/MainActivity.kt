@@ -73,6 +73,10 @@ import com.future.navigation.data.payment.PaymentProfileStore
 import com.future.navigation.ui.payment.PaymentDetailsScreen
 import com.future.navigation.ui.payment.TransitPaymentScreen
 import com.future.navigation.ui.payment.dialRavKavLoading
+import com.future.navigation.data.payment.FarePaymentGateway
+import com.future.navigation.data.scan.BusScanRepository
+import com.future.navigation.ui.scan.BusScanScreen
+import com.future.navigation.ui.scan.BusScanViewModel
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import androidx.lifecycle.lifecycleScope
@@ -92,6 +96,7 @@ class MainActivity : ComponentActivity() {
     private val siriRealtimeRepository by lazy { SiriRealtimeRepository() }
     private val transitRealtimeEnricher by lazy { TransitRealtimeEnricher(siriRealtimeRepository) }
     private val paymentProfileStore by lazy { PaymentProfileStore(applicationContext) }
+    private val busScanRepository by lazy { BusScanRepository(gtfsDatabase.gtfsDao(), siriRealtimeRepository) }
 
     private val navSessionViewModel: NavSessionViewModel by viewModels()
 
@@ -214,7 +219,8 @@ class MainActivity : ComponentActivity() {
                             savedPlacesViewModel = savedPlacesViewModel,
                             gtfsSetupViewModel = gtfsSetupViewModel,
                             routingRepository = routingRepository,
-                            paymentProfileStore = paymentProfileStore
+                            paymentProfileStore = paymentProfileStore,
+                            busScanRepository = busScanRepository
                         )
                     }
                   }
@@ -302,7 +308,8 @@ private fun AppNavHost(
     savedPlacesViewModel: SavedPlacesViewModel,
     gtfsSetupViewModel: GtfsSetupViewModel,
     routingRepository: RoutingRepository,
-    paymentProfileStore: PaymentProfileStore
+    paymentProfileStore: PaymentProfileStore,
+    busScanRepository: BusScanRepository
 ) {
     val navController = rememberNavController()
 
@@ -325,7 +332,8 @@ private fun AppNavHost(
                     navController.navigate(Screen.RouteOptions.route)
                 },
                 onOpenSavedPlaces = { navController.navigate(Screen.SavedPlaces.route) },
-                onOpenGtfsSetup = { navController.navigate(Screen.GtfsSetup.route) }
+                onOpenGtfsSetup = { navController.navigate(Screen.GtfsSetup.route) },
+                onOpenBusScan = { navController.navigate(Screen.BusScan.route) }
             )
         }
 
@@ -396,6 +404,7 @@ private fun AppNavHost(
                     itinerary = itinerary,
                     profile = profile,
                     onBack = { navController.popBackStack() },
+                    onScan = { navController.navigate(Screen.BusScan.route) },
                     // בלי מספר רב-קו אין מה להקיש בשיחה - קודם הטופס, ומשם ישר לחייגן.
                     onCall = {
                         if (profile.isEmpty) navController.navigate(Screen.PaymentDetails.route(thenCall = true))
@@ -420,6 +429,27 @@ private fun AppNavHost(
                     if (thenCall) context.dialRavKavLoading(paymentProfileStore.profile.value)
                 }
             )
+        }
+
+        composable(Screen.BusScan.route) {
+            // ViewModel לכל כניסה למסך (ולא של ה-Activity): סריקה חדשה מתחילה
+            // תמיד מהמצלמה, לא מהשלב שבו נעצרה הסריקה הקודמת.
+            val viewModel = androidx.lifecycle.viewmodel.compose.viewModel<BusScanViewModel>(
+                factory = object : ViewModelProvider.Factory {
+                    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                        @Suppress("UNCHECKED_CAST")
+                        return BusScanViewModel(
+                            repository = busScanRepository,
+                            gateway = FarePaymentGateway.current,
+                            currentLocation = {
+                                homeViewModel.refreshLocation()
+                                homeViewModel.currentLocation.value
+                            }
+                        ) as T
+                    }
+                }
+            )
+            BusScanScreen(viewModel = viewModel, onClose = { navController.popBackStack() })
         }
 
         composable(Screen.SavedPlaces.route) {

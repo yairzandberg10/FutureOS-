@@ -4,6 +4,22 @@ This repo has no carried-over git history (see root [README](README.md)), so thi
 
 ## Unreleased
 
+### Navigation: scan the bus barcode and pay, built into the app
+
+- **New "Scan the bus barcode" flow**, from the home screen (transit mode) and
+  the trip payment screen: camera scan of the QR sticker by the door, the line
+  identified from the vehicle number through SIRI (or picked from the
+  departures at the nearby stops), every remaining stop with its exact fare,
+  then confirm and pay. Keys only; Back steps back.
+- **One payment integration point** (`FarePaymentGateway`). There is no public
+  API for charging a ride - only operators licensed by the Ministry of
+  Transport can. Until one is connected, Pay charges nothing, issues no
+  ticket and says so plainly.
+- The QR format is unknown, so parsing lives in one replaceable function
+  (`BusQrParser`) with unit tests; without a recognised vehicle number the
+  user picks the line.
+- First unit tests in Navigation: `BusQrParserTest`, `FareCalculatorTest`.
+
 ### Navigation: pay for a public-transit ride (by phone, kosher device)
 
 - **A "Pay for the trip · ₪X" button** on the transit itinerary screen opens a
