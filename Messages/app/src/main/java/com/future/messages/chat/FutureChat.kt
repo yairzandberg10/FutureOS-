@@ -331,6 +331,7 @@ object FutureChat {
         process(context, docs)
     }
 
+    fun syncBlocking(context: Context) = runBlocking { withTimeoutOrNull(18_000) { sync(context) } }
 
     private suspend fun process(context: Context, docs: List<DocumentSnapshot>) = inboxLock.withLock {
         val me = ChatBackend.uid() ?: return@withLock
