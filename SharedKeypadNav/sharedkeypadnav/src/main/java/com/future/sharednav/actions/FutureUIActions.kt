@@ -12,12 +12,13 @@ import com.future.sharednav.systemui.SystemUiTarget
  */
 object FutureUIActions {
     /**
-     * הרשאת החתימה של הסוויטה, שמגינה על השידורים שכאן (מקשים, שיחות). מוגדרת
-     * בכל אפליקציה (המניפסט של המודול הזה) וכל אפליקציה מחזיקה אותה. השם קבוע
-     * ולא נגזר מ-SystemUiTarget: גם SystemUI מגדיר בדיוק את השם הזה, ו-dialer
-     * ו-Assistant דורשים אותו מהשולח במניפסט.
+     * הרשאת החתימה של הסוויטה. מוגדרת (protectionLevel=signature) ב-AndroidManifest של
+     * SharedKeypadNav ולכן מתמזגת לכל אפליקציה. שידורי מקשים/שיחה נשלחים ונקלטים רק
+     * איתה - בלעדיה כל אפליקציה זרה יכולה "ללחוץ" על מקשים או לזייף שיחה נכנסת.
+     * הקבוע היה בשימוש בקוד אבל לא מוגדר בשום מקום (הקומפילציה נכשלה); security-check.py
+     * בודק עכשיו שהוא קיים ושהערך שלו זהה להרשאה שמוצהרת ב-Manifest.
      */
-    const val PERMISSION_SYSTEM = "com.future.futureui.permission.SYSTEM_SETTINGS"
+    const val PERMISSION_SYSTEM = "${SystemUiTarget.PACKAGE}.permission.SYSTEM_SETTINGS"
 
     const val ACTION_SHOW_CONTROL_CENTER = "${SystemUiTarget.PACKAGE}.ACTION_SHOW_CONTROL_CENTER"
     const val ACTION_SHOW_NOTIFICATION_CENTER = "${SystemUiTarget.PACKAGE}.ACTION_SHOW_NOTIFICATION_CENTER"
