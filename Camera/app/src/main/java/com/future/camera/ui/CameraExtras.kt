@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
@@ -150,7 +151,9 @@ fun CameraSettingsScreen(
                     FutureDivider(theme = theme)
                     KeyHintRow("1-9", "נקודת מיקוד · 0 אוטומטי", theme)
                     FutureDivider(theme = theme)
-                    KeyHintRow("* / #", "תמונה/וידאו · הבזק", theme)
+                    KeyHintRow("OK מוחזק", "מיקוד במרכז", theme)
+                    FutureDivider(theme = theme)
+                    KeyHintRow("* / #", "מצב צילום · הבזק", theme)
                 }
             }
         }
@@ -164,27 +167,26 @@ private fun KeyHintRow(key: String, action: String, theme: FutureTheme) {
 }
 
 /**
- * מציג התמונות האחרונות של המצלמה, בתוך האפליקציה: ימינה/שמאלה בין
- * התמונות (RTL - שמאלה היא הבאה, הישנה יותר), OK פותח בגלריה, BACK חוזר
- * למצלמה (CameraScreen).
+ * מציג מה שצולם *בסשן הזה* (לא כל התמונות במכשיר), בתוך האפליקציה. הרשימה
+ * מהחדש לישן: ימינה - הקודמת (הישנה יותר), שמאלה - חזרה לחדשה. OK פותח את
+ * הפריט בגלריה (תמונה) או בנגן (וידאו), BACK חוזר למצלמה (CameraScreen).
  */
 @Composable
-fun PhotoViewer(theme: FutureTheme, startUri: Uri?) {
+fun PhotoViewer(theme: FutureTheme, items: List<Uri>) {
     val context = LocalContext.current
-    var photos by remember { mutableStateOf<List<Uri>>(emptyList()) }
     var index by remember { mutableIntStateOf(0) }
     var bitmap by remember { mutableStateOf<Bitmap?>(null) }
+    var isVideo by remember { mutableStateOf(false) }
     val focus = remember { FocusRequester() }
 
-    LaunchedEffect(Unit) {
-        photos = withContext(Dispatchers.IO) { CameraMedia.recentPhotos(context) }
-        index = photos.indexOf(startUri).coerceAtLeast(0)
-        runCatching { focus.requestFocus() }
-    }
-    val current = photos.getOrNull(index)
+    LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
+    val current = items.getOrNull(index)
     LaunchedEffect(current) {
         bitmap = current?.let { uri ->
-            withContext(Dispatchers.IO) { CameraMedia.screenImage(context, uri, 1280) }
+            withContext(Dispatchers.IO) {
+                isVideo = context.contentResolver.getType(uri)?.startsWith("video") == true
+                if (isVideo) CameraMedia.thumbnail(context, uri, 1280) else CameraMedia.screenImage(context, uri, 1280)
+            }
         }
     }
 
@@ -197,8 +199,8 @@ fun PhotoViewer(theme: FutureTheme, startUri: Uri?) {
             .onKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
                 when (event.key) {
-                    Key.DirectionLeft -> { if (index < photos.lastIndex) index++; true }
-                    Key.DirectionRight -> { if (index > 0) index--; true }
+                    Key.DirectionRight -> { if (index < items.lastIndex) index++; true }
+                    Key.DirectionLeft -> { if (index > 0) index--; true }
                     Key.DirectionCenter, Key.Enter -> {
                         current?.let { uri ->
                             runCatching {
@@ -223,11 +225,19 @@ fun PhotoViewer(theme: FutureTheme, startUri: Uri?) {
                 Box(modifier = Modifier.fillMaxSize())
             }
         }
-        if (photos.isEmpty()) {
-            Text("אין תמונות", color = theme.mutedTextColor, fontSize = FutureTypography.body)
+        if (isVideo && bitmap != null) {
+            androidx.compose.material3.Icon(
+                FutureIcons.PlayCircle,
+                contentDescription = "וידאו",
+                tint = Color.White,
+                modifier = Modifier.size(64.dp),
+            )
+        }
+        if (items.isEmpty()) {
+            Text("עדיין לא צולם כלום", color = theme.mutedTextColor, fontSize = FutureTypography.body)
         } else {
             Text(
-                "${index + 1}/${photos.size}",
+                "${index + 1}/${items.size}",
                 color = Color.White,
                 fontSize = FutureTypography.summary,
                 modifier = Modifier

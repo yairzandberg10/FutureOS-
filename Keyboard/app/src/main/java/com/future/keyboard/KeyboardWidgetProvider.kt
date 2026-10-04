@@ -1,28 +1,16 @@
 package com.future.keyboard
 
-import android.app.PendingIntent
-import android.appwidget.AppWidgetManager
-import android.appwidget.AppWidgetProvider
+import android.provider.Settings
 import android.content.Context
-import android.widget.RemoteViews
+import com.future.sharednav.widget.FutureContentWidget
+import com.future.sharednav.widget.WidgetContent
 
-/**
- * ווידג'ט קיצור-דרך למסך הבית - אייקון ושם האפליקציה, לחיצה פותחת אותה.
- * חלק מהעיצוב האחיד של ווידג'טים ייעודיים לכל אפליקציית FutureOS מובנית.
- */
-class KeyboardWidgetProvider : AppWidgetProvider() {
-    override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
-        appWidgetIds.forEach { widgetId ->
-            val views = RemoteViews(context.packageName, R.layout.app_widget)
-            val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
-            if (launchIntent != null) {
-                val pendingIntent = PendingIntent.getActivity(
-                    context, 0, launchIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                )
-                views.setOnClickPendingIntent(R.id.widget_root, pendingIntent)
-            }
-            appWidgetManager.updateAppWidget(widgetId, views)
-        }
+/** האם המקלדת של FutureOS היא מקלדת ברירת המחדל, ואיך מחליפים שפה/מכתיבים. */
+class KeyboardWidgetProvider : FutureContentWidget() {
+    override fun content(context: Context): WidgetContent {
+        val current = Settings.Secure.getString(context.contentResolver, Settings.Secure.DEFAULT_INPUT_METHOD).orEmpty()
+        val active = current.startsWith(context.packageName + "/")
+        return if (active) WidgetContent(value = "המקלדת פעילה", subtitle = "* ארוך שפה · 0 ארוך הכתבה")
+        else WidgetContent(value = "המקלדת לא פעילה", subtitle = "פתח כדי להגדיר אותה כברירת מחדל")
     }
 }

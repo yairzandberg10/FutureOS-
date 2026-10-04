@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- ווידג'ט על מסך הבית: משטח ההתראה הצפה של הדיזיין סיסטם (#1C1C1E ב-90%,
+     קו שיער 0.5dp לבן 15%), רדיוס 22dp - הרדיוס שהלאנצ'ר חותך בו ווידג'טים. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="#E61C1C1E" />
+    <corners android:radius="22dp" />
+    <stroke android:width="0.5dp" android:color="#26FFFFFF" />
+</shape>

@@ -1,4 +1,5 @@
 package com.android.sistemui.notificationcenter.ui
+import com.android.sistemui.utils.safeText
 import com.future.sharednav.theme.FutureMotion
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
@@ -64,6 +65,7 @@ fun NotificationCenterScreen(
     modifier: Modifier = Modifier,
     wallpaper: ImageBitmap? = null,
     manager: NotificationCenterManager? = null,
+    onRequestClose: () -> Unit = {},
     onSwitchToControlCenter: () -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -249,7 +251,10 @@ fun NotificationCenterScreen(
                                     sbn = sbn,
                                     onSwitchToControlCenter = onSwitchToControlCenter,
                                     onDismiss = { isDismissing = true },
-                                    onOpen = { ncManager.launchApp(sbn.packageName) },
+                                    onOpen = {
+                                        ncManager.openNotification(sbn)
+                                        onRequestClose()
+                                    },
                                     onMuteApp = { ncManager.openNotificationSettings(sbn.packageName) },
                                     textColor = textColor,
                                     subTextColor = subTextColor,
@@ -274,7 +279,7 @@ fun NotificationCenterScreen(
                             icon = Icons.Rounded.DeleteSweep,
                             onClick = { ncManager.clearAll() },
                             modifier = Modifier.weight(1f),
-                            color = Color.Black.copy(alpha = 0.3f),
+                            color = GlassFill,
                             focusRequester = clearAllFocusRequester
                         )
                         NotificationCenterButton(
@@ -282,7 +287,7 @@ fun NotificationCenterScreen(
                             icon = if (ncManager.controlManager.isDndOn) Icons.Rounded.NotificationsOff else Icons.Rounded.NotificationsActive,
                             onClick = { ncManager.toggleDnd() },
                             modifier = Modifier.weight(1f),
-                            color = Color.Black.copy(alpha = 0.3f)
+                            color = GlassFill
                         )
                     }
                 }
@@ -312,10 +317,11 @@ fun NotificationItem(
     var isExpanded by remember { mutableStateOf(false) }
     var showOptions by remember { mutableStateOf(false) }
     var selectedOptionIndex by remember { mutableStateOf(0) }
+    var okHeld by remember { mutableStateOf(false) }
 
     val n = sbn.notification
-    val title = n.extras.getCharSequence(Notification.EXTRA_TITLE)?.toString() ?: ""
-    val text = n.extras.getCharSequence(Notification.EXTRA_TEXT)?.toString() ?: ""
+    val title = n.safeText(Notification.EXTRA_TITLE)?.toString() ?: ""
+    val text = n.safeText(Notification.EXTRA_TEXT)?.toString() ?: ""
 
     // הפעולות האמיתיות שההתראה הביאה איתה מהאפליקציה המקורית (למשל "ענה"/"דחה"
     // בהתראת שיחה, או "סמן כנקרא") - בלי RemoteInput כי אין מקלדת מגע להקליד תשובה.
@@ -369,8 +375,9 @@ fun NotificationItem(
     val shape = FutureShapes.xxl
     // הרקע של הכרטיס נגזר מכיוון הטקסט (isDarkBackground) ולא מהטפט עצמו, כדי
     // שהניגודיות טקסט-מול-כרטיס תישמר גם כשהטפט שמתחת בהיר או כהה באופן בלתי צפוי.
+    // זכוכית (לבן שקוף מעל הרקע המטושטש) ולא שחור 40% - "אלמנטים שחורים".
     val cardBackground = if (isDarkBackground) {
-        if (isFocused) Color.Black.copy(alpha = 0.45f) else Color.Black.copy(alpha = 0.38f)
+        if (isFocused) GlassFillFocused else GlassFill
     } else {
         if (isFocused) Color.White.copy(alpha = 0.55f) else Color.White.copy(alpha = 0.42f)
     }
@@ -383,27 +390,25 @@ fun NotificationItem(
             .focusEffect(isFocused, shape)
             .clip(shape)
             .background(cardBackground)
-            .then(
-                if (isFocused) Modifier.border(2.dp, Color.LightGray, shape) else Modifier
-            )
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .onKeyEvent { event ->
                 if (!isFocused) return@onKeyEvent false
                 if (showOptions) {
                     when (event.key) {
-                        // ניווט בין הפעולות הזמינות בתפריט
-                        Key.DirectionLeft -> {
+                        // ניווט בין הפעולות - שורות תפריט אחת מתחת לשנייה, כמו בתפריט Options
+                        Key.DirectionUp -> {
                             if (event.type == KeyEventType.KeyDown) {
                                 selectedOptionIndex = (selectedOptionIndex - 1 + options.size) % options.size
                             }
                             true
                         }
-                        Key.DirectionRight -> {
+                        Key.DirectionDown -> {
                             if (event.type == KeyEventType.KeyDown) {
                                 selectedOptionIndex = (selectedOptionIndex + 1) % options.size
                             }
                             true
                         }
+                        Key.DirectionLeft, Key.DirectionRight -> true
                         // OK קצר - הפעלת הפעולה המסומנת (למשל "ענה" בהתראת שיחה)
                         Key.DirectionCenter, Key.Enter -> {
                             if (event.type == KeyEventType.KeyUp && event.nativeKeyEvent.repeatCount == 0) {
@@ -420,13 +425,20 @@ fun NotificationItem(
                     }
                 } else {
                     when (event.key) {
-                        // כפתור OK ארוך - פתיחת האפליקציה שמקורה בהתראה
-                        Key.DirectionCenter, Key.Enter -> {
-                            if (event.type == KeyEventType.KeyDown && event.nativeKeyEvent.repeatCount > 8) {
-                                onOpen()
-                                return@onKeyEvent true
+                        // OK - פותח את ההתראה (השיחה/ההודעה עצמה) וסוגר את המרכז.
+                        // OK ארוך - מרחיב/מצמצם את הטקסט המלא.
+                        Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> {
+                            when (event.type) {
+                                KeyEventType.KeyDown -> {
+                                    if (event.nativeKeyEvent.repeatCount == 0) okHeld = false
+                                    else if (event.nativeKeyEvent.repeatCount > 8 && !okHeld) {
+                                        okHeld = true
+                                        isExpanded = !isExpanded
+                                    }
+                                }
+                                KeyEventType.KeyUp -> if (!okHeld) onOpen()
                             }
-                            false
+                            true
                         }
                         // חץ שמאל ארוך - מעבר למרכז הבקרה
                         Key.DirectionLeft -> {
@@ -457,10 +469,6 @@ fun NotificationItem(
                     }
                 }
             }
-            // לחיצה רגילה - הרחבה/צמצום של פרטי ההתראה
-            .clickable(interactionSource = interactionSource, indication = null, onClick = {
-                if (showOptions) showOptions = false else isExpanded = !isExpanded
-            })
             .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
             // כרטיס מעט "שמן" יותר (8dp -> 13dp, אייקון 32 -> 38, תקציר בשתי שורות).
             .padding(horizontal = 14.dp, vertical = 13.dp)
@@ -472,32 +480,36 @@ fun NotificationItem(
             if (optionsVisible) {
                 // תפריט אפשרויות (Overlay) - פעולות אמיתיות מההתראה + השתקה/חזרה,
                 // ניתנות לניווט בין הכפתורים עם חצי כיוון ובחירה עם OK.
-                Row(
-                    modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                // שורות תפריט של הדיזיין סיסטם (OptionsMenu.jsx): 50dp, 15sp, השורה
+                // הנבחרת ב-12% מילוי בלי מסגרת, פעולה הרסנית בצבע הסכנה. קודם אלה היו
+                // גלולות צפופות בשורה אחת, אדום רווי ומסגרת 1.5dp.
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = appName,
+                        color = subTextColor,
+                        fontSize = FutureTypography.label,
+                        modifier = Modifier.padding(start = 12.dp, bottom = 4.dp),
+                    )
                     options.forEachIndexed { index, option ->
                         val isSelected = index == selectedOptionIndex
-                        val baseColor = if (option.isDestructive) Color.Red.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.2f)
-                        Text(
-                            text = option.label,
-                            color = textColor,
-                            fontSize = FutureTypography.summary,
-                            fontWeight = FontWeight.Bold,
-                            style = androidx.compose.ui.text.TextStyle(shadow = legibilityShadow),
+                        Box(
                             modifier = Modifier
-                                .clip(CircleShape)
-                                .background(baseColor)
-                                .then(
-                                    if (isSelected) Modifier.border(1.5.dp, Color.White, CircleShape) else Modifier
-                                )
-                                .clickable {
-                                    option.action()
-                                    showOptions = false
-                                }
-                                .padding(horizontal = 16.dp, vertical = 8.dp)
-                        )
+                                .fillMaxWidth()
+                                .height(OptionRowHeight)
+                                .clip(FutureShapes.lg)
+                                .background(if (isSelected) textColor.copy(alpha = 0.12f) else Color.Transparent)
+                                .padding(horizontal = 12.dp),
+                            contentAlignment = Alignment.CenterStart,
+                        ) {
+                            Text(
+                                text = option.label,
+                                color = if (option.isDestructive) DangerOnGlass else textColor,
+                                fontSize = FutureTypography.dialog,
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
                     }
                 }
             } else {
@@ -573,7 +585,7 @@ fun NotificationCenterButton(
             .height(38.dp)
             .focusEffect(isFocused, shape)
             .clip(shape)
-            .background(if (isFocused) Color.White.copy(alpha = 0.25f) else color)
+            .background(if (isFocused) GlassFillFocused else color)
             .then(
                 if (isFocused) Modifier.border(2.dp, Color.White, shape) else Modifier
             )
@@ -592,3 +604,13 @@ fun NotificationCenterButton(
         }
     }
 }
+
+/** זכוכית מעל הרקע המטושטש: לבן 15% במנוחה, 24% בפוקוס - במקום שחור 30-45%. */
+private val GlassFill = Color.White.copy(alpha = 0.15f)
+private val GlassFillFocused = Color.White.copy(alpha = 0.24f)
+
+/** צבע הסכנה של הערכה הכהה (#FF6B6B) - הפאנל תמיד מעל רקע כהה-מטושטש. */
+private val DangerOnGlass = Color(0xFFFF6B6B)
+
+/** 50dp - שורת תפריט (rowHeightMenu). */
+private val OptionRowHeight = 50.dp

@@ -1,4 +1,4 @@
-<!-- @dsCard group="Forms" viewport="700x320" name="Slider" subtitle="Value in a range — volume, brightness" -->
+<!-- @dsCard group="Forms" viewport="700x560" name="Slider" subtitle="Value in a range — volume, brightness; optional leading icon" -->
 <!DOCTYPE html><html lang="he" dir="rtl"><head>
 <meta charset="utf-8">
 <title>FutureOS · Slider</title>
@@ -23,6 +23,11 @@ function App(){return <div className="wrap">
   <div className="bleed" style={{display:"flex",flexDirection:"column",gap:20}}>
     <Slider label="עוצמת מדיה" value={0.7} />
     <Slider label="בהירות מסך" value={0.4} focused />
+  </div>
+  <L>With a leading icon · idle / focused</L>
+  <div className="bleed" style={{display:"flex",flexDirection:"column",gap:20}}>
+    <Slider icon="volume_up" label="עוצמת מדיה" value={0.7} />
+    <Slider icon="brightness_6" label="בהירות מסך" value={0.4} focused />
   </div></div>}
 ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script></body></html>

@@ -45,7 +45,7 @@ fun MusicPlayerCard(manager: ControlManager, labelColor: Color = Color.Black) {
                 .height(80.dp)
                 .clip(shape)
                 .focusEffect(isFocused, shape)
-                .background(Color(0x80E0E0E0))
+                .background(GlassFill)
                 .then(
                     if (isFocused) Modifier.border(2.dp, Color.LightGray, shape) else Modifier
                 )
@@ -69,7 +69,7 @@ fun MusicPlayerCard(manager: ControlManager, labelColor: Color = Color.Black) {
                 .height(65.dp)
                 .clip(shape)
                 .focusEffect(isFocused, shape)
-                .background(Color(0x80E0E0E0))
+                .background(GlassFill)
                 .then(
                     if (isFocused) Modifier.border(2.dp, Color.LightGray, shape) else Modifier
                 )
@@ -89,7 +89,7 @@ fun MusicPlayerCard(manager: ControlManager, labelColor: Color = Color.Black) {
                     modifier = Modifier
                         .size(40.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFF616161)),
+                        .background(GlassFill),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -117,7 +117,7 @@ fun MusicPlayerCard(manager: ControlManager, labelColor: Color = Color.Black) {
                 .fillMaxWidth()
                 .height(180.dp)
                 .clip(shape)
-                .background(Color.Black)
+                .background(GlassFill)
                 .border(0.5.dp, Color.White.copy(alpha = 0.2f), shape)
         ) {
             manager.currentAlbumArt?.let { bitmap ->
@@ -134,7 +134,8 @@ fun MusicPlayerCard(manager: ControlManager, labelColor: Color = Color.Black) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.3f))
+                    // הכהיה קלה רק מעל עטיפת אלבום, כדי שהטקסט הלבן ייקרא עליה.
+                    .background(if (manager.currentAlbumArt != null) Color.Black.copy(alpha = 0.25f) else Color.Transparent)
             )
 
             Column(

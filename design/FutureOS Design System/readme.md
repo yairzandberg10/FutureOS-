@@ -145,12 +145,45 @@ light. Everything else is flat.
 
 ### Elevation
 
-Six levels, and only two of them use a shadow:
+Seven levels (0–6), and only two of them use a shadow:
 
 0 screen background · 1–2 surface (card, with its shadow) · 3 raised "glass" — *a lighter tone,
 no shadow at all* · 4 dialog — surface plus a 60% black scrim over the screen behind ·
 5 heads-up notification — `#1C1C1E` at 90% with a 0.5dp 15% white hairline, floating over
-everything and **always dark even in light mode**.
+everything and **always dark even in light mode** · 6 system-shell panel — a blurred snapshot of the
+screen behind a 20% white wash, no shadow, only in the Control Center and Notification Center
+(see System shell).
+
+### System shell
+
+Four surfaces belong to the shell, not to an app: the **Control Center and Notification Center**
+panels, the **status-bar capsules** and the **home-screen widget**. They sit on the user's own
+picture, so their tokens are theme-independent — the same in light and dark, ink always white — and
+an app screen never uses them. They are documented as components (`GlassPanel` with `GlassTile`,
+`NotificationCard`, `StatusCapsule`, `Widget`) and were added from the Android code, not from the
+original token pipeline.
+
+- **Glass on a blurred backdrop.** The one exception to "no blur". When a panel opens it takes a
+  screenshot of the screen, blurs it at 40dp (`--fos-backdrop-blur`) and lays a 20% white wash over
+  it (`--fos-backdrop-wash`). Elements on the panel are white at **15%** (`--fos-glass-fill`) and
+  **24%** when focused (`--fos-glass-fill-focused`) with a **2dp white ring** — white, not the
+  accent. An *on* toggle is the exception, a solid accent fill with `--fos-on-accent` ink. A
+  destructive row is `--fos-danger-on-glass` (`#FF6B6B`, always) and option rows are 50dp. This is
+  **not** `--fos-glass`, the opaque raised tone apps use: never use one in the other's place.
+  Specimen: `guidelines/colors-glass.html`.
+- **Capsules.** The status bar is transparent; its two capsules are `#1C1C1E` at 55%
+  (`--fos-capsule-bg`) with a 0.5dp 15% white hairline, 22dp tall. The leading one is dynamic: it
+  widens (200ms, no bounce) for a call, charging, a new notification or playing music, then returns
+  to the time and the app glyphs. No blur, no focus.
+- **Widget.** `#1C1C1E` at 90% (`--fos-widget-bg`), 22dp radius, a 0.5dp 15% white hairline; a 12sp
+  title at 60%, a 20sp bold value (28sp for the clock) and a 13sp subtitle. Always dark, no blur.
+- **Notification card.** A glass tile in the Notification Center: OK opens the notification and
+  closes the center, long OK expands its text, the Options key swaps the content for its actions as
+  50dp menu rows (the destructive one in `--fos-danger-on-glass`).
+
+Two existing components grew with the shell, and both are used outside it: `Slider` takes an optional
+leading icon (Settings and the Control Center share one slider), and `ActionGrid` cells can carry a
+text glyph instead of an icon and be non-focusable key legends (the calculator).
 
 ### States
 
@@ -166,7 +199,8 @@ cannot activate looks like a row you can — a known gap).
   dialog button all read this way.
 - Anything that cannot receive focus cannot be activated at all. That is a design rule, not an
   implementation detail — the bottom nav is deliberately unfocusable because the screen-level arrow
-  keys move between its tabs.
+  keys move between its tabs, and the calculator's key legend (an `ActionGrid` of `legend` cells that
+  only reminds you what a physical key does) never takes the focus ring.
 
 ### Motion
 
@@ -193,9 +227,12 @@ notification is inset 12dp from the sides, 8dp from the top.
 Grids exist in the launcher only, at fixed counts: app drawer 4 columns, folder contents 3 columns,
 folder preview 2 columns. No fluid grid anywhere.
 
-Transparency and blur: **there is no blur in this system.** "Glass" is a lighter opaque tone, not a
-backdrop filter. Transparency is used for exactly two jobs — the alpha ladder over text, and the
-60% black scrim behind dialogs and menus. No protection gradients; a scrim or a solid capsule does
+Transparency and blur: **inside an app there is no blur.** "Glass" in an app is a lighter opaque
+tone, not a backdrop filter. Transparency is used for three jobs — the alpha ladder over text, the
+60% black scrim behind dialogs and menus, and the system shell. The shell is the one place that
+blurs: the Control Center and Notification Center draw a blurred screenshot of the screen behind a
+20% white wash and put white-15% glass on it (see System shell). The status-bar capsules and the
+widget are translucent but not blurred. No protection gradients; a scrim or a solid capsule does
 that job instead.
 
 ### Focus target sizes
@@ -262,23 +299,23 @@ non-systemic; if you need them, they should be designed rather than reconstructe
 | file | contents |
 |---|---|
 | `tokens/fonts.css` | Heebo, Roboto Mono, Material Symbols Rounded; the `.fos-icon` class |
-| `tokens/colors.css` | core dark/light, accent palette, alpha ladder, app extensions |
-| `tokens/typography.css` | the seven sizes, weights, the 0.8–1.4 multiplier |
+| `tokens/colors.css` | core dark/light, accent palette, alpha ladder, app extensions, system-shell glass, capsule and widget |
+| `tokens/typography.css` | the seven sizes (plus the 28sp widget clock), weights, the 0.8–1.4 multiplier |
 | `tokens/spacing.css` | the two named tokens, the dp ladder, screen size, focus row heights |
 | `tokens/shape.css` | nine radii, border widths |
 | `tokens/focus.css` | focus borders, scale, and every focus/idle background |
 | `tokens/motion.css` | five durations, four easings |
-| `tokens/elevation.css` | the two real shadows |
+| `tokens/elevation.css` | the two real shadows (the shell's blur is in `colors.css`) |
 
 **Components** — `components/<group>/`, each with `.jsx`, `.d.ts`, `.prompt.md`, and one card:
 
 - `core/` — `TopBar`, `IconButton`, `ListItem`, `EmptyState`, `Button`, `Card`, `SectionHeader`,
-  `Divider`, `Icon`, `FosIcon`, `Avatar`, `ScreenHero`, `MonoValue`, `ActionGrid`
+  `Divider`, `Icon`, `FosIcon`, `Avatar`, `ScreenHero`, `MonoValue`, `ActionGrid`, `Widget`
 - `forms/` — `Switch`, `Slider`, `TextField`, `TextArea`, `Chip`, `DayChip`, `Capsule`,
   `ToggleButton`, `Checkbox`, `RadioButton`, `TimePicker`, `DatePicker`, `SettingItem`
 - `feedback/` — `ConfirmDialog`, `InputDialog`, `HeadsUpNotification`, `Snackbar`, `ProgressBar`,
-  `Spinner`, `Badge`
-- `navigation/` — `BottomNav`, `SoftKeyBar`, `OptionsMenu`, `TabRow`
+  `Spinner`, `Badge`, `GlassPanel` (with `GlassTile`), `NotificationCard`
+- `navigation/` — `BottomNav`, `SoftKeyBar`, `OptionsMenu`, `TabRow`, `StatusCapsule`
 
 **UI kits** — `ui_kits/<product>/`, click-through recreations at 640 × 960:
 
@@ -294,7 +331,8 @@ non-systemic; if you need them, they should be designed rather than reconstructe
   conversation mode (designed against the system; no translation app exists in the sources)
 
 **Guidelines** — `guidelines/` holds the foundation specimen cards that populate the Design System
-tab (type, color, spacing, shape, focus, motion, keypad model).
+tab (type, color, spacing, shape, focus, motion, keypad model, and the shell glass in
+`guidelines/colors-glass.html`).
 
 **Assets** — `assets/` holds no logo, by design (see Sources). Two icon sources: the custom
 `FosIcon` set drawn in `components/core/FosIcon.jsx`, and the Material Symbols Rounded webfont

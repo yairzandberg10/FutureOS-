@@ -1,6 +1,8 @@
 /* FutureOS elevation. Depth is built from tone, not shadow: there are exactly two
    real shadows in the whole codebase (SettingsCard, 4dp dark / 1dp light).
-   Levels: 0 screen bg, 1-2 surface, 3 glass (tone only), 4 dialog (scrim), 5 heads-up. */
+   Levels: 0 screen bg, 1-2 surface, 3 glass (tone only), 4 dialog (scrim), 5 heads-up,
+   6 system-shell panel (blurred snapshot of the screen + 20% wash — see --fos-backdrop-*
+   in colors.css; no shadow, and never drawn inside an app). */
 :root {
   --fos-shadow-none: none;
   --fos-shadow-card: 0 8px 16px rgba(0, 0, 0, 0.5);   /* 4dp, dark theme */

@@ -1,28 +1,25 @@
 package com.future.notes
 
-import android.app.PendingIntent
-import android.appwidget.AppWidgetManager
-import android.appwidget.AppWidgetProvider
+import android.database.sqlite.SQLiteDatabase
 import android.content.Context
-import android.widget.RemoteViews
+import com.future.sharednav.widget.FutureContentWidget
+import com.future.sharednav.widget.WidgetContent
 
-/**
- * ווידג'ט קיצור-דרך למסך הבית - אייקון ושם האפליקציה, לחיצה פותחת אותה.
- * חלק מהעיצוב האחיד של ווידג'טים ייעודיים לכל אפליקציית FutureOS מובנית.
- */
-class NotesWidgetProvider : AppWidgetProvider() {
-    override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
-        appWidgetIds.forEach { widgetId ->
-            val views = RemoteViews(context.packageName, R.layout.app_widget)
-            val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
-            if (launchIntent != null) {
-                val pendingIntent = PendingIntent.getActivity(
-                    context, 0, launchIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                )
-                views.setOnClickPendingIntent(R.id.widget_root, pendingIntent)
+/** הפתק העליון (נעוץ, או האחרון שנערך) ומספר הפתקים. */
+class NotesWidgetProvider : FutureContentWidget() {
+    override fun content(context: Context): WidgetContent {
+        val file = context.getDatabasePath("note_database")
+        if (!file.exists()) return WidgetContent(value = "אין פתקים", subtitle = "OK לפתק חדש")
+        SQLiteDatabase.openDatabase(file.path, null, SQLiteDatabase.OPEN_READONLY).use { db ->
+            val count = db.rawQuery("SELECT COUNT(*) FROM notes", null).use { if (it.moveToFirst()) it.getInt(0) else 0 }
+            if (count == 0) return WidgetContent(value = "אין פתקים", subtitle = "OK לפתק חדש")
+            db.rawQuery("SELECT title, content FROM notes ORDER BY isPinned DESC, timestamp DESC LIMIT 1", null).use { c ->
+                if (c.moveToFirst()) {
+                    val title = c.getString(0).orEmpty().ifBlank { c.getString(1).orEmpty().lineSequence().firstOrNull { it.isNotBlank() }.orEmpty() }
+                    return WidgetContent(value = title.ifBlank { "פתק" }, subtitle = if (count == 1) "פתק אחד" else "$count פתקים")
+                }
             }
-            appWidgetManager.updateAppWidget(widgetId, views)
         }
+        return WidgetContent(value = "פתקים")
     }
 }

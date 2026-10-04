@@ -180,6 +180,7 @@ class MainActivity : ComponentActivity() {
         } catch (e: Exception) {
             pruneOrphanedWidgetIds()
         }
+        refreshHostedWidgets()
 
         // אפליקציות שהותקנו/הוסרו/הוחלפו אחרי הטעינה הראשונית של הרשימה חייבות
         // לגרום לרענון שלה, אחרת אפליקציה חדשה לעולם לא תופיע ואפליקציה שהוסרה
@@ -217,6 +218,30 @@ class MainActivity : ComponentActivity() {
         }
         packageChangeReceiver?.let { unregisterReceiver(it) }
         packageChangeReceiver = null
+    }
+
+    private var lastWidgetRefresh = 0L
+
+    /**
+     * מבקש מכל ווידג'ט שמוצג במסך הבית לעדכן את התוכן שלו (APPWIDGET_UPDATE
+     * ישירות לספק שלו). בלי זה ווידג'ט התעדכן רק במחזור של המערכת (חצי שעה,
+     * או אף פעם - רוב הווידג'טים הוגדרו עם updatePeriodMillis=0), ומסך הבית
+     * הציג נתונים ישנים: שיחה, הודעה או מעורר מלפני שעות. לכל היותר פעם בדקה.
+     */
+    private fun refreshHostedWidgets() {
+        val now = android.os.SystemClock.elapsedRealtime()
+        if (now - lastWidgetRefresh < 60_000L) return
+        lastWidgetRefresh = now
+        appWidgetHost.appWidgetIds.forEach { id ->
+            val provider = runCatching { appWidgetManager.getAppWidgetInfo(id)?.provider }.getOrNull() ?: return@forEach
+            runCatching {
+                sendBroadcast(
+                    Intent(AppWidgetManager.ACTION_APPWIDGET_UPDATE)
+                        .setComponent(provider)
+                        .putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, intArrayOf(id))
+                )
+            }
+        }
     }
 
     private fun selectWidget() {

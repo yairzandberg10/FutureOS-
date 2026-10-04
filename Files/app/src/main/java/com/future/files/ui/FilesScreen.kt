@@ -104,6 +104,13 @@ fun FilesScreen(
     /** תצוגת רשת (ריבועים) או רשימה - מתחלפת מתפריט האפשרויות. */
     gridView: Boolean = false,
     onToggleGridView: () -> Unit = {},
+    /** סדר המיון הנוכחי - מוצג ומוחלף בכפתור המיון שבשורה העליונה. */
+    sortOrder: com.future.files.data.SortOrder = com.future.files.data.SortOrder.NAME,
+    onCycleSort: () -> Unit = {},
+    /** התקדמות העתקה/העברה (0..1), או null כשאין. */
+    busyProgress: Float? = null,
+    onCancelBusy: (() -> Unit)? = null,
+    onOpenInGallery: (FileEntry) -> Unit = {},
     // הנתיב של הפריט שנפתח לאחרונה מהתיקייה הזו - כשחוזרים "אחורה" (מקובץ
     // שנפתח, או מתת-תיקייה) הפוקוס צריך לשוב אליו בדיוק, לא תמיד לפריט הראשון.
     lastSelectedPath: String? = null,
@@ -158,11 +165,17 @@ fun FilesScreen(
         Box(modifier = Modifier.escapeTextFieldFocusTrap().fillMaxSize().background(theme.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize()) {
                 if (selectedEntries.isEmpty()) {
-                    // כותרת בלבד: חזרה במקש BACK, והפעולות במקש Options.
-                    com.future.sharednav.components.ScreenTopBar(
+                    // הכותרת, ובסופה שלושה כפתורי סרגל עליון: מיון, תצוגה (רשימה/רשת)
+                    // ותיקייה חדשה. חזרה במקש BACK, ושאר הפעולות במקש Options.
+                    FilesTopBar(
                         title = if (isRoot) "קבצים" else currentDir.displayName(currentDirIsTopLevelFolder),
-                        textColor = theme.textColor,
-                        accentColor = theme.accentColor,
+                        theme = theme,
+                        sortOrder = sortOrder,
+                        gridView = gridView,
+                        enabled = hasAccess,
+                        onSort = onCycleSort,
+                        onToggleView = onToggleGridView,
+                        onNewFolder = { showNewFolder = true },
                     )
                 } else {
                     // סרגל בחירה מרובה
@@ -271,6 +284,8 @@ fun FilesScreen(
                     onCopy = { menuEntry = null; onCopy(entry) },
                     onMove = { menuEntry = null; onMove(entry) },
                     onDetails = { menuEntry = null; detailsEntry = entry },
+                    isImage = categorize(entry.file) == FileCategory.IMAGE,
+                    onOpenInGallery = { menuEntry = null; onOpenInGallery(entry) },
                     onDelete = { menuEntry = null; deleteEntryState = entry },
                     folderRows = {
                         FolderMenuRows(theme, hasClipboard, gridView, onDone = { menuEntry = null }, onNewFolder = { showNewFolder = true }, onPaste = onPaste, onToggleGridView = onToggleGridView)
@@ -337,18 +352,75 @@ fun FilesScreen(
             }
 
             if (isBusy) {
-                // המתנה בלי אורך ידוע: ההכהיה של הדיאלוג (60%) וספינר, על משטח של דיאלוג.
+                // ההכהיה של הדיאלוג (60%) ומשטח של דיאלוג: בהעתקה - פס התקדמות
+                // וכפתור ביטול; בפעולה בלי אורך ידוע (מחיקה) - ספינר.
                 Box(modifier = Modifier.fillMaxSize().background(theme.scrimColor), contentAlignment = Alignment.Center) {
-                    Box(
+                    Column(
                         modifier = Modifier
+                            .fillMaxWidth(0.85f)
                             .clip(FutureShapes.dialog)
                             .background(theme.surfaceColor)
-                            .padding(horizontal = FutureDimens.spacingXl, vertical = FutureDimens.spacingLg)
+                            .padding(horizontal = FutureDimens.spacingXl, vertical = FutureDimens.spacingLg),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(FutureDimens.spacingMd),
                     ) {
-                        FutureSpinner(theme = theme, label = "מבצע פעולה")
+                        if (busyProgress != null) {
+                            Text("מעתיק · ${(busyProgress * 100).toInt()}%", color = theme.textColor, fontSize = FutureTypography.body)
+                            com.future.sharednav.components.FutureProgressBar(progress = busyProgress, theme = theme)
+                            if (onCancelBusy != null) {
+                                val cancelFocus = remember { FocusRequester() }
+                                LaunchedEffect(Unit) { runCatching { cancelFocus.requestFocus() } }
+                                FutureButton("ביטול", theme, onCancelBusy, variant = com.future.sharednav.components.FutureButtonVariant.Secondary, focusRequester = cancelFocus)
+                            }
+                        } else {
+                            FutureSpinner(theme = theme, label = "מבצע פעולה")
+                        }
                     }
                 }
             }
+        }
+    }
+}
+
+/**
+ * השורה העליונה של הקבצים: הכותרת (ScreenTopBar) ובסופה שלושה כפתורי סרגל
+ * עליון של המערכת (TopBarIconButton, 36dp): מיון - מחליף שם/תאריך/גודל/סוג,
+ * והסדר הנוכחי כתוב מתחת לכותרת; תצוגה - רשימה או רשת; תיקייה חדשה.
+ */
+@Composable
+private fun FilesTopBar(
+    title: String,
+    theme: FutureTheme,
+    sortOrder: com.future.files.data.SortOrder,
+    gridView: Boolean,
+    enabled: Boolean,
+    onSort: () -> Unit,
+    onToggleView: () -> Unit,
+    onNewFolder: () -> Unit,
+) {
+    val type = com.future.sharednav.theme.rememberFutureType()
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = FutureDimens.spacingLg, vertical = FutureDimens.spacingMd),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm),
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                title,
+                color = theme.textColor,
+                fontSize = type.screenTitle,
+                fontWeight = FutureTypography.weightBold,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            )
+            if (enabled) Text("ממוין לפי ${sortOrder.label}", color = theme.mutedTextColor, fontSize = type.summary, maxLines = 1)
+        }
+        if (enabled) {
+            FocusableIconButton(FutureIcons.AutoMirrored.Sort, "מיון", theme, onSort)
+            FocusableIconButton(if (gridView) FutureIcons.AutoMirrored.ViewList else FutureIcons.GridView, if (gridView) "תצוגת רשימה" else "תצוגת רשת", theme, onToggleView)
+            FocusableIconButton(FutureIcons.CreateNewFolder, "תיקייה חדשה", theme, onNewFolder)
         }
     }
 }
@@ -492,9 +564,12 @@ private fun FileOptionsMenu(
     onMove: () -> Unit,
     onDetails: () -> Unit,
     onDelete: () -> Unit,
+    isImage: Boolean = false,
+    onOpenInGallery: () -> Unit = {},
     folderRows: @Composable () -> Unit = {},
 ) {
     FutureOptionsMenu(theme = theme, onDismissRequest = onDismiss, header = entryName) {
+        if (isImage) FutureMenuRow("פתח בגלריה", FutureIcons.Image, theme, onOpenInGallery)
         if (!isDirectory) {
             FutureMenuRow("שתף", FutureIcons.Share, theme, onShare)
             FutureMenuRow("פתח באפליקציה חיצונית", Icons.Rounded.OpenInNew, theme, onOpenExternally)

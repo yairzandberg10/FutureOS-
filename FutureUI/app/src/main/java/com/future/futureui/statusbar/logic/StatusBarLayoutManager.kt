@@ -33,7 +33,9 @@ class StatusBarLayoutManager(context: Context) {
     fun getSuppressSystemBars(): Boolean = prefs.getBoolean("suppress_system_bars", true)
     fun saveSuppressSystemBars(value: Boolean) = prefs.edit().putBoolean("suppress_system_bars", value).apply()
 
-    fun getBarStyle(): String = prefs.getString(KEY_BAR_STYLE, STYLE_CLASSIC)?.takeIf { it in STYLES } ?: STYLE_CLASSIC
+    // הכמוסות הן ברירת המחדל (שקופות ודינמיות); מי שבחר במפורש סגנון אחר ממשיך לקבל אותו,
+    // כי הערך השמור ב-prefs גובר על ברירת המחדל.
+    fun getBarStyle(): String = prefs.getString(KEY_BAR_STYLE, STYLE_CAPSULES)?.takeIf { it in STYLES } ?: STYLE_CAPSULES
     fun saveBarStyle(value: String) = prefs.edit().putString(KEY_BAR_STYLE, value).apply()
 
     fun registerListener(listener: SharedPreferences.OnSharedPreferenceChangeListener) = prefs.registerOnSharedPreferenceChangeListener(listener)

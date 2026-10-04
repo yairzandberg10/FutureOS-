@@ -67,6 +67,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
     private val recentAppsManager by lazy { RecentAppsManager(this) }
     private val recentsMemory = mutableStateOf<String?>(null)
     private var recentAppsTriggered = false
+    private var lockController: com.android.sistemui.lockscreen.LockScreenController? = null
     private val recentAppsRunnable = Runnable {
         recentAppsTriggered = true
         showRecentAppsWithFreshSnapshot()
@@ -77,7 +78,14 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
 
     /** האם אפשר לצלם עכשיו את [pkg]: היא בחזית, רשומה באחרונות, ואין מעליה חלון שלנו. */
     private fun isSnapshotTarget(pkg: String): Boolean =
-        FutureUIState.foregroundPackage == pkg && !recentsVisible && powerMenuView == null && recentAppsManager.isTop(pkg)
+        FutureUIState.foregroundPackage == pkg && !recentsVisible && powerMenuView == null && recentAppsManager.isTop(pkg) &&
+            // צילום נשמר לדיסק ומוצג באחרונות: לא כשהמכשיר נעול, ולא כשהמקלדת
+            // פתוחה - סיסמה או קוד שמוקלדים עכשיו היו נכנסים לתמונה.
+            !FutureUIState.isLocked && !FutureUIState.isSecured && !isKeyboardShowing()
+
+    private fun isKeyboardShowing(): Boolean = runCatching {
+        windows.any { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD }
+    }.getOrDefault(true)
 
     // צבע ההדגשה/פוקוס המשותף בין כל אפליקציות FutureOS (ThemeProvider). כאן
     // ניגשים ל-SharedPreferences ישירות במקום דרך ContentResolver כי השירות
@@ -96,6 +104,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
                 FutureUIActions.ACTION_BRING_STATUS_BAR_FRONT -> bringStatusBarToFront()
                 // כפתור הכיבוי במרכז הבקרה פותח את אותו תפריט כיבוי אחד.
                 ACTION_SHOW_POWER_MENU -> mainHandler.post { showPowerMenu() }
+                ACTION_LOCK_NOW -> mainHandler.post { lockController?.lock() }
             }
         }
     }
@@ -111,6 +120,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
             when (intent?.action) {
                 FutureUIActions.ACTION_CALL_RINGING -> {
                     suppressForActiveCall = true
+                    lockController?.onCallRinging()
                     // ה-fullScreenIntent הרגיל של ההתראה מופעל אוטומטית ע"י המערכת רק
                     // כשהמסך כבוי - כשמסך הבית עצמו הוא האפליקציה בחזית צריך לפתוח את
                     // מסך השיחה במפורש כדי שגם שם השיחה תתקבל במסך מלא, לא רק כהתראה.
@@ -118,7 +128,10 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
                         sendBroadcast(Intent(FutureUIActions.ACTION_LAUNCH_CALL_UI).setPackage(DIALER_PACKAGE))
                     }
                 }
-                FutureUIActions.ACTION_CALL_ENDED -> suppressForActiveCall = false
+                FutureUIActions.ACTION_CALL_ENDED -> {
+                    suppressForActiveCall = false
+                    lockController?.onCallEnded()
+                }
             }
         }
     }
@@ -151,6 +164,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
 
             val filter = IntentFilter(FutureUIActions.ACTION_BRING_STATUS_BAR_FRONT).apply {
                 addAction(ACTION_SHOW_POWER_MENU)
+                addAction(ACTION_LOCK_NOW)
             }
             // שני השידורים נשלחים רק מתוך FutureUI עצמו (מסכי overlay, מרכז הבקרה) -
             // NOT_EXPORTED כדי שאפליקציה זרה לא תוכל להקפיץ את תפריט הכיבוי.
@@ -173,10 +187,36 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
 
     override fun onServiceConnected() {
         super.onServiceConnected()
+        // מרכז הבקרה ומרכז ההתראות מצלמים דרכנו את הרקע המטושטש (ר' ScreenBackdrop).
+        com.android.sistemui.utils.ScreenBackdrop.screenshotService = this
         if (layoutManager?.getSuppressSystemBars() == true) {
             suppressSystemBars()
         }
         showStatusBar()
+        exemptCallAppsFromBackgroundRestriction()
+        if (lockController == null) {
+            lockController = com.android.sistemui.lockscreen.LockScreenController(
+                service = this,
+                owner = this,
+                windowManager = windowManager,
+                controlManager = { controlManager },
+                accentColor = { recentsAccentColor.value },
+                bringStatusBarFront = { bringStatusBarToFront() },
+            ).also { it.start() }
+        }
+    }
+
+    /**
+     * מנהל הסוללה של היצרן מסמן כמעט כל אפליקציה כ"מוגבלת ברקע" (RUN_ANY_IN_BACKGROUND
+     * ignore). על החייגן זה קטלני: כשהתהליך שלו לא רץ, Telecom לא מצליח להעיר את
+     * ה-InCallService בשיחה נכנסת - אין מסך, אין באנר, והשיחה נראית רק מתוך החייגן.
+     * כאן (שרץ תמיד) מחזירים את ההיתר בכל הפעלה, כי היצרן עלול להחיל את ההגבלה מחדש.
+     */
+    private fun exemptCallAppsFromBackgroundRestriction() {
+        val packages = listOf("com.future.dialer", "com.future.messages", "com.future.clock", packageName)
+        controlManager?.runRootCommandAsync(
+            packages.joinToString("; ") { "cmd appops set $it RUN_ANY_IN_BACKGROUND allow; dumpsys deviceidle whitelist +$it" }
+        )
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
@@ -188,6 +228,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
             // צילום המסך לכרטיס שלה באחרונות - אחרי שהחלון סיים להיפתח
             if (pkg != null && recentAppsManager.isTop(pkg)) recentSnapshots.schedule(pkg, 900, ::isSnapshotTarget)
             maybeReplaceSystemPowerMenu(pkg, event.className?.toString(), event)
+            lockController?.onForegroundChanged(pkg, event.className?.toString())
         }
     }
     override fun onInterrupt() {}
@@ -215,6 +256,9 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
             }
             return false
         }
+
+        // מסך הנעילה תופס את כל שאר המקשים (ר' LockScreenController.onKey)
+        if (lockController?.onKey(event) == true) return true
 
         // כשמסך "אפליקציות אחרונות" שלנו גלוי, BACK סוגר אותו וכל שאר המקשים
         // (חצים, אישור, Menu לסגירת פריט) עוברים ישירות לחלון שלו כדי שהניווט
@@ -279,6 +323,8 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
     }
 
     private fun launchVoiceAssistant() {
+        // נעול (גם כשמסך הנעילה פינה מקום לשיחה/מעורר): לא פותחים אפליקציה מעליו
+        if (FutureUIState.isSecured) return
         try {
             val intent = packageManager.getLaunchIntentForPackage(VOICE_ASSISTANT_PACKAGE) ?: return
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -497,7 +543,13 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
                             },
                             onCancel = { hidePowerMenu() },
                             airplaneOn = powerAirplaneState.value,
-                            onAirplane = {
+                            onAirplane = onAirplane@{
+                                // מצב טיסה מהמכשיר נעול = גנב מנתק אותו מהרשת ומאיתור. כמו
+                                // "נעילת רשת ואבטחה" בסמסונג: רק אחרי פתיחה.
+                                if (FutureUIState.isSecured) {
+                                    android.widget.Toast.makeText(this@StatusBarAccessibilityService, "צריך לפתוח את הנעילה קודם", android.widget.Toast.LENGTH_SHORT).show()
+                                    return@onAirplane
+                                }
                                 val next = !powerAirplaneState.value
                                 powerAirplaneState.value = next
                                 controlManager?.let { cm ->
@@ -564,6 +616,8 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
     /** מסך "אפליקציות אחרונות" עצמאי מבוסס UsageStatsManager, במקום GLOBAL_ACTION_RECENTS המכוער. */
     private fun showRecentApps() {
         if (recentsVisible) return
+        // נעול (גם כשמסך הנעילה פינה מקום לשיחה): האחרונות מציגות צילומים של כל האפליקציות
+        if (FutureUIState.isSecured) return
         try {
             if (!recentAppsManager.hasUsageAccess()) {
                 controlManager?.runRootCommandAsync("appops set $packageName GET_USAGE_STATS allow")
@@ -664,10 +718,15 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
     }
 
     override fun onDestroy() {
+        if (com.android.sistemui.utils.ScreenBackdrop.screenshotService === this) {
+            com.android.sistemui.utils.ScreenBackdrop.screenshotService = null
+        }
         try {
             hideVolumeOverlay()
             hideRecentApps()
             hidePowerMenu()
+            lockController?.dispose()
+            lockController = null
             statusBarView?.let { windowManager.removeView(it) }
             statusBarView = null
         } catch (e: Exception) {
@@ -697,6 +756,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
         private const val HOME_PACKAGE = "com.future.futurelauncher"
         private const val DOUBLE_CLICK_WINDOW_MS = 300L
         const val ACTION_SHOW_POWER_MENU = "com.future.futureui.ACTION_SHOW_POWER_MENU"
+        const val ACTION_LOCK_NOW = "com.future.futureui.ACTION_LOCK_NOW"
         private val POWER_MENU_CLASS_HINTS = listOf("globalactions", "ActionsDialog", "PowerMenu", "ShutdownDialog")
         /** השורות של תפריט הכיבוי של אנדרואיד, עברית ואנגלית. */
         private val POWER_OFF_LABELS = listOf("כיבוי", "כבה", "Power off", "Shut down", "Shutdown")

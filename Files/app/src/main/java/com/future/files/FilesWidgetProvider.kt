@@ -1,42 +1,23 @@
 package com.future.files
 
-import android.app.PendingIntent
-import android.appwidget.AppWidgetManager
-import android.appwidget.AppWidgetProvider
-import android.content.Context
 import android.os.Environment
 import android.os.StatFs
-import android.widget.RemoteViews
 import java.util.Locale
+import android.content.Context
+import com.future.sharednav.widget.FutureContentWidget
+import com.future.sharednav.widget.WidgetContent
 
-/**
- * ווידג'ט "קבצים" למסך הבית - מציג נפח פנוי מתוך הכולל באחסון הפנימי (סטטיסטיקת
- * מערכת קבצים בלבד, לא דורשת הרשאת אחסון), לחיצה פותחת את האפליקציה.
- */
-class FilesWidgetProvider : AppWidgetProvider() {
-    override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
-        val storageText = try {
-            val stat = StatFs(Environment.getExternalStorageDirectory().path)
-            val totalGb = stat.totalBytes / (1024.0 * 1024.0 * 1024.0)
-            val freeGb = stat.availableBytes / (1024.0 * 1024.0 * 1024.0)
-            String.format(Locale.getDefault(), "%.1fGB פנויים מתוך %.1fGB", freeGb, totalGb)
-        } catch (e: Exception) {
-            ""
-        }
-
-        appWidgetIds.forEach { widgetId ->
-            val views = RemoteViews(context.packageName, R.layout.app_widget)
-            views.setTextViewText(R.id.widget_storage_info, storageText)
-
-            val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
-            if (launchIntent != null) {
-                val pendingIntent = PendingIntent.getActivity(
-                    context, 0, launchIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                )
-                views.setOnClickPendingIntent(R.id.widget_root, pendingIntent)
-            }
-            appWidgetManager.updateAppWidget(widgetId, views)
-        }
+/** נפח פנוי באחסון (סטטיסטיקת מערכת קבצים, בלי הרשאת אחסון). */
+class FilesWidgetProvider : FutureContentWidget() {
+    override fun content(context: Context): WidgetContent {
+        val stat = StatFs(Environment.getExternalStorageDirectory().path)
+        val gb = 1024.0 * 1024.0 * 1024.0
+        val free = stat.availableBytes / gb
+        val total = stat.totalBytes / gb
+        val usedPercent = if (total > 0) ((1 - free / total) * 100).toInt() else 0
+        return WidgetContent(
+            value = String.format(Locale.US, "%.1fGB פנויים", free),
+            subtitle = String.format(Locale.US, "מתוך %.0fGB · %d%% בשימוש", total, usedPercent),
+        )
     }
 }

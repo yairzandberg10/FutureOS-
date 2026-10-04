@@ -1,4 +1,4 @@
-/* @ds-bundle: {"format":4,"namespace":"FutureOSDesignSystem_3ab611","components":[{"name":"ActionGrid","sourcePath":"components/core/ActionGrid.jsx"},{"name":"Avatar","sourcePath":"components/core/Avatar.jsx"},{"name":"Button","sourcePath":"components/core/Button.jsx"},{"name":"Card","sourcePath":"components/core/Card.jsx"},{"name":"Divider","sourcePath":"components/core/Divider.jsx"},{"name":"EmptyState","sourcePath":"components/core/EmptyState.jsx"},{"name":"FosIcon","sourcePath":"components/core/FosIcon.jsx"},{"name":"FOS_ICON_NAMES","sourcePath":"components/core/FosIcon.jsx"},{"name":"Icon","sourcePath":"components/core/Icon.jsx"},{"name":"IconButton","sourcePath":"components/core/IconButton.jsx"},{"name":"ListItem","sourcePath":"components/core/ListItem.jsx"},{"name":"MonoValue","sourcePath":"components/core/MonoValue.jsx"},{"name":"ScreenHero","sourcePath":"components/core/ScreenHero.jsx"},{"name":"SectionHeader","sourcePath":"components/core/SectionHeader.jsx"},{"name":"TopBar","sourcePath":"components/core/TopBar.jsx"},{"name":"Badge","sourcePath":"components/feedback/Badge.jsx"},{"name":"ConfirmDialog","sourcePath":"components/feedback/ConfirmDialog.jsx"},{"name":"HeadsUpNotification","sourcePath":"components/feedback/HeadsUpNotification.jsx"},{"name":"InputDialog","sourcePath":"components/feedback/InputDialog.jsx"},{"name":"ProgressBar","sourcePath":"components/feedback/ProgressBar.jsx"},{"name":"Snackbar","sourcePath":"components/feedback/Snackbar.jsx"},{"name":"Spinner","sourcePath":"components/feedback/Spinner.jsx"},{"name":"Capsule","sourcePath":"components/forms/Capsule.jsx"},{"name":"Checkbox","sourcePath":"components/forms/Checkbox.jsx"},{"name":"Chip","sourcePath":"components/forms/Chip.jsx"},{"name":"DatePicker","sourcePath":"components/forms/DatePicker.jsx"},{"name":"DayChip","sourcePath":"components/forms/DayChip.jsx"},{"name":"RadioButton","sourcePath":"components/forms/RadioButton.jsx"},{"name":"SettingItem","sourcePath":"components/forms/SettingItem.jsx"},{"name":"Slider","sourcePath":"components/forms/Slider.jsx"},{"name":"Switch","sourcePath":"components/forms/Switch.jsx"},{"name":"TextArea","sourcePath":"components/forms/TextArea.jsx"},{"name":"TextField","sourcePath":"components/forms/TextField.jsx"},{"name":"TimePicker","sourcePath":"components/forms/TimePicker.jsx"},{"name":"ToggleButton","sourcePath":"components/forms/ToggleButton.jsx"},{"name":"BottomNav","sourcePath":"components/navigation/BottomNav.jsx"},{"name":"OptionsMenu","sourcePath":"components/navigation/OptionsMenu.jsx"},{"name":"SoftKeyBar","sourcePath":"components/navigation/SoftKeyBar.jsx"},{"name":"TabRow","sourcePath":"components/navigation/TabRow.jsx"}],"sourceHashes":{"components/core/ActionGrid.jsx":"1dac07e1c560","components/core/Avatar.jsx":"fca60feda10e","components/core/Button.jsx":"7598ed3564fe","components/core/Card.jsx":"d1221204057c","components/core/Divider.jsx":"9ce386a7db14","components/core/EmptyState.jsx":"0190085decc8","components/core/FosIcon.jsx":"8e200ea899ff","components/core/Icon.jsx":"77fa91a06ef0","components/core/IconButton.jsx":"fd182bcf1148","components/core/ListItem.jsx":"08963c64d715","components/core/MonoValue.jsx":"93033b85d235","components/core/ScreenHero.jsx":"270e3e83fef1","components/core/SectionHeader.jsx":"66f7be2cf6f4","components/core/TopBar.jsx":"f6e6440d6faa","components/feedback/Badge.jsx":"da8a60b9a105","components/feedback/ConfirmDialog.jsx":"98ad1eadd672","components/feedback/HeadsUpNotification.jsx":"78cb3d5c38fb","components/feedback/InputDialog.jsx":"16ec2899f44f","components/feedback/ProgressBar.jsx":"4fa3e02273ad","components/feedback/Snackbar.jsx":"cca72c5417b1","components/feedback/Spinner.jsx":"074c00e9ef4a","components/forms/Capsule.jsx":"91ad95a91ccd","components/forms/Checkbox.jsx":"d1baa228e661","components/forms/Chip.jsx":"b019249ab06e","components/forms/DatePicker.jsx":"a8ea753c9a0f","components/forms/DayChip.jsx":"8708e3b3b07e","components/forms/RadioButton.jsx":"5fecfa82d426","components/forms/SettingItem.jsx":"2320ee21cca5","components/forms/Slider.jsx":"dcd45d3e1f62","components/forms/Switch.jsx":"5bcb19b90b79","components/forms/TextArea.jsx":"31e91283ff62","components/forms/TextField.jsx":"83f6aa086b21","components/forms/TimePicker.jsx":"0376d714d63e","components/forms/ToggleButton.jsx":"1bbb9fbba640","components/navigation/BottomNav.jsx":"bc08fdca8729","components/navigation/OptionsMenu.jsx":"5102a72a04d4","components/navigation/SoftKeyBar.jsx":"d3565ae1f0b0","components/navigation/TabRow.jsx":"740331b451e3","ui_kits/bluetooth/BluetoothScreens.jsx":"f905a806bb14","ui_kits/calls/ScreensA.jsx":"f03eb79a6759","ui_kits/calls/data.js":"cb2d06765e1d","ui_kits/clock/ClockScreens.jsx":"d3a5d1df7cc3","ui_kits/communication/CommScreens.jsx":"62e066d39d0d","ui_kits/settings/SettingsScreens.jsx":"222f45fdf47c","ui_kits/translate/TranslateScreens.jsx":"9a37b194e4bc"},"inlinedExternals":[],"unexposedExports":[]} */
+/* @ds-bundle: {"format":4,"namespace":"FutureOSDesignSystem_3ab611","components":[{"name":"ActionGrid","sourcePath":"components/core/ActionGrid.jsx"},{"name":"Avatar","sourcePath":"components/core/Avatar.jsx"},{"name":"Button","sourcePath":"components/core/Button.jsx"},{"name":"Card","sourcePath":"components/core/Card.jsx"},{"name":"Divider","sourcePath":"components/core/Divider.jsx"},{"name":"EmptyState","sourcePath":"components/core/EmptyState.jsx"},{"name":"FosIcon","sourcePath":"components/core/FosIcon.jsx"},{"name":"FOS_ICON_NAMES","sourcePath":"components/core/FosIcon.jsx"},{"name":"Icon","sourcePath":"components/core/Icon.jsx"},{"name":"IconButton","sourcePath":"components/core/IconButton.jsx"},{"name":"ListItem","sourcePath":"components/core/ListItem.jsx"},{"name":"MonoValue","sourcePath":"components/core/MonoValue.jsx"},{"name":"ScreenHero","sourcePath":"components/core/ScreenHero.jsx"},{"name":"SectionHeader","sourcePath":"components/core/SectionHeader.jsx"},{"name":"TopBar","sourcePath":"components/core/TopBar.jsx"},{"name":"Widget","sourcePath":"components/core/Widget.jsx"},{"name":"Badge","sourcePath":"components/feedback/Badge.jsx"},{"name":"ConfirmDialog","sourcePath":"components/feedback/ConfirmDialog.jsx"},{"name":"GlassPanel","sourcePath":"components/feedback/GlassPanel.jsx"},{"name":"GlassTile","sourcePath":"components/feedback/GlassPanel.jsx"},{"name":"HeadsUpNotification","sourcePath":"components/feedback/HeadsUpNotification.jsx"},{"name":"InputDialog","sourcePath":"components/feedback/InputDialog.jsx"},{"name":"NotificationCard","sourcePath":"components/feedback/NotificationCard.jsx"},{"name":"ProgressBar","sourcePath":"components/feedback/ProgressBar.jsx"},{"name":"Snackbar","sourcePath":"components/feedback/Snackbar.jsx"},{"name":"Spinner","sourcePath":"components/feedback/Spinner.jsx"},{"name":"Capsule","sourcePath":"components/forms/Capsule.jsx"},{"name":"Checkbox","sourcePath":"components/forms/Checkbox.jsx"},{"name":"Chip","sourcePath":"components/forms/Chip.jsx"},{"name":"DatePicker","sourcePath":"components/forms/DatePicker.jsx"},{"name":"DayChip","sourcePath":"components/forms/DayChip.jsx"},{"name":"RadioButton","sourcePath":"components/forms/RadioButton.jsx"},{"name":"SettingItem","sourcePath":"components/forms/SettingItem.jsx"},{"name":"Slider","sourcePath":"components/forms/Slider.jsx"},{"name":"Switch","sourcePath":"components/forms/Switch.jsx"},{"name":"TextArea","sourcePath":"components/forms/TextArea.jsx"},{"name":"TextField","sourcePath":"components/forms/TextField.jsx"},{"name":"TimePicker","sourcePath":"components/forms/TimePicker.jsx"},{"name":"ToggleButton","sourcePath":"components/forms/ToggleButton.jsx"},{"name":"BottomNav","sourcePath":"components/navigation/BottomNav.jsx"},{"name":"OptionsMenu","sourcePath":"components/navigation/OptionsMenu.jsx"},{"name":"SoftKeyBar","sourcePath":"components/navigation/SoftKeyBar.jsx"},{"name":"StatusCapsule","sourcePath":"components/navigation/StatusCapsule.jsx"},{"name":"TabRow","sourcePath":"components/navigation/TabRow.jsx"}],"sourceHashes":{"components/core/ActionGrid.jsx":"4ff967e62be6","components/core/Avatar.jsx":"fca60feda10e","components/core/Button.jsx":"7598ed3564fe","components/core/Card.jsx":"d1221204057c","components/core/Divider.jsx":"9ce386a7db14","components/core/EmptyState.jsx":"0190085decc8","components/core/FosIcon.jsx":"4edeecefa94a","components/core/Icon.jsx":"77fa91a06ef0","components/core/IconButton.jsx":"fd182bcf1148","components/core/ListItem.jsx":"08963c64d715","components/core/MonoValue.jsx":"93033b85d235","components/core/ScreenHero.jsx":"270e3e83fef1","components/core/SectionHeader.jsx":"66f7be2cf6f4","components/core/TopBar.jsx":"f6e6440d6faa","components/core/Widget.jsx":"c3175e202f5d","components/feedback/Badge.jsx":"da8a60b9a105","components/feedback/ConfirmDialog.jsx":"98ad1eadd672","components/feedback/GlassPanel.jsx":"d9ef63e151e2","components/feedback/HeadsUpNotification.jsx":"78cb3d5c38fb","components/feedback/InputDialog.jsx":"16ec2899f44f","components/feedback/NotificationCard.jsx":"33bacf72f505","components/feedback/ProgressBar.jsx":"4fa3e02273ad","components/feedback/Snackbar.jsx":"cca72c5417b1","components/feedback/Spinner.jsx":"074c00e9ef4a","components/forms/Capsule.jsx":"91ad95a91ccd","components/forms/Checkbox.jsx":"d1baa228e661","components/forms/Chip.jsx":"b019249ab06e","components/forms/DatePicker.jsx":"a8ea753c9a0f","components/forms/DayChip.jsx":"8708e3b3b07e","components/forms/RadioButton.jsx":"5fecfa82d426","components/forms/SettingItem.jsx":"2320ee21cca5","components/forms/Slider.jsx":"1706cfbc80b2","components/forms/Switch.jsx":"5bcb19b90b79","components/forms/TextArea.jsx":"31e91283ff62","components/forms/TextField.jsx":"83f6aa086b21","components/forms/TimePicker.jsx":"9a7d5903d7e7","components/forms/ToggleButton.jsx":"1bbb9fbba640","components/navigation/BottomNav.jsx":"bc08fdca8729","components/navigation/OptionsMenu.jsx":"5102a72a04d4","components/navigation/SoftKeyBar.jsx":"d3565ae1f0b0","components/navigation/StatusCapsule.jsx":"545be5eea8ea","components/navigation/TabRow.jsx":"740331b451e3","ui_kits/bluetooth/BluetoothScreens.jsx":"f905a806bb14","ui_kits/calls/ScreensA.jsx":"f03eb79a6759","ui_kits/calls/data.js":"cb2d06765e1d","ui_kits/clock/ClockScreens.jsx":"d3a5d1df7cc3","ui_kits/communication/CommScreens.jsx":"62e066d39d0d","ui_kits/settings/SettingsScreens.jsx":"222f45fdf47c","ui_kits/translate/TranslateScreens.jsx":"9a37b194e4bc"},"inlinedExternals":[],"unexposedExports":[]} */
 
 (() => {
 
@@ -215,6 +215,23 @@ function _extends() { return _extends = Object.assign ? Object.assign.bind() : f
    rounded rect, and the 45°/90° line — so the set stays coherent as it grows.
    Unknown names fall through to Material Symbols, so no screen can break. */
 
+const C8 = "M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16Z";
+const SLASH = "M4.4 4.4l15.2 15.2";
+const SHIELD = "M12 3.6 5 6.4v5.2c0 4.2 3 7.6 7 8.8 4-1.2 7-4.6 7-8.8V6.4Z";
+const BATT = "M6 7h9.8a2.6 2.6 0 0 1 2.6 2.6v4.8a2.6 2.6 0 0 1-2.6 2.6H6a2.6 2.6 0 0 1-2.6-2.6V9.6A2.6 2.6 0 0 1 6 7Z|M20.8 10.4v3.2";
+const BELL = "M6.6 16.4V11a5.4 5.4 0 1 1 10.8 0v5.4l1.4 2.2H5.2Z|M10 19.6a2 2 0 0 0 4 0";
+const CAM = "M3.8 8.6a2.1 2.1 0 0 1 2.1-2.1h2.3l1.3-2h5l1.3 2h2.3a2.1 2.1 0 0 1 2.1 2.1v8.3a2.1 2.1 0 0 1-2.1 2.1H5.9a2.1 2.1 0 0 1-2.1-2.1Z|M12 9.2a3.4 3.4 0 1 0 0 6.8 3.4 3.4 0 0 0 0-6.8Z";
+const FOLDER = "M3.6 7a2 2 0 0 1 2-2h3.6l2.1 2.4h7.1a2 2 0 0 1 2 2v7.6a2 2 0 0 1-2 2H5.6a2 2 0 0 1-2-2Z";
+const ARCHIVE_BOX = "M3.6 6.2a1.6 1.6 0 0 1 1.6-1.6h13.6a1.6 1.6 0 0 1 1.6 1.6v1.4a1.6 1.6 0 0 1-1.6 1.6H5.2a1.6 1.6 0 0 1-1.6-1.6Z|M5 9.2v8.8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9.2";
+const DOC ="M6.8 3.8h6.4L18.4 9v10.8a1.6 1.6 0 0 1-1.6 1.6H6.8a1.6 1.6 0 0 1-1.6-1.6V5.4a1.6 1.6 0 0 1 1.6-1.6Z|M13.2 3.8V9h5.2";
+const RECT = "M3.4 6.6a1.8 1.8 0 0 1 1.8-1.8h13.6a1.8 1.8 0 0 1 1.8 1.8v10.8a1.8 1.8 0 0 1-1.8 1.8H5.2a1.8 1.8 0 0 1-1.8-1.8Z";
+const CORNERS = "M4 8.4V6a2 2 0 0 1 2-2h2.4|M15.6 4H18a2 2 0 0 1 2 2v2.4|M20 15.6V18a2 2 0 0 1-2 2h-2.4|M8.4 20H6a2 2 0 0 1-2-2v-2.4";
+const REPEAT = "M4.6 11V9.4a2 2 0 0 1 2-2h12.2|M16 4.4l3 3-3 3|M19.4 13v1.6a2 2 0 0 1-2 2H5.2|M8 19.6l-3-3 3-3";
+const FLASH = "M13.4 3.4 6.4 13h5l-1 7.6 7.2-10h-5.2Z";
+const TORCH = "M7.4 3.6h9.2v3.2l-2 3.4v10.2H9.4V10.2l-2-3.4Z|M7.4 6.8h9.2";
+const FLAME = "M12 20.4a6 6 0 0 0 6-6c0-3.6-2.8-5.6-3.6-10.2-2.8 1.6-4.4 4.2-4.2 7-1.2-.6-1.8-1.8-2-3-1.6 1.6-2.2 3.8-2.2 6.2a6 6 0 0 0 6 6Z";
+const TXT_A = "M3 18.4 7.6 6.6l4.6 11.8|M4.6 14.4h6|M15 12h6";
+
 const P = {
   home: "M3.8 11.2 12 4.2l8.2 7v7.4a1.8 1.8 0 0 1-1.8 1.8H5.6a1.8 1.8 0 0 1-1.8-1.8Z|M9.4 20.4v-5.2h5.2v5.2",
   search: "M10.6 4.6a6 6 0 1 0 0 12 6 6 0 0 0 0-12Z|M15 15l4.6 4.6",
@@ -270,6 +287,8 @@ const P = {
   trending_up: "M4.2 16.2 9.2 11.2l3.4 3.4L19.8 7.4|M14.6 7.4h5.2v5.2",
   folder: "M3.6 7a2 2 0 0 1 2-2h3.6l2.1 2.4h7.1a2 2 0 0 1 2 2v7.6a2 2 0 0 1-2 2H5.6a2 2 0 0 1-2-2Z",
   folder_off: "M3.6 7a2 2 0 0 1 2-2h3.6l2.1 2.4h7.1a2 2 0 0 1 2 2v7.6a2 2 0 0 1-2 2H5.6a2 2 0 0 1-2-2Z|M4.4 4.4l15.2 15.2",
+  archive: `${ARCHIVE_BOX}|M12 11.6v5.2|M9.6 14.4 12 16.8l2.4-2.4`,
+  unarchive: `${ARCHIVE_BOX}|M12 16.8v-5.2|M9.6 14 12 11.6l2.4 2.4`,
   image: "M3.8 6.6a2.2 2.2 0 0 1 2.2-2.2h12a2.2 2.2 0 0 1 2.2 2.2v10.8a2.2 2.2 0 0 1-2.2 2.2H6a2.2 2.2 0 0 1-2.2-2.2Z|d:8.6 9.2|M4.4 16.8 9.2 12l3.4 3.4 3-3 4.2 4.2",
   description: "M6.8 3.8h6.4L18.4 9v10.8a1.6 1.6 0 0 1-1.6 1.6H6.8a1.6 1.6 0 0 1-1.6-1.6V5.4a1.6 1.6 0 0 1 1.6-1.6Z|M13.2 3.8V9h5.2|M8.4 13.2h7.2|M8.4 16.6h4.6",
   music_note: "M9.8 17.2V7.2l8.4-2.2v10|M7 14.4a2.8 2.8 0 1 0 0 5.6 2.8 2.8 0 0 0 0-5.6Z|M15.4 12.2a2.8 2.8 0 1 0 0 5.6 2.8 2.8 0 0 0 0-5.6Z",
@@ -313,63 +332,220 @@ const P = {
   mark_email_read: "M3.6 7.6a1.8 1.8 0 0 1 1.8-1.8h10.2a1.8 1.8 0 0 1 1.8 1.8v3|M3.6 8.2 10.5 13l3.3-2.3|M3.6 8.2v8a1.8 1.8 0 0 0 1.8 1.8h6.2|M14.4 17.2l2 2 4.2-4.6",
   devices_other: "M3.2 6.4a1.6 1.6 0 0 1 1.6-1.6h10.8a1.6 1.6 0 0 1 1.6 1.6v1.4|M3.2 8.6v6.2a1.6 1.6 0 0 0 1.6 1.6h6.6|M6 19.4h4|M15.2 10.4a1.4 1.4 0 0 1 1.4-1.4h3.4a1.4 1.4 0 0 1 1.4 1.4v7.6a1.4 1.4 0 0 1-1.4 1.4h-3.4a1.4 1.4 0 0 1-1.4-1.4Z",
   send: "M20.4 4 3.6 12l16.8 8-3.2-8Z|M17.2 12H6.4",
-  error: "M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16Z|M12 7.8v5.4|d:12 16.4"
+  error: "M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16Z|M12 7.8v5.4|d:12 16.4",
+
+  /* general & actions */
+  remove: "M4.8 12h14.4",
+  save: "M5 4.4h11l3.6 3.6v11.6H5Z|M8.4 4.4v4.4h6.4V4.4|M8.4 19.6v-5.4h7.2v5.4",
+  cancel: `${C8}|M9 9l6 6|M15 9l-6 6`,
+  block: `${C8}|M6.4 6.4l11.2 11.2`,
+  tune: "M4 7h8|M16 7h4|M4 17h4|M12 17h8|M14 4.6v4.8|M10 14.6v4.8",
+  sort: "M4 7h16|M4 12h11|M4 17h6",
+  view_list: "M8.4 6.6h11.2|M8.4 12h11.2|M8.4 17.4h11.2|d:4.8 6.6|d:4.8 12|d:4.8 17.4",
+  grid_view: "M4.6 4.6h5.8v5.8H4.6Z|M13.6 4.6h5.8v5.8h-5.8Z|M4.6 13.6h5.8v5.8H4.6Z|M13.6 13.6h5.8v5.8h-5.8Z",
+  dashboard: "M4.4 4.4h6.4v8.2H4.4Z|M13.2 4.4h6.4v4.4h-6.4Z|M13.2 11.2h6.4v8.4h-6.4Z|M4.4 15h6.4v4.6H4.4Z",
+  push_pin: "M9 3.8h6|M10 3.8v5.4l-3.2 3.6v1.6h10.4v-1.6L14 9.2V3.8|M12 14.4v5.8",
+  pin: "M3.6 7.6a1.8 1.8 0 0 1 1.8-1.8h13.2a1.8 1.8 0 0 1 1.8 1.8v8.8a1.8 1.8 0 0 1-1.8 1.8H5.4a1.8 1.8 0 0 1-1.8-1.8Z|d:8 12|d:12 12|d:16 12",
+  attach_file: "M16.4 7.4v8.4a4.4 4.4 0 0 1-8.8 0V6.6a2.8 2.8 0 0 1 5.6 0v8.8a1.2 1.2 0 0 1-2.4 0V7.8",
+  content_paste: "M6.6 5.4H6a1.6 1.6 0 0 0-1.6 1.6v12.2A1.6 1.6 0 0 0 6 20.8h12a1.6 1.6 0 0 0 1.6-1.6V7a1.6 1.6 0 0 0-1.6-1.6h-.6|M8.8 3.4h6.4v3.6H8.8Z",
+  code: "M8.6 7 3.6 12l5 5|M15.4 7l5 5-5 5",
+  terminal: "M3.6 7a2 2 0 0 1 2-2h12.8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5.6a2 2 0 0 1-2-2Z|M7.4 9.4l2.8 2.6-2.8 2.6|M12.4 15h4.2",
+  lock_open: "M5 12.6a2.2 2.2 0 0 1 2.2-2.2h9.6a2.2 2.2 0 0 1 2.2 2.2v5a2.2 2.2 0 0 1-2.2 2.2H7.2A2.2 2.2 0 0 1 5 17.6Z|M8.6 10.4V8.2a3.4 3.4 0 0 1 6.6-1.2|d:12 15.1",
+  security: SHIELD,
+  privacy_tip: `${SHIELD}|M12 11v4.4|d:12 8.2`,
+  build: "M14.6 4.2a4.2 4.2 0 0 0-4.4 5.6l-5.8 5.8a1.8 1.8 0 0 0 2.6 2.6l5.8-5.8a4.2 4.2 0 0 0 5.6-4.4l-2.6 2.6-2.4-.4-.4-2.4Z",
+  handyman: "M5 19l8.4-8.4|M10.4 5.6 13.6 3l5.4 5.4-2.6 2.6-2.2-.6-1-1-.6-2.2Z",
+  widgets: "M4.4 4.4h6v6h-6Z|M4.4 13.6h6v6h-6Z|M13.6 13.6h6v6h-6Z|M16.6 3.4l3.9 3.9-3.9 3.9-3.9-3.9Z",
+  wallpaper: "M4 9V6a2 2 0 0 1 2-2h3|M15 4h3a2 2 0 0 1 2 2v3|M20 15v3a2 2 0 0 1-2 2h-3|M9 20H6a2 2 0 0 1-2-2v-3|M7.4 16.4l3-3.6 2.2 2.4 1.8-2 2.2 3.2Z|d:15.4 8.6",
+  favorite: "M12 19.4s-7.6-4.6-7.6-10a4.2 4.2 0 0 1 7.6-2.5 4.2 4.2 0 0 1 7.6 2.5c0 5.4-7.6 10-7.6 10Z",
+  location_on: "M12 20.8s-6.2-5.6-6.2-10.6a6.2 6.2 0 0 1 12.4 0c0 5-6.2 10.6-6.2 10.6Z|M12 7.8a2.4 2.4 0 1 0 0 4.8 2.4 2.4 0 0 0 0-4.8Z",
+  my_location: "M12 5.6a6.4 6.4 0 1 0 0 12.8 6.4 6.4 0 0 0 0-12.8Z|M12 2.8v2.8|M12 18.4v2.8|M2.8 12h2.8|M18.4 12h2.8|d:12 12",
+  navigation: "M12 3.6 18.6 19.6 12 16.2 5.4 19.6Z",
+  explore: `${C8}|M15.4 8.6l-2 4.8-4.8 2 2-4.8Z`,
+  route: "M6.4 3.8a2.2 2.2 0 1 0 0 4.4 2.2 2.2 0 0 0 0-4.4Z|M17.6 15.8a2.2 2.2 0 1 0 0 4.4 2.2 2.2 0 0 0 0-4.4Z|M8.6 6h7.6a2.8 2.8 0 0 1 0 5.6H7.8a2.8 2.8 0 0 0 0 5.6h7.6",
+  work: "M3.8 9a2 2 0 0 1 2-2h12.4a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5.8a2 2 0 0 1-2-2Z|M9 7V5.4A1.4 1.4 0 0 1 10.4 4h3.2A1.4 1.4 0 0 1 15 5.4V7|M3.8 12.6h16.4",
+
+  /* system */
+  power_settings_new: "M12 3.6v7.6|M7.4 6.4a7 7 0 1 0 9.2 0",
+  battery_full: `${BATT}|M7 9.4h8a1 1 0 0 1 1 1v3.2a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-3.2a1 1 0 0 1 1-1Z`,
+  battery_charging_full: `${BATT}|M11.8 9 9.6 12.2h3.4l-2 2.8`,
+  battery_saver: `${BATT}|M10.9 9.8v4.4|M8.7 12h4.4`,
+  signal_cellular_alt: "M5.4 19v-4|M10 19v-7.4|M14.6 19V8|M19.2 19V4.6",
+  sim_card: "M7.8 3.6h6.8l3.6 3.6v12a1.6 1.6 0 0 1-1.6 1.6H7.8a1.6 1.6 0 0 1-1.6-1.6V5.2a1.6 1.6 0 0 1 1.6-1.6Z|M9 11h6v6.4H9Z|M12 11v6.4",
+  vibration: "M8.6 5h6.8v14H8.6Z|M5.4 8.4v7.2|M18.6 8.4v7.2|M2.8 10.2v3.6|M21.2 10.2v3.6",
+  do_not_disturb_on: `${C8}|M8 12h8`,
+  notifications_off: `${BELL}|${SLASH}`,
+  nightlight: "M15.6 4.4a8 8 0 1 0 0 15.2 8 8 0 0 1 0-15.2Z",
+  screen_rotation: "M9.4 4.2l10.4 10.4-5.2 5.2L4.2 9.4Z|M3.4 15.4a8.6 8.6 0 0 0 5.2 5.2|M20.6 8.6a8.6 8.6 0 0 0-5.2-5.2",
+  storage: "M4 5.4h16V9H4Z|M4 10.2h16v3.6H4Z|M4 15h16v3.6H4Z|d:6.8 7.2|d:6.8 12|d:6.8 16.8",
+  memory: "M7 7h10v10H7Z|M10 10h4v4h-4Z|M9.4 4v3|M14.6 4v3|M9.4 17v3|M14.6 17v3|M4 9.4h3|M4 14.6h3|M17 9.4h3|M17 14.6h3",
+  speed: "M4.8 17.6a8 8 0 1 1 14.4 0|M12 14.2l4-5|d:12 14.2",
+  sensors: "d:12 12|M8.6 8.6a4.8 4.8 0 0 0 0 6.8|M15.4 8.6a4.8 4.8 0 0 1 0 6.8|M5.8 5.8a8.8 8.8 0 0 0 0 12.4|M18.2 5.8a8.8 8.8 0 0 1 0 12.4",
+  accessibility: "d:12 4.6|M5 8.4l7 1.4 7-1.4|M12 9.8V14|M9 20l3-6 3 6",
+  autorenew: "M18.6 9.4A7 7 0 0 0 5.4 10|M18.6 4.8v4.6H14|M5.4 14.6a7 7 0 0 0 13.2.6|M5.4 19.2v-4.6H10",
+  sos: "M7.2 8.6H4.4a1.6 1.6 0 0 0 0 3.2h1.2a1.6 1.6 0 0 1 0 3.2H2.8|M12 8.6a3.2 3.2 0 1 0 0 6.4 3.2 3.2 0 0 0 0-6.4Z|M21.2 8.6h-2.8a1.6 1.6 0 0 0 0 3.2h1.2a1.6 1.6 0 0 1 0 3.2h-2.8",
+
+  /* media */
+  skip_next: "M6 6l8.4 6L6 18Z|M18 6v12",
+  skip_previous: "M18 6l-8.4 6L18 18Z|M6 6v12",
+  stop: "M6.6 6.6h10.8v10.8H6.6Z",
+  stop_circle: `${C8}|M9.4 9.4h5.2v5.2H9.4Z`,
+  play_circle: `${C8}|M10 8.6 15.4 12 10 15.4Z`,
+  repeat: REPEAT,
+  repeat_one: `${REPEAT}|M11.4 10.6l1.2-.8v4.6`,
+  shuffle: "M4 7h3.4l9.2 10H20|M4 17h3.4l2.4-2.6|M14.2 9.6 16.6 7H20|M17.6 4l2.8 3-2.8 3|M17.6 14l2.8 3-2.8 3",
+  equalizer: "M6 19.4v-8|M10 19.4V4.6|M14 19.4v-11|M18 19.4v-5",
+  queue_music: "M4 6.4h11|M4 11h11|M4 15.6h6|M18.6 6v10.6|M18.6 6H21|M16.4 14.4a2.2 2.2 0 1 0 0 4.4 2.2 2.2 0 0 0 0-4.4Z",
+  playlist_add: "M4 6.4h11|M4 11h11|M4 15.6h7|M17.6 12.4v7.2|M14 16h7.2",
+  album: `${C8}|M12 9.8a2.2 2.2 0 1 0 0 4.4 2.2 2.2 0 0 0 0-4.4Z`,
+  volume_down: "M5.4 9.4h3.4l4.6-3.8v12.8l-4.6-3.8H5.4Z|M16.7 9.4a3.7 3.7 0 0 1 0 5.2",
+  videocam: "M3.4 7.6a1.8 1.8 0 0 1 1.8-1.8h8.6a1.8 1.8 0 0 1 1.8 1.8v8.8a1.8 1.8 0 0 1-1.8 1.8H5.2a1.8 1.8 0 0 1-1.8-1.8Z|M15.6 10.4l5-3v9.2l-5-3",
+  movie: "M3.8 6a1.6 1.6 0 0 1 1.6-1.6h13.2A1.6 1.6 0 0 1 20.2 6v12a1.6 1.6 0 0 1-1.6 1.6H5.4A1.6 1.6 0 0 1 3.8 18Z|M3.8 9h16.4|M8 4.4 9.6 9|M13 4.4 14.6 9",
+  record_voice_over: "M9.4 5a3.4 3.4 0 1 0 0 6.8 3.4 3.4 0 0 0 0-6.8Z|M3.4 19.6a6 6 0 0 1 12 0|M16.4 6.4a3.6 3.6 0 0 1 0 4|M19 4a7.2 7.2 0 0 1 0 8.8",
+
+  /* camera & gallery */
+  flash_on: FLASH,
+  flash_off: `${FLASH}|${SLASH}`,
+  flash_auto: "M10.4 3.4 4.4 12h4.4L8 19.6 14 11H9.6Z|M14.6 19.6l2.6-7 2.6 7|M15.4 17.4H19",
+  flashlight_on: `${TORCH}|d:12 13.6`,
+  flashlight_off: `${TORCH}|${SLASH}`,
+  grid_on: "M4.4 4.4h15.2v15.2H4.4Z|M9.5 4.4v15.2|M14.5 4.4v15.2|M4.4 9.5h15.2|M4.4 14.5h15.2",
+  high_quality: `${RECT}|M6.6 9v6|M10 9v6|M6.6 12H10|M13.4 9h3.4v6h-3.4Z|M16 14l1.4 1.6`,
+  aspect_ratio: `${RECT}|M6.6 11V8.4h3|M17.4 13v2.6h-3`,
+  crop: "M6.6 3.4v12.2a1.8 1.8 0 0 0 1.8 1.8h12.2|M3.4 6.6h12.2a1.8 1.8 0 0 1 1.8 1.8v12.2",
+  rotate_left: "M5.6 12.6a6.8 6.8 0 1 0 2-4.8|M4.2 4.4V9h4.6",
+  flip: "M12 3.4v17.2|M9 6.4 3.6 17.6H9Z|M15 6.4l5.4 11.2H15Z",
+  auto_awesome: "M10 4.6l1.6 4.4 4.4 1.6-4.4 1.6-1.6 4.4-1.6-4.4L4 10.6l4.4-1.6Z|M17.6 13.6l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8Z|M17.4 3.6v3.2|M15.8 5.2H19",
+  filter_vintage: "M12 9.6a2.4 2.4 0 1 0 0 4.8 2.4 2.4 0 0 0 0-4.8Z|M12 9.6c-2-3-1.4-5.4 0-6.2 1.4.8 2 3.2 0 6.2Z|M12 14.4c2 3 1.4 5.4 0 6.2-1.4-.8-2-3.2 0-6.2Z|M9.6 12c-3 2-5.4 1.4-6.2 0 .8-1.4 3.2-2 6.2 0Z|M14.4 12c3-2 5.4-1.4 6.2 0-.8 1.4-3.2 2-6.2 0Z",
+  no_photography: `${CAM}|${SLASH}`,
+  add_a_photo: `${CAM}|M19.4 1.8v3.6|M17.6 3.6h3.6`,
+
+  /* files */
+  create_new_folder: `${FOLDER}|M12 10.4v5.2|M9.4 13h5.2`,
+  drive_file_move: `${FOLDER}|M8.4 13h6.4|M12.4 10.4 15 13l-2.6 2.6`,
+  drive_file_rename_outline: "M4.4 19.6h3L17.8 9.2l-3-3L4.4 16.6Z|M13 8l3 3|M12 19.6h7.6",
+  picture_as_pdf: `${DOC}|M8.4 13v4.4|M8.4 13h1.4a1.2 1.2 0 0 1 0 2.4H8.4|M12.2 13v4.4h.8a1.6 1.6 0 0 0 1.6-1.6v-1.2a1.6 1.6 0 0 0-1.6-1.6Z`,
+  download_done: "M5.6 11.4l4.4 4.4 8.4-8.8|M5 19.4h14",
+  android: "M4.6 17.4a7.4 7.4 0 0 1 14.8 0Z|M8 8.4 6.4 5.8|M16 8.4l1.6-2.6|d:9.2 13.8|d:14.8 13.8",
+
+  /* books & text */
+  book: "M6 4.4h11.6v15.2H7.4A1.4 1.4 0 0 1 6 18.2Z|M6 17.4A1.4 1.4 0 0 1 7.4 16h10.2|M10 4.4v6l1.8-1.2 1.8 1.2v-6",
+  menu_book: "M12 6.8c-2-1.6-4.8-2-8-1.6v12.6c3.2-.4 6 0 8 1.6 2-1.6 4.8-2 8-1.6V5.2c-3.2-.4-6 0-8 1.6Z|M12 6.8v12.6",
+  library_books: "M7.6 3.8h11a1.6 1.6 0 0 1 1.6 1.6v11a1.6 1.6 0 0 1-1.6 1.6h-11A1.6 1.6 0 0 1 6 16.4v-11a1.6 1.6 0 0 1 1.6-1.6Z|M3.4 7.4v11.4a1.8 1.8 0 0 0 1.8 1.8h11.4|M9.6 8H16|M9.6 11H16|M9.6 14h4",
+  book_shelf: "M3 20h18|M4.6 4.6h3v15.4h-3Z|M8.6 6.6h3v13.4h-3Z|M12.8 5.6l2.8-.8 3.6 14.6-2.8.8Z|M4.6 8h3|M8.6 9.6h3",
+  book_open: "M12 18.6c-2.4-1.6-5.4-1.8-8.6-1.2V6.6c3.2-.6 6.2-.4 8.6 1.2 2.4-1.6 5.4-1.8 8.6-1.2v10.8c-3.2-.6-6.2-.4-8.6 1.2Z|M12 7.8v10.8|M3.4 19.8c3.2-.6 6.2-.2 8.6 1.2 2.4-1.4 5.4-1.8 8.6-1.2",
+  auto_stories: "M3.6 6.2 11 8.6v11.2l-7.4-2.4Z|M11 8.6l6.6-4.8v11.4L11 19.8|M20.4 7v11.6",
+  text_increase: `${TXT_A}|M18 9v6`,
+  text_decrease: TXT_A,
+  spellcheck: "M3.4 13.4 6.8 4.6l3.4 8.8|M4.6 10.4H9|M11.8 15.2l3.2 3.2 6-6.4",
+
+  /* weather */
+  wb_sunny: "M12 7.6a4.4 4.4 0 1 0 0 8.8 4.4 4.4 0 0 0 0-8.8Z|M12 2.6v2|M12 19.4v2|M2.6 12h2|M19.4 12h2|M5.4 5.4l1.4 1.4|M17.2 17.2l1.4 1.4|M18.6 5.4l-1.4 1.4|M6.8 17.2l-1.4 1.4",
+  wb_cloudy: "M8.6 4.6a3.6 3.6 0 0 0-2.8 5.9|M8.6 2.2V3|M3 8.2h.8|M4.6 4.2l.6.6|M8.6 19.4a3.6 3.6 0 0 1-.4-7.2 5 5 0 0 1 9.6 1.1 3 3 0 0 1-.2 6.1Z",
+  wb_twilight: "M5.6 16.4a6.4 6.4 0 0 1 12.8 0|M3 19.4h18|M12 4.6v2.6|M4.6 8.6l1.8 1.8|M19.4 8.6l-1.8 1.8",
+  cloud: "M7.2 18.4a4 4 0 0 1-.4-8 5.6 5.6 0 0 1 10.8 1.2 3.4 3.4 0 0 1-.4 6.8Z",
+  umbrella: "M3.4 12a8.6 8.6 0 0 1 17.2 0Z|M12 12v6.2a2 2 0 0 1-4 0|M12 2.6v.8",
+  ac_unit: "M12 3v18|M4.2 7.5l15.6 9|M4.2 16.5l15.6-9|M9.8 4.4 12 6.4l2.2-2|M9.8 19.6l2.2-2 2.2 2",
+  thermostat: "M9.8 5.6a2.2 2.2 0 0 1 4.4 0v8.2a4 4 0 1 1-4.4 0Z|M12 9.4v7",
+  grain: "d:6 6|d:12 8|d:9 12.4|d:15.4 12|d:6 17|d:18 6|d:12 17.6|d:18 17",
+  dehaze: "M4 7h16|M4 12h16|M4 17h16",
+
+  /* fitness */
+  directions_run: "M15.2 3.4a1.6 1.6 0 1 0 0 3.2 1.6 1.6 0 0 0 0-3.2Z|M6.4 9.6l3.4-2.2h3.6l2 3.4 3 1|M12.6 7.4 10 13.4l3.6 2.4-1 4.6|M10 13.4 8 17H4.4",
+  directions_walk: "M13.2 3.4a1.6 1.6 0 1 0 0 3.2 1.6 1.6 0 0 0 0-3.2Z|M12.4 8.4 10.6 14l2.8 2.6.6 4|M10.6 14l-1.8 6.4|M12.4 8.4l-3.4 2v3|M12.4 8.4l1.6 3 2.6 1",
+  directions_bike: "M6 12.6a3.6 3.6 0 1 0 0 7.2 3.6 3.6 0 0 0 0-7.2Z|M18 12.6a3.6 3.6 0 1 0 0 7.2 3.6 3.6 0 0 0 0-7.2Z|M6 16.2 10 10l3 3.6h5|M10 10h4.4|M15.6 3.6a1.6 1.6 0 1 0 0 3.2 1.6 1.6 0 0 0 0-3.2Z|M18 16.2l-3.2-6.8",
+  pool: "M3 18c1.5-1.2 3-1.2 4.5 0s3 1.2 4.5 0 3-1.2 4.5 0 3 1.2 4.5 0|M7.6 14.2 13 8.6l-2.6-2.4-3 .8|M13 8.6l4 5.6|M17 5.4a1.6 1.6 0 1 0 0 3.2 1.6 1.6 0 0 0 0-3.2Z",
+  directions_boat: "M3.6 15.2 12 12.4l8.4 2.8-2 4.4H5.6Z|M6.4 14.2V8.6h11.2v5.6|M12 5v3.6|M9.6 5h4.8|M12 12.4v7.2",
+  terrain: "M2.8 18.6 9 8.6l3.6 5.6 2.4-3.4 6.2 7.8Z",
+  spa: "M12 19.4c-4.6 0-8-2.8-8.4-7 3.6 0 6.8 2 8.4 7Z|M12 19.4c4.6 0 8-2.8 8.4-7-3.6 0-6.8 2-8.4 7Z|M12 19.4c-2.4-2.6-2.4-9.6 0-14 2.4 4.4 2.4 11.4 0 14Z",
+  whatshot: FLAME,
+  local_fire_department: `${FLAME}|M12 20.4a2.6 2.6 0 0 1-2.6-2.6c0-1.6 1.4-2.4 2.6-4.2 1.2 1.8 2.6 2.6 2.6 4.2a2.6 2.6 0 0 1-2.6 2.6Z`,
+  emoji_events: "M7.4 4.2h9.2v5.4a4.6 4.6 0 0 1-9.2 0Z|M7.4 6H4.6v1.6a3 3 0 0 0 3 3|M16.6 6h2.8v1.6a3 3 0 0 1-3 3|M12 14.2v3.2|M9.6 17.4h4.8V20H9.6Z",
+  military_tech: "M7.6 3.4l2.8 6.4|M16.4 3.4l-2.8 6.4|M7.6 3.4h8.8|M12 9.8a4.8 4.8 0 1 0 0 9.6 4.8 4.8 0 0 0 0-9.6Z|M12 12.2l.9 1.8 2 .3-1.4 1.4.3 2-1.8-.9-1.8.9.3-2-1.4-1.4 2-.3Z",
+  videogame_asset: "M3.4 9a2 2 0 0 1 2-2h13.2a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H5.4a2 2 0 0 1-2-2Z|M8 10v4|M6 12h4|d:15.2 11|d:17.4 13.2",
+
+  /* tools */
+  calculate: "M5 5.4a1.6 1.6 0 0 1 1.6-1.6h10.8A1.6 1.6 0 0 1 19 5.4v13.2a1.6 1.6 0 0 1-1.6 1.6H6.6A1.6 1.6 0 0 1 5 18.6Z|M8 7.4h8v3H8Z|d:8.6 13.6|d:12 13.6|d:15.4 13.6|d:8.6 17|d:12 17|d:15.4 17",
+  functions: "M17.4 4.6H6.6l6 7.4-6 7.4h10.8",
+  percent: "M18.4 5.6 5.6 18.4|M7.6 5a2.4 2.4 0 1 0 0 4.8 2.4 2.4 0 0 0 0-4.8Z|M16.4 14.2a2.4 2.4 0 1 0 0 4.8 2.4 2.4 0 0 0 0-4.8Z",
+  numbers: "M9.6 4 7.6 20|M16.4 4l-2 16|M4.6 9h15.2|M3.8 15H19",
+  straighten: "M2.8 8.4h18.4v7.2H2.8Z|M6.4 8.4v3|M10 8.4v4.2|M13.6 8.4v3|M17.2 8.4v4.2",
+  architecture: "M12 3.4a1.8 1.8 0 1 0 0 3.6 1.8 1.8 0 0 0 0-3.6Z|M11.2 6.8 5.6 20.4|M12.8 6.8l5.6 13.6|M7.2 16.2a9 9 0 0 0 9.6 0",
+  swap_vert: "M8.6 18.8V5.6|M5.4 8.6l3.2-3.2 3.2 3.2|M15.4 5.2v13.2|M12.2 15.4l3.2 3.2 3.2-3.2",
+  qr_code_scanner: `${CORNERS}|M7.6 7.6h3.2v3.2H7.6Z|M13.2 7.6h3.2v3.2h-3.2Z|M7.6 13.2h3.2v3.2H7.6Z|M13.2 13.2h3.2v3.2h-3.2Z`,
+  document_scanner: `${CORNERS}|M3.6 12h16.8|M8 8h8|M8 16h5`,
+  receipt: "M5.6 3.6v17l2.1-1.4 2.1 1.4 2.2-1.4 2.2 1.4 2.1-1.4 2.1 1.4v-17l-2.1 1.4-2.1-1.4-2.2 1.4-2.2-1.4-2.1 1.4Z|M8.8 9h6.4|M8.8 12.4h6.4|M8.8 15.8h4",
+  casino: "M4.4 6.4a2 2 0 0 1 2-2h11.2a2 2 0 0 1 2 2v11.2a2 2 0 0 1-2 2H6.4a2 2 0 0 1-2-2Z|d:8.4 8.4|d:15.6 8.4|d:12 12|d:8.4 15.6|d:15.6 15.6",
+  vpn_key: "M7.4 8.2a3.8 3.8 0 1 0 0 7.6 3.8 3.8 0 0 0 0-7.6Z|M11.2 12h9.4v3|M17.4 12v2.4",
+  local_cafe: "M4.6 8.4h11.2v6.4a4 4 0 0 1-4 4H8.6a4 4 0 0 1-4-4Z|M15.8 9.6h1.8a2.2 2.2 0 0 1 0 4.4h-1.8|M3.6 21h14|M8 3.4v2.4|M11.6 3.4v2.4",
+  checklist: "M3.6 6.6l1.6 1.6L8 5.2|M3.6 14.6l1.6 1.6L8 13.2|M11.4 6.8h9|M11.4 14.8h9",
+  radio_button_checked: `${C8}|M12 8.6a3.4 3.4 0 1 0 0 6.8 3.4 3.4 0 0 0 0-6.8Z`,
+  radio_button_unchecked: C8,
+
+  /* misc */
+  email: "M3.4 7a1.8 1.8 0 0 1 1.8-1.8h13.6A1.8 1.8 0 0 1 20.6 7v10a1.8 1.8 0 0 1-1.8 1.8H5.2A1.8 1.8 0 0 1 3.4 17Z|M3.8 7.2 12 13l8.2-5.8",
+  business: "M3.6 20.2V4.6H12v15.6|M12 8.8h8.4v11.4|M2.6 20.2h18.8|M6.4 7.8h2.8|M6.4 11.2h2.8|M6.4 14.6h2.8|M15 12h2.4|M15 15.4h2.4",
+  groups: "M12 5.4a2.8 2.8 0 1 0 0 5.6 2.8 2.8 0 0 0 0-5.6Z|M6.6 18.6a5.4 5.4 0 0 1 10.8 0|M5.6 8.2a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z|M18.4 8.2a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z|M2.4 17.4A3.6 3.6 0 0 1 6 14.2|M21.6 17.4a3.6 3.6 0 0 0-3.6-3.2",
+  contact_phone: "M2.8 6.4a1.8 1.8 0 0 1 1.8-1.8h14.8a1.8 1.8 0 0 1 1.8 1.8v11.2a1.8 1.8 0 0 1-1.8 1.8H4.6a1.8 1.8 0 0 1-1.8-1.8Z|M8.6 8.4a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z|M5.4 16.4a3.4 3.4 0 0 1 6.4 0|M14.4 9h3.8|M14.4 12h3.8|M14.4 15h2.4",
+  face: `${C8}|d:9.2 10.6|d:14.8 10.6|M9 14.4a4 4 0 0 0 6 0`,
+  mouse: "M6.4 9.4a5.6 5.6 0 0 1 11.2 0v5.2a5.6 5.6 0 0 1-11.2 0Z|M12 3.8v4.6",
+  hub: "M12 9.6a2.4 2.4 0 1 0 0 4.8 2.4 2.4 0 0 0 0-4.8Z|M12 3.4a1.8 1.8 0 1 0 0 3.6 1.8 1.8 0 0 0 0-3.6Z|M4.8 15.6a1.8 1.8 0 1 0 0 3.6 1.8 1.8 0 0 0 0-3.6Z|M19.2 15.6a1.8 1.8 0 1 0 0 3.6 1.8 1.8 0 0 0 0-3.6Z|M12 7v2.6|M10 13.4l-3.8 2.8|M14 13.4l3.8 2.8",
+  bolt: "M13 3.4 6.6 13.2h5.2L11 20.6l6.4-9.8h-5.2Z",
+  restaurant: "M6.4 3.6v5.6a2 2 0 0 0 4 0V3.6|M8.4 3.6v16.8|M17.4 20.4V3.6c-2.2 1-3.4 3.6-3.4 7.6h3.4",
+  storefront: "M4.2 8.4l1.4-4h12.8l1.4 4v1a2.6 2.6 0 0 1-5.2 0 2.6 2.6 0 0 1-5.2 0 2.6 2.6 0 0 1-5.2 0Z|M5.4 12v7.6h13.2V12|M10 19.6v-4.4h4v4.4",
+  sports_esports: "M7.4 6.8h9.2a4 4 0 0 1 3.9 3.2l1 5.2a2.4 2.4 0 0 1-4.2 2l-2-2.4H8.7l-2 2.4a2.4 2.4 0 0 1-4.2-2l1-5.2a4 4 0 0 1 3.9-3.2Z|M8 9.6v3.2|M6.4 11.2h3.2|d:15.6 10.2|d:17.4 12.2",
+  celebration: "M4 20l4.6-12.4 7.8 7.8Z|M13.6 4.4c.8 1.6.4 3-1 4|M19.6 10.4c-1.6-.8-3-.4-4 1|d:17 5|d:20 7.4|d:10.4 3.6",
+  cleaning_services: "M10.6 3.4h2.8v7.2h-2.8Z|M5.6 10.6h12.8l1.2 10H4.4Z|M9 20.6v-3.4|M12 20.6v-3.4|M15 20.6v-3.4",
+  gavel: "M8.2 7.4l4.4-4.4 5.2 5.2-4.4 4.4Z|M10.6 10.4l-6 6a1.4 1.4 0 0 0 2 2l6-6|M12.4 20.4h8",
+  health_and_safety: `${SHIELD}|M12 9v5.6|M9.2 11.8h5.6`,
+  troubleshoot: "M10 3.8a6.2 6.2 0 1 0 0 12.4 6.2 6.2 0 0 0 0-12.4Z|M14.4 14.4l5.8 5.8|M6 10.4h1.8L9 8.2l1.8 4 1.2-1.8H14",
+  settings_remote: "M8.4 7.6h7.2a1 1 0 0 1 1 1v11.8H7.4V8.6a1 1 0 0 1 1-1Z|M12 10.2a1.4 1.4 0 1 0 0 2.8 1.4 1.4 0 0 0 0-2.8Z|M9 4.6a4.4 4.4 0 0 1 6 0|M6.6 2.4a7.6 7.6 0 0 1 10.8 0",
+  air: "M3.4 8.8h10.4a2.6 2.6 0 1 0-2.6-2.6|M3.4 12.4h15a2.6 2.6 0 1 1-2.6 2.6|M3.4 16h7",
+  fiber_manual_record: "M12 6.4a5.6 5.6 0 1 0 0 11.2 5.6 5.6 0 0 0 0-11.2Z"
 };
-function FosIcon({
-  name,
-  size = 24,
-  color = "currentColor",
-  opacity = 1,
-  fill = 0,
-  strokeWidth = 1.6,
-  weight,
-  style,
-  ...rest
-}) {
+
+function FosIcon({ name, size = 24, color = "currentColor", opacity = 1, fill = 0, strokeWidth = 1.6, weight, style, ...rest }) {
   const spec = P[name];
   if (!spec) return /*#__PURE__*/React.createElement(__ds_scope.Icon, _extends({
-    name: name,
-    size: size,
-    color: color,
-    opacity: opacity,
-    fill: fill,
-    weight: weight,
-    style: style
-  }, rest));
+  name: name,
+  size: size,
+  color: color,
+  opacity: opacity,
+  fill: fill,
+  weight: weight,
+  style: style
+}, rest));
   const parts = spec.split("|");
   const solid = fill === 1 || fill === true;
   return /*#__PURE__*/React.createElement("svg", _extends({
-    viewBox: "0 0 24 24",
-    width: size,
-    height: size,
-    fill: "none",
-    stroke: color,
-    strokeWidth: strokeWidth,
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    "aria-hidden": "true",
-    style: {
-      opacity,
-      flex: "0 0 auto",
-      display: "block",
-      ...style
-    }
-  }, rest), parts.map((p, i) => p.startsWith("d:") ? (() => {
-    const [cx, cy] = p.slice(2).split(" ");
-    return /*#__PURE__*/React.createElement("circle", {
-      key: i,
-      cx: cx,
-      cy: cy,
-      r: "1.2",
-      fill: color,
-      stroke: "none"
-    });
-  })() : /*#__PURE__*/React.createElement("path", {
-    key: i,
-    d: p,
-    fill: solid && p.trim().endsWith("Z") ? color : "none"
-  })));
+  viewBox: "0 0 24 24",
+  width: size,
+  height: size,
+  fill: "none",
+  stroke: color,
+  strokeWidth: strokeWidth,
+  strokeLinecap: "round",
+  strokeLinejoin: "round",
+  "aria-hidden": "true",
+  style: { opacity, flex: "0 0 auto", display: "block", ...style }
+}, rest), parts.map((p, i) =>
+        p.startsWith("d:")
+          ? (() => { const [cx, cy] = p.slice(2).split(" "); return /*#__PURE__*/React.createElement("circle", {
+  key: i,
+  cx: cx,
+  cy: cy,
+  r: "1.2",
+  fill: color,
+  stroke: "none"
+}); })()
+          : /*#__PURE__*/React.createElement("path", {
+  key: i,
+  d: p,
+  fill: solid && p.trim().endsWith("Z") ? color : "none"
+})
+      ));
 }
+
 const FOS_ICON_NAMES = Object.keys(P).sort();
 FosIcon.names = FOS_ICON_NAMES;
 Object.assign(__ds_scope, { FosIcon, FOS_ICON_NAMES });
@@ -378,19 +554,25 @@ Object.assign(__ds_scope, { FosIcon, FOS_ICON_NAMES });
 // components/core/ActionGrid.jsx
 try { (() => {
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
-/* ActionGrid: the focusable icon+label cells that carry a screen's actions —
-   four in a row under a translation, 2x2 as call controls, a column of contact
-   actions. Cell = 20% accent fill when active, 4px accent border when focused,
-   40dp glyph over a 13sp label. `columns` sets the shape; `height` the cell. */
+/* ActionGrid (FutureActionCell): the focusable icon+label cells that carry a screen's
+   actions — four in a row under a translation, 2x2 as call controls, a column of contact
+   actions. Cell = 20% accent fill when active, 4px accent border when focused, a 44%-of-height
+   glyph (20-40dp) over an optional 13sp label. `columns` sets the shape; `height` the cell.
+   Two variants of the glyph: a FosIcon (`icon`), or a text symbol (`glyph`: "+", "sin", "π")
+   drawn at 90% of the icon size in the same 70% alpha, accent when active. A `legend` cell is
+   the second variant made non-focusable: a reminder of what a physical key does (glyph = the
+   operation, label = the key name), so it never takes the focus border and never activates. */
 function ActionGrid({
   items = [],
   focusedIndex = -1,
   columns = 2,
   height = 132,
+  legend = false,
   onSelect,
   style,
   ...rest
 }) {
+  const iconPx = Math.max(40, Math.min(80, Math.round(height * 0.44)));
   return /*#__PURE__*/React.createElement("div", _extends({
     style: {
       direction: "rtl",
@@ -401,11 +583,12 @@ function ActionGrid({
       ...style
     }
   }, rest), items.map((it, i) => {
-    const focused = focusedIndex === i;
-    const glyph = Math.max(40, Math.min(80, Math.round(height * 0.44)));
+    const isLegend = it.legend ?? legend;
+    const focused = focusedIndex === i && !isLegend;
+    const ink = it.color || (it.active ? "var(--fos-accent)" : "var(--fos-text-70)");
     return /*#__PURE__*/React.createElement("div", {
-      key: (it.label || "") + i,
-      onClick: onSelect ? () => onSelect(i) : undefined,
+      key: (it.label || it.glyph || "") + i,
+      onClick: onSelect && !isLegend ? () => onSelect(i) : undefined,
       style: {
         height,
         borderRadius: "var(--fos-radius-card)",
@@ -417,19 +600,33 @@ function ActionGrid({
         alignItems: "center",
         justifyContent: "center",
         gap: "var(--fos-space-1)",
-        cursor: "pointer",
+        cursor: isLegend ? "default" : "pointer",
         transition: "background var(--fos-transition-focus), border-color var(--fos-transition-focus)"
       }
-    }, /*#__PURE__*/React.createElement(__ds_scope.FosIcon, {
+    }, it.glyph != null ? /*#__PURE__*/React.createElement("div", {
+      style: {
+        direction: "ltr",
+        fontSize: Math.round(iconPx * 0.9),
+        lineHeight: 1,
+        fontWeight: "var(--fos-weight-regular)",
+        color: ink,
+        textAlign: "center",
+        whiteSpace: "nowrap"
+      }
+    }, it.glyph) : /*#__PURE__*/React.createElement(__ds_scope.FosIcon, {
       name: it.icon,
-      size: glyph,
+      size: iconPx,
       strokeWidth: 1.3,
-      color: it.color || (it.active ? "var(--fos-accent)" : "var(--fos-text-70)")
+      color: ink
     }), it.label && /*#__PURE__*/React.createElement("div", {
       style: {
+        maxWidth: "100%",
         fontSize: "var(--fos-size-summary)",
         color: "var(--fos-text-60)",
-        textAlign: "center"
+        textAlign: "center",
+        whiteSpace: "nowrap",
+        overflow: "hidden",
+        textOverflow: "ellipsis"
       }
     }, it.label));
   }));
@@ -1627,11 +1824,13 @@ Object.assign(__ds_scope, { SettingItem });
 // components/forms/Slider.jsx
 try { (() => {
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
-/* VolumeSlider: full-width row at 16dp card radius, 16dp inner padding,
-   label 14sp/60%, 6dp track at 15% text, accent fill starting from the RIGHT.
-   Left/right keys step 5%. Focus = 18% text background + 2dp accent border. */
+/* VolumeSlider / FutureSlider: full-width row at 16dp card radius, 16dp inner padding,
+   optional leading icon (20dp, 60% text) before the label 14sp/60%, 6dp track at 15% text,
+   accent fill starting from the RIGHT. Left/right keys step 5%.
+   Focus = 18% text background + 2dp accent border. Used in Settings and in the Control Center. */
 function Slider({
   label,
+  icon,
   value = 0.5,
   focused = false,
   style,
@@ -1653,11 +1852,18 @@ function Slider({
     }
   }, rest), /*#__PURE__*/React.createElement("div", {
     style: {
+      display: "flex",
+      alignItems: "center",
+      gap: "var(--fos-space-3)",
       fontSize: "var(--fos-size-body)",
       color: "var(--fos-text-60)",
       marginBottom: "var(--fos-space-5)"
     }
-  }, label), /*#__PURE__*/React.createElement("div", {
+  }, icon && /*#__PURE__*/React.createElement(__ds_scope.FosIcon, {
+    name: icon,
+    size: 40,
+    color: "var(--fos-text-60)"
+  }), /*#__PURE__*/React.createElement("span", null, label)), /*#__PURE__*/React.createElement("div", {
     style: {
       height: 12,
       borderRadius: 6,
@@ -1908,141 +2114,99 @@ try { (() => {
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const DAYS = ["א", "ב", "ג", "ד", "ה", "ו", "ש"];
 
-/* TimePickerOverlay: a full-screen overlay, not a dialog. 48sp/300 mono values,
-   36dp stepper buttons, 12sp/50% unit labels, hours on the RIGHT (RTL first column). */
-function Step({
-  dir,
-  focused
-}) {
-  return /*#__PURE__*/React.createElement("button", {
-    type: "button",
-    style: {
-      width: 72,
-      height: 72,
-      borderRadius: "var(--fos-radius-full)",
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center",
-      border: "none",
-      cursor: "pointer",
-      background: focused ? "var(--fos-accent-30)" : "var(--fos-text-08)"
-    }
-  }, /*#__PURE__*/React.createElement(__ds_scope.FosIcon, {
-    name: dir === "up" ? "keyboard_arrow_up" : "keyboard_arrow_down",
-    size: 36,
-    color: "var(--fos-accent)"
-  }));
+/* TimePickerOverlay: a full-screen overlay, not a dialog. Two wheels — hours on
+   the RIGHT (RTL first column), minutes on the left. A wheel is ONE focus target:
+   field fill (8% text) at rest, 14% accent + 2px-dp accent ring when focused.
+   Inside: the next value (above) and previous value (below) at 30%, the value
+   itself at 48sp/300 mono, and a 12sp/50% unit label. Up/down step the focused
+   wheel, digits type the value directly, OK moves on to the repeat row. */
+function Wheel({ value, max, label, focused }) {
+  const pad = (n) => String(n).padStart(2, "0");
+  const v = Number(value);
+  const next = v === max ? 0 : v + 1;
+  const prev = v === 0 ? max : v - 1;
+  const side = {
+    fontFamily: "var(--fos-font-mono)", fontSize: "calc(48px * var(--fos-font-scale))" /* 24sp headline */,
+    color: "var(--fos-text-30)", lineHeight: 1.2, fontVariantNumeric: "tabular-nums"
+  };
+  return /*#__PURE__*/React.createElement("div", {
+  style: {
+        width: 208, display: "flex", flexDirection: "column", alignItems: "center",
+        padding: "var(--fos-space-3) 0", borderRadius: "var(--fos-radius-textfield)",
+        background: focused ? "var(--fos-accent-14)" : "var(--fos-text-08)",
+        boxShadow: focused ? "inset 0 0 0 4px var(--fos-accent)" : "none"
+      }
+}, /*#__PURE__*/React.createElement("div", {
+  style: side
+}, pad(next)), /*#__PURE__*/React.createElement("div", {
+  style: VALUE
+}, pad(v)), /*#__PURE__*/React.createElement("div", {
+  style: side
+}, pad(prev)), /*#__PURE__*/React.createElement("div", {
+  style: UNIT_LABEL
+}, label));
 }
+
 const VALUE = {
-  fontFamily: "var(--fos-font-mono)",
-  fontSize: "var(--fos-size-clock)",
-  fontWeight: "var(--fos-weight-light)",
-  color: "var(--fos-text)",
-  lineHeight: 1,
-  fontVariantNumeric: "tabular-nums",
-  textAlign: "center"
+  fontFamily: "var(--fos-font-mono)", fontSize: "var(--fos-size-clock)",
+  fontWeight: "var(--fos-weight-light)", color: "var(--fos-text)", lineHeight: 1,
+  fontVariantNumeric: "tabular-nums", textAlign: "center"
 };
-const UNIT_LABEL = {
-  fontSize: "var(--fos-size-label)",
-  color: "var(--fos-text-50)",
-  textAlign: "center"
-};
-function TimePicker({
-  title = "ערוך שעה",
-  hours = "07",
-  minutes = "18",
-  repeat = [0, 1, 2, 3, 4],
-  focusedDay = 5,
-  onCancel,
-  onSave,
-  style,
-  ...rest
-}) {
+const UNIT_LABEL = { fontSize: "var(--fos-size-label)", color: "var(--fos-text-50)", textAlign: "center" };
+
+function TimePicker({ title = "ערוך שעה", hours = "07", minutes = "18", repeat = [0, 1, 2, 3, 4], focusedWheel = "hours", focusedDay = -1, onCancel, onSave, style, ...rest }) {
   return /*#__PURE__*/React.createElement("div", _extends({
-    style: {
-      direction: "rtl",
-      fontFamily: "var(--fos-font)",
-      background: "var(--fos-bg)",
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: "var(--fos-space-9)",
-      padding: "var(--fos-space-7)",
-      ...style
-    }
-  }, rest), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: "var(--fos-size-screen-title)",
-      fontWeight: "var(--fos-weight-bold)",
-      color: "var(--fos-text)"
-    }
-  }, title), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "grid",
-      gridTemplateColumns: "104px 40px 104px",
-      gridTemplateRows: "auto auto auto auto",
-      justifyItems: "center",
-      alignItems: "center",
-      columnGap: "var(--fos-space-5)",
-      rowGap: "var(--fos-space-3)"
-    }
-  }, /*#__PURE__*/React.createElement(Step, {
-    dir: "up",
-    focused: true
-  }), /*#__PURE__*/React.createElement("div", null), /*#__PURE__*/React.createElement(Step, {
-    dir: "up"
-  }), /*#__PURE__*/React.createElement("div", {
-    style: VALUE
-  }, hours), /*#__PURE__*/React.createElement("div", {
-    style: VALUE
-  }, ":"), /*#__PURE__*/React.createElement("div", {
-    style: VALUE
-  }, minutes), /*#__PURE__*/React.createElement(Step, {
-    dir: "down"
-  }), /*#__PURE__*/React.createElement("div", null), /*#__PURE__*/React.createElement(Step, {
-    dir: "down"
-  }), /*#__PURE__*/React.createElement("div", {
-    style: UNIT_LABEL
-  }, "\u05E9\u05E2\u05D5\u05EA"), /*#__PURE__*/React.createElement("div", null), /*#__PURE__*/React.createElement("div", {
-    style: UNIT_LABEL
-  }, "\u05D3\u05E7\u05D5\u05EA")), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      gap: "var(--fos-space-3)"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: "var(--fos-size-summary)",
-      color: "var(--fos-text-60)"
-    }
-  }, "\u05D7\u05D5\u05D6\u05E8\u05EA"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      gap: "var(--fos-space-2)"
-    }
-  }, DAYS.map((d, i) => /*#__PURE__*/React.createElement(__ds_scope.DayChip, {
-    key: d,
-    selected: repeat.includes(i),
-    focused: i === focusedDay
-  }, d)))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      gap: "var(--fos-space-7)",
-      width: "100%"
-    }
-  }, /*#__PURE__*/React.createElement(__ds_scope.Button, {
-    variant: "quiet",
-    fullWidth: true,
-    onClick: onCancel
-  }, "\u05D1\u05D9\u05D8\u05D5\u05DC"), /*#__PURE__*/React.createElement(__ds_scope.Button, {
-    variant: "primary",
-    fullWidth: true,
-    focused: true,
-    onClick: onSave
-  }, "\u05E9\u05DE\u05D5\u05E8")));
+  style: {
+          direction: "rtl",
+          fontFamily: "var(--fos-font)",
+          background: "var(--fos-bg)",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "var(--fos-space-7)",
+          padding: "var(--fos-space-7)",
+          ...style
+        }
+}, rest), /*#__PURE__*/React.createElement("div", {
+  style: { fontSize: "var(--fos-size-screen-title)", fontWeight: "var(--fos-weight-bold)", color: "var(--fos-text)" }
+}, title), /*#__PURE__*/React.createElement("div", {
+  style: { display: "flex", alignItems: "center", gap: "var(--fos-space-3)" }
+}, /*#__PURE__*/React.createElement(Wheel, {
+  value: hours,
+  max: 23,
+  label: "שעות",
+  focused: focusedWheel === "hours"
+}), /*#__PURE__*/React.createElement("div", {
+  style: VALUE
+}, ":"), /*#__PURE__*/React.createElement(Wheel, {
+  value: minutes,
+  max: 59,
+  label: "דקות",
+  focused: focusedWheel === "minutes"
+})), /*#__PURE__*/React.createElement("div", {
+  style: { fontSize: "var(--fos-size-summary)", color: "var(--fos-text-60)" }
+}, "↑↓ שינוי · ספרות הקלדה · OK הבא"), /*#__PURE__*/React.createElement("div", {
+  style: { display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--fos-space-3)" }
+}, /*#__PURE__*/React.createElement("div", {
+  style: { fontSize: "var(--fos-size-summary)", color: "var(--fos-text-60)" }
+}, repeat.length ? "חוזרת" : "חד-פעמית"), /*#__PURE__*/React.createElement("div", {
+  style: { display: "flex", gap: "var(--fos-space-2)" }
+}, DAYS.map((d, i) => /*#__PURE__*/React.createElement(__ds_scope.DayChip, {
+  key: d,
+  selected: repeat.includes(i),
+  focused: i === focusedDay
+}, d)))), /*#__PURE__*/React.createElement("div", {
+  style: { display: "flex", gap: "var(--fos-space-7)", width: "100%" }
+}, /*#__PURE__*/React.createElement(__ds_scope.Button, {
+  variant: "quiet",
+  fullWidth: true,
+  onClick: onCancel
+}, "ביטול"), /*#__PURE__*/React.createElement(__ds_scope.Button, {
+  variant: "primary",
+  fullWidth: true,
+  onClick: onSave
+}, "שמור")));
 }
 Object.assign(__ds_scope, { TimePicker });
 })(); } catch (e) { __ds_ns.__errors.push({ path: "components/forms/TimePicker.jsx", error: String((e && e.message) || e) }); }
@@ -2345,6 +2509,279 @@ function TabRow({
 }
 Object.assign(__ds_scope, { TabRow });
 })(); } catch (e) { __ds_ns.__errors.push({ path: "components/navigation/TabRow.jsx", error: String((e && e.message) || e) }); }
+
+// components/feedback/GlassPanel.jsx
+try { (() => {
+function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
+/* GlassPanel: a system-shell panel (Control Center, Notification Center) — the one place in
+   FutureOS that blurs. It draws a snapshot of the screen behind it blurred at 40dp (80px),
+   under a 20% white wash, and lays its children out in a column with 16dp side / 8dp vertical
+   padding and 10dp between elements (the Control Center uses 4dp vertical).
+   `wallpaper` stands in for the snapshot (any CSS background); without it the panel blurs
+   whatever is live behind it with backdrop-filter. App screens never use this. Ink is always
+   white, so the panel reads the same in light and dark. */
+function GlassPanel({ wallpaper, blur = "var(--fos-backdrop-blur)", children, style, ...rest }) {
+  return /*#__PURE__*/React.createElement("div", _extends({
+  style: {
+          position: "relative",
+          isolation: "isolate",
+          overflow: "hidden",
+          boxSizing: "border-box",
+          direction: "rtl",
+          fontFamily: "var(--fos-font)",
+          color: "var(--fos-shell-ink)",
+          ...(wallpaper ? null : { backdropFilter: `blur(${blur})`, WebkitBackdropFilter: `blur(${blur})` }),
+          ...style
+        }
+}, rest), wallpaper && /*#__PURE__*/React.createElement("div", {
+  "aria-hidden": "true",
+  style: { position: "absolute", inset: `calc(-1 * ${blur})`, zIndex: -2, background: wallpaper, backgroundSize: "cover", backgroundPosition: "center", filter: `blur(${blur})` }
+}), /*#__PURE__*/React.createElement("div", {
+  "aria-hidden": "true",
+  style: { position: "absolute", inset: 0, zIndex: -1, background: "var(--fos-backdrop-wash)" }
+}), /*#__PURE__*/React.createElement("div", {
+  style: { position: "relative", boxSizing: "border-box", minHeight: "100%", display: "flex", flexDirection: "column", gap: "var(--fos-space-4)", padding: "var(--fos-space-3) var(--fos-space-screen)" }
+}, children));
+}
+
+/* GlassTile: any element that sits on a GlassPanel — toggle, notification card, media card,
+   button. 28dp radius (the shell radius), white at 15% at rest, 24% when focused with a 2dp
+   white ring (4px, inside, no scale).
+   `on` is the exception: a solid accent fill with on-accent ink, so a toggle reads at any accent.
+   Ink is white with a faint legibility shadow; children that draw icons should use currentColor
+   so `on` can flip them. */
+function GlassTile({ focused = false, on = false, radius = "var(--fos-radius-headsup)", onClick, children, style, ...rest }) {
+  return /*#__PURE__*/React.createElement("div", _extends({
+  onClick: onClick,
+  style: {
+          boxSizing: "border-box",
+          borderRadius: radius,
+          background: on ? "var(--fos-accent)" : focused ? "var(--fos-glass-fill-focused)" : "var(--fos-glass-fill)",
+          color: on ? "var(--fos-on-accent)" : "var(--fos-shell-ink)",
+          textShadow: on ? "none" : "var(--fos-shell-text-shadow)",
+          border: `var(--fos-focus-border-control) solid ${focused ? "var(--fos-shell-ink)" : "transparent"}`,
+          cursor: onClick ? "pointer" : undefined,
+          transition: "background var(--fos-transition-focus), border-color var(--fos-transition-focus)",
+          ...style
+        }
+}, rest), children);
+}
+Object.assign(__ds_scope, { GlassPanel, GlassTile });
+})(); } catch (e) { __ds_ns.__errors.push({ path: "components/feedback/GlassPanel.jsx", error: String((e && e.message) || e) }); }
+
+// components/feedback/NotificationCard.jsx
+try { (() => {
+function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
+/* NotificationCard: one notification in the Notification Center, a GlassTile (white 15% at
+   rest, 24% + 2dp white ring when focused) at 28dp radius, 14dp / 13dp padding. Collapsed: a
+   38dp app disc (white 20%) and a text column — "app: title" at 14sp/700, then the body at
+   13sp in two lines, all of it when `expanded` (long OK). `optionsOpen` (the Options key)
+   replaces that content with the notification's actions as OptionsMenu rows stacked
+   vertically: 50dp tall, 16dp radius, 15sp, the selected row a 12% white fill with no border,
+   a destructive row in the danger-on-glass color; a 12sp app-name header sits above them.
+   Always white ink — it sits on a GlassPanel. */
+function NotificationCard({ appName, title, body, icon = "chat", focused = false, expanded = false, optionsOpen = false, options = [], focusedOption = 0, onSelect, style, ...rest }) {
+  return /*#__PURE__*/React.createElement(__ds_scope.GlassTile, _extends({
+  focused: focused,
+  radius: "var(--fos-radius-headsup)",
+  style: { padding: "26px var(--fos-space-6)", transition: "background var(--fos-transition-focus), border-color var(--fos-transition-focus), height var(--fos-transition-focus)", ...style }
+}, rest), optionsOpen ? /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+  style: { fontSize: "var(--fos-size-label)", color: "var(--fos-shell-ink-sub)", padding: "0 var(--fos-space-5) var(--fos-space-1)" }
+}, appName), options.map((it, i) => /*#__PURE__*/React.createElement("div", {
+  key: it.label,
+  onClick: () => onSelect && onSelect(i),
+  style: {
+                  display: "flex",
+                  alignItems: "center",
+                  height: "var(--fos-row-menu)",
+                  padding: "0 var(--fos-space-5)",
+                  borderRadius: "var(--fos-radius-card)",
+                  background: i === focusedOption ? "var(--fos-shell-ink-12)" : "transparent",
+                  color: it.destructive ? "var(--fos-danger-on-glass)" : "var(--fos-shell-ink)",
+                  cursor: "pointer",
+                  transition: "background var(--fos-transition-focus)"
+                }
+}, /*#__PURE__*/React.createElement("div", {
+  style: { minWidth: 0, fontSize: "var(--fos-size-dialog)", fontWeight: "var(--fos-weight-medium)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }
+}, it.label)))) : /*#__PURE__*/React.createElement("div", {
+  style: { display: "flex", alignItems: "center", gap: "var(--fos-space-6)" }
+}, /*#__PURE__*/React.createElement("div", {
+  style: { flex: "0 0 auto", width: 76, height: 76, borderRadius: "var(--fos-radius-full)", background: "var(--fos-shell-ink-20)", display: "grid", placeItems: "center", color: "var(--fos-shell-ink-sub)" }
+}, /*#__PURE__*/React.createElement(__ds_scope.FosIcon, {
+  name: icon,
+  size: 36,
+  color: "currentColor"
+})), /*#__PURE__*/React.createElement("div", {
+  style: { flex: 1, minWidth: 0 }
+}, /*#__PURE__*/React.createElement("div", {
+  style: { fontSize: "var(--fos-size-body)", fontWeight: "var(--fos-weight-bold)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }
+}, title ? `${appName}: ${title}` : appName), body && /*#__PURE__*/React.createElement("div", {
+  style: {
+                    fontSize: "var(--fos-size-summary)",
+                    color: "var(--fos-shell-ink-sub)",
+                    ...(expanded ? null : { display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 2, overflow: "hidden" })
+                  }
+}, body))));
+}
+Object.assign(__ds_scope, { NotificationCard });
+})(); } catch (e) { __ds_ns.__errors.push({ path: "components/feedback/NotificationCard.jsx", error: String((e && e.message) || e) }); }
+
+// components/core/Widget.jsx
+try { (() => {
+function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
+/* Home-screen widget template (FutureContentWidget, 2x1 cells): #1C1C1E at 90% with a 0.5dp 15%
+   white hairline, 22dp radius, 16dp / 10dp padding. Row: 18dp app icon, 6dp, 12sp title at 60%
+   white. Value 20sp bold white (28sp in the clock variant, a live clock; 2dp tighter above it).
+   Subtitle 13sp at 60%, two lines max. The icon is the app's own launcher icon, drawn as is and
+   not tinted; `icon` here is a FosIcon stand-in for it. Always dark, even in light mode — it
+   sits on the user's wallpaper — hence the shell tokens. */
+function Widget({ icon = "widgets", title, value, subtitle, variant = "default", style, ...rest }) {
+  const clock = variant === "clock";
+  return /*#__PURE__*/React.createElement("div", _extends({
+  style: {
+          direction: "rtl",
+          fontFamily: "var(--fos-font)",
+          boxSizing: "border-box",
+          padding: "var(--fos-space-4) var(--fos-space-7)",
+          borderRadius: "var(--fos-radius-main)",
+          background: "var(--fos-widget-bg)",
+          border: "var(--fos-border-headsup) solid var(--fos-hairline-dark)",
+          color: "var(--fos-shell-ink)",
+          ...style
+        }
+}, rest), /*#__PURE__*/React.createElement("div", {
+  style: { display: "flex", alignItems: "center", gap: "var(--fos-space-2)" }
+}, /*#__PURE__*/React.createElement(__ds_scope.FosIcon, {
+  name: icon,
+  size: 36,
+  color: "var(--fos-shell-ink)"
+}), /*#__PURE__*/React.createElement("div", {
+  style: { minWidth: 0, fontSize: "var(--fos-size-label)", color: "var(--fos-shell-ink-60)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }
+}, title)), /*#__PURE__*/React.createElement("div", {
+  style: {
+            marginTop: clock ? 4 : "var(--fos-space-1)",
+            fontSize: clock ? "var(--fos-size-widget-clock)" : "var(--fos-size-screen-title)",
+            fontWeight: "var(--fos-weight-bold)",
+            lineHeight: "var(--fos-line-height)",
+            fontVariantNumeric: "tabular-nums"
+          }
+}, value), subtitle && /*#__PURE__*/React.createElement("div", {
+  style: {
+              fontSize: "var(--fos-size-summary)",
+              lineHeight: "var(--fos-line-height)",
+              color: "var(--fos-shell-ink-60)",
+              display: "-webkit-box",
+              WebkitBoxOrient: "vertical",
+              WebkitLineClamp: 2,
+              overflow: "hidden"
+            }
+}, subtitle));
+}
+Object.assign(__ds_scope, { Widget });
+})(); } catch (e) { __ds_ns.__errors.push({ path: "components/core/Widget.jsx", error: String((e && e.message) || e) }); }
+
+// components/navigation/StatusCapsule.jsx
+try { (() => {
+function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
+const PAD = 18; /* 9dp */
+const MAX_GLYPHS = 4;
+
+/* StatusCapsule: a status-bar capsule (DynamicCapsule) — #1C1C1E at 55% with a 0.5dp 15% white
+   hairline, 22dp (44px) tall, a pill, 9dp inside each end, over a transparent bar. The leading
+   capsule is dynamic: it widens (200ms, standard easing, no bounce) to show live activity — a call
+   (success fill, black ink, call icon + duration), charging (bolt in success + label), a new
+   notification (app glyph + app name, label at most 90dp), media (music note + title, label at
+   most 110dp, ellipsized) — then returns to the time and the app glyphs (at most four, then +N).
+   Pass children for a static capsule (the trailing device-status capsule). Ink is always white. */
+function StatusCapsule({ state = "idle", time, label, apps = [], icon = "chat", children, style, ...rest }) {
+  const innerRef = React.useRef(null);
+  const [width, setWidth] = React.useState(null);
+  React.useLayoutEffect(() => {
+    const el = innerRef.current;
+    if (!el) return undefined;
+    const measure = () => setWidth(Math.ceil(el.getBoundingClientRect().width) + 2);
+    measure();
+    if (typeof ResizeObserver === "undefined") return undefined;
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const call = !children && state === "call";
+  const ink = call ? "var(--fos-on-accent)" : "var(--fos-shell-ink)";
+  const lead = state === "charging" ? { name: "bolt", size: 24, color: "var(--fos-shell-success)" }
+    : state === "notification" ? { name: icon, size: 28, color: ink }
+    : state === "media" ? { name: "music_note", size: 28, color: ink }
+    : call ? { name: "call", size: 24, color: ink }
+    : null;
+  const labelMax = state === "notification" ? 180 : state === "media" ? 220 : undefined;
+  const shown = apps.slice(0, MAX_GLYPHS);
+
+  let content;
+  if (children) content = children;
+  else if (state === "idle") {
+    content = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
+  style: { fontSize: "var(--fos-size-body)", fontWeight: "var(--fos-weight-semibold)", fontVariantNumeric: "tabular-nums" }
+}, time), shown.length > 0 && /*#__PURE__*/React.createElement("span", {
+  style: { display: "flex", alignItems: "center", gap: "var(--fos-space-1)" }
+}, shown.map((a, i) => /*#__PURE__*/React.createElement(__ds_scope.FosIcon, {
+  key: a + i,
+  name: a,
+  size: 28,
+  color: "currentColor"
+})), apps.length > MAX_GLYPHS && /*#__PURE__*/React.createElement("span", {
+  style: { fontSize: "var(--fos-size-label)", fontWeight: "var(--fos-weight-semibold)", color: "var(--fos-shell-ink-70)" }
+}, "+", apps.length - MAX_GLYPHS)));
+  } else {
+    content = /*#__PURE__*/React.createElement(React.Fragment, null, lead && /*#__PURE__*/React.createElement(__ds_scope.FosIcon, {
+  name: lead.name,
+  size: lead.size,
+  color: lead.color
+}), /*#__PURE__*/React.createElement("span", {
+  style: {
+              maxWidth: labelMax,
+              fontSize: "var(--fos-size-label)",
+              fontWeight: call ? "var(--fos-weight-bold)" : "var(--fos-weight-medium)",
+              fontVariantNumeric: "tabular-nums",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis"
+            }
+}, label));
+  }
+
+  return /*#__PURE__*/React.createElement("div", _extends({
+  style: {
+          direction: "rtl",
+          fontFamily: "var(--fos-font)",
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "flex-start",
+          height: 44,
+          width: width == null ? "max-content" : width,
+          boxSizing: "border-box",
+          overflow: "hidden",
+          borderRadius: "var(--fos-radius-full)",
+          background: call ? "var(--fos-shell-success)" : "var(--fos-capsule-bg)",
+          border: `var(--fos-border-headsup) solid ${call ? "var(--fos-shell-success)" : "var(--fos-hairline-dark)"}`,
+          color: ink,
+          transition: "width var(--fos-transition-focus), background var(--fos-transition-focus), border-color var(--fos-transition-focus)",
+          ...style
+        }
+}, rest), /*#__PURE__*/React.createElement("div", {
+  ref: innerRef,
+  style: {
+            flex: "0 0 auto",
+            display: "flex",
+            alignItems: "center",
+            gap: children ? 14 /* 7dp */ : state === "idle" ? "var(--fos-space-2)" : state === "notification" || state === "media" ? 10 /* 5dp */ : "var(--fos-space-1)",
+            padding: `0 ${PAD}px`,
+            width: "max-content"
+          }
+}, content));
+}
+Object.assign(__ds_scope, { StatusCapsule });
+})(); } catch (e) { __ds_ns.__errors.push({ path: "components/navigation/StatusCapsule.jsx", error: String((e && e.message) || e) }); }
 
 // ui_kits/bluetooth/BluetoothScreens.jsx
 try { (() => {
@@ -4643,13 +5080,20 @@ __ds_ns.SectionHeader = __ds_scope.SectionHeader;
 
 __ds_ns.TopBar = __ds_scope.TopBar;
 
+__ds_ns.Widget = __ds_scope.Widget;
+
 __ds_ns.Badge = __ds_scope.Badge;
 
 __ds_ns.ConfirmDialog = __ds_scope.ConfirmDialog;
 
+__ds_ns.GlassPanel = __ds_scope.GlassPanel;
+__ds_ns.GlassTile = __ds_scope.GlassTile;
+
 __ds_ns.HeadsUpNotification = __ds_scope.HeadsUpNotification;
 
 __ds_ns.InputDialog = __ds_scope.InputDialog;
+
+__ds_ns.NotificationCard = __ds_scope.NotificationCard;
 
 __ds_ns.ProgressBar = __ds_scope.ProgressBar;
 
@@ -4688,6 +5132,8 @@ __ds_ns.BottomNav = __ds_scope.BottomNav;
 __ds_ns.OptionsMenu = __ds_scope.OptionsMenu;
 
 __ds_ns.SoftKeyBar = __ds_scope.SoftKeyBar;
+
+__ds_ns.StatusCapsule = __ds_scope.StatusCapsule;
 
 __ds_ns.TabRow = __ds_scope.TabRow;
 

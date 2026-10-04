@@ -44,10 +44,13 @@ class LocalSpeechEngine(private val context: Context) {
         wavFile.delete()
         val samples = trimSilence(raw)
         if (samples.isEmpty()) return ""
-        val whisper = sharedWhisper ?: return ""
+        // ההקלטה מתחילה עוד לפני שהמודל סיים להיטען - כאן מחכים לטעינה אם
+        // היא עדיין רצה (preload נועל את אותו lock), במקום להחזיר טקסט ריק.
+        val whisper = sharedWhisper ?: runCatching { preload(context); sharedWhisper }.getOrNull() ?: return ""
         // העוזר והשירות (AssistantRecognitionService) רצים באותו תהליך וחולקים
         // את אותו context, ש-whisper_full לא בטוח להריץ עליו במקביל.
-        return synchronized(lock) { whisper.transcribe(samples, language) }
+        val text = synchronized(lock) { whisper.transcribe(samples, language) }
+        return RepetitionFilter.collapse(text)
     }
 
     /**
@@ -96,6 +99,22 @@ class LocalSpeechEngine(private val context: Context) {
         // של המודל בזיכרון הם כחצי ג'יגה על מכשיר עם 4GB.
         private val lock = Any()
         @Volatile private var sharedWhisper: WhisperCpp? = null
+
+        val isLoaded: Boolean get() = sharedWhisper != null
+
+        /**
+         * מתחיל לטעון את המודל ברקע ולא מחכה. נקרא ב-onCreate של העוזר, לפני
+         * שהמסך בכלל מצויר - כך שהטעינה (קריאת 264MB) רצה במקביל לפתיחת
+         * החלון ולהקלטה הראשונה, ולא אחריהן.
+         */
+        fun preloadAsync(context: Context, onDone: ((Boolean) -> Unit)? = null) {
+            val app = context.applicationContext
+            if (sharedWhisper != null) { onDone?.invoke(true); return }
+            Thread {
+                val ok = runCatching { preload(app) }.isSuccess
+                onDone?.invoke(ok)
+            }.apply { priority = Thread.MAX_PRIORITY }.start()
+        }
 
         /** כמו loadModel, בלי ליצור Recorder (ר' AsrWarmupReceiver). */
         fun preload(context: Context) {

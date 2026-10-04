@@ -11,6 +11,9 @@ import com.future.sharednav.systemui.SystemUiTarget
  * הקלדה ששוברת תקשורת בין שירותים בלי שגיאת קומפילציה שתתפוס את זה.
  */
 object FutureUIActions {
+    /** הרשאת החתימה של FutureOS - שולח שמחזיק אותה הוא אפליקציה של המערכת (ר' KeyPressBroadcasts). */
+    const val PERMISSION_SYSTEM = "com.future.futureui.permission.SYSTEM_SETTINGS"
+
     const val ACTION_SHOW_CONTROL_CENTER = "${SystemUiTarget.PACKAGE}.ACTION_SHOW_CONTROL_CENTER"
     const val ACTION_SHOW_NOTIFICATION_CENTER = "${SystemUiTarget.PACKAGE}.ACTION_SHOW_NOTIFICATION_CENTER"
 

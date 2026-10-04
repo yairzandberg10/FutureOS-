@@ -4,8 +4,8 @@
     android:minHeight="40dp"
     android:targetCellWidth="2"
     android:targetCellHeight="1"
-    android:updatePeriodMillis="0"
-    android:initialLayout="@layout/app_widget"
-    android:previewLayout="@layout/app_widget"
+    android:updatePeriodMillis="1800000"
+    android:initialLayout="@layout/future_widget_clock"
+    android:previewLayout="@layout/future_widget_clock"
     android:resizeMode="none"
     android:widgetCategory="home_screen" />

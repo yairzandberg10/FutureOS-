@@ -83,22 +83,72 @@ fun categorize(file: File): FileCategory {
     }
 }
 
+/** סדר הרשימה - נבחר בכפתור המיון שבשורה העליונה. תיקיות תמיד לפני קבצים. */
+enum class SortOrder(val label: String) { NAME("שם"), DATE("תאריך"), SIZE("גודל"), TYPE("סוג") }
+
+/** התקדמות של העתקה/העברה ארוכה, וביטול שלה מהמסך. */
+class CopyProgress {
+    @Volatile var total: Long = 1L
+    @Volatile var copied: Long = 0L
+    @Volatile var cancelled: Boolean = false
+        private set
+    val fraction: Float get() = (copied.toFloat() / total.coerceAtLeast(1L)).coerceIn(0f, 1f)
+    fun cancel() { cancelled = true }
+}
+
+/**
+ * מצב מפתח (הגדרות > אפשרויות מפתח). בלעדיו הקבצים מציגים רק את מה ששייך
+ * למשתמש: בלי תיקיות של אפליקציות (Android, backups, com.xxx), בלי קבצי
+ * מערכת (xml, log, apk) ובלי וידאו, שהקבצים לא תומכים בו.
+ */
+fun isDeveloperMode(context: android.content.Context): Boolean =
+    android.provider.Settings.Global.getInt(context.contentResolver, android.provider.Settings.Global.DEVELOPMENT_SETTINGS_ENABLED, 0) == 1
+
+/** תיקיות טכניות שאפליקציות יוצרות - מוסתרות כשמצב מפתח כבוי. */
+private val TECHNICAL_FOLDERS = setOf(
+    "android", "lost.dir", "backups", "backup", "baidu", "baiduasr", "apkpure", "tencent", "miui",
+    "bugreports", "logs", "log", "mtklog", "debuglogger", "data", "obb", "system", "cache", "temp", "tmp",
+    "sharedit", "shareit", "amap", "autonavi", "netease", "sogou", "ucdownloads",
+)
+
+/** סיומות של קבצים טכניים - מוסתרות כשמצב מפתח כבוי. */
+private val TECHNICAL_EXTENSIONS = setOf(
+    "xml", "log", "apk", "apks", "xapk", "dex", "so", "bin", "db", "db-journal", "tmp", "ini", "cfg", "conf",
+    "prop", "dat", "lock", "bak", "json", "nomedia",
+)
+
+/** "com.apkpure.aegon" - תיקייה בשם של חבילה היא תיקיית נתונים של אפליקציה. */
+private val PACKAGE_NAME = Regex("^[a-z][a-z0-9_]*(\\.[a-z0-9_]+)+$")
+
+private fun isTechnical(entry: File): Boolean {
+    val lower = entry.name.lowercase()
+    return if (entry.isDirectory) lower in TECHNICAL_FOLDERS || PACKAGE_NAME.matches(lower)
+    else entry.extension.lowercase() in TECHNICAL_EXTENSIONS || categorize(entry) == FileCategory.VIDEO
+}
+
 /** גישה אמיתית למערכת הקבצים של המכשיר - בלי נתונים מדומים. */
 class FileRepository {
 
-    fun listDirectory(dir: File, isRoot: Boolean): List<FileEntry> {
+    fun listDirectory(dir: File, isRoot: Boolean, sort: SortOrder = SortOrder.NAME, developer: Boolean = false): List<FileEntry> {
         return try {
-            (dir.listFiles() ?: emptyArray())
+            val entries = (dir.listFiles() ?: emptyArray())
                 .filter { entry ->
                     val name = entry.name
                     if (name.startsWith(".")) return@filter false
                     if (isRoot && name in ROOT_HIDDEN_NAMES) return@filter false
+                    if (!developer && isTechnical(entry)) return@filter false
                     // קישור שמוביל אל מחוץ לאחסון (למשל אל /data) לא מוצג בכלל.
                     if (entry.isDirectory && !isInsideUserStorage(entry, rootDirectory())) return@filter false
                     true
                 }
                 .map { FileEntry(it, it.isDirectory, if (it.isFile) it.length() else 0L) }
-                .sortedWith(compareByDescending<FileEntry> { it.isDirectory }.thenBy { it.file.name.lowercase() })
+            val bySort: Comparator<FileEntry> = when (sort) {
+                SortOrder.NAME -> compareBy { it.file.name.lowercase() }
+                SortOrder.DATE -> compareByDescending { it.file.lastModified() }
+                SortOrder.SIZE -> compareByDescending<FileEntry> { it.sizeBytes }.thenBy { it.file.name.lowercase() }
+                SortOrder.TYPE -> compareBy<FileEntry> { it.file.extension.lowercase() }.thenBy { it.file.name.lowercase() }
+            }
+            entries.sortedWith(compareByDescending<FileEntry> { it.isDirectory }.then(bySort))
         } catch (e: Exception) {
             emptyList()
         }
@@ -142,26 +192,59 @@ class FileRepository {
         return true
     }
 
-    fun copyEntry(source: File, destDir: File): Boolean {
+    /** העתקה עם התקדמות וביטול. ביטול באמצע מוחק את מה שכבר הועתק. */
+    fun copyEntry(source: File, destDir: File, progress: CopyProgress = CopyProgress()): Boolean {
+        val target = File(destDir, source.name)
+        return try {
+            if (target.exists() || target.absolutePath.startsWith(source.absolutePath + File.separator)) return false
+            progress.total = source.walkTopDown().filter { it.isFile }.sumOf { it.length() }.coerceAtLeast(1L)
+            source.walkTopDown().forEach { from ->
+                if (progress.cancelled) throw java.util.concurrent.CancellationException()
+                val to = File(target, from.relativeTo(source).path)
+                if (from.isDirectory) {
+                    to.mkdirs()
+                } else {
+                    to.parentFile?.mkdirs()
+                    from.inputStream().use { input ->
+                        to.outputStream().use { output ->
+                            val buf = ByteArray(64 * 1024)
+                            while (true) {
+                                if (progress.cancelled) throw java.util.concurrent.CancellationException()
+                                val n = input.read(buf)
+                                if (n < 0) break
+                                output.write(buf, 0, n)
+                                progress.copied += n
+                            }
+                        }
+                    }
+                }
+            }
+            true
+        } catch (e: Exception) {
+            target.deleteRecursively()
+            false
+        }
+    }
+
+    fun moveEntry(source: File, destDir: File, progress: CopyProgress = CopyProgress()): Boolean {
         return try {
             val target = File(destDir, source.name)
-            if (target.exists() || target.absolutePath.startsWith(source.absolutePath + File.separator)) return false
-            if (source.isDirectory) source.copyRecursively(target, overwrite = false) else source.copyTo(target, overwrite = false)
-            true
+            if (target.exists()) return false
+            if (source.renameTo(target)) return true
+            if (copyEntry(source, destDir, progress)) { source.deleteRecursively(); true } else false
         } catch (e: Exception) {
             false
         }
     }
 
-    fun moveEntry(source: File, destDir: File): Boolean {
-        return try {
-            val target = File(destDir, source.name)
-            if (target.exists()) return false
-            if (source.renameTo(target)) return true
-            if (copyEntry(source, destDir)) { source.deleteRecursively(); true } else false
-        } catch (e: Exception) {
-            false
-        }
+    /** שמירת קובץ טקסט/קוד מהעורך. כתיבה לקובץ זמני ואז החלפה - בלי קובץ חצי-כתוב. */
+    fun saveText(file: File, text: String): Boolean = try {
+        val tmp = File(file.parentFile, ".${file.name}.saving")
+        tmp.writeText(text)
+        if (!tmp.renameTo(file)) { file.writeText(text); tmp.delete() }
+        true
+    } catch (e: Exception) {
+        false
     }
 
     fun createFolder(parent: File, name: String): Boolean {

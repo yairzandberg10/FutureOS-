@@ -27,12 +27,14 @@ enum class SceneOption(val mode: Int, val label: String) {
 /** ההגדרות של המצלמה, נשמרות בין הפעלות. */
 data class CameraOptions(
     val aspect: AspectOption = AspectOption.RATIO_4_3,
-    val photoQuality: PhotoQualityOption = PhotoQualityOption.QUALITY,
+    // צילום מהיר כברירת מחדל: "איכות מרבית" מעבד כל תמונה שנייה ויותר על המכשיר.
+    val photoQuality: PhotoQualityOption = PhotoQualityOption.SPEED,
     val videoQuality: VideoQualityOption = VideoQualityOption.HD,
     val scene: SceneOption = SceneOption.NONE,
     val flashMode: Int = ImageCapture.FLASH_MODE_OFF,
     val timerSeconds: Int = 0,
     val showGrid: Boolean = false,
+    val filter: CameraFilter = CameraFilter.NONE,
 ) {
     companion object {
         private const val PREFS = "camera_options"
@@ -43,12 +45,13 @@ data class CameraOptions(
                 values.firstOrNull { it.name == p.getString(key, null) } ?: default
             return CameraOptions(
                 aspect = read("aspect", AspectOption.entries.toTypedArray(), AspectOption.RATIO_4_3),
-                photoQuality = read("photo_quality", PhotoQualityOption.entries.toTypedArray(), PhotoQualityOption.QUALITY),
+                photoQuality = read("photo_quality", PhotoQualityOption.entries.toTypedArray(), PhotoQualityOption.SPEED),
                 videoQuality = read("video_quality", VideoQualityOption.entries.toTypedArray(), VideoQualityOption.HD),
                 scene = read("scene", SceneOption.entries.toTypedArray(), SceneOption.NONE),
                 flashMode = p.getInt("flash", ImageCapture.FLASH_MODE_OFF),
                 timerSeconds = p.getInt("timer", 0),
                 showGrid = p.getBoolean("grid", false),
+                filter = read("filter", CameraFilter.entries.toTypedArray(), CameraFilter.NONE),
             )
         }
     }
@@ -62,6 +65,7 @@ data class CameraOptions(
             .putInt("flash", flashMode)
             .putInt("timer", timerSeconds)
             .putBoolean("grid", showGrid)
+            .putString("filter", filter.name)
             .apply()
     }
 }

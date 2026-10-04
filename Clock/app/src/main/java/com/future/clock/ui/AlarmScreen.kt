@@ -54,6 +54,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
+import com.future.sharednav.theme.FutureShapes
 import com.future.clock.logic.Alarm
 import com.future.clock.logic.AlarmLogic
 import com.future.sharednav.theme.FutureTheme
@@ -214,31 +222,65 @@ fun AlarmRow(alarm: Alarm, theme: FutureTheme, onToggle: (Boolean) -> Unit, onDe
 // עצמו קיים ב-data class ומטופל נכון עכשיו ב-AlarmLogic.nextTriggerMillis.
 private val DAY_LABELS = listOf(1 to "א", 2 to "ב", 3 to "ג", 4 to "ד", 5 to "ה", 6 to "ו", 7 to "ש")
 
+/**
+ * בורר השעה (components/forms/TimePicker.jsx, הגרסה המעודכנת): שני "גלגלים" -
+ * שעות מימין ודקות משמאל. גלגל ממוקד מקבל את טבעת הפוקוס של שדה (2dp
+ * הדגשה), ומעליו ומתחתיו הערך הבא והקודם ב-30%, כך שרואים לאן ↑/↓ יזיזו.
+ *
+ * - ↑/↓ - הערך הבא/הקודם (מקש מוחזק רץ ברצף).
+ * - ספרות - הקלדה ישירה: "0","7" = 07. אחרי שתי ספרות של שעה עוברים לדקות.
+ * - ←/→ - מעבר בין שעות, דקות, ימי החזרה והכפתורים.
+ *
+ * קודם היו ארבעה כפתורי חץ נפרדים: כדי לשנות שעה היה צריך לנווט לחץ, ללחוץ
+ * OK פעם אחת לכל דקה, ולנווט לחץ אחר - והבורר גם לא נכנס בגובה המסך.
+ */
 @Composable
 fun TimePickerOverlay(alarm: Alarm, theme: FutureTheme, onSave: (Alarm) -> Unit, onCancel: () -> Unit) {
     var hour by remember { mutableIntStateOf(alarm.hour) }
     var minute by remember { mutableIntStateOf(alarm.minute) }
     var days by remember { mutableStateOf(alarm.days) }
+    val hourFocus = remember { FocusRequester() }
+    val minuteFocus = remember { FocusRequester() }
     // BACK סוגר את הבורר בלי לשמור, כמו ביטול - ולא יוצא מהאפליקציה.
     androidx.activity.compose.BackHandler(onBack = onCancel)
+    LaunchedEffect(Unit) { runCatching { hourFocus.requestFocus() } }
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(FutureDimens.spacingLg),
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = FutureDimens.screenPadding, vertical = FutureDimens.spacingLg),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         Text("ערוך שעה", color = theme.textColor, fontSize = FutureTypography.screenTitle, fontWeight = FutureTypography.weightBold)
-        Spacer(modifier = Modifier.height(FutureDimens.spacingXl))
+        Spacer(modifier = Modifier.height(FutureDimens.spacingLg))
 
-        TimeGrid(
-            hour = hour,
-            minute = minute,
-            theme = theme,
-            onHourChange = { hour = it },
-            onMinuteChange = { minute = it },
-        )
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm)) {
+            TimeWheel(
+                value = hour,
+                range = 0..23,
+                label = "שעות",
+                theme = theme,
+                focusRequester = hourFocus,
+                onChange = { hour = it },
+                onTypedComplete = { runCatching { minuteFocus.requestFocus() } },
+            )
+            TimeValue(":", theme)
+            TimeWheel(
+                value = minute,
+                range = 0..59,
+                label = "דקות",
+                theme = theme,
+                focusRequester = minuteFocus,
+                onChange = { minute = it },
+                onTypedComplete = {},
+            )
+        }
+        Spacer(modifier = Modifier.height(FutureDimens.spacingSm))
+        Text("↑↓ שינוי · ספרות הקלדה · OK הבא", color = theme.textAlpha(60), fontSize = FutureTypography.summary)
 
-        Spacer(modifier = Modifier.height(FutureDimens.spacingXl))
+        Spacer(modifier = Modifier.height(FutureDimens.spacingLg))
         Text(
             if (days.isEmpty()) "חד-פעמית" else "חוזרת",
             color = theme.textAlpha(60),
@@ -278,64 +320,88 @@ fun DayToggleChip(label: String, selected: Boolean, theme: FutureTheme, onToggle
 }
 
 /**
- * הטבלה של בורר השעה (components/forms/TimePicker.jsx): שלוש עמודות -
- * שעות, נקודתיים, דקות (52/20/52dp, מרווח 12dp) - וארבע שורות: חץ למעלה,
- * ערך, חץ למטה, תווית. כך החצים יושבים בדיוק מעל ומתחת לספרות, והנקודתיים
- * בשורה של הערכים ולא באמצע הגובה של כל הבלוק. השעות בעמודה הראשונה, כלומר
- * מימין.
+ * גלגל ערך אחד: הערך הבא (מעל) והקודם (מתחת) ב-30%, הערך עצמו 48sp מונו,
+ * ותווית 12sp. הגלגל כולו הוא יעד פוקוס אחד - מילוי 8% במנוחה, טבעת 2dp
+ * בהדגשה בפוקוס (השדה של הדיזיין סיסטם). ספרה שהוקלדה ועוד לא הושלמה
+ * מוצגת בהדגשה.
  */
 @Composable
-private fun TimeGrid(hour: Int, minute: Int, theme: FutureTheme, onHourChange: (Int) -> Unit, onMinuteChange: (Int) -> Unit) {
-    fun step(value: Int, range: IntRange, up: Boolean): Int = when {
-        up -> if (value == range.last) range.first else value + 1
-        else -> if (value == range.first) range.last else value - 1
-    }
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm),
-    ) {
-        TimeGridRow(
-            hours = { TimeStepButton(FutureIcons.KeyboardArrowUp, "שעה למעלה", theme) { onHourChange(step(hour, 0..23, up = true)) } },
-            minutes = { TimeStepButton(FutureIcons.KeyboardArrowUp, "דקה למעלה", theme) { onMinuteChange(step(minute, 0..59, up = true)) } },
-        )
-        TimeGridRow(
-            hours = { TimeValue("%02d".format(hour), theme) },
-            separator = { TimeValue(":", theme) },
-            minutes = { TimeValue("%02d".format(minute), theme) },
-        )
-        TimeGridRow(
-            hours = { TimeStepButton(FutureIcons.KeyboardArrowDown, "שעה למטה", theme) { onHourChange(step(hour, 0..23, up = false)) } },
-            minutes = { TimeStepButton(FutureIcons.KeyboardArrowDown, "דקה למטה", theme) { onMinuteChange(step(minute, 0..59, up = false)) } },
-        )
-        TimeGridRow(
-            hours = { Text("שעות", color = theme.textAlpha(50), fontSize = FutureTypography.label) },
-            minutes = { Text("דקות", color = theme.textAlpha(50), fontSize = FutureTypography.label) },
-        )
-    }
-}
-
-@Composable
-private fun TimeGridRow(
-    hours: @Composable () -> Unit,
-    minutes: @Composable () -> Unit,
-    separator: @Composable () -> Unit = {},
+private fun TimeWheel(
+    value: Int,
+    range: IntRange,
+    label: String,
+    theme: FutureTheme,
+    focusRequester: FocusRequester,
+    onChange: (Int) -> Unit,
+    onTypedComplete: () -> Unit,
 ) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingMd),
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
+    var typed by remember { mutableStateOf("") }
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+    LaunchedEffect(isFocused) { if (!isFocused) typed = "" }
+    fun wrap(v: Int) = when {
+        v > range.last -> range.first
+        v < range.first -> range.last
+        else -> v
+    }
+    val shape = FutureShapes.textField
+    val accent = theme.readableAccentColor
+    Column(
+        modifier = Modifier
+            .width(TimeWheelWidth)
+            .clip(shape)
+            .background(if (isFocused) accent.copy(alpha = 0.14f) else theme.textAlpha(8))
+            .border(FutureDimens.focusBorderControl, if (isFocused) accent else Color.Transparent, shape)
+            .focusRequester(focusRequester)
+            .onKeyEvent { event ->
+                if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
+                val digit = com.future.sharednav.nav.digitForKey(event.key)
+                when {
+                    event.key == Key.DirectionUp -> { typed = ""; onChange(wrap(value + 1)); true }
+                    event.key == Key.DirectionDown -> { typed = ""; onChange(wrap(value - 1)); true }
+                    // ↑/↓ שייכים לגלגל, אז OK הוא היציאה ממנו - לימי החזרה ולכפתורים.
+                    event.key == Key.DirectionCenter || event.key == Key.Enter || event.key == Key.NumPadEnter -> {
+                        typed = ""
+                        focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Down)
+                        true
+                    }
+                    digit != null -> {
+                        val next = typed + digit
+                        val v = next.toInt()
+                        when {
+                            next.length >= 2 || v * 10 > range.last -> {
+                                onChange(v.coerceIn(range))
+                                typed = ""
+                                onTypedComplete()
+                            }
+                            else -> {
+                                typed = next
+                                onChange(v)
+                            }
+                        }
+                        true
+                    }
+                    else -> false
+                }
+            }
+            .focusable(interactionSource = interactionSource)
+            .padding(vertical = FutureDimens.spacingSm),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Box(modifier = Modifier.width(TimeUnitColumn), contentAlignment = Alignment.Center) { hours() }
-        Box(modifier = Modifier.width(TimeSeparatorColumn), contentAlignment = Alignment.Center) { separator() }
-        Box(modifier = Modifier.width(TimeUnitColumn), contentAlignment = Alignment.Center) { minutes() }
+        Text("%02d".format(wrap(value + 1)), color = theme.textAlpha(30), fontSize = FutureTypography.headline, fontFamily = FutureTypography.monoFamily)
+        TimeValue("%02d".format(value), theme, color = if (typed.isNotEmpty()) accent else theme.textColor)
+        Text("%02d".format(wrap(value - 1)), color = theme.textAlpha(30), fontSize = FutureTypography.headline, fontFamily = FutureTypography.monoFamily)
+        Text(label, color = theme.textAlpha(50), fontSize = FutureTypography.label)
     }
 }
 
 /** 48sp/300 מונו, גובה שורה 1 - כך שהמרווח בין הספרות לחצים הוא המרווח של הטבלה בלבד. */
 @Composable
-private fun TimeValue(text: String, theme: FutureTheme) {
+private fun TimeValue(text: String, theme: FutureTheme, color: Color = theme.textColor) {
     Text(
         text,
-        color = theme.textColor,
+        color = color,
         fontSize = FutureTypography.hero,
         fontWeight = FontWeight.Light,
         fontFamily = FutureTypography.monoFamily,
@@ -348,19 +414,5 @@ private fun TimeValue(text: String, theme: FutureTheme) {
     )
 }
 
-/** חץ של בורר השעה - עיגול 36dp, 8% מהטקסט במנוחה ו-30% מההדגשה בפוקוס, והחץ עצמו בהדגשה. */
-@Composable
-private fun TimeStepButton(icon: ImageVector, contentDescription: String, theme: FutureTheme, onClick: () -> Unit) {
-    SharedTopBarIconButton(
-        icon = icon,
-        contentDescription = contentDescription,
-        textColor = theme.textColor,
-        accentColor = theme.accentColor,
-        onClick = onClick,
-        iconColor = theme.readableAccentColor,
-    )
-}
-
-/** 104px / 40px - רוחב עמודת ערך ועמודת הנקודתיים ב-TimePicker.jsx. */
-private val TimeUnitColumn = 52.dp
-private val TimeSeparatorColumn = 20.dp
+/** 104dp - רוחב גלגל: שתי ספרות 48sp מונו עם ריפוד. */
+private val TimeWheelWidth = 104.dp

@@ -17,6 +17,9 @@
 # purpose: they come from SharedKeypadNav (SystemUiTarget.PACKAGE), so SystemUI
 # answers exactly the same broadcasts FutureUI does.
 #
+# The one <uses-permission> for the real FutureUI permission also stays as is: the
+# dialer's CallActionReceiver requires exactly that permission from the sender.
+#
 # Usage: bash SystemUI/sync-from-futureui.sh   (from the repo root or anywhere)
 set -euo pipefail
 
@@ -42,6 +45,7 @@ sed \
     -e 's/com\.future\.futureui/com.android.sistemui/g' \
     -e 's/@@KEEP_ACTION@@/com.future.futureui.ACTION_/g' \
     -e 's/android:label="FutureUI /android:label="SystemUI /g' \
+    -e 's#<uses-permission android:name="com.android.sistemui.permission.SYSTEM_SETTINGS" />#<uses-permission android:name="com.future.futureui.permission.SYSTEM_SETTINGS" />#' \
     "$src/AndroidManifest.xml" > "$dst/AndroidManifest.xml"
 
 # Resources (never icons)

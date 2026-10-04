@@ -3,7 +3,7 @@ package com.future.calculator.logic
 import java.math.BigDecimal
 import java.math.MathContext
 
-enum class CalcOp(val symbol: String) { ADD("+"), SUB("−"), MUL("×"), DIV("÷"), POW("^") }
+enum class CalcOp(val symbol: String) { ADD("+"), SUB("−"), MUL("×"), DIV("÷"), POW("^"), ROOT("ʸ√"), MOD("mod") }
 
 data class CalcHistoryEntry(val expression: String, val result: String)
 
@@ -75,6 +75,16 @@ object CalculatorEngine {
             CalcOp.DIV -> if (cur.signum() == 0) throw ArithmeticException("Division by zero") else pv.divide(cur, PRECISION)
             // חזקה לא-שלמה היא מחוץ ל-BigDecimal - דרך Double, כמו הפונקציות המדעיות
             CalcOp.POW -> BigDecimal(Math.pow(pv.toDouble(), cur.toDouble()), PRECISION)
+            // שורש y של x = x^(1/y). שורש אי-זוגי של מספר שלילי מוגדר (∛-8 = -2).
+            CalcOp.ROOT -> {
+                val x = pv.toDouble()
+                val y = cur.toDouble()
+                if (y == 0.0) throw ArithmeticException("root 0")
+                val r = if (x < 0 && y % 2.0 == 1.0) -Math.pow(-x, 1.0 / y) else Math.pow(x, 1.0 / y)
+                if (r.isNaN()) throw ArithmeticException("NaN")
+                BigDecimal(r, PRECISION)
+            }
+            CalcOp.MOD -> if (cur.signum() == 0) throw ArithmeticException("mod 0") else pv.remainder(cur, PRECISION)
         }
         format(result)
     } catch (e: Exception) {
@@ -147,6 +157,13 @@ object CalculatorEngine {
             format(result)
         }
         return s.copy(display = display, startFresh = true)
+    }
+
+    /** ± - הופך את הסימן של המספר שבתצוגה, בלי לסגור אותו (אפשר להמשיך להקליד). */
+    fun negate(s: CalcState): CalcState {
+        if (s.isError || s.display == "0") return s
+        val d = s.display
+        return s.copy(display = if (d.startsWith("-")) d.drop(1) else "-$d")
     }
 
     fun constant(s: CalcState, value: Double): CalcState =

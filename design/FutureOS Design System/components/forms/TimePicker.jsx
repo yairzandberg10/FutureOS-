@@ -1,21 +1,36 @@
 import React from "react";
-import { FosIcon } from "../core/FosIcon.jsx";
 import { DayChip } from "./DayChip.jsx";
 import { Button } from "../core/Button.jsx";
 
 const DAYS = ["א", "ב", "ג", "ד", "ה", "ו", "ש"];
 
-/* TimePickerOverlay: a full-screen overlay, not a dialog. 48sp/300 mono values,
-   36dp stepper buttons, 12sp/50% unit labels, hours on the RIGHT (RTL first column). */
-function Step({ dir, focused }) {
+/* TimePickerOverlay: a full-screen overlay, not a dialog. Two wheels — hours on
+   the RIGHT (RTL first column), minutes on the left. A wheel is ONE focus target:
+   field fill (8% text) at rest, 14% accent + 2px-dp accent ring when focused.
+   Inside: the next value (above) and previous value (below) at 30%, the value
+   itself at 48sp/300 mono, and a 12sp/50% unit label. Up/down step the focused
+   wheel, digits type the value directly, OK moves on to the repeat row. */
+function Wheel({ value, max, label, focused }) {
+  const pad = (n) => String(n).padStart(2, "0");
+  const v = Number(value);
+  const next = v === max ? 0 : v + 1;
+  const prev = v === 0 ? max : v - 1;
+  const side = {
+    fontFamily: "var(--fos-font-mono)", fontSize: "calc(48px * var(--fos-font-scale))" /* 24sp headline */,
+    color: "var(--fos-text-30)", lineHeight: 1.2, fontVariantNumeric: "tabular-nums"
+  };
   return (
-    <button type="button" style={{
-      width: 72, height: 72, borderRadius: "var(--fos-radius-full)", display: "inline-flex",
-      alignItems: "center", justifyContent: "center", border: "none", cursor: "pointer",
-      background: focused ? "var(--fos-accent-30)" : "var(--fos-text-08)"
+    <div style={{
+      width: 208, display: "flex", flexDirection: "column", alignItems: "center",
+      padding: "var(--fos-space-3) 0", borderRadius: "var(--fos-radius-textfield)",
+      background: focused ? "var(--fos-accent-14)" : "var(--fos-text-08)",
+      boxShadow: focused ? "inset 0 0 0 4px var(--fos-accent)" : "none"
     }}>
-      <FosIcon name={dir === "up" ? "keyboard_arrow_up" : "keyboard_arrow_down"} size={36} color="var(--fos-accent)" />
-    </button>
+      <div style={side}>{pad(next)}</div>
+      <div style={VALUE}>{pad(v)}</div>
+      <div style={side}>{pad(prev)}</div>
+      <div style={UNIT_LABEL}>{label}</div>
+    </div>
   );
 }
 
@@ -26,7 +41,7 @@ const VALUE = {
 };
 const UNIT_LABEL = { fontSize: "var(--fos-size-label)", color: "var(--fos-text-50)", textAlign: "center" };
 
-export function TimePicker({ title = "ערוך שעה", hours = "07", minutes = "18", repeat = [0, 1, 2, 3, 4], focusedDay = 5, onCancel, onSave, style, ...rest }) {
+export function TimePicker({ title = "ערוך שעה", hours = "07", minutes = "18", repeat = [0, 1, 2, 3, 4], focusedWheel = "hours", focusedDay = -1, onCancel, onSave, style, ...rest }) {
   return (
     <div
       style={{
@@ -37,37 +52,21 @@ export function TimePicker({ title = "ערוך שעה", hours = "07", minutes = 
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        gap: "var(--fos-space-9)",
+        gap: "var(--fos-space-7)",
         padding: "var(--fos-space-7)",
         ...style
       }}
       {...rest}
     >
       <div style={{ fontSize: "var(--fos-size-screen-title)", fontWeight: "var(--fos-weight-bold)", color: "var(--fos-text)" }}>{title}</div>
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "104px 40px 104px",
-        gridTemplateRows: "auto auto auto auto",
-        justifyItems: "center",
-        alignItems: "center",
-        columnGap: "var(--fos-space-5)",
-        rowGap: "var(--fos-space-3)"
-      }}>
-        <Step dir="up" focused />
-        <div />
-        <Step dir="up" />
-        <div style={VALUE}>{hours}</div>
+      <div style={{ display: "flex", alignItems: "center", gap: "var(--fos-space-3)" }}>
+        <Wheel value={hours} max={23} label="שעות" focused={focusedWheel === "hours"} />
         <div style={VALUE}>:</div>
-        <div style={VALUE}>{minutes}</div>
-        <Step dir="down" />
-        <div />
-        <Step dir="down" />
-        <div style={UNIT_LABEL}>שעות</div>
-        <div />
-        <div style={UNIT_LABEL}>דקות</div>
+        <Wheel value={minutes} max={59} label="דקות" focused={focusedWheel === "minutes"} />
       </div>
+      <div style={{ fontSize: "var(--fos-size-summary)", color: "var(--fos-text-60)" }}>↑↓ שינוי · ספרות הקלדה · OK הבא</div>
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--fos-space-3)" }}>
-        <div style={{ fontSize: "var(--fos-size-summary)", color: "var(--fos-text-60)" }}>חוזרת</div>
+        <div style={{ fontSize: "var(--fos-size-summary)", color: "var(--fos-text-60)" }}>{repeat.length ? "חוזרת" : "חד-פעמית"}</div>
         <div style={{ display: "flex", gap: "var(--fos-space-2)" }}>
           {DAYS.map((d, i) => (
             <DayChip key={d} selected={repeat.includes(i)} focused={i === focusedDay}>{d}</DayChip>
@@ -76,7 +75,7 @@ export function TimePicker({ title = "ערוך שעה", hours = "07", minutes = 
       </div>
       <div style={{ display: "flex", gap: "var(--fos-space-7)", width: "100%" }}>
         <Button variant="quiet" fullWidth onClick={onCancel}>ביטול</Button>
-        <Button variant="primary" fullWidth focused onClick={onSave}>שמור</Button>
+        <Button variant="primary" fullWidth onClick={onSave}>שמור</Button>
       </div>
     </div>
   );

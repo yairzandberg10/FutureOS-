@@ -13,6 +13,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -75,6 +77,67 @@ fun FutureActionCell(
                 contentDescription = contentDescription,
                 tint = iconColor ?: if (active) accent else theme.textAlpha(70),
                 modifier = Modifier.size(FutureDimens.iconActionCell(height)),
+            )
+            if (label != null) {
+                Text(
+                    label,
+                    color = theme.mutedTextColor,
+                    fontSize = type.summary,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * אותו תא בדיוק, כשהאייקון הוא סימן טקסט (פעולת חשבון: "+", "sin", "π").
+ * המידות, המילוי, הטבעת והצבעים זהים לגרסת האייקון - הסימן בגודל של
+ * האייקון ובאותה שקיפות 70%, בהדגשה כשהתא דלוק.
+ *
+ * [focusable] = false - תא שהוא תזכורת בלבד (הפעולה שלו על מקש פיזי),
+ * ולכן לא מקבל פוקוס: "מה שלא מקבל פוקוס גם לא מופעל".
+ */
+@Composable
+fun FutureActionCell(
+    glyph: String,
+    label: String?,
+    theme: FutureTheme,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    active: Boolean = false,
+    height: Dp = ActionCellHeight,
+    focusable: Boolean = true,
+    focusRequester: FocusRequester? = null,
+) {
+    val type = rememberFutureType()
+    val accent = LocalFutureAccent.current ?: theme.readableAccentColor
+    val fill = if (active) accent.copy(alpha = 0.20f) else theme.elevatedSurfaceColor
+    val glyphSize = with(LocalDensity.current) { (FutureDimens.iconActionCell(height) * 0.9f).toSp() }
+    FocusableItem(
+        onClick = onClick,
+        accentColor = theme.accentColor,
+        modifier = modifier.height(height).then(if (focusable) Modifier else Modifier.focusProperties { canFocus = false }),
+        idleBackgroundColor = fill,
+        focusedBackgroundColor = fill,
+        borderWidth = FutureDimens.focusBorderControl,
+        cornerRadius = FutureShapes.radiusLg,
+        scaleOnFocus = false,
+        contentPadding = 0.dp,
+        focusRequester = focusRequester,
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(FutureDimens.spacingXxs, Alignment.CenterVertically),
+        ) {
+            Text(
+                glyph,
+                color = if (active) accent else theme.textAlpha(70),
+                fontSize = glyphSize,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
             )
             if (label != null) {
                 Text(

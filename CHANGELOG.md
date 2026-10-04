@@ -4,6 +4,89 @@ This repo has no carried-over git history (see root [README](README.md)), so thi
 
 ## Unreleased
 
+### Fix pass, 1 October: 12 apps, real widgets, blurred system panels
+
+- **Assistant.** Whisper no longer repeats the same sentence over and over:
+  one segment per command, no carried context, non-speech tokens suppressed, a
+  token cap scaled to the recording length, and a text filter that collapses
+  any repeated run of words that still gets through. The JNI layer returns
+  bytes instead of a jstring, so a cut-off Hebrew character can't crash the
+  process. The speech model starts loading in `onCreate`, recording starts
+  immediately and transcription waits for the model, and the TTS models load
+  once per process instead of on every open. The assistant is now a floating
+  card at the bottom of the screen (translucent window over the current app)
+  in design-system type, colors and button, with Siri-style waves that follow
+  the microphone level while listening and the playback level while speaking.
+  New commands: beatbox (synthesized on device: kick, snare, hi-hat, lip snare),
+  and swearing gets "לא לנבל את הפה!".
+- **Bluetooth.** Every action reports its result: pairing started / paired /
+  pairing failed, connecting / connected / connection failed, Bluetooth on/off,
+  calls and media profile changes, and how many devices a scan found.
+- **Calculator.** Scientific keys are design-system ActionGrid cells, with
+  inverse trig, nth root, 10ˣ, eˣ, ∛, x³, |x|, ±, mod and a DEG/RAD switch.
+  The standard-mode legend above the D-pad is ActionGrid cells (operation +
+  physical key). A bottom bar switches between standard and scientific (long
+  `#`, or right from the edge of the scientific grid). The home-screen widget
+  shows the last result.
+- **Calendar.** Recurring events: none / daily / weekly / monthly / yearly,
+  saved as an RRULE with DURATION (no DTEND), as the provider requires.
+- **Camera.** It was slow because the camera was unbound and re-bound on every
+  recomposition (each second of recording, each zoom step, each focus change).
+  Binding now runs only when the lens, mode, aspect or scene actually changes.
+  Photo default is fast capture. Shutter sound and flash at the moment of the
+  press, and feedback for flash, lens, focus and mode changes. Long OK focuses
+  and locks at the center (digits 1-9 still pick a focus point), with a
+  message when the camera can't focus. The preview viewer shows only this
+  session's photos and videos, newest first, right = older. New: 8 live
+  filters (applied to the preview and the saved photo) and capture modes:
+  photo, video, burst (5), square, document.
+- **Clock.** The alarm time picker is two wheels instead of four arrow
+  buttons: up/down change the focused wheel, digits type the time directly,
+  OK moves on. It fits the screen. The design-system TimePicker is updated to
+  match.
+- **Contacts.** Blocking, setting a photo and saving a contact all failed
+  silently because WRITE_CONTACTS was never requested (only READ). Every write
+  now asks for it first. Sorting is a "sort by" menu with first name, last
+  name, recently updated and favorites first.
+- **Files.** No video support and no APK installs (REQUEST_INSTALL_PACKAGES
+  removed). Without developer mode, technical folders and files (Android,
+  backups, package-named folders, xml/log/apk, videos) are hidden. Images open
+  in the Gallery (OK in the viewer, or "פתח בגלריה"). Text and code files can
+  be edited; code is shown and edited left-to-right in monospace with line
+  numbers. Sort, view and new folder are buttons in the top bar. Also restores
+  sorting and copy progress/cancel, which `MainActivity` already used but were
+  never committed (Files did not compile).
+- **Flashlight.** A round on/off toggle (the design system's round capsule)
+  instead of the wide button.
+- **Frixa** is no longer part of the system: not in the launcher's built-in
+  list, no page in the Guide, no FutureOS signature permissions.
+- **Launcher widgets.** Every FutureOS widget now shows real content through a
+  shared `FutureContentWidget` (clock + next alarm, Hebrew date + next event,
+  last call, unread messages, last result, favorites, free storage, photo
+  count, last song, top note, battery and radios, daily Tehillim, uptime,
+  tools, keyboard state, tip of the day). The launcher refreshes the widgets on
+  screen when it comes back. Wallpapers with people in them were removed from
+  the built-in catalog (Wallpapers and Settings).
+- **FutureUI.** The control center and notification center draw a blurred
+  screenshot of the screen behind them (window blur is disabled on the device,
+  so `FLAG_BLUR_BEHIND` did nothing and the panels looked black), and their
+  black and dark-grey elements are now glass. OK on a notification opens it
+  (its contentIntent) and closes the center; long OK expands it. Notification
+  options are design-system menu rows. Sliders are the design system's slider
+  (new shared `FutureSlider`). Sharing offers only FutureOS apps and system
+  Bluetooth. FutureUI has no settings screens any more: status-bar settings
+  live in Settings > System UI. The status bar's capsules are translucent over
+  a transparent bar and the first capsule is dynamic (call, charging, new
+  notification, music); capsules is the default style.
+- **Shared library.** Restores `FutureUIActions.PERMISSION_SYSTEM`, which
+  `KeyPressBroadcasts` used but was never committed (nothing compiled).
+- **SystemUI** is synced with FutureUI (same changes, `com.android.sistemui`
+  package).
+- **Design system.** New: glass on a blurred backdrop (tokens, GlassPanel and
+  a guideline page), Widget, StatusCapsule, NotificationCard, a slider icon,
+  ActionGrid glyph cells and a non-focusable legend, and the TimePicker as two
+  wheels.
+
 ### New lock screen: PIN, face unlock, One UI / iOS style customisation
 
 - **Security.** A 4-8 digit PIN, stored only as an HMAC in an Android

@@ -1,28 +1,23 @@
 package com.future.sfarim
 
-import android.app.PendingIntent
-import android.appwidget.AppWidgetManager
-import android.appwidget.AppWidgetProvider
+import android.icu.util.HebrewCalendar
 import android.content.Context
-import android.widget.RemoteViews
+import com.future.sharednav.widget.FutureContentWidget
+import com.future.sharednav.widget.WidgetContent
 
-/**
- * ווידג'ט קיצור-דרך למסך הבית - אייקון ושם האפליקציה, לחיצה פותחת אותה.
- * חלק מהעיצוב האחיד של ווידג'טים ייעודיים לכל אפליקציית FutureOS מובנית.
- */
-class SfarimWidgetProvider : AppWidgetProvider() {
-    override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
-        appWidgetIds.forEach { widgetId ->
-            val views = RemoteViews(context.packageName, R.layout.app_widget)
-            val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
-            if (launchIntent != null) {
-                val pendingIntent = PendingIntent.getActivity(
-                    context, 0, launchIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                )
-                views.setOnClickPendingIntent(R.id.widget_root, pendingIntent)
-            }
-            appWidgetManager.updateAppWidget(widgetId, views)
-        }
+/** התהילים היומי לפי החלוקה החודשית המקובלת, לפי היום בחודש העברי. */
+class SfarimWidgetProvider : FutureContentWidget() {
+    override fun content(context: Context): WidgetContent {
+        val day = HebrewCalendar().get(HebrewCalendar.DAY_OF_MONTH).coerceIn(1, 30)
+        return WidgetContent(value = "תהילים ${TEHILLIM_BY_DAY[day - 1]}", subtitle = "תהילים היומי · יום $day בחודש")
+    }
+
+    private companion object {
+        /** חלוקת ספר תהילים לשלושים ימי החודש. */
+        val TEHILLIM_BY_DAY = listOf(
+            "1-9", "10-17", "18-22", "23-28", "29-34", "35-38", "39-43", "44-48", "49-54", "55-59",
+            "60-65", "66-68", "69-71", "72-76", "77-78", "79-82", "83-87", "88-89", "90-96", "97-103",
+            "104-105", "106-107", "108-112", "113-118", "119:1-96", "119:97-176", "120-134", "135-139", "140-144", "145-150",
+        )
     }
 }

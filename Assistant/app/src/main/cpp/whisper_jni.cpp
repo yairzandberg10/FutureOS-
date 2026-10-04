@@ -14,11 +14,21 @@ Java_com_future_assistant_asr_WhisperCpp_nativeInit(JNIEnv *env, jobject /*thiz*
     return reinterpret_cast<jlong>(ctx);
 }
 
-extern "C" JNIEXPORT jstring JNICALL
+// מחזיר בתים ולא jstring: max_tokens יכול לקטוע באמצע תו עברי (2 בתים),
+// ו-NewStringUTF על UTF-8 לא תקין מפיל את התהליך. הפענוח נעשה ב-Kotlin.
+static jbyteArray toBytes(JNIEnv *env, const std::string &s) {
+    jbyteArray arr = env->NewByteArray(static_cast<jsize>(s.size()));
+    if (arr != nullptr && !s.empty()) {
+        env->SetByteArrayRegion(arr, 0, static_cast<jsize>(s.size()), reinterpret_cast<const jbyte *>(s.data()));
+    }
+    return arr;
+}
+
+extern "C" JNIEXPORT jbyteArray JNICALL
 Java_com_future_assistant_asr_WhisperCpp_nativeTranscribe(JNIEnv *env, jobject /*thiz*/, jlong ctxPtr,
                                                            jfloatArray samples, jstring language) {
     auto *ctx = reinterpret_cast<struct whisper_context *>(ctxPtr);
-    if (ctx == nullptr) return env->NewStringUTF("");
+    if (ctx == nullptr) return toBytes(env, "");
 
     jsize n = env->GetArrayLength(samples);
     jfloat *data = env->GetFloatArrayElements(samples, nullptr);
@@ -31,7 +41,15 @@ Java_com_future_assistant_asr_WhisperCpp_nativeTranscribe(JNIEnv *env, jobject /
     wparams.print_progress = false;
     wparams.print_realtime = false;
     wparams.print_special = false;
-    wparams.single_segment = false;
+    // פקודה קולית היא משפט אחד. כמה סגמנטים + audio_ctx מקוצר הם מה שגרם
+    // ל-Whisper "להיתקע בלולאה" ולחזור על אותו משפט שוב ושוב עד סוף החלון.
+    wparams.single_segment = true;
+    wparams.no_context = true;
+    wparams.suppress_blank = true;
+    wparams.suppress_nst = true;
+    // תקרת טוקנים לפי אורך ההקלטה: עברית היא בערך 3-4 טוקנים לשנייה של
+    // דיבור, אז פי 3 מזה + מרווח לא קוטע משפט אמיתי אבל עוצר חזרה אינסופית.
+    wparams.max_tokens = static_cast<int>(static_cast<long long>(n) * 10 / 16000) + 24;
     // בלי "temperature fallback": כשהמודל לא בטוח (קורה הרבה בעברית) ברירת
     // המחדל מפענחת מחדש עד 5 פעמים בטמפרטורות עולות, עם 5 מפענחים בכל פעם -
     // זה מה שהפך תמלול של משפט קצר לשניות ארוכות. פענוח greedy יחיד מספיק.
@@ -51,14 +69,14 @@ Java_com_future_assistant_asr_WhisperCpp_nativeTranscribe(JNIEnv *env, jobject /
     env->ReleaseFloatArrayElements(samples, data, JNI_ABORT);
     env->ReleaseStringUTFChars(language, lang);
 
-    if (result != 0) return env->NewStringUTF("");
+    if (result != 0) return toBytes(env, "");
 
     std::string out;
     const int n_segments = whisper_full_n_segments(ctx);
     for (int i = 0; i < n_segments; i++) {
         out += whisper_full_get_segment_text(ctx, i);
     }
-    return env->NewStringUTF(out.c_str());
+    return toBytes(env, out);
 }
 
 extern "C" JNIEXPORT void JNICALL

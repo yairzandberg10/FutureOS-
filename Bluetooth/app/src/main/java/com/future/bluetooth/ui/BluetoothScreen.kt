@@ -18,6 +18,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -108,6 +109,11 @@ fun BluetoothApp(
     var menuOpen by remember { mutableStateOf(false) }
     var dialog by remember { mutableStateOf<Dialog?>(null) }
     val snackbar = rememberFutureSnackbarState()
+    // תוצאות שמגיעות מאוחר בשידור של המערכת (הותאם, מחובר, נכשל...).
+    DisposableEffect(controller) {
+        controller.onEvent = { snackbar.show(it) }
+        onDispose { controller.onEvent = null }
+    }
 
     val ready = controller.isSupported() && hasPermission
     onOptionsKeyPress { if (ready && dialog == null) menuOpen = !menuOpen }
@@ -123,7 +129,11 @@ fun BluetoothApp(
 
     fun toggleRadio() {
         val on = !controller.isEnabled
-        if (!controller.setEnabled(on) && on) actions.requestEnable()
+        when {
+            controller.setEnabled(on) -> snackbar.show(if (on) "מפעיל בלוטות'" else "מכבה בלוטות'")
+            on -> actions.requestEnable()
+            else -> snackbar.show("לא ניתן לכבות את הבלוטות'")
+        }
     }
 
     /** סריקה - כשהרדיו כבוי startDiscovery לא עושה כלום, וההודעה "מחפש" הטעתה. */
@@ -189,12 +199,24 @@ fun BluetoothApp(
                     theme = theme,
                     onBack = { openAddress = null },
                     onMenu = { menuOpen = true },
-                    onCalls = { orSystem(controller.setProfile(device.address, calls = true, enabled = !device.callsConnected)) },
-                    onMedia = { orSystem(controller.setProfile(device.address, calls = false, enabled = !device.mediaConnected)) },
+                    onCalls = {
+                        val on = !device.callsConnected
+                        val ok = controller.setProfile(device.address, calls = true, enabled = on)
+                        if (ok) snackbar.show(if (on) "מחבר שיחות · ${device.name}" else "שיחות נותקו · ${device.name}")
+                        orSystem(ok)
+                    },
+                    onMedia = {
+                        val on = !device.mediaConnected
+                        val ok = controller.setProfile(device.address, calls = false, enabled = on)
+                        if (ok) snackbar.show(if (on) "מחבר מדיה · ${device.name}" else "מדיה נותקה · ${device.name}")
+                        orSystem(ok)
+                    },
                     onRename = { dialog = Dialog.RenameDevice(device) },
                     onConnect = {
                         if (device.connection == Connection.Disconnected) {
-                            orSystem(controller.connect(device.address))
+                            val ok = controller.connect(device.address)
+                            if (ok) snackbar.show("מתחבר · ${device.name}")
+                            orSystem(ok)
                         } else {
                             val ok = controller.disconnect(device.address)
                             if (ok) snackbar.show("נותק · ${device.name}") else orSystem(false)
@@ -235,7 +257,8 @@ fun BluetoothApp(
             onCancel = { dialog = null },
             onConfirm = {
                 dialog = null
-                if (!controller.pair(d.device.address)) snackbar.show("ההתאמה לא התחילה")
+                if (controller.pair(d.device.address)) snackbar.show("מתאים · ${d.device.name}")
+                else snackbar.show("ההתאמה לא התחילה")
             },
         )
         is Dialog.Forget -> ConfirmDialog(

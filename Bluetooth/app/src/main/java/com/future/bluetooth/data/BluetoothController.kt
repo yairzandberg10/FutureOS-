@@ -37,6 +37,16 @@ class BluetoothController(private val context: Context) {
 
     private val aliases = context.getSharedPreferences("device_aliases", Context.MODE_PRIVATE)
 
+    /**
+     * תוצאה של פעולה אסינכרונית (התאמה, חיבור, הפעלה, סריקה) כהודעה קצרה
+     * למשתמש. הפעולות עצמן מחזירות רק "התחיל/לא התחיל" - ההצלחה או הכישלון
+     * מגיעים מאוחר יותר בשידור של המערכת, ובלי זה המשתמש לא ידע מה קרה.
+     */
+    var onEvent: ((String) -> Unit)? = null
+
+    /** מכשירים שהמשתמש ביקש לחבר מכאן ועוד לא הגיעה תוצאה. */
+    private val userConnecting = mutableSetOf<String>()
+
     /** מתי כל מכשיר מותאם היה בשימוש לאחרונה - לאנדרואיד אין API לזה. */
     private val lastUsed = context.getSharedPreferences("device_last_used", Context.MODE_PRIVATE)
 
@@ -251,6 +261,7 @@ class BluetoothController(private val context: Context) {
         if (info.supportsMedia) ok = callProfile(a2dp, "connect", device) || ok
         if (ok) {
             connecting.add(address)
+            userConnecting.add(address)
             refreshPairedDevices()
         }
         return ok
@@ -271,7 +282,10 @@ class BluetoothController(private val context: Context) {
         val proxy = if (calls) headset else a2dp
         val ok = callProfile(proxy, if (enabled) "connect" else "disconnect", device)
         if (ok) {
-            if (enabled) connecting.add(address)
+            if (enabled) {
+                connecting.add(address)
+                userConnecting.add(address)
+            }
             refreshPairedDevices()
         }
         return ok
@@ -319,17 +333,26 @@ class BluetoothController(private val context: Context) {
                         if (index >= 0) discoveredDevices[index] = info else refreshPairedDevices()
                     }
                     BluetoothAdapter.ACTION_DISCOVERY_STARTED -> isScanning = true
-                    BluetoothAdapter.ACTION_DISCOVERY_FINISHED -> isScanning = false
+                    BluetoothAdapter.ACTION_DISCOVERY_FINISHED -> {
+                        if (isScanning) {
+                            val n = discoveredDevices.size
+                            onEvent?.invoke(if (n == 0) "לא נמצאו מכשירים" else "החיפוש הסתיים · נמצאו $n")
+                        }
+                        isScanning = false
+                    }
                     BluetoothAdapter.ACTION_STATE_CHANGED -> {
                         val state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR)
                         isEnabled = state == BluetoothAdapter.STATE_ON || state == BluetoothAdapter.STATE_TURNING_ON
                         if (state == BluetoothAdapter.STATE_ON) {
+                            onEvent?.invoke("הבלוטות' הופעל")
                             isTurningOn = false
                             adapterName = readAdapterName()
                             connectProfiles()
                             refreshPairedDevices()
                             startDiscovery()
                         } else if (state == BluetoothAdapter.STATE_OFF) {
+                            onEvent?.invoke("הבלוטות' כובה")
+                            userConnecting.clear()
                             isTurningOn = false
                             isScanning = false
                             aclConnected.clear()
@@ -342,6 +365,8 @@ class BluetoothController(private val context: Context) {
                         val state = intent.getIntExtra(BluetoothDevice.EXTRA_BOND_STATE, BluetoothDevice.ERROR)
                         val address = device?.address
                         if (address != null && state != BluetoothDevice.BOND_BONDING && pairing.remove(address)) {
+                            val name = device.toInfo().name
+                            onEvent?.invoke(if (state == BluetoothDevice.BOND_BONDED) "הותאם · $name" else "ההתאמה נכשלה · $name")
                             // התאמה שנכשלה/בוטלה מחזירה את המכשיר לרשימת הזמינים.
                             if (state == BluetoothDevice.BOND_NONE && discoveredDevices.none { it.address == address }) {
                                 discoveredDevices.add(device.toInfo())
@@ -361,9 +386,22 @@ class BluetoothController(private val context: Context) {
                     BluetoothHeadset.ACTION_CONNECTION_STATE_CHANGED,
                     BluetoothA2dp.ACTION_CONNECTION_STATE_CHANGED -> {
                         val address = device?.address ?: return
-                        when (intent.getIntExtra(BluetoothProfile.EXTRA_STATE, -1)) {
+                        val state = intent.getIntExtra(BluetoothProfile.EXTRA_STATE, -1)
+                        when (state) {
                             BluetoothProfile.STATE_CONNECTING -> connecting.add(address)
                             else -> connecting.remove(address)
+                        }
+                        if (address in userConnecting) {
+                            val stillTrying = connectingOn(headset, device) || connectingOn(a2dp, device)
+                            if (state == BluetoothProfile.STATE_CONNECTED) {
+                                userConnecting.remove(address)
+                                onEvent?.invoke("מחובר · ${device.toInfo().name}")
+                            } else if (state == BluetoothProfile.STATE_DISCONNECTED && !stillTrying &&
+                                !connectedOn(headset, device) && !connectedOn(a2dp, device)
+                            ) {
+                                userConnecting.remove(address)
+                                onEvent?.invoke("החיבור נכשל · ${device.toInfo().name}")
+                            }
                         }
                         refreshPairedDevices()
                     }
@@ -436,6 +474,12 @@ class BluetoothController(private val context: Context) {
         } catch (e: Exception) {
             false
         }
+
+    private fun connectingOn(proxy: BluetoothProfile?, device: BluetoothDevice): Boolean = try {
+        proxy?.getConnectionState(device) == BluetoothProfile.STATE_CONNECTING
+    } catch (e: SecurityException) {
+        false
+    }
 
     private fun connectedOn(proxy: BluetoothProfile?, device: BluetoothDevice): Boolean =
         try {

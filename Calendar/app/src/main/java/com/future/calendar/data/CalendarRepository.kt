@@ -49,6 +49,38 @@ data class CalendarEvent(
     }
 }
 
+/** תדירות חזרה של אירוע, וה-RRULE (RFC 5545) שהיא נשמרת בו. */
+enum class EventRepeat(val label: String, val rrule: String?) {
+    NONE("לא חוזר", null),
+    DAILY("כל יום", "FREQ=DAILY"),
+    WEEKLY("כל שבוע", "FREQ=WEEKLY"),
+    MONTHLY("כל חודש", "FREQ=MONTHLY"),
+    YEARLY("כל שנה", "FREQ=YEARLY");
+
+    fun next(): EventRepeat = entries[(ordinal + 1) % entries.size]
+}
+
+/**
+ * אירוע חוזר נשמר עם RRULE ו-DURATION, ובלי DTEND - זו הדרישה של ספק לוח
+ * השנה (עם DTEND הוא דוחה את ההוספה). אירוע כל-היום נמדד בימים.
+ */
+private fun ContentValues.putTiming(startMillis: Long, endMillis: Long, allDay: Boolean, repeat: EventRepeat) {
+    put(CalendarContract.Events.DTSTART, startMillis)
+    if (repeat.rrule == null) {
+        put(CalendarContract.Events.DTEND, endMillis)
+        putNull(CalendarContract.Events.RRULE)
+        putNull(CalendarContract.Events.DURATION)
+    } else {
+        putNull(CalendarContract.Events.DTEND)
+        put(CalendarContract.Events.RRULE, repeat.rrule)
+        val seconds = ((endMillis - startMillis) / 1000).coerceAtLeast(60)
+        put(CalendarContract.Events.DURATION, if (allDay) "P${(seconds / 86400).coerceAtLeast(1)}D" else "P${seconds}S")
+    }
+    put(CalendarContract.Events.ALL_DAY, if (allDay) 1 else 0)
+    // אירוע כל-היום חייב להיות ב-UTC (הזמנים עצמם הם חצות UTC)
+    put(CalendarContract.Events.EVENT_TIMEZONE, if (allDay) "UTC" else java.util.TimeZone.getDefault().id)
+}
+
 /** גישה אמיתית לספק לוח השנה של אנדרואיד (CalendarContract) - בלי נתונים מדומים. */
 class CalendarRepository(private val context: Context) {
 
@@ -150,7 +182,8 @@ class CalendarRepository(private val context: Context) {
         location: String,
         startMillis: Long,
         endMillis: Long,
-        allDay: Boolean
+        allDay: Boolean,
+        repeat: EventRepeat = EventRepeat.NONE
     ): Long? {
         return try {
             val values = ContentValues().apply {
@@ -158,11 +191,7 @@ class CalendarRepository(private val context: Context) {
                 put(CalendarContract.Events.TITLE, title)
                 put(CalendarContract.Events.DESCRIPTION, description)
                 put(CalendarContract.Events.EVENT_LOCATION, location)
-                put(CalendarContract.Events.DTSTART, startMillis)
-                put(CalendarContract.Events.DTEND, endMillis)
-                put(CalendarContract.Events.ALL_DAY, if (allDay) 1 else 0)
-                // אירוע כל-היום חייב להיות ב-UTC (הזמנים עצמם הם חצות UTC)
-                put(CalendarContract.Events.EVENT_TIMEZONE, if (allDay) "UTC" else java.util.TimeZone.getDefault().id)
+                putTiming(startMillis, endMillis, allDay, repeat)
             }
             val uri = context.contentResolver.insert(CalendarContract.Events.CONTENT_URI, values)
             uri?.lastPathSegment?.toLongOrNull()
@@ -180,7 +209,8 @@ class CalendarRepository(private val context: Context) {
         startMillis: Long,
         endMillis: Long,
         allDay: Boolean,
-        recurring: Boolean = false
+        recurring: Boolean = false,
+        repeat: EventRepeat = EventRepeat.NONE
     ): Boolean {
         return try {
             val uri = ContentUris.withAppendedId(CalendarContract.Events.CONTENT_URI, eventId)
@@ -191,12 +221,8 @@ class CalendarRepository(private val context: Context) {
                 // באירוע חוזר DTEND אסור (יש DURATION) והספק דחה את כל העדכון, ו-
                 // DTSTART של המופע שנערך היה מזיז את תחילת כל הסדרה. בסדרה נערכים
                 // רק הטקסטים.
-                if (!recurring) {
-                    put(CalendarContract.Events.DTSTART, startMillis)
-                    put(CalendarContract.Events.DTEND, endMillis)
-                    put(CalendarContract.Events.ALL_DAY, if (allDay) 1 else 0)
-                    put(CalendarContract.Events.EVENT_TIMEZONE, if (allDay) "UTC" else java.util.TimeZone.getDefault().id)
-                }
+                // אירוע רגיל שהמשתמש הפך לחוזר מקבל כאן את ה-RRULE.
+                if (!recurring) putTiming(startMillis, endMillis, allDay, repeat)
             }
             context.contentResolver.update(uri, values, null, null) > 0
         } catch (e: Exception) {

@@ -19,7 +19,15 @@ import kotlin.random.Random
 
 /** speech - מה שהקול מקריא, כשהוא שונה מהטקסט שעל המסך (למשל מילה באנגלית
  * שמוצגת באותיות לועזיות אבל מוקראת בתעתיק עברי). */
-data class CommandResult(val responseText: String, val shouldClose: Boolean = false, val speech: String = responseText)
+data class CommandResult(
+    val responseText: String,
+    val shouldClose: Boolean = false,
+    val speech: String = responseText,
+    val action: AssistantAction? = null,
+)
+
+/** פעולה שהעוזר מבצע אחרי שהוא מסיים לדבר. */
+enum class AssistantAction { BEATBOX }
 
 /**
  * מנוע פקודות קוליות מקומי לגמרי - בלי AI/שרת חיצוני, בלי אינטרנט. כל
@@ -51,6 +59,13 @@ object CommandProcessor {
         val text = stripName(recognizedText)
         // רק השם, בלי בקשה ("עוזרי?", "היי עוזרי").
         if (text.isBlank()) return CommandResult("כן, אני $NAME. במה אפשר לעזור?")
+
+        // קללות - לפני כל פקודה אחרת, כדי ש"תפתח ת'מצלמה יא ..." לא יבוצע.
+        if (Profanity.contains(text)) return CommandResult("לא לנבל את הפה!")
+
+        if (BEATBOX_TRIGGERS.any { text.lowercase().contains(it) }) {
+            return CommandResult("בום טס קה טס, בום בום קה טס", speech = "קבל ביט", action = AssistantAction.BEATBOX)
+        }
 
         // סגירת העוזר - נבדק ראשון כדי שלא יתנגש עם פקודות אחרות. התאמה
         // ברמת מילה שלמה (לא הכלת מחרוזת) - כי "די" ו"ביי" הן מילים קצרות
@@ -97,6 +112,11 @@ object CommandProcessor {
 
         return CommandResult("לא הבנתי את הבקשה, אפשר לנסות שוב")
     }
+
+    private val BEATBOX_TRIGGERS = listOf(
+        "ביטבוקס", "ביט בוקס", "בית בוקס", "ביט-בוקס", "ביטבוקסינג", "ביט בוקסינג", "תעשה ביט", "תעשי ביט",
+        "תן ביט", "תני ביט", "beatbox", "beat box",
+    )
 
     // ---------------------------------------------------------------------
     // השם "עוזרי"

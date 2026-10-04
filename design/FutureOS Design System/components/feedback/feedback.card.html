@@ -1,4 +1,4 @@
-<!-- @dsCard group="Components" viewport="700x1520" name="Feedback" subtitle="Confirm and input dialogs, heads-up, snackbar, progress, spinner, badge" -->
+<!-- @dsCard group="Components" viewport="700x3800" name="Feedback" subtitle="Confirm and input dialogs, heads-up, snackbar, progress, spinner, badge, glass panel, notification card" -->
 <!DOCTYPE html><html lang="he" dir="rtl"><head>
 <meta charset="utf-8">
 <title>FutureOS · Feedback</title>
@@ -14,8 +14,20 @@
 a{color:var(--fos-accent)}a:hover{opacity:.7}</style>
 </head><body><div id="root"></div>
 <script type="text/babel">
-const { ConfirmDialog, InputDialog, HeadsUpNotification, Snackbar, ProgressBar, Spinner, Badge, ListItem } = window.FutureOSDesignSystem_3ab611;
+const { ConfirmDialog, InputDialog, HeadsUpNotification, Snackbar, ProgressBar, Spinner, Badge, ListItem, GlassPanel, GlassTile, NotificationCard, Slider, FosIcon } = window.FutureOSDesignSystem_3ab611;
 const L = ({children}) => <div className="lbl">{children}</div>;
+const WALL = "radial-gradient(circle at 18% 12%, #e0894a 0, transparent 46%), radial-gradient(circle at 88% 28%, #4b8fc4 0, transparent 52%), radial-gradient(circle at 36% 92%, #8a52b0 0, transparent 56%), #2a3350";
+const Frame = ({children}) => <div style={{borderRadius:"var(--fos-radius-card)",overflow:"hidden",border:"2px solid var(--fos-text-12)"}}>{children}</div>;
+const SHADOW = "var(--fos-shell-text-shadow)";
+const Round = ({icon,label,on,focused}) => <div style={{width:108,display:"flex",flexDirection:"column",alignItems:"center",gap:8}}>
+  <GlassTile on={on} focused={focused} radius="var(--fos-radius-full)" style={{width:76,height:76,display:"grid",placeItems:"center"}}><FosIcon name={icon} size={40} color="currentColor" /></GlassTile>
+  <span style={{fontSize:22,textShadow:SHADOW}}>{label}</span>
+</div>;
+const Pill = ({icon,label,on,focused}) => <GlassTile focused={focused} style={{flex:1,height:110,padding:12,display:"flex",alignItems:"center",gap:20}}>
+  <GlassTile on={on} radius="var(--fos-radius-full)" style={{width:80,height:80,flex:"0 0 auto",display:"grid",placeItems:"center",border:"none"}}><FosIcon name={icon} size={36} color="currentColor" /></GlassTile>
+  <span style={{fontSize:"var(--fos-size-label)",fontWeight:"var(--fos-weight-medium)"}}>{label}</span>
+</GlassTile>;
+const PanelButton = ({icon,label,focused}) => <GlassTile focused={focused} radius="var(--fos-radius-full)" style={{flex:1,height:76,display:"flex",alignItems:"center",justifyContent:"center",gap:12,fontSize:"var(--fos-size-label)",fontWeight:"var(--fos-weight-semibold)"}}><FosIcon name={icon} size={36} color="currentColor" />{label}</GlassTile>;
 const Stage = ({h, children}) => <div style={{position:"relative",height:h,background:"var(--fos-bg)",border:"2px solid var(--fos-text-12)",borderRadius:"var(--fos-radius-card)",overflow:"hidden"}}>{children}</div>;
 function App(){return <div className="wrap">
   <L>HeadsUpNotification · always dark</L>
@@ -43,6 +55,54 @@ function App(){return <div className="wrap">
   </div>
   <L>Badge</L>
   <ListItem title="דני כהן" summary="נתראה בערב" trailing={<Badge count={2} />} />
+  <L>GlassPanel · Control Center — blurred snapshot, 20% white wash; toggle pills and icon toggles (on / focused / idle), sliders, media card</L>
+  <Frame>
+    <GlassPanel wallpaper={WALL}>
+      <div style={{marginTop:24,display:"flex",gap:20}}>
+        <Pill icon="wifi" label="Wi-Fi" on />
+        <Pill icon="bluetooth" label="Bluetooth" focused />
+      </div>
+      <div style={{display:"flex",gap:20}}>
+        <Pill icon="flashlight_on" label="פנס" />
+        <Pill icon="airplanemode_active" label="מצב טיסה" />
+      </div>
+      <div style={{display:"flex",justifyContent:"space-around"}}>
+        <Round icon="signal_cellular_alt" label="נתונים" on />
+        <Round icon="do_not_disturb_on" label="נא לא להפריע" focused />
+        <Round icon="location_on" label="מיקום" />
+        <Round icon="settings" label="הגדרות" />
+      </div>
+      <div style={{display:"flex",flexDirection:"column",gap:16}}>
+        <Slider icon="brightness_6" label="בהירות" value={0.6} focused style={{margin:0}} />
+        <Slider icon="volume_up" label="עוצמת קול" value={0.3} style={{margin:0}} />
+      </div>
+      <GlassTile style={{height:130,padding:"0 28px",display:"flex",alignItems:"center",gap:24,marginBottom:16}}>
+        <GlassTile radius="var(--fos-radius-full)" style={{width:80,height:80,flex:"0 0 auto",display:"grid",placeItems:"center",border:"none"}}><FosIcon name="music_note" size={36} color="currentColor" /></GlassTile>
+        <span style={{fontSize:"var(--fos-size-summary)",fontWeight:"var(--fos-weight-bold)"}}>אין מוזיקה מתנגנת</span>
+      </GlassTile>
+    </GlassPanel>
+  </Frame>
+  <L>GlassPanel · Notification Center — NotificationCard focused and expanded, collapsed, options open; pill buttons below</L>
+  <Frame>
+    <GlassPanel wallpaper={WALL}>
+      <div style={{marginTop:24}}>
+        <div style={{fontSize:"var(--fos-size-header)",fontWeight:"var(--fos-weight-bold)",lineHeight:1.1,textShadow:SHADOW}}>07:30</div>
+        <div style={{fontSize:"var(--fos-size-label)",color:"var(--fos-shell-ink-sub)",marginTop:4,textShadow:SHADOW}}>יום רביעי, 1 באוקטובר</div>
+      </div>
+      <NotificationCard focused expanded appName="הודעות" title="מיכל לוי" body="נתראה בערב, אני מביאה את הדברים מהחנות בדרך הביתה ואם צריך עוד משהו תכתבו לי" />
+      <NotificationCard appName="לוח שנה" icon="calendar_today" title="ישיבת צוות" body="בעוד 15 דקות" />
+      <NotificationCard focused optionsOpen focusedOption={0} appName="הודעות"
+        options={[
+          {label:"סמן כנקרא"},
+          {label:"כבה התראות",destructive:true},
+          {label:"חזור"}
+        ]} />
+      <div style={{display:"flex",gap:24,marginBottom:16}}>
+        <PanelButton icon="delete" label="נקה הכל" focused />
+        <PanelButton icon="notifications_off" label="השתק" />
+      </div>
+    </GlassPanel>
+  </Frame>
 </div>}
 ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script></body></html>

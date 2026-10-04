@@ -152,18 +152,31 @@ class ControlCenterAccessibilityService : AccessibilityService(), LifecycleOwner
         }
     }
 
+    private var isOpening = false
+
     private fun showControlCenter() {
-        if (isVisible) return
+        if (isVisible || isOpening) return
         // כל דרך פתיחה (מקש, שידור פנימי, מעבר מהפאנל השני) - לא כשהמכשיר נעול
         if (com.future.futureui.utils.FutureUIState.isLocked || com.future.futureui.utils.FutureUIState.isSecured) return
+        // קודם צילום של המסך (לפני שהפאנל מכסה אותו) - הוא הרקע המטושטש.
+        isOpening = true
+        com.future.futureui.utils.ScreenBackdrop.capture { shot ->
+            isOpening = false
+            showControlCenterNow(shot)
+        }
+    }
+
+    private fun showControlCenterNow(backdrop: android.graphics.Bitmap?) {
+        if (isVisible) return
         try {
             if (controlManager == null) {
                 controlManager = ControlManager(this)
             }
 
-            val wallpaperManager = WallpaperManager.getInstance(this)
-            val wallpaperDrawable = wallpaperManager.drawable
-            val wallpaperBitmap = wallpaperDrawable?.let { drawableToBitmap(it) }
+            // הטפט הוא רק גיבוי כשאין צילום (ו-getDrawable יכול לזרוק בלי הרשאת אחסון).
+            val wallpaperBitmap = backdrop ?: runCatching {
+                WallpaperManager.getInstance(this).drawable?.let { drawableToBitmap(it) }
+            }.getOrNull()
 
             val params = WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT,

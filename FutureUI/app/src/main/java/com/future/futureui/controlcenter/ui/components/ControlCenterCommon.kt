@@ -38,6 +38,6 @@ fun Modifier.focusEffect(isFocused: Boolean, shape: androidx.compose.ui.graphics
     .zIndex(if (isFocused) 1f else 0f)
     .then(
         if (isFocused) {
-            Modifier.border(2.dp, Color.LightGray, shape)
+            Modifier.border(2.dp, Color.White, shape)
         } else Modifier
     )

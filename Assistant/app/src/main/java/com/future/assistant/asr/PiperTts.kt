@@ -33,8 +33,12 @@ class PiperTts(private val context: Context) {
     private var scales = floatArrayOf(0.667f, 1.0f, 0.8f)
     private val synthExecutor = Executors.newSingleThreadExecutor()
 
-    /** טוען את המודלים. חוסם - יש לקרוא מ-thread ברקע. */
+    @Volatile private var ready = false
+
+    /** טוען את המודלים. חוסם - יש לקרוא מ-thread ברקע. קריאה חוזרת אחרי הצלחה חוזרת מיד. */
+    @Synchronized
     fun init(): Boolean {
+        if (ready) return true
         return try {
             // שאריות המנוע הקודם (eSpeak לפונמיזציה של sherpa-onnx).
             File(context.filesDir, "piper/espeak-ng-data").deleteRecursively()
@@ -63,6 +67,7 @@ class PiperTts(private val context: Context) {
                 key.codePointAt(0) to map.getJSONArray(key).getInt(0)
             }
             this.env = env
+            ready = true
             true
         } catch (e: Exception) {
             Log.e(TAG, "Piper init failed", e)
@@ -70,8 +75,9 @@ class PiperTts(private val context: Context) {
         }
     }
 
-    /** מקריא את הטקסט. חוסם עד סוף ההשמעה - יש לקרוא מ-thread ברקע. */
-    fun speak(text: String) {
+    /** מקריא את הטקסט. חוסם עד סוף ההשמעה - יש לקרוא מ-thread ברקע.
+     *  [onLevel] - עוצמת ההשמעה 0..1 בזמן אמת, לגלי הקול במסך. */
+    fun speak(text: String, onLevel: ((Float) -> Unit)? = null) {
         if (voice == null || text.isBlank()) return
         // משפט-משפט: המשפט הבא מסונתז בזמן שהקודם מושמע, כך שתשובה ארוכה
         // מתחילה להישמע אחרי סינתוז המשפט הראשון בלבד.
@@ -80,7 +86,7 @@ class PiperTts(private val context: Context) {
         for (i in sentences.indices) {
             val pcm = next!!.get()
             next = sentences.getOrNull(i + 1)?.let { s -> synthExecutor.submit<ShortArray> { synthesize(s) } }
-            if (pcm.isNotEmpty()) PcmPlayback.playAndWait(pcm, sampleRate)
+            if (pcm.isNotEmpty()) PcmPlayback.playAndWait(pcm, sampleRate, onLevel)
         }
     }
 
@@ -129,12 +135,20 @@ class PiperTts(private val context: Context) {
         return outFile
     }
 
-    private companion object {
-        const val TAG = "PiperTts"
-        const val PAD = 0L
-        const val BOS = 1L
-        const val EOS = 2L
+    companion object {
+        @Volatile private var instance: PiperTts? = null
+
+        /** מופע אחד לכל התהליך: המודלים נטענים פעם אחת ולא בכל פתיחה של העוזר. */
+        fun shared(context: Context): PiperTts =
+            instance ?: synchronized(this) {
+                instance ?: PiperTts(context.applicationContext).also { instance = it }
+            }
+
+        private const val TAG = "PiperTts"
+        private const val PAD = 0L
+        private const val BOS = 1L
+        private const val EOS = 2L
         // הסימן נשאר בסוף המשפט (lookbehind), כדי שהקול ישמע את הנקודה/סימן השאלה.
-        val SENTENCE_END = Regex("""(?<=[.!?])\s+|\n+""")
+        private val SENTENCE_END = Regex("""(?<=[.!?])\s+|\n+""")
     }
 }

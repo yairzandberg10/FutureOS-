@@ -47,8 +47,8 @@
         "message": "Font not provided by the design system. Available: Heebo, Rubik, Roboto Mono, Material Symbols Rounded."
       },
       {
-        "selector": "JSXOpeningElement[name.name='ActionGridItem'] > JSXAttribute > JSXIdentifier[name!=/^(?:icon|label|active|color|key|ref|className|style|children)$/]",
-        "message": "<ActionGridItem> doesn't accept that prop. Declared props: icon, label, active, color."
+        "selector": "JSXOpeningElement[name.name='ActionGridItem'] > JSXAttribute > JSXIdentifier[name!=/^(?:icon|glyph|label|active|color|legend|key|ref|className|style|children)$/]",
+        "message": "<ActionGridItem> doesn't accept that prop. Declared props: icon, glyph, label, active, color, legend."
       },
       {
         "selector": "JSXOpeningElement[name.name='Avatar'] > JSXAttribute > JSXIdentifier[name!=/^(?:name|icon|size|color|background|style|key|ref|className|style|children)$/]",
@@ -119,6 +119,14 @@
         "message": "<FosIcon> doesn't accept that prop. Declared props: name, size, color, opacity, fill, strokeWidth, style."
       },
       {
+        "selector": "JSXOpeningElement[name.name='GlassPanel'] > JSXAttribute > JSXIdentifier[name!=/^(?:wallpaper|blur|children|style|key|ref|className|style|children)$/]",
+        "message": "<GlassPanel> doesn't accept that prop. Declared props: wallpaper, blur, children, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='GlassTile'] > JSXAttribute > JSXIdentifier[name!=/^(?:focused|on|radius|onClick|children|style|key|ref|className|style|children)$/]",
+        "message": "<GlassTile> doesn't accept that prop. Declared props: focused, on, radius, onClick, children, style."
+      },
+      {
         "selector": "JSXOpeningElement[name.name='HeadsUpNotification'] > JSXAttribute > JSXIdentifier[name!=/^(?:appName|title|body|icon|style|key|ref|className|style|children)$/]",
         "message": "<HeadsUpNotification> doesn't accept that prop. Declared props: appName, title, body, icon, style."
       },
@@ -141,6 +149,10 @@
       {
         "selector": "JSXOpeningElement[name.name='MonoValue'] > JSXAttribute > JSXIdentifier[name!=/^(?:children|size|weight|color|label|style|key|ref|className|style|children)$/]",
         "message": "<MonoValue> doesn't accept that prop. Declared props: children, size, weight, color, label, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='NotificationCard'] > JSXAttribute > JSXIdentifier[name!=/^(?:appName|title|body|icon|focused|expanded|optionsOpen|options|focusedOption|onSelect|style|key|ref|className|style|children)$/]",
+        "message": "<NotificationCard> doesn't accept that prop. Declared props: appName, title, body, icon, focused, expanded, optionsOpen, options, focusedOption, onSelect, style."
       },
       {
         "selector": "JSXOpeningElement[name.name='OptionsMenuItem'] > JSXAttribute > JSXIdentifier[name!=/^(?:label|icon|destructive|key|ref|className|style|children)$/]",
@@ -171,8 +183,8 @@
         "message": "<SettingItem> position must be one of 'only' | 'first' | 'middle' | 'last'."
       },
       {
-        "selector": "JSXOpeningElement[name.name='Slider'] > JSXAttribute > JSXIdentifier[name!=/^(?:label|value|focused|style|key|ref|className|style|children)$/]",
-        "message": "<Slider> doesn't accept that prop. Declared props: label, value, focused, style."
+        "selector": "JSXOpeningElement[name.name='Slider'] > JSXAttribute > JSXIdentifier[name!=/^(?:label|icon|value|focused|style|key|ref|className|style|children)$/]",
+        "message": "<Slider> doesn't accept that prop. Declared props: label, icon, value, focused, style."
       },
       {
         "selector": "JSXOpeningElement[name.name='Snackbar'] > JSXAttribute > JSXIdentifier[name!=/^(?:message|action|onAction|style|key|ref|className|style|children)$/]",
@@ -185,6 +197,14 @@
       {
         "selector": "JSXOpeningElement[name.name='Spinner'] > JSXAttribute > JSXIdentifier[name!=/^(?:size|thickness|label|style|key|ref|className|style|children)$/]",
         "message": "<Spinner> doesn't accept that prop. Declared props: size, thickness, label, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='StatusCapsule'] > JSXAttribute > JSXIdentifier[name!=/^(?:state|time|label|apps|icon|children|style|key|ref|className|style|children)$/]",
+        "message": "<StatusCapsule> doesn't accept that prop. Declared props: state, time, label, apps, icon, children, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='StatusCapsule'] > JSXAttribute[name.name='state'] > Literal[value!=/^(?:idle|call|charging|notification|media)$/]",
+        "message": "<StatusCapsule> state must be one of 'idle' | 'call' | 'charging' | 'notification' | 'media'."
       },
       {
         "selector": "JSXOpeningElement[name.name='Switch'] > JSXAttribute > JSXIdentifier[name!=/^(?:on|onChange|style|key|ref|className|style|children)$/]",
@@ -211,8 +231,8 @@
         "message": "<TextField> doesn't accept that prop. Declared props: value, placeholder, focused, showCaret, style."
       },
       {
-        "selector": "JSXOpeningElement[name.name='TimePicker'] > JSXAttribute > JSXIdentifier[name!=/^(?:title|hours|minutes|repeat|focusedDay|onCancel|onSave|style|key|ref|className|style|children)$/]",
-        "message": "<TimePicker> doesn't accept that prop. Declared props: title, hours, minutes, repeat, focusedDay, onCancel, onSave, style."
+        "selector": "JSXOpeningElement[name.name='TimePicker'] > JSXAttribute > JSXIdentifier[name!=/^(?:title|hours|minutes|repeat|focusedWheel|focusedDay|onCancel|onSave|style|key|ref|className|style|children)$/]",
+        "message": "<TimePicker> doesn't accept that prop. Declared props: title, hours, minutes, repeat, focusedWheel, focusedDay, onCancel, onSave, style."
       },
       {
         "selector": "JSXOpeningElement[name.name='ToggleButton'] > JSXAttribute > JSXIdentifier[name!=/^(?:children|icon|on|focused|fullWidth|onChange|style|key|ref|className|style|children)$/]",
@@ -221,6 +241,14 @@
       {
         "selector": "JSXOpeningElement[name.name='TopBar'] > JSXAttribute > JSXIdentifier[name!=/^(?:title|onBack|onMenu|backFocused|menuFocused|style|key|ref|className|style|children)$/]",
         "message": "<TopBar> doesn't accept that prop. Declared props: title, onBack, onMenu, backFocused, menuFocused, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Widget'] > JSXAttribute > JSXIdentifier[name!=/^(?:icon|title|value|subtitle|variant|style|key|ref|className|style|children)$/]",
+        "message": "<Widget> doesn't accept that prop. Declared props: icon, title, value, subtitle, variant, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Widget'] > JSXAttribute[name.name='variant'] > Literal[value!=/^(?:default|clock)$/]",
+        "message": "<Widget> variant must be one of 'default' | 'clock'."
       }
     ]
   },
@@ -281,6 +309,12 @@
       "FosIcon": {
         "replaces": []
       },
+      "GlassPanel": {
+        "replaces": []
+      },
+      "GlassTile": {
+        "replaces": []
+      },
       "HeadsUpNotification": {
         "replaces": []
       },
@@ -297,6 +331,9 @@
         "replaces": []
       },
       "MonoValue": {
+        "replaces": []
+      },
+      "NotificationCard": {
         "replaces": []
       },
       "OptionsMenuItem": {
@@ -329,6 +366,9 @@
       "Spinner": {
         "replaces": []
       },
+      "StatusCapsule": {
+        "replaces": []
+      },
       "Switch": {
         "replaces": []
       },
@@ -349,6 +389,9 @@
       },
       "TopBar": {
         "replaces": []
+      },
+      "Widget": {
+        "replaces": []
       }
     },
     "tokens": [
@@ -362,6 +405,8 @@
       "--fos-accent-purple",
       "--fos-accent-white",
       "--fos-avatar-fill",
+      "--fos-backdrop-blur",
+      "--fos-backdrop-wash",
       "--fos-bg",
       "--fos-border-divider",
       "--fos-border-divider-row",
@@ -371,7 +416,9 @@
       "--fos-calc-button",
       "--fos-calc-button-focused",
       "--fos-calc-button-muted",
+      "--fos-capsule-bg",
       "--fos-danger",
+      "--fos-danger-on-glass",
       "--fos-density",
       "--fos-divider",
       "--fos-duration-emphasized",
@@ -398,6 +445,9 @@
       "--fos-font-mono",
       "--fos-font-scale",
       "--fos-glass",
+      "--fos-glass-fill",
+      "--fos-glass-fill-focused",
+      "--fos-hairline-dark",
       "--fos-headsup-bg",
       "--fos-idle-bg-chip",
       "--fos-idle-bg-field",
@@ -429,6 +479,14 @@
       "--fos-shadow-card-light",
       "--fos-shadow-headsup",
       "--fos-shadow-none",
+      "--fos-shell-ink",
+      "--fos-shell-ink-12",
+      "--fos-shell-ink-20",
+      "--fos-shell-ink-60",
+      "--fos-shell-ink-70",
+      "--fos-shell-ink-sub",
+      "--fos-shell-success",
+      "--fos-shell-text-shadow",
       "--fos-size-badge",
       "--fos-size-base",
       "--fos-size-body",
@@ -439,6 +497,7 @@
       "--fos-size-screen-title",
       "--fos-size-summary",
       "--fos-size-title",
+      "--fos-size-widget-clock",
       "--fos-space-1",
       "--fos-space-10",
       "--fos-space-2",
@@ -481,7 +540,8 @@
       "--fos-weight-light",
       "--fos-weight-medium",
       "--fos-weight-regular",
-      "--fos-weight-semibold"
+      "--fos-weight-semibold",
+      "--fos-widget-bg"
     ],
     "tokenKinds": {
       "--fos-accent-white": "color",

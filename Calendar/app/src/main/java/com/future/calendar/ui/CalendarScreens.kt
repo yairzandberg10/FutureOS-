@@ -64,6 +64,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.future.sharednav.components.AppDialog
 import com.future.calendar.data.CalendarEvent
+import com.future.calendar.data.EventRepeat
 import com.future.calendar.data.CalMonth
 import com.future.calendar.data.CalendarKind
 import com.future.calendar.data.CalendarMonths
@@ -832,13 +833,14 @@ fun EventEditDialog(
     editingEvent: CalendarEvent?,
     theme: FutureTheme,
     onDismiss: () -> Unit,
-    onSave: (title: String, description: String, location: String, startHour: Int, startMinute: Int, endHour: Int, endMinute: Int, allDay: Boolean) -> Unit,
+    onSave: (title: String, description: String, location: String, startHour: Int, startMinute: Int, endHour: Int, endMinute: Int, allDay: Boolean, repeat: EventRepeat) -> Unit,
     onDelete: (() -> Unit)? = null
 ) {
     var title by remember { mutableStateOf(editingEvent?.title ?: "") }
     var description by remember { mutableStateOf(editingEvent?.description ?: "") }
     var location by remember { mutableStateOf(editingEvent?.location ?: "") }
     var allDay by remember { mutableStateOf(editingEvent?.allDay ?: false) }
+    var repeat by remember { mutableStateOf(EventRepeat.NONE) }
 
     val initialStart = editingEvent?.let {
         java.time.Instant.ofEpochMilli(it.startMillis).atZone(java.time.ZoneId.systemDefault()).toLocalTime()
@@ -876,6 +878,10 @@ fun EventEditDialog(
 
                 Spacer(modifier = Modifier.height(8.dp))
                 AllDayToggleRow(allDay = allDay, theme = theme, onToggle = { allDay = !allDay })
+                // סדרה קיימת נשארת סדרה - זמני החזרה שלה לא נערכים מכאן (ר' updateEvent).
+                if (editingEvent?.isRecurring != true) {
+                    RepeatRow(repeat = repeat, theme = theme, onCycle = { repeat = repeat.next() })
+                }
 
                 if (!allDay) {
                     Spacer(modifier = Modifier.height(8.dp))
@@ -906,7 +912,7 @@ fun EventEditDialog(
                 FutureDialogButtons {
                     FutureButton("ביטול", theme, onDismiss, variant = FutureButtonVariant.Secondary)
                     FutureButton(if (editingEvent != null) "שמור" else "צור", theme, {
-                        onSave(title, description, location, startHour, startMinute, endHour, endMinute, allDay)
+                        onSave(title, description, location, startHour, startMinute, endHour, endMinute, allDay, repeat)
                     })
                     if (onDelete != null) {
                         FutureButton("מחק", theme, onDelete, variant = FutureButtonVariant.Destructive)
@@ -934,6 +940,30 @@ private fun AllDayToggleRow(allDay: Boolean, theme: FutureTheme, onToggle: () ->
     ) {
         Text("כל היום", color = theme.textColor, fontSize = FutureTypography.body)
         FutureSwitch(checked = allDay, theme = theme)
+    }
+}
+
+/**
+ * "חזרה" - אותה שורה כמו "כל היום": כותרת, ומשמאל הערך הנוכחי. OK עובר
+ * לאפשרות הבאה (לא חוזר, כל יום, כל שבוע, כל חודש, כל שנה).
+ */
+@Composable
+private fun RepeatRow(repeat: EventRepeat, theme: FutureTheme, onCycle: () -> Unit) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(FutureShapes.md)
+            .background(if (isFocused) theme.textColor.copy(alpha = 0.1f) else Color.Transparent)
+            .clickable(interactionSource = interactionSource, indication = null, onClick = onCycle)
+            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
+            .padding(vertical = 10.dp, horizontal = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text("חזרה", color = theme.textColor, fontSize = FutureTypography.body)
+        Text(repeat.label, color = if (repeat.rrule != null) theme.readableAccentColor else theme.mutedTextColor, fontSize = FutureTypography.body)
     }
 }
 

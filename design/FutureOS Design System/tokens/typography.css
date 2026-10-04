@@ -21,6 +21,7 @@
   --fos-size-label: calc(24px * var(--fos-font-scale));         /* 12sp — nav label, app name */
   --fos-size-badge: calc(20px * var(--fos-font-scale));         /* 10sp / 700 — unread count */
   --fos-size-clock: calc(96px * var(--fos-font-scale));         /* 48sp / 300 — time picker value */
+  --fos-size-widget-clock: calc(56px * var(--fos-font-scale));  /* 28sp / 700 — clock widget value */
 
   --fos-weight-regular: 400;
   --fos-weight-medium: 500;

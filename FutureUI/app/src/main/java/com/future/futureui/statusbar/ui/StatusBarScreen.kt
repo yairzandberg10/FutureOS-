@@ -1,6 +1,7 @@
 package com.future.futureui.statusbar.ui
 
 import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureMotion
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -10,9 +11,19 @@ import android.os.BatteryManager
 import android.os.SystemClock
 import android.telecom.TelecomManager
 import android.util.Log
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -38,6 +49,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -80,6 +92,9 @@ fun StatusBarScreen(
     // האפליקציות שיש להן התראה, החדשה ביותר ראשונה, כל אפליקציה פעם אחת
     var notifApps by remember { mutableStateOf<List<NotifApp>>(emptyList()) }
     var callSeconds by remember { mutableIntStateOf(0) }
+    // נהיה true רק אחרי שהסקר הראשון הסתיים: עד אז רשימת ההתראות ריקה ומצב הטעינה עוד לא נקרא,
+    // והכמוסה הדינמית הייתה מפרשת את הערכים ההתחלתיים כ"התראה חדשה" / "מטען חובר" בכל פתיחה
+    var firstPollDone by remember { mutableStateOf(false) }
     // אייקון ההתראה הקטן של אפליקציה שאין לה סמל במיפוי - נטען פעם אחת לכל חבילה
     val smallIconCache = remember { HashMap<String, ImageBitmap?>() }
 
@@ -152,6 +167,9 @@ fun StatusBarScreen(
     LaunchedEffect(Unit) {
         while (true) {
             manager.updateStates()
+            // הכמוסה הדינמית מציגה את הנגן הפעיל - בלי זה hasActiveMedia נשאר false
+            // (את זה בדרך כלל מעדכן מרכז הבקרה, שלא תמיד פתוח). החיפוש רץ ברקע בתוך המנהל.
+            manager.updateMediaController()
 
             val (notifications, inCall, apps) = withContext(Dispatchers.IO) {
                 val active = if (MediaControlService.isEnabled(context)) {
@@ -181,7 +199,7 @@ fun StatusBarScreen(
                             }
                             smallIconCache[pkg]
                         }
-                        NotifApp(pkg, icon)
+                        NotifApp(pkg, icon, sbn.postTime)
                     }
 
                 // dialer שומר את מצב השיחה בתהליך שלו בלבד (CallService.activeCall) - אין
@@ -198,6 +216,7 @@ fun StatusBarScreen(
             notificationCount = notifications
             isCallActive = inCall
             notifApps = apps
+            firstPollDone = true
 
             delay(15_000)
         }
@@ -223,7 +242,8 @@ fun StatusBarScreen(
         showBluetooth = showBluetooth,
         notificationCount = notificationCount,
         apps = notifApps,
-        callDuration = if (isCallActive) "%d:%02d".format(callSeconds / 60, callSeconds % 60) else null
+        callDuration = if (isCallActive) "%d:%02d".format(callSeconds / 60, callSeconds % 60) else null,
+        settled = firstPollDone
     )
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
@@ -394,14 +414,30 @@ private val Fos = FutureTheme(isDarkMode = true)
 private val FosText70 = Fos.textColor.copy(alpha = 0.7f)
 private val FosText60 = Fos.textColor.copy(alpha = 0.6f)
 
-/** fos-glass - המילוי של הכמוסות. */
-private val FosGlass = Color(0xFF2C2C2E)
+/**
+ * fos-glass - המילוי של הכמוסות. זה משטח ה"heads-up" הצף של מערכת העיצוב: #1C1C1E בשקיפות גבוהה
+ * ולא אטום, כדי שהאפליקציה שמאחורי השורה תיראה דרכו; הטקסט הלבן נשאר קריא מעל כל תוכן
+ * כי הכמוסה עצמה כהה.
+ */
+private val FosGlass = Color(0xFF1C1C1E).copy(alpha = 0.55f)
+
+/** hairline לבן 15% סביב הכמוסה - מפריד אותה מהתוכן שמאחוריה כשהמילוי שקוף למחצה. */
+private val FosGlassBorder = Color.White.copy(alpha = 0.15f)
+
+/** גובה הכמוסה - שורת המצב קבועה ב-28dp, ורק הרוחב של הכמוסה הדינמית משתנה. */
+private val CapsuleHeight = 22.dp
 
 /** כמה אייקוני אפליקציות מוצגים לפני שהם הופכים למונה +N. */
 private const val MAX_APP_GLYPHS = 4
 
-/** אפליקציה עם התראה: סמל Future Glyphs לפי שם החבילה, או אייקון ההתראה של האפליקציה עצמה. */
-private data class NotifApp(val packageName: String, val smallIcon: ImageBitmap?)
+/** כמה זמן אירוע חולף (מטען חובר, התראה חדשה) נשאר בכמוסה לפני שהיא מתכווצת. */
+private const val EVENT_VISIBLE_MS = 3_000L
+
+/**
+ * אפליקציה עם התראה: סמל Future Glyphs לפי שם החבילה, או אייקון ההתראה של האפליקציה עצמה.
+ * postTime נשמר כדי להבדיל התראה שהגיעה עכשיו מהתראה שרק התקדמה לראש הרשימה כי הקודמת נמחקה.
+ */
+private data class NotifApp(val packageName: String, val smallIcon: ImageBitmap?, val postTime: Long = 0L)
 
 private data class BarStatus(
     val time: String,
@@ -411,8 +447,23 @@ private data class BarStatus(
     val showBluetooth: Boolean,
     val notificationCount: Int,
     val apps: List<NotifApp>,
-    val callDuration: String?
+    val callDuration: String?,
+    /** הסקר הראשון הסתיים - רק מכאן אפשר להבדיל שינוי אמיתי מערך התחלתי. */
+    val settled: Boolean
 )
+
+/**
+ * מה הכמוסה הדינמית מציגה, בסדר עדיפות יורד: שיחה, אירוע חולף, מדיה, ואז שעה ואייקונים.
+ * המפתח של AnimatedContent הוא הסוג בלבד (לא הטקסט) - אחרת משך השיחה, שמתחלף כל שנייה,
+ * היה מפעיל מעבר חדש בכל שנייה.
+ */
+private enum class DynamicKind { Idle, Call, Charging, Notification, Media }
+
+/**
+ * אירוע חולף שהכמוסה מציגה כ-3 שניות. מחלקה רגילה ולא data: ההשוואה היא לפי זהות,
+ * אז גם שני אירועים זהים בתוכנם ברצף מאפסים את ספירת ה-3 שניות.
+ */
+private class BarEvent(val kind: DynamicKind, val app: NotifApp? = null, val label: String? = null)
 
 /** סמל פשוט בקו אחד לכל אפליקציה מוכרת. null - משתמשים באייקון ההתראה שהאפליקציה שולחת. */
 private fun appGlyph(pkg: String): ImageVector? = when (pkg) {
@@ -438,8 +489,41 @@ private fun appGlyph(pkg: String): ImageVector? = when (pkg) {
 }
 
 @Composable
-private fun BarText(text: String, color: Color, fontSize: TextUnit, weight: FontWeight) {
-    Text(text = text, color = color, fontSize = fontSize, fontWeight = weight, maxLines = 1, style = androidx.compose.ui.text.TextStyle(fontFeatureSettings = "tnum"))
+private fun BarText(
+    text: String,
+    color: Color,
+    fontSize: TextUnit,
+    weight: FontWeight,
+    modifier: Modifier = Modifier,
+    overflow: TextOverflow = TextOverflow.Clip
+) {
+    Text(
+        text = text,
+        color = color,
+        fontSize = fontSize,
+        fontWeight = weight,
+        maxLines = 1,
+        overflow = overflow,
+        modifier = modifier,
+        style = androidx.compose.ui.text.TextStyle(fontFeatureSettings = "tnum")
+    )
+}
+
+/** סמל אפליקציה אחת - משמש גם את שורת האייקונים וגם את הכמוסה הדינמית כשמגיעה התראה. */
+@Composable
+private fun AppGlyph(app: NotifApp) {
+    val glyph = appGlyph(app.packageName)
+    val icon = app.smallIcon
+    when {
+        glyph != null -> Icon(glyph, contentDescription = null, tint = Fos.textColor, modifier = Modifier.size(14.dp))
+        icon != null -> Image(
+            bitmap = icon,
+            contentDescription = null,
+            colorFilter = ColorFilter.tint(Fos.textColor),
+            modifier = Modifier.size(14.dp)
+        )
+        else -> Icon(FutureIcons.Notifications, contentDescription = null, tint = Fos.textColor, modifier = Modifier.size(14.dp))
+    }
 }
 
 @Composable
@@ -447,20 +531,7 @@ private fun AppGlyphs(apps: List<NotifApp>) {
     // בטקסט גדול אין מקום לארבעה - אייקון אחד ואחריו מונה
     val max = if (LocalDensity.current.fontScale >= 1.2f) 1 else MAX_APP_GLYPHS
     Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-        apps.take(max).forEach { app ->
-            val glyph = appGlyph(app.packageName)
-            val icon = app.smallIcon
-            when {
-                glyph != null -> Icon(glyph, contentDescription = null, tint = Fos.textColor, modifier = Modifier.size(14.dp))
-                icon != null -> Image(
-                    bitmap = icon,
-                    contentDescription = null,
-                    colorFilter = ColorFilter.tint(Fos.textColor),
-                    modifier = Modifier.size(14.dp)
-                )
-                else -> Icon(FutureIcons.Notifications, contentDescription = null, tint = Fos.textColor, modifier = Modifier.size(14.dp))
-            }
-        }
+        apps.take(max).forEach { app -> AppGlyph(app) }
         if (apps.size > max) BarText("+${apps.size - max}", FosText70, FutureTypography.label, FontWeight.SemiBold)
     }
 }
@@ -573,27 +644,28 @@ private fun QuietBar(modifier: Modifier, manager: ControlManager, status: BarSta
     }
 }
 
-/** כיוון ב - כמוסות: שעה ואייקוני אפליקציות בכמוסה אחת, מצב המכשיר בשנייה. */
+/** כמוסת זכוכית: גובה קבוע, מילוי שקוף למחצה ו-hairline, בצורת גלולה. */
+private fun Modifier.glassCapsule(fill: Color = FosGlass, borderColor: Color = FosGlassBorder): Modifier =
+    this.height(CapsuleHeight).clip(CircleShape).background(fill).border(0.5.dp, borderColor, CircleShape)
+
+/**
+ * כיוון ב - כמוסות: כמוסה דינמית (שעה, ובמקומה פעילות חיה) בצד אחד, מצב המכשיר בשנייה.
+ * הרקע של השורה עצמה שקוף - הכמוסות צפות מעל האפליקציה ורק הן זכוכית.
+ */
 @Composable
 private fun CapsulesBar(modifier: Modifier, manager: ControlManager, status: BarStatus) {
     Row(
-        modifier = modifier.fillMaxWidth().background(Fos.backgroundColor).padding(horizontal = 8.dp),
+        modifier = modifier.fillMaxWidth().padding(horizontal = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-            Row(
-                modifier = Modifier.height(22.dp).clip(CircleShape).background(FosGlass).padding(horizontal = 9.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                BarText(status.time, Fos.textColor, FutureTypography.body, FontWeight.SemiBold)
-                if (status.apps.isNotEmpty()) AppGlyphs(status.apps)
-            }
-            status.callDuration?.let { CallPill(it, showIcon = false) }
-        }
+        // weight(fill = false): הכמוסה הדינמית לוקחת רק את הרוחב שהיא צריכה, אבל לא יכולה
+        // לדחוף את כמוסת המכשיר אל מחוץ למסך - כותרת שיר ארוכה פשוט נחתכת ב-"…"
+        DynamicCapsule(Modifier.weight(1f, fill = false), manager, status)
+        // רווח מינימלי בין הכמוסות כשהדינמית מתרחבת עד שהן כמעט נוגעות
+        Spacer(Modifier.width(4.dp))
         Row(
-            modifier = Modifier.height(22.dp).clip(CircleShape).background(FosGlass).padding(horizontal = 9.dp),
+            modifier = Modifier.glassCapsule().padding(horizontal = 9.dp),
             horizontalArrangement = Arrangement.spacedBy(7.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -601,6 +673,159 @@ private fun CapsulesBar(modifier: Modifier, manager: ControlManager, status: Bar
             if (status.showBattery) {
                 BatteryPercent(status, withSign = true)
                 FosBattery(status.batteryPercent, status.isCharging, manager.isBatterySaverOn)
+            }
+        }
+    }
+}
+
+/**
+ * הכמוסה הדינמית: בלי פעילות היא שעה ואייקוני אפליקציות; כשיש פעילות חיה היא מתרחבת
+ * להציג אותה ואחר כך חוזרת. עדיפות: שיחה פעילה, אירוע חולף (מטען חובר / התראה חדשה, ~3 שניות),
+ * מדיה מנגנת, ואז המצב הרגיל.
+ *
+ * האנימציה היא tween של סקאלת התנועה ולא קפיץ - מערכת העיצוב אוסרת קפיצי bounce, ובמכשיר
+ * בלי מגע כל תנועה מצטברת להרגשה של איטיות. הרוחב נאנימט ב-animateContentSize ואילו
+ * AnimatedContent רק מחליף את התוכן בדעיכה (SizeTransform עם snap, כדי ששני המנגנונים
+ * לא ילחמו על אותו רוחב).
+ */
+@Composable
+private fun DynamicCapsule(modifier: Modifier, manager: ControlManager, status: BarStatus) {
+    val context = LocalContext.current
+    // האירוע האחרון נשאר שמור גם אחרי שהכמוסה התכווצה: התוכן היוצא עדיין מצויר בזמן הדעיכה
+    // וחייב נתונים. eventActive הוא זה שקובע אם להציג אותו.
+    var event by remember { mutableStateOf<BarEvent?>(null) }
+    var eventActive by remember { mutableStateOf(false) }
+    // null = עוד לא ידוע (הסקר הראשון לא הסתיים), ואז אין מה להשוות אליו. אם הסגנון נבחר
+    // אחרי שהכול כבר נקרא, מתחילים מהערך הנוכחי - אחרת כל מעבר לכמוסות היה מציג "אירוע".
+    var prevCharging by remember { mutableStateOf<Boolean?>(if (status.settled) status.isCharging else null) }
+    var prevTopPostTime by remember {
+        mutableStateOf<Long?>(if (status.settled) (status.apps.firstOrNull()?.postTime ?: 0L) else null)
+    }
+    // משך השיחה האחרון - בזמן שהכמוסה נסגרת callDuration כבר null, והתוכן היוצא לא אמור להתרוקן
+    var lastCallText by remember { mutableStateOf("0:00") }
+
+    LaunchedEffect(status.callDuration) {
+        status.callDuration?.let { lastCallText = it }
+    }
+
+    // מטען חובר: מעבר false -> true בלבד (לא כשמתחילים כשהמכשיר כבר בטעינה)
+    LaunchedEffect(status.isCharging, status.settled) {
+        if (!status.settled) return@LaunchedEffect
+        if (status.isCharging && prevCharging == false) event = BarEvent(DynamicKind.Charging)
+        prevCharging = status.isCharging
+    }
+
+    // התראה חדשה: ההתראות נשאבות כל 15 שניות, אז משווים לרשימה הקודמת. משווים לפי postTime של
+    // הראשונה ולא לפי שם החבילה בלבד - כשהראשונה נמחקת השנייה "עולה" לראש הרשימה בלי שהגיעה
+    // שום התראה, וזה לא אירוע.
+    LaunchedEffect(status.apps, status.settled) {
+        if (!status.settled) return@LaunchedEffect
+        val top = status.apps.firstOrNull()
+        val prev = prevTopPostTime
+        if (top != null && prev != null && top.postTime > prev) {
+            // שם האפליקציה נטען ברקע (קריאת binder) ולא על ה-main thread שמסנן את מקשי הטלפון
+            val label = withContext(Dispatchers.IO) {
+                runCatching {
+                    val pm = context.packageManager
+                    pm.getApplicationLabel(pm.getApplicationInfo(top.packageName, 0)).toString()
+                }.getOrNull()
+            }
+            event = BarEvent(DynamicKind.Notification, top, label)
+        }
+        prevTopPostTime = top?.postTime ?: 0L
+    }
+
+    // אירוע חדש (או אירוע שמחליף אירוע קודם) מתחיל ספירה של 3 שניות מההתחלה
+    LaunchedEffect(event) {
+        if (event == null) return@LaunchedEffect
+        eventActive = true
+        delay(EVENT_VISIBLE_MS)
+        eventActive = false
+    }
+
+    val shownEvent = event
+    val kind = when {
+        status.callDuration != null -> DynamicKind.Call
+        eventActive && shownEvent != null -> shownEvent.kind
+        manager.isPlaying && manager.hasActiveMedia -> DynamicKind.Media
+        else -> DynamicKind.Idle
+    }
+
+    val colorSpec = tween<Color>(FutureMotion.DurationStandard, easing = FutureMotion.EasingStandard)
+    val isCall = kind == DynamicKind.Call
+    // שיחה = גלולת הצלחה אטומה עם דיו שחור (כמו CallPill); כל השאר זכוכית שקופה
+    val fill by animateColorAsState(if (isCall) Fos.successColor else FosGlass, colorSpec, label = "capsuleFill")
+    val borderColor by animateColorAsState(if (isCall) Fos.successColor else FosGlassBorder, colorSpec, label = "capsuleBorder")
+
+    // הסדר חשוב: הרקע והגזירה לפני animateContentSize כדי שיצטיירו ברוחב המונפש, וה-padding
+    // אחריו כדי שיהיה חלק מהתוכן שמשנה גודל
+    Box(
+        modifier = modifier
+            .glassCapsule(fill, borderColor)
+            .animateContentSize(animationSpec = tween(FutureMotion.DurationStandard, easing = FutureMotion.EasingStandard))
+            .padding(horizontal = 9.dp),
+        contentAlignment = Alignment.CenterStart
+    ) {
+        AnimatedContent(
+            targetState = kind,
+            transitionSpec = {
+                (fadeIn(tween(FutureMotion.DurationStandard, easing = FutureMotion.EasingStandard)) togetherWith
+                    fadeOut(tween(FutureMotion.DurationFast, easing = FutureMotion.EasingStandard)))
+                    .using(SizeTransform(clip = false) { _, _ -> snap() })
+            },
+            contentAlignment = Alignment.CenterStart,
+            label = "dynamicCapsule"
+        ) { shown ->
+            when (shown) {
+                DynamicKind.Idle -> Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    BarText(status.time, Fos.textColor, FutureTypography.body, FontWeight.SemiBold)
+                    if (status.apps.isNotEmpty()) AppGlyphs(status.apps)
+                }
+                DynamicKind.Call -> Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(FutureIcons.Call, contentDescription = null, tint = Color.Black, modifier = Modifier.size(12.dp))
+                    BarText(status.callDuration ?: lastCallText, Color.Black, FutureTypography.label, FontWeight.Bold)
+                }
+                DynamicKind.Charging -> Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(FutureIcons.Bolt, contentDescription = null, tint = Fos.successColor, modifier = Modifier.size(12.dp))
+                    BarText("בטעינה · ${status.batteryPercent}%", Fos.textColor, FutureTypography.label, FontWeight.Medium)
+                }
+                DynamicKind.Notification -> Row(
+                    horizontalArrangement = Arrangement.spacedBy(5.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    shownEvent?.app?.let { AppGlyph(it) }
+                    BarText(
+                        shownEvent?.label?.takeIf { it.isNotBlank() } ?: "התראה חדשה",
+                        Fos.textColor,
+                        FutureTypography.label,
+                        FontWeight.Medium,
+                        modifier = Modifier.widthIn(max = 90.dp),
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                DynamicKind.Media -> Row(
+                    horizontalArrangement = Arrangement.spacedBy(5.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(FutureIcons.MusicNote, contentDescription = null, tint = Fos.textColor, modifier = Modifier.size(14.dp))
+                    BarText(
+                        manager.currentSongTitle,
+                        Fos.textColor,
+                        FutureTypography.label,
+                        FontWeight.Medium,
+                        modifier = Modifier.widthIn(max = 110.dp),
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
         }
     }

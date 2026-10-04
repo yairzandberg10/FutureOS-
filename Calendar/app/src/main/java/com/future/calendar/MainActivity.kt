@@ -172,7 +172,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            fun saveEvent(date: LocalDate, editing: CalendarEvent?, title: String, description: String, location: String, startHour: Int, startMinute: Int, endHour: Int, endMinute: Int, allDay: Boolean) {
+            fun saveEvent(date: LocalDate, editing: CalendarEvent?, title: String, description: String, location: String, startHour: Int, startMinute: Int, endHour: Int, endMinute: Int, allDay: Boolean, repeat: com.future.calendar.data.EventRepeat) {
                 if (title.isBlank()) {
                     // קודם הדיאלוג נסגר בשקט וכל מה שהוקלד (מיקום, תיאור) אבד
                     android.widget.Toast.makeText(this@MainActivity, "צריך כותרת לאירוע", android.widget.Toast.LENGTH_SHORT).show()
@@ -191,13 +191,13 @@ class MainActivity : ComponentActivity() {
                 }
 
                 if (editing != null) {
-                    if (!repository.updateEvent(editing.id, title, description, location, startMillis, endMillis, allDay, editing.isRecurring)) {
+                    if (!repository.updateEvent(editing.id, title, description, location, startMillis, endMillis, allDay, editing.isRecurring, repeat)) {
                         android.widget.Toast.makeText(this@MainActivity, "השינויים לא נשמרו", android.widget.Toast.LENGTH_SHORT).show()
                     }
                 } else {
                     val calendarId = repository.getDefaultWritableCalendarId()
                     if (calendarId != null) {
-                        if (repository.addEvent(calendarId, title, description, location, startMillis, endMillis, allDay) == null) {
+                        if (repository.addEvent(calendarId, title, description, location, startMillis, endMillis, allDay, repeat) == null) {
                             android.widget.Toast.makeText(this@MainActivity, "האירוע לא נשמר", android.widget.Toast.LENGTH_SHORT).show()
                         }
                     } else {
@@ -323,8 +323,8 @@ class MainActivity : ComponentActivity() {
                     editingEvent = editing,
                     theme = theme,
                     onDismiss = { editorState = null },
-                    onSave = { title, description, location, startHour, startMinute, endHour, endMinute, allDay ->
-                        saveEvent(date, editing, title, description, location, startHour, startMinute, endHour, endMinute, allDay)
+                    onSave = { title, description, location, startHour, startMinute, endHour, endMinute, allDay, repeat ->
+                        saveEvent(date, editing, title, description, location, startHour, startMinute, endHour, endMinute, allDay, repeat)
                     },
                     onDelete = if (editing != null) {
                         { pendingDelete = editing }

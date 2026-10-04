@@ -5,14 +5,10 @@ import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Surface
-import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import com.future.sharednav.theme.ThemeClient
+import com.future.assistant.asr.LocalSpeechEngine
 import com.future.assistant.ui.AssistantScreen
-import com.future.sharednav.theme.FutureTheme
+import com.future.sharednav.theme.FutureMaterialTheme
+import com.future.sharednav.theme.rememberFutureTheme
 
 class MainActivity : ComponentActivity() {
     // המכשיר האמיתי הוא מקלדת T9 בלבד בלי מסך מגע - מבטלים קלט מגע לגמרי כדי
@@ -32,30 +28,13 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // טעינת מודל זיהוי הדיבור מתחילה לפני שהחלון בכלל מצויר, במקביל לפתיחה.
+        LocalSpeechEngine.preloadAsync(this)
         enableEdgeToEdge()
 
         setContent {
-            var theme by remember {
-                mutableStateOf(
-                    ThemeClient.getTheme(this@MainActivity).let {
-                        FutureTheme(isDarkMode = it.isDarkMode, accentColor = Color(it.primaryColor))
-                    }
-                )
-            }
-
-            val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
-            DisposableEffect(lifecycleOwner) {
-                val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
-                    if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
-                        val shared = ThemeClient.getTheme(this@MainActivity)
-                        theme = FutureTheme(isDarkMode = shared.isDarkMode, accentColor = Color(shared.primaryColor))
-                    }
-                }
-                lifecycleOwner.lifecycle.addObserver(observer)
-                onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-            }
-
-            Surface(modifier = Modifier.fillMaxSize(), color = theme.backgroundColor) {
+            val theme = rememberFutureTheme()
+            FutureMaterialTheme(theme) {
                 AssistantScreen(theme = theme, onExit = { finish() })
             }
         }

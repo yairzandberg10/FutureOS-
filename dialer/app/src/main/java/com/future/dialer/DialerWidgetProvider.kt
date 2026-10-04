@@ -1,28 +1,34 @@
 package com.future.dialer
 
-import android.app.PendingIntent
-import android.appwidget.AppWidgetManager
-import android.appwidget.AppWidgetProvider
+import android.content.pm.PackageManager
+import android.provider.CallLog
 import android.content.Context
-import android.widget.RemoteViews
+import com.future.sharednav.widget.FutureContentWidget
+import com.future.sharednav.widget.WidgetContent
 
-/**
- * ווידג'ט קיצור-דרך למסך הבית - אייקון ושם האפליקציה, לחיצה פותחת אותה.
- * חלק מהעיצוב האחיד של ווידג'טים ייעודיים לכל אפליקציית FutureOS מובנית.
- */
-class DialerWidgetProvider : AppWidgetProvider() {
-    override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
-        appWidgetIds.forEach { widgetId ->
-            val views = RemoteViews(context.packageName, R.layout.app_widget)
-            val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
-            if (launchIntent != null) {
-                val pendingIntent = PendingIntent.getActivity(
-                    context, 0, launchIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                )
-                views.setOnClickPendingIntent(R.id.widget_root, pendingIntent)
-            }
-            appWidgetManager.updateAppWidget(widgetId, views)
+/** השיחה האחרונה: מי, איזה סוג, ומתי. */
+class DialerWidgetProvider : FutureContentWidget() {
+    override fun content(context: Context): WidgetContent {
+        if (context.checkSelfPermission(android.Manifest.permission.READ_CALL_LOG) != PackageManager.PERMISSION_GRANTED) {
+            return WidgetContent(value = "טלפון", subtitle = "פתח כדי לאשר גישה")
         }
+        context.contentResolver.query(
+            CallLog.Calls.CONTENT_URI,
+            arrayOf(CallLog.Calls.CACHED_NAME, CallLog.Calls.NUMBER, CallLog.Calls.TYPE, CallLog.Calls.DATE),
+            null, null, "${CallLog.Calls.DATE} DESC",
+        )?.use { c ->
+            if (c.moveToFirst()) {
+                val who = c.getString(0)?.takeIf { it.isNotBlank() } ?: c.getString(1)?.let { "\u2066$it\u2069" } ?: "מספר חסוי"
+                val type = when (c.getInt(2)) {
+                    CallLog.Calls.INCOMING_TYPE -> "נכנסת"
+                    CallLog.Calls.OUTGOING_TYPE -> "יוצאת"
+                    CallLog.Calls.MISSED_TYPE -> "שלא נענתה"
+                    CallLog.Calls.REJECTED_TYPE, CallLog.Calls.BLOCKED_TYPE -> "שנדחתה"
+                    else -> ""
+                }
+                return WidgetContent(value = who, subtitle = "שיחה $type · ${ago(c.getLong(3))}", title = "שיחה אחרונה")
+            }
+        }
+        return WidgetContent(value = "אין שיחות", subtitle = null)
     }
 }

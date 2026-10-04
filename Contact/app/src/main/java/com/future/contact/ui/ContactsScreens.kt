@@ -96,7 +96,9 @@ class ContactActions(
     val toggleBlocked: (Contact) -> Unit,
     val delete: (Contact) -> Unit,
     val add: (name: String, number: String) -> Unit,
-    val cycleSort: () -> Unit,
+    val setSort: (com.future.contact.data.ContactSort) -> Unit,
+    /** מריץ פעולת כתיבה אחרי שהרשאת WRITE_CONTACTS אושרה (מבקש אותה אם צריך). */
+    val withWrite: (() -> Unit) -> Unit,
 )
 
 /**
@@ -120,6 +122,7 @@ fun ContactsListScreen(
     var t9Query by remember { mutableStateOf("") }
     var focusedContact by remember { mutableStateOf<Contact?>(null) }
     var menuOpen by remember { mutableStateOf(false) }
+    var sortMenuOpen by remember { mutableStateOf(false) }
     var pendingDelete by remember { mutableStateOf<Contact?>(null) }
     var adding by remember { mutableStateOf(false) }
 
@@ -284,8 +287,21 @@ fun ContactsListScreen(
                 ContactMenuRows(target, theme, actions, onDelete = { pendingDelete = target }, pick = ::pick)
             }
             FutureMenuRow("איש קשר חדש", FutureIcons.PersonAdd, theme, pick { adding = true })
-            FutureMenuRow("מיון · $sortLabel", FutureIcons.AutoMirrored.Sort, theme, pick(actions.cycleSort))
+            FutureMenuRow("מיון לפי · $sortLabel", FutureIcons.AutoMirrored.Sort, theme, pick { sortMenuOpen = true })
             FutureMenuRow("חיפוש", FutureIcons.Search, theme, pick { searchOpen = true })
+        }
+    }
+    // "מיון לפי" - תפריט משני עם כל האפשרויות, והנבחרת מסומנת.
+    if (sortMenuOpen) {
+        FutureOptionsMenu(theme = theme, onDismissRequest = { sortMenuOpen = false }, header = "מיון לפי") {
+            com.future.contact.data.ContactSort.entries.forEach { option ->
+                FutureMenuRow(
+                    option.label,
+                    if (option.label == sortLabel) FutureIcons.Check else null,
+                    theme,
+                    { sortMenuOpen = false; actions.setSort(option) },
+                )
+            }
         }
     }
     pendingDelete?.let { contact ->
@@ -450,8 +466,12 @@ fun ContactDetailScreen(contact: Contact, theme: FutureTheme, actions: ContactAc
         ContactEditDetailsDialog(initial = details, theme = theme, onDismiss = { editing = false }, onSave = { updated ->
             editing = false
             scope.launch {
-                val ok = withContext(Dispatchers.IO) { repository.updateContactDetails(contact.id, updated) }
-                if (ok) details = updated
+                actions.withWrite {
+                    scope.launch {
+                        val ok = withContext(Dispatchers.IO) { repository.updateContactDetails(contact.id, updated) }
+                        if (ok) details = updated
+                    }
+                }
             }
         })
     }

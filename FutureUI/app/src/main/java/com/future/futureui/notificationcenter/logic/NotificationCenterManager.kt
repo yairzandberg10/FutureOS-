@@ -70,6 +70,25 @@ class NotificationCenterManager(private val context: Context) {
         controlManager.handleControlToggle("dnd")
     }
 
+    /**
+     * פותח את ההתראה עצמה (ה-contentIntent שלה - השיחה, ההודעה, המייל), כמו
+     * לחיצה על התראה בטלפון רגיל. בלי contentIntent - פותח את האפליקציה.
+     * התראה עם FLAG_AUTO_CANCEL נמחקת אחרי הפתיחה, כמו במערכת.
+     */
+    fun openNotification(sbn: StatusBarNotification) {
+        val n = sbn.notification
+        val opened = n.contentIntent?.let { pi ->
+            runCatching { pi.send() }.onFailure {
+                android.util.Log.w("NotificationCenter", "contentIntent failed: ${sbn.packageName}", it)
+            }.isSuccess
+        } ?: false
+        if (!opened) launchApp(sbn.packageName)
+        if (n.flags and Notification.FLAG_AUTO_CANCEL != 0) {
+            MediaControlService.instance?.cancelNotification(sbn.key)
+            notifications.remove(sbn)
+        }
+    }
+
     fun launchApp(packageName: String) {
         try {
             val intent = context.packageManager.getLaunchIntentForPackage(packageName)

@@ -1,28 +1,17 @@
 package com.future.guide
 
-import android.app.PendingIntent
-import android.appwidget.AppWidgetManager
-import android.appwidget.AppWidgetProvider
+import com.future.guide.data.GUIDE_APPS
 import android.content.Context
-import android.widget.RemoteViews
+import com.future.sharednav.widget.FutureContentWidget
+import com.future.sharednav.widget.WidgetContent
 
-/**
- * ווידג'ט קיצור-דרך למסך הבית - אייקון ושם האפליקציה, לחיצה פותחת אותה.
- * חלק מהעיצוב האחיד של ווידג'טים ייעודיים לכל אפליקציית FutureOS מובנית.
- */
-class GuideWidgetProvider : AppWidgetProvider() {
-    override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
-        appWidgetIds.forEach { widgetId ->
-            val views = RemoteViews(context.packageName, R.layout.app_widget)
-            val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
-            if (launchIntent != null) {
-                val pendingIntent = PendingIntent.getActivity(
-                    context, 0, launchIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                )
-                views.setOnClickPendingIntent(R.id.widget_root, pendingIntent)
-            }
-            appWidgetManager.updateAppWidget(widgetId, views)
-        }
+/** טיפ היום - טיפ אחר בכל יום, מתוך הטיפים של כל האפליקציות במדריך. */
+class GuideWidgetProvider : FutureContentWidget() {
+    override fun content(context: Context): WidgetContent {
+        val tips = GUIDE_APPS.flatMap { app -> app.tips.map { app.name to it } }
+        if (tips.isEmpty()) return WidgetContent(value = "מדריך למשתמש")
+        val day = (System.currentTimeMillis() / 86_400_000L).toInt()
+        val (app, tip) = tips[day % tips.size]
+        return WidgetContent(value = app, subtitle = tip, title = "טיפ היום")
     }
 }

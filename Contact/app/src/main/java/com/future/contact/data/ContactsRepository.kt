@@ -40,6 +40,7 @@ enum class ContactSort(val label: String) {
     FIRST_NAME("שם פרטי"),
     LAST_NAME("שם משפחה"),
     RECENT("עודכנו לאחרונה"),
+    FAVORITES("מועדפים תחילה"),
 }
 
 /** גישה אמיתית לספק אנשי הקשר של אנדרואיד - בלי נתונים מדומים. */
@@ -320,6 +321,10 @@ class ContactsRepository(private val context: Context) {
         }
     }
 
+    /** הרשאת כתיבה - נפרדת מהקריאה. בלעדיה חסימה, תמונה ושמירה נכשלו בשקט. */
+    fun hasWritePermission(): Boolean =
+        context.checkSelfPermission(android.Manifest.permission.WRITE_CONTACTS) == android.content.pm.PackageManager.PERMISSION_GRANTED
+
     fun hasContactsPermission(): Boolean {
         return context.checkSelfPermission(android.Manifest.permission.READ_CONTACTS) ==
             android.content.pm.PackageManager.PERMISSION_GRANTED
@@ -347,6 +352,13 @@ class ContactsRepository(private val context: Context) {
         fun sortContacts(list: List<Contact>, sort: ContactSort): List<Contact> {
             val collator = Collator.getInstance(Locale.forLanguageTag("he")).apply { strength = Collator.PRIMARY }
             if (sort == ContactSort.RECENT) return list.sortedByDescending { it.updatedAt }
+            if (sort == ContactSort.FAVORITES) {
+                return list.sortedWith(
+                    compareByDescending<Contact> { it.isFavorite }
+                        .thenBy { scriptBucket(it.name) }
+                        .thenComparator { a, b -> collator.compare(a.name, b.name) }
+                )
+            }
             val key: (Contact) -> String = {
                 if (sort == ContactSort.LAST_NAME) it.alternativeName.ifBlank { it.name } else it.name
             }

@@ -139,18 +139,31 @@ class NotificationCenterAccessibilityService : AccessibilityService(), Lifecycle
         }
     }
 
+    private var isOpening = false
+
     private fun showNotificationCenter() {
-        if (isVisible) return
+        if (isVisible || isOpening) return
         // כל דרך פתיחה (מקש, שידור פנימי, מעבר מהפאנל השני) - לא כשהמכשיר נעול
         if (com.future.futureui.utils.FutureUIState.isLocked || com.future.futureui.utils.FutureUIState.isSecured) return
+        // קודם צילום של המסך (לפני שהפאנל מכסה אותו) - הוא הרקע המטושטש.
+        isOpening = true
+        com.future.futureui.utils.ScreenBackdrop.capture { shot ->
+            isOpening = false
+            showNotificationCenterNow(shot)
+        }
+    }
+
+    private fun showNotificationCenterNow(backdrop: android.graphics.Bitmap?) {
+        if (isVisible) return
         try {
             if (notificationManager == null) {
                 notificationManager = NotificationCenterManager(this)
             }
 
-            val wallpaperManager = WallpaperManager.getInstance(this)
-            val wallpaperDrawable = wallpaperManager.drawable
-            val wallpaperBitmap = wallpaperDrawable?.let { drawableToBitmap(it) }
+            // הטפט הוא רק גיבוי כשאין צילום (ו-getDrawable יכול לזרוק בלי הרשאת אחסון).
+            val wallpaperBitmap = backdrop ?: runCatching {
+                WallpaperManager.getInstance(this).drawable?.let { drawableToBitmap(it) }
+            }.getOrNull()
 
             val params = WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT,
@@ -180,6 +193,8 @@ class NotificationCenterAccessibilityService : AccessibilityService(), Lifecycle
                             modifier = Modifier.fillMaxSize(),
                             wallpaper = wallpaperBitmap?.asImageBitmap(),
                             manager = notificationManager,
+                            // התראה שנפתחה - הפאנל נסגר, אחרת האפליקציה נפתחת מתחתיו ולא רואים אותה.
+                            onRequestClose = { hideNotificationCenter() },
                             onSwitchToControlCenter = {
                                 val intent = Intent(FutureUIActions.ACTION_SHOW_CONTROL_CENTER)
                                 intent.setPackage(packageName)

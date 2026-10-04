@@ -90,6 +90,22 @@ class MainActivity : ComponentActivity() {
                 })
             }
 
+            // כתיבה (חסימה, תמונה, שמירה, מחיקה) - הרשאה נפרדת מהקריאה. מי שאישר
+            // רק קריאה בגרסה קודמת לא התבקש אף פעם לכתיבה, וכל פעולה נכשלה בשקט.
+            var pendingWrite by remember { mutableStateOf<(() -> Unit)?>(null) }
+            val writePermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+                val action = pendingWrite
+                pendingWrite = null
+                if (granted) action?.invoke() else snackbar.show("נדרשת הרשאה לעריכת אנשי קשר")
+            }
+            fun withWrite(action: () -> Unit) {
+                if (repository.hasWritePermission()) action()
+                else {
+                    pendingWrite = action
+                    writePermission.launch(Manifest.permission.WRITE_CONTACTS)
+                }
+            }
+
             fun reload() {
                 if (!hasPermission) return
                 scope.launch { contacts = withContext(Dispatchers.IO) { repository.getAllContacts(sort) } }
@@ -119,6 +135,12 @@ class MainActivity : ComponentActivity() {
             }
 
             LaunchedEffect(hasPermission, sort) { reload() }
+            // מי שכבר אישר קריאה מקבל עכשיו גם את בקשת הכתיבה, פעם אחת בפתיחה.
+            LaunchedEffect(hasPermission) {
+                if (hasPermission && !repository.hasWritePermission()) {
+                    writePermission.launch(Manifest.permission.WRITE_CONTACTS)
+                }
+            }
 
             val selected = contacts.firstOrNull { it.id == selectedId }
             BackHandler(enabled = selectedId != null) { selectedId = null }
@@ -161,7 +183,7 @@ class MainActivity : ComponentActivity() {
                         }
                         FutureShare.open(this@MainActivity, send, "שיתוף איש קשר")
                     },
-                    pickPhoto = { contact ->
+                    pickPhoto = { contact -> withWrite {
                         photoTarget = contact
                         val gallery = Intent(Intent.ACTION_PICK).setType("image/*").setPackage("com.future.gallery")
                         val any = Intent(Intent.ACTION_GET_CONTENT).setType("image/*")
@@ -170,20 +192,22 @@ class MainActivity : ComponentActivity() {
                             photoTarget = null
                             snackbar.show("אין אפליקציה לבחירת תמונה")
                         }
-                    },
-                    removePhoto = { contact ->
+                    } },
+                    removePhoto = { contact -> withWrite {
                         scope.launch {
-                            withContext(Dispatchers.IO) { repository.removePhoto(contact.id) }
+                            val ok = withContext(Dispatchers.IO) { repository.removePhoto(contact.id) }
+                            snackbar.show(if (ok) "התמונה הוסרה" else "לא ניתן להסיר את התמונה")
                             reload()
                         }
-                    },
-                    toggleFavorite = { contact ->
+                    } },
+                    toggleFavorite = { contact -> withWrite {
                         scope.launch {
                             withContext(Dispatchers.IO) { repository.setFavorite(contact.id, !contact.isFavorite) }
+                            snackbar.show(if (contact.isFavorite) "הוסר מהמועדפים" else "נוסף למועדפים")
                             reload()
                         }
-                    },
-                    toggleBlocked = { contact ->
+                    } },
+                    toggleBlocked = { contact -> withWrite {
                         scope.launch {
                             val ok = withContext(Dispatchers.IO) { repository.setBlocked(contact, !contact.isBlocked) }
                             snackbar.show(
@@ -195,8 +219,8 @@ class MainActivity : ComponentActivity() {
                             )
                             reload()
                         }
-                    },
-                    delete = { contact ->
+                    } },
+                    delete = { contact -> withWrite {
                         scope.launch {
                             val ok = withContext(Dispatchers.IO) { repository.deleteContact(contact.id) }
                             if (ok) {
@@ -207,19 +231,20 @@ class MainActivity : ComponentActivity() {
                             }
                             reload()
                         }
-                    },
-                    add = { name, number ->
+                    } },
+                    add = { name, number -> withWrite {
                         scope.launch {
                             val ok = withContext(Dispatchers.IO) { repository.addContact(name, number) }
                             snackbar.show(if (ok) "$name נוסף" else "לא ניתן לשמור")
                             reload()
                         }
+                    } },
+                    setSort = { option ->
+                        sort = option
+                        prefs.edit().putString("sort", option.name).apply()
+                        snackbar.show("ממוין לפי ${option.label}")
                     },
-                    cycleSort = {
-                        sort = ContactSort.entries[(sort.ordinal + 1) % ContactSort.entries.size]
-                        prefs.edit().putString("sort", sort.name).apply()
-                        snackbar.show("ממוין לפי ${sort.label}")
-                    },
+                    withWrite = { action -> withWrite(action) },
                 )
             }
 

@@ -160,21 +160,19 @@
             </intent-filter>
         </activity>
 
-        <activity
-            android:name=".SettingsActivity"
-            android:exported="true"
-            android:permission="com.future.futureui.permission.SYSTEM_SETTINGS"
-            android:label="התאמה אישית"
-            android:theme="@style/Theme.FutureUI" />
+        <!-- אין הגדרות בתוך FutureUI: שורת המצב, הסגנון והרקע נשלטים מאפליקציית
+             ההגדרות (ממשק המערכת) דרך SystemUiSettingsProvider. -->
 
         <!-- בכוונה בלי CATEGORY_LAUNCHER: FutureUI הוא SystemUI, לא אפליקציה שהמשתמש
              פותח ישירות - אין לו אייקון ברשימת האפליקציות. ACTION_MAIN נשאר כדי
-             שאפשר עדיין להפעיל אותו במפורש (adb / debugging) בלי חשיפה בלאנצ'ר. -->
+             שאפשר עדיין להפעיל אותו במפורש (adb / debugging) בלי חשיפה בלאנצ'ר.
+             אין בו מסך: הוא רק מבקש את הרשאות זמן הריצה ונסגר. -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:excludeFromRecents="true"
             android:label="@string/app_name"
-            android:theme="@style/Theme.FutureUI"
+            android:theme="@style/Theme.FutureUI.Translucent"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
