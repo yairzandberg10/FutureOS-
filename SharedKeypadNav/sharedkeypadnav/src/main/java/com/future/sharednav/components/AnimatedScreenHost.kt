@@ -1,5 +1,6 @@
 package com.future.sharednav.components
 
+import com.future.sharednav.focus.focusGlideHost
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -74,9 +75,15 @@ fun <S> AnimatedScreenHost(
     ) { state ->
         val key = contentKey(state)
         val focusMemory = remember(key) { host.focus.getOrPut(key) { FocusMemory() } }
+        // לכל מסך סמן פוקוס משלו: הוא מצויר בתוך השכבה של המסך, ולכן זז איתו
+        // במעבר (forward/backward) במקום להחליק לרוחב המסך מהמסך הקודם.
+        val glide = com.future.sharednav.focus.rememberFocusGlideState()
         stateHolder.SaveableStateProvider(host.idOf(key)) {
-            CompositionLocalProvider(LocalFocusMemory provides focusMemory) {
-                Box(modifier = Modifier.fillMaxSize()) { content(state) }
+            CompositionLocalProvider(
+                LocalFocusMemory provides focusMemory,
+                com.future.sharednav.focus.LocalFocusGlide provides glide,
+            ) {
+                Box(modifier = Modifier.fillMaxSize().focusGlideHost(glide)) { content(state) }
             }
         }
     }

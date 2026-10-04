@@ -65,7 +65,10 @@ fun NotificationCenterScreen(
     modifier: Modifier = Modifier,
     wallpaper: ImageBitmap? = null,
     manager: NotificationCenterManager? = null,
-    onSwitchToControlCenter: () -> Unit = {}
+    onSwitchToControlCenter: () -> Unit = {},
+    /** פתיחה/סגירה בשליטת השירות - כך היציאה רצה לפני שהחלון מוסר. */
+    motion: com.future.futureui.utils.OverlayMotion? = null,
+    onExitFinished: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val ncManager = manager ?: remember { NotificationCenterManager(context) }
@@ -123,18 +126,15 @@ fun NotificationCenterScreen(
     }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+        // אותה שכבה כמו מרכז הבקרה: נופלת מהקצה העליון בקפיץ layer, או נכנסת
+        // מהצד כשעוברים אליה ממרכז הבקרה. קודם זה היה קפיץ LowBouncy איטי
+        // שלא מהטוקנים, והיציאה לא רצה בכלל (החלון הוסר מיד).
+        val overlay = motion ?: remember { com.future.futureui.utils.OverlayMotion().also { it.enter() } }
+        if (motion != null) com.future.futureui.utils.OverlayExitWatcher(motion, onExitFinished)
         AnimatedVisibility(
-            visible = isVisible,
-            // כניסה עם spring קליל (overshoot עדין) במקום tween ליניארי - מרגישה
-            // "חיה" יותר, כמו וילון התראות אמיתי, ולא כמו View שקופץ למקומו.
-            enter = slideInVertically(
-                initialOffsetY = { -it },
-                animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
-            ) + fadeIn(animationSpec = tween(FutureMotion.DurationStandard)),
-            exit = slideOutVertically(
-                targetOffsetY = { -it },
-                animationSpec = tween(FutureMotion.DurationStandard, easing = FutureMotion.EasingAccelerate)
-            ) + fadeOut(animationSpec = tween(FutureMotion.DurationStandard))
+            visibleState = overlay.visible,
+            enter = overlay.enterTransition(),
+            exit = overlay.exitTransition(),
         ) {
             Box(modifier = modifier.fillMaxSize()) {
                 // רקע עם טשטוש (Blur) אם קיימת תמונת רקע
@@ -217,34 +217,39 @@ fun NotificationCenterScreen(
                             // הצגת כל התראה ברשימה - כניסה מדורגת (stagger לפי אינדקס) כדי
                             // שההתראות "יזרמו" פנימה אחת אחרי השנייה במקום לקפוץ כולן ביחד.
                         itemsIndexed(ncManager.notifications, key = { _, sbn -> sbn.key }) { index, sbn ->
+                            // גל רק ב-4 ההתראות הראשונות ורק בפתיחה. התראה שגוללים אליה
+                            // מופיעה מיד - אחרת כל גלילה הייתה מריצה את הגל מחדש.
                             val visibleState = remember {
-                                MutableTransitionState(false)
+                                MutableTransitionState(index >= 4)
                             }
                             var isDismissing by remember { mutableStateOf(false) }
 
                             LaunchedEffect(Unit) {
-                                delay((index * 45L).coerceAtMost(360L))
-                                visibleState.targetState = true
+                                if (!visibleState.targetState) {
+                                    delay(60L + index * 30L)
+                                    visibleState.targetState = true
+                                }
                             }
                             LaunchedEffect(isDismissing) {
                                 if (isDismissing) {
                                     visibleState.targetState = false
-                                    delay(220)
+                                    delay(260)
                                     ncManager.dismissNotification(sbn)
                                 }
                             }
 
                             AnimatedVisibility(
                                 visibleState = visibleState,
-                                enter = fadeIn(animationSpec = tween(FutureMotion.DurationStandard)) +
-                                    slideInVertically(
-                                        initialOffsetY = { -it / 3 },
-                                        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow)
-                                    ) +
-                                    expandVertically(animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow)),
-                                exit = fadeOut(animationSpec = tween(FutureMotion.DurationStandard)) +
-                                    slideOutHorizontally(targetOffsetX = { it / 4 }, animationSpec = tween(FutureMotion.DurationStandard)) +
-                                    shrinkVertically(animationSpec = tween(FutureMotion.DurationStandard))
+                                // כניסה: נופלת ומתנפחת בקפיץ dialog - transform בלבד, בלי
+                                // expandVertically שמדד מחדש את כל הרשימה בכל פריים.
+                                // מחיקה: ההתראה עפה הצידה עד הסוף, והמקום שלה נסגר, כך
+                                // שההתראות שמתחת עולות אליו.
+                                enter = fadeIn(animationSpec = FutureMotion.enter()) +
+                                    slideInVertically(FutureMotion.Springs.dialogOffset) { -it / 2 } +
+                                    scaleIn(FutureMotion.Springs.dialog(), initialScale = 0.85f),
+                                exit = fadeOut(animationSpec = FutureMotion.exit()) +
+                                    slideOutHorizontally(FutureMotion.Springs.layerOffset) { it } +
+                                    shrinkVertically(animationSpec = tween(FutureMotion.DurationStandard, delayMillis = 60, easing = FutureMotion.EasingStandard))
                             ) {
                                 NotificationItem(
                                     sbn = sbn,

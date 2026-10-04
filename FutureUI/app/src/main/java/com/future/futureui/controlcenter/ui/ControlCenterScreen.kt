@@ -43,6 +43,7 @@ import com.future.futureui.controlcenter.logic.ControlManager
 import com.future.futureui.controlcenter.logic.GridCatalog
 import com.future.futureui.controlcenter.logic.GridControlManager
 import com.future.futureui.controlcenter.ui.components.*
+import com.future.futureui.utils.cascadeIn
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.*
@@ -57,7 +58,10 @@ fun ControlCenterScreen(
     onPowerClick: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
     onSwitchToNotificationCenter: () -> Unit = {},
-    onRequestClose: () -> Unit = {}
+    onRequestClose: () -> Unit = {},
+    /** פתיחה/סגירה בשליטת השירות - כך היציאה רצה לפני שהחלון מוסר. */
+    motion: com.future.futureui.utils.OverlayMotion? = null,
+    onExitFinished: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val manager = controlManager ?: remember { ControlManager(context) }
@@ -134,16 +138,14 @@ fun ControlCenterScreen(
     val dateColor = if (isDarkBackground) Color.LightGray else Color.Gray
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+        // השכבה נופלת מהקצה העליון בקפיץ (או נכנסת מהצד, במעבר ממרכז
+        // ההתראות), והקבוצות שבה נכנסות בגל (cascadeIn). העיצוב לא השתנה.
+        val overlay = motion ?: remember { com.future.futureui.utils.OverlayMotion().also { it.enter() } }
+        if (motion != null) com.future.futureui.utils.OverlayExitWatcher(motion, onExitFinished)
         AnimatedVisibility(
-            visible = isVisible,
-            enter = slideInVertically(
-                initialOffsetY = { -it },
-                animationSpec = tween(FutureMotion.DurationSlow, easing = FutureMotion.EasingDecelerate)
-            ) + fadeIn(animationSpec = tween(FutureMotion.DurationSlow)),
-            exit = slideOutVertically(
-                targetOffsetY = { -it },
-                animationSpec = tween(FutureMotion.DurationSlow, easing = FutureMotion.EasingAccelerate)
-            ) + fadeOut(animationSpec = tween(FutureMotion.DurationSlow))
+            visibleState = overlay.visible,
+            enter = overlay.enterTransition(),
+            exit = overlay.exitTransition(),
         ) {
             Box(
                 modifier = modifier
@@ -188,7 +190,7 @@ fun ControlCenterScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().cascadeIn(0),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.Top
                     ) {
@@ -238,11 +240,14 @@ fun ControlCenterScreen(
 
                     Spacer(modifier = Modifier.height(4.dp))
 
-                    sectionOrder.forEach { sectionId ->
-                        if (sectionId == "available") return@forEach
+                    sectionOrder.forEachIndexed { sectionIndex, sectionId ->
+                        if (sectionId == "available") return@forEachIndexed
                         
                         val isMoving = movingSectionId == sectionId
                         
+                        // key: כשמזיזים קבוצות במצב עריכה, הגל לא יורץ מחדש על הקבוצה שזזה.
+                        androidx.compose.runtime.key(sectionId) {
+                        Box(modifier = Modifier.cascadeIn(sectionIndex + 1)) {
                         FocusableSection(
                             id = sectionId,
                             isEditMode = isEditMode,
@@ -494,6 +499,8 @@ fun ControlCenterScreen(
                                     }
                                 }
                             }
+                        }
+                        }
                         }
                         Spacer(modifier = Modifier.height(8.dp))
                     }

@@ -35,7 +35,7 @@ import kotlinx.coroutines.delay
 fun Modifier.focusMotion(
     interactionSource: InteractionSource,
     focusedScale: Float = 1.02f,
-    pressedScale: Float = 0.97f,
+    pressedScale: Float = FutureMotion.PressScale,
     enabled: Boolean = true,
 ): Modifier {
     val isFocused by interactionSource.collectIsFocusedAsState()
@@ -46,7 +46,14 @@ fun Modifier.focusMotion(
         isFocused -> focusedScale
         else -> 1f
     }
-    val scale = animateFloatAsState(target, FutureMotion.focusScaleSpec, label = "focusMotion")
+    // ירידה מהירה ללחיצה, וחזרה בקפיץ press עם overshoot קטן - כך הלחיצה
+    // מורגשת גם כשה-OK קצר. בפוקוס רגיל - הקפיץ הרך של focusScaleSpec.
+    val spec = when {
+        isPressed -> FutureMotion.pressDownSpec
+        target == focusedScale && enabled -> FutureMotion.Springs.press<Float>()
+        else -> FutureMotion.focusScaleSpec
+    }
+    val scale = animateFloatAsState(target, spec, label = "focusMotion")
     return graphicsLayer {
         scaleX = scale.value
         scaleY = scale.value
@@ -71,12 +78,16 @@ fun Modifier.staggeredEntrance(index: Int): Modifier {
     LaunchedEffect(Unit) {
         if (!hasEntered) {
             delay((index * FutureMotion.StaggerStepMillis).toLong())
-            progress.animateTo(1f, FutureMotion.enter())
+            progress.animateTo(1f, FutureMotion.Springs.dialog())
             hasEntered = true
         }
     }
     return graphicsLayer {
-        alpha = progress.value
-        translationY = (1f - progress.value) * 10.dp.toPx()
+        val p = progress.value
+        alpha = p.coerceIn(0f, 1f)
+        translationY = (1f - p) * FutureMotion.StaggerDistanceDp.dp.toPx()
+        val s = 0.96f + 0.04f * p
+        scaleX = s
+        scaleY = s
     }
 }

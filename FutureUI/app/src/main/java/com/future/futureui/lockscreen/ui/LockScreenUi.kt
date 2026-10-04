@@ -101,24 +101,34 @@ fun LockScreenUi(state: LockUiState, accent: Color) {
     val is24 = remember { DateFormat.is24HourFormat(context) }
     val clockColor = if (state.clockColor == 0) accent else FutureAccents.presets.getOrElse(state.clockColor - 1) { Color.White }
 
-    // כניסה: עולה מלמטה. פתיחה: ממשיך למעלה ודועך.
+    // כניסה: השעון והתוכן "נופלים" למקום מ-1.1 בקפיץ layer.
+    // ביטול נעילה - "דרך הזכוכית": התוכן גדל ל-1.5 ונעלם, והרקע נעלם איתו,
+    // כך שמתחת מתגלה האפליקציה עצמה. קודם התוכן עלה 500dp מעל Box שחור בחלון
+    // אטום, ובמשך 300ms ראו מסך שחור לפני שהאפליקציה הופיעה בבת אחת.
     var entered by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { entered = true }
     val density = LocalDensity.current
-    val offset by animateFloatAsState(
-        targetValue = when {
-            state.unlocking -> with(density) { (-500).dp.toPx() }
-            entered -> 0f
-            else -> with(density) { 60.dp.toPx() }
-        },
-        animationSpec = tween(FutureMotion.DurationSlow, easing = if (state.unlocking) FutureMotion.EasingAccelerate else FutureMotion.EasingDecelerate),
-        label = "lockOffset"
+    val enter by animateFloatAsState(
+        targetValue = if (entered) 1f else 0f,
+        animationSpec = FutureMotion.Springs.layer(),
+        label = "lockEnter"
     )
-    val alpha by animateFloatAsState(if (state.unlocking) 0f else 1f, tween(FutureMotion.DurationSlow), label = "lockAlpha")
+    val unlock by animateFloatAsState(
+        targetValue = if (state.unlocking) 1f else 0f,
+        animationSpec = tween(FutureMotion.DurationSlow, easing = FutureMotion.EasingAccelerate),
+        label = "lockUnlock"
+    )
+    val offset = with(density) { (1f - enter) * (-40).dp.toPx() }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-        Box(Modifier.fillMaxSize().background(Color.Black)) {
-            Box(Modifier.fillMaxSize().graphicsLayer { translationY = offset; this.alpha = alpha }) {
+        Box(Modifier.fillMaxSize().graphicsLayer { this.alpha = 1f - unlock }.background(Color.Black)) {
+            Box(Modifier.fillMaxSize().graphicsLayer {
+                translationY = offset
+                val s = (1.1f - 0.1f * enter) + 0.5f * unlock
+                scaleX = s
+                scaleY = s
+                this.alpha = (enter.coerceIn(0f, 1f)) * (1f - (unlock * 1.4f).coerceIn(0f, 1f))
+            }) {
                 when (state.mode) {
                     LockMode.PIN -> {
                         LockBackground(state, blurred = true, scrim = 0.55f)
@@ -484,12 +494,16 @@ fun shortcutIcon(id: String, active: Boolean = false): ImageVector = when (id) {
 @Composable
 private fun PinScreen(state: LockUiState, accent: Color, now: Date, is24: Boolean) {
     val shake = remember { androidx.compose.animation.core.Animatable(0f) }
+    // קוד שגוי: השדה נזרק הצידה ומתנדנד עד שהוא נעצר - קפיץ עם ריסון נמוך
+    // ומהירות התחלתית, במקום 3 צעדים קבועים של 50ms שנראו כמו רעד מכני.
     LaunchedEffect(state.pinErrorTick) {
         if (state.pinErrorTick > 0) {
-            repeat(3) {
-                shake.animateTo(1f, tween(50)); shake.animateTo(-1f, tween(50))
-            }
-            shake.animateTo(0f, tween(50))
+            shake.snapTo(0f)
+            shake.animateTo(
+                0f,
+                androidx.compose.animation.core.spring(dampingRatio = 0.22f, stiffness = 900f),
+                initialVelocity = -30f,
+            )
         }
     }
     val lockedOut = state.lockoutSeconds > 0

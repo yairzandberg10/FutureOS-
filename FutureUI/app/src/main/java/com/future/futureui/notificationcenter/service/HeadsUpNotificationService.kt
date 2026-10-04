@@ -4,12 +4,14 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.graphics.PixelFormat
-import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
+import android.service.notification.StatusBarNotification
 import android.util.Log
 import android.view.WindowManager
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.ui.Modifier
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.platform.ComposeView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
@@ -25,17 +27,31 @@ import androidx.lifecycle.setViewTreeLifecycleOwner
 import com.future.futureui.controlcenter.service.MediaControlService
 import com.future.futureui.notificationcenter.ui.HeadsUpNotificationScreen
 import com.future.futureui.ui.theme.FutureUITheme
+import com.future.futureui.utils.FrostedBackdrop
 import com.future.futureui.utils.FutureUIActions
 
 /**
- * שירות קל-משקל שמציג באנר קופץ (heads-up) חד-פעמי כשמגיעה התראה חדשה, בלי
+ * שירות קל-משקל שמציג באנר קופץ (heads-up) כשמגיעה התראה חדשה, בלי
  * להתערב בקלט מקשים של האפליקציה שבחזית (המכשיר ללא מסך מגע, ואין סיבה
  * לגזול פוקוס מקלדת עבור באנר חולף) - ראו הערה בקובץ ה-UI המשויך.
+ *
+ * באנר אחד בכל רגע: התראה שמגיעה בזמן שבאנר מוצג מחליפה רק את התוכן שלו
+ * ([generation]) - קודם הבאנר נמחק ונבנה מחדש, וזה נראה כמו חיתוך חד.
+ *
+ * לפני שהבאנר מוצג מצלמים את רצועת המסך העליונה בשביל רקע הזכוכית
+ * (FrostedBackdrop) - חייבים לצלם לפני שהחלון שלנו מכסה אותה. אם הצילום
+ * לא חוזר תוך [FrostWaitMillis] הבאנר מוצג בלי זכוכית, כדי שהתראה לא תתעכב.
  */
 class HeadsUpNotificationService : Service(), LifecycleOwner, SavedStateRegistryOwner, ViewModelStoreOwner {
 
     companion object {
         private const val EXTRA_KEY = "notification_key"
+
+        /** כמה מחכים לצילום הזכוכית לפני שמציגים בלעדיה. */
+        private const val FrostWaitMillis = 180L
+
+        /** גובה הרצועה שמצולמת - שורת המצב, הריווח והבאנר עצמו. */
+        private const val FrostRegionDp = 170
 
         fun show(context: Context, notificationKey: String) {
             val intent = Intent(context, HeadsUpNotificationService::class.java)
@@ -59,6 +75,13 @@ class HeadsUpNotificationService : Service(), LifecycleOwner, SavedStateRegistry
 
     private lateinit var windowManager: WindowManager
     private var composeView: ComposeView? = null
+    private val mainHandler = Handler(Looper.getMainLooper())
+
+    private val current = mutableStateOf<StatusBarNotification?>(null)
+    private val generation = mutableIntStateOf(0)
+    private val frost = mutableStateOf<FrostedBackdrop.Frost?>(null)
+    private var pendingShow: Runnable? = null
+    private var latestStartId = 0
 
     private val lifecycleRegistry = LifecycleRegistry(this)
     private val savedStateRegistryController = SavedStateRegistryController.create(this)
@@ -84,24 +107,58 @@ class HeadsUpNotificationService : Service(), LifecycleOwner, SavedStateRegistry
             stopSelf(startId)
             return START_NOT_STICKY
         }
+        latestStartId = startId
         val key = intent?.getStringExtra(EXTRA_KEY)
         val sbn = key?.let { k -> MediaControlService.instance?.activeNotifications?.firstOrNull { it.key == k } }
         if (sbn == null) {
-            stopSelf(startId)
+            if (composeView == null && pendingShow == null) stopSelf(startId)
             return START_NOT_STICKY
         }
-        showBanner(sbn, startId)
+
+        current.value = sbn
+        when {
+            // באנר כבר מוצג: רק התוכן מתחלף והטיימר מתאפס
+            composeView != null -> {
+                generation.intValue++
+                shownKey = sbn.key
+            }
+            // הצילום עוד בדרך - הבאנר יוצג עם ההתראה העדכנית
+            pendingShow != null -> Unit
+            else -> {
+                generation.intValue = 0
+                frost.value = null
+                var shown = false
+                val showNow = Runnable {
+                    if (!shown) {
+                        shown = true
+                        pendingShow = null
+                        showBanner()
+                    }
+                }
+                pendingShow = showNow
+                mainHandler.postDelayed(showNow, FrostWaitMillis)
+                val regionPx = (FrostRegionDp * resources.displayMetrics.density).toInt()
+                FrostedBackdrop.capture(regionPx) { result ->
+                    if (!shown) {
+                        frost.value = result
+                        mainHandler.removeCallbacks(showNow)
+                        showNow.run()
+                    }
+                }
+            }
+        }
         return START_NOT_STICKY
     }
 
-    private fun showBanner(sbn: android.service.notification.StatusBarNotification, startId: Int) {
+    private fun showBanner() {
         try {
             removeBanner()
             // המכשיר ננעל בין פרסום ההתראה להצגה - לא מציגים תוכן מעל מסך הנעילה
             // (שיחה נכנסת היא החריג: היא חייבת להופיע)
             val st = com.future.futureui.utils.FutureUIState
+            val sbn = current.value ?: return
             if ((st.isLocked || st.isSecured) && sbn.notification.category != android.app.Notification.CATEGORY_CALL) {
-                stopSelf(startId)
+                stopSelf(latestStartId)
                 return
             }
 
@@ -121,16 +178,19 @@ class HeadsUpNotificationService : Service(), LifecycleOwner, SavedStateRegistry
                 setViewTreeViewModelStoreOwner(this@HeadsUpNotificationService)
                 setContent {
                     FutureUITheme {
+                        val sbn = current.value ?: return@FutureUITheme
                         // התראת שיחה נכנסת (CATEGORY_CALL) נשארת על המסך הרבה יותר זמן מבאנר
                         // רגיל - שיחה ממשיכה לצלצל עשרות שניות, ובאנר שנעלם אחרי 4.5 שניות
                         // בזמן שהיא עדיין מצלצלת נראה כאילו השיחה נגמרה.
                         val autoDismissMillis = if (sbn.notification.category == android.app.Notification.CATEGORY_CALL) 30000L else 4500L
                         HeadsUpNotificationScreen(
                             sbn = sbn,
+                            generation = generation.intValue,
+                            frost = frost.value,
                             autoDismissMillis = autoDismissMillis,
                             onDismissed = {
                                 removeBanner()
-                                stopSelf(startId)
+                                stopSelf(latestStartId)
                             }
                         )
                     }
@@ -143,14 +203,14 @@ class HeadsUpNotificationService : Service(), LifecycleOwner, SavedStateRegistry
             lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
 
             windowManager.addView(composeView, params)
-            shownKey = sbn.key
+            shownKey = current.value?.key
 
             val bringFrontIntent = Intent(FutureUIActions.ACTION_BRING_STATUS_BAR_FRONT)
             bringFrontIntent.setPackage(packageName)
             sendBroadcast(bringFrontIntent)
         } catch (e: Exception) {
             Log.e("HeadsUpNotification", "Error showing banner", e)
-            stopSelf(startId)
+            stopSelf(latestStartId)
         }
     }
 
@@ -166,6 +226,8 @@ class HeadsUpNotificationService : Service(), LifecycleOwner, SavedStateRegistry
     }
 
     override fun onDestroy() {
+        pendingShow?.let(mainHandler::removeCallbacks)
+        pendingShow = null
         removeBanner()
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
         store.clear()
