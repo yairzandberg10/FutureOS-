@@ -1,6 +1,5 @@
 package com.android.sistemui.notificationcenter.logic
 
-import com.android.sistemui.utils.safeText
 import android.app.Notification
 import android.content.Context
 import android.content.Intent
@@ -34,8 +33,8 @@ class NotificationCenterManager(private val context: Context) {
         val n = sbn.notification
         // Filter out ongoing or system notifications that might be noisy if desired
         // For now, show everything that has a title or text
-        val title = n.safeText(Notification.EXTRA_TITLE)
-        val text = n.safeText(Notification.EXTRA_TEXT)
+        val title = n.extras.getCharSequence(Notification.EXTRA_TITLE)
+        val text = n.extras.getCharSequence(Notification.EXTRA_TEXT)
         return !title.isNullOrBlank() || !text.isNullOrBlank()
     }
 
@@ -68,25 +67,6 @@ class NotificationCenterManager(private val context: Context) {
 
     fun toggleDnd() {
         controlManager.handleControlToggle("dnd")
-    }
-
-    /**
-     * פותח את ההתראה עצמה (ה-contentIntent שלה - השיחה, ההודעה, המייל), כמו
-     * לחיצה על התראה בטלפון רגיל. בלי contentIntent - פותח את האפליקציה.
-     * התראה עם FLAG_AUTO_CANCEL נמחקת אחרי הפתיחה, כמו במערכת.
-     */
-    fun openNotification(sbn: StatusBarNotification) {
-        val n = sbn.notification
-        val opened = n.contentIntent?.let { pi ->
-            runCatching { pi.send() }.onFailure {
-                android.util.Log.w("NotificationCenter", "contentIntent failed: ${sbn.packageName}", it)
-            }.isSuccess
-        } ?: false
-        if (!opened) launchApp(sbn.packageName)
-        if (n.flags and Notification.FLAG_AUTO_CANCEL != 0) {
-            MediaControlService.instance?.cancelNotification(sbn.key)
-            notifications.remove(sbn)
-        }
     }
 
     fun launchApp(packageName: String) {

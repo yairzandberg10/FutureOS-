@@ -145,34 +145,21 @@
             </intent-filter>
         </activity>
 
-        <!-- הגדרות מסך הנעילה - נפתח רק מאפליקציית ההגדרות (אבטחה) ב-ACTION_LOCK_SETTINGS.
-             דורש את הקוד הנוכחי לפני כל שינוי. -->
         <activity
-            android:name=".lockscreen.settings.LockSettingsActivity"
+            android:name=".SettingsActivity"
             android:exported="true"
             android:permission="com.android.sistemui.permission.SYSTEM_SETTINGS"
-            android:excludeFromRecents="true"
-            android:label="מסך נעילה"
-            android:theme="@style/Theme.FutureUI">
-            <intent-filter>
-                <action android:name="com.future.futureui.ACTION_LOCK_SETTINGS" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-        </activity>
-
-        <!-- אין הגדרות בתוך FutureUI: שורת המצב, הסגנון והרקע נשלטים מאפליקציית
-             ההגדרות (ממשק המערכת) דרך SystemUiSettingsProvider. -->
+            android:label="התאמה אישית"
+            android:theme="@style/Theme.FutureUI" />
 
         <!-- בכוונה בלי CATEGORY_LAUNCHER: FutureUI הוא SystemUI, לא אפליקציה שהמשתמש
              פותח ישירות - אין לו אייקון ברשימת האפליקציות. ACTION_MAIN נשאר כדי
-             שאפשר עדיין להפעיל אותו במפורש (adb / debugging) בלי חשיפה בלאנצ'ר.
-             אין בו מסך: הוא רק מבקש את הרשאות זמן הריצה ונסגר. -->
+             שאפשר עדיין להפעיל אותו במפורש (adb / debugging) בלי חשיפה בלאנצ'ר. -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:excludeFromRecents="true"
             android:label="@string/app_name"
-            android:theme="@style/Theme.FutureUI.Translucent"
+            android:theme="@style/Theme.FutureUI"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

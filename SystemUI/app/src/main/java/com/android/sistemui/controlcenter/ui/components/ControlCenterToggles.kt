@@ -52,7 +52,6 @@ fun TogglePill(
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
     val shape = FutureShapes.xxl
-    val accent = com.future.sharednav.theme.rememberFutureTheme().accentColor
 
     // מקש Options הפיזי נחסם ברמת המערכת ולעולם לא מגיע כ-Key.Menu לכאן - זו הדרך
     // האמיתית שהוא מפעיל את "החלפת הקיצור" הזה כשהוא ממוקד במצב עריכה.
@@ -63,7 +62,10 @@ fun TogglePill(
             .height(55.dp)
             .clip(shape)
             .focusEffect(isFocused, shape)
-            .background(if (isFocused) GlassFillFocused else GlassFill)
+            .background(Color(0x80E0E0E0))
+            .then(
+                if (isFocused) Modifier.border(2.dp, Color.LightGray, shape) else Modifier
+            )
             .padding(6.dp)
             .onKeyEvent { event ->
                 if (isEditMode && event.type == KeyEventType.KeyDown && event.key == Key.Menu) {
@@ -87,14 +89,13 @@ fun TogglePill(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(CircleShape)
-                    // דלוק = מילוי מלא בהדגשה (המצב "נבחר" של הדיזיין סיסטם), כבוי = זכוכית.
-                    .background(if (isOn) accent else GlassFill),
+                    .background(if (isOn) Color(0xFF6E6969) else Color(0xFF616161)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = if (isOn) com.future.sharednav.theme.FutureContrast.onColor(accent) else Color.White,
+                    tint = Color.White,
                     modifier = Modifier.size(18.dp)
                 )
             }
@@ -125,7 +126,6 @@ fun FocusableIcon(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    val accent = com.future.sharednav.theme.rememberFutureTheme().accentColor
 
     // מקש Options הפיזי נחסם ברמת המערכת ולעולם לא מגיע כ-Key.Menu לכאן - זו הדרך
     // האמיתית שהוא מפעיל את onMenuClick כשהאייקון הזה ממוקד.
@@ -140,7 +140,7 @@ fun FocusableIcon(
                 .size(38.dp)
                 .focusEffect(isFocused, CircleShape)
                 .clip(CircleShape)
-                .background(if (isOn) accent else if (isFocused) GlassFillFocused else GlassFill)
+                .background(if (isOn) Color(0xFF969494).copy(alpha = 0.9f) else Color(0xFF616161).copy(alpha = 0.8f))
                 .onKeyEvent { event ->
                     if (event.type == KeyEventType.KeyDown) {
                         if (event.key == Key.Menu || event.key == Key.Settings || event.key == Key.F1 || event.key == Key.Back) {
@@ -160,7 +160,7 @@ fun FocusableIcon(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = if (isOn) com.future.sharednav.theme.FutureContrast.onColor(accent) else Color.White,
+                tint = Color.White,
                 modifier = Modifier.size(20.dp)
             )
 
@@ -289,7 +289,3 @@ fun FocusableSection(
         content()
     }
 }
-
-/** זכוכית מעל הרקע המטושטש (לבן 15% / 24% בפוקוס) - במקום האפורים הכהים. */
-internal val GlassFill = Color.White.copy(alpha = 0.15f)
-internal val GlassFillFocused = Color.White.copy(alpha = 0.24f)

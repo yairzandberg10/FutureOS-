@@ -155,6 +155,7 @@ val FUTURE_OS_APPS = listOf(
 
 /** חבילת האפליקציה של FutureUI (מרכז בקרה/שורת מצב) - להתאמה אישית שלהם. */
 private const val FUTURE_UI_PACKAGE = "com.future.futureui"
+private const val FUTURE_UI_SETTINGS_ACTIVITY = "com.future.futureui.SettingsActivity"
 private const val FUTURE_UI_LOCK_SETTINGS_ACTION = "com.future.futureui.ACTION_LOCK_SETTINGS"
 
 /**
@@ -848,10 +849,15 @@ fun DisplayScreen(navController: NavController, theme: ThemeConfig, viewModel: S
                 item {
                     val context = LocalContext.current
                     SettingsCard(theme) {
-                        // ההגדרות של ממשק המערכת (שורת מצב, סגנון, רקע) נמצאות כאן, באפליקציית
-                        // ההגדרות - FutureUI עצמו כבר לא מחזיק מסך הגדרות משלו.
-                        SettingItem("ממשק המערכת", "שורת מצב וסגנון", FutureIcons.Widgets, theme) {
-                            navController.navigate(Screen.SystemUi.route)
+                        // FutureUI (מרכז בקרה, שורת מצב) הוא SystemUI בלי אייקון
+                        // ברשימת האפליקציות - בלי הפריט הזה אין דרך להגיע להגדרות שלו
+                        // מלבד קוד ה-PIN שקבור במסך "אבטחה" (ראו SecurityScreen).
+                        SettingItem("ממשק המערכת", "מרכז בקרה ושורת מצב", FutureIcons.Widgets, theme) {
+                            safeStartActivity(
+                                context,
+                                Intent().setClassName(FUTURE_UI_PACKAGE, FUTURE_UI_SETTINGS_ACTIVITY),
+                                "FutureUI לא מותקן על המכשיר"
+                            )
                         }
                     }
                 }
@@ -1019,11 +1025,6 @@ fun SystemUiScreen(navController: NavController, theme: ThemeConfig, viewModel: 
                         SettingDivider(theme)
                         SettingSwitch("שעון 24 שעות", "17:00 במקום 5:00", settings.use24HourClock, {
                             com.future.settings.theme.SystemUiSettingsClient.setUse24HourClock(context, it); reload()
-                        }, theme)
-                        SettingDivider(theme)
-                        // עבר לכאן מ"התאמה אישית" שהייתה בתוך FutureUI.
-                        SettingSwitch("הסתר את שורת המצב של אנדרואיד", "דורש root", settings.suppressSystemBars, {
-                            com.future.settings.theme.SystemUiSettingsClient.setSuppressSystemBars(context, it); reload()
                         }, theme)
                     }
                 }

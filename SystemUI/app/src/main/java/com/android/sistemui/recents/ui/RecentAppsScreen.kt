@@ -216,9 +216,7 @@ fun RecentAppsScreen(
 private fun RecentAppCard(app: RecentAppInfo, snapshot: ImageBitmap?, isFocused: Boolean, modifier: Modifier = Modifier) {
     val shape = RoundedCornerShape(FutureShapes.radiusXl)
     val scale by animateFloatAsState(if (isFocused) 1.03f else 1f, label = "recentCardScale")
-    // גודל קבוע: אייקון של אפליקציה זרה יכול להצהיר על גודל עצום, ו-toBitmap() בגודל
-    // המקורי היה מפיל את FutureUI (ואיתו את מסך הנעילה) מחוסר זיכרון
-    val icon = remember(app.packageName) { app.icon.toBitmap(96, 96).asImageBitmap() }
+    val icon = remember(app.packageName) { app.icon.toBitmap().asImageBitmap() }
     val tint = Color(app.tint)
 
     Column(

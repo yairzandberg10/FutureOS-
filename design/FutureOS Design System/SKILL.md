@@ -19,5 +19,4 @@ If the user invokes this skill without any other guidance, ask them what they wa
 4. **Accent is the only chromatic decision, and it defaults to white.** Never rely on the accent
    being colourful.
 5. **Depth is tone, not shadow.** Two real shadows exist in the whole system, both on the settings
-   card. The only blur is on the system-shell panels (Control Center, Notification Center), never in
-   an app. No gradients, no imagery, no emoji.
+   card. No gradients, no blur, no imagery, no emoji.

@@ -16,8 +16,7 @@ data class SystemUiSettings(
     val use24HourClock: Boolean,
     val suppressSystemBars: Boolean,
     // "classic" / "quiet" / "capsules" / "centered" - ר' StatusBarLayoutManager ב-FutureUI
-    // ברירת המחדל של FutureUI היא קפסולות (שורת המצב הדינמית)
-    val barStyle: String = "capsules"
+    val barStyle: String = "classic"
 )
 
 object SystemUiSettingsClient {

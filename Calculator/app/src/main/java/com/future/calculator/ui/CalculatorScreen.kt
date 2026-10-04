@@ -101,11 +101,10 @@ fun CalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
         if (showHistory) return@LaunchedEffect
         runCatching { if (calcMode == CalculatorMode.STANDARD) rootFocus.requestFocus() else focusRequester.requestFocus() }
     }
-    // "*" קצר = C, "*" ארוך = נקודה עשרונית (ל-* ול-# יש כבר תפקיד, והנקודה
-    // צריכה מקש פיזי כלשהו).
-    var starHeld by remember { mutableStateOf(false) }
-    // "#" קצר = אחוז, "#" ארוך = מעבר בין רגיל למדעי (הסרגל התחתון) - אותו דפוס כמו "*".
-    var poundHeld by remember { mutableStateOf(false) }
+    // * ו-# נצרכים ברמת המערכת (החזקה ארוכה = מרכז בקרה / מרכז התראות) ולחיצה
+    // קצרה מגיעה רק כשידור - אין "* ארוך" או "# ארוך" באפליקציה. לכן * = נקודה
+    // עשרונית (אין לה שום מקש אחר) ו-# = אחוז; C בתפריט Options, ו-BACK אחרי
+    // תוצאה מנקה. המעבר למדעי - בתפריט ובסרגל התחתון. (המאזינים - אחרי inputDot/onPercent.)
     // מקש Options הפיזי נחסם ברמת המערכת ולעולם לא מגיע כ-Key.Menu לאפליקציה -
     // התפריט נפתח באמת רק דרך השידור הגלובלי (ר' onOptionsKeyPress).
     com.future.sharednav.nav.onOptionsKeyPress { showMenu = true }
@@ -131,6 +130,10 @@ fun CalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
     fun onNegate() { state = CalculatorEngine.negate(state) }
     fun toRad(x: Double) = if (degrees) Math.toRadians(x) else x
     fun fromRad(x: Double) = if (degrees) Math.toDegrees(x) else x
+
+    // * = נקודה עשרונית, # = אחוז - דרך השידור של FutureUI (ר' ההערה ליד המשתנים למעלה).
+    com.future.sharednav.nav.onStarKeyPress { if (!showHistory && !showMenu) inputDot() }
+    com.future.sharednav.nav.onPoundKeyPress { if (!showHistory && !showMenu) onPercent() }
 
     /** BACK במחשבון מוחק. רק כשאין מה למחוק הוא יוצא מהאפליקציה. */
     fun onBackKey() {
@@ -176,26 +179,14 @@ fun CalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
                 // הזה "למטה" ברשימה היה הופך לפעולת חיסור.
                 if (showHistory) return@onKeyEvent false
                 val native = event.nativeKeyEvent
-                // "*": קצר = C (בשחרור), מוחזק = נקודה (בחזרה הראשונה של המקש).
+                // KEYCODE_STAR/POUND מגיעים לכאן רק בלי FutureUI (אמולטור, מקלדת
+                // חיצונית) - במכשיר הם מגיעים כשידור (ר' onStarKeyPress למעלה).
                 if (native.keyCode == android.view.KeyEvent.KEYCODE_STAR) {
-                    if (event.type == KeyEventType.KeyDown) {
-                        if (native.repeatCount == 0) starHeld = false
-                        else if (!starHeld) { starHeld = true; inputDot() }
-                    } else if (event.type == KeyEventType.KeyUp && !starHeld) {
-                        onClear()
-                    }
+                    if (event.type == KeyEventType.KeyUp) inputDot()
                     return@onKeyEvent true
                 }
                 if (native.keyCode == android.view.KeyEvent.KEYCODE_POUND) {
-                    if (event.type == KeyEventType.KeyDown) {
-                        if (native.repeatCount == 0) poundHeld = false
-                        else if (!poundHeld) {
-                            poundHeld = true
-                            toggleMode()
-                        }
-                    } else if (event.type == KeyEventType.KeyUp && !poundHeld) {
-                        onPercent()
-                    }
+                    if (event.type == KeyEventType.KeyUp) onPercent()
                     return@onKeyEvent true
                 }
                 if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
@@ -328,7 +319,7 @@ fun CalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
             }
 
             // סרגל תחתון בין רגיל למדעי. כמו בכל המערכת הוא לא מקבל פוקוס:
-            // מחליפים לשונית ב-# ארוך, או ימינה מקצה הרשת המדעית.
+            // מחליפים לשונית בתפריט Options, או ימינה מקצה הרשת המדעית.
             FutureBottomNav(
                 items = listOf(
                     FutureNavItem("רגיל", FutureIcons.Calculate),
@@ -360,6 +351,10 @@ fun CalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
                     calcMode = if (calcMode == CalculatorMode.SCIENTIFIC) CalculatorMode.STANDARD else CalculatorMode.SCIENTIFIC
                 },
                 onDismiss = { showMenu = false },
+                onClear = {
+                    showMenu = false
+                    onClear()
+                },
                 onShowHistory = {
                     showMenu = false
                     showHistory = true
@@ -448,10 +443,10 @@ private fun CalcPadOp(op: CalcOp, pendingOp: CalcOp?, theme: FutureTheme, modifi
 @Composable
 private fun CalcKeyLegend(theme: FutureTheme) {
     val items = listOf(
-        "C" to "*",
-        "." to "* ארוך",
+        "." to "*",
         "%" to "#",
         "⌫" to "חזור",
+        "C" to "תפריט",
     )
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = FutureDimens.screenPadding),
@@ -548,12 +543,14 @@ private fun CalculatorOptionsMenu(
     scientific: Boolean,
     onToggleMode: () -> Unit,
     onDismiss: () -> Unit,
+    onClear: () -> Unit,
     onShowHistory: () -> Unit,
     onCopyResult: () -> Unit,
     onClearHistory: () -> Unit,
 ) {
     FutureOptionsMenu(theme = theme, onDismissRequest = onDismiss, header = "מחשבון") {
         FutureMenuRow(if (scientific) "מחשבון רגיל" else "מחשבון מדעי", FutureIcons.Functions, theme, onToggleMode)
+        FutureMenuRow("נקה (C)", FutureIcons.Cancel, theme, onClear)
         FutureMenuRow("היסטוריה", FutureIcons.History, theme, onShowHistory)
         FutureMenuRow("העתק תוצאה", FutureIcons.ContentCopy, theme, onCopyResult)
         FutureMenuRow("נקה היסטוריה", FutureIcons.Delete, theme, onClearHistory, destructive = true)

@@ -15,7 +15,7 @@ export interface ActionGridItem {
   /** Overrides the glyph color — e.g. the favorite color on a starred item. */
   color?: string;
   /** Key legend: the cell only reminds the user what a physical key does — glyph = the operation,
-   *  label = the key name ("*", "* ארוך", "#", "חזור"). It takes no focus and cannot be activated.
+   *  label = the key name ("*", "#", "חזור", "תפריט"). * and # are short presses only: their long press belongs to the shell (control / notification center). It takes no focus and cannot be activated.
    *  Overrides the grid-level `legend` for this cell. */
   legend?: boolean;
 }

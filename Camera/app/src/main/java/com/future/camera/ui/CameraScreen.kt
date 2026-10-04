@@ -439,6 +439,18 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
         captureMode = CaptureMode.entries[(captureMode.ordinal + 1) % CaptureMode.entries.size]
     }
 
+    // * ו-# נצרכים ברמת המערכת ומגיעים לאפליקציה רק כשידור של לחיצה קצרה (ר'
+    // onStarKeyPress) - ה-KEYCODE_STAR/POUND ב-cameraKeys נשארים רק למקלדת בלי FutureUI.
+    com.future.sharednav.nav.onStarKeyPress {
+        if (!showSettings && !showViewer && !showFilters) nextMode()
+    }
+    com.future.sharednav.nav.onPoundKeyPress {
+        if (!showSettings && !showViewer && !showFilters) {
+            update { it.copy(flashMode = nextFlash(it.flashMode)) }
+            snackbar.show(flashLabel(options.flashMode))
+        }
+    }
+
     LaunchedEffect(countdownRemaining) {
         val remaining = countdownRemaining ?: return@LaunchedEffect
         if (remaining <= 0) {

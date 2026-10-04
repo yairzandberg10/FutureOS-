@@ -46,8 +46,7 @@ class SystemUiSettingsProvider : ContentProvider() {
                 if (statusBarPrefs.getBoolean(COL_SHOW_BLUETOOTH, true)) 1 else 0,
                 if (statusBarPrefs.getBoolean(COL_USE_24_HOUR_CLOCK, true)) 1 else 0,
                 if (statusBarPrefs.getBoolean(COL_SUPPRESS_SYSTEM_BARS, true)) 1 else 0,
-                // אותה ברירת מחדל כמו StatusBarLayoutManager.getBarStyle - אחרת ההגדרות יציגו סגנון אחר מהשורה עצמה
-                statusBarPrefs.getString(COL_BAR_STYLE, StatusBarLayoutManager.STYLE_CAPSULES),
+                statusBarPrefs.getString(COL_BAR_STYLE, StatusBarLayoutManager.STYLE_CLASSIC),
                 if (com.future.futureui.utils.FutureUIState.isSecured) 1 else 0,
             )
         )

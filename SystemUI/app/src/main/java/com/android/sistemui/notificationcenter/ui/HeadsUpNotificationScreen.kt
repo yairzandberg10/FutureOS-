@@ -1,6 +1,5 @@
 package com.android.sistemui.notificationcenter.ui
 
-import com.android.sistemui.utils.safeText
 import com.future.sharednav.theme.FutureMotion
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
@@ -80,8 +79,8 @@ fun HeadsUpNotificationScreen(
     }
 
     val n = sbn.notification
-    val title = n.safeText(Notification.EXTRA_TITLE)?.toString() ?: ""
-    val text = n.safeText(Notification.EXTRA_TEXT)?.toString() ?: ""
+    val title = n.extras.getCharSequence(Notification.EXTRA_TITLE)?.toString() ?: ""
+    val text = n.extras.getCharSequence(Notification.EXTRA_TEXT)?.toString() ?: ""
 
     val appName = remember(sbn.packageName) {
         try {

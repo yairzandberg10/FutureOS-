@@ -55,11 +55,11 @@ class ThemeProvider : ContentProvider() {
         if (values.containsKey(COL_IS_DARK_MODE)) {
             editor.putBoolean(COL_IS_DARK_MODE, values.getAsInteger(COL_IS_DARK_MODE) == 1)
         }
-        // ערך לא תקין (null / NaN / ענק) היה מפיל את התהליך של FutureUI - ואיתו את
-        // שירותי הנגישות ומסך הנעילה - או שובר את הטקסט בכל האפליקציות.
-        values.getAsInteger(COL_PRIMARY_COLOR)?.let { editor.putInt(COL_PRIMARY_COLOR, it) }
-        values.getAsFloat(COL_FONT_SIZE_MULTIPLIER)?.takeIf { it.isFinite() }?.let {
-            editor.putFloat(COL_FONT_SIZE_MULTIPLIER, it.coerceIn(0.7f, 2.0f))
+        if (values.containsKey(COL_PRIMARY_COLOR)) {
+            editor.putInt(COL_PRIMARY_COLOR, values.getAsInteger(COL_PRIMARY_COLOR))
+        }
+        if (values.containsKey(COL_FONT_SIZE_MULTIPLIER)) {
+            editor.putFloat(COL_FONT_SIZE_MULTIPLIER, values.getAsFloat(COL_FONT_SIZE_MULTIPLIER))
         }
         editor.apply()
         // מודיע לכל מי שרשום כ"צופה" ב-Uri הזה (למשל ContentObserver) שהעיצוב השתנה

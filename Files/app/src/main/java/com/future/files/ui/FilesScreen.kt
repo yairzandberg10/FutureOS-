@@ -154,6 +154,13 @@ fun FilesScreen(
         selectedEntries = emptySet()
     }
 
+    // # נצרך ברמת המערכת ומגיע רק כשידור (ר' onPoundKeyPress) - ה-Key.Pound בשורות
+    // נשאר רק למקלדת בלי FutureUI. בוחר או מבטל את הפריט הממוקד.
+    com.future.sharednav.nav.onPoundKeyPress {
+        if (!hasAccess || menuEntry != null || generalMenu || renameEntry != null || detailsEntry != null || showNewFolder) return@onPoundKeyPress
+        focusedEntry?.let { f -> entries.firstOrNull { it.file == f.file } }?.let { toggleSelection(it) }
+    }
+
     // Reset selection when changing directory
     LaunchedEffect(currentDir) {
         clearSelection()

@@ -1,7 +1,6 @@
 /* FutureOS colors. Source: FutureTheme.kt (core + app extensions),
    ThemeConfig.kt (glassColor, dividerColor), SettingsScreens.kt:894 (accent choices),
-   plus the system-shell panels (control center, notification center), status capsules
-   and home-screen widget. Dark is the default theme; .fos-light scopes the light theme. */
+   plus the home-screen widget. Dark is the default theme; .fos-light scopes the light theme. */
 :root {
   /* --- accent palette: the only user-selectable color in the whole system --- */
   --fos-accent-white: #FFFFFF;
@@ -55,31 +54,13 @@
   --fos-switch-track-off: #C8C8CC;
   --fos-headsup-bg: #E61C1C1E;
 
-  /* --- system shell: control center, notification center, status capsules, widget ---
-     These surfaces sit on the user's wallpaper, so they are theme-independent (same in
-     light and dark) and their ink is always white. App screens never use any of them. */
-  --fos-widget-bg: #E61C1C1E;       /* home-screen widget: #1C1C1E at 90% */
-  --fos-capsule-bg: #8C1C1C1E;      /* status-bar capsule: #1C1C1E at 55% */
-  --fos-hairline-dark: #FFFFFF26;   /* 0.5dp hairline on a shell surface: white at 15% */
-  --fos-shell-ink: #FFFFFF;         /* text, icons and the focus ring on a shell surface */
-  --fos-shell-ink-70: #FFFFFFB2;    /* status-bar device glyphs and battery frame */
-  --fos-shell-ink-60: #FFFFFF99;    /* widget title and subtitle */
-  --fos-shell-ink-sub: #CCCCCC;     /* LightGray: date, app name and body on a panel */
-  --fos-shell-ink-20: #FFFFFF33;    /* disc behind the app icon on a notification card */
-  --fos-shell-ink-12: #FFFFFF1F;    /* focused option row inside a notification card */
-  --fos-shell-success: #32D74B;     /* call capsule fill, charging bolt: always the dark-theme success */
-  --fos-danger-on-glass: #FF6B6B;   /* destructive row on a panel: always the dark-theme danger */
-  --fos-shell-text-shadow: 0 0 6px rgba(0, 0, 0, 0.35); /* faint legibility shadow on text over the blur */
-
-  /* --- shell glass: the only blur in FutureOS (capsules and widget are translucent, not blurred) ---
-     A shell panel draws a blurred snapshot of the screen behind it (40dp = 80px radius)
-     under a 20% white wash; the elements on it are white at 15%, 24% when focused, with
-     a 2dp white ring. An "on" toggle is the exception: solid accent fill, --fos-on-accent
-     ink. --fos-glass (above) is the opaque raised tone for apps and is a different thing. */
-  --fos-glass-fill: rgba(255, 255, 255, 0.15);
-  --fos-glass-fill-focused: rgba(255, 255, 255, 0.24);
-  --fos-backdrop-blur: 80px; /* @kind other */   /* 40dp blur radius behind a shell panel */
-  --fos-backdrop-wash: rgba(255, 255, 255, 0.20);
+  /* --- home-screen widget (FutureContentWidget, future_widget_background.xml) ---
+     The widget sits on the user's wallpaper, so it is theme-independent (same in light
+     and dark) and its ink is always white. App screens never use these. */
+  --fos-widget-bg: #E61C1C1E;       /* #1C1C1E at 90% */
+  --fos-hairline-dark: #FFFFFF26;   /* 0.5dp hairline: white at 15% */
+  --fos-shell-ink: #FFFFFF;         /* value text and app icon */
+  --fos-shell-ink-60: #FFFFFF99;    /* title and subtitle */
 
   /* --- semantic aliases --- */
   --fos-text-primary: var(--fos-text);

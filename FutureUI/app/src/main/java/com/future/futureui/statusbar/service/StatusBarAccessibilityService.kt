@@ -187,8 +187,6 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
 
     override fun onServiceConnected() {
         super.onServiceConnected()
-        // מרכז הבקרה ומרכז ההתראות מצלמים דרכנו את הרקע המטושטש (ר' ScreenBackdrop).
-        com.future.futureui.utils.ScreenBackdrop.screenshotService = this
         if (layoutManager?.getSuppressSystemBars() == true) {
             suppressSystemBars()
         }
@@ -718,9 +716,6 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
     }
 
     override fun onDestroy() {
-        if (com.future.futureui.utils.ScreenBackdrop.screenshotService === this) {
-            com.future.futureui.utils.ScreenBackdrop.screenshotService = null
-        }
         try {
             hideVolumeOverlay()
             hideRecentApps()

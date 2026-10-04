@@ -13,8 +13,8 @@ The grid of action cells that carries a screen's actions: four across under a tr
 
 {/* key legend: non-focusable, glyph = the operation, label = the physical key */}
 <ActionGrid columns={4} height={112} legend items={[
-  { glyph: "C", label: "*" }, { glyph: ".", label: "* ארוך" },
-  { glyph: "%", label: "#" }, { glyph: "⌫", label: "חזור" }
+  { glyph: ".", label: "*" }, { glyph: "%", label: "#" },
+  { glyph: "⌫", label: "חזור" }, { glyph: "C", label: "תפריט" }
 ]} />
 ```
 

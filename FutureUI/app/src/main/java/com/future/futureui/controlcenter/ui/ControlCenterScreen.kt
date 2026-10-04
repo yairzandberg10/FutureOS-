@@ -301,10 +301,10 @@ fun ControlCenterScreen(
                                             .fillMaxWidth()
                                             .animateContentSize(animationSpec = tween(FutureMotion.DurationSlow))
                                             .clip(FutureShapes.xxl)
-                                            .background(GlassFill)
+                                            .background(Color(0x80E0E0E0))
                                             .border(
                                                 width = if (isGridEditing) 2.dp else 0.5.dp, 
-                                                color = if (isGridEditing) Color.White else Color.White.copy(alpha = 0.15f), 
+                                                color = if (isGridEditing) Color.Red else Color.White.copy(alpha = 0.5f), 
                                                 shape = FutureShapes.xxl
                                             )
                                             .onKeyEvent { event ->
@@ -450,7 +450,7 @@ fun ControlCenterScreen(
                                                 contentAlignment = Alignment.Center
                                             ) {
                                                 Box(modifier = Modifier.width(36.dp).height(4.dp).clip(CircleShape)
-                                                    .background(if (isIndicatorFocused) Color.White else Color.White.copy(alpha = 0.4f)))
+                                                    .background(if (isIndicatorFocused) Color(0xFF525252) else Color(0xFFBDBDBD)))
                                             }
                                         }
                                     }
@@ -462,8 +462,8 @@ fun ControlCenterScreen(
                                 }
                                 "sliders" -> {
                                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        SliderBar(icon = Icons.Rounded.Brightness6, label = "בהירות", value = manager.brightnessLevel, onValueChange = { manager.setBrightness(it) }, isDarkBackground = isDarkBackground)
-                                        SliderBar(icon = Icons.AutoMirrored.Rounded.VolumeUp, label = "עוצמת קול", value = manager.volumeLevel, onValueChange = { manager.setVolume(it) }, isDarkBackground = isDarkBackground)
+                                        SliderBar(icon = Icons.Rounded.Brightness6, value = manager.brightnessLevel, onValueChange = { manager.setBrightness(it) }, isDarkBackground = isDarkBackground)
+                                        SliderBar(icon = Icons.AutoMirrored.Rounded.VolumeUp, value = manager.volumeLevel, onValueChange = { manager.setVolume(it) }, isDarkBackground = isDarkBackground)
                                     }
                                 }
                                 "bottom_toggles" -> {

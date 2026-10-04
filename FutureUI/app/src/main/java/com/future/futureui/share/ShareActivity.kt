@@ -182,10 +182,8 @@ class ShareActivity : ComponentActivity() {
     private fun buildAppTargets(send: Intent): List<Target> {
         val pm = packageManager
         val prefs = getSharedPreferences("share", Context.MODE_PRIVATE)
-        // רק יעדים של המערכת עצמה: אפליקציות FutureOS (הודעות, פתקים, בלוטות'...)
-        // ושליחה בבלוטות' של אנדרואיד - לא כלים חיצוניים שהותקנו במכשיר.
         val resolved = pm.queryIntentActivities(send, PackageManager.MATCH_DEFAULT_ONLY)
-            .filter { it.activityInfo.packageName != packageName && isSystemTarget(it.activityInfo.packageName) }
+            .filter { it.activityInfo.packageName != packageName }
         return resolved.map { ri ->
             val component = ComponentName(ri.activityInfo.packageName, ri.activityInfo.name)
             val key = component.flattenToShortString()
@@ -214,9 +212,6 @@ class ShareActivity : ComponentActivity() {
             )
         }.sortedWith(compareByDescending<Target> { prefs.getLong(it.key, 0L) }.thenBy { it.label })
     }
-
-    private fun isSystemTarget(pkg: String): Boolean =
-        pkg.startsWith("com.future.") || pkg in SYSTEM_SHARE_PACKAGES
 
     @Composable
     private fun ShareSheet(
@@ -446,8 +441,6 @@ class ShareActivity : ComponentActivity() {
 
     private companion object {
         const val COLUMNS = 4
-        /** יעדי שיתוף של אנדרואיד שהם חלק מהמערכת ולא אפליקציה חיצונית. */
-        val SYSTEM_SHARE_PACKAGES = setOf("com.android.bluetooth")
         /** אותו משטח של תפריט הכיבוי (PowerMenuScreen). */
         val SheetColor = Color(0xEE1C1C1E)
     }

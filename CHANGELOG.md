@@ -4,7 +4,7 @@ This repo has no carried-over git history (see root [README](README.md)), so thi
 
 ## Unreleased
 
-### Fix pass, 1 October: 12 apps, real widgets, blurred system panels
+### Fix pass, 1 October: 11 apps and real widgets
 
 - **Assistant.** Whisper no longer repeats the same sentence over and over:
   one segment per command, no carried context, non-speech tokens suppressed, a
@@ -25,9 +25,9 @@ This repo has no carried-over git history (see root [README](README.md)), so thi
 - **Calculator.** Scientific keys are design-system ActionGrid cells, with
   inverse trig, nth root, 10ˣ, eˣ, ∛, x³, |x|, ±, mod and a DEG/RAD switch.
   The standard-mode legend above the D-pad is ActionGrid cells (operation +
-  physical key). A bottom bar switches between standard and scientific (long
-  `#`, or right from the edge of the scientific grid). The home-screen widget
-  shows the last result.
+  physical key). A bottom bar switches between standard and scientific (the
+  Options menu, or right from the edge of the scientific grid). The home-screen
+  widget shows the last result.
 - **Calendar.** Recurring events: none / daily / weekly / monthly / yearly,
   saved as an RRULE with DURATION (no DTEND), as the provider requires.
 - **Camera.** It was slow because the camera was unbound and re-bound on every
@@ -67,25 +67,19 @@ This repo has no carried-over git history (see root [README](README.md)), so thi
   tools, keyboard state, tip of the day). The launcher refreshes the widgets on
   screen when it comes back. Wallpapers with people in them were removed from
   the built-in catalog (Wallpapers and Settings).
-- **FutureUI.** The control center and notification center draw a blurred
-  screenshot of the screen behind them (window blur is disabled on the device,
-  so `FLAG_BLUR_BEHIND` did nothing and the panels looked black), and their
-  black and dark-grey elements are now glass. OK on a notification opens it
-  (its contentIntent) and closes the center; long OK expands it. Notification
-  options are design-system menu rows. Sliders are the design system's slider
-  (new shared `FutureSlider`). Sharing offers only FutureOS apps and system
-  Bluetooth. FutureUI has no settings screens any more: status-bar settings
-  live in Settings > System UI. The status bar's capsules are translucent over
-  a transparent bar and the first capsule is dynamic (call, charging, new
-  notification, music); capsules is the default style.
+- **`*` and `#` in Calculator, Camera and Files.** FutureUI consumes both keys
+  system-wide (long press opens the control / notification center) and sends a
+  short press only as a broadcast, so `KEYCODE_STAR`/`KEYCODE_POUND` handlers
+  never ran on the device. These screens now use `onStarKeyPress` /
+  `onPoundKeyPress`. Calculator: `*` = decimal point, `#` = percent, C moved to
+  the Options menu (a long press can't reach an app). Camera: `*` = capture mode,
+  `#` = flash. Files: `#` selects the focused item.
 - **Shared library.** Restores `FutureUIActions.PERMISSION_SYSTEM`, which
-  `KeyPressBroadcasts` used but was never committed (nothing compiled).
-- **SystemUI** is synced with FutureUI (same changes, `com.android.sistemui`
-  package).
-- **Design system.** New: glass on a blurred backdrop (tokens, GlassPanel and
-  a guideline page), Widget, StatusCapsule, NotificationCard, a slider icon,
-  ActionGrid glyph cells and a non-focusable legend, and the TimePicker as two
-  wheels.
+  `KeyPressBroadcasts` used but was never committed (nothing compiled), and
+  Messages' `FutureChat.syncBlocking`, which `ChatPushService` calls.
+- **Design system.** Widget, ActionGrid glyph cells and the non-focusable key
+  legend, and the TimePicker as two wheels; manifest, bundle and adherence rules
+  updated.
 
 ### New lock screen: PIN, face unlock, One UI / iOS style customisation
 

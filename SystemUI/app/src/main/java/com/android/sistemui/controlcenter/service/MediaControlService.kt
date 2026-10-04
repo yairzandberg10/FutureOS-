@@ -1,6 +1,5 @@
 package com.android.sistemui.controlcenter.service
 
-import com.android.sistemui.utils.safeText
 import android.app.NotificationManager
 import android.content.Intent
 import android.service.notification.NotificationListenerService
@@ -54,31 +53,17 @@ class MediaControlService : NotificationListenerService() {
         }
     }
 
-    /** שיחה שנענתה/נדחתה מוחקת את התראת הצלצול - הבאנר שלה נסגר מיד במקום להישאר 30 שניות. */
-    override fun onNotificationRemoved(sbn: StatusBarNotification) {
-        super.onNotificationRemoved(sbn)
-        HeadsUpNotificationService.dismiss(this, sbn.key)
-    }
-
     /** מסנן התראות שלא צריכות להציג באנר קופץ: ההתראות של האפליקציה עצמה,
      * התראות "מתמשכות" (למשל התקדמות נגן מוזיקה, שירותים ברקע), והכל כשה-DND פעיל. */
     private fun shouldShowHeadsUp(sbn: StatusBarNotification): Boolean {
         if (sbn.packageName == packageName) return false
-        // במסך הנעילה ההתראה מופיעה ברשימה שלו (עם הגדרת הפרטיות) - לא כבאנר
-        if (com.android.sistemui.utils.FutureUIState.isLocked) return false
         val n = sbn.notification
-        // נעול ומסך הנעילה פינה מקום לשיחה/מעורר: רק שיחות מקבלות באנר, לא תוכן הודעות
-        if (com.android.sistemui.utils.FutureUIState.isSecured && n.category != android.app.Notification.CATEGORY_CALL) return false
         // שיחה נכנסת היא "מתמשכת" (isOngoing) לכל אורך הצלצול, אבל היא בדיוק ההפך
         // מהתראות מתמשכות רגילות (התקדמות נגן וכו') שהמסנן הזה נועד לחסום - היא
         // חייבת להופיע כבאנר, אחרת אין שום אינדיקציה לשיחה נכנסת מעל אפליקציה אחרת.
-        // רק שיחה *מצלצלת* (עם fullScreenIntent): גם התראת "מחייג…"/"שיחה פעילה" של
-        // החייגן היא CATEGORY_CALL ומתמשכת, והיא קפצה כבאנר של 30 שניות עם "טלפון = מענה"
-        // בכל שיחה יוצאת ובכל שינוי מצב.
-        val isRingingCall = n.category == android.app.Notification.CATEGORY_CALL && n.fullScreenIntent != null
-        if (sbn.isOngoing && !isRingingCall) return false
-        val title = n.safeText(android.app.Notification.EXTRA_TITLE)
-        val text = n.safeText(android.app.Notification.EXTRA_TEXT)
+        if (sbn.isOngoing && n.category != android.app.Notification.CATEGORY_CALL) return false
+        val title = n.extras.getCharSequence(android.app.Notification.EXTRA_TITLE)
+        val text = n.extras.getCharSequence(android.app.Notification.EXTRA_TEXT)
         if (title.isNullOrBlank() && text.isNullOrBlank()) return false
         val nm = getSystemService(NotificationManager::class.java)
         if (nm != null && nm.currentInterruptionFilter != NotificationManager.INTERRUPTION_FILTER_ALL) return false

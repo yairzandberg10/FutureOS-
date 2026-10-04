@@ -1,4 +1,4 @@
-<!-- @dsCard group="Components" viewport="700x1980" name="Navigation" subtitle="Bottom nav, soft-key bar, menu-key overlay, view tabs, dynamic status capsule" -->
+<!-- @dsCard group="Components" viewport="700x1220" name="Navigation" subtitle="Bottom nav, soft-key bar, menu-key overlay, view tabs" -->
 <!DOCTYPE html><html lang="he" dir="rtl"><head>
 <meta charset="utf-8">
 <title>FutureOS · Navigation</title>
@@ -14,28 +14,8 @@
 a{color:var(--fos-accent)}a:hover{opacity:.7}</style>
 </head><body><div id="root"></div>
 <script type="text/babel">
-const { BottomNav, OptionsMenu, TabRow, SoftKeyBar, StatusCapsule, FosIcon } = window.FutureOSDesignSystem_3ab611;
+const { BottomNav, OptionsMenu, TabRow, SoftKeyBar } = window.FutureOSDesignSystem_3ab611;
 const L = ({children}) => <div className="lbl">{children}</div>;
-const WALL = "radial-gradient(circle at 18% 12%, #e0894a 0, transparent 46%), radial-gradient(circle at 88% 28%, #4b8fc4 0, transparent 52%), radial-gradient(circle at 36% 92%, #8a52b0 0, transparent 56%), #2a3350";
-const Device = () => <StatusCapsule>
-  <FosIcon name="wifi" size={28} color="var(--fos-shell-ink-70)" />
-  <FosIcon name="signal_cellular_alt" size={28} color="var(--fos-shell-ink-70)" />
-  <span style={{fontSize:"var(--fos-size-label)",fontWeight:"var(--fos-weight-medium)"}}>76%</span>
-  <FosIcon name="battery_full" size={28} color="var(--fos-shell-ink)" />
-</StatusCapsule>;
-const Bar = ({children}) => <div style={{height:56,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 16px"}}>{children}</div>;
-const STATES = [
-  {state:"idle",time:"07:30",apps:["chat","email"]},
-  {state:"call",label:"1:24"},
-  {state:"charging",label:"בטעינה · 76%"},
-  {state:"notification",icon:"chat",label:"הודעות"},
-  {state:"media",label:"בוקר טוב"}
-];
-function Cycle(){
-  const [i,setI] = React.useState(0);
-  React.useEffect(()=>{const t=setInterval(()=>setI(n=>(n+1)%STATES.length),2000);return ()=>clearInterval(t);},[]);
-  return <Bar><StatusCapsule {...STATES[i]} /><Device /></Bar>;
-}
 function App(){return <div className="wrap">
   <L>TabRow · selected / focused / idle</L>
   <div style={{margin:"0 -20px"}}><TabRow items={["יום","שבוע","חודש"]} selected={0} focusedIndex={1} /></div>
@@ -52,13 +32,6 @@ function App(){return <div className="wrap">
       {label:"שתף",icon:"share"},{label:"שנה שם",icon:"edit"},{label:"העתק",icon:"content_copy"},
       {label:"פרטים",icon:"info"},{label:"מחק",icon:"delete",destructive:true}]} />
   </div>
-  <L>StatusCapsule · idle, call, charging, notification, media, and idle with more than four apps — over a transparent bar</L>
-  <div style={{background:WALL,borderRadius:"var(--fos-radius-card)",padding:"12px 0",display:"flex",flexDirection:"column",gap:8}}>
-    {STATES.map(s => <Bar key={s.state}><StatusCapsule {...s} /><Device /></Bar>)}
-    <Bar><StatusCapsule time="07:30" apps={["chat","email","calendar_today","alarm","call_missed"]} /><Device /></Bar>
-  </div>
-  <L>StatusCapsule · widening on the standard 200ms easing, no bounce — cycles every two seconds (in the app a call lasts as long as the call, charging and a new notification about 3 seconds, media while it plays)</L>
-  <div style={{background:WALL,borderRadius:"var(--fos-radius-card)",padding:"12px 0"}}><Cycle /></div>
 </div>}
 ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script></body></html>

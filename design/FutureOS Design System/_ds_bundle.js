@@ -1,4 +1,4 @@
-/* @ds-bundle: {"format":4,"namespace":"FutureOSDesignSystem_3ab611","components":[{"name":"ActionGrid","sourcePath":"components/core/ActionGrid.jsx"},{"name":"Avatar","sourcePath":"components/core/Avatar.jsx"},{"name":"Button","sourcePath":"components/core/Button.jsx"},{"name":"Card","sourcePath":"components/core/Card.jsx"},{"name":"Divider","sourcePath":"components/core/Divider.jsx"},{"name":"EmptyState","sourcePath":"components/core/EmptyState.jsx"},{"name":"FosIcon","sourcePath":"components/core/FosIcon.jsx"},{"name":"FOS_ICON_NAMES","sourcePath":"components/core/FosIcon.jsx"},{"name":"Icon","sourcePath":"components/core/Icon.jsx"},{"name":"IconButton","sourcePath":"components/core/IconButton.jsx"},{"name":"ListItem","sourcePath":"components/core/ListItem.jsx"},{"name":"MonoValue","sourcePath":"components/core/MonoValue.jsx"},{"name":"ScreenHero","sourcePath":"components/core/ScreenHero.jsx"},{"name":"SectionHeader","sourcePath":"components/core/SectionHeader.jsx"},{"name":"TopBar","sourcePath":"components/core/TopBar.jsx"},{"name":"Widget","sourcePath":"components/core/Widget.jsx"},{"name":"Badge","sourcePath":"components/feedback/Badge.jsx"},{"name":"ConfirmDialog","sourcePath":"components/feedback/ConfirmDialog.jsx"},{"name":"GlassPanel","sourcePath":"components/feedback/GlassPanel.jsx"},{"name":"GlassTile","sourcePath":"components/feedback/GlassPanel.jsx"},{"name":"HeadsUpNotification","sourcePath":"components/feedback/HeadsUpNotification.jsx"},{"name":"InputDialog","sourcePath":"components/feedback/InputDialog.jsx"},{"name":"NotificationCard","sourcePath":"components/feedback/NotificationCard.jsx"},{"name":"ProgressBar","sourcePath":"components/feedback/ProgressBar.jsx"},{"name":"Snackbar","sourcePath":"components/feedback/Snackbar.jsx"},{"name":"Spinner","sourcePath":"components/feedback/Spinner.jsx"},{"name":"Capsule","sourcePath":"components/forms/Capsule.jsx"},{"name":"Checkbox","sourcePath":"components/forms/Checkbox.jsx"},{"name":"Chip","sourcePath":"components/forms/Chip.jsx"},{"name":"DatePicker","sourcePath":"components/forms/DatePicker.jsx"},{"name":"DayChip","sourcePath":"components/forms/DayChip.jsx"},{"name":"RadioButton","sourcePath":"components/forms/RadioButton.jsx"},{"name":"SettingItem","sourcePath":"components/forms/SettingItem.jsx"},{"name":"Slider","sourcePath":"components/forms/Slider.jsx"},{"name":"Switch","sourcePath":"components/forms/Switch.jsx"},{"name":"TextArea","sourcePath":"components/forms/TextArea.jsx"},{"name":"TextField","sourcePath":"components/forms/TextField.jsx"},{"name":"TimePicker","sourcePath":"components/forms/TimePicker.jsx"},{"name":"ToggleButton","sourcePath":"components/forms/ToggleButton.jsx"},{"name":"BottomNav","sourcePath":"components/navigation/BottomNav.jsx"},{"name":"OptionsMenu","sourcePath":"components/navigation/OptionsMenu.jsx"},{"name":"SoftKeyBar","sourcePath":"components/navigation/SoftKeyBar.jsx"},{"name":"StatusCapsule","sourcePath":"components/navigation/StatusCapsule.jsx"},{"name":"TabRow","sourcePath":"components/navigation/TabRow.jsx"}],"sourceHashes":{"components/core/ActionGrid.jsx":"4ff967e62be6","components/core/Avatar.jsx":"fca60feda10e","components/core/Button.jsx":"7598ed3564fe","components/core/Card.jsx":"d1221204057c","components/core/Divider.jsx":"9ce386a7db14","components/core/EmptyState.jsx":"0190085decc8","components/core/FosIcon.jsx":"4edeecefa94a","components/core/Icon.jsx":"77fa91a06ef0","components/core/IconButton.jsx":"fd182bcf1148","components/core/ListItem.jsx":"08963c64d715","components/core/MonoValue.jsx":"93033b85d235","components/core/ScreenHero.jsx":"270e3e83fef1","components/core/SectionHeader.jsx":"66f7be2cf6f4","components/core/TopBar.jsx":"f6e6440d6faa","components/core/Widget.jsx":"c3175e202f5d","components/feedback/Badge.jsx":"da8a60b9a105","components/feedback/ConfirmDialog.jsx":"98ad1eadd672","components/feedback/GlassPanel.jsx":"d9ef63e151e2","components/feedback/HeadsUpNotification.jsx":"78cb3d5c38fb","components/feedback/InputDialog.jsx":"16ec2899f44f","components/feedback/NotificationCard.jsx":"33bacf72f505","components/feedback/ProgressBar.jsx":"4fa3e02273ad","components/feedback/Snackbar.jsx":"cca72c5417b1","components/feedback/Spinner.jsx":"074c00e9ef4a","components/forms/Capsule.jsx":"91ad95a91ccd","components/forms/Checkbox.jsx":"d1baa228e661","components/forms/Chip.jsx":"b019249ab06e","components/forms/DatePicker.jsx":"a8ea753c9a0f","components/forms/DayChip.jsx":"8708e3b3b07e","components/forms/RadioButton.jsx":"5fecfa82d426","components/forms/SettingItem.jsx":"2320ee21cca5","components/forms/Slider.jsx":"1706cfbc80b2","components/forms/Switch.jsx":"5bcb19b90b79","components/forms/TextArea.jsx":"31e91283ff62","components/forms/TextField.jsx":"83f6aa086b21","components/forms/TimePicker.jsx":"9a7d5903d7e7","components/forms/ToggleButton.jsx":"1bbb9fbba640","components/navigation/BottomNav.jsx":"bc08fdca8729","components/navigation/OptionsMenu.jsx":"5102a72a04d4","components/navigation/SoftKeyBar.jsx":"d3565ae1f0b0","components/navigation/StatusCapsule.jsx":"545be5eea8ea","components/navigation/TabRow.jsx":"740331b451e3","ui_kits/bluetooth/BluetoothScreens.jsx":"f905a806bb14","ui_kits/calls/ScreensA.jsx":"f03eb79a6759","ui_kits/calls/data.js":"cb2d06765e1d","ui_kits/clock/ClockScreens.jsx":"d3a5d1df7cc3","ui_kits/communication/CommScreens.jsx":"62e066d39d0d","ui_kits/settings/SettingsScreens.jsx":"222f45fdf47c","ui_kits/translate/TranslateScreens.jsx":"9a37b194e4bc"},"inlinedExternals":[],"unexposedExports":[]} */
+/* @ds-bundle: {"format":4,"namespace":"FutureOSDesignSystem_3ab611","components":[{"name":"ActionGrid","sourcePath":"components/core/ActionGrid.jsx"},{"name":"Avatar","sourcePath":"components/core/Avatar.jsx"},{"name":"Button","sourcePath":"components/core/Button.jsx"},{"name":"Card","sourcePath":"components/core/Card.jsx"},{"name":"Divider","sourcePath":"components/core/Divider.jsx"},{"name":"EmptyState","sourcePath":"components/core/EmptyState.jsx"},{"name":"FosIcon","sourcePath":"components/core/FosIcon.jsx"},{"name":"FOS_ICON_NAMES","sourcePath":"components/core/FosIcon.jsx"},{"name":"Icon","sourcePath":"components/core/Icon.jsx"},{"name":"IconButton","sourcePath":"components/core/IconButton.jsx"},{"name":"ListItem","sourcePath":"components/core/ListItem.jsx"},{"name":"MonoValue","sourcePath":"components/core/MonoValue.jsx"},{"name":"ScreenHero","sourcePath":"components/core/ScreenHero.jsx"},{"name":"SectionHeader","sourcePath":"components/core/SectionHeader.jsx"},{"name":"TopBar","sourcePath":"components/core/TopBar.jsx"},{"name":"Widget","sourcePath":"components/core/Widget.jsx"},{"name":"Badge","sourcePath":"components/feedback/Badge.jsx"},{"name":"ConfirmDialog","sourcePath":"components/feedback/ConfirmDialog.jsx"},{"name":"HeadsUpNotification","sourcePath":"components/feedback/HeadsUpNotification.jsx"},{"name":"InputDialog","sourcePath":"components/feedback/InputDialog.jsx"},{"name":"ProgressBar","sourcePath":"components/feedback/ProgressBar.jsx"},{"name":"Snackbar","sourcePath":"components/feedback/Snackbar.jsx"},{"name":"Spinner","sourcePath":"components/feedback/Spinner.jsx"},{"name":"Capsule","sourcePath":"components/forms/Capsule.jsx"},{"name":"Checkbox","sourcePath":"components/forms/Checkbox.jsx"},{"name":"Chip","sourcePath":"components/forms/Chip.jsx"},{"name":"DatePicker","sourcePath":"components/forms/DatePicker.jsx"},{"name":"DayChip","sourcePath":"components/forms/DayChip.jsx"},{"name":"RadioButton","sourcePath":"components/forms/RadioButton.jsx"},{"name":"SettingItem","sourcePath":"components/forms/SettingItem.jsx"},{"name":"Slider","sourcePath":"components/forms/Slider.jsx"},{"name":"Switch","sourcePath":"components/forms/Switch.jsx"},{"name":"TextArea","sourcePath":"components/forms/TextArea.jsx"},{"name":"TextField","sourcePath":"components/forms/TextField.jsx"},{"name":"TimePicker","sourcePath":"components/forms/TimePicker.jsx"},{"name":"ToggleButton","sourcePath":"components/forms/ToggleButton.jsx"},{"name":"BottomNav","sourcePath":"components/navigation/BottomNav.jsx"},{"name":"OptionsMenu","sourcePath":"components/navigation/OptionsMenu.jsx"},{"name":"SoftKeyBar","sourcePath":"components/navigation/SoftKeyBar.jsx"},{"name":"TabRow","sourcePath":"components/navigation/TabRow.jsx"}],"sourceHashes":{"components/core/ActionGrid.jsx":"4ff967e62be6","components/core/Avatar.jsx":"fca60feda10e","components/core/Button.jsx":"7598ed3564fe","components/core/Card.jsx":"d1221204057c","components/core/Divider.jsx":"9ce386a7db14","components/core/EmptyState.jsx":"0190085decc8","components/core/FosIcon.jsx":"4edeecefa94a","components/core/Icon.jsx":"77fa91a06ef0","components/core/IconButton.jsx":"fd182bcf1148","components/core/ListItem.jsx":"08963c64d715","components/core/MonoValue.jsx":"93033b85d235","components/core/ScreenHero.jsx":"270e3e83fef1","components/core/SectionHeader.jsx":"66f7be2cf6f4","components/core/TopBar.jsx":"f6e6440d6faa","components/core/Widget.jsx":"c3175e202f5d","components/feedback/Badge.jsx":"da8a60b9a105","components/feedback/ConfirmDialog.jsx":"98ad1eadd672","components/feedback/HeadsUpNotification.jsx":"78cb3d5c38fb","components/feedback/InputDialog.jsx":"16ec2899f44f","components/feedback/ProgressBar.jsx":"4fa3e02273ad","components/feedback/Snackbar.jsx":"cca72c5417b1","components/feedback/Spinner.jsx":"074c00e9ef4a","components/forms/Capsule.jsx":"91ad95a91ccd","components/forms/Checkbox.jsx":"d1baa228e661","components/forms/Chip.jsx":"b019249ab06e","components/forms/DatePicker.jsx":"a8ea753c9a0f","components/forms/DayChip.jsx":"8708e3b3b07e","components/forms/RadioButton.jsx":"5fecfa82d426","components/forms/SettingItem.jsx":"2320ee21cca5","components/forms/Slider.jsx":"dcd45d3e1f62","components/forms/Switch.jsx":"5bcb19b90b79","components/forms/TextArea.jsx":"31e91283ff62","components/forms/TextField.jsx":"83f6aa086b21","components/forms/TimePicker.jsx":"9a7d5903d7e7","components/forms/ToggleButton.jsx":"1bbb9fbba640","components/navigation/BottomNav.jsx":"bc08fdca8729","components/navigation/OptionsMenu.jsx":"5102a72a04d4","components/navigation/SoftKeyBar.jsx":"d3565ae1f0b0","components/navigation/TabRow.jsx":"740331b451e3","ui_kits/bluetooth/BluetoothScreens.jsx":"f905a806bb14","ui_kits/calls/ScreensA.jsx":"f03eb79a6759","ui_kits/calls/data.js":"cb2d06765e1d","ui_kits/clock/ClockScreens.jsx":"d3a5d1df7cc3","ui_kits/communication/CommScreens.jsx":"62e066d39d0d","ui_kits/settings/SettingsScreens.jsx":"222f45fdf47c","ui_kits/translate/TranslateScreens.jsx":"9a37b194e4bc"},"inlinedExternals":[],"unexposedExports":[]} */
 
 (() => {
 
@@ -1824,13 +1824,11 @@ Object.assign(__ds_scope, { SettingItem });
 // components/forms/Slider.jsx
 try { (() => {
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
-/* VolumeSlider / FutureSlider: full-width row at 16dp card radius, 16dp inner padding,
-   optional leading icon (20dp, 60% text) before the label 14sp/60%, 6dp track at 15% text,
-   accent fill starting from the RIGHT. Left/right keys step 5%.
-   Focus = 18% text background + 2dp accent border. Used in Settings and in the Control Center. */
+/* VolumeSlider: full-width row at 16dp card radius, 16dp inner padding,
+   label 14sp/60%, 6dp track at 15% text, accent fill starting from the RIGHT.
+   Left/right keys step 5%. Focus = 18% text background + 2dp accent border. */
 function Slider({
   label,
-  icon,
   value = 0.5,
   focused = false,
   style,
@@ -1852,18 +1850,11 @@ function Slider({
     }
   }, rest), /*#__PURE__*/React.createElement("div", {
     style: {
-      display: "flex",
-      alignItems: "center",
-      gap: "var(--fos-space-3)",
       fontSize: "var(--fos-size-body)",
       color: "var(--fos-text-60)",
       marginBottom: "var(--fos-space-5)"
     }
-  }, icon && /*#__PURE__*/React.createElement(__ds_scope.FosIcon, {
-    name: icon,
-    size: 40,
-    color: "var(--fos-text-60)"
-  }), /*#__PURE__*/React.createElement("span", null, label)), /*#__PURE__*/React.createElement("div", {
+  }, label), /*#__PURE__*/React.createElement("div", {
     style: {
       height: 12,
       borderRadius: 6,
@@ -2510,122 +2501,6 @@ function TabRow({
 Object.assign(__ds_scope, { TabRow });
 })(); } catch (e) { __ds_ns.__errors.push({ path: "components/navigation/TabRow.jsx", error: String((e && e.message) || e) }); }
 
-// components/feedback/GlassPanel.jsx
-try { (() => {
-function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
-/* GlassPanel: a system-shell panel (Control Center, Notification Center) — the one place in
-   FutureOS that blurs. It draws a snapshot of the screen behind it blurred at 40dp (80px),
-   under a 20% white wash, and lays its children out in a column with 16dp side / 8dp vertical
-   padding and 10dp between elements (the Control Center uses 4dp vertical).
-   `wallpaper` stands in for the snapshot (any CSS background); without it the panel blurs
-   whatever is live behind it with backdrop-filter. App screens never use this. Ink is always
-   white, so the panel reads the same in light and dark. */
-function GlassPanel({ wallpaper, blur = "var(--fos-backdrop-blur)", children, style, ...rest }) {
-  return /*#__PURE__*/React.createElement("div", _extends({
-  style: {
-          position: "relative",
-          isolation: "isolate",
-          overflow: "hidden",
-          boxSizing: "border-box",
-          direction: "rtl",
-          fontFamily: "var(--fos-font)",
-          color: "var(--fos-shell-ink)",
-          ...(wallpaper ? null : { backdropFilter: `blur(${blur})`, WebkitBackdropFilter: `blur(${blur})` }),
-          ...style
-        }
-}, rest), wallpaper && /*#__PURE__*/React.createElement("div", {
-  "aria-hidden": "true",
-  style: { position: "absolute", inset: `calc(-1 * ${blur})`, zIndex: -2, background: wallpaper, backgroundSize: "cover", backgroundPosition: "center", filter: `blur(${blur})` }
-}), /*#__PURE__*/React.createElement("div", {
-  "aria-hidden": "true",
-  style: { position: "absolute", inset: 0, zIndex: -1, background: "var(--fos-backdrop-wash)" }
-}), /*#__PURE__*/React.createElement("div", {
-  style: { position: "relative", boxSizing: "border-box", minHeight: "100%", display: "flex", flexDirection: "column", gap: "var(--fos-space-4)", padding: "var(--fos-space-3) var(--fos-space-screen)" }
-}, children));
-}
-
-/* GlassTile: any element that sits on a GlassPanel — toggle, notification card, media card,
-   button. 28dp radius (the shell radius), white at 15% at rest, 24% when focused with a 2dp
-   white ring (4px, inside, no scale).
-   `on` is the exception: a solid accent fill with on-accent ink, so a toggle reads at any accent.
-   Ink is white with a faint legibility shadow; children that draw icons should use currentColor
-   so `on` can flip them. */
-function GlassTile({ focused = false, on = false, radius = "var(--fos-radius-headsup)", onClick, children, style, ...rest }) {
-  return /*#__PURE__*/React.createElement("div", _extends({
-  onClick: onClick,
-  style: {
-          boxSizing: "border-box",
-          borderRadius: radius,
-          background: on ? "var(--fos-accent)" : focused ? "var(--fos-glass-fill-focused)" : "var(--fos-glass-fill)",
-          color: on ? "var(--fos-on-accent)" : "var(--fos-shell-ink)",
-          textShadow: on ? "none" : "var(--fos-shell-text-shadow)",
-          border: `var(--fos-focus-border-control) solid ${focused ? "var(--fos-shell-ink)" : "transparent"}`,
-          cursor: onClick ? "pointer" : undefined,
-          transition: "background var(--fos-transition-focus), border-color var(--fos-transition-focus)",
-          ...style
-        }
-}, rest), children);
-}
-Object.assign(__ds_scope, { GlassPanel, GlassTile });
-})(); } catch (e) { __ds_ns.__errors.push({ path: "components/feedback/GlassPanel.jsx", error: String((e && e.message) || e) }); }
-
-// components/feedback/NotificationCard.jsx
-try { (() => {
-function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
-/* NotificationCard: one notification in the Notification Center, a GlassTile (white 15% at
-   rest, 24% + 2dp white ring when focused) at 28dp radius, 14dp / 13dp padding. Collapsed: a
-   38dp app disc (white 20%) and a text column — "app: title" at 14sp/700, then the body at
-   13sp in two lines, all of it when `expanded` (long OK). `optionsOpen` (the Options key)
-   replaces that content with the notification's actions as OptionsMenu rows stacked
-   vertically: 50dp tall, 16dp radius, 15sp, the selected row a 12% white fill with no border,
-   a destructive row in the danger-on-glass color; a 12sp app-name header sits above them.
-   Always white ink — it sits on a GlassPanel. */
-function NotificationCard({ appName, title, body, icon = "chat", focused = false, expanded = false, optionsOpen = false, options = [], focusedOption = 0, onSelect, style, ...rest }) {
-  return /*#__PURE__*/React.createElement(__ds_scope.GlassTile, _extends({
-  focused: focused,
-  radius: "var(--fos-radius-headsup)",
-  style: { padding: "26px var(--fos-space-6)", transition: "background var(--fos-transition-focus), border-color var(--fos-transition-focus), height var(--fos-transition-focus)", ...style }
-}, rest), optionsOpen ? /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-  style: { fontSize: "var(--fos-size-label)", color: "var(--fos-shell-ink-sub)", padding: "0 var(--fos-space-5) var(--fos-space-1)" }
-}, appName), options.map((it, i) => /*#__PURE__*/React.createElement("div", {
-  key: it.label,
-  onClick: () => onSelect && onSelect(i),
-  style: {
-                  display: "flex",
-                  alignItems: "center",
-                  height: "var(--fos-row-menu)",
-                  padding: "0 var(--fos-space-5)",
-                  borderRadius: "var(--fos-radius-card)",
-                  background: i === focusedOption ? "var(--fos-shell-ink-12)" : "transparent",
-                  color: it.destructive ? "var(--fos-danger-on-glass)" : "var(--fos-shell-ink)",
-                  cursor: "pointer",
-                  transition: "background var(--fos-transition-focus)"
-                }
-}, /*#__PURE__*/React.createElement("div", {
-  style: { minWidth: 0, fontSize: "var(--fos-size-dialog)", fontWeight: "var(--fos-weight-medium)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }
-}, it.label)))) : /*#__PURE__*/React.createElement("div", {
-  style: { display: "flex", alignItems: "center", gap: "var(--fos-space-6)" }
-}, /*#__PURE__*/React.createElement("div", {
-  style: { flex: "0 0 auto", width: 76, height: 76, borderRadius: "var(--fos-radius-full)", background: "var(--fos-shell-ink-20)", display: "grid", placeItems: "center", color: "var(--fos-shell-ink-sub)" }
-}, /*#__PURE__*/React.createElement(__ds_scope.FosIcon, {
-  name: icon,
-  size: 36,
-  color: "currentColor"
-})), /*#__PURE__*/React.createElement("div", {
-  style: { flex: 1, minWidth: 0 }
-}, /*#__PURE__*/React.createElement("div", {
-  style: { fontSize: "var(--fos-size-body)", fontWeight: "var(--fos-weight-bold)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }
-}, title ? `${appName}: ${title}` : appName), body && /*#__PURE__*/React.createElement("div", {
-  style: {
-                    fontSize: "var(--fos-size-summary)",
-                    color: "var(--fos-shell-ink-sub)",
-                    ...(expanded ? null : { display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 2, overflow: "hidden" })
-                  }
-}, body))));
-}
-Object.assign(__ds_scope, { NotificationCard });
-})(); } catch (e) { __ds_ns.__errors.push({ path: "components/feedback/NotificationCard.jsx", error: String((e && e.message) || e) }); }
-
 // components/core/Widget.jsx
 try { (() => {
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
@@ -2679,109 +2554,6 @@ function Widget({ icon = "widgets", title, value, subtitle, variant = "default",
 }
 Object.assign(__ds_scope, { Widget });
 })(); } catch (e) { __ds_ns.__errors.push({ path: "components/core/Widget.jsx", error: String((e && e.message) || e) }); }
-
-// components/navigation/StatusCapsule.jsx
-try { (() => {
-function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
-const PAD = 18; /* 9dp */
-const MAX_GLYPHS = 4;
-
-/* StatusCapsule: a status-bar capsule (DynamicCapsule) — #1C1C1E at 55% with a 0.5dp 15% white
-   hairline, 22dp (44px) tall, a pill, 9dp inside each end, over a transparent bar. The leading
-   capsule is dynamic: it widens (200ms, standard easing, no bounce) to show live activity — a call
-   (success fill, black ink, call icon + duration), charging (bolt in success + label), a new
-   notification (app glyph + app name, label at most 90dp), media (music note + title, label at
-   most 110dp, ellipsized) — then returns to the time and the app glyphs (at most four, then +N).
-   Pass children for a static capsule (the trailing device-status capsule). Ink is always white. */
-function StatusCapsule({ state = "idle", time, label, apps = [], icon = "chat", children, style, ...rest }) {
-  const innerRef = React.useRef(null);
-  const [width, setWidth] = React.useState(null);
-  React.useLayoutEffect(() => {
-    const el = innerRef.current;
-    if (!el) return undefined;
-    const measure = () => setWidth(Math.ceil(el.getBoundingClientRect().width) + 2);
-    measure();
-    if (typeof ResizeObserver === "undefined") return undefined;
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-
-  const call = !children && state === "call";
-  const ink = call ? "var(--fos-on-accent)" : "var(--fos-shell-ink)";
-  const lead = state === "charging" ? { name: "bolt", size: 24, color: "var(--fos-shell-success)" }
-    : state === "notification" ? { name: icon, size: 28, color: ink }
-    : state === "media" ? { name: "music_note", size: 28, color: ink }
-    : call ? { name: "call", size: 24, color: ink }
-    : null;
-  const labelMax = state === "notification" ? 180 : state === "media" ? 220 : undefined;
-  const shown = apps.slice(0, MAX_GLYPHS);
-
-  let content;
-  if (children) content = children;
-  else if (state === "idle") {
-    content = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
-  style: { fontSize: "var(--fos-size-body)", fontWeight: "var(--fos-weight-semibold)", fontVariantNumeric: "tabular-nums" }
-}, time), shown.length > 0 && /*#__PURE__*/React.createElement("span", {
-  style: { display: "flex", alignItems: "center", gap: "var(--fos-space-1)" }
-}, shown.map((a, i) => /*#__PURE__*/React.createElement(__ds_scope.FosIcon, {
-  key: a + i,
-  name: a,
-  size: 28,
-  color: "currentColor"
-})), apps.length > MAX_GLYPHS && /*#__PURE__*/React.createElement("span", {
-  style: { fontSize: "var(--fos-size-label)", fontWeight: "var(--fos-weight-semibold)", color: "var(--fos-shell-ink-70)" }
-}, "+", apps.length - MAX_GLYPHS)));
-  } else {
-    content = /*#__PURE__*/React.createElement(React.Fragment, null, lead && /*#__PURE__*/React.createElement(__ds_scope.FosIcon, {
-  name: lead.name,
-  size: lead.size,
-  color: lead.color
-}), /*#__PURE__*/React.createElement("span", {
-  style: {
-              maxWidth: labelMax,
-              fontSize: "var(--fos-size-label)",
-              fontWeight: call ? "var(--fos-weight-bold)" : "var(--fos-weight-medium)",
-              fontVariantNumeric: "tabular-nums",
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis"
-            }
-}, label));
-  }
-
-  return /*#__PURE__*/React.createElement("div", _extends({
-  style: {
-          direction: "rtl",
-          fontFamily: "var(--fos-font)",
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "flex-start",
-          height: 44,
-          width: width == null ? "max-content" : width,
-          boxSizing: "border-box",
-          overflow: "hidden",
-          borderRadius: "var(--fos-radius-full)",
-          background: call ? "var(--fos-shell-success)" : "var(--fos-capsule-bg)",
-          border: `var(--fos-border-headsup) solid ${call ? "var(--fos-shell-success)" : "var(--fos-hairline-dark)"}`,
-          color: ink,
-          transition: "width var(--fos-transition-focus), background var(--fos-transition-focus), border-color var(--fos-transition-focus)",
-          ...style
-        }
-}, rest), /*#__PURE__*/React.createElement("div", {
-  ref: innerRef,
-  style: {
-            flex: "0 0 auto",
-            display: "flex",
-            alignItems: "center",
-            gap: children ? 14 /* 7dp */ : state === "idle" ? "var(--fos-space-2)" : state === "notification" || state === "media" ? 10 /* 5dp */ : "var(--fos-space-1)",
-            padding: `0 ${PAD}px`,
-            width: "max-content"
-          }
-}, content));
-}
-Object.assign(__ds_scope, { StatusCapsule });
-})(); } catch (e) { __ds_ns.__errors.push({ path: "components/navigation/StatusCapsule.jsx", error: String((e && e.message) || e) }); }
 
 // ui_kits/bluetooth/BluetoothScreens.jsx
 try { (() => {
@@ -5086,14 +4858,9 @@ __ds_ns.Badge = __ds_scope.Badge;
 
 __ds_ns.ConfirmDialog = __ds_scope.ConfirmDialog;
 
-__ds_ns.GlassPanel = __ds_scope.GlassPanel;
-__ds_ns.GlassTile = __ds_scope.GlassTile;
-
 __ds_ns.HeadsUpNotification = __ds_scope.HeadsUpNotification;
 
 __ds_ns.InputDialog = __ds_scope.InputDialog;
-
-__ds_ns.NotificationCard = __ds_scope.NotificationCard;
 
 __ds_ns.ProgressBar = __ds_scope.ProgressBar;
 
@@ -5132,8 +4899,6 @@ __ds_ns.BottomNav = __ds_scope.BottomNav;
 __ds_ns.OptionsMenu = __ds_scope.OptionsMenu;
 
 __ds_ns.SoftKeyBar = __ds_scope.SoftKeyBar;
-
-__ds_ns.StatusCapsule = __ds_scope.StatusCapsule;
 
 __ds_ns.TabRow = __ds_scope.TabRow;
 
