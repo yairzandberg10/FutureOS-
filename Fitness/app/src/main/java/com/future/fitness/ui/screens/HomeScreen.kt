@@ -321,22 +321,25 @@ private fun greeting(): String {
     }
 }
 
+/**
+ * השבוע הנוכחי, מיום ראשון עד שבת - כמו בלוח שנה ישראלי (FT3). קודם הוצגו
+ * 7 הימים האחרונים כשהיום אחרון, כך שהשבוע "התחיל" ביום משתנה. ימים שעוד לא
+ * הגיעו מוצגים ריקים.
+ */
 private fun buildWeekDots(history: List<WorkoutHistoryEntry>): List<DayDot> {
     val labels = listOf("א", "ב", "ג", "ד", "ה", "ו", "ש")
     val today = Calendar.getInstance()
-    val todayDayOfWeek = today.get(Calendar.DAY_OF_WEEK)
-
-    val doneByDayOfWeek = BooleanArray(8)
-    val sevenDaysAgo = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -6) }.apply {
+    val todayDayOfWeek = today.get(Calendar.DAY_OF_WEEK) // 1 = ראשון
+    val weekStart = (today.clone() as Calendar).apply {
+        add(Calendar.DAY_OF_YEAR, -(todayDayOfWeek - 1))
         set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
     }
+    val doneByDayOfWeek = BooleanArray(8)
     history.forEach { entry ->
         val c = Calendar.getInstance().apply { timeInMillis = entry.dateMillis }
-        if (!c.before(sevenDaysAgo)) doneByDayOfWeek[c.get(Calendar.DAY_OF_WEEK)] = true
+        if (!c.before(weekStart)) doneByDayOfWeek[c.get(Calendar.DAY_OF_WEEK)] = true
     }
-
-    return (0..6).map { offset ->
-        val dow = ((todayDayOfWeek - 1 - offset + 7) % 7) + 1
-        DayDot(label = labels[dow - 1], done = doneByDayOfWeek[dow], isToday = offset == 0)
-    }.reversed()
+    return (1..7).map { dow ->
+        DayDot(label = labels[dow - 1], done = doneByDayOfWeek[dow], isToday = dow == todayDayOfWeek)
+    }
 }

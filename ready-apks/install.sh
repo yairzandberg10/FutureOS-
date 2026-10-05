@@ -10,7 +10,8 @@
 # ה-APK-ים נבנו מהענף qa-install (התיקונים מדוח ה-QA + motion-system), חתומים
 # במפתח ה-debug כמו כל גרסת release בפרויקט, ולכן מתקינים מעל ההתקנה הקיימת.
 export MSYS_NO_PATHCONV=1
-DIR="$(cd "$(dirname "$0")" && pwd)"
+# pwd -W (Git Bash) נותן נתיב Windows - adb.exe לא מבין /c/Users/...
+DIR="$(cd "$(dirname "$0")" && (pwd -W 2>/dev/null || pwd))"
 ADB="${ADB:-$LOCALAPPDATA/Android/Sdk/platform-tools/adb.exe}"
 [ -x "$ADB" ] || ADB=adb
 

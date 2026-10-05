@@ -64,7 +64,7 @@ fun TogglePill(
             .focusEffect(isFocused, shape)
             .background(Color(0x80E0E0E0))
             .then(
-                if (isFocused) Modifier.border(2.dp, Color.LightGray, shape) else Modifier
+                if (isFocused) Modifier.controlFocusRing(shape) else Modifier
             )
             .padding(6.dp)
             .onKeyEvent { event ->
@@ -185,7 +185,8 @@ fun FocusableIcon(
             }
         }
         AnimatedVisibility(
-            visible = showLabel,
+            // UI1: השם מופיע גם כשהאייקון ממוקד, לא רק במצב מורחב.
+            visible = showLabel || isFocused,
             enter = fadeIn() + expandVertically(),
             exit = fadeOut() + shrinkVertically()
         ) {
@@ -244,7 +245,7 @@ fun FocusableSection(
                             width = 2.dp,
                             color = when {
                                 isMoving -> Color.Red
-                                isFocused -> Color.LightGray
+                                isFocused -> Color(0xFF111114)
                                 else -> Color.Transparent
                             },
                             shape = shape

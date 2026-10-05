@@ -8,7 +8,15 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
-class TaskViewModel(private val repository: TaskRepository) : ViewModel() {
+/**
+ * [scheduleReminder]/[cancelReminder] - ל-AlarmManager (ר' TaskReminders); מוזרקים
+ * מה-Activity כדי שה-ViewModel לא יחזיק Context.
+ */
+class TaskViewModel(
+    private val repository: TaskRepository,
+    private val scheduleReminder: (Task) -> Unit = {},
+    private val cancelReminder: (Int) -> Unit = {},
+) : ViewModel() {
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery
@@ -25,22 +33,27 @@ class TaskViewModel(private val repository: TaskRepository) : ViewModel() {
         _searchQuery.value = query
     }
 
-    fun addOrUpdateTask(id: Int = 0, title: String, notes: String, priority: Int, isDone: Boolean = false) {
+    fun addOrUpdateTask(id: Int = 0, title: String, notes: String, priority: Int, isDone: Boolean = false, reminderAt: Long? = null) {
         viewModelScope.launch {
-            val task = Task(id = id, title = title, notes = notes, priority = priority, isDone = isDone, timestamp = System.currentTimeMillis())
-            if (id == 0) repository.insert(task) else repository.update(task)
+            val task = Task(id = id, title = title, notes = notes, priority = priority, isDone = isDone, timestamp = System.currentTimeMillis(), reminderAt = reminderAt)
+            val savedId = if (id == 0) repository.insert(task) else { repository.update(task); id }
+            scheduleReminder(task.copy(id = savedId))
         }
     }
 
     fun deleteTask(task: Task) {
         viewModelScope.launch {
             repository.delete(task)
+            cancelReminder(task.id)
         }
     }
 
     fun toggleDone(task: Task) {
         viewModelScope.launch {
-            repository.update(task.copy(isDone = !task.isDone))
+            val updated = task.copy(isDone = !task.isDone)
+            repository.update(updated)
+            // משימה שבוצעה לא מזכירה; משימה שנפתחה מחדש - התזכורת חוזרת (אם עוד בעתיד).
+            scheduleReminder(updated)
         }
     }
 }

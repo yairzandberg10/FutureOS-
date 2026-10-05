@@ -43,7 +43,11 @@ class MainActivity : ComponentActivity() {
                 factory = object : ViewModelProvider.Factory {
                     override fun <T : ViewModel> create(modelClass: Class<T>): T {
                         @Suppress("UNCHECKED_CAST")
-                        return TaskViewModel(app.repository) as T
+                        return TaskViewModel(
+                            app.repository,
+                            scheduleReminder = { com.future.tasks.data.TaskReminders.schedule(applicationContext, it) },
+                            cancelReminder = { com.future.tasks.data.TaskReminders.cancel(applicationContext, it) },
+                        ) as T
                     }
                 }
             )
@@ -78,8 +82,8 @@ class MainActivity : ComponentActivity() {
                         TaskEditorScreen(
                             task = task,
                             theme = theme,
-                            onSave = { title, notes, priority, isDone ->
-                                viewModel.addOrUpdateTask(editingId, title, notes, priority, isDone)
+                            onSave = { title, notes, priority, isDone, reminderAt ->
+                                viewModel.addOrUpdateTask(editingId, title, notes, priority, isDone, reminderAt)
                                 editingTaskId = null
                             },
                             onDelete = {
@@ -97,6 +101,8 @@ class MainActivity : ComponentActivity() {
                             onTaskClick = { task -> lastSelectedTaskId = task.id; editingTaskId = task.id },
                             onAddTask = { editingTaskId = 0 },
                             lastSelectedTaskId = lastSelectedTaskId,
+                            onToggleDone = { viewModel.toggleDone(it) },
+                            onDelete = { viewModel.deleteTask(it) },
                         )
                     }
                 }

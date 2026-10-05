@@ -45,13 +45,30 @@ private const val IN_TUNE_CENTS = 5f
 /** מיתר פתוח בכיוון סטנדרטי. [label] הוא שם התו כפי שמוצג על הצ'יפ. */
 private data class GuitarString(val label: String, val note: String, val frequency: Double)
 
-private val STANDARD_TUNING = listOf(
-    GuitarString("E", "E2", 82.41),
-    GuitarString("A", "A2", 110.00),
-    GuitarString("D", "D3", 146.83),
-    GuitarString("G", "G3", 196.00),
-    GuitarString("B", "B3", 246.94),
-    GuitarString("e", "E4", 329.63),
+private data class Tuning(val name: String, val strings: List<GuitarString>)
+
+/** הכיוונונים, מהמיתר העבה (6) לדק (1). # עובר ביניהם. תדרים לפי A4 = 440Hz. */
+private val TUNINGS = listOf(
+    Tuning("סטנדרטי", listOf(
+        GuitarString("E", "E2", 82.41), GuitarString("A", "A2", 110.00), GuitarString("D", "D3", 146.83),
+        GuitarString("G", "G3", 196.00), GuitarString("B", "B3", 246.94), GuitarString("e", "E4", 329.63),
+    )),
+    Tuning("Drop D", listOf(
+        GuitarString("D", "D2", 73.42), GuitarString("A", "A2", 110.00), GuitarString("D", "D3", 146.83),
+        GuitarString("G", "G3", 196.00), GuitarString("B", "B3", 246.94), GuitarString("e", "E4", 329.63),
+    )),
+    Tuning("חצי טון למטה", listOf(
+        GuitarString("E♭", "E♭2", 77.78), GuitarString("A♭", "A♭2", 103.83), GuitarString("D♭", "D♭3", 138.59),
+        GuitarString("G♭", "G♭3", 185.00), GuitarString("B♭", "B♭3", 233.08), GuitarString("e♭", "E♭4", 311.13),
+    )),
+    Tuning("DADGAD", listOf(
+        GuitarString("D", "D2", 73.42), GuitarString("A", "A2", 110.00), GuitarString("D", "D3", 146.83),
+        GuitarString("G", "G3", 196.00), GuitarString("A", "A3", 220.00), GuitarString("d", "D4", 293.66),
+    )),
+    Tuning("Open G", listOf(
+        GuitarString("D", "D2", 73.42), GuitarString("G", "G2", 98.00), GuitarString("D", "D3", 146.83),
+        GuitarString("G", "G3", 196.00), GuitarString("B", "B3", 246.94), GuitarString("d", "D4", 293.66),
+    )),
 )
 
 private val NOTE_NAMES = listOf("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
@@ -170,12 +187,20 @@ fun GuitarTunerScreen(theme: FutureTheme, onBack: () -> Unit) {
     val pitch = rememberDetectedPitch(enabled = hasPermission)
     // -1 = זיהוי אוטומטי של המיתר הקרוב, 0..5 = מיתר שנבחר ידנית (6 עד 1)
     var selected by remember { mutableIntStateOf(-1) }
+    // # - הכיוונון הבא; ↑/↓ - כיול A4 (430-450Hz). # נצרך ב-FutureUI ומגיע כשידור.
+    var tuningIndex by remember { mutableIntStateOf(0) }
+    var a4 by remember { mutableIntStateOf(440) }
+    com.future.sharednav.nav.onPoundKeyPress { tuningIndex = (tuningIndex + 1) % TUNINGS.size }
+    val tuning = TUNINGS[tuningIndex]
+    val strings = remember(tuningIndex, a4) {
+        tuning.strings.map { it.copy(frequency = it.frequency * a4 / 440.0) }
+    }
     val focusRequester = remember { FocusRequester() }
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
 
     val target: GuitarString? = when {
-        selected >= 0 -> STANDARD_TUNING[selected]
-        pitch != null -> STANDARD_TUNING.minBy { abs(cents(pitch, it.frequency)) }
+        selected >= 0 -> strings[selected]
+        pitch != null -> strings.minBy { abs(cents(pitch, it.frequency)) }
         else -> null
     }
     val centsOff = if (pitch != null && target != null) cents(pitch, target.frequency).coerceIn(-50f, 50f) else null
@@ -197,6 +222,8 @@ fun GuitarTunerScreen(theme: FutureTheme, onBack: () -> Unit) {
                         android.view.KeyEvent.KEYCODE_0 -> { selected = -1; true }
                         android.view.KeyEvent.KEYCODE_DPAD_LEFT -> { selected = if (selected <= -1) 5 else selected - 1; true }
                         android.view.KeyEvent.KEYCODE_DPAD_RIGHT -> { selected = if (selected >= 5) -1 else selected + 1; true }
+                        android.view.KeyEvent.KEYCODE_DPAD_UP -> { a4 = (a4 + 1).coerceAtMost(450); true }
+                        android.view.KeyEvent.KEYCODE_DPAD_DOWN -> { a4 = (a4 - 1).coerceAtLeast(430); true }
                         else -> false
                     }
                 }
@@ -204,14 +231,21 @@ fun GuitarTunerScreen(theme: FutureTheme, onBack: () -> Unit) {
             Column(modifier = Modifier.fillMaxSize()) {
                 ToolsHeader(title = "מכוון גיטרה", theme = theme, onBack = onBack)
 
-                // המיתרים מסודרים משמאל לימין כמו על צוואר הגיטרה, גם בממשק RTL
+                Text(
+                    "${tuning.name} · A4 = ${a4}Hz" + if (selected == -1) " · זיהוי אוטומטי" else "",
+                    color = theme.mutedTextColor,
+                    fontSize = FutureTypography.summary,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = FutureDimens.screenPadding),
+                )
+                // המיתרים מסודרים משמאל לימין כמו על צוואר הגיטרה, גם בממשק RTL. שישה
+                // צ'יפים בלבד (בלי "אוטו", שעבר לשורה שמעל) - עם שבעה ה-e הדק נחתך (TL13).
                 CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = FutureDimens.screenPadding, vertical = FutureDimens.spacingSm),
                         horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingXs, Alignment.CenterHorizontally)
                     ) {
-                        FutureChip("אוטו", theme, selected = selected == -1)
-                        STANDARD_TUNING.forEachIndexed { index, string ->
+                        strings.forEachIndexed { index, string ->
                             FutureChip(string.label, theme, selected = selected == index || (selected == -1 && target == string && pitch != null))
                         }
                     }
@@ -267,7 +301,7 @@ fun GuitarTunerScreen(theme: FutureTheme, onBack: () -> Unit) {
                 }
 
                 Text(
-                    "1-6 בחירת מיתר · 0 זיהוי אוטומטי · חצים למעבר",
+                    "1-6 מיתר · 0 אוטומטי · # כיוונון · ↑↓ כיול",
                     color = theme.subtleTextColor,
                     fontSize = FutureTypography.caption,
                     textAlign = TextAlign.Center,

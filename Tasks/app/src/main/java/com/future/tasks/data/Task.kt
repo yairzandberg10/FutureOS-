@@ -19,4 +19,6 @@ data class Task(
     val priority: Int = TaskPriority.NORMAL,
     val isDone: Boolean = false,
     val timestamp: Long = System.currentTimeMillis(),
+    /** מתי להזכיר (millis), או null - בלי תזכורת. ר' TaskReminders. */
+    val reminderAt: Long? = null,
 )

@@ -1,5 +1,7 @@
 package com.future.sharednav.components
 
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.border
 import com.future.sharednav.focus.animatedFill
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
@@ -109,6 +111,12 @@ fun FutureTabItem(
         modifier = modifier
             .clip(FutureShapes.md)
             .animatedFill { background.value }
+            // טבעת פוקוס - לשונית נבחרת וממוקדת נראתה בדיוק כמו נבחרת (CA1, ‏TL12).
+            .border(
+                FutureDimens.focusBorderControl,
+                if (isFocused) (if (selected) FutureContrast.onColor(accent) else accent) else Color.Transparent,
+                FutureShapes.md,
+            )
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .bringIntoViewOnFocus()
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)

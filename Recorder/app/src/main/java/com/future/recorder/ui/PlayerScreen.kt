@@ -57,7 +57,8 @@ import kotlinx.coroutines.delay
 import java.io.File
 
 /**
- * נגן הקלטה. OK - הפעלה/השהיה; חצים - 5 שניות אחורה/קדימה; 4/6 - 30 שניות.
+ * נגן הקלטה. OK - הפעלה/השהיה; חצים - 5 שניות אחורה/קדימה; 4/6 - 30 שניות;
+ * # - מהירות השמעה (1× ← 1.25× ← 1.5× ← 2× ← 0.75×), גם מתפריט האפשרויות.
  * סרגל ההתקדמות נשאר משמאל לימין גם בממשק RTL, כמו בכל נגני המדיה.
  */
 @Composable
@@ -67,6 +68,17 @@ fun PlayerScreen(theme: FutureTheme, file: File, onBack: () -> Unit) {
     var positionMs by remember { mutableIntStateOf(0) }
     var isPlaying by remember { mutableStateOf(false) }
     val player = remember(file) { MediaPlayer() }
+    var speed by remember { mutableStateOf(1f) }
+
+    // setPlaybackParams עם מהירות שאינה 0 מתחיל השמעה ב-MediaPlayer - לכן בזמן
+    // השהיה רק שומרים, והמהירות מוחלת ב-start הבא.
+    fun applySpeed() {
+        if (isPlaying) runCatching { player.playbackParams = player.playbackParams.setSpeed(speed) }
+    }
+    fun cycleSpeed() {
+        speed = PLAYBACK_SPEEDS[(PLAYBACK_SPEEDS.indexOf(speed) + 1) % PLAYBACK_SPEEDS.size]
+        applySpeed()
+    }
 
     DisposableEffect(file) {
         runCatching {
@@ -105,8 +117,9 @@ fun PlayerScreen(theme: FutureTheme, file: File, onBack: () -> Unit) {
         runCatching {
             if (player.isPlaying) { player.pause(); isPlaying = false }
             else {
-                if (positionMs >= durationMs - 50) player.seekTo(0)
+                if (positionMs >= durationMs - 50) { player.seekTo(0); positionMs = 0 }
                 player.start(); isPlaying = true
+                applySpeed()
             }
         }
     }
@@ -122,6 +135,8 @@ fun PlayerScreen(theme: FutureTheme, file: File, onBack: () -> Unit) {
     var menuOpen by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
     onOptionsKeyPress { menuOpen = !menuOpen }
+    // # נצרך ב-FutureUI ומגיע רק כשידור (ר' SharedKeypadNav).
+    com.future.sharednav.nav.onPoundKeyPress { if (!menuOpen && !confirmDelete) cycleSpeed() }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Column(
@@ -155,7 +170,7 @@ fun PlayerScreen(theme: FutureTheme, file: File, onBack: () -> Unit) {
                     fontFamily = FutureTypography.monoFamily,
                 )
                 Text(
-                    "מתוך ${formatDuration(durationMs.toLong())}",
+                    "מתוך ${formatDuration(durationMs.toLong())}" + if (speed != 1f) " · ${speedLabel(speed)}" else "",
                     color = theme.mutedTextColor,
                     fontSize = FutureTypography.summary,
                 )
@@ -170,7 +185,7 @@ fun PlayerScreen(theme: FutureTheme, file: File, onBack: () -> Unit) {
                 )
             }
             Text(
-                "חצים 5 שניות · 4/6 חצי דקה · אפשרויות",
+                "חצים 5 שניות · 4/6 חצי דקה · # מהירות",
                 color = theme.subtleTextColor,
                 fontSize = FutureTypography.caption,
                 textAlign = TextAlign.Center,
@@ -183,6 +198,7 @@ fun PlayerScreen(theme: FutureTheme, file: File, onBack: () -> Unit) {
 
     if (menuOpen) {
         FutureOptionsMenu(theme = theme, onDismissRequest = { menuOpen = false }, header = file.nameWithoutExtension) {
+            FutureMenuRow("מהירות: ${speedLabel(speed)}", FutureIcons.Speed, theme, { cycleSpeed() })
             FutureMenuRow("שתף", FutureIcons.Share, theme, { menuOpen = false; shareRecording(context, file) })
             FutureMenuRow("מחק", FutureIcons.Delete, theme, { menuOpen = false; confirmDelete = true }, destructive = true)
         }
@@ -214,3 +230,9 @@ private fun ProgressBar(fraction: Float, theme: FutureTheme) {
         }
     }
 }
+
+private val PLAYBACK_SPEEDS = listOf(1f, 1.25f, 1.5f, 2f, 0.75f)
+
+/** "1.5×" - LRI…PDI כדי שבשורה עברית הסימן יישאר אחרי המספר. */
+private fun speedLabel(speed: Float): String =
+    "\u2066" + (if (speed % 1f == 0f) speed.toInt().toString() else speed.toString().trimEnd('0')) + "×\u2069"

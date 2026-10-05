@@ -956,19 +956,10 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                             viewModel.dialogState = LauncherDialog.AppList
                         }
                     }
+                    // L3: גם במצב עריכה רואים באיזה עמוד נמצאים ובכמה עמודים יש.
+                    PageDots(pages.size, pagerState.currentPage, Modifier.align(Alignment.TopCenter).padding(top = 2.dp))
                 } else if (pages.size > 1 && prefs.showPageIndicator) {
-                    Row(horizontalArrangement = Arrangement.Center) {
-                        repeat(pages.size) { iteration ->
-                            val color = if (pagerState.currentPage == iteration) OnWallpaperColor else OnWallpaperColor.copy(alpha = 0.4f)
-                            Box(
-                                modifier = Modifier
-                                    .padding(4.dp)
-                                    .clip(FutureShapes.pill)
-                                    .background(color)
-                                    .size(6.dp)
-                            )
-                        }
-                    }
+                    PageDots(pages.size, pagerState.currentPage)
                 }
             }
         }
@@ -1169,5 +1160,26 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
 
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
+    }
+}
+
+/**
+ * מחוון העמודים. הנקודות לבנות עם קו מתאר כהה: נקודה לא-פעילה (לבן שקוף בלי
+ * מתאר) נעלמה על טפט בהיר (L2). הפעילה ארוכה יותר, כך שאפשר להבחין גם בלי צבע.
+ */
+@Composable
+private fun PageDots(count: Int, current: Int, modifier: Modifier = Modifier) {
+    Row(modifier = modifier, horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+        repeat(count) { index ->
+            val active = index == current
+            Box(
+                modifier = Modifier
+                    .padding(3.dp)
+                    .size(width = if (active) 14.dp else 7.dp, height = 7.dp)
+                    .clip(FutureShapes.pill)
+                    .background(if (active) OnWallpaperColor else OnWallpaperColor.copy(alpha = 0.6f))
+                    .border(1.dp, Color.Black.copy(alpha = 0.45f), FutureShapes.pill)
+            )
+        }
     }
 }

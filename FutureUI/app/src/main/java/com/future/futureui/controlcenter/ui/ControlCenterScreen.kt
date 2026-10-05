@@ -295,7 +295,8 @@ fun ControlCenterScreen(
                                                     topToggleIds = newList
                                                 },
                                                 focusRequester = if (index == 0) initialFocusRequester else null,
-                                                labelColor = clockColor
+                                                // SY3: הכיתוב על אריח הזכוכית הבהיר תמיד כהה, בלי קשר לטפט.
+                                                labelColor = Color(0xFF111114)
                                             )
                                         }
                                     }

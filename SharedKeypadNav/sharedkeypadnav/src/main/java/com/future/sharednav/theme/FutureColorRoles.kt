@@ -73,25 +73,29 @@ val FutureTheme.avatarFillColor: Color
 // לכל רכיב יש בדיוק רקע אחד, ולא "תבנית פוקוס" כללית: שורת רשימה
 // נצבעת בהדגשה, שורת הגדרה בטקסט, ושורת תפריט בדרגה אחרת לגמרי.
 
-/** מילוי הרקע של שורת רשימה ממוקדת - 14% מצבע ההדגשה. */
-val FutureTheme.focusFillColor: Color
-    get() = accentColor.copy(alpha = 0.14f)
+// ניגודיות במצב בהיר (5.10, באישור המשתמש): ההדגשה הגולמית (לבן כברירת מחדל)
+// על משטח בהיר נעלמה, וההבדל בין 6% במנוחה ל-18% בפוקוס כמעט לא נראה. המילויים
+// נגזרים מההדגשה הקריאה (readableAccentColor), ובמצב בהיר הם חזקים יותר.
 
-/** רקע של כפתור אייקון ממוקד בשורה העליונה - 30% מצבע ההדגשה. */
+/** מילוי הרקע של שורת רשימה ממוקדת - 14% מההדגשה הקריאה (20% במצב בהיר). */
+val FutureTheme.focusFillColor: Color
+    get() = readableAccentColor.copy(alpha = if (isDarkMode) 0.14f else 0.20f)
+
+/** רקע של כפתור אייקון ממוקד בשורה העליונה - 30% מההדגשה הקריאה (40% במצב בהיר). */
 val FutureTheme.focusFillIconColor: Color
-    get() = accentColor.copy(alpha = 0.30f)
+    get() = readableAccentColor.copy(alpha = if (isDarkMode) 0.30f else 0.40f)
 
 /** רקע של שורת הגדרה ממוקדת. */
 val FutureTheme.focusFillSettingColor: Color
-    get() = textAlpha(6)
+    get() = textAlpha(if (isDarkMode) 6 else 10)
 
 /** רקע של שורת תפריט ממוקדת - הרכיב היחיד בלי מסגרת פוקוס. */
 val FutureTheme.focusFillMenuColor: Color
-    get() = textAlpha(12)
+    get() = textAlpha(if (isDarkMode) 12 else 16)
 
 /** רקע של צ'יפ או שורת מחוון ממוקדים. */
 val FutureTheme.focusFillChipColor: Color
-    get() = textAlpha(18)
+    get() = textAlpha(if (isDarkMode) 18 else 28)
 
 /** רקע של צ'יפ במנוחה. */
 val FutureTheme.idleChipColor: Color

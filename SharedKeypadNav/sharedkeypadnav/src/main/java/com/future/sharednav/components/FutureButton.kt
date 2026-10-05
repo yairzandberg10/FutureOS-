@@ -152,7 +152,10 @@ internal fun FutureButtonCore(
                     drawOutline(outline, fill)
                     drawContent()
                     val a = ringAlpha.value
-                    if (a > 0f) drawPath(ringPath, fill.copy(alpha = fill.alpha * a), style = stroke)
+                    // כפתור משני/שקט ממולא בשקיפות נמוכה, וטבעת באותו צבע כמעט לא נראתה
+                    // (אפור בהיר על אפור בהיר, L4) - אצלו הטבעת בצבע הטקסט.
+                    val ringColor = if (fill.alpha < 0.5f) contentColor else fill
+                    if (a > 0f) drawPath(ringPath, ringColor.copy(alpha = ringColor.alpha * a), style = stroke)
                 }
             }
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)

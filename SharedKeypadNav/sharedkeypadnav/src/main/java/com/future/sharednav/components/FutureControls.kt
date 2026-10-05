@@ -172,6 +172,13 @@ fun FutureChip(
         modifier = modifier
             .clip(FutureShapes.chip)
             .animatedFill { background.value }
+            // טבעת פוקוס: בלעדיה צ'יפ נבחר וממוקד נראה בדיוק כמו נבחר, ואחרי בחירה
+            // לא רואים איפה הפוקוס. על צ'יפ נבחר הטבעת בצבע הדיו של ההדגשה.
+            .border(
+                FutureDimens.focusBorderControl,
+                if (focused || ownFocus) (if (selected) FutureContrast.onColor(accent) else accent) else Color.Transparent,
+                FutureShapes.chip,
+            )
             .then(
                 if (onClick != null) {
                     Modifier

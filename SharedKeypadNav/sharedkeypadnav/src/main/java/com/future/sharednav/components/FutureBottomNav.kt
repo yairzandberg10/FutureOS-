@@ -117,7 +117,8 @@ private fun RowScope.NavItem(
     )
     Box(
         modifier = Modifier
-            .weight(if (isSelected) 1.4f else 1f)
+            // 2.2 ולא 1.4: עם ארבעה פריטים (שעון) התווית נחתכה ל"מעו..." (CK3).
+            .weight(if (isSelected) 2.2f else 1f)
             .focusProperties { canFocus = false },
         contentAlignment = Alignment.Center,
     ) {

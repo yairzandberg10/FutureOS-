@@ -47,7 +47,7 @@ fun MusicPlayerCard(manager: ControlManager, labelColor: Color = Color.Black) {
                 .focusEffect(isFocused, shape)
                 .background(Color(0x80E0E0E0))
                 .then(
-                    if (isFocused) Modifier.border(2.dp, Color.LightGray, shape) else Modifier
+                    if (isFocused) Modifier.controlFocusRing(shape) else Modifier
                 )
                 .clickable(interactionSource = interactionSource, indication = null) { manager.openNotificationAccessSettings() }
                 .focusable(interactionSource = interactionSource)
@@ -71,7 +71,7 @@ fun MusicPlayerCard(manager: ControlManager, labelColor: Color = Color.Black) {
                 .focusEffect(isFocused, shape)
                 .background(Color(0x80E0E0E0))
                 .then(
-                    if (isFocused) Modifier.border(2.dp, Color.LightGray, shape) else Modifier
+                    if (isFocused) Modifier.controlFocusRing(shape) else Modifier
                 )
                 .clickable(
                     interactionSource = interactionSource,
@@ -234,7 +234,7 @@ fun MediaControlButton(icon: ImageVector, onClick: () -> Unit, isLarge: Boolean 
                 scaleX = if (isFocused) 1.2f else 1f
                 scaleY = if (isFocused) 1.2f else 1f
             }
-            .then(if (isFocused) Modifier.border(2.dp, Color.LightGray, shape) else Modifier)
+            .then(if (isFocused) Modifier.controlFocusRing(shape) else Modifier)
             .clip(shape)
             .background(if (isFocused) Color.White.copy(alpha = 0.3f) else Color.Transparent)
             .clickable(

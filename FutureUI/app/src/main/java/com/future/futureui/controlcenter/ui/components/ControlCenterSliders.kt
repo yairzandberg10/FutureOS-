@@ -40,7 +40,7 @@ fun SliderBar(
             // מסילה כהה שקופה-למחצה ומילוי לבן כמעט אטום.
             .background(SliderTrack)
             .then(
-                if (isFocused) Modifier.border(2.dp, Color.LightGray, shape) else Modifier
+                if (isFocused) Modifier.controlFocusRing(shape) else Modifier
             )
             .onKeyEvent { event ->
                 if (event.type == KeyEventType.KeyDown) {

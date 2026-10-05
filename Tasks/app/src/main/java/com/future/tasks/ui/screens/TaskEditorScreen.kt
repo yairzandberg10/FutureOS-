@@ -43,7 +43,7 @@ import com.future.tasks.data.TaskPriority
 fun TaskEditorScreen(
     task: Task?,
     theme: FutureTheme,
-    onSave: (title: String, notes: String, priority: Int, isDone: Boolean) -> Unit,
+    onSave: (title: String, notes: String, priority: Int, isDone: Boolean, reminderAt: Long?) -> Unit,
     onDelete: () -> Unit,
     onBack: () -> Unit,
 ) {
@@ -55,10 +55,13 @@ fun TaskEditorScreen(
     var notes by remember(taskKey) { mutableStateOf(task?.notes ?: "") }
     var priority by remember(taskKey) { mutableStateOf(task?.priority ?: TaskPriority.NORMAL) }
     var isDone by remember(taskKey) { mutableStateOf(task?.isDone ?: false) }
+    // תזכורת שכבר עברה לא נשמרת שוב - רק עתידית.
+    var reminderAt by remember(taskKey) { mutableStateOf(task?.reminderAt?.takeIf { it > System.currentTimeMillis() }) }
+    val reminderPresets = remember { com.future.tasks.data.TaskReminders.presets() }
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
     fun saveIfNeeded() {
-        if (title.isNotBlank() || notes.isNotBlank()) onSave(title, notes, priority, isDone) else onBack()
+        if (title.isNotBlank() || notes.isNotBlank()) onSave(title, notes, priority, isDone, reminderAt) else onBack()
     }
 
     // משימה חדשה מתחילה בשדה הכותרת. קודם הפוקוס ההתחלתי נפל על כפתור השמירה
@@ -97,7 +100,7 @@ fun TaskEditorScreen(
                         Spacer(modifier = Modifier.width(8.dp))
                     }
                     TopBarIconButton(FutureIcons.Save, "שמור", theme.textColor, theme.accentColor) {
-                        onSave(title, notes, priority, isDone)
+                        onSave(title, notes, priority, isDone, reminderAt)
                     }
                 }
 
@@ -121,6 +124,28 @@ fun TaskEditorScreen(
                         singleLine = false,
                         modifier = Modifier.weight(1f),
                     )
+
+                    // תזכורת: צ'יפים של הדיזיין סיסטם. אין "היום 09:00" שכבר עבר - "הערב"
+                    // מופיע רק לפני 20:00, אז אין שמירה שנחסמת ו-BACK תמיד יוצא (TK1).
+                    Column {
+                        FutureSectionHeader("תזכורת", theme, inset = false)
+                        androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            item {
+                                FutureChip("ללא", theme, selected = reminderAt == null, onClick = { reminderAt = null })
+                            }
+                            val presetTimes = reminderPresets.map { it.second }
+                            if (reminderAt != null && reminderAt !in presetTimes) {
+                                item {
+                                    FutureChip(com.future.tasks.data.TaskReminders.label(reminderAt!!), theme, selected = true, onClick = {})
+                                }
+                            }
+                            reminderPresets.forEach { (label, at) ->
+                                item {
+                                    FutureChip(label, theme, selected = reminderAt == at, onClick = { reminderAt = at })
+                                }
+                            }
+                        }
+                    }
 
                     Column(modifier = Modifier.padding(bottom = 20.dp)) {
                         FutureSectionHeader("עדיפות", theme, inset = false)

@@ -1,5 +1,9 @@
 package com.future.tasks.ui.screens
 
+import androidx.compose.foundation.layout.padding
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.material.icons.rounded.CheckCircle
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureTextField
@@ -51,7 +55,46 @@ fun TaskListScreen(
     // המשימה שנפתחה לאחרונה - כשחוזרים "אחורה" מהעורך, הפוקוס צריך לשוב
     // אליה בדיוק, לא תמיד למשימה הראשונה ברשימה.
     lastSelectedTaskId: Int? = null,
+    onToggleDone: (Task) -> Unit = {},
+    onDelete: (Task) -> Unit = {},
 ) {
+    // TK6: Options על משימה ממוקדת - סימון "בוצע" ומחיקה בלי להיכנס לעורך.
+    var focusedTaskId by remember { mutableStateOf<Int?>(null) }
+    var menuOpen by remember { mutableStateOf(false) }
+    var pendingDelete by remember { mutableStateOf<Task?>(null) }
+    com.future.sharednav.nav.onOptionsKeyPress { if (pendingDelete == null) menuOpen = true }
+    val focusedTask = tasks.firstOrNull { it.id == focusedTaskId }
+    if (menuOpen) {
+        com.future.sharednav.components.FutureOptionsMenu(
+            theme = theme,
+            onDismissRequest = { menuOpen = false },
+            header = focusedTask?.title?.ifEmpty { "משימה ללא שם" } ?: "משימות",
+        ) {
+            if (focusedTask != null) {
+                com.future.sharednav.components.FutureMenuRow(
+                    if (focusedTask.isDone) "סמן כלא בוצע" else "סמן כבוצע",
+                    FutureIcons.Checklist,
+                    theme,
+                    { menuOpen = false; onToggleDone(focusedTask) },
+                )
+            }
+            com.future.sharednav.components.FutureMenuRow("משימה חדשה", FutureIcons.Add, theme, { menuOpen = false; onAddTask() })
+            if (focusedTask != null) {
+                com.future.sharednav.components.FutureMenuRow("מחק", FutureIcons.Delete, theme, {
+                    menuOpen = false
+                    pendingDelete = focusedTask
+                }, destructive = true)
+            }
+        }
+    }
+    pendingDelete?.let { task ->
+        com.future.sharednav.components.ConfirmDialog(
+            message = "למחוק את המשימה \"${task.title.ifEmpty { "ללא שם" }}\"?",
+            theme = theme,
+            onCancel = { pendingDelete = null },
+            onConfirm = { pendingDelete = null; onDelete(task) },
+        )
+    }
     val rowFocusRequesters = remember { mutableMapOf<Int, FocusRequester>() }
     val addFocusRequester = remember { FocusRequester() }
     LaunchedEffect(tasks.map { it.id }) {
@@ -76,7 +119,16 @@ fun TaskListScreen(
         Column(modifier = Modifier.fillMaxSize()) {
             SearchField(searchQuery, onSearchChanged, theme)
 
-            if (tasks.isEmpty()) {
+            if (tasks.isEmpty() && searchQuery.isNotBlank()) {
+                // TK7: בחיפוש ההודעה מיד מתחת לשדה, ולא באמצע המסך - שם היא הוסתרה
+                // מתחת לפס המקלדת.
+                Text(
+                    "לא נמצאו משימות",
+                    color = theme.mutedTextColor,
+                    fontSize = com.future.sharednav.theme.FutureTypography.summary,
+                    modifier = Modifier.padding(horizontal = FutureDimens.screenPadding, vertical = FutureDimens.spacingSm),
+                )
+            } else if (tasks.isEmpty()) {
                 EmptyState(
                     icon = FutureIcons.Checklist,
                     title = if (searchQuery.isBlank()) "אין משימות" else "לא נמצאו משימות",
@@ -96,6 +148,7 @@ fun TaskListScreen(
                             theme = theme,
                             focusRequester = rowFocusRequesters.getOrPut(task.id) { FocusRequester() },
                             onClick = { onTaskClick(task) },
+                            modifier = Modifier.onFocusChanged { if (it.isFocused || it.hasFocus) focusedTaskId = task.id },
                         )
                     }
                 }
@@ -122,10 +175,14 @@ private fun SearchField(query: String, onQueryChanged: (String) -> Unit, theme: 
 
 /** שורת משימה - שורת הרשימה של הדיזיין סיסטם; משימה שבוצעה בקו חוצה וב-40%. */
 @Composable
-private fun TaskRow(task: Task, theme: FutureTheme, focusRequester: FocusRequester, onClick: () -> Unit) {
+private fun TaskRow(task: Task, theme: FutureTheme, focusRequester: FocusRequester, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    // תזכורת עתידית מוצגת בשורה ("תזכורת: מחר 09:00"), לפני ההערות.
+    val reminder = task.reminderAt?.takeIf { !task.isDone && it > System.currentTimeMillis() }
+        ?.let { "תזכורת: " + com.future.tasks.data.TaskReminders.label(it) }
     FutureListItem(
         title = task.title.ifEmpty { "משימה ללא שם" },
-        summary = task.notes.ifBlank { null },
+        summary = listOfNotNull(reminder, task.notes.ifBlank { null }).joinToString(" · ").ifEmpty { null },
+        modifier = modifier,
         theme = theme,
         onClick = onClick,
         focusRequester = focusRequester,

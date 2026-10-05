@@ -386,14 +386,17 @@ fun ItemPanel(
         }
         if ((item !is LauncherItem.Widget || isEditMode) && (showLabel || isEditMode)) {
             Spacer(modifier = Modifier.height(6.dp))
-            Text(
+            // L7: שם ארוך ("ניווט ותחבורה") נגלל כשהאייקון ממוקד - MarqueeText של
+            // הספרייה המשותפת. בלי פוקוס הוא נחתך עם "..." כמו קודם.
+            com.future.sharednav.components.MarqueeText(
                 text = if (item is LauncherItem.Empty) "" else (item.customLabel ?: item.label),
-                style = MaterialTheme.typography.labelSmall.copy(shadow = OnWallpaperShadow),
                 color = OnWallpaperColor,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.Center,
-                fontSize = if (largeLabel) FutureTypography.summary else FutureTypography.caption
+                isFocused = isFocused,
+                style = MaterialTheme.typography.labelSmall.copy(
+                    shadow = OnWallpaperShadow,
+                    textAlign = TextAlign.Center,
+                    fontSize = if (largeLabel) FutureTypography.summary else FutureTypography.caption,
+                ),
             )
         }
     }
