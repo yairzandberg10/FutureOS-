@@ -142,11 +142,15 @@ class FileRepository {
                     true
                 }
                 .map { FileEntry(it, it.isDirectory, if (it.isFile) it.length() else 0L) }
+            // סדר אלפביתי אמיתי (ICU, עברית): עברית לחוד ואנגלית לחוד, כל אחת לפי
+            // הא"ב שלה, בלי תלות באותיות גדולות. קודם השמות התערבבו.
+            val collator = java.text.Collator.getInstance(java.util.Locale("he")).apply { strength = java.text.Collator.SECONDARY }
+            val byName = Comparator<FileEntry> { a, b -> collator.compare(a.file.name, b.file.name) }
             val bySort: Comparator<FileEntry> = when (sort) {
-                SortOrder.NAME -> compareBy { it.file.name.lowercase() }
+                SortOrder.NAME -> byName
                 SortOrder.DATE -> compareByDescending { it.file.lastModified() }
-                SortOrder.SIZE -> compareByDescending<FileEntry> { it.sizeBytes }.thenBy { it.file.name.lowercase() }
-                SortOrder.TYPE -> compareBy<FileEntry> { it.file.extension.lowercase() }.thenBy { it.file.name.lowercase() }
+                SortOrder.SIZE -> compareByDescending<FileEntry> { it.sizeBytes }.then(byName)
+                SortOrder.TYPE -> compareBy<FileEntry> { it.file.extension.lowercase() }.then(byName)
             }
             entries.sortedWith(compareByDescending<FileEntry> { it.isDirectory }.then(bySort))
         } catch (e: Exception) {

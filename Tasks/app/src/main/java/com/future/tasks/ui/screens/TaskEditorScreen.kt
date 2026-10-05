@@ -61,6 +61,11 @@ fun TaskEditorScreen(
         if (title.isNotBlank() || notes.isNotBlank()) onSave(title, notes, priority, isDone) else onBack()
     }
 
+    // משימה חדשה מתחילה בשדה הכותרת. קודם הפוקוס ההתחלתי נפל על כפתור השמירה
+    // (הראשון בשורה העליונה), וצריך היה לנווט אל השדה.
+    val titleFocus = remember { androidx.compose.ui.focus.FocusRequester() }
+    LaunchedEffect(Unit) { if (task == null) runCatching { titleFocus.requestFocus() } }
+
     // מקש Back פיזי שומר (אלא אם המשימה ריקה לגמרי) במקום לזרוק שינויים בשקט.
     BackHandler { saveIfNeeded() }
 
@@ -106,6 +111,7 @@ fun TaskEditorScreen(
                         placeholder = "כותרת המשימה",
                         theme = theme,
                         singleLine = true,
+                        focusRequester = titleFocus,
                     )
                     EditorField(
                         value = notes,
@@ -149,6 +155,7 @@ private fun EditorField(
     theme: FutureTheme,
     singleLine: Boolean,
     modifier: Modifier = Modifier,
+    focusRequester: androidx.compose.ui.focus.FocusRequester? = null,
 ) {
     FutureTextField(
         value = value,
@@ -156,6 +163,7 @@ private fun EditorField(
         theme = theme,
         placeholder = placeholder,
         singleLine = singleLine,
+        focusRequester = focusRequester,
         modifier = modifier.fillMaxWidth(),
     )
 }

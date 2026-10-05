@@ -62,6 +62,11 @@ what to re-check on the device). None of these is verified on the device yet.
   the day view's time range reads left to right.
 - **Tip calculator.** Amounts always show two decimals, and the typed bill is
   grouped by thousands.
+- **Smaller QA items.** Pomodoro starts on Start and Skip no longer counts as
+  a completed cycle; Files sorts names with a Hebrew ICU collator; Music
+  leaves out clips under 10 s and WhatsApp / Recordings folders; the remote's
+  "other model" hint only shows when the brand has other models; a new task
+  starts in the title field; BACK on Gallery's Albums tab returns to All.
 - **Launcher edit mode.** Left from the left "+" goes to the next page and
   right from the right "+" to the previous one (the arrows only toggled
   between the two buttons); adding a page scrolls to it.

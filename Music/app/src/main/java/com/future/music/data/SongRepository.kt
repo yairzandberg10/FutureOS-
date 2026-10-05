@@ -61,9 +61,12 @@ class SongRepository(private val context: Context) {
                 projection,
                 // לא רק IS_MUSIC: הקלטות, פודקאסטים ופורמטים שהסורק לא סימן
                 // כמוזיקה (opus/ogg/amr/m4a מהורדות) לא הופיעו בכלל. מסננים
-                // רק צלצולים/התראות/שעונים מעורר.
-                "${MediaStore.Audio.Media.IS_RINGTONE} = 0 AND ${MediaStore.Audio.Media.IS_NOTIFICATION} = 0 AND ${MediaStore.Audio.Media.IS_ALARM} = 0 AND ${MediaStore.Audio.Media.DURATION} > 1000",
-                null,
+                // רק צלצולים/התראות/שעונים מעורר. וגם הודעות קוליות והקלטות שיחה:
+                // "כל השירים" היה מלא בקטעי WhatsApp של 1-5 שניות עם "אמן לא ידוע".
+                // קבצים מתחת ל-10 שניות ותיקיות WhatsApp/הקלטות לא נחשבים שירים.
+                "${MediaStore.Audio.Media.IS_RINGTONE} = 0 AND ${MediaStore.Audio.Media.IS_NOTIFICATION} = 0 AND ${MediaStore.Audio.Media.IS_ALARM} = 0 AND ${MediaStore.Audio.Media.DURATION} > 10000" +
+                    " AND IFNULL(${MediaStore.MediaColumns.RELATIVE_PATH}, '') NOT LIKE ? AND IFNULL(${MediaStore.MediaColumns.RELATIVE_PATH}, '') NOT LIKE ?",
+                arrayOf("%WhatsApp%", "%Recordings%"),
                 "${MediaStore.Audio.Media.TITLE} ASC",
             )?.use { cursor ->
                 val idCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)

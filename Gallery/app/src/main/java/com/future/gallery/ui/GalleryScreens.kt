@@ -110,6 +110,8 @@ fun GalleryHomeScreen(
     lastSelectedAlbumId: String? = null,
 ) {
     var tab by rememberSaveable { mutableStateOf(GalleryTab.ALL) }
+    // BACK מ"אלבומים" חוזר ל"הכל" ולא יוצא מהאפליקציה.
+    BackHandler(enabled = tab == GalleryTab.ALBUMS) { tab = GalleryTab.ALL }
     var sortOption by rememberSaveable { mutableStateOf(SortOption.DATE_NEWEST) }
     var showMenu by remember { mutableStateOf(false) }
     val sortedItems = remember(items, sortOption) { items.sortedBy(sortOption) }

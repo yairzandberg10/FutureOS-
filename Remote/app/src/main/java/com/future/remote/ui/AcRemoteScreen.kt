@@ -178,7 +178,10 @@ fun AcRemoteScreen(theme: FutureTheme, device: RemoteDevice, onBack: () -> Unit)
                 }
                 Spacer(Modifier.height(FutureDimens.spacingMd))
                 Text(
-                    "כוונו את הטלפון אל המזגן. לא מגיב? Options ← דגם שלט אחר",
+                    // "דגם שלט אחר" מופיע בתפריט רק כשלחברה יש יותר מדגם אחד - אחרת ההנחיה
+                    // שלחה לאפשרות שלא קיימת.
+                    if ((company?.protocols?.size ?: 0) > 1) "כוונו את הטלפון אל המזגן. לא מגיב? Options ← דגם שלט אחר"
+                    else "כוונו את הטלפון אל המזגן.",
                     color = theme.subtleTextColor,
                     fontSize = FutureTypography.caption,
                 )

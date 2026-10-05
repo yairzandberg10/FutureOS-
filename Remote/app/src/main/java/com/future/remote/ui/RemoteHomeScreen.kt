@@ -91,7 +91,7 @@ fun RemoteHomeScreen(
                     }
                 } else {
                     Text(
-                        "בחרו את החברה של המזגן. לא מגיב? בשלט: Options ← דגם שלט אחר.",
+                        "בחרו את החברה של המזגן. לחברה עם כמה דגמים אפשר להחליף דגם ב-Options בתוך השלט.",
                         color = theme.textColor.copy(alpha = 0.55f),
                         fontSize = FutureTypography.summary,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)

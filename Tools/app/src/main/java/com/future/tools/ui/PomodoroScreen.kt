@@ -67,11 +67,15 @@ fun PomodoroScreen(theme: FutureTheme, onBack: () -> Unit) {
     var completedFocusCycles by remember { mutableIntStateOf(0) }
     var remainingMillis by remember { mutableLongStateOf(PomodoroPhase.FOCUS.minutes * 60_000L) }
     var isRunning by remember { mutableStateOf(false) }
+    // הפוקוס ההתחלתי על "התחל" - הפעולה הראשית, ולא על "איפוס".
+    val startFocus = remember { androidx.compose.ui.focus.FocusRequester() }
+    LaunchedEffect(Unit) { runCatching { startFocus.requestFocus() } }
 
-    fun startNextPhase() {
+    // completed = false ב"דלג": מחזור מיקוד שדולג לא נספר כ"הושלם".
+    fun startNextPhase(completed: Boolean = true) {
         val next = when (phase) {
             PomodoroPhase.FOCUS -> {
-                completedFocusCycles += 1
+                if (completed) completedFocusCycles += 1
                 if (completedFocusCycles % 4 == 0) PomodoroPhase.LONG_BREAK else PomodoroPhase.SHORT_BREAK
             }
             PomodoroPhase.SHORT_BREAK, PomodoroPhase.LONG_BREAK -> PomodoroPhase.FOCUS
@@ -130,8 +134,9 @@ fun PomodoroScreen(theme: FutureTheme, onBack: () -> Unit) {
                     FutureButton(
                         if (isRunning) "השהה" else "התחל", theme, { isRunning = !isRunning },
                         modifier = Modifier.weight(1f),
+                        focusRequester = startFocus,
                     )
-                    FutureButton("דלג", theme, { startNextPhase() }, modifier = Modifier.weight(1f), variant = FutureButtonVariant.Secondary)
+                    FutureButton("דלג", theme, { startNextPhase(completed = false) }, modifier = Modifier.weight(1f), variant = FutureButtonVariant.Secondary)
                     FutureButton("איפוס", theme, { resetAll() }, modifier = Modifier.weight(1f), variant = FutureButtonVariant.Secondary)
                 }
             }
