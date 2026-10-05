@@ -85,17 +85,20 @@ class RecorderService : Service() {
         val file = Recordings.newFile(this)
         startForeground(NOTIFICATION_ID, buildNotification(paused = false), ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE)
         try {
-            recorder = MediaRecorder(this).apply {
-                setAudioSource(MediaRecorder.AudioSource.MIC)
-                setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
-                setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
-                setAudioEncodingBitRate(128_000)
-                setAudioSamplingRate(44_100)
-                setAudioChannels(1)
-                setOutputFile(file.path)
-                prepare()
-                start()
-            }
+            // prepare/start נקראים במפורש על r, ולא בתוך apply: שם start() נפתר
+            // ל-RecorderService.start() עצמו, ו-recorder עדיין null - רקורסיה
+            // אינסופית ו-StackOverflowError בכל ניסיון הקלטה.
+            val r = MediaRecorder(this)
+            recorder = r
+            r.setAudioSource(MediaRecorder.AudioSource.MIC)
+            r.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+            r.setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+            r.setAudioEncodingBitRate(128_000)
+            r.setAudioSamplingRate(44_100)
+            r.setAudioChannels(1)
+            r.setOutputFile(file.path)
+            r.prepare()
+            r.start()
         } catch (e: Exception) {
             Log.e(TAG, "start failed", e)
             recorder?.release()

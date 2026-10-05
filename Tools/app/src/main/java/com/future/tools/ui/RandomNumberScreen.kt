@@ -1,4 +1,5 @@
 package com.future.tools.ui
+import com.future.sharednav.nav.onPoundKeyPress
 import com.future.sharednav.components.FutureButton
 import com.future.sharednav.theme.FutureDimens
 import com.future.sharednav.theme.idleFieldColor
@@ -52,6 +53,22 @@ fun RandomNumberScreen(theme: FutureTheme, onBack: () -> Unit) {
         if (isValidRange) result = Random.nextInt(minValue, maxValue + 1)
     }
 
+    fun switchField() {
+        activeField = 1 - activeField
+        startFresh = true
+    }
+
+    fun deleteDigit() {
+        if (activeField == 0) {
+            minText = if (minText.length <= 1) "0" else minText.dropLast(1)
+        } else {
+            maxText = if (maxText.length <= 1) "0" else maxText.dropLast(1)
+        }
+    }
+
+    // # נצרך ב-FutureUI ומגיע רק כשידור - בלי זה אי אפשר היה להגיע לשדה המקסימום.
+    onPoundKeyPress { switchField() }
+
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Box(
             modifier = Modifier
@@ -68,27 +85,23 @@ fun RandomNumberScreen(theme: FutureTheme, onBack: () -> Unit) {
                         startFresh = false
                         return@onKeyEvent true
                     }
+                    // רק בלי FutureUI (אמולטור, מקלדת חיצונית) - במכשיר דרך השידור למעלה.
                     if (event.nativeKeyEvent.keyCode == android.view.KeyEvent.KEYCODE_POUND) {
-                        activeField = 1 - activeField
-                        startFresh = true
+                        switchField()
                         return@onKeyEvent true
                     }
                     when (event.key) {
-                        Key.Backspace, Key.Delete -> {
-                            if (activeField == 0) {
-                                minText = if (minText.length <= 1) "0" else minText.dropLast(1)
-                            } else {
-                                maxText = if (maxText.length <= 1) "0" else maxText.dropLast(1)
-                            }
-                            true
-                        }
+                        Key.Backspace, Key.Delete -> { deleteDigit(); true }
                         Key.Enter, Key.NumPadEnter, Key.DirectionCenter -> { roll(); true }
                         else -> false
                     }
                 }
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                ToolsHeader(title = "מספר אקראי", theme = theme, onBack = onBack)
+                // אין במכשיר מקש מחיקה: BACK מוחק ספרה, ויוצא רק כשהשדה הפעיל ריק.
+                ToolsHeader(title = "מספר אקראי", theme = theme, onBack = {
+                    if ((if (activeField == 0) minText else maxText) != "0") deleteDigit() else onBack()
+                })
 
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
@@ -99,7 +112,7 @@ fun RandomNumberScreen(theme: FutureTheme, onBack: () -> Unit) {
                 }
 
                 Text(
-                    "# למעבר בין שדות · הקלד מהמקלדת",
+                    "# מעבר בין שדות · BACK מוחק ספרה",
                     color = theme.subtleTextColor,
                     fontSize = FutureTypography.caption,
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),

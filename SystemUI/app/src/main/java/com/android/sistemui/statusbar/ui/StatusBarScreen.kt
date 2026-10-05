@@ -274,7 +274,8 @@ private fun BatteryPill(percent: Int, isCharging: Boolean, accentColor: Color, m
         )
 
         val inset = strokeWidth + 1.2.dp.toPx()
-        val fillMaxWidth = bodyWidth - inset * 2
+        // coerceAtLeast: רוחב שלילי (אייקון צר מה-inset) הפיל את coerceIn בשלב הציור.
+        val fillMaxWidth = (bodyWidth - inset * 2).coerceAtLeast(0f)
         val fillWidth = (fillMaxWidth * (percent / 100f)).coerceIn(0f, fillMaxWidth)
         if (fillWidth > 0f) {
             drawRoundRect(

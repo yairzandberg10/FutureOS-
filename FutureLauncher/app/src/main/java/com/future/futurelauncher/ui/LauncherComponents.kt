@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.Spacer
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
 import android.content.pm.ResolveInfo
 import androidx.compose.material3.Icon
 
@@ -58,21 +57,28 @@ internal object AppIconCache {
     private const val MAX_ICON_PX = 256
     private val cache = java.util.concurrent.ConcurrentHashMap<String, ImageBitmap>()
 
-    fun peek(packageName: String): ImageBitmap? = cache[packageName]
+    /**
+     * המפתח הוא החבילה וה-Activity, ולא החבילה לבד: לאפליקציה עם כמה כניסות
+     * (שעון עצר/טיימר של "שעון" כ-activity-alias) יש אייקון לכל כניסה.
+     */
+    fun keyOf(resolveInfo: ResolveInfo): String =
+        "${resolveInfo.activityInfo.packageName}/${resolveInfo.activityInfo.name}"
+
+    fun peek(resolveInfo: ResolveInfo): ImageBitmap? = cache[keyOf(resolveInfo)]
 
     /** טוען (אם צריך) ומחזיר - חוסם, לקרוא רק מ-thread רקע. */
     fun load(pm: PackageManager, resolveInfo: ResolveInfo): ImageBitmap {
-        val packageName = resolveInfo.activityInfo.packageName
-        cache[packageName]?.let { return it }
+        val key = keyOf(resolveInfo)
+        cache[key]?.let { return it }
         // גודל קבוע: אפליקציה זרה יכולה להצהיר על אייקון בגודל עצום, ו-toBitmap() בגודל
         // המקורי מפיל את מסך הבית מחוסר זיכרון (בכל פתיחה - כלומר מסך בית שלא עולה)
         val icon = resolveInfo.loadIcon(pm)
         val side = maxOf(icon.intrinsicWidth, icon.intrinsicHeight).coerceIn(1, MAX_ICON_PX)
-        return icon.toBitmap(side, side).asImageBitmap().also { cache[packageName] = it }
+        return icon.toBitmap(side, side).asImageBitmap().also { cache[key] = it }
     }
 
     fun evict(packageName: String) {
-        cache.remove(packageName)
+        cache.keys.removeAll { it.startsWith("$packageName/") }
     }
 }
 
@@ -83,18 +89,24 @@ internal object AppIconCache {
  * הופיע באיחור. עכשיו אייקון שכבר במטמון מוצג מיד, ואחר נטען ברקע ומופיע
  * כשהוא מוכן. LauncherViewModel טוען מראש את כולם יחד עם רשימת האפליקציות,
  * כך שבפועל גם בפתיחה הראשונה הם כבר שם.
+ *
+ * המצב נשמר ב-remember עם מפתח האפליקציה. קודם הוא היה ב-produceState, שבו
+ * רק ה-producer מתחיל מחדש כשהמפתח משתנה והערך נשאר: משבצת שעברה מאפליקציה
+ * A ל-B (סידור, הסרה, מעבר דף ב-HorizontalPager) המשיכה להציג את האייקון של
+ * A, כי הוא לא null ולכן האייקון של B לא נטען אף פעם.
  */
 @Composable
 internal fun rememberAppIcon(resolveInfo: ResolveInfo, pm: PackageManager): ImageBitmap? {
-    val packageName = resolveInfo.activityInfo.packageName
-    val icon by produceState(initialValue = AppIconCache.peek(packageName), packageName) {
-        if (value == null) {
-            value = withContext(Dispatchers.IO) {
+    val key = AppIconCache.keyOf(resolveInfo)
+    val icon = remember(key) { mutableStateOf(AppIconCache.peek(resolveInfo)) }
+    LaunchedEffect(key) {
+        if (icon.value == null) {
+            icon.value = withContext(Dispatchers.IO) {
                 runCatching { AppIconCache.load(pm, resolveInfo) }.getOrNull()
             }
         }
     }
-    return icon
+    return icon.value
 }
 
 /**
@@ -130,7 +142,9 @@ fun FixedLauncherGrid(
         content = {
             items.forEachIndexed { index, item ->
                 if (item is LauncherItem.Empty && item.isOccupiedBy != null) return@forEachIndexed
-                itemContent(index, item)
+                // המצב של כל פריט קשור לפריט עצמו ולא למיקום במסך - אחרת בהזזה
+                // השם עובר למשבצת החדשה והמצב (האייקון) נשאר מאחור.
+                key(item.id) { itemContent(index, item) }
             }
         },
         modifier = modifier

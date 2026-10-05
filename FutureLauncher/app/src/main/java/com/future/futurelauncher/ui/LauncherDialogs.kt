@@ -262,7 +262,7 @@ fun AppOptionsDialog(
         theme = theme,
         title = item.label,
         trailingTitleContent = {
-            TopBarIconButton(FutureIcons.Delete, stringResource(R.string.trash), theme.dangerColor, theme.accentColor, { onRemove(); onDismiss() })
+            TopBarIconButton(FutureIcons.Delete, stringResource(R.string.trash), theme.dangerColor, theme.accentColor, onRemove)
         },
         footer = {
             GlassButton(text = stringResource(R.string.close), onClick = onDismiss, theme = theme, isPrimary = false, modifier = Modifier.fillMaxWidth())

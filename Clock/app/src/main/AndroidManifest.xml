@@ -12,6 +12,10 @@
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- הצלצול רץ ב-Foreground Service עם התראה במסך מלא (AlarmRingService):
+         באנדרואיד 12 Receiver לא רשאי לפתוח את מסך הצלצול ישירות מהרקע. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
 
     <uses-permission android:name="com.future.futureui.permission.SYSTEM_SETTINGS" />
     <uses-permission android:name="com.future.keyboard.permission.SETTINGS" />
@@ -86,7 +90,7 @@
             </intent-filter>
         </activity-alias>
 
-        <!-- מסך צלצול ייעודי, מוצג ישירות מ-AlarmReceiver כשאזעקה מצלצלת (גם
+        <!-- מסך צלצול ייעודי, נפתח מההתראה במסך מלא של AlarmRingService (גם
              מעל מסך נעילה, ר' setShowWhenLocked/setTurnScreenOn בקוד).
              excludeFromRecents/singleTask כדי שלא יישאר כרטיס "אחרונות" תקוע
              אחרי שהמשתמש כבר ביטל/נדנד את הצלצול. -->
@@ -99,6 +103,10 @@
             android:showWhenLocked="true"
             android:turnScreenOn="true"
             android:theme="@style/Theme.Clock" />
+
+        <service
+            android:name=".AlarmRingService"
+            android:exported="false" />
 
         <receiver
             android:name=".AlarmReceiver"

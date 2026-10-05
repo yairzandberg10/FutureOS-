@@ -20,6 +20,8 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.future.sharednav.theme.FutureTheme
+import com.future.sharednav.focus.FocusableItem
+import com.future.sharednav.focus.bringIntoViewOnFocus
 import kotlinx.coroutines.delay
 import java.time.ZoneId
 import java.time.ZonedDateTime
@@ -81,12 +83,18 @@ fun TimeZoneConverterScreen(theme: FutureTheme, onBack: () -> Unit) {
 
 @Composable
 private fun CityTimeRow(city: WorldCity, zoned: ZonedDateTime, dayDiff: Long, theme: FutureTheme) {
-    val shape = FutureShapes.lg
+    // כל שורה מקבלת פוקוס, כדי שהחצים יגללו את הרשימה. קודם אף שורה לא הייתה
+    // ממוקדת ולא הייתה גלילה במקשים, ורק 6 מתוך 11 הערים נראו.
+    FocusableItem(
+        onClick = {},
+        accentColor = theme.accentColor,
+        idleBackgroundColor = theme.textColor.copy(alpha = 0.055f),
+        modifier = Modifier.fillMaxWidth().bringIntoViewOnFocus(),
+        contentPadding = 0.dp,
+    ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(shape)
-            .background(theme.textColor.copy(alpha = 0.055f))
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
@@ -105,5 +113,6 @@ private fun CityTimeRow(city: WorldCity, zoned: ZonedDateTime, dayDiff: Long, th
             )
         }
         Text(zoned.format(timeFormatter), color = theme.accentColor, fontSize = FutureTypography.screenTitle, fontWeight = FontWeight.Bold)
+    }
     }
 }

@@ -1,4 +1,5 @@
 package com.future.wallpapers
+import com.future.sharednav.components.ConfirmDialog
 import com.future.sharednav.systemui.StatusBarInset
 
 import android.app.WallpaperManager
@@ -179,7 +180,10 @@ private enum class Target(val label: String, val flags: Int) {
     BOTH("שניהם", WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK),
 }
 
-/** תצוגה מלאה: OK - הגדר למסך הבית; Options - בחירה בין בית, נעילה ושניהם. */
+/**
+ * תצוגה מלאה: OK - הגדר למסך הבית (אחרי אישור); Options - בחירה בין בית,
+ * נעילה ושניהם. קודם OK החליף את הרקע מיד, והרקע הקודם אבד בלחיצה מקרית.
+ */
 @Composable
 private fun PreviewScreen(wallpaper: Wallpaper, theme: FutureTheme) {
     val context = LocalContext.current
@@ -189,6 +193,7 @@ private fun PreviewScreen(wallpaper: Wallpaper, theme: FutureTheme) {
     var failed by remember { mutableStateOf(false) }
     var menuOpen by remember { mutableStateOf(false) }
     var applying by remember { mutableStateOf(false) }
+    var confirmHome by remember { mutableStateOf(false) }
     val focus = remember { FocusRequester() }
     val darkTheme = remember(theme.accentColor) { FutureTheme(isDarkMode = true, accentColor = theme.accentColor) }
 
@@ -223,8 +228,8 @@ private fun PreviewScreen(wallpaper: Wallpaper, theme: FutureTheme) {
             .focusable()
             .onKeyEvent { event ->
                 val isOk = event.key == Key.DirectionCenter || event.key == Key.Enter
-                if (event.type == KeyEventType.KeyUp && isOk && !applying) {
-                    apply(Target.HOME)
+                if (event.type == KeyEventType.KeyUp && isOk && !applying && bitmap != null) {
+                    confirmHome = true
                     true
                 } else false
             },
@@ -248,6 +253,20 @@ private fun PreviewScreen(wallpaper: Wallpaper, theme: FutureTheme) {
                 .padding(horizontal = 14.dp, vertical = 6.dp),
         )
         FutureSnackbarHost(snackbar, darkTheme)
+    }
+
+    if (confirmHome) {
+        ConfirmDialog(
+            message = "להגדיר את התמונה כרקע של מסך הבית?",
+            theme = theme,
+            confirmLabel = "הגדר",
+            destructive = false,
+            onCancel = { confirmHome = false },
+            onConfirm = {
+                confirmHome = false
+                apply(Target.HOME)
+            },
+        )
     }
 
     if (menuOpen) {

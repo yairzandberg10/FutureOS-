@@ -3,7 +3,6 @@ import androidx.activity.compose.BackHandler
 
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.focus.animatedFill
-import androidx.compose.foundation.focusable
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.style.TextOverflow
@@ -145,8 +144,8 @@ fun TopBarIconButton(
             .animatedFill { bgColor.value }
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             // כפתור שאי אפשר להפעיל (שליחה בלי טקסט) לא מקבל פוקוס בכלל, והאייקון
-            // שלו יורד ל-40% - אותו כלל של FutureButton.
-            .focusable(enabled = enabled, interactionSource = interactionSource)
+            // שלו יורד ל-40% - אותו כלל של FutureButton. clickable הוא יעד הפוקוס
+            // היחיד, כדי שה-OK הראשון ילחץ (ר' FutureButton).
             .clickable(interactionSource = interactionSource, indication = null, enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {

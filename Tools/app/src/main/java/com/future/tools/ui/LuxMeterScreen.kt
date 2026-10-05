@@ -87,7 +87,8 @@ fun LuxMeterScreen(theme: FutureTheme, onBack: () -> Unit) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             LuxGauge(lux = state.lux, theme = theme)
                             Spacer(modifier = Modifier.height(20.dp))
-                            Text("${state.lux.roundToInt()} lux", color = theme.textColor, fontSize = FutureTypography.display, fontWeight = FontWeight.Light)
+                            // LRI…PDI: בלי זה ה-BiDi של המסך הציג "lux 333".
+                            Text("\u2066${state.lux.roundToInt()} lux\u2069", color = theme.textColor, fontSize = FutureTypography.display, fontWeight = FontWeight.Light)
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(lightingLabel(state.lux), color = theme.accentColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Medium)
                         }

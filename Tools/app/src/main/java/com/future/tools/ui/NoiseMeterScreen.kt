@@ -117,7 +117,8 @@ fun NoiseMeterScreen(theme: FutureTheme, onBack: () -> Unit) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             NoiseGauge(db = db, theme = theme)
                             Spacer(modifier = Modifier.height(20.dp))
-                            Text("${db.roundToInt()} dB", color = theme.textColor, fontSize = FutureTypography.display, fontWeight = FontWeight.Light)
+                            // LRI…PDI: בלי זה ה-BiDi של המסך הציג "dB 19".
+                            Text("\u2066${db.roundToInt()} dB\u2069", color = theme.textColor, fontSize = FutureTypography.display, fontWeight = FontWeight.Light)
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(levelLabel(db), color = theme.accentColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Medium)
                         }

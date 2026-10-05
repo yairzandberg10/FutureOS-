@@ -1,4 +1,6 @@
 package com.future.tools.ui
+import com.future.sharednav.nav.onPoundKeyPress
+import com.future.sharednav.nav.onStarKeyPress
 import com.future.sharednav.components.FutureChip
 import com.future.sharednav.components.FutureTabItem
 import com.future.sharednav.theme.subtleTextColor
@@ -92,6 +94,36 @@ fun UnitConverterScreen(theme: FutureTheme, onBack: () -> Unit) {
         0.0
     }
 
+    fun inputDigit(d: String) {
+        inputText = when {
+            startFresh || inputText == "0" -> d
+            inputText == "-0" -> "-$d"
+            else -> inputText + d
+        }
+        startFresh = false
+    }
+
+    fun inputDot() {
+        if (startFresh) inputText = "0"
+        if (!inputText.contains(".")) inputText += "."
+        startFresh = false
+    }
+
+    /** # = מינוס, למשל לטמפרטורות מתחת לאפס. */
+    fun toggleSign() {
+        inputText = if (inputText.startsWith("-")) inputText.drop(1) else "-$inputText"
+        startFresh = false
+    }
+
+    fun deleteDigit() {
+        inputText = inputText.dropLast(1).let { if (it.isEmpty() || it == "-") "0" else it }
+    }
+
+    // * ו-# נצרכים ב-FutureUI ומגיעים רק כשידור - KEYCODE_STAR למטה לא רץ במכשיר,
+    // ולכן אי אפשר היה להקליד נקודה עשרונית.
+    onStarKeyPress { inputDot() }
+    onPoundKeyPress { toggleSign() }
+
     fun setCategory(c: ConvCategory) {
         category = c
         fromIndex = 0
@@ -108,26 +140,29 @@ fun UnitConverterScreen(theme: FutureTheme, onBack: () -> Unit) {
                 .onKeyEvent { event ->
                     if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
                     digitForKey(event.key)?.let {
-                        inputText = if (startFresh || inputText == "0") it else inputText + it
-                        startFresh = false
+                        inputDigit(it)
                         return@onKeyEvent true
                     }
+                    // רק בלי FutureUI (אמולטור, מקלדת חיצונית) - במכשיר דרך השידור למעלה.
                     if (event.nativeKeyEvent.keyCode == android.view.KeyEvent.KEYCODE_STAR) {
-                        if (!inputText.contains(".")) inputText += "."
-                        startFresh = false
+                        inputDot()
+                        return@onKeyEvent true
+                    }
+                    if (event.nativeKeyEvent.keyCode == android.view.KeyEvent.KEYCODE_POUND) {
+                        toggleSign()
                         return@onKeyEvent true
                     }
                     when (event.key) {
-                        Key.Backspace, Key.Delete -> {
-                            inputText = if (inputText.length <= 1) "0" else inputText.dropLast(1)
-                            true
-                        }
+                        Key.Backspace, Key.Delete -> { deleteDigit(); true }
                         else -> false
                     }
                 }
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                ToolsHeader(title = "ממיר יחידות", theme = theme, onBack = onBack)
+                // אין במכשיר מקש מחיקה: BACK מוחק ספרה, ויוצא רק כשהקלט ריק.
+                ToolsHeader(title = "ממיר יחידות", theme = theme, onBack = {
+                    if (inputText != "0") deleteDigit() else onBack()
+                })
 
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),

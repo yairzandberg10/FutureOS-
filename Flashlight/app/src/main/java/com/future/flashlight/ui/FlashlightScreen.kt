@@ -1,5 +1,6 @@
 package com.future.flashlight.ui
 
+import com.future.sharednav.systemui.StatusBarInset
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -95,7 +97,11 @@ fun FlashlightScreen(theme: FutureTheme) {
                 }
             }
 
-            ScreenTopBar(title = "פנס", textColor = dark.textColor, accentColor = dark.accentColor, onBack = null)
+            // המסך מצויר עד הקצה (BoxWithConstraints על כל החלון), ובלי הריווח הזה
+            // הכותרת ישבה מתחת לשורת המצב של FutureUI ונראה רק חציה התחתון.
+            Column(modifier = Modifier.padding(top = StatusBarInset.TITLE_GAP_DP.dp)) {
+                ScreenTopBar(title = "פנס", textColor = dark.textColor, accentColor = dark.accentColor, onBack = null)
+            }
 
             Column(
                 modifier = Modifier.offset(y = v * 700).fillMaxWidth(),

@@ -1,4 +1,6 @@
 package com.future.tools.ui
+import com.future.sharednav.nav.onPoundKeyPress
+import com.future.sharednav.nav.onStarKeyPress
 import com.future.sharednav.theme.readableAccentColor
 import com.future.sharednav.components.FutureTabItem
 import com.future.sharednav.theme.subtleTextColor
@@ -50,8 +52,33 @@ fun QuickFinanceCalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
 
     fun resetInputs() {
-        primaryText = "0"; secondaryText = "0"; activeField = 0; startFresh = true
+        // מע"מ בישראל - 18%, כך שהתוצאה נכונה בלי להקליד אחוז בכלל.
+        primaryText = "0"; secondaryText = if (mode == FinanceMode.TAX) "18" else "0"; activeField = 0; startFresh = true
     }
+
+    fun inputDot() {
+        if (activeField == 0 && !primaryText.contains(".")) primaryText += "."
+        if (activeField == 1 && !secondaryText.contains(".")) secondaryText += "."
+        startFresh = false
+    }
+
+    fun switchField() {
+        activeField = 1 - activeField
+        startFresh = true
+    }
+
+    fun deleteDigit() {
+        if (activeField == 0) {
+            primaryText = if (primaryText.length <= 1) "0" else primaryText.dropLast(1)
+        } else {
+            secondaryText = if (secondaryText.length <= 1) "0" else secondaryText.dropLast(1)
+        }
+    }
+
+    // * ו-# נצרכים ב-FutureUI ומגיעים רק כשידור - KEYCODE_STAR/POUND למטה לא
+    // רצים במכשיר, ולכן אי אפשר היה להגיע לשדה השני והתוצאה תמיד הייתה 0.
+    onStarKeyPress { inputDot() }
+    onPoundKeyPress { switchField() }
 
     val primary = primaryText.toDoubleOrNull() ?: 0.0
     val secondary = secondaryText.toDoubleOrNull() ?: 0.0
@@ -72,33 +99,27 @@ fun QuickFinanceCalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
                         startFresh = false
                         return@onKeyEvent true
                     }
+                    // רק בלי FutureUI (אמולטור, מקלדת חיצונית) - במכשיר דרך השידור למעלה.
                     if (event.nativeKeyEvent.keyCode == android.view.KeyEvent.KEYCODE_STAR) {
-                        if (activeField == 0 && !primaryText.contains(".")) primaryText += "."
-                        if (activeField == 1 && !secondaryText.contains(".")) secondaryText += "."
-                        startFresh = false
+                        inputDot()
                         return@onKeyEvent true
                     }
                     if (event.nativeKeyEvent.keyCode == android.view.KeyEvent.KEYCODE_POUND) {
-                        activeField = 1 - activeField
-                        startFresh = true
+                        switchField()
                         return@onKeyEvent true
                     }
                     when (event.key) {
-                        Key.Backspace, Key.Delete -> {
-                            if (activeField == 0) {
-                                primaryText = if (primaryText.length <= 1) "0" else primaryText.dropLast(1)
-                            } else {
-                                secondaryText = if (secondaryText.length <= 1) "0" else secondaryText.dropLast(1)
-                            }
-                            true
-                        }
-                        Key.Tab -> { activeField = 1 - activeField; startFresh = true; true }
+                        Key.Backspace, Key.Delete -> { deleteDigit(); true }
+                        Key.Tab -> { switchField(); true }
                         else -> false
                     }
                 }
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                ToolsHeader(title = "מחשבון פיננסי", theme = theme, onBack = onBack)
+                // אין במכשיר מקש מחיקה: BACK מוחק ספרה, ויוצא רק כשהשדה הפעיל ריק.
+                ToolsHeader(title = "מחשבון פיננסי", theme = theme, onBack = {
+                    if ((if (activeField == 0) primaryText else secondaryText) != "0") deleteDigit() else onBack()
+                })
 
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
@@ -153,7 +174,7 @@ fun QuickFinanceCalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
                 }
 
                 Text(
-                    "# להחלפת שדה קלט · הקלד ספרות מהמקלדת",
+                    "# החלפת שדה · * נקודה · BACK מוחק ספרה",
                     color = theme.subtleTextColor,
                     fontSize = FutureTypography.caption,
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),

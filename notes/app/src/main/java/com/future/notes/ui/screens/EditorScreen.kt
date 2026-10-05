@@ -173,6 +173,12 @@ fun EditorScreen(
     fun exit() {
         if (recording) stopRecording()
         scope.launch {
+            // פתק שרוקן עד הסוף לא נשאר ברשימה כ"ללא כותרת / אין תוכן"
+            // (onDelete כבר סוגר את העורך).
+            if (id != 0 && isEmpty()) {
+                onDelete(current())
+                return@launch
+            }
             saveNow()
             onBack()
         }

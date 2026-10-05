@@ -35,29 +35,22 @@ class AlarmReceiver : BroadcastReceiver() {
                 if (alarmId == -1) return
                 val alarm = AlarmLogic.onAlarmFired(context, alarmId) ?: return
 
-                // מתחיל את מסך הצלצול ישירות מה-Receiver - הפעלת Activity
-                // מ-Receiver שמופעל על ידי AlarmManager (בעוד האפליקציה מחזיקה
-                // SCHEDULE_EXACT_ALARM) פטורה ממגבלות "background activity
-                // start" בדיוק בשביל השימוש הזה. FLAG_ACTIVITY_NEW_TASK נדרש
-                // כי אין כאן Activity-parent שממנו הופעלנו.
-                val ringIntent = Intent(context, AlarmRingActivity::class.java).apply {
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                    putExtra(EXTRA_ALARM_ID, alarm.id)
-                    putExtra(AlarmRingActivity.EXTRA_HOUR, alarm.hour)
-                    putExtra(AlarmRingActivity.EXTRA_MINUTE, alarm.minute)
-                    putExtra(AlarmRingActivity.EXTRA_LABEL, alarm.label)
-                }
-                context.startActivity(ringIntent)
+                // הצלצול רץ ב-AlarmRingService. קודם המסך נפתח ישירות מכאן, אבל
+                // באנדרואיד 12 זה נחסם ("Abort background activity starts") והאזעקה
+                // עברה בשקט. אזעקה מדויקת כן פוטרת הפעלת Foreground Service, והוא
+                // פותח את המסך דרך התראה במסך מלא.
+                AlarmRingService.start(context, alarm.id, alarm.hour, alarm.minute, alarm.label)
             }
             ACTION_TIMER_FIRED -> {
                 AlarmLogic.cancelTimer(context)
                 val now = java.util.Calendar.getInstance()
-                context.startActivity(Intent(context, AlarmRingActivity::class.java).apply {
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                    putExtra(AlarmRingActivity.EXTRA_HOUR, now.get(java.util.Calendar.HOUR_OF_DAY))
-                    putExtra(AlarmRingActivity.EXTRA_MINUTE, now.get(java.util.Calendar.MINUTE))
-                    putExtra(AlarmRingActivity.EXTRA_LABEL, "הטיימר הסתיים")
-                })
+                AlarmRingService.start(
+                    context,
+                    alarmId = -1,
+                    hour = now.get(java.util.Calendar.HOUR_OF_DAY),
+                    minute = now.get(java.util.Calendar.MINUTE),
+                    label = "הטיימר הסתיים",
+                )
             }
             else -> Log.w(TAG, "פעולה לא צפויה התקבלה: ${intent.action}")
         }

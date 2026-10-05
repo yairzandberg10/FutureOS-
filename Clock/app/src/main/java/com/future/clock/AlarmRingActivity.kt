@@ -1,17 +1,13 @@
 package com.future.clock
 
-import android.media.AudioAttributes
-import android.media.Ringtone
-import android.media.RingtoneManager
 import android.os.Bundle
-import android.os.CombinedVibration
-import android.os.Handler
-import android.os.Looper
-import android.os.VibrationEffect
-import android.os.VibratorManager
 import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.launch
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -43,7 +39,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.future.clock.logic.AlarmLogic
 import com.future.clock.logic.EXTRA_ALARM_ID
 import com.future.clock.logic.SNOOZE_MINUTES
 import com.future.sharednav.components.FutureButton
@@ -56,9 +51,6 @@ import com.future.sharednav.theme.mutedTextColor
 import com.future.sharednav.theme.readableAccentColor
 import com.future.sharednav.theme.rememberFutureTheme
 
-/** אחרי כמה זמן צלצול שאיש לא ענה לו נדחה לבד (נודניק), כמו בכל שעון מעורר. */
-private const val AUTO_SNOOZE_MILLIS = 10 * 60 * 1000L
-
 /**
  * מסך הצלצול. שני כפתורים של המערכת - "עצור" (ממוקד כברירת מחדל) ו"נודניק" -
  * ו-BACK דוחה לנודניק, כך שלחיצה מקרית לא משתיקה אזעקה לגמרי.
@@ -67,14 +59,14 @@ private const val AUTO_SNOOZE_MILLIS = 10 * 60 * 1000L
  * אליו, ו-BACK היה חסום לגמרי: אי אפשר היה לכבות את הצלצול. והמסך ישב
  * בתוך המשימה של האפליקציה, כך שבכל פתיחה של "שעון" הוא עלה שוב.
  * עכשיו יש לו משימה משלו (taskAffinity במניפסט) והוא נסגר תמיד.
+ *
+ * הצליל, הרטט והנודניק האוטומטי רצים ב-AlarmRingService, כדי שהאזעקה
+ * תצלצל גם כשהמערכת לא פותחת את המסך. המסך רק שולט בהם, ונסגר כשהצלצול
+ * נגמר (גם כש"עצור" נלחץ בהתראה).
  */
 class AlarmRingActivity : ComponentActivity() {
-    private var ringtone: Ringtone? = null
-    private var vibratorManager: VibratorManager? = null
     private var alarmId = -1
     private var handled = false
-    private val handler = Handler(Looper.getMainLooper())
-    private val autoSnooze = Runnable { snooze() }
 
     override fun dispatchTouchEvent(ev: android.view.MotionEvent): Boolean = true
 
@@ -89,13 +81,21 @@ class AlarmRingActivity : ComponentActivity() {
         val minute = intent.getIntExtra(EXTRA_MINUTE, 0)
         val label = intent.getStringExtra(EXTRA_LABEL).orEmpty()
 
-        // מסך שנפתח מחדש אחרי שהתהליך נהרג (בלי אזעקה אמיתית מאחוריו) לא מצלצל שוב.
-        if (savedInstanceState != null) {
-            finish()
+        // מסך שנפתח בלי צלצול פעיל מאחוריו (אחרי שהתהליך נהרג, או מהתראה ישנה) נסגר מיד.
+        if (savedInstanceState != null || !AlarmRingService.ringing.value) {
+            finishAndRemoveTask()
             return
         }
-        startRinging()
-        handler.postDelayed(autoSnooze, AUTO_SNOOZE_MILLIS)
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.CREATED) {
+                AlarmRingService.ringing.collect { ringing ->
+                    if (!ringing) {
+                        handled = true
+                        finishAndRemoveTask()
+                    }
+                }
+            }
+        }
 
         setContent {
             val theme = rememberFutureTheme()
@@ -176,7 +176,7 @@ class AlarmRingActivity : ComponentActivity() {
                 return true
             }
             KeyEvent.KEYCODE_VOLUME_UP, KeyEvent.KEYCODE_VOLUME_DOWN -> {
-                if (event.action == KeyEvent.ACTION_DOWN) runCatching { ringtone?.stop() }
+                if (event.action == KeyEvent.ACTION_DOWN) AlarmRingService.send(this, AlarmRingService.ACTION_SILENCE)
                 return true
             }
         }
@@ -186,52 +186,15 @@ class AlarmRingActivity : ComponentActivity() {
     private fun dismiss() {
         if (handled) return
         handled = true
-        stopRinging()
+        AlarmRingService.send(this, AlarmRingService.ACTION_DISMISS)
         finishAndRemoveTask()
     }
 
     private fun snooze() {
         if (handled) return
         handled = true
-        stopRinging()
-        if (alarmId != -1) AlarmLogic.scheduleSnooze(this, alarmId)
+        AlarmRingService.send(this, AlarmRingService.ACTION_SNOOZE)
         finishAndRemoveTask()
-    }
-
-    private fun startRinging() {
-        try {
-            val uri = RingtoneManager.getActualDefaultRingtoneUri(this, RingtoneManager.TYPE_ALARM)
-                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-            ringtone = RingtoneManager.getRingtone(this, uri)?.apply {
-                audioAttributes = AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_ALARM)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                    .build()
-                isLooping = true
-                play()
-            }
-        } catch (e: Exception) {
-            // בלי צליל ברירת מחדל - רטט ומסך בלבד.
-        }
-        try {
-            val manager = getSystemService(VIBRATOR_MANAGER_SERVICE) as VibratorManager
-            vibratorManager = manager
-            manager.vibrate(CombinedVibration.createParallel(VibrationEffect.createWaveform(longArrayOf(0, 800, 400), 0)))
-        } catch (e: Exception) {
-            // בלי רטט - צליל ומסך בלבד.
-        }
-    }
-
-    private fun stopRinging() {
-        handler.removeCallbacks(autoSnooze)
-        runCatching { ringtone?.stop() }
-        ringtone = null
-        runCatching { vibratorManager?.cancel() }
-    }
-
-    override fun onDestroy() {
-        stopRinging()
-        super.onDestroy()
     }
 
     companion object {

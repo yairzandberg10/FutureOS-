@@ -15,6 +15,10 @@ import com.future.sharednav.components.FutureButton
 import com.future.sharednav.components.FutureButtonVariant
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.components.ConfirmDialog
+import com.future.sharednav.components.FutureMenuRow
+import com.future.sharednav.components.FutureOptionsMenu
+import com.future.sharednav.nav.onOptionsKeyPress
+import androidx.compose.ui.focus.onFocusChanged
 import com.future.sharednav.focus.bringIntoViewOnFocus
 
 import androidx.compose.foundation.background
@@ -80,13 +84,61 @@ fun AlarmScreen(theme: FutureTheme, onBack: () -> Unit, onOverlayChange: (Boolea
     // מחיקה היא בלתי הפיכה, ומקש OK הוא מקש בודד - בלי אישור, לחיצה בשוגג
     // על שורת השעון מוחקת אותו.
     var pendingDelete by remember { mutableStateOf<Alarm?>(null) }
-    
+    // הכיבוי והמחיקה יושבים בתפריט האפשרויות של המעורר הממוקד (כמו בעיצוב).
+    // קודם היו מתג ופח בתוך השורה, אבל אי אפשר היה להגיע אליהם בחצים, והמתג
+    // לא הגיב בכלל - מעורר שנוצר נשאר לתמיד.
+    var focusedAlarmId by remember { mutableStateOf<Int?>(null) }
+    var menuOpen by remember { mutableStateOf(false) }
+    onOptionsKeyPress { if (!overlayOpen && pendingDelete == null) menuOpen = true }
+
     LaunchedEffect(Unit) {
         alarms.addAll(AlarmLogic.getAlarms(context))
     }
 
     fun updateAlarms() {
         AlarmLogic.saveAlarms(context, alarms.toList())
+    }
+
+    fun setEnabled(alarm: Alarm, enabled: Boolean) {
+        val at = alarms.indexOfFirst { it.id == alarm.id }
+        if (at != -1) {
+            alarms[at] = alarm.copy(isEnabled = enabled)
+            updateAlarms()
+        }
+    }
+
+    if (menuOpen) {
+        val focused = alarms.firstOrNull { it.id == focusedAlarmId }
+        FutureOptionsMenu(
+            theme = theme,
+            onDismissRequest = { menuOpen = false },
+            header = focused?.let { "%02d:%02d".format(it.hour, it.minute) } ?: "שעונים מעוררים",
+        ) {
+            if (focused != null) {
+                FutureMenuRow(if (focused.isEnabled) "כבה" else "הפעל", FutureIcons.Schedule, theme, {
+                    menuOpen = false
+                    setEnabled(focused, !focused.isEnabled)
+                })
+                FutureMenuRow("ערוך שעה", FutureIcons.Edit, theme, {
+                    menuOpen = false
+                    editingAlarm = focused
+                })
+            }
+            FutureMenuRow("מעורר חדש", FutureIcons.Add, theme, {
+                menuOpen = false
+                val newId = (alarms.maxOfOrNull { it.id } ?: 0) + 1
+                val newAlarm = Alarm(newId, 7, 0, emptySet())
+                alarms.add(newAlarm)
+                updateAlarms()
+                editingAlarm = newAlarm
+            })
+            if (focused != null) {
+                FutureMenuRow("מחק", FutureIcons.Delete, theme, {
+                    menuOpen = false
+                    pendingDelete = focused
+                }, destructive = true)
+            }
+        }
     }
 
     pendingDelete?.let { alarm ->
@@ -158,20 +210,13 @@ fun AlarmScreen(theme: FutureTheme, onBack: () -> Unit, onOverlayChange: (Boolea
                                 alarms.forEachIndexed { index, alarm ->
                                     if (index > 0) FutureDivider(theme = theme)
                                     AlarmRow(alarm, theme,
-                                        onToggle = { enabled ->
-                                            val at = alarms.indexOf(alarm)
-                                            if (at != -1) {
-                                                alarms[at] = alarm.copy(isEnabled = enabled)
-                                                updateAlarms()
-                                            }
-                                        },
-                                        onDelete = { pendingDelete = alarm },
-                                        onClick = { editingAlarm = alarm }
+                                        onClick = { editingAlarm = alarm },
+                                        modifier = Modifier.onFocusChanged { if (it.hasFocus) focusedAlarmId = alarm.id },
                                     )
                                 }
                             }
                             Text(
-                                "אישור פותח את בורר השעה. מקש ההוספה למעלה מוסיף מעורר חדש.",
+                                "אישור פותח את בורר השעה. Options: הפעלה/כיבוי ומחיקה.",
                                 color = theme.subtleTextColor,
                                 fontSize = FutureTypography.summary,
                                 modifier = Modifier.padding(
@@ -197,22 +242,20 @@ private fun recurrenceSummary(alarm: Alarm): String {
 }
 
 /**
- * שורת מעורר. בעיצוב היא [FutureSettingItem] עם מתג בלבד בסוף השורה;
- * כפתור המחיקה נשאר כאן כתוספת, כי הוא הדרך היחידה למחוק מעורר - בעיצוב
- * המחיקה יושבת בתפריט האפשרויות, שאינו קיים במסך הזה.
+ * שורת מעורר, כמו בעיצוב: [FutureSettingItem] עם מתג בלבד בסוף השורה. המתג
+ * מציג את המצב; ההפעלה, הכיבוי והמחיקה בתפריט האפשרויות של השורה הממוקדת.
  */
 @Composable
-fun AlarmRow(alarm: Alarm, theme: FutureTheme, onToggle: (Boolean) -> Unit, onDelete: () -> Unit, onClick: () -> Unit) {
+fun AlarmRow(alarm: Alarm, theme: FutureTheme, onClick: () -> Unit, modifier: Modifier = Modifier) {
     FutureSettingItem(
         title = "%02d:%02d".format(alarm.hour, alarm.minute),
         summary = recurrenceSummary(alarm),
         icon = FutureIcons.Schedule,
         theme = theme,
         onClick = onClick,
+        modifier = modifier,
         trailing = {
             FutureSwitch(checked = alarm.isEnabled, theme = theme)
-            Spacer(modifier = Modifier.width(FutureDimens.spacingSm))
-            ToolsIconButton(FutureIcons.Delete, "מחק", theme, tint = theme.dangerColor, onClick = onDelete)
         },
     )
 }

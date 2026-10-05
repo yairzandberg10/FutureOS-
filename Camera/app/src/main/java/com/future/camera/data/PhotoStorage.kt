@@ -12,7 +12,7 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 
 /**
- * שמירת תמונה שצולמה ל-MediaStore (Pictures/Camera) - ללא צורך בהרשאת
+ * שמירת תמונה שצולמה ל-MediaStore (DCIM/Camera) - ללא צורך בהרשאת
  * אחסון מפורשת כי אנחנו רק כותבים לפריט שאנחנו עצמנו יצרנו (Scoped Storage,
  * minSdk 31 תמיד תחת המדיניות הזו).
  */
@@ -30,7 +30,7 @@ object PhotoStorage {
         val contentValues = ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, name)
             put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
-            put(MediaStore.MediaColumns.RELATIVE_PATH, "Pictures/Camera")
+            put(MediaStore.MediaColumns.RELATIVE_PATH, CAMERA_DIR)
         }
         val outputOptions = ImageCapture.OutputFileOptions.Builder(
             context.contentResolver,
@@ -100,7 +100,7 @@ object PhotoStorage {
         val values = ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, name)
             put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
-            put(MediaStore.MediaColumns.RELATIVE_PATH, "Pictures/Camera")
+            put(MediaStore.MediaColumns.RELATIVE_PATH, CAMERA_DIR)
             put(MediaStore.MediaColumns.IS_PENDING, 1)
         }
         val resolver = context.contentResolver

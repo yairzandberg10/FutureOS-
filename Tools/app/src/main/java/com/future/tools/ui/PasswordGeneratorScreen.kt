@@ -82,8 +82,10 @@ fun PasswordGeneratorScreen(theme: FutureTheme, onBack: () -> Unit) {
                 ToolsHeader(title = "מחולל סיסמאות", theme = theme, onBack = onBack)
 
                 Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp)) {
+                    // LRI…PDI: סיסמה מוצגת משמאל לימין. בהקשר RTL סימנים בקצוות
+                    // (סוגריים, !, @) זזו, ומה שהוצג היה שונה ממה שמועתק.
                     Text(
-                        password,
+                        "\u2066$password\u2069",
                         color = theme.textColor,
                         fontSize = FutureTypography.headline,
                         fontWeight = FontWeight.Medium,

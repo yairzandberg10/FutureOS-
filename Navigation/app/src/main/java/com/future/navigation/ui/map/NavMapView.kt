@@ -33,7 +33,8 @@ import org.maplibre.android.maps.MapView
  * מיפוי מקשים (זהה בכל מקום שבו המפה הזו מוצגת):
  * - חצי D-pad: הזזת המפה (pan) בכיוון הנלחץ
  * - מרכז/Enter: חזרה למיקום שלי (recenter) וחידוש מצב מעקב
- * - * (KEYCODE_STAR): התרחקות (zoom out); # (KEYCODE_POUND): התקרבות (zoom in)
+ * - *: התרחקות (zoom out); #: התקרבות (zoom in). במכשיר שני המקשים מגיעים
+ *   כשידור מ-FutureUI (onStarKeyPress/onPoundKeyPress) ולא כאירוע מקש.
  */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -75,6 +76,11 @@ fun NavMapView(
         focusRequester.requestFocus()
     }
 
+    // FutureUI צורך את * ו-# בכל המערכת ומעביר לחיצה קצרה רק כשידור - Key.Pound
+    // ו-Key.Multiply למטה לא רצים במכשיר, והזום במקשים לא עבד.
+    com.future.sharednav.nav.onStarKeyPress { cameraController.zoomOut() }
+    com.future.sharednav.nav.onPoundKeyPress { cameraController.zoomIn() }
+
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -88,6 +94,7 @@ fun NavMapView(
                     Key.DirectionLeft -> { cameraController.pan(0.0, -1.0); onManualPan(); true }
                     Key.DirectionRight -> { cameraController.pan(0.0, 1.0); onManualPan(); true }
                     Key.DirectionCenter, Key.Enter -> { onRecenterRequested(); true }
+                    // רק בלי FutureUI (אמולטור, מקלדת חיצונית).
                     Key.Pound -> { cameraController.zoomIn(); true }
                     // KEYCODE_STAR נחשף ב-Compose בשם Key.Multiply (לא Key.Star).
                     Key.Multiply -> { cameraController.zoomOut(); true }

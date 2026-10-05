@@ -173,6 +173,11 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             var sharedTheme by remember { mutableStateOf(ThemeClient.getTheme(this)) }
+            // * ו-# נצרכים ב-FutureUI (החזקה ארוכה = מרכז בקרה / התראות) ולחיצה קצרה
+            // מגיעה רק כשידור - KEYCODE_STAR/POUND לא מגיעים ל-onKeyDown במכשיר,
+            // ולכן אי אפשר היה להקליד קודי USSD (*100#) או לנווט בתפריט קולי.
+            com.future.sharednav.nav.onStarKeyPress { onSymbolKey('*') }
+            com.future.sharednav.nav.onPoundKeyPress { onSymbolKey('#') }
             val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
             DisposableEffect(lifecycleOwner) {
                 val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
@@ -363,6 +368,28 @@ class MainActivity : ComponentActivity() {
         else -> null
     }
 
+    /**
+     * * או # שהגיעו כשידור מ-FutureUI - אותה התנהגות כמו ספרה ב-onKeyDown. לשידור
+     * אין "שחרור", אז צליל ה-DTMF בשיחה נעצר לבד אחרי רגע.
+     */
+    private fun onSymbolKey(symbol: Char) {
+        when (CallService.callState.value) {
+            android.telecom.Call.STATE_RINGING -> return
+            android.telecom.Call.STATE_ACTIVE -> {
+                inCallViewModel.onDtmfDigitPressed(symbol)
+                window.decorView.postDelayed({ inCallViewModel.onDtmfDigitReleased() }, DTMF_TAP_MILLIS)
+                return
+            }
+        }
+        when (currentRoute) {
+            Screen.Dialpad.route -> callsViewModel.onDigitPressed(symbol.toString())
+            Screen.CallLog.route, Screen.Contacts.route -> {
+                callsViewModel.setNumber(symbol.toString())
+                _openDialpad.tryEmit(Unit)
+            }
+        }
+    }
+
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         val currentCallState = CallService.callState.value
         val isCallActive = currentCallState == android.telecom.Call.STATE_ACTIVE
@@ -451,6 +478,7 @@ class MainActivity : ComponentActivity() {
     private companion object {
         const val CONTACTS_PACKAGE = "com.future.contact"
         const val MAX_DIAL_LENGTH = 64
+        const val DTMF_TAP_MILLIS = 150L
         val TabRoutes = setOf(Screen.CallLog.route, Screen.Contacts.route, Screen.Dialpad.route)
     }
 }

@@ -2,7 +2,6 @@ package com.future.sharednav.components
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Box
@@ -152,7 +151,8 @@ internal fun FutureButtonCore(
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             // כפתור שאי אפשר להפעיל גם לא מקבל פוקוס - "Anything that cannot
             // receive focus cannot be activated at all" (README של הדיזיין סיסטם).
-            .focusable(enabled = enabled, interactionSource = interactionSource)
+            // clickable הוא יעד הפוקוס היחיד: focusable חיצוני יצר שני יעדים
+            // מקוננים, וה-OK הראשון רק נכנס פנימה (FocusDirection.Enter) במקום ללחוץ.
             .bringIntoViewOnFocus()
             .clickable(interactionSource = interactionSource, indication = null, enabled = enabled, onClick = onClick)
             .padding(horizontal = if (diameter != null) FutureDimens.spacingSm else FutureDimens.spacingXl),

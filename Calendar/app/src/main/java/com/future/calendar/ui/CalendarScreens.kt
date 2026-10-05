@@ -125,11 +125,23 @@ fun CalendarHomeScreen(
     kind: CalendarKind = CalendarKind.COMBINED,
     usingFallbackLocation: Boolean = false
 ) {
+    // תפריט Options כללי (אירוע חדש, היום, הגדרות). קודם Options לא עשה כלום
+    // בתצוגת חודש, שבוע ושנה, וגם ביום כשאין אירוע ממוקד.
+    var generalMenu by remember { mutableStateOf(false) }
+    com.future.sharednav.nav.onOptionsKeyPress { if (viewMode != CalendarViewMode.DAY) generalMenu = true }
+    if (generalMenu) {
+        FutureOptionsMenu(theme = theme, onDismissRequest = { generalMenu = false }, header = "לוח שנה") {
+            FutureMenuRow("אירוע חדש", FutureIcons.Add, theme, { generalMenu = false; onAddEvent() })
+            FutureMenuRow("היום", FutureIcons.CalendarToday, theme, { generalMenu = false; onGoToday() })
+            FutureMenuRow("הגדרות", FutureIcons.Settings, theme, { generalMenu = false; onOpenSettings() })
+        }
+    }
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize()) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(20.dp, 20.dp, 20.dp, 8.dp),
+                    // TITLE_GAP_DP: בלי הריווח חצי העליון של הכפתורים ישב מתחת לשורת המצב.
+                    modifier = Modifier.fillMaxWidth().padding(top = StatusBarInset.TITLE_GAP_DP.dp).padding(20.dp, 20.dp, 20.dp, 8.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -202,7 +214,8 @@ fun CalendarHomeScreen(
                         lat = resolvedLat,
                         lon = resolvedLon,
                         showWeather = showWeather,
-                        kind = kind
+                        kind = kind,
+                        onGeneralMenu = { generalMenu = true },
                     )
                     CalendarViewMode.YEAR -> YearView(
                         title = if (kind == CalendarKind.HEBREW) CalendarMonths.hebrewYearLabel(selectedDate)
@@ -507,14 +520,15 @@ private fun DayView(
     lat: Double,
     lon: Double,
     showWeather: Boolean,
-    kind: CalendarKind = CalendarKind.COMBINED
+    kind: CalendarKind = CalendarKind.COMBINED,
+    onGeneralMenu: () -> Unit = {},
 ) {
     var menuFor by remember { mutableStateOf<CalendarEvent?>(null) }
     // עוקב אחרי האירוע הממוקד כרגע ברשימת היום, כדי שמקש Options יוכל לפתוח
     // את תפריט העריכה/מחיקה שלו - בלי זה התפריט לא נגיש בכלל במכשיר אמיתי,
     // כי מקש Options הפיזי נחסם ברמת המערכת ולעולם לא מגיע כ-Key.Menu לאפליקציה.
     var focusedEvent by remember { mutableStateOf<CalendarEvent?>(null) }
-    com.future.sharednav.nav.onOptionsKeyPress { if (focusedEvent != null) menuFor = focusedEvent }
+    com.future.sharednav.nav.onOptionsKeyPress { if (focusedEvent != null) menuFor = focusedEvent else onGeneralMenu() }
     menuFor?.let { event ->
         EventOptionsMenu(
             event = event, theme = theme,

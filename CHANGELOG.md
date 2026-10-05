@@ -4,6 +4,63 @@ This repo has no carried-over git history (see root [README](README.md)), so thi
 
 ## Unreleased
 
+### QA report fixes, 5 October
+
+From the manual QA report on the F22 Pro (`QA-REPORT.md`, section 0 lists
+what to re-check on the device). None of these is verified on the device yet.
+
+- **Shared: first OK did nothing.** `FutureButton`, `TopBarIconButton` and the
+  Messages compose buttons had `.focusable()` in front of `.clickable()` - two
+  nested focus targets, so the first OK only entered the inner one (and BACK
+  needed two presses after a click). `clickable` is now the only focus target.
+- **Shared: delete dialogs start on Cancel.** `ConfirmDialog` focused the red
+  button first, so a stray OK deleted.
+- **Clock: alarms and timers ring.** Android 12 blocks the receiver from
+  starting the ring screen ("Abort background activity starts"), so alarms
+  passed in silence. `AlarmRingService` is a foreground service (exact alarms
+  may start one) that plays the sound and vibration and posts a full-screen
+  notification with Stop / Snooze; the ring screen only controls it. Alarms
+  can now be turned off and deleted from the Options menu of the focused alarm
+  (the switch was display-only and the row's trash button was unreachable).
+- **Recorder: recording no longer crashes.** `start()` inside
+  `MediaRecorder(this).apply { }` resolved to `RecorderService.start()` -
+  infinite recursion, `StackOverflowError` on every recording.
+- **Launcher: icons match their names.** `rememberAppIcon` kept the previous
+  app's icon when a slot changed apps (`produceState` keeps its value across
+  keys); it now uses `remember(key)`, the grid keys items by id, and the icon
+  cache is keyed by package/activity. Removing an app from home, or a page
+  that still has apps on it, asks first.
+- **\* and # in Dialer, Navigation and Tools** now come from FutureUI's
+  broadcast (`onStarKeyPress` / `onPoundKeyPress`): USSD codes and DTMF in the
+  dialer, zoom in the map, field switching, decimal point and minus sign in
+  the finance calculator, random number, unit converter and tip calculator.
+  In those tools BACK deletes a digit and leaves only when the field is empty;
+  VAT starts at 18%. The time-zone list is focusable, so all 11 cities scroll.
+- **Keyboard (T9).** OK commits the composing word without a space; up/down
+  commit it and move on instead of cycling candidates (left/right still do),
+  so a composing word no longer traps focus in a field (notes could not be
+  left). A composing word is kept when input finishes. Abc mode doesn't
+  capitalize in URI and email fields.
+- **Terminal.** The command field is a URI field without capitalization or
+  autocorrect, so `ls` no longer becomes `Ls`.
+- **Notes.** A note emptied to nothing is deleted on exit.
+- **BiDi.** Passwords, "19 dB", "333 lux" and contact phone numbers render
+  left to right (and numbers are formatted consistently).
+- **Flashlight.** The title no longer sits under the status bar.
+- **FutureUI / SystemUI: status bar crash.** The battery icon's maximum fill
+  width went negative when the icon was narrow (mid-animation), and
+  `coerceIn(0f, negative)` crashed the draw phase; FutureUI then fell back to
+  the stock grey status bar until restart. The width is now floored at 0.
+- **Launcher edit mode.** Left from the left "+" goes to the next page and
+  right from the right "+" to the previous one (the arrows only toggled
+  between the two buttons); adding a page scrolls to it.
+- **Wallpapers.** OK in the preview asks before replacing the wallpaper.
+- **Calendar.** Options opens a general menu (new event, today, settings) in
+  every view; the top buttons no longer sit under the status bar.
+- **Camera.** Photos and videos are saved to `DCIM/Camera` (they went to
+  `Pictures/Camera` and `Movies/Camera`); the preview still shows older
+  photos from `Pictures/Camera`.
+
 ### Fix pass, 1 October: 11 apps and real widgets
 
 - **Assistant.** Whisper no longer repeats the same sentence over and over:

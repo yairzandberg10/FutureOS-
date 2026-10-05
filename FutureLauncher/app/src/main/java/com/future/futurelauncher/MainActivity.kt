@@ -429,12 +429,22 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                                     viewModel.homePageIndex = currentPage
                                     viewModel.savePages()
                                 } else { // Trash
-                                    viewModel.removePage(currentPage)
+                                    // עמוד ריק נמחק מיד; עמוד עם תוכן - רק אחרי אישור.
+                                    if (viewModel.pages.getOrNull(currentPage).orEmpty().all { it is LauncherItem.Empty }) {
+                                        viewModel.removePage(currentPage)
+                                    } else {
+                                        viewModel.dialogState = LauncherDialog.ConfirmRemovePage(currentPage)
+                                    }
                                 }
                             } else if (viewModel.isLeftPlusFocused) {
-                                viewModel.addPage(currentPage)
+                                // עוברים לעמוד החדש, כדי שיהיה ברור שהוא נוסף.
+                                val newPage = currentPage
+                                viewModel.addPage(newPage)
+                                scope.launch { pagerState.animateScrollToPage(newPage) }
                             } else if (viewModel.isRightPlusFocused) {
-                                viewModel.addPage(currentPage + 1)
+                                val newPage = currentPage + 1
+                                viewModel.addPage(newPage)
+                                scope.launch { pagerState.animateScrollToPage(newPage) }
                             } else if (viewModel.isEditMode && viewModel.isEditModeBottomBarFocused) {
                                 when (viewModel.editModeSelectedIndex) {
                                     0 -> viewModel.dialogState = LauncherDialog.LauncherSettings
@@ -541,9 +551,15 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                             AndroidKeyEvent.KEYCODE_DPAD_LEFT -> {
                                 when {
                                     viewModel.isTopBarFocused -> viewModel.topBarSelectedIndex = 1
+                                    // מה-"+" השמאלי, ← ממשיך לעמוד הבא (כמו מהעמודה הקיצונית
+                                    // ברשת). קודם החצים רק החליפו בין שני ה-"+", ובמצב עריכה
+                                    // לא היה מעבר בין עמודים בכלל.
                                     viewModel.isLeftPlusFocused -> {
-                                        viewModel.isLeftPlusFocused = false
-                                        viewModel.isRightPlusFocused = true
+                                        if (currentPage < pages.size - 1) scope.launch { pagerState.animateScrollToPage(currentPage + 1) }
+                                    }
+                                    viewModel.isRightPlusFocused -> {
+                                        viewModel.isRightPlusFocused = false
+                                        viewModel.isLeftPlusFocused = true
                                     }
                                     viewModel.isEditModeBottomBarFocused ->
                                         viewModel.editModeSelectedIndex = (viewModel.editModeSelectedIndex + 1).coerceAtMost(3)
@@ -553,9 +569,13 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                             AndroidKeyEvent.KEYCODE_DPAD_RIGHT -> {
                                 when {
                                     viewModel.isTopBarFocused -> viewModel.topBarSelectedIndex = 0
+                                    // מה-"+" הימני, → חוזר לעמוד הקודם.
                                     viewModel.isRightPlusFocused -> {
-                                        viewModel.isRightPlusFocused = false
-                                        viewModel.isLeftPlusFocused = true
+                                        if (currentPage > 0) scope.launch { pagerState.animateScrollToPage(currentPage - 1) }
+                                    }
+                                    viewModel.isLeftPlusFocused -> {
+                                        viewModel.isLeftPlusFocused = false
+                                        viewModel.isRightPlusFocused = true
                                     }
                                     viewModel.isEditModeBottomBarFocused ->
                                         viewModel.editModeSelectedIndex = (viewModel.editModeSelectedIndex - 1).coerceAtLeast(0)
@@ -992,12 +1012,7 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                             viewModel.savePages()
                         }
                     },
-                    onRemove = {
-                        val indexToRemove = currentItems.indexOf(dialog.item)
-                        if (indexToRemove != -1) {
-                            viewModel.removeItem(currentPage, indexToRemove)
-                        }
-                    },
+                    onRemove = { viewModel.dialogState = LauncherDialog.ConfirmRemoveItem(dialog.item) },
                     onDismiss = { viewModel.dialogState = LauncherDialog.None },
                     theme = theme
                 )
@@ -1094,6 +1109,30 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                         viewModel.dialogState = LauncherDialog.None
                     },
                     onDismiss = { viewModel.dialogState = LauncherDialog.None }
+                )
+            }
+            is LauncherDialog.ConfirmRemoveItem -> {
+                com.future.sharednav.components.ConfirmDialog(
+                    message = "להסיר את ${dialog.item.customLabel ?: dialog.item.label} ממסך הבית?",
+                    theme = theme,
+                    confirmLabel = "הסר",
+                    onCancel = { viewModel.dialogState = LauncherDialog.None },
+                    onConfirm = {
+                        val indexToRemove = currentItems.indexOf(dialog.item)
+                        if (indexToRemove != -1) viewModel.removeItem(currentPage, indexToRemove)
+                        viewModel.dialogState = LauncherDialog.None
+                    },
+                )
+            }
+            is LauncherDialog.ConfirmRemovePage -> {
+                com.future.sharednav.components.ConfirmDialog(
+                    message = "למחוק את העמוד ואת כל מה שבו?",
+                    theme = theme,
+                    onCancel = { viewModel.dialogState = LauncherDialog.None },
+                    onConfirm = {
+                        viewModel.dialogState = LauncherDialog.None
+                        viewModel.removePage(dialog.pageIndex)
+                    },
                 )
             }
             LauncherDialog.None -> {}

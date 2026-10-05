@@ -280,7 +280,14 @@ class MainActivity : ComponentActivity() {
                                 cursorBrush = androidx.compose.ui.graphics.SolidColor(theme.readableAccentColor),
                                 interactionSource = inputInteraction,
                                 singleLine = true,
-                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                                // URI ובלי אות גדולה או תיקון: מקלדת FutureOS לא מגדילה
+                                // את האות הראשונה בשדה כזה, אחרת "ls" הופך ל-"Ls" ונכשל.
+                                keyboardOptions = KeyboardOptions(
+                                    capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.None,
+                                    autoCorrectEnabled = false,
+                                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Uri,
+                                    imeAction = ImeAction.Send,
+                                ),
                                 keyboardActions = KeyboardActions(onSend = { runCommand(input) })
                             )
                             if (isRunning) {

@@ -373,7 +373,9 @@ private fun BatteryPill(percent: Int, isCharging: Boolean, accentColor: Color, m
         )
 
         val inset = strokeWidth + 1.2.dp.toPx()
-        val fillMaxWidth = bodyWidth - inset * 2
+        // coerceAtLeast: כשהאייקון צר מה-inset (למשל באמצע אנימציה) הרוחב יוצא שלילי,
+        // ו-coerceIn(0f, שלילי) הפיל את FutureUI בשלב הציור ("maximum -13.0").
+        val fillMaxWidth = (bodyWidth - inset * 2).coerceAtLeast(0f)
         val fillWidth = (fillMaxWidth * (percent / 100f)).coerceIn(0f, fillMaxWidth)
         if (fillWidth > 0f) {
             drawRoundRect(
@@ -513,7 +515,8 @@ private fun FosBattery(percent: Int, isCharging: Boolean, isSaver: Boolean) {
                 cornerRadius = CornerRadius(1.dp.toPx())
             )
             val inset = stroke + 1.5.dp.toPx()
-            val maxW = bodyW - inset * 2
+            // coerceAtLeast: ר' ההערה באייקון הסוללה למעלה - רוחב שלילי הפיל את FutureUI.
+            val maxW = (bodyW - inset * 2).coerceAtLeast(0f)
             val w = (maxW * percent / 100f).coerceIn(0f, maxW)
             if (w > 0f) {
                 drawRoundRect(

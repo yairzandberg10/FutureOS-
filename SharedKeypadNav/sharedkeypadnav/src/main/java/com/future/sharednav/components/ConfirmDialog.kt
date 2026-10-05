@@ -6,7 +6,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import com.future.sharednav.theme.FutureContrast
@@ -26,7 +32,8 @@ import com.future.sharednav.theme.rememberFutureType
  * הם [FutureButton] עצמו (משני + הרסני) - קודם הם היו כפתור נפרד בצורת
  * גלולה שגדל בפוקוס, כלומר כפתור שלישי שאין לו מקבילה בעיצוב.
  *
- * ביטול בימין (תחילת השורה ב-RTL), הפעולה בשמאל.
+ * ביטול בימין (תחילת השורה ב-RTL), הפעולה בשמאל. הפוקוס ההתחלתי על
+ * ביטול: OK מקרי לא מוחק כלום.
  */
 @Composable
 fun ConfirmDialog(
@@ -90,6 +97,10 @@ private fun ConfirmDialogContent(
     confirmLabel: String,
 ) {
     val type = rememberFutureType()
+    // קודם לא הוגדר פוקוס התחלתי, וה-OK/החץ הראשון נחת על הכפתור ההרסני.
+    // הבקשה רק אחרי שהכפתור נמדד: Dialog רץ בחלון נפרד, ובקשה מוקדמת נבלעת.
+    val cancelFocus = remember { FocusRequester() }
+    var initialFocusDone by remember { mutableStateOf(false) }
     AppDialog(onDismissRequest = onCancel) {
         DialogSurface(surfaceColor) {
             Text(
@@ -109,6 +120,13 @@ private fun ConfirmDialogContent(
                     fill = textColor.copy(alpha = 0.2f),
                     contentColor = textColor,
                     onClick = onCancel,
+                    focusRequester = cancelFocus,
+                    modifier = Modifier.onGloballyPositioned {
+                        if (!initialFocusDone) {
+                            initialFocusDone = true
+                            runCatching { cancelFocus.requestFocus() }
+                        }
+                    },
                 )
                 FutureButtonCore(
                     text = confirmLabel,

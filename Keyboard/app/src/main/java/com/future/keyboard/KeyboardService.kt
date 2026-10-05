@@ -137,6 +137,10 @@ class KeyboardService : InputMethodService() {
     // (למשל גלישה בסתר). בשדה כזה המקלדת לא לומדת מילים, לא שומרת העתקות
     // להיסטוריה ולא מחממת את מנוע הדיבור.
     private var isPrivateField = false
+    /** שדה URI/דוא"ל - מצב Abc לא מגדיל בו את האות הראשונה (ר' isLowercaseInput). */
+    private var isLowercaseField = false
+    /** OK אישר מילה בהרכבה - גם השחרור שלו לא מגיע לאפליקציה. */
+    private var centerCommittedWord = false
 
     // מצב multi-tap (כשאין התאמה במילון): האות שנבחרה בפועל בכל מיקום (מקביל
     // ל-digitSequence), האינדקס הנוכחי בתוך אותיות המקש האחרון, וזמן הלחיצה
@@ -495,7 +499,7 @@ class KeyboardService : InputMethodService() {
     /** מפעיל שיבוץ אותיות רישיות בהתאם למצב הנוכחי - רלוונטי לאנגלית בלבד. */
     private fun applyCase(text: String, mode: InputMode = currentMode()): String = when (mode) {
         InputMode.ENGLISH_UPPER -> text.uppercase()
-        InputMode.ENGLISH_CAPITALIZE -> text.replaceFirstChar { it.uppercaseChar() }
+        InputMode.ENGLISH_CAPITALIZE -> if (isLowercaseField) text else text.replaceFirstChar { it.uppercaseChar() }
         else -> text
     }
 
@@ -860,8 +864,24 @@ class KeyboardService : InputMethodService() {
         val inputClass = attribute?.inputType?.and(InputType.TYPE_MASK_CLASS)
         isPredictiveField = inputClass == InputType.TYPE_CLASS_TEXT
         isPrivateField = isPrivateInput(attribute)
+        isLowercaseField = isLowercaseInput(attribute)
         if (isPredictiveField && !isPrivateField) warmUpVoiceEngine()
         renderPanel()
+    }
+
+    /**
+     * שדה שבו אות ראשונה גדולה שוברת את הקלט: כתובת, דוא"ל, ופקודה בטרמינל
+     * (שמוצהרת כ-URI). שם מצב Abc לא מגדיל - "ls" נשאר "ls" ולא "Ls".
+     */
+    private fun isLowercaseInput(attribute: EditorInfo?): Boolean {
+        val type = attribute?.inputType ?: return false
+        if (type and InputType.TYPE_MASK_CLASS != InputType.TYPE_CLASS_TEXT) return false
+        return when (type and InputType.TYPE_MASK_VARIATION) {
+            InputType.TYPE_TEXT_VARIATION_URI,
+            InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS,
+            InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS -> true
+            else -> false
+        }
     }
 
     private fun isPrivateInput(attribute: EditorInfo?): Boolean {
@@ -1515,21 +1535,37 @@ class KeyboardService : InputMethodService() {
         }
 
         when (keyCode) {
-            // חצים שמאלה/ימינה/למעלה/למטה - מעבר בין מועמדות הניבוי כשיש יותר
-            // ממילה אחת מתאימה (למעלה/למטה כי חלון המועמדות מוצג כשורה מעל שדה
-            // הטקסט - ניווט אנכי טבעי לתוכו, בנוסף לחצים האופקיים); אם אין כמה
-            // מועמדות, מתנהג כניווט רגיל (ברירת המחדל של המערכת).
+            // חצים שמאלה/ימינה - מעבר בין מועמדות הניבוי כשיש יותר ממילה אחת
+            // מתאימה; אם אין כמה מועמדות, מתנהג כניווט רגיל (ברירת המחדל של המערכת).
             // שורת המועמדות מסודרת מימין לשמאל (הפאנל RTL): הראשונה בימין, ולכן
             // חץ שמאל מתקדם למועמדת הבאה וחץ ימין חוזר - כמו כיוון התנועה על המסך.
-            // קודם זה היה הפוך. למעלה/למטה: הקודמת/הבאה.
-            KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_DOWN -> {
+            // קודם זה היה הפוך.
+            //
+            // למעלה/למטה מאשרים את המילה (בלי רווח) וממשיכים לניווט הרגיל. קודם הם
+            // החליפו מועמדת, ולכן מילה בהרכבה "כלאה" את הפוקוס בשדה - אי אפשר היה
+            // לצאת ממנו (למשל מגוף פתק) בלי לאשר אותה ב-0, שגם מוסיף רווח.
+            KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN -> {
+                if (digitSequence.isNotEmpty()) commitCurrentWord(ic, appendSpace = false)
+                return super.onKeyDown(keyCode, event)
+            }
+            // OK מאשר את המילה המוצעת בלי רווח, ולא מועבר לאפליקציה (גם השחרור שלו
+            // נבלע - ר' onKeyUp). בלי מילה בהרכבה הוא מגיע לאפליקציה כרגיל.
+            KeyEvent.KEYCODE_DPAD_CENTER -> {
+                if (digitSequence.isNotEmpty()) {
+                    commitCurrentWord(ic, appendSpace = false)
+                    centerCommittedWord = true
+                    return true
+                }
+                return super.onKeyDown(keyCode, event)
+            }
+            KeyEvent.KEYCODE_DPAD_LEFT -> {
                 if (candidates.size > 1) {
                     cycleCandidate(ic, 1)
                     return true
                 }
                 return super.onKeyDown(keyCode, event)
             }
-            KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_DPAD_UP -> {
+            KeyEvent.KEYCODE_DPAD_RIGHT -> {
                 if (candidates.size > 1) {
                     cycleCandidate(ic, -1)
                     return true
@@ -1594,6 +1630,10 @@ class KeyboardService : InputMethodService() {
     }
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_DPAD_CENTER && centerCommittedWord) {
+            centerCommittedWord = false
+            return true
+        }
         if (keyCode == KeyEvent.KEYCODE_0) {
             val wasArmed = voiceInputArmed
             voiceInputArmed = false
@@ -2052,7 +2092,23 @@ class KeyboardService : InputMethodService() {
         renderPanel()
     }
 
+    /**
+     * מילה שעדיין בהרכבה נשארת בשדה כטקסט רגיל כשהקלט נגמר (נעילת מסך, מעבר
+     * אפליקציה). קודם resetComposing לבד השאיר את השדה עם הרכבה פתוחה, והמילה
+     * נמחקה ממנו.
+     */
+    override fun onFinishInputView(finishingInput: Boolean) {
+        if (digitSequence.isNotEmpty()) {
+            runCatching { currentInputConnection?.finishComposingText() }
+            // ההרכבה נסגרה בשדה - גם כאן מאפסים, אחרת הלחיצה הבאה הייתה
+            // מרכיבה מחדש את המילה שכבר נשארה בשדה ומכפילה אותה.
+            resetComposing()
+        }
+        super.onFinishInputView(finishingInput)
+    }
+
     override fun onFinishInput() {
+        if (digitSequence.isNotEmpty()) runCatching { currentInputConnection?.finishComposingText() }
         super.onFinishInput()
         resetComposing()
         isPunctuationMenuOpen = false

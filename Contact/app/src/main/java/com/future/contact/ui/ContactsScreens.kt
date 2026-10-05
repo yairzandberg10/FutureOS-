@@ -256,7 +256,7 @@ fun ContactsListScreen(
                     itemsIndexed(shown, key = { _, c -> c.id }) { _, contact ->
                         FutureListItem(
                             title = contact.name,
-                            summary = contact.phoneNumbers.firstOrNull(),
+                            summary = contact.phoneNumbers.firstOrNull()?.let(::displayNumber),
                             theme = theme,
                             onClick = { onContactClick(contact) },
                             focusRequester = focusFor(contact.id),
@@ -367,7 +367,7 @@ fun ContactDetailScreen(contact: Contact, theme: FutureTheme, actions: ContactAc
                     Text(contact.name, color = theme.textColor, fontSize = type.screenTitle, fontWeight = FutureTypography.weightBold, textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = FutureDimens.screenPadding))
                     if (primary != null) {
                         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-                            Text(primary, color = theme.mutedTextColor, fontSize = type.body)
+                            Text(displayNumber(primary), color = theme.mutedTextColor, fontSize = type.body)
                         }
                     }
                     if (contact.isBlocked) Text("חסום", color = theme.dangerColor, fontSize = type.summary)
@@ -380,7 +380,7 @@ fun ContactDetailScreen(contact: Contact, theme: FutureTheme, actions: ContactAc
                     contact.phoneNumbers.forEachIndexed { index, number ->
                         if (index > 0) FutureDivider(theme = theme)
                         FutureSettingItem(
-                            title = if (contact.phoneNumbers.size > 1) "התקשר · $number" else "התקשר",
+                            title = if (contact.phoneNumbers.size > 1) "התקשר · ${displayNumber(number)}" else "התקשר",
                             icon = FutureIcons.Call,
                             theme = theme,
                             showChevron = false,
@@ -528,4 +528,13 @@ fun AddContactDialog(theme: FutureTheme, initialNumber: String = "", onDismiss: 
             )
         }
     }
+}
+
+/**
+ * מספר טלפון לתצוגה: בפורמט אחיד (מקפים גם במספר בינלאומי), ועטוף ב-LRI…PDI
+ * כדי שבשורה RTL הוא יוצג משמאל לימין. בלי זה "+972..." הוצג כ-"972...+".
+ */
+internal fun displayNumber(number: String): String {
+    val formatted = android.telephony.PhoneNumberUtils.formatNumber(number, "IL") ?: number
+    return "\u2066$formatted\u2069"
 }

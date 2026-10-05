@@ -1,4 +1,5 @@
 package com.future.tools.ui
+import com.future.sharednav.nav.onStarKeyPress
 import com.future.sharednav.components.FutureTabItem
 import com.future.sharednav.theme.subtleTextColor
 import com.future.sharednav.theme.mutedTextColor
@@ -47,6 +48,14 @@ fun TipSplitCalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
     val total = bill + tipAmount
     val perPerson = total / people
 
+    fun inputDot() {
+        if (!billText.contains(".")) billText += "."
+        startFresh = false
+    }
+
+    // * נצרך ב-FutureUI ומגיע רק כשידור - בלי זה אי אפשר היה להקליד אגורות.
+    onStarKeyPress { inputDot() }
+
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Box(
             modifier = Modifier
@@ -59,9 +68,9 @@ fun TipSplitCalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
                         startFresh = false
                         return@onKeyEvent true
                     }
+                    // רק בלי FutureUI (אמולטור, מקלדת חיצונית) - במכשיר דרך השידור למעלה.
                     if (event.nativeKeyEvent.keyCode == android.view.KeyEvent.KEYCODE_STAR) {
-                        if (!billText.contains(".")) billText += "."
-                        startFresh = false
+                        inputDot()
                         return@onKeyEvent true
                     }
                     when (event.key) {
@@ -74,7 +83,10 @@ fun TipSplitCalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
                 }
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                ToolsHeader(title = "טיפים ופיצול חשבון", theme = theme, onBack = onBack)
+                // אין במכשיר מקש מחיקה: BACK מוחק ספרה, ויוצא רק כשהסכום ריק.
+                ToolsHeader(title = "טיפים ופיצול חשבון", theme = theme, onBack = {
+                    if (billText != "0") billText = if (billText.length <= 1) "0" else billText.dropLast(1) else onBack()
+                })
 
                 Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
                     Text("סכום החשבון", color = theme.mutedTextColor, fontSize = FutureTypography.label)

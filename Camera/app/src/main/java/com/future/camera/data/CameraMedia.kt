@@ -9,10 +9,19 @@ import android.provider.MediaStore
 import android.util.Size
 
 /**
- * התמונות שהמצלמה שמרה (Pictures/Camera) - לתצוגה המקדימה ליד כפתור הצילום
+ * התמונות שהמצלמה שמרה (DCIM/Camera, ותמונות ישנות מ-Pictures/Camera) - לתצוגה המקדימה ליד כפתור הצילום
  * ולמציג התמונות האחרונות בתוך האפליקציה. קבצים שהאפליקציה יצרה נקראים
  * בלי הרשאת אחסון (Scoped Storage).
  */
+/**
+ * תיקיית המצלמה הסטנדרטית באנדרואיד - שם גלריות, גיבוי ומחשב (MTP) מחפשים
+ * תמונות. קודם התמונות נשמרו ב-Pictures/Camera והסרטונים ב-Movies/Camera.
+ */
+const val CAMERA_DIR = "DCIM/Camera"
+
+/** איפה תמונות נשמרו לפני המעבר ל-DCIM - כדי שהתצוגה המקדימה תמשיך להציג אותן. */
+private const val LEGACY_PHOTO_DIR = "Pictures/Camera"
+
 object CameraMedia {
     fun recentPhotos(context: Context, limit: Int = 60): List<Uri> {
         val result = mutableListOf<Uri>()
@@ -20,8 +29,8 @@ object CameraMedia {
             context.contentResolver.query(
                 MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
                 arrayOf(MediaStore.Images.Media._ID),
-                "${MediaStore.MediaColumns.RELATIVE_PATH} LIKE ?",
-                arrayOf("Pictures/Camera%"),
+                "${MediaStore.MediaColumns.RELATIVE_PATH} LIKE ? OR ${MediaStore.MediaColumns.RELATIVE_PATH} LIKE ?",
+                arrayOf("$CAMERA_DIR%", "$LEGACY_PHOTO_DIR%"),
                 "${MediaStore.MediaColumns.DATE_ADDED} DESC",
             )?.use { c ->
                 val idCol = c.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
