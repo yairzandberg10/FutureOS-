@@ -62,6 +62,22 @@ what to re-check on the device). None of these is verified on the device yet.
   the day view's time range reads left to right.
 - **Tip calculator.** Amounts always show two decimals, and the typed bill is
   grouped by thousands.
+- **Navigation.** Up from the home/work tiles and down from the search field
+  reach the drive/transit tabs (explicit focus properties; the screen-wide
+  text-field focus trap's geometric search skipped them).
+- **Keyboard.** BACK in an empty field goes straight to the app instead of
+  only hiding the keyboard bar.
+- **More QA items.** Camera's top controls sit below the status bar; file
+  path, 12-hour sample and map coordinates read left to right; OK in the
+  Terminal field runs the command; app options open on Close; Settings,
+  Messages and the launcher have Hebrew names; the dialer and Messages
+  default-app prompts name the app; OK on a time wheel goes to Sunday; the
+  calculator keeps "12 + 3 =" above the result; Translate returns focus to
+  the capsule whose picker was opened; note actions come first in Notes'
+  Options; Sfarim focuses "continue reading" once it loads and doesn't repeat
+  the book name; deleting a random-picker option asks first; Fitness retries
+  initial focus until the first item is drawn. README: Wallpapers in the app
+  table, lock-screen note corrected.
 - **Smaller QA items.** Pomodoro starts on Start and Skip no longer counts as
   a completed cycle; Files sorts names with a Hebrew ICU collator; Music
   leaves out clips under 10 s and WhatsApp / Recordings folders; the remote's

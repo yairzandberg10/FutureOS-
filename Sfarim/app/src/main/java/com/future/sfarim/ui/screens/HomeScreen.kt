@@ -49,7 +49,9 @@ fun HomeScreen(
     onContinueReading: (ReadingProgressEntry) -> Unit,
 ) {
     val firstFocusRequester = remember { FocusRequester() }
-    LaunchedEffect(Unit) { firstFocusRequester.requestFocus() }
+    // "המשך קריאה" נטען אחרי הפתיחה ומופיע מעל "חיפוש" - מבקשים פוקוס שוב כשהוא
+    // מופיע, אחרת הפוקוס נשאר על "חיפוש" ו-↓ הראשון דילג עליו (SF1).
+    LaunchedEffect(continueReading != null) { runCatching { firstFocusRequester.requestFocus() } }
 
     Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
         LazyColumn(
@@ -68,7 +70,9 @@ fun HomeScreen(
             if (continueReading != null) {
                 item {
                     FutureListItem(
-                        title = "${continueReading.bookTitle} · ${continueReading.segmentRef}",
+                        // ההפניה כבר מתחילה בשם הספר ("בראשית פרק ב") - בלי כפילות "בראשית · בראשית...".
+                        title = if (continueReading.segmentRef.startsWith(continueReading.bookTitle)) continueReading.segmentRef
+                        else "${continueReading.bookTitle} · ${continueReading.segmentRef}",
                         summary = "המשך קריאה",
                         theme = theme,
                         onClick = { onContinueReading(continueReading) },

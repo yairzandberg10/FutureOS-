@@ -76,7 +76,15 @@ fun WorkoutsScreen(
     }
 
     val firstRowFocusRequester = remember { FocusRequester() }
-    LaunchedEffect(Unit) { firstRowFocusRequester.requestFocus() }
+    // הפריט הראשון עוד לא מצויר בפריים הראשון (רשימה, אנימציית מעבר), והבקשה
+    // נכשלה בשקט - הפוקוס נשאר על העוגן הבלתי נראה של ה-NavHost. מנסים שוב בכמה
+    // הפריימים הראשונים, עד שהפריט קיים.
+    LaunchedEffect(Unit) {
+        repeat(6) {
+            androidx.compose.runtime.withFrameNanos { }
+            if (runCatching { firstRowFocusRequester.requestFocus() }.isSuccess) return@LaunchedEffect
+        }
+    }
 
     // מחיקת אימון מותאם היא בלתי הפיכה, וכפתור המחיקה יושב באותה שורה
     // שעליה המשתמש מנווט - בלי אישור, לחיצת OK אחת בשוגג מוחקת אותו.

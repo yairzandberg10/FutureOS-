@@ -114,7 +114,15 @@ fun HomeScreen(
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     val focusRequester = remember { FocusRequester() }
-    LaunchedEffect(Unit) { runCatching { focusRequester.requestFocus() } }
+    // הפריט הראשון עוד לא מצויר בפריים הראשון (רשימה, אנימציית מעבר), והבקשה
+    // נכשלה בשקט - הפוקוס נשאר על העוגן הבלתי נראה של ה-NavHost. מנסים שוב בכמה
+    // הפריימים הראשונים, עד שהפריט קיים.
+    LaunchedEffect(Unit) {
+        repeat(6) {
+            androidx.compose.runtime.withFrameNanos { }
+            if (runCatching { focusRequester.requestFocus() }.isSuccess) return@LaunchedEffect
+        }
+    }
 
     Column(
         modifier = Modifier

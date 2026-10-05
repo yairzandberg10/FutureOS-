@@ -178,14 +178,8 @@ fun ListScreen(
             onDismissRequest = { showMenu = false },
             header = note?.title?.ifEmpty { stringResource(R.string.untitled) },
         ) {
-            FutureMenuRow(stringResource(R.string.new_note), FutureIcons.Add, theme, {
-                showMenu = false
-                onAddNote()
-            })
-            FutureMenuRow("רשימה חדשה", FutureIcons.Checklist, theme, {
-                showMenu = false
-                onAddChecklist()
-            })
+            // פעולה על הפתק הממוקד ראשונה (התפריט נפתח עם שם הפתק בכותרת); "פתק חדש"
+            // אחריה. המחיקה, ההרסנית, נשארת אחרונה.
             if (note != null) {
                 FutureMenuRow(
                     stringResource(if (note.isPinned) R.string.unpin else R.string.pin),
@@ -197,6 +191,14 @@ fun ListScreen(
                     },
                 )
             }
+            FutureMenuRow(stringResource(R.string.new_note), FutureIcons.Add, theme, {
+                showMenu = false
+                onAddNote()
+            })
+            FutureMenuRow("רשימה חדשה", FutureIcons.Checklist, theme, {
+                showMenu = false
+                onAddChecklist()
+            })
             FutureMenuRow(if (gridView) "תצוגת רשימה" else "תצוגת רשת", if (gridView) Icons.Rounded.ViewAgenda else FutureIcons.GridView, theme, {
                 showMenu = false
                 onToggleGrid()

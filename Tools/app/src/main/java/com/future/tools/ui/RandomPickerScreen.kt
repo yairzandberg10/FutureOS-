@@ -47,6 +47,8 @@ fun RandomPickerScreen(theme: FutureTheme, onBack: () -> Unit) {
     val options = remember { mutableStateListOf("פיצה", "סושי", "המבורגר") }
     var draft by remember { mutableStateOf("") }
     var chosenIndex by remember { mutableStateOf<Int?>(null) }
+    // X מוחק רק אחרי אישור - קודם אפשרות נמחקה מיד, גם בלחיצה מקרית.
+    var pendingDeleteIndex by remember { mutableStateOf<Int?>(null) }
 
     fun pick() {
         if (options.isNotEmpty()) chosenIndex = Random.nextInt(options.size)
@@ -93,10 +95,7 @@ fun RandomPickerScreen(theme: FutureTheme, onBack: () -> Unit) {
                                 text = option,
                                 isChosen = chosenIndex == index,
                                 theme = theme,
-                                onDelete = {
-                                    options.removeAt(index)
-                                    chosenIndex = null
-                                }
+                                onDelete = { pendingDeleteIndex = index }
                             )
                         }
                     }
@@ -107,6 +106,19 @@ fun RandomPickerScreen(theme: FutureTheme, onBack: () -> Unit) {
                 }
             }
         }
+    }
+
+    pendingDeleteIndex?.let { index ->
+        com.future.sharednav.components.ConfirmDialog(
+            message = "למחוק את \"${options.getOrNull(index).orEmpty()}\"?",
+            theme = theme,
+            onCancel = { pendingDeleteIndex = null },
+            onConfirm = {
+                if (index in options.indices) options.removeAt(index)
+                chosenIndex = null
+                pendingDeleteIndex = null
+            },
+        )
     }
 }
 
