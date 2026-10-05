@@ -115,6 +115,8 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
     // אחד לתהליך, כך שפתיחה שנייה של העוזר לא טוענת את המודלים מחדש.
     val piperTts = remember { PiperTts.shared(context) }
     val speechEngine = remember { LocalSpeechEngine(context) }
+    // גוגל בעברית כשאפשר, Whisper המקומי כגיבוי (ר' HybridSpeech).
+    val speech = remember { com.future.assistant.asr.HybridSpeech(context, speechEngine) }
 
     fun speak(text: String, spoken: String = text, action: AssistantAction? = null) {
         state = AssistantState.SPEAKING
@@ -174,7 +176,7 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
             if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP && state == AssistantState.LISTENING) {
                 state = AssistantState.IDLE
-                scope.launch(Dispatchers.IO) { speechEngine.cancelRecording() }
+                speech.cancel()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -186,17 +188,26 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
             AssistantState.IDLE -> {
                 heardText = ""
                 state = AssistantState.LISTENING
-                // ההקלטה מתחילה מיד, גם אם המודל עוד נטען - התמלול יחכה לו.
-                scope.launch(Dispatchers.IO) {
-                    speechEngine.startRecording { db -> level = ((db + 2f) / 12f).coerceIn(0f, 1f) }
-                }
+                // ההקלטה מתחילה מיד, גם אם מודל Whisper עוד נטען - התמלול יחכה לו.
+                speech.start(
+                    onLevel = { level = it },
+                    // גוגל מסיים לבד אחרי שקט - בלי לחכות ל-OK.
+                    onAutoResult = { text ->
+                        scope.launch(Dispatchers.Main) {
+                            if (state == AssistantState.LISTENING) {
+                                level = 0f
+                                handleRecognizedText(text)
+                            }
+                        }
+                    },
+                )
             }
             AssistantState.LISTENING -> {
                 state = AssistantState.THINKING
                 level = 0f
-                scope.launch(Dispatchers.IO) {
-                    val text = speechEngine.stopRecordingAndTranscribe()
-                    withContext(Dispatchers.Main) { handleRecognizedText(text) }
+                scope.launch {
+                    val text = speech.stopAndTranscribe()
+                    handleRecognizedText(text)
                 }
             }
             else -> {}
