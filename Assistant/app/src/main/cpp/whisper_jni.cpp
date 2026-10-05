@@ -62,7 +62,16 @@ Java_com_future_assistant_asr_WhisperCpp_nativeTranscribe(JNIEnv *env, jobject /
     // משפט של 3 שניות ועל חצי דקה. audio_ctx מקצר את החלון לאורך ההקלטה
     // בפועל (1500 פריימים = 30 שניות, כלומר 50 לשנייה) + מרווח: במודל
     // small זה הוריד את ה-encoder מ-8.7 שניות ל-1.1 שניות למשפט קצר.
-    wparams.audio_ctx = std::min(1500, static_cast<int>(static_cast<long long>(n) * 50 / 16000) + 64);
+    //
+    // אבל חלון קצר מדי פוגע מאוד בדיוק, בעיקר בשפות שאינן אנגלית: עם מרווח של
+    // 64 פריימים (~1.3 שניות) התמלול בעברית יצא גרוע. רצפה של 768 פריימים
+    // (~15 שניות) ומרווח של 256 מחזירים את רוב הדיוק, בעלות של שנייה בערך.
+    wparams.audio_ctx = std::min(1500, std::max(768, static_cast<int>(static_cast<long long>(n) * 50 / 16000) + 256));
+    // הקשר עברי קצר: מכוון את המודל לכתיב עברי ולמילים של פקודות, במקום
+    // לתעתיק או לאנגלית. רק כשהשפה היא עברית.
+    if (std::string(lang) == "he") {
+        wparams.initial_prompt = "פקודה לעוזר הקולי בעברית: מה השעה, תתקשר לאמא, תפתח את המצלמה, מה מזג האוויר היום.";
+    }
 
     int result = whisper_full(ctx, wparams, data, n);
 

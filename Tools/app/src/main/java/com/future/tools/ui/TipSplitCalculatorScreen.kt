@@ -31,7 +31,8 @@ import com.future.sharednav.nav.digitForKey
 import com.future.sharednav.theme.FutureTheme
 import java.text.DecimalFormat
 
-private val moneyFormat = DecimalFormat("#,##0.##")
+// סכומי כסף תמיד עם שתי ספרות אחרי הנקודה ("3,602.70" ולא "3,602.7").
+private val moneyFormat = DecimalFormat("#,##0.00")
 private val TIP_PRESETS = listOf(10, 15, 18, 20)
 
 @Composable
@@ -91,7 +92,8 @@ fun TipSplitCalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
                 Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
                     Text("סכום החשבון", color = theme.mutedTextColor, fontSize = FutureTypography.label)
                     Text(
-                        billText,
+                        // מפריד אלפים גם בסכום שמוקלד, כמו בתוצאות ("20,015" ולא "20015").
+                        formatTyped(billText),
                         color = theme.textColor,
                         fontSize = FutureTypography.display,
                         fontWeight = FontWeight.Light,
@@ -165,4 +167,11 @@ private fun ResultRow(label: String, value: String, theme: FutureTheme, isEmphas
             fontWeight = if (isEmphasized || isAccent) FontWeight.Bold else FontWeight.Medium
         )
     }
+}
+
+/** סכום שמוקלד עם מפריד אלפים, בלי לגעת בחלק העשרוני שעוד מוקלד ("1,234." נשאר). */
+private fun formatTyped(text: String): String {
+    val intPart = text.substringBefore('.')
+    val grouped = intPart.toLongOrNull()?.let { DecimalFormat("#,##0").format(it) } ?: intPart
+    return if ('.' in text) grouped + "." + text.substringAfter('.') else grouped
 }

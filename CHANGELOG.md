@@ -51,6 +51,17 @@ what to re-check on the device). None of these is verified on the device yet.
   width went negative when the icon was narrow (mid-animation), and
   `coerceIn(0f, negative)` crashed the draw phase; FutureUI then fell back to
   the stock grey status bar until restart. The width is now floored at 0.
+- **Assistant.** Better Hebrew recognition: a wider audio window (the short
+  `audio_ctx` hurt accuracy outside English), the `VOICE_RECOGNITION` source,
+  level normalization and a short Hebrew initial prompt. Focus lands on the
+  microphone once it is on screen. A rotating design-system gradient glows
+  around the screen edges while listening, transcribing and speaking, driven
+  by frame time so reduced motion doesn't hide it.
+- **Calendar.** Up from the first row goes to the buttons instead of jumping
+  to the previous month (the blank cells before the 1st counted as a row);
+  the day view's time range reads left to right.
+- **Tip calculator.** Amounts always show two decimals, and the typed bill is
+  grouped by thousands.
 - **Launcher edit mode.** Left from the left "+" goes to the next page and
   right from the right "+" to the previous one (the arrows only toggled
   between the two buttons); adding a page scrolls to it.

@@ -1,5 +1,13 @@
 package com.future.assistant.ui
 
+import com.future.sharednav.theme.FutureAccents
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.ShaderBrush
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.layout.onGloballyPositioned
 import android.Manifest
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
@@ -8,7 +16,6 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -202,6 +209,12 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Box(modifier = Modifier.fillMaxSize().background(theme.scrimColor)) {
+            EdgeGlow(
+                active = state != AssistantState.IDLE,
+                level = level,
+                thinking = state == AssistantState.THINKING,
+                modifier = Modifier.fillMaxSize(),
+            )
             AnimatedVisibility(
                 visible = shown,
                 modifier = Modifier.align(Alignment.BottomCenter),
@@ -263,6 +276,7 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
                                 state = state,
                                 theme = theme,
                                 focusRequester = micFocus,
+                                autoFocus = true,
                                 onClick = { onMicClick() },
                             )
                         }
@@ -329,8 +343,11 @@ private fun SiriWave(theme: FutureTheme, level: Float, active: Boolean, thinking
  * הסכנה בזמן הקלטה), טבעת פוקוס 2dp בצבע הכפתור במרחק 2dp, והגדלה ל-1.02.
  */
 @Composable
-private fun MicButton(state: AssistantState, theme: FutureTheme, focusRequester: FocusRequester, onClick: () -> Unit) {
+private fun MicButton(state: AssistantState, theme: FutureTheme, focusRequester: FocusRequester, autoFocus: Boolean = false, onClick: () -> Unit) {
     val interactionSource = remember { MutableInteractionSource() }
+    // הפוקוס על המיקרופון ברגע שהכפתור באמת על המסך. קודם הבקשה נשלחה לפני
+    // שהכרטיס (AnimatedVisibility) הופיע, נבלעה, ולא היה פוקוס בכלל.
+    var autoFocused by remember { mutableStateOf(false) }
     val isFocused by interactionSource.collectIsFocusedAsState()
     val fill = if (state == AssistantState.LISTENING) theme.dangerColor else theme.readableAccentColor
     val ring by animateFloatAsState(if (isFocused) 1f else 0f, FutureMotion.fast(), label = "micRing")
@@ -349,8 +366,13 @@ private fun MicButton(state: AssistantState, theme: FutureTheme, focusRequester:
                 }
             }
             .focusRequester(focusRequester)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource),
+            .onGloballyPositioned {
+                if (autoFocus && !autoFocused) {
+                    autoFocused = true
+                    runCatching { focusRequester.requestFocus() }
+                }
+            }
+            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Icon(FutureIcons.Mic, contentDescription = "מיקרופון", tint = FutureContrast.onColor(fill), modifier = Modifier.size(FutureDimens.spacingXl))
@@ -359,3 +381,65 @@ private fun MicButton(state: AssistantState, theme: FutureTheme, focusRequester:
 
 private val WaveHeight = 56.dp
 private val MicSize = 56.dp
+
+/**
+ * זוהר צבעוני סביב שולי המסך בזמן הקשבה, תמלול ודיבור: מסגרת של גרדיאנט
+ * מעגלי בארבע ההדגשות של הדיזיין סיסטם (ציאן, סגול, כתום, ירוק) שמסתובבת
+ * סביב המסך, ועובייה פועם עם עוצמת הקול.
+ *
+ * התנועה מונעת ידנית מ-withFrameNanos ולא מ-animate*AsState: במכשיר מופעל
+ * reduced-motion (קנה מידה 0 לאנימציות), שמבטל אנימציות רגילות - והזוהר
+ * חייב להישאר גלוי ובולט גם אז.
+ */
+@Composable
+private fun EdgeGlow(active: Boolean, level: Float, thinking: Boolean, modifier: Modifier) {
+    var rotation by remember { mutableFloatStateOf(0f) }
+    var presence by remember { mutableFloatStateOf(0f) }
+    var pulse by remember { mutableFloatStateOf(0f) }
+    val currentActive by rememberUpdatedState(active)
+    val currentLevel by rememberUpdatedState(level)
+    val currentThinking by rememberUpdatedState(thinking)
+    LaunchedEffect(Unit) {
+        var last = 0L
+        while (true) {
+            withFrameNanos { now ->
+                val dt = if (last == 0L) 0f else ((now - last) / 1_000_000_000f).coerceAtMost(0.1f)
+                last = now
+                // סיבוב מלא בכ-2.5 שניות בהקשבה, איטי יותר בתמלול.
+                rotation = (rotation + dt * if (currentThinking) 80f else 150f) % 360f
+                // כניסה ויציאה מהירות (~0.25 שנייה) אבל ברורות.
+                val targetPresence = if (currentActive) 1f else 0f
+                presence += (targetPresence - presence) * (dt * 8f).coerceAtMost(1f)
+                // הפעימה עוקבת אחרי עוצמת הקול; בתמלול - נשימה קבועה.
+                val targetPulse = if (currentThinking) 0.35f + 0.25f * sin(rotation / 180f * PI.toFloat() * 2f) else currentLevel
+                pulse += (targetPulse - pulse) * (dt * 14f).coerceAtMost(1f)
+            }
+        }
+    }
+    if (presence < 0.01f) return
+    val colors = remember {
+        intArrayOf(
+            FutureAccents.Cyan.toArgb(), FutureAccents.Purple.toArgb(),
+            FutureAccents.Orange.toArgb(), FutureAccents.Green.toArgb(), FutureAccents.Cyan.toArgb(),
+        )
+    }
+    Canvas(modifier) {
+        val shader = android.graphics.SweepGradient(size.width / 2f, size.height / 2f, colors, null)
+        shader.setLocalMatrix(android.graphics.Matrix().apply { setRotate(rotation, size.width / 2f, size.height / 2f) })
+        val brush = ShaderBrush(shader)
+        val base = 5.dp.toPx() + pulse * 7.dp.toPx()
+        val corner = CornerRadius(18.dp.toPx())
+        // שלוש שכבות מהדקה והחזקה לרחבה והשקופה - "זוהר" בלי blur, שלא זמין לפני API 31 בכל מקום.
+        listOf(1f to 1f, 2.4f to 0.45f, 4.2f to 0.2f).forEach { (widthMul, alpha) ->
+            val w = base * widthMul
+            drawRoundRect(
+                brush = brush,
+                topLeft = Offset(w / 2f, w / 2f),
+                size = Size(size.width - w, size.height - w),
+                cornerRadius = corner,
+                style = Stroke(width = w),
+                alpha = alpha * presence,
+            )
+        }
+    }
+}

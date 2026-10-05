@@ -78,6 +78,14 @@ class LocalSpeechEngine(private val context: Context) {
         val start = (first * window - pad).coerceAtLeast(0)
         val end = ((last + 1) * window + pad).coerceAtMost(samples.size)
         val trimmed = samples.copyOfRange(start, end)
+        // נרמול עוצמה: דיבור שקט (טלפון רחוק מהפה) מגיע לשיא של 0.05-0.1, ו-Whisper
+        // מזהה אותו הרבה פחות טוב. מגבירים עד שיא של 0.9, לא יותר מפי 10.
+        var maxAbs = 0f
+        for (v in trimmed) { val a = kotlin.math.abs(v); if (a > maxAbs) maxAbs = a }
+        if (maxAbs in 1e-4f..0.5f) {
+            val gain = (0.9f / maxAbs).coerceAtMost(10f)
+            for (i in trimmed.indices) trimmed[i] = trimmed[i] * gain
+        }
         // Whisper מחזיר תוצאה ריקה על פחות משנייה של אודיו - משלימים באפסים.
         val minLen = SAMPLE_RATE * 11 / 10
         return if (trimmed.size >= minLen) trimmed else trimmed.copyOf(minLen)

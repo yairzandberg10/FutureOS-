@@ -325,7 +325,11 @@ private fun MonthGrid(
                     Key.DirectionLeft -> { onMoveTo(focusDate.plusDays(1)); true }
                     Key.DirectionDown -> { onMoveTo(focusDate.plusDays(7)); true }
                     Key.DirectionUp -> {
-                        if (focusedIndex >= 7) { onMoveTo(focusDate.minusDays(7)); true } else false
+                        // שבוע אחורה רק אם הוא עדיין בחודש המוצג. focusedIndex >= 7 כלל גם
+                        // את המשבצות הריקות שלפני ה-1, ולכן ↑ מהשורה העליונה קפץ לחודש הקודם
+                        // במקום לעלות לכפתורים. בלוח עברי אין YearMonth - בודקים לפי התאריכים.
+                        val target = focusDate.minusDays(7)
+                        if (target in cells) { onMoveTo(target); true } else false
                     }
                     Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> { onOpenDay(focusDate); true }
                     else -> false
@@ -798,7 +802,8 @@ private fun EventRow(event: CalendarEvent, theme: FutureTheme, onClick: () -> Un
     val timeLabel = if (event.allDay) "כל היום" else {
         val start = java.time.Instant.ofEpochMilli(event.startMillis).atZone(java.time.ZoneId.systemDefault()).toLocalTime()
         val end = java.time.Instant.ofEpochMilli(event.endMillis).atZone(java.time.ZoneId.systemDefault()).toLocalTime()
-        "%02d:%02d–%02d:%02d".format(start.hour, start.minute, end.hour, end.minute)
+        // LRI…PDI: בשורה RTL הטווח הוצג הפוך ("10:00–09:00").
+        "\u2066%02d:%02d–%02d:%02d\u2069".format(start.hour, start.minute, end.hour, end.minute)
     }
 
     Row(
