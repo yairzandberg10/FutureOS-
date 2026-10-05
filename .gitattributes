@@ -1,2 +1,4 @@
 *.db filter=lfs diff=lfs merge=lfs -text
 Assistant/app/src/main/assets/*.bin filter=lfs diff=lfs merge=lfs -text
+# סקריפטי shell תמיד עם LF - עם CRLF ש-Git ממיר ב-Windows, bash נכשל על .
+*.sh text eol=lf
