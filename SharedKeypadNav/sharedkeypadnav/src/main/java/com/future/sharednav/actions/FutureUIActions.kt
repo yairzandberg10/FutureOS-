@@ -17,6 +17,12 @@ object FutureUIActions {
     const val ACTION_SHOW_CONTROL_CENTER = "${SystemUiTarget.PACKAGE}.ACTION_SHOW_CONTROL_CENTER"
     const val ACTION_SHOW_NOTIFICATION_CENTER = "${SystemUiTarget.PACKAGE}.ACTION_SHOW_NOTIFICATION_CENTER"
 
+    /**
+     * Int: מאיזה צד השכבה נכנסת כשעוברים בין מרכז הבקרה למרכז ההתראות
+     * (-1 משמאל, 1 מימין). בלי - פתיחה רגילה מהקצה העליון.
+     */
+    const val EXTRA_FROM_DIRECTION = "from_direction"
+
     /** נשלח על ידי כל מסך overlay כשהוא נפתח, כדי ששורת המצב הקבועה תישאר תמיד מעל כולם. */
     const val ACTION_BRING_STATUS_BAR_FRONT = "${SystemUiTarget.PACKAGE}.ACTION_BRING_STATUS_BAR_FRONT"
 

@@ -61,6 +61,33 @@ what to re-check on the device). None of these is verified on the device yet.
   `Pictures/Camera` and `Movies/Camera`); the preview still shows older
   photos from `Pictures/Camera`.
 
+
+### Motion system: Elastic Focus, Icon Bloom, animated system panels
+
+- **Elastic Focus.** One focus marker per screen and dialog glides and
+  stretches from the item that lost focus to the one that gained it, instead
+  of every row fading its own fill. Also on the launcher grid. See
+  `SharedKeypadNav/README.md` (Motion).
+- **Larger, spring-driven motion, same durations.** Screens enter a quarter
+  of the width with a spring and the previous one recedes with parallax;
+  dialogs pop from 0.85; OK presses rows and buttons to 0.94 and springs back;
+  the switch thumb springs (drawn via offset, no relayout).
+- **Icon Bloom.** Apps open out of the focused icon (ClipReveal); the home
+  screen recedes behind them and receives the app back with an icon pulse.
+  Page changes use a spring.
+- **System panels keep their design but animate both ways.** The Control
+  Center, Notification Center, Recents and volume overlay used to be removed
+  in the same frame they were closed, so their exit animation never ran; the
+  window is now removed when the exit ends. Control Center and Notification
+  Center switch sideways at the same depth; their sections and items enter in
+  a short wave.
+- **Heads-up notification** grows out of the status bar, swaps content in
+  place when another notification arrives, and sits on frosted glass made
+  from one screenshot of the strip under it (window blur is off on the device).
+- **Lock screen.** Unlocking zooms through the glass instead of sliding up
+  over a black opaque window for 300ms; a wrong PIN shakes on a spring.
+
+### Fix pass, 1 October: 12 apps, real widgets, blurred system panels
 ### Fix pass, 1 October: 11 apps and real widgets
 
 - **Assistant.** Whisper no longer repeats the same sentence over and over:

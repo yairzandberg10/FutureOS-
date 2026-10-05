@@ -59,6 +59,9 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
     private val mainHandler = Handler(Looper.getMainLooper())
     private val volumeLevelState = mutableFloatStateOf(0.5f)
     private var hideVolumeRunnable: Runnable? = null
+    // מצב הכניסה/יציאה של חלון הווליום - היציאה רצה ורק אחריה החלון מוסר
+    private val volumeVisible = androidx.compose.animation.core.MutableTransitionState(false)
+    private val removeVolumeRunnable = Runnable { removeVolumeOverlayNow() }
     private var statusBarParams: WindowManager.LayoutParams? = null
     private var recentsView: ComposeView? = null
     private var powerMenuView: ComposeView? = null
@@ -187,6 +190,8 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
 
     override fun onServiceConnected() {
         super.onServiceConnected()
+        // השירות הזה מורשה לצלם מסך - ההתראה הצפה משתמשת בו לרקע הזכוכית
+        com.future.futureui.utils.FrostedBackdrop.service = this
         if (layoutManager?.getSuppressSystemBars() == true) {
             suppressSystemBars()
         }
@@ -418,6 +423,8 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
 
     private fun showVolumeOverlay() {
         hideVolumeRunnable?.let { mainHandler.removeCallbacks(it) }
+        mainHandler.removeCallbacks(removeVolumeRunnable)
+        volumeVisible.targetState = true
 
         if (volumeOverlayView == null) {
             try {
@@ -441,7 +448,8 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
                         FutureUITheme {
                             VolumeOverlay(
                                 level = volumeLevelState.floatValue,
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth(),
+                                visibleState = volumeVisible,
                             )
                         }
                     }
@@ -456,7 +464,16 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
         mainHandler.postDelayed(hideVolumeRunnable!!, 1500)
     }
 
+    /** מתחיל את היציאה; החלון מוסר אחריה. */
     private fun hideVolumeOverlay() {
+        if (volumeOverlayView == null) return
+        volumeVisible.targetState = false
+        mainHandler.removeCallbacks(removeVolumeRunnable)
+        mainHandler.postDelayed(removeVolumeRunnable, 260)
+    }
+
+    private fun removeVolumeOverlayNow() {
+        mainHandler.removeCallbacks(removeVolumeRunnable)
         try {
             volumeOverlayView?.let { windowManager.removeView(it) }
         } catch (e: Exception) {
@@ -716,8 +733,9 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
     }
 
     override fun onDestroy() {
+        if (com.future.futureui.utils.FrostedBackdrop.service === this) com.future.futureui.utils.FrostedBackdrop.service = null
         try {
-            hideVolumeOverlay()
+            removeVolumeOverlayNow()
             hideRecentApps()
             hidePowerMenu()
             lockController?.dispose()

@@ -1,5 +1,8 @@
 package com.future.sharednav.focus
 
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -75,15 +78,36 @@ fun FocusableItem(
     }
     val ring = if (screenAccent != null && borderColor == accentColor) screenAccent else borderColor
 
+    // Elastic Focus: אם יש מארח (מסך/דיאלוג) והפריט שקוף במנוחה, הפריט לא מצייר
+    // פוקוס בעצמו - הוא מדווח איפה הוא, והסמן של המארח מחליק אליו (ר' FocusGlide).
+    // פריט עם רקע משלו במנוחה (צ'יפ, אריח) נשאר עם הפוקוס הישן: הרקע שלו היה
+    // מסתיר את המילוי של הסמן.
+    val glide = LocalFocusGlide.current?.takeIf { idleBackgroundColor.alpha == 0f }
+    val glideId = remember { Any() }
+    if (glide != null) {
+        DisposableEffect(glide, isFocused) { onDispose { glide.release(glideId) } }
+    }
+    val density = LocalDensity.current
+    val glideStyle = remember(fill, ring, cornerRadius, borderWidth, showBorderOnFocus, density) {
+        with(density) {
+            FocusGlideStyle(
+                fill = fill,
+                ring = if (showBorderOnFocus) ring else Color.Transparent,
+                cornerRadiusPx = cornerRadius.toPx(),
+                ringWidthPx = borderWidth.toPx(),
+            )
+        }
+    }
+
     // State ולא `by`: הערכים נקראים רק בשלב הציור (animatedFocusSurface), כך
     // שכל פריים של האנימציה מצייר מחדש בלי להריץ את ה-composition של הפריט.
     val backgroundColor = animateColorAsState(
-        if (isFocused) fill else idleBackgroundColor,
+        if (isFocused && glide == null) fill else idleBackgroundColor,
         FutureMotion.focusColorSpec,
         label = "focusableItemBg",
     )
     val ringColor = animateColorAsState(
-        if (showBorderOnFocus && isFocused) ring else ring.copy(alpha = 0f),
+        if (showBorderOnFocus && isFocused && glide == null) ring else ring.copy(alpha = 0f),
         FutureMotion.focusColorSpec,
         label = "focusableItemRing",
     )
@@ -91,7 +115,14 @@ fun FocusableItem(
     Box(
         modifier = modifier
             .bringIntoViewOnFocus()
-            .focusMotion(interactionSource, focusedScale = if (scaleOnFocus) focusedScale else 1f)
+            .then(
+                if (glide != null && isFocused) {
+                    Modifier.onGloballyPositioned { glide.report(glideId, it, glideStyle) }
+                } else Modifier
+            )
+            // עם הסמן המשותף הפריט לא גדל בפוקוס (הסמן לא היה גדל איתו), אבל עדיין
+            // מתכווץ ב-OK - זה המשוב על הלחיצה עצמה.
+            .focusMotion(interactionSource, focusedScale = if (scaleOnFocus && glide == null) focusedScale else 1f)
             .clip(shape)
             .animatedFocusSurface(shape, borderWidth, fill = { backgroundColor.value }, ring = { ringColor.value })
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)

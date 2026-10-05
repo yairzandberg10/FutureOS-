@@ -1,4 +1,5 @@
 package com.future.sharednav.components
+import com.future.sharednav.focus.focusGlideHost
 import androidx.compose.ui.focus.FocusRequester
 
 import androidx.compose.foundation.background
@@ -53,12 +54,15 @@ fun ScreenScaffold(
     val accent = remember(accentColor, textColor) {
         FutureContrast.accentForText(accentColor, textColor)
     }
+    // סמן פוקוס אחד לכל המסך (Elastic Focus, ר' FocusGlide)
+    val glide = com.future.sharednav.focus.rememberFocusGlideState()
     CompositionLocalProvider(
         LocalLayoutDirection provides LayoutDirection.Rtl,
         LocalFutureType provides type,
         LocalFutureAccent provides accent,
+        com.future.sharednav.focus.LocalFocusGlide provides glide,
     ) {
-        Box(modifier = modifier.fillMaxSize().background(backgroundColor)) {
+        Box(modifier = modifier.fillMaxSize().background(backgroundColor).then(Modifier.focusGlideHost(glide))) {
             if (title != null) {
                 Column(modifier = Modifier.fillMaxSize()) {
                     ScreenTopBar(

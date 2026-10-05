@@ -1,5 +1,6 @@
 package com.future.sharednav.components
 
+import com.future.sharednav.focus.focusGlideHost
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -44,7 +45,13 @@ fun AppDialog(
     ) {
         // הפוקוס בתוך הדיאלוג לא נרשם בזיכרון של המסך שמתחתיו (ר' FocusMemory).
         val focusMemory = remember { com.future.sharednav.focus.FocusMemory() }
-        androidx.compose.runtime.CompositionLocalProvider(com.future.sharednav.focus.LocalFocusMemory provides focusMemory) {
+        // דיאלוג הוא חלון נפרד: סמן משלו, ולא של המסך שמתחת (הקואורדינטות של
+        // שני חלונות לא ניתנות להשוואה).
+        val glide = com.future.sharednav.focus.rememberFocusGlideState()
+        androidx.compose.runtime.CompositionLocalProvider(
+            com.future.sharednav.focus.LocalFocusMemory provides focusMemory,
+            com.future.sharednav.focus.LocalFocusGlide provides glide,
+        ) {
         val visibility = remember { MutableTransitionState(false) }
         visibility.targetState = true
         // תפריט האפשרויות לא ממורכז כמו דיאלוג אלא תלוי 40dp מראש המסך
@@ -65,7 +72,8 @@ fun AppDialog(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth(widthFraction)
-                        .heightIn(max = maxContentHeight),
+                        .heightIn(max = maxContentHeight)
+                        .focusGlideHost(glide),
                     content = content,
                 )
             }

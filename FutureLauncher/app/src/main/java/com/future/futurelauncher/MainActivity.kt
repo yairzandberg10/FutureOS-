@@ -1,5 +1,6 @@
 package com.future.futurelauncher
 
+import com.future.sharednav.focus.focusGlideHost
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.theme.scrimColor
 import com.future.sharednav.theme.FutureShapes
@@ -305,7 +306,20 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
         pageCount = { maxOf(1, pages.size) }
     )
 
-    val editModeScale by animateFloatAsState(if (viewModel.isEditMode) 0.95f else 1f)
+    val editModeScale by animateFloatAsState(
+        if (viewModel.isEditMode) 0.95f else 1f,
+        com.future.sharednav.theme.FutureMotion.Springs.layer(),
+        label = "editModeScale",
+    )
+    // Icon Bloom: הבית נסוג לעומק כשאפליקציה נפתחת ממנו, ובחזרה "קולט" אותה -
+    // גדל חזרה בקפיץ (ר' LaunchMotion). graphicsLayer בלבד.
+    val homeDepth = remember { androidx.compose.animation.core.Animatable(1f) }
+    val launcherGlide = com.future.sharednav.focus.rememberFocusGlideState()
+    LaunchedEffect(com.future.futurelauncher.ui.LaunchMotion.launchTick) {
+        if (com.future.futurelauncher.ui.LaunchMotion.launchTick > 0) {
+            homeDepth.animateTo(0.88f, androidx.compose.animation.core.tween(240, easing = com.future.sharednav.theme.FutureMotion.EasingAccelerate))
+        }
+    }
     val scope = rememberCoroutineScope()
     var menuClickJob by remember { mutableStateOf<Job?>(null) }
     var lastMenuKeyUpTime by remember { mutableStateOf(0L) }
@@ -330,6 +344,14 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
             if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
                 viewModel.loadTheme()
+                if (com.future.futurelauncher.ui.LaunchMotion.onHomeResumed()) {
+                    scope.launch {
+                        homeDepth.snapTo(0.88f)
+                        homeDepth.animateTo(1f, com.future.sharednav.theme.FutureMotion.Springs.layer())
+                    }
+                } else if (homeDepth.value != 1f) {
+                    scope.launch { homeDepth.snapTo(1f) }
+                }
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -460,7 +482,7 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                                 when (item) {
                                     is LauncherItem.App -> {
                                         try {
-                                            context.startActivity(item.resolveInfo.launchIntent())
+                                            com.future.futurelauncher.ui.LaunchMotion.start(context, item.resolveInfo.launchIntent())
                                         } catch (e: android.content.ActivityNotFoundException) {
                                             Toast.makeText(context, context.getString(R.string.app_no_longer_installed), Toast.LENGTH_SHORT).show()
                                             viewModel.loadData()
@@ -601,7 +623,7 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                             // בדף הבית המוגדר, "חזור" מחזיר אליו - בדיוק כמו ברוב הלאנצ'רים;
                             // אם כבר בדף הבית, המקש נבלע ולא עושה כלום.
                             if (currentPage != viewModel.homePageIndex) {
-                                scope.launch { pagerState.animateScrollToPage(viewModel.homePageIndex) }
+                                scope.launch { pagerState.animateScrollToPage(viewModel.homePageIndex, animationSpec = com.future.sharednav.theme.FutureMotion.Springs.layer()) }
                             }
                             return@onKeyEvent true
                         }
@@ -693,14 +715,14 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                                     if (currentPage < pages.size - 1) {
                                         viewModel.moveItemBetweenPages(currentPage, index, currentPage + 1, index - 3)
                                         viewModel.focusedIndex = index - 3
-                                        scope.launch { pagerState.animateScrollToPage(currentPage + 1) }
+                                        scope.launch { pagerState.animateScrollToPage(currentPage + 1, animationSpec = com.future.sharednav.theme.FutureMotion.Springs.layer()) }
                                     }
                                 } else if (index + 1 < currentItems.size) {
                                     viewModel.swapItems(currentPage, index, index + 1)
                                 }
                             } else {
                                 if (index % 4 == 3) {
-                                    if (currentPage < pages.size - 1) scope.launch { pagerState.animateScrollToPage(currentPage + 1) }
+                                    if (currentPage < pages.size - 1) scope.launch { pagerState.animateScrollToPage(currentPage + 1, animationSpec = com.future.sharednav.theme.FutureMotion.Springs.layer()) }
                                 } else if (index + 1 < currentItems.size) {
                                     val item = currentItems.getOrNull(index)
                                     val skip = if (item is LauncherItem.Widget) item.spanX else 1
@@ -731,14 +753,14 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                                     if (currentPage > 0) {
                                         viewModel.moveItemBetweenPages(currentPage, index, currentPage - 1, index + 3)
                                         viewModel.focusedIndex = index + 3
-                                        scope.launch { pagerState.animateScrollToPage(currentPage - 1) }
+                                        scope.launch { pagerState.animateScrollToPage(currentPage - 1, animationSpec = com.future.sharednav.theme.FutureMotion.Springs.layer()) }
                                     }
                                 } else if (index > 0) {
                                     viewModel.swapItems(currentPage, index, index - 1)
                                 }
                             } else {
                                 if (index % 4 == 0) {
-                                    if (currentPage > 0) scope.launch { pagerState.animateScrollToPage(currentPage - 1) }
+                                    if (currentPage > 0) scope.launch { pagerState.animateScrollToPage(currentPage - 1, animationSpec = com.future.sharednav.theme.FutureMotion.Springs.layer()) }
                                 } else if (index > 0) {
                                     var nextIndex = index - 1
                                     while (nextIndex >= 0 && nextIndex % 4 != 3) {
@@ -825,9 +847,11 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                             else Modifier.fillMaxSize()
                         )
                         .graphicsLayer {
-                            scaleX = editModeScale
-                            scaleY = editModeScale
-                            alpha = if (viewModel.isEditMode) 0.85f else 1f
+                            val depth = homeDepth.value
+                            scaleX = editModeScale * depth
+                            scaleY = editModeScale * depth
+                            val depthAlpha = (0.35f + 0.65f * ((depth - 0.88f) / 0.12f)).coerceIn(0f, 1f)
+                            alpha = (if (viewModel.isEditMode) 0.85f else 1f) * depthAlpha
                         }
                         .then(
                             if (viewModel.isEditMode) {
@@ -836,7 +860,10 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                                     .border(2.dp, OnWallpaperColor.copy(alpha = 0.3f), FutureShapes.xl)
                             } else Modifier
                         )
+                        // Elastic Focus: סמן אחד שמחליק ונמתח בין האייקונים (ר' FocusGlide)
+                        .focusGlideHost(launcherGlide)
                 ) {
+                    androidx.compose.runtime.CompositionLocalProvider(com.future.sharednav.focus.LocalFocusGlide provides launcherGlide) {
                     HorizontalPager(
                         state = pagerState,
                         modifier = Modifier.fillMaxSize(),
@@ -873,6 +900,7 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                                 largeLabel = prefs.largeLabels,
                             )
                         }
+                    }
                     }
                 }
 
@@ -1023,7 +1051,7 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                     pm = pm,
                     onAppClick = { app ->
                         try {
-                            context.startActivity(app.resolveInfo.launchIntent())
+                            com.future.futurelauncher.ui.LaunchMotion.start(context, app.resolveInfo.launchIntent())
                         } catch (e: android.content.ActivityNotFoundException) {
                             Toast.makeText(context, context.getString(R.string.app_no_longer_installed), Toast.LENGTH_SHORT).show()
                             viewModel.loadData()

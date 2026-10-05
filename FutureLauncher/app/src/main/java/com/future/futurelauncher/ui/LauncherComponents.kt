@@ -1,4 +1,10 @@
 package com.future.futurelauncher.ui
+
+import androidx.compose.runtime.remember
+
+import androidx.compose.ui.layout.boundsInWindow
+
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.runtime.Composable
 import androidx.compose.foundation.layout.Spacer
 import kotlinx.coroutines.withContext
@@ -210,19 +216,63 @@ fun ItemPanel(
     val iconSize = if (isEditMode) baseIcon - 8.dp else baseIcon
     // ווידג'ט הוא משטח גדול - הגדלה של 15% הייתה מוציאה אותו מהמסך ומעל שכניו.
     val focusScale = if (item is LauncherItem.Widget) 1.03f else 1.15f
-    val scale by animateFloatAsState(if (isFocused || isMoving) focusScale else 1f)
-    val borderColor = when {
-        isMoving -> theme.dangerColor
-        isFocused -> theme.accentColor
-        else -> if (item is LauncherItem.Empty && isEditMode) OnWallpaperColor.copy(alpha = 0.05f) else Color.Transparent
+    // האייקון "קופץ" לפוקוס בקפיץ lift (overshoot קטן) במקום קפיץ ברירת המחדל,
+    // והמסגרת נצבעת פנימה במקום להופיע בבת אחת.
+    // Elastic Focus: מחוץ למצב עריכה המסגרת של הפוקוס היא הסמן המשותף של
+    // המסך, שמחליק ונמתח מאייקון לאייקון (ר' FocusGlide). האייקון עצמו "קופץ"
+    // בתוך התא, כך שהוא לא חורג מהסמן.
+    val glide = com.future.sharednav.focus.LocalFocusGlide.current?.takeIf { !isEditMode }
+    val glideId = remember { Any() }
+    if (glide != null) {
+        androidx.compose.runtime.DisposableEffect(glide, isFocused) { onDispose { glide.release(glideId) } }
+    }
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val glideStyle = remember(theme.accentColor, density, item is LauncherItem.Widget) {
+        with(density) {
+            com.future.sharednav.focus.FocusGlideStyle(
+                fill = Color.Transparent,
+                ring = theme.accentColor,
+                cornerRadiusPx = (if (item is LauncherItem.Widget) FutureShapes.radiusXl else FutureShapes.radiusMd).toPx(),
+                ringWidthPx = 2.5.dp.toPx(),
+            )
+        }
+    }
+    val scale by animateFloatAsState(
+        if (isFocused || isMoving) focusScale else 1f,
+        com.future.sharednav.theme.FutureMotion.Springs.lift(),
+        label = "itemScale",
+    )
+    val borderColor by androidx.compose.animation.animateColorAsState(
+        when {
+            isMoving -> theme.dangerColor
+            isFocused && glide == null -> theme.accentColor
+            else -> if (item is LauncherItem.Empty && isEditMode) OnWallpaperColor.copy(alpha = 0.05f) else Color.Transparent
+        },
+        com.future.sharednav.theme.FutureMotion.focusColorSpec,
+        label = "itemBorder",
+    )
+    // נחיתה: כשחוזרים מאפליקציה שנפתחה מהאייקון הזה, הוא קופץ וחוזר (LaunchMotion).
+    val land = remember { androidx.compose.animation.core.Animatable(1f) }
+    androidx.compose.runtime.LaunchedEffect(LaunchMotion.landTick) {
+        if (isFocused && LaunchMotion.landTick > 0) {
+            land.snapTo(1.3f)
+            land.animateTo(1f, com.future.sharednav.theme.FutureMotion.Springs.lift())
+        }
     }
 
     Column(
         modifier = Modifier
             .then(if (item is LauncherItem.Widget) Modifier.fillMaxSize() else Modifier.fillMaxWidth().wrapContentHeight())
+            .then(
+                if (glide != null && isFocused && !isMoving) {
+                    Modifier.onGloballyPositioned { glide.report(glideId, it, glideStyle) }
+                } else Modifier
+            )
             .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
+                // עם הסמן - התא לא גדל (רק האייקון שבתוכו); בלעדיו - כמו קודם
+                val cellScale = if (glide != null && !isMoving) 1f else scale * land.value
+                scaleX = cellScale
+                scaleY = cellScale
                 // תא ריק שמקבל פוקוס חייב להיראות (הנקודה הקטנה), אחרת אין שום
                 // אינדיקציה חזותית שהפוקוס בכלל נמצא שם.
                 alpha = if (isMoving) 0.7f else if (item is LauncherItem.Empty && !isEditMode && !isFocused) 0f else 1f
@@ -245,6 +295,21 @@ fun ItemPanel(
                     } else {
                         Modifier.size(iconSize)
                     }
+                )
+                .then(
+                    if (glide != null && !isMoving && item !is LauncherItem.Widget) {
+                        Modifier.graphicsLayer {
+                            val s = scale * land.value
+                            scaleX = s
+                            scaleY = s
+                        }
+                    } else Modifier
+                )
+                // האייקון הממוקד מדווח איפה הוא - משם האפליקציה תיפתח (Icon Bloom)
+                .then(
+                    if (isFocused && item !is LauncherItem.Widget) {
+                        Modifier.onGloballyPositioned { LaunchMotion.updateFocusedIcon(it.boundsInWindow()) }
+                    } else Modifier
                 )
                 .clip(if (item is LauncherItem.Widget) FutureShapes.xl else RoundedCornerShape(percent = 28))
                 .background(if (item is LauncherItem.Empty || item is LauncherItem.Widget) Color.Transparent else OnWallpaperColor.copy(alpha = 0.05f))

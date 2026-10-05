@@ -155,6 +155,30 @@ arrow key doesn't restart the scale on every row), `listItemSpec`.
 - `navEnter` / `navExit` / `navPopEnter` / `navPopExit` — the same motion as
   values for `androidx.navigation` `NavHost(enterTransition = { ... })`.
 
+**Springs and amplitude.** Motion has to be felt on a 3.5" screen without
+getting longer, so it gets its size from distance and physics rather than
+time: a screen enters a quarter of the width (`SlideFraction` 4), the one it
+leaves recedes to `DepthScale` 0.90 and shifts 6% the other way
+(`ParallaxFraction`), OK presses to `PressScale` 0.94 and springs back, and a
+dialog opens from `DialogFromScale` 0.85. `FutureMotion.Springs` holds the
+springs (`lift`, `press`, `toggle`, `dialog`, `layer`, `island`, `settle`,
+`glideLead`/`glideTrail`, plus `layerOffset`/`dialogOffset` for `IntOffset`);
+all of them finish most of their travel in 120-160ms and land the overshoot
+behind the next key press. A spring continues from its current velocity when
+the target changes, so fast presses never make motion jump.
+
+**Elastic Focus (`focus/FocusGlide.kt`).** One focus marker per screen
+(`ScreenScaffold`, `AnimatedScreenHost`) and per dialog (`AppDialog`) glides
+from the item that lost focus to the one that gained it: each edge is its own
+spring, the leading edge stiff and the trailing edge soft, so the marker
+stretches in the direction of travel and settles when it lands. A
+`FocusableItem` that is transparent at rest reports its position
+(`LocalFocusGlide`) instead of drawing its own fill and ring; with no host,
+or with its own idle background, it keeps the old per-item focus. The fill is
+drawn behind the content and the ring on top, so inside an opaque card the
+ring still shows. To host it elsewhere: `rememberFocusGlideState()`,
+`Modifier.focusGlideHost(state)` and `LocalFocusGlide provides state`.
+
 Don't write a `tween(…)` with a literal duration in app code.
 
 ### Material bridge — `FutureMaterialTheme` / `FutureAppTheme`

@@ -231,7 +231,9 @@ class LockScreenController(
                     // הקלטת מסך/צילום של אפליקציה אחרת לא תופסת את מסך הנעילה
                     // (התראות, הקלדת הקוד)
                     WindowManager.LayoutParams.FLAG_SECURE,
-                PixelFormat.OPAQUE
+                // TRANSLUCENT ולא OPAQUE: בביטול הנעילה הרקע נעלם עם התוכן ומתחת
+                // מתגלה האפליקציה. כל עוד המסך נעול התוכן אטום ממילא.
+                PixelFormat.TRANSLUCENT
             )
             val v = ComposeView(service).apply {
                 setViewTreeLifecycleOwner(owner as LifecycleOwner)

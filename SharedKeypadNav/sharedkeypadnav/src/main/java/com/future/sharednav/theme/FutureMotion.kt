@@ -5,6 +5,8 @@ import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.Easing
 import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.SpringSpec
+import androidx.compose.animation.core.VisibilityThreshold
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.ui.graphics.Color
@@ -77,19 +79,20 @@ object FutureMotion {
 
     /**
      * שבריר מרוחב המסך שממנו נכנס מסך חדש. מעבר "מלא" (מסך שלם שנכנס
-     * מהצד) על מסך 640px נמשך יותר מדי זמן ומושך את העין למקום הלא נכון;
-     * הסטה של שישית מהרוחב מספיקה כדי למסור את כיוון הניווט.
+     * מהצד) על מסך 640px נמשך יותר מדי זמן ומושך את העין למקום הלא נכון.
+     * שישית מהרוחב (הערך הקודם) הייתה נכונה בכיוון אבל כמעט לא הורגשה על
+     * מסך של 3.5 אינץ'; רבע, עם קפיץ, מורגש ועדיין לא ארוך יותר.
      */
-    const val SlideFraction: Int = 6
+    const val SlideFraction: Int = 4
 
     /** הגודל שאליו "נסוג" מסך כשנכנסים ממנו פנימה (ר' FutureTransitions.forward). */
-    const val DepthScale: Float = 0.94f
+    const val DepthScale: Float = 0.90f
 
     /** משך ההשהיה של אנימציית כניסה מדורגת בין פריט לפריט ברשימה. */
-    const val StaggerStepMillis: Int = 24
+    const val StaggerStepMillis: Int = 22
 
     /** מעבר לא מדורג מעבר לפריט הזה - רשימה ארוכה לא אמורה "להיבנות" לאט. */
-    const val StaggerMaxItems: Int = 8
+    const val StaggerMaxItems: Int = 6
 
     /**
      * סיבוב אחד של הספינר - הרכיב המסתובב היחיד במערכת, בקצב לינארי
@@ -103,4 +106,59 @@ object FutureMotion {
      * לינארי, כמו כל פס התקדמות במערכת, ולולאה ולא מעבר.
      */
     const val ProgressSweepMillis: Int = 1400
+
+    // ---- גודל התנועה (Amplitude) ----
+    //
+    // התנועה צריכה להיות מורגשת בלי להאריך זמן: מה שגורם לאנימציה להירגש
+    // הוא המרחק, העומק והפיזיקה (overshoot), לא המשך. כל הערכים כאן הם
+    // transform/alpha בלבד, כך שהגדלתם לא עולה כלום בביצועים.
+
+    /** לחיצת OK: הפריט יורד לכאן ב-[pressDownSpec] וחוזר בקפיץ [Springs.press]. */
+    const val PressScale: Float = 0.94f
+
+    /** דיאלוג ותפריט נפתחים מהגודל הזה בקפיץ עם overshoot קטן. */
+    const val DialogFromScale: Float = 0.85f
+
+    /** המסך שנסוג לעומק זז גם מעט הצידה (parallax) - שבריר מהרוחב. */
+    const val ParallaxFraction: Float = 0.06f
+
+    /** כמה dp עולה פריט בכניסה מדורגת. */
+    const val StaggerDistanceDp: Float = 24f
+
+    /** ירידה מהירה ללחיצה - כמעט מיידית, כדי שהמשוב יגיע בפריים הראשון. */
+    val pressDownSpec: FiniteAnimationSpec<Float> = tween(70, easing = EasingStandard)
+
+    /**
+     * קפיצי המערכת. כולם "התקפה מהירה, נחיתה רכה": עיקר התנועה נגמר תוך
+     * 120-160ms, וה-overshoot נוחת מאחורי הלחיצה הבאה בלי לחסום אותה.
+     * קפיץ ממשיך מהמהירות הנוכחית כשהיעד משתנה, ולכן לחיצות מהירות לא
+     * יוצרות קפיצות בתנועה.
+     */
+    object Springs {
+        /** אייקון ממוקד, אריח או כרטיס שנכנס בגל. ζ0.5 · k650. */
+        fun <T> lift(threshold: T? = null): SpringSpec<T> = spring(0.5f, 650f, threshold)
+        /** חזרה אחרי לחיצה, נשימה של התראה. ζ0.42 · k1300. */
+        fun <T> press(threshold: T? = null): SpringSpec<T> = spring(0.42f, 1300f, threshold)
+        /** מתג, מחוון, מילוי. ζ0.58 · k800. */
+        fun <T> toggle(threshold: T? = null): SpringSpec<T> = spring(0.58f, 800f, threshold)
+        /** דיאלוג, תפריט, החלפת תוכן. ζ0.62 · k520. */
+        fun <T> dialog(threshold: T? = null): SpringSpec<T> = spring(0.62f, 520f, threshold)
+        /** מסכים ושכבות מערכת (CC, NC, נעילה). ζ0.78 · k380. */
+        fun <T> layer(threshold: T? = null): SpringSpec<T> = spring(0.78f, 380f, threshold)
+        /** התראה צפה שגדלה משורת המצב. ζ0.66 · k420. */
+        fun <T> island(threshold: T? = null): SpringSpec<T> = spring(0.66f, 420f, threshold)
+        /** יציאה וחזרה - בלי overshoot. ζ0.9 · k520. */
+        fun <T> settle(threshold: T? = null): SpringSpec<T> = spring(0.9f, 520f, threshold)
+
+        /**
+         * Elastic Focus: הקצה המוביל של סמן הפוקוס רץ קדימה בקפיץ קשיח, והקצה
+         * האחורי מגיע אחריו בקפיץ רך - ההפרש ביניהם הוא המתיחה. ζ0.72 · k950.
+         */
+        val glideLead: SpringSpec<Float> = spring(0.72f, 950f, 0.5f)
+        /** הקצה האחורי של הסמן. ζ0.86 · k340. */
+        val glideTrail: SpringSpec<Float> = spring(0.86f, 340f, 0.5f)
+
+        val layerOffset: SpringSpec<IntOffset> = spring(0.78f, 380f, IntOffset.VisibilityThreshold)
+        val dialogOffset: SpringSpec<IntOffset> = spring(0.62f, 520f, IntOffset.VisibilityThreshold)
+    }
 }

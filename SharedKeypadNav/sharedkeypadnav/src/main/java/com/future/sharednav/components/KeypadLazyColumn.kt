@@ -66,7 +66,7 @@ fun <T> KeypadLazyColumn(
                 modifier = (if (key != null) {
                     Modifier.animateItem(
                         fadeInSpec = FutureMotion.fast(),
-                        placementSpec = FutureMotion.listItemSpec,
+                        placementSpec = FutureMotion.Springs.dialogOffset,
                         fadeOutSpec = FutureMotion.fast(),
                     )
                 } else Modifier).staggeredEntrance(index),

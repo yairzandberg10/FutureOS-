@@ -4,6 +4,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -121,9 +122,15 @@ internal fun FutureButtonCore(
     // הטבעת בצבע הכפתור; רק השקיפות שלה וההגדלה מונפשות, ושתיהן נקראות
     // בשלב הציור בלבד - בלי recomposition בכל פריים.
     val ringAlpha = animateFloatAsState(if (isFocused) 1f else 0f, FutureMotion.fast(), label = "buttonRing")
+    val isPressed by interactionSource.collectIsPressedAsState()
+    // OK: יורד ל-PressScale כמעט מיד, וחוזר בקפיץ press עם overshoot קטן.
     val scale = animateFloatAsState(
-        if (isFocused) FutureDimens.focusScale else 1f,
-        FutureMotion.focusScaleSpec,
+        when {
+            isPressed && enabled -> FutureMotion.PressScale
+            isFocused -> FutureDimens.focusScale
+            else -> 1f
+        },
+        if (isPressed) FutureMotion.pressDownSpec else FutureMotion.Springs.press(),
         label = "buttonScale",
     )
     val shape = FutureShapes.pill
