@@ -1,4 +1,5 @@
 package com.future.terminal
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import com.future.sharednav.systemui.StatusBarInset
 
 import com.future.sharednav.icons.FutureIcons
@@ -270,6 +271,15 @@ class MainActivity : ComponentActivity() {
                                 onValueChange = { input = it },
                                 modifier = Modifier
                                     .escapeTextFieldFocusTrap()
+                                    // OK בתוך השדה מריץ את הפקודה. קודם רק כפתור השליחה הריץ,
+                                    // ו-OK בשדה לא עשה כלום. מילה שעוד בהרכבה - המקלדת מאשרת
+                                    // אותה ב-OK הראשון ולא מעבירה אותו לכאן.
+                                    .onPreviewKeyEvent { event ->
+                                        if (event.key == Key.DirectionCenter && input.isNotBlank() && !isRunning) {
+                                            if (event.type == KeyEventType.KeyUp) runCommand(input)
+                                            true
+                                        } else false
+                                    }
                                     .weight(1f)
                                     .focusRequester(inputFocusRequester)
                                     .clip(FutureShapes.textField)

@@ -284,6 +284,9 @@ fun TimePickerOverlay(alarm: Alarm, theme: FutureTheme, onSave: (Alarm) -> Unit,
     var days by remember { mutableStateOf(alarm.days) }
     val hourFocus = remember { FocusRequester() }
     val minuteFocus = remember { FocusRequester() }
+    // OK בגלגל עובר ליום הראשון (א׳). קודם moveFocus(Down) בחר את היום הקרוב
+    // גיאומטרית, ומגלגל הדקות (בצד שמאל) נחת על ו׳.
+    val firstDayFocus = remember { FocusRequester() }
     // BACK סוגר את הבורר בלי לשמור, כמו ביטול - ולא יוצא מהאפליקציה.
     androidx.activity.compose.BackHandler(onBack = onCancel)
     LaunchedEffect(Unit) { runCatching { hourFocus.requestFocus() } }
@@ -308,6 +311,7 @@ fun TimePickerOverlay(alarm: Alarm, theme: FutureTheme, onSave: (Alarm) -> Unit,
                 focusRequester = hourFocus,
                 onChange = { hour = it },
                 onTypedComplete = { runCatching { minuteFocus.requestFocus() } },
+                onOk = { runCatching { firstDayFocus.requestFocus() } },
             )
             TimeValue(":", theme)
             TimeWheel(
@@ -318,6 +322,7 @@ fun TimePickerOverlay(alarm: Alarm, theme: FutureTheme, onSave: (Alarm) -> Unit,
                 focusRequester = minuteFocus,
                 onChange = { minute = it },
                 onTypedComplete = {},
+                onOk = { runCatching { firstDayFocus.requestFocus() } },
             )
         }
         Spacer(modifier = Modifier.height(FutureDimens.spacingSm))
@@ -336,6 +341,7 @@ fun TimePickerOverlay(alarm: Alarm, theme: FutureTheme, onSave: (Alarm) -> Unit,
                     label = label,
                     selected = dayValue in days,
                     theme = theme,
+                    modifier = if (dayValue == DAY_LABELS.first().first) Modifier.focusRequester(firstDayFocus) else Modifier,
                     onToggle = {
                         days = if (dayValue in days) days - dayValue else days + dayValue
                     }
@@ -358,8 +364,8 @@ fun TimePickerOverlay(alarm: Alarm, theme: FutureTheme, onSave: (Alarm) -> Unit,
  * צבע את המצב הנבחר בהדגשה הגולמית, שנעלמת במצב בהיר עם הדגשה לבנה.
  */
 @Composable
-fun DayToggleChip(label: String, selected: Boolean, theme: FutureTheme, onToggle: () -> Unit) {
-    FutureDayChip(text = label, theme = theme, selected = selected, onClick = onToggle)
+fun DayToggleChip(label: String, selected: Boolean, theme: FutureTheme, modifier: Modifier = Modifier, onToggle: () -> Unit) {
+    FutureDayChip(text = label, theme = theme, modifier = modifier, selected = selected, onClick = onToggle)
 }
 
 /**
@@ -377,11 +383,11 @@ private fun TimeWheel(
     focusRequester: FocusRequester,
     onChange: (Int) -> Unit,
     onTypedComplete: () -> Unit,
+    onOk: () -> Unit,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
     var typed by remember { mutableStateOf("") }
-    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
     LaunchedEffect(isFocused) { if (!isFocused) typed = "" }
     fun wrap(v: Int) = when {
         v > range.last -> range.first
@@ -406,7 +412,7 @@ private fun TimeWheel(
                     // ↑/↓ שייכים לגלגל, אז OK הוא היציאה ממנו - לימי החזרה ולכפתורים.
                     event.key == Key.DirectionCenter || event.key == Key.Enter || event.key == Key.NumPadEnter -> {
                         typed = ""
-                        focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Down)
+                        onOk()
                         true
                     }
                     digit != null -> {

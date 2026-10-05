@@ -32,6 +32,9 @@ data class TalkLine(val text: String, val language: String, val translation: Str
 
 class TranslateViewModel(application: Application) : AndroidViewModel(application) {
 
+    /** מאיזו קפסולה נפתח בורר השפות האחרון - לשם חוזר הפוקוס. */
+    var lastPickWasSource = true
+
     private val engine = TranslationEngine()
     private val prefs = TranslatePrefs(application)
     val history = HistoryStore(application)

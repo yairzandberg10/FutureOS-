@@ -1,5 +1,6 @@
 package com.future.navigation.ui.home
 
+import androidx.compose.ui.focus.focusProperties
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureAvatar
 
@@ -84,6 +85,10 @@ fun HomeScreen(
     val nearbyStops by viewModel.nearbyStops.collectAsState()
     val currentLocation by viewModel.currentLocation.collectAsState()
     val searchFocusRequester = remember { FocusRequester() }
+    // NV1: escapeTextFieldFocusTrap מזיז את הפוקוס ב-↑/↓ בחיפוש גיאומטרי, ומתוך
+    // ה-LazyColumn הוא דילג על לשוניות "נהיגה"/"תחבורה ציבורית" וחזר לשדה החיפוש.
+    // הנתיב מוגדר במפורש: חיפוש ↓ לשוניות, ואריחי בית/עבודה ↑ לשוניות.
+    val modeTabsFocusRequester = remember { FocusRequester() }
 
     // פוקוס D-pad התחלתי על שדה החיפוש - בלי זה נחיתה על מסך הבית משאירה אותו
     // בלי שום פריט מודגש (בדיוק כמו בשאר 5 המסכים באפליקציה הזו).
@@ -102,7 +107,8 @@ fun HomeScreen(
                 modifier = Modifier.size(FutureDimens.iconTopBar),
             )
             Text(
-                text = currentLocation?.let { "%.4f, %.4f".format(it.lat, it.lon) }
+                // LRI…PDI: קו הרוחב ראשון. בשורה RTL קו האורך הוצג לפניו.
+                text = currentLocation?.let { "\u2066%.4f, %.4f\u2069".format(it.lat, it.lon) }
                     ?: stringResource(R.string.current_location_unknown),
                 fontSize = type.body,
                 color = theme.secondaryTextColor,
@@ -146,7 +152,8 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = FutureDimens.screenPadding)
-                .padding(top = FutureDimens.itemSpacing),
+                .padding(top = FutureDimens.itemSpacing)
+                .focusProperties { down = modeTabsFocusRequester },
         )
 
         FutureTabRow(
@@ -155,6 +162,7 @@ fun HomeScreen(
             theme = theme,
             onSelect = { viewModel.setMode(TravelMode.entries[it]) },
             modifier = Modifier.padding(top = FutureDimens.spacingSm),
+            firstItemFocusRequester = modeTabsFocusRequester,
         )
 
         LazyColumn(
@@ -196,7 +204,7 @@ fun HomeScreen(
                             emptyHint = stringResource(R.string.add_home_address),
                             place = homePlace,
                             theme = theme,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f).focusProperties { up = modeTabsFocusRequester }
                         ) { homePlace?.let { onDestinationPicked(GeocodeResult(it.address, LatLng(it.lat, it.lon))) } ?: onOpenSavedPlaces() }
                         QuickPlaceTile(
                             icon = FutureIcons.Work,
@@ -204,7 +212,7 @@ fun HomeScreen(
                             emptyHint = stringResource(R.string.add_work_address),
                             place = workPlace,
                             theme = theme,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f).focusProperties { up = modeTabsFocusRequester }
                         ) { workPlace?.let { onDestinationPicked(GeocodeResult(it.address, LatLng(it.lat, it.lon))) } ?: onOpenSavedPlaces() }
                     }
                 }

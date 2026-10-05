@@ -472,7 +472,7 @@ private fun DefaultAppRequiredScreen(theme: FutureTheme, onRequest: () -> Unit) 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
-                Text("צריך להגדיר את Messages כאפליקציית ברירת המחדל למסרונים", color = theme.textColor, textAlign = TextAlign.Center)
+                Text("צריך להגדיר את \"הודעות\" כאפליקציית ברירת המחדל למסרונים", color = theme.textColor, textAlign = TextAlign.Center)
                 Spacer(modifier = Modifier.height(16.dp))
                 FutureButton("הגדר כברירת מחדל", theme, onRequest, focusRequester = focusRequester)
             }

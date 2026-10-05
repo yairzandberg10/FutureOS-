@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">FutureLauncher</string>
+    <string name="app_name">מסך הבית</string>
     <string name="no_space_toast">אין מקום פנוי בעמוד זה</string>
     <string name="widget_default_label">ווידג\'ט</string>
     <string name="home">בית</string>

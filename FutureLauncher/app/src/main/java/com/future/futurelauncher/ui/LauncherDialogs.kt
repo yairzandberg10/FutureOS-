@@ -256,6 +256,7 @@ fun AppOptionsDialog(
     var folderName by remember { mutableStateOf("") }
     var customName by remember { mutableStateOf(item.customLabel ?: item.label) }
     val focusRequester = remember { FocusRequester() }
+    val closeFocus = remember { FocusRequester() }
 
     GlassDialog(
         onDismissRequest = onDismiss,
@@ -265,7 +266,8 @@ fun AppOptionsDialog(
             TopBarIconButton(FutureIcons.Delete, stringResource(R.string.trash), theme.dangerColor, theme.accentColor, onRemove)
         },
         footer = {
-            GlassButton(text = stringResource(R.string.close), onClick = onDismiss, theme = theme, isPrimary = false, modifier = Modifier.fillMaxWidth())
+            // הפוקוס ההתחלתי על "סגור" ולא על הפח שבכותרת (פעולה הרסנית).
+            GlassButton(text = stringResource(R.string.close), onClick = onDismiss, theme = theme, isPrimary = false, modifier = Modifier.fillMaxWidth(), focusRequester = closeFocus)
         }
     ) {
         Column(

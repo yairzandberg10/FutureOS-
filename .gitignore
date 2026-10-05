@@ -55,3 +55,6 @@ Navigation/firebase/functions/lib/
 Messages/firebase/functions/node_modules/
 Messages/firebase/functions/lib/
 replay_pid*.log
+
+# APK-ים מוכנים להתקנה (נבנים מקומית, גדולים מדי ל-git)
+ready-apks/*.apk

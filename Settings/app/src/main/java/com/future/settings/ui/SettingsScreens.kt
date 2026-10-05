@@ -1388,7 +1388,7 @@ fun GeneralScreen(navController: NavController, theme: ThemeConfig, viewModel: S
                 item { SettingHeader("תאריך ושעה", theme) }
                 item {
                     SettingsCard(theme) {
-                        SettingSwitch("תצוגת 24 שעות", if (viewModel.use24Hour.value) "14:30" else "2:30 PM", viewModel.use24Hour.value, { viewModel.toggle24Hour() }, theme)
+                        SettingSwitch("תצוגת 24 שעות", if (viewModel.use24Hour.value) "14:30" else "\u20662:30 PM\u2069" /* LRI…PDI: היה "PM 2:30" */, viewModel.use24Hour.value, { viewModel.toggle24Hour() }, theme)
                         SettingDivider(theme)
                         SettingSwitch("שעה ותאריך אוטומטיים", "נלקחים מהרשת הסלולרית", viewModel.autoTime.value, { viewModel.toggleAutoTime() }, theme)
                         SettingDivider(theme)

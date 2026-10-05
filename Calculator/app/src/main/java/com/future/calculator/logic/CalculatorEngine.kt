@@ -50,11 +50,11 @@ object CalculatorEngine {
         val digitsOnly = s.display.count { it.isDigit() }
         if (!s.startFresh && s.display != "0" && digitsOnly >= MAX_INPUT_DIGITS) return s
         val display = if (s.startFresh || s.display == "0") digit else s.display + digit
-        return s.copy(display = display, startFresh = false)
+        return s.copy(display = display, startFresh = false, expressionLine = freshLine(s))
     }
 
     fun inputDot(s: CalcState): CalcState = when {
-        s.isError || s.startFresh -> s.copy(display = "0.", startFresh = false)
+        s.isError || s.startFresh -> s.copy(display = "0.", startFresh = false, expressionLine = freshLine(s))
         !s.display.contains(".") -> s.copy(display = s.display + ".")
         else -> s
     }
@@ -111,8 +111,12 @@ object CalculatorEngine {
         if (pv == null || op == null || s.isError) return s.copy(pendingValue = null, pendingOp = null, startFresh = true, expressionLine = "") to null
         val expression = "${format(pv)} ${op.symbol} ${format(value(s))}"
         val result = apply(pv, op, value(s))
-        return CalcState(display = result, startFresh = true) to CalcHistoryEntry(expression, result)
+        // הביטוי נשאר מעל התוצאה ("12 + 3 =") עד שמתחילים מספר חדש.
+        return CalcState(display = result, startFresh = true, expressionLine = "$expression =") to CalcHistoryEntry(expression, result)
     }
+
+    /** מספר חדש אחרי "=" מוחק את שורת הביטוי הקודם; באמצע פעולה היא נשארת. */
+    private fun freshLine(s: CalcState): String = if (s.startFresh && s.pendingOp == null) "" else s.expressionLine
 
     /**
      * אחוזים כמו במחשבון כיס: עם חיבור/חיסור ממתין האחוז הוא מהמספר הראשון
@@ -130,9 +134,9 @@ object CalculatorEngine {
                 cur.divide(BigDecimal(100), PRECISION)
             }
         } catch (e: Exception) {
-            return s.copy(display = ERROR, startFresh = true)
+            return s.copy(display = ERROR, startFresh = true, expressionLine = freshLine(s))
         }
-        return s.copy(display = format(result), startFresh = true)
+        return s.copy(display = format(result), startFresh = true, expressionLine = freshLine(s))
     }
 
     fun unary(s: CalcState, fn: (Double) -> Double): CalcState {
@@ -143,7 +147,7 @@ object CalculatorEngine {
         } catch (e: Exception) {
             ERROR
         }
-        return s.copy(display = display, startFresh = true)
+        return s.copy(display = display, startFresh = true, expressionLine = freshLine(s))
     }
 
     fun factorial(s: CalcState): CalcState {
@@ -156,18 +160,18 @@ object CalculatorEngine {
             for (i in 2..n.toInt()) result = result.multiply(BigDecimal(i))
             format(result)
         }
-        return s.copy(display = display, startFresh = true)
+        return s.copy(display = display, startFresh = true, expressionLine = freshLine(s))
     }
 
     /** ± - הופך את הסימן של המספר שבתצוגה, בלי לסגור אותו (אפשר להמשיך להקליד). */
     fun negate(s: CalcState): CalcState {
         if (s.isError || s.display == "0") return s
         val d = s.display
-        return s.copy(display = if (d.startsWith("-")) d.drop(1) else "-$d")
+        return s.copy(display = if (d.startsWith("-")) d.drop(1) else "-$d", expressionLine = freshLine(s))
     }
 
     fun constant(s: CalcState, value: Double): CalcState =
-        s.copy(display = format(BigDecimal(value, PRECISION)), startFresh = true)
+        s.copy(display = format(BigDecimal(value, PRECISION)), startFresh = true, expressionLine = freshLine(s))
 
     /** תוצאה מההיסטוריה חוזרת לתצוגה כמספר חדש. */
     fun recall(result: String): CalcState = CalcState(display = result, startFresh = true)

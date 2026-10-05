@@ -1523,7 +1523,8 @@ class KeyboardService : InputMethodService() {
                     ic.deleteSurroundingText(1, 0)
                     return true
                 }
-                return super.onKeyDown(keyCode, event)
+                // אין מה למחוק: BACK עובר ישר לאפליקציה (ר' backWhenEmpty).
+                return false
             }
             return super.onKeyDown(keyCode, event)
         }
@@ -1604,7 +1605,11 @@ class KeyboardService : InputMethodService() {
                     ic.deleteSurroundingText(1, 0)
                     return true
                 }
-                return super.onKeyDown(keyCode, event)
+                // backWhenEmpty: אין מה למחוק - BACK עובר ישר לאפליקציה, ולא נבלע
+                // רק כדי לסגור את פס המקלדת. קודם צריך היה BACK פעמיים כדי לצאת
+                // משדה ריק (תרגום, בורר שפות, "תיקייה חדשה"). האפליקציה שיוצאת
+                // מהמסך סוגרת את המקלדת ממילא.
+                return false
             }
             KeyEvent.KEYCODE_0 -> {
                 // לחיצה קצרה - כמו ברוב מכשירי T9, 0 לא ממופה לאותיות ומציב רווח.

@@ -683,7 +683,7 @@ private fun FileDetailsDialog(entry: FileEntry, displayName: String, repository:
         if (!entry.isDirectory) {
             FutureDetailRow("גודל", repository.formatSize(entry.sizeBytes), theme)
         }
-        FutureDetailRow("נתיב", entry.file.absolutePath, theme)
+        FutureDetailRow("נתיב", "\u2066${entry.file.absolutePath}\u2069", theme) // LRI…PDI: הנתיב משמאל לימין, בלי "/" בסוף
         FutureDetailRow(
             "שונה לאחרונה",
             android.text.format.DateFormat.format("dd/MM/yyyy HH:mm", entry.file.lastModified()).toString(),

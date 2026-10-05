@@ -16,7 +16,7 @@
     <string name="incoming_call">שיחה נכנסת</string>
     <string name="dialing">מתקשר</string>
     <string name="set_as_default_dialer">הפוך לאפליקציית הטלפון הראשית</string>
-    <string name="default_dialer_required">כדי לחייג ולקבל שיחות, יש להגדיר את חייגן כאפליקציית הטלפון הראשית</string>
+    <string name="default_dialer_required">כדי לחייג ולקבל שיחות, יש להגדיר את "טלפון" כאפליקציית הטלפון הראשית</string>
     <string name="keypad">מקלדת</string>
     <string name="record">הקלטה</string>
     <string name="stop_recording">עצור הקלטה</string>

@@ -78,7 +78,9 @@ fun TranslateScreen(
     val speaking by viewModel.speaker.speaking.collectAsState()
 
     val fromCapsule = remember { FocusRequester() }
-    LaunchedEffect(Unit) { runCatching { fromCapsule.requestFocus() } }
+    val toCapsule = remember { FocusRequester() }
+    // בחזרה מבורר השפות הפוקוס חוזר לקפסולה שממנה נפתח ("מ" או "אל"), ולא תמיד ל"מ".
+    LaunchedEffect(Unit) { runCatching { if (viewModel.lastPickWasSource) fromCapsule.requestFocus() else toCapsule.requestFocus() } }
 
     ScreenScaffold(
         modifier = Modifier.padding(top = StatusBarInset.TITLE_GAP_DP.dp),
@@ -106,7 +108,7 @@ fun TranslateScreen(
                     label = "מ",
                     value = Languages.of(from).name,
                     theme = theme,
-                    onClick = { onPick(true) },
+                    onClick = { viewModel.lastPickWasSource = true; onPick(true) },
                     focusRequester = fromCapsule,
                     modifier = Modifier.weight(1f),
                 )
@@ -124,7 +126,8 @@ fun TranslateScreen(
                     label = "אל",
                     value = Languages.of(to).name,
                     theme = theme,
-                    onClick = { onPick(false) },
+                    onClick = { viewModel.lastPickWasSource = false; onPick(false) },
+                    focusRequester = toCapsule,
                     modifier = Modifier.weight(1f),
                 )
             }

@@ -574,7 +574,8 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.TopCenter)
-                    .padding(start = 16.dp, end = 16.dp, top = 10.dp),
+                    // מתחת לשורת המצב של FutureUI (28dp) - ב-10dp חצי מהעיגולים היה מוסתר.
+                    .padding(start = 16.dp, end = 16.dp, top = com.future.sharednav.systemui.StatusBarInset.HEIGHT_DP.dp + 6.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -618,7 +619,7 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
                 visible = showHints && hasCameraPermission && cameraAvailable,
                 enter = fadeIn(FutureMotion.enter()),
                 exit = fadeOut(FutureMotion.exit()),
-                modifier = Modifier.align(Alignment.TopCenter).padding(top = 64.dp),
+                modifier = Modifier.align(Alignment.TopCenter).padding(top = 96.dp),
             ) {
                 OverlayChip("1-9 מיקוד · OK מוחזק מיקוד במרכז · * מצב")
             }
