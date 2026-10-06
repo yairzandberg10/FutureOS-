@@ -91,6 +91,24 @@ fun AlarmScreen(theme: FutureTheme, onBack: () -> Unit, onOverlayChange: (Boolea
     // לא הגיב בכלל - מעורר שנוצר נשאר לתמיד.
     var focusedAlarmId by remember { mutableStateOf<Int?>(null) }
     var menuOpen by remember { mutableStateOf(false) }
+    // CK8: אחרי סגירת הבורר או התפריט הפוקוס חוזר לשורת המעורר (שנוסף, נערך או
+    // היה ממוקד), ואם אין כזו - ל-"+". קודם שום פריט לא היה ממוקד, ו-OK לא עשה כלום.
+    val rowRequesters = remember { mutableMapOf<Int, FocusRequester>() }
+    val addFocus = remember { FocusRequester() }
+    var restoreFocusTo by remember { mutableStateOf<Int?>(null) }
+    LaunchedEffect(restoreFocusTo, editingAlarm, menuOpen) {
+        val target = restoreFocusTo ?: return@LaunchedEffect
+        if (editingAlarm != null || menuOpen) return@LaunchedEffect
+        repeat(6) {
+            androidx.compose.runtime.withFrameNanos { }
+            val requester = rowRequesters[target] ?: alarms.firstOrNull()?.let { rowRequesters[it.id] } ?: addFocus
+            if (runCatching { requester.requestFocus() }.isSuccess) {
+                restoreFocusTo = null
+                return@LaunchedEffect
+            }
+        }
+        restoreFocusTo = null
+    }
     onOptionsKeyPress { if (!overlayOpen && pendingDelete == null) menuOpen = true }
 
     LaunchedEffect(Unit) {
@@ -113,7 +131,7 @@ fun AlarmScreen(theme: FutureTheme, onBack: () -> Unit, onOverlayChange: (Boolea
         val focused = alarms.firstOrNull { it.id == focusedAlarmId }
         FutureOptionsMenu(
             theme = theme,
-            onDismissRequest = { menuOpen = false },
+            onDismissRequest = { menuOpen = false; restoreFocusTo = focusedAlarmId ?: -1 },
             header = focused?.let { "%02d:%02d".format(it.hour, it.minute) } ?: "שעונים מעוררים",
         ) {
             if (focused != null) {
@@ -148,10 +166,11 @@ fun AlarmScreen(theme: FutureTheme, onBack: () -> Unit, onOverlayChange: (Boolea
             surfaceColor = theme.surfaceColor,
             textColor = theme.textColor,
             dangerColor = theme.dangerColor,
-            onCancel = { pendingDelete = null },
+            onCancel = { restoreFocusTo = alarm.id; pendingDelete = null },
             onConfirm = {
                 alarms.remove(alarm)
                 updateAlarms()
+                restoreFocusTo = -1
                 pendingDelete = null
             },
         )
@@ -166,7 +185,7 @@ fun AlarmScreen(theme: FutureTheme, onBack: () -> Unit, onOverlayChange: (Boolea
                     onBack = onBack,
                     trailing = {
                         if (editingAlarm == null) {
-                            ToolsIconButton(FutureIcons.Add, "הוסף שעון", theme) {
+                            ToolsIconButton(FutureIcons.Add, "הוסף שעון", theme, focusRequester = addFocus) {
                                 val newId = (alarms.maxOfOrNull { it.id } ?: 0) + 1
                                 // CK7: מעורר חדש נכנס לרשימה רק ב"שמור". קודם הוא נשמר ותוזמן עוד
                                 // לפני שהבורר נפתח, ו"ביטול" השאיר מעורר 07:00 מופעל.
@@ -183,9 +202,13 @@ fun AlarmScreen(theme: FutureTheme, onBack: () -> Unit, onOverlayChange: (Boolea
                             val index = alarms.indexOfFirst { it.id == updated.id }
                             if (index != -1) alarms[index] = updated else alarms.add(updated)
                             updateAlarms()
+                            restoreFocusTo = updated.id
                             editingAlarm = null
                         },
-                        onCancel = { editingAlarm = null }
+                        onCancel = {
+                            restoreFocusTo = editingAlarm?.id?.takeIf { id -> alarms.any { it.id == id } } ?: -1
+                            editingAlarm = null
+                        }
                     )
                 } else {
                     if (alarms.isEmpty()) {
@@ -210,6 +233,7 @@ fun AlarmScreen(theme: FutureTheme, onBack: () -> Unit, onOverlayChange: (Boolea
                                     if (index > 0) FutureDivider(theme = theme)
                                     AlarmRow(alarm, theme,
                                         onClick = { editingAlarm = alarm },
+                                        focusRequester = rowRequesters.getOrPut(alarm.id) { FocusRequester() },
                                         modifier = Modifier.onFocusChanged { if (it.hasFocus) focusedAlarmId = alarm.id },
                                     )
                                 }
@@ -245,7 +269,7 @@ private fun recurrenceSummary(alarm: Alarm): String {
  * מציג את המצב; ההפעלה, הכיבוי והמחיקה בתפריט האפשרויות של השורה הממוקדת.
  */
 @Composable
-fun AlarmRow(alarm: Alarm, theme: FutureTheme, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun AlarmRow(alarm: Alarm, theme: FutureTheme, onClick: () -> Unit, modifier: Modifier = Modifier, focusRequester: FocusRequester? = null) {
     FutureSettingItem(
         title = "%02d:%02d".format(alarm.hour, alarm.minute),
         summary = recurrenceSummary(alarm),
@@ -253,6 +277,7 @@ fun AlarmRow(alarm: Alarm, theme: FutureTheme, onClick: () -> Unit, modifier: Mo
         theme = theme,
         onClick = onClick,
         modifier = modifier,
+        focusRequester = focusRequester,
         trailing = {
             FutureSwitch(checked = alarm.isEnabled, theme = theme)
         },

@@ -55,8 +55,15 @@ import com.future.sharednav.theme.rememberFutureType
  * ולא בעיגול.
  */
 @Composable
-fun ToolsIconButton(icon: ImageVector, contentDescription: String, theme: FutureTheme, tint: Color = theme.textColor, onClick: () -> Unit) {
-    SharedTopBarIconButton(icon, contentDescription, tint, theme.accentColor, onClick)
+fun ToolsIconButton(
+    icon: ImageVector,
+    contentDescription: String,
+    theme: FutureTheme,
+    tint: Color = theme.textColor,
+    focusRequester: androidx.compose.ui.focus.FocusRequester? = null,
+    onClick: () -> Unit,
+) {
+    SharedTopBarIconButton(icon, contentDescription, tint, theme.accentColor, onClick, focusRequester)
 }
 
 /**
