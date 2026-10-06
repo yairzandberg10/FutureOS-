@@ -1,5 +1,8 @@
 package com.future.tasks.ui.screens
 
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.rounded.CheckCircle
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureTextField
@@ -104,8 +107,11 @@ fun TaskEditorScreen(
                     }
                 }
 
+                // TK10: עם שורת התזכורת שנוספה, weight(1f) כיווץ את שדה הפרטים כמעט
+                // לאפס - ↓ מהכותרת "דילג" עליו (או שהפוקוס בו לא נראה). עכשיו לשדה
+                // גובה מינימלי והעורך כולו נגלל.
                 Column(
-                    modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                    modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
                     EditorField(
@@ -122,7 +128,7 @@ fun TaskEditorScreen(
                         placeholder = "פרטים נוספים",
                         theme = theme,
                         singleLine = false,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.heightIn(min = 112.dp),
                     )
 
                     // תזכורת: צ'יפים של הדיזיין סיסטם. אין "היום 09:00" שכבר עבר - "הערב"

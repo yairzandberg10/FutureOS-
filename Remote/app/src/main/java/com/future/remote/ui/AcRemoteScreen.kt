@@ -193,7 +193,8 @@ fun AcRemoteScreen(theme: FutureTheme, device: RemoteDevice, onBack: () -> Unit)
     if (showMenu) {
         FutureOptionsMenu(theme = theme, onDismissRequest = { showMenu = false }, header = device.name) {
             company?.protocols?.filter { it != protocol }?.forEach { other ->
-                FutureMenuRow("דגם שלט: ${other.label}", FutureIcons.SwapHoriz, theme, {
+                // RM2: "החלף ל..." - הנוסח הקודם ("דגם שלט: X") נקרא כמו הדגם הנוכחי, ונחתך.
+                FutureMenuRow("החלף ל-${other.label.removePrefix("שלט ")}", FutureIcons.SwapHoriz, theme, {
                     showMenu = false
                     protocol = other
                     repository.updateDevice(device.id) { it.copy(acProtocol = other) }
