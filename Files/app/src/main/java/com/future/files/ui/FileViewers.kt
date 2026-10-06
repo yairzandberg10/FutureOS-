@@ -71,6 +71,8 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
+import com.future.sharednav.focus.focusMotion
+import com.future.sharednav.focus.animateFocusColor
 
 @Composable
 private fun ViewerHeader(title: String, theme: FutureTheme, onBack: () -> Unit) {
@@ -330,6 +332,7 @@ private fun ViewerBackChip(theme: FutureTheme, onBack: () -> Unit) {
     Box(
         modifier = Modifier
             .size(FutureDimens.rowHeightTopBarButton)
+            .focusMotion(interactionSource, focusedScale = 1.1f)
             .clip(FutureShapes.pill)
             .background(bgColor)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onBack)
@@ -339,7 +342,7 @@ private fun ViewerBackChip(theme: FutureTheme, onBack: () -> Unit) {
         Icon(
             FutureIcons.AutoMirrored.ArrowBack,
             contentDescription = "חזור",
-            tint = if (isFocused) FutureContrast.onColor(theme.accentColor) else Color.White,
+            tint = animateFocusColor(isFocused, FutureContrast.onColor(theme.accentColor), Color.White).value,
             modifier = Modifier.size(FutureDimens.iconTopBar),
         )
     }

@@ -56,6 +56,7 @@ import com.future.fitness.data.WorkoutStore
 import com.future.fitness.ui.components.FocusableItem
 import com.future.sharednav.components.ConfirmDialog
 import com.future.sharednav.theme.FutureTheme
+import com.future.sharednav.focus.animateFocusColor
 
 private val DIFFICULTIES = listOf("הכל", "קל", "בינוני", "קשה")
 
@@ -154,7 +155,7 @@ fun WorkoutsScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(if (isFocused) theme.focusFillChipColor else theme.idleFieldColor, FutureShapes.pill)
+                            .background(animateFocusColor(isFocused, theme.focusFillChipColor, theme.idleFieldColor).value, FutureShapes.pill)
                             .padding(14.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center,
@@ -265,7 +266,7 @@ private fun WorkoutCard(workout: Workout, weightKg: Int, theme: FutureTheme, onC
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(theme.textColor.copy(alpha = if (isFocused) 0.16f else 0.06f), FutureShapes.md),
+                        .background(animateFocusColor(isFocused, theme.textColor.copy(alpha = 0.16f), theme.textColor.copy(alpha = 0.06f)).value, FutureShapes.md),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(FutureIcons.Close, contentDescription = "מחק אימון", tint = theme.textColor.copy(alpha = 0.7f), modifier = Modifier.size(18.dp))

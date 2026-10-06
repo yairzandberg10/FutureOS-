@@ -69,6 +69,8 @@ import com.future.sharednav.theme.FutureShapes
 import com.future.clock.logic.Alarm
 import com.future.clock.logic.AlarmLogic
 import com.future.sharednav.theme.FutureTheme
+import com.future.sharednav.focus.focusScale
+import com.future.sharednav.focus.animateFocusColor
 
 @Composable
 fun AlarmScreen(theme: FutureTheme, onBack: () -> Unit, onOverlayChange: (Boolean) -> Unit = {}) {
@@ -403,9 +405,10 @@ private fun TimeWheel(
     Column(
         modifier = Modifier
             .width(TimeWheelWidth)
+            .focusScale(isFocused, focusedScale = 1.05f)
             .clip(shape)
-            .background(if (isFocused) accent.copy(alpha = 0.14f) else theme.textAlpha(8))
-            .border(FutureDimens.focusBorderControl, if (isFocused) accent else Color.Transparent, shape)
+            .background(animateFocusColor(isFocused, accent.copy(alpha = 0.14f), theme.textAlpha(8)).value)
+            .border(FutureDimens.focusBorderControl, animateFocusColor(isFocused, accent, Color.Transparent).value, shape)
             .focusRequester(focusRequester)
             .onKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onKeyEvent false

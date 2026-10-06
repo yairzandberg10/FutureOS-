@@ -39,9 +39,6 @@ fun SliderBar(
             // של מרכז הבקרה כמעט לא היה אפשר לראות איפה נגמר המילוי. עכשיו
             // מסילה כהה שקופה-למחצה ומילוי לבן כמעט אטום.
             .background(SliderTrack)
-            .then(
-                if (isFocused) Modifier.controlFocusRing(shape) else Modifier
-            )
             .onKeyEvent { event ->
                 if (event.type == KeyEventType.KeyDown) {
                     when (event.key) {

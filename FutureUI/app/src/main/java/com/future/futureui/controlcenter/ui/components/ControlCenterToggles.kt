@@ -63,9 +63,6 @@ fun TogglePill(
             .clip(shape)
             .focusEffect(isFocused, shape)
             .background(Color(0x80E0E0E0))
-            .then(
-                if (isFocused) Modifier.controlFocusRing(shape) else Modifier
-            )
             .padding(6.dp)
             .onKeyEvent { event ->
                 if (isEditMode && event.type == KeyEventType.KeyDown && event.key == Key.Menu) {
@@ -243,11 +240,15 @@ fun FocusableSection(
                     Modifier
                         .border(
                             width = 2.dp,
-                            color = when {
-                                isMoving -> Color.Red
-                                isFocused -> Color(0xFF111114)
-                                else -> Color.Transparent
-                            },
+                            color = androidx.compose.animation.animateColorAsState(
+                                when {
+                                    isMoving -> Color.Red
+                                    isFocused -> Color(0xFF111114)
+                                    else -> Color.Transparent
+                                },
+                                com.future.sharednav.theme.FutureMotion.focusColorSpec,
+                                label = "ccEditBorder",
+                            ).value,
                             shape = shape
                         )
                         .onKeyEvent { event ->

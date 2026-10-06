@@ -46,6 +46,7 @@ import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.idleFieldColor
 import com.future.sharednav.theme.readableAccentColor
 import com.future.sharednav.theme.rememberFutureType
+import com.future.sharednav.focus.focusMotion
 
 /**
  * כפתור אייקון - עטיפה דקה סביב TopBarIconButton המשותף. האייקון בצבע
@@ -154,6 +155,7 @@ fun ToolsRoundActionButton(
     Box(
         modifier = Modifier
             .size(size)
+            .focusMotion(interactionSource, focusedScale = 1.08f)
             .clip(CircleShape)
             .alpha(opacity)
             .background(fill)

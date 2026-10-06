@@ -83,6 +83,7 @@ import com.future.fitness.ui.formatElapsed
 import com.future.sharednav.theme.FutureTheme
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
+import com.future.sharednav.focus.animateFocusColor
 
 private enum class WorkoutPage { MAIN, DYNAMICS, POWER_CADENCE, ELEVATION, HR_ZONES, MUSIC }
 
@@ -261,7 +262,7 @@ fun WorkoutTemplateScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(if (isFocused) theme.focusFillChipColor else theme.textColor.copy(alpha = 0.08f), FutureShapes.lg),
+                        .background(animateFocusColor(isFocused, theme.focusFillChipColor, theme.textColor.copy(alpha = 0.08f)).value, FutureShapes.lg),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
@@ -475,7 +476,7 @@ private fun MediaButton(theme: FutureTheme, icon: ImageVector, contentDescriptio
             modifier = Modifier
                 .fillMaxSize()
                 .background(
-                    if (primary) theme.readableAccentColor else if (isFocused) theme.focusFillChipColor else theme.textColor.copy(alpha = 0.08f),
+                    animateFocusColor(isFocused, if (primary) theme.readableAccentColor else theme.focusFillChipColor, if (primary) theme.readableAccentColor else theme.textColor.copy(alpha = 0.08f)).value,
                     FutureShapes.lg,
                 ),
             contentAlignment = Alignment.Center,

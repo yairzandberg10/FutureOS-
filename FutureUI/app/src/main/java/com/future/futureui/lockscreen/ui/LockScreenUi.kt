@@ -82,6 +82,11 @@ import java.util.Date
 import java.util.Locale
 import kotlin.math.cos
 import kotlin.math.sin
+import com.future.sharednav.focus.animateFocusColor
+import com.future.sharednav.focus.animateFocusFloat
+import com.future.sharednav.focus.animateFocusDp
+import com.future.sharednav.focus.focusScale
+import androidx.compose.runtime.getValue
 
 private val Danger = Color(0xFFFF6B6B)
 private val Surface = Color(0xFF1C1C1E)
@@ -425,10 +430,11 @@ private fun NotificationCard(n: LockNotification, showContent: Boolean, focused:
     Column(
         Modifier
             .fillMaxWidth()
+            .focusScale(focused)
             .clip(shape)
-            .background(Surface.copy(alpha = if (focused) 0.92f else 0.8f))
-            .then(if (focused) Modifier.border(1.5.dp, accent, shape) else Modifier)
-            .padding(horizontal = 14.dp, vertical = if (focused) 14.dp else 12.dp)
+            .background(animateFocusColor(focused, Surface.copy(alpha = 0.92f), Surface.copy(alpha = 0.8f)).value)
+            .border(1.5.dp, animateFocusColor(focused, accent, accent.copy(alpha = 0f)).value, shape)
+            .padding(horizontal = 14.dp, vertical = animateFocusDp(focused, 14.dp, 12.dp).value)
     ) {
         Row(verticalAlignment = if (focused) Alignment.Top else Alignment.CenterVertically) {
             Box(Modifier.size(32.dp).clip(CircleShape).background(Raised), contentAlignment = Alignment.Center) {
@@ -589,23 +595,36 @@ private fun formatSeconds(s: Int): String = if (s >= 60) "${(s + 59) / 60} דק�
 // ---------------------------------------------------------------- עריכה
 
 /** מסגרת עריכה: מלאה בצבע ההדגשה כשבמיקוד, מקווקוות כשלא. */
-private fun Modifier.editFrame(focused: Boolean, accent: Color, corner: Dp): Modifier =
-    if (focused) {
-        val shape = RoundedCornerShape(corner)
-        this.clip(shape).background(Color.White.copy(alpha = 0.1f)).border(2.dp, accent, shape)
-    } else {
-        this.drawWithContent {
-            drawContent()
+// המסגרת המקווקוות מתחלפת במסגרת המלאה בהצלבה (ולא בקפיצה), והאזור גדל מעט.
+@Composable
+private fun Modifier.editFrame(focused: Boolean, accent: Color, corner: Dp): Modifier {
+    val p by animateFocusFloat(focused, 1f, 0f)
+    return this.focusScale(focused, focusedScale = 1.04f).drawWithContent {
+        val radius = CornerRadius(corner.toPx())
+        if (p > 0f) drawRoundRect(Color.White.copy(alpha = 0.1f * p), cornerRadius = radius)
+        drawContent()
+        if (p < 1f) {
             val w = 1.5.dp.toPx()
             drawRoundRect(
-                Color.White.copy(alpha = 0.6f),
+                Color.White.copy(alpha = 0.6f * (1f - p)),
                 topLeft = Offset(w / 2, w / 2),
                 size = androidx.compose.ui.geometry.Size(size.width - w, size.height - w),
-                cornerRadius = CornerRadius(corner.toPx()),
+                cornerRadius = radius,
                 style = Stroke(w, pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f)))
             )
         }
+        if (p > 0f) {
+            val w = 2.dp.toPx()
+            drawRoundRect(
+                accent.copy(alpha = accent.alpha * p),
+                topLeft = Offset(w / 2, w / 2),
+                size = androidx.compose.ui.geometry.Size(size.width - w, size.height - w),
+                cornerRadius = CornerRadius((corner.toPx() - w / 2).coerceAtLeast(0f)),
+                style = Stroke(w)
+            )
+        }
     }
+}
 
 @Composable
 private fun EditScreen(state: LockUiState, accent: Color, clockColor: Color, now: Date, is24: Boolean) {

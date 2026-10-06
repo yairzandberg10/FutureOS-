@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.future.futureui.controlcenter.ui.components.focusEffect
 import kotlinx.coroutines.delay
+import com.future.sharednav.focus.animateFocusColor
 
 /**
  * תפריט הכיבוי של FutureUI. נפתח משני מקומות: כפתור הכיבוי במרכז הבקרה,
@@ -191,9 +192,9 @@ private fun PowerMenuRow(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 10.dp, vertical = 3.dp)
-            .focusEffect(isFocused, shape)
+            .focusEffect(isFocused, shape, focusedScale = 1.02f)
             .clip(shape)
-            .background(if (isFocused) Color.White.copy(alpha = 0.15f) else Color.Transparent)
+            .background(animateFocusColor(isFocused, Color.White.copy(alpha = 0.15f), Color.Transparent).value)
             .onFocusChanged { if (!it.isFocused) onFocusLost() }
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
             .focusable(interactionSource = interactionSource)

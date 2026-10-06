@@ -69,6 +69,7 @@ import com.future.sharednav.theme.readableAccentColor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import com.future.sharednav.focus.animateFocusColor
 
 private enum class EditorTool(val label: String, val icon: ImageVector) {
     ROTATE("סיבוב", FutureIcons.RotateLeft),
@@ -439,9 +440,10 @@ private fun AdjustSlider(param: AdjustParam, value: Float, theme: FutureTheme, o
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 14.dp, vertical = 4.dp)
+            .focusMotion(interactionSource, focusedScale = FutureDimens.focusScale)
             .clip(shape)
-            .background(if (isFocused) theme.surfaceColor else Color.Transparent)
-            .then(if (isFocused) Modifier.border(FutureDimens.focusBorderItem, theme.readableAccentColor, shape) else Modifier)
+            .background(animateFocusColor(isFocused, theme.surfaceColor, Color.Transparent).value)
+            .border(FutureDimens.focusBorderItem, animateFocusColor(isFocused, theme.readableAccentColor, Color.Transparent).value, shape)
             .onKeyEvent { event ->
                 if (!isFocused || event.type != KeyEventType.KeyDown) return@onKeyEvent false
                 when (event.key) {

@@ -80,6 +80,7 @@ import com.future.music.ui.components.rememberAlbumArt
 import com.future.sharednav.nav.digitForKey
 import com.future.sharednav.theme.FutureTheme
 import kotlinx.coroutines.delay
+import com.future.sharednav.focus.focusMotion
 
 @Composable
 fun NowPlayingScreen(
@@ -342,6 +343,7 @@ private fun RoundIconButton(
     Box(
         modifier = Modifier
             .size(size + ringGap * 2)
+            .focusMotion(interactionSource, focusedScale = 1.1f)
             .border(width = FutureDimens.focusBorderControl, color = focusBorderColor, shape = CircleShape)
             .padding(ringGap)
             .clip(CircleShape)

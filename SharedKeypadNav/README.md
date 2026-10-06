@@ -326,6 +326,12 @@ its own shape.
 - **`Modifier.focusMotion(interactionSource)`** — just that scale-on-focus /
   shrink-on-press motion, for a hand-built button. Press comes from
   `clickable`, which turns DPAD_CENTER/ENTER into a `PressInteraction`.
+- **`animateFocusColor` / `animateFocusDp` / `animateFocusFloat`** and
+  **`Modifier.focusScale(focused)`** — the same focus motion for a hand-built
+  item that tracks its own `isFocused` (no `interactionSource`): color at
+  `focusColorSpec`, scale on the press spring going in and `focusScaleSpec`
+  coming out. Never write `.background(if (isFocused) A else B)` — the mark
+  jumps between items while every shared component fades it.
 - **`Modifier.staggeredEntrance(index)`** — items fade and rise in one after
   another when a screen opens (first 8 only; state kept per lazy-list key, so
   scrolling back doesn't replay it).

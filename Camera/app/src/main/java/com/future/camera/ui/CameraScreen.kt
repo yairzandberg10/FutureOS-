@@ -117,6 +117,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.resume
+import com.future.sharednav.focus.focusMotion
+import com.future.sharednav.focus.animateFocusColor
 
 /** מצבי הצילום. וידאו הוא היחיד שקושר VideoCapture; השאר מצלמים תמונה. */
 private enum class CaptureMode(val label: String) {
@@ -818,9 +820,10 @@ private fun PreviewThumbButton(thumb: Bitmap?, accentColor: Color, onClick: () -
     Box(
         modifier = Modifier
             .size(52.dp)
+            .focusMotion(interactionSource, focusedScale = 1.08f)
             .clip(CircleShape)
             .background(ScrimOverPreview)
-            .border(FutureDimens.focusBorderControl, if (isFocused) accentColor else Color.White.copy(alpha = 0.3f), CircleShape)
+            .border(FutureDimens.focusBorderControl, animateFocusColor(isFocused, accentColor, Color.White.copy(alpha = 0.3f)).value, CircleShape)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
             .focusable(interactionSource = interactionSource),
         contentAlignment = Alignment.Center
@@ -916,9 +919,10 @@ private fun CaptureModeSegment(label: String, isSelected: Boolean, theme: Future
     )
     Box(
         modifier = Modifier
+            .focusMotion(interactionSource, focusedScale = 1.06f)
             .clip(shape)
             .background(bgColor)
-            .border(FutureDimens.focusBorderControl, if (isFocused && isSelected) Color.White else Color.Transparent, shape)
+            .border(FutureDimens.focusBorderControl, animateFocusColor(isFocused && isSelected, Color.White, Color.Transparent).value, shape)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
             .focusable(interactionSource = interactionSource)
             .padding(horizontal = 12.dp, vertical = 7.dp),

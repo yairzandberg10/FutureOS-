@@ -77,6 +77,7 @@ import com.future.sharednav.theme.mutedTextColor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import com.future.sharednav.focus.animateFocusColor
 
 /** הגדרות הלאנצ'ר - נשמרות מקומית, ונקראות בכל ציור של מסך הבית. */
 class LauncherPrefs(context: Context) {
@@ -370,7 +371,7 @@ private fun AppPickerCell(
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .focusMotion(interaction)
             .clip(shape)
-            .background(if (focused) theme.focusFillMenuColor else Color.Transparent)
+            .background(animateFocusColor(focused, theme.focusFillMenuColor, Color.Transparent).value)
             .clickable(interactionSource = interaction, indication = null, onClick = onClick)
             .bringIntoViewOnFocus()
             .padding(vertical = 8.dp, horizontal = 2.dp),
@@ -383,7 +384,7 @@ private fun AppPickerCell(
         }
         Text(
             app.label,
-            color = if (focused) theme.textColor else theme.mutedTextColor,
+            color = animateFocusColor(focused, theme.textColor, theme.mutedTextColor).value,
             fontSize = FutureTypography.caption,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,

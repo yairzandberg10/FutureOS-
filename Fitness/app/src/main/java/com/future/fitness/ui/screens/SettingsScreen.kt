@@ -69,6 +69,7 @@ import com.future.sharednav.focus.escapeTextFieldFocusTrap
 import com.future.fitness.ui.components.ScreenTopBar
 import com.future.sharednav.theme.FutureTheme
 import androidx.compose.foundation.layout.PaddingValues
+import com.future.sharednav.focus.animateFocusColor
 
 /** מצב כהה/בהיר וצבע הדגשה משותפים לכל אפליקציות FutureOS ונשלטים ממסך
  * ההגדרות המרכזי של המערכת (כמו בכל שאר אפליקציות הסוויטה - אף אחת מהן לא
@@ -253,7 +254,7 @@ fun SettingsScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(if (isFocused) theme.focusFillChipColor else theme.idleChipColor, FutureShapes.lg)
+                                .background(animateFocusColor(isFocused, theme.focusFillChipColor, theme.idleChipColor).value, FutureShapes.lg)
                                 .padding(14.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {

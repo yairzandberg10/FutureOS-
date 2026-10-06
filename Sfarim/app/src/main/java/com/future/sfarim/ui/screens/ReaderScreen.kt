@@ -80,6 +80,8 @@ import com.future.sharednav.theme.FutureTheme
 import com.future.sfarim.util.HebrewNumerals
 import com.future.sfarim.util.stripHtmlTags
 import kotlinx.coroutines.launch
+import com.future.sharednav.focus.animateFocusColor
+import com.future.sharednav.theme.FutureMotion
 
 @Composable
 fun ReaderScreen(
@@ -343,7 +345,11 @@ private fun SegmentRow(
     val cleanedText = remember(segment.id) { stripHtmlTags(segment.textHe) }
     // בורדר + scale בפוקוס, כמו בשאר האפליקציה (FocusableItem המשותף) - בלי זה
     // דווקא מסך הקריאה, המרכזי ביותר, נראה שונה מכל שאר המסכים.
-    val scale by animateFloatAsState(if (isFocused) 1.02f else 1f, label = "segmentRowScale")
+    val scale by animateFloatAsState(
+        if (isFocused) FutureDimens.focusScale else 1f,
+        if (isFocused) FutureMotion.Springs.press() else FutureMotion.focusScaleSpec,
+        label = "segmentRowScale",
+    )
     val shape = FutureShapes.row
 
     Row(
@@ -351,8 +357,8 @@ private fun SegmentRow(
             .fillMaxWidth()
             .graphicsLayer { scaleX = scale; scaleY = scale }
             .clip(shape)
-            .background(if (isFocused) theme.readableAccentColor.copy(alpha = 0.12f) else Color.Transparent)
-            .then(if (isFocused) Modifier.border(width = FutureDimens.focusBorderItem, color = theme.readableAccentColor, shape = shape) else Modifier)
+            .background(animateFocusColor(isFocused, theme.readableAccentColor.copy(alpha = 0.12f), Color.Transparent).value)
+            .border(width = FutureDimens.focusBorderItem, color = animateFocusColor(isFocused, theme.readableAccentColor, Color.Transparent).value, shape = shape)
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             // לחיצת OK/מרכז הייתה no-op בלי שום רמז על המסך - עכשיו פותחת את
             // אותו תפריט אפשרויות (סימניה/שיתוף/פרשנים) שמקש Menu כבר מספק,

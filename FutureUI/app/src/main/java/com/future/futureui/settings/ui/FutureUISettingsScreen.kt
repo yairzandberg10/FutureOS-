@@ -115,7 +115,7 @@ private fun SettingsToggleRow(label: String, value: Boolean, onChange: (Boolean)
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .focusEffect(isFocused, shape)
+            .focusEffect(isFocused, shape, focusedScale = 1.02f)
             .clip(shape)
             .clickable(
                 interactionSource = interactionSource,

@@ -301,7 +301,7 @@ private fun ToggleRow(label: String, value: Boolean, modifier: Modifier = Modifi
     Row(
         modifier
             .fillMaxWidth()
-            .focusEffect(focused, FutureShapes.lg)
+            .focusEffect(focused, FutureShapes.lg, focusedScale = 1.02f)
             .clip(FutureShapes.lg)
             .clickable(interactionSource = source, indication = null) { onChange(!value) }
             .focusable(interactionSource = source)
@@ -324,7 +324,7 @@ private fun ValueRow(label: String, value: String, danger: Boolean = false, onCl
     Row(
         Modifier
             .fillMaxWidth()
-            .focusEffect(focused, FutureShapes.lg)
+            .focusEffect(focused, FutureShapes.lg, focusedScale = 1.02f)
             .clip(FutureShapes.lg)
             .clickable(interactionSource = source, indication = null, onClick = onClick)
             .focusable(interactionSource = source)

@@ -56,6 +56,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
+import com.future.sharednav.focus.animateFocusColor
+import androidx.compose.runtime.getValue
 
 /**
  * מסך מרכז ההתראות הראשי - מציג רשימת התראות, שעון, תאריך וכפתורי פעולה בתחתית.
@@ -375,10 +377,10 @@ fun NotificationItem(
     val shape = FutureShapes.xxl
     // הרקע של הכרטיס נגזר מכיוון הטקסט (isDarkBackground) ולא מהטפט עצמו, כדי
     // שהניגודיות טקסט-מול-כרטיס תישמר גם כשהטפט שמתחת בהיר או כהה באופן בלתי צפוי.
-    val cardBackground = if (isDarkBackground) {
-        if (isFocused) Color.Black.copy(alpha = 0.45f) else Color.Black.copy(alpha = 0.38f)
+    val cardBackground by if (isDarkBackground) {
+        animateFocusColor(isFocused, Color.Black.copy(alpha = 0.45f), Color.Black.copy(alpha = 0.38f))
     } else {
-        if (isFocused) Color.White.copy(alpha = 0.55f) else Color.White.copy(alpha = 0.42f)
+        animateFocusColor(isFocused, Color.White.copy(alpha = 0.55f), Color.White.copy(alpha = 0.42f))
     }
     val legibilityShadow = androidx.compose.ui.graphics.Shadow(color = Color.Black.copy(alpha = 0.35f), blurRadius = 6f)
 
@@ -386,12 +388,10 @@ fun NotificationItem(
         modifier = Modifier
             .fillMaxWidth()
             .animateContentSize(animationSpec = tween(FutureMotion.DurationStandard))
-            .focusEffect(isFocused, shape)
+            .focusEffect(isFocused, shape, focusedScale = 1.02f)
             .clip(shape)
             .background(cardBackground)
-            .then(
-                if (isFocused) Modifier.border(2.dp, Color.LightGray, shape) else Modifier
-            )
+            .border(2.dp, animateFocusColor(isFocused, Color.LightGray, Color.Transparent).value, shape)
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .onKeyEvent { event ->
                 if (!isFocused) return@onKeyEvent false
@@ -577,12 +577,10 @@ fun NotificationCenterButton(
     Box(
         modifier = modifier
             .height(38.dp)
-            .focusEffect(isFocused, shape)
+            .focusEffect(isFocused, shape, focusedScale = 1.08f)
             .clip(shape)
-            .background(if (isFocused) Color.White.copy(alpha = 0.25f) else color)
-            .then(
-                if (isFocused) Modifier.border(2.dp, Color.White, shape) else Modifier
-            )
+            .background(animateFocusColor(isFocused, Color.White.copy(alpha = 0.25f), color).value)
+            .border(2.dp, animateFocusColor(isFocused, Color.White, Color.Transparent).value, shape)
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
             .focusable(interactionSource = interactionSource).bringIntoViewOnFocus(),

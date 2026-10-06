@@ -4,6 +4,33 @@ This repo has no carried-over git history (see root [README](README.md)), so thi
 
 ## Unreleased
 
+### Focus transitions everywhere, 6 October
+
+Every place where the focus mark still jumped in one frame now fades and
+springs like the shared components. Not verified on the device yet.
+
+- **Shared:** `animateFocusColor` / `animateFocusDp` / `animateFocusFloat` and
+  `Modifier.focusScale(focused)` (`focus/FocusAnimations.kt`) for hand-built
+  items with their own `isFocused`. `ScreenTopBar`'s ring and the action-bar
+  label now fade too.
+- **FutureUI:** `focusEffect` (control center, notification center, power
+  menu, share sheet, recents, FutureUI settings) fades the two-tone ring in and
+  springs the control up (1.04, 1.02 on full-width rows) instead of drawing it
+  instantly; the duplicate rings drawn next to it were removed. Media buttons,
+  notification actions, recents cards and the "clear all" button, share
+  targets, the lock-screen notification card and edit frames (dashed ↔ solid
+  cross-fade).
+- **Launcher:** the edit-mode home/trash/plus icons spring and fade instead of
+  jumping to 1.2×; an empty cell fades in; folder and app-picker cells.
+- **Apps:** Calendar (all-day/repeat rows, day cells pop), Camera (icon
+  buttons, thumbnail, mode segments), Clock (time wheels), Files (viewer back
+  chip), Fitness (inner fills), Gallery (editor sliders), Messages (compose
+  buttons), Music (now-playing buttons), Settings (sound modes, color and SIM
+  swatches), Sfarim (reader rows), Tools (round buttons, range fields).
+- **Keyboard:** moving the selection with the arrows (candidates,
+  punctuation, language, clipboard) pops the selected item (0.86 → 1,
+  overshoot, `DurationFast`); typing still rebuilds the row without motion.
+
 ### QA report fixes, 5 October
 
 From the manual QA report on the F22 Pro (`QA-REPORT.md`, section 0 lists

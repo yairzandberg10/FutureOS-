@@ -25,6 +25,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.future.sharednav.focus.focusMotion
+import com.future.sharednav.focus.animateFocusColor
 
 /** כפתור עגול צף מעל תצוגת המצלמה - אותה שפת עיצוב כמו ToolsIconButton
  * (טבעת מיקוד בצבע ההדגשה, רקע כהה למראה שקוף מעל התצוגה החיה). */
@@ -54,13 +56,14 @@ fun CameraIconButton(
     Box(
         modifier = Modifier
             .size(size)
+            .focusMotion(interactionSource, focusedScale = 1.08f)
             .background(bgColor, CircleShape)
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
             .focusable(interactionSource = interactionSource),
         contentAlignment = Alignment.Center
     ) {
-        Icon(icon, contentDescription = contentDescription, tint = if (isFocused) FutureContrast.onColor(accentColor) else tint, modifier = Modifier.size(iconSize))
+        Icon(icon, contentDescription = contentDescription, tint = animateFocusColor(isFocused, FutureContrast.onColor(accentColor), tint).value, modifier = Modifier.size(iconSize))
     }
 }
 

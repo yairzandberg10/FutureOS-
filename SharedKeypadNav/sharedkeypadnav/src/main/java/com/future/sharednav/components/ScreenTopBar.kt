@@ -144,7 +144,7 @@ fun TopBarIconButton(
             .clip(CircleShape)
             .animatedFill { bgColor.value }
             // L10: מילוי לבד לא נשא את הסימון על משטח בהיר - נוספה טבעת בצבע ההדגשה הקריאה.
-            .border(FutureDimens.focusBorderControl, if (isFocused) ring else Color.Transparent, CircleShape)
+            .border(FutureDimens.focusBorderControl, com.future.sharednav.focus.animateFocusColor(isFocused, ring, ring.copy(alpha = 0f)).value, CircleShape)
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             // כפתור שאי אפשר להפעיל (שליחה בלי טקסט) לא מקבל פוקוס בכלל, והאייקון
             // שלו יורד ל-40% - אותו כלל של FutureButton. clickable הוא יעד הפוקוס

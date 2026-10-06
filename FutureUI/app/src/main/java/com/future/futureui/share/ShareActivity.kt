@@ -72,6 +72,8 @@ import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.theme.FutureMotion
 import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.focus.animateFocusColor
+import com.future.sharednav.focus.focusScale
 
 /**
  * חלון השיתוף של המערכת. כל אפליקציה ב-FutureOS משתפת דרכו
@@ -371,9 +373,10 @@ class ShareActivity : ComponentActivity() {
         val shape = FutureShapes.lg
         Row(
             modifier = Modifier
+                .focusScale(isFocused, focusedScale = 1.06f)
                 .clip(shape)
-                .background(if (isFocused) Color.White.copy(alpha = 0.15f) else Color.White.copy(alpha = 0.06f))
-                .then(if (isFocused) Modifier.border(2.dp, Color.LightGray, shape) else Modifier)
+                .background(animateFocusColor(isFocused, Color.White.copy(alpha = 0.15f), Color.White.copy(alpha = 0.06f)).value)
+                .border(2.dp, animateFocusColor(isFocused, Color.LightGray, Color.Transparent).value, shape)
                 .padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -411,9 +414,10 @@ class ShareActivity : ComponentActivity() {
                     height = c.size.height
                 }
                 .padding(2.dp)
+                .focusScale(isFocused, focusedScale = 1.08f)
                 .clip(shape)
-                .background(if (isFocused) Color.White.copy(alpha = 0.15f) else Color.Transparent)
-                .then(if (isFocused) Modifier.border(2.dp, Color.LightGray, shape) else Modifier)
+                .background(animateFocusColor(isFocused, Color.White.copy(alpha = 0.15f), Color.Transparent).value)
+                .border(2.dp, animateFocusColor(isFocused, Color.LightGray, Color.Transparent).value, shape)
                 .padding(vertical = 10.dp, horizontal = 2.dp),
         ) {
             if (t.icon != null) {
@@ -428,7 +432,7 @@ class ShareActivity : ComponentActivity() {
             }
             Text(
                 t.label,
-                color = if (isFocused) Color.White else Color.White.copy(alpha = 0.75f),
+                color = animateFocusColor(isFocused, Color.White, Color.White.copy(alpha = 0.75f)).value,
                 fontSize = FutureTypography.caption,
                 fontWeight = if (isFocused) FontWeight.SemiBold else FontWeight.Normal,
                 maxLines = 1,

@@ -55,6 +55,8 @@ import kotlinx.coroutines.launch
 import androidx.compose.ui.composed
 import androidx.core.graphics.drawable.toBitmap
 import com.future.futureui.recents.logic.RecentAppInfo
+import com.future.sharednav.focus.animateFocusColor
+import com.future.sharednav.focus.animateFocusDp
 
 /**
  * "אפליקציות אחרונות" בפריסה של Redmi: רשת של שני חלונות בשורה - שם
@@ -211,7 +213,11 @@ fun RecentAppsScreen(
 
                 // כפתור X עגול לסגירת הכל, כמו ב-Redmi - מרחף מעל הכרטיסים ולא תופס שורה משלו.
                 if (apps.isNotEmpty()) {
-                    val scale by animateFloatAsState(if (clearFocused) 1.12f else 1f, label = "clearAllScale")
+                    val scale by animateFloatAsState(
+                        if (clearFocused) 1.12f else 1f,
+                        if (clearFocused) com.future.sharednav.theme.FutureMotion.Springs.press() else com.future.sharednav.theme.FutureMotion.focusScaleSpec,
+                        label = "clearAllScale",
+                    )
                     Box(
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
@@ -221,8 +227,8 @@ fun RecentAppsScreen(
                                 scaleX = scale; scaleY = scale
                                 shadowElevation = 12.dp.toPx(); shape = CircleShape; clip = true
                             }
-                            .background(if (clearFocused) Color(0xFF4A4A50) else Color(0xE62C2C30))
-                            .border(if (clearFocused) 2.dp else 1.dp, if (clearFocused) Color.LightGray else Color.White.copy(alpha = 0.18f), CircleShape),
+                            .background(animateFocusColor(clearFocused, Color(0xFF4A4A50), Color(0xE62C2C30)).value)
+                            .border(animateFocusDp(clearFocused, 2.dp, 1.dp).value, animateFocusColor(clearFocused, Color.LightGray, Color.White.copy(alpha = 0.18f)).value, CircleShape),
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(Icons.Rounded.Close, contentDescription = "סגור הכל", tint = Color.White, modifier = Modifier.size(28.dp))
@@ -245,7 +251,11 @@ fun RecentAppsScreen(
 @Composable
 private fun RecentAppCard(app: RecentAppInfo, snapshot: ImageBitmap?, isFocused: Boolean, modifier: Modifier = Modifier) {
     val shape = RoundedCornerShape(FutureShapes.radiusXl)
-    val scale by animateFloatAsState(if (isFocused) 1.03f else 1f, label = "recentCardScale")
+    val scale by animateFloatAsState(
+        if (isFocused) 1.03f else 1f,
+        if (isFocused) com.future.sharednav.theme.FutureMotion.Springs.press() else com.future.sharednav.theme.FutureMotion.focusScaleSpec,
+        label = "recentCardScale",
+    )
     // גודל קבוע: אייקון של אפליקציה זרה יכול להצהיר על גודל עצום, ו-toBitmap() בגודל
     // המקורי היה מפיל את FutureUI (ואיתו את מסך הנעילה) מחוסר זיכרון
     val icon = remember(app.packageName) { app.icon.toBitmap(96, 96).asImageBitmap() }
@@ -263,7 +273,7 @@ private fun RecentAppCard(app: RecentAppInfo, snapshot: ImageBitmap?, isFocused:
             Spacer(modifier = Modifier.width(6.dp))
             Text(
                 app.label,
-                color = if (isFocused) Color.White else Color.White.copy(alpha = 0.8f),
+                color = animateFocusColor(isFocused, Color.White, Color.White.copy(alpha = 0.8f)).value,
                 fontSize = FutureTypography.summary,
                 fontWeight = if (isFocused) FontWeight.Bold else FontWeight.Medium,
                 maxLines = 1,
@@ -293,7 +303,7 @@ private fun RecentAppCard(app: RecentAppInfo, snapshot: ImageBitmap?, isFocused:
             Box(
                 modifier = Modifier
                     .matchParentSize()
-                    .border(if (isFocused) 2.5.dp else 0.5.dp, if (isFocused) Color.White else Color.White.copy(alpha = 0.12f), shape)
+                    .border(animateFocusDp(isFocused, 2.5.dp, 0.5.dp).value, animateFocusColor(isFocused, Color.White, Color.White.copy(alpha = 0.12f)).value, shape)
             )
         }
     }

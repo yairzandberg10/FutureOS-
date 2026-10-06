@@ -22,6 +22,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import com.future.sharednav.focus.animateFocusFloat
+import com.future.sharednav.focus.focusScale
 
 @Composable
 fun HeaderActionButton(icon: ImageVector, color: Color, onClick: () -> Unit, isPower: Boolean = false) {
@@ -36,20 +38,37 @@ fun HeaderActionButton(icon: ImageVector, color: Color, onClick: () -> Unit, isP
     )
 }
 
-fun Modifier.focusEffect(isFocused: Boolean, shape: androidx.compose.ui.graphics.Shape = FutureShapes.lg): Modifier = this
-    .zIndex(if (isFocused) 1f else 0f)
-    .then(if (isFocused) Modifier.controlFocusRing(shape) else Modifier)
+/**
+ * פוקוס של פקד במרכז הבקרה ובשאר חלונות המערכת: הטבעת נצבעת פנימה (ולא
+ * קופצת בבת אחת), והפקד גדל בקפיץ press - אותה תנועה כמו בשאר המערכת
+ * (ר' focusMotion ב-SharedKeypadNav). zIndex נשאר מורם עד שהטבעת דועכת,
+ * כדי שהפקד שיוצא מפוקוס לא ייחתך מתחת לשכן בזמן שהוא מתכווץ.
+ */
+@Composable
+fun Modifier.focusEffect(
+    isFocused: Boolean,
+    shape: androidx.compose.ui.graphics.Shape = FutureShapes.lg,
+    focusedScale: Float = 1.04f,
+): Modifier {
+    val ring = animateFocusFloat(isFocused, 1f, 0f)
+    return this
+        .zIndex(if (isFocused || ring.value > 0f) 1f else 0f)
+        .focusScale(isFocused, focusedScale)
+        .controlFocusRing(shape) { ring.value }
+}
 
 /**
  * טבעת הפוקוס של מרכז הבקרה: קו כהה עבה ובתוכו קו לבן דק. הטבעת הקודמת
  * (2dp אפור-בהיר) לא נראתה על הזכוכית הבהירה (UI1, ‏SY3), ואחת כהה בלבד הייתה
  * נעלמת על עיגולי האייקונים הכהים - שני הצבעים יחד נראים על שניהם.
  */
-fun Modifier.controlFocusRing(shape: androidx.compose.ui.graphics.Shape): Modifier = this.drawWithContent {
+fun Modifier.controlFocusRing(shape: androidx.compose.ui.graphics.Shape, alpha: () -> Float = { 1f }): Modifier = this.drawWithContent {
     drawContent()
+    val a = alpha()
+    if (a <= 0f) return@drawWithContent
     val outline = shape.createOutline(size, layoutDirection, this)
     val outer = 3.dp.toPx()
     val inner = 1.5.dp.toPx()
-    drawOutline(outline, Color(0xFF111114), style = androidx.compose.ui.graphics.drawscope.Stroke(width = outer * 2))
-    drawOutline(outline, Color.White, style = androidx.compose.ui.graphics.drawscope.Stroke(width = inner * 2))
+    drawOutline(outline, Color(0xFF111114), alpha = a, style = androidx.compose.ui.graphics.drawscope.Stroke(width = outer * 2))
+    drawOutline(outline, Color.White, alpha = a, style = androidx.compose.ui.graphics.drawscope.Stroke(width = inner * 2))
 }

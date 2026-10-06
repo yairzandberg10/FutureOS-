@@ -53,6 +53,9 @@ import com.future.sharednav.theme.FutureTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
+import com.future.sharednav.focus.animateFocusColor
+import com.future.sharednav.focus.focusScale
+import androidx.compose.runtime.getValue
 
 class MainActivity : ComponentActivity() {
     // המכשיר האמיתי הוא מקלדת T9 בלבד בלי מסך מגע - מבטלים קלט מגע לגמרי כדי
@@ -797,26 +800,21 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                     // בהחלפת האייקון עצמו.
                     val isCurrentHome = currentPage == viewModel.homePageIndex
                     val isHomeFocused = viewModel.isTopBarFocused && viewModel.topBarSelectedIndex == 0
-                    val homeColor = if (isHomeFocused) theme.accentColor else if (isCurrentHome) OnWallpaperColor else OnWallpaperColor.copy(alpha = 0.5f)
+                    val homeColor by animateFocusColor(isHomeFocused, theme.accentColor, if (isCurrentHome) OnWallpaperColor else OnWallpaperColor.copy(alpha = 0.5f))
                     Icon(
                         imageVector = FutureIcons.Home,
                         contentDescription = stringResource(R.string.home), 
                         tint = homeColor, 
-                        modifier = Modifier.size(32.dp).graphicsLayer {
-                            scaleX = if (isHomeFocused) 1.2f else 1f
-                            scaleY = if (isHomeFocused) 1.2f else 1f
-                        }
+                        modifier = Modifier.size(32.dp).focusScale(isHomeFocused, focusedScale = 1.2f)
                     )
                     Spacer(modifier = Modifier.width(64.dp))
-                    val trashColor = if (viewModel.isTopBarFocused && viewModel.topBarSelectedIndex == 1) theme.accentColor else OnWallpaperColor
+                    val isTrashFocused = viewModel.isTopBarFocused && viewModel.topBarSelectedIndex == 1
+                    val trashColor by animateFocusColor(isTrashFocused, theme.accentColor, OnWallpaperColor)
                     Icon(
                         imageVector = FutureIcons.Delete, 
                         contentDescription = stringResource(R.string.trash), 
                         tint = trashColor, 
-                        modifier = Modifier.size(32.dp).graphicsLayer {
-                            scaleX = if (viewModel.isTopBarFocused && viewModel.topBarSelectedIndex == 1) 1.2f else 1f
-                            scaleY = if (viewModel.isTopBarFocused && viewModel.topBarSelectedIndex == 1) 1.2f else 1f
-                        }
+                        modifier = Modifier.size(32.dp).focusScale(isTrashFocused, focusedScale = 1.2f)
                     )
                 }
             }
@@ -826,15 +824,12 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if (viewModel.isEditMode) {
-                    val leftPlusColor = if (viewModel.isLeftPlusFocused) theme.accentColor else OnWallpaperColor
+                    val leftPlusColor by animateFocusColor(viewModel.isLeftPlusFocused, theme.accentColor, OnWallpaperColor)
                     Icon(
                         FutureIcons.Add, 
                         contentDescription = null, 
                         tint = leftPlusColor,
-                        modifier = Modifier.size(48.dp).padding(8.dp).graphicsLayer {
-                            scaleX = if (viewModel.isLeftPlusFocused) 1.2f else 1f
-                            scaleY = if (viewModel.isLeftPlusFocused) 1.2f else 1f
-                        }
+                        modifier = Modifier.size(48.dp).padding(8.dp).focusScale(viewModel.isLeftPlusFocused, focusedScale = 1.2f)
                     )
                 }
 
@@ -905,15 +900,12 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                 }
 
                 if (viewModel.isEditMode) {
-                    val rightPlusColor = if (viewModel.isRightPlusFocused) theme.accentColor else OnWallpaperColor
+                    val rightPlusColor by animateFocusColor(viewModel.isRightPlusFocused, theme.accentColor, OnWallpaperColor)
                     Icon(
                         FutureIcons.Add, 
                         contentDescription = null, 
                         tint = rightPlusColor,
-                        modifier = Modifier.size(48.dp).padding(8.dp).graphicsLayer {
-                            scaleX = if (viewModel.isRightPlusFocused) 1.2f else 1f
-                            scaleY = if (viewModel.isRightPlusFocused) 1.2f else 1f
-                        }
+                        modifier = Modifier.size(48.dp).padding(8.dp).focusScale(viewModel.isRightPlusFocused, focusedScale = 1.2f)
                     )
                 }
             }

@@ -146,7 +146,7 @@ private fun ActionBarItem(
         Icon(action.icon, contentDescription = null, tint = tint, modifier = Modifier.size(ActionIconSize))
         Text(
             action.label,
-            color = if (focused && !action.destructive) theme.readableAccentColor else tint,
+            color = com.future.sharednav.focus.animateFocusColor(focused && !action.destructive, theme.readableAccentColor, tint).value,
             fontSize = labelSize,
             fontWeight = if (focused) FutureTypography.weightBold else null,
             maxLines = 1,

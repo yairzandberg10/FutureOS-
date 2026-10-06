@@ -47,6 +47,7 @@ import com.future.futureui.utils.cascadeIn
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.*
+import com.future.sharednav.focus.animateFocusColor
 
 @Composable
 fun ControlCenterScreen(
@@ -456,7 +457,7 @@ fun ControlCenterScreen(
                                                 contentAlignment = Alignment.Center
                                             ) {
                                                 Box(modifier = Modifier.width(36.dp).height(4.dp).clip(CircleShape)
-                                                    .background(if (isIndicatorFocused) Color(0xFF525252) else Color(0xFFBDBDBD)))
+                                                    .background(animateFocusColor(isIndicatorFocused, Color(0xFF525252), Color(0xFFBDBDBD)).value))
                                             }
                                         }
                                     }

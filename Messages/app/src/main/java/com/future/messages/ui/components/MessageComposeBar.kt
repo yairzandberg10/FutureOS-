@@ -55,6 +55,7 @@ import com.future.sharednav.theme.readableAccentColor
 import com.future.sharednav.theme.rememberFutureType
 import com.future.sharednav.theme.secondaryTextColor
 import com.future.sharednav.theme.subtleTextColor
+import com.future.sharednav.focus.focusMotion
 
 /**
  * שורת הכתיבה בתחתית מסך הודעה - התבנית "Message compose bar" של
@@ -216,6 +217,7 @@ private fun ComposeIconButton(
     Box(
         modifier = Modifier
             .size(ComposeIconButtonSize)
+            .focusMotion(interactionSource, focusedScale = 1.12f)
             .clip(CircleShape)
             .border(FutureDimens.focusBorderItem, ring, CircleShape)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick),
@@ -242,6 +244,7 @@ private fun ComposeSendButton(theme: FutureTheme, accent: Color, enabled: Boolea
     Box(
         modifier = Modifier
             .size(SendButtonSize)
+            .focusMotion(interactionSource, focusedScale = 1.08f)
             // הטבעת מצוירת מחוץ לעיגול ולא מגדילה אותו - כך הכפתור נשאר
             // מיושר לתחתית הגלולה גם כשהוא בפוקוס.
             .drawBehind {

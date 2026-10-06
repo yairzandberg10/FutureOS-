@@ -69,6 +69,8 @@ import com.future.futurelauncher.DefaultApps
 import com.future.futurelauncher.DeveloperApps
 import com.future.futurelauncher.R
 import com.future.sharednav.theme.FutureTheme
+import com.future.sharednav.focus.animateFocusColor
+import com.future.sharednav.focus.focusScale
 
 /**
  * מעטפת אחידה לכל תפריטי ה"אופציות" של הלאנצ'ר - זכוכית כהה/בהירה עקבית עם
@@ -227,10 +229,11 @@ fun FolderDialog(
                     Surface(
                         modifier = Modifier
                             .size(44.dp)
+                            .focusScale(isAppFocused, focusedScale = 1.12f)
                             .onFocusChanged { isAppFocused = it.isFocused },
                         shape = RoundedCornerShape(percent = 28),
-                        color = if (isAppFocused) theme.readableAccentColor.copy(alpha = 0.14f) else theme.idleFieldColor,
-                        border = androidx.compose.foundation.BorderStroke(FutureDimens.focusBorderItem, if (isAppFocused) theme.readableAccentColor else Color.Transparent),
+                        color = animateFocusColor(isAppFocused, theme.readableAccentColor.copy(alpha = 0.14f), theme.idleFieldColor).value,
+                        border = androidx.compose.foundation.BorderStroke(FutureDimens.focusBorderItem, animateFocusColor(isAppFocused, theme.readableAccentColor, Color.Transparent).value),
                         onClick = { onAppClick(app) }
                     ) {
                         if (icon != null) Image(bitmap = icon, contentDescription = null, modifier = Modifier.fillMaxSize())

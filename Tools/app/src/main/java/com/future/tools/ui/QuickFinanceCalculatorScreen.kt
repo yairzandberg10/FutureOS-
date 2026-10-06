@@ -33,6 +33,7 @@ import com.future.sharednav.nav.digitForKey
 import com.future.sharednav.theme.FutureTheme
 import java.text.DecimalFormat
 import kotlin.math.pow
+import com.future.sharednav.focus.animateFocusColor
 
 private val moneyFormat = DecimalFormat("#,##0.##")
 
@@ -220,7 +221,7 @@ fun QuickFinanceCalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
 @Composable
 private fun FinanceField(label: String, value: String, isActive: Boolean, theme: FutureTheme) {
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
-        Text(label, color = if (isActive) theme.readableAccentColor else theme.mutedTextColor, fontSize = FutureTypography.label, fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal)
+        Text(label, color = animateFocusColor(isActive, theme.readableAccentColor, theme.mutedTextColor).value, fontSize = FutureTypography.label, fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal)
         Text(
             value,
             color = theme.textColor,

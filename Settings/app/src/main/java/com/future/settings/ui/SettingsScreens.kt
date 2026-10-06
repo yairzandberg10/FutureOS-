@@ -92,6 +92,8 @@ import com.future.settings.ui.components.*
 import com.future.settings.ui.theme.ThemeConfig
 import com.future.settings.viewmodel.SettingsViewModel
 import com.future.sharednav.focus.escapeTextFieldFocusTrap
+import com.future.sharednav.focus.animateFocusColor
+import com.future.sharednav.focus.focusScale
 
 sealed class Screen(val route: String) {
     object Main : Screen("main")
@@ -961,17 +963,17 @@ fun ColorPicker(currentColor: Color, theme: ThemeConfig, onColorChange: (Color) 
             val presets = FutureAccents.presets
             presets.forEach { color ->
                 var isFocused by remember { mutableStateOf(false) }
+                val selected = currentColor == color
                 Box(
                     modifier = Modifier
                         .size(36.dp)
+                        .focusScale(isFocused, focusedScale = 1.2f)
                         .clip(CircleShape)
                         .background(color)
-                        .then(
-                            when {
-                                currentColor == color -> Modifier.border(3.dp, theme.textColor, CircleShape)
-                                isFocused -> Modifier.border(2.dp, theme.primaryColor, CircleShape)
-                                else -> Modifier
-                            }
+                        .border(
+                            if (selected) 3.dp else 2.dp,
+                            animateFocusColor(isFocused && !selected, theme.primaryColor, if (selected) theme.textColor else Color.Transparent).value,
+                            CircleShape,
                         )
                         .onFocusChanged { isFocused = it.isFocused }
                         .focusable().bringIntoViewOnFocus()
@@ -2285,13 +2287,17 @@ fun SoundModeItem(label: String, icon: ImageVector, selected: Boolean, theme: Th
                 // נבחר = ההדגשה המתוקנת (ההדגשה הגולמית הלבנה נעלמת על משטח לבן במצב בהיר);
                 // טבעת הפוקוס בצבע הטקסט כשהעיגול כבר מלא בהדגשה, אחרת בהדגשה.
                 .background(
-                    when {
-                        selected -> theme.futureTheme.readableAccentColor
-                        isFocused -> theme.futureTheme.readableAccentColor.copy(alpha = 0.14f)
-                        else -> theme.textColor.copy(alpha = 0.06f)
-                    }
+                    animateFocusColor(
+                        isFocused,
+                        if (selected) theme.futureTheme.readableAccentColor else theme.futureTheme.readableAccentColor.copy(alpha = 0.14f),
+                        if (selected) theme.futureTheme.readableAccentColor else theme.textColor.copy(alpha = 0.06f),
+                    ).value
                 )
-                .then(if (isFocused) Modifier.border(FutureDimens.focusBorderControl, if (selected) theme.textColor else theme.futureTheme.readableAccentColor, CircleShape) else Modifier),
+                .border(
+                    FutureDimens.focusBorderControl,
+                    animateFocusColor(isFocused, if (selected) theme.textColor else theme.futureTheme.readableAccentColor, Color.Transparent).value,
+                    CircleShape,
+                ),
             contentAlignment = Alignment.Center
         ) {
             Icon(icon, contentDescription = null, tint = if (selected) theme.futureTheme.onReadableAccentColor else theme.textColor)
@@ -2299,7 +2305,7 @@ fun SoundModeItem(label: String, icon: ImageVector, selected: Boolean, theme: Th
         Text(
             label,
             fontSize = FutureTypography.label,
-            color = if (isFocused) theme.futureTheme.readableAccentColor else theme.textColor,
+            color = animateFocusColor(isFocused, theme.futureTheme.readableAccentColor, theme.textColor).value,
             fontWeight = if (isFocused || selected) FontWeight.SemiBold else FontWeight.Normal,
             modifier = Modifier.padding(top = 4.dp),
         )
@@ -2426,17 +2432,17 @@ fun SimManagerScreen(navController: NavController, theme: ThemeConfig, viewModel
                             Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
                                 simColors.forEach { color ->
                                     var isFocused by remember { mutableStateOf(false) }
+                                    val selected = sim.colorArgb == color.toArgb()
                                     Box(
                                         modifier = Modifier
                                             .size(28.dp)
+                                            .focusScale(isFocused, focusedScale = 1.2f)
                                             .clip(CircleShape)
                                             .background(color)
-                                            .then(
-                                                when {
-                                                    sim.colorArgb == color.toArgb() -> Modifier.border(2.dp, theme.textColor, CircleShape)
-                                                    isFocused -> Modifier.border(2.dp, theme.primaryColor, CircleShape)
-                                                    else -> Modifier
-                                                }
+                                            .border(
+                                                2.dp,
+                                                animateFocusColor(isFocused && !selected, theme.primaryColor, if (selected) theme.textColor else Color.Transparent).value,
+                                                CircleShape,
                                             )
                                             .onFocusChanged { isFocused = it.isFocused }
                                             .focusable().bringIntoViewOnFocus()

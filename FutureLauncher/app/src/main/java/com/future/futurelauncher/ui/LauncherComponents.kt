@@ -252,6 +252,12 @@ fun ItemPanel(
         label = "itemBorder",
     )
     // נחיתה: כשחוזרים מאפליקציה שנפתחה מהאייקון הזה, הוא קופץ וחוזר (LaunchMotion).
+    // תא ריק שמקבל פוקוס מופיע בדעיכה ולא בהבזק.
+    val itemAlpha by com.future.sharednav.focus.animateFocusFloat(
+        isFocused,
+        if (isMoving) 0.7f else 1f,
+        if (isMoving) 0.7f else if (item is LauncherItem.Empty && !isEditMode) 0f else 1f,
+    )
     val land = remember { androidx.compose.animation.core.Animatable(1f) }
     androidx.compose.runtime.LaunchedEffect(LaunchMotion.landTick) {
         if (isFocused && LaunchMotion.landTick > 0) {
@@ -275,7 +281,7 @@ fun ItemPanel(
                 scaleY = cellScale
                 // תא ריק שמקבל פוקוס חייב להיראות (הנקודה הקטנה), אחרת אין שום
                 // אינדיקציה חזותית שהפוקוס בכלל נמצא שם.
-                alpha = if (isMoving) 0.7f else if (item is LauncherItem.Empty && !isEditMode && !isFocused) 0f else 1f
+                alpha = itemAlpha
             }
             .clip(if (item is LauncherItem.Widget) FutureShapes.xl else FutureShapes.md)
             .border(

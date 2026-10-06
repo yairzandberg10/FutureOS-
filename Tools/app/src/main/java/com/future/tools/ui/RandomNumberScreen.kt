@@ -34,6 +34,8 @@ import androidx.compose.ui.unit.dp
 import com.future.sharednav.nav.digitForKey
 import com.future.sharednav.theme.FutureTheme
 import kotlin.random.Random
+import com.future.sharednav.focus.animateFocusColor
+import com.future.sharednav.focus.focusScale
 
 @Composable
 fun RandomNumberScreen(theme: FutureTheme, onBack: () -> Unit) {
@@ -140,7 +142,7 @@ fun RandomNumberScreen(theme: FutureTheme, onBack: () -> Unit) {
 private fun RangeField(label: String, value: String, isActive: Boolean, theme: FutureTheme, modifier: Modifier = Modifier) {
     val accent = theme.readableAccentColor
     Column(modifier = modifier) {
-        Text(label, color = if (isActive) accent else theme.mutedTextColor, fontSize = FutureTypography.label, fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal)
+        Text(label, color = animateFocusColor(isActive, accent, theme.mutedTextColor).value, fontSize = FutureTypography.label, fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal)
         Text(
             value,
             color = theme.textColor,
@@ -149,9 +151,10 @@ private fun RangeField(label: String, value: String, isActive: Boolean, theme: F
             textAlign = TextAlign.Center,
             modifier = Modifier
                 .fillMaxWidth()
+                .focusScale(isActive, focusedScale = 1.04f)
                 .clip(FutureShapes.textField)
                 .background(theme.idleFieldColor)
-                .border(FutureDimens.focusBorderControl, if (isActive) accent else Color.Transparent, FutureShapes.textField)
+                .border(FutureDimens.focusBorderControl, animateFocusColor(isActive, accent, Color.Transparent).value, FutureShapes.textField)
                 .padding(vertical = FutureDimens.spacingSm)
         )
     }

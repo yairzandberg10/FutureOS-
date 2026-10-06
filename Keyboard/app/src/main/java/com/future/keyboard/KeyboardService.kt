@@ -1066,9 +1066,34 @@ class KeyboardService : InputMethodService() {
 
     /** מציג רק את החלקים ששייכים למצב הנוכחי - שאר חלקי הפאנל חיים אך מוסתרים. */
     private fun showOnly(vararg visible: View) {
+        // מצב חדש (תפריט נפתח/נסגר) - הבחירה הראשונה בו היא לא "מעבר".
+        if (visible.any { it.visibility != View.VISIBLE }) lastSelection.clear()
         for (view in panelParts) {
             view.visibility = if (visible.any { it === view }) View.VISIBLE else View.GONE
         }
+    }
+
+    /** איזה פריט היה נבחר בכל רשימה בציור הקודם (מפתח = הרשימה). */
+    private val lastSelection = HashMap<String, Int>()
+    private var lastCandidateWords: List<String> = emptyList()
+
+    /**
+     * מעבר בחירה בחיצים: הפריט הנבחר "קופץ" לגודלו בקפיץ קצר (0.86 → 1 עם
+     * overshoot) במקום להופיע בבת אחת - אותה תחושה כמו מעבר פוקוס בשאר
+     * המערכת. רק כשהבחירה זזה בתוך אותה רשימה: בנייה מחדש בגלל הקשה (רשימת
+     * מועמדות חדשה) לא מונפשת, כי אנימציה על כל אות הרגישה כמו תקיעה.
+     */
+    private fun popOnSelectionMove(view: View, list: String, index: Int) {
+        val previous = lastSelection.put(list, index)
+        if (previous == null || previous == index) return
+        view.scaleX = 0.86f
+        view.scaleY = 0.86f
+        view.animate()
+            .scaleX(1f)
+            .scaleY(1f)
+            .setDuration(com.future.sharednav.theme.FutureMotion.DurationFast.toLong())
+            .setInterpolator(android.view.animation.OvershootInterpolator(2.5f))
+            .start()
     }
 
     private val panelParts: List<View>
@@ -1117,6 +1142,11 @@ class KeyboardService : InputMethodService() {
 
     private fun renderCandidateChips(words: List<String>, selectedIndex: Int, mode: InputMode) {
         candidatesRow.removeAllViews()
+        // רשימה אחרת (הקשה) - הבחירה בה מתחילה מחדש ולא "עוברת".
+        if (words != lastCandidateWords) {
+            lastSelection.remove("candidates")
+            lastCandidateWords = words
+        }
         // "חלון" של עד MAX_VISIBLE_CANDIDATES מועמדות סביב המועמדת הנבחרת - כדי
         // שהשורה לא תתפח כשהמילון מחזיר עשרות התאמות, בלי לאבד גישה למועמדות
         // שנבחרות בעזרת החיצים מעבר לתקרה.
@@ -1145,9 +1175,11 @@ class KeyboardService : InputMethodService() {
                 setOnClickListener { selectCandidate(index) }
             }
             candidatesRow.addView(chip, gap(if (index == windowStart) 0 else dp(8)))
-            // בלי אנימציית "קפיצה" - השורה נבנית מחדש בכל הקשה, והאנימציה רצה
-            // על כל אות והרגישה כמו תקיעה.
-            if (isSelected) selectedChip = chip
+            // קפיצה רק במעבר בין מועמדות באותה רשימה (חיצים) - לא בכל הקשה.
+            if (isSelected) {
+                selectedChip = chip
+                popOnSelectionMove(chip, "candidates", index)
+            }
         }
         if (windowEnd < total) candidatesRow.addView(ellipsisChip(), gap(dp(4)))
 
@@ -1191,6 +1223,7 @@ class KeyboardService : InputMethodService() {
                 setMargins(dp(4), dp(4), dp(4), dp(4))
             }
             punctuationGrid.addView(cell, params)
+            if (isSelected) popOnSelectionMove(cell, "punctuation", cellIndex)
         }
 
         renderLegend(
@@ -1260,7 +1293,10 @@ class KeyboardService : InputMethodService() {
                 row,
                 LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(38)).apply { bottomMargin = dp(4) },
             )
-            if (isSelected) selectedRow = row
+            if (isSelected) {
+                selectedRow = row
+                popOnSelectionMove(row, "language", index)
+            }
         }
         selectedRow?.let { row ->
             languageMenuList.post {
@@ -1342,7 +1378,10 @@ class KeyboardService : InputMethodService() {
                 row,
                 LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(38)).apply { bottomMargin = dp(4) },
             )
-            if (isSelected) selectedRow = row
+            if (isSelected) {
+                selectedRow = row
+                popOnSelectionMove(row, "clipboard", index)
+            }
         }
         selectedRow?.let { row ->
             clipboardList.post {

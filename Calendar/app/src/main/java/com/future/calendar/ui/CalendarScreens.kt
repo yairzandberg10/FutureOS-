@@ -83,6 +83,9 @@ import java.time.LocalTime
 import java.time.YearMonth
 import java.time.format.TextStyle as JavaTextStyle
 import java.util.Locale
+import com.future.sharednav.focus.animateFocusColor
+import com.future.sharednav.focus.focusScale
+import androidx.compose.ui.zIndex
 
 enum class CalendarViewMode { DAY, WEEK, MONTH, YEAR }
 
@@ -383,6 +386,8 @@ private fun DayCell(date: LocalDate, isToday: Boolean, isSelected: Boolean, isFo
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .zIndex(if (isFocused) 1f else 0f)
+            .focusScale(isFocused, focusedScale = 1.1f)
             .clip(shape)
             .background(bgColor)
             .border(width = FutureDimens.focusBorderItem, color = ring, shape = shape),
@@ -949,8 +954,9 @@ private fun AllDayToggleRow(allDay: Boolean, theme: FutureTheme, onToggle: () ->
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .focusMotion(interactionSource)
             .clip(FutureShapes.md)
-            .background(if (isFocused) theme.textColor.copy(alpha = 0.1f) else Color.Transparent)
+            .background(animateFocusColor(isFocused, theme.textColor.copy(alpha = 0.1f), Color.Transparent).value)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onToggle)
             .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
             .padding(vertical = 10.dp, horizontal = 4.dp),
@@ -973,8 +979,9 @@ private fun RepeatRow(repeat: EventRepeat, theme: FutureTheme, onCycle: () -> Un
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .focusMotion(interactionSource)
             .clip(FutureShapes.md)
-            .background(if (isFocused) theme.textColor.copy(alpha = 0.1f) else Color.Transparent)
+            .background(animateFocusColor(isFocused, theme.textColor.copy(alpha = 0.1f), Color.Transparent).value)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onCycle)
             .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
             .padding(vertical = 10.dp, horizontal = 4.dp),
