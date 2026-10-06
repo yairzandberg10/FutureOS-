@@ -127,10 +127,9 @@ fun AlarmScreen(theme: FutureTheme, onBack: () -> Unit, onOverlayChange: (Boolea
             FutureMenuRow("מעורר חדש", FutureIcons.Add, theme, {
                 menuOpen = false
                 val newId = (alarms.maxOfOrNull { it.id } ?: 0) + 1
-                val newAlarm = Alarm(newId, 7, 0, emptySet())
-                alarms.add(newAlarm)
-                updateAlarms()
-                editingAlarm = newAlarm
+                // CK7: מעורר חדש נכנס לרשימה רק ב"שמור". קודם הוא נשמר ותוזמן עוד
+                // לפני שהבורר נפתח, ו"ביטול" השאיר מעורר 07:00 מופעל.
+                editingAlarm = Alarm(newId, 7, 0, emptySet())
             })
             if (focused != null) {
                 FutureMenuRow("מחק", FutureIcons.Delete, theme, {
@@ -167,23 +166,21 @@ fun AlarmScreen(theme: FutureTheme, onBack: () -> Unit, onOverlayChange: (Boolea
                         if (editingAlarm == null) {
                             ToolsIconButton(FutureIcons.Add, "הוסף שעון", theme) {
                                 val newId = (alarms.maxOfOrNull { it.id } ?: 0) + 1
-                                val newAlarm = Alarm(newId, 7, 0, emptySet())
-                                alarms.add(newAlarm)
-                                updateAlarms()
-                                editingAlarm = newAlarm
+                                // CK7: מעורר חדש נכנס לרשימה רק ב"שמור". קודם הוא נשמר ותוזמן עוד
+                                // לפני שהבורר נפתח, ו"ביטול" השאיר מעורר 07:00 מופעל.
+                                editingAlarm = Alarm(newId, 7, 0, emptySet())
                             }
                         }
                     }
                 )
 
                 if (editingAlarm != null) {
-                    TimePickerOverlay(editingAlarm!!, theme, 
+                    TimePickerOverlay(editingAlarm!!, theme,
+                        isNew = alarms.none { it.id == editingAlarm!!.id },
                         onSave = { updated ->
                             val index = alarms.indexOfFirst { it.id == updated.id }
-                            if (index != -1) {
-                                alarms[index] = updated
-                                updateAlarms()
-                            }
+                            if (index != -1) alarms[index] = updated else alarms.add(updated)
+                            updateAlarms()
                             editingAlarm = null
                         },
                         onCancel = { editingAlarm = null }
@@ -278,7 +275,7 @@ private val DAY_LABELS = listOf(1 to "א", 2 to "ב", 3 to "ג", 4 to "ד", 5 to
  * OK פעם אחת לכל דקה, ולנווט לחץ אחר - והבורר גם לא נכנס בגובה המסך.
  */
 @Composable
-fun TimePickerOverlay(alarm: Alarm, theme: FutureTheme, onSave: (Alarm) -> Unit, onCancel: () -> Unit) {
+fun TimePickerOverlay(alarm: Alarm, theme: FutureTheme, isNew: Boolean = false, onSave: (Alarm) -> Unit, onCancel: () -> Unit) {
     var hour by remember { mutableIntStateOf(alarm.hour) }
     var minute by remember { mutableIntStateOf(alarm.minute) }
     var days by remember { mutableStateOf(alarm.days) }
@@ -289,7 +286,14 @@ fun TimePickerOverlay(alarm: Alarm, theme: FutureTheme, onSave: (Alarm) -> Unit,
     val firstDayFocus = remember { FocusRequester() }
     // BACK סוגר את הבורר בלי לשמור, כמו ביטול - ולא יוצא מהאפליקציה.
     androidx.activity.compose.BackHandler(onBack = onCancel)
-    LaunchedEffect(Unit) { runCatching { hourFocus.requestFocus() } }
+    // בכניסה השנייה הבקשה הראשונה נבלעה (הגלגל עוד לא היה מצויר) והפוקוס נחת
+    // על "ביטול" - מנסים שוב בכמה הפריימים הראשונים.
+    LaunchedEffect(Unit) {
+        repeat(6) {
+            androidx.compose.runtime.withFrameNanos { }
+            if (runCatching { hourFocus.requestFocus() }.isSuccess) return@LaunchedEffect
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -299,7 +303,7 @@ fun TimePickerOverlay(alarm: Alarm, theme: FutureTheme, onSave: (Alarm) -> Unit,
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text("ערוך שעה", color = theme.textColor, fontSize = FutureTypography.screenTitle, fontWeight = FutureTypography.weightBold)
+        Text(if (isNew) "מעורר חדש" else "ערוך שעה", color = theme.textColor, fontSize = FutureTypography.screenTitle, fontWeight = FutureTypography.weightBold)
         Spacer(modifier = Modifier.height(FutureDimens.spacingLg))
 
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm)) {
