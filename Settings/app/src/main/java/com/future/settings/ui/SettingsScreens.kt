@@ -1625,7 +1625,7 @@ fun SecurityScreen(navController: NavController, theme: ThemeConfig) {
                 item { SettingHeader("איתור ופרטיות מתקדמת", theme) }
                 item {
                     SettingsCard(theme) {
-                        SettingItem("איתור המכשיר (Find My Device)", "מיקום, נעילה ומחיקה מרחוק דרך Google", FutureIcons.MyLocation, theme) {
+                        SettingItem("איתור המכשיר (Find My Device)", "מיקום, נעילה ומחיקה מרחוק דרך שירות איתור המכשיר", FutureIcons.MyLocation, theme) {
                             val launchIntent = context.packageManager.getLaunchIntentForPackage("com.google.android.apps.adm")
                             if (launchIntent != null) {
                                 safeStartActivity(context, launchIntent, "לא ניתן לפתוח את Find My Device")

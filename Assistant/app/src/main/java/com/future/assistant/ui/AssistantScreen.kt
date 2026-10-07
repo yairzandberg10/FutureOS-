@@ -293,6 +293,12 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
                         }
                     }
                     Text(
+                        text = "כשהחיבור זמין, קטע אודיו עשוי להישלח לשירות חיצוני לצורך תמלול.",
+                        color = theme.mutedTextColor,
+                        fontSize = type.summary,
+                        modifier = Modifier.padding(top = FutureDimens.spacingSm),
+                    )
+                    Text(
                         if (state == AssistantState.LISTENING) "OK לסיום" else "OK לדיבור",
                         color = theme.mutedTextColor,
                         fontSize = type.summary,

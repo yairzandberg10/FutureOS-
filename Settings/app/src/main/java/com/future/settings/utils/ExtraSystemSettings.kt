@@ -318,7 +318,7 @@ object ExtraSystemSettings {
                     listOf(
                         SysOption("off", "כבוי"),
                         SysOption("opportunistic", "אוטומטי"),
-                        SysOption("dns.google", "Google"),
+                        SysOption("dns.google", "DNS ציבורי"),
                         SysOption("one.one.one.one", "Cloudflare"),
                         SysOption("dns.adguard-dns.com", "AdGuard - חוסם פרסומות"),
                     ),
