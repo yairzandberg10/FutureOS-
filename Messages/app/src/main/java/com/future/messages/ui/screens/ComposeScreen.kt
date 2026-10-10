@@ -13,15 +13,24 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -40,11 +49,13 @@ import com.future.sharednav.components.ScreenTopBar
 import com.future.sharednav.components.TopBarIconButton
 import com.future.sharednav.focus.escapeTextFieldFocusTrap
 import com.future.sharednav.icons.FutureIcons
+import com.future.sharednav.nav.digitForKey
 import com.future.sharednav.theme.FutureDimens
 import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.theme.FutureTheme
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.idleFieldColor
+import android.view.KeyEvent as NativeKeyEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -66,6 +77,7 @@ fun ComposeScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val focusManager = LocalFocusManager.current
     var query by remember { mutableStateOf("") }
     var attachedImageUri by remember { mutableStateOf(initialImageUri) }
     val focusRequester = remember { FocusRequester() }
@@ -128,14 +140,42 @@ fun ComposeScreen(
                     fontWeight = FutureTypography.weightMedium,
                     modifier = Modifier.padding(start = FutureDimens.spacingXs, bottom = FutureDimens.spacingSm),
                 )
+                // השדה מקבל את המקשים בעצמו (בשלב ה-preview, לפני ה-IME): ספרות, * ו-#
+                // נכנסות כמו שהן - ולא כאותיות T9 של מקלדת ההקלדה. מחיקה במקש המחיקה
+                // (כמו בשאר השדות), ו-BACK עוזב את השדה במקום למחוק תו.
                 FutureTextField(
                     value = query,
                     onValueChange = { query = it },
                     theme = theme,
                     placeholder = "הקלידו שם או מספר",
                     focusRequester = focusRequester,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                     leading = { FutureAvatar(theme = theme, icon = FutureIcons.Search, size = 28.dp) },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().onPreviewKeyEvent { event ->
+                        val native = event.nativeKeyEvent.keyCode
+                        val symbol = digitForKey(event.key)
+                            ?: when (native) {
+                                NativeKeyEvent.KEYCODE_STAR -> "*"
+                                NativeKeyEvent.KEYCODE_POUND -> "#"
+                                else -> null
+                            }
+                        when {
+                            symbol != null -> {
+                                if (event.type == KeyEventType.KeyDown) query += symbol
+                                true
+                            }
+                            event.key == Key.Backspace || event.key == Key.Delete -> {
+                                if (event.type == KeyEventType.KeyDown && query.isNotEmpty()) query = query.dropLast(1)
+                                true
+                            }
+                            event.key == Key.Back -> {
+                                // עוזבים את השדה לשורה הבאה; אם אין לאן - את המסך.
+                                if (event.type == KeyEventType.KeyDown && !focusManager.moveFocus(FocusDirection.Down)) onCancel()
+                                true
+                            }
+                            else -> false
+                        }
+                    },
                 )
 
                 val currentImageUri = attachedImageUri
@@ -180,7 +220,7 @@ fun ComposeScreen(
                         item(key = "number") {
                             FutureListItem(
                                 title = typedNumber,
-                                summary = "OK לפעולות: הודעה, חיוג, שמירה, חסימה",
+                                summary = "OK לפעולות על המספר",
                                 theme = theme,
                                 onClick = { menuNumber = typedNumber },
                                 leading = { FutureAvatar(theme = theme, icon = FutureIcons.Dialpad) },
@@ -229,7 +269,11 @@ fun ComposeScreen(
             onDismiss = { menuNumber = null },
             onMessage = {
                 menuNumber = null
-                startWith(repository.resolveContact(number))
+                // חיפוש איש הקשר נעשה ברקע - לא על ה-UI thread.
+                scope.launch {
+                    val contact = withContext(Dispatchers.IO) { repository.resolveContact(number) }
+                    startWith(contact)
+                }
             },
             onCall = {
                 menuNumber = null
@@ -265,7 +309,7 @@ fun ComposeScreen(
     // שורה הרסנית בתפריט עוברת דרך אישור (DS).
     pendingBlock?.let { number ->
         com.future.sharednav.components.ConfirmDialog(
-            message = "לחסום את $number?",
+            message = "לחסום את ⁦$number⁩?",
             surfaceColor = theme.surfaceColor,
             textColor = theme.textColor,
             dangerColor = theme.dangerColor,

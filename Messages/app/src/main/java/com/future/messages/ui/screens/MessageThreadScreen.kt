@@ -55,6 +55,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
@@ -188,7 +189,11 @@ fun MessageThreadScreen(
                     MessageBubble(
                         message, theme,
                         onClick = { actionMenuMessage = message },
-                        onFocused = { focusedMessage = message },
+                        // הפוקוס עזב את הבועה - היא כבר לא "הממוקדת" (Options לא פועל עליה).
+                        onFocusChange = { focused ->
+                            if (focused) focusedMessage = message
+                            else if (focusedMessage == message) focusedMessage = null
+                        },
                     )
                 }
             }
@@ -221,7 +226,8 @@ fun MessageThreadScreen(
                 onAttach = imagePicker,
                 onDictate = if (dictation.available) dictation::toggle else null,
                 fieldFocusRequester = textFieldFocusRequester,
-                modifier = Modifier.escapeTextFieldFocusTrap(),
+                // כשהכתיבה מקבלת פוקוס, הבועה שהייתה ממוקדת כבר לא היעד של Options.
+                modifier = Modifier.escapeTextFieldFocusTrap().onFocusChanged { if (it.hasFocus) focusedMessage = null },
                 dictationListening = dictation.listening,
                 dictationProcessing = dictation.processing,
             )
@@ -316,10 +322,10 @@ private fun AttachmentPreview(uri: Uri, theme: FutureTheme, onRemove: () -> Unit
  * נשלח" באדום); של הצד השני - השעה.
  */
 @Composable
-private fun MessageBubble(message: Message, theme: FutureTheme, onClick: () -> Unit, onFocused: () -> Unit = {}) {
+private fun MessageBubble(message: Message, theme: FutureTheme, onClick: () -> Unit, onFocusChange: (Boolean) -> Unit = {}) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    LaunchedEffect(isFocused) { if (isFocused) onFocused() }
+    LaunchedEffect(isFocused) { onFocusChange(isFocused) }
     val bitmap = message.imageUri?.let { rememberMmsBitmap(it) }
     val accent = theme.readableAccentColor
     val fill = if (message.isFromMe) accent else theme.surfaceColor
@@ -351,8 +357,9 @@ private fun MessageBubble(message: Message, theme: FutureTheme, onClick: () -> U
                 .clip(shape)
                 .background(fill)
                 .border(FutureDimens.focusBorderItem, ring, shape)
+                // clickable הוא יעד הפוקוס היחיד (כמו ב-FutureButton) - בלי focusable נוסף.
                 .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-                .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
+                .bringIntoViewOnFocus()
                 .padding(horizontal = 14.dp, vertical = 11.dp)
         ) {
             Column {

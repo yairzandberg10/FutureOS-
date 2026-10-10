@@ -75,7 +75,7 @@ fun ChatSetupScreen(theme: FutureTheme, onBack: () -> Unit) {
             ) {
                 when (state) {
                     FutureChat.State.NOT_CONFIGURED -> Body(
-                        "הצ'אט עוד לא מחובר לשרת. צריך להוסיף את google-services.json של פרויקט ה-Firebase ולבנות מחדש (ראו Messages/firebase/README.md).",
+                        "הצ'אט עוד לא זמין במכשיר הזה.",
                         theme,
                     )
                     FutureChat.State.ACTIVE -> {

@@ -310,6 +310,10 @@ class MainActivity : ComponentActivity() {
 
     private fun makeRealCall(phoneNumber: String) {
         if (phoneNumber.isBlank()) return
+        // שיחה אחת בכל פעם: לא מחייגים מעל שיחה קיימת (פעילה, מחייגת או מצלצלת), וגם
+        // לא מיד אחרי שנגמרה - לחיצות OK שנשארו מהשיחה לא יכולות להתחיל שיחה נוספת.
+        if (CallService.activeCall.value != null) return
+        if (System.currentTimeMillis() - CallService.lastCallEndedAt < RECALL_GUARD_MILLIS) return
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED) {
             // ישירות ל-Telecom. ACTION_CALL דרך startActivity חזר ל-Activity הזה
             // עצמו (אפליקציית החיוג ברירת המחדל), והשיחה לא יצאה.
@@ -479,6 +483,7 @@ class MainActivity : ComponentActivity() {
         const val CONTACTS_PACKAGE = "com.future.contact"
         const val MAX_DIAL_LENGTH = 64
         const val DTMF_TAP_MILLIS = 150L
+        const val RECALL_GUARD_MILLIS = 2_000L
         val TabRoutes = setOf(Screen.CallLog.route, Screen.Contacts.route, Screen.Dialpad.route)
     }
 }
@@ -575,7 +580,7 @@ fun MainScreen(
 
     // מימין לשמאל: יומן, אנשי קשר, מקלדת.
     val tabs = listOf(
-        Triple(Screen.CallLog.route, "יומן", FutureIcons.Call),
+        Triple(Screen.CallLog.route, "חיוג", FutureIcons.Call),
         Triple(Screen.Contacts.route, "אנשי קשר", FutureIcons.Contacts),
         Triple(Screen.Dialpad.route, "מקלדת", FutureIcons.Dialpad),
     )
@@ -728,7 +733,8 @@ fun MainScreen(
                         viewModel = inCallViewModel,
                         onCallEnded = {
                             if (com.future.dialer.telecom.DeviceLock.isSecured(context)) (context as? android.app.Activity)?.finish()
-                            else navController.popBackStack()
+                            // חוזרים ליומן, לא לאיש הקשר שממנו התחילה השיחה.
+                            else navController.popBackStack(Screen.CallLog.route, inclusive = false)
                         },
                         onCallAgain = { again ->
                             navController.popBackStack()

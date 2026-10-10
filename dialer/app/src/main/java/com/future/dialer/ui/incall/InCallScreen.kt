@@ -4,6 +4,7 @@ import androidx.compose.material.icons.rounded.Sms
 import com.future.sharednav.icons.FutureIcons
 
 import android.telecom.Call
+import android.view.KeyEvent
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
@@ -31,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
@@ -98,7 +100,14 @@ fun InCallScreen(
     }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-        Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
+        // מסך השיחה בולע את כל המקשים שלא הגיעו לכפתור בפוקוס: כך מסך איש הקשר
+        // שמתחתיו (עם כפתור "התקשר") לא מקבל OK ולא מחייג שיחה נוספת.
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(theme.backgroundColor)
+                .onKeyEvent { event -> !passesThrough(event.nativeKeyEvent.keyCode) },
+        ) {
             when {
                 ended -> EndedCall(
                     name = name,
@@ -220,7 +229,7 @@ private fun ActiveCall(
     val dtmfDigits by viewModel.dtmfDigits.collectAsState()
 
     val first = remember { FocusRequester() }
-    LaunchedEffect(Unit) { runCatching { first.requestFocus() } }
+    LaunchedEffect(Unit) { first.requestFocusWhenAttached() }
 
     Column(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -240,22 +249,28 @@ private fun ActiveCall(
                 maxLines = 1,
                 modifier = Modifier.padding(horizontal = FutureDimens.screenPadding),
             )
+            // "מתקשר" רק עד המענה. המונה רץ מרגע שהשיחה התחברה, ולכן הוא גם מסמן
+            // חיבור - מצב השיחה לבדו נשאר לפעמים "מתקשר" אחרי שהשיחה כבר פעילה.
+            val connected = callState == Call.STATE_ACTIVE || duration > 0
+            val dialing = !connected && (callState == Call.STATE_DIALING || callState == Call.STATE_CONNECTING)
             val status = when {
                 isOnHold -> "בהמתנה"
-                callState == Call.STATE_DIALING || callState == Call.STATE_CONNECTING -> stringResource(R.string.dialing)
+                connected -> "בשיחה"
+                dialing -> stringResource(R.string.dialing)
                 else -> null
             }
-            if (status != null) {
-                Text(status, color = theme.mutedTextColor, fontSize = type.body)
-            } else {
+            if (status != null) Text(status, color = theme.mutedTextColor, fontSize = type.body)
+            if (!isOnHold && !dialing) {
                 CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
                     Text(CallFormat.duration(duration), color = theme.successColor, fontSize = type.body)
                 }
             }
             if (isDialpadVisible) {
+                // בתחילת המספר נחתך הסוף - מציגים את הספרות האחרונות.
+                val shownDigits = if (dtmfDigits.length > DTMF_VISIBLE_DIGITS) "…" + dtmfDigits.takeLast(DTMF_VISIBLE_DIGITS) else dtmfDigits
                 CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
                     Text(
-                        dtmfDigits.ifEmpty { " " },
+                        shownDigits.ifEmpty { " " },
                         color = theme.textColor,
                         fontSize = type.headline,
                         maxLines = 1,
@@ -274,7 +289,7 @@ private fun ActiveCall(
         // הקלטה והודעה הם יכולות קיימות של החייגן, באותו רכיב.
         val controls = listOf(
             Control(if (isMuted) FutureIcons.MicOff else FutureIcons.Mic,
-                stringResource(if (isMuted) R.string.unmute else R.string.mute), isMuted) { viewModel.toggleMute() },
+                if (isMuted) "מושתק" else stringResource(R.string.mute), isMuted) { viewModel.toggleMute() },
             Control(FutureIcons.AutoMirrored.VolumeUp, stringResource(R.string.speaker), isSpeakerOn) { viewModel.toggleSpeaker() },
             Control(if (isOnHold) FutureIcons.PlayArrow else FutureIcons.Pause,
                 if (isOnHold) "המשך" else "המתנה", isOnHold) { if (!viewModel.toggleHold()) onHoldUnsupported() },
@@ -346,8 +361,9 @@ private fun EndedCall(
     onBackToLog: () -> Unit,
 ) {
     val type = rememberFutureType()
-    val again = remember { FocusRequester() }
-    LaunchedEffect(Unit) { runCatching { again.requestFocus() } }
+    // הפוקוס הראשוני על "חזור ליומן": לחיצת OK בטעות לא מתקשרת שוב.
+    val back = remember { FocusRequester() }
+    LaunchedEffect(Unit) { back.requestFocusWhenAttached() }
     BackHandler(onBack = onBackToLog)
 
     Column(
@@ -370,8 +386,8 @@ private fun EndedCall(
             modifier = Modifier.fillMaxWidth().padding(top = FutureDimens.spacingMd),
             verticalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm),
         ) {
-            FutureButton("התקשר שוב", theme, onCallAgain, fillMaxWidth = true, focusRequester = again)
-            FutureButton("חזור ליומן", theme, onBackToLog, variant = FutureButtonVariant.Quiet, fillMaxWidth = true)
+            FutureButton("התקשר שוב", theme, onCallAgain, fillMaxWidth = true)
+            FutureButton("חזור ליומן", theme, onBackToLog, variant = FutureButtonVariant.Quiet, fillMaxWidth = true, focusRequester = back)
         }
     }
 }
@@ -407,3 +423,23 @@ private val ActiveAvatar = 80.dp
 
 /** 60dp - אריח פקד בשיחה; שש משבצות בשלוש שורות נכנסות מעל "סיים שיחה". */
 private val ControlHeight = 60.dp
+
+/** כמה ספרות DTMF מוצגות - מעבר לזה מוצגות האחרונות. */
+private const val DTMF_VISIBLE_DIGITS = 14
+
+/**
+ * מקשים שממשיכים לאקטיביטי ולא נבלעים במסך השיחה: BACK (ניתוק/סגירה), CALL ו-ENDCALL
+ * (ענה/נתק), ספרות, * ו-# (טוני DTMF ב-MainActivity), וניווט בחצים (מעבר פוקוס בין
+ * הפקדים - Compose מטפל בו רק כשהמקש לא נבלע).
+ */
+private fun passesThrough(keyCode: Int): Boolean =
+    keyCode == KeyEvent.KEYCODE_BACK ||
+        keyCode == KeyEvent.KEYCODE_CALL ||
+        keyCode == KeyEvent.KEYCODE_ENDCALL ||
+        keyCode == KeyEvent.KEYCODE_STAR ||
+        keyCode == KeyEvent.KEYCODE_POUND ||
+        keyCode in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9 ||
+        keyCode == KeyEvent.KEYCODE_DPAD_UP ||
+        keyCode == KeyEvent.KEYCODE_DPAD_DOWN ||
+        keyCode == KeyEvent.KEYCODE_DPAD_LEFT ||
+        keyCode == KeyEvent.KEYCODE_DPAD_RIGHT

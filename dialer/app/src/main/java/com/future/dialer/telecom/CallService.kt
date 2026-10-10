@@ -52,6 +52,7 @@ class CallService : InCallService() {
         if (_activeCall.value == call) {
             _activeCall.value = null
             _callState.value = null
+            lastCallEndedAt = System.currentTimeMillis()
             stopRecording()
         }
         notifyCallNoLongerRinging()
@@ -261,6 +262,11 @@ class CallService : InCallService() {
 
         @Volatile
         private var ringingNotified = false
+
+        /** מתי נגמרה השיחה האחרונה (System.currentTimeMillis) - MainActivity לא מחייג מיד אחריה. */
+        @Volatile
+        var lastCallEndedAt = 0L
+            private set
 
         fun answer() {
             _activeCall.value?.answer(VideoProfile.STATE_AUDIO_ONLY)
