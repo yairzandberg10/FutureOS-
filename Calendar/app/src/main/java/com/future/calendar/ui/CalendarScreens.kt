@@ -537,6 +537,9 @@ private fun DayView(
     // את תפריט העריכה/מחיקה שלו - בלי זה התפריט לא נגיש בכלל במכשיר אמיתי,
     // כי מקש Options הפיזי נחסם ברמת המערכת ולעולם לא מגיע כ-Key.Menu לאפליקציה.
     var focusedEvent by remember { mutableStateOf<CalendarEvent?>(null) }
+    // יום אחר או רשימה שהתחלפה: הפריט הממוקד הקודם כבר לא מוצג, ולכן התפריט לא נפתח עליו
+    LaunchedEffect(date) { focusedEvent = null }
+    LaunchedEffect(events) { if (focusedEvent != null && focusedEvent !in events) focusedEvent = null }
     com.future.sharednav.nav.onOptionsKeyPress { if (focusedEvent != null) menuFor = focusedEvent else onGeneralMenu() }
     menuFor?.let { event ->
         EventOptionsMenu(
@@ -901,13 +904,15 @@ fun EventEditDialog(
                 EditField("הערות", description, theme) { description = it }
 
                 Spacer(modifier = Modifier.height(8.dp))
-                AllDayToggleRow(allDay = allDay, theme = theme, onToggle = { allDay = !allDay })
-                // סדרה קיימת נשארת סדרה - זמני החזרה שלה לא נערכים מכאן (ר' updateEvent).
-                if (editingEvent?.isRecurring != true) {
+                // סדרה קיימת נשארת סדרה - זמני הסדרה (כל היום, שעות, חזרה) לא נערכים מכאן (ר' updateEvent).
+                // בלי להסתיר אותם, השינוי נשמר בשקט בלי השפעה.
+                val seriesEdit = editingEvent?.isRecurring == true
+                if (!seriesEdit) {
+                    AllDayToggleRow(allDay = allDay, theme = theme, onToggle = { allDay = !allDay })
                     RepeatRow(repeat = repeat, theme = theme, onCycle = { repeat = repeat.next() })
                 }
 
-                if (!allDay) {
+                if (!allDay && !seriesEdit) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         TimeStepperField(

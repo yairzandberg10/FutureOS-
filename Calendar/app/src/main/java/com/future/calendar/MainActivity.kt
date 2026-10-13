@@ -10,8 +10,13 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import com.future.calendar.data.CalendarEvent
 import com.future.calendar.data.CalendarRepository
 import com.future.calendar.data.CalendarSettings
@@ -45,15 +50,23 @@ class MainActivity : ComponentActivity() {
             val repository = remember { CalendarRepository(this) }
             val today = remember { LocalDate.now() }
 
+            // מצב התצוגה והתאריכים נשמרים גם במוות תהליך/שינוי שפה (לא remember בלבד)
+            val viewModeSaver = Saver<CalendarViewMode, String>(save = { it.name }, restore = { CalendarViewMode.valueOf(it) })
+            val monthSaver = Saver<YearMonth, String>(save = { it.toString() }, restore = { YearMonth.parse(it) })
+            val dateSaver = Saver<LocalDate, String>(save = { it.toString() }, restore = { LocalDate.parse(it) })
+
             var hasPermission by remember { mutableStateOf(repository.hasCalendarPermission()) }
-            var viewMode by remember { mutableStateOf(CalendarViewMode.MONTH) }
-            var currentMonth by remember { mutableStateOf(YearMonth.from(today)) }
-            var selectedDate by remember { mutableStateOf(today) }
+            var viewMode by rememberSaveable(stateSaver = viewModeSaver) { mutableStateOf(CalendarViewMode.MONTH) }
+            var currentMonth by rememberSaveable(stateSaver = monthSaver) { mutableStateOf(YearMonth.from(today)) }
+            var selectedDate by rememberSaveable(stateSaver = dateSaver) { mutableStateOf(today) }
             var events by remember { mutableStateOf<List<CalendarEvent>>(emptyList()) }
             var editorState by remember { mutableStateOf<Pair<LocalDate, CalendarEvent?>?>(null) }
             var pendingDelete by remember { mutableStateOf<CalendarEvent?>(null) }
             // 0 - לוח השנה, 1 - הגדרות, 2 - הגדרות > מיקום.
-            var settingsPage by remember { mutableStateOf(0) }
+            var settingsPage by rememberSaveable { mutableStateOf(0) }
+            // שמירה/מחיקה/שאילתות ContentResolver רצות ב-IO, לא על ה-main thread
+            val dataScope = rememberCoroutineScope()
+            var saving by remember { mutableStateOf(false) }
 
             var useGps by remember { mutableStateOf(CalendarSettings.getUseGps(this@MainActivity)) }
             var region by remember { mutableStateOf(CalendarSettings.getRegion(this@MainActivity)) }
@@ -83,8 +96,9 @@ class MainActivity : ComponentActivity() {
                 )
             }
 
-            val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
-                hasPermission = result.values.all { it }
+            // התצוגה נקבעת לפי הרשאת הקריאה בלבד - כמו ON_RESUME. הרשאת כתיבה שנדחתה לא מסתירה את הלוח
+            val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+                hasPermission = repository.hasCalendarPermission()
             }
 
             // הטווח שנטען: שנה (עברית או לועזית) בתצוגת שנה, אחרת שלושה חודשים
@@ -107,8 +121,13 @@ class MainActivity : ComponentActivity() {
                 val (rangeStart, rangeEnd) = eventRange
                 val startMillis = rangeStart.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
                 val endMillis = rangeEnd.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
-                events = repository.getEventsInRange(startMillis, endMillis)
+                dataScope.launch {
+                    events = withContext(Dispatchers.IO) { repository.getEventsInRange(startMillis, endMillis) }
+                }
             }
+
+            // ה-observer נרשם פעם אחת: בלי זה הוא היה קורא תמיד לטווח של ההרכבה הראשונה
+            val refreshLatest by rememberUpdatedState { refreshEvents() }
 
             LaunchedEffect(hasPermission, eventRange) { refreshEvents() }
 
@@ -119,7 +138,7 @@ class MainActivity : ComponentActivity() {
                         hasPermission = repository.hasCalendarPermission()
                         val shared = ThemeClient.getTheme(this@MainActivity)
                         theme = FutureTheme(isDarkMode = shared.isDarkMode, accentColor = Color(shared.primaryColor))
-                        refreshEvents()
+                        refreshLatest()
                     }
                 }
                 lifecycleOwner.lifecycle.addObserver(observer)
@@ -190,22 +209,31 @@ class MainActivity : ComponentActivity() {
                     endMillis = endLocal.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
                 }
 
-                if (editing != null) {
-                    if (!repository.updateEvent(editing.id, title, description, location, startMillis, endMillis, allDay, editing.isRecurring, repeat)) {
-                        android.widget.Toast.makeText(this@MainActivity, "השינויים לא נשמרו", android.widget.Toast.LENGTH_SHORT).show()
-                    }
-                } else {
-                    val calendarId = repository.getDefaultWritableCalendarId()
-                    if (calendarId != null) {
-                        if (repository.addEvent(calendarId, title, description, location, startMillis, endMillis, allDay, repeat) == null) {
-                            android.widget.Toast.makeText(this@MainActivity, "האירוע לא נשמר", android.widget.Toast.LENGTH_SHORT).show()
+                // בלי מנעול כפול: שמירה נוספת בזמן שהקודמת רצה הייתה יוצרת אירוע כפול
+                if (saving) return
+                saving = true
+                dataScope.launch {
+                    try {
+                        val error: String? = withContext(Dispatchers.IO) {
+                            if (editing != null) {
+                                if (repository.updateEvent(editing.id, title, description, location, startMillis, endMillis, allDay, editing.isRecurring, repeat)) null
+                                else "השינויים לא נשמרו"
+                            } else {
+                                val calendarId = repository.getDefaultWritableCalendarId()
+                                when {
+                                    calendarId == null -> "לא נמצא לוח שנה זמין לשמירה - האירוע לא נשמר"
+                                    repository.addEvent(calendarId, title, description, location, startMillis, endMillis, allDay, repeat) == null -> "האירוע לא נשמר"
+                                    else -> null
+                                }
+                            }
                         }
-                    } else {
-                        android.widget.Toast.makeText(this@MainActivity, "לא נמצא לוח שנה זמין לשמירה - האירוע לא נשמר", android.widget.Toast.LENGTH_SHORT).show()
+                        error?.let { android.widget.Toast.makeText(this@MainActivity, it, android.widget.Toast.LENGTH_SHORT).show() }
+                        editorState = null
+                        refreshEvents()
+                    } finally {
+                        saving = false
                     }
                 }
-                editorState = null
-                refreshEvents()
             }
 
             Surface(modifier = Modifier.fillMaxSize(), color = theme.backgroundColor) {
@@ -307,12 +335,15 @@ class MainActivity : ComponentActivity() {
                     dangerColor = theme.dangerColor,
                     onCancel = { pendingDelete = null },
                     onConfirm = {
-                        if (!repository.deleteEvent(event.id)) {
-                            android.widget.Toast.makeText(this@MainActivity, "האירוע לא נמחק", android.widget.Toast.LENGTH_SHORT).show()
+                        dataScope.launch {
+                            val deleted = withContext(Dispatchers.IO) { repository.deleteEvent(event.id) }
+                            if (!deleted) {
+                                android.widget.Toast.makeText(this@MainActivity, "האירוע לא נמחק", android.widget.Toast.LENGTH_SHORT).show()
+                            }
+                            pendingDelete = null
+                            editorState = null
+                            refreshEvents()
                         }
-                        pendingDelete = null
-                        editorState = null
-                        refreshEvents()
                     },
                 )
             }
