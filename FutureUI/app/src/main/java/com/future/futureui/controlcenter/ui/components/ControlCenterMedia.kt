@@ -31,22 +31,25 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.future.futureui.controlcenter.logic.ControlManager
 import com.future.sharednav.focus.animateFocusColor
+import com.future.futureui.ui.LocalOneUiPalette
+import com.future.futureui.ui.oneUiFocus
+import com.future.futureui.ui.oneUiTileColor
 
 @Composable
 fun MusicPlayerCard(manager: ControlManager, labelColor: Color = Color.Black) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
     val shape = FutureShapes.xxl
-    val legibilityShadow = androidx.compose.ui.graphics.Shadow(color = Color.Black.copy(alpha = 0.35f), blurRadius = 6f)
+    val palette = LocalOneUiPalette.current
 
     if (!manager.isMediaServiceEnabled) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(80.dp)
+                .oneUiFocus(isFocused, shape)
                 .clip(shape)
-                .focusEffect(isFocused, shape)
-                .background(Color(0x80E0E0E0))
+                .background(oneUiTileColor(isFocused))
                 .clickable(interactionSource = interactionSource, indication = null) { manager.openNotificationAccessSettings() }
                 .focusable(interactionSource = interactionSource)
                 .padding(16.dp),
@@ -54,10 +57,9 @@ fun MusicPlayerCard(manager: ControlManager, labelColor: Color = Color.Black) {
         ) {
             Text(
                 text = "לחצו OK לאישור גישה למוזיקה",
-                color = labelColor,
+                color = palette.text,
                 fontSize = FutureTypography.body,
-                fontWeight = FontWeight.Bold,
-                style = androidx.compose.ui.text.TextStyle(shadow = legibilityShadow)
+                fontWeight = FontWeight.Bold
             )
         }
     } else if (!manager.hasActiveMedia) {
@@ -65,9 +67,9 @@ fun MusicPlayerCard(manager: ControlManager, labelColor: Color = Color.Black) {
             modifier = Modifier
                 .fillMaxWidth()
                 .height(65.dp)
+                .oneUiFocus(isFocused, shape)
                 .clip(shape)
-                .focusEffect(isFocused, shape)
-                .background(Color(0x80E0E0E0))
+                .background(oneUiTileColor(isFocused))
                 .clickable(
                     interactionSource = interactionSource,
                     indication = null,
@@ -84,24 +86,23 @@ fun MusicPlayerCard(manager: ControlManager, labelColor: Color = Color.Black) {
                     modifier = Modifier
                         .size(40.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFF616161)),
+                        .background(palette.chipOff),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Rounded.MusicNote,
                         contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(18.dp)
+                        tint = palette.chipOffIcon,
+                        modifier = Modifier.size(20.dp)
                     )
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
                     text = "אין מוזיקה מתנגנת",
                     fontSize = FutureTypography.summary,
-                    color = labelColor,
+                    color = palette.text,
                     fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    style = androidx.compose.ui.text.TextStyle(shadow = legibilityShadow)
+                    maxLines = 1
                 )
                 Spacer(modifier = Modifier.weight(1f))
             }

@@ -79,6 +79,86 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
         RecentSnapshots(this, (com.future.futureui.statusbar.logic.StatusBarLayoutManager.HEIGHT_DP * resources.displayMetrics.density).toInt())
     }
 
+    // גוון שורת המצב: true = לבנה (תוכן שחור), false = שחורה (תוכן לבן). נדגם מהתוכן שמתחתיה.
+    private val barLight = mutableStateOf(false)
+    private val toneExecutor by lazy { java.util.concurrent.Executors.newSingleThreadExecutor() }
+    private var lastToneShotAt = 0L
+    private val toneRunnable = Runnable { sampleBarTone() }
+
+    private fun scheduleToneSample(delayMs: Long) {
+        mainHandler.removeCallbacks(toneRunnable)
+        mainHandler.postDelayed(toneRunnable, delayMs)
+    }
+
+    /**
+     * מצלם את המסך ומודד את הבהירות של רצועה בגובה 24dp שמיד מתחת לשורת המצב (השורה
+     * עצמה לא נכללת במדידה, כדי שהיא לא תשפיע על עצמה). תוכן בהיר -> שורה לבנה,
+     * כהה -> שחורה; בין 0.42 ל-0.58 נשארים בגוון הקיים כדי שלא יהבהב. נשמרת רק
+     * הבהירות הממוצעת - הצילום עצמו לא נשמר ולא יוצא מהפונקציה.
+     */
+    private fun sampleBarTone() {
+        val now = SystemClock.uptimeMillis()
+        // המערכת מגבילה takeScreenshot (גם צילומי האחרונות והזכוכית משתמשים בו) - מנסים שוב מאוחר יותר.
+        if (now - lastToneShotAt < 500) { scheduleToneSample(550); return }
+        lastToneShotAt = now
+        try {
+            takeScreenshot(android.view.Display.DEFAULT_DISPLAY, toneExecutor, object : TakeScreenshotCallback {
+                override fun onSuccess(result: ScreenshotResult) {
+                    val luma = runCatching {
+                        val buffer = result.hardwareBuffer
+                        val hw = android.graphics.Bitmap.wrapHardwareBuffer(buffer, result.colorSpace)
+                        buffer.close()
+                        hw?.let { measureStripLuma(it) }
+                    }.onFailure { Log.w("FutureUI", "tone sample failed", it) }.getOrNull()
+                    if (luma != null) {
+                        mainHandler.post {
+                            if (luma > 0.58f) barLight.value = true
+                            else if (luma < 0.42f) barLight.value = false
+                        }
+                    }
+                }
+
+                override fun onFailure(errorCode: Int) {
+                    // חלון מאובטח או הגבלת קצב - נשארים בגוון הקיים ומנסים שוב בקרוב.
+                    mainHandler.post { scheduleToneSample(900) }
+                }
+            })
+        } catch (e: Exception) {
+            Log.w("FutureUI", "takeScreenshot for tone failed", e)
+        }
+    }
+
+    private fun measureStripLuma(hardware: android.graphics.Bitmap): Float {
+        val density = resources.displayMetrics.density
+        val top = (StatusBarLayoutManager.HEIGHT_DP * density).toInt()
+        val stripHeight = (24 * density).toInt().coerceAtLeast(1)
+        val soft = hardware.copy(android.graphics.Bitmap.Config.ARGB_8888, false)
+        hardware.recycle()
+        try {
+            val y0 = top.coerceIn(0, soft.height - 1)
+            val y1 = (y0 + stripHeight).coerceAtMost(soft.height)
+            var sum = 0.0
+            var count = 0
+            var y = y0
+            while (y < y1) {
+                var x = 0
+                while (x < soft.width) {
+                    val c = soft.getPixel(x, y)
+                    val r = (c shr 16) and 0xFF
+                    val g = (c shr 8) and 0xFF
+                    val b = c and 0xFF
+                    sum += (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255.0
+                    count++
+                    x += 8
+                }
+                y += 4
+            }
+            return if (count == 0) 0f else (sum / count).toFloat()
+        } finally {
+            soft.recycle()
+        }
+    }
+
     /** האם אפשר לצלם עכשיו את [pkg]: היא בחזית, רשומה באחרונות, ואין מעליה חלון שלנו. */
     private fun isSnapshotTarget(pkg: String): Boolean =
         FutureUIState.foregroundPackage == pkg && !recentsVisible && powerMenuView == null && recentAppsManager.isTop(pkg) &&
@@ -196,6 +276,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
             suppressSystemBars()
         }
         showStatusBar()
+        scheduleToneSample(400)
         exemptCallAppsFromBackgroundRestriction()
         if (lockController == null) {
             lockController = com.future.futureui.lockscreen.LockScreenController(
@@ -232,12 +313,15 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
             if (pkg != null && recentAppsManager.isTop(pkg)) recentSnapshots.schedule(pkg, 900, ::isSnapshotTarget)
             maybeReplaceSystemPowerMenu(pkg, event.className?.toString(), event)
             lockController?.onForegroundChanged(pkg, event.className?.toString())
+            // הגוון נדגם אחרי שהחלון החדש סיים להצטייר
+            scheduleToneSample(350)
         }
     }
     override fun onInterrupt() {}
 
     override fun onKeyEvent(event: KeyEvent): Boolean {
         val keyCode = event.keyCode
+        if (event.action == KeyEvent.ACTION_UP) scheduleToneSample(450)
         // כשהמשתמש מפסיק ללחוץ - מצלמים שוב, כדי שכרטיס האחרונות יראה איפה עזבנו
         if (event.action == KeyEvent.ACTION_UP && !recentsVisible) {
             val fg = FutureUIState.foregroundPackage
@@ -391,7 +475,8 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
                             modifier = Modifier.fillMaxSize(),
                             controlManager = controlManager,
                             layoutManager = layoutManager,
-                            accentColor = recentsAccentColor.value
+                            accentColor = recentsAccentColor.value,
+                            lightTone = barLight.value
                         )
                     }
                 }
@@ -733,6 +818,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
     }
 
     override fun onDestroy() {
+        mainHandler.removeCallbacks(toneRunnable)
         if (com.future.futureui.utils.FrostedBackdrop.service === this) com.future.futureui.utils.FrostedBackdrop.service = null
         try {
             removeVolumeOverlayNow()

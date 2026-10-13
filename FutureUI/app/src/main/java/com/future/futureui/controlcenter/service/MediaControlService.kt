@@ -37,15 +37,23 @@ class MediaControlService : NotificationListenerService() {
     override fun onListenerConnected() {
         super.onListenerConnected()
         instance = this
+        bumpTick()
     }
 
     override fun onListenerDisconnected() {
         super.onListenerDisconnected()
         instance = null
+        bumpTick()
+    }
+
+    private fun bumpTick() {
+        // ה-callbacks של ה-listener רצים על ה-main thread, שם גם נכתב מצב ה-Compose.
+        com.future.futureui.utils.FutureUIState.notificationTick.intValue++
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification) {
         super.onNotificationPosted(sbn)
+        bumpTick()
         if (!shouldShowHeadsUp(sbn)) return
         try {
             HeadsUpNotificationService.show(this, sbn.key)
@@ -57,6 +65,7 @@ class MediaControlService : NotificationListenerService() {
     /** שיחה שנענתה/נדחתה מוחקת את התראת הצלצול - הבאנר שלה נסגר מיד במקום להישאר 30 שניות. */
     override fun onNotificationRemoved(sbn: StatusBarNotification) {
         super.onNotificationRemoved(sbn)
+        bumpTick()
         HeadsUpNotificationService.dismiss(this, sbn.key)
     }
 

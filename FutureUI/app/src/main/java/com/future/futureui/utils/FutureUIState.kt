@@ -18,4 +18,10 @@ object FutureUIState {
     // וצילומי המסך שלו - לא נפתח כל עוד זה true.
     @Volatile
     var isSecured: Boolean = false
+
+    /**
+     * עולה בכל פעם שהתראה נוספה/הוסרה (MediaControlService) - שורת המצב מתעדכנת ממנו
+     * מיד במקום לחכות לסקר, ככה אייקוני ההתראות מופיעים ונעלמים בזמן אמת.
+     */
+    val notificationTick = androidx.compose.runtime.mutableIntStateOf(0)
 }

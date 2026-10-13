@@ -17,6 +17,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.*
 import androidx.compose.ui.unit.dp
+import com.future.futureui.ui.LocalOneUiPalette
+import com.future.futureui.ui.oneUiFocus
+import com.future.sharednav.theme.FutureContrast
 
 @Composable
 fun SliderBar(
@@ -28,17 +31,21 @@ fun SliderBar(
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
     val shape = FutureShapes.xxl
+    val palette = LocalOneUiPalette.current
+    // המילוי הוא צבע הטקסט של הפלטה; האייקון והאחוז הופכים לדיו הפוך מעליו.
+    val fill = palette.text
+    val inkOnFill = FutureContrast.onColor(fill)
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(47.dp)
-            .focusEffect(isFocused, shape)
+            .oneUiFocus(isFocused, shape)
             .clip(shape)
             // ניגודיות: קודם מסילה אפורה-בהירה 50% ומילוי אפור 40% - על הזכוכית
             // של מרכז הבקרה כמעט לא היה אפשר לראות איפה נגמר המילוי. עכשיו
             // מסילה כהה שקופה-למחצה ומילוי לבן כמעט אטום.
-            .background(SliderTrack)
+            .background(palette.sliderTrack)
             .onKeyEvent { event ->
                 if (event.type == KeyEventType.KeyDown) {
                     when (event.key) {
@@ -62,7 +69,7 @@ fun SliderBar(
                 .fillMaxHeight()
                 .fillMaxWidth(value.coerceAtLeast(0.01f))
                 .clip(shape)
-                .background(SliderFill)
+                .background(fill)
         )
 
         // האייקון יושב בתחילת המסילה: כהה כשהמילוי הלבן כבר מתחתיו, לבן כשלא.
@@ -70,7 +77,7 @@ fun SliderBar(
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = if (iconOnFill) SliderInkOnFill else Color.White,
+            tint = if (iconOnFill) inkOnFill else palette.text,
             modifier = Modifier
                 .padding(start = 14.dp)
                 .size(22.dp)
@@ -80,7 +87,7 @@ fun SliderBar(
         val percentOnFill = value > 0.86f
         androidx.compose.material3.Text(
             "${(value * 100).toInt()}%",
-            color = if (percentOnFill) SliderInkOnFill else Color.White,
+            color = if (percentOnFill) inkOnFill else palette.text,
             fontSize = com.future.sharednav.theme.FutureTypography.summary,
             fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
             modifier = Modifier
@@ -89,7 +96,3 @@ fun SliderBar(
         )
     }
 }
-
-private val SliderTrack = Color(0x66000000)
-private val SliderFill = Color(0xF2FFFFFF)
-private val SliderInkOnFill = Color(0xFF1C1C1E)

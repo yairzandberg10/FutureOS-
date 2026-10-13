@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.future.sharednav.focus.animateFocusFloat
 import com.future.sharednav.focus.focusScale
+import com.future.futureui.ui.LocalOneUiPalette
 
 @Composable
 fun HeaderActionButton(icon: ImageVector, color: Color, onClick: () -> Unit, isPower: Boolean = false) {
@@ -32,8 +33,8 @@ fun HeaderActionButton(icon: ImageVector, color: Color, onClick: () -> Unit, isP
     com.future.sharednav.components.TopBarIconButton(
         icon = icon,
         contentDescription = "",
-        textColor = if (isPower) Color.Red else color,
-        accentColor = Color.White,
+        textColor = if (isPower) Color(0xFFFF453A) else color,
+        accentColor = LocalOneUiPalette.current.ring,
         onClick = onClick,
     )
 }

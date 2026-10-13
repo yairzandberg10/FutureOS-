@@ -57,6 +57,10 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 import com.future.sharednav.focus.animateFocusColor
+import com.future.futureui.ui.LocalOneUiPalette
+import com.future.futureui.ui.oneUiFocus
+import com.future.futureui.ui.oneUiTileColor
+import com.future.futureui.ui.rememberOneUiPalette
 import androidx.compose.runtime.getValue
 
 /**
@@ -96,9 +100,10 @@ fun NotificationCenterScreen(
         }
     }
 
-    val isDarkBackground = wallpaper != null
-    val textColor = if (isDarkBackground) Color.White else Color.Black
-    val subTextColor = if (isDarkBackground) Color.LightGray else Color.Gray
+    val palette = rememberOneUiPalette()
+    val isDarkBackground = palette.isDark
+    val textColor = palette.text
+    val subTextColor = palette.subText
 
     var isVisible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { isVisible = true }
@@ -127,7 +132,7 @@ fun NotificationCenterScreen(
         }
     }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl, LocalOneUiPalette provides palette) {
         // אותה שכבה כמו מרכז הבקרה: נופלת מהקצה העליון בקפיץ layer, או נכנסת
         // מהצד כשעוברים אליה ממרכז הבקרה. קודם זה היה קפיץ LowBouncy איטי
         // שלא מהטוקנים, והיציאה לא רצה בכלל (החלון הוסר מיד).
@@ -153,10 +158,7 @@ fun NotificationCenterScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(
-                            if (wallpaper != null) Color.White.copy(alpha = 0.2f)
-                            else Color(0xCCFFFFFF)
-                        )
+                        .background(palette.scrim)
                 )
 
                 Column(
@@ -177,18 +179,12 @@ fun NotificationCenterScreen(
                                 text = currentTime,
                                 fontSize = FutureTypography.display,
                                 fontWeight = FontWeight.Bold,
-                                color = textColor,
-                                style = androidx.compose.ui.text.TextStyle(
-                                    shadow = androidx.compose.ui.graphics.Shadow(color = Color.Black.copy(alpha = 0.3f), blurRadius = 8f)
-                                )
+                                color = textColor
                             )
                             Text(
                                 text = currentDate,
                                 fontSize = FutureTypography.label,
-                                color = subTextColor,
-                                style = androidx.compose.ui.text.TextStyle(
-                                    shadow = androidx.compose.ui.graphics.Shadow(color = Color.Black.copy(alpha = 0.3f), blurRadius = 8f)
-                                )
+                                color = subTextColor
                             )
                         }
                     }
@@ -282,7 +278,7 @@ fun NotificationCenterScreen(
                             icon = Icons.Rounded.DeleteSweep,
                             onClick = { ncManager.clearAll() },
                             modifier = Modifier.weight(1f),
-                            color = Color.Black.copy(alpha = 0.3f),
+                            color = palette.tile,
                             focusRequester = clearAllFocusRequester
                         )
                         NotificationCenterButton(
@@ -290,7 +286,7 @@ fun NotificationCenterScreen(
                             icon = if (ncManager.controlManager.isDndOn) Icons.Rounded.NotificationsOff else Icons.Rounded.NotificationsActive,
                             onClick = { ncManager.toggleDnd() },
                             modifier = Modifier.weight(1f),
-                            color = Color.Black.copy(alpha = 0.3f)
+                            color = palette.tile
                         )
                     }
                 }
@@ -377,21 +373,16 @@ fun NotificationItem(
     val shape = FutureShapes.xxl
     // הרקע של הכרטיס נגזר מכיוון הטקסט (isDarkBackground) ולא מהטפט עצמו, כדי
     // שהניגודיות טקסט-מול-כרטיס תישמר גם כשהטפט שמתחת בהיר או כהה באופן בלתי צפוי.
-    val cardBackground by if (isDarkBackground) {
-        animateFocusColor(isFocused, Color.Black.copy(alpha = 0.45f), Color.Black.copy(alpha = 0.38f))
-    } else {
-        animateFocusColor(isFocused, Color.White.copy(alpha = 0.55f), Color.White.copy(alpha = 0.42f))
-    }
-    val legibilityShadow = androidx.compose.ui.graphics.Shadow(color = Color.Black.copy(alpha = 0.35f), blurRadius = 6f)
+    val palette = LocalOneUiPalette.current
+    val cardBackground = oneUiTileColor(isFocused)
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .animateContentSize(animationSpec = tween(FutureMotion.DurationStandard))
-            .focusEffect(isFocused, shape, focusedScale = 1.02f)
+            .oneUiFocus(isFocused, shape, focusedScale = 1.03f)
             .clip(shape)
             .background(cardBackground)
-            .border(2.dp, animateFocusColor(isFocused, Color.LightGray, Color.Transparent).value, shape)
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .onKeyEvent { event ->
                 if (!isFocused) return@onKeyEvent false
@@ -485,18 +476,17 @@ fun NotificationItem(
                 ) {
                     options.forEachIndexed { index, option ->
                         val isSelected = index == selectedOptionIndex
-                        val baseColor = if (option.isDestructive) Color.Red.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.2f)
+                        val baseColor = if (option.isDestructive) Color(0xFFFF453A) else palette.chipOff
                         Text(
                             text = option.label,
-                            color = textColor,
+                            color = if (option.isDestructive) Color.White else palette.text,
                             fontSize = FutureTypography.summary,
                             fontWeight = FontWeight.Bold,
-                            style = androidx.compose.ui.text.TextStyle(shadow = legibilityShadow),
                             modifier = Modifier
                                 .clip(CircleShape)
                                 .background(baseColor)
                                 .then(
-                                    if (isSelected) Modifier.border(1.5.dp, Color.White, CircleShape) else Modifier
+                                    if (isSelected) Modifier.border(2.dp, palette.ring, CircleShape) else Modifier
                                 )
                                 .clickable {
                                     option.action()
@@ -516,7 +506,7 @@ fun NotificationItem(
                         modifier = Modifier
                             .size(38.dp)
                             .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.2f)),
+                            .background(palette.chipOff),
                         contentAlignment = Alignment.Center
                     ) {
                         if (appIcon != null) {
@@ -540,16 +530,14 @@ fun NotificationItem(
                             fontWeight = FontWeight.Bold,
                             color = textColor,
                             maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            style = androidx.compose.ui.text.TextStyle(shadow = legibilityShadow)
+                            overflow = TextOverflow.Ellipsis
                         )
                         Text(
                             text = text,
                             fontSize = FutureTypography.summary,
                             color = subTextColor,
                             maxLines = if (isExpanded) Int.MAX_VALUE else 2,
-                            overflow = TextOverflow.Ellipsis,
-                            style = androidx.compose.ui.text.TextStyle(shadow = legibilityShadow)
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
@@ -573,14 +561,14 @@ fun NotificationCenterButton(
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
     val shape = CircleShape
+    val palette = LocalOneUiPalette.current
 
     Box(
         modifier = modifier
-            .height(38.dp)
-            .focusEffect(isFocused, shape, focusedScale = 1.08f)
+            .height(40.dp)
+            .oneUiFocus(isFocused, shape, focusedScale = 1.05f)
             .clip(shape)
-            .background(animateFocusColor(isFocused, Color.White.copy(alpha = 0.25f), color).value)
-            .border(2.dp, animateFocusColor(isFocused, Color.White, Color.Transparent).value, shape)
+            .background(animateFocusColor(isFocused, palette.tileFocused, color).value)
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
             .focusable(interactionSource = interactionSource).bringIntoViewOnFocus(),
@@ -590,9 +578,9 @@ fun NotificationCenterButton(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
-            Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+            Icon(icon, contentDescription = null, tint = palette.text, modifier = Modifier.size(20.dp))
             Spacer(modifier = Modifier.width(6.dp))
-            Text(text = text, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = FutureTypography.label)
+            Text(text = text, color = palette.text, fontWeight = FontWeight.SemiBold, fontSize = FutureTypography.label)
         }
     }
 }
