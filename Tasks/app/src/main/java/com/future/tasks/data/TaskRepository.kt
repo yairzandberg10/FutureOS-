@@ -7,6 +7,7 @@ class TaskRepository(private val taskDao: TaskDao) {
 
     fun searchTasks(query: String): Flow<List<Task>> = taskDao.searchTasks(query)
 
+    suspend fun get(id: Int): Task? = taskDao.getTask(id)
     suspend fun insert(task: Task): Int = taskDao.insertTask(task).toInt()
     suspend fun update(task: Task) = taskDao.updateTask(task)
     suspend fun delete(task: Task) = taskDao.deleteTask(task)

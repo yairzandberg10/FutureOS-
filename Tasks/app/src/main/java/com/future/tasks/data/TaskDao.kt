@@ -10,7 +10,8 @@ interface TaskDao {
     @Query("SELECT * FROM tasks ORDER BY isDone ASC, priority DESC, timestamp DESC")
     fun getAllTasks(): Flow<List<Task>>
 
-    @Query("SELECT * FROM tasks WHERE title LIKE '%' || :query || '%' OR notes LIKE '%' || :query || '%' ORDER BY isDone ASC, priority DESC, timestamp DESC")
+    // ESCAPE '!': התווים % ו-_ שהמשתמש הקליד נשארים תווים רגילים (ר' TaskViewModel.escapeLike).
+    @Query("SELECT * FROM tasks WHERE title LIKE '%' || :query || '%' ESCAPE '!' OR notes LIKE '%' || :query || '%' ESCAPE '!' ORDER BY isDone ASC, priority DESC, timestamp DESC")
     fun searchTasks(query: String): Flow<List<Task>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -28,4 +29,8 @@ interface TaskDao {
 
     @Update
     suspend fun updateTask(task: Task)
+
+    /** מבטל תזכורת רק אם היא עדיין אותה תזכורת - לא דורס עריכה שנכנסה בינתיים. */
+    @Query("UPDATE tasks SET reminderAt = NULL WHERE id = :id AND reminderAt = :expected")
+    suspend fun clearReminder(id: Int, expected: Long)
 }

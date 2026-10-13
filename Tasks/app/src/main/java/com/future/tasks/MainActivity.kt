@@ -13,6 +13,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -56,10 +57,11 @@ class MainActivity : ComponentActivity() {
             val tasks by viewModel.tasks.collectAsState()
             val query by viewModel.searchQuery.collectAsState()
             // null = מסך הרשימה, 0 = משימה חדשה, אחרת = עריכת משימה קיימת לפי id.
-            var editingTaskId by remember { mutableStateOf<Int?>(null) }
+            // rememberSaveable: סיבוב/הריגה ברקע לא מחזירים את המסך לרשימה באמצע עריכה.
+            var editingTaskId by rememberSaveable { mutableStateOf<Int?>(null) }
             // נשמר גם אחרי שחוזרים לרשימה - כדי שהפוקוס יחזור למשימה שממנה
             // נכנסנו לעורך, לא תמיד למשימה הראשונה ברשימה.
-            var lastSelectedTaskId by remember { mutableStateOf<Int?>(null) }
+            var lastSelectedTaskId by rememberSaveable { mutableStateOf<Int?>(null) }
             // המשימה שנפתחה לעריכה - נלקחת בזמן הפתיחה ולא מחושבת מהרשימה המסוננת,
             // כדי שחיפוש או עדכון ברשימה לא יפתחו עורך ריק מעל משימה קיימת.
             var editingTask by remember { mutableStateOf<Task?>(null) }
@@ -82,7 +84,10 @@ class MainActivity : ComponentActivity() {
                     depthOf = { if (it == null) 0 else 1 },
                 ) { editingId ->
                     if (editingId != null) {
-                        val task = if (editingId != 0) editingTask?.takeIf { it.id == editingId } else null
+                        // אחרי שחזור מצב המשימה לא בזיכרון - לוקחים אותה מהרשימה לפי המזהה.
+                        val task = if (editingId != 0) {
+                            editingTask?.takeIf { it.id == editingId } ?: tasks.firstOrNull { it.id == editingId }
+                        } else null
                         TaskEditorScreen(
                             task = task,
                             theme = theme,

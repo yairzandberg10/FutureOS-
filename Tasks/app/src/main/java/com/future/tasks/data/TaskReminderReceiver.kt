@@ -27,7 +27,7 @@ class TaskReminderReceiver : BroadcastReceiver() {
                         if (task != null && !task.isDone && task.reminderAt != null) {
                             TaskReminders.notify(context, task)
                             // תזכורת חד-פעמית: אחרי שהוצגה היא נמחקת מהמשימה.
-                            dao.updateTask(task.copy(reminderAt = null))
+                            task.reminderAt?.let { dao.clearReminder(task.id, it) }
                         }
                     }
                     else -> dao.upcomingReminders(System.currentTimeMillis()).forEach { TaskReminders.schedule(context, it) }

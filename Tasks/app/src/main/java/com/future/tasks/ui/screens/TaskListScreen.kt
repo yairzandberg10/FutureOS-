@@ -98,11 +98,16 @@ fun TaskListScreen(
     val rowFocusRequesters = remember { mutableMapOf<Int, FocusRequester>() }
     val addFocusRequester = remember { FocusRequester() }
     LaunchedEffect(tasks.map { it.id }) {
+        // בזמן חיפוש הפוקוס נשאר בשדה החיפוש - עדכון התוצאות לא גונב אותו לשורה.
+        if (searchQuery.isNotBlank()) return@LaunchedEffect
         if (tasks.isEmpty()) {
             // כפתור ההוספה מחובר ל-ScreenScaffold (trailingFocusRequester) - בלי זה הבקשה נזרקת.
             runCatching { addFocusRequester.requestFocus() }
         } else {
-            val target = tasks.firstOrNull { it.id == lastSelectedTaskId } ?: tasks.first()
+            // השורה שממוקדת כרגע נשארת ממוקדת (סימון/שינוי סדר לא מעביר את הפוקוס ממנה).
+            val target = tasks.firstOrNull { it.id == focusedTaskId }
+                ?: tasks.firstOrNull { it.id == lastSelectedTaskId }
+                ?: tasks.first()
             rowFocusRequesters.getOrPut(target.id) { FocusRequester() }.requestFocus()
         }
     }

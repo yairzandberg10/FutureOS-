@@ -102,8 +102,9 @@ fun TaskEditorScreen(
                         TopBarIconButton(FutureIcons.Delete, "מחק", theme.textColor, theme.dangerColor) { showDeleteConfirm = true }
                         Spacer(modifier = Modifier.width(8.dp))
                     }
+                    // אותו כלל כמו BACK: משימה ריקה לא נשמרת (ר' saveIfNeeded).
                     TopBarIconButton(FutureIcons.Save, "שמור", theme.textColor, theme.accentColor) {
-                        onSave(title, notes, priority, isDone, reminderAt)
+                        saveIfNeeded()
                     }
                 }
 
