@@ -36,6 +36,8 @@ class RunTracker(private val context: Context) {
 
     private val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
     private var lastLocation: Location? = null
+    // בהשהיה של האימון קיבועים לא נספרים (המרחק והקצב נשארים עקביים עם הזמן שעמד).
+    private var paused = false
 
     fun isLocationAvailable(): Boolean = locationManager != null
 
@@ -43,6 +45,7 @@ class RunTracker(private val context: Context) {
         val manager = locationManager ?: return
         distanceMeters = 0.0
         lastLocation = null
+        paused = false
         hasFix = false
         currentAltitudeMeters = null
         elevationGainMeters = 0.0
@@ -61,6 +64,17 @@ class RunTracker(private val context: Context) {
         }
     }
 
+    /** השהיה: מתעלמים מקיבועים, ומאפסים את הנקודה האחרונה כדי שההמשך לא יספור קפיצה. */
+    fun pause() {
+        paused = true
+        lastLocation = null
+    }
+
+    fun resume() {
+        paused = false
+        lastLocation = null
+    }
+
     fun stop() {
         try {
             locationManager?.removeUpdates(listener)
@@ -71,6 +85,7 @@ class RunTracker(private val context: Context) {
     }
 
     private val listener = LocationListener { location ->
+        if (paused) return@LocationListener
         hasFix = true
         // קיבוע לא מדויק (בתוך בניין, תחילת ריצה) קופץ עשרות מטרים הלוך וחזור,
         // וכל קפיצה נספרה כמרחק - גם בעמידה במקום. מדלגים על קיבועים גרועים,

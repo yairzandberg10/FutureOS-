@@ -1,6 +1,7 @@
 package com.future.fitness.ui.screens
 
 import com.future.sharednav.icons.FutureIcons
+import com.future.sharednav.components.ConfirmDialog
 import com.future.sharednav.components.FutureAvatar
 import com.future.sharednav.components.FutureProgressBar
 import com.future.sharednav.theme.elevatedSurfaceColor
@@ -133,6 +134,9 @@ fun ActiveWorkoutScreen(
     val liveBpm = heartRateMonitor.currentBpm
     val actionButtonFocusRequester = remember { FocusRequester() }
     val restFocusRequester = remember { FocusRequester() }
+    // יציאה באמצע אימון (אחרי שהתחיל) דורשת אישור - אחרת כל הסטים והזמן הולכים לאיבוד.
+    var confirmExit by remember { mutableStateOf(false) }
+    androidx.activity.compose.BackHandler(enabled = state.elapsedSec > 0) { confirmExit = true }
     LaunchedEffect(state.resting) {
         runCatching { if (state.resting) restFocusRequester.requestFocus() else actionButtonFocusRequester.requestFocus() }
     }
@@ -164,11 +168,23 @@ fun ActiveWorkoutScreen(
     val doneSets = (0 until state.exerciseIndex).sumOf { workout.exercises[it].sets } + state.setIndex
     val overallProgress = doneSets.toFloat() / totalSetsInWorkout.toFloat()
 
+    if (confirmExit) {
+        ConfirmDialog(
+            message = "לצאת מהאימון? הנתונים שנצברו לא יישמרו.",
+            surfaceColor = theme.surfaceColor,
+            textColor = theme.textColor,
+            dangerColor = theme.dangerColor,
+            onCancel = { confirmExit = false },
+            onConfirm = { confirmExit = false; onBack() },
+            cancelLabel = "המשך",
+            confirmLabel = "צא",
+        )
+    }
     // המסך נבנה לגובה 480dp: קודם הזמן, שני אריחי דופק/קלוריות, האווטאר
     // הגדול וכרטיס התרגיל הצטברו לכ-550dp, וכפתורי "סיימתי סט"/השהה נדחקו
     // מתחת לקצה המסך. עכשיו הזמן והמדדים חולקים שורה אחת, והכרטיס קומפקטי.
     Column(modifier = Modifier.fillMaxSize()) {
-        ScreenTopBar(title = workout.name, theme = theme, onBack = onBack)
+        ScreenTopBar(title = workout.name, theme = theme, onBack = { if (state.elapsedSec > 0) confirmExit = true else onBack() })
 
         Column(
             modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp),

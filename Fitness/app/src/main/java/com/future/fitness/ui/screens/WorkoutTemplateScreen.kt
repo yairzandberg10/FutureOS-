@@ -81,6 +81,7 @@ import com.future.fitness.ui.components.FocusableItem
 import com.future.fitness.ui.components.ScreenTopBar
 import com.future.fitness.ui.formatElapsed
 import com.future.sharednav.theme.FutureTheme
+import com.future.sharednav.components.ConfirmDialog
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import com.future.sharednav.focus.animateFocusColor
@@ -132,6 +133,9 @@ fun WorkoutTemplateScreen(
 
     var elapsedSec by remember { mutableIntStateOf(0) }
     var running by remember { mutableStateOf(true) }
+    // יציאה באמצע אימון (אחרי שהתחיל) דורשת אישור - אחרת כל הנתונים הולכים לאיבוד.
+    var confirmExit by remember { mutableStateOf(false) }
+    androidx.activity.compose.BackHandler(enabled = elapsedSec > 0) { confirmExit = true }
     var hrSum by remember { mutableIntStateOf(0) }
     var hrSamples by remember { mutableIntStateOf(0) }
     var maxHrSeen by remember { mutableIntStateOf(0) }
@@ -186,8 +190,21 @@ fun WorkoutTemplateScreen(
     val isHrConnected = heartRateMonitor.state == HrConnectionState.CONNECTED
     val bpm = heartRateMonitor.currentBpm
 
+    if (confirmExit) {
+        ConfirmDialog(
+            message = "לצאת מהאימון? הנתונים שנצברו לא יישמרו.",
+            surfaceColor = theme.surfaceColor,
+            textColor = theme.textColor,
+            dangerColor = theme.dangerColor,
+            onCancel = { confirmExit = false },
+            onConfirm = { confirmExit = false; onBack() },
+            cancelLabel = "המשך",
+            confirmLabel = "צא",
+        )
+    }
+
     Column(modifier = Modifier.fillMaxSize()) {
-        ScreenTopBar(title = title, theme = theme, onBack = onBack)
+        ScreenTopBar(title = title, theme = theme, onBack = { if (elapsedSec > 0) confirmExit = true else onBack() })
 
         // נקודות עמוד - מציגות באיזה מסך-משנה נמצאים ושכמה יש בסה"כ, בלי מגע.
         if (pages.size > 1) {
@@ -258,7 +275,15 @@ fun WorkoutTemplateScreen(
         }
 
         Row(modifier = Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            FocusableItem(onClick = { running = !running }, theme = theme, modifier = Modifier.size(56.dp), cornerRadius = FutureShapes.radiusLg) { isFocused ->
+            FocusableItem(
+                onClick = {
+                    running = !running
+                    if (usesGps) { if (running) tracker.resume() else tracker.pause() }
+                },
+                theme = theme,
+                modifier = Modifier.size(56.dp),
+                cornerRadius = FutureShapes.radiusLg,
+            ) { isFocused ->
                 Box(
                     modifier = Modifier
                         .fillMaxSize()

@@ -196,12 +196,28 @@ class HeartRateMonitor(private val context: Context) {
         lastCrankSample = null
     }
 
+    /** מאפס את כל הקריאות החיות (דופק וחיישני ריצה/רכיבה) - כדי שלא יישארו אחרי ניתוק. */
+    private fun resetLiveReadings() {
+        connectedDeviceName = null
+        currentBpm = null
+        hasRunningCadenceSensor = false
+        runningCadenceSpm = null
+        runningSpeedKmh = null
+        runningStrideLengthM = null
+        hasCyclingPowerSensor = false
+        cyclingPowerWatts = null
+        cyclingCadenceRpm = null
+        lastCrankSample = null
+    }
+
     private val gattCallback = object : BluetoothGattCallback() {
         override fun onConnectionStateChange(g: BluetoothGatt, status: Int, newState: Int) {
             if (status != BluetoothGatt.GATT_SUCCESS && newState != BluetoothProfile.STATE_CONNECTED) {
                 // כשל חיבור (133 וחבריו) - ניסיון חוזר אחד, ואז הודעה.
                 g.close()
                 if (gatt === g) gatt = null
+                // ניתוק עם סטטוס שגוי נכנס לכאן (לא לענף STATE_DISCONNECTED) - הדופק האחרון לא נשאר.
+                resetLiveReadings()
                 val address = g.device.address
                 if (connectAttempts < 1 && state == HrConnectionState.CONNECTING) {
                     connectAttempts++
