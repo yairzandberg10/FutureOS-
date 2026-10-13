@@ -512,8 +512,12 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch(Dispatchers.IO) {
             val success = systemInteractor.setMultiWindowForced(false)
             withContext(Dispatchers.Main) {
-                if (success) _multiWindowForced.value = false
-                showToast("הגדרות FutureOS אופסו")
+                if (success) {
+                    _multiWindowForced.value = false
+                    showToast("הגדרות FutureOS אופסו")
+                } else {
+                    showToast("האיפוס לא הושלם - לא ניתן לשנות את חלון מרובה")
+                }
             }
         }
     }
@@ -812,7 +816,8 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             val success = systemInteractor.setAppAudioMuted(packageName, muted)
             viewModelScope.launch(Dispatchers.Main) {
                 if (!success) showToast("לא ניתן לשנות הגדרה זו - נדרשת הרשאת root")
-                onDone(muted)
+                // onDone מקבל אם השינוי הצליח, כדי שהמתג לא יציג מצב שלא נכתב למערכת.
+                onDone(success)
             }
         }
     }
@@ -845,19 +850,35 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         loadSimCards()
     }
 
+    // המתג מתעדכן רק אחרי שהפקודה הצליחה; בכישלון מוצגת הודעה והמצב הקודם נשאר.
     fun setDefaultDataSim(subscriptionId: Int) {
-        _defaultDataSubId.value = subscriptionId
-        systemInteractor.setDefaultDataSim(subscriptionId)
+        viewModelScope.launch(Dispatchers.IO) {
+            val success = systemInteractor.setDefaultDataSim(subscriptionId)
+            withContext(Dispatchers.Main) {
+                if (success) _defaultDataSubId.value = subscriptionId
+                else showToast("לא ניתן לשנות הגדרה זו - נדרשת הרשאת root")
+            }
+        }
     }
 
     fun setDefaultVoiceSim(subscriptionId: Int) {
-        _defaultVoiceSubId.value = subscriptionId
-        systemInteractor.setDefaultVoiceSim(subscriptionId)
+        viewModelScope.launch(Dispatchers.IO) {
+            val success = systemInteractor.setDefaultVoiceSim(subscriptionId)
+            withContext(Dispatchers.Main) {
+                if (success) _defaultVoiceSubId.value = subscriptionId
+                else showToast("לא ניתן לשנות הגדרה זו - נדרשת הרשאת root")
+            }
+        }
     }
 
     fun setDefaultSmsSim(subscriptionId: Int) {
-        _defaultSmsSubId.value = subscriptionId
-        systemInteractor.setDefaultSmsSim(subscriptionId)
+        viewModelScope.launch(Dispatchers.IO) {
+            val success = systemInteractor.setDefaultSmsSim(subscriptionId)
+            withContext(Dispatchers.Main) {
+                if (success) _defaultSmsSubId.value = subscriptionId
+                else showToast("לא ניתן לשנות הגדרה זו - נדרשת הרשאת root")
+            }
+        }
     }
 
     // --- אודות הטלפון: IMEI, מספר טלפון, מידע רגולטורי ---

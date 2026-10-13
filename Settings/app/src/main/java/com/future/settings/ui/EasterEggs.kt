@@ -447,7 +447,11 @@ fun AsciiFlexScreen(navController: NavController, viewModel: SettingsViewModel) 
     val cpu = remember { interactor.getCpuInfo() }
     val uptime = remember { interactor.getUptimeString() }
     val kernel = remember { interactor.getKernelVersion() }
-    val rooted = remember { interactor.isRooted() }
+    // בדיקת root רצה ברקע, לא בתוך ההרכבה (מסך לא נתקע בפתיחה).
+    var rooted by remember { mutableStateOf<Boolean?>(null) }
+    LaunchedEffect(Unit) {
+        rooted = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { interactor.isRooted() }
+    }
 
     val ascii = """
         █▀▀ █░█ ▀█▀ █░█ █▀█ █▀▀
@@ -480,7 +484,7 @@ fun AsciiFlexScreen(navController: NavController, viewModel: SettingsViewModel) 
                 "זמן פעולה" to uptime,
                 "זיכרון" to "%.1fGB / %.1fGB".format(usedGb, totalGb),
                 "מעבד" to cpu,
-                "Root" to if (rooted) "כן" else "לא"
+                "Root" to when (rooted) { null -> "בודק..."; true -> "כן"; false -> "לא" }
             )
             lines.forEach { (label, value) ->
                 Text(

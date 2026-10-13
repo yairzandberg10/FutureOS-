@@ -1001,17 +1001,14 @@ class SystemInteractor(private val context: Context) {
     fun getDefaultVoiceSubscriptionId(): Int = SubscriptionManager.getDefaultVoiceSubscriptionId()
     fun getDefaultSmsSubscriptionId(): Int = SubscriptionManager.getDefaultSmsSubscriptionId()
 
-    fun setDefaultDataSim(subscriptionId: Int) {
-        runRootCommand("settings put global multi_sim_data_call $subscriptionId")
-    }
+    fun setDefaultDataSim(subscriptionId: Int): Boolean =
+        runRootCommand("settings put global multi_sim_data_call $subscriptionId").success
 
-    fun setDefaultVoiceSim(subscriptionId: Int) {
-        runRootCommand("settings put global multi_sim_voice_call $subscriptionId")
-    }
+    fun setDefaultVoiceSim(subscriptionId: Int): Boolean =
+        runRootCommand("settings put global multi_sim_voice_call $subscriptionId").success
 
-    fun setDefaultSmsSim(subscriptionId: Int) {
-        runRootCommand("settings put global multi_sim_sms $subscriptionId")
-    }
+    fun setDefaultSmsSim(subscriptionId: Int): Boolean =
+        runRootCommand("settings put global multi_sim_sms $subscriptionId").success
 
     // --- IMEI, מספר טלפון ומידע רגולטורי (מסך "אודות") ---
     // IMEI חסום מ-API 29 ומעלה גם עם READ_PHONE_STATE רגיל (צריך READ_PRIVILEGED_

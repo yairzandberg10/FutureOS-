@@ -824,7 +824,8 @@ fun DisplayScreen(navController: NavController, theme: ThemeConfig, viewModel: S
                         SettingSwitch("הפחתת אנימציות", "מעברים מיידיים בין מסכים, בלי תנועה", viewModel.animationsReduced.value, { viewModel.toggleAnimationsReduced() }, theme)
                         SettingDivider(theme)
                         val zoomStep = remember(viewModel.densityDpi.value) {
-                            ((viewModel.densityDpi.value.toFloat() / viewModel.defaultDensityDpi - 0.88f) / 0.06f).toInt().coerceIn(0, viewModel.densityPresetsCount - 1)
+                            // עיגול (לא חיתוך): ה-dpi נשמר כ-toInt, ולכן החיתוך הפוך היה מחזיר צעד קודם.
+                            kotlin.math.round((viewModel.densityDpi.value.toFloat() / viewModel.defaultDensityDpi - 0.88f) / 0.06f).toInt().coerceIn(0, viewModel.densityPresetsCount - 1)
                         }
                         VolumeSlider("זום מסך", zoomStep.toFloat() / (viewModel.densityPresetsCount - 1), theme, "מגדיל או מקטין את כל מה שעל המסך") {
                             viewModel.setScreenZoomStep((it * (viewModel.densityPresetsCount - 1)).toInt())
@@ -1476,15 +1477,22 @@ fun KeyboardLanguagesScreen(navController: NavController, theme: ThemeConfig) {
     var languages by remember { mutableStateOf(emptyList<com.future.sharednav.keyboard.KeyboardLanguage>()) }
     var predictive by remember { mutableStateOf(true) }
     var loaded by remember { mutableStateOf(false) }
+    var loadFailed by remember { mutableStateOf(false) }
     // ה-ContentProvider של המקלדת בתהליך אחר, שלפעמים צריך לעלות מאפס - לא על
     // ה-main thread בזמן ה-composition (המסך קפא עד שהמקלדת עלתה).
     LaunchedEffect(Unit) {
-        val (langs, pred) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            com.future.sharednav.keyboard.KeyboardSettingsClient.languages(context) to
-                com.future.sharednav.keyboard.KeyboardSettingsClient.isPredictiveEnabled(context)
+        // כשל בקריאה לא מפיל את המסך: מוצגת הודעה במקום מסך ריק.
+        runCatching {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                com.future.sharednav.keyboard.KeyboardSettingsClient.languages(context) to
+                    com.future.sharednav.keyboard.KeyboardSettingsClient.isPredictiveEnabled(context)
+            }
+        }.onSuccess { (langs, pred) ->
+            languages = langs
+            predictive = pred
+        }.onFailure {
+            loadFailed = true
         }
-        languages = langs
-        predictive = pred
         loaded = true
     }
     Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
@@ -1513,7 +1521,7 @@ fun KeyboardLanguagesScreen(navController: NavController, theme: ThemeConfig) {
                 } else if (languages.isEmpty()) {
                     item {
                         Text(
-                            "המקלדת לא מותקנת",
+                            if (loadFailed) "לא ניתן לטעון את הגדרות המקלדת" else "המקלדת לא מותקנת",
                             color = theme.textColor.copy(alpha = 0.6f),
                             fontSize = FutureTypography.body,
                             modifier = Modifier.padding(20.dp)
@@ -1708,7 +1716,11 @@ fun AppDetailScreen(navController: NavController, theme: ThemeConfig, viewModel:
     val installed = remember(packageName) { interactor.isAppInstalled(packageName) }
     val versionName = remember(packageName) { if (installed) interactor.getAppVersionName(packageName) else null }
     var showClearDataConfirm by remember { mutableStateOf(false) }
-    var audioMuted by remember(packageName) { mutableStateOf(if (installed) interactor.isAppAudioMuted(packageName) else false) }
+    // הקריאה ל-root (appops) רצה ברקע - לא בתוך ההרכבה, כדי שהמסך לא ייתקע בפתיחה.
+    var audioMuted by remember(packageName) { mutableStateOf(false) }
+    LaunchedEffect(packageName, installed) {
+        if (installed) audioMuted = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { interactor.isAppAudioMuted(packageName) }
+    }
 
     if (showClearDataConfirm) {
         ConfirmDialog(
@@ -1755,8 +1767,8 @@ fun AppDetailScreen(navController: NavController, theme: ThemeConfig, viewModel:
                                 "משתיק את פלט האודיו של האפליקציה בלבד",
                                 audioMuted,
                                 { newValue ->
-                                    audioMuted = newValue
-                                    viewModel.setAppAudioMuted(packageName, newValue) { }
+                                    // המתג משתנה רק אם הכתיבה למערכת הצליחה.
+                                    viewModel.setAppAudioMuted(packageName, newValue) { success -> if (success) audioMuted = newValue }
                                 },
                                 theme
                             )
@@ -1938,8 +1950,10 @@ fun ScreenTimeScreen(navController: NavController, theme: ThemeConfig, viewModel
                                     formatDuration(entry.millis),
                                     app?.icon ?: FutureIcons.Apps,
                                     theme,
-                                    showChevron = false
-                                ) { }
+                                    showChevron = false,
+                                    // שורת מידע בלי פעולה: לא נראית כלחיצה, אבל נשארת נגישה לגלילה במקשים.
+                                    infoFocusable = true,
+                                )
                                 if (index < summary.topApps.lastIndex) SettingDivider(theme)
                             }
                         }
