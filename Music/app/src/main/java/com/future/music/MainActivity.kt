@@ -53,7 +53,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        openUri.value = viewUriOf(intent)
+        // רק בהפעלה ראשונה: אחרי סיבוב/שחזור תהליך ה-intent נשאר, והקובץ היה מתנגן מחדש
+        openUri.value = if (savedInstanceState == null) viewUriOf(intent) else null
         setContent { MusicApp(openUri = openUri.value, onOpened = { openUri.value = null }) }
     }
 
@@ -126,8 +127,21 @@ private fun MusicApp(openUri: android.net.Uri?, onOpened: () -> Unit) {
     }
 
     var hasAudioPermission by remember { mutableStateOf(repository.hasAudioPermission()) }
+    // דחייה "לא לשאול שוב": הדיאלוג של המערכת לא יופיע שוב - הכפתור פותח את הגדרות האפליקציה
+    var audioDeniedForever by remember { mutableStateOf(false) }
     val audioPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         hasAudioPermission = granted
+        audioDeniedForever = !granted &&
+            (context as? android.app.Activity)?.shouldShowRequestPermissionRationale(repository.requiredPermission()) == false
+    }
+    // חזרה מההגדרות: בודקים את ההרשאה מחדש, אחרת המסך נשאר נעול עד יציאה מהאפליקציה
+    val permissionLifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(permissionLifecycle) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) hasAudioPermission = repository.hasAudioPermission()
+        }
+        permissionLifecycle.lifecycle.addObserver(observer)
+        onDispose { permissionLifecycle.lifecycle.removeObserver(observer) }
     }
     val notificationPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
@@ -143,7 +157,18 @@ private fun MusicApp(openUri: android.net.Uri?, onOpened: () -> Unit) {
         // ריווח קטן - כותרות המסכים ישבו מתחת לשורת המצב.
         androidx.compose.foundation.layout.Box(modifier = Modifier.fillMaxSize().padding(top = StatusBarInset.TITLE_GAP_DP.dp)) {
             if (!hasAudioPermission) {
-                PermissionScreen(theme = theme, onRequestPermission = { audioPermissionLauncher.launch(repository.requiredPermission()) })
+                PermissionScreen(theme = theme, onRequestPermission = {
+                    if (audioDeniedForever) {
+                        context.startActivity(
+                            android.content.Intent(
+                                android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                android.net.Uri.fromParts("package", context.packageName, null)
+                            )
+                        )
+                    } else {
+                        audioPermissionLauncher.launch(repository.requiredPermission())
+                    }
+                })
             } else {
                 MusicNavHost(repository = repository, playlistStore = playlistStore, playerController = playerController, theme = theme)
             }
