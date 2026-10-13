@@ -129,11 +129,18 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    // true אחרי דחייה "לא לשאול שוב": המערכת כבר לא תציג את דיאלוג ההרשאה
+    private val locationDeniedForever = androidx.compose.runtime.mutableStateOf(false)
+
     private val locationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
         if (permissions.values.any { it }) {
+            locationDeniedForever.value = false
             homeViewModel.refreshLocation()
+        } else {
+            locationDeniedForever.value =
+                !shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION)
         }
     }
 
@@ -198,7 +205,18 @@ class MainActivity : ComponentActivity() {
                   // ריווח קטן - הכותרות ושורת החיפוש ישבו מתחת לשורת המצב.
                   androidx.compose.foundation.layout.Box(modifier = Modifier.fillMaxSize().padding(top = StatusBarInset.TITLE_GAP_DP.dp)) {
                     if (!hasLocationPermission) {
-                        MissingLocationPermissionScreen { locationPermissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)) }
+                        MissingLocationPermissionScreen(
+                            deniedForever = locationDeniedForever.value,
+                            onRequest = { locationPermissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)) },
+                            onOpenSettings = {
+                                startActivity(
+                                    android.content.Intent(
+                                        android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                        android.net.Uri.fromParts("package", packageName, null)
+                                    )
+                                )
+                            }
+                        )
                     } else {
                         AppNavHost(
                             navSessionViewModel = navSessionViewModel,
@@ -260,7 +278,11 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun MissingLocationPermissionScreen(onRequest: () -> Unit) {
+private fun MissingLocationPermissionScreen(
+    deniedForever: Boolean,
+    onRequest: () -> Unit,
+    onOpenSettings: () -> Unit
+) {
     // מכשיר היעד חסר מסך מגע לחלוטין - כפתור בודד חייב לקבל פוקוס באופן
     // יזום כדי שאפשר יהיה בכלל להפעיל אותו דרך ה-D-pad (ר' התבנית הזהה
     // ב-Music/ui/screens/PermissionScreen.kt).
@@ -275,11 +297,21 @@ private fun MissingLocationPermissionScreen(onRequest: () -> Unit) {
                 color = MaterialTheme.colorScheme.onBackground,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
+            if (deniedForever) {
+                androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = androidx.compose.ui.res.stringResource(R.string.location_permission_denied_forever),
+                    color = MaterialTheme.colorScheme.onBackground,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+            }
             androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(16.dp))
             com.future.sharednav.components.FutureButton(
-                text = androidx.compose.ui.res.stringResource(R.string.grant_permission),
+                text = androidx.compose.ui.res.stringResource(
+                    if (deniedForever) R.string.open_app_settings else R.string.grant_permission
+                ),
                 theme = com.future.sharednav.theme.LocalFutureTheme.current,
-                onClick = onRequest,
+                onClick = if (deniedForever) onOpenSettings else onRequest,
                 focusRequester = buttonFocusRequester,
             )
         }

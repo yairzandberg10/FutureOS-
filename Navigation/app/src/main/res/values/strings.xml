@@ -12,6 +12,8 @@
     <string name="current_location_unknown">מאתר מיקום</string>
     <string name="location_permission_required">האפליקציה צריכה הרשאת מיקום כדי לנווט</string>
     <string name="grant_permission">אשר הרשאה</string>
+    <string name="location_permission_denied_forever">הרשאת המיקום נדחתה. אשר אותה בהגדרות האפליקציה</string>
+    <string name="open_app_settings">פתח הגדרות</string>
 
     <!-- אפשרויות מסלול -->
     <string name="route_options_title">בחירת מסלול</string>

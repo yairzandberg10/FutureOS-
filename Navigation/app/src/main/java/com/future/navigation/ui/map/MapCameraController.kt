@@ -64,6 +64,11 @@ class MapCameraController {
         animateTo(on, zoom, durationMs = 600)
     }
 
+    /** מעקב אחרי מיקום תוך שמירה על הזום הנוכחי (זום שהמשתמש שינה במקשים לא נדרס). */
+    fun follow(on: AppLatLng) {
+        animateTo(on, currentZoom, durationMs = 600)
+    }
+
     companion object {
         private const val DEFAULT_ZOOM = 15.0
         private const val FOLLOW_ZOOM = 17.0

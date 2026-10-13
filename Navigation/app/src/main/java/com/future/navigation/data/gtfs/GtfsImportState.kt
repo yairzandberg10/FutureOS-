@@ -25,6 +25,11 @@ object GtfsImportState {
         )
     }
 
+    /** מנקה את האזור שנרשם - קוראים לפני ייבוא שמוחק את הטבלאות. */
+    fun clear(context: Context) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().clear().apply()
+    }
+
     fun recordImportedBoundingBox(context: Context, bbox: BoundingBox) {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
             .putFloat(KEY_MIN_LAT, bbox.minLat.toFloat())

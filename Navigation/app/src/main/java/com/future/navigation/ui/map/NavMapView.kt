@@ -31,7 +31,7 @@ import org.maplibre.android.maps.MapView
  * לתבנית הקוד). כל מחוות המגע של MapLibre מבוטלות ב-MapCameraController.attach.
  *
  * מיפוי מקשים (זהה בכל מקום שבו המפה הזו מוצגת):
- * - חצי D-pad: הזזת המפה (pan) בכיוון הנלחץ
+ * - חצי שמאל/ימין: הזזת המפה (pan). חצי למעלה/למטה: מעבר פוקוס לשורת הכפתורים
  * - מרכז/Enter: חזרה למיקום שלי (recenter) וחידוש מצב מעקב
  * - *: התרחקות (zoom out); #: התקרבות (zoom in). במכשיר שני המקשים מגיעים
  *   כשידור מ-FutureUI (onStarKeyPress/onPoundKeyPress) ולא כאירוע מקש.
@@ -89,8 +89,8 @@ fun NavMapView(
             .onKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
                 when (event.key) {
-                    Key.DirectionUp -> { cameraController.pan(1.0, 0.0); onManualPan(); true }
-                    Key.DirectionDown -> { cameraController.pan(-1.0, 0.0); onManualPan(); true }
+                    // למעלה/למטה לא נצרכים: הפוקוס עובר משם לשורת הכפתורים (השתק/סיים)
+                    // ובחזרה. ההזזה במפה היא שמאלה/ימינה בלבד.
                     Key.DirectionLeft -> { cameraController.pan(0.0, -1.0); onManualPan(); true }
                     Key.DirectionRight -> { cameraController.pan(0.0, 1.0); onManualPan(); true }
                     Key.DirectionCenter, Key.Enter -> { onRecenterRequested(); true }

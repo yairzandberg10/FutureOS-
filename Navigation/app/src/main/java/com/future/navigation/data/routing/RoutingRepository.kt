@@ -58,6 +58,12 @@ class HereRoutingRepository : RoutingRepository {
                 distanceMeters = action.length,
                 durationSeconds = action.duration
             )
+        }.ifEmpty {
+            // מסלול נהיגה בלי תמרונים: בלי שלב אחד לפחות מסך הניווט נופל על steps ריק
+            listOf(
+                Maneuver("depart", null, "", polyline.first(), 0.0, 0.0),
+                Maneuver("arrive", null, "", polyline.last(), 0.0, 0.0)
+            )
         }
 
         val summary = section.travelSummary ?: section.summary

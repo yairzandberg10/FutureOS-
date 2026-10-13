@@ -62,7 +62,7 @@ fun NavigateScreen(viewModel: NavigateViewModel, onClose: () -> Unit = {}) {
     androidx.compose.runtime.LaunchedEffect(state.currentLocation, followMode) {
         val loc = state.currentLocation
         if (loc != null && followMode) {
-            cameraController.recenter(loc)
+            cameraController.follow(loc)
         }
     }
 
