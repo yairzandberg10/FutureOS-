@@ -32,7 +32,8 @@ class MediaRepository(private val context: Context) {
 
     fun getAllMedia(): List<MediaItem> {
         // Gallery היא לתמונות בלבד - סרטונים נפתחים מ-Files (נגן הווידאו שם).
-        return queryImages().sortedByDescending { it.dateAdded }
+        // השאילתה כבר ממוינת DATE_ADDED DESC (ר' queryImages) - בלי מיון שני.
+        return queryImages()
     }
 
     fun getAlbums(): List<Album> {

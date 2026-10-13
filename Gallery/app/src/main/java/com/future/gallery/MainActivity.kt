@@ -5,6 +5,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
+import kotlinx.coroutines.launch
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -85,13 +86,21 @@ class MainActivity : ComponentActivity() {
             // מתעדכן בזמן אמת כשמצב כהה/בהיר או צבע ההדגשה משתנים (ר' rememberFutureTheme).
             val theme = rememberFutureTheme()
 
+            // קריאת MediaStore רצה ב-IO - על ה-main thread היא תקעה את המסך עם הרבה תמונות
+            val loadScope = androidx.compose.runtime.rememberCoroutineScope()
+            fun reloadItems() {
+                loadScope.launch {
+                    items = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { repository.getAllMedia() }
+                }
+            }
+
             val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
                 hasPermission = granted
-                if (granted) items = repository.getAllMedia()
+                if (granted) reloadItems()
             }
 
             LaunchedEffect(hasPermission) {
-                if (hasPermission) items = repository.getAllMedia()
+                if (hasPermission) reloadItems()
             }
 
             val albums = remember(items) {
@@ -133,7 +142,7 @@ class MainActivity : ComponentActivity() {
                                 onBack = { editingItem = null },
                                 onSaved = {
                                     editingItem = null
-                                    items = repository.getAllMedia()
+                                    reloadItems()
                                 }
                             )
                             current != null -> MediaViewerScreen(
@@ -143,7 +152,7 @@ class MainActivity : ComponentActivity() {
                                 onNavigate = { selectedItem = it; lastSelectedItemId = it.id },
                                 onDeleted = {
                                     selectedItem = null
-                                    items = repository.getAllMedia()
+                                    reloadItems()
                                 },
                                 onEdit = { editingItem = current },
                                 theme = theme

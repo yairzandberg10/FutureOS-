@@ -605,11 +605,21 @@ fun MediaViewerScreen(
             }
         }
 
+        // התמונה שממתינה לאישור המחיקה של מסך המערכת (ראו RecoverableSecurityException)
+        var pendingDeleteUri by remember { mutableStateOf<android.net.Uri?>(null) }
         val deleteIntentLauncher = rememberLauncherForActivityResult(
             ActivityResultContracts.StartIntentSenderForResult()
         ) { result ->
+            val pending = pendingDeleteUri
+            pendingDeleteUri = null
             if (result.resultCode == android.app.Activity.RESULT_OK) {
-                onDeleted()
+                // המשתמש אישר במסך המערכת - ההרשאה ניתנה, אבל המחיקה עצמה עוד לא רצה
+                val deleted = pending?.let { runCatching { context.contentResolver.delete(it, null, null) }.getOrDefault(0) } ?: 0
+                if (deleted > 0) {
+                    onDeleted()
+                } else {
+                    android.widget.Toast.makeText(context, "לא ניתן למחוק", android.widget.Toast.LENGTH_SHORT).show()
+                }
             } else {
                 android.widget.Toast.makeText(context, "המחיקה בוטלה", android.widget.Toast.LENGTH_SHORT).show()
             }
@@ -646,22 +656,31 @@ fun MediaViewerScreen(
                 onCancel = { showDeleteConfirm = false },
                 onConfirm = {
                     showDeleteConfirm = false
-                    try {
-                        context.contentResolver.delete(item.uri, null, null)
-                        onDeleted()
-                    } catch (securityException: SecurityException) {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && securityException is RecoverableSecurityException) {
+                    // המחיקה מול MediaStore רצה ב-IO, ומכאן חוזרים ל-main לעדכון המסך
+                    scope.launch {
+                        val failure: Exception? = withContext(Dispatchers.IO) {
                             try {
-                                val intentSender = securityException.userAction.actionIntent.intentSender
-                                deleteIntentLauncher.launch(IntentSenderRequest.Builder(intentSender).build())
+                                context.contentResolver.delete(item.uri, null, null)
+                                null
                             } catch (e: Exception) {
-                                android.widget.Toast.makeText(context, "לא ניתן למחוק - צריך אישור נוסף", android.widget.Toast.LENGTH_SHORT).show()
+                                e
                             }
-                        } else {
-                            android.widget.Toast.makeText(context, "לא ניתן למחוק - צריך אישור נוסף", android.widget.Toast.LENGTH_SHORT).show()
                         }
-                    } catch (e: Exception) {
-                        android.widget.Toast.makeText(context, "לא ניתן למחוק", android.widget.Toast.LENGTH_SHORT).show()
+                        when {
+                            failure == null -> onDeleted()
+                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && failure is RecoverableSecurityException -> {
+                                pendingDeleteUri = item.uri
+                                try {
+                                    val intentSender = failure.userAction.actionIntent.intentSender
+                                    deleteIntentLauncher.launch(IntentSenderRequest.Builder(intentSender).build())
+                                } catch (e: Exception) {
+                                    pendingDeleteUri = null
+                                    android.widget.Toast.makeText(context, "לא ניתן למחוק - צריך אישור נוסף", android.widget.Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                            failure is SecurityException -> android.widget.Toast.makeText(context, "לא ניתן למחוק - צריך אישור נוסף", android.widget.Toast.LENGTH_SHORT).show()
+                            else -> android.widget.Toast.makeText(context, "לא ניתן למחוק", android.widget.Toast.LENGTH_SHORT).show()
+                        }
                     }
                 }
             )

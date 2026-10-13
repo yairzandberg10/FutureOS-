@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.PhotoAlbum
@@ -65,11 +66,18 @@ fun AlbumsScreen(
         return
     }
     val cardFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
+    val gridState = rememberLazyGridState()
     LaunchedEffect(albums.map { it.bucketId }) {
         val target = albums.firstOrNull { it.bucketId == lastSelectedAlbumId } ?: albums.firstOrNull()
-        target?.let { cardFocusRequesters.getOrPut(it.bucketId) { FocusRequester() }.requestFocus() }
+        if (target != null) {
+            // גוללים ליעד ומחכים לפריים שבו הכרטיס מורכב, אחרת אין FocusRequester מחובר
+            gridState.scrollToItem(albums.indexOf(target))
+            withFrameNanos { }
+            runCatching { cardFocusRequesters.getOrPut(target.bucketId) { FocusRequester() }.requestFocus() }
+        }
     }
     LazyVerticalGrid(
+        state = gridState,
         columns = GridCells.Fixed(2),
         modifier = Modifier.focusGroup(),
         contentPadding = PaddingValues(12.dp),

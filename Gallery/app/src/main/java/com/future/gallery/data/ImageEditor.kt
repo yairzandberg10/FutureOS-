@@ -393,12 +393,21 @@ object ImageEditor {
         }
         val uri = context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values) ?: return null
         return try {
-            context.contentResolver.openOutputStream(uri)?.use { out ->
+            // compress/openOutputStream מחזירים הצלחה כערך - בלי לבדוק, קובץ ריק נשמר כ"נשמר"
+            val written = context.contentResolver.openOutputStream(uri)?.use { out ->
                 bitmap.compress(Bitmap.CompressFormat.JPEG, 92, out)
+            } == true
+            if (!written) {
+                context.contentResolver.delete(uri, null, null)
+                return null
             }
             if (Build.VERSION.SDK_INT >= 29) {
                 val done = ContentValues().apply { put(MediaStore.Images.Media.IS_PENDING, 0) }
-                context.contentResolver.update(uri, done, null, null)
+                val rows = context.contentResolver.update(uri, done, null, null)
+                if (rows <= 0) {
+                    context.contentResolver.delete(uri, null, null)
+                    return null
+                }
             }
             uri
         } catch (e: Exception) {

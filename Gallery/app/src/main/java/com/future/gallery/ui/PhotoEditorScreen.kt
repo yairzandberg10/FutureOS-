@@ -68,6 +68,7 @@ import com.future.sharednav.theme.mutedTextColor
 import com.future.sharednav.theme.readableAccentColor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.future.sharednav.focus.animateFocusColor
 
@@ -121,6 +122,8 @@ fun PhotoEditorScreen(item: MediaItem, theme: FutureTheme, onBack: () -> Unit, o
     var isSaving by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
     var hint by remember { mutableStateOf<String?>(null) }
+    var isDetecting by remember { mutableStateOf(false) }
+    val stickerScope = rememberCoroutineScope()
     val firstTabFocus = remember { FocusRequester() }
 
     com.future.sharednav.nav.onOptionsKeyPress { showMenu = !showMenu }
@@ -164,6 +167,7 @@ fun PhotoEditorScreen(item: MediaItem, theme: FutureTheme, onBack: () -> Unit, o
             isSaving = false
             return@LaunchedEffect
         }
+        var reducedResolution = false
         val uri = withContext(Dispatchers.IO) {
             val fullSource = try {
                 val full = android.graphics.ImageDecoder.createSource(context.contentResolver, item.uri)
@@ -178,14 +182,21 @@ fun PhotoEditorScreen(item: MediaItem, theme: FutureTheme, onBack: () -> Unit, o
                     }
                 }
             } catch (e: Throwable) {
+                // פענוח מלא נכשל (בדרך כלל זיכרון): שומרים מהתצוגה המקדימה, ומודיעים למשתמש
+                reducedResolution = true
                 src
             }
-            val rendered = ImageEditor.renderFinal(fullSource, state)
-            ImageEditor.saveAsNewImage(context, rendered, item.displayName.substringBeforeLast('.').ifBlank { "IMG" })
+            try {
+                val rendered = ImageEditor.renderFinal(fullSource, state)
+                ImageEditor.saveAsNewImage(context, rendered, item.displayName.substringBeforeLast('.').ifBlank { "IMG" })
+            } catch (e: OutOfMemoryError) {
+                null
+            }
         }
         isSaving = false
         if (uri != null) {
-            android.widget.Toast.makeText(context, "נשמר כעותק חדש", android.widget.Toast.LENGTH_SHORT).show()
+            val message = if (reducedResolution) "נשמר כעותק חדש בגודל מופחת (אין מספיק זיכרון)" else "נשמר כעותק חדש"
+            android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show()
             onSaved(uri)
         } else {
             android.widget.Toast.makeText(context, "לא ניתן לשמור את התמונה", android.widget.Toast.LENGTH_SHORT).show()
@@ -194,10 +205,20 @@ fun PhotoEditorScreen(item: MediaItem, theme: FutureTheme, onBack: () -> Unit, o
 
     fun addStickers(kind: StickerKind) {
         val src = sourceBitmap ?: return
-        val base = ImageEditor.renderFinal(src, state.copy(stickers = emptyList(), vignette = 0f))
-        val (placed, found) = ImageEditor.placeStickers(base, kind)
-        state = state.copy(stickers = state.stickers + placed)
-        hint = if (found) "זוהו ${placed.size} פנים" else "לא זוהו פנים - 2/4/6/8 להזזה, 1/3 לגודל"
+        if (isDetecting) return
+        isDetecting = true
+        hint = "מזהה פנים..."
+        // רינדור וזיהוי פנים כבדים - ברקע, והמצב מתעדכן רק בסיום
+        val current = state
+        stickerScope.launch {
+            val (placed, found) = withContext(Dispatchers.Default) {
+                val base = ImageEditor.renderFinal(src, current.copy(stickers = emptyList(), vignette = 0f))
+                ImageEditor.placeStickers(base, kind)
+            }
+            state = state.copy(stickers = state.stickers + placed)
+            hint = if (found) "זוהו ${placed.size} פנים" else "לא זוהו פנים - 2/4/6/8 להזזה, 1/3 לגודל"
+            isDetecting = false
+        }
     }
 
     // מקשי המספרים: הזזה/גודל בחיתוך ובאפקטים. החצים נשארים לניווט בלבד.
