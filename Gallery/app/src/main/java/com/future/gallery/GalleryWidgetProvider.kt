@@ -12,11 +12,17 @@ class GalleryWidgetProvider : FutureContentWidget() {
         if (context.checkSelfPermission(android.Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED &&
             context.checkSelfPermission("android.permission.READ_MEDIA_IMAGES") != PackageManager.PERMISSION_GRANTED
         ) return WidgetContent(value = "גלריה", subtitle = "פתח כדי לאשר גישה")
-        context.contentResolver.query(
-            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-            arrayOf(MediaStore.Images.Media.DATE_ADDED),
-            null, null, "${MediaStore.Images.Media.DATE_ADDED} DESC",
-        )?.use { c ->
+        // ההרשאה יכולה להתבטל בין הבדיקה לשאילתה - בלי זה הווידג'ט קורס.
+        val cursor = try {
+            context.contentResolver.query(
+                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                arrayOf(MediaStore.Images.Media.DATE_ADDED),
+                null, null, "${MediaStore.Images.Media.DATE_ADDED} DESC",
+            )
+        } catch (e: SecurityException) {
+            null
+        }
+        cursor?.use { c ->
             if (c.moveToFirst()) {
                 return WidgetContent(value = "${c.count} תמונות", subtitle = "האחרונה נוספה ${ago(c.getLong(0) * 1000L)}")
             }

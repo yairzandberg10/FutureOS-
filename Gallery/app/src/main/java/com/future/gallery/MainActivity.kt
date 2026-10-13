@@ -12,6 +12,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import com.future.gallery.data.Album
 import com.future.gallery.data.MediaItem
@@ -53,6 +54,10 @@ class MainActivity : ComponentActivity() {
             val repository = remember { MediaRepository(this) }
             var hasPermission by remember { mutableStateOf(repository.hasMediaPermission()) }
             var items by remember { mutableStateOf(listOf<MediaItem>()) }
+            // true אחרי שהטעינה הראשונה מ-MediaStore הסתיימה (מבדיל "טוען" מ"אין תמונות").
+            var loaded by remember { mutableStateOf(false) }
+            // "אל תשאל שוב" - המערכת לא תציג את חלון ההרשאה שוב, ולחיצה פותחת את הגדרות האפליקציה.
+            var permissionDeniedForever by rememberSaveable { mutableStateOf(false) }
             var selectedAlbum by remember { mutableStateOf<Album?>(null) }
             var selectedItem by remember { mutableStateOf<MediaItem?>(null) }
             var viewerList by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
@@ -76,9 +81,19 @@ class MainActivity : ComponentActivity() {
             }
             LaunchedEffect(viewUri) {
                 val uri = viewUri ?: return@LaunchedEffect
+                // פרטים אמיתיים מהספק כשהוא חושף אותם; אחרת השדות נשארים ריקים - לא מזויפים.
+                val info = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    runCatching {
+                        contentResolver.query(
+                            uri,
+                            arrayOf(android.provider.MediaStore.Images.Media.DATE_ADDED, android.provider.MediaStore.Images.Media.SIZE, android.provider.MediaStore.Images.Media.DISPLAY_NAME),
+                            null, null, null,
+                        )?.use { c -> if (c.moveToFirst()) Triple(c.getLong(0), c.getLong(1), c.getString(2)) else null }
+                    }.getOrNull()
+                }
                 val single = MediaItem(
-                    id = uri.hashCode().toLong(), uri = uri, dateAdded = System.currentTimeMillis() / 1000,
-                    displayName = uri.lastPathSegment ?: "", size = 0L, bucketId = "", bucketName = "",
+                    id = uri.hashCode().toLong(), uri = uri, dateAdded = info?.first ?: 0L,
+                    displayName = info?.third ?: uri.lastPathSegment ?: "", size = info?.second ?: 0L, bucketId = "", bucketName = "",
                 )
                 viewerList = listOf(single)
                 selectedItem = single
@@ -91,16 +106,31 @@ class MainActivity : ComponentActivity() {
             fun reloadItems() {
                 loadScope.launch {
                     items = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { repository.getAllMedia() }
+                    loaded = true
                 }
             }
 
             val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
                 hasPermission = granted
+                permissionDeniedForever = !granted && !shouldShowRequestPermissionRationale(repository.requiredPermission())
                 if (granted) reloadItems()
             }
 
             LaunchedEffect(hasPermission) {
                 if (hasPermission) reloadItems()
+            }
+
+            // ההרשאה יכולה להשתנות בהגדרות המערכת בזמן שהאפליקציה ברקע - בודקים שוב בכל חזרה.
+            val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+            androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+                val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+                    if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                        val now = repository.hasMediaPermission()
+                        if (now != hasPermission) hasPermission = now
+                    }
+                }
+                lifecycleOwner.lifecycle.addObserver(observer)
+                onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
             }
 
             val albums = remember(items) {
@@ -151,7 +181,8 @@ class MainActivity : ComponentActivity() {
                                 onBack = { if (viewUri != null) finish() else selectedItem = null },
                                 onNavigate = { selectedItem = it; lastSelectedItemId = it.id },
                                 onDeleted = {
-                                    selectedItem = null
+                                    // תמונה שנפתחה מאפליקציה אחרת - אחרי מחיקה סוגרים, לא מציגים את הגלריה.
+                                    if (viewUri != null) finish() else selectedItem = null
                                     reloadItems()
                                 },
                                 onEdit = { editingItem = current },
@@ -175,7 +206,16 @@ class MainActivity : ComponentActivity() {
                                 items = items,
                                 albums = albums,
                                 hasPermission = hasPermission,
-                                onRequestPermission = { permissionLauncher.launch(repository.requiredPermission()) },
+                                onRequestPermission = {
+                                    if (permissionDeniedForever) {
+                                        runCatching {
+                                            startActivity(Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, android.net.Uri.fromParts("package", packageName, null)))
+                                        }
+                                    } else {
+                                        permissionLauncher.launch(repository.requiredPermission())
+                                    }
+                                },
+                                loaded = loaded,
                                 onItemClick = { list, item ->
                                     if (isPickMode) {
                                         finishWithPickedItem(item.uri)

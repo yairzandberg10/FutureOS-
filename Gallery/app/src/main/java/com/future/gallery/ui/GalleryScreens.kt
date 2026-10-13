@@ -108,6 +108,8 @@ fun GalleryHomeScreen(
     theme: FutureTheme,
     lastSelectedItemId: Long? = null,
     lastSelectedAlbumId: String? = null,
+    // false עד שהטעינה מ-MediaStore מסתיימת - בלי זה "אין תמונות" מופיע לרגע.
+    loaded: Boolean = true,
 ) {
     var tab by rememberSaveable { mutableStateOf(GalleryTab.ALL) }
     // BACK מ"אלבומים" חוזר ל"הכל" ולא יוצא מהאפליקציה.
@@ -158,6 +160,9 @@ fun GalleryHomeScreen(
                         }
                     }
                     tab == GalleryTab.ALBUMS -> AlbumsScreen(albums, theme, onAlbumClick, lastSelectedAlbumId = lastSelectedAlbumId)
+                    !loaded -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        com.future.sharednav.components.FutureSpinner(theme = theme, label = "טוען תמונות")
+                    }
                     sortedItems.isEmpty() -> {
                         com.future.sharednav.components.EmptyState(
                             icon = FutureIcons.Image,
@@ -642,9 +647,10 @@ fun MediaViewerScreen(
                     java.text.SimpleDateFormat("d.M.yyyy HH:mm", java.util.Locale.getDefault()).format(java.util.Date(item.dateAdded * 1000))
                 }
                 InfoRow("שם", item.displayName, theme) { showInfo = false }
-                InfoRow("תאריך", date, theme) { showInfo = false }
+                // שדה שלא ידוע (תמונה מאפליקציה אחרת בלי נתונים) לא מוצג, ולא מוצג כערך מזויף.
+                if (item.dateAdded > 0) InfoRow("תאריך", date, theme) { showInfo = false }
                 imageSize?.let { InfoRow("רזולוציה", "${it.width}×${it.height}", theme) { showInfo = false } }
-                InfoRow("גודל", android.text.format.Formatter.formatShortFileSize(context, item.size), theme) { showInfo = false }
+                if (item.size > 0) InfoRow("גודל", android.text.format.Formatter.formatShortFileSize(context, item.size), theme) { showInfo = false }
                 if (item.bucketName.isNotBlank()) InfoRow("אלבום", item.bucketName, theme) { showInfo = false }
             }
         }

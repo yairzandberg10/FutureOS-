@@ -21,10 +21,39 @@ enum class SortOption { DATE_NEWEST, DATE_OLDEST, NAME_AZ, NAME_ZA, SIZE_LARGEST
 fun List<MediaItem>.sortedBy(option: SortOption): List<MediaItem> = when (option) {
     SortOption.DATE_NEWEST -> sortedByDescending { it.dateAdded }
     SortOption.DATE_OLDEST -> sortedBy { it.dateAdded }
-    SortOption.NAME_AZ -> sortedBy { it.displayName.lowercase() }
-    SortOption.NAME_ZA -> sortedByDescending { it.displayName.lowercase() }
+    SortOption.NAME_AZ -> sortedWith { a, b -> naturalCompare(a.displayName, b.displayName) }
+    SortOption.NAME_ZA -> sortedWith { a, b -> naturalCompare(b.displayName, a.displayName) }
     SortOption.SIZE_LARGEST -> sortedByDescending { it.size }
     SortOption.SIZE_SMALLEST -> sortedBy { it.size }
+}
+
+/**
+ * השוואת שמות "טבעית": רצפי ספרות מושוונים כמספרים, כך ש-IMG_2 לפני IMG_10.
+ * בלי זה המיון הלקסיקוגרפי שם 10 לפני 2.
+ */
+internal fun naturalCompare(a: String, b: String): Int {
+    var i = 0
+    var j = 0
+    while (i < a.length && j < b.length) {
+        if (a[i].isDigit() && b[j].isDigit()) {
+            val startA = i
+            while (i < a.length && a[i].isDigit()) i++
+            val startB = j
+            while (j < b.length && b[j].isDigit()) j++
+            val numA = a.substring(startA, i).trimStart('0')
+            val numB = b.substring(startB, j).trimStart('0')
+            if (numA.length != numB.length) return numA.length.compareTo(numB.length)
+            val byValue = numA.compareTo(numB)
+            if (byValue != 0) return byValue
+        } else {
+            val charA = a[i].lowercaseChar()
+            val charB = b[j].lowercaseChar()
+            if (charA != charB) return charA.compareTo(charB)
+            i++
+            j++
+        }
+    }
+    return (a.length - i).compareTo(b.length - j)
 }
 
 /** גישה אמיתית ל-MediaStore של אנדרואיד - התמונות שבמכשיר. */

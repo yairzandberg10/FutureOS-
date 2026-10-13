@@ -115,6 +115,8 @@ private const val MAX_FULL_SIDE = 4096
 fun PhotoEditorScreen(item: MediaItem, theme: FutureTheme, onBack: () -> Unit, onSaved: (android.net.Uri) -> Unit) {
     val context = LocalContext.current
     var sourceBitmap by remember(item.id) { mutableStateOf<Bitmap?>(null) }
+    // פענוח שנכשל מוצג כהודעה - בלי זה הספינר "טוען תמונה" נשאר לנצח.
+    var loadFailed by remember(item.id) { mutableStateOf(false) }
     var previewBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var state by remember { mutableStateOf(EditState()) }
     var activeTool by remember { mutableStateOf(EditorTool.FILTER) }
@@ -149,6 +151,7 @@ fun PhotoEditorScreen(item: MediaItem, theme: FutureTheme, onBack: () -> Unit, o
                 null
             }
         }
+        loadFailed = sourceBitmap == null
         runCatching { firstTabFocus.requestFocus() }
     }
 
@@ -298,7 +301,11 @@ fun PhotoEditorScreen(item: MediaItem, theme: FutureTheme, onBack: () -> Unit, o
                         }
                     }
                     if (sourceBitmap == null) {
-                        FutureSpinner(theme = theme, label = "טוען תמונה")
+                        if (loadFailed) {
+                            Text("לא ניתן לפתוח את התמונה לעריכה", color = theme.textColor, fontSize = FutureTypography.summary)
+                        } else {
+                            FutureSpinner(theme = theme, label = "טוען תמונה")
+                        }
                     }
                     hint?.let {
                         Text(
@@ -479,7 +486,8 @@ private fun AdjustSlider(param: AdjustParam, value: Float, theme: FutureTheme, o
     ) {
         Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
             Text(param.label, color = theme.textColor, fontSize = FutureTypography.summary)
-            Text(value.toInt().toString(), color = theme.mutedTextColor, fontSize = FutureTypography.label)
+            // LRI/PDI: מספר שלילי (למשל -50) נשאר עם המינוס בצד הנכון גם בפסקת RTL.
+            Text("⁦${value.toInt()}⁩", color = theme.mutedTextColor, fontSize = FutureTypography.label)
         }
         Spacer(modifier = Modifier.height(6.dp))
         Box(modifier = Modifier.fillMaxWidth().height(4.dp).clip(FutureShapes.xs).background(theme.textColor.copy(alpha = 0.15f))) {
