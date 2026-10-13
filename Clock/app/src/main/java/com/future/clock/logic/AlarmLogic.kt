@@ -6,6 +6,8 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import com.future.clock.AlarmReceiver
+import com.future.clock.ClockWidgetProvider
+import com.future.sharednav.widget.FutureContentWidget
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
 import com.google.gson.reflect.TypeToken
@@ -43,6 +45,8 @@ data class Alarm(
 object AlarmLogic {
     private const val PREFS_NAME = "alarms_prefs"
     private const val ALARMS_KEY = "alarms_list"
+    /** העתק של הרשימה הפגומה - שמירה הבאה דורסת את ALARMS_KEY, ובלי זה הנתונים הולכים לאיבוד. */
+    private const val ALARMS_CORRUPT_KEY = "alarms_list_corrupt"
     private val gson = Gson()
 
     /**
@@ -59,6 +63,7 @@ object AlarmLogic {
             gson.fromJson<List<Alarm>?>(json, type) ?: emptyList()
         } catch (e: JsonSyntaxException) {
             Log.w(TAG, "alarms_list פגום, מתעלם ומחזיר רשימה ריקה", e)
+            prefs.edit().putString(ALARMS_CORRUPT_KEY, json).apply()
             emptyList()
         }
     }
@@ -82,6 +87,8 @@ object AlarmLogic {
             if (previousById[alarm.id] != alarm) cancelRequestCode(context, alarmManager, snoozeRequestCode(alarm.id))
             if (alarm.isEnabled) scheduleAlarm(context, alarmManager, alarm) else cancelAlarm(context, alarmManager, alarm)
         }
+        // הווידג'ט מציג את המעורר הבא - מבקשים ממנו להתעדכן עכשיו, לא רק כל 30 דקות.
+        FutureContentWidget.refresh(context, ClockWidgetProvider::class.java)
     }
 
     /**
@@ -116,6 +123,7 @@ object AlarmLogic {
         if (updated.isEnabled) {
             scheduleAlarm(context, alarmManager, updated)
         }
+        FutureContentWidget.refresh(context, ClockWidgetProvider::class.java)
         return firedAlarm
     }
 
@@ -129,6 +137,8 @@ object AlarmLogic {
         getAlarms(context).forEach { alarm ->
             if (alarm.isEnabled) scheduleAlarm(context, alarmManager, alarm)
         }
+        // טיימר שרץ לא שורד אתחול/שינוי שעה ב-AlarmManager - מתזמנים אותו מחדש לשעת הסיום.
+        runningTimer(context)?.let { (end, total) -> scheduleTimer(context, end, total) }
     }
 
     /** מתזמן אזעקה חד-פעמית נוספת בעוד SNOOZE_MINUTES דקות, בלי לגעת באזעקה המקורית. */

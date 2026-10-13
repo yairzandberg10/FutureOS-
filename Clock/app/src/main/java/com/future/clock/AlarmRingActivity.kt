@@ -87,7 +87,8 @@ class AlarmRingActivity : ComponentActivity() {
         readAlarm(intent)
 
         // מסך שנפתח בלי צלצול פעיל מאחוריו (אחרי שהתהליך נהרג, או מהתראה ישנה) נסגר מיד.
-        if (savedInstanceState != null || !AlarmRingService.ringing.value) {
+        // recreate באמצע צלצול (סיבוב, שינוי שפה) לא סוגר אותו - הצלצול עדיין רץ בשירות.
+        if (!AlarmRingService.ringing.value) {
             finishAndRemoveTask()
             return
         }

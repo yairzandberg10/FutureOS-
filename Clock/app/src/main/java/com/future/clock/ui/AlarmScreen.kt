@@ -396,7 +396,7 @@ fun TimePickerOverlay(alarm: Alarm, theme: FutureTheme, isNew: Boolean = false, 
         // TimePicker.jsx: הביטול כאן הוא הכפתור השקט - זה המקום היחיד במערכת שבו הוא מופיע.
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingLg)) {
             FutureButton("ביטול", theme, onCancel, modifier = Modifier.weight(1f), variant = FutureButtonVariant.Quiet)
-            FutureButton("שמור", theme, { onSave(alarm.copy(hour = hour, minute = minute, days = days, isEnabled = true)) }, modifier = Modifier.weight(1f))
+            FutureButton("שמור", theme, { onSave(alarm.copy(hour = hour, minute = minute, days = days)) }, modifier = Modifier.weight(1f))
         }
     }
 }

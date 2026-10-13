@@ -247,7 +247,13 @@ private fun CityClockRow(city: CityClock, now: Long, theme: FutureTheme, focusRe
 private fun CityPicker(theme: FutureTheme, exclude: List<CityClock>, onPick: (CityClock) -> Unit) {
     val options = remember(exclude) { WORLD_CITIES.filter { it !in exclude } }
     val first = remember { FocusRequester() }
-    LaunchedEffect(Unit) { runCatching { first.requestFocus() } }
+    LaunchedEffect(Unit) {
+        // ניסיון חוזר: בקשה לפני שהרכיב מחובר נכשלת, ובלי זה המסך נפתח בלי פוקוס.
+        repeat(6) {
+            androidx.compose.runtime.withFrameNanos { }
+            if (runCatching { first.requestFocus() }.isSuccess) return@LaunchedEffect
+        }
+    }
     val now = remember { System.currentTimeMillis() }
     Column(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
         ToolsHeader(title = "הוסף עיר", theme = theme)

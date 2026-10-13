@@ -81,7 +81,13 @@ fun StopwatchScreen(theme: FutureTheme, onBack: () -> Unit) {
     val snackbar = com.future.sharednav.components.rememberFutureSnackbarState()
     // אותה תקלת "אין פוקוס" שתועדה ותוקנה במחשבון/ממיר יחידות - ראו שם.
     val focusRequester = remember { FocusRequester() }
-    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+    LaunchedEffect(Unit) {
+        // ניסיון חוזר: בקשה לפני שהרכיב מחובר נכשלת, ובלי זה המסך נפתח בלי פוקוס.
+        repeat(6) {
+            androidx.compose.runtime.withFrameNanos { }
+            if (runCatching { focusRequester.requestFocus() }.isSuccess) return@LaunchedEffect
+        }
+    }
 
     LaunchedEffect(StopwatchState.isRunning) {
         while (StopwatchState.isRunning) {

@@ -79,7 +79,13 @@ fun TimerScreen(theme: FutureTheme, onBack: () -> Unit) {
     // פריט ממוקד כלשהו בעץ, גם onKeyEvent של ה-Box החיצוני (להקשת דקות/שניות)
     // לא היה מקבל אירועי מקש בכלל.
     val focusRequester = remember { FocusRequester() }
-    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+    LaunchedEffect(Unit) {
+        // ניסיון חוזר: בקשה לפני שהרכיב מחובר נכשלת, ובלי זה המסך נפתח בלי פוקוס.
+        repeat(6) {
+            androidx.compose.runtime.withFrameNanos { }
+            if (runCatching { focusRequester.requestFocus() }.isSuccess) return@LaunchedEffect
+        }
+    }
 
     // טיימר שהתחיל קודם ועדיין מתוזמן ב-AlarmManager - ממשיכים להציג את הספירה שלו
     LaunchedEffect(Unit) {
@@ -178,7 +184,7 @@ fun TimerScreen(theme: FutureTheme, onBack: () -> Unit) {
                     )
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = if (isRunning || remainingMillis > 0) {
+                            text = if (isRunning || remainingMillis > 0 || isFinished) {
                                 val totalSeconds = (remainingMillis + 999) / 1000
                                 "%02d:%02d".format(totalSeconds / 60, totalSeconds % 60)
                             } else mmssToText(mmss),
