@@ -18,6 +18,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.core.content.FileProvider
 import com.future.files.data.FileCategory
 import com.future.files.data.FileEntry
@@ -37,6 +39,13 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 
+/** שמירת קובץ/תיקייה כנתיב מחרוזת - כדי ש-rememberSaveable ישרוד יצירה מחדש. */
+private val FileSaver = Saver<File, String>(save = { it.absolutePath }, restore = { File(it) })
+private val FileEntrySaver = Saver<FileEntry?, String>(
+    save = { it?.file?.absolutePath },
+    restore = { FileEntry(File(it), false, 0L) },
+)
+
 class MainActivity : ComponentActivity() {
     // המכשיר האמיתי הוא מקלדת T9 בלבד בלי מסך מגע - מבטלים קלט מגע לגמרי כדי
     // שההתנהגות תישאר תואמת לחומרה האמיתית. לא פוגע בניווט/הפעלה במקשים -
@@ -51,15 +60,17 @@ class MainActivity : ComponentActivity() {
             val repository = remember { FileRepository() }
             var hasAccess by remember { mutableStateOf(repository.hasAllFilesAccess()) }
             val root = remember { repository.rootDirectory() }
-            var currentDir by remember { mutableStateOf(root) }
+            var currentDir by rememberSaveable(stateSaver = FileSaver) { mutableStateOf(root) }
             var entries by remember { mutableStateOf(listOf<FileEntry>()) }
-            var viewingFile by remember { mutableStateOf<FileEntry?>(null) }
+            // true כשקריאת התיקייה נכשלה - מוצג "לא ניתן לקרוא" במקום "התיקייה ריקה".
+            var loadFailed by remember { mutableStateOf(false) }
+            var viewingFile by rememberSaveable(stateSaver = FileEntrySaver) { mutableStateOf<FileEntry?>(null) }
             // הנתיב שנפתח לאחרונה מכל תיקייה (לפי נתיב התיקייה עצמה) - כך
             // שכשחוזרים "אחורה" מקובץ שנפתח או מתת-תיקייה, הפוקוס חוזר בדיוק
             // לפריט שממנו יצאנו, לא תמיד לפריט הראשון ברשימה.
-            var lastSelectedPathByDir by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
-            var clipboardEntry by remember { mutableStateOf<FileEntry?>(null) }
-            var clipboardIsMove by remember { mutableStateOf(false) }
+            var lastSelectedPathByDir by rememberSaveable { mutableStateOf<Map<String, String>>(emptyMap()) }
+            var clipboardEntry by rememberSaveable(stateSaver = FileEntrySaver) { mutableStateOf<FileEntry?>(null) }
+            var clipboardIsMove by rememberSaveable { mutableStateOf(false) }
             // מציין שפעולת קבצים כבדה (מחיקה/העתקה/העברה) רצה כרגע ברקע כדי
             // שהתור העליון של ה-UI thread לא ייחסם בתיקיות גדולות.
             var isBusy by remember { mutableStateOf(false) }
@@ -106,8 +117,15 @@ class MainActivity : ComponentActivity() {
             val isRootDir = currentDir.absolutePath == root.absolutePath
             val isCurrentDirTopLevel = currentDir.parentFile?.absolutePath == root.absolutePath
 
+            // קריאת התיקייה מחוץ ל-UI thread. תיקייה שלא נקראת מציגה שגיאה ולא רשימה ריקה.
+            suspend fun reloadEntries() {
+                val loaded = withContext(Dispatchers.IO) { repository.listDirectory(currentDir, isRootDir, sortOrder, developer) }
+                loadFailed = loaded == null
+                entries = loaded ?: emptyList()
+            }
+
             LaunchedEffect(hasAccess, currentDir, sortOrder, developer) {
-                if (hasAccess) entries = repository.listDirectory(currentDir, isRootDir, sortOrder, developer)
+                if (hasAccess) reloadEntries()
             }
 
             fun goUp() {
@@ -145,6 +163,7 @@ class MainActivity : ComponentActivity() {
                 } else FilesScreen(
                     currentDir = currentDir,
                     entries = entries,
+                    loadFailed = loadFailed,
                     hasAccess = hasAccess,
                     isRoot = currentDir.absolutePath == root.absolutePath,
                     currentDirIsTopLevelFolder = isCurrentDirTopLevel,
@@ -169,9 +188,9 @@ class MainActivity : ComponentActivity() {
                             else message("אין גישה לתיקייה הזו")
                         } else {
                             when (categorize(entry.file)) {
-                                // הקבצים לא מתקינים אפליקציות ולא מנגנים וידאו (הם מוצגים רק במצב מפתח).
+                                // הקבצים לא מתקינים אפליקציות. וידאו נפתח באפליקציה חיצונית שמתאימה לו.
                                 FileCategory.APK -> message("התקנת אפליקציות לא נתמכת")
-                                FileCategory.VIDEO -> message("קבצי וידאו לא נתמכים")
+                                FileCategory.VIDEO -> if (!openFile(entry.file)) message("אין אפליקציה שפותחת את הקובץ")
                                 // שירים וקבצי שמע נפתחים במוזיקה; בלעדיה - בנגן הפנימי.
                                 FileCategory.AUDIO -> if (!openInMusic(entry.file)) viewingFile = entry
                                 FileCategory.OTHER -> if (!openFile(entry.file)) message("אין אפליקציה שפותחת את הקובץ")
@@ -195,17 +214,21 @@ class MainActivity : ComponentActivity() {
                     lastSelectedPath = lastSelectedPathByDir[currentDir.absolutePath],
                     onBack = { goUp() },
                     onNewFolder = { name ->
-                        if (repository.createFolder(currentDir, name)) {
-                            entries = repository.listDirectory(currentDir, isRootDir, sortOrder, developer)
-                        } else {
-                            message("לא ניתן ליצור את התיקייה")
+                        coroutineScope.launch {
+                            if (withContext(Dispatchers.IO) { repository.createFolder(currentDir, name) }) {
+                                reloadEntries()
+                            } else {
+                                message("לא ניתן ליצור את התיקייה")
+                            }
                         }
                     },
                     onRename = { entry, newName ->
-                        if (repository.renameEntry(entry.file, newName)) {
-                            entries = repository.listDirectory(currentDir, isRootDir, sortOrder, developer)
-                        } else {
-                            message("לא ניתן לשנות את השם")
+                        coroutineScope.launch {
+                            if (withContext(Dispatchers.IO) { repository.renameEntry(entry.file, newName) }) {
+                                reloadEntries()
+                            } else {
+                                message("לא ניתן לשנות את השם")
+                            }
                         }
                     },
                     isBusy = isBusy,
@@ -215,7 +238,7 @@ class MainActivity : ComponentActivity() {
                             coroutineScope.launch {
                                 val ok = withContext(Dispatchers.IO) { repository.deleteEntry(entry.file) }
                                 if (ok) {
-                                    entries = repository.listDirectory(currentDir, isRootDir, sortOrder, developer)
+                                    reloadEntries()
                                 } else {
                                     message("לא ניתן למחוק")
                                 }
@@ -253,7 +276,7 @@ class MainActivity : ComponentActivity() {
                                     if (clipboardIsMove) repository.moveEntry(toPaste.file, currentDir, progress)
                                     else repository.copyEntry(toPaste.file, currentDir, progress)
                                 }
-                                entries = repository.listDirectory(currentDir, isRootDir, sortOrder, developer)
+                                reloadEntries()
                                 when {
                                     progress.cancelled -> message("הפעולה בוטלה")
                                     !ok -> message("לא ניתן להדביק כאן")
@@ -269,12 +292,13 @@ class MainActivity : ComponentActivity() {
                         if (!isBusy && selected.isNotEmpty()) {
                             isBusy = true
                             coroutineScope.launch {
-                                val allOk = withContext(Dispatchers.IO) {
-                                    selected.all { repository.deleteEntry(it.file) }
+                                // ספירה של כל הפריטים (לא עוצרים בכשל הראשון), כדי שההודעה תהיה מדויקת.
+                                val failed = withContext(Dispatchers.IO) {
+                                    selected.count { !repository.deleteEntry(it.file) }
                                 }
-                                entries = repository.listDirectory(currentDir, isRootDir, sortOrder, developer)
-                                if (!allOk) {
-                                    message("חלק מהפריטים לא נמחקו")
+                                reloadEntries()
+                                if (failed > 0) {
+                                    message("לא נמחקו $failed מתוך ${selected.size} פריטים")
                                 }
                                 isBusy = false
                             }

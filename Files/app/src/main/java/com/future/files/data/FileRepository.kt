@@ -1,6 +1,7 @@
 package com.future.files.data
 
 import java.io.File
+import java.nio.file.Files as NioFiles
 
 data class FileEntry(val file: File, val isDirectory: Boolean, val sizeBytes: Long)
 
@@ -98,8 +99,8 @@ class CopyProgress {
 
 /**
  * מצב מפתח (הגדרות > אפשרויות מפתח). בלעדיו הקבצים מציגים רק את מה ששייך
- * למשתמש: בלי תיקיות של אפליקציות (Android, backups, com.xxx), בלי קבצי
- * מערכת (xml, log, apk) ובלי וידאו, שהקבצים לא תומכים בו.
+ * למשתמש: בלי תיקיות של אפליקציות (Android, backups, com.xxx) ובלי קבצי
+ * מערכת (xml, log, apk). סרטונים תמיד מוצגים.
  */
 fun isDeveloperMode(context: android.content.Context): Boolean =
     android.provider.Settings.Global.getInt(context.contentResolver, android.provider.Settings.Global.DEVELOPMENT_SETTINGS_ENABLED, 0) == 1
@@ -123,15 +124,33 @@ private val PACKAGE_NAME = Regex("^[a-z][a-z0-9_]*(\\.[a-z0-9_]+)+$")
 private fun isTechnical(entry: File): Boolean {
     val lower = entry.name.lowercase()
     return if (entry.isDirectory) lower in TECHNICAL_FOLDERS || PACKAGE_NAME.matches(lower)
-    else entry.extension.lowercase() in TECHNICAL_EXTENSIONS || categorize(entry) == FileCategory.VIDEO
+    else entry.extension.lowercase() in TECHNICAL_EXTENSIONS
+}
+
+/** קישור סמלי - לא נעקב בשום פעולה (מחיקה, העתקה), כדי לא לגעת במקור שלו. */
+private fun isLink(file: File): Boolean = NioFiles.isSymbolicLink(file.toPath())
+
+/** עץ הקבצים של [source] בלי לרדת לתוך קישורים סמליים (ואף לא להעתיק אותם). */
+private fun ownTree(source: File): Sequence<File> =
+    source.walkTopDown()
+        .onEnter { it == source || !isLink(it) }
+        .filter { it == source || !isLink(it) }
+
+/** מחיקה רקורסיבית שלא עוקבת אחרי קישורים: קישור נמחק כקישור בלבד. */
+private fun deleteTree(file: File): Boolean {
+    if (!file.exists() && !isLink(file)) return true
+    if (isLink(file)) return file.delete()
+    if (file.isDirectory) file.listFiles()?.forEach { if (!deleteTree(it)) return false }
+    return file.delete()
 }
 
 /** גישה אמיתית למערכת הקבצים של המכשיר - בלי נתונים מדומים. */
 class FileRepository {
 
-    fun listDirectory(dir: File, isRoot: Boolean, sort: SortOrder = SortOrder.NAME, developer: Boolean = false): List<FileEntry> {
+    /** null כשהתיקייה לא נקראת (שגיאת קריאה) - כדי להבדיל ממצב "תיקייה ריקה". */
+    fun listDirectory(dir: File, isRoot: Boolean, sort: SortOrder = SortOrder.NAME, developer: Boolean = false): List<FileEntry>? {
         return try {
-            val entries = (dir.listFiles() ?: emptyArray())
+            val entries = (dir.listFiles() ?: return null)
                 .filter { entry ->
                     val name = entry.name
                     if (name.startsWith(".")) return@filter false
@@ -154,7 +173,7 @@ class FileRepository {
             }
             entries.sortedWith(compareByDescending<FileEntry> { it.isDirectory }.then(bySort))
         } catch (e: Exception) {
-            emptyList()
+            null
         }
     }
 
@@ -171,7 +190,7 @@ class FileRepository {
 
     fun deleteEntry(file: File): Boolean {
         return try {
-            file.deleteRecursively()
+            deleteTree(file)
         } catch (e: Exception) {
             false
         }
@@ -201,8 +220,8 @@ class FileRepository {
         val target = File(destDir, source.name)
         return try {
             if (target.exists() || target.absolutePath.startsWith(source.absolutePath + File.separator)) return false
-            progress.total = source.walkTopDown().filter { it.isFile }.sumOf { it.length() }.coerceAtLeast(1L)
-            source.walkTopDown().forEach { from ->
+            progress.total = ownTree(source).filter { it.isFile }.sumOf { it.length() }.coerceAtLeast(1L)
+            ownTree(source).forEach { from ->
                 if (progress.cancelled) throw java.util.concurrent.CancellationException()
                 val to = File(target, from.relativeTo(source).path)
                 if (from.isDirectory) {
@@ -235,7 +254,7 @@ class FileRepository {
             val target = File(destDir, source.name)
             if (target.exists()) return false
             if (source.renameTo(target)) return true
-            if (copyEntry(source, destDir, progress)) { source.deleteRecursively(); true } else false
+            if (copyEntry(source, destDir, progress)) { deleteEntry(source); true } else false
         } catch (e: Exception) {
             false
         }

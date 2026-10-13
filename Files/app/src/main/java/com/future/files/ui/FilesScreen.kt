@@ -82,6 +82,8 @@ import java.io.File
 fun FilesScreen(
     currentDir: File,
     entries: List<FileEntry>,
+    /** קריאת התיקייה נכשלה - מוצג מצב שגיאה במקום "התיקייה ריקה". */
+    loadFailed: Boolean = false,
     hasAccess: Boolean,
     isRoot: Boolean,
     currentDirIsTopLevelFolder: Boolean = false,
@@ -137,9 +139,17 @@ fun FilesScreen(
     // FocusRequester לפי נתיב - מתאפס בכל מעבר תיקייה, כדי שגם הפוקוס ההתחלתי
     // וגם השחזור אחרי חזרה "אחורה" יעבדו על אותה תבנית.
     val rowFocusRequesters = remember(currentDir) { mutableMapOf<String, FocusRequester>() }
-    LaunchedEffect(currentDir, entries.map { it.file.absolutePath }) {
-        val target = entries.firstOrNull { it.file.absolutePath == lastSelectedPath } ?: entries.firstOrNull()
-        target?.let { rowFocusRequesters.getOrPut(it.file.absolutePath) { FocusRequester() }.requestFocus() }
+    // הפוקוס הראשוני בתיקייה: הפריט שממנו יצאנו (או הראשון). אחרי זה, כששינוי ברשימה
+    // (מחיקה, שינוי שם, יצירה) מחליף אותה, הפוקוס חוזר לפריט הממוקד אם הוא עדיין קיים,
+    // ואחרת לפריט הראשון - כדי שהפוקוס לא ייעלם מהמקשים.
+    var initialFocusDone by remember(currentDir) { mutableStateOf(false) }
+    LaunchedEffect(currentDir, entries) {
+        // רשימה ישנה מהתיקייה הקודמת (הטעינה אסינכרונית) - מחכים לרשימה של התיקייה הזו.
+        if (entries.isEmpty() || entries.first().file.parentFile?.absolutePath != currentDir.absolutePath) return@LaunchedEffect
+        val wanted = if (initialFocusDone) focusedEntry?.file?.absolutePath else lastSelectedPath
+        val target = entries.firstOrNull { it.file.absolutePath == wanted } ?: entries.first()
+        val focused = runCatching { rowFocusRequesters.getOrPut(target.file.absolutePath) { FocusRequester() }.requestFocus() }.isSuccess
+        if (focused) initialFocusDone = true
     }
 
     fun toggleSelection(entry: FileEntry) {
@@ -226,8 +236,9 @@ fun FilesScreen(
                 } else if (entries.isEmpty()) {
                     EmptyState(
                         icon = FutureIcons.Folder,
-                        title = "התיקייה ריקה",
+                        title = if (loadFailed) "לא ניתן לקרוא את התיקייה" else "התיקייה ריקה",
                         textColor = theme.textColor,
+                        subtitle = if (loadFailed) "לחזרה לתיקייה הקודמת לחץ BACK" else null,
                     )
                 } else if (gridView) {
                     androidx.compose.foundation.lazy.grid.LazyVerticalGrid(

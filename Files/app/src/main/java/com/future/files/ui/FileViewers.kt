@@ -63,6 +63,8 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.future.files.data.FileRepository
+import com.future.files.data.ThumbnailCache
+import androidx.compose.runtime.saveable.rememberSaveable
 import com.future.sharednav.theme.FutureTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -71,6 +73,10 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.nio.ByteBuffer
+import java.nio.CharBuffer
+import java.nio.charset.Charset
+import java.nio.charset.CodingErrorAction
 import com.future.sharednav.focus.focusMotion
 import com.future.sharednav.focus.animateFocusColor
 
@@ -90,6 +96,37 @@ private val CODE_EXTENSIONS = setOf(
 
 fun isCodeFile(file: File): Boolean = file.extension.lowercase() in CODE_EXTENSIONS
 
+/** מקסימום בתים שנקראים מקובץ טקסט לתצוגה/עריכה. */
+private const val TEXT_MAX_BYTES = 300_000
+
+/** טקסט שנקרא מהקובץ. readOnly = הקובץ לא UTF-8, ולכן לא נערך (כדי לא לדרוס את הקידוד). */
+private class LoadedText(val text: String, val readOnly: Boolean, val truncated: Boolean)
+
+/** פענוח UTF-8 מחמיר. בקטע חלקי (קובץ שנחתך) זנב של תו לא שלם לא נחשב שגיאה. */
+private fun decodeUtf8Strict(bytes: ByteArray, partial: Boolean): String? {
+    val decoder = Charsets.UTF_8.newDecoder()
+        .onMalformedInput(CodingErrorAction.REPORT)
+        .onUnmappableCharacter(CodingErrorAction.REPORT)
+    val input = ByteBuffer.wrap(bytes)
+    val output = CharBuffer.allocate(bytes.size)
+    if (decoder.decode(input, output, !partial).isError) return null
+    if (!partial && decoder.flush(output).isError) return null
+    output.flip()
+    return output.toString()
+}
+
+private fun loadText(file: File): LoadedText? = try {
+    val bytes = file.inputStream().use { it.readNBytes(TEXT_MAX_BYTES) }
+    val truncated = file.length() > TEXT_MAX_BYTES
+    val utf8 = decodeUtf8Strict(bytes, truncated)
+    if (utf8 != null) LoadedText(utf8, readOnly = false, truncated = truncated)
+    else LoadedText(String(bytes, Charset.forName("windows-1255")), readOnly = true, truncated = truncated)
+} catch (e: Exception) {
+    null
+} catch (e: OutOfMemoryError) {
+    null
+}
+
 /**
  * קובץ טקסט או קוד: צפייה, ועריכה מתפריט Options ("ערוך" / "שמור").
  *
@@ -102,8 +139,11 @@ fun isCodeFile(file: File): Boolean = file.extension.lowercase() in CODE_EXTENSI
 fun TextViewerScreen(file: File, theme: FutureTheme, onBack: () -> Unit, onMessage: (String) -> Unit = {}) {
     var content by remember(file) { mutableStateOf<String?>(null) }
     var truncated by remember(file) { mutableStateOf(false) }
-    var editing by remember { mutableStateOf(false) }
-    var draft by remember { mutableStateOf(androidx.compose.ui.text.input.TextFieldValue("")) }
+    var readOnly by remember(file) { mutableStateOf(false) }
+    var editing by rememberSaveable { mutableStateOf(false) }
+    var draft by rememberSaveable(stateSaver = androidx.compose.ui.text.input.TextFieldValue.Saver) {
+        mutableStateOf(androidx.compose.ui.text.input.TextFieldValue(""))
+    }
     var confirmDiscard by remember { mutableStateOf(false) }
     var menuOpen by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
@@ -114,19 +154,10 @@ fun TextViewerScreen(file: File, theme: FutureTheme, onBack: () -> Unit, onMessa
     val dirty = editing && draft.text != content
 
     LaunchedEffect(file) {
-        content = withContext(Dispatchers.IO) {
-            try {
-                val maxBytes = 300_000L
-                if (file.length() > maxBytes) {
-                    truncated = true
-                    file.readText().take(maxBytes.toInt())
-                } else {
-                    file.readText()
-                }
-            } catch (e: Exception) {
-                null
-            }
-        }
+        val loaded = withContext(Dispatchers.IO) { loadText(file) }
+        truncated = loaded?.truncated ?: false
+        readOnly = loaded?.readOnly ?: false
+        content = loaded?.text
     }
     // בלי זה אין שום רכיב פוקוסבילי במסך הזה, ולכן אין דרך במקלדת/D-pad לגלול
     // קובץ טקסט שחורג מגובה המסך - dead end מוחלט למשתמש בלי מסך מגע.
@@ -135,6 +166,7 @@ fun TextViewerScreen(file: File, theme: FutureTheme, onBack: () -> Unit, onMessa
     fun startEditing() {
         val text = content ?: return onMessage("לא ניתן לקרוא את הקובץ")
         if (truncated) return onMessage("הקובץ גדול מדי לעריכה")
+        if (readOnly) return onMessage("הקובץ לא בקידוד UTF-8 - לקריאה בלבד")
         draft = androidx.compose.ui.text.input.TextFieldValue(text)
         editing = true
     }
@@ -162,6 +194,14 @@ fun TextViewerScreen(file: File, theme: FutureTheme, onBack: () -> Unit, onMessa
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Column(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
             ViewerHeader(if (dirty) "${file.name} *" else file.name, theme, onBack = { if (!editing) onBack() })
+            if (readOnly && !editing) {
+                Text(
+                    "קידוד לא נתמך · לקריאה בלבד",
+                    color = theme.warningColor,
+                    fontSize = FutureTypography.summary,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                )
+            }
             if (com.future.files.data.isScript(file) && !editing) {
                 Text(
                     "סקריפט · נערך כאן, לא מורץ",
@@ -265,17 +305,15 @@ fun TextViewerScreen(file: File, theme: FutureTheme, onBack: () -> Unit, onMessa
 @Composable
 fun ImageFileViewerScreen(file: File, theme: FutureTheme, onBack: () -> Unit, onOpenInGallery: () -> Unit = {}) {
     var bitmap by remember(file) { mutableStateOf<Bitmap?>(null) }
+    var loadFailed by remember(file) { mutableStateOf(false) }
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
 
     LaunchedEffect(file) {
-        bitmap = withContext(Dispatchers.IO) {
-            try {
-                BitmapFactory.decodeFile(file.absolutePath)
-            } catch (e: Exception) {
-                null
-            }
-        }
+        // מפענחים בגודל מוקטן למסך (לא בגודל המלא של התמונה) - כדי לא לקרוס על תמונה גדולה.
+        val decoded = withContext(Dispatchers.IO) { decodeForScreen(file) }
+        bitmap = decoded
+        loadFailed = decoded == null
     }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
@@ -299,6 +337,14 @@ fun ImageFileViewerScreen(file: File, theme: FutureTheme, onBack: () -> Unit, on
                     contentScale = ContentScale.Fit
                 )
             }
+            if (loadFailed) {
+                Text(
+                    "לא ניתן להציג את התמונה",
+                    color = Color.White,
+                    fontSize = FutureTypography.summary,
+                    modifier = Modifier.align(Alignment.Center),
+                )
+            }
             Text(
                 "OK · פתח בגלריה",
                 color = Color.White,
@@ -314,6 +360,19 @@ fun ImageFileViewerScreen(file: File, theme: FutureTheme, onBack: () -> Unit, on
             androidx.activity.compose.BackHandler(onBack = onBack)
         }
     }
+}
+
+/** פענוח תמונה בגודל מתאים למסך (640x960) - inSampleSize מחושב מגודל התמונה האמיתי. */
+private fun decodeForScreen(file: File): Bitmap? = try {
+    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    BitmapFactory.decodeFile(file.absolutePath, bounds)
+    BitmapFactory.decodeFile(file.absolutePath, BitmapFactory.Options().apply {
+        inSampleSize = ThumbnailCache.calculateInSampleSize(bounds, 640, 960)
+    })
+} catch (e: Exception) {
+    null
+} catch (e: OutOfMemoryError) {
+    null
 }
 
 /**
@@ -414,11 +473,13 @@ fun AudioPlayerScreen(file: File, theme: FutureTheme, onBack: () -> Unit) {
                             .alpha(playOpacity)
                             .background(theme.readableAccentColor)
                             .border(FutureDimens.focusBorderControl, playRing, CircleShape)
-                            .clickable(interactionSource = interactionSource, indication = null, enabled = isPrepared && !loadFailed) {
+                            // clickable כבר פוקוסבילי (יעד פוקוס אחד בלבד). לפני הכנה/אחרי כשל - לחיצה לא עושה דבר.
+                            .clickable(interactionSource = interactionSource, indication = null) {
+                                if (!isPrepared || loadFailed) return@clickable
                                 if (isPlaying) player.pause() else player.start()
                                 isPlaying = !isPlaying
                             }
-                            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus(),
+                            .bringIntoViewOnFocus(),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -452,6 +513,9 @@ private fun formatMs(ms: Int): String {
     val totalSeconds = ms / 1000
     return "%d:%02d".format(totalSeconds / 60, totalSeconds % 60)
 }
+
+/** כמה עמודי PDF מרונדרים נשמרים בזיכרון בכל רגע (סביב העמוד הנוכחי). */
+private const val PDF_PAGE_CACHE_SIZE = 4
 
 @Composable
 fun PdfViewerScreen(file: File, theme: FutureTheme, onBack: () -> Unit) {
@@ -551,9 +615,16 @@ fun PdfViewerScreen(file: File, theme: FutureTheme, onBack: () -> Unit) {
                 ) {
                     items(pageCount, key = { it }) { index ->
                         val bitmap = pageCache[index]
-                        LaunchedEffect(index) {
+                        // המפתח כולל "העמוד חסר" - עמוד שפונה מהמטמון מרונדר שוב כשהוא חוזר להיות גלוי.
+                        LaunchedEffect(index, bitmap == null) {
                             if (pageCache[index] == null) {
-                                renderPage(index)?.let { pageCache[index] = it }
+                                renderPage(index)?.let { rendered ->
+                                    pageCache[index] = rendered
+                                    while (pageCache.size > PDF_PAGE_CACHE_SIZE) {
+                                        val farthest = pageCache.keys.maxByOrNull { kotlin.math.abs(it - index) } ?: break
+                                        pageCache.remove(farthest)?.recycle()
+                                    }
+                                }
                             }
                         }
                         if (bitmap != null) {

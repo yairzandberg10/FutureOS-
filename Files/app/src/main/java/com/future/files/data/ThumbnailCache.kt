@@ -34,7 +34,7 @@ object ThumbnailCache {
 
     private fun cacheKey(file: File) = "${file.absolutePath}:${file.lastModified()}"
 
-    private fun calculateInSampleSize(options: BitmapFactory.Options, reqWidth: Int, reqHeight: Int): Int {
+    fun calculateInSampleSize(options: BitmapFactory.Options, reqWidth: Int, reqHeight: Int): Int {
         val height = options.outHeight
         val width = options.outWidth
         var inSampleSize = 1
