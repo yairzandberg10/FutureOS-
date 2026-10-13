@@ -115,7 +115,15 @@ private fun QrResultView(value: String, theme: FutureTheme, onScanAgain: () -> U
     ) {
         Text("נסרק בהצלחה", color = theme.accentColor, fontSize = FutureTypography.body, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(8.dp))
-        Text(value, color = theme.textColor, fontSize = FutureTypography.title, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        // טקסט ארוך (כתובת/vCard/WiFi) לא דוחף את הכפתורים מחוץ למסך - נחתך, והכפתורים נשארים
+        Text(
+            value,
+            color = theme.textColor,
+            fontSize = FutureTypography.title,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            maxLines = 5,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+        )
         Spacer(modifier = Modifier.height(20.dp))
 
         QrActionButton("העתק", theme = theme) {

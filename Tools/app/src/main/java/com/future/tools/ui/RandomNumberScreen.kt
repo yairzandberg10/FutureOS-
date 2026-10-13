@@ -52,7 +52,8 @@ fun RandomNumberScreen(theme: FutureTheme, onBack: () -> Unit) {
     val isValidRange = minValue <= maxValue
 
     fun roll() {
-        if (isValidRange) result = Random.nextInt(minValue, maxValue + 1)
+        // Long: עם max = Int.MAX_VALUE החיבור +1 גולש ל-Int ו-nextInt זורק
+        if (isValidRange) result = Random.nextLong(minValue.toLong(), maxValue.toLong() + 1).toInt()
     }
 
     fun switchField() {

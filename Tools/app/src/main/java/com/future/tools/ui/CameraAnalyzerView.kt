@@ -7,7 +7,9 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -26,6 +28,11 @@ fun CameraAnalyzerView(modifier: Modifier = Modifier, onFrame: (ImageProxy) -> U
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val currentOnFrame by rememberUpdatedState(onFrame)
+    // המצלמה נקשרת לחיים של ה-Activity, לא של המסך: בלי unbind ביציאה מהמסך היא ממשיכה לרוץ
+    val boundProvider = remember { arrayOfNulls<ProcessCameraProvider>(1) }
+    DisposableEffect(Unit) {
+        onDispose { runCatching { boundProvider[0]?.unbindAll() } }
+    }
 
     AndroidView(
         modifier = modifier,
@@ -34,6 +41,7 @@ fun CameraAnalyzerView(modifier: Modifier = Modifier, onFrame: (ImageProxy) -> U
             val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
             cameraProviderFuture.addListener({
                 val cameraProvider = cameraProviderFuture.get()
+                boundProvider[0] = cameraProvider
                 val preview = Preview.Builder().build().also {
                     it.surfaceProvider = previewView.surfaceProvider
                 }
