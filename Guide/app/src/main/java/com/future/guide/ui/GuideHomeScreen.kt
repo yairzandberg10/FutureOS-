@@ -13,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -27,7 +28,13 @@ fun GuideHomeScreen(theme: FutureTheme, focusedAppId: String? = null, onOpen: (S
     val focusIndex = GUIDE_APPS.indexOfFirst { it.id == focusedAppId }.coerceAtLeast(0)
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = focusIndex)
     // runCatching: בזמן אנימציית המעבר השורה עוד לא מחוברת, ו-requestFocus זורק
-    LaunchedEffect(Unit) { runCatching { firstRowFocusRequester.requestFocus() } }
+    // ניסיון יחיד לא מספיק: בזמן האנימציה השורה מתחברת בפריים מאוחר יותר - מנסים שוב בכל פריים
+    LaunchedEffect(Unit) {
+        repeat(30) {
+            if (runCatching { firstRowFocusRequester.requestFocus() }.isSuccess) return@LaunchedEffect
+            withFrameNanos { }
+        }
+    }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
