@@ -278,7 +278,9 @@ fun ComposeScreen(
             onCall = {
                 menuNumber = null
                 val canCall = ContextCompat.checkSelfPermission(context, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED
-                val action = if (canCall) Intent.ACTION_CALL else Intent.ACTION_DIAL
+                // כמו בחיוג מהחייגן: קודי MMI (* ו-#) לא מבצעים שיחה ישירה, רק פותחים בחייגן
+                val plainNumber = number.all { it.isDigit() || it == '+' || it == ' ' || it == '-' }
+                val action = if (canCall && plainNumber) Intent.ACTION_CALL else Intent.ACTION_DIAL
                 runCatching { context.startActivity(Intent(action, Uri.fromParts("tel", number, null))) }
             },
             onAddContact = {
