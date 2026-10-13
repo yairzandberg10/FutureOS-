@@ -276,7 +276,8 @@ fun ContactsListScreen(
     }
 
     if (menuOpen) {
-        val target = focusedContact?.takeIf { f -> shown.any { it.id == f.id } }
+        // מהרשימה המעודכנת (לא האובייקט שנשמר בפוקוס): אחרי מועדף/חסימה הכותרת והמצב נכונים
+        val target = focusedContact?.let { f -> shown.firstOrNull { it.id == f.id } }
         FutureOptionsMenu(theme = theme, onDismissRequest = { menuOpen = false }, header = target?.name ?: tab.title) {
             fun pick(action: () -> Unit): () -> Unit = { menuOpen = false; action() }
             if (target != null) {
@@ -344,10 +345,15 @@ fun ContactDetailScreen(contact: Contact, theme: FutureTheme, actions: ContactAc
     val scope = rememberCoroutineScope()
     val type = rememberFutureType()
     var details by remember(contact.id) { mutableStateOf(ContactDetails()) }
+    // העריכה נפתחת רק אחרי שהפרטים נטענו - אחרת השדות מתחילים ריקים ושמירה מוחקת נתונים קיימים
+    var detailsLoaded by remember(contact.id) { mutableStateOf(false) }
     var editing by remember { mutableStateOf(false) }
     var menuOpen by remember { mutableStateOf(false) }
     var pendingDelete by remember { mutableStateOf(false) }
-    LaunchedEffect(contact.id) { details = withContext(Dispatchers.IO) { repository.getContactDetails(contact.id) } }
+    LaunchedEffect(contact.id) {
+        details = withContext(Dispatchers.IO) { repository.getContactDetails(contact.id) }
+        detailsLoaded = true
+    }
     onOptionsKeyPress { if (!editing && !pendingDelete) menuOpen = !menuOpen }
 
     val first = remember { FocusRequester() }
@@ -416,7 +422,7 @@ fun ContactDetailScreen(contact: Contact, theme: FutureTheme, actions: ContactAc
                         FutureSettingItem(title = text, icon = icon, theme = theme, showChevron = false, onClick = null)
                     }
                     if (info.isNotEmpty()) FutureDivider(theme = theme)
-                    FutureSettingItem(title = "ערוך פרטים", icon = FutureIcons.Edit, theme = theme, onClick = { editing = true })
+                    FutureSettingItem(title = "ערוך פרטים", icon = FutureIcons.Edit, theme = theme, onClick = { if (detailsLoaded) editing = true })
                 }
 
                 FutureSectionHeader("ניהול", theme)

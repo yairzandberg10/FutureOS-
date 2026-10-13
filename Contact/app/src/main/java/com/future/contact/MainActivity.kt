@@ -26,6 +26,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
@@ -75,11 +76,12 @@ class MainActivity : ComponentActivity() {
                 mutableStateOf(ContactSort.entries.firstOrNull { it.name == prefs.getString("sort", null) } ?: ContactSort.FIRST_NAME)
             }
             var contacts by remember { mutableStateOf(listOf<Contact>()) }
-            var tab by remember { mutableStateOf(ContactsTab.CONTACTS) }
-            var selectedId by remember { mutableStateOf<String?>(null) }
-            var lastSelectedContactId by remember { mutableStateOf<String?>(null) }
-            var photoTarget by remember { mutableStateOf<Contact?>(null) }
-            var pendingCall by remember { mutableStateOf<String?>(null) }
+            // נשמרים גם אם התהליך נהרג בזמן שהגלריה פתוחה (אפליקציה אחרת)
+            var tab by rememberSaveable { mutableStateOf(ContactsTab.CONTACTS) }
+            var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
+            var lastSelectedContactId by rememberSaveable { mutableStateOf<String?>(null) }
+            var photoTargetId by rememberSaveable { mutableStateOf<String?>(null) }
+            var pendingCall by rememberSaveable { mutableStateOf<String?>(null) }
             // "הוסף לאנשי קשר" מהחייגן/מההודעות (ACTION_INSERT) - עורך אנשי הקשר של
             // המערכת מושבת במכשיר, אז הוא נפתח כאן כדיאלוג עם המספר מוכן.
             var insertNumber by remember {
@@ -123,11 +125,11 @@ class MainActivity : ComponentActivity() {
             val photoPicker = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
                 // בורר זר יכול להחזיר file:// לקובץ פרטי שלנו - רק content:// של מישהו אחר
                 val uri = result.data?.data?.takeIf { it.scheme == "content" && it.authority?.startsWith(packageName) != true }
-                val contact = photoTarget
-                photoTarget = null
-                if (uri != null && contact != null) {
+                val targetId = photoTargetId
+                photoTargetId = null
+                if (uri != null && targetId != null) {
                     scope.launch {
-                        val ok = withContext(Dispatchers.IO) { repository.setPhoto(contact.id, uri) }
+                        val ok = withContext(Dispatchers.IO) { repository.setPhoto(targetId, uri) }
                         snackbar.show(if (ok) "התמונה עודכנה" else "לא ניתן לשמור את התמונה")
                         reload()
                     }
@@ -148,7 +150,11 @@ class MainActivity : ComponentActivity() {
             val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
             DisposableEffect(lifecycleOwner) {
                 val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
-                    if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) reload()
+                    if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                        // הרשאה שאושרה מחוץ לאפליקציה (בהגדרות) נקלטת כאן, לא רק בתשובת בקשה בתוך האפליקציה
+                        hasPermission = repository.hasContactsPermission()
+                        reload()
+                    }
                 }
                 lifecycleOwner.lifecycle.addObserver(observer)
                 onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
@@ -184,12 +190,12 @@ class MainActivity : ComponentActivity() {
                         FutureShare.open(this@MainActivity, send, "שיתוף איש קשר")
                     },
                     pickPhoto = { contact -> withWrite {
-                        photoTarget = contact
+                        photoTargetId = contact.id
                         val gallery = Intent(Intent.ACTION_PICK).setType("image/*").setPackage("com.future.gallery")
                         val any = Intent(Intent.ACTION_GET_CONTENT).setType("image/*")
                         val intent = if (gallery.resolveActivity(packageManager) != null) gallery else any
                         runCatching { photoPicker.launch(intent) }.onFailure {
-                            photoTarget = null
+                            photoTargetId = null
                             snackbar.show("אין אפליקציה לבחירת תמונה")
                         }
                     } },
