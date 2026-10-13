@@ -177,17 +177,24 @@ fun PhotoViewer(theme: FutureTheme, items: List<Uri>) {
     var index by remember { mutableIntStateOf(0) }
     var bitmap by remember { mutableStateOf<Bitmap?>(null) }
     var isVideo by remember { mutableStateOf(false) }
+    // הקובץ לא נטען (למשל נמחק מהגלריה) - מציגים הודעה במקום מסך שחור בלי הסבר.
+    var loadFailed by remember { mutableStateOf(false) }
     val focus = remember { FocusRequester() }
 
     LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
     val current = items.getOrNull(index)
     LaunchedEffect(current) {
-        bitmap = current?.let { uri ->
-            withContext(Dispatchers.IO) {
-                isVideo = context.contentResolver.getType(uri)?.startsWith("video") == true
-                if (isVideo) CameraMedia.thumbnail(context, uri, 1280) else CameraMedia.screenImage(context, uri, 1280)
-            }
+        // מאפסים לפני הטעינה, כדי שתמונה קודמת לא תישאר על המסך; ה-state נכתב רק מה-main thread.
+        bitmap = null
+        loadFailed = false
+        val uri = current ?: return@LaunchedEffect
+        val (video, loaded) = withContext(Dispatchers.IO) {
+            val video = context.contentResolver.getType(uri)?.startsWith("video") == true
+            video to if (video) CameraMedia.thumbnail(context, uri, 1280) else CameraMedia.screenImage(context, uri, 1280)
         }
+        isVideo = video
+        bitmap = loaded
+        loadFailed = loaded == null
     }
 
     Box(
@@ -236,6 +243,9 @@ fun PhotoViewer(theme: FutureTheme, items: List<Uri>) {
         if (items.isEmpty()) {
             Text("עדיין לא צולם כלום", color = theme.mutedTextColor, fontSize = FutureTypography.body)
         } else {
+            if (loadFailed) {
+                Text("לא ניתן להציג את הקובץ", color = theme.mutedTextColor, fontSize = FutureTypography.body)
+            }
             Text(
                 "${index + 1}/${items.size}",
                 color = Color.White,

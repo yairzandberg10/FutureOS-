@@ -65,6 +65,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -167,14 +168,15 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
         options.save(context)
     }
 
-    var lensFacing by remember { mutableIntStateOf(CameraSelector.LENS_FACING_BACK) }
+    // rememberSaveable: סיבוב/הריגה ברקע לא מחזירים למצלמה ולמצב צילום ברירת מחדל.
+    var lensFacing by rememberSaveable { mutableStateOf(CameraSelector.LENS_FACING_BACK) }
     var cameraAvailable by remember { mutableStateOf(true) }
     var camera by remember { mutableStateOf<Camera?>(null) }
     var previewView by remember { mutableStateOf<PreviewView?>(null) }
     var cameraProvider by remember { mutableStateOf<ProcessCameraProvider?>(null) }
     var extensionsManager by remember { mutableStateOf<ExtensionsManager?>(null) }
     var availableScenes by remember { mutableStateOf(listOf(SceneOption.NONE)) }
-    var captureMode by remember { mutableStateOf(CaptureMode.PHOTO) }
+    var captureMode by rememberSaveable { mutableStateOf(CaptureMode.PHOTO) }
     var countdownRemaining by remember { mutableStateOf<Int?>(null) }
     var isRecording by remember { mutableStateOf(false) }
     var recordingSeconds by remember { mutableIntStateOf(0) }
@@ -197,9 +199,9 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
     // מה שצולם בסשן הזה בלבד, החדש ראשון - לתצוגה המקדימה ולמציג.
     val sessionMedia = remember { mutableStateListOf<Uri>() }
     var lastThumb by remember { mutableStateOf<Bitmap?>(null) }
-    var showSettings by remember { mutableStateOf(false) }
-    var showViewer by remember { mutableStateOf(false) }
-    var showFilters by remember { mutableStateOf(false) }
+    var showSettings by rememberSaveable { mutableStateOf(false) }
+    var showViewer by rememberSaveable { mutableStateOf(false) }
+    var showFilters by rememberSaveable { mutableStateOf(false) }
     var showHints by remember { mutableStateOf(true) }
 
     val shutterFocus = remember { FocusRequester() }
@@ -283,7 +285,11 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
         camera?.cameraControl?.enableTorch(isRecording && options.flashMode == ImageCapture.FLASH_MODE_ON)
     }
     // הפילטר על התצוגה החיה: מטריצת הצבע על שכבת ה-PreviewView (TextureView).
-    val liveMatrix = if (captureMode == CaptureMode.DOCUMENT) CameraFilter.DOCUMENT else options.filter.matrix()
+    // remember: ColorMatrix לא מממש equals, ולכן בלי זה ה-LaunchedEffect למטה רץ מחדש בכל recomposition
+    // (וכל שנייה בהקלטה) ומדליק/מכבה את שכבת החומרה שוב ושוב.
+    val liveMatrix = remember(captureMode, options.filter) {
+        if (captureMode == CaptureMode.DOCUMENT) CameraFilter.DOCUMENT else options.filter.matrix()
+    }
     LaunchedEffect(previewView, liveMatrix) {
         val view = previewView ?: return@LaunchedEffect
         val paint = liveMatrix?.let { android.graphics.Paint().apply { colorFilter = android.graphics.ColorMatrixColorFilter(it) } }
@@ -307,24 +313,12 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
 
     // Options - החלפת מצלמה. פעיל רק במסך הצילום עצמו.
     com.future.sharednav.nav.onOptionsKeyPress {
-        if (!showSettings && !showViewer && !isRecording && !busy) {
+        if (!showSettings && !showViewer && !isRecording && !busy && countdownRemaining == null) {
             lensFacing = if (lensFacing == CameraSelector.LENS_FACING_BACK) CameraSelector.LENS_FACING_FRONT else CameraSelector.LENS_FACING_BACK
             snackbar.show(if (lensFacing == CameraSelector.LENS_FACING_FRONT) "מצלמה קדמית" else "מצלמה אחורית")
         }
     }
 
-    BackHandler(enabled = showSettings || showViewer || showFilters || focusPoint != null) {
-        when {
-            showViewer -> showViewer = false
-            showSettings -> showSettings = false
-            showFilters -> showFilters = false
-            else -> {
-                focusPoint = null
-                camera?.cameraControl?.cancelFocusAndMetering()
-                snackbar.show("מיקוד אוטומטי")
-            }
-        }
-    }
 
     fun onSaved(uri: Uri) {
         sessionMedia.add(0, uri)
@@ -423,6 +417,23 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
         else if (countdownRemaining == null) startCapture()
     }
 
+    // BACK בזמן ספירה מבטל אותה, ובזמן הקלטה עוצר ושומר את הסרטון - במקום לסגור את האפליקציה.
+    // (מוגדר אחרי startCapture/onShutterPressed כי הוא קורא להם.)
+    BackHandler(enabled = showSettings || showViewer || showFilters || focusPoint != null || countdownRemaining != null || isRecording) {
+        when {
+            showViewer -> showViewer = false
+            showSettings -> showSettings = false
+            showFilters -> showFilters = false
+            countdownRemaining != null -> countdownRemaining = null
+            isRecording -> startCapture()
+            else -> {
+                focusPoint = null
+                camera?.cameraControl?.cancelFocusAndMetering()
+                snackbar.show("מיקוד אוטומטי")
+            }
+        }
+    }
+
     fun focusAt(fraction: Offset) {
         val view = previewView ?: return
         val cam = camera ?: return
@@ -451,7 +462,8 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
     }
 
     fun nextMode() {
-        if (isRecording || busy) return
+        // במהלך ספירה לאחור המצב נעול - הצילום יתבצע במצב שנבחר כשהספירה התחילה.
+        if (isRecording || busy || countdownRemaining != null) return
         captureMode = CaptureMode.entries[(captureMode.ordinal + 1) % CaptureMode.entries.size]
     }
 
