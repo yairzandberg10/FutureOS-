@@ -331,7 +331,7 @@ class SmsRepository(private val context: Context) {
         // requestCode חייב להיות שונה לכל (הודעה, חלק) כדי ש-PendingIntent.getBroadcast
         // לא יחזיר מופע ממוחזר עם extras של שליחה קודמת (FLAG_UPDATE_CURRENT מחליף
         // extras על אותו requestCode - בלי הפרדה כזו חלקים/הודעות שונות "יתבלבלו").
-        val requestCode = (messageId * 16 + partIndex).toInt()
+        val requestCode = (messageId * 256 + partIndex).toInt()
         return PendingIntent.getBroadcast(
             context, requestCode, intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
@@ -343,7 +343,7 @@ class SmsRepository(private val context: Context) {
             action = SmsDeliveredReceiver.ACTION_SMS_DELIVERED
             putExtra(SmsDeliveredReceiver.EXTRA_MESSAGE_ID, messageId)
         }
-        val requestCode = (messageId * 16 + partIndex).toInt()
+        val requestCode = (messageId * 256 + partIndex).toInt()
         return PendingIntent.getBroadcast(
             context, requestCode, intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
@@ -490,7 +490,15 @@ class SmsRepository(private val context: Context) {
             )
 
             val smsManager = context.getSystemService(SmsManager::class.java)
-            smsManager.sendMultimediaMessage(context, contentUri, null, null, pendingIntent)
+            try {
+                smsManager.sendMultimediaMessage(context, contentUri, null, null, pendingIntent)
+            } catch (e: Exception) {
+                // בלי זה השורה נשארת לתמיד ב"שולח..." והקובץ נשאר בדיסק.
+                Log.e("SmsRepository", "sendMultimediaMessage failed right away", e)
+                updateMmsStatus(mmsId, success = false)
+                file.delete()
+                return false
+            }
             true
         } catch (e: Exception) {
             Log.e("SmsRepository", "Error sending MMS", e)
@@ -547,14 +555,21 @@ class SmsRepository(private val context: Context) {
                 if (result != null) break
                 maxSide = (maxSide * 0.75f).toInt()
                 val scale = maxSide.toFloat() / maxOf(bitmap.width, bitmap.height)
-                bitmap = Bitmap.createScaledBitmap(
+                val scaled = Bitmap.createScaledBitmap(
                     bitmap,
                     (bitmap.width * scale).toInt().coerceAtLeast(1),
                     (bitmap.height * scale).toInt().coerceAtLeast(1),
                     true
                 )
+                // הביטמפ הקודם כבר לא נחוץ - משחררים אותו לפני הסבב הבא.
+                if (scaled !== bitmap) bitmap.recycle()
+                bitmap = scaled
             }
             result
+        } catch (e: OutOfMemoryError) {
+            // תמונה גדולה מדי לזיכרון של המכשיר - השליחה נכשלת במקום לקרוס.
+            Log.e("SmsRepository", "Out of memory compressing image for MMS", e)
+            null
         } catch (e: Exception) {
             Log.e("SmsRepository", "Error compressing image for MMS", e)
             null
@@ -651,7 +666,8 @@ class SmsRepository(private val context: Context) {
     fun resolveContact(address: String): Contact {
         contactCache[address]?.let { return it }
         val resolved = lookupContact(address)
-        contactCache[address] = resolved
+        // מספר שלא זוהה לא נשמר במטמון - אחרת איש קשר שנשמר אחר כך לא יופיע בשיחות.
+        if (resolved.name != address) contactCache[address] = resolved
         return resolved
     }
 

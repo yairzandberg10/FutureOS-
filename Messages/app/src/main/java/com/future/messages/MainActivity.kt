@@ -33,8 +33,10 @@ import com.future.messages.ui.screens.ConversationListScreen
 import com.future.messages.ui.screens.GroupComposeScreen
 import com.future.messages.ui.screens.MessageThreadScreen
 import com.future.sharednav.theme.FutureTheme
+import com.future.sharednav.theme.mutedTextColor
 import com.future.messages.ui.theme.MessagesTheme
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -174,9 +176,22 @@ fun MessagesApp(theme: FutureTheme) {
         mutableStateOf(Telephony.Sms.getDefaultSmsPackage(context) == context.packageName)
     }
 
+    // נדחה עם "אל תשאל שוב": המערכת לא תציג את הבקשה שוב, ולכן המסך מציע את הגדרות האפליקציה.
+    var permissionDeniedForever by remember { mutableStateOf(false) }
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         // גם אם הרשאה משלימה (אנשי קשר/התראות) נדחתה, ממשיכים - היא לא חוסמת שימוש.
         hasPermissions = hasCorePermissions()
+        permissionDeniedForever = !hasPermissions && activity != null &&
+            CORE_PERMISSIONS.none { activity.shouldShowRequestPermissionRationale(it) }
+    }
+    // חזרה מהגדרות האפליקציה (או מכל מקום אחר) בודקת שוב את ההרשאות.
+    val resumeOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(resumeOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) hasPermissions = hasCorePermissions()
+        }
+        resumeOwner.lifecycle.addObserver(observer)
+        onDispose { resumeOwner.lifecycle.removeObserver(observer) }
     }
     val defaultAppLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         isDefaultSmsApp = Telephony.Sms.getDefaultSmsPackage(context) == context.packageName
@@ -215,8 +230,13 @@ fun MessagesApp(theme: FutureTheme) {
         }
     }
 
+    // טעינה חדשה מבטלת את הקודמת: תוצאה ישנה (ContentObserver מהיר) לא דורסת את החדשה.
+    var messagesJob by remember { mutableStateOf<Job?>(null) }
+    // שליחה קבוצתית רצה - לחיצה כפולה על "שלח" לא שולחת שוב לכל הנמענים.
+    var groupSending by remember { mutableStateOf(false) }
     fun loadMessages(threadId: Long) {
-        ioScope.launch {
+        messagesJob?.cancel()
+        messagesJob = ioScope.launch {
             messages = withContext(Dispatchers.IO) { repository.getMessages(threadId) }
         }
     }
@@ -261,7 +281,18 @@ fun MessagesApp(theme: FutureTheme) {
     }
 
     when {
-        !hasPermissions -> PermissionRequiredScreen(theme) { permissionLauncher.launch(REQUIRED_PERMISSIONS.toTypedArray()) }
+        !hasPermissions -> PermissionRequiredScreen(
+            theme = theme,
+            deniedForever = permissionDeniedForever,
+            onRequest = { permissionLauncher.launch(REQUIRED_PERMISSIONS.toTypedArray()) },
+            onOpenSettings = {
+                runCatching {
+                    context.startActivity(
+                        Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null))
+                    )
+                }
+            },
+        )
         !isDefaultSmsApp -> DefaultAppRequiredScreen(theme) {
             val intent = Intent(Telephony.Sms.Intents.ACTION_CHANGE_DEFAULT)
             intent.putExtra(Telephony.Sms.Intents.EXTRA_PACKAGE_NAME, context.packageName)
@@ -293,14 +324,14 @@ fun MessagesApp(theme: FutureTheme) {
                 onGroupComposeClick = { screen = MessagesScreen.GroupCompose },
                 onChatSetupClick = { screen = MessagesScreen.ChatSetup },
                 onCallConversation = { conversation ->
-                    context.startActivity(Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", conversation.contact.phoneNumber, null)))
+                    runCatching { context.startActivity(Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", conversation.contact.phoneNumber, null))) }
                 },
                 onAddToContacts = { conversation ->
                     val intent = Intent(Intent.ACTION_INSERT).apply {
                         type = android.provider.ContactsContract.Contacts.CONTENT_TYPE
                         putExtra(android.provider.ContactsContract.Intents.Insert.PHONE, conversation.contact.phoneNumber)
                     }
-                    context.startActivity(intent)
+                    runCatching { context.startActivity(intent) }
                 },
                 onDeleteConversation = { conversation ->
                     ioScope.launch {
@@ -360,7 +391,7 @@ fun MessagesApp(theme: FutureTheme) {
                     refreshConversations()
                     screen = MessagesScreen.List
                 },
-                onSend = { text, imageUri -> ioScope.launch {
+                onSend = { text, imageUri, onDone -> ioScope.launch {
                     // אין יותר Toast על הצלחה - בועת ההודעה עצמה מציגה "שולח.../✓ נשלח/
                     // ⚠ נכשל" בזמן אמת (ראו MessageStatus). Toast נשאר רק לכישלון מיידי
                     // (לפני שיש בכלל שורה בהיסטוריה להראות עליה סטטוס).
@@ -375,11 +406,12 @@ fun MessagesApp(theme: FutureTheme) {
                         val message = if (imageUri != null) "שליחת ה-MMS נכשלה" else "שליחת ההודעה נכשלה"
                         android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show()
                     }
+                    onDone(dispatchedOk)
                     messages = withContext(Dispatchers.IO) { repository.getMessages(current.conversation.threadId) }
                 } },
                 onCall = {
                     val intent = Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", current.conversation.contact.phoneNumber, null))
-                    context.startActivity(intent)
+                    runCatching { context.startActivity(intent) }
                 },
                 onDeleteMessage = { message ->
                     ioScope.launch {
@@ -429,7 +461,7 @@ fun MessagesApp(theme: FutureTheme) {
                 theme = theme,
                 repository = repository,
                 onCancel = { screen = MessagesScreen.List },
-                onSend = { contacts, text -> ioScope.launch {
+                onSend = { contacts, text -> if (!groupSending) { groupSending = true; ioScope.launch {
                     // "הודעה קבוצתית" בטלפוניית SMS אמיתית פירושה שליחת אותה הודעה
                     // כ-SMS נפרד לכל נמען (אין MMS-קבוצתי-אמיתי סטנדרטי חוצה-ספקים) -
                     // כל נמען מקבל thread רגיל משלו, בדיוק כמו שיחה ישירה איתו.
@@ -442,24 +474,38 @@ fun MessagesApp(theme: FutureTheme) {
                         "נכשלה שליחה ל-$failures מתוך ${contacts.size} אנשי קשר"
                     }
                     android.widget.Toast.makeText(context, summary, android.widget.Toast.LENGTH_SHORT).show()
+                    groupSending = false
                     refreshConversations()
                     screen = MessagesScreen.List
-                } }
+                } } }
             )
         } }
     }
 }
 
 @Composable
-private fun PermissionRequiredScreen(theme: FutureTheme, onRequest: () -> Unit) {
+private fun PermissionRequiredScreen(
+    theme: FutureTheme,
+    deniedForever: Boolean,
+    onRequest: () -> Unit,
+    onOpenSettings: () -> Unit,
+) {
     val focusRequester = remember { FocusRequester() }
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
                 Text("כדי להשתמש בהודעות, יש לאשר הרשאות SMS ואנשי קשר", color = theme.textColor, textAlign = TextAlign.Center)
+                if (deniedForever) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("ההרשאה נדחתה. אפשר לאשר אותה בהגדרות האפליקציה", color = theme.mutedTextColor, textAlign = TextAlign.Center)
+                }
                 Spacer(modifier = Modifier.height(16.dp))
-                FutureButton("אשר הרשאות", theme, onRequest, focusRequester = focusRequester)
+                if (deniedForever) {
+                    FutureButton("פתח הגדרות", theme, onOpenSettings, focusRequester = focusRequester)
+                } else {
+                    FutureButton("אשר הרשאות", theme, onRequest, focusRequester = focusRequester)
+                }
             }
         }
     }

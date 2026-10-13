@@ -17,7 +17,8 @@ class HeadlessSmsSendService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_RESPOND_VIA_MESSAGE) {
-            val address = intent.data?.schemeSpecificPart
+            // smsto:0501234567?body=... - הכתובת היא מה שלפני ה-'?', השאר הוא גוף ההודעה.
+            val address = intent.data?.schemeSpecificPart?.substringBefore('?')
             val text = intent.getStringExtra(Intent.EXTRA_TEXT)
             if (!address.isNullOrBlank() && !text.isNullOrBlank()) {
                 SmsRepository(applicationContext).sendMessage(address, text)

@@ -86,13 +86,15 @@ fun MessageThreadScreen(
     initialDraftText: String = "",
     initialDraftImageUri: Uri? = null,
     onBack: () -> Unit,
-    onSend: (text: String, imageUri: Uri?) -> Unit,
+    // onDone מקבל אם השליחה יצאה: הטקסט נמחק רק אז, כדי שכישלון לא יאבד את ההודעה.
+    onSend: (text: String, imageUri: Uri?, onDone: (Boolean) -> Unit) -> Unit,
     onCall: () -> Unit,
     onDeleteMessage: (Message) -> Unit,
     onForwardMessage: (Message) -> Unit
 ) {
     var textState by remember { mutableStateOf(initialDraftText) }
     var attachedImageUri by remember { mutableStateOf(initialDraftImageUri) }
+    var sending by remember { mutableStateOf(false) }
     var actionMenuMessage by remember { mutableStateOf<Message?>(null) }
     // מחיקת הודעה היא בלתי הפיכה ואין undo בשום מקום במערכת - אישור לפני.
     var pendingDelete by remember { mutableStateOf<Message?>(null) }
@@ -216,10 +218,19 @@ fun MessageThreadScreen(
                 },
                 canSend = textState.isNotBlank() || attachedImageUri != null,
                 onSend = {
-                    if (textState.isNotBlank() || attachedImageUri != null) {
-                        onSend(textState, attachedImageUri)
-                        textState = ""
-                        attachedImageUri = null
+                    // לחיצה נוספת בזמן שהשליחה רצה לא שולחת שוב את אותה הודעה.
+                    if (!sending && (textState.isNotBlank() || attachedImageUri != null)) {
+                        val sentText = textState
+                        val sentImage = attachedImageUri
+                        sending = true
+                        onSend(sentText, sentImage) { sent ->
+                            sending = false
+                            // מוחקים רק את מה שנשלח בפועל, ורק אם השליחה יצאה - אחרת הטיוטה נשארת.
+                            if (sent) {
+                                if (textState == sentText) textState = ""
+                                if (attachedImageUri == sentImage) attachedImageUri = null
+                            }
+                        }
                         textFieldFocusRequester.requestFocus()
                     }
                 },
