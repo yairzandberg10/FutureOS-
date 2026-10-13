@@ -1,7 +1,11 @@
 package com.future.clock
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.KeyEvent
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.lifecycle.Lifecycle
@@ -65,7 +69,11 @@ import com.future.sharednav.theme.rememberFutureTheme
  * נגמר (גם כש"עצור" נלחץ בהתראה).
  */
 class AlarmRingActivity : ComponentActivity() {
-    private var alarmId = -1
+    // מצב שמוצג על המסך - נשמר כ-state כדי ש-onNewIntent (מעורר נוסף בזמן שהמסך פתוח) יעדכן אותו.
+    private var alarmId by mutableIntStateOf(-1)
+    private var shownHour by mutableIntStateOf(0)
+    private var shownMinute by mutableIntStateOf(0)
+    private var shownLabel by mutableStateOf("")
     private var handled = false
 
     override fun dispatchTouchEvent(ev: android.view.MotionEvent): Boolean = true
@@ -76,10 +84,7 @@ class AlarmRingActivity : ComponentActivity() {
         setShowWhenLocked(true)
         setTurnScreenOn(true)
 
-        alarmId = intent.getIntExtra(EXTRA_ALARM_ID, -1)
-        val hour = intent.getIntExtra(EXTRA_HOUR, 0)
-        val minute = intent.getIntExtra(EXTRA_MINUTE, 0)
-        val label = intent.getStringExtra(EXTRA_LABEL).orEmpty()
+        readAlarm(intent)
 
         // מסך שנפתח בלי צלצול פעיל מאחוריו (אחרי שהתהליך נהרג, או מהתראה ישנה) נסגר מיד.
         if (savedInstanceState != null || !AlarmRingService.ringing.value) {
@@ -100,7 +105,13 @@ class AlarmRingActivity : ComponentActivity() {
         setContent {
             val theme = rememberFutureTheme()
             val stopFocus = remember { FocusRequester() }
-            LaunchedEffect(Unit) { runCatching { stopFocus.requestFocus() } }
+            LaunchedEffect(Unit) {
+                // בפריים הראשון העץ עוד לא מצויר (מסך שנפתח מהתראה) - מנסים שוב עד שהפוקוס נתפס.
+                repeat(6) {
+                    androidx.compose.runtime.withFrameNanos { }
+                    if (runCatching { stopFocus.requestFocus() }.isSuccess) return@LaunchedEffect
+                }
+            }
 
             // פעימה עדינה של העיגול סביב השעה - הסימן היחיד שמשהו "חי" על המסך.
             val pulse = rememberInfiniteTransition(label = "ringPulse")
@@ -131,14 +142,14 @@ class AlarmRingActivity : ComponentActivity() {
                         Spacer(modifier = Modifier.height(20.dp))
                         // פני שעון - גרפיקה ולא טקסט ממשק (ר' הערת הדיזיין סיסטם על גדלים מעל hero).
                         Text(
-                            "%02d:%02d".format(hour, minute),
+                            "%02d:%02d".format(shownHour, shownMinute),
                             color = theme.textColor,
                             fontSize = 64.sp,
                             fontWeight = FutureTypography.weightLight,
                             fontFamily = FutureTypography.monoFamily,
                         )
                         Text(
-                            label.ifBlank { "שעון מעורר" },
+                            shownLabel.ifBlank { "שעון מעורר" },
                             color = theme.mutedTextColor,
                             fontSize = FutureTypography.title,
                             textAlign = TextAlign.Center,
@@ -166,6 +177,21 @@ class AlarmRingActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    private fun readAlarm(intent: Intent) {
+        alarmId = intent.getIntExtra(EXTRA_ALARM_ID, -1)
+        shownHour = intent.getIntExtra(EXTRA_HOUR, 0)
+        shownMinute = intent.getIntExtra(EXTRA_MINUTE, 0)
+        shownLabel = intent.getStringExtra(EXTRA_LABEL).orEmpty()
+    }
+
+    // מעורר נוסף (או טיימר) בזמן שהמסך פתוח: מציגים את הפרטים החדשים ומאפסים את הטיפול.
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handled = false
+        readAlarm(intent)
     }
 
     /** BACK - נודניק; מקשי הווליום משתיקים את הצליל (הרטט ממשיך) בלי לסגור. */

@@ -26,7 +26,9 @@ class AlarmReceiver : BroadcastReceiver() {
             Intent.ACTION_BOOT_COMPLETED,
             Intent.ACTION_TIME_CHANGED,
             Intent.ACTION_TIMEZONE_CHANGED,
-            Intent.ACTION_MY_PACKAGE_REPLACED -> {
+            Intent.ACTION_MY_PACKAGE_REPLACED,
+            // הרשאת מעורר מדויק נשללה או ניתנה מחדש - מתזמנים מחדש עם השיטה הנכונה.
+            android.app.AlarmManager.ACTION_SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED -> {
                 Log.i(TAG, "${intent.action} - rescheduling all enabled alarms")
                 AlarmLogic.rescheduleAll(context)
             }

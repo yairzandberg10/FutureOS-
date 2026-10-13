@@ -115,15 +115,22 @@ fun AlarmScreen(theme: FutureTheme, onBack: () -> Unit, onOverlayChange: (Boolea
         alarms.addAll(AlarmLogic.getAlarms(context))
     }
 
-    fun updateAlarms() {
-        AlarmLogic.saveAlarms(context, alarms.toList())
+    // השינוי מוחל על הרשימה העדכנית בהעדפות (לא על העותק שבמסך) - צלצול שרץ ברקע
+    // כבר כיבה אזעקה חד-פעמית, ושמירה של העותק הישן הייתה מחזירה אותה להפעלה.
+    fun updateAlarms(change: (MutableList<Alarm>) -> Unit) {
+        val fresh = AlarmLogic.getAlarms(context).toMutableList()
+        change(fresh)
+        AlarmLogic.saveAlarms(context, fresh)
+        alarms.clear()
+        alarms.addAll(fresh)
     }
 
     fun setEnabled(alarm: Alarm, enabled: Boolean) {
-        val at = alarms.indexOfFirst { it.id == alarm.id }
-        if (at != -1) {
-            alarms[at] = alarm.copy(isEnabled = enabled)
-            updateAlarms()
+        updateAlarms { list ->
+            val at = list.indexOfFirst { it.id == alarm.id }
+            if (at != -1) {
+                list[at] = list[at].copy(isEnabled = enabled)
+            }
         }
     }
 
@@ -168,8 +175,7 @@ fun AlarmScreen(theme: FutureTheme, onBack: () -> Unit, onOverlayChange: (Boolea
             dangerColor = theme.dangerColor,
             onCancel = { restoreFocusTo = alarm.id; pendingDelete = null },
             onConfirm = {
-                alarms.remove(alarm)
-                updateAlarms()
+                updateAlarms { list -> list.removeAll { it.id == alarm.id } }
                 restoreFocusTo = -1
                 pendingDelete = null
             },
@@ -199,9 +205,14 @@ fun AlarmScreen(theme: FutureTheme, onBack: () -> Unit, onOverlayChange: (Boolea
                     TimePickerOverlay(editingAlarm!!, theme,
                         isNew = alarms.none { it.id == editingAlarm!!.id },
                         onSave = { updated ->
-                            val index = alarms.indexOfFirst { it.id == updated.id }
-                            if (index != -1) alarms[index] = updated else alarms.add(updated)
-                            updateAlarms()
+                            updateAlarms { list ->
+                                val index = list.indexOfFirst { it.id == updated.id }
+                                if (index != -1) {
+                                    list[index] = updated
+                                } else {
+                                    list.add(updated)
+                                }
+                            }
                             restoreFocusTo = updated.id
                             editingAlarm = null
                         },

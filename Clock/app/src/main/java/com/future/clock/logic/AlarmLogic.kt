@@ -76,7 +76,10 @@ object AlarmLogic {
             cancelAlarm(context, alarmManager, removed)
             cancelRequestCode(context, alarmManager, snoozeRequestCode(removed.id))
         }
+        val previousById = previous.associateBy { it.id }
         alarms.forEach { alarm ->
+            // נודניק פתוח של מעורר שכובה או נערך לא צולצל על הנתונים הישנים.
+            if (previousById[alarm.id] != alarm) cancelRequestCode(context, alarmManager, snoozeRequestCode(alarm.id))
             if (alarm.isEnabled) scheduleAlarm(context, alarmManager, alarm) else cancelAlarm(context, alarmManager, alarm)
         }
     }
@@ -96,6 +99,8 @@ object AlarmLogic {
         val index = alarms.indexOfFirst { it.id == alarmId }
         if (index == -1) return null
         val firedAlarm = alarms[index]
+        // מעורר שכובה לא מצלצל (גם נודניק שנשאר בתור לפני הכיבוי).
+        if (!firedAlarm.isEnabled) return null
 
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val updated = if (firedAlarm.days.isEmpty()) {

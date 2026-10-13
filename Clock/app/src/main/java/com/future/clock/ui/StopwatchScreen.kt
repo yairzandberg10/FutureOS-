@@ -9,6 +9,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.*
@@ -43,21 +44,48 @@ private fun formatElapsed(millis: Long): String {
     return "%02d:%02d.%02d".format(minutes, seconds, centis)
 }
 
+/**
+ * מצב שעון העצר ברמת התהליך: מעבר לשונית אחרת הורס את הקומפוזיציה של המסך,
+ * ולכן המצב (ריצה, זמן, הקפות) נשמר כאן ולא ב-remember.
+ */
+private object StopwatchState {
+    var isRunning by mutableStateOf(false)
+    var elapsedBeforeStart by mutableLongStateOf(0L)
+    var startedAtElapsedRealtime by mutableLongStateOf(0L)
+    var displayedElapsed by mutableLongStateOf(0L)
+    val laps = mutableStateListOf<Long>()
+}
+
+@Composable
+private fun LapRow(lapLabel: String, time: String, theme: FutureTheme) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(if (isFocused) theme.accentColor.copy(alpha = 0.15f) else Color.Transparent)
+            .focusable(interactionSource = interactionSource)
+            .bringIntoViewOnFocus()
+            .padding(vertical = FutureDimens.spacingSm),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(lapLabel, color = theme.mutedTextColor, fontSize = FutureTypography.summary)
+        Text(time, color = theme.textColor, fontSize = FutureTypography.bodyLarge, fontFamily = FutureTypography.monoFamily)
+    }
+}
+
 @Composable
 fun StopwatchScreen(theme: FutureTheme, onBack: () -> Unit) {
-    var isRunning by remember { mutableStateOf(false) }
-    var elapsedBeforeStart by remember { mutableLongStateOf(0L) }
-    var startedAtElapsedRealtime by remember { mutableLongStateOf(0L) }
-    var displayedElapsed by remember { mutableLongStateOf(0L) }
-    val laps = remember { mutableStateListOf<Long>() }
+    val laps = StopwatchState.laps
     val snackbar = com.future.sharednav.components.rememberFutureSnackbarState()
     // אותה תקלת "אין פוקוס" שתועדה ותוקנה במחשבון/ממיר יחידות - ראו שם.
     val focusRequester = remember { FocusRequester() }
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
 
-    LaunchedEffect(isRunning) {
-        while (isRunning) {
-            displayedElapsed = elapsedBeforeStart + (android.os.SystemClock.elapsedRealtime() - startedAtElapsedRealtime)
+    LaunchedEffect(StopwatchState.isRunning) {
+        while (StopwatchState.isRunning) {
+            StopwatchState.displayedElapsed = StopwatchState.elapsedBeforeStart + (android.os.SystemClock.elapsedRealtime() - StopwatchState.startedAtElapsedRealtime)
             delay(30)
         }
     }
@@ -69,7 +97,7 @@ fun StopwatchScreen(theme: FutureTheme, onBack: () -> Unit) {
 
                 Box(modifier = Modifier.fillMaxWidth().padding(vertical = FutureDimens.spacingXl), contentAlignment = Alignment.Center) {
                     Text(
-                        formatElapsed(displayedElapsed),
+                        formatElapsed(StopwatchState.displayedElapsed),
                         color = theme.textColor,
                         fontSize = FutureTypography.hero,
                         fontWeight = FutureTypography.weightLight,
@@ -79,9 +107,9 @@ fun StopwatchScreen(theme: FutureTheme, onBack: () -> Unit) {
 
                 // סיבוב השניות מתחת לשעון (ui_kits/clock). המספרים הגדולים
                 // משתנים לאט מכדי למסור "רץ" במבט חטוף; הפס עושה את זה.
-                if (isRunning) {
+                if (StopwatchState.isRunning) {
                     FutureProgressBar(
-                        progress = (displayedElapsed % 60_000L) / 60_000f,
+                        progress = (StopwatchState.displayedElapsed % 60_000L) / 60_000f,
                         theme = theme,
                         modifier = Modifier.padding(start = FutureDimens.spacingXxl, end = FutureDimens.spacingXxl, bottom = FutureDimens.spacingLg),
                     )
@@ -91,24 +119,24 @@ fun StopwatchScreen(theme: FutureTheme, onBack: () -> Unit) {
                 // השקופים של 84dp שהיו כאן: אלה לא היו בדיזיין סיסטם ולקחו
                 // חצי מגובה המסך, כך שכמעט לא נשאר מקום לרשימת ההקפות.
                 ClockActionRow(
-                    primaryLabel = if (isRunning) "עצור" else "התחל",
-                    primaryVariant = if (isRunning) FutureButtonVariant.Destructive else FutureButtonVariant.Primary,
+                    primaryLabel = if (StopwatchState.isRunning) "עצור" else "התחל",
+                    primaryVariant = if (StopwatchState.isRunning) FutureButtonVariant.Destructive else FutureButtonVariant.Primary,
                     onPrimary = {
-                        if (isRunning) {
-                            elapsedBeforeStart = displayedElapsed
-                            isRunning = false
+                        if (StopwatchState.isRunning) {
+                            StopwatchState.elapsedBeforeStart = StopwatchState.displayedElapsed
+                            StopwatchState.isRunning = false
                         } else {
-                            startedAtElapsedRealtime = android.os.SystemClock.elapsedRealtime()
-                            isRunning = true
+                            StopwatchState.startedAtElapsedRealtime = android.os.SystemClock.elapsedRealtime()
+                            StopwatchState.isRunning = true
                         }
                     },
-                    secondaryLabel = if (isRunning) "הקפה" else "איפוס",
+                    secondaryLabel = if (StopwatchState.isRunning) "הקפה" else "איפוס",
                     onSecondary = {
-                        if (isRunning) {
-                            laps.add(0, displayedElapsed)
+                        if (StopwatchState.isRunning) {
+                            laps.add(0, StopwatchState.displayedElapsed)
                         } else {
-                            elapsedBeforeStart = 0L
-                            displayedElapsed = 0L
+                            StopwatchState.elapsedBeforeStart = 0L
+                            StopwatchState.displayedElapsed = 0L
                             laps.clear()
                         }
                     },
@@ -122,14 +150,7 @@ fun StopwatchScreen(theme: FutureTheme, onBack: () -> Unit) {
                         contentPadding = PaddingValues(horizontal = FutureDimens.spacingXl, vertical = FutureDimens.spacingXs),
                     ) {
                         itemsIndexed(laps) { index, lap ->
-                            Row(
-                                modifier = Modifier.fillMaxWidth().padding(vertical = FutureDimens.spacingSm),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Text("הקפה ${laps.size - index}", color = theme.mutedTextColor, fontSize = FutureTypography.summary)
-                                Text(formatElapsed(lap), color = theme.textColor, fontSize = FutureTypography.bodyLarge, fontFamily = FutureTypography.monoFamily)
-                            }
+                            LapRow(lapLabel = "הקפה ${laps.size - index}", time = formatElapsed(lap), theme = theme)
                         }
                     }
                 }
