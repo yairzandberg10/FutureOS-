@@ -134,7 +134,7 @@ fun PlayerScreen(theme: FutureTheme, file: File, onBack: () -> Unit) {
 
     var menuOpen by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
-    onOptionsKeyPress { menuOpen = !menuOpen }
+    onOptionsKeyPress { if (!confirmDelete) menuOpen = !menuOpen }
     // # נצרך ב-FutureUI ומגיע רק כשידור (ר' SharedKeypadNav).
     com.future.sharednav.nav.onPoundKeyPress { if (!menuOpen && !confirmDelete) cycleSpeed() }
 

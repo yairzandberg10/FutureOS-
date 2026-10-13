@@ -71,13 +71,18 @@ import com.future.sharednav.theme.mutedTextColor
 import com.future.sharednav.theme.readableAccentColor
 import com.future.sharednav.theme.subtleTextColor
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import com.future.recorder.data.RecorderState
 import java.io.File
 
 @Composable
 fun RecorderHomeScreen(theme: FutureTheme, onPlay: (File) -> Unit) {
     val context = LocalContext.current
-    val state by RecorderService.state.collectAsState()
+    // בלי רמות הקול (מתעדכנות כל 80ms) - אחרת כל המסך מורכב מחדש בכל דגימה.
+    val state by remember { RecorderService.state.map { it.copy(levels = emptyList()) }.distinctUntilChanged() }
+        .collectAsState(RecorderService.state.value.copy(levels = emptyList()))
     var recordings by remember { mutableStateOf<List<Recording>?>(null) }
     var reloadKey by remember { mutableStateOf(0) }
     LaunchedEffect(state.savedCount, reloadKey) {
@@ -87,14 +92,6 @@ fun RecorderHomeScreen(theme: FutureTheme, onPlay: (File) -> Unit) {
         state.error?.let {
             Toast.makeText(context, it, Toast.LENGTH_LONG).show()
             RecorderService.clearError()
-        }
-    }
-
-    // השעון רץ לפי הפריים רק בזמן הקלטה - השירות לא משדר כל עשירית שנייה
-    var now by remember { mutableLongStateOf(android.os.SystemClock.uptimeMillis()) }
-    LaunchedEffect(state.status) {
-        while (state.status == RecorderStatus.Recording) {
-            withFrameMillis { now = android.os.SystemClock.uptimeMillis() }
         }
     }
 
@@ -120,7 +117,7 @@ fun RecorderHomeScreen(theme: FutureTheme, onPlay: (File) -> Unit) {
     var menuFor by remember { mutableStateOf<Recording?>(null) }
     var renaming by remember { mutableStateOf<Recording?>(null) }
     var deleting by remember { mutableStateOf<Recording?>(null) }
-    onOptionsKeyPress { menuFor = if (menuFor == null) focused else null }
+    onOptionsKeyPress { if (renaming == null && deleting == null) menuFor = if (menuFor == null) focused else null }
 
     val listState = rememberLazyListState()
 
@@ -136,9 +133,7 @@ fun RecorderHomeScreen(theme: FutureTheme, onPlay: (File) -> Unit) {
                 item(key = "recorder") {
                     RecorderPanel(
                         theme = theme,
-                        status = state.status,
-                        elapsedMs = state.elapsedMs(now),
-                        levels = state.levels,
+                        state = state,
                         mainButton = mainButton,
                         onStart = ::startRecording,
                         onPause = { RecorderService.send(context, RecorderService.ACTION_PAUSE) },
@@ -214,6 +209,7 @@ fun RecorderHomeScreen(theme: FutureTheme, onPlay: (File) -> Unit) {
                 if (Recordings.rename(rec.file, name) == null) {
                     Toast.makeText(context, "השם לא חוקי או כבר קיים", Toast.LENGTH_SHORT).show()
                 }
+                focused = null
                 reloadKey++
             },
         )
@@ -226,6 +222,7 @@ fun RecorderHomeScreen(theme: FutureTheme, onPlay: (File) -> Unit) {
             onConfirm = {
                 deleting = null
                 Recordings.delete(rec.file)
+                focused = null
                 reloadKey++
             },
         )
@@ -235,9 +232,7 @@ fun RecorderHomeScreen(theme: FutureTheme, onPlay: (File) -> Unit) {
 @Composable
 private fun RecorderPanel(
     theme: FutureTheme,
-    status: RecorderStatus,
-    elapsedMs: Long,
-    levels: List<Float>,
+    state: RecorderState,
     mainButton: FocusRequester,
     onStart: () -> Unit,
     onPause: () -> Unit,
@@ -245,6 +240,15 @@ private fun RecorderPanel(
     onStop: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val status = state.status
+    // השעון רץ לפי הפריים רק בזמן הקלטה - השירות לא משדר כל עשירית שנייה. הקריאה כאן,
+    // כך שרק הפאנל מתעדכן (לא כל המסך).
+    var now by remember { mutableLongStateOf(android.os.SystemClock.uptimeMillis()) }
+    LaunchedEffect(status) {
+        while (status == RecorderStatus.Recording) {
+            withFrameMillis { now = android.os.SystemClock.uptimeMillis() }
+        }
+    }
     Column(modifier = modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             when (status) {
@@ -258,13 +262,13 @@ private fun RecorderPanel(
             modifier = Modifier.padding(top = FutureDimens.spacingSm),
         )
         Text(
-            formatDuration(elapsedMs),
+            formatDuration(state.elapsedMs(now)),
             color = theme.textColor,
             fontSize = FutureTypography.hero,
             fontWeight = FutureTypography.weightLight,
             fontFamily = FutureTypography.monoFamily,
         )
-        LevelBars(levels = levels, active = status == RecorderStatus.Recording, theme = theme)
+        LevelBars(active = status == RecorderStatus.Recording, theme = theme)
         Row(
             modifier = Modifier.fillMaxWidth().padding(top = FutureDimens.spacingMd, bottom = FutureDimens.spacingSm),
             horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm),
@@ -285,13 +289,17 @@ private fun RecorderPanel(
             }
         }
     }
-    // כשהמצב מתחלף הכפתור הממוקד נעלם ואחר בא במקומו - הפוקוס עובר לכפתור הראשי
-    LaunchedEffect(status) { runCatching { mainButton.requestFocus() } }
+    // כשעוברים בין "מוכן" להקלטה הכפתור הממוקד נעלם ואחר בא במקומו - הפוקוס עובר לכפתור הראשי.
+    // השהה/המשך לא מזיזים את הפוקוס (מפתח לפי "מוכן" בלבד, לא לפי הסטטוס).
+    LaunchedEffect(status == RecorderStatus.Idle) { runCatching { mainButton.requestFocus() } }
 }
 
 /** גלי קול: עמודה לכל דגימה, החדשה ביותר מימין (תחילת השורה ב-RTL). */
 @Composable
-private fun LevelBars(levels: List<Float>, active: Boolean, theme: FutureTheme) {
+private fun LevelBars(active: Boolean, theme: FutureTheme) {
+    // הרמות נקראות רק בשלב הציור - דגימה חדשה לא מרכיבה מחדש את המסך.
+    val levelsFlow = remember { RecorderService.state.map { it.levels } }
+    val levels by levelsFlow.collectAsState(emptyList())
     val color = if (active) theme.readableAccentColor else theme.textColor.copy(alpha = 0.25f)
     val idle = theme.textColor.copy(alpha = 0.12f)
     Canvas(modifier = Modifier.fillMaxWidth().height(56.dp).padding(horizontal = FutureDimens.spacingSm)) {

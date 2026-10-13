@@ -82,8 +82,23 @@ class RecorderService : Service() {
 
     private fun start() {
         if (recorder != null) return
-        val file = Recordings.newFile(this)
-        startForeground(NOTIFICATION_ID, buildNotification(paused = false), ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE)
+        // קבצים חלקיים מהפעלה שנהרגה באמצע לא נשארים על הדיסק.
+        Recordings.dir(this).listFiles { f -> f.name.endsWith(PART_SUFFIX) }?.forEach { it.delete() }
+        if (Recordings.dir(this).usableSpace < MIN_FREE_BYTES) {
+            failStart("אין מקום פנוי להקלטה")
+            return
+        }
+        // ההקלטה נכתבת לקובץ .part (לא נראה ברשימה) ונשמרת בשמה הסופי רק אחרי עצירה.
+        val file = try {
+            val partFile = File(Recordings.newFile(this).path + PART_SUFFIX)
+            // startForeground נזרק כשההרשאה נשללה - בלי הטיפול הזה השירות קורס לפני ההתחלה.
+            startForeground(NOTIFICATION_ID, buildNotification(paused = false), ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE)
+            partFile
+        } catch (e: Exception) {
+            Log.e(TAG, "foreground start failed", e)
+            failStart("לא ניתן להתחיל הקלטה - בדוק הרשאת מיקרופון")
+            return
+        }
         try {
             // prepare/start נקראים במפורש על r, ולא בתוך apply: שם start() נפתר
             // ל-RecorderService.start() עצמו, ו-recorder עדיין null - רקורסיה
@@ -97,6 +112,9 @@ class RecorderService : Service() {
             r.setAudioSamplingRate(44_100)
             r.setAudioChannels(1)
             r.setOutputFile(file.path)
+            // שיחה נכנסת, מיקרופון שנלקח או אחסון מלא עוצרים את המקליט - בלי זה ההקלטה
+            // המשיכה להירשם על המסך כאילו ממשיכה.
+            r.setOnErrorListener { _, _, _ -> onRecorderError("ההקלטה נעצרה - שגיאה במיקרופון או באחסון") }
             r.prepare()
             r.start()
         } catch (e: Exception) {
@@ -104,9 +122,7 @@ class RecorderService : Service() {
             recorder?.release()
             recorder = null
             file.delete()
-            _state.value = RecorderState(savedCount = _state.value.savedCount, error = "לא ניתן להתחיל הקלטה - המיקרופון תפוס?")
-            stopForeground(STOP_FOREGROUND_REMOVE)
-            stopSelf()
+            failStart("לא ניתן להתחיל הקלטה - המיקרופון תפוס?")
             return
         }
         wakeLock = (getSystemService(Context.POWER_SERVICE) as PowerManager)
@@ -119,6 +135,19 @@ class RecorderService : Service() {
             savedCount = _state.value.savedCount,
         )
         handler.post(levelTick)
+    }
+
+    private fun failStart(message: String) {
+        _state.value = RecorderState(savedCount = _state.value.savedCount, error = message)
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
+    }
+
+    /** שגיאת מקליט באמצע הקלטה: שומרים מה שנאסף ומציגים הסבר במסך. */
+    private fun onRecorderError(message: String) {
+        if (recorder == null) return
+        stop()
+        _state.value = _state.value.copy(error = message)
     }
 
     private fun pause() {
@@ -142,15 +171,23 @@ class RecorderService : Service() {
         val s = _state.value
         var saved = false
         recorder?.let { r ->
-            // stop() זורק אם לא נאסף אף פריים (הקלטה של רגע) - אז הקובץ ריק ונמחק
+            // stop() זורק אם לא נאסף אף פריים (הקלטה של רגע) - אז הקובץ ריק ונמחק.
+            // הסף הוא שנייה: הקלטה ארוכה לא נמחקת בשקט גם אם העצירה נכשלה.
             saved = runCatching { r.stop() }.isSuccess
             r.release()
         }
         recorder = null
-        if (!saved) s.file?.delete()
+        val part = s.file
+        val target = part?.let { File(it.path.removeSuffix(PART_SUFFIX)) }
+        val keep = saved || s.elapsedMs() >= MIN_KEPT_MS
+        if (part != null && !keep) part.delete()
+        val kept = part != null && target != null && keep && part.renameTo(target)
         wakeLock?.let { if (it.isHeld) it.release() }
         wakeLock = null
-        _state.value = RecorderState(savedCount = s.savedCount + if (saved) 1 else 0)
+        _state.value = RecorderState(
+            savedCount = s.savedCount + if (kept) 1 else 0,
+            error = if (keep && !saved) "ההקלטה לא נשמרה במלואה" else null,
+        )
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
@@ -180,7 +217,7 @@ class RecorderService : Service() {
         return Notification.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle(if (paused) "ההקלטה מושהית" else "מקליט")
-            .setContentText(_state.value.file?.nameWithoutExtension ?: "רשמקול")
+            .setContentText(_state.value.file?.let { File(it.path.removeSuffix(PART_SUFFIX)).nameWithoutExtension } ?: "רשמקול")
             .setContentIntent(open)
             .setOngoing(true)
             .addAction(Notification.Action.Builder(null, "עצור ושמור", stop).build())
@@ -192,6 +229,9 @@ class RecorderService : Service() {
         private const val CHANNEL_ID = "recording"
         private const val NOTIFICATION_ID = 7
         private const val MAX_LEVELS = 48
+        private const val PART_SUFFIX = ".part"
+        private const val MIN_KEPT_MS = 1_000L
+        private const val MIN_FREE_BYTES = 5L * 1024 * 1024
         const val ACTION_START = "com.future.recorder.START"
         const val ACTION_PAUSE = "com.future.recorder.PAUSE"
         const val ACTION_RESUME = "com.future.recorder.RESUME"
