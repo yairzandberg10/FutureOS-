@@ -1745,6 +1745,8 @@ class KeyboardService : InputMethodService() {
             return
         }
 
+        // מילה שבהרכבה נשמרת לפני התמלול (כמו שהיא מוצגת), ולא נמחקת מהמצב כשהזיהוי מתחיל
+        currentInputConnection?.let { ic -> if (digitSequence.isNotEmpty()) commitCurrentWord(ic, appendSpace = false) }
         resetComposing()
         isListening = true
         isVoiceProcessing = false
