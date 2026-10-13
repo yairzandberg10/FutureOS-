@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
@@ -82,6 +84,8 @@ class BluetoothActions(
     val openSystemSettings: () -> Unit,
     /** false כשאין קבצים שהתקבלו. */
     val openReceivedFiles: () -> Boolean,
+    /** מסך הגדרות האפליקציה - לאישור הרשאה שנדחתה לצמיתות (אחרי זה המערכת לא מציגה דיאלוג). */
+    val openAppSettings: () -> Unit,
 )
 
 private sealed interface Dialog {
@@ -186,6 +190,7 @@ fun BluetoothApp(
                     focusAddress = lastOpened,
                     onMenu = { menuOpen = true },
                     onRequestPermission = actions.requestPermission,
+                    onOpenAppSettings = actions.openAppSettings,
                     onToggleRadio = ::toggleRadio,
                     onRenamePhone = { dialog = Dialog.RenamePhone },
                     onOpenDevice = openFromList,
@@ -318,6 +323,7 @@ private fun RootScreen(
     focusAddress: String?,
     onMenu: () -> Unit,
     onRequestPermission: () -> Unit,
+    onOpenAppSettings: () -> Unit,
     onToggleRadio: () -> Unit,
     onRenamePhone: () -> Unit,
     onOpenDevice: (BluetoothDeviceInfo) -> Unit,
@@ -338,7 +344,7 @@ private fun RootScreen(
                 title = "אין בלוטות' במכשיר הזה",
                 textColor = theme.textColor,
             )
-            !hasPermission -> PermissionPrompt(theme, onRequestPermission)
+            !hasPermission -> PermissionPrompt(theme, onRequestPermission, onOpenAppSettings)
             else -> DeviceLists(controller, theme, focusAddress, onToggleRadio, onRenamePhone, onOpenDevice, onShowAll, onScan, onPair)
         }
     }
@@ -621,7 +627,7 @@ private fun ScanCard(scanning: Boolean, found: Int, theme: FutureTheme, onClick:
 }
 
 @Composable
-private fun PermissionPrompt(theme: FutureTheme, onRequest: () -> Unit) {
+private fun PermissionPrompt(theme: FutureTheme, onRequest: () -> Unit, onOpenAppSettings: () -> Unit) {
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
     Column(
@@ -631,11 +637,14 @@ private fun PermissionPrompt(theme: FutureTheme, onRequest: () -> Unit) {
         EmptyState(
             icon = FutureIcons.Bluetooth,
             title = "אין הרשאה לבלוטות'",
-            subtitle = "לחץ על אישור כדי לאשר",
+            subtitle = "לחץ על אישור כדי לאשר. אם ההרשאה נדחתה לצמיתות - פתח את הגדרות האפליקציה",
             textColor = theme.textColor,
             modifier = Modifier.weight(1f),
         )
+        // "הגדרות" תמיד זמין כאן: אחרי דחייה לצמיתות אישור לא מציג דיאלוג, והמשתמש צריך דרך לתקן.
         FutureButton("אשר", theme, onRequest, focusRequester = focus)
+        Spacer(modifier = Modifier.height(FutureDimens.spacingSm))
+        FutureButton("הגדרות האפליקציה", theme, onOpenAppSettings, variant = FutureButtonVariant.Secondary)
     }
 }
 

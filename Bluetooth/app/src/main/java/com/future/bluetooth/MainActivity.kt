@@ -90,6 +90,7 @@ class MainActivity : ComponentActivity() {
                     requestEnable = { enableLauncher.launch(controller.requestEnableIntent()) },
                     openSystemSettings = { openSystemBluetoothSettings() },
                     openReceivedFiles = { openReceivedFiles() },
+                    openAppSettings = { openAppDetails() },
                 )
             }
 
@@ -101,6 +102,20 @@ class MainActivity : ComponentActivity() {
                     actions = actions,
                 )
             }
+        }
+    }
+
+    /** מסך ההגדרות של האפליקציה, שם מאשרים הרשאה שנדחתה לצמיתות. */
+    private fun openAppDetails() {
+        try {
+            startActivity(
+                Intent(
+                    android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                    android.net.Uri.fromParts("package", packageName, null),
+                )
+            )
+        } catch (e: Exception) {
+            // אין מסך הגדרות - אין לאן לפנות.
         }
     }
 
