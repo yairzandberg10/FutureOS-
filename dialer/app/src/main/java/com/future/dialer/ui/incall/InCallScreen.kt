@@ -24,8 +24,8 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -84,9 +84,10 @@ fun InCallScreen(
     val quickMessage by viewModel.isQuickMessageVisible.collectAsState()
 
     // אחרי שהשיחה נגמרת callState הוא null והמשך מתאפס - שומרים את מה שהיה.
-    var wasAnswered by remember { mutableStateOf(false) }
-    var lastDuration by remember { mutableLongStateOf(0L) }
-    var ended by remember { mutableStateOf(false) }
+    // rememberSaveable: יצירה מחדש של הפעילות (סיבוב, הריגה ברקע) לא תשכח שהשיחה נענתה.
+    var wasAnswered by rememberSaveable { mutableStateOf(false) }
+    var lastDuration by rememberSaveable { mutableStateOf(0L) }
+    var ended by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(callState, duration) {
         if (callState == Call.STATE_ACTIVE || callState == Call.STATE_HOLDING) wasAnswered = true
         if (duration > 0) lastDuration = duration
@@ -95,6 +96,7 @@ fun InCallScreen(
     LaunchedEffect(callState) {
         if (callState == null) {
             viewModel.closeQuickMessage()
+            viewModel.clearDtmfDigits()
             if (wasAnswered) ended = true else onCallEnded()
         }
     }
@@ -240,15 +242,18 @@ private fun ActiveCall(
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             CallerAvatar(name, phoneNumber, theme, ActiveAvatar)
-            Text(
-                name,
-                color = theme.textColor,
-                fontSize = type.screenTitle,
-                fontWeight = FutureTypography.weightBold,
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-                modifier = Modifier.padding(horizontal = FutureDimens.screenPadding),
-            )
+            // מספר בלי שם מוצג מתוך RTL - בלי זה התווים מתהפכים.
+            CompositionLocalProvider(LocalLayoutDirection provides if (name == phoneNumber) LayoutDirection.Ltr else LayoutDirection.Rtl) {
+                Text(
+                    name,
+                    color = theme.textColor,
+                    fontSize = type.screenTitle,
+                    fontWeight = FutureTypography.weightBold,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    modifier = Modifier.padding(horizontal = FutureDimens.screenPadding),
+                )
+            }
             // "מתקשר" רק עד המענה. המונה רץ מרגע שהשיחה התחברה, ולכן הוא גם מסמן
             // חיבור - מצב השיחה לבדו נשאר לפעמים "מתקשר" אחרי שהשיחה כבר פעילה.
             val connected = callState == Call.STATE_ACTIVE || duration > 0
@@ -373,13 +378,15 @@ private fun EndedCall(
     ) {
         CallerAvatar(name, phoneNumber, theme, ActiveAvatar)
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            Text(
-                name,
-                color = theme.textColor,
-                fontSize = type.screenTitle,
-                fontWeight = FutureTypography.weightBold,
-                textAlign = TextAlign.Center,
-            )
+            CompositionLocalProvider(LocalLayoutDirection provides if (name == phoneNumber) LayoutDirection.Ltr else LayoutDirection.Rtl) {
+                Text(
+                    name,
+                    color = theme.textColor,
+                    fontSize = type.screenTitle,
+                    fontWeight = FutureTypography.weightBold,
+                    textAlign = TextAlign.Center,
+                )
+            }
             Text("השיחה הסתיימה · ${CallFormat.duration(duration)}", color = theme.mutedTextColor, fontSize = type.body)
         }
         Column(

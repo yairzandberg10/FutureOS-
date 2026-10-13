@@ -47,11 +47,15 @@ class InCallViewModel : ViewModel() {
 
     private var timerJob: kotlinx.coroutines.Job? = null
 
-    /** מונה המשך. כניסה חוזרת למסך השיחה מחליפה את המונה הקודם ולא מוסיפה עוד אחד. */
+    /**
+     * מונה המשך. כניסה חוזרת למסך השיחה מחליפה את המונה הקודם ולא מוסיפה עוד אחד.
+     * הלולאה עוצרת כשאין שיחה פעילה - ה-ViewModel חי כל חיי הפעילות, ולולאה בלי עצירה
+     * הייתה רצה לנצח. המשך האחרון נשמר ב-callDuration.
+     */
     fun startDurationTimer() {
         timerJob?.cancel()
         timerJob = viewModelScope.launch {
-            while (true) {
+            while (CallService.activeCall.value != null) {
                 val connectTime = CallService.activeCall.value?.details?.connectTimeMillis ?: 0L
                 _callDuration.value = if (connectTime > 0) {
                     (System.currentTimeMillis() - connectTime) / 1000
@@ -102,6 +106,11 @@ class InCallViewModel : ViewModel() {
 
     fun onDtmfDigitReleased() {
         CallService.stopDtmfTone()
+    }
+
+    /** מנקה את ספרות ה-DTMF של השיחה שנגמרה, כדי שלא יופיעו בשיחה הבאה. */
+    fun clearDtmfDigits() {
+        _dtmfDigits.value = ""
     }
 
     fun toggleRecording(context: Context) {

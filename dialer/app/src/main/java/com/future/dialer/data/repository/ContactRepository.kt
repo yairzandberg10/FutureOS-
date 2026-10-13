@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import android.provider.ContactsContract
 import android.util.Log
+import com.future.dialer.R
 import com.future.dialer.data.model.Contact
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -60,7 +61,7 @@ class ContactRepository(private val context: Context) {
                     // שורה אחת לכל איש קשר ברשימה - אנשי קשר עם כמה מספרים
                     // חוזרים כמה פעמים ב-Phone.CONTENT_URI, זה שובר את המיון האלפביתי.
                     if (id.isEmpty() || !seenIds.add(id)) continue
-                    val name = if (nameIndex != -1) it.getString(nameIndex) ?: "Unknown" else "Unknown"
+                    val name = if (nameIndex != -1) it.getString(nameIndex) ?: context.getString(R.string.unknown) else context.getString(R.string.unknown)
                     val photo = if (photoIndex != -1) it.getString(photoIndex) else null
                     val starred = starredIndex != -1 && it.getInt(starredIndex) == 1
 

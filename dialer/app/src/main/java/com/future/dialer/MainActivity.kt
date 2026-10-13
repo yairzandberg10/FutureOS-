@@ -55,7 +55,9 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -80,6 +82,7 @@ import com.future.dialer.ui.contacts.SearchScreen
 import com.future.dialer.ui.dialpad.DialpadScreen
 import com.future.dialer.ui.contacts.ContactsTabScreen
 import com.future.dialer.ui.CallFormat
+import com.future.dialer.ui.requestFocusWhenAttached
 import com.future.dialer.data.model.CallFilter
 import com.future.dialer.ui.incall.InCallScreen
 import com.future.dialer.ui.incall.InCallViewModel
@@ -397,6 +400,9 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        // החזקת מקש ספרה/כוכבית/סולמית מייצרת אירועים חוזרים - בלי לסנן, כל אחד הוסיף ספרה
+        // ושלח טון DTMF נוסף. DEL וכפתורי הניווט נשארים עם חזרה (מחיקה מהירה).
+        if (event != null && event.repeatCount > 0 && digitFor(keyCode) != null) return true
         val currentCallState = CallService.callState.value
         val isCallActive = currentCallState == android.telecom.Call.STATE_ACTIVE
         // שיחה נכנסת שעדיין לא נענתה - "מצלצלת" - חייבת להישאר עד למענה/דחייה
@@ -780,7 +786,7 @@ fun MainScreen(
             fun minutes(seconds: Long): String = "${(seconds + 59) / 60} דק׳"
             com.future.sharednav.components.FutureSettingItem(
                 title = "התקבלו",
-                summary = "${stats.incomingCount} שיחות",
+                summary = callCountText(stats.incomingCount),
                 icon = FutureIcons.CallReceived,
                 iconTint = CallFormat.colorOf(com.future.dialer.data.model.CallType.INCOMING, theme),
                 theme = theme,
@@ -789,7 +795,7 @@ fun MainScreen(
             )
             com.future.sharednav.components.FutureSettingItem(
                 title = "חויגו",
-                summary = "${stats.outgoingCount} שיחות",
+                summary = callCountText(stats.outgoingCount),
                 icon = FutureIcons.CallMade,
                 iconTint = CallFormat.colorOf(com.future.dialer.data.model.CallType.OUTGOING, theme),
                 theme = theme,
@@ -798,7 +804,7 @@ fun MainScreen(
             )
             com.future.sharednav.components.FutureSettingItem(
                 title = "סה״כ דקות שיחה",
-                summary = "${stats.missedCount} לא נענו",
+                summary = callCountText(stats.incomingCount + stats.outgoingCount),
                 icon = FutureIcons.Call,
                 theme = theme,
                 onClick = null,
@@ -864,6 +870,9 @@ private fun OngoingCallBanner(name: String, onReturn: () -> Unit) {
                 fontWeight = FontWeight.Medium,
                 style = MaterialTheme.typography.bodyMedium,
                 maxLines = 1,
+                // שם ארוך נחתך בסוף, ו"חזרה לשיחה" נשאר תמיד גלוי.
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false),
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
@@ -875,23 +884,31 @@ private fun OngoingCallBanner(name: String, onReturn: () -> Unit) {
     }
 }
 
+/** מספר שיחות בניסוח נכון לרבים וליחיד ("1 שיחות" היה שבור). */
+private fun callCountText(count: Int): String = if (count == 1) "שיחה אחת" else "$count שיחות"
+
+/** מסך "הפוך לאפליקציית הטלפון הראשית": לחצן ההגדרה מקבל פוקוס מיד, כדי שמקש OK יעבוד בלי ניווט. */
 @Composable
 private fun DefaultDialerRequiredScreen(onRequest: () -> Unit) {
+    val theme = LocalFutureTheme.current
+    val buttonFocus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { buttonFocus.requestFocusWhenAttached() }
     Box(
-        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
+        modifier = Modifier.fillMaxSize().background(theme.backgroundColor),
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
             Text(
                 text = stringResource(R.string.default_dialer_required),
-                color = MaterialTheme.colorScheme.onBackground,
+                color = theme.textColor,
                 textAlign = TextAlign.Center,
             )
             Spacer(modifier = Modifier.height(16.dp))
             FutureButton(
                 text = stringResource(R.string.set_as_default_dialer),
-                theme = LocalFutureTheme.current,
+                theme = theme,
                 onClick = onRequest,
+                focusRequester = buttonFocus,
             )
         }
     }

@@ -99,14 +99,17 @@ fun ContactScreen(
                     size = HeroAvatar,
                     photoUri = contact?.photoUri,
                 )
-                Text(
-                    shownName,
-                    color = theme.textColor,
-                    fontSize = type.screenTitle,
-                    fontWeight = FutureTypography.weightBold,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(horizontal = FutureDimens.screenPadding),
-                )
+                // מספר בלי שם מוצג מתוך RTL - בלי זה התווים מתהפכים.
+                CompositionLocalProvider(LocalLayoutDirection provides if (shownName == number) LayoutDirection.Ltr else LayoutDirection.Rtl) {
+                    Text(
+                        shownName,
+                        color = theme.textColor,
+                        fontSize = type.screenTitle,
+                        fontWeight = FutureTypography.weightBold,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = FutureDimens.screenPadding),
+                    )
+                }
                 if (shownName != number) {
                     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
                         Text(number, color = theme.mutedTextColor, fontSize = type.body)

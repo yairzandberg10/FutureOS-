@@ -75,7 +75,7 @@ fun CallLogScreen(
         if (groups.isEmpty()) {
             EmptyState(
                 icon = if (filter == CallFilter.MISSED) FutureIcons.CallMissed else FutureIcons.Call,
-                title = if (filter == CallFilter.ALL) "אין שיחות" else "אין שיחות ב${filter.label}",
+                title = emptyTitleOf(filter),
                 subtitle = if (filter == CallFilter.ALL) "הקלד מספר כדי להתקשר" else "בחר הכל כדי לראות את כל השיחות",
                 textColor = theme.textColor,
                 modifier = Modifier.weight(1f).fillMaxWidth(),
@@ -115,4 +115,14 @@ fun CallLogScreen(
             }
         }
     }
+}
+
+/** כותרת המסך הריק לכל פילטר - משפט שלם בעברית (לא "אין שיחות" + שם הפילטר). */
+private fun emptyTitleOf(filter: CallFilter): String = when (filter) {
+    CallFilter.ALL -> "אין שיחות"
+    CallFilter.MISSED -> "אין שיחות שלא נענו"
+    CallFilter.INCOMING -> "אין שיחות שהתקבלו"
+    CallFilter.OUTGOING -> "אין שיחות שחויגו"
+    CallFilter.REJECTED -> "אין שיחות שנדחו"
+    CallFilter.BLOCKED -> "אין שיחות שנחסמו"
 }

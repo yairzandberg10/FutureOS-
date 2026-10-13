@@ -79,12 +79,23 @@ class CallService : InCallService() {
         }
     }
 
-    /** שם איש הקשר של השיחה, ואם אין - המספר. קודם ההתראה הציגה תמיד מספר. */
+    /**
+     * שם איש הקשר של השיחה, ואם אין - המספר. קודם ההתראה הציגה תמיד מספר.
+     * השם נשאלה מספק אנשי הקשר פעם אחת לכל מספר ונשמר - בלי זה כל מעבר מצב של Telecom
+     * הריץ שאילתה סינכרונית על ה-main thread.
+     */
     private fun callerLabel(): String {
         val number = _activeCall.value?.details?.handle?.schemeSpecificPart
         if (number.isNullOrBlank()) return "מספר חסוי"
-        return com.future.sharednav.contacts.ContactLookup.nameForNumber(this, number) ?: number
+        if (number != labelCacheNumber) {
+            labelCacheNumber = number
+            labelCacheName = com.future.sharednav.contacts.ContactLookup.nameForNumber(this, number)
+        }
+        return labelCacheName ?: number
     }
+
+    private var labelCacheNumber: String? = null
+    private var labelCacheName: String? = null
 
     private fun callUiIntent(requestCode: Int): PendingIntent {
         val launchIntent = Intent(applicationContext, MainActivity::class.java)

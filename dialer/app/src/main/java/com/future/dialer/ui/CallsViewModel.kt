@@ -86,8 +86,9 @@ class CallsViewModel(
 
     /** אנשי קשר שמתאימים למה שהוקלד במקלדת (ספרות במספר או T9 בשם) - עד שישה. */
     val dialSuggestions: StateFlow<List<Contact>> = combine(_dialedNumber, _contacts) { digits, list ->
-        if (digits.length < 2) return@combine emptyList()
+        // בלי ספרות ("**") אין מה להתאים - contains("") היה מחזיר כל איש קשר.
         val clean = digitsOf(digits)
+        if (digits.length < 2 || clean.isEmpty()) return@combine emptyList()
         list.filter { digitsOf(it.phoneNumber).contains(clean) || T9Search.matchesAnyWord(it.name, digits) }.take(6)
     }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
@@ -96,8 +97,8 @@ class CallsViewModel(
      * ומעלה, כמו בערכה: קודם התאמה במספר, ואם אין - התאמת T9 על השם.
      */
     val dialMatch: StateFlow<Contact?> = combine(_dialedNumber, _contacts) { digits, list ->
-        if (digits.length < 3) return@combine null
         val clean = digitsOf(digits)
+        if (digits.length < 3 || clean.isEmpty()) return@combine null
         list.firstOrNull { digitsOf(it.phoneNumber).contains(clean) }
             ?: list.firstOrNull { T9Search.matchesAnyWord(it.name, digits) }
     }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Eagerly, null)
