@@ -100,6 +100,8 @@ import com.future.sharednav.theme.FutureTransitions
 import com.future.sharednav.theme.LocalFutureTheme
 import com.future.sharednav.theme.ThemeClient
 import com.future.sharednav.theme.onStatusColor
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 
@@ -725,14 +727,17 @@ fun MainScreen(
                     val context = androidx.compose.ui.platform.LocalContext.current
                     // מכשיר נעול: מסך השיחה בלבד. BACK לא מוביל ליומן/לאנשי הקשר, ובסוף
                     // השיחה החייגן נסגר ומסך הנעילה חוזר (ר' DeviceLock).
-                    val secured = remember { com.future.dialer.telecom.DeviceLock.isSecured(context) }
+                    // הבדיקה מול ספק המערכת רצה ברקע, לא בהרכבה על ה-main thread
+                    val secured by produceState(initialValue = false, context) {
+                        value = withContext(Dispatchers.IO) { com.future.dialer.telecom.DeviceLock.isSecured(context) }
+                    }
                     BackHandler(enabled = secured) { }
                     InCallScreen(
                         name = name,
                         phoneNumber = number,
                         viewModel = inCallViewModel,
                         onCallEnded = {
-                            if (com.future.dialer.telecom.DeviceLock.isSecured(context)) (context as? android.app.Activity)?.finish()
+                            if (secured) (context as? android.app.Activity)?.finish()
                             // חוזרים ליומן, לא לאיש הקשר שממנו התחילה השיחה.
                             else navController.popBackStack(Screen.CallLog.route, inclusive = false)
                         },
