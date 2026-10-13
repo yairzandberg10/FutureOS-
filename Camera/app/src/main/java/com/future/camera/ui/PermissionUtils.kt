@@ -4,6 +4,7 @@ import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
@@ -20,6 +21,17 @@ fun rememberRuntimePermission(permission: String): MutableState<Boolean> {
     }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { result ->
         granted.value = result
+    }
+    // חזרה מהגדרות האפליקציה (או מכל מקום) - בודקים מחדש, אחרת המסך נשאר "בלי הרשאה"
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                granted.value = ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
     LaunchedEffect(Unit) {
         if (!granted.value) launcher.launch(permission)

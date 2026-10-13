@@ -83,9 +83,10 @@ object PhotoStorage {
                     if (matrix != null) bmp = com.future.camera.data.CameraFilter.apply(bmp, matrix)
                     val uri = saveJpeg(context, bmp)
                     main.execute { if (uri != null) onSaved(uri) else onError(IllegalStateException("save failed")) }
-                } catch (e: Exception) {
+                } catch (e: Throwable) {
+                    // OutOfMemoryError לא Exception: בלי לתפוס אותו onError לא נקרא, ו-busy נתקע במצב רצף
                     runCatching { image.close() }
-                    main.execute { onError(e) }
+                    main.execute { onError(e as? Exception ?: IllegalStateException("capture failed", e)) }
                 }
             }
 
@@ -106,7 +107,14 @@ object PhotoStorage {
         val resolver = context.contentResolver
         val uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values) ?: return null
         return try {
-            resolver.openOutputStream(uri)?.use { bmp.compress(android.graphics.Bitmap.CompressFormat.JPEG, 92, it) }
+            // בלי stream (או כשהכתיבה נכשלה) אסור לדווח "נשמר" על קובץ ריק
+            val written = resolver.openOutputStream(uri)?.use {
+                bmp.compress(android.graphics.Bitmap.CompressFormat.JPEG, 92, it)
+            } == true
+            if (!written) {
+                resolver.delete(uri, null, null)
+                return null
+            }
             resolver.update(uri, ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) }, null, null)
             uri
         } catch (e: Exception) {

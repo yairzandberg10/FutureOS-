@@ -3,6 +3,7 @@ package com.future.camera.ui
 import android.Manifest
 import android.graphics.Bitmap
 import android.media.MediaActionSound
+import android.content.Intent
 import android.net.Uri
 import android.view.View
 import android.view.KeyEvent as AndroidKeyEvent
@@ -151,7 +152,9 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
     val lifecycleOwner = LocalLifecycleOwner.current
     val focusManager = LocalFocusManager.current
     val hasCameraPermission by rememberRuntimePermission(Manifest.permission.CAMERA)
-    val (_, requestAudioPermission) = rememberLazyRuntimePermission(Manifest.permission.RECORD_AUDIO)
+    val (audioGranted, requestAudioPermission) = rememberLazyRuntimePermission(Manifest.permission.RECORD_AUDIO)
+    // בקשת מיקרופון כבר הוצגה בלחיצה הזאת - ההקלטה מתחילה בלחיצה הבאה, אחרי התשובה
+    var audioAsked by remember { mutableStateOf(false) }
     // המצלמה תמיד מעל תמונה חיה - הפקדים והתפריטים בצבעי הערכה הכהה.
     val darkTheme = remember(theme.accentColor) { FutureTheme(isDarkMode = true, accentColor = theme.accentColor) }
     val snackbar = rememberFutureSnackbarState()
@@ -286,6 +289,12 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
         val paint = liveMatrix?.let { android.graphics.Paint().apply { colorFilter = android.graphics.ColorMatrixColorFilter(it) } }
         view.setLayerType(if (paint != null) View.LAYER_TYPE_HARDWARE else View.LAYER_TYPE_NONE, paint)
     }
+    // תמונה אחרונה מהגלריה של המצלמה כבר בכניסה (לא רק אחרי צילום בסשן הזה)
+    LaunchedEffect(Unit) {
+        lastThumb = withContext(Dispatchers.IO) {
+            CameraMedia.recentPhotos(context, 1).firstOrNull()?.let { CameraMedia.thumbnail(context, it, 128) }
+        }
+    }
     LaunchedEffect(sessionMedia.firstOrNull()) {
         val uri = sessionMedia.firstOrNull() ?: return@LaunchedEffect
         lastThumb = withContext(Dispatchers.IO) { CameraMedia.thumbnail(context, uri, 128) }
@@ -368,7 +377,12 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
                 isRecording = false
                 sound.play(MediaActionSound.STOP_VIDEO_RECORDING)
             } else {
-                requestAudioPermission()
+                // ההקלטה לא מתחילה לפני תשובת המיקרופון: אחרת הווידאו הראשון נשמר בלי קול
+                if (!audioGranted.value && !audioAsked) {
+                    audioAsked = true
+                    requestAudioPermission()
+                    return
+                }
                 val recording = VideoStorage.startRecording(
                     context = context,
                     recorder = recorder,
@@ -474,6 +488,19 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
     // מקשי המצלמה. onPreviewKeyEvent כדי שמקש מוחזק יגיע לזום לפני שהפוקוס זז.
     val cameraKeys = Modifier.onPreviewKeyEvent { event ->
         if (showSettings || showViewer) return@onPreviewKeyEvent false
+        // בלי הרשאת מצלמה אין מה לצלם: OK פותח את הגדרות האפליקציה כדי לאשר אותה (BACK יוצא כרגיל)
+        if (!hasCameraPermission) {
+            if (event.type == KeyEventType.KeyUp && (event.key == Key.DirectionCenter || event.key == Key.Enter)) {
+                context.startActivity(
+                    Intent(
+                        android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                        Uri.fromParts("package", context.packageName, null)
+                    )
+                )
+                return@onPreviewKeyEvent true
+            }
+            return@onPreviewKeyEvent false
+        }
         val native = event.nativeKeyEvent
         // בורר הפילטרים פתוח: ימינה/שמאלה בוחרים (התצוגה החיה מתעדכנת), OK סוגר.
         if (showFilters) {
@@ -550,7 +577,7 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Box(modifier = Modifier.fillMaxSize().background(Color.Black).then(cameraKeys)) {
             if (!hasCameraPermission) {
-                CenterMessage("נדרשת הרשאת מצלמה כדי לצלם")
+                CenterMessage("נדרשת הרשאת מצלמה כדי לצלם. לחץ OK לפתיחת הגדרות ההרשאה")
             } else if (!cameraAvailable) {
                 CenterMessage("אין מצלמה זמינה במכשיר הזה")
             } else {
