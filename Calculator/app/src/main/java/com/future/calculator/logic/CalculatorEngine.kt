@@ -17,6 +17,8 @@ data class CalcState(
     val pendingValue: BigDecimal? = null,
     val pendingOp: CalcOp? = null,
     val startFresh: Boolean = true,
+    /** התצוגה הגיעה מאחוז/פונקציה (√, x², n!...) על האופרנד הממתין - הפעולה הממתינה עוד לא חושבה. */
+    val operandFromFunction: Boolean = false,
 ) {
     val isError: Boolean get() = display == CalculatorEngine.ERROR
     val isEmpty: Boolean get() = display == "0" && pendingOp == null && expressionLine.isEmpty()
@@ -49,12 +51,20 @@ object CalculatorEngine {
         if (s.isError) return CalcState(display = digit, startFresh = false)
         val digitsOnly = s.display.count { it.isDigit() }
         if (!s.startFresh && s.display != "0" && digitsOnly >= MAX_INPUT_DIGITS) return s
-        val display = if (s.startFresh || s.display == "0") digit else s.display + digit
-        return s.copy(display = display, startFresh = false, expressionLine = freshLine(s))
+        // מספר חדש אחרי ± (למשל 5 + ± 3) שומר על הסימן השלילי
+        val display = when {
+            s.startFresh && s.display.startsWith("-") -> "-$digit"
+            s.startFresh || s.display == "0" -> digit
+            else -> s.display + digit
+        }
+        return s.copy(display = display, startFresh = false, expressionLine = freshLine(s), operandFromFunction = false)
     }
 
     fun inputDot(s: CalcState): CalcState = when {
-        s.isError || s.startFresh -> s.copy(display = "0.", startFresh = false, expressionLine = freshLine(s))
+        s.isError || s.startFresh -> {
+            val sign = if (!s.isError && s.display.startsWith("-")) "-" else ""
+            s.copy(display = "$sign" + "0.", startFresh = false, expressionLine = freshLine(s), operandFromFunction = false)
+        }
         !s.display.contains(".") -> s.copy(display = s.display + ".")
         else -> s
     }
@@ -69,9 +79,11 @@ object CalculatorEngine {
 
     private fun apply(pv: BigDecimal, op: CalcOp, cur: BigDecimal): String = try {
         val result = when (op) {
-            CalcOp.ADD -> pv.add(cur, PRECISION)
-            CalcOp.SUB -> pv.subtract(cur, PRECISION)
-            CalcOp.MUL -> pv.multiply(cur, PRECISION)
+            // חיבור/חיסור/כפל מדויקים: הקלט עד 15 ספרות, והתוצאה מעוגלת רק בתצוגה ב-format
+            // (עיגול ל-12 כאן איבד ספרות כבר ב-1234567890123 + 1)
+            CalcOp.ADD -> pv.add(cur)
+            CalcOp.SUB -> pv.subtract(cur)
+            CalcOp.MUL -> pv.multiply(cur)
             CalcOp.DIV -> if (cur.signum() == 0) throw ArithmeticException("Division by zero") else pv.divide(cur, PRECISION)
             // חזקה לא-שלמה היא מחוץ ל-BigDecimal - דרך Double, כמו הפונקציות המדעיות
             CalcOp.POW -> BigDecimal(Math.pow(pv.toDouble(), cur.toDouble()), PRECISION)
@@ -94,8 +106,9 @@ object CalculatorEngine {
     fun operator(s: CalcState, op: CalcOp): CalcState {
         // אחרי שגיאה פעולה לא ממשיכה בשקט מ-0 - צריך להקליד מספר חדש
         if (s.isError) return s
-        // פעולה שנייה ברצף בלי מספר ביניהן רק מחליפה את הפעולה הממתינה
-        if (s.startFresh && s.pendingOp != null && s.pendingValue != null) {
+        // פעולה שנייה ברצף בלי מספר ביניהן רק מחליפה את הפעולה הממתינה - אלא אם התצוגה
+        // הגיעה מאחוז/פונקציה, אז הפעולה הממתינה צריכה להתחשב קודם (200 + 10% + 5 = 225)
+        if (s.startFresh && s.pendingOp != null && s.pendingValue != null && !s.operandFromFunction) {
             return s.copy(pendingOp = op, expressionLine = "${format(s.pendingValue)} ${op.symbol}")
         }
         val display = if (s.pendingValue != null && s.pendingOp != null) apply(s.pendingValue, s.pendingOp, value(s)) else s.display
@@ -136,7 +149,7 @@ object CalculatorEngine {
         } catch (e: Exception) {
             return s.copy(display = ERROR, startFresh = true, expressionLine = freshLine(s))
         }
-        return s.copy(display = format(result), startFresh = true, expressionLine = freshLine(s))
+        return s.copy(display = format(result), startFresh = true, expressionLine = freshLine(s), operandFromFunction = true)
     }
 
     fun unary(s: CalcState, fn: (Double) -> Double): CalcState {
@@ -147,7 +160,7 @@ object CalculatorEngine {
         } catch (e: Exception) {
             ERROR
         }
-        return s.copy(display = display, startFresh = true, expressionLine = freshLine(s))
+        return s.copy(display = display, startFresh = true, expressionLine = freshLine(s), operandFromFunction = true)
     }
 
     fun factorial(s: CalcState): CalcState {
@@ -160,7 +173,7 @@ object CalculatorEngine {
             for (i in 2..n.toInt()) result = result.multiply(BigDecimal(i))
             format(result)
         }
-        return s.copy(display = display, startFresh = true, expressionLine = freshLine(s))
+        return s.copy(display = display, startFresh = true, expressionLine = freshLine(s), operandFromFunction = true)
     }
 
     /** ± - הופך את הסימן של המספר שבתצוגה, בלי לסגור אותו (אפשר להמשיך להקליד). */
@@ -171,7 +184,7 @@ object CalculatorEngine {
     }
 
     fun constant(s: CalcState, value: Double): CalcState =
-        s.copy(display = format(BigDecimal(value, PRECISION)), startFresh = true, expressionLine = freshLine(s))
+        s.copy(display = format(BigDecimal(value, PRECISION)), startFresh = true, expressionLine = freshLine(s), operandFromFunction = true)
 
     /** תוצאה מההיסטוריה חוזרת לתצוגה כמספר חדש. */
     fun recall(result: String): CalcState = CalcState(display = result, startFresh = true)
