@@ -87,11 +87,13 @@ class NavigateViewModel(
         // HERE כבר מחשב כל מסלול עם פקקים בזמן אמת (ר' HereApi.kt), אז די לבקש
         // מסלול טרי מהמיקום הנוכחי מדי פעם ולהשוות משך.
         viewModelScope.launch {
+            // אחרי כל כשל ברשת ממתינים פי 2 יותר (עד פי 8) - בלי רשת לא פונים לשרת כל 90 שניות
+            var failures = 0
             while (!_uiState.value.ended) {
-                delay(TRAFFIC_RECHECK_INTERVAL_MS)
+                delay(TRAFFIC_RECHECK_INTERVAL_MS * (1L shl minOf(failures, 3)))
                 val location = _uiState.value.currentLocation
                 if (location != null && !_uiState.value.ended) {
-                    checkForFasterRouteDueToTraffic(location)
+                    failures = if (checkForFasterRouteDueToTraffic(location)) 0 else failures + 1
                 }
             }
         }
@@ -165,7 +167,14 @@ class NavigateViewModel(
             // finally: חריגה בחישוב השאירה קודם rerouting=true לתמיד, ומאז אף
             // סטייה מהמסלול לא חושבה מחדש עד סוף הנסיעה
             try {
-                val newRoute = runCatching { routingRepository.getDrivingRoute(from, destination) }.getOrNull()
+                // runCatching היה בולע CancellationException - ביטול ה-ViewModel לא נעצר
+                val newRoute = try {
+                    routingRepository.getDrivingRoute(from, destination)
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    null
+                }
                 if (newRoute != null && !_uiState.value.ended) {
                     applyNewRoute(newRoute)
                     speak("מחשב מסלול מחדש")
@@ -192,17 +201,25 @@ class NavigateViewModel(
      * כדי שעומס שהצטבר פתאום יגרום להחלפה בפועל, בלי "קפיצות" מסלול על הבדלים
      * של כמה שניות.
      */
-    private suspend fun checkForFasterRouteDueToTraffic(from: LatLng) {
-        if (rerouting || _uiState.value.ended) return
+    /** מחזיר false רק כשהבדיקה נכשלה ברשת - אז הלולאה מחכה יותר לפני הניסיון הבא. */
+    private suspend fun checkForFasterRouteDueToTraffic(from: LatLng): Boolean {
+        if (rerouting || _uiState.value.ended) return true
         rerouting = true
         try {
-            val candidate = runCatching { routingRepository.getDrivingRoute(from, destination) }.getOrNull() ?: return
+            val candidate = (try {
+                routingRepository.getDrivingRoute(from, destination)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                null
+            }) ?: return false
             val state = _uiState.value
-            if (state.ended) return
+            if (state.ended) return true
             if (candidate.durationSeconds < state.remainingDurationSeconds * TRAFFIC_REROUTE_IMPROVEMENT_FACTOR) {
                 applyNewRoute(candidate)
                 speak("נמצא מסלול מהיר יותר")
             }
+            return true
         } finally {
             rerouting = false
         }

@@ -33,13 +33,27 @@ class SavedPlacesViewModel(
 
     private var searchJob: Job? = null
 
+    /** העריכה האחרונה - כדי שאחרי החזרה מחיפוש הפוקוס ישוב לאריח שנערך. */
+    private var lastEditedSlot = EditingSlot.NONE
+
+    /** מחזיר את העריכה האחרונה ומאפס אותה (נקראת פעם אחת בחזרה למסך). */
+    fun takeLastEditedSlot(): EditingSlot {
+        val slot = lastEditedSlot
+        lastEditedSlot = EditingSlot.NONE
+        return slot
+    }
+
     fun startEditing(slot: EditingSlot) {
+        // חיפוש שנשאר רץ מהעריכה הקודמת לא יכתוב תוצאות לתוך העריכה החדשה
+        searchJob?.cancel()
+        lastEditedSlot = slot
         _editingSlot.value = slot
         _searchQuery.value = ""
         _searchResults.value = emptyList()
     }
 
     fun cancelEditing() {
+        searchJob?.cancel()
         _editingSlot.value = EditingSlot.NONE
     }
 

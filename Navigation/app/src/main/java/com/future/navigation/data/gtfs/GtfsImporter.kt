@@ -76,7 +76,10 @@ class GtfsImporter(private val database: GtfsDatabase) {
                 emit(ImportProgress(ImportPhase.DOWNLOADING, fraction))
             }
         } catch (e: Exception) {
-            emit(ImportProgress(ImportPhase.ERROR, 0f, error = e.message ?: "שגיאת הורדה"))
+            // קובץ חלקי מהורדה שנכשלה לא נשאר ב-cache (עד 130MB)
+            File(context.cacheDir, "israel-public-transportation.zip").delete()
+            // בלי e.message: הוא לרוב טקסט טכני באנגלית (למשל שגיאת רשת של OkHttp)
+            emit(ImportProgress(ImportPhase.ERROR, 0f, error = "לא ניתן להוריד את נתוני התחבורה"))
             return@flow
         }
 
@@ -219,7 +222,8 @@ class GtfsImporter(private val database: GtfsDatabase) {
             zipFile.delete()
             emit(ImportProgress(ImportPhase.DONE, 1f))
         } catch (e: Exception) {
-            emit(ImportProgress(ImportPhase.ERROR, 0f, error = e.message ?: "שגיאת ייבוא"))
+            zipFile.delete()
+            emit(ImportProgress(ImportPhase.ERROR, 0f, error = "לא ניתן לייבא את נתוני התחבורה"))
         }
     }.flowOn(Dispatchers.IO)
 

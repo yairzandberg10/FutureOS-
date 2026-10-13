@@ -42,6 +42,8 @@ class SiriRealtimeRepository {
                     val xml = response.body?.string() ?: return@withContext emptyList()
                     SiriXml.parseStopMonitoringResponse(xml)
                 }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
                 emptyList()
             }

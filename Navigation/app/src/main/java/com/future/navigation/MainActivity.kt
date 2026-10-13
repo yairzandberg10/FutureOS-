@@ -239,6 +239,8 @@ class MainActivity : ComponentActivity() {
     }
 
     private var transitPrefetchStarted = false
+    /** זמן הכשלון האחרון של הורדה ברקע - בלי השהיה כל שינוי מיקום היה מנסה שוב מיד. */
+    private var transitPrefetchFailedAtMs = 0L
 
     /**
      * מריץ ברקע (בלי לחסום שום מסך) הורדה/ייבוא של נתוני GTFS סביב המיקום
@@ -249,6 +251,7 @@ class MainActivity : ComponentActivity() {
      */
     private fun prefetchTransitDataInBackground(location: LatLng) {
         if (transitPrefetchStarted) return
+        if (System.currentTimeMillis() - transitPrefetchFailedAtMs < PREFETCH_RETRY_DELAY_MS) return
         val neededBbox = GtfsConfig.boundingBoxCovering(location, location, paddingDegrees = PREFETCH_PADDING_DEGREES)
         val alreadyImported = GtfsImportState.lastImportedBoundingBox(applicationContext)
         if (alreadyImported != null && alreadyImported.covers(neededBbox)) return
@@ -262,18 +265,21 @@ class MainActivity : ComponentActivity() {
                         GtfsImportState.recordImportedBoundingBox(applicationContext, neededBbox)
                     } else if (progress.phase == ImportPhase.ERROR) {
                         transitPrefetchStarted = false
+                        transitPrefetchFailedAtMs = System.currentTimeMillis()
                     }
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Exception) {
                 transitPrefetchStarted = false
+                transitPrefetchFailedAtMs = System.currentTimeMillis()
             }
         }
     }
 
     companion object {
         private const val PREFETCH_PADDING_DEGREES = 0.3
+        private const val PREFETCH_RETRY_DELAY_MS = 10 * 60 * 1000L
     }
 }
 

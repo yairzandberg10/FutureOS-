@@ -48,20 +48,24 @@ class RouteOptionsViewModel(
     /** עבודת החיפוש הפעילה - מבוטלת אם מתבקש חיפוש חדש לפני שהקודם הסתיים,
      * כדי שתשובה איטית/ישנה לא תדרוס תוצאה טרייה יותר. */
     private var searchJob: Job? = null
+    /** מזהה החיפוש האחרון - רק החיפוש האחרון מכבה את מצב הטעינה (ביטול של קודם לא מכבה חדש). */
+    private var searchId = 0
 
     fun search(mode: TravelMode, destination: Destination) {
+        val id = ++searchId
+        searchJob?.cancel()
+        // תוצאות של יעד קודם לא נשארות על המסך - גם כשאין מיקום (אחרת מסלול ישן נפתח על יעד חדש)
+        _drivingRoute.value = null
+        _itineraries.value = emptyList()
+        _error.value = null
         val origin = LocationHelper.lastKnownLatLon(appContext)?.let { LatLng(it.first, it.second) }
         if (origin == null) {
+            _loading.value = false
             _error.value = "לא ניתן לאתר את המיקום הנוכחי"
             return
         }
 
-        searchJob?.cancel()
         _loading.value = true
-        _error.value = null
-        // תוצאות של יעד קודם לא נשארות על המסך מתחת להודעת שגיאה של היעד החדש
-        _drivingRoute.value = null
-        _itineraries.value = emptyList()
         searchJob = viewModelScope.launch {
             try {
                 when (mode) {
@@ -85,7 +89,7 @@ class RouteOptionsViewModel(
             } catch (e: Exception) {
                 _error.value = "אירעה שגיאה בחישוב המסלול"
             } finally {
-                _loading.value = false
+                if (id == searchId) _loading.value = false
             }
         }
     }

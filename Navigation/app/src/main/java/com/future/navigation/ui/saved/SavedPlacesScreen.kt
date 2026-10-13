@@ -59,10 +59,14 @@ fun SavedPlacesScreen(viewModel: SavedPlacesViewModel, onBack: () -> Unit, onNav
     val allPlaces by viewModel.allPlaces.collectAsState(initial = emptyList())
     val favorites = allPlaces.filter { it.isFavorite }
     val homeCardFocusRequester = remember { FocusRequester() }
+    val workCardFocusRequester = remember { FocusRequester() }
 
     // פוקוס D-pad התחלתי על כרטיס "בית" - בלי זה נחיתה על המסך משאירה אותו
-    // בלי שום פריט מודגש.
-    LaunchedEffect(Unit) { runCatching { homeCardFocusRequester.requestFocus() } }
+    // בלי שום פריט מודגש. חזרה מעריכה של "עבודה" מחזירה את הפוקוס לכרטיס הזה.
+    LaunchedEffect(Unit) {
+        val target = if (viewModel.takeLastEditedSlot() == EditingSlot.WORK) workCardFocusRequester else homeCardFocusRequester
+        runCatching { target.requestFocus() }
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         ScreenTopBar(
@@ -85,7 +89,7 @@ fun SavedPlacesScreen(viewModel: SavedPlacesViewModel, onBack: () -> Unit, onNav
                     PinTile(FutureIcons.Home, stringResource(R.string.quick_home), homePlace, stringResource(R.string.add_home_address), theme, modifier = Modifier.weight(1f), focusRequester = homeCardFocusRequester) {
                         viewModel.startEditing(EditingSlot.HOME)
                     }
-                    PinTile(FutureIcons.Work, stringResource(R.string.quick_work), workPlace, stringResource(R.string.add_work_address), theme, modifier = Modifier.weight(1f)) {
+                    PinTile(FutureIcons.Work, stringResource(R.string.quick_work), workPlace, stringResource(R.string.add_work_address), theme, modifier = Modifier.weight(1f), focusRequester = workCardFocusRequester) {
                         viewModel.startEditing(EditingSlot.WORK)
                     }
                 }
