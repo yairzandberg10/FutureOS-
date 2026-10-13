@@ -37,6 +37,9 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -73,6 +76,14 @@ data class TerminalLine(val text: String, val isCommand: Boolean)
 private const val MAX_LINES = 2000
 private const val MAX_HISTORY = 50
 
+// סימון של המעטפת לנתיב אחרי cd מוצלח. cd שנכשל לא מדפיס אותו, לכן הודעת השגיאה שלו
+// לעולם לא נחשבת לנתיב נוכחי.
+private const val CWD_MARKER = "__PWD__"
+
+/** cd לבד (בלי שרשור, צינור או פקודה נוספת) - רק אלה מעדכנים את הנתיב הנוכחי. */
+private fun isPureCd(cmd: String): Boolean =
+    (cmd == "cd" || cmd.startsWith("cd ")) && cmd.none { it in ";&|<>`()\n" }
+
 class MainActivity : ComponentActivity() {
     // המכשיר האמיתי הוא מקלדת T9 בלבד בלי מסך מגע - מבטלים קלט מגע לגמרי כדי
     // שההתנהגות תישאר תואמת לחומרה האמיתית. לא פוגע בניווט/הפעלה במקשים -
@@ -94,15 +105,21 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         setContent {
-            var cwd by remember { mutableStateOf("/sdcard") }
-            var previousCwd by remember { mutableStateOf("/sdcard") }
-            val history = remember { mutableStateListOf<String>() }
-            var input by remember { mutableStateOf("") }
+            // נשמרים גם אחרי שינוי תצורה/מוות תהליך (לא remember בלבד): נתיב, קלט והיסטוריה
+            var cwd by rememberSaveable { mutableStateOf("/sdcard") }
+            var previousCwd by rememberSaveable { mutableStateOf("/sdcard") }
+            val history = rememberSaveable(
+                saver = listSaver<SnapshotStateList<String>, String>(
+                    save = { it.toList() },
+                    restore = { it.toMutableStateList() }
+                )
+            ) { mutableStateListOf<String>() }
+            var input by rememberSaveable { mutableStateOf("") }
             val lines = remember { mutableStateListOf<TerminalLine>() }
             val listState = rememberLazyListState()
             val scope = rememberCoroutineScope()
             var isRunning by remember { mutableStateOf(false) }
-            var showMenu by remember { mutableStateOf(false) }
+            var showMenu by rememberSaveable { mutableStateOf(false) }
             val context = LocalContext.current
             // מקש Options הפיזי נחסם ברמת המערכת ולעולם לא מגיע כ-Key.Menu לאפליקציה -
             // זו הדרך האמיתית שהוא פותח את התפריט.
@@ -148,7 +165,7 @@ class MainActivity : ComponentActivity() {
                     val output = withContext(Dispatchers.IO) {
                         when {
                             cmd == "clear" -> null
-                            cmd.startsWith("cd ") || cmd == "cd" -> {
+                            isPureCd(cmd) -> {
                                 // "~" ו-"cd" לבד מובילים ל-/sdcard (הבית של המשתמש כאן); "cd -"
                                 // חוזר לתיקייה הקודמת. היעד מצוטט בגרשיים בודדים - בגרשיים
                                 // כפולים "~" לא הורחב בכלל ונתיב עם " שבר את הפקודה.
@@ -160,14 +177,17 @@ class MainActivity : ComponentActivity() {
                                         else -> it
                                     }
                                 }
-                                val result = shell.runCommand(
-                                    "cd ${shellQuote(dir)} 2>/dev/null; cd ${shellQuote(target)} && pwd"
-                                ).trim()
-                                // pwd מחזיר נתיב מוחלט; כל דבר אחר הוא הודעת שגיאה של cd
-                                if (result.startsWith("/") && !result.contains('\n')) {
-                                    newCwd = result
+                                val raw = shell.runCommand(
+                                    "cd ${shellQuote(dir)} 2>/dev/null; cd ${shellQuote(target)} && printf '\\n$CWD_MARKER%s\\n' \"\$(pwd)\""
+                                )
+                                val markerAt = raw.lastIndexOf(CWD_MARKER)
+                                if (markerAt >= 0) {
+                                    newCwd = raw.substring(markerAt + CWD_MARKER.length).trim()
                                     ""
-                                } else result
+                                } else {
+                                    // cd נכשל: מציגים את השגיאה, והנתיב הנוכחי לא משתנה
+                                    raw.trim()
+                                }
                             }
                             else -> shell.runCommand("cd ${shellQuote(dir)} 2>/dev/null; $cmd")
                         }
@@ -177,7 +197,8 @@ class MainActivity : ComponentActivity() {
                     if (cmd == "clear") {
                         lines.clear()
                     } else if (!output.isNullOrBlank()) {
-                        lines.add(TerminalLine(output.trimEnd('\n'), isCommand = false))
+                        // שורה-שורה: התקרה של MAX_LINES סופרת שורות, ו-LazyColumn מרנדר רק את הנראות
+                        output.trimEnd('\n').split('\n').forEach { lines.add(TerminalLine(it, isCommand = false)) }
                     }
                     // היסטוריה ארוכה בלי הגבלה (למשל logcat) ממלאת את הזיכרון ומאטה את הרשימה
                     if (lines.size > MAX_LINES) lines.removeRange(0, lines.size - MAX_LINES)
@@ -227,12 +248,13 @@ class MainActivity : ComponentActivity() {
                                 .onKeyEvent { event ->
                                     if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
                                     when (event.key) {
-                                        Key.DirectionDown -> {
+                                        // בתחתית/בראשית הרשימה החץ לא נצרך: הפוקוס עובר לשדה הקלט (למטה) או משם חזרה
+                                        Key.DirectionDown -> if (listState.canScrollForward) {
                                             scope.launch { listState.animateScrollBy(150f) }; true
-                                        }
-                                        Key.DirectionUp -> {
+                                        } else false
+                                        Key.DirectionUp -> if (listState.canScrollBackward) {
                                             scope.launch { listState.animateScrollBy(-150f) }; true
-                                        }
+                                        } else false
                                         else -> false
                                     }
                                 },
