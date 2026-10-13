@@ -266,7 +266,7 @@ fun TalkScreen(
 
     fun activate() {
         when {
-            listening -> viewModel.listener.stop()
+            listening -> viewModel.listener.finish()
             canListen -> actions.requestMic {
                 viewModel.listener.listen(speakerCode) { heard -> if (heard != null) viewModel.addTalkLine(heard) }
             }

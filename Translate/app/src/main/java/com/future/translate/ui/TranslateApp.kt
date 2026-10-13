@@ -59,7 +59,11 @@ fun TranslateApp(viewModel: TranslateViewModel, theme: FutureTheme, actions: Tra
         if (stack.size > 1) stack.removeAt(stack.lastIndex)
     }
 
-    BackHandler(enabled = stack.size > 1) { pop() }
+    // BACK ממסך השיחה עוצר את ההקשבה - אחרת התוצאה נכנסת למסך הראשי בשקט
+    BackHandler(enabled = stack.size > 1) {
+        viewModel.listener.stop()
+        pop()
+    }
 
     val top = stack.last()
     val menuAllowed = top == Route.Root || top == Route.History || top == Route.Talk

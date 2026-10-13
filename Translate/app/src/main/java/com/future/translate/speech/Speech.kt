@@ -140,6 +140,13 @@ class Listener(private val context: Context) {
         _listening.value = true
     }
 
+    /** מסיים את ההקשבה ומקבל את מה שנאמר עד עכשיו (onResults) - לא מאבד את המשפט. */
+    fun finish() {
+        runCatching { recognizer?.stopListening() }
+        _listening.value = false
+    }
+
+    /** ביטול: לא מחזיר תוצאה (למשל יציאה מהמסך). */
     fun stop() {
         recognizer?.let {
             it.cancel()

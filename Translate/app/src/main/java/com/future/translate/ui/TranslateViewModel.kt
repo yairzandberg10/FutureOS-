@@ -99,7 +99,9 @@ class TranslateViewModel(application: Application) : AndroidViewModel(applicatio
         // כיוון במקום זאת, כמו בכל מתרגם.
         if (code == _to.value && code != Languages.AUTO) {
             val old = _from.value
-            if (old != Languages.AUTO) { _to.value = old; prefs.to = old }
+            // מקור "זיהוי שפה" - היעד לא יכול להישאר זהה למקור (אחרת "התרגום" הוא הטקסט עצמו)
+            val newTo = if (old != Languages.AUTO) old else if (code == "he") "en" else "he"
+            _to.value = newTo; prefs.to = newTo
         }
         _from.value = code
         prefs.from = code
@@ -127,6 +129,7 @@ class TranslateViewModel(application: Application) : AndroidViewModel(applicatio
     fun swap() {
         val oldFrom = if (_from.value == Languages.AUTO) _detected.value ?: "he" else _from.value
         val oldTo = _to.value
+        if (oldFrom == oldTo) return
         val done = _result.value as? Result.Done
         _from.value = oldTo
         _to.value = oldFrom
@@ -156,13 +159,17 @@ class TranslateViewModel(application: Application) : AndroidViewModel(applicatio
         if (source.isEmpty()) {
             _result.value = Result.Empty
             _detected.value = null
+            lastDoneSource = null
             return
         }
         translateJob = viewModelScope.launch {
             // המתנה קצרה בזמן הקלדה, כדי לא לתרגם כל אות בנפרד.
             if (!immediate) delay(TypingPauseMillis)
             _result.value = Result.Translating
-            _result.value = translate(source, _from.value, _to.value) { detected -> _detected.value = detected }
+            val result = translate(source, _from.value, _to.value) { detected -> _detected.value = detected }
+            _result.value = result
+            // רושמים את המקור שהתרגום שייך אליו - שמירה/היסטוריה לא ישתמשו בתרגום ישן לטקסט חדש
+            lastDoneSource = if (result is Result.Done) source else null
         }
     }
 
@@ -201,10 +208,12 @@ class TranslateViewModel(application: Application) : AndroidViewModel(applicatio
     // ---- היסטוריה ----
 
     /** רושם את התרגום הנוכחי בהיסטוריה (אם מופעלת). נקרא כשעוזבים את השדה. */
+    private var lastDoneSource: String? = null
+
     fun commit(): HistoryEntry? {
         val done = _result.value as? Result.Done ?: return null
         val source = _text.value.trim()
-        if (source.isEmpty()) return null
+        if (source.isEmpty() || lastDoneSource != source) return null
         val from = resolvedFrom() ?: return null
         val existing = history.find(source, from, _to.value)
         if (!_saveHistory.value && existing == null) return null
@@ -215,6 +224,7 @@ class TranslateViewModel(application: Application) : AndroidViewModel(applicatio
     fun toggleSaved(): Boolean? {
         val done = _result.value as? Result.Done ?: return null
         val source = _text.value.trim()
+        if (lastDoneSource != source) return null
         val from = resolvedFrom() ?: return null
         val existing = history.find(source, from, _to.value)
         return if (existing?.saved == true) {
