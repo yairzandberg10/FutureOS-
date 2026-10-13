@@ -64,7 +64,10 @@ fun StoresScreen(theme: FutureTheme) {
     LaunchedEffect(myLocation, refreshKey) {
         loading = true
         val result = withContext(Dispatchers.IO) { runCatching { FricasseStores.search(context, myLocation) } }
-        result.onSuccess { stores = it; offline = false }.onFailure { offline = true }
+        // תשובה ריקה (או כשל) לא דורסת תוצאות שכבר מוצגות - מסומן כ"אין חיבור" במקום.
+        result.onSuccess {
+            if (it.isNotEmpty() || stores.isEmpty()) { stores = it; offline = false } else offline = true
+        }.onFailure { offline = true }
         loading = false
     }
     onOptionsKeyPress { menuOpen = !menuOpen }
