@@ -10,13 +10,16 @@ class RemoteRepository(context: Context) {
     private val prefs = context.getSharedPreferences("remote_devices", Context.MODE_PRIVATE)
     private val gson = Gson()
 
-    fun loadDevices(): List<RemoteDevice> {
+    fun loadDevices(): List<RemoteDevice> = readDevicesOrNull() ?: emptyList()
+
+    /** null = השמירה הקיימת לא נקראת. כותבים רק כשהקריאה הצליחה - אחרת שמירה של מכשיר חדש דורסת את כולם. */
+    private fun readDevicesOrNull(): List<RemoteDevice>? {
         val json = prefs.getString(KEY_DEVICES, null) ?: return emptyList()
         return try {
             val type = object : TypeToken<List<RemoteDevice>>() {}.type
-            gson.fromJson(json, type) ?: emptyList()
+            gson.fromJson<List<RemoteDevice>>(json, type) ?: emptyList()
         } catch (e: Exception) {
-            emptyList()
+            null
         }
     }
 
@@ -25,27 +28,27 @@ class RemoteRepository(context: Context) {
     }
 
     fun addDevice(device: RemoteDevice) {
-        saveDevices(loadDevices() + device)
+        saveDevices((readDevicesOrNull() ?: return) + device)
     }
 
     fun deleteDevice(deviceId: String) {
-        saveDevices(loadDevices().filterNot { it.id == deviceId })
+        saveDevices((readDevicesOrNull() ?: return).filterNot { it.id == deviceId })
     }
 
     fun addButton(deviceId: String, button: RemoteButton) {
-        saveDevices(loadDevices().map { device ->
+        saveDevices((readDevicesOrNull() ?: return).map { device ->
             if (device.id == deviceId) device.copy(buttons = device.buttons + button) else device
         })
     }
 
     fun deleteButton(deviceId: String, buttonId: String) {
-        saveDevices(loadDevices().map { device ->
+        saveDevices((readDevicesOrNull() ?: return).map { device ->
             if (device.id == deviceId) device.copy(buttons = device.buttons.filterNot { it.id == buttonId }) else device
         })
     }
 
     fun updateDevice(deviceId: String, transform: (RemoteDevice) -> RemoteDevice) {
-        saveDevices(loadDevices().map { if (it.id == deviceId) transform(it) else it })
+        saveDevices((readDevicesOrNull() ?: return).map { if (it.id == deviceId) transform(it) else it })
     }
 
     companion object {

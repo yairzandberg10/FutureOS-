@@ -95,7 +95,6 @@ fun AcRemoteScreen(theme: FutureTheme, device: RemoteDevice, onBack: () -> Unit)
     val scope = rememberCoroutineScope()
     fun send(next: AcState) {
         state = next
-        repository.updateDevice(device.id) { it.copy(acState = next, acProtocol = protocol) }
         val pattern = AcProtocols.encode(protocol, next)
         // transmit חוסם עד סוף השידור (עד ~200ms בפרוטוקולים הארוכים); על ה-main
         // thread, עם חזרת מקש (החזקת 2), זה הקפיא את המסך. שליחות עוברות בתור
@@ -104,7 +103,11 @@ fun AcRemoteScreen(theme: FutureTheme, device: RemoteDevice, onBack: () -> Unit)
             val hasEmitter = ir.isAvailable
             val ok = withContext(irDispatcher) { hasEmitter && ir.transmit(AcProtocols.CARRIER_HZ, pattern) }
             when {
-                ok -> buzz(context)
+                ok -> {
+                    // נשמר רק אחרי שידור מוצלח - אחרת בפתיחה הבאה המסך מציג מצב שהמזגן לא קיבל
+                    repository.updateDevice(device.id) { it.copy(acState = next, acProtocol = protocol) }
+                    buzz(context)
+                }
                 !hasEmitter -> Toast.makeText(context, "אין משדר אינפרא-אדום", Toast.LENGTH_SHORT).show()
                 else -> Toast.makeText(context, "השליחה נכשלה", Toast.LENGTH_SHORT).show()
             }
