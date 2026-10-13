@@ -18,13 +18,21 @@ object ContactFinder {
             context.contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
                 val nameIdx = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
                 val numberIdx = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
+                // התאמה מדויקת קודמת. אחריה התאמה חלקית - ושם קצר (למשל "אל") לא נמצא בתוך כל שאילתה
+                var partial: ContactResult? = null
                 while (cursor.moveToNext()) {
                     val contactName = cursor.getString(nameIdx) ?: continue
-                    if (contactName.contains(query, ignoreCase = true) || query.contains(contactName, ignoreCase = true)) {
-                        return ContactResult(contactName, cursor.getString(numberIdx), hasPermission = true)
+                    val number = cursor.getString(numberIdx)
+                    if (contactName.equals(query, ignoreCase = true)) {
+                        return ContactResult(contactName, number, hasPermission = true)
+                    }
+                    if (partial == null && (contactName.contains(query, ignoreCase = true) ||
+                            (contactName.length >= 3 && query.contains(contactName, ignoreCase = true)))
+                    ) {
+                        partial = ContactResult(contactName, number, hasPermission = true)
                     }
                 }
-                ContactResult(null, null, hasPermission = true)
+                partial ?: ContactResult(null, null, hasPermission = true)
             } ?: ContactResult(null, null, hasPermission = true)
         } catch (e: SecurityException) {
             ContactResult(null, null, hasPermission = false)

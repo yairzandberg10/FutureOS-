@@ -153,8 +153,12 @@ object CommandProcessor {
     private fun voiceIntent(triggers: List<String>, respond: (Context) -> String): VoiceIntent =
         VoiceIntent(triggers) { context -> CommandResult(respond(context)) }
 
+    // התאמה במילים שלמות: "שעה" לא נתפס בתוך "בשעה" (קבע פגישה בשעה חמש)
     private fun firstMatchingIntent(text: String): VoiceIntent? =
-        ALL_INTENTS.firstOrNull { intent -> intent.triggers.any { text.contains(it) } }
+        ALL_INTENTS.firstOrNull { intent -> intent.triggers.any { containsWord(text, it) } }
+
+    private fun containsWord(text: String, trigger: String): Boolean =
+        Regex("(?<!\\p{L})" + Regex.escape(trigger) + "(?!\\p{L})").containsMatchIn(text)
 
     /** הניסוחים שהיו לפני ExtraPhrasings - כדי שהבדיקות יספרו רק ניסוחים חדשים באמת. */
     private val baseTriggers = mutableSetOf<String>()

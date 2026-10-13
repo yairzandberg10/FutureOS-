@@ -39,6 +39,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
@@ -114,6 +115,8 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
     // מנוע Text-to-Speech נוירוני מקומי (ReNikud + Piper, ר' PiperTts) - מופע
     // אחד לתהליך, כך שפתיחה שנייה של העוזר לא טוענת את המודלים מחדש.
     val piperTts = remember { PiperTts.shared(context) }
+    // יציאה מהעוזר (BACK / סגירה) עוצרת את ההקראה, אחרת כל התור היה ממשיך להישמע
+    DisposableEffect(Unit) { onDispose { piperTts.stop() } }
     val speechEngine = remember { LocalSpeechEngine(context) }
     // גוגל בעברית כשאפשר, Whisper המקומי כגיבוי (ר' HybridSpeech).
     val speech = remember { com.future.assistant.asr.HybridSpeech(context, speechEngine) }
@@ -144,13 +147,16 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
             state = AssistantState.IDLE
             responseText = "לא זיהיתי דיבור, נסה שוב"
         } else {
-            try {
-                val result = CommandProcessor.process(context, text)
-                pendingClose = result.shouldClose
-                speak(result.responseText, result.speech, result.action)
-            } catch (e: Exception) {
-                pendingClose = false
-                speak("משהו השתבש בביצוע הפקודה, נסה שוב")
+            // עיבוד הפקודה כולל IO כבד (רשימת אפליקציות, אנשי קשר, מאגר הידע) - לא על ה-main thread
+            scope.launch {
+                val result = withContext(Dispatchers.IO) { runCatching { CommandProcessor.process(context, text) } }
+                result.onSuccess {
+                    pendingClose = it.shouldClose
+                    speak(it.responseText, it.speech, it.action)
+                }.onFailure {
+                    pendingClose = false
+                    speak("משהו השתבש בביצוע הפקודה, נסה שוב")
+                }
             }
         }
     }

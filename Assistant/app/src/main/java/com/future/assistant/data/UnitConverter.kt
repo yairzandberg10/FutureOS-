@@ -136,6 +136,8 @@ object UnitConverter {
             words.firstOrNull() == "כמה" -> second to first
             else -> first to second
         }
+        // בלי מספר מפורש ובלי "כמה" זו לא בקשת המרה (למשל "מה יום בשבוע" - "יום" ו"שבוע" הם יחידות זמן)
+        if (value == null && words.firstOrNull() != "כמה") return null
         val amount = value ?: 1.0
         val result = amount * from.unit.factor / to.unit.factor
         return CommandResult("${format(amount)} ${from.unit.title} זה ${format(result)} ${to.unit.title}")

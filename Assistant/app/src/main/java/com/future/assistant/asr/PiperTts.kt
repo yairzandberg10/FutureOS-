@@ -79,15 +79,29 @@ class PiperTts(private val context: Context) {
      *  [onLevel] - עוצמת ההשמעה 0..1 בזמן אמת, לגלי הקול במסך. */
     fun speak(text: String, onLevel: ((Float) -> Unit)? = null) {
         if (voice == null || text.isBlank()) return
+        stopRequested = false
         // משפט-משפט: המשפט הבא מסונתז בזמן שהקודם מושמע, כך שתשובה ארוכה
         // מתחילה להישמע אחרי סינתוז המשפט הראשון בלבד.
         val sentences = SENTENCE_END.split(HebrewTextNormalizer.normalize(text)).filter { it.isNotBlank() }
         var next: Future<ShortArray>? = sentences.firstOrNull()?.let { s -> synthExecutor.submit<ShortArray> { synthesize(s) } }
         for (i in sentences.indices) {
+            // עצירה (למשל BACK מהעוזר) בין משפטים - לא ממשיכים להשמיע את התור
+            if (stopRequested) {
+                next?.cancel(true)
+                break
+            }
             val pcm = next!!.get()
             next = sentences.getOrNull(i + 1)?.let { s -> synthExecutor.submit<ShortArray> { synthesize(s) } }
             if (pcm.isNotEmpty()) PcmPlayback.playAndWait(pcm, sampleRate, onLevel)
         }
+    }
+
+    /** מבקש לעצור את ההקראה הנוכחית - נבדק בין משפטים. */
+    @Volatile
+    private var stopRequested = false
+
+    fun stop() {
+        stopRequested = true
     }
 
     private fun synthesize(sentence: String): ShortArray {
