@@ -164,6 +164,11 @@ fun FilesScreen(
         selectedEntries = emptySet()
     }
 
+    // BACK במצב בחירה מבטל את הבחירה קודם, ולא יוצא מהתיקייה.
+    androidx.activity.compose.BackHandler(enabled = selectedEntries.isNotEmpty()) { clearSelection() }
+    // בזמן פעולה ברקע BACK לא משנה תיקייה: בהעתקה הוא מבטל אותה, ובמחיקה הוא לא עושה דבר.
+    androidx.activity.compose.BackHandler(enabled = isBusy) { onCancelBusy?.invoke() }
+
     // # נצרך ברמת המערכת ומגיע רק כשידור (ר' onPoundKeyPress) - ה-Key.Pound בשורות
     // נשאר רק למקלדת בלי FutureUI. בוחר או מבטל את הפריט הממוקד.
     com.future.sharednav.nav.onPoundKeyPress {

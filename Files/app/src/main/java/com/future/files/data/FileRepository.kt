@@ -261,13 +261,28 @@ class FileRepository {
     }
 
     /** שמירת קובץ טקסט/קוד מהעורך. כתיבה לקובץ זמני ואז החלפה - בלי קובץ חצי-כתוב. */
-    fun saveText(file: File, text: String): Boolean = try {
+    /**
+     * שמירה אטומית: כותבים לקובץ זמני, מסנכרנים לדיסק, ואז מחליפים את המקור.
+     * כשלון בכתיבה או בהחלפה משאיר את הקובץ המקורי בלי שינוי ומוחק את הזמני.
+     */
+    fun saveText(file: File, text: String): Boolean {
         val tmp = File(file.parentFile, ".${file.name}.saving")
-        tmp.writeText(text)
-        if (!tmp.renameTo(file)) { file.writeText(text); tmp.delete() }
-        true
-    } catch (e: Exception) {
-        false
+        return try {
+            java.io.FileOutputStream(tmp).use { out ->
+                out.write(text.toByteArray(Charsets.UTF_8))
+                out.flush()
+                out.fd.sync()
+            }
+            try {
+                NioFiles.move(tmp.toPath(), file.toPath(), java.nio.file.StandardCopyOption.ATOMIC_MOVE, java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+            } catch (e: java.nio.file.AtomicMoveNotSupportedException) {
+                NioFiles.move(tmp.toPath(), file.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+            }
+            true
+        } catch (e: Exception) {
+            tmp.delete()
+            false
+        }
     }
 
     fun createFolder(parent: File, name: String): Boolean {

@@ -90,6 +90,8 @@ class MainActivity : ComponentActivity() {
             }
             // מצב מפתח: רק בו מוצגים קבצים ותיקיות טכניים (ר' isDeveloperMode).
             var developer by remember { mutableStateOf(com.future.files.data.isDeveloperMode(this@MainActivity)) }
+            // עולה בכל חזרה לאפליקציה - מרענן את הרשימה (קבצים שנוצרו/השתנו מחוץ לאפליקציה).
+            var resumeTick by remember { mutableIntStateOf(0) }
             fun message(text: String) = snackbar.show(text)
             val coroutineScope = rememberCoroutineScope()
             var theme by remember {
@@ -104,6 +106,7 @@ class MainActivity : ComponentActivity() {
             DisposableEffect(lifecycleOwner) {
                 val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
                     if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                        resumeTick++
                         hasAccess = repository.hasAllFilesAccess()
                         developer = com.future.files.data.isDeveloperMode(this@MainActivity)
                         val shared = ThemeClient.getTheme(this@MainActivity)
@@ -124,7 +127,7 @@ class MainActivity : ComponentActivity() {
                 entries = loaded ?: emptyList()
             }
 
-            LaunchedEffect(hasAccess, currentDir, sortOrder, developer) {
+            LaunchedEffect(hasAccess, currentDir, sortOrder, developer, resumeTick) {
                 if (hasAccess) reloadEntries()
             }
 
@@ -271,18 +274,21 @@ class MainActivity : ComponentActivity() {
                             val progress = com.future.files.data.CopyProgress()
                             progressValue = 0f
                             copyProgress = progress
+                            // התיקייה נקבעת לפני ההעתקה - חזרה "אחורה" באמצע לא משנה את היעד.
+                            val destDir = currentDir
                             coroutineScope.launch {
                                 val ok = withContext(Dispatchers.IO) {
-                                    if (clipboardIsMove) repository.moveEntry(toPaste.file, currentDir, progress)
-                                    else repository.copyEntry(toPaste.file, currentDir, progress)
+                                    if (clipboardIsMove) repository.moveEntry(toPaste.file, destDir, progress)
+                                    else repository.copyEntry(toPaste.file, destDir, progress)
                                 }
                                 reloadEntries()
                                 when {
                                     progress.cancelled -> message("הפעולה בוטלה")
+                                    !ok && File(destDir, toPaste.file.name).exists() -> message("כבר קיים פריט בשם הזה כאן")
                                     !ok -> message("לא ניתן להדביק כאן")
                                 }
-                                // ביטול משאיר את הפריט בלוח - אפשר להדביק שוב
-                                if (!progress.cancelled) clipboardEntry = null
+                                // ביטול או כשלון משאירים את הפריט בלוח - אפשר לנסות שוב
+                                if (ok) clipboardEntry = null
                                 copyProgress = null
                                 isBusy = false
                             }

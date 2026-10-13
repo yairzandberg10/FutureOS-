@@ -68,6 +68,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import com.future.sharednav.theme.FutureTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -138,6 +139,7 @@ private fun loadText(file: File): LoadedText? = try {
 @Composable
 fun TextViewerScreen(file: File, theme: FutureTheme, onBack: () -> Unit, onMessage: (String) -> Unit = {}) {
     var content by remember(file) { mutableStateOf<String?>(null) }
+    var loadFailed by remember(file) { mutableStateOf(false) }
     var truncated by remember(file) { mutableStateOf(false) }
     var readOnly by remember(file) { mutableStateOf(false) }
     var editing by rememberSaveable { mutableStateOf(false) }
@@ -157,6 +159,7 @@ fun TextViewerScreen(file: File, theme: FutureTheme, onBack: () -> Unit, onMessa
         val loaded = withContext(Dispatchers.IO) { loadText(file) }
         truncated = loaded?.truncated ?: false
         readOnly = loaded?.readOnly ?: false
+        loadFailed = loaded == null
         content = loaded?.text
     }
     // בלי זה אין שום רכיב פוקוסבילי במסך הזה, ולכן אין דרך במקלדת/D-pad לגלול
@@ -256,6 +259,7 @@ fun TextViewerScreen(file: File, theme: FutureTheme, onBack: () -> Unit, onMessa
                     ) {
                         val text = content
                         when {
+                            loadFailed -> Text("לא ניתן לקרוא את הקובץ", color = theme.mutedTextColor, fontSize = FutureTypography.summary)
                             text == null -> Text("טוען", color = theme.mutedTextColor, fontSize = FutureTypography.summary)
                             code -> Row {
                                 val lines = text.lines()
@@ -416,10 +420,44 @@ fun AudioPlayerScreen(file: File, theme: FutureTheme, onBack: () -> Unit) {
     var loadFailed by remember(file) { mutableStateOf(false) }
     var durationMs by remember { mutableStateOf(0) }
     var positionMs by remember { mutableStateOf(0) }
+    val audioManager = remember { context.getSystemService(android.content.Context.AUDIO_SERVICE) as android.media.AudioManager }
+    val audioAttributes = remember {
+        android.media.AudioAttributes.Builder()
+            .setUsage(android.media.AudioAttributes.USAGE_MEDIA)
+            .setContentType(android.media.AudioAttributes.CONTENT_TYPE_MUSIC)
+            .build()
+    }
+    // שיחה/ניווט קולי מהמערכת מושהים; בלי זה השמע ממשיך מעליהם.
+    val focusRequest = remember {
+        android.media.AudioFocusRequest.Builder(android.media.AudioManager.AUDIOFOCUS_GAIN)
+            .setAudioAttributes(audioAttributes)
+            .setOnAudioFocusChangeListener { change ->
+                if (change == android.media.AudioManager.AUDIOFOCUS_LOSS || change == android.media.AudioManager.AUDIOFOCUS_LOSS_TRANSIENT) {
+                    runCatching { player.pause() }
+                    isPlaying = false
+                }
+            }
+            .build()
+    }
+
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            // יציאה מהמסך (מעבר לאפליקציה אחרת או מסך כבוי) - עוצרים את השמע.
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP) {
+                if (isPlaying) runCatching { player.pause() }
+                isPlaying = false
+                audioManager.abandonAudioFocusRequest(focusRequest)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     DisposableEffect(file) {
         try {
             player.reset()
+            player.setAudioAttributes(audioAttributes)
             player.setDataSource(file.absolutePath)
             player.setOnPreparedListener {
                 isPrepared = true
@@ -437,6 +475,7 @@ fun AudioPlayerScreen(file: File, theme: FutureTheme, onBack: () -> Unit) {
             android.widget.Toast.makeText(context, "לא ניתן לנגן קובץ זה", android.widget.Toast.LENGTH_SHORT).show()
         }
         onDispose {
+            audioManager.abandonAudioFocusRequest(focusRequest)
             player.release()
         }
     }
@@ -476,7 +515,13 @@ fun AudioPlayerScreen(file: File, theme: FutureTheme, onBack: () -> Unit) {
                             // clickable כבר פוקוסבילי (יעד פוקוס אחד בלבד). לפני הכנה/אחרי כשל - לחיצה לא עושה דבר.
                             .clickable(interactionSource = interactionSource, indication = null) {
                                 if (!isPrepared || loadFailed) return@clickable
-                                if (isPlaying) player.pause() else player.start()
+                                if (isPlaying) {
+                                    player.pause()
+                                    audioManager.abandonAudioFocusRequest(focusRequest)
+                                } else {
+                                    if (audioManager.requestAudioFocus(focusRequest) != android.media.AudioManager.AUDIOFOCUS_REQUEST_GRANTED) return@clickable
+                                    player.start()
+                                }
                                 isPlaying = !isPlaying
                             }
                             .bringIntoViewOnFocus(),
@@ -543,7 +588,18 @@ fun PdfViewerScreen(file: File, theme: FutureTheme, onBack: () -> Unit) {
         withContext(Dispatchers.IO) {
             try {
                 val pfd = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
-                val renderer = PdfRenderer(pfd)
+                val renderer = try {
+                    PdfRenderer(pfd)
+                } catch (e: Exception) {
+                    pfd.close()
+                    throw e
+                }
+                // המסך נסגר בזמן הטעינה - onDispose כבר רץ ולא יסגור את המשאבים האלה.
+                if (!isActive) {
+                    renderer.close()
+                    pfd.close()
+                    return@withContext
+                }
                 pfdRef.value = pfd
                 rendererRef.value = renderer
                 pageCount = renderer.pageCount
@@ -576,7 +632,8 @@ fun PdfViewerScreen(file: File, theme: FutureTheme, onBack: () -> Unit) {
     val focusRequester = remember { FocusRequester() }
     // בלי זה אין שום רכיב פוקוסבילי ברשימת העמודים ואין דרך במקלדת לגלול
     // PDF מרובה-עמודים - רק העמוד הראשון (הגלוי מיד) היה נגיש בפועל.
-    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+    // מחכים לסיום הטעינה: לפני כן הרשימה עדיין לא קיימת ולבקשת הפוקוס אין יעד.
+    LaunchedEffect(isLoading) { if (!isLoading) runCatching { focusRequester.requestFocus() } }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Column(modifier = Modifier.fillMaxSize().background(theme.raisedSurfaceColor)) {
