@@ -45,13 +45,18 @@ object Recordings {
                 )
             }
 
-    fun durationOf(file: File): Long = durations.getOrPut("${file.path}@${file.lastModified()}") {
-        runCatching {
+    /** כשל בקריאה לא נשמר במטמון - ניסיון חוזר בקריאה הבאה במקום 0 לנצח. */
+    fun durationOf(file: File): Long {
+        val key = "${file.path}@${file.lastModified()}"
+        durations[key]?.let { return it }
+        val duration = runCatching {
             MediaMetadataRetriever().use { r ->
                 r.setDataSource(file.path)
-                r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0L
+                r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull()
             }
-        }.getOrDefault(0L)
+        }.getOrNull() ?: return 0L
+        durations[key] = duration
+        return duration
     }
 
     /** "הקלטה 1", "הקלטה 2"... - המספר הפנוי הבא. */

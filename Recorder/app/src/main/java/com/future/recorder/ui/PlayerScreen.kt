@@ -80,27 +80,66 @@ fun PlayerScreen(theme: FutureTheme, file: File, onBack: () -> Unit) {
         applySpeed()
     }
 
+    // פוקוס שמע: שיחה נכנסת או ניווט קולי מושהים את ההשמעה, ואחרי שהם נגמרים
+    // הנגן לא מתחיל לבד - המשתמש לוחץ OK.
+    val audioManager = remember { context.getSystemService(android.content.Context.AUDIO_SERVICE) as android.media.AudioManager }
+    val audioAttributes = remember {
+        android.media.AudioAttributes.Builder()
+            .setUsage(android.media.AudioAttributes.USAGE_MEDIA)
+            .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SPEECH)
+            .build()
+    }
+    val focusRequest = remember {
+        android.media.AudioFocusRequest.Builder(android.media.AudioManager.AUDIOFOCUS_GAIN)
+            .setAudioAttributes(audioAttributes)
+            .setOnAudioFocusChangeListener { change ->
+                if (change == android.media.AudioManager.AUDIOFOCUS_LOSS || change == android.media.AudioManager.AUDIOFOCUS_LOSS_TRANSIENT) {
+                    runCatching { player.pause() }
+                    isPlaying = false
+                }
+            }
+            .build()
+    }
+
     DisposableEffect(file) {
+        // כשל השמעה באמצע (לא רק בהכנה) מציג הודעה ולא נשאר שקט.
+        player.setOnErrorListener { _, _, _ ->
+            isPlaying = false
+            Toast.makeText(context, "לא ניתן להשמיע את ההקלטה", Toast.LENGTH_SHORT).show()
+            true
+        }
         runCatching {
+            player.setAudioAttributes(audioAttributes)
             player.setDataSource(file.path)
             player.prepare()
             durationMs = player.duration
-            player.setOnCompletionListener { isPlaying = false; positionMs = durationMs }
-            player.start()
-            isPlaying = true
+            player.setOnCompletionListener {
+                isPlaying = false
+                positionMs = durationMs
+                audioManager.abandonAudioFocusRequest(focusRequest)
+            }
+            if (audioManager.requestAudioFocus(focusRequest) == android.media.AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
+                player.start()
+                isPlaying = true
+            }
         }.onFailure {
             Toast.makeText(context, "לא ניתן להשמיע את ההקלטה", Toast.LENGTH_SHORT).show()
         }
-        onDispose { runCatching { player.stop() }; player.release() }
+        onDispose {
+            audioManager.abandonAudioFocusRequest(focusRequest)
+            runCatching { player.stop() }
+            player.release()
+        }
     }
     // אין שירות מאחורי הנגן - ביציאה מהאפליקציה (בית/שיחה נכנסת) ההשמעה נעצרת,
     // אחרת היא המשיכה ברקע בלי שום דרך לעצור אותה חוץ מלחזור לאפליקציה.
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val obs = androidx.lifecycle.LifecycleEventObserver { _, event ->
-            if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP && isPlaying) {
-                runCatching { player.pause() }
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP) {
+                if (isPlaying) runCatching { player.pause() }
                 isPlaying = false
+                audioManager.abandonAudioFocusRequest(focusRequest)
             }
         }
         lifecycleOwner.lifecycle.addObserver(obs)
@@ -115,12 +154,17 @@ fun PlayerScreen(theme: FutureTheme, file: File, onBack: () -> Unit) {
 
     fun toggle() {
         runCatching {
-            if (player.isPlaying) { player.pause(); isPlaying = false }
-            else {
+            if (player.isPlaying) {
+                player.pause(); isPlaying = false
+                audioManager.abandonAudioFocusRequest(focusRequest)
+            } else {
+                if (audioManager.requestAudioFocus(focusRequest) != android.media.AudioManager.AUDIOFOCUS_REQUEST_GRANTED) return@runCatching
                 if (positionMs >= durationMs - 50) { player.seekTo(0); positionMs = 0 }
                 player.start(); isPlaying = true
                 applySpeed()
             }
+        }.onFailure {
+            Toast.makeText(context, "לא ניתן להשמיע את ההקלטה", Toast.LENGTH_SHORT).show()
         }
     }
     fun seekBy(deltaMs: Int) {

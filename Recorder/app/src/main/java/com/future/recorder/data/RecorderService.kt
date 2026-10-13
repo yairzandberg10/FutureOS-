@@ -154,6 +154,8 @@ class RecorderService : Service() {
         val s = _state.value
         if (s.status != RecorderStatus.Recording) return
         runCatching { recorder?.pause() }.onFailure { Log.w(TAG, "pause failed", it) }
+        // בהשהיה אין מה לדגום - עוצרים את לולאת הרמה כדי לא להתעורר כל 80ms.
+        handler.removeCallbacks(levelTick)
         _state.value = s.copy(status = RecorderStatus.Paused, accumulatedMs = s.elapsedMs())
         notify(paused = true)
     }
@@ -163,6 +165,7 @@ class RecorderService : Service() {
         if (s.status != RecorderStatus.Paused) return
         runCatching { recorder?.resume() }.onFailure { Log.w(TAG, "resume failed", it) }
         _state.value = s.copy(status = RecorderStatus.Recording, resumedAt = SystemClock.uptimeMillis())
+        handler.post(levelTick)
         notify(paused = false)
     }
 

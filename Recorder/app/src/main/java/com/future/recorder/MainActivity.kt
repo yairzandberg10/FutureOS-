@@ -11,6 +11,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -32,9 +33,10 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         setContent {
-            // null = המסך הראשי; קובץ = נגן ההקלטה הזו
-            var playing by remember { mutableStateOf<File?>(null) }
-            BackHandler(enabled = playing != null) { playing = null }
+            // null = המסך הראשי; נתיב = נגן ההקלטה הזו. נשמר כמחרוזת כדי לשרוד יצירה מחדש.
+            var playingPath by rememberSaveable { mutableStateOf<String?>(null) }
+            val playing = playingPath?.let { File(it) }
+            BackHandler(enabled = playing != null) { playingPath = null }
             val theme = rememberFutureTheme()
 
             FutureMaterialTheme(theme) {
@@ -45,9 +47,9 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.padding(top = StatusBarInset.TITLE_GAP_DP.dp),
                     ) { file ->
                         if (file == null) {
-                            RecorderHomeScreen(theme = theme, onPlay = { playing = it })
+                            RecorderHomeScreen(theme = theme, onPlay = { playingPath = it.path })
                         } else {
-                            PlayerScreen(theme = theme, file = file, onBack = { playing = null })
+                            PlayerScreen(theme = theme, file = file, onBack = { playingPath = null })
                         }
                     }
                 }

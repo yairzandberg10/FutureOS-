@@ -1,9 +1,12 @@
 package com.future.recorder.ui
 
 import android.Manifest
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
+import android.provider.Settings
 import android.text.format.DateFormat
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -28,6 +31,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -95,15 +99,30 @@ fun RecorderHomeScreen(theme: FutureTheme, onPlay: (File) -> Unit) {
         }
     }
 
-    var pendingStart by remember { mutableStateOf(false) }
+    // נשמר ב-rememberSaveable: אם ההרשאה נענתה בזמן שה-Activity נבנה מחדש, ההקלטה עדיין מתחילה.
+    var pendingStart by rememberSaveable { mutableStateOf(false) }
+    // "אל תשאל שוב" - המערכת לא תציג את החלון שוב, ולכן הלחיצה הבאה פותחת את הגדרות האפליקציה.
+    var micPermanentlyDenied by rememberSaveable { mutableStateOf(false) }
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted && pendingStart) RecorderService.send(context, RecorderService.ACTION_START)
-        else if (!granted) Toast.makeText(context, "נדרשת הרשאת מיקרופון כדי להקליט", Toast.LENGTH_LONG).show()
+        else if (!granted) {
+            val activity = context as? Activity
+            micPermanentlyDenied = activity != null && !activity.shouldShowRequestPermissionRationale(Manifest.permission.RECORD_AUDIO)
+            Toast.makeText(
+                context,
+                if (micPermanentlyDenied) "הרשאת מיקרופון חסומה. לחיצה נוספת על ההקלטה תפתח את הגדרות האפליקציה" else "נדרשת הרשאת מיקרופון כדי להקליט",
+                Toast.LENGTH_LONG,
+            ).show()
+        }
         pendingStart = false
     }
     fun startRecording() {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
             RecorderService.send(context, RecorderService.ACTION_START)
+        } else if (micPermanentlyDenied) {
+            runCatching {
+                context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null)))
+            }
         } else {
             pendingStart = true
             permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
