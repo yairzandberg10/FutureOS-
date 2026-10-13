@@ -123,7 +123,15 @@ fun FlashlightScreen(theme: FutureTheme) {
                     FutureRoundCapsule(
                         icon = FutureIcons.PowerSettingsNew,
                         theme = dark,
-                        onClick = { if (isOn) TorchService.turnOff(context) else TorchService.turnOn(context) },
+                        onClick = {
+                            if (isOn) {
+                                // הפנס יכול להיות דלוק בלי השירות (למשל מהבקרה): stopService לבדו לא מכבה אותו
+                                TorchService.turnOff(context)
+                                controller.setTorch(false)
+                            } else {
+                                TorchService.turnOn(context)
+                            }
+                        },
                         active = isOn,
                         size = PowerButtonSize,
                         contentDescription = if (isOn) "כבה פנס" else "הדלק פנס",
