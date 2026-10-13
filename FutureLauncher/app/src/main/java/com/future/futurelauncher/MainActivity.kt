@@ -964,8 +964,11 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                         val newPages = viewModel.pages.toMutableList()
                         val currentPageItems = newPages[currentPage].toMutableList()
                         val itemToMove = dialog.item as? LauncherItem.App
-                        if (itemToMove != null) {
-                            val originalIndex = currentPageItems.indexOf(itemToMove)
+                        // לפי מזהה, לא לפי שוויון: אחרי טעינה מחדש של הדף האובייקט כבר לא זהה (ResolveInfo)
+                        val originalIndex = if (itemToMove != null) {
+                            currentPageItems.indexOfFirst { it is LauncherItem.App && it.id == itemToMove.id }
+                        } else -1
+                        if (itemToMove != null && originalIndex != -1) {
                             val existingFolder = currentPageItems.find { it is LauncherItem.Folder && it.label == folderName } as? LauncherItem.Folder
                             if (existingFolder != null) {
                                 existingFolder.apps.add(itemToMove)
@@ -998,8 +1001,22 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                         val newPages = viewModel.pages.toMutableList()
                         val currentPageItems = newPages[currentPage].toMutableList()
                         val itemIndex = currentPageItems.indexOf(dialog.item)
-                        if (itemIndex != -1 && dialog.item is LauncherItem.Widget) {
-                            val widget = dialog.item
+                        val widgetItem = dialog.item as? LauncherItem.Widget
+                        // הגודל החדש חייב להיכנס בתוך השורה (4 עמודות) ולהיות פנוי - או תא של הווידג'ט עצמו.
+                        // אחרת הוא דורס אפליקציות/תיקיות שמתחתיו
+                        val fits = widgetItem != null && itemIndex != -1 && (itemIndex % 4) + spanX <= 4 &&
+                            (0 until spanY).all { y ->
+                                (0 until spanX).all { x ->
+                                    val idx = itemIndex + y * 4 + x
+                                    idx == itemIndex || (idx < currentPageItems.size && currentPageItems[idx].let { c ->
+                                        c is LauncherItem.Empty && (c.isOccupiedBy == null || c.isOccupiedBy == widgetItem?.id)
+                                    })
+                                }
+                            }
+                        if (widgetItem != null && itemIndex != -1 && !fits) {
+                            Toast.makeText(viewModel.getApplication<android.app.Application>(), "אין מקום לגודל הזה", Toast.LENGTH_SHORT).show()
+                        } else if (widgetItem != null && itemIndex != -1) {
+                            val widget = widgetItem
                             widget.spanX = spanX
                             widget.spanY = spanY
                             currentPageItems.forEachIndexed { idx, it ->
@@ -1099,6 +1116,8 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                             viewModel.pages = newPages
                             viewModel.savePages()
                             viewModel.pendingSlot = null
+                            // הוספה מחדש של אפליקציה שהוסרה - מבטלים את הסימון, אחרת תיעלם בטעינה הבאה
+                            if (app is LauncherItem.App) viewModel.unmarkAppRemoved(app.id)
                         }
                         viewModel.dialogState = LauncherDialog.None
                     },

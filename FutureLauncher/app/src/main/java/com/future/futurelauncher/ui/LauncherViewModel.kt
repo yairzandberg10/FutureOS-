@@ -249,6 +249,13 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         return prefs.getStringSet(KEY_REMOVED_APPS, emptySet()) ?: emptySet()
     }
 
+    /** אפליקציה שהוסרה וחזרה למסך במפורש (הוספה מחדש) - לא נשארת מסומנת כ"הוסרה" לטעינה הבאה. */
+    fun unmarkAppRemoved(appId: String) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val current = loadRemovedAppIds().toMutableSet()
+        if (current.remove(appId)) prefs.edit().putStringSet(KEY_REMOVED_APPS, current).apply()
+    }
+
     private fun markAppRemoved(appId: String) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val current = loadRemovedAppIds().toMutableSet()
