@@ -119,8 +119,8 @@ fun FutureTabItem(
             )
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .bringIntoViewOnFocus()
+            // clickable כבר מוסיף פוקוס - focusable נוסף יוצר שני יעדי פוקוס, וה-OK הראשון נבלע
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource)
             .padding(vertical = FutureDimens.spacingSm),
         contentAlignment = Alignment.Center,
     ) {

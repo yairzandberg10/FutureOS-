@@ -150,7 +150,6 @@ fun FutureMenuRow(
                 } else Modifier
             )
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource)
             .bringIntoViewOnFocus()
             .padding(horizontal = MenuRowHorizontalPadding),
         verticalAlignment = Alignment.CenterVertically,

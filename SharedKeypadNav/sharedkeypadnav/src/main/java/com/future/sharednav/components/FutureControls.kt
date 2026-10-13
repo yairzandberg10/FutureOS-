@@ -188,7 +188,6 @@ fun FutureChip(
                             indication = null,
                             onClick = onClick,
                         )
-                        .focusable(interactionSource = interactionSource)
                 } else Modifier
             )
             .padding(horizontal = ChipHorizontalPadding, vertical = FutureDimens.spacingSm),
@@ -243,9 +242,8 @@ fun FutureDayChip(
                         indication = null,
                         onClick = onClick,
                     )
-                } else Modifier
-            )
-            .focusable(interactionSource = interactionSource),
+                } else Modifier.focusable(interactionSource = interactionSource)
+            ),
         contentAlignment = Alignment.Center,
     ) {
         Text(

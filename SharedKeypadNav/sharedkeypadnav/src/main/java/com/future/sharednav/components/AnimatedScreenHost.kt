@@ -113,7 +113,9 @@ fun <S> AnimatedBackStackHost(
     contentKey: (S) -> Any? = { it },
     content: @Composable (S) -> Unit,
 ) {
-    val entry = BackStackEntry(backStack.last(), backStack.size)
+    // מחסנית ריקה אסורה לקרוס בהרכבה - בלי מסך מציגים כלום
+    val top = backStack.lastOrNull() ?: return
+    val entry = BackStackEntry(top, backStack.size)
     AnimatedScreenHost(
         targetState = entry,
         depthOf = { it.depth },
