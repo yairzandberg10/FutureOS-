@@ -71,9 +71,15 @@ fun BrowseScreen(
         .sortedBy { it.sortOrder }
 
     val rowFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
     LaunchedEffect(entries.map { keyOf(it) }) {
         val target = entries.firstOrNull { keyOf(it) == lastSelectedKey } ?: entries.firstOrNull()
-        target?.let { rowFocusRequesters.getOrPut(keyOf(it)) { FocusRequester() }.requestFocus() }
+        if (target != null) {
+            // גוללים ליעד ומחכים לפריים שבו השורה מורכבת - אחרת requestFocus נופל על שורה שלא מורכבת
+            listState.scrollToItem(entries.indexOf(target))
+            androidx.compose.runtime.withFrameNanos { }
+            runCatching { rowFocusRequesters.getOrPut(keyOf(target)) { FocusRequester() }.requestFocus() }
+        }
     }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
@@ -90,6 +96,7 @@ fun BrowseScreen(
                     }
                 } else {
                     LazyColumn(
+                        state = listState,
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                         verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp),
                     ) {

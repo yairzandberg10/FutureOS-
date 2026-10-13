@@ -28,6 +28,8 @@ import com.future.sharednav.icons.FutureIcons
 @Composable
 fun LibraryNotInstalledScreen(expectedPath: String, theme: FutureTheme, onRetry: () -> Unit) {
     val focusRequester = remember { FocusRequester() }
+    // בלי פוקוס התחלתי OK לא מפעיל "נסה שוב" מיד
+    androidx.compose.runtime.LaunchedEffect(Unit) { runCatching { focusRequester.requestFocus() } }
     Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor).padding(32.dp), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(FutureIcons.AutoMirrored.MenuBook, contentDescription = null, tint = theme.accentColor, modifier = Modifier.padding(bottom = 16.dp))

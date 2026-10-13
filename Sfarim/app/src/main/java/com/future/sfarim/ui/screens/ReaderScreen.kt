@@ -363,8 +363,9 @@ private fun SegmentRow(
             // לחיצת OK/מרכז הייתה no-op בלי שום רמז על המסך - עכשיו פותחת את
             // אותו תפריט אפשרויות (סימניה/שיתוף/פרשנים) שמקש Menu כבר מספק,
             // כך שהיא לא "מתה" בלי סיבה.
+            // בלי focusable נוסף: clickable כבר מוסיף פוקוס. שניהם יחד יוצרים שני יעדי פוקוס,
+            // וה-OK הראשון נבלע במעבר ביניהם.
             .clickable(interactionSource = interactionSource, indication = null, onClick = onMenu)
-            .focusable(interactionSource = interactionSource)
             .onFocusChanged { if (it.isFocused) onFocusedShown() }
             .onKeyEvent { event ->
                 if (isFocused && event.type == KeyEventType.KeyUp && (event.key == Key.Menu || event.key == Key.Settings)) {
