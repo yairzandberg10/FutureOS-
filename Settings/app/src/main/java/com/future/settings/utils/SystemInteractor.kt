@@ -288,9 +288,19 @@ class SystemInteractor(private val context: Context) {
 
     fun setWallpaperFromUri(uri: Uri): Boolean {
         return try {
-            val bitmap = contentResolver.openInputStream(uri)?.use { android.graphics.BitmapFactory.decodeStream(it) } ?: return false
+            // קודם רק הגבולות, ואז פענוח מוקטן: תמונה של כמה מגה-פיקסלים לא נפתחת בגודל מלא במכשיר
+            val bounds = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            contentResolver.openInputStream(uri)?.use { android.graphics.BitmapFactory.decodeStream(it, null, bounds) } ?: return false
+            val maxSide = maxOf(bounds.outWidth, bounds.outHeight).coerceAtLeast(1)
+            var sample = 1
+            // לא מורידים מתחת ל-1920 בצלע הארוכה - מספיק לטפט גם בשני המסכים
+            while (maxSide / (sample * 2) >= 1920) sample *= 2
+            val options = android.graphics.BitmapFactory.Options().apply { inSampleSize = sample }
+            val bitmap = contentResolver.openInputStream(uri)?.use { android.graphics.BitmapFactory.decodeStream(it, null, options) } ?: return false
             setWallpaperBitmap(bitmap)
         } catch (e: Exception) {
+            false
+        } catch (e: OutOfMemoryError) {
             false
         }
     }
@@ -657,7 +667,8 @@ class SystemInteractor(private val context: Context) {
     /** אפליקציות FutureOS שאסור לעצור בכפייה בניקוי RAM - מערכת ההפעלה עצמה,
      *  ההשקה, ואפליקציה שעשויה לנגן ברקע כרגע. */
     private val ramCleanupProtectedPackages = setOf(
-        "com.future.futureui", "com.future.futurelauncher", "com.future.settings", "com.future.music"
+        "com.future.futureui", "com.future.futurelauncher", "com.future.settings", "com.future.music",
+        "com.future.dialer", "com.future.messages"
     )
 
     /** מנקה RAM ע"י עצירה בכפייה של אפליקציות FutureOS לא-קריטיות - מחזיר כמה
@@ -693,6 +704,12 @@ class SystemInteractor(private val context: Context) {
     }
 
     fun getTodayScreenTime(): ScreenTimeSummary {
+        val entries = getTodayUsageEntries()
+        return ScreenTimeSummary(entries.sumOf { it.millis }, entries.take(5))
+    }
+
+    /** שימוש היום לכל החבילות בלי חיתוך - אכיפת טיימרים חייבת לראות כל אפליקציה. */
+    fun getTodayUsageEntries(): List<UsageEntry> {
         return try {
             val usm = context.getSystemService(Context.USAGE_STATS_SERVICE) as android.app.usage.UsageStatsManager
             val cal = java.util.Calendar.getInstance()
@@ -704,13 +721,12 @@ class SystemInteractor(private val context: Context) {
             val now = System.currentTimeMillis()
             val stats = usm.queryUsageStats(android.app.usage.UsageStatsManager.INTERVAL_DAILY, startOfDay, now)
                 ?: emptyList()
-            val entries = stats
+            stats
                 .filter { it.totalTimeInForeground > 0 }
                 .map { UsageEntry(it.packageName, it.totalTimeInForeground) }
                 .sortedByDescending { it.millis }
-            ScreenTimeSummary(entries.sumOf { it.millis }, entries.take(5))
         } catch (e: Exception) {
-            ScreenTimeSummary(0L, emptyList())
+            emptyList()
         }
     }
 
@@ -1106,7 +1122,7 @@ class SystemInteractor(private val context: Context) {
     fun checkAndEnforceAppTimers(): List<String> {
         val timers = getAppTimers()
         if (timers.isEmpty()) return emptyList()
-        val usage = getTodayScreenTime().topApps.associateBy { it.packageName }
+        val usage = getTodayUsageEntries().associateBy { it.packageName }
         val exceeded = timers.filter { timer ->
             val usedMinutes = (usage[timer.packageName]?.millis ?: 0L) / 60000
             usedMinutes >= timer.dailyLimitMinutes
@@ -1186,7 +1202,13 @@ class SystemInteractor(private val context: Context) {
         return try {
             val smsManager = if (Build.VERSION.SDK_INT >= 31) context.getSystemService(SmsManager::class.java)
                 else @Suppress("DEPRECATION") SmsManager.getDefault()
-            smsManager.sendTextMessage(phoneNumber, null, message, null, null)
+            // טקסט עברי (UCS-2) מעל 70 תווים חייב להתפצל להודעות מחוברות, אחרת נחתך
+            val parts = smsManager.divideMessage(message)
+            if (parts.size > 1) {
+                smsManager.sendMultipartTextMessage(phoneNumber, null, parts, null, null)
+            } else {
+                smsManager.sendTextMessage(phoneNumber, null, message, null, null)
+            }
             true
         } catch (e: Exception) {
             false

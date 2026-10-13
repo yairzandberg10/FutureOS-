@@ -353,14 +353,19 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             AudioManager.RINGER_MODE_VIBRATE -> "רטט"
             else -> "השתק"
         }
-        val succeeded = systemInteractor.setRingerMode(mode) ||
-            (systemInteractor.grantNotificationPolicyAccessViaRoot() && systemInteractor.setRingerMode(mode))
-        if (succeeded) {
-            _ringerMode.value = mode
-            showToast("מצב שמע שונה ל: $modeStr")
-        } else {
-            showToast("צריך לאשר גישה למדיניות התראות כדי לעבור למצב $modeStr")
-            systemInteractor.openNotificationPolicyAccessSettings()
+        // הרשאת מדיניות התראות מוענקת דרך root (קריאה חוסמת) - כל המסלול רץ ברקע
+        viewModelScope.launch(Dispatchers.IO) {
+            val succeeded = systemInteractor.setRingerMode(mode) ||
+                (systemInteractor.grantNotificationPolicyAccessViaRoot() && systemInteractor.setRingerMode(mode))
+            viewModelScope.launch(Dispatchers.Main) {
+                if (succeeded) {
+                    _ringerMode.value = mode
+                    showToast("מצב שמע שונה ל: $modeStr")
+                } else {
+                    showToast("צריך לאשר גישה למדיניות התראות כדי לעבור למצב $modeStr")
+                }
+            }
+            if (!succeeded) systemInteractor.openNotificationPolicyAccessSettings()
         }
     }
 
@@ -632,13 +637,14 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun optimizeNow() {
         _isOptimizing.value = true
         viewModelScope.launch(Dispatchers.IO) {
-            val count = systemInteractor.cleanBackgroundApps()
+            // לא מדווחים מספר: הניקוי מחזיר את מספר החבילות המותקנות, לא את מה שנעצר בפועל
+            systemInteractor.cleanBackgroundApps()
             systemInteractor.freeUpSpace()
             val ram = systemInteractor.getRamInfo()
             viewModelScope.launch(Dispatchers.Main) {
                 _ramInfo.value = ram
                 _isOptimizing.value = false
-                showToast(if (count > 0) "האופטימיזציה הושלמה - $count אפליקציות נוקו" else "האופטימיזציה הושלמה")
+                showToast("האופטימיזציה הושלמה")
             }
         }
     }
@@ -724,6 +730,9 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         val newValue = !_cyclingAccentEnabled.value
         _cyclingAccentEnabled.value = newValue
         if (newValue) {
+            // הצבע לפני החגיגה - חוזרים אליו בסיום הטיימר או בביטול המתג
+            val originalColor = _themeConfig.value.primaryColor
+            cyclingOriginalColor = originalColor
             cyclingAccentJob = viewModelScope.launch(Dispatchers.Default) {
                 var hue = 0f
                 // הלולאה בודקת את תפוגת מצב החגיגה בעצמה בכל טיק - כדי שהצבע
@@ -739,12 +748,32 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
                     hue = (hue + 24f) % 360f
                     kotlinx.coroutines.delay(1000)
                 }
-                viewModelScope.launch(Dispatchers.Main) { _cyclingAccentEnabled.value = false }
+                withContext(Dispatchers.IO) { ThemeClient.setPrimaryColor(app, originalColor.toArgb()) }
+                viewModelScope.launch(Dispatchers.Main) {
+                    _themeConfig.value = _themeConfig.value.copy(primaryColor = originalColor)
+                    _cyclingAccentEnabled.value = false
+                }
             }
         } else {
-            cyclingAccentJob?.cancel()
+            val job = cyclingAccentJob
+            cyclingAccentJob = null
+            job?.cancel()
+            // מחכים שהלולאה תסיים לכתוב (אם כתבה כרגע) ואז מחזירים את הצבע המקורי
+            val original = cyclingOriginalColor
+            cyclingOriginalColor = null
+            if (original != null) {
+                viewModelScope.launch(Dispatchers.IO) {
+                    job?.join()
+                    ThemeClient.setPrimaryColor(app, original.toArgb())
+                    viewModelScope.launch(Dispatchers.Main) {
+                        _themeConfig.value = _themeConfig.value.copy(primaryColor = original)
+                    }
+                }
+            }
         }
     }
+
+    private var cyclingOriginalColor: Color? = null
 
     // --- זום מסך ---
 

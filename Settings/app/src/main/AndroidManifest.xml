@@ -40,6 +40,7 @@
     <uses-permission android:name="android.permission.READ_PHONE_NUMBERS" />
     <!-- שליחת הודעת SOS ואיתור מיקום ידני למגע חירום -->
     <uses-permission android:name="android.permission.SEND_SMS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.VIBRATE" />
@@ -87,6 +88,13 @@
         <receiver
             android:name=".receiver.AppTimerCheckReceiver"
             android:exported="false" />
+        <receiver
+            android:name=".receiver.BootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
         <receiver
             android:name=".SettingsWidgetProvider"
             android:exported="true">

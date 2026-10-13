@@ -2609,6 +2609,7 @@ fun SosScreen(navController: NavController, theme: ThemeConfig, viewModel: Setti
     LaunchedEffect(Unit) { viewModel.loadEmergencyContact() }
     val contact = viewModel.emergencyContact.value
     var showEditDialog by remember { mutableStateOf(false) }
+    var showSosConfirm by remember { mutableStateOf(false) }
     var nameField by remember { mutableStateOf(contact?.first ?: "") }
     var phoneField by remember { mutableStateOf(contact?.second ?: "") }
 
@@ -2686,7 +2687,17 @@ fun SosScreen(navController: NavController, theme: ThemeConfig, viewModel: Setti
                             theme,
                             showChevron = false
                         ) {
-                            if (!sending) viewModel.sendSosNow()
+                            if (!sending) showSosConfirm = true
+                        }
+                        if (showSosConfirm) {
+                            ConfirmDialog(
+                                theme = theme,
+                                title = "שליחת הודעת SOS",
+                                message = "תישלח הודעת SMS עם המיקום האחרון לאיש הקשר לחירום. להמשיך?",
+                                confirmLabel = "שלח",
+                                onConfirm = { showSosConfirm = false; viewModel.sendSosNow() },
+                                onDismiss = { showSosConfirm = false }
+                            )
                         }
                     }
                 }
