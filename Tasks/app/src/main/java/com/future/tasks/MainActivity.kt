@@ -20,6 +20,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.future.sharednav.components.AnimatedScreenHost
 import com.future.sharednav.theme.FutureMaterialTheme
 import com.future.sharednav.theme.rememberFutureTheme
+import com.future.tasks.data.Task
 import com.future.tasks.ui.TaskViewModel
 import com.future.tasks.ui.screens.TaskEditorScreen
 import com.future.tasks.ui.screens.TaskListScreen
@@ -59,6 +60,9 @@ class MainActivity : ComponentActivity() {
             // נשמר גם אחרי שחוזרים לרשימה - כדי שהפוקוס יחזור למשימה שממנה
             // נכנסנו לעורך, לא תמיד למשימה הראשונה ברשימה.
             var lastSelectedTaskId by remember { mutableStateOf<Int?>(null) }
+            // המשימה שנפתחה לעריכה - נלקחת בזמן הפתיחה ולא מחושבת מהרשימה המסוננת,
+            // כדי שחיפוש או עדכון ברשימה לא יפתחו עורך ריק מעל משימה קיימת.
+            var editingTask by remember { mutableStateOf<Task?>(null) }
 
             BackHandler(enabled = editingTaskId != null) { editingTaskId = null }
 
@@ -78,12 +82,15 @@ class MainActivity : ComponentActivity() {
                     depthOf = { if (it == null) 0 else 1 },
                 ) { editingId ->
                     if (editingId != null) {
-                        val task = if (editingId != 0) tasks.find { it.id == editingId } else null
+                        val task = if (editingId != 0) editingTask?.takeIf { it.id == editingId } else null
                         TaskEditorScreen(
                             task = task,
                             theme = theme,
                             onSave = { title, notes, priority, isDone, reminderAt ->
-                                viewModel.addOrUpdateTask(editingId, title, notes, priority, isDone, reminderAt)
+                                // משימה קיימת שלא נטענה לא נשמרת - אחרת הכותרת הריקה דורסת אותה.
+                                if (editingId == 0 || task != null) {
+                                    viewModel.addOrUpdateTask(editingId, title, notes, priority, isDone, reminderAt)
+                                }
                                 editingTaskId = null
                             },
                             onDelete = {
@@ -98,8 +105,8 @@ class MainActivity : ComponentActivity() {
                             searchQuery = query,
                             theme = theme,
                             onSearchChanged = { viewModel.onSearchQueryChanged(it) },
-                            onTaskClick = { task -> lastSelectedTaskId = task.id; editingTaskId = task.id },
-                            onAddTask = { editingTaskId = 0 },
+                            onTaskClick = { task -> lastSelectedTaskId = task.id; editingTask = task; editingTaskId = task.id },
+                            onAddTask = { editingTask = null; editingTaskId = 0 },
                             lastSelectedTaskId = lastSelectedTaskId,
                             onToggleDone = { viewModel.toggleDone(it) },
                             onDelete = { viewModel.deleteTask(it) },

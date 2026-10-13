@@ -99,7 +99,8 @@ fun TaskListScreen(
     val addFocusRequester = remember { FocusRequester() }
     LaunchedEffect(tasks.map { it.id }) {
         if (tasks.isEmpty()) {
-            addFocusRequester.requestFocus()
+            // כפתור ההוספה מחובר ל-ScreenScaffold (trailingFocusRequester) - בלי זה הבקשה נזרקת.
+            runCatching { addFocusRequester.requestFocus() }
         } else {
             val target = tasks.firstOrNull { it.id == lastSelectedTaskId } ?: tasks.first()
             rowFocusRequesters.getOrPut(target.id) { FocusRequester() }.requestFocus()
@@ -115,6 +116,7 @@ fun TaskListScreen(
         trailingIcon = FutureIcons.Add,
         trailingContentDescription = "משימה חדשה",
         onTrailingClick = onAddTask,
+        trailingFocusRequester = addFocusRequester,
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             SearchField(searchQuery, onSearchChanged, theme)
