@@ -117,7 +117,17 @@ private fun decodeUtf8Strict(bytes: ByteArray, partial: Boolean): String? {
 }
 
 private fun loadText(file: File): LoadedText? = try {
-    val bytes = file.inputStream().use { it.readNBytes(TEXT_MAX_BYTES) }
+    // readNBytes(int) קיים רק מ-API 33, והמכשיר הוא API 31 - קריאה ידנית בלולאה.
+    val bytes = file.inputStream().use { input ->
+        val buffer = ByteArray(minOf(file.length(), TEXT_MAX_BYTES.toLong()).toInt())
+        var read = 0
+        while (read < buffer.size) {
+            val n = input.read(buffer, read, buffer.size - read)
+            if (n < 0) break
+            read += n
+        }
+        if (read == buffer.size) buffer else buffer.copyOf(read)
+    }
     val truncated = file.length() > TEXT_MAX_BYTES
     val utf8 = decodeUtf8Strict(bytes, truncated)
     if (utf8 != null) LoadedText(utf8, readOnly = false, truncated = truncated)
