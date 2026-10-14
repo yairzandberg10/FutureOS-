@@ -46,6 +46,31 @@ private val FileEntrySaver = Saver<FileEntry?, String>(
     restore = { FileEntry(File(it), false, 0L) },
 )
 
+/**
+ * בקשת בחירת קובץ מאפליקציה אחרת (GET_CONTENT / OPEN_DOCUMENT, #33). הקובץ שנבחר
+ * מוחזר כ-content URI דרך FileProvider עם הרשאת קריאה, ולא כנתיב.
+ */
+private class PickRequest(private val mimeTypes: List<String>) {
+    fun accepts(file: File): Boolean {
+        if (mimeTypes.isEmpty() || mimeTypes.any { it == "*/*" || it == "*" }) return true
+        val mime = android.webkit.MimeTypeMap.getSingleton().getMimeTypeFromExtension(file.extension.lowercase())
+            ?: return false
+        return mimeTypes.any { pattern ->
+            pattern == mime || (pattern.endsWith("/*") && mime.startsWith(pattern.removeSuffix("*")))
+        }
+    }
+
+    companion object {
+        fun from(intent: Intent?): PickRequest? {
+            if (intent == null) return null
+            val action = intent.action
+            if (action != Intent.ACTION_GET_CONTENT && action != Intent.ACTION_OPEN_DOCUMENT) return null
+            val types = intent.getStringArrayExtra(Intent.EXTRA_MIME_TYPES)?.toList() ?: listOfNotNull(intent.type)
+            return PickRequest(types)
+        }
+    }
+}
+
 class MainActivity : ComponentActivity() {
     // המכשיר האמיתי הוא מקלדת T9 בלבד בלי מסך מגע - מבטלים קלט מגע לגמרי כדי
     // שההתנהגות תישאר תואמת לחומרה האמיתית. לא פוגע בניווט/הפעלה במקשים -
@@ -58,6 +83,8 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val repository = remember { FileRepository() }
+            // מצב בחירה (לאפליקציה אחרת): לא null כשהפתיחה הגיעה מ-GET_CONTENT / OPEN_DOCUMENT.
+            val pickRequest = remember { PickRequest.from(intent) }
             var hasAccess by remember { mutableStateOf(repository.hasAllFilesAccess()) }
             val root = remember { repository.rootDirectory() }
             var currentDir by rememberSaveable(stateSaver = FileSaver) { mutableStateOf(root) }
@@ -141,6 +168,11 @@ class MainActivity : ComponentActivity() {
             BackHandler(enabled = viewingFile != null || currentDir.absolutePath != root.absolutePath) {
                 if (viewingFile != null) viewingFile = null else goUp()
             }
+            // בחירה לאפליקציה אחרת: BACK בשורש מבטל את הבחירה.
+            BackHandler(enabled = pickRequest != null && viewingFile == null && currentDir.absolutePath == root.absolutePath) {
+                setResult(RESULT_CANCELED)
+                finish()
+            }
 
             Surface(modifier = Modifier.fillMaxSize(), color = theme.backgroundColor) {
               // ריווח קטן - הכותרת (שם התיקייה) ישבה מתחת לשורת המצב.
@@ -189,6 +221,10 @@ class MainActivity : ComponentActivity() {
                             // תיקיות מערכת ונתוני אפליקציות לא נפתחים, גם דרך קישור.
                             if (isInsideUserStorage(entry.file, root)) currentDir = entry.file
                             else message("אין גישה לתיקייה הזו")
+                        } else if (pickRequest != null) {
+                            // במצב בחירה קובץ שנבחר מוחזר לאפליקציה הקוראת, בלי לפתוח אותו.
+                            if (pickRequest.accepts(entry.file)) returnPickedFile(entry.file)
+                            else message("הקובץ הזה לא מתאים לבחירה")
                         } else {
                             when (categorize(entry.file)) {
                                 // הקבצים לא מתקינים אפליקציות. וידאו נפתח באפליקציה חיצונית שמתאימה לו.
@@ -345,6 +381,16 @@ class MainActivity : ComponentActivity() {
               }
             }
         }
+    }
+
+    /** מחזיר את הקובץ שנבחר לאפליקציה שביקשה אותו, ומסיים את המסך (#33). */
+    private fun returnPickedFile(file: File) {
+        val uri = FileProvider.getUriForFile(this, "$packageName.fileprovider", file)
+        val result = Intent().setData(uri)
+        result.clipData = android.content.ClipData.newRawUri("", uri)
+        result.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        setResult(RESULT_OK, result)
+        finish()
     }
 
     private fun openFile(file: File, targetPackage: String? = null): Boolean = try {
