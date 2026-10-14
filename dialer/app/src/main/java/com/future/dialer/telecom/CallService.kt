@@ -3,9 +3,13 @@ package com.future.dialer.telecom
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.content.ContentValues
 import android.content.Intent
 import android.media.MediaRecorder
+import android.net.Uri
 import android.os.Build
+import android.os.ParcelFileDescriptor
+import android.provider.MediaStore
 import android.telecom.Call
 import android.telecom.CallAudioState
 import android.telecom.InCallService
@@ -14,7 +18,6 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.future.dialer.MainActivity
 import com.future.sharednav.systemui.SystemUiTarget
-import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -247,6 +250,7 @@ class CallService : InCallService() {
 
     companion object {
         private const val TAG = "CallService"
+        private const val RECORDINGS_FOLDER = "הקלטות שיחה"
         private const val CALL_CHANNEL_ID = "incoming_call"
         private const val CALL_NOTIFICATION_ID = 7001
         private const val ONGOING_CHANNEL_ID = "ongoing_call"
@@ -269,7 +273,9 @@ class CallService : InCallService() {
         val isRecording: StateFlow<Boolean> = _isRecording.asStateFlow()
 
         private var recorder: MediaRecorder? = null
-        private var recordingFile: File? = null
+        private var recordingUri: Uri? = null
+        private var recordingResolver: android.content.ContentResolver? = null
+        private var recordingPfd: ParcelFileDescriptor? = null
 
         @Volatile
         private var ringingNotified = false
@@ -321,7 +327,8 @@ class CallService : InCallService() {
         }
 
         /**
-         * מתחיל הקלטת שיחה למקום אחסון פרטי של האפליקציה. איכות ההקלטה תלויה במקור השמע
+         * מתחיל הקלטת שיחה. הקובץ נשמר ב-MediaStore, בתיקייה "הקלטות שיחה" תחת הקלטות
+         * (Recordings) - כך הוא נראה בקבצים ובנגן, בלי הרשאת אחסון. איכות ההקלטה תלויה במקור השמע
          * שהמכשיר מאפשר עבורו - VOICE_CALL אינו זמין בכל המכשירים (מוגבל ע"י ה-OEM/אבטחה),
          * ולכן יש נפילה חזרה למקור המיקרופון הרגיל אם היצירה נכשלת.
          */
@@ -329,29 +336,43 @@ class CallService : InCallService() {
             if (_isRecording.value) return true
             if (_activeCall.value == null) return false
 
-            val dir = File(context.getExternalFilesDir(null), "recordings").apply { mkdirs() }
+            val resolver = context.contentResolver
             val name = "call_${SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())}.m4a"
-            val file = File(dir, name)
+            val values = ContentValues().apply {
+                put(MediaStore.Audio.Media.DISPLAY_NAME, name)
+                put(MediaStore.Audio.Media.MIME_TYPE, "audio/mp4")
+                put(MediaStore.Audio.Media.RELATIVE_PATH, "Recordings/$RECORDINGS_FOLDER")
+                put(MediaStore.Audio.Media.IS_PENDING, 1)
+            }
+            val uri = runCatching {
+                resolver.insert(MediaStore.Audio.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY), values)
+            }.getOrNull() ?: return false
 
             val audioSources = intArrayOf(MediaRecorder.AudioSource.VOICE_CALL, MediaRecorder.AudioSource.MIC)
             for (source in audioSources) {
                 val mr = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) MediaRecorder(context) else @Suppress("DEPRECATION") MediaRecorder()
+                var pfd: ParcelFileDescriptor? = null
                 try {
+                    pfd = resolver.openFileDescriptor(uri, "w") ?: throw IllegalStateException("no output")
                     mr.setAudioSource(source)
                     mr.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
                     mr.setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
-                    mr.setOutputFile(file.absolutePath)
+                    mr.setOutputFile(pfd.fileDescriptor)
                     mr.prepare()
                     mr.start()
                     recorder = mr
-                    recordingFile = file
+                    recordingUri = uri
+                    recordingResolver = resolver
+                    recordingPfd = pfd
                     _isRecording.value = true
                     return true
                 } catch (e: Exception) {
                     Log.w(TAG, "recording start failed for source=$source", e)
                     mr.release()
+                    runCatching { pfd?.close() }
                 }
             }
+            runCatching { resolver.delete(uri, null, null) }
             return false
         }
 
@@ -364,6 +385,18 @@ class CallService : InCallService() {
             } finally {
                 recorder?.release()
                 recorder = null
+                runCatching { recordingPfd?.close() }
+                recordingPfd = null
+                // הקובץ נגלה לכל האפליקציות רק אחרי שהסיום נרשם (IS_PENDING=0).
+                val uri = recordingUri
+                val resolver = recordingResolver
+                if (uri != null && resolver != null) {
+                    runCatching {
+                        resolver.update(uri, ContentValues().apply { put(MediaStore.Audio.Media.IS_PENDING, 0) }, null, null)
+                    }
+                }
+                recordingUri = null
+                recordingResolver = null
                 _isRecording.value = false
             }
         }

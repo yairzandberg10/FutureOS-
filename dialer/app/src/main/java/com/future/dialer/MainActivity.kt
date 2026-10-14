@@ -151,6 +151,9 @@ class MainActivity : ComponentActivity() {
     // בלי זה המקשים הגיעו רק לכאן, אף אחד לא טיפל בהם, והטאב "נתקע".
     private val _tabStep = MutableSharedFlow<Int>(extraBufferCapacity = 1)
 
+    // שיחה שלא יצאה (אין הרשאה, שגיאת Telecom, או חיוג חוזר מיד אחרי שיחה) - המסך מציג "החיוג נכשל".
+    private val _callFailed = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
@@ -202,6 +205,7 @@ class MainActivity : ComponentActivity() {
                     inCallViewModel = inCallViewModel,
                     openDialpadRequests = _openDialpad.asSharedFlow(),
                     tabStepRequests = _tabStep.asSharedFlow(),
+                    callFailedRequests = _callFailed.asSharedFlow(),
                     startOnDialpad = prefillNumber != null,
                     actions = DialerActions(
                         placeCall = ::makeRealCall,
@@ -317,8 +321,8 @@ class MainActivity : ComponentActivity() {
         if (phoneNumber.isBlank()) return
         // שיחה אחת בכל פעם: לא מחייגים מעל שיחה קיימת (פעילה, מחייגת או מצלצלת), וגם
         // לא מיד אחרי שנגמרה - לחיצות OK שנשארו מהשיחה לא יכולות להתחיל שיחה נוספת.
-        if (CallService.activeCall.value != null) return
-        if (System.currentTimeMillis() - CallService.lastCallEndedAt < RECALL_GUARD_MILLIS) return
+        if (CallService.activeCall.value != null) { _callFailed.tryEmit(Unit); return }
+        if (System.currentTimeMillis() - CallService.lastCallEndedAt < RECALL_GUARD_MILLIS) { _callFailed.tryEmit(Unit); return }
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED) {
             // ישירות ל-Telecom. ACTION_CALL דרך startActivity חזר ל-Activity הזה
             // עצמו (אפליקציית החיוג ברירת המחדל), והשיחה לא יצאה.
@@ -327,6 +331,10 @@ class MainActivity : ComponentActivity() {
                 telecom.placeCall(Uri.fromParts("tel", phoneNumber, null), Bundle())
             } catch (e: SecurityException) {
                 checkAndRequestPermissions()
+                _callFailed.tryEmit(Unit)
+                return
+            } catch (e: Exception) {
+                _callFailed.tryEmit(Unit)
                 return
             }
             // מנקים את שדה החיוג אחרי שהשיחה יצאה, כדי שמספר ישן לא יישאר "תקוע"
@@ -334,6 +342,7 @@ class MainActivity : ComponentActivity() {
             callsViewModel.clearNumber()
         } else {
             checkAndRequestPermissions()
+            _callFailed.tryEmit(Unit)
         }
     }
 
@@ -513,6 +522,7 @@ fun MainScreen(
     inCallViewModel: InCallViewModel,
     openDialpadRequests: kotlinx.coroutines.flow.SharedFlow<Unit>,
     tabStepRequests: kotlinx.coroutines.flow.SharedFlow<Int>,
+    callFailedRequests: kotlinx.coroutines.flow.SharedFlow<Unit>,
     startOnDialpad: Boolean,
     actions: DialerActions,
     checkIsDefaultDialer: () -> Boolean,
@@ -574,6 +584,9 @@ fun MainScreen(
         // מספר שהגיע מכוונה חיצונית (ACTION_DIAL) נפתח במקלדת, מוכן לחיוג.
         if (startOnDialpad) navController.switchTab(Screen.Dialpad.route)
         openDialpadRequests.collect { navController.switchTab(Screen.Dialpad.route) }
+    }
+    LaunchedEffect(Unit) {
+        callFailedRequests.collect { snackbar.show("החיוג נכשל") }
     }
 
     val isOnCallScreen = currentRoute?.startsWith("incall") == true

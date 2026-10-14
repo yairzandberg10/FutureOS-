@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.future.dialer.data.model.Contact
 import com.future.dialer.data.repository.ContactRepository
+import com.future.dialer.util.T9Search
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -43,13 +44,34 @@ class ContactsViewModel(private val repository: ContactRepository) : ViewModel()
     }
 
     private fun filterContacts() {
-        val query = _searchQuery.value.lowercase()
+        val raw = _searchQuery.value.trim()
+        val query = raw.lowercase()
         if (query.isEmpty()) {
             _contacts.value = _allContacts.value
+        } else if (raw.all { it in '0'..'9' }) {
+            // שאילתת ספרות: חיפוש T9 לפי שם (כמו בחייגן), והשוואת מספרים בלי קידומת.
+            val key = numberKey(raw)
+            _contacts.value = _allContacts.value.filter { contact ->
+                T9Search.matchesAnyWord(contact.name, raw) ||
+                    contact.allNumbers.any { numberKey(it).contains(key) }
+            }
         } else {
             _contacts.value = _allContacts.value.filter {
                 it.name.lowercase().contains(query) || it.phoneNumber.contains(query)
             }
+        }
+    }
+
+    private companion object {
+        /** ספרות בלבד, בלי קידומת 972 או 0 מובילה - כדי ש-052 ימצא +972 52. */
+        fun numberKey(number: String): String {
+            val digits = number.filter { it in '0'..'9' }
+            val key = when {
+                digits.startsWith("972") -> digits.drop(3)
+                digits.startsWith("0") -> digits.drop(1)
+                else -> digits
+            }
+            return key.ifEmpty { digits }
         }
     }
 }
