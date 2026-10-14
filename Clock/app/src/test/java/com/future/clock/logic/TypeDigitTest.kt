@@ -42,12 +42,20 @@ class TypeDigitTest {
     }
 
     @Test
-    fun `hours 2 then 3 gives 23 and a larger second digit is capped`() {
+    fun `hours 2 then 3 gives 23`() {
         val first = typeDigit("", 2, 23)
         val second = typeDigit(first.buffer, 3, 23)
         assertEquals(23, second.value)
-        val capped = typeDigit(first.buffer, 9, 23)
-        assertEquals(23, capped.value)
+        assertTrue(second.complete)
+    }
+
+    @Test
+    fun `hours 2 then 5 starts again with 5 and does not clamp to 23`() {
+        val first = typeDigit("", 2, 23)
+        val second = typeDigit(first.buffer, 5, 23)
+        assertEquals(5, second.value)
+        assertTrue(second.complete)
+        assertEquals("", second.buffer)
     }
 
     @Test

@@ -31,11 +31,25 @@ data class TypedDigit(val value: Int, val buffer: String, val complete: Boolean)
 fun typeDigit(buffer: String, digit: Int, max: Int): TypedDigit {
     val next = buffer + digit
     val v = next.toInt()
-    return if (next.length >= 2 || digit * 10 > max) {
-        TypedDigit(v.coerceAtMost(max), "", true)
-    } else {
-        TypedDigit(v, next, false)
+    return when {
+        // שתי ספרות בתוך הטווח - הערך הוא מה שהוקלד.
+        next.length >= 2 && v <= max -> TypedDigit(v, "", true)
+        // שתי ספרות מחוץ לטווח (2 ואז 5 בשעות): הספרה השנייה מתחילה מחדש לבד,
+        // ולא נחתכת לגבול (23) כמו קודם.
+        next.length >= 2 -> TypedDigit(digit.coerceAtMost(max), "", true)
+        digit * 10 > max -> TypedDigit(digit.coerceAtMost(max), "", true)
+        else -> TypedDigit(v, next, false)
     }
+}
+
+/**
+ * מחזיר רשימה שבה לכל מעורר מזהה ייחודי. מעורר שמזהה כבר הופיע קודם מקבל
+ * מזהה חדש (מעל המקסימום), כך שאין שני מעוררים שחולקים PendingIntent וסטטוס.
+ */
+fun withUniqueIds(alarms: List<Alarm>): List<Alarm> {
+    val seen = HashSet<Int>()
+    var next = (alarms.maxOfOrNull { it.id } ?: 0) + 1
+    return alarms.map { alarm -> if (seen.add(alarm.id)) alarm else alarm.copy(id = next++) }
 }
 
 /**
@@ -92,6 +106,20 @@ object AlarmLogic {
             emptyList()
         }
     }
+
+    /**
+     * הרשימה שמוצגת במסך: תמיד נטענת מההעדפות (המקור היחיד), ואם יש בה מזהים
+     * כפולים הם מתוקנים ונשמרים חזרה מיד.
+     */
+    fun loadAlarms(context: Context): List<Alarm> {
+        val stored = getAlarms(context)
+        val unique = withUniqueIds(stored)
+        if (unique != stored) saveAlarms(context, unique)
+        return unique
+    }
+
+    /** מזהה חדש למעורר, לפי מה ששמור בפועל ולא לפי מה שמוצג במסך. */
+    fun newAlarmId(context: Context): Int = (getAlarms(context).maxOfOrNull { it.id } ?: 0) + 1
 
     fun saveAlarms(context: Context, alarms: List<Alarm>) {
         val previous = getAlarms(context)

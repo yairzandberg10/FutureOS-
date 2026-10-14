@@ -124,7 +124,12 @@ class MainActivity : ComponentActivity() {
                         AnimatedScreenHost(targetState = route, depthOf = { 0 }) { shown ->
                             when (shown) {
                                 // הלשונית הראשונה - BACK ממנה יוצא מהאפליקציה.
-                                ClockRoute.Alarms -> AlarmScreen(theme = theme, onBack = { finish() }, onOverlayChange = { overlayOpen = it })
+                                ClockRoute.Alarms -> AlarmScreen(
+                                    theme = theme,
+                                    onBack = { finish() },
+                                    onOverlayChange = { overlayOpen = it },
+                                    onTabDigit = { index -> tabs.getOrNull(index)?.let { route = it.first } },
+                                )
                                 ClockRoute.WorldClock -> WorldClockScreen(theme = theme, onBack = goBack)
                                 ClockRoute.Stopwatch -> StopwatchScreen(theme = theme, onBack = goBack)
                                 ClockRoute.Timer -> TimerScreen(theme = theme, onBack = goBack)

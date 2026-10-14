@@ -85,9 +85,22 @@ import com.future.sharednav.focus.animateFocusColor
 private const val RESTORE_TO_ADD = -2
 
 @Composable
-fun AlarmScreen(theme: FutureTheme, onBack: () -> Unit, onOverlayChange: (Boolean) -> Unit = {}) {
+fun AlarmScreen(
+    theme: FutureTheme,
+    onBack: () -> Unit,
+    onOverlayChange: (Boolean) -> Unit = {},
+    /** מקשים 1-4 (מחוץ לבורר ולתפריטים) מחליפים לשונית: 0 = מעוררים, 1 = עולמי, 2 = עצר, 3 = טיימר. */
+    onTabDigit: (Int) -> Unit = {},
+) {
     val context = LocalContext.current
     val alarms = remember { mutableStateListOf<Alarm>() }
+    // הרשימה במסך היא עותק של ההעדפות בלבד: נטענת מחדש בכניסה, בחזרה למסך
+    // (ON_RESUME) ואחרי כל שמירה או מחיקה. טעינה חוזרת מנקה לפני ההוספה, כך
+    // שלא נוצרים כפילויות.
+    fun reloadAlarms() {
+        alarms.clear()
+        alarms.addAll(AlarmLogic.loadAlarms(context))
+    }
     // בלי הרשאת מעורר מדויק המערכת יכולה לאחר אזעקה - מציגים באנר שפותח את ההרשאה.
     var exactAlarmsAllowed by remember { mutableStateOf(AlarmLogic.canScheduleExact(context)) }
     var snoozeLimit by remember { mutableIntStateOf(AlarmLogic.snoozeLimit(context)) }
@@ -127,9 +140,7 @@ fun AlarmScreen(theme: FutureTheme, onBack: () -> Unit, onOverlayChange: (Boolea
     }
     onOptionsKeyPress { if (!overlayOpen && pendingDelete == null) menuOpen = true }
 
-    LaunchedEffect(Unit) {
-        alarms.addAll(AlarmLogic.getAlarms(context))
-    }
+    LaunchedEffect(Unit) { reloadAlarms() }
 
     // צלצול רץ ברקע (מסך נפרד) ומשנה את האזעקה - בחזרה למסך טוענים מחדש מההעדפות, כמו
     // בכניסה למסך, כדי שלא יוצג "מופעל" לאזעקה שכבר כבויה.
@@ -137,8 +148,7 @@ fun AlarmScreen(theme: FutureTheme, onBack: () -> Unit, onOverlayChange: (Boolea
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                alarms.clear()
-                alarms.addAll(AlarmLogic.getAlarms(context))
+                reloadAlarms()
                 exactAlarmsAllowed = AlarmLogic.canScheduleExact(context)
             }
         }
@@ -148,12 +158,12 @@ fun AlarmScreen(theme: FutureTheme, onBack: () -> Unit, onOverlayChange: (Boolea
 
     // השינוי מוחל על הרשימה העדכנית בהעדפות (לא על העותק שבמסך) - צלצול שרץ ברקע
     // כבר כיבה אזעקה חד-פעמית, ושמירה של העותק הישן הייתה מחזירה אותה להפעלה.
+    // אחרי השמירה הרשימה במסך נטענת מההעדפות שוב.
     fun updateAlarms(change: (MutableList<Alarm>) -> Unit) {
         val fresh = AlarmLogic.getAlarms(context).toMutableList()
         change(fresh)
         AlarmLogic.saveAlarms(context, fresh)
-        alarms.clear()
-        alarms.addAll(fresh)
+        reloadAlarms()
     }
 
     fun setEnabled(alarm: Alarm, enabled: Boolean) {
@@ -181,20 +191,22 @@ fun AlarmScreen(theme: FutureTheme, onBack: () -> Unit, onOverlayChange: (Boolea
                     menuOpen = false
                     editingAlarm = focused
                 })
+            } else {
+                // הנודניק הוא הגדרה לכל המעוררים, ולכן רק בתפריט הכללי (לא בתפריט של
+                // מעורר בודד). התפריט נשאר פתוח אחרי הבחירה, והערך מתעדכן מיד בשורה.
+                FutureMenuRow(
+                    "נודניק: " + (if (snoozeLimit == SNOOZE_LIMIT_UNLIMITED) "ללא הגבלה" else "$snoozeLimit פעמים"),
+                    FutureIcons.Schedule, theme, {
+                        // מחזורי: ללא הגבלה, 3, 5, 10, ושוב ללא הגבלה.
+                        val next = when (snoozeLimit) { 0 -> 3; 3 -> 5; 5 -> 10; else -> SNOOZE_LIMIT_UNLIMITED }
+                        AlarmLogic.setSnoozeLimit(context, next)
+                        snoozeLimit = next
+                    },
+                )
             }
-            FutureMenuRow(
-                "נודניק: " + (if (snoozeLimit == SNOOZE_LIMIT_UNLIMITED) "ללא הגבלה" else "$snoozeLimit פעמים"),
-                FutureIcons.Schedule, theme, {
-                    menuOpen = false
-                    // מחזורי: ללא הגבלה, 3, 5, 10, ושוב ללא הגבלה.
-                    val next = when (snoozeLimit) { 0 -> 3; 3 -> 5; 5 -> 10; else -> SNOOZE_LIMIT_UNLIMITED }
-                    AlarmLogic.setSnoozeLimit(context, next)
-                    snoozeLimit = next
-                },
-            )
             FutureMenuRow("מעורר חדש", FutureIcons.Add, theme, {
                 menuOpen = false
-                val newId = (alarms.maxOfOrNull { it.id } ?: 0) + 1
+                val newId = AlarmLogic.newAlarmId(context)
                 // CK7: מעורר חדש נכנס לרשימה רק ב"שמור". קודם הוא נשמר ותוזמן עוד
                 // לפני שהבורר נפתח, ו"ביטול" השאיר מעורר 07:00 מופעל.
                 editingAlarm = Alarm(newId, 7, 0, emptySet())
@@ -226,7 +238,20 @@ fun AlarmScreen(theme: FutureTheme, onBack: () -> Unit, onOverlayChange: (Boolea
     }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-        Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(theme.backgroundColor)
+                // מהרשימה אין מסלול מקשים ללשוניות התחתונות (הסרגל לא ממוקד). לכן מקשים
+                // 1-4 מחליפים לשונית. בבורר, בתפריטים ובדיאלוג מחיקה המקשים לא עוברים לכאן.
+                .onKeyEvent { event ->
+                    if (event.type != KeyEventType.KeyDown || overlayOpen || menuOpen || pendingDelete != null) return@onKeyEvent false
+                    val index = com.future.sharednav.nav.digitForKey(event.key)?.toInt()?.minus(1) ?: return@onKeyEvent false
+                    if (index !in 0..3) return@onKeyEvent false
+                    onTabDigit(index)
+                    true
+                }
+        ) {
             Column(modifier = Modifier.fillMaxSize()) {
                 if (!overlayOpen && !exactAlarmsAllowed) {
                     FutureButton(
@@ -252,7 +277,7 @@ fun AlarmScreen(theme: FutureTheme, onBack: () -> Unit, onOverlayChange: (Boolea
                         if (editingAlarm == null) {
                             Box(modifier = Modifier.onFocusChanged { if (it.hasFocus) focusedAlarmId = null }) {
                                 ToolsIconButton(FutureIcons.Add, "הוסף שעון", theme, focusRequester = addFocus) {
-                                    val newId = (alarms.maxOfOrNull { it.id } ?: 0) + 1
+                                    val newId = AlarmLogic.newAlarmId(context)
                                     // CK7: מעורר חדש נכנס לרשימה רק ב"שמור". קודם הוא נשמר ותוזמן עוד
                                     // לפני שהבורר נפתח, ו"ביטול" השאיר מעורר 07:00 מופעל.
                                     editingAlarm = Alarm(newId, 7, 0, emptySet())
@@ -311,7 +336,7 @@ fun AlarmScreen(theme: FutureTheme, onBack: () -> Unit, onOverlayChange: (Boolea
                                 }
                             }
                             Text(
-                                "אישור פותח את בורר השעה. Options: הפעלה/כיבוי ומחיקה.",
+                                "OK פותח את בורר השעה. מקש האפשרויות: הפעלה, כיבוי ומחיקה. מקשים 1 עד 4 מחליפים לשונית.",
                                 color = theme.subtleTextColor,
                                 fontSize = FutureTypography.summary,
                                 modifier = Modifier.padding(

@@ -90,3 +90,20 @@ class AlarmLogicTest {
         assertEquals(0, trigger.get(Calendar.MILLISECOND))
     }
 }
+
+class UniqueIdsTest {
+    @Test
+    fun `alarms with distinct ids are returned unchanged`() {
+        val list = listOf(Alarm(1, 7, 0, emptySet()), Alarm(2, 8, 0, emptySet()))
+        assertEquals(list, withUniqueIds(list))
+    }
+
+    @Test
+    fun `a repeated id gets a new id above the maximum and keeps its time`() {
+        val list = listOf(Alarm(1, 7, 0, emptySet()), Alarm(1, 8, 30, emptySet()), Alarm(3, 9, 0, emptySet()))
+        val fixed = withUniqueIds(list)
+        assertEquals(listOf(1, 4, 3), fixed.map { it.id })
+        assertEquals(8, fixed[1].hour)
+        assertEquals(30, fixed[1].minute)
+    }
+}
