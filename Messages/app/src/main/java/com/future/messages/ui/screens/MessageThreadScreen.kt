@@ -90,7 +90,11 @@ fun MessageThreadScreen(
     onSend: (text: String, imageUri: Uri?, onDone: (Boolean) -> Unit) -> Unit,
     onCall: () -> Unit,
     onDeleteMessage: (Message) -> Unit,
-    onForwardMessage: (Message) -> Unit
+    onForwardMessage: (Message) -> Unit,
+    // שליחה חוזרת של הודעה שנכשלה (M23).
+    onResendMessage: (Message) -> Unit = {},
+    // המשתמש אישר לשלוח כ-SMS הודעה שנכשלה בצ'אט (M13).
+    onSendAsSms: (com.future.messages.chat.FutureChat.SmsFallbackAsk) -> Unit = {},
 ) {
     var textState by remember { mutableStateOf(initialDraftText) }
     var attachedImageUri by remember { mutableStateOf(initialDraftImageUri) }
@@ -245,9 +249,32 @@ fun MessageThreadScreen(
         }
     }
 
+    // כישלון בשליחה בצ'אט (למשל timeout): שואלים לפני שליחה כ-SMS, בלי שליחה אוטומטית (M13).
+    val smsAsk by com.future.messages.chat.FutureChat.smsFallbackAsk.collectAsState()
+    smsAsk?.takeIf { it.address == conversation.contact.phoneNumber }?.let { ask ->
+        ConfirmDialog(
+            message = "ההודעה לא נשלחה דרך צ'אט FutureOS. לשלוח אותה כ-SMS?",
+            theme = theme,
+            onCancel = { com.future.messages.chat.FutureChat.clearSmsFallbackAsk() },
+            onConfirm = {
+                com.future.messages.chat.FutureChat.clearSmsFallbackAsk()
+                onSendAsSms(ask)
+            },
+            cancelLabel = "לא",
+            confirmLabel = "שלח כ-SMS",
+            destructive = false,
+        )
+    }
+
     actionMenuMessage?.let { message ->
         MessageActionDialog(
             theme = theme,
+            onResend = if (message.status == com.future.messages.data.MessageStatus.FAILED && message.isFromMe) {
+                {
+                    actionMenuMessage = null
+                    onResendMessage(message)
+                }
+            } else null,
             onForward = {
                 actionMenuMessage = null
                 onForwardMessage(message)
@@ -440,12 +467,14 @@ private val BubbleGap = 10.dp
 @Composable
 private fun MessageActionDialog(
     theme: FutureTheme,
+    onResend: (() -> Unit)? = null,
     onForward: () -> Unit,
     onDelete: () -> Unit,
     onDismiss: () -> Unit,
     onSaveToNotes: (() -> Unit)? = null,
 ) {
     FutureOptionsMenu(theme = theme, onDismissRequest = onDismiss, header = "הודעה") {
+        if (onResend != null) FutureMenuRow("שלח שוב", FutureIcons.RestartAlt, theme, onResend)
         FutureMenuRow("העבר הודעה", FutureIcons.AutoMirrored.Send, theme, onForward)
         if (onSaveToNotes != null) FutureMenuRow("שמירה בפתקים", FutureIcons.Description, theme, onSaveToNotes)
         FutureMenuRow("מחק הודעה", FutureIcons.Delete, theme, onDelete, destructive = true)

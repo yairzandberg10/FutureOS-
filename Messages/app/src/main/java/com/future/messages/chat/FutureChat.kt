@@ -27,6 +27,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -182,23 +183,53 @@ object FutureChat {
         val phone = e164(context, address) ?: return false
         if (knownNotRegistered(context, phone)) return false
         scope.launch {
+            // נמען שלא רשום בצ'אט - SMS רגיל מיד, בלי לשאול. שגיאה במציאת הנמען או
+            // שליחה שנכשלה (timeout) היא כישלון של הצ'אט: שואלים את המשתמש (M06).
+            val peer = try {
+                resolvePeer(context, phone)
+            } catch (e: Exception) {
+                Log.w(TAG, "Chat peer lookup failed", e)
+                askSmsFallback(context, smsId, address, text)
+                return@launch
+            }
+            if (peer == null) {
+                smsFallback()
+                return@launch
+            }
             val sent = try {
-                val peer = resolvePeer(context, phone)
-                if (peer == null) false else {
-                    val id = UUID.randomUUID().toString()
-                    ChatStore.get(context).putOutgoing(smsId, id, phone, threadIdOf(context, smsId))
-                    val ok = sendPayload(peer, id, "m", JSONObject().put("t", "m").put("b", text))
-                    if (ok) markSmsSent(context, smsId) else ChatStore.get(context).remove(smsId)
-                    ok
-                }
+                val id = UUID.randomUUID().toString()
+                ChatStore.get(context).putOutgoing(smsId, id, phone, threadIdOf(context, smsId))
+                val ok = sendPayload(peer, id, "m", JSONObject().put("t", "m").put("b", text))
+                if (ok) markSmsSent(context, smsId) else ChatStore.get(context).remove(smsId)
+                ok
             } catch (e: Exception) {
                 Log.w(TAG, "Chat send failed", e)
                 false
             }
-            if (!sent) smsFallback()
+            if (!sent) askSmsFallback(context, smsId, address, text)
         }
         return true
     }
+
+    /** שליחה בצ'אט נכשלה: השורה מסומנת "נכשל", והמשתמש מחליט אם לשלוח כ-SMS (בלי שליחה אוטומטית). */
+    private fun askSmsFallback(context: Context, smsId: Long, address: String, text: String) {
+        updateSms(context, smsId) { put(Telephony.Sms.TYPE, Telephony.Sms.MESSAGE_TYPE_FAILED) }
+        _smsFallbackAsk.value = SmsFallbackAsk(smsId, address, text)
+    }
+
+    /** הודעה שממתינה להחלטת המשתמש: לשלוח כ-SMS אחרי כישלון בצ'אט. */
+    data class SmsFallbackAsk(val smsId: Long, val address: String, val text: String)
+
+    private val _smsFallbackAsk = MutableStateFlow<SmsFallbackAsk?>(null)
+    val smsFallbackAsk: StateFlow<SmsFallbackAsk?> = _smsFallbackAsk.asStateFlow()
+
+    fun clearSmsFallbackAsk() {
+        _smsFallbackAsk.value = null
+    }
+
+    /** מזהה השיחה הפתוחה כרגע במסך (null כשאין). הודעות צ'אט שמגיעות לשיחה הזו נקראות מיד. */
+    @Volatile
+    var openThreadId: Long? = null
 
     /**
      * תמונה בצ'אט במקום MMS: באיכות מלאה (עד 2048 פיקסלים) ולא דחוסה למגבלת
@@ -256,6 +287,18 @@ object FutureChat {
     fun isTyping(context: Context, address: String): Boolean {
         val phone = e164(context, address) ?: return false
         return (_typing.value[phone] ?: 0L) > System.currentTimeMillis()
+    }
+
+    private fun markThreadReadNow(context: Context, threadId: Long) {
+        runCatching {
+            context.contentResolver.update(
+                Telephony.Sms.CONTENT_URI,
+                ContentValues().apply { put(Telephony.Sms.READ, 1) },
+                "${Telephony.Sms.THREAD_ID} = ? AND ${Telephony.Sms.READ} = 0",
+                arrayOf(threadId.toString()),
+            )
+        }
+        onThreadRead(context, threadId)
     }
 
     /** המשתמש פתח שיחה - שולחים "נקרא" על ההודעות שהתקבלו בה. */
@@ -389,9 +432,12 @@ object FutureChat {
                 val imageOnly = isImage && caption.isBlank()
                 val body = if (imageOnly) IMAGE_PLACEHOLDER else caption
                 val smsId = insertSms(context, phone, body, incoming = true) ?: return
-                store.putIncoming(smsId, id, phone, threadIdOf(context, smsId), imagePath, imageOnly)
+                val threadId = threadIdOf(context, smsId)
+                store.putIncoming(smsId, id, phone, threadId, imagePath, imageOnly)
                 delivered.getOrPut(phone) { mutableListOf() }.add(id)
                 clearTyping(phone)
+                // השיחה פתוחה על המסך - ההודעה נקראת מיד, והשולח מקבל "נקרא" (M17).
+                if (openThreadId == threadId) markThreadReadNow(context, threadId)
                 SmsDeliverReceiver.notifyIncoming(context, phone, body)
             }
             "r" -> {

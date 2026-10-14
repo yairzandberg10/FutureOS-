@@ -1,6 +1,8 @@
 package com.future.messages.ui.screens
 
 import com.future.sharednav.icons.FutureIcons
+import com.future.sharednav.components.FutureButton
+import com.future.sharednav.components.FutureButtonVariant
 import com.future.sharednav.components.TopBarIconButton
 import com.future.sharednav.components.FutureSpinner
 import com.future.sharednav.components.EmptyState
@@ -66,6 +68,9 @@ fun ConversationListScreen(
     // רשימה ריקה ורשימה שעדיין נטענת נראו עד כה בדיוק אותו דבר. הטעינה עצמה
     // רצה ב-Dispatchers.IO (ראו MainActivity), אז המסך מצויר לפני שיש נתונים.
     isLoading: Boolean = false,
+    // טעינה שנכשלה מציגה "שגיאה" עם "נסה שוב", לא "אין הודעות" (M22).
+    loadFailed: Boolean = false,
+    onRetry: () -> Unit = {},
     onConversationClick: (Conversation) -> Unit,
     onComposeClick: () -> Unit,
     onGroupComposeClick: () -> Unit,
@@ -264,6 +269,20 @@ fun ConversationListScreen(
                 if (isLoading && conversations.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         FutureSpinner(theme = theme)
+                    }
+                } else if (shown.isEmpty() && loadFailed) {
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                    ) {
+                        EmptyState(
+                            icon = FutureIcons.SearchOff,
+                            title = "שגיאה",
+                            subtitle = "לא ניתן לטעון את ההודעות",
+                            textColor = theme.textColor,
+                        )
+                        FutureButton("נסה שוב", theme, onRetry, variant = FutureButtonVariant.Secondary)
                     }
                 } else if (shown.isEmpty()) {
                     EmptyState(

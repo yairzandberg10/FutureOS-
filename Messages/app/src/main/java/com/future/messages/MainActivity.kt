@@ -207,6 +207,7 @@ fun MessagesApp(theme: FutureTheme) {
     var conversations by remember { mutableStateOf<List<Conversation>>(emptyList()) }
     var messages by remember { mutableStateOf<List<com.future.messages.data.Message>>(emptyList()) }
     var isLoadingConversations by remember { mutableStateOf(true) }
+    var conversationsLoadFailed by remember { mutableStateOf(false) }
 
     // כל גישה ל-content://sms היא I/O אמיתי: getConversations סורקת את כל
     // התיבה, ו-getMessages/deleteThread/sendMessage פונים לספק. עד כה הן נקראו
@@ -226,6 +227,7 @@ fun MessagesApp(theme: FutureTheme) {
         ioScope.launch {
             isLoadingConversations = true
             conversations = withContext(Dispatchers.IO) { repository.getConversations() }
+            conversationsLoadFailed = repository.lastConversationsFailed
             isLoadingConversations = false
         }
     }
@@ -309,6 +311,8 @@ fun MessagesApp(theme: FutureTheme) {
                 conversations = conversations,
                 theme = theme,
                 isLoading = isLoadingConversations,
+                loadFailed = conversationsLoadFailed,
+                onRetry = { refreshConversations() },
                 onConversationClick = { conversation ->
                     lastSelectedThreadId = conversation.threadId
                     messages = emptyList()
@@ -371,6 +375,8 @@ fun MessagesApp(theme: FutureTheme) {
                 // הספק, ה-UI היה נשאר תקוע על "שולח..." או מפספס הודעות נכנסות
                 // עד חזרה/כניסה מחדש למסך.
                 DisposableEffect(current.conversation.threadId) {
+                    // השיחה פתוחה: הודעות צ'אט שמגיעות אליה נקראות מיד (ר' FutureChat.openThreadId).
+                    com.future.messages.chat.FutureChat.openThreadId = current.conversation.threadId
                     val handler = android.os.Handler(android.os.Looper.getMainLooper())
                     val observer = object : android.database.ContentObserver(handler) {
                         override fun onChange(selfChange: Boolean) {
@@ -379,7 +385,10 @@ fun MessagesApp(theme: FutureTheme) {
                     }
                     context.contentResolver.registerContentObserver(Telephony.Sms.CONTENT_URI, true, observer)
                     context.contentResolver.registerContentObserver(Telephony.Mms.CONTENT_URI, true, observer)
-                    onDispose { context.contentResolver.unregisterContentObserver(observer) }
+                    onDispose {
+                        com.future.messages.chat.FutureChat.openThreadId = null
+                        context.contentResolver.unregisterContentObserver(observer)
+                    }
                 }
                 MessageThreadScreen(
                 conversation = current.conversation,
@@ -387,6 +396,33 @@ fun MessagesApp(theme: FutureTheme) {
                 theme = theme,
                 initialDraftText = current.draftText,
                 initialDraftImageUri = current.draftImageUri,
+                onResendMessage = { message ->
+                    // שליחה חוזרת של הודעה שנכשלה: השורה הישנה נמחקת, ונשלחת שוב כהודעה חדשה.
+                    ioScope.launch {
+                        val sent = withContext(Dispatchers.IO) {
+                            if (!repository.deleteMessage(message)) return@withContext null
+                            val imageUri = message.imageUri
+                            if (imageUri != null) {
+                                repository.sendMmsMessage(current.conversation.contact.phoneNumber, message.text, imageUri)
+                            } else {
+                                repository.sendMessage(current.conversation.contact.phoneNumber, message.text) != null
+                            }
+                        }
+                        if (sent == null) {
+                            android.widget.Toast.makeText(context, "מחיקת ההודעה הנכשלת נכשלה", android.widget.Toast.LENGTH_SHORT).show()
+                        } else if (!sent) {
+                            android.widget.Toast.makeText(context, "שליחת ההודעה נכשלה", android.widget.Toast.LENGTH_SHORT).show()
+                        }
+                        messages = withContext(Dispatchers.IO) { repository.getMessages(current.conversation.threadId) }
+                    }
+                },
+                onSendAsSms = { ask ->
+                    // המשתמש אישר: ההודעה שנכשלה בצ'אט נשלחת כ-SMS (השורה כבר רשומה כנכשלת).
+                    ioScope.launch {
+                        withContext(Dispatchers.IO) { repository.sendSmsAfterChatFailure(ask.smsId, ask.address, ask.text) }
+                        messages = withContext(Dispatchers.IO) { repository.getMessages(current.conversation.threadId) }
+                    }
+                },
                 onBack = {
                     refreshConversations()
                     screen = MessagesScreen.List

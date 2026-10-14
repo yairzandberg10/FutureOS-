@@ -49,6 +49,11 @@ class SmsRepository(private val context: Context) {
     /** לקרוא אחרי הוספה/עריכה של איש קשר, כדי ששם חדש יופיע בשיחות. */
     fun clearContactCache() = contactCache.clear()
 
+    /** true אם הטעינה האחרונה של השיחות נכשלה (ולא סתם אין שיחות). */
+    @Volatile
+    var lastConversationsFailed = false
+        private set
+
     /**
      * רשימת השיחות, ממוינת מהחדש לישן. שולפת ישירות מ-content://sms ומקבצת
      * לפי thread_id בקוד - לא מסתמכת על content://sms/conversations, שהוא
@@ -56,6 +61,7 @@ class SmsRepository(private val context: Context) {
      * שאילתה אחת בלבד, לא שאילתה נפרדת לכל שיחה.
      */
     fun getConversations(): List<Conversation> {
+        lastConversationsFailed = false
         data class ThreadAccumulator(
             var address: String? = null,
             var lastText: String = "",
@@ -96,6 +102,7 @@ class SmsRepository(private val context: Context) {
             }
         } catch (e: Exception) {
             Log.e("SmsRepository", "Error loading conversations", e)
+            lastConversationsFailed = true
         }
 
         return byThread.entries
@@ -303,6 +310,9 @@ class SmsRepository(private val context: Context) {
             null
         }
     }
+
+    /** שליחה כ-SMS של הודעה שנכשלה בצ'אט, אחרי שהמשתמש אישר. */
+    fun sendSmsAfterChatFailure(messageId: Long, address: String, text: String) = dispatchSms(messageId, address, text)
 
     /** שולח כ-SMS שורה שכבר רשומה ב-OUTBOX. כישלון מסמן אותה FAILED. */
     private fun dispatchSms(messageId: Long, address: String, text: String) {
