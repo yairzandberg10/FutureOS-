@@ -52,6 +52,7 @@ import com.future.gallery.data.ImageEditor
 import com.future.gallery.data.MediaItem
 import com.future.gallery.data.PhotoFilter
 import com.future.gallery.data.StickerKind
+import com.future.sharednav.components.ConfirmDialog
 import com.future.sharednav.components.FutureChip
 import com.future.sharednav.components.FutureMenuRow
 import com.future.sharednav.components.FutureOptionsMenu
@@ -123,6 +124,11 @@ fun PhotoEditorScreen(item: MediaItem, theme: FutureTheme, onBack: () -> Unit, o
     var adjustParam by remember { mutableStateOf(AdjustParam.BRIGHTNESS) }
     var isSaving by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
+    // פעולות שמאבדות עריכות מבקשות אישור קודם (GAL-11): "reset", "stickers" או "exit".
+    var confirmAction by remember { mutableStateOf<String?>(null) }
+    fun requestExit() { if (state.hasEdits) confirmAction = "exit" else onBack() }
+    // BACK עם עריכות לא יוצא בשקט - קודם שואלים.
+    androidx.activity.compose.BackHandler(enabled = state.hasEdits && confirmAction == null) { requestExit() }
     var hint by remember { mutableStateOf<String?>(null) }
     var isDetecting by remember { mutableStateOf(false) }
     val stickerScope = rememberCoroutineScope()
@@ -357,19 +363,48 @@ fun PhotoEditorScreen(item: MediaItem, theme: FutureTheme, onBack: () -> Unit, o
                     })
                     FutureMenuRow("איפוס כל השינויים", FutureIcons.RestartAlt, theme, onClick = {
                         showMenu = false
-                        state = EditState()
+                        if (state.hasEdits) confirmAction = "reset" else state = EditState()
                     })
                     if (state.stickers.isNotEmpty()) {
                         FutureMenuRow("הסר את כל המדבקות", FutureIcons.Delete, theme, onClick = {
                             showMenu = false
-                            state = state.copy(stickers = emptyList())
+                            confirmAction = "stickers"
                         })
                     }
                     FutureMenuRow("יציאה בלי לשמור", FutureIcons.Close, theme, destructive = true, onClick = {
                         showMenu = false
-                        onBack()
+                        requestExit()
                     })
                 }
+            }
+            // אישור לפני פעולה שמאבדת עריכות. הכפתור הבטוח ("ביטול") הוא ברירת המחדל של הדיאלוג.
+            confirmAction?.let { action ->
+                val message = when (action) {
+                    "reset" -> "לאפס את כל השינויים בתמונה? אי אפשר לבטל את זה."
+                    "stickers" -> "להסיר את כל המדבקות?"
+                    else -> "לצאת בלי לשמור את השינויים?"
+                }
+                val confirmLabel = when (action) {
+                    "reset" -> "אפס"
+                    "stickers" -> "הסר"
+                    else -> "צא"
+                }
+                ConfirmDialog(
+                    message = message,
+                    surfaceColor = theme.surfaceColor,
+                    textColor = theme.textColor,
+                    dangerColor = theme.dangerColor,
+                    onCancel = { confirmAction = null },
+                    onConfirm = {
+                        confirmAction = null
+                        when (action) {
+                            "reset" -> state = EditState()
+                            "stickers" -> state = state.copy(stickers = emptyList())
+                            else -> onBack()
+                        }
+                    },
+                    confirmLabel = confirmLabel,
+                )
             }
         }
     }

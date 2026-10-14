@@ -206,6 +206,7 @@ class MainActivity : ComponentActivity() {
                                 items = items,
                                 albums = albums,
                                 hasPermission = hasPermission,
+                                permissionDeniedForever = permissionDeniedForever,
                                 onRequestPermission = {
                                     if (permissionDeniedForever) {
                                         runCatching {

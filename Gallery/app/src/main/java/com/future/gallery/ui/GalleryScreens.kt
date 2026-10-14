@@ -54,6 +54,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -103,6 +104,8 @@ fun GalleryHomeScreen(
     albums: List<Album>,
     hasPermission: Boolean,
     onRequestPermission: () -> Unit,
+    // נדחתה לתמיד: הכפתור פותח את הגדרות האפליקציה, ולכן מסבירים את זה ליד הכפתור.
+    permissionDeniedForever: Boolean = false,
     onItemClick: (List<MediaItem>, MediaItem) -> Unit,
     onAlbumClick: (Album) -> Unit,
     theme: FutureTheme,
@@ -155,6 +158,15 @@ fun GalleryHomeScreen(
                             verticalArrangement = Arrangement.Center
                         ) {
                             Text("כדי להציג תמונות צריך לאשר הרשאה", color = theme.mutedTextColor, fontSize = FutureTypography.bodyLarge)
+                            if (permissionDeniedForever) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    "ההרשאה נדחתה לתמיד. לחיצה על הכפתור תפתח את הגדרות האפליקציה, ושם אפשר לאשר אותה.",
+                                    color = theme.mutedTextColor,
+                                    fontSize = FutureTypography.summary,
+                                    textAlign = TextAlign.Center,
+                                )
+                            }
                             Spacer(modifier = Modifier.height(16.dp))
                             FutureButton("אשר הרשאה", theme, onRequestPermission)
                         }
