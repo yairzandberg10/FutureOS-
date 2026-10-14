@@ -68,14 +68,29 @@ import androidx.compose.ui.input.key.type
 import com.future.sharednav.theme.FutureShapes
 import com.future.clock.logic.Alarm
 import com.future.clock.logic.AlarmLogic
+import com.future.clock.logic.SNOOZE_LIMIT_UNLIMITED
+import com.future.clock.logic.typeDigit
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.future.sharednav.theme.FutureTheme
 import com.future.sharednav.focus.focusScale
 import com.future.sharednav.focus.animateFocusColor
+
+/** מזהה מיוחד ל-restoreFocusTo: הפוקוס חוזר לכפתור "+" ולא לשורה. */
+private const val RESTORE_TO_ADD = -2
 
 @Composable
 fun AlarmScreen(theme: FutureTheme, onBack: () -> Unit, onOverlayChange: (Boolean) -> Unit = {}) {
     val context = LocalContext.current
     val alarms = remember { mutableStateListOf<Alarm>() }
+    // בלי הרשאת מעורר מדויק המערכת יכולה לאחר אזעקה - מציגים באנר שפותח את ההרשאה.
+    var exactAlarmsAllowed by remember { mutableStateOf(AlarmLogic.canScheduleExact(context)) }
+    var snoozeLimit by remember { mutableIntStateOf(AlarmLogic.snoozeLimit(context)) }
     var editingAlarm by remember { mutableStateOf<Alarm?>(null) }
     // בורר השעה הוא שכבה על כל המסך (TimePicker.jsx) - בלי השורה העליונה
     // ובלי הסרגל התחתון. בתוך 480dp פחות שניהם הוא לא נכנס, וכפתורי
@@ -101,7 +116,8 @@ fun AlarmScreen(theme: FutureTheme, onBack: () -> Unit, onOverlayChange: (Boolea
         if (editingAlarm != null || menuOpen) return@LaunchedEffect
         repeat(6) {
             androidx.compose.runtime.withFrameNanos { }
-            val requester = rowRequesters[target] ?: alarms.firstOrNull()?.let { rowRequesters[it.id] } ?: addFocus
+            val requester = if (target == RESTORE_TO_ADD) addFocus
+                else rowRequesters[target] ?: alarms.firstOrNull()?.let { rowRequesters[it.id] } ?: addFocus
             if (runCatching { requester.requestFocus() }.isSuccess) {
                 restoreFocusTo = null
                 return@LaunchedEffect
@@ -113,6 +129,21 @@ fun AlarmScreen(theme: FutureTheme, onBack: () -> Unit, onOverlayChange: (Boolea
 
     LaunchedEffect(Unit) {
         alarms.addAll(AlarmLogic.getAlarms(context))
+    }
+
+    // צלצול רץ ברקע (מסך נפרד) ומשנה את האזעקה - בחזרה למסך טוענים מחדש מההעדפות, כמו
+    // בכניסה למסך, כדי שלא יוצג "מופעל" לאזעקה שכבר כבויה.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                alarms.clear()
+                alarms.addAll(AlarmLogic.getAlarms(context))
+                exactAlarmsAllowed = AlarmLogic.canScheduleExact(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     // השינוי מוחל על הרשימה העדכנית בהעדפות (לא על העותק שבמסך) - צלצול שרץ ברקע
@@ -138,7 +169,7 @@ fun AlarmScreen(theme: FutureTheme, onBack: () -> Unit, onOverlayChange: (Boolea
         val focused = alarms.firstOrNull { it.id == focusedAlarmId }
         FutureOptionsMenu(
             theme = theme,
-            onDismissRequest = { menuOpen = false; restoreFocusTo = focusedAlarmId ?: -1 },
+            onDismissRequest = { menuOpen = false; restoreFocusTo = focusedAlarmId ?: RESTORE_TO_ADD },
             header = focused?.let { "%02d:%02d".format(it.hour, it.minute) } ?: "שעונים מעוררים",
         ) {
             if (focused != null) {
@@ -151,6 +182,16 @@ fun AlarmScreen(theme: FutureTheme, onBack: () -> Unit, onOverlayChange: (Boolea
                     editingAlarm = focused
                 })
             }
+            FutureMenuRow(
+                "נודניק: " + (if (snoozeLimit == SNOOZE_LIMIT_UNLIMITED) "ללא הגבלה" else "$snoozeLimit פעמים"),
+                FutureIcons.Schedule, theme, {
+                    menuOpen = false
+                    // מחזורי: ללא הגבלה, 3, 5, 10, ושוב ללא הגבלה.
+                    val next = when (snoozeLimit) { 0 -> 3; 3 -> 5; 5 -> 10; else -> SNOOZE_LIMIT_UNLIMITED }
+                    AlarmLogic.setSnoozeLimit(context, next)
+                    snoozeLimit = next
+                },
+            )
             FutureMenuRow("מעורר חדש", FutureIcons.Add, theme, {
                 menuOpen = false
                 val newId = (alarms.maxOfOrNull { it.id } ?: 0) + 1
@@ -175,8 +216,10 @@ fun AlarmScreen(theme: FutureTheme, onBack: () -> Unit, onOverlayChange: (Boolea
             dangerColor = theme.dangerColor,
             onCancel = { restoreFocusTo = alarm.id; pendingDelete = null },
             onConfirm = {
+                val index = alarms.indexOfFirst { it.id == alarm.id }
                 updateAlarms { list -> list.removeAll { it.id == alarm.id } }
-                restoreFocusTo = -1
+                // הפוקוס עובר לשכן של המחוק (הבא, ואם אין - הקודם), ואם הרשימה ריקה - ל"+".
+                restoreFocusTo = alarms.getOrNull(index)?.id ?: alarms.getOrNull(index - 1)?.id ?: RESTORE_TO_ADD
                 pendingDelete = null
             },
         )
@@ -185,17 +228,35 @@ fun AlarmScreen(theme: FutureTheme, onBack: () -> Unit, onOverlayChange: (Boolea
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize()) {
+                if (!overlayOpen && !exactAlarmsAllowed) {
+                    FutureButton(
+                        text = "אין הרשאה למעורר מדויק - OK לפתיחת ההגדרות",
+                        theme = theme,
+                        onClick = {
+                            runCatching {
+                                context.startActivity(
+                                    Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:${context.packageName}"))
+                                )
+                            }
+                        },
+                        variant = FutureButtonVariant.Secondary,
+                        fillMaxWidth = true,
+                        modifier = Modifier.padding(horizontal = FutureDimens.screenPadding, vertical = FutureDimens.spacingSm),
+                    )
+                }
                 if (!overlayOpen) ToolsHeader(
                     title = "שעונים מעוררים",
                     theme = theme,
                     onBack = onBack,
                     trailing = {
                         if (editingAlarm == null) {
-                            ToolsIconButton(FutureIcons.Add, "הוסף שעון", theme, focusRequester = addFocus) {
-                                val newId = (alarms.maxOfOrNull { it.id } ?: 0) + 1
-                                // CK7: מעורר חדש נכנס לרשימה רק ב"שמור". קודם הוא נשמר ותוזמן עוד
-                                // לפני שהבורר נפתח, ו"ביטול" השאיר מעורר 07:00 מופעל.
-                                editingAlarm = Alarm(newId, 7, 0, emptySet())
+                            Box(modifier = Modifier.onFocusChanged { if (it.hasFocus) focusedAlarmId = null }) {
+                                ToolsIconButton(FutureIcons.Add, "הוסף שעון", theme, focusRequester = addFocus) {
+                                    val newId = (alarms.maxOfOrNull { it.id } ?: 0) + 1
+                                    // CK7: מעורר חדש נכנס לרשימה רק ב"שמור". קודם הוא נשמר ותוזמן עוד
+                                    // לפני שהבורר נפתח, ו"ביטול" השאיר מעורר 07:00 מופעל.
+                                    editingAlarm = Alarm(newId, 7, 0, emptySet())
+                                }
                             }
                         }
                     }
@@ -217,7 +278,7 @@ fun AlarmScreen(theme: FutureTheme, onBack: () -> Unit, onOverlayChange: (Boolea
                             editingAlarm = null
                         },
                         onCancel = {
-                            restoreFocusTo = editingAlarm?.id?.takeIf { id -> alarms.any { it.id == id } } ?: -1
+                            restoreFocusTo = editingAlarm?.id?.takeIf { id -> alarms.any { it.id == id } } ?: RESTORE_TO_ADD
                             editingAlarm = null
                         }
                     )
@@ -353,7 +414,7 @@ fun TimePickerOverlay(alarm: Alarm, theme: FutureTheme, isNew: Boolean = false, 
                 focusRequester = hourFocus,
                 onChange = { hour = it },
                 onTypedComplete = { runCatching { minuteFocus.requestFocus() } },
-                onOk = { runCatching { firstDayFocus.requestFocus() } },
+                onOk = { runCatching { minuteFocus.requestFocus() } },
             )
             TimeValue(":", theme)
             TimeWheel(
@@ -459,19 +520,10 @@ private fun TimeWheel(
                         true
                     }
                     digit != null -> {
-                        val next = typed + digit
-                        val v = next.toInt()
-                        when {
-                            next.length >= 2 || v * 10 > range.last -> {
-                                onChange(v.coerceIn(range))
-                                typed = ""
-                                onTypedComplete()
-                            }
-                            else -> {
-                                typed = next
-                                onChange(v)
-                            }
-                        }
+                        val result = typeDigit(typed, digit.toInt(), range.last)
+                        typed = result.buffer
+                        onChange(result.value)
+                        if (result.complete) onTypedComplete()
                         true
                     }
                     else -> false

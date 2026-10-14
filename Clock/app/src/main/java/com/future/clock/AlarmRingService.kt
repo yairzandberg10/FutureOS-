@@ -81,7 +81,11 @@ class AlarmRingService : Service() {
     }
 
     private fun finishRinging(snooze: Boolean) {
-        if (snooze && alarmId != -1) AlarmLogic.scheduleSnooze(this, alarmId)
+        if (alarmId != -1) {
+            // מגבלת הנודניקים מההגדרות: אחרי שהגיעה למקסימום, נודניק מסיים את הצלצול כמו כיבוי.
+            if (snooze && AlarmLogic.canSnooze(this, alarmId)) AlarmLogic.scheduleSnooze(this, alarmId)
+            else AlarmLogic.resetSnoozeCount(this, alarmId)
+        }
         _ringing.value = false
         stopSound()
         stopForeground(STOP_FOREGROUND_REMOVE)

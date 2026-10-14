@@ -18,6 +18,26 @@ private const val TAG = "Clock/AlarmLogic"
 /** דקות הנודניק כשלוחצים על מקש כלשהו (לא OK) במסך הצלצול. */
 const val SNOOZE_MINUTES = 5
 
+/** מגבלת נודניקים: 0 = ללא הגבלה (ברירת מחדל). אחרת - כמה פעמים אפשר לנדנד באותה אזעקה. */
+const val SNOOZE_LIMIT_UNLIMITED = 0
+
+/** תוצאת הקלדת ספרה בגלגל שעה/דקות: הערך החדש, מה שהוקלד עד עכשיו, והאם ההקלדה הושלמה. */
+data class TypedDigit(val value: Int, val buffer: String, val complete: Boolean)
+
+/**
+ * הקלדת ספרה בגלגל עם מקסימום [max]. ספרה ראשונה שלא יכולה להיות תחילת
+ * מספר (למשל 7 בדקות) מסיימת מיד; אחרת מחכים לספרה השנייה, כך ש-4 ואז 0 = 40.
+ */
+fun typeDigit(buffer: String, digit: Int, max: Int): TypedDigit {
+    val next = buffer + digit
+    val v = next.toInt()
+    return if (next.length >= 2 || digit * 10 > max) {
+        TypedDigit(v.coerceAtMost(max), "", true)
+    } else {
+        TypedDigit(v, next, false)
+    }
+}
+
 /**
  * הפעולה שמסומנת על ה-Intent שהאזעקה האמיתית מצלצלת בו (בניגוד ל-
  * BOOT_COMPLETED שאותו Receiver גם מאזין לו). בלי הפרדה מפורשת הזאת,
@@ -48,6 +68,8 @@ data class Alarm(
 object AlarmLogic {
     private const val PREFS_NAME = "alarms_prefs"
     private const val ALARMS_KEY = "alarms_list"
+    private const val SNOOZE_LIMIT_KEY = "snooze_limit"
+    private const val SNOOZE_COUNT_PREFIX = "snooze_count_"
     /** העתק של הרשימה הפגומה - שמירה הבאה דורסת את ALARMS_KEY, ובלי זה הנתונים הולכים לאיבוד. */
     private const val ALARMS_CORRUPT_KEY = "alarms_list_corrupt"
     private val gson = Gson()
@@ -151,9 +173,36 @@ object AlarmLogic {
         runningTimer(context)?.let { (end, total) -> scheduleTimer(context, end, total) }
     }
 
+    private fun prefs(context: Context) = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+
+    fun snoozeLimit(context: Context): Int = prefs(context).getInt(SNOOZE_LIMIT_KEY, SNOOZE_LIMIT_UNLIMITED)
+
+    fun setSnoozeLimit(context: Context, limit: Int) {
+        prefs(context).edit().putInt(SNOOZE_LIMIT_KEY, limit).apply()
+    }
+
+    /** true אם עוד מותר לנדנד את האזעקה הזאת, לפי המגבלה שהמשתמש בחר ומספר הנודניקים שכבר היו. */
+    fun canSnooze(context: Context, alarmId: Int): Boolean {
+        val limit = snoozeLimit(context)
+        if (limit == SNOOZE_LIMIT_UNLIMITED) return true
+        return prefs(context).getInt(snoozeCountKey(alarmId), 0) < limit
+    }
+
+    /** מנקה את מספר הנודניקים של אזעקה אחרי שצלצול נסגר בכיבוי (לא בנודניק). */
+    fun resetSnoozeCount(context: Context, alarmId: Int) {
+        prefs(context).edit().remove(snoozeCountKey(alarmId)).apply()
+    }
+
+    fun canScheduleExact(context: Context): Boolean =
+        (context.getSystemService(Context.ALARM_SERVICE) as AlarmManager).canScheduleExactAlarms()
+
+    private fun snoozeCountKey(alarmId: Int) = "$SNOOZE_COUNT_PREFIX$alarmId"
+
     /** מתזמן אזעקה חד-פעמית נוספת בעוד SNOOZE_MINUTES דקות, בלי לגעת באזעקה המקורית. */
     fun scheduleSnooze(context: Context, originalAlarmId: Int) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val countKey = snoozeCountKey(originalAlarmId)
+        prefs(context).edit().putInt(countKey, prefs(context).getInt(countKey, 0) + 1).apply()
         val snoozeId = snoozeRequestCode(originalAlarmId)
         val intent = Intent(context, AlarmReceiver::class.java).apply {
             action = ACTION_ALARM_FIRED

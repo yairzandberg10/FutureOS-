@@ -43,6 +43,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.future.clock.logic.AlarmLogic
 import com.future.clock.logic.EXTRA_ALARM_ID
 import com.future.clock.logic.SNOOZE_MINUTES
 import com.future.sharednav.components.FutureButton
@@ -166,8 +167,9 @@ class AlarmRingActivity : ComponentActivity() {
                         // לטיימר (בלי מזהה אזעקה) אין נודניק - הכפתור לא היה עושה כלום
                         if (alarmId != -1) {
                             Spacer(modifier = Modifier.height(FutureDimens.spacingMd))
+                            val snoozeAllowed = AlarmLogic.canSnooze(this@AlarmRingActivity, alarmId)
                             FutureButton(
-                                text = "נודניק · $SNOOZE_MINUTES דקות",
+                                text = if (snoozeAllowed) "נודניק · $SNOOZE_MINUTES דקות" else "סיום",
                                 theme = theme,
                                 onClick = ::snooze,
                                 variant = FutureButtonVariant.Secondary,
