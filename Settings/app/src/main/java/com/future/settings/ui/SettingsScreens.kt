@@ -1015,6 +1015,17 @@ fun SystemUiScreen(navController: NavController, theme: ThemeConfig, viewModel: 
                         }
                     }
                 }
+                item { SettingHeader("רקע שורת המצב", theme) }
+                item {
+                    SettingsCard(theme) {
+                        StatusBarTones.forEachIndexed { index, tone ->
+                            if (index > 0) SettingDivider(theme)
+                            StatusBarStyleOption(tone, selected = settings.barTone == tone.id, theme = theme) {
+                                com.future.settings.theme.SystemUiSettingsClient.setBarTone(context, tone.id); reload()
+                            }
+                        }
+                    }
+                }
                 item { SettingHeader("שורת מצב", theme) }
                 item {
                     SettingsCard(theme) {
@@ -1073,6 +1084,12 @@ fun SystemUiScreen(navController: NavController, theme: ThemeConfig, viewModel: 
 /** ארבעת סגנונות שורת המצב, עם תמונה של כל אחד מתוך העיצוב (drawable-nodpi, 640×64). */
 private data class StatusBarStyle(val id: String, val title: String, val summary: String, val preview: Int)
 
+private val StatusBarTones = listOf(
+    StatusBarStyle("auto", "אוטומטי", "שקוף מעל תוכן בהיר, כהה מעל תוכן כהה - לפי האפליקציה", 0),
+    StatusBarStyle("transparent", "שקוף", "תמיד שקוף, הטקסט כהה או בהיר לפי הרקע", 0),
+    StatusBarStyle("dark", "כהה", "תמיד שחור עם טקסט לבן", 0),
+)
+
 private val StatusBarStyles = listOf(
     StatusBarStyle("classic", "קלאסי", "השורה המוכרת, עם נקודה כשיש התראות", com.future.settings.R.drawable.statusbar_style_classic),
     StatusBarStyle("quiet", "שקט", "שעה ואייקוני האפליקציות עם התראות, בלי קישוטים", com.future.settings.R.drawable.statusbar_style_quiet),
@@ -1110,7 +1127,7 @@ private fun StatusBarStyleOption(style: StatusBarStyle, selected: Boolean, theme
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         // התמונה מצוירת על שחור כמו שורת המצב האמיתית, גם בערכת נושא בהירה
-        androidx.compose.foundation.Image(
+        if (style.preview != 0) androidx.compose.foundation.Image(
             painter = androidx.compose.ui.res.painterResource(style.preview),
             contentDescription = style.title,
             contentScale = androidx.compose.ui.layout.ContentScale.FillWidth,
