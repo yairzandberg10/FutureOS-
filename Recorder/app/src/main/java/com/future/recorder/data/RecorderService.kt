@@ -40,6 +40,8 @@ data class RecorderState(
     /** עולה בכל הקלטה שנשמרה - הרשימה מתרעננת לפיו. */
     val savedCount: Int = 0,
     val error: String? = null,
+    /** אזהרה שלא עוצרת הקלטה (למשל מקום פנוי נמוך). מוצגת פעם אחת. */
+    val warning: String? = null,
 ) {
     fun elapsedMs(now: Long = SystemClock.uptimeMillis()): Long =
         if (status == RecorderStatus.Recording) accumulatedMs + (now - resumedAt) else accumulatedMs
@@ -54,6 +56,8 @@ class RecorderService : Service() {
     private var recorder: MediaRecorder? = null
     private var wakeLock: PowerManager.WakeLock? = null
     private val handler = Handler(Looper.getMainLooper())
+    private var ticks = 0
+    private var lowSpaceWarned = false
     private val levelTick = object : Runnable {
         override fun run() {
             val r = recorder ?: return
@@ -63,9 +67,18 @@ class RecorderService : Service() {
                 val level = sqrt((amp / 32767f).coerceIn(0f, 1f))
                 val next = (_state.value.levels + level).takeLast(MAX_LEVELS)
                 _state.value = _state.value.copy(levels = next)
+                // בודקים מקום פנוי כל כ-10 שניות (לא בכל דגימה), ומזהירים פעם אחת.
+                if (++ticks % 125 == 0) checkLowSpace()
             }
             handler.postDelayed(this, 80)
         }
+    }
+
+    /** מזהיר פעם אחת כשהמקום הפנוי יורד מתחת ל-[LOW_FREE_BYTES]; ההקלטה ממשיכה בכל מקרה. */
+    private fun checkLowSpace() {
+        if (lowSpaceWarned || Recordings.dir(this).usableSpace >= LOW_FREE_BYTES) return
+        lowSpaceWarned = true
+        _state.value = _state.value.copy(warning = "מקום פנוי נמוך - כדאי לעצור את ההקלטה בזמן")
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -82,8 +95,11 @@ class RecorderService : Service() {
 
     private fun start() {
         if (recorder != null) return
-        // קבצים חלקיים מהפעלה שנהרגה באמצע לא נשארים על הדיסק.
-        Recordings.dir(this).listFiles { f -> f.name.endsWith(PART_SUFFIX) }?.forEach { it.delete() }
+        // קבצים חלקיים מהפעלה שנהרגה באמצע לא נשארים על הדיסק. הם לא ניתנים להשמעה
+        // (אין בהם סוף הקובץ), ולכן מודיעים על כך במקום למחוק בשקט.
+        val orphans = Recordings.dir(this).listFiles { f -> f.name.endsWith(PART_SUFFIX) }.orEmpty()
+        orphans.forEach { it.delete() }
+        lowSpaceWarned = false
         if (Recordings.dir(this).usableSpace < MIN_FREE_BYTES) {
             failStart("אין מקום פנוי להקלטה")
             return
@@ -133,6 +149,11 @@ class RecorderService : Service() {
             file = file,
             resumedAt = SystemClock.uptimeMillis(),
             savedCount = _state.value.savedCount,
+            warning = when {
+                orphans.isNotEmpty() -> "ההקלטה הקודמת נקטעה ולא נשמרה"
+                Recordings.dir(this).usableSpace < LOW_FREE_BYTES -> "מקום פנוי נמוך - כדאי לעצור את ההקלטה בזמן"
+                else -> null
+            },
         )
         handler.post(levelTick)
     }
@@ -217,10 +238,16 @@ class RecorderService : Service() {
             this, 1, Intent(this, RecorderService::class.java).setAction(ACTION_STOP),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
+        // משך ההקלטה בהתראה: שעון חי (chronometer) בזמן הקלטה, וזמן קבוע בהשהיה.
+        val elapsed = _state.value.elapsedMs()
+        val name = _state.value.file?.let { File(it.path.removeSuffix(PART_SUFFIX)).nameWithoutExtension } ?: "רשמקול"
         return Notification.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle(if (paused) "ההקלטה מושהית" else "מקליט")
-            .setContentText(_state.value.file?.let { File(it.path.removeSuffix(PART_SUFFIX)).nameWithoutExtension } ?: "רשמקול")
+            .setContentText(if (paused) "$name · ${formatDuration(elapsed)}" else name)
+            .setUsesChronometer(!paused)
+            .setWhen(System.currentTimeMillis() - elapsed)
+            .setShowWhen(true)
             .setContentIntent(open)
             .setOngoing(true)
             .addAction(Notification.Action.Builder(null, "עצור ושמור", stop).build())
@@ -229,6 +256,8 @@ class RecorderService : Service() {
 
     companion object {
         private const val TAG = "RecorderService"
+        /** מתחת לסף הזה מזהירים על מקום פנוי נמוך (כ-100MB, בערך כמה דקות הקלטה ב-128kbps). */
+        private const val LOW_FREE_BYTES = 100L * 1024 * 1024
         private const val CHANNEL_ID = "recording"
         private const val NOTIFICATION_ID = 7
         private const val MAX_LEVELS = 48
@@ -250,6 +279,10 @@ class RecorderService : Service() {
 
         fun clearError() {
             _state.value = _state.value.copy(error = null)
+        }
+
+        fun clearWarning() {
+            _state.value = _state.value.copy(warning = null)
         }
     }
 }

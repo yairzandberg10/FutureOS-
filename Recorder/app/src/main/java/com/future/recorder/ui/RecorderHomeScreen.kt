@@ -80,6 +80,17 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import com.future.recorder.data.RecorderState
 import java.io.File
+import androidx.compose.foundation.background
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
+import com.future.sharednav.components.AppDialog
+import com.future.sharednav.components.FutureDialogButtons
+import com.future.sharednav.components.FutureTextField
+import com.future.sharednav.focus.escapeTextFieldFocusTrap
+import com.future.sharednav.theme.FutureShapes
+import com.future.sharednav.theme.rememberFutureType
+import androidx.compose.ui.draw.clip
 
 @Composable
 fun RecorderHomeScreen(theme: FutureTheme, onPlay: (File) -> Unit) {
@@ -96,6 +107,12 @@ fun RecorderHomeScreen(theme: FutureTheme, onPlay: (File) -> Unit) {
         state.error?.let {
             Toast.makeText(context, it, Toast.LENGTH_LONG).show()
             RecorderService.clearError()
+        }
+    }
+    LaunchedEffect(state.warning) {
+        state.warning?.let {
+            Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+            RecorderService.clearWarning()
         }
     }
 
@@ -218,7 +235,7 @@ fun RecorderHomeScreen(theme: FutureTheme, onPlay: (File) -> Unit) {
         }
     }
     renaming?.let { rec ->
-        InputDialog(
+        RenameRecordingDialog(
             title = "שינוי שם",
             theme = theme,
             initialValue = rec.name,
@@ -355,4 +372,55 @@ internal fun shareRecording(context: Context, file: File) {
         .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     send.clipData = android.content.ClipData.newRawUri(file.nameWithoutExtension, uri)
     FutureShare.open(context, send, "שיתוף הקלטה")
+}
+
+
+/**
+ * שינוי שם של הקלטה. כמו [InputDialog] המשותף, אבל מעוגן לראש המסך (ולא במרכז),
+ * כך שכפתורי שמור/ביטול נשארים מעל המקלדת. Done במקלדת שומר את השם.
+ */
+@Composable
+private fun RenameRecordingDialog(
+    title: String,
+    theme: FutureTheme,
+    initialValue: String,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit,
+) {
+    val type = rememberFutureType()
+    var text by remember { mutableStateOf(initialValue) }
+    val submit = { if (text.isNotBlank()) onConfirm(text.trim()) }
+
+    AppDialog(onDismissRequest = onDismiss, anchorTop = true) {
+        Column(
+            modifier = Modifier
+                .escapeTextFieldFocusTrap()
+                .fillMaxWidth()
+                .clip(FutureShapes.dialog)
+                .background(theme.surfaceColor)
+                .padding(20.dp),
+        ) {
+            Text(
+                title,
+                color = theme.textColor,
+                fontSize = type.dialog,
+                fontWeight = FutureTypography.weightBold,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+            )
+            FutureTextField(
+                value = text,
+                onValueChange = { text = it },
+                theme = theme,
+                autoFocus = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { submit() }),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            FutureDialogButtons {
+                FutureButton("ביטול", theme, onDismiss, variant = FutureButtonVariant.Secondary)
+                FutureButton("שמור", theme, { submit() })
+            }
+        }
+    }
 }
