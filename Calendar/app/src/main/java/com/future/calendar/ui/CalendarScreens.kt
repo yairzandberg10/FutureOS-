@@ -56,6 +56,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -863,11 +864,19 @@ fun EventEditDialog(
     onSave: (title: String, description: String, location: String, startHour: Int, startMinute: Int, endHour: Int, endMinute: Int, allDay: Boolean, repeat: EventRepeat) -> Unit,
     onDelete: (() -> Unit)? = null
 ) {
-    var title by remember { mutableStateOf(editingEvent?.title ?: "") }
-    var description by remember { mutableStateOf(editingEvent?.description ?: "") }
-    var location by remember { mutableStateOf(editingEvent?.location ?: "") }
-    var allDay by remember { mutableStateOf(editingEvent?.allDay ?: false) }
-    var repeat by remember { mutableStateOf(EventRepeat.NONE) }
+    val draftContext = LocalContext.current
+    val draftPrefs = remember { draftContext.getSharedPreferences(DRAFT_PREFS, android.content.Context.MODE_PRIVATE) }
+    // טיוטה נטענת רק לאירוע חדש שנפתח באותו יום שבו נשמרה (ר' keepDraft).
+    val restoring = editingEvent == null && draftPrefs.getLong(DRAFT_DATE, -1L) == initialDate.toEpochDay()
+    fun draftText(key: String) = if (restoring) draftPrefs.getString(key, "") ?: "" else ""
+
+    var title by remember { mutableStateOf(editingEvent?.title ?: draftText(DRAFT_TITLE)) }
+    var description by remember { mutableStateOf(editingEvent?.description ?: draftText(DRAFT_DESCRIPTION)) }
+    var location by remember { mutableStateOf(editingEvent?.location ?: draftText(DRAFT_LOCATION)) }
+    var allDay by remember { mutableStateOf(editingEvent?.allDay ?: (restoring && draftPrefs.getBoolean(DRAFT_ALL_DAY, false))) }
+    var repeat by remember {
+        mutableStateOf(if (restoring) EventRepeat.values().getOrNull(draftPrefs.getInt(DRAFT_REPEAT, 0)) ?: EventRepeat.NONE else EventRepeat.NONE)
+    }
 
     val initialStart = editingEvent?.let {
         java.time.Instant.ofEpochMilli(it.startMillis).atZone(java.time.ZoneId.systemDefault()).toLocalTime()
@@ -876,12 +885,34 @@ fun EventEditDialog(
         java.time.Instant.ofEpochMilli(it.endMillis).atZone(java.time.ZoneId.systemDefault()).toLocalTime()
     } ?: LocalTime.of(10, 0)
 
-    var startHour by remember { mutableIntStateOf(initialStart.hour) }
-    var startMinute by remember { mutableIntStateOf(initialStart.minute) }
-    var endHour by remember { mutableIntStateOf(initialEnd.hour) }
-    var endMinute by remember { mutableIntStateOf(initialEnd.minute) }
+    fun draftInt(key: String, default: Int) = if (restoring) draftPrefs.getInt(key, default) else default
+    var startHour by remember { mutableIntStateOf(draftInt(DRAFT_START_HOUR, initialStart.hour)) }
+    var startMinute by remember { mutableIntStateOf(draftInt(DRAFT_START_MINUTE, initialStart.minute)) }
+    var endHour by remember { mutableIntStateOf(draftInt(DRAFT_END_HOUR, initialEnd.hour)) }
+    var endMinute by remember { mutableIntStateOf(draftInt(DRAFT_END_MINUTE, initialEnd.minute)) }
 
-    AppDialog(onDismissRequest = onDismiss) {
+    // יציאה מהטופס באמצע (BACK או לחיצה בחוץ) שומרת אירוע חדש כטיוטה. "ביטול" מוחק אותה.
+    fun clearDraft() {
+        if (editingEvent == null) draftPrefs.edit().clear().apply()
+    }
+    fun keepDraft() {
+        if (editingEvent != null) return
+        if (title.isBlank() && description.isBlank() && location.isBlank()) return clearDraft()
+        draftPrefs.edit()
+            .putLong(DRAFT_DATE, initialDate.toEpochDay())
+            .putString(DRAFT_TITLE, title)
+            .putString(DRAFT_DESCRIPTION, description)
+            .putString(DRAFT_LOCATION, location)
+            .putBoolean(DRAFT_ALL_DAY, allDay)
+            .putInt(DRAFT_REPEAT, repeat.ordinal)
+            .putInt(DRAFT_START_HOUR, startHour)
+            .putInt(DRAFT_START_MINUTE, startMinute)
+            .putInt(DRAFT_END_HOUR, endHour)
+            .putInt(DRAFT_END_MINUTE, endMinute)
+            .apply()
+    }
+
+    AppDialog(onDismissRequest = { keepDraft(); onDismiss() }) {
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
             Column(
                 modifier = Modifier
@@ -939,8 +970,9 @@ fun EventEditDialog(
                 }
 
                 FutureDialogButtons {
-                    FutureButton("ביטול", theme, onDismiss, variant = FutureButtonVariant.Secondary)
+                    FutureButton("ביטול", theme, { clearDraft(); onDismiss() }, variant = FutureButtonVariant.Secondary)
                     FutureButton(if (editingEvent != null) "שמור" else "צור", theme, {
+                        clearDraft()
                         onSave(title, description, location, startHour, startMinute, endHour, endMinute, allDay, repeat)
                     })
                     if (onDelete != null) {
@@ -951,6 +983,19 @@ fun EventEditDialog(
         }
     }
 }
+
+/** שם קובץ ההעדפות ומפתחות הטיוטה של אירוע חדש (ר' EventEditDialog). */
+private const val DRAFT_PREFS = "event_draft"
+private const val DRAFT_DATE = "date"
+private const val DRAFT_TITLE = "title"
+private const val DRAFT_DESCRIPTION = "description"
+private const val DRAFT_LOCATION = "location"
+private const val DRAFT_ALL_DAY = "all_day"
+private const val DRAFT_REPEAT = "repeat"
+private const val DRAFT_START_HOUR = "start_hour"
+private const val DRAFT_START_MINUTE = "start_minute"
+private const val DRAFT_END_HOUR = "end_hour"
+private const val DRAFT_END_MINUTE = "end_minute"
 
 @Composable
 private fun AllDayToggleRow(allDay: Boolean, theme: FutureTheme, onToggle: () -> Unit) {
