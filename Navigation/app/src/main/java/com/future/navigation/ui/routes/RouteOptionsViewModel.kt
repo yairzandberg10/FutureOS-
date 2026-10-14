@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.future.navigation.data.common.LatLng
 import com.future.navigation.data.gtfs.GtfsConfig
 import com.future.navigation.data.gtfs.GtfsImportState
+import com.future.navigation.data.network.NetworkPolicy
 import com.future.navigation.data.gtfs.GtfsImporter
 import com.future.navigation.data.gtfs.ImportPhase
 import com.future.navigation.data.gtfs.TransitItinerary
@@ -39,6 +40,11 @@ class RouteOptionsViewModel(
     private val _error = MutableStateFlow<String?>(null)
     val error = _error.asStateFlow()
 
+    /** הורדה של נתוני התחבורה (~130MB) ברשת סלולרית מחכה לאישור המשתמש (F09). */
+    private val _askCellularDownload = MutableStateFlow(false)
+    val askCellularDownload = _askCellularDownload.asStateFlow()
+    private var pendingSearch: Pair<TravelMode, Destination>? = null
+
     private val _drivingRoute = MutableStateFlow<DrivingRoute?>(null)
     val drivingRoute = _drivingRoute.asStateFlow()
 
@@ -51,7 +57,7 @@ class RouteOptionsViewModel(
     /** מזהה החיפוש האחרון - רק החיפוש האחרון מכבה את מצב הטעינה (ביטול של קודם לא מכבה חדש). */
     private var searchId = 0
 
-    fun search(mode: TravelMode, destination: Destination) {
+    fun search(mode: TravelMode, destination: Destination, allowCellularDownload: Boolean = false) {
         val id = ++searchId
         searchJob?.cancel()
         // תוצאות של יעד קודם לא נשארות על המסך - גם כשאין מיקום (אחרת מסלול ישן נפתח על יעד חדש)
@@ -62,6 +68,16 @@ class RouteOptionsViewModel(
         if (origin == null) {
             _loading.value = false
             _error.value = "לא ניתן לאתר את המיקום הנוכחי"
+            return
+        }
+
+        // הורדה גדולה ברשת סלולרית - קודם שואלים (ברירת המחדל: לא להוריד).
+        if (mode == TravelMode.TRANSIT && !allowCellularDownload &&
+            transitDownloadNeeded(origin, destination.location) && NetworkPolicy.isMetered(appContext)
+        ) {
+            pendingSearch = mode to destination
+            _loading.value = false
+            _askCellularDownload.value = true
             return
         }
 
@@ -92,6 +108,24 @@ class RouteOptionsViewModel(
                 if (id == searchId) _loading.value = false
             }
         }
+    }
+
+    fun confirmCellularDownload() {
+        _askCellularDownload.value = false
+        val (mode, destination) = pendingSearch ?: return
+        pendingSearch = null
+        search(mode, destination, allowCellularDownload = true)
+    }
+
+    fun cancelCellularDownload() {
+        _askCellularDownload.value = false
+        pendingSearch = null
+    }
+
+    private fun transitDownloadNeeded(origin: LatLng, destination: LatLng): Boolean {
+        val neededBbox = GtfsConfig.boundingBoxCovering(origin, destination)
+        val alreadyImported = GtfsImportState.lastImportedBoundingBox(appContext)
+        return !(alreadyImported != null && alreadyImported.covers(neededBbox))
     }
 
     /**

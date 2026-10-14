@@ -44,6 +44,7 @@ import com.future.navigation.R
 import com.future.navigation.data.routing.Maneuver
 import com.future.navigation.ui.map.MapCameraController
 import com.future.navigation.ui.map.NavMapView
+import com.future.sharednav.components.ConfirmDialog
 
 @Composable
 fun NavigateScreen(viewModel: NavigateViewModel, onClose: () -> Unit = {}) {
@@ -51,6 +52,19 @@ fun NavigateScreen(viewModel: NavigateViewModel, onClose: () -> Unit = {}) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val cameraController = remember { MapCameraController() }
     var followMode by remember { mutableStateOf(true) }
+    // סיום ניווט מבקש אישור (F18), ולכן הכפתור רק פותח את הדיאלוג.
+    var confirmEnd by remember { mutableStateOf(false) }
+    // GPS כבוי - מציגים הודעה במקום מפה שאינה מתעדכנת (F19). נבדק מחדש בכל חזרה למסך.
+    val gpsContext = androidx.compose.ui.platform.LocalContext.current
+    var gpsOff by remember { mutableStateOf(!isGpsEnabled(gpsContext)) }
+    val lifecycleOwnerForGps = androidx.compose.ui.platform.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(lifecycleOwnerForGps) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) gpsOff = !isGpsEnabled(gpsContext)
+        }
+        lifecycleOwnerForGps.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwnerForGps.lifecycle.removeObserver(observer) }
+    }
 
     // המסך לא נכבה באמצע ניווט (קודם הוא כבה אחרי זמן ההמתנה הרגיל)
     val view = androidx.compose.ui.platform.LocalView.current
@@ -64,6 +78,23 @@ fun NavigateScreen(viewModel: NavigateViewModel, onClose: () -> Unit = {}) {
         if (loc != null && followMode) {
             cameraController.follow(loc)
         }
+    }
+
+    if (confirmEnd) {
+        ConfirmDialog(
+            message = "לסיים את הניווט?",
+            surfaceColor = theme.surfaceColor,
+            textColor = theme.textColor,
+            dangerColor = theme.dangerColor,
+            onCancel = { confirmEnd = false },
+            onConfirm = {
+                confirmEnd = false
+                viewModel.endNavigation()
+                onClose()
+            },
+            cancelLabel = "ביטול",
+            confirmLabel = "סיים",
+        )
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -116,6 +147,14 @@ fun NavigateScreen(viewModel: NavigateViewModel, onClose: () -> Unit = {}) {
         }
 
         Column(modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = FutureDimens.screenPadding, vertical = FutureDimens.spacingSm)) {
+            if (gpsOff && !state.ended) {
+                Text(
+                    "GPS כבוי - הפעילו מיקום כדי שהמפה תראה איפה אתם",
+                    color = theme.dangerColor,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(bottom = 8.dp),
+                )
+            }
             if (!state.ended) {
                 Surface(shape = FutureShapes.lg, color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxWidth()) {
                     Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -131,8 +170,8 @@ fun NavigateScreen(viewModel: NavigateViewModel, onClose: () -> Unit = {}) {
                             // הכפתור הזה משמעו "בטל/צא מהניווט" - לא רק לסמן ended=true (זה
                             // קורה גם אוטומטית בהגעה בפועל ליעד) אלא גם לצאת בפועל מהמסך,
                             // אחרת המשתמש נשאר תקוע על מסך המפה עם באנר "הגעת ליעד" שגוי.
-                            viewModel.endNavigation()
-                            onClose()
+                            // לפני כן מבקשים אישור (F18), והברירה הבטוחה היא "ביטול".
+                            confirmEnd = true
                         })
                     }
                 }
@@ -144,12 +183,22 @@ fun NavigateScreen(viewModel: NavigateViewModel, onClose: () -> Unit = {}) {
                         }
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(stringResource(R.string.arrived_at_destination), fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.weight(1f))
+                        // יציאה מהמסך אחרי ההגעה (F17) - בלי זה נשאר רק BACK.
+                        TopBarIconButton(FutureIcons.Close, "יציאה", theme.textColor, theme.accentColor, onClick = onClose)
                     }
                 }
             }
         }
     }
 }
+
+/** האם שירות מיקום GPS דולק במכשיר. לא דורש הרשאה. */
+private fun isGpsEnabled(context: android.content.Context): Boolean =
+    runCatching {
+        (context.getSystemService(android.content.Context.LOCATION_SERVICE) as android.location.LocationManager)
+            .isProviderEnabled(android.location.LocationManager.GPS_PROVIDER)
+    }.getOrDefault(true)
 
 @Composable
 private fun ManeuverIcon(step: Maneuver) {

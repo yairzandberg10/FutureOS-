@@ -80,6 +80,7 @@ fun HomeScreen(
     val query by viewModel.searchQuery.collectAsState()
     val results by viewModel.searchResults.collectAsState()
     val searching by viewModel.searching.collectAsState()
+    val searchFailed by viewModel.searchFailed.collectAsState()
     val homePlace by viewModel.homePlace.collectAsState(initial = null)
     val workPlace by viewModel.workPlace.collectAsState(initial = null)
     val nearbyStops by viewModel.nearbyStops.collectAsState()
@@ -93,6 +94,23 @@ fun HomeScreen(
     // פוקוס D-pad התחלתי על שדה החיפוש - בלי זה נחיתה על מסך הבית משאירה אותו
     // בלי שום פריט מודגש (בדיוק כמו בשאר 5 המסכים באפליקציה הזו).
     LaunchedEffect(Unit) { runCatching { searchFocusRequester.requestFocus() } }
+
+    // מיקום חי רק כשהמסך בחזית: מתחילים בחזרה למסך, ומפסיקים ביציאה ממנו (F32).
+    val homeLifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(homeLifecycleOwner, viewModel) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            when (event) {
+                androidx.lifecycle.Lifecycle.Event.ON_RESUME -> viewModel.startLiveLocation()
+                androidx.lifecycle.Lifecycle.Event.ON_PAUSE -> viewModel.stopLiveLocation()
+                else -> {}
+            }
+        }
+        homeLifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            homeLifecycleOwner.lifecycle.removeObserver(observer)
+            viewModel.stopLiveLocation()
+        }
+    }
 
     Column(modifier = Modifier.fillMaxSize().escapeTextFieldFocusTrap()) {
         Row(
@@ -177,6 +195,16 @@ fun HomeScreen(
                         theme = theme,
                         inset = false,
                     )
+                }
+                // בלי תוצאות - מסבירים למה: אין רשת, או שלא נמצא דבר (F31).
+                if (!searching && results.isEmpty()) {
+                    item {
+                        Text(
+                            if (searchFailed) "אין חיבור לאינטרנט. נסו שוב כשיש רשת." else "לא נמצאו תוצאות לחיפוש הזה.",
+                            color = theme.textColor.copy(alpha = 0.6f),
+                            modifier = Modifier.padding(horizontal = FutureDimens.spacingSm),
+                        )
+                    }
                 }
                 // המפתח חייב להיות טיפוס שאפשר לשמור ב-Bundle (Compose שומר דרכו
                 // את ה-state של השורה): key = { it } העביר את GeocodeResult עצמו

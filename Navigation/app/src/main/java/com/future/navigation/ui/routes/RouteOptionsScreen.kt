@@ -55,11 +55,26 @@ fun RouteOptionsScreen(
     val error by viewModel.error.collectAsState()
     val drivingRoute by viewModel.drivingRoute.collectAsState()
     val itineraries by viewModel.itineraries.collectAsState()
+    val askCellularDownload by viewModel.askCellularDownload.collectAsState()
     val actionFocusRequester = remember { FocusRequester() }
     val theme = LocalFutureTheme.current
 
     LaunchedEffect(destination, mode) {
         viewModel.search(mode, destination)
+    }
+
+    // הורדה של ~130MB ברשת סלולרית - שואלים לפני (F09). הברירה הבטוחה היא "לא עכשיו".
+    if (askCellularDownload) {
+        com.future.sharednav.components.ConfirmDialog(
+            message = "נדרשת הורדה של כ-130MB לנתוני התחבורה, ברשת סלולרית. להוריד עכשיו?",
+            surfaceColor = theme.surfaceColor,
+            textColor = theme.textColor,
+            dangerColor = theme.dangerColor,
+            onCancel = viewModel::cancelCellularDownload,
+            onConfirm = viewModel::confirmCellularDownload,
+            cancelLabel = "לא עכשיו",
+            confirmLabel = "הורד",
+        )
     }
 
     // פוקוס D-pad התחלתי על תוצאת המסלול ברגע שהיא מוכנה - בלי זה נחיתה על

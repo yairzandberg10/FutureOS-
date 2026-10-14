@@ -31,6 +31,13 @@ class SavedPlacesViewModel(
     private val _searchResults = MutableStateFlow<List<GeocodeResult>>(emptyList())
     val searchResults = _searchResults.asStateFlow()
 
+    private val _searching = MutableStateFlow(false)
+    val searching = _searching.asStateFlow()
+
+    /** true כשהחיפוש האחרון נכשל (אין רשת) - מוצג בנפרד מ"לא נמצאו תוצאות" (F30). */
+    private val _searchFailed = MutableStateFlow(false)
+    val searchFailed = _searchFailed.asStateFlow()
+
     private var searchJob: Job? = null
 
     /** העריכה האחרונה - כדי שאחרי החזרה מחיפוש הפוקוס ישוב לאריח שנערך. */
@@ -50,24 +57,38 @@ class SavedPlacesViewModel(
         _editingSlot.value = slot
         _searchQuery.value = ""
         _searchResults.value = emptyList()
+        _searching.value = false
+        _searchFailed.value = false
     }
 
     fun cancelEditing() {
         searchJob?.cancel()
+        _searching.value = false
         _editingSlot.value = EditingSlot.NONE
     }
 
     fun onSearchQueryChanged(query: String) {
         _searchQuery.value = query
         searchJob?.cancel()
+        _searchFailed.value = false
         if (query.isBlank()) {
             _searchResults.value = emptyList()
+            _searching.value = false
             return
         }
+        _searching.value = true
         searchJob = viewModelScope.launch {
             delay(500)
-            _searchResults.value = runCatching { geocodingRepository.search(query) }
-                .getOrElse { if (it is kotlinx.coroutines.CancellationException) throw it else emptyList() }
+            val outcome = try {
+                geocodingRepository.search(query) to false
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                emptyList<GeocodeResult>() to true
+            }
+            _searchResults.value = outcome.first
+            _searchFailed.value = outcome.second
+            _searching.value = false
         }
     }
 

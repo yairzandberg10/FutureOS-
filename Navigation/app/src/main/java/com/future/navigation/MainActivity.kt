@@ -251,6 +251,8 @@ class MainActivity : ComponentActivity() {
      */
     private fun prefetchTransitDataInBackground(location: LatLng) {
         if (transitPrefetchStarted) return
+        // ברשת סלולרית לא מורידים 130MB בלי לשאול - ההורדה תשאל כשמבקשים מסלול תחבורה (F09).
+        if (com.future.navigation.data.network.NetworkPolicy.isMetered(applicationContext)) return
         if (System.currentTimeMillis() - transitPrefetchFailedAtMs < PREFETCH_RETRY_DELAY_MS) return
         val neededBbox = GtfsConfig.boundingBoxCovering(location, location, paddingDegrees = PREFETCH_PADDING_DEGREES)
         val alreadyImported = GtfsImportState.lastImportedBoundingBox(applicationContext)

@@ -32,6 +32,7 @@ import org.maplibre.android.maps.MapView
  *
  * מיפוי מקשים (זהה בכל מקום שבו המפה הזו מוצגת):
  * - חצי שמאל/ימין: הזזת המפה (pan). חצי למעלה/למטה: מעבר פוקוס לשורת הכפתורים
+ * - מקשים 2/8/4/6: הזזת המפה למעלה/למטה/שמאלה/ימינה. 5: חזרה למיקום שלי
  * - מרכז/Enter: חזרה למיקום שלי (recenter) וחידוש מצב מעקב
  * - *: התרחקות (zoom out); #: התקרבות (zoom in). במכשיר שני המקשים מגיעים
  *   כשידור מ-FutureUI (onStarKeyPress/onPoundKeyPress) ולא כאירוע מקש.
@@ -88,9 +89,17 @@ fun NavMapView(
             .focusable()
             .onKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
+                // מקשי ספרות להזזת המפה (2 למעלה, 8 למטה, 4 שמאלה, 6 ימינה), 5 למיקום שלי.
+                // חצים למעלה/למטה לא נצרכים: הפוקוס עובר משם לשורת הכפתורים (השתק/סיים)
+                // ובחזרה. חצי שמאל/ימין ממשיכים להזיז את המפה כמו קודם.
+                when (com.future.sharednav.nav.digitForKey(event.key)) {
+                    "2" -> { cameraController.pan(1.0, 0.0); onManualPan(); return@onKeyEvent true }
+                    "8" -> { cameraController.pan(-1.0, 0.0); onManualPan(); return@onKeyEvent true }
+                    "4" -> { cameraController.pan(0.0, -1.0); onManualPan(); return@onKeyEvent true }
+                    "6" -> { cameraController.pan(0.0, 1.0); onManualPan(); return@onKeyEvent true }
+                    "5" -> { onRecenterRequested(); return@onKeyEvent true }
+                }
                 when (event.key) {
-                    // למעלה/למטה לא נצרכים: הפוקוס עובר משם לשורת הכפתורים (השתק/סיים)
-                    // ובחזרה. ההזזה במפה היא שמאלה/ימינה בלבד.
                     Key.DirectionLeft -> { cameraController.pan(0.0, -1.0); onManualPan(); true }
                     Key.DirectionRight -> { cameraController.pan(0.0, 1.0); onManualPan(); true }
                     Key.DirectionCenter, Key.Enter -> { onRecenterRequested(); true }

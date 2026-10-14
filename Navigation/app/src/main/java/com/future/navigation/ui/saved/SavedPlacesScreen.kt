@@ -18,6 +18,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,6 +30,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import com.future.navigation.R
 import com.future.navigation.data.gtfs.SavedPlaceEntity
 import com.future.navigation.ui.home.RowIcon
+import com.future.sharednav.components.ConfirmDialog
 import com.future.sharednav.components.FutureListItem
 import com.future.sharednav.components.FutureSectionHeader
 import com.future.sharednav.components.FutureTextField
@@ -58,6 +61,23 @@ fun SavedPlacesScreen(viewModel: SavedPlacesViewModel, onBack: () -> Unit, onNav
     val workPlace by viewModel.workPlace.collectAsState(initial = null)
     val allPlaces by viewModel.allPlaces.collectAsState(initial = emptyList())
     val favorites = allPlaces.filter { it.isFavorite }
+    // מחיקת מועדף מבקשת אישור קודם (F28), והברירה הבטוחה היא "ביטול".
+    var pendingDelete by remember { mutableStateOf<SavedPlaceEntity?>(null) }
+    pendingDelete?.let { place ->
+        ConfirmDialog(
+            message = "למחוק את ${place.label.ifBlank { place.address }} מהמועדפים?",
+            surfaceColor = theme.surfaceColor,
+            textColor = theme.textColor,
+            dangerColor = theme.dangerColor,
+            onCancel = { pendingDelete = null },
+            onConfirm = {
+                viewModel.delete(place)
+                pendingDelete = null
+            },
+            cancelLabel = "ביטול",
+            confirmLabel = "מחק",
+        )
+    }
     val homeCardFocusRequester = remember { FocusRequester() }
     val workCardFocusRequester = remember { FocusRequester() }
 
@@ -106,6 +126,16 @@ fun SavedPlacesScreen(viewModel: SavedPlacesViewModel, onBack: () -> Unit, onNav
                     )
                 }
             }
+            // מצב ריק (F30): בלי מועדפים מסבירים איך מוסיפים.
+            if (favorites.isEmpty()) {
+                item {
+                    Text(
+                        "אין מועדפים עדיין. לחצו על + כדי להוסיף מקום.",
+                        color = theme.textColor.copy(alpha = 0.6f),
+                        modifier = Modifier.padding(horizontal = FutureDimens.spacingSm),
+                    )
+                }
+            }
             items(favorites, key = { it.id }) { place ->
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -134,7 +164,7 @@ fun SavedPlacesScreen(viewModel: SavedPlacesViewModel, onBack: () -> Unit, onNav
                         contentDescription = "מחק",
                         textColor = theme.textColor,
                         accentColor = theme.accentColor,
-                        onClick = { viewModel.delete(place) },
+                        onClick = { pendingDelete = place },
                     )
                 }
             }
@@ -184,6 +214,8 @@ private fun AddressSearchScreen(viewModel: SavedPlacesViewModel, onBack: () -> U
     val theme = LocalFutureTheme.current
     val query by viewModel.searchQuery.collectAsState()
     val results by viewModel.searchResults.collectAsState()
+    val searching by viewModel.searching.collectAsState()
+    val searchFailed by viewModel.searchFailed.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize().escapeTextFieldFocusTrap()) {
         ScreenTopBar(
@@ -221,6 +253,20 @@ private fun AddressSearchScreen(viewModel: SavedPlacesViewModel, onBack: () -> U
                     onClick = { viewModel.pickResult(result) },
                     leading = { RowIcon(FutureIcons.LocationOn, theme) },
                 )
+            }
+            // מצב המתנה/ריק/כשל (F30): "מחפש", "אין חיבור לאינטרנט" או "לא נמצאו תוצאות".
+            if (query.isNotBlank() && results.isEmpty()) {
+                item {
+                    Text(
+                        when {
+                            searching -> "מחפש..."
+                            searchFailed -> "אין חיבור לאינטרנט. נסו שוב כשיש רשת."
+                            else -> "לא נמצאו תוצאות לחיפוש הזה."
+                        },
+                        color = theme.textColor.copy(alpha = 0.6f),
+                        modifier = Modifier.padding(horizontal = FutureDimens.spacingSm),
+                    )
+                }
             }
         }
     }
