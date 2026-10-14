@@ -269,7 +269,10 @@ class MainActivity : ComponentActivity() {
                     onMove = { entry -> clipboardEntry = entry; clipboardIsMove = true },
                     onPaste = {
                         val toPaste = clipboardEntry
-                        if (toPaste != null && !isBusy) {
+                        val movingIntoSameFolder = clipboardIsMove && toPaste?.file?.parentFile?.absolutePath == currentDir.absolutePath
+                        if (movingIntoSameFolder) {
+                            message("הפריט כבר נמצא כאן")
+                        } else if (toPaste != null && !isBusy) {
                             isBusy = true
                             val progress = com.future.files.data.CopyProgress()
                             progressValue = 0f
@@ -277,14 +280,15 @@ class MainActivity : ComponentActivity() {
                             // התיקייה נקבעת לפני ההעתקה - חזרה "אחורה" באמצע לא משנה את היעד.
                             val destDir = currentDir
                             coroutineScope.launch {
+                                // שם תפוס לא עוצר את ההדבקה: הפריט נשמר כ"שם (2)".
+                                val targetName = withContext(Dispatchers.IO) { repository.availableName(destDir, toPaste.file.name, toPaste.isDirectory) }
                                 val ok = withContext(Dispatchers.IO) {
-                                    if (clipboardIsMove) repository.moveEntry(toPaste.file, destDir, progress)
-                                    else repository.copyEntry(toPaste.file, destDir, progress)
+                                    if (clipboardIsMove) repository.moveEntry(toPaste.file, destDir, progress, targetName)
+                                    else repository.copyEntry(toPaste.file, destDir, progress, targetName)
                                 }
                                 reloadEntries()
                                 when {
                                     progress.cancelled -> message("הפעולה בוטלה")
-                                    !ok && File(destDir, toPaste.file.name).exists() -> message("כבר קיים פריט בשם הזה כאן")
                                     !ok -> message("לא ניתן להדביק כאן")
                                 }
                                 // ביטול או כשלון משאירים את הפריט בלוח - אפשר לנסות שוב

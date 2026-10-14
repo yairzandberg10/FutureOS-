@@ -58,6 +58,8 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -118,6 +120,9 @@ fun FilesScreen(
     lastSelectedPath: String? = null,
 ) {
     val repository = remember { FileRepository() }
+    // בזמן העתקה או מחיקה נחסמים כל המקשים, חוץ מ"ביטול" (ר' ההודעה בשכבת הפעולה).
+    var overlayFocused by remember { mutableStateOf(false) }
+    LaunchedEffect(isBusy) { overlayFocused = false }
     var selectedEntries by remember { mutableStateOf(setOf<FileEntry>()) }
     var menuEntry by remember { mutableStateOf<FileEntry?>(null) }
     var renameEntry by remember { mutableStateOf<FileEntry?>(null) }
@@ -148,8 +153,12 @@ fun FilesScreen(
         if (entries.isEmpty() || entries.first().file.parentFile?.absolutePath != currentDir.absolutePath) return@LaunchedEffect
         val wanted = if (initialFocusDone) focusedEntry?.file?.absolutePath else lastSelectedPath
         val target = entries.firstOrNull { it.file.absolutePath == wanted } ?: entries.first()
-        val focused = runCatching { rowFocusRequesters.getOrPut(target.file.absolutePath) { FocusRequester() }.requestFocus() }.isSuccess
-        if (focused) initialFocusDone = true
+        // השורות עדיין לא הורכבו (FocusRequester לא מחובר) - מנסים שוב בכמה פריימים, אחרת הפוקוס נשאר על "+".
+        repeat(10) {
+            val focused = runCatching { rowFocusRequesters.getOrPut(target.file.absolutePath) { FocusRequester() }.requestFocus() }.isSuccess
+            if (focused) { initialFocusDone = true; return@LaunchedEffect }
+            kotlinx.coroutines.delay(30)
+        }
     }
 
     fun toggleSelection(entry: FileEntry) {
@@ -184,7 +193,16 @@ fun FilesScreen(
     fun displayNameOf(entry: FileEntry): String = entry.file.displayName(isRoot && entry.isDirectory)
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-        Box(modifier = Modifier.escapeTextFieldFocusTrap().fillMaxSize().background(theme.backgroundColor)) {
+        Box(
+            modifier = Modifier
+                .escapeTextFieldFocusTrap()
+                .fillMaxSize()
+                .background(theme.backgroundColor)
+                .onPreviewKeyEvent { event ->
+                    val passThrough = !isBusy || overlayFocused || event.key == Key.Back
+                    !passThrough
+                },
+        ) {
             Column(modifier = Modifier.fillMaxSize()) {
                 if (selectedEntries.isEmpty()) {
                     // הכותרת, ובסופה שלושה כפתורי סרגל עליון: מיון, תצוגה (רשימה/רשת)
@@ -264,7 +282,7 @@ fun FilesScreen(
                                     else onOpenFile(entry)
                                 },
                                 onToggleSelection = { toggleSelection(entry) },
-                                onFocused = { focusedEntry = entry },
+                                onFocused = { focused -> if (focused) focusedEntry = entry else if (focusedEntry == entry) focusedEntry = null },
                                 focusRequester = rowFocusRequesters.getOrPut(entry.file.absolutePath) { FocusRequester() },
                             )
                         }
@@ -287,7 +305,7 @@ fun FilesScreen(
                                 },
                                 onMenu = { menuEntry = entry },
                                 onToggleSelection = { toggleSelection(entry) },
-                                onFocusChanged = { isFocused -> if (isFocused) focusedEntry = entry },
+                                onFocusChanged = { isFocused -> if (isFocused) focusedEntry = entry else if (focusedEntry == entry) focusedEntry = null },
                                 focusRequester = rowFocusRequesters.getOrPut(entry.file.absolutePath) { FocusRequester() },
                             )
                         }
@@ -380,6 +398,7 @@ fun FilesScreen(
                 Box(modifier = Modifier.fillMaxSize().background(theme.scrimColor), contentAlignment = Alignment.Center) {
                     Column(
                         modifier = Modifier
+                            .onFocusChanged { overlayFocused = it.hasFocus }
                             .fillMaxWidth(0.85f)
                             .clip(FutureShapes.dialog)
                             .background(theme.surfaceColor)
@@ -640,11 +659,11 @@ private fun FileTile(
     isSelected: Boolean,
     onClick: () -> Unit,
     onToggleSelection: () -> Unit,
-    onFocused: () -> Unit,
+    onFocused: (Boolean) -> Unit,
     focusRequester: FocusRequester,
 ) {
     var isFocused by remember { mutableStateOf(false) }
-    LaunchedEffect(isFocused) { if (isFocused) onFocused() }
+    LaunchedEffect(isFocused) { onFocused(isFocused) }
     FocusableItem(
         onClick = onClick,
         accentColor = theme.accentColor,

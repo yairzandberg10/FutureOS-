@@ -105,11 +105,9 @@ class CopyProgress {
 fun isDeveloperMode(context: android.content.Context): Boolean =
     android.provider.Settings.Global.getInt(context.contentResolver, android.provider.Settings.Global.DEVELOPMENT_SETTINGS_ENABLED, 0) == 1
 
-/** תיקיות טכניות שאפליקציות יוצרות - מוסתרות כשמצב מפתח כבוי. */
-private val TECHNICAL_FOLDERS = setOf(
-    "android", "lost.dir", "backups", "backup", "baidu", "baiduasr", "apkpure", "tencent", "miui",
-    "bugreports", "logs", "log", "mtklog", "debuglogger", "data", "obb", "system", "cache", "temp", "tmp",
-    "sharedit", "shareit", "amap", "autonavi", "netease", "sogou", "ucdownloads",
+/** תיקיות מערכת - מוסתרות תמיד. תיקיות אחרות (למשל logs או project.v2) מוצגות למשתמש. */
+private val SYSTEM_FOLDERS = setOf(
+    "android", "lost.dir", "backups", "backup", "bugreports", "mtklog", "debuglogger", "data", "obb", "system", "cache", "temp", "tmp",
 )
 
 /** סיומות של קבצים טכניים - מוסתרות כשמצב מפתח כבוי. */
@@ -118,12 +116,10 @@ private val TECHNICAL_EXTENSIONS = setOf(
     "prop", "dat", "lock", "bak", "json", "nomedia",
 )
 
-/** "com.apkpure.aegon" - תיקייה בשם של חבילה היא תיקיית נתונים של אפליקציה. */
-private val PACKAGE_NAME = Regex("^[a-z][a-z0-9_]*(\\.[a-z0-9_]+)+$")
 
 private fun isTechnical(entry: File): Boolean {
     val lower = entry.name.lowercase()
-    return if (entry.isDirectory) lower in TECHNICAL_FOLDERS || PACKAGE_NAME.matches(lower)
+    return if (entry.isDirectory) lower in SYSTEM_FOLDERS
     else entry.extension.lowercase() in TECHNICAL_EXTENSIONS
 }
 
@@ -216,8 +212,8 @@ class FileRepository {
     }
 
     /** העתקה עם התקדמות וביטול. ביטול באמצע מוחק את מה שכבר הועתק. */
-    fun copyEntry(source: File, destDir: File, progress: CopyProgress = CopyProgress()): Boolean {
-        val target = File(destDir, source.name)
+    fun copyEntry(source: File, destDir: File, progress: CopyProgress = CopyProgress(), targetName: String = source.name): Boolean {
+        val target = File(destDir, targetName)
         return try {
             if (target.exists() || target.absolutePath.startsWith(source.absolutePath + File.separator)) return false
             progress.total = ownTree(source).filter { it.isFile }.sumOf { it.length() }.coerceAtLeast(1L)
@@ -249,12 +245,12 @@ class FileRepository {
         }
     }
 
-    fun moveEntry(source: File, destDir: File, progress: CopyProgress = CopyProgress()): Boolean {
+    fun moveEntry(source: File, destDir: File, progress: CopyProgress = CopyProgress(), targetName: String = source.name): Boolean {
         return try {
-            val target = File(destDir, source.name)
+            val target = File(destDir, targetName)
             if (target.exists()) return false
             if (source.renameTo(target)) return true
-            if (copyEntry(source, destDir, progress)) { deleteEntry(source); true } else false
+            if (copyEntry(source, destDir, progress, targetName)) { deleteEntry(source); true } else false
         } catch (e: Exception) {
             false
         }
@@ -283,6 +279,17 @@ class FileRepository {
             tmp.delete()
             false
         }
+    }
+
+    /** שם פנוי בתיקייה: אם השם תפוס - "שם (2)", "שם (3)"... (לקבצים - לפני הסיומת). */
+    fun availableName(destDir: File, name: String, isDirectory: Boolean): String {
+        if (!File(destDir, name).exists()) return name
+        val dot = if (isDirectory) -1 else name.lastIndexOf('.').takeIf { it > 0 } ?: -1
+        val base = if (dot > 0) name.substring(0, dot) else name
+        val ext = if (dot > 0) name.substring(dot) else ""
+        var n = 2
+        while (File(destDir, "$base ($n)$ext").exists()) n++
+        return "$base ($n)$ext"
     }
 
     fun createFolder(parent: File, name: String): Boolean {
