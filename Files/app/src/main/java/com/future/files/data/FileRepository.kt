@@ -312,6 +312,7 @@ class FileRepository {
             value /= 1024
             unitIndex++
         }
-        return "%.1f %s".format(value, units[unitIndex])
+        // בייטים שלמים בלי ".0" (14 B, לא 14.0 B).
+        return if (unitIndex == 0) "%d B".format(bytes) else "%.1f %s".format(value, units[unitIndex])
     }
 }

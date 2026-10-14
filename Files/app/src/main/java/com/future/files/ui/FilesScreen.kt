@@ -148,17 +148,28 @@ fun FilesScreen(
     // (מחיקה, שינוי שם, יצירה) מחליף אותה, הפוקוס חוזר לפריט הממוקד אם הוא עדיין קיים,
     // ואחרת לפריט הראשון - כדי שהפוקוס לא ייעלם מהמקשים.
     var initialFocusDone by remember(currentDir) { mutableStateOf(false) }
+    // תיקייה שנוצרה עכשיו מקבלת את הפוקוס אחרי הטעינה מחדש (ולא הפריט הראשון).
+    var pendingFocusPath by remember(currentDir) { mutableStateOf<String?>(null) }
     LaunchedEffect(currentDir, entries) {
         // רשימה ישנה מהתיקייה הקודמת (הטעינה אסינכרונית) - מחכים לרשימה של התיקייה הזו.
         if (entries.isEmpty() || entries.first().file.parentFile?.absolutePath != currentDir.absolutePath) return@LaunchedEffect
-        val wanted = if (initialFocusDone) focusedEntry?.file?.absolutePath else lastSelectedPath
+        val wanted = pendingFocusPath ?: if (initialFocusDone) focusedEntry?.file?.absolutePath else lastSelectedPath
         val target = entries.firstOrNull { it.file.absolutePath == wanted } ?: entries.first()
-        // השורות עדיין לא הורכבו (FocusRequester לא מחובר) - מנסים שוב בכמה פריימים, אחרת הפוקוס נשאר על "+".
-        repeat(10) {
-            val focused = runCatching { rowFocusRequesters.getOrPut(target.file.absolutePath) { FocusRequester() }.requestFocus() }.isSuccess
-            if (focused) { initialFocusDone = true; return@LaunchedEffect }
+        val targetPath = target.file.absolutePath
+        // השורות עדיין לא הורכבו (FocusRequester לא מחובר) או שהבקשה נבלעה - מנסים שוב.
+        // הצלחה נמדדת לפי הפוקוס בפועל (onFocused של השורה), לא לפי היעדר חריגה:
+        // requestFocus שלא נזרק לא מבטיח שהשורה קיבלה פוקוס, והפוקוס נשאר על "+".
+        repeat(15) {
+            val requested = runCatching { rowFocusRequesters.getOrPut(targetPath) { FocusRequester() }.requestFocus() }.isSuccess
+            repeat(3) { androidx.compose.runtime.withFrameNanos { } }
+            if (requested && focusedEntry?.file?.absolutePath == targetPath) {
+                initialFocusDone = true
+                pendingFocusPath = null
+                return@LaunchedEffect
+            }
             kotlinx.coroutines.delay(30)
         }
+        pendingFocusPath = null
     }
 
     fun toggleSelection(entry: FileEntry) {
@@ -387,7 +398,10 @@ fun FilesScreen(
                     onDismiss = { showNewFolder = false },
                     onConfirm = { name ->
                         showNewFolder = false
-                        if (name.isNotBlank()) onNewFolder(name)
+                        if (name.isNotBlank()) {
+                            pendingFocusPath = java.io.File(currentDir, name).absolutePath
+                            onNewFolder(name)
+                        }
                     }
                 )
             }
