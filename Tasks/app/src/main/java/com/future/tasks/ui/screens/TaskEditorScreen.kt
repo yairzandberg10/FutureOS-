@@ -64,7 +64,12 @@ fun TaskEditorScreen(
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
     fun saveIfNeeded() {
-        if (title.isNotBlank() || notes.isNotBlank()) onSave(title, notes, priority, isDone, reminderAt) else onBack()
+        if (title.isNotBlank() || notes.isNotBlank()) {
+            onSave(title, notes, priority, isDone, reminderAt)
+        } else if (task == null) {
+            onBack()
+        }
+        // משימה קיימת שהכותרת והתוכן שלה נמחקו - נשארים בעורך, בלי לזרוק את השינויים בשקט (F08).
     }
 
     // משימה חדשה מתחילה בשדה הכותרת. קודם הפוקוס ההתחלתי נפל על כפתור השמירה

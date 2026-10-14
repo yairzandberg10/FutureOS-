@@ -20,6 +20,10 @@ interface TaskDao {
     @Query("SELECT * FROM tasks WHERE id = :id")
     suspend fun getTask(id: Int): Task?
 
+    /** תזכורות שעברו (המכשיר היה כבוי) ועוד לא טופלו - מוצגות בהודעה מסכמת אחת באתחול. */
+    @Query("SELECT * FROM tasks WHERE isDone = 0 AND reminderAt IS NOT NULL AND reminderAt <= :now")
+    suspend fun missedReminders(now: Long): List<Task>
+
     /** משימות פתוחות עם תזכורת עתידית - לתזמון מחדש אחרי אתחול/שינוי שעה. */
     @Query("SELECT * FROM tasks WHERE isDone = 0 AND reminderAt IS NOT NULL AND reminderAt > :now")
     suspend fun upcomingReminders(now: Long): List<Task>

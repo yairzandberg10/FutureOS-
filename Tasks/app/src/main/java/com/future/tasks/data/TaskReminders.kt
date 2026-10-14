@@ -74,6 +74,33 @@ object TaskReminders {
         manager.notify(NOTIFICATION_BASE + task.id, notification)
     }
 
+    /** הודעה מסכמת אחת לתזכורות שהוחמצו בזמן שהמכשיר היה כבוי (F12). */
+    fun notifyMissed(context: Context, tasks: List<Task>) {
+        val manager = context.getSystemService(NotificationManager::class.java)
+        if (manager.getNotificationChannel(CHANNEL_ID) == null) {
+            manager.createNotificationChannel(
+                NotificationChannel(CHANNEL_ID, "תזכורות למשימות", NotificationManager.IMPORTANCE_HIGH),
+            )
+        }
+        val open = PendingIntent.getActivity(
+            context,
+            NOTIFICATION_MISSED,
+            Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        val names = tasks.take(3).joinToString(", ") { it.title.ifBlank { "משימה" } }
+        val more = if (tasks.size > 3) " ועוד ${tasks.size - 3}" else ""
+        val notification = Notification.Builder(context, CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.ic_popup_reminder)
+            .setContentTitle("${tasks.size} תזכורות הוחמצו כשהטלפון היה כבוי")
+            .setContentText(names + more)
+            .setCategory(Notification.CATEGORY_REMINDER)
+            .setContentIntent(open)
+            .setAutoCancel(true)
+            .build()
+        manager.notify(NOTIFICATION_MISSED, notification)
+    }
+
     /**
      * אפשרויות התזכורת בעורך. "הערב" מופיע רק לפני 20:00 - קודם "היום" נבחר
      * ל-09:00 גם בערב, השמירה נחסמה כ"המועד עבר" ו-BACK נתקע (TK1).
@@ -110,4 +137,5 @@ object TaskReminders {
     }.timeInMillis
 
     private const val NOTIFICATION_BASE = 5000
+    private const val NOTIFICATION_MISSED = 4999
 }

@@ -30,7 +30,16 @@ class TaskReminderReceiver : BroadcastReceiver() {
                             task.reminderAt?.let { dao.clearReminder(task.id, it) }
                         }
                     }
-                    else -> dao.upcomingReminders(System.currentTimeMillis()).forEach { TaskReminders.schedule(context, it) }
+                    else -> {
+                        val now = System.currentTimeMillis()
+                        // תזכורות שעברו בזמן שהמכשיר היה כבוי: הודעה מסכמת אחת, ואז הן מסומנות כטופלו.
+                        val missed = dao.missedReminders(now)
+                        if (missed.isNotEmpty()) {
+                            TaskReminders.notifyMissed(context, missed)
+                            missed.forEach { task -> task.reminderAt?.let { dao.clearReminder(task.id, it) } }
+                        }
+                        dao.upcomingReminders(now).forEach { TaskReminders.schedule(context, it) }
+                    }
                 }
             } finally {
                 pending.finish()
