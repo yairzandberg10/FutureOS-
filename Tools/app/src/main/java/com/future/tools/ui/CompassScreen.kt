@@ -247,7 +247,9 @@ private fun formatCoordinate(value: Double, positive: String, negative: String):
 @Composable
 fun CompassScreen(theme: FutureTheme, onBack: () -> Unit) {
     val compassState = rememberCompassState()
-    val hasLocationPermission by rememberRuntimePermission(Manifest.permission.ACCESS_FINE_LOCATION)
+    // מיקום מקורב בלבד (TL-06): המצפן לא מבקש מיקום מדויק. ה-GPS נכשל בשקט בלי הרשאה מדויקת,
+    // והמיקום מגיע מרשת.
+    val hasLocationPermission by rememberRuntimePermission(Manifest.permission.ACCESS_COARSE_LOCATION)
     val fix = rememberLocationFix(hasLocationPermission)
     // עם מיקום - צפון אמיתי (מגנטי + סטייה מקומית); בתנועה מהירה כיוון ה-GPS מדויק יותר מהמגנטומטר
     val azimuth = when {
