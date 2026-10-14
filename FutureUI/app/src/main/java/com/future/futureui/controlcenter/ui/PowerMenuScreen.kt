@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AirplanemodeActive
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.NotificationsOff
 import androidx.compose.material.icons.rounded.PowerSettingsNew
 import androidx.compose.material.icons.rounded.RestartAlt
@@ -46,8 +47,8 @@ import com.future.sharednav.focus.animateFocusColor
  * אותו ופותח את זה במקומו - ר' StatusBarAccessibilityService). הדיאלוג
  * המקורי לא בנוי לניווט במקשים ולא תואם ויזואלית לשאר המערכת.
  *
- * שורות: כיבוי והפעלה מחדש (שתיהן מבקשות OK שני לאישור - כמו ההחלקה ב-Redmi,
- * כדי שלחיצה בטעות לא תכבה את הטלפון), ואחריהן מצב טיסה, מצב שקט וצילום
+ * שורות: ביטול (הפוקוס ההתחלתי), כיבוי והפעלה מחדש (שתיהן פותחות דיאלוג אישור
+ * שגם בו הפוקוס על "ביטול", כדי שלחיצה בטעות לא תכבה את הטלפון), ואחריהן מצב טיסה, מצב שקט וצילום
  * מסך. שורה של מתג מראה את המצב הנוכחי. כיבוי והפעלה מחדש דורשים root (כמו
  * שאר הפעולות ב-ControlManager).
  */
@@ -62,19 +63,27 @@ fun PowerMenuScreen(
     onSilent: (() -> Unit)? = null,
     onScreenshot: (() -> Unit)? = null,
 ) {
+    // הפוקוס ההתחלתי על "ביטול" ולא על "כיבוי": OK כפול (או OK שנשאר מהחזקת מקש ההפעלה)
+    // כיבה את הטלפון בלילה, והמעורר לא צלצל (UI-PWR-01).
     val focusRequester = remember { FocusRequester() }
-    // איזו שורה מחכה ל-OK שני ("power" / "restart"), אם בכלל.
+    val confirmFocusRequester = remember { FocusRequester() }
+    // איזו פעולה מחכה לאישור בדיאלוג ("power" / "restart"), אם בכלל.
     var armed by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(Unit) {
+    // OK בחצי השנייה הראשונה אחרי פתיחת הדיאלוג לא מאשר - לחיצה כפולה מהירה לא תכבה.
+    var armedAt by remember { mutableStateOf(0L) }
+    LaunchedEffect(armed) {
         delay(100)
-        try { focusRequester.requestFocus() } catch (t: Throwable) {
+        try {
+            if (armed == null) focusRequester.requestFocus() else confirmFocusRequester.requestFocus()
+        } catch (t: Throwable) {
             android.util.Log.w("PowerMenuScreen", "PowerMenuScreen failed", t)
         }
     }
-    LaunchedEffect(armed) {
-        if (armed != null) {
-            delay(4000)
-            armed = null
+    fun confirmArmed() {
+        if (android.os.SystemClock.uptimeMillis() - armedAt < 500) return
+        when (armed) {
+            "power" -> onPowerOff()
+            "restart" -> onRestart()
         }
     }
     val shown = remember { MutableTransitionState(false).apply { targetState = true } }
@@ -95,6 +104,30 @@ fun PowerMenuScreen(
                         .border(0.5.dp, Color.White.copy(alpha = 0.15f), FutureShapes.xxl)
                         .padding(vertical = 12.dp)
                 ) {
+                  if (armed != null) {
+                    Text(
+                        text = if (armed == "power") "לכבות את הטלפון?" else "להפעיל מחדש את הטלפון?",
+                        color = Color.White,
+                        fontSize = FutureTypography.bodyLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(horizontal = 22.dp, vertical = 8.dp)
+                    )
+                    PowerMenuRow(
+                        icon = Icons.Rounded.Close,
+                        label = "ביטול",
+                        tint = Color.White,
+                        circle = Color.White.copy(alpha = 0.12f),
+                        onClick = { armed = null },
+                        modifier = Modifier.focusRequester(confirmFocusRequester)
+                    )
+                    PowerMenuRow(
+                        icon = if (armed == "power") Icons.Rounded.PowerSettingsNew else Icons.Rounded.RestartAlt,
+                        label = if (armed == "power") "כיבוי" else "הפעלה מחדש",
+                        tint = if (armed == "power") Color(0xFFFF453A) else Color.White,
+                        circle = if (armed == "power") Color(0xFFFF453A).copy(alpha = 0.18f) else Color(0xFF30D158).copy(alpha = 0.2f),
+                        onClick = { confirmArmed() },
+                    )
+                  } else {
                     Text(
                         text = "אפשרויות כיבוי",
                         color = Color.White.copy(alpha = 0.55f),
@@ -103,21 +136,26 @@ fun PowerMenuScreen(
                         modifier = Modifier.padding(horizontal = 22.dp, vertical = 8.dp)
                     )
                     PowerMenuRow(
-                        icon = Icons.Rounded.PowerSettingsNew,
-                        label = if (armed == "power") "לחצו OK שוב לכיבוי" else "כיבוי",
-                        tint = Color(0xFFFF453A),
-                        circle = Color(0xFFFF453A).copy(alpha = 0.18f),
-                        onClick = { if (armed == "power") onPowerOff() else armed = "power" },
-                        onFocusLost = { if (armed == "power") armed = null },
+                        icon = Icons.Rounded.Close,
+                        label = "ביטול",
+                        tint = Color.White,
+                        circle = Color.White.copy(alpha = 0.12f),
+                        onClick = onCancel,
                         modifier = Modifier.focusRequester(focusRequester)
                     )
                     PowerMenuRow(
+                        icon = Icons.Rounded.PowerSettingsNew,
+                        label = "כיבוי",
+                        tint = Color(0xFFFF453A),
+                        circle = Color(0xFFFF453A).copy(alpha = 0.18f),
+                        onClick = { armedAt = android.os.SystemClock.uptimeMillis(); armed = "power" },
+                    )
+                    PowerMenuRow(
                         icon = Icons.Rounded.RestartAlt,
-                        label = if (armed == "restart") "לחצו OK שוב להפעלה מחדש" else "הפעלה מחדש",
+                        label = "הפעלה מחדש",
                         tint = Color.White,
                         circle = Color(0xFF30D158).copy(alpha = 0.2f),
-                        onClick = { if (armed == "restart") onRestart() else armed = "restart" },
-                        onFocusLost = { if (armed == "restart") armed = null },
+                        onClick = { armedAt = android.os.SystemClock.uptimeMillis(); armed = "restart" },
                     )
                     if (onAirplane != null || onSilent != null || onScreenshot != null) {
                         Box(
@@ -159,6 +197,7 @@ fun PowerMenuScreen(
                             onClick = onScreenshot,
                         )
                     }
+                  }
                     Text(
                         "חזרה לביטול",
                         color = Color.White.copy(alpha = 0.35f),
