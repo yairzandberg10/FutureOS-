@@ -28,6 +28,9 @@ object SystemUiSettingsClient {
     private fun trusted(context: Context) =
         com.future.sharednav.systemui.TrustedProviders.isTrusted(context, SystemUiTarget.SETTINGS_AUTHORITY)
 
+    /** true רק כשהקישור ל-FutureUI מאומת; בלעדיו המתגים של שורת המצב לא זמינים. */
+    fun isLinked(context: Context): Boolean = trusted(context)
+
     fun get(context: Context): SystemUiSettings {
         return try {
             (if (trusted(context)) context.contentResolver else null)?.query(URI, null, null, null, null)?.use { cursor ->

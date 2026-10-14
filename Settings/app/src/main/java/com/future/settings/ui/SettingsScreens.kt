@@ -992,6 +992,9 @@ fun ColorPicker(currentColor: Color, theme: ThemeConfig, onColorChange: (Color) 
 fun SystemUiScreen(navController: NavController, theme: ThemeConfig, viewModel: SettingsViewModel) {
     val context = LocalContext.current
     var settings by remember { mutableStateOf(com.future.settings.theme.SystemUiSettingsClient.get(context)) }
+    // בלי קישור מאומת ל-FutureUI המתגים לא נשמרים בכלל - מסומנים כ"לא זמין" ולא מתנהגים כרגיל.
+    val systemUiLinked = com.future.settings.theme.SystemUiSettingsClient.isLinked(context)
+    val unavailable = "לא זמין"
 
     fun reload() { settings = com.future.settings.theme.SystemUiSettingsClient.get(context) }
 
@@ -1029,16 +1032,16 @@ fun SystemUiScreen(navController: NavController, theme: ThemeConfig, viewModel: 
                 item { SettingHeader("שורת מצב", theme) }
                 item {
                     SettingsCard(theme) {
-                        SettingSwitch("הצג אחוז סוללה", "מספר לצד סמל הסוללה בשורת המצב", settings.showBattery, {
-                            com.future.settings.theme.SystemUiSettingsClient.setShowBattery(context, it); reload()
+                        SettingSwitch("הצג אחוז סוללה", if (systemUiLinked) "מספר לצד סמל הסוללה בשורת המצב" else unavailable, settings.showBattery, {
+                            if (systemUiLinked) { com.future.settings.theme.SystemUiSettingsClient.setShowBattery(context, it); reload() }
                         }, theme)
                         SettingDivider(theme)
-                        SettingSwitch("הצג סמל Bluetooth", "סמל בשורת המצב כש-Bluetooth דולק", settings.showBluetooth, {
-                            com.future.settings.theme.SystemUiSettingsClient.setShowBluetooth(context, it); reload()
+                        SettingSwitch("הצג סמל Bluetooth", if (systemUiLinked) "סמל בשורת המצב כש-Bluetooth דולק" else unavailable, settings.showBluetooth, {
+                            if (systemUiLinked) { com.future.settings.theme.SystemUiSettingsClient.setShowBluetooth(context, it); reload() }
                         }, theme)
                         SettingDivider(theme)
-                        SettingSwitch("שעון 24 שעות", "17:00 במקום 5:00", settings.use24HourClock, {
-                            com.future.settings.theme.SystemUiSettingsClient.setUse24HourClock(context, it); reload()
+                        SettingSwitch("שעון 24 שעות", if (systemUiLinked) "17:00 במקום 5:00" else unavailable, settings.use24HourClock, {
+                            if (systemUiLinked) { com.future.settings.theme.SystemUiSettingsClient.setUse24HourClock(context, it); reload() }
                         }, theme)
                     }
                 }
@@ -1366,6 +1369,18 @@ fun StorageScreen(navController: NavController, theme: ThemeConfig, viewModel: S
 fun GeneralScreen(navController: NavController, theme: ThemeConfig, viewModel: SettingsViewModel) {
     val context = LocalContext.current
     var showRestartConfirm by remember { mutableStateOf(false) }
+    // איפוס FutureOS מחזיר את ההגדרות לברירת מחדל - לפני כן מבקשים אישור (SET-21).
+    var showResetFutureOsConfirm by remember { mutableStateOf(false) }
+    if (showResetFutureOsConfirm) {
+        ConfirmDialog(
+            theme = theme,
+            title = "איפוס הגדרות FutureOS",
+            message = "ההגדרות יחזרו לברירת המחדל: מצב כהה, צבע הדגשה וגודל טקסט. להמשיך?",
+            confirmLabel = "אפס",
+            onConfirm = { showResetFutureOsConfirm = false; viewModel.resetFutureOsSettings() },
+            onDismiss = { showResetFutureOsConfirm = false }
+        )
+    }
     var showShutdownConfirm by remember { mutableStateOf(false) }
     var showMultiWindowConfirm by remember { mutableStateOf(false) }
 
@@ -1451,7 +1466,7 @@ fun GeneralScreen(navController: NavController, theme: ThemeConfig, viewModel: S
                 item {
                     SettingsCard(theme) {
                         SettingItem("איפוס הגדרות FutureOS", "מחזיר מצב כהה, צבע הדגשה וגודל טקסט לברירת המחדל", FutureIcons.RestartAlt, theme) {
-                            viewModel.resetFutureOsSettings()
+                            showResetFutureOsConfirm = true
                         }
                     }
                 }
