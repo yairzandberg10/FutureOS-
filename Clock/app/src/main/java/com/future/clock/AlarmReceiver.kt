@@ -8,6 +8,7 @@ import com.future.clock.logic.ACTION_ALARM_FIRED
 import com.future.clock.logic.ACTION_TIMER_FIRED
 import com.future.clock.logic.AlarmLogic
 import com.future.clock.logic.EXTRA_ALARM_ID
+import com.future.clock.logic.EXTRA_IS_SNOOZE
 
 private const val TAG = "Clock/AlarmReceiver"
 
@@ -35,7 +36,8 @@ class AlarmReceiver : BroadcastReceiver() {
             ACTION_ALARM_FIRED -> {
                 val alarmId = intent.getIntExtra(EXTRA_ALARM_ID, -1)
                 if (alarmId == -1) return
-                val alarm = AlarmLogic.onAlarmFired(context, alarmId) ?: return
+                val isSnooze = intent.getBooleanExtra(EXTRA_IS_SNOOZE, false)
+                val alarm = AlarmLogic.onAlarmFired(context, alarmId, isSnooze) ?: return
 
                 // הצלצול רץ ב-AlarmRingService. קודם המסך נפתח ישירות מכאן, אבל
                 // באנדרואיד 12 זה נחסם ("Abort background activity starts") והאזעקה

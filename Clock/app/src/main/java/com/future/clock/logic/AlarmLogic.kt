@@ -33,6 +33,9 @@ const val ACTION_TIMER_FIRED = "com.future.clock.ACTION_TIMER_FIRED"
 /** מפתח תוסף ה-Intent שנושא את מזהה האזעקה שצריכה לצלצל/להתנדנד. */
 const val EXTRA_ALARM_ID = "ALARM_ID"
 
+/** האזעקה היא נודניק (ולא ההופעה המתוזמנת של המעורר). */
+const val EXTRA_IS_SNOOZE = "IS_SNOOZE"
+
 data class Alarm(
     val id: Int,
     val hour: Int,
@@ -101,12 +104,19 @@ object AlarmLogic {
      * ככבויה כדי שלא "תיעלם" מהרשימה מבלי שהמשתמש יבין למה היא לא תצלצל
      * שוב (הבאג המקורי: אזעקה חד-פעמית פשוט נעלמה בלי הסבר אחרי צלצול יחיד).
      */
-    fun onAlarmFired(context: Context, alarmId: Int): Alarm? {
+    fun onAlarmFired(context: Context, alarmId: Int, isSnooze: Boolean = false): Alarm? {
         val alarms = getAlarms(context)
         val index = alarms.indexOfFirst { it.id == alarmId }
         if (index == -1) return null
         val firedAlarm = alarms[index]
-        // מעורר שכובה לא מצלצל (גם נודניק שנשאר בתור לפני הכיבוי).
+        // נודניק מצלצל גם כשהמעורר כבוי: מעורר חד-פעמי מסומן כבוי כבר בצלצול הראשון,
+        // ולכן הנודניק שלו לא צלצל אף פעם (CLK-D01). כיבוי או עריכה של המעורר
+        // מבטלים את הנודניק ב-saveAlarms, כך שנודניק שהגיע לכאן עדיין רצוי.
+        if (isSnooze) {
+            FutureContentWidget.refresh(context, ClockWidgetProvider::class.java)
+            return firedAlarm
+        }
+        // מעורר שכובה לא מצלצל.
         if (!firedAlarm.isEnabled) return null
 
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
@@ -148,6 +158,7 @@ object AlarmLogic {
         val intent = Intent(context, AlarmReceiver::class.java).apply {
             action = ACTION_ALARM_FIRED
             putExtra(EXTRA_ALARM_ID, originalAlarmId)
+            putExtra(EXTRA_IS_SNOOZE, true)
         }
         val pendingIntent = PendingIntent.getBroadcast(
             context, snoozeId, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
