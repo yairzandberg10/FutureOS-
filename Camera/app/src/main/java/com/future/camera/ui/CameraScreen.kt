@@ -178,6 +178,8 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
     var availableScenes by remember { mutableStateOf(listOf(SceneOption.NONE)) }
     var captureMode by rememberSaveable { mutableStateOf(CaptureMode.PHOTO) }
     var countdownRemaining by remember { mutableStateOf<Int?>(null) }
+    // BACK באמצע הקלטה: עוצרים, שומרים, ואז יוצאים (ולא סוגרים את המסך לפני השמירה).
+    var exitAfterRecording by remember { mutableStateOf(false) }
     var isRecording by remember { mutableStateOf(false) }
     var recordingSeconds by remember { mutableIntStateOf(0) }
     var currentRecording by remember { mutableStateOf<Recording?>(null) }
@@ -385,11 +387,13 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
                         recordingSeconds = 0
                         uri?.let { onSaved(it) }
                         snackbar.show("הווידאו נשמר")
+                        if (exitAfterRecording) onExit()
                     },
                     onError = {
                         isRecording = false
                         recordingSeconds = 0
                         snackbar.show("ההקלטה נכשלה")
+                        if (exitAfterRecording) onExit()
                     },
                 )
                 if (recording != null) {
@@ -408,6 +412,12 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
     }
 
     fun onShutterPressed() {
+        // OK בזמן ספירה מבטל אותה (ולא מתחיל צילום, ולא מתעלם כמו קודם).
+        if (countdownRemaining != null) {
+            countdownRemaining = null
+            snackbar.show("הספירה בוטלה")
+            return
+        }
         if (busy) return
         if (isVideo && isRecording) {
             startCapture()
@@ -417,15 +427,18 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
         else if (countdownRemaining == null) startCapture()
     }
 
-    // BACK בזמן ספירה מבטל אותה, ובזמן הקלטה עוצר ושומר את הסרטון - במקום לסגור את האפליקציה.
-    // (מוגדר אחרי startCapture/onShutterPressed כי הוא קורא להם.)
+    // BACK בזמן ספירה מבטל אותה, ובזמן הקלטה עוצר ושומר את הסרטון ויוצא מהמסך
+    // (היציאה אחרי השמירה, ר' onFinished). (מוגדר אחרי startCapture/onShutterPressed כי הוא קורא להם.)
     BackHandler(enabled = showSettings || showViewer || showFilters || focusPoint != null || countdownRemaining != null || isRecording) {
         when {
             showViewer -> showViewer = false
             showSettings -> showSettings = false
             showFilters -> showFilters = false
             countdownRemaining != null -> countdownRemaining = null
-            isRecording -> startCapture()
+            isRecording -> {
+                exitAfterRecording = true
+                startCapture()
+            }
             else -> {
                 focusPoint = null
                 camera?.cameraControl?.cancelFocusAndMetering()
