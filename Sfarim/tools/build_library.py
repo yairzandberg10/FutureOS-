@@ -44,6 +44,7 @@ import argparse
 import hashlib
 import json
 import re
+import shutil
 import sqlite3
 import sys
 import time
@@ -637,6 +638,8 @@ def main():
     parser.add_argument("--refresh-index", action="store_true", help="re-download TOC/books.json instead of using local cache")
     parser.add_argument("--licenses-only", action="store_true",
                         help="only check licenses and write LICENSES.md - no DB, no text download")
+    parser.add_argument("--min-free-gb", type=float, default=1.5,
+                        help="stop importing (resumable) when the DB's disk drops below this many GB free")
     args = parser.parse_args()
 
     out_path = Path(args.out)
@@ -706,6 +709,12 @@ def main():
         }
         for future in as_completed(future_to_title):
             title = future_to_title[future]
+            free_gb = shutil.disk_usage(out_path.parent).free / 1024 ** 3
+            if free_gb < args.min_free_gb:
+                print(f"  STOPPED: {free_gb:.2f}GB free < --min-free-gb {args.min_free_gb}. Re-run to resume.", flush=True)
+                for f in future_to_title:
+                    f.cancel()
+                break
             category_id, order = book_category[title]
             try:
                 book_data = future.result()
