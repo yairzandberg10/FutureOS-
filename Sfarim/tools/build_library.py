@@ -24,8 +24,20 @@ Texts licensed "Copyright: ..." (the Koren Steinsaltz Tanakh and Mishneh
 Torah, Urim titles) are left out of the public export on purpose and are not
 fetched from anywhere else.
 
+Licensing: FutureOS is sold, so only versions whose license allows commercial
+use go in - Public Domain, CC0, CC-BY, CC-BY-SA. CC-BY-NC (e.g. the William
+Davidson Talmud, Torat Emet), ND, "Copyright" and unknown/empty licenses stay
+out. The export has no license field, so each title's versions come from the
+Sefaria versions API (cached). The "merged" version mixes several sources and
+is used only when every Hebrew version of the title is allowed; otherwise the
+best allowed single version (by Sefaria's priority) is used, and a title with
+none is excluded. The chosen version per book is stored in book_licenses, and
+Sfarim/LICENSES.md is regenerated on every run. A book an older build imported
+without a book_licenses row is purged and re-checked.
+
 Usage:
     python build_library.py [--out PATH] [--workers N] [--limit N] [--with-fts]
+    python build_library.py --licenses-only   # license scan + LICENSES.md, no text download
 """
 
 import argparse
@@ -44,6 +56,18 @@ from pathlib import Path
 TOC_URL = "https://www.sefaria.org/api/index"
 BOOKS_JSON_URL = "https://raw.githubusercontent.com/Sefaria/Sefaria-Export/master/books.json"
 RAW_INDEX_URL = "https://www.sefaria.org/api/v2/raw/index/"
+VERSIONS_URL = "https://www.sefaria.org/api/texts/versions/"
+LICENSES_MD = Path(__file__).resolve().parent.parent / "LICENSES.md"
+# Allowed for commercial use, matched on the normalized license string, so
+# "CC-BY-SA 3.0" and "CC BY 4.0" count; anything with NC/ND does not.
+ALLOWED_LICENSE = re.compile(r"^(public domain|pd|cc0|cc-by|cc-by-sa)( \d\.\d)?$")
+# Most restrictive first, for labelling a merged version.
+LICENSE_RANK = ["CC-BY-SA", "CC-BY", "CC0", "Public Domain"]
+KEY_TITLES = [
+    "Genesis", "Exodus", "Psalms", "Mishnah Berakhot", "Pirkei Avot", "Berakhot", "Shabbat", "Bava Metzia",
+    "Jerusalem Talmud Berakhot", "Rashi on Genesis", "Mishneh Torah, Prayer and the Priestly Blessing",
+    "Shulchan Arukh, Orach Chayim", "Mishnah Berurah", "Arukh HaShulchan", "Siddur Ashkenaz",
+]
 REQUEST_TIMEOUT = 20
 MAX_RETRIES = 3
 
@@ -145,6 +169,13 @@ def init_schema(conn: sqlite3.Connection):
         -- Hebrew part titles above the chapter (outermost first); number is the
         -- chapter's own section number inside its part, for jump-by-number, and
         -- NULL when the chapter is a whole named part.
+        -- The version each book's text came from, and its license.
+        CREATE TABLE IF NOT EXISTS book_licenses (
+            book_id INTEGER PRIMARY KEY REFERENCES books(id),
+            version_title TEXT NOT NULL,
+            license TEXT NOT NULL,
+            attribution TEXT NOT NULL
+        );
         CREATE TABLE IF NOT EXISTS chapters (
             book_id INTEGER NOT NULL REFERENCES books(id),
             top_index INTEGER NOT NULL,
@@ -196,20 +227,84 @@ def build_category_tree(conn: sqlite3.Connection, toc: list) -> dict:
 
 
 def build_hebrew_text_map(books_json: dict) -> dict:
-    """title -> Hebrew json_urls to try, the 'merged' version first. More than
-    one because books.json sometimes lists a merged file that is not actually in
-    the bucket (Chovat HaTalmidim: 404) - the next version of the same book is a
-    better fallback than dropping it from the library."""
+    """title -> {versionTitle: json_url} for its Hebrew versions ("merged" for the
+    merged one). choose_versions() picks which may be used, in order - more than
+    one because books.json sometimes lists a file that is not actually in the
+    bucket (Chovat HaTalmidim merged: 404)."""
     by_title = {}
     for b in books_json["books"]:
         if b.get("language") != "Hebrew":
             continue
-        urls = by_title.setdefault(b["title"], [])
-        if b.get("versionTitle", "").lower() == "merged":
-            urls.insert(0, b["json_url"])
-        else:
-            urls.append(b["json_url"])
+        vt = b.get("versionTitle", "")
+        by_title.setdefault(b["title"], {})["merged" if vt.lower() == "merged" else vt] = b["json_url"]
     return by_title
+
+
+def normalize_license(lic) -> str:
+    n = re.sub(r"\s+", " ", (lic or "").strip().lower())
+    return n.replace("cc by", "cc-by").replace("cc-by sa", "cc-by-sa")
+
+
+def license_allowed(lic) -> bool:
+    return bool(ALLOWED_LICENSE.match(normalize_license(lic)))
+
+
+def license_label(lic) -> str:
+    n = normalize_license(lic)
+    if n in ("public domain", "pd"):
+        return "Public Domain"
+    if n.startswith("cc0"):
+        return "CC0"
+    if n.startswith("cc-by-sa"):
+        return "CC-BY-SA"
+    return "CC-BY"
+
+
+def fetch_versions(title: str, cache_dir: Path):
+    """[{versionTitle, license, priority, source}] for the Hebrew versions of a
+    title. Only these fields are cached. A failed fetch raises and is not
+    cached, so a re-run retries it."""
+    cache_path = cache_dir / (hashlib.sha1(title.encode("utf-8")).hexdigest() + ".json")
+    if cache_path.exists():
+        return json.loads(cache_path.read_text(encoding="utf-8"))
+    data = fetch_json(VERSIONS_URL + urllib.parse.quote(title, safe=""))
+    versions = [
+        {
+            "versionTitle": v.get("versionTitle", ""),
+            "license": v.get("license") or "",
+            "priority": v.get("priority") if isinstance(v.get("priority"), (int, float)) else 0,
+            "source": v.get("versionSource") or "",
+        }
+        for v in data if isinstance(v, dict) and v.get("language") == "he"
+    ]
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    cache_path.write_text(json.dumps(versions, ensure_ascii=False), encoding="utf-8")
+    return versions
+
+
+def choose_versions(title: str, urls: dict, cache_dir: Path) -> dict:
+    """License decision for one title: {"candidates": [(url, version, license, attribution)], "reason"}.
+    Candidates are tried in order; no candidates means the book is excluded."""
+    try:
+        versions = fetch_versions(title, cache_dir)
+    except RuntimeError as e:
+        return {"candidates": [], "reason": f"versions API failed: {e}", "retry": True}
+    if not versions:
+        return {"candidates": [], "reason": "no Hebrew version listed"}
+    candidates = []
+    if "merged" in urls and all(license_allowed(v["license"]) for v in versions):
+        labels = {license_label(v["license"]) for v in versions}
+        lic = next(l for l in LICENSE_RANK if l in labels)
+        attribution = "; ".join(f'{v["versionTitle"]} ({v["source"]})' for v in versions)
+        candidates.append((urls["merged"], "merged: " + " + ".join(v["versionTitle"] for v in versions), lic, attribution))
+    for v in sorted(versions, key=lambda v: -v["priority"]):
+        if license_allowed(v["license"]) and v["versionTitle"] in urls:
+            candidates.append((urls[v["versionTitle"]], v["versionTitle"], license_label(v["license"]),
+                               f'{v["versionTitle"]} ({v["source"]})'))
+    if candidates:
+        return {"candidates": candidates, "reason": ""}
+    seen = sorted({v["license"] or "unknown" for v in versions})
+    return {"candidates": [], "reason": "no commercial-use version: " + ", ".join(seen)}
 
 
 def flatten_text(node, section_names, path, out):
@@ -326,15 +421,13 @@ def split_complex_book(title_he: str, parts: list):
     return segments, chapters, book_section_names
 
 
-def fetch_book_text(title: str, json_urls, index_cache_dir: Path):
-    if isinstance(json_urls, str):
-        json_urls = [json_urls]
-    for attempt, url in enumerate(json_urls):
+def fetch_book_text(title: str, candidates, index_cache_dir: Path):
+    for attempt, (url, version_title, lic, attribution) in enumerate(candidates):
         try:
             data = fetch_json(url)
             break
         except RuntimeError:
-            if attempt == len(json_urls) - 1:
+            if attempt == len(candidates) - 1:
                 raise
     title_he = data.get("heTitle")
     text = data.get("text")
@@ -358,15 +451,47 @@ def fetch_book_text(title: str, json_urls, index_cache_dir: Path):
         "section_names": section_names,
         "segments": segments,
         "chapters": chapters,
+        "license": (version_title, lic, attribution),
     }
 
 
 def already_imported(conn: sqlite3.Connection, title: str) -> bool:
+    """Imported AND license-checked: a book an older build imported (no
+    book_licenses row) counts as not imported, and gets purged first."""
     row = conn.execute(
-        "SELECT b.id FROM books b JOIN segments s ON s.book_id = b.id WHERE b.title_en = ? LIMIT 1",
+        "SELECT b.id FROM books b JOIN segments s ON s.book_id = b.id "
+        "JOIN book_licenses l ON l.book_id = b.id WHERE b.title_en = ? LIMIT 1",
         (title,),
     ).fetchone()
     return row is not None
+
+
+def has_table(conn: sqlite3.Connection, name: str) -> bool:
+    return conn.execute("SELECT 1 FROM sqlite_master WHERE name = ?", (name,)).fetchone() is not None
+
+
+def purge_book(conn: sqlite3.Connection, title: str, drop_book: bool):
+    """Removes a book's text (and the book row itself when drop_book), keeping
+    the external-content FTS indexes in sync."""
+    row = conn.execute("SELECT id, title_he, title_en FROM books WHERE title_en = ?", (title,)).fetchone()
+    if not row:
+        return
+    book_id = row[0]
+    if has_table(conn, "segments_fts"):
+        conn.execute(
+            "INSERT INTO segments_fts(segments_fts, rowid, text_he, ref_display) "
+            "SELECT 'delete', id, text_he, ref_display FROM segments WHERE book_id = ?",
+            (book_id,),
+        )
+    for table in ("bookmarks", "reading_progress", "segments", "chapters", "book_licenses"):
+        conn.execute(f"DELETE FROM {table} WHERE book_id = ?", (book_id,))
+    if drop_book:
+        if has_table(conn, "search_fts"):
+            conn.execute(
+                "INSERT INTO search_fts(search_fts, rowid, title_he, title_en) VALUES ('delete', ?, ?, ?)", row
+            )
+        conn.execute("DELETE FROM books WHERE id = ?", (book_id,))
+    conn.commit()
 
 
 def insert_book(conn: sqlite3.Connection, title_en, category_id, order, book_data):
@@ -389,6 +514,10 @@ def insert_book(conn: sqlite3.Connection, title_en, category_id, order, book_dat
         "INSERT INTO segments (book_id, top_index, path, depth, ref_display, text_he, sort_order) "
         "VALUES (?, ?, ?, ?, ?, ?, ?)",
         rows,
+    )
+    cur.execute(
+        "INSERT OR REPLACE INTO book_licenses (book_id, version_title, license, attribution) VALUES (?, ?, ?, ?)",
+        (book_id, *book_data["license"]),
     )
     cur.execute("DELETE FROM chapters WHERE book_id = ?", (book_id,))
     if book_data["chapters"]:
@@ -426,6 +555,70 @@ def build_fts(conn: sqlite3.Connection):
     conn.commit()
 
 
+def md_cell(text) -> str:
+    return str(text or "").replace("|", "\\|").replace("\n", " ")
+
+
+def write_licenses_md(decisions: dict, titles_he: dict, path: Path):
+    """LICENSES.md for the library: every included book with its version,
+    license and required attribution, then every excluded book and why."""
+    included = sorted((t, d["candidates"][0]) for t, d in decisions.items() if d["candidates"])
+    excluded = sorted((t, d["reason"]) for t, d in decisions.items() if not d["candidates"])
+    counts = {}
+    for _, c in included:
+        counts[c[2]] = counts.get(c[2], 0) + 1
+    lines = [
+        "# רישיונות הטקסטים בספריית Sfarim",
+        "",
+        "נוצר אוטומטית על ידי `tools/build_library.py`. לא לערוך ידנית.",
+        "",
+        "המקור: [Sefaria](https://www.sefaria.org). נכנסות רק גרסאות שמותרות לשימוש מסחרי: "
+        "Public Domain, CC0, CC-BY, CC-BY-SA. גרסאות CC-BY-NC (למשל התלמוד של William Davidson "
+        "ותורת אמת), ND, Copyright, או בלי רישיון ידוע - לא נכנסות.",
+        "",
+        "- **CC-BY / CC-BY-SA:** חובה להציג את הייחוס שבטבלה (למשל במסך \"מקורות\" באפליקציה). "
+        "ב-CC-BY-SA, טקסט ששונה יוצא באותו רישיון.",
+        "- אין להשתמש בשם ובלוגו של Sefaria כסימן מסחרי בלי רשות.",
+        "",
+        f"**{len(included)} ספרים נכנסו, {len(excluded)} לא נכנסו.** "
+        + ", ".join(f"{k}: {v}" for k, v in sorted(counts.items())),
+        "",
+        "## ספרים מרכזיים",
+        "",
+    ]
+    missing_key = [t for t in KEY_TITLES if t in decisions and not decisions[t]["candidates"]]
+    for t in KEY_TITLES:
+        if t in decisions:
+            d = decisions[t]
+            lines.append(f"- {t}: " + (f"{d['candidates'][0][1]} ({d['candidates'][0][2]})" if d["candidates"]
+                                        else f"**חסר** - {d['reason']}"))
+    lines += ["", "## ספרים שנכנסו", "", "| ספר | גרסה | רישיון | ייחוס נדרש |", "|---|---|---|---|"]
+    for t, (_, version, lic, attribution) in included:
+        name = f"{titles_he[t]} ({t})" if titles_he.get(t) else t
+        need = "-" if lic in ("Public Domain", "CC0") else attribution
+        lines.append(f"| {md_cell(name)} | {md_cell(version)} | {lic} | {md_cell(need)} |")
+    lines += ["", "## ספרים שלא נכנסו", "", "| ספר | סיבה |", "|---|---|"]
+    for t, reason in excluded:
+        name = f"{titles_he[t]} ({t})" if titles_he.get(t) else t
+        lines.append(f"| {md_cell(name)} | {md_cell(reason)} |")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return len(included), len(excluded), missing_key
+
+
+def toc_hebrew_titles(toc: list) -> dict:
+    out = {}
+
+    def walk(nodes):
+        for node in nodes:
+            if "contents" in node:
+                walk(node["contents"])
+            elif "title" in node:
+                out[node["title"]] = node.get("heTitle")
+
+    walk(toc)
+    return out
+
+
 def fetch_json_cached(url: str, cache_path: Path, refresh: bool):
     if not refresh and cache_path.exists():
         return json.loads(cache_path.read_text(encoding="utf-8"))
@@ -442,6 +635,8 @@ def main():
     parser.add_argument("--limit", type=int, default=0, help="cap number of books (0 = no cap, for testing)")
     parser.add_argument("--with-fts", action="store_true", help="build title search_fts index at the end")
     parser.add_argument("--refresh-index", action="store_true", help="re-download TOC/books.json instead of using local cache")
+    parser.add_argument("--licenses-only", action="store_true",
+                        help="only check licenses and write LICENSES.md - no DB, no text download")
     args = parser.parse_args()
 
     out_path = Path(args.out)
@@ -456,6 +651,28 @@ def main():
     hebrew_map = build_hebrew_text_map(books_json)
     print(f"      {len(hebrew_map)} titles have a Hebrew version available", flush=True)
 
+    toc_titles = toc_hebrew_titles(toc)
+    titles = [t for t in hebrew_map if t in toc_titles]
+    if args.limit:
+        titles = titles[: args.limit]
+
+    print(f"[licenses] checking {len(titles)} titles against the Sefaria versions API (cached) ...", flush=True)
+    decisions = {}
+    with ThreadPoolExecutor(max_workers=args.workers) as pool:
+        futures = {pool.submit(choose_versions, t, hebrew_map[t], cache_dir / "versions"): t for t in titles}
+        for i, future in enumerate(as_completed(futures), 1):
+            decisions[futures[future]] = future.result()
+            if i % 500 == 0:
+                print(f"  {i}/{len(titles)}", flush=True)
+    retry = [t for t, d in decisions.items() if d.get("retry")]
+    n_in, n_out, missing_key = write_licenses_md(decisions, toc_titles, LICENSES_MD)
+    print(f"  allowed: {n_in} | excluded: {n_out} | API failures (re-run to retry): {len(retry)}", flush=True)
+    if missing_key:
+        print(f"  key books with no allowed version: {', '.join(missing_key)}", flush=True)
+    print(f"  wrote {LICENSES_MD}", flush=True)
+    if args.licenses_only:
+        return
+
     conn = sqlite3.connect(str(out_path))
     conn.execute("PRAGMA journal_mode=WAL")
     init_schema(conn)
@@ -463,10 +680,13 @@ def main():
     print("[3/4] building/verifying category tree (idempotent) ...", flush=True)
     book_category = build_category_tree(conn, toc)
 
-    to_import = [(title, urls) for title, urls in hebrew_map.items() if title in book_category]
-    if args.limit:
-        to_import = to_import[: args.limit]
-    pending = [(t, u) for t, u in to_import if not already_imported(conn, t)]
+    for t, d in decisions.items():
+        if not d["candidates"] and not d.get("retry"):
+            purge_book(conn, t, drop_book=True)
+    to_import = [(t, decisions[t]["candidates"]) for t in titles if decisions[t]["candidates"]]
+    pending = [(t, c) for t, c in to_import if not already_imported(conn, t)]
+    for t, _ in pending:
+        purge_book(conn, t, drop_book=False)
     print(
         f"[4/4] {len(to_import)} Hebrew books matched to the TOC; "
         f"{len(to_import) - len(pending)} already imported, {len(pending)} to fetch now",
