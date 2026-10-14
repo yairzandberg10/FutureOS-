@@ -57,6 +57,8 @@ android {
         buildConfigField("String", "HERE_API_KEY", "\"${localProperty("HERE_API_KEY")}\"")
         buildConfigField("String", "SIRI_API_KEY", "\"${localProperty("SIRI_API_KEY")}\"")
         buildConfigField("String", "SIRI_BASE_URL", "\"${localProperty("SIRI_BASE_URL")}\"")
+        // כתובת שרת FutureOS (ר' FutureServer). נדרסת ב-ro.futureos.api_base במכשיר; ריקה = אין שרת.
+        buildConfigField("String", "FUTURE_API_BASE", "\"${localProperty("future.api.base")}\"")
         // נקרא ב-FirebaseBackend כדי לדעת בזמן ריצה אם בכלל יש קונפיגורציית
         // Firebase בבנייה הזו, בלי לנחש מקיום מחלקות ב-classpath.
         buildConfigField("boolean", "FIREBASE_CONFIGURED", googleServicesJson.exists().toString())

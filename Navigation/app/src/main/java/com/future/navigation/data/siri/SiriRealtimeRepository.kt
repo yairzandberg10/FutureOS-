@@ -1,5 +1,6 @@
 package com.future.navigation.data.siri
 
+import com.future.navigation.data.backend.FutureServer
 import com.future.navigation.data.backend.NavigationFunctions
 import com.future.navigation.data.network.NetworkModule
 import kotlinx.coroutines.Dispatchers
@@ -19,9 +20,15 @@ class SiriRealtimeRepository {
     private val client = NetworkModule.okHttpClient
 
     suspend fun stopMonitoring(stopId: String, lineRef: String? = null): List<RealtimeArrival> {
+        // נתיב ראשי: שרת FutureOS (POST /nav/siri/stop), מחזיר XML של SIRI כמו שהוא.
+        // כשל = null, וממשיכים לנתיב הקיים.
+        FutureServer.siriStopMonitoringXml(stopId, lineRef)?.let { xml ->
+            return runCatching { SiriXml.parseStopMonitoringResponse(xml) }.getOrDefault(emptyList())
+        }
+
         if (!SiriConfig.isConfigured) return emptyList()
 
-        // נתיב ראשי: Cloud Function שמחזיקה את כתובת ה-SIRI ואת המפתח בסוד
+        // נתיב שני: Cloud Function שמחזיקה את כתובת ה-SIRI ואת המפתח בסוד
         // בצד השרת ומחזירה את ה-XML הגולמי - אותו פירוק בדיוק (SiriXml).
         NavigationFunctions.siriStopMonitoringXml(stopId, lineRef)?.let { xml ->
             return runCatching { SiriXml.parseStopMonitoringResponse(xml) }.getOrDefault(emptyList())

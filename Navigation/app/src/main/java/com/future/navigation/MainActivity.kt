@@ -38,6 +38,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.future.navigation.data.backend.FirebaseBackend
+import com.future.navigation.data.backend.FutureServer
 import com.future.navigation.data.backend.RemoteKeys
 import com.future.navigation.data.common.LatLng
 import com.future.navigation.data.geocoding.GeocodingRepository
@@ -153,6 +154,8 @@ class MainActivity : ComponentActivity() {
         // בדיוק כמו קודם (ר' data/backend/FirebaseBackend).
         FirebaseBackend.init(this)
         RemoteKeys.refresh()
+        // שרת FutureOS: הטוקן נקרא מ-com.future.settings. בלי הספק הוא פשוט לא זמין.
+        FutureServer.init(this)
 
         setContent {
             var sharedTheme by remember { mutableStateOf(ThemeClient.getTheme(this)) }

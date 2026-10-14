@@ -1,5 +1,6 @@
 package com.future.navigation.data.routing
 
+import com.future.navigation.data.backend.FutureServer
 import com.future.navigation.data.backend.NavigationFunctions
 import com.future.navigation.data.common.LatLng
 import com.future.navigation.data.network.NetworkModule
@@ -40,9 +41,14 @@ class HereRoutingRepository : RoutingRepository {
         .create(HereApi::class.java)
 
     override suspend fun getDrivingRoute(from: LatLng, to: LatLng): DrivingRoute? {
-        if (!HereConfig.isConfigured) return null
-
-        val response = fetchViaProxy(from, to) ?: fetchDirectly(from, to) ?: return null
+        // הנתיב הראשון: שרת FutureOS (בלי מפתח HERE על המכשיר). אם הוא לא זמין -
+        // ממשיכים לנתיב הקיים בדיוק כמו קודם.
+        val response = fetchViaFutureServer(from, to)
+            ?: run {
+                if (!HereConfig.isConfigured) return null
+                fetchViaProxy(from, to) ?: fetchDirectly(from, to)
+            }
+            ?: return null
 
         val route = response.routes.firstOrNull() ?: return null
         val section = route.sections.firstOrNull() ?: return null
@@ -73,6 +79,19 @@ class HereRoutingRepository : RoutingRepository {
             distanceMeters = summary?.length ?: 0.0,
             durationSeconds = summary?.duration ?: 0.0
         )
+    }
+
+    /**
+     * שרת FutureOS: POST /nav/route, והתשובה היא JSON של HERE כמו שהוא - אותו
+     * פירוק בדיוק (HereRouteResponse). כל כשל (503, 429, רשת, פירוק) = null.
+     */
+    private suspend fun fetchViaFutureServer(from: LatLng, to: LatLng): HereRouteResponse? {
+        val body = FutureServer.routeJson(from, to) ?: return null
+        return try {
+            NetworkModule.json.decodeFromString(HereRouteResponse.serializer(), body)
+        } catch (e: Exception) {
+            null
+        }
     }
 
     /**
