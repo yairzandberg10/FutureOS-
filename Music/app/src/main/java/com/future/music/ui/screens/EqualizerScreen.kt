@@ -1,5 +1,7 @@
 package com.future.music.ui.screens
 
+import kotlin.math.roundToInt
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -88,7 +90,7 @@ fun EqualizerScreen(theme: FutureTheme, onBack: () -> Unit) {
                         value = (level - range.first) / span,
                         step = 100f / span,
                         theme = theme,
-                        onValueChange = { AudioFx.setBand(band.index, (range.first + it * span).toInt()) },
+                        onValueChange = { AudioFx.setBand(band.index, (range.first + it * span).roundToInt()) },
                     )
                 }
             }
@@ -99,7 +101,7 @@ fun EqualizerScreen(theme: FutureTheme, onBack: () -> Unit) {
                     valueText = "${settings.bass / 10}%",
                     value = settings.bass / 1000f,
                     theme = theme,
-                    onValueChange = { v -> AudioFx.update { it.copy(bass = (v * 1000).toInt()) } },
+                    onValueChange = { v -> AudioFx.update { it.copy(bass = (v * 1000).roundToInt()) } },
                 )
             }
             item {
@@ -108,7 +110,7 @@ fun EqualizerScreen(theme: FutureTheme, onBack: () -> Unit) {
                     valueText = "${settings.virtualizer / 10}%",
                     value = settings.virtualizer / 1000f,
                     theme = theme,
-                    onValueChange = { v -> AudioFx.update { it.copy(virtualizer = (v * 1000).toInt()) } },
+                    onValueChange = { v -> AudioFx.update { it.copy(virtualizer = (v * 1000).roundToInt()) } },
                 )
             }
             item {
@@ -117,7 +119,7 @@ fun EqualizerScreen(theme: FutureTheme, onBack: () -> Unit) {
                     valueText = "+%.1f dB".format(settings.loudness / 100f),
                     value = settings.loudness / 1500f,
                     theme = theme,
-                    onValueChange = { v -> AudioFx.update { it.copy(loudness = (v * 1500).toInt()) } },
+                    onValueChange = { v -> AudioFx.update { it.copy(loudness = (v * 1500).roundToInt()) } },
                 )
             }
             item {

@@ -41,18 +41,19 @@ class PlaylistStore(context: Context) {
     }
 
     fun getPlaylists(): List<Playlist> {
-        val raw = prefs.getString(KEY_PLAYLISTS, null) ?: return emptyList()
-        val arr = runCatching { JSONArray(raw) }.getOrNull() ?: return emptyList()
-        val result = mutableListOf<Playlist>()
-        for (i in 0 until arr.length()) {
-            runCatching {
-                val obj = arr.getJSONObject(i)
-                val songIdsArr = obj.getJSONArray("songIds")
-                val songIds = (0 until songIdsArr.length()).map { songIdsArr.getLong(it) }
-                result.add(Playlist(obj.getLong("id"), obj.getString("name"), songIds))
-            }
-        }
-        return result
+        val arr = rawPlaylists() ?: return emptyList()
+        return (0 until arr.length()).mapNotNull { i -> arr.optJSONObject(i)?.let(::parsePlaylist) }
+    }
+
+    private fun parsePlaylist(obj: JSONObject): Playlist? = runCatching {
+        val songIdsArr = obj.getJSONArray("songIds")
+        val songIds = (0 until songIdsArr.length()).map { songIdsArr.getLong(it) }
+        Playlist(obj.getLong("id"), obj.getString("name"), songIds)
+    }.getOrNull()
+
+    private fun rawPlaylists(): JSONArray? {
+        val raw = prefs.getString(KEY_PLAYLISTS, null) ?: return null
+        return runCatching { JSONArray(raw) }.getOrNull()
     }
 
     private fun savePlaylists(playlists: List<Playlist>) {
@@ -65,6 +66,13 @@ class PlaylistStore(context: Context) {
             p.songIds.forEach { songIdsArr.put(it) }
             obj.put("songIds", songIdsArr)
             arr.put(obj)
+        }
+        // רשומה שלא נקראת נשמרת כמות שהיא - היא לא נמחקת בשקט בשמירה הבאה
+        rawPlaylists()?.let { old ->
+            for (i in 0 until old.length()) {
+                val entry = old.opt(i) ?: continue
+                if (entry !is JSONObject || parsePlaylist(entry) == null) arr.put(entry)
+            }
         }
         prefs.edit().putString(KEY_PLAYLISTS, arr.toString()).apply()
     }

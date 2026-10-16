@@ -1,5 +1,7 @@
 package com.future.music.ui.screens
 
+import kotlin.math.roundToInt
+
 import android.Manifest
 import android.content.pm.PackageManager
 import android.widget.Toast
@@ -170,7 +172,7 @@ fun AudioDevicesScreen(theme: FutureTheme, onBack: () -> Unit, onOpenEqualizer: 
                     valueText = if (settings.volumeLimit >= 100) "ללא" else "${settings.volumeLimit}%",
                     value = settings.volumeLimit / 100f,
                     theme = theme,
-                    onValueChange = { v -> AudioFx.update { it.copy(volumeLimit = (v * 100).toInt().coerceIn(10, 100)) } },
+                    onValueChange = { v -> AudioFx.update { it.copy(volumeLimit = (v * 100).roundToInt().coerceIn(10, 100)) } },
                 )
             }
             if (currentDevice != AudioFx.SPEAKER) {

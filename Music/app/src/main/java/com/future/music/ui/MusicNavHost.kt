@@ -10,6 +10,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,13 +52,13 @@ fun MusicNavHost(
     playerController: PlayerController,
     theme: FutureTheme,
 ) {
-    val backStack = remember { mutableStateListOf<Route>(Route.NowPlaying) }
+    val backStack = rememberSaveable(saver = backStackSaver) { mutableStateListOf<Route>(Route.NowPlaying) }
     val current = backStack.last()
     var dataVersion by remember { mutableIntStateOf(0) }
     var restoredLastQueue by remember { mutableStateOf(false) }
     // הפריט (לפי digit) שנפתח לאחרונה מתפריט הבית - כשחוזרים "אחורה", הפוקוס
     // צריך לשוב אליו בדיוק, לא תמיד לפריט הראשון בתפריט.
-    var lastOpenedHomeItemId by remember { mutableStateOf<String?>(null) }
+    var lastOpenedHomeItemId by rememberSaveable { mutableStateOf<String?>(null) }
 
     BackHandler(enabled = backStack.size > 1) { backStack.removeAt(backStack.lastIndex) }
     fun push(route: Route) = backStack.add(route)
@@ -98,7 +101,7 @@ fun MusicNavHost(
         val fresh = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { repository.getAllSongs() }
         if (fresh != allSongs) allSongs = fresh
     }
-    var renamingArtist by remember { mutableStateOf<String?>(null) }
+    var renamingArtist by rememberSaveable { mutableStateOf<String?>(null) }
     val playerState = playerController.state
 
     val artists = remember(allSongs) {
@@ -125,7 +128,12 @@ fun MusicNavHost(
             if (last != null) {
                 val songs = last.songIds.mapNotNull { id -> allSongs.find { it.id == id } }
                 if (songs.isNotEmpty()) {
-                    playerController.restoreQueue(songs, last.index.coerceIn(0, songs.lastIndex), last.positionMs)
+                    // האינדקס השמור הוא של התור המקורי: מחפשים את השיר הנוכחי לפי מזהה.
+                    // אם הוא נמחק, מתחילים מהשיר הראשון מההתחלה.
+                    val savedId = last.songIds.getOrNull(last.index)
+                    val index = songs.indexOfFirst { it.id == savedId }
+                    if (index >= 0) playerController.restoreQueue(songs, index, last.positionMs)
+                    else playerController.restoreQueue(songs, 0, 0L)
                 }
             }
         }
@@ -403,3 +411,12 @@ fun MusicNavHost(
     }
     }
 }
+
+/** מחסנית הניווט נשמרת כרשימת מחרוזות (מסלול אחד בכל שורה) - שורדת מזעור ושחזור. */
+private val backStackSaver = listSaver<SnapshotStateList<Route>, String>(
+    save = { stack -> stack.map { it.encodeRoute() } },
+    restore = { encoded ->
+        val routes = encoded.mapNotNull { decodeRoute(it) }
+        mutableStateListOf<Route>().apply { addAll(routes.ifEmpty { listOf(Route.NowPlaying) }) }
+    },
+)

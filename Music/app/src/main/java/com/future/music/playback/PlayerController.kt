@@ -32,6 +32,8 @@ data class PlayerUiState(
 class PlayerController(private val context: Context) {
     private var controller: MediaController? = null
     private var currentQueue: List<Song> = emptyList()
+    // חיבור שמסתיים אחרי disconnect() משוחרר מיד, אחרת הוא נשאר פתוח לנצח
+    private var disposed = false
 
     var state by mutableStateOf(PlayerUiState())
         private set
@@ -43,6 +45,7 @@ class PlayerController(private val context: Context) {
     }
 
     fun connect(onReady: () -> Unit = {}) {
+        disposed = false
         val sessionToken = SessionToken(context, ComponentName(context, MusicPlaybackService::class.java))
         val future = MediaController.Builder(context, sessionToken).buildAsync()
         future.addListener({
@@ -50,6 +53,10 @@ class PlayerController(private val context: Context) {
                 future.get()
             } catch (e: Exception) {
                 android.util.Log.e("PlayerController", "Failed to connect to MusicPlaybackService", e)
+                return@addListener
+            }
+            if (disposed) {
+                c.release()
                 return@addListener
             }
             controller = c
@@ -60,6 +67,7 @@ class PlayerController(private val context: Context) {
     }
 
     fun disconnect() {
+        disposed = true
         controller?.removeListener(listener)
         controller?.release()
         controller = null
