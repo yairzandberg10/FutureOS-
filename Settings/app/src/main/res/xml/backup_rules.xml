@@ -7,4 +7,6 @@
 <full-backup-content>
     <!-- טוקן השרת לא נכנס לגיבוי: הוא נרשם מחדש מול השרת על מכשיר אחר -->
     <exclude domain="sharedpref" path="futureserver_credentials.xml"/>
+    <!-- משובים ולוגים מסוננים שממתינים לשליחה: נשארים במכשיר הזה בלבד -->
+    <exclude domain="sharedpref" path="feedback_store.xml"/>
 </full-backup-content>

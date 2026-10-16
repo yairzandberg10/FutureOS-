@@ -106,6 +106,7 @@ sealed class Screen(val route: String) {
     object Storage : Screen("storage")
     object General : Screen("general")
     object About : Screen("about")
+    object Feedback : Screen("feedback")
     object Ringtone : Screen("ringtone")
     object NotificationSound : Screen("notification_sound")
     object AlarmSound : Screen("alarm_sound")
@@ -204,7 +205,7 @@ private fun shareFileViaBluetooth(context: android.content.Context, uri: android
 }
 
 @Composable
-fun SettingsApp(viewModel: SettingsViewModel) {
+fun SettingsApp(viewModel: SettingsViewModel, startRoute: String = Screen.Main.route, feedbackPkg: String? = null) {
     val navController = rememberNavController()
     val theme by viewModel.themeConfig
 
@@ -216,7 +217,7 @@ fun SettingsApp(viewModel: SettingsViewModel) {
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         NavHost(
             navController = navController,
-            startDestination = Screen.Main.route,
+            startDestination = startRoute,
             enterTransition = { com.future.sharednav.theme.FutureTransitions.navEnter },
             exitTransition = { com.future.sharednav.theme.FutureTransitions.navExit },
             popEnterTransition = { com.future.sharednav.theme.FutureTransitions.navPopEnter },
@@ -232,6 +233,7 @@ fun SettingsApp(viewModel: SettingsViewModel) {
             composable(Screen.Storage.route) { StorageScreen(navController, theme, viewModel) }
             composable(Screen.General.route) { GeneralScreen(navController, theme, viewModel) }
             composable(Screen.About.route) { AboutScreen(navController, theme, viewModel) }
+            composable(Screen.Feedback.route) { FeedbackScreen(navController, theme, feedbackPkg) }
             composable(Screen.Ringtone.route) {
                 SoundPickerScreen(navController, theme, "רינגטון", RingtoneManager.TYPE_RINGTONE, viewModel)
             }
@@ -292,7 +294,8 @@ private val SEARCHABLE_SETTINGS = listOf(
     SearchableSetting("כללי", "general תאריך שעה שפה נגישות accessibility date time language", FutureIcons.Language, Screen.General.route),
     SearchableSetting("אבטחה", "security מסך נעילה קוד pin סיסמה זיהוי פנים face lock", FutureIcons.Security, Screen.Security.route),
     SearchableSetting("אפליקציות", "apps אפליקציה", FutureIcons.Apps, Screen.Apps.route),
-    SearchableSetting("אודות הטלפון", "about imei גרסה מספר טלפון version", FutureIcons.Info, Screen.About.route)
+    SearchableSetting("אודות הטלפון", "about imei גרסה מספר טלפון version", FutureIcons.Info, Screen.About.route),
+    SearchableSetting("שלח משוב", "feedback משוב באג דיווח הצעה bug report", FutureIcons.Chat, Screen.Feedback.route)
 ) + com.future.settings.utils.ExtraSystemSettings.ALL_SCREENS.flatMap { screen ->
     // המסך עצמו, ואז כל הגדרה שבו בנפרד - חיפוש "תאורת לילה" מוביל ישר למסך שלה.
     listOf(SearchableSetting(screen.title, screen.keywords, FutureIcons.Tune, screen.route)) +
@@ -446,6 +449,8 @@ fun MainMenu(navController: NavController, theme: ThemeConfig, viewModel: Settin
                         SettingItem("אפליקציות", "פתיחה, עצירה, הרשאות ונתונים", FutureIcons.Apps, theme, modifier = menuFocus(Screen.Apps.route)) { navController.navigate(Screen.Apps.route) }
                         SettingDivider(theme)
                         SettingItem("אודות הטלפון", "גרסה, דגם ומספר טלפון", FutureIcons.Info, theme, modifier = menuFocus(Screen.About.route)) { navController.navigate(Screen.About.route) }
+                        SettingDivider(theme)
+                        SettingItem("שלח משוב", "דיווח על באג או הצעה לשיפור", FutureIcons.Chat, theme, modifier = menuFocus(Screen.Feedback.route)) { navController.navigate(Screen.Feedback.route) }
                     }
                 }
 

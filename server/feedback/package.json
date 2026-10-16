@@ -1,0 +1,14 @@
+{
+  "name": "futureos-feedback",
+  "private": true,
+  "type": "module",
+  "description": "FutureOS feedback, triage and navigation proxy (Cloudflare Worker)",
+  "engines": { "node": ">=22.5" },
+  "scripts": {
+    "test": "node --test",
+    "dev": "node scripts/dev-server.mjs",
+    "triage:demo": "node scripts/triage-local.mjs --demo",
+    "wrangler:dev": "npx wrangler dev",
+    "deploy": "npx wrangler deploy"
+  }
+}
