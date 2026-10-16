@@ -1,0 +1,84 @@
+FutureOS Assistant - הודעה על רישיונות של רכיבי צד שלישי
+==========================================================
+
+קובץ זה מפרט את רכיבי הקוד והמודלים בצד שלישי שנכללים ב-APK של FutureOS Assistant,
+יחד עם הרישיון וכתובת המקור של כל רכיב.
+
+סטטוס: טיוטה. רכיבים המסומנים "לבדוק" טרם אומתו, ורכיבים המסומנים
+"⚠" חייבים להיות מוחלפים או מאושרים לפני מכירה של המוצר.
+
+
+1. רכיבי קוד (native / ספריות)
+------------------------------
+
+whisper.cpp (כולל ספריית src/ ו-include/)
+  רישיון: MIT
+  מקור:   https://github.com/ggml-org/whisper.cpp
+
+ggml (ספריית הטנסורים שעליה רץ whisper.cpp; בתיקייה ggml/)
+  רישיון: MIT
+  מקור:   https://github.com/ggml-org/whisper.cpp (ggml/ בתוך המאגר)
+
+ONNX Runtime (onnxruntime-android 1.30.0)
+  רישיון: MIT
+  מקור:   https://github.com/microsoft/onnxruntime
+
+
+2. מודלים ונתונים
+-----------------
+
+Whisper small (ggml-small-q8_0.bin) - זיהוי דיבור
+  רישיון: MIT (OpenAI Whisper)
+  מקור:   https://github.com/openai/whisper
+
+Piper voice "shaul" (piper/shaul.onnx, shaul.onnx.json) - Phonikud TTS checkpoints
+  רישיון: CC BY-NC (non-commercial)
+  מקור:   לבדוק - מקור מדויק של ה-checkpoint לא תועד בקוד
+  ⚠ רישיון לא-מסחרי - חייב להיות מוחלף לפני מכירה
+
+renikud (renikud/model.onnx) - טקסט עברי בלי ניקוד להגייה
+  רישיון: רישיון לא ידוע - בבירור, חייב להיות מוחלף או מאושר לפני מכירה
+  מקור:   לבדוק
+
+Knowledge datasets (knowledge/*.tsv: animals, blessings, capitals, dictionary,
+elements, opposites, parashot, people, planets, tanakh, trivia)
+  רישיון: לבדוק
+  מקור:   לבדוק - יש לאמת מקור ורישיון של כל קובץ
+
+
+3. ספריות Android / Kotlin (Apache 2.0 אלא אם צוין אחרת)
+--------------------------------------------------------
+
+Kotlin (kotlin-stdlib, קומפיילר Kotlin 2.2.10)
+  רישיון: Apache 2.0
+  מקור:   https://github.com/JetBrains/kotlin
+
+Jetpack Compose (compose-bom 2026.02.01: ui, ui-graphics, material3,
+ui-tooling-preview; material-icons-extended)
+  רישיון: Apache 2.0
+  מקור:   https://github.com/androidx/androidx
+
+AndroidX (core-ktx 1.19.0, activity-compose 1.13.0, lifecycle-runtime-ktx 2.11.0)
+  רישיון: Apache 2.0
+  מקור:   https://github.com/androidx/androidx
+
+Android Gradle Plugin (בזמן בנייה בלבד, לא נכלל ב-APK)
+  רישיון: Apache 2.0
+  מקור:   https://github.com/android/gradle-recipes / https://developer.android.com/build
+
+
+4. ספריות בדיקה (לא נכללות ב-APK של הרילייס)
+--------------------------------------------
+
+JUnit 4 (4.13.2)
+  רישיון: EPL 1.0
+  מקור:   https://github.com/junit-team/junit4
+
+AndroidX Test / Espresso / Compose UI test (junit 1.3.0, espresso-core 3.7.0,
+ui-test-junit4, ui-test-manifest)
+  רישיון: Apache 2.0
+  מקור:   https://github.com/androidx/androidx
+
+
+---
+עדכון אחרון: 2026-10-14
