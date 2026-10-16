@@ -99,6 +99,8 @@ class ContactActions(
     val setSort: (com.future.contact.data.ContactSort) -> Unit,
     /** מריץ פעולת כתיבה אחרי שהרשאת WRITE_CONTACTS אושרה (מבקש אותה אם צריך). */
     val withWrite: (() -> Unit) -> Unit,
+    /** הודעה קצרה על המסך הראשי (snackbar), גם מתוך מסך הפרטים. */
+    val notify: (String) -> Unit,
 )
 
 /**
@@ -442,7 +444,7 @@ fun ContactDetailScreen(contact: Contact, theme: FutureTheme, actions: ContactAc
                     FutureDivider(theme = theme)
                     FutureSettingItem(
                         title = if (contact.isBlocked) "בטל חסימה" else "חסום",
-                        summary = if (contact.isBlocked) "שיחות והודעות ממנו חסומות" else null,
+                        summary = if (contact.isBlocked) "שיחות ממנו נדחות" else null,
                         icon = FutureIcons.Block,
                         theme = theme,
                         showChevron = false,
@@ -470,12 +472,15 @@ fun ContactDetailScreen(contact: Contact, theme: FutureTheme, actions: ContactAc
     }
     if (editing) {
         ContactEditDetailsDialog(initial = details, theme = theme, onDismiss = { editing = false }, onSave = { updated ->
-            editing = false
-            scope.launch {
-                actions.withWrite {
-                    scope.launch {
-                        val ok = withContext(Dispatchers.IO) { repository.updateContactDetails(contact.id, updated) }
-                        if (ok) details = updated
+            // הדיאלוג נסגר רק אחרי שהשמירה הצליחה - כשלון משאיר את העריכה על המסך
+            actions.withWrite {
+                scope.launch {
+                    val ok = withContext(Dispatchers.IO) { repository.updateContactDetails(contact.id, updated) }
+                    if (ok) {
+                        details = updated
+                        editing = false
+                    } else {
+                        actions.notify("לא ניתן לשמור את הפרטים")
                     }
                 }
             }

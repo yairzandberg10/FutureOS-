@@ -53,6 +53,7 @@ import com.future.sharednav.share.FutureShare
 import com.future.sharednav.theme.FutureMaterialTheme
 import com.future.sharednav.theme.rememberFutureTheme
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -84,8 +85,11 @@ class MainActivity : ComponentActivity() {
             var pendingCall by rememberSaveable { mutableStateOf<String?>(null) }
             // "הוסף לאנשי קשר" מהחייגן/מההודעות (ACTION_INSERT) - עורך אנשי הקשר של
             // המערכת מושבת במכשיר, אז הוא נפתח כאן כדיאלוג עם המספר מוכן.
-            var insertNumber by remember {
-                mutableStateOf(intent?.takeIf { it.action == Intent.ACTION_INSERT }?.let {
+            var insertNumber by rememberSaveable {
+                val insert = intent?.takeIf { it.action == Intent.ACTION_INSERT }
+                // הכוונה נצרכת פעם אחת: בלי זה סיבוב מסך או שחזור היו פותחים את הדיאלוג שוב
+                setIntent(Intent())
+                mutableStateOf(insert?.let {
                     // INSERT חשוף לכל אפליקציה: רק תווי מספר טלפון, ובאורך סביר
                     it.getStringExtra(ContactsContract.Intents.Insert.PHONE).orEmpty()
                         .filter { c -> c.isDigit() || c in "+*#,;() -" }.take(64)
@@ -108,9 +112,12 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
+            var reloadJob by remember { mutableStateOf<Job?>(null) }
             fun reload() {
                 if (!hasPermission) return
-                scope.launch { contacts = withContext(Dispatchers.IO) { repository.getAllContacts(sort) } }
+                // טעינה חדשה מבטלת את הקודמת, כדי שתוצאה ישנה (מיון ישן) לא תדרוס את החדשה
+                reloadJob?.cancel()
+                reloadJob = scope.launch { contacts = withContext(Dispatchers.IO) { repository.getAllContacts(sort) } }
             }
 
             val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { results ->
@@ -145,7 +152,7 @@ class MainActivity : ComponentActivity() {
             }
 
             val selected = contacts.firstOrNull { it.id == selectedId }
-            BackHandler(enabled = selectedId != null) { selectedId = null }
+            BackHandler(enabled = selected != null) { selectedId = null }
 
             val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
             DisposableEffect(lifecycleOwner) {
@@ -208,8 +215,14 @@ class MainActivity : ComponentActivity() {
                     } },
                     toggleFavorite = { contact -> withWrite {
                         scope.launch {
-                            withContext(Dispatchers.IO) { repository.setFavorite(contact.id, !contact.isFavorite) }
-                            snackbar.show(if (contact.isFavorite) "הוסר מהמועדפים" else "נוסף למועדפים")
+                            val ok = withContext(Dispatchers.IO) { repository.setFavorite(contact.id, !contact.isFavorite) }
+                            snackbar.show(
+                                when {
+                                    !ok -> "לא ניתן לשנות את המועדפים"
+                                    contact.isFavorite -> "הוסר מהמועדפים"
+                                    else -> "נוסף למועדפים"
+                                }
+                            )
                             reload()
                         }
                     } },
@@ -251,6 +264,7 @@ class MainActivity : ComponentActivity() {
                         snackbar.show("ממוין לפי ${option.label}")
                     },
                     withWrite = { action -> withWrite(action) },
+                    notify = { snackbar.show(it) },
                 )
             }
 

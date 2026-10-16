@@ -59,10 +59,12 @@ class MyProfileStore(private val context: Context) {
         }
         val side = minOf(bitmap.width, bitmap.height)
         val square = Bitmap.createBitmap(bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side)
-        removePhotoFile()
+        val oldPath = prefs.getString("photo", null)?.let { Uri.parse(it).path }
         val file = File(context.filesDir, "me_${System.currentTimeMillis()}.jpg")
         file.outputStream().use { square.compress(Bitmap.CompressFormat.JPEG, 88, it) }
         prefs.edit().putString("photo", Uri.fromFile(file).toString()).apply()
+        // הקובץ הישן נמחק רק אחרי שהחדש נכתב והעדפות מצביעות עליו - כשלון לא מאבד את התמונה
+        oldPath?.let { File(it).delete() }
         true
     } catch (e: Exception) {
         android.util.Log.e("MyProfileStore", "Error saving profile photo", e)

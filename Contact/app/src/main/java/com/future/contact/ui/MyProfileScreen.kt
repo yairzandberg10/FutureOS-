@@ -152,7 +152,7 @@ fun MyProfileScreen(theme: FutureTheme) {
                     }
                     if (myNumber != null) {
                         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-                            Text(myNumber, color = theme.mutedTextColor, fontSize = type.body)
+                            Text(displayNumber(myNumber), color = theme.mutedTextColor, fontSize = type.body)
                         }
                     }
                 }
@@ -206,7 +206,7 @@ fun MyProfileScreen(theme: FutureTheme) {
                                 sim.network?.takeIf { it != sim.carrier }?.let { "רשת: $it" },
                                 sim.signalBars?.let { "קליטה ${it}/4" },
                                 if (sim.roaming) "נדידה" else null,
-                                sim.number,
+                                sim.number?.let(::displayNumber),
                             ).joinToString(" · ").ifBlank { null },
                             icon = FutureIcons.SimCard,
                             theme = theme,

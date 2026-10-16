@@ -102,9 +102,9 @@ class ContactsRepository(private val context: Context) {
         return sortContacts(result, sort)
     }
 
-    fun setFavorite(contactId: String, isFavorite: Boolean) {
+    /** מחזיר true רק אם הכתיבה לספק הצליחה. */
+    fun setFavorite(contactId: String, isFavorite: Boolean): Boolean =
         com.future.sharednav.contacts.ContactLookup.setStarred(context, contactId, isFavorite)
-    }
 
     /**
      * חסימה: SEND_TO_VOICEMAIL על איש הקשר (הטלפון דוחה את שיחותיו), ובנוסף
