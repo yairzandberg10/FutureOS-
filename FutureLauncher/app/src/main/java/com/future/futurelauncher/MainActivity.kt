@@ -991,7 +991,8 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                         val newPages = viewModel.pages.toMutableList()
                         val currentPageItems = newPages[currentPage].toMutableList()
                         val itemToRename = dialog.item
-                        itemToRename.customLabel = newName
+                        // שם ריק = חזרה לשם המקורי של האפליקציה (ולא שם ריק על המסך)
+                        itemToRename.customLabel = newName.trim().takeIf { it.isNotEmpty() }
                         newPages[currentPage] = currentPageItems
                         viewModel.pages = newPages
                         viewModel.savePages()
@@ -1118,6 +1119,9 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                             viewModel.pendingSlot = null
                             // הוספה מחדש של אפליקציה שהוסרה - מבטלים את הסימון, אחרת תיעלם בטעינה הבאה
                             if (app is LauncherItem.App) viewModel.unmarkAppRemoved(app.id)
+                        } else {
+                            // בלי שורה ריקה האפליקציה לא נוספת - מודיעים במקום לסגור בשקט
+                            Toast.makeText(activity, "אין מקום פנוי בדף הזה", Toast.LENGTH_SHORT).show()
                         }
                         viewModel.dialogState = LauncherDialog.None
                     },

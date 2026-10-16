@@ -61,6 +61,8 @@ internal object AppIconCache {
     // ConcurrentHashMap: האייקונים נטענים ב-Dispatchers.IO (rememberAppIcon,
     // ו-preload מתוך LauncherViewModel.loadData) ונקראים מה-main thread.
     private const val MAX_ICON_PX = 256
+    // תקרה למטמון: בלי זה כל אפליקציה מותקנת השאירה אייקון של 256px לנצח
+    private const val MAX_ENTRIES = 200
     private val cache = java.util.concurrent.ConcurrentHashMap<String, ImageBitmap>()
 
     /**
@@ -80,7 +82,13 @@ internal object AppIconCache {
         // המקורי מפיל את מסך הבית מחוסר זיכרון (בכל פתיחה - כלומר מסך בית שלא עולה)
         val icon = resolveInfo.loadIcon(pm)
         val side = maxOf(icon.intrinsicWidth, icon.intrinsicHeight).coerceIn(1, MAX_ICON_PX)
-        return icon.toBitmap(side, side).asImageBitmap().also { cache[key] = it }
+        return icon.toBitmap(side, side).asImageBitmap().also {
+            cache[key] = it
+            while (cache.size > MAX_ENTRIES) {
+                val old = cache.keys.firstOrNull() ?: break
+                cache.remove(old)
+            }
+        }
     }
 
     fun evict(packageName: String) {
