@@ -1,0 +1,18 @@
+# העתק ל-.dev.vars (לא נכנס לגיט) לפיתוח מקומי. כל הערכים כאן מזויפים.
+ENVIRONMENT=local
+LOCAL_ADMIN_TOKEN=change-me-local-only
+
+# ריק = mock. מפתח אמיתי מ-Google AI Studio (עדיף חשבון עם חיוב, ראו README)
+GEMINI_API_KEY=
+# GEMINI_MODEL=gemini-2.5-flash
+# GEMINI_EMBED_MODEL=gemini-embedding-001
+
+# ריק = לא נפתחים issues
+GITHUB_TOKEN=
+GITHUB_REPO=
+GITHUB_REPO_PRIVATE=false
+
+# ריק = הניווט מחזיר 503 והאפליקציה נופלת לנתיב הקיים
+HERE_API_KEY=
+SIRI_BASE_URL=
+SIRI_API_KEY=

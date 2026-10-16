@@ -6,8 +6,10 @@
     <!-- טוקן השרת לא נכנס לגיבוי ולא להעברה בין מכשירים -->
     <cloud-backup>
         <exclude domain="sharedpref" path="futureserver_credentials.xml"/>
+        <exclude domain="sharedpref" path="feedback_store.xml"/>
     </cloud-backup>
     <device-transfer>
         <exclude domain="sharedpref" path="futureserver_credentials.xml"/>
+        <exclude domain="sharedpref" path="feedback_store.xml"/>
     </device-transfer>
 </data-extraction-rules>

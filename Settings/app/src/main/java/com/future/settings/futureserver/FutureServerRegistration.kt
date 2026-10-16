@@ -42,6 +42,12 @@ object FutureServerRegistration {
         return deviceId to token
     }
 
+    /** כתובת הבסיס של השרת (כולל /v1), או null אם הבנייה הזו לא מוגדרת עם שרת. משמש גם את המשוב. */
+    fun resolvedBaseUrl(): String? = FutureServerPolicy.resolveBaseUrl(
+        readSystemProperty(SYSTEM_PROP_API_BASE),
+        BuildConfig.FUTURE_API_BASE,
+    )
+
     /**
      * מתחיל רישום ברקע אם צריך. חוזר מיד, בלי רשת על ה-thread של הקורא.
      * בלי כתובת שרת - לא עושה כלום, וגם לא מסמן ניסיון.
@@ -50,10 +56,7 @@ object FutureServerRegistration {
         val appContext = context.applicationContext
         if (loadCredentials(appContext) != null) return
 
-        val base = FutureServerPolicy.resolveBaseUrl(
-            readSystemProperty(SYSTEM_PROP_API_BASE),
-            BuildConfig.FUTURE_API_BASE,
-        ) ?: return
+        val base = resolvedBaseUrl() ?: return
 
         // single-flight: אם רישום כבר רץ או בתור, מדלגים
         if (!inFlight.compareAndSet(false, true)) return

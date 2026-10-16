@@ -41,6 +41,10 @@ class MainActivity : ComponentActivity() {
             SystemInteractor(applicationContext).initSystemPermissions()
         }
 
+        // נפתח מ"שלח משוב" של אפליקציה אחרת: מתחילים ישר במסך המשוב, עם האפליקציה שלה מסומנת
+        val openFeedback = intent?.action == ACTION_SEND_FEEDBACK
+        val feedbackPkg = intent?.getStringExtra(EXTRA_FEEDBACK_PKG)?.takeIf { openFeedback && PKG_RE.matches(it) }
+
         setContent {
             val viewModel: SettingsViewModel = viewModel()
             val theme by viewModel.themeConfig
@@ -66,7 +70,11 @@ class MainActivity : ComponentActivity() {
                     }
 
                     if (isReady) {
-                        SettingsApp(viewModel)
+                        SettingsApp(
+                            viewModel,
+                            startRoute = if (openFeedback) com.future.settings.ui.Screen.Feedback.route else com.future.settings.ui.Screen.Main.route,
+                            feedbackPkg = feedbackPkg,
+                        )
                     } else {
                         Box(
                             modifier = Modifier.fillMaxSize().background(theme.backgroundColor),
@@ -78,5 +86,11 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    companion object {
+        const val ACTION_SEND_FEEDBACK = "com.future.settings.action.SEND_FEEDBACK"
+        const val EXTRA_FEEDBACK_PKG = "com.future.settings.extra.FEEDBACK_PKG"
+        private val PKG_RE = Regex("""^com\.future\.[a-z0-9_.]{1,64}$""")
     }
 }

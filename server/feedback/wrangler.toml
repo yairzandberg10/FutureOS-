@@ -1,0 +1,31 @@
+# הגדרות Cloudflare Worker לשרת המשוב. אין כאן סודות ואין account_id:
+# הסודות נכנסים ב-`wrangler secret put`, וה-database_id אחרי `wrangler d1 create`.
+name = "futureos-feedback"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+
+# בכוונה לא מוגדר ENVIRONMENT=local כאן: טוקן המנהל המקומי עובד רק דרך .dev.vars
+[vars]
+ENVIRONMENT = "production"
+FEEDBACK_PER_DAY = "10"
+ROUTE_PER_HOUR = "60"
+DAILY_LIMIT_HERE = "5000"
+DAILY_LIMIT_SIRI = "20000"
+GITHUB_REPO = ""            # למשל yairzandberg10/FutureOS-feedback (ריפו פרטי)
+GITHUB_REPO_PRIVATE = "false"
+ACCESS_TEAM_DOMAIN = ""     # למשל <team>.cloudflareaccess.com
+ACCESS_AUD = ""
+ADMIN_EMAIL = ""
+
+[[d1_databases]]
+binding = "DB"
+database_name = "futureos"
+database_id = "REPLACE_AFTER_wrangler_d1_create"
+
+[[r2_buckets]]
+binding = "BLOBS"
+bucket_name = "futureos-feedback"
+
+# מיון Gemini פעם בשעה
+[triggers]
+crons = ["17 * * * *"]
