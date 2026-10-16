@@ -50,7 +50,7 @@ node scripts/dev-server.mjs
 | `GET /v1/inbox?ack=<id,...>` | מכשיר | הודעות שעוד לא נמסרו. `ack` מסמן הודעות כנמסרו |
 | `DELETE /v1/me` | מכשיר | מוחק את המכשיר, את המשובים, את הלוגים ואת ההודעות |
 | `POST /v1/nav/route` | מכשיר | JSON של HERE כמו שהוא. 503 כשאין מפתח, 429 מעל 60 בשעה |
-| `POST /v1/nav/siri/stop` | מכשיר | XML של SIRI כמו שהוא. cache של 20 שניות |
+| `POST /v1/nav/siri/stop` | מכשיר | XML של SIRI כמו שהוא. cache של 20 שניות (עובד רק על דומיין משלך: ב-`workers.dev` ה-Cache API של Cloudflare לא פעיל, וכל בקשה מגיעה ל-SIRI) |
 | `GET /admin/clusters` | אתה | אשכולות המשוב |
 | `POST /admin/clusters/<id>/decision` | אתה | `{"state":"deep"}` פותח issue ושולח "בטיפול". `{"state":"wontfix"}` סוגר |
 | `POST /admin/clusters/<id>/fixed` | אתה | `{"version":"..."}` שולח "תוקן בגרסה X" לכל מי שדיווח |
