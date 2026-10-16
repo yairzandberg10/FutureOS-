@@ -343,7 +343,7 @@ class KeyboardService : InputMethodService() {
             } catch (e: Throwable) {
                 android.util.Log.e("KeyboardService", "Hebrew dictionary unavailable", e)
                 android.os.Handler(android.os.Looper.getMainLooper()).post {
-                    panelMessage = "המילון המלא לא נטען - ניבוי מצומצם"
+                    showPanelMessage("המילון המלא לא נטען - ניבוי מצומצם")
                 }
             }
         }.start()
@@ -1321,7 +1321,8 @@ class KeyboardService : InputMethodService() {
     private fun clipActions(): List<ClipAction> {
         val current = currentClipText()
         val actions = mutableListOf<ClipAction>()
-        if (current != null) actions += ClipAction("הדבק", preview(current)) { ic -> ic.commitText(current, 1) }
+        // העתקה שסומנה כרגישה: מדביקים, אבל לא מציגים ממנה תצוגה מקדימה על המסך
+        if (current != null) actions += ClipAction("הדבק", if (clipIsSensitive()) null else preview(current)) { ic -> ic.commitText(current, 1) }
         actions += ClipAction("העתק", "המסומן, או את כל הטקסט") { ic -> copyFromField(ic, cut = false) }
         actions += ClipAction("גזור", "המסומן, או את כל הטקסט") { ic -> copyFromField(ic, cut = true) }
         actions += ClipAction("בחר הכל", null) { ic -> ic.performContextMenuAction(android.R.id.selectAll) }
@@ -1538,7 +1539,7 @@ class KeyboardService : InputMethodService() {
                 if (event.repeatCount == 0) {
                     voiceInputArmed = false
                     zeroPending = true
-                } else if (!voiceInputArmed && event.repeatCount > longPressRepeatThreshold) {
+                } else if (!voiceInputArmed && !isPrivateField && event.repeatCount > longPressRepeatThreshold) {
                     voiceInputArmed = true
                     zeroPending = false
                     startVoiceTranscription()
@@ -1656,7 +1657,7 @@ class KeyboardService : InputMethodService() {
                 if (event.repeatCount == 0) {
                     voiceInputArmed = false
                     zeroPending = true
-                } else if (!voiceInputArmed && event.repeatCount > longPressRepeatThreshold) {
+                } else if (!voiceInputArmed && !isPrivateField && event.repeatCount > longPressRepeatThreshold) {
                     voiceInputArmed = true
                     zeroPending = false
                     startVoiceTranscription()
@@ -2002,11 +2003,12 @@ class KeyboardService : InputMethodService() {
         clipboardManager.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(this)?.toString()
     }.getOrNull()?.takeIf { it.isNotEmpty() }
 
+    private fun clipIsSensitive(): Boolean = runCatching {
+        clipboardManager.primaryClipDescription?.extras?.getBoolean(EXTRA_CLIP_SENSITIVE, false) == true
+    }.getOrDefault(false)
+
     private fun rememberCurrentClip() {
-        val sensitive = runCatching {
-            clipboardManager.primaryClipDescription?.extras?.getBoolean(EXTRA_CLIP_SENSITIVE, false) == true
-        }.getOrDefault(false)
-        if (sensitive || isPrivateField) return
+        if (clipIsSensitive() || isPrivateField) return
         currentClipText()?.let(::rememberClip)
     }
 

@@ -10,7 +10,7 @@ class KeyboardWidgetProvider : FutureContentWidget() {
     override fun content(context: Context): WidgetContent {
         val current = Settings.Secure.getString(context.contentResolver, Settings.Secure.DEFAULT_INPUT_METHOD).orEmpty()
         val active = current.startsWith(context.packageName + "/")
-        return if (active) WidgetContent(value = "המקלדת פעילה", subtitle = "* ארוך שפה · 0 ארוך הכתבה")
+        return if (active) WidgetContent(value = "המקלדת פעילה", subtitle = "# שפה · 0 ארוך הכתבה")
         else WidgetContent(value = "המקלדת לא פעילה", subtitle = "פתח כדי להגדיר אותה כברירת מחדל")
     }
 }
