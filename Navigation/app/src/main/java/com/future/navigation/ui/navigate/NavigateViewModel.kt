@@ -169,7 +169,7 @@ class NavigateViewModel(
             try {
                 // runCatching היה בולע CancellationException - ביטול ה-ViewModel לא נעצר
                 val newRoute = try {
-                    routingRepository.getDrivingRoute(from, destination)
+                    routingRepository.getDrivingRoute(from, destination).routeOrNull
                 } catch (e: kotlinx.coroutines.CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -207,7 +207,7 @@ class NavigateViewModel(
         rerouting = true
         try {
             val candidate = (try {
-                routingRepository.getDrivingRoute(from, destination)
+                routingRepository.getDrivingRoute(from, destination).routeOrNull
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Exception) {

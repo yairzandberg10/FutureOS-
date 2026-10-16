@@ -13,6 +13,7 @@ import com.future.navigation.data.gtfs.TransitItinerary
 import com.future.navigation.data.gtfs.TransitJourneyPlanner
 import com.future.navigation.data.location.LocationHelper
 import com.future.navigation.data.routing.DrivingRoute
+import com.future.navigation.data.routing.RouteLookup
 import com.future.navigation.data.routing.RoutingRepository
 import com.future.navigation.data.siri.TransitRealtimeEnricher
 import com.future.navigation.ui.navigation.Destination
@@ -40,6 +41,12 @@ class RouteOptionsViewModel(
     private val _error = MutableStateFlow<String?>(null)
     val error = _error.asStateFlow()
 
+    /** true כשההודעה בשגיאה היא שגיאת שרת/רשת - אז מוצג כפתור "נסה שוב". */
+    private val _serverError = MutableStateFlow(false)
+    val serverError = _serverError.asStateFlow()
+
+    private var lastSearch: Triple<TravelMode, Destination, Boolean>? = null
+
     /** הורדה של נתוני התחבורה (~130MB) ברשת סלולרית מחכה לאישור המשתמש (F09). */
     private val _askCellularDownload = MutableStateFlow(false)
     val askCellularDownload = _askCellularDownload.asStateFlow()
@@ -59,6 +66,8 @@ class RouteOptionsViewModel(
 
     fun search(mode: TravelMode, destination: Destination, allowCellularDownload: Boolean = false) {
         val id = ++searchId
+        lastSearch = Triple(mode, destination, allowCellularDownload)
+        _serverError.value = false
         searchJob?.cancel()
         // תוצאות של יעד קודם לא נשארות על המסך - גם כשאין מיקום (אחרת מסלול ישן נפתח על יעד חדש)
         _drivingRoute.value = null
@@ -85,10 +94,13 @@ class RouteOptionsViewModel(
         searchJob = viewModelScope.launch {
             try {
                 when (mode) {
-                    TravelMode.DRIVE -> {
-                        val route = routingRepository.getDrivingRoute(origin, destination.location)
-                        _drivingRoute.value = route
-                        if (route == null) _error.value = "לא נמצא מסלול נסיעה"
+                    TravelMode.DRIVE -> when (val lookup = routingRepository.getDrivingRoute(origin, destination.location)) {
+                        is RouteLookup.Found -> _drivingRoute.value = lookup.route
+                        RouteLookup.NoRoute -> _error.value = "לא נמצא מסלול נסיעה"
+                        RouteLookup.ServerError -> {
+                            _error.value = "שגיאת שרת – נסה שוב"
+                            _serverError.value = true
+                        }
                     }
                     TravelMode.TRANSIT -> {
                         ensureTransitDataFor(origin, destination.location)
@@ -108,6 +120,12 @@ class RouteOptionsViewModel(
                 if (id == searchId) _loading.value = false
             }
         }
+    }
+
+    /** מנסה שוב את החיפוש האחרון (אחרי שגיאת שרת). */
+    fun retry() {
+        val (mode, destination, allow) = lastSearch ?: return
+        search(mode, destination, allowCellularDownload = allow)
     }
 
     fun confirmCellularDownload() {

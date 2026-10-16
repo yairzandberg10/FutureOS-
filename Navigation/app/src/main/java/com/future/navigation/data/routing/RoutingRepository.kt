@@ -22,8 +22,20 @@ data class DrivingRoute(
     val durationSeconds: Double
 )
 
+/**
+ * תוצאת חיפוש מסלול. "לא נמצא" = HERE ענה ואין מסלול (תשובה ריקה). "שגיאת שרת" =
+ * אף אחד מהנתיבים לא ענה (שרת, רשת, מפתח חסר) - זה שונה ולכן מוצג אחרת למשתמש.
+ */
+sealed class RouteLookup {
+    data class Found(val route: DrivingRoute) : RouteLookup()
+    data object NoRoute : RouteLookup()
+    data object ServerError : RouteLookup()
+
+    val routeOrNull: DrivingRoute? get() = (this as? Found)?.route
+}
+
 interface RoutingRepository {
-    suspend fun getDrivingRoute(from: LatLng, to: LatLng): DrivingRoute?
+    suspend fun getDrivingRoute(from: LatLng, to: LatLng): RouteLookup
 }
 
 /**
@@ -40,20 +52,21 @@ class HereRoutingRepository : RoutingRepository {
         .retrofit(HereConfig.BASE_URL)
         .create(HereApi::class.java)
 
-    override suspend fun getDrivingRoute(from: LatLng, to: LatLng): DrivingRoute? {
+    override suspend fun getDrivingRoute(from: LatLng, to: LatLng): RouteLookup {
         // הנתיב הראשון: שרת FutureOS (בלי מפתח HERE על המכשיר). אם הוא לא זמין -
-        // ממשיכים לנתיב הקיים בדיוק כמו קודם.
+        // ממשיכים לנתיב הקיים בדיוק כמו קודם. כשלון בכל השרשרת = שגיאת שרת.
         val response = fetchViaFutureServer(from, to)
             ?: run {
-                if (!HereConfig.isConfigured) return null
+                if (!HereConfig.isConfigured) return RouteLookup.ServerError
                 fetchViaProxy(from, to) ?: fetchDirectly(from, to)
             }
-            ?: return null
+            ?: return RouteLookup.ServerError
 
-        val route = response.routes.firstOrNull() ?: return null
-        val section = route.sections.firstOrNull() ?: return null
+        // תשובה שהתקבלה אבל בלי מסלול = באמת לא נמצא מסלול
+        val route = response.routes.firstOrNull() ?: return RouteLookup.NoRoute
+        val section = route.sections.firstOrNull() ?: return RouteLookup.NoRoute
         val polyline = FlexiblePolyline.decode(section.polyline)
-        if (polyline.isEmpty()) return null
+        if (polyline.isEmpty()) return RouteLookup.NoRoute
 
         val steps = section.turnByTurnActions.map { action ->
             Maneuver(
@@ -73,11 +86,13 @@ class HereRoutingRepository : RoutingRepository {
         }
 
         val summary = section.travelSummary ?: section.summary
-        return DrivingRoute(
-            polyline = polyline,
-            steps = steps,
-            distanceMeters = summary?.length ?: 0.0,
-            durationSeconds = summary?.duration ?: 0.0
+        return RouteLookup.Found(
+            DrivingRoute(
+                polyline = polyline,
+                steps = steps,
+                distanceMeters = summary?.length ?: 0.0,
+                durationSeconds = summary?.duration ?: 0.0
+            )
         )
     }
 

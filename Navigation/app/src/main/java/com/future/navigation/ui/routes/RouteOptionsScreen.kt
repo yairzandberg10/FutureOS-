@@ -57,6 +57,12 @@ fun RouteOptionsScreen(
     val itineraries by viewModel.itineraries.collectAsState()
     val askCellularDownload by viewModel.askCellularDownload.collectAsState()
     val actionFocusRequester = remember { FocusRequester() }
+    val retryFocusRequester = remember { FocusRequester() }
+    val serverError by viewModel.serverError.collectAsState()
+    // שגיאת שרת: הפוקוס ההתחלתי על "נסה שוב", כדי שאפשר לנסות ב-OK מיד
+    LaunchedEffect(serverError) {
+        if (serverError) runCatching { retryFocusRequester.requestFocus() }
+    }
     val theme = LocalFutureTheme.current
 
     LaunchedEffect(destination, mode) {
@@ -127,11 +133,19 @@ fun RouteOptionsScreen(
                         FutureSpinner(theme = theme, label = stringResource(R.string.calculating_route))
                     }
                 }
-                error != null -> Text(
-                    text = error ?: "",
+                error != null -> Column(
                     modifier = Modifier.align(Alignment.Center).padding(24.dp),
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                )
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    Text(
+                        text = error ?: "",
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+                    if (serverError) {
+                        PrimaryButton("נסה שוב", focusRequester = retryFocusRequester) { viewModel.retry() }
+                    }
+                }
                 mode == TravelMode.DRIVE && drivingRoute != null -> DrivingRouteCard(drivingRoute!!)
                 mode == TravelMode.TRANSIT -> {
                     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
