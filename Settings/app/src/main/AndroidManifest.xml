@@ -50,6 +50,11 @@
     <!-- הורדת הטפטים המובנים (אותו קטלוג צילומים של אפליקציית הטפטים) -->
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- רק אפליקציות חתומות באותו מפתח (com.future.*) יכולות לקרוא את טוקן השרת -->
+    <permission
+        android:name="com.future.settings.permission.FUTURE_SERVER"
+        android:protectionLevel="signature" />
+
     <uses-permission android:name="com.future.futureui.permission.SYSTEM_SETTINGS" />
     <uses-permission android:name="com.future.keyboard.permission.SETTINGS" />
     <application
@@ -105,6 +110,14 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/app_widget_info" />
         </receiver>
+
+        <!-- קריאה בלבד של device_id ו-token לאפליקציות com.future.* (signature) -->
+        <provider
+            android:name=".futureserver.FutureServerCredentialsProvider"
+            android:authorities="com.future.settings.futureserver"
+            android:exported="true"
+            android:permission="com.future.settings.permission.FUTURE_SERVER"
+            android:readPermission="com.future.settings.permission.FUTURE_SERVER" />
     </application>
 
 </manifest>

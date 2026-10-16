@@ -14,6 +14,15 @@ if (keystorePropertiesFile.exists()) {
     keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
 }
 
+// כתובת שרת FutureOS נקראת מ-local.properties (לא נכנסת ל-git). בלי הערך - המחרוזת ריקה,
+// והרישום מול השרת פשוט לא רץ. במכשיר האמיתי הכתובת מגיעה מ-ro.futureos.api_base.
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.inputStream().use { localProperties.load(it) }
+}
+fun localProperty(name: String): String = localProperties.getProperty(name) ?: ""
+
 android {
     namespace = "com.future.settings"
     compileSdk = 37
@@ -26,6 +35,9 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // כתובת בסיס השרת (גיבוי לערך ב-ro.futureos.api_base). ריקה = אין רישום.
+        buildConfigField("String", "FUTURE_API_BASE", "\"${localProperty("future.api.base")}\"")
     }
 
     signingConfigs {
@@ -74,6 +86,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
