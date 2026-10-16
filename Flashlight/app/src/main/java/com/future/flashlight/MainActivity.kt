@@ -26,7 +26,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             var theme by remember {
                 mutableStateOf(
-                    ThemeClient.getTheme(this@MainActivity).let {
+                    ThemeClient.cachedTheme(this@MainActivity).let {
                         FutureTheme(isDarkMode = it.isDarkMode, accentColor = Color(it.primaryColor))
                     }
                 )
@@ -38,7 +38,7 @@ class MainActivity : ComponentActivity() {
             DisposableEffect(lifecycleOwner) {
                 val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
                     if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
-                        val shared = ThemeClient.getTheme(this@MainActivity)
+                        val shared = ThemeClient.cachedTheme(this@MainActivity)
                         theme = FutureTheme(isDarkMode = shared.isDarkMode, accentColor = Color(shared.primaryColor))
                     }
                 }

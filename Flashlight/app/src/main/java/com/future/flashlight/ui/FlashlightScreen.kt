@@ -51,6 +51,7 @@ import com.future.sharednav.theme.FutureTypography
 // inTorch הציר הוא ציר הפנס: x מהזנב (0) אל העדשה (470), y לרוחב (למעלה = הצד המואר).
 private const val DESIGN_W = 640f
 private const val DESIGN_H = 960f
+private const val TOGGLE_DEBOUNCE_MS = 500L
 
 @Composable
 fun FlashlightScreen(theme: FutureTheme) {
@@ -58,6 +59,8 @@ fun FlashlightScreen(theme: FutureTheme) {
     val controller = remember { FlashlightController(context) }
     var isOn by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    // לחיצה נוספת תוך זמן קצר (לפני שהמערכת דיווחה על המצב החדש) נחשבת לכפילות
+    var lastToggleMs by remember { mutableLongStateOf(0L) }
     // המסך תמיד כהה - הפנס מצויר על במה שחורה גם כשהמערכת במצב בהיר
     val dark = remember(theme.accentColor) { FutureTheme(isDarkMode = true, accentColor = theme.accentColor) }
 
@@ -124,12 +127,16 @@ fun FlashlightScreen(theme: FutureTheme) {
                         icon = FutureIcons.PowerSettingsNew,
                         theme = dark,
                         onClick = {
-                            if (isOn) {
-                                // הפנס יכול להיות דלוק בלי השירות (למשל מהבקרה): stopService לבדו לא מכבה אותו
-                                TorchService.turnOff(context)
-                                controller.setTorch(false)
-                            } else {
-                                TorchService.turnOn(context)
+                            val now = android.os.SystemClock.elapsedRealtime()
+                            if (now - lastToggleMs >= TOGGLE_DEBOUNCE_MS) {
+                                lastToggleMs = now
+                                if (isOn) {
+                                    // הפנס יכול להיות דלוק בלי השירות (למשל מהבקרה): stopService לבדו לא מכבה אותו
+                                    TorchService.turnOff(context)
+                                    controller.setTorch(false)
+                                } else {
+                                    TorchService.turnOn(context)
+                                }
                             }
                         },
                         active = isOn,

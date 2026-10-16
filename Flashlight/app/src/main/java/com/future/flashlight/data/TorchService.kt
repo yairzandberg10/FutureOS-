@@ -37,8 +37,13 @@ class TorchService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
+        // קודם ההדלקה: אם היא נכשלת לא מציגים התראה "הפנס דלוק", ומודיעים למשתמש
+        if (!controller.setTorch(true)) {
+            android.widget.Toast.makeText(this, "לא ניתן להדליק את הפנס", android.widget.Toast.LENGTH_SHORT).show()
+            stopSelf()
+            return START_NOT_STICKY
+        }
         startForeground(NOTIFICATION_ID, notification())
-        if (!controller.setTorch(true)) stopSelf()
         return START_NOT_STICKY
     }
 
