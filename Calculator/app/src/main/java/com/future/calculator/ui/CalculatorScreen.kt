@@ -52,6 +52,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
+import com.future.sharednav.components.ConfirmDialog
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.future.sharednav.nav.digitForKey
@@ -73,23 +77,25 @@ private enum class CalculatorMode { STANDARD, SCIENTIFIC }
 @Composable
 fun CalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
     // כל הלוגיקה ב-CalculatorEngine (בלי ממשק, עם בדיקות); המסך מחזיק רק את המצב
-    var state by remember { mutableStateOf(CalcState()) }
+    var state by rememberSaveable(stateSaver = CalcStateSaver) { mutableStateOf(CalcState()) }
     val display = state.display
     val expressionLine = state.expressionLine
     val pendingOp = state.pendingOp
     val startFresh = state.startFresh
     val historyStore = rememberCalcHistoryStore()
     val history = historyStore.entries
-    var showMenu by remember { mutableStateOf(false) }
+    var showMenu by rememberSaveable { mutableStateOf(false) }
     // ההיסטוריה כבר לא יושבת מתחת למקשים (הווירפריים לא משאיר לה מקום) - היא
     // מסך נפרד שנפתח מתפריט Options.
-    var showHistory by remember { mutableStateOf(false) }
-    var calcMode by remember { mutableStateOf(CalculatorMode.STANDARD) }
+    var showHistory by rememberSaveable { mutableStateOf(false) }
+    var calcMode by rememberSaveable { mutableStateOf(CalculatorMode.STANDARD) }
+    // נבחר לפני מחיקה של כל ההיסטוריה - מחיקה בלי אישור לא הפיכה.
+    var confirmClearHistory by rememberSaveable { mutableStateOf(false) }
     fun toggleMode() {
         calcMode = if (calcMode == CalculatorMode.SCIENTIFIC) CalculatorMode.STANDARD else CalculatorMode.SCIENTIFIC
     }
     // מעלות או רדיאנים לפונקציות הטריגונומטריות במדעי.
-    var degrees by remember { mutableStateOf(true) }
+    var degrees by rememberSaveable { mutableStateOf(true) }
     val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
     val context = LocalContext.current
     // במצב רגיל אין אף מקש על המסך שמקבל פוקוס - החצים הם פעולות החשבון
@@ -97,8 +103,9 @@ fun CalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
     // הפוקוס עובר לרשת הפונקציות והחצים זזים בה.
     val rootFocus = remember { FocusRequester() }
     val focusRequester = remember { FocusRequester() }
-    LaunchedEffect(calcMode, showHistory) {
-        if (showHistory) return@LaunchedEffect
+    LaunchedEffect(calcMode, showHistory, showMenu) {
+        // כשתפריט או היסטוריה פתוחים הפוקוס שייך להם; בסגירה הוא חוזר לכפתור/לשורש.
+        if (showHistory || showMenu) return@LaunchedEffect
         runCatching { if (calcMode == CalculatorMode.STANDARD) rootFocus.requestFocus() else focusRequester.requestFocus() }
     }
     // * ו-# נצרכים ברמת המערכת (החזקה ארוכה = מרכז בקרה / מרכז התראות) ולחיצה
@@ -123,6 +130,8 @@ fun CalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
         }
     }
     fun onClear() { state = CalculatorEngine.clear() }
+    val sqrInput: () -> Unit = { state = CalculatorEngine.integerPower(state, 2) }
+    val cubeInput: () -> Unit = { state = CalculatorEngine.integerPower(state, 3) }
     fun onPercent() { state = CalculatorEngine.percent(state) }
     fun applyUnaryFunction(fn: (Double) -> Double) { state = CalculatorEngine.unary(state, fn) }
     fun onFactorial() { state = CalculatorEngine.factorial(state) }
@@ -155,8 +164,8 @@ fun CalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
         val scientificRows: List<List<Pair<String, () -> Unit>>> = listOf(
             listOf("sin" to trig(Math::sin), "cos" to trig(Math::cos), "tan" to trig(Math::tan), "xʸ" to { onOperator(CalcOp.POW) }),
             listOf("sin⁻¹" to arc(Math::asin), "cos⁻¹" to arc(Math::acos), "tan⁻¹" to arc(Math::atan), "ʸ√x" to { onOperator(CalcOp.ROOT) }),
-            listOf("log" to { applyUnaryFunction(Math::log10) }, "ln" to { applyUnaryFunction(Math::log) }, "10ˣ" to { applyUnaryFunction { x -> Math.pow(10.0, x) } }, "eˣ" to { applyUnaryFunction(Math::exp) }),
-            listOf("√" to { applyUnaryFunction(Math::sqrt) }, "∛" to { applyUnaryFunction(Math::cbrt) }, "x²" to { applyUnaryFunction { x -> x * x } }, "x³" to { applyUnaryFunction { x -> x * x * x } }),
+            listOf("log" to { applyUnaryFunction(Math::log10) }, "ln" to { applyUnaryFunction(Math::log) }, "10ˣ" to { state = CalculatorEngine.tenPow(state) }, "eˣ" to { applyUnaryFunction(Math::exp) }),
+            listOf("√" to { applyUnaryFunction(Math::sqrt) }, "∛" to { applyUnaryFunction(Math::cbrt) }, "x²" to sqrInput, "x³" to cubeInput),
             listOf("1/x" to { applyUnaryFunction { x -> 1.0 / x } }, "x!" to { onFactorial() }, "|x|" to { applyUnaryFunction(Math::abs) }, "±" to { onNegate() }),
             listOf("π" to { onConstant(Math.PI) }, "e" to { onConstant(Math.E) }, "mod" to { onOperator(CalcOp.MOD) }, (if (degrees) "DEG" else "RAD") to { degrees = !degrees }),
             listOf("÷" to { onOperator(CalcOp.DIV) }, "×" to { onOperator(CalcOp.MUL) }, "−" to { onOperator(CalcOp.SUB) }, "+" to { onOperator(CalcOp.ADD) }),
@@ -244,6 +253,7 @@ fun CalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
                             fontSize = FutureTypography.bodyLarge,
                             textAlign = TextAlign.End,
                             maxLines = 1,
+                            overflow = TextOverflow.StartEllipsis,
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
@@ -366,8 +376,20 @@ fun CalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
                 },
                 onClearHistory = {
                     showMenu = false
-                    historyStore.clear()
+                    confirmClearHistory = true
                 }
+            )
+        }
+
+        if (confirmClearHistory) {
+            ConfirmDialog(
+                message = "למחוק את כל ההיסטוריה?",
+                theme = theme,
+                onCancel = { confirmClearHistory = false },
+                onConfirm = {
+                    confirmClearHistory = false
+                    historyStore.clear()
+                },
             )
         }
     }
@@ -556,6 +578,23 @@ private fun CalculatorOptionsMenu(
         FutureMenuRow("נקה היסטוריה", FutureIcons.Delete, theme, onClearHistory, destructive = true)
     }
 }
+
+/** המצב שורד סיבוב מסך ו-process death (ל-Activity אין configChanges). */
+private val CalcStateSaver = listSaver<CalcState, Any>(
+    save = {
+        listOf(it.display, it.expressionLine, it.pendingValue?.toPlainString() ?: "", it.pendingOp?.name ?: "", it.startFresh, it.operandFromFunction)
+    },
+    restore = { l ->
+        CalcState(
+            display = l[0] as String,
+            expressionLine = l[1] as String,
+            pendingValue = (l[2] as String).takeIf { it.isNotEmpty() }?.let { java.math.BigDecimal(it) },
+            pendingOp = (l[3] as String).takeIf { it.isNotEmpty() }?.let { CalcOp.valueOf(it) },
+            startFresh = l[4] as Boolean,
+            operandFromFunction = l[5] as Boolean,
+        )
+    },
+)
 
 /**
  * ההיסטוריה נשמרת בהעדפות (50 האחרונות) - קודם היא נעלמה בכל יציאה מהמחשבון.

@@ -33,6 +33,16 @@ class CalculatorEngineTest {
 
     @Test fun divisionByZeroIsError() = assertTrue(type("5", "/", "0", "=").isError)
 
+    @Test fun equalsWithErrorHasNoHistory() = assertNull(CalculatorEngine.equals(type("5", "/", "0")).second)
+
+    @Test fun powerKeepsAllDigits() {
+        var s = CalculatorEngine.operator(type("2"), CalcOp.POW)
+        for (c in "40") s = CalculatorEngine.inputDigit(s, c.toString())
+        assertEquals("1099511627776", CalculatorEngine.equals(s).first.display)
+    }
+
+    @Test fun squareKeepsAllDigits() = assertEquals("1234321", CalculatorEngine.integerPower(CalcState(display = "1111"), 2).display)
+
     @Test fun operatorAfterErrorDoesNotContinueFromZero() {
         val s = CalculatorEngine.operator(type("5", "/", "0", "="), CalcOp.ADD)
         assertTrue(s.isError)

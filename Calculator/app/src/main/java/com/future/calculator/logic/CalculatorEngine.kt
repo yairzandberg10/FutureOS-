@@ -77,6 +77,19 @@ object CalculatorEngine {
 
     fun clear(): CalcState = CalcState()
 
+    /**
+     * חזקה: מעריך שלם (עד 1000 בערך) מחושב מדויק ב-BigDecimal, כדי ש-2^40 לא יאבד ספרות
+     * דרך Double. מעריך שאינו שלם (או גדול מדי) נשאר על Math.pow.
+     */
+    private fun power(base: BigDecimal, exp: BigDecimal): BigDecimal {
+        val n = exp.stripTrailingZeros()
+        return if (n.scale() <= 0 && n.abs() <= BigDecimal(1000)) {
+            base.pow(n.toInt(), MathContext.DECIMAL128)
+        } else {
+            BigDecimal(Math.pow(base.toDouble(), exp.toDouble()), PRECISION)
+        }
+    }
+
     private fun apply(pv: BigDecimal, op: CalcOp, cur: BigDecimal): String = try {
         val result = when (op) {
             // חיבור/חיסור/כפל מדויקים: הקלט עד 15 ספרות, והתוצאה מעוגלת רק בתצוגה ב-format
@@ -86,7 +99,7 @@ object CalculatorEngine {
             CalcOp.MUL -> pv.multiply(cur)
             CalcOp.DIV -> if (cur.signum() == 0) throw ArithmeticException("Division by zero") else pv.divide(cur, PRECISION)
             // חזקה לא-שלמה היא מחוץ ל-BigDecimal - דרך Double, כמו הפונקציות המדעיות
-            CalcOp.POW -> BigDecimal(Math.pow(pv.toDouble(), cur.toDouble()), PRECISION)
+            CalcOp.POW -> power(pv, cur)
             // שורש y של x = x^(1/y). שורש אי-זוגי של מספר שלילי מוגדר (∛-8 = -2).
             CalcOp.ROOT -> {
                 val x = pv.toDouble()
@@ -124,8 +137,9 @@ object CalculatorEngine {
         if (pv == null || op == null || s.isError) return s.copy(pendingValue = null, pendingOp = null, startFresh = true, expressionLine = "") to null
         val expression = "${format(pv)} ${op.symbol} ${format(value(s))}"
         val result = apply(pv, op, value(s))
-        // הביטוי נשאר מעל התוצאה ("12 + 3 =") עד שמתחילים מספר חדש.
-        return CalcState(display = result, startFresh = true, expressionLine = "$expression =") to CalcHistoryEntry(expression, result)
+        // הביטוי נשאר מעל התוצאה ("12 + 3 =") עד שמתחילים מספר חדש. תוצאת שגיאה לא נשמרת להיסטוריה.
+        val entry = if (result == ERROR) null else CalcHistoryEntry(expression, result)
+        return CalcState(display = result, startFresh = true, expressionLine = "$expression =") to entry
     }
 
     /** מספר חדש אחרי "=" מוחק את שורת הביטוי הקודם; באמצע פעולה היא נשארת. */
@@ -161,6 +175,28 @@ object CalculatorEngine {
             ERROR
         }
         return s.copy(display = display, startFresh = true, expressionLine = freshLine(s), operandFromFunction = true)
+    }
+
+    /** x² / x³ בדיוק (בלי Double), כמו החזקה הרגילה. */
+    fun integerPower(s: CalcState, exponent: Int): CalcState {
+        if (s.isError) return s
+        val display = try {
+            format(value(s).pow(exponent))
+        } catch (e: Exception) {
+            ERROR
+        }
+        return s.copy(display = display, startFresh = true, expressionLine = freshLine(s), operandFromFunction = true)
+    }
+
+    /** 10ˣ: מעריך שלם נשאר מדויק (10^3 = 1000), אחרת דרך Math.pow. */
+    fun tenPow(s: CalcState): CalcState {
+        val x = value(s)
+        val n = x.stripTrailingZeros()
+        return if (n.scale() <= 0 && n.abs() <= BigDecimal(1000)) {
+            s.copy(display = format(BigDecimal.TEN.pow(n.toInt(), MathContext.DECIMAL128)), startFresh = true, expressionLine = freshLine(s), operandFromFunction = true)
+        } else {
+            unary(s) { v -> Math.pow(10.0, v) }
+        }
     }
 
     fun factorial(s: CalcState): CalcState {
