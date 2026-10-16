@@ -11,6 +11,10 @@ FEEDBACK_PER_DAY = "10"
 ROUTE_PER_HOUR = "60"
 DAILY_LIMIT_HERE = "5000"
 DAILY_LIMIT_SIRI = "20000"
+# עדכונים: עצירה אוטומטית של פריסה אחרי 3 כשלי התקנה ומעל 20% כשלים. המפתח: wrangler secret put UPDATE_SIGNING_KEY
+UPDATE_PAUSE_MIN_FAILS = "3"
+UPDATE_PAUSE_FAIL_RATE = "0.2"
+DOWNLOADS_PER_DAY = "30"
 GITHUB_REPO = ""            # למשל yairzandberg10/FutureOS-feedback (ריפו פרטי)
 GITHUB_REPO_PRIVATE = "false"
 ACCESS_TEAM_DOMAIN = ""     # למשל <team>.cloudflareaccess.com

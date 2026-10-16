@@ -142,6 +142,7 @@ export async function deleteMe(env, device) {
   for (const row of results) await env.BLOBS.delete(row.log_key);
   await env.DB.batch([
     env.DB.prepare("DELETE FROM inbox WHERE device_id = ?1").bind(device.id),
+    env.DB.prepare("DELETE FROM update_events WHERE device_id = ?1").bind(device.id),
     env.DB.prepare("DELETE FROM feedback WHERE device_id = ?1").bind(device.id),
     env.DB.prepare("DELETE FROM devices WHERE id = ?1").bind(device.id),
   ]);

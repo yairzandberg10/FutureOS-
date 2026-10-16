@@ -16,3 +16,9 @@ GITHUB_REPO_PRIVATE=false
 HERE_API_KEY=
 SIRI_BASE_URL=
 SIRI_API_KEY=
+
+# עדכונים: ריק = /v1/update/check מחזיר 503 והטלפון מציג "שרת העדכונים לא מוגדר".
+# זוג מפתחות: node scripts/update-keys.mjs
+UPDATE_SIGNING_KEY=
+# UPDATE_PAUSE_MIN_FAILS=3
+# UPDATE_PAUSE_FAIL_RATE=0.2

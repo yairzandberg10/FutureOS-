@@ -1,11 +1,13 @@
 // נקודת הכניסה של ה-Worker: ניתוב בקשות, ו-Cron למיון המשובים.
 // מבנה: /v1/* למכשירים (טוקן מכשיר), /admin/* למשתמש (Cloudflare Access).
+// /v1/update/* הוא מנוע העדכונים (updates.js), השאר משוב וניווט.
 
 import { HttpError, json, errorResponse } from "./util.js";
 import { register, authenticate, submitFeedback, listFeedback, inbox, deleteMe } from "./devices.js";
 import { route, siriStop } from "./nav.js";
 import { handleAdmin } from "./admin.js";
 import { runTriage } from "./triage.js";
+import { checkUpdates, download, reportEvent } from "./updates.js";
 
 export async function handle(request, env) {
   const url = new URL(request.url);
@@ -32,7 +34,13 @@ export async function handle(request, env) {
         return route(request, env, device);
       case "POST /v1/nav/siri/stop":
         return siriStop(request, env, device);
+      case "POST /v1/update/check":
+        return checkUpdates(request, env, device);
+      case "POST /v1/update/event":
+        return reportEvent(request, env, device);
     }
+    const dl = /^\/v1\/update\/download\/([^/]+)$/.exec(path);
+    if (dl && method === "GET") return download(env, device, dl[1]);
   }
   throw new HttpError(404, "not_found");
 }

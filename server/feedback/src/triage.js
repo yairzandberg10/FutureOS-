@@ -7,7 +7,7 @@ import { now, newId } from "./util.js";
 const BATCH = 20;
 const MSG_IN_PROGRESS = "המשוב שלך התקבל ונמצא בטיפול. נעדכן כשיצא תיקון.";
 const MSG_NEEDS_INFO = "לא הצלחנו להבין מה קרה. אפשר לשלוח משוב נוסף עם יותר פרטים: מה לחצת ומה ציפית שיקרה.";
-const msgFixed = (version) => `הבעיה שדיווחת עליה תוקנה בגרסה ${version}.`;
+export const msgFixed = (version) => `הבעיה שדיווחת עליה תוקנה בגרסה ${version}.`;
 
 const STATUS_BY_DECISION = { deep: "triaged", needs_info: "needs_info", wontfix: "wontfix", duplicate: "triaged" };
 
@@ -158,7 +158,7 @@ export async function markFixed(env, clusterId, version) {
   return results.length;
 }
 
-async function addInbox(env, feedback, kind, text) {
+export async function addInbox(env, feedback, kind, text) {
   // UNIQUE(feedback_id, kind): אותה הודעה לא נשלחת פעמיים על אותו משוב
   await env.DB.prepare(
     "INSERT OR IGNORE INTO inbox (id, device_id, feedback_id, kind, text_he, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",

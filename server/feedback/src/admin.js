@@ -4,6 +4,7 @@
 
 import { HttpError, json, readJson, timingSafeEqual } from "./util.js";
 import { runTriage, promote, markFixed } from "./triage.js";
+import { adminListReleases, adminCreateRelease, adminUploadPayload, adminRollout, adminPause, adminSetChannel } from "./updates.js";
 
 const VERSION_RE = /^[\w.\-+ ]{1,40}$/;
 let jwksCache = { at: 0, keys: [] };
@@ -130,6 +131,16 @@ export async function handleAdmin(request, env, path) {
   if (method === "POST" && path === "/admin/triage") {
     return json(await runTriage(env));
   }
+
+  // ---------- עדכונים: יצירת גרסה, העלאת קובץ, פריסה ועצירה ----------
+  if (method === "GET" && path === "/admin/releases") return adminListReleases(env);
+  if (method === "POST" && path === "/admin/releases") return adminCreateRelease(request, env);
+  m = /^\/admin\/releases\/([0-9a-f-]{36})\/(payload|rollout|pause)$/.exec(path);
+  if (m && method === "PUT" && m[2] === "payload") return adminUploadPayload(request, env, m[1]);
+  if (m && method === "POST" && m[2] === "rollout") return adminRollout(request, env, m[1]);
+  if (m && method === "POST" && m[2] === "pause") return adminPause(env, m[1]);
+  m = /^\/admin\/devices\/([0-9a-f-]{36})\/channel$/.exec(path);
+  if (m && method === "POST") return adminSetChannel(request, env, m[1]);
 
   throw new HttpError(404, "not_found");
 }

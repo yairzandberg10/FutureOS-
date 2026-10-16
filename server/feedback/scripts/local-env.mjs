@@ -67,12 +67,22 @@ export class LocalR2 {
     return join(this.dir, key.replace(/[^\w.-]/g, "_"));
   }
   async put(key, value) {
-    if (this.dir) writeFileSync(this.file(key), value);
-    else this.map.set(key, String(value));
+    // מחרוזת (לוגים) או בינארי (APK)
+    const bytes = typeof value === "string" ? Buffer.from(value, "utf8") : Buffer.from(value instanceof ArrayBuffer ? new Uint8Array(value) : value);
+    if (this.dir) writeFileSync(this.file(key), bytes);
+    else this.map.set(key, bytes);
   }
   async get(key) {
-    const text = this.dir ? (existsSync(this.file(key)) ? readFileSync(this.file(key), "utf8") : null) : this.map.get(key);
-    return text == null ? null : { text: async () => text };
+    const bytes = this.dir ? (existsSync(this.file(key)) ? readFileSync(this.file(key)) : null) : this.map.get(key);
+    if (bytes == null) return null;
+    return {
+      size: bytes.length,
+      text: async () => bytes.toString("utf8"),
+      arrayBuffer: async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.length),
+      get body() {
+        return new Blob([bytes]).stream();
+      },
+    };
   }
   async delete(key) {
     if (this.dir) rmSync(this.file(key), { force: true });

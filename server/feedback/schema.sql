@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS devices (
   token_hash    TEXT NOT NULL,             -- SHA-256 של הטוקן, הטוקן עצמו לא נשמר
   model         TEXT,
   build         TEXT,
-  channel       TEXT NOT NULL DEFAULT 'dev',
+  channel       TEXT NOT NULL DEFAULT 'stable', -- dev | beta | stable (ערוץ עדכונים; dev רק לטלפון של המשתמש)
   created_at    INTEGER NOT NULL,
   last_seen     INTEGER NOT NULL
 );
@@ -64,3 +64,38 @@ CREATE TABLE IF NOT EXISTS counters (
   count         INTEGER NOT NULL,
   expires_at    INTEGER NOT NULL
 );
+
+-- ---------- עדכונים (docs/update-feedback-design.md סעיף 2) ----------
+-- גרסה אחת = שורה אחת. kind=apk היא עדכון של אפליקציה בודדת (סעיף 2.5, אושר 2026-10-16).
+-- kind=ota שמור ל-FutureUpdater של ה-AOSP: אותו פרוטוקול, ומכשיר מקבל אותו רק אם הצהיר שהוא תומך.
+CREATE TABLE IF NOT EXISTS releases (
+  id             TEXT PRIMARY KEY,
+  kind           TEXT NOT NULL DEFAULT 'apk',   -- apk | ota
+  pkg            TEXT NOT NULL,                 -- שם החבילה; ב-ota: com.future.system
+  version_code   INTEGER NOT NULL,
+  version_name   TEXT NOT NULL,
+  channel        TEXT NOT NULL DEFAULT 'stable', -- dev | beta | stable
+  blob_key       TEXT,                          -- מפתח ב-R2 אחרי העלאה
+  size           INTEGER,
+  sha256         TEXT,                          -- מחושב בשרת בזמן ההעלאה
+  notes_he       TEXT NOT NULL DEFAULT '',
+  fixed_clusters TEXT NOT NULL DEFAULT '[]',    -- JSON: אשכולות משוב שהגרסה מתקנת
+  pct            INTEGER NOT NULL DEFAULT 0,    -- אחוז המכשירים שמקבלים (0-100)
+  state          TEXT NOT NULL DEFAULT 'draft', -- draft | active | paused
+  pause_reason   TEXT,
+  created_at     INTEGER NOT NULL,
+  updated_at     INTEGER NOT NULL,
+  UNIQUE (kind, pkg, version_code)
+);
+CREATE INDEX IF NOT EXISTS releases_active ON releases(state, kind, pkg);
+
+-- מה קרה לכל גרסה בכל מכשיר. שורה אחת לכל (מכשיר, גרסה, אירוע); at מתעדכן בכל חזרה.
+CREATE TABLE IF NOT EXISTS update_events (
+  device_id   TEXT NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
+  release_id  TEXT NOT NULL REFERENCES releases(id) ON DELETE CASCADE,
+  event       TEXT NOT NULL,                   -- offered | downloaded | installed | failed
+  error       TEXT,
+  at          INTEGER NOT NULL,
+  PRIMARY KEY (device_id, release_id, event)
+);
+CREATE INDEX IF NOT EXISTS update_events_release ON update_events(release_id, event);
