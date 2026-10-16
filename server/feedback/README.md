@@ -38,7 +38,7 @@ node scripts/dev-server.mjs
 
 שרת הפיתוח מאזין ב-`http://127.0.0.1:8787/v1`, ושומר את הנתונים בתיקייה `.local/`. בלי `.dev.vars` המיון רץ על mock והניווט מחזיר 503.
 
-כדי לחבר אליו טלפון: `adb reverse tcp:8787 tcp:8787`, ובבניית בדיקה של Settings לשים `future.api.base=http://127.0.0.1:8787/v1` ב-`local.properties`. HTTP רגיל מותר ב-Settings רק לכתובת 127.0.0.1 (`res/xml/network_security_config.xml`). כל כתובת אחרת חייבת HTTPS.
+כדי לחבר אליו טלפון: `adb reverse tcp:8787 tcp:8787`, ובבניית בדיקה של Settings לשים `future.api.base=http://127.0.0.1:8787/v1` ב-`local.properties`. HTTP רגיל ל-127.0.0.1 מותר רק בבניית debug של Settings (`src/debug/res/xml/network_security_config.xml`). בגרסת release מותר HTTPS בלבד. כדי לבדוק release מול השרת צריך כתובת HTTPS, למשל השרת אחרי פריסה. בניית debug חתומה במפתח אחר, ולכן לא מותקנת מעל release בלי להסיר אותה קודם.
 
 ## API
 
