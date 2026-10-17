@@ -95,6 +95,10 @@ fun TimerScreen(theme: FutureTheme, onBack: () -> Unit) {
             remainingMillis = left
             totalMillis = if (total > 0) total else left
             isRunning = true
+        } ?: AlarmLogic.pausedTimer(context)?.let { (left, total) ->
+            // טיימר שהושהה ואז עזבו את המסך - חוזר מושהה עם אותו זמן (CLK-08)
+            remainingMillis = left
+            totalMillis = if (total > 0) total else left
         }
     }
     // כל התחלה/המשך מתזמנת את הצלצול במערכת; השהיה/איפוס מבטלים אותו
@@ -110,7 +114,8 @@ fun TimerScreen(theme: FutureTheme, onBack: () -> Unit) {
                 remainingMillis = 0
                 isRunning = false
                 isFinished = true
-                vibrate(context)
+                // בלי רטט כאן: AlarmManager מפעיל באותו רגע את AlarmRingService, שמרטט
+                // ומצלצל בעצמו - קודם הטלפון רטט פעמיים במקביל (CLK-18).
             } else {
                 remainingMillis = remaining
                 delay(100)
@@ -128,11 +133,13 @@ fun TimerScreen(theme: FutureTheme, onBack: () -> Unit) {
         deadlineElapsedRealtime = android.os.SystemClock.elapsedRealtime() + totalMs
         isFinished = false
         isRunning = true
+        AlarmLogic.clearPausedTimer(context)
         armSystemTimer()
     }
 
     fun resetTimer() {
         AlarmLogic.cancelTimer(context)
+        AlarmLogic.clearPausedTimer(context)
         isRunning = false
         isFinished = false
         remainingMillis = 0
@@ -222,9 +229,11 @@ fun TimerScreen(theme: FutureTheme, onBack: () -> Unit) {
                             remainingMillis = (deadlineElapsedRealtime - android.os.SystemClock.elapsedRealtime()).coerceAtLeast(0L)
                             isRunning = false
                             AlarmLogic.cancelTimer(context)
+                            AlarmLogic.savePausedTimer(context, remainingMillis, totalMillis)
                         } else if (remainingMillis > 0) {
                             deadlineElapsedRealtime = android.os.SystemClock.elapsedRealtime() + remainingMillis
                             isRunning = true
+                            AlarmLogic.clearPausedTimer(context)
                             armSystemTimer()
                         } else {
                             startTimer()

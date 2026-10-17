@@ -319,6 +319,27 @@ object AlarmLogic {
         return end to prefs.getLong(TIMER_TOTAL_KEY, 0L)
     }
 
+    /**
+     * טיימר מושהה - נשמר כדי שמעבר לשונית או יציאה מהאפליקציה לא ימחקו אותו (CLK-08).
+     * קודם הזמן שנשאר היה רק ב-remember של המסך, וההשהיה ביטלה את מה שנשמר.
+     */
+    fun savePausedTimer(context: Context, remainingMillis: Long, totalMillis: Long) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
+            .putLong(TIMER_PAUSED_LEFT_KEY, remainingMillis).putLong(TIMER_TOTAL_KEY, totalMillis).apply()
+    }
+
+    fun clearPausedTimer(context: Context) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().remove(TIMER_PAUSED_LEFT_KEY).apply()
+    }
+
+    /** (זמן שנשאר, אורך מלא) של טיימר מושהה, או null. */
+    fun pausedTimer(context: Context): Pair<Long, Long>? {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val left = prefs.getLong(TIMER_PAUSED_LEFT_KEY, 0L)
+        if (left <= 0L) return null
+        return left to prefs.getLong(TIMER_TOTAL_KEY, 0L)
+    }
+
     private fun timerIntent(context: Context): PendingIntent = PendingIntent.getBroadcast(
         context, TIMER_REQUEST_CODE,
         Intent(context, AlarmReceiver::class.java).setAction(ACTION_TIMER_FIRED),
@@ -327,6 +348,7 @@ object AlarmLogic {
 
     private const val TIMER_END_KEY = "timer_end_wall"
     private const val TIMER_TOTAL_KEY = "timer_total"
+    private const val TIMER_PAUSED_LEFT_KEY = "timer_paused_left"
     private const val TIMER_REQUEST_CODE = 2_000_000
 
     private fun cancelRequestCode(context: Context, alarmManager: AlarmManager, requestCode: Int) {
