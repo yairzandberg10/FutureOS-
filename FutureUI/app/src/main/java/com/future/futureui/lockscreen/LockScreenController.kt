@@ -422,6 +422,9 @@ class LockScreenController(
         }
 
         if (event.action != KeyEvent.ACTION_DOWN) return true
+        // ספרה שמוחזקת קצת יותר מדי שולחת ACTION_DOWN חוזרים (repeatCount > 0) - קודם כל
+        // אחד מהם נוסף לקוד, והקוד הנכון נקלט כשגוי ונספר ככישלון.
+        if (event.repeatCount > 0 && digitOf(code) != null) return true
         when (state.mode) {
             LockMode.PIN -> onPinKey(code)
             LockMode.EDIT -> onEditKey(code)
