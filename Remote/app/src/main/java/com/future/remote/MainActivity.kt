@@ -35,6 +35,8 @@ class MainActivity : ComponentActivity() {
             var route by remember { mutableStateOf<RemoteRoute>(RemoteRoute.Home) }
             // עולה בכל חזרה למסך הראשי כדי שהרשימה תציג את המצב האחרון של כל שלט.
             var refreshKey by remember { mutableStateOf(0) }
+            // R13: בחזרה לרשימה הפוקוס חוזר לחברה שנפתחה.
+            var lastOpenedId by remember { mutableStateOf<String?>(null) }
             val goHome = { refreshKey++; route = RemoteRoute.Home }
             BackHandler(enabled = route != RemoteRoute.Home) { goHome() }
 
@@ -52,7 +54,8 @@ class MainActivity : ComponentActivity() {
                             RemoteRoute.Home -> RemoteHomeScreen(
                                 theme = theme,
                                 refreshKey = refreshKey,
-                                onOpenRemote = { route = RemoteRoute.Ac(it) },
+                                focusDeviceId = lastOpenedId,
+                                onOpenRemote = { lastOpenedId = it; route = RemoteRoute.Ac(it) },
                             )
                             is RemoteRoute.Ac -> {
                                 val context = LocalContext.current

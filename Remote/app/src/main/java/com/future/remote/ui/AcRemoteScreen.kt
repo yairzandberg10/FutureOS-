@@ -90,7 +90,9 @@ fun AcRemoteScreen(theme: FutureTheme, device: RemoteDevice, onBack: () -> Unit)
     var protocol by remember { mutableStateOf(device.acProtocol!!) }
     var state by remember { mutableStateOf(device.acState ?: AcState()) }
     var showMenu by remember { mutableStateOf(false) }
-    onOptionsKeyPress { showMenu = true }
+    var confirmReset by remember { mutableStateOf(false) }
+    // R12: Options שוב סוגר את התפריט.
+    onOptionsKeyPress { if (!confirmReset) showMenu = !showMenu }
 
     val scope = rememberCoroutineScope()
     fun send(next: AcState) {
@@ -115,13 +117,17 @@ fun AcRemoteScreen(theme: FutureTheme, device: RemoteDevice, onBack: () -> Unit)
     }
 
     fun power() = send(state.copy(power = !state.power))
-    fun temp(delta: Int) {
-        val range = AcProtocols.tempRange(protocol)
-        send(state.copy(power = true, temp = (state.temp.coerceIn(range) + delta).coerceIn(range)))
+    // R10: כשהמזגן כבוי, מקשי טמפרטורה/מצב/מאוורר/תנודה לא מדליקים אותו בלי שביקשו.
+    fun whenOn(action: () -> Unit) {
+        if (state.power) action() else Toast.makeText(context, "המזגן כבוי - לחצו 5 להפעלה", Toast.LENGTH_SHORT).show()
     }
-    fun mode() = send(state.copy(power = true, mode = AcMode.entries[(state.mode.ordinal + 1) % AcMode.entries.size]))
-    fun fan() = send(state.copy(power = true, fan = AcFan.entries[(state.fan.ordinal + 1) % AcFan.entries.size]))
-    fun swing() = send(state.copy(power = true, swing = !state.swing))
+    fun temp(delta: Int) = whenOn {
+        val range = AcProtocols.tempRange(protocol)
+        send(state.copy(temp = (state.temp.coerceIn(range) + delta).coerceIn(range)))
+    }
+    fun mode() = whenOn { send(state.copy(mode = AcMode.entries[(state.mode.ordinal + 1) % AcMode.entries.size])) }
+    fun fan() = whenOn { send(state.copy(fan = AcFan.entries[(state.fan.ordinal + 1) % AcFan.entries.size])) }
+    fun swing() = whenOn { send(state.copy(swing = !state.swing)) }
 
     val powerFocus = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { powerFocus.requestFocus() } }
@@ -133,6 +139,8 @@ fun AcRemoteScreen(theme: FutureTheme, device: RemoteDevice, onBack: () -> Unit)
                 .background(theme.backgroundColor)
                 .onPreviewKeyEvent { e ->
                     if (e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                    // R07: החזקת מקש לא שולחת שידור לכל חזרה - אחרת המזגן ממשיך לזוז אחרי השחרור.
+                    if (e.nativeKeyEvent.repeatCount > 0) return@onPreviewKeyEvent digitForKey(e.key) != null
                     when (digitForKey(e.key)) {
                         "5" -> { power(); true }
                         "2" -> { temp(+1); true }
@@ -200,16 +208,31 @@ fun AcRemoteScreen(theme: FutureTheme, device: RemoteDevice, onBack: () -> Unit)
                 FutureMenuRow("החלף ל-${other.label.removePrefix("שלט ")}", FutureIcons.SwapHoriz, theme, {
                     showMenu = false
                     protocol = other
-                    repository.updateDevice(device.id) { it.copy(acProtocol = other) }
+                    // R08: הטמפרטורה מותאמת לטווח של הדגם החדש, כדי שהמסך והשידור יסכימו.
+                    state = state.copy(temp = state.temp.coerceIn(AcProtocols.tempRange(other)))
+                    repository.updateDevice(device.id) { it.copy(acProtocol = other, acState = state) }
                     Toast.makeText(context, "עכשיו: ${other.label}", Toast.LENGTH_SHORT).show()
                 })
             }
+            // R11: איפוס השלט מבקש אישור.
             FutureMenuRow("איפוס השלט", FutureIcons.Delete, theme, {
                 showMenu = false
-                repository.deleteDevice(device.id)
-                onBack()
+                confirmReset = true
             }, destructive = true)
         }
+    }
+    if (confirmReset) {
+        com.future.sharednav.components.ConfirmDialog(
+            message = "לאפס את השלט ${device.name}? ההגדרות שלו יימחקו.",
+            theme = theme,
+            confirmLabel = "אפס",
+            onCancel = { confirmReset = false },
+            onConfirm = {
+                confirmReset = false
+                repository.deleteDevice(device.id)
+                onBack()
+            },
+        )
     }
 }
 

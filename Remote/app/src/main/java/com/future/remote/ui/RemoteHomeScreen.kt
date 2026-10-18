@@ -45,19 +45,24 @@ fun RemoteHomeScreen(
     theme: FutureTheme,
     refreshKey: Int,
     onOpenRemote: (deviceId: String) -> Unit,
+    focusDeviceId: String? = null,
 ) {
     val context = LocalContext.current
     val repository = remember { RemoteRepository(context) }
     val irTransmitter = remember { IrTransmitter(context) }
     var remotes by remember { mutableStateOf(mapOf<AcCompany, RemoteDevice>()) }
     val focusRequester = remember { FocusRequester() }
+    val rowFocus = remember { mutableMapOf<AcCompany, FocusRequester>() }
 
     LaunchedEffect(refreshKey) {
         remotes = repository.loadDevices()
             .filter { it.acCompany != null && it.acProtocol != null }
             .associateBy { it.acCompany!! }
     }
-    LaunchedEffect(Unit) { runCatching { focusRequester.requestFocus() } }
+    LaunchedEffect(remotes) {
+        val target = remotes.entries.firstOrNull { it.value.id == focusDeviceId }?.key
+        runCatching { (target?.let { rowFocus.getOrPut(it) { FocusRequester() } } ?: focusRequester).requestFocus() }
+    }
 
     fun open(company: AcCompany) {
         val existing = remotes[company]
@@ -113,7 +118,8 @@ fun RemoteHomeScreen(
                                 },
                                 theme = theme,
                                 onClick = { open(company) },
-                                focusRequester = if (index == 0) focusRequester else null
+                                focusRequester = if (index == 0 && remotes[company]?.id != focusDeviceId) focusRequester
+                                    else rowFocus.getOrPut(company) { FocusRequester() }
                             )
                         }
                     }
