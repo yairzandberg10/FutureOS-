@@ -80,7 +80,24 @@ object Recordings {
     }
 
     fun delete(file: File): Boolean = file.delete()
+
+    /**
+     * R-36: קבצים חלקיים (.part) מהקלטה שנקטעה (התהליך נהרג באמצע). אין בהם סוף
+     * קובץ ולכן הם לא ניתנים להשמעה - נמחקים, ומוחזר כמה היו כדי להודיע למשתמש.
+     * לקרוא רק כשאין הקלטה פעילה, ולא מה-main thread.
+     */
+    fun discardInterrupted(context: Context): Int {
+        val parts = dir(context).listFiles { f -> f.isFile && f.name.endsWith(".part") }.orEmpty()
+        parts.forEach { it.delete() }
+        return parts.size
+    }
 }
+
+/**
+ * R-44: שם הקלטה מבודד לתצוגה (FSI...PDI), כך ששם שמערבב אנגלית ועברית לא מתהפך
+ * ולא "מושך" איתו גרשיים וסימני פיסוק שמסביבו.
+ */
+fun isolated(name: String): String = "${Char(0x2068)}$name${Char(0x2069)}"
 
 /** mm:ss, או h:mm:ss מעל שעה. */
 fun formatDuration(ms: Long): String {

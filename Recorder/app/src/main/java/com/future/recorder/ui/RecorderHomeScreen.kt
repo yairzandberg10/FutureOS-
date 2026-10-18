@@ -109,6 +109,29 @@ fun RecorderHomeScreen(theme: FutureTheme, onPlay: (File) -> Unit) {
             RecorderService.clearError()
         }
     }
+    // R-36: הקלטה שנקטעה (התהליך נהרג באמצע) מדווחת כבר בפתיחה, ולא רק בהקלטה הבאה.
+    LaunchedEffect(Unit) {
+        if (RecorderService.state.value.status != RecorderStatus.Idle) return@LaunchedEffect
+        val interrupted = withContext(Dispatchers.IO) { Recordings.discardInterrupted(context) }
+        if (interrupted > 0) Toast.makeText(context, "ההקלטה הקודמת נקטעה ולא נשמרה", Toast.LENGTH_LONG).show()
+    }
+    // R-19: BACK באמצע הקלטה לא יוצא בשקט - שואלים קודם, וההקלטה ממשיכה ברקע.
+    var confirmLeave by remember { mutableStateOf(false) }
+    androidx.activity.compose.BackHandler(enabled = state.status != RecorderStatus.Idle) { confirmLeave = true }
+    if (confirmLeave) {
+        ConfirmDialog(
+            message = "ההקלטה תמשיך ברקע. לצאת?",
+            theme = theme,
+            onCancel = { confirmLeave = false },
+            onConfirm = {
+                confirmLeave = false
+                (context as? Activity)?.finish()
+            },
+            cancelLabel = "הישאר",
+            confirmLabel = "צא",
+            destructive = false,
+        )
+    }
     LaunchedEffect(state.warning) {
         state.warning?.let {
             Toast.makeText(context, it, Toast.LENGTH_LONG).show()
@@ -204,7 +227,7 @@ fun RecorderHomeScreen(theme: FutureTheme, onPlay: (File) -> Unit) {
                     }
                     items(list, key = { it.file.path }) { rec ->
                         FutureListItem(
-                            title = rec.name,
+                            title = com.future.recorder.data.isolated(rec.name),
                             summary = "${formatDate(context, rec.modified)} · ${formatDuration(rec.durationMs)}",
                             theme = theme,
                             onClick = { onPlay(rec.file) },
@@ -227,7 +250,7 @@ fun RecorderHomeScreen(theme: FutureTheme, onPlay: (File) -> Unit) {
     }
 
     menuFor?.let { rec ->
-        FutureOptionsMenu(theme = theme, onDismissRequest = { menuFor = null }, header = rec.name) {
+        FutureOptionsMenu(theme = theme, onDismissRequest = { menuFor = null }, header = com.future.recorder.data.isolated(rec.name)) {
             FutureMenuRow("השמע", FutureIcons.PlayArrow, theme, { menuFor = null; onPlay(rec.file) })
             FutureMenuRow("שנה שם", FutureIcons.DriveFileRenameOutline, theme, { menuFor = null; renaming = rec })
             FutureMenuRow("שתף", FutureIcons.Share, theme, { menuFor = null; shareRecording(context, rec.file) })
@@ -252,7 +275,7 @@ fun RecorderHomeScreen(theme: FutureTheme, onPlay: (File) -> Unit) {
     }
     deleting?.let { rec ->
         ConfirmDialog(
-            message = "למחוק את \"${rec.name}\"?",
+            message = "למחוק את \"${com.future.recorder.data.isolated(rec.name)}\"?",
             theme = theme,
             onCancel = { deleting = null },
             onConfirm = {

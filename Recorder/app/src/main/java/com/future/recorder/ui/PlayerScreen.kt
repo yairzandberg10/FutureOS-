@@ -198,7 +198,7 @@ fun PlayerScreen(theme: FutureTheme, file: File, onBack: () -> Unit) {
                     }
                 }
         ) {
-            ScreenTopBar(title = file.nameWithoutExtension, textColor = theme.textColor, accentColor = theme.accentColor, onBack = onBack)
+            ScreenTopBar(title = com.future.recorder.data.isolated(file.nameWithoutExtension), textColor = theme.textColor, accentColor = theme.accentColor, onBack = onBack)
             Column(
                 modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = FutureDimens.screenPadding),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -241,7 +241,7 @@ fun PlayerScreen(theme: FutureTheme, file: File, onBack: () -> Unit) {
     }
 
     if (menuOpen) {
-        FutureOptionsMenu(theme = theme, onDismissRequest = { menuOpen = false }, header = file.nameWithoutExtension) {
+        FutureOptionsMenu(theme = theme, onDismissRequest = { menuOpen = false }, header = com.future.recorder.data.isolated(file.nameWithoutExtension)) {
             FutureMenuRow("מהירות: ${speedLabel(speed)}", FutureIcons.Speed, theme, { cycleSpeed() })
             FutureMenuRow("שתף", FutureIcons.Share, theme, { menuOpen = false; shareRecording(context, file) })
             FutureMenuRow("מחק", FutureIcons.Delete, theme, { menuOpen = false; confirmDelete = true }, destructive = true)
@@ -249,7 +249,7 @@ fun PlayerScreen(theme: FutureTheme, file: File, onBack: () -> Unit) {
     }
     if (confirmDelete) {
         ConfirmDialog(
-            message = "למחוק את \"${file.nameWithoutExtension}\"?",
+            message = "למחוק את \"${com.future.recorder.data.isolated(file.nameWithoutExtension)}\"?",
             theme = theme,
             onCancel = { confirmDelete = false },
             onConfirm = {
