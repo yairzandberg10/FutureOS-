@@ -85,8 +85,12 @@ fun ProgressScreen(
     val monthMinutes = monthEntries.sumOf { it.minutes }
     val totalCalories = remember(history) { history.sumOf { it.calories } }
 
-    val records = remember(history) { buildPersonalRecords(history, theme) }
-    val nextMilestone = remember(history) { WORKOUT_MILESTONES.firstOrNull { it > history.size } ?: (WORKOUT_MILESTONES.last() * 2) }
+    // F13: הצבעים של הכרטיסים מתעדכנים גם כשצבע ההדגשה משתנה.
+    val records = remember(history, theme) { buildPersonalRecords(history, theme) }
+    // F14: אחרי היעד האחרון ברשימה - כל 250 אימונים יעד חדש, ולא 500 לנצח.
+    val nextMilestone = remember(history) {
+        WORKOUT_MILESTONES.firstOrNull { it > history.size } ?: (((history.size / 250) + 1) * 250)
+    }
 
     // המסך הזה תצוגה בלבד (אין כרטיס לחיץ), אז בלי טיפול מפורש ב-D-pad
     // למעלה/למטה, DOWN היה פשוט מזיז את הפוקוס האמיתי לכפתור "אימון חי"
@@ -231,7 +235,7 @@ fun ProgressScreen(
                         Text("השלמת ${history.size} אימונים עד כה", color = theme.textColor.copy(alpha = 0.55f), fontSize = FutureTypography.caption)
                     }
                     Text(
-                        "${((history.size.toFloat() / nextMilestone) * 100).toInt()}%",
+                        "${((history.size.toFloat() / nextMilestone) * 100).toInt().coerceIn(0, 100)}%",
                         color = theme.successColor,
                         fontSize = FutureTypography.bodyLarge,
                         fontWeight = FontWeight.ExtraBold,

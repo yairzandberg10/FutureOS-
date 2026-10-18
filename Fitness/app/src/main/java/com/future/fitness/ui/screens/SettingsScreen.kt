@@ -162,7 +162,8 @@ fun SettingsScreen(
                         onValueChange = { v ->
                             if (v.length <= 3 && v.all { it.isDigit() }) {
                                 weightText = v
-                                onSetProfile(v.toIntOrNull(), ageText.toIntOrNull())
+                                // F12: נשמרים רק ערכים בטווח סביר (משקל 20-300, גיל 10-110).
+                                onSetProfile(validWeight(v), validAge(ageText))
                             }
                         },
                         label = "משקל (ק״ג)",
@@ -178,7 +179,7 @@ fun SettingsScreen(
                         onValueChange = { v ->
                             if (v.length <= 3 && v.all { it.isDigit() }) {
                                 ageText = v
-                                onSetProfile(weightText.toIntOrNull(), v.toIntOrNull())
+                                onSetProfile(validWeight(weightText), validAge(v))
                             }
                         },
                         label = "גיל",
@@ -222,6 +223,8 @@ fun SettingsScreen(
                         }
                         HrConnectionState.CONNECTING -> {
                             Text("מתחבר", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.summary, modifier = Modifier.padding(vertical = 12.dp))
+                            // F10: אפשר לבטל חיבור שלא מתקדם.
+                            FutureButton("בטל", theme, { heartRateMonitor.disconnect() }, variant = FutureButtonVariant.Secondary, fillMaxWidth = true)
                         }
                         HrConnectionState.SCANNING -> {
                             Text("סורק מכשירים בקרבת מקום", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.summary, modifier = Modifier.padding(vertical = 12.dp))
@@ -245,8 +248,9 @@ fun SettingsScreen(
                 items(heartRateMonitor.foundDevices, key = { it.address }) { device ->
                     FocusableItem(
                         onClick = {
+                            // F08: המכשיר נשמר רק אחרי חיבור מוצלח עם שירות דופק, לא בלחיצה.
+                            heartRateMonitor.onConnectedAndVerified = { address, _ -> onDeviceConnected(address, device.name) }
                             heartRateMonitor.connect(device.address)
-                            onDeviceConnected(device.address, device.name)
                         },
                         theme = theme,
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
@@ -281,3 +285,7 @@ private fun SectionLabel(text: String, theme: FutureTheme) {
         modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 8.dp),
     )
 }
+
+private fun validWeight(text: String): Int? = text.toIntOrNull()?.takeIf { it in 20..300 }
+
+private fun validAge(text: String): Int? = text.toIntOrNull()?.takeIf { it in 10..110 }

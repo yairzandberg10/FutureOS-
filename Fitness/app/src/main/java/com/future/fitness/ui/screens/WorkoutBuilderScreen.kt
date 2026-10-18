@@ -160,7 +160,8 @@ fun WorkoutBuilderScreen(
                         FitnessTextField(
                         theme = theme,
                             value = ex.sets,
-                            onValueChange = { v -> if (v.length <= 2 && v.all { it.isDigit() }) ex.sets = v },
+                            // F19: 1-10 סטים - יותר מזה לא נכנס בשורת העיגולים של האימון.
+                            onValueChange = { v -> if (v.isEmpty() || (v.all { it.isDigit() } && v.toInt() in 1..10)) ex.sets = v },
                             label = "סטים",
                             keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Number),
                             modifier = Modifier.width(90.dp),
@@ -214,7 +215,7 @@ fun WorkoutBuilderScreen(
                         durationMin = durationMin.toIntOrNull() ?: 30,
                         met = met,
                         exercises = exercises.filter { it.name.isNotBlank() }.map { ex ->
-                            Exercise(ex.name.trim(), ex.sets.toIntOrNull()?.coerceAtLeast(1) ?: 3, ex.reps.ifBlank { "10 חזרות" })
+                            Exercise(ex.name.trim(), ex.sets.toIntOrNull()?.coerceIn(1, 10) ?: 3, ex.reps.ifBlank { "10 חזרות" })
                         },
                         isCustom = true,
                     )

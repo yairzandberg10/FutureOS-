@@ -142,11 +142,24 @@ fun ActiveWorkoutScreen(
     }
 
     LaunchedEffect(state) {
+        // F26: הזמן נמדד לפי השעון ולא לפי מספר הטיקים - delay מתארך תחת עומס.
+        var lastTick = android.os.SystemClock.elapsedRealtime()
+        var carryMs = 0L
         while (true) {
             delay(1000)
+            val now = android.os.SystemClock.elapsedRealtime()
+            val passedMs = now - lastTick
+            lastTick = now
             // המנוחה היא חלק מהאימון: קודם השעון עצר בכל מנוחה, ומשך האימון
             // והקלוריות שנשמרו יצאו קצרים ממה שבאמת היה.
-            if (state.running) state.elapsedSec += 1
+            if (state.running) {
+                carryMs += passedMs
+                val seconds = (carryMs / 1000).toInt()
+                state.elapsedSec += seconds
+                carryMs -= seconds * 1000L
+            } else {
+                carryMs = 0L
+            }
             if (state.resting) {
                 if (state.restRemaining <= 1) {
                     state.resting = false

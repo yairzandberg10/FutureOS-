@@ -145,10 +145,20 @@ fun WorkoutTemplateScreen(
     val estimatedMaxHr = remember(age) { age?.let { WorkoutStore.estimateMaxHr(it) } }
 
     LaunchedEffect(Unit) {
+        // F26: הזמן נמדד לפי השעון ולא לפי מספר הטיקים - delay מתארך תחת עומס.
+        var lastTick = android.os.SystemClock.elapsedRealtime()
+        var carryMs = 0L
         while (true) {
             delay(1000)
+            val now = android.os.SystemClock.elapsedRealtime()
+            val passedMs = now - lastTick
+            lastTick = now
+            if (!running) carryMs = 0L
             if (running) {
-                elapsedSec += 1
+                carryMs += passedMs
+                val seconds = (carryMs / 1000).toInt()
+                elapsedSec += seconds
+                carryMs -= seconds * 1000L
                 val bpm = heartRateMonitor.currentBpm
                 if (bpm != null && bpm > 0) {
                     hrSum += bpm
@@ -356,7 +366,12 @@ private fun MainPage(
 
         Text(formatElapsed(elapsedSec), color = theme.textColor, fontSize = FutureTypography.hero, fontWeight = FontWeight.Bold)
         if (usesGps) {
-            Text(if (tracker.hasFix) "עוקב אחרי המיקום" else "מחפש GPS", color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.label, modifier = Modifier.padding(bottom = 20.dp))
+            // F31: כשהמיקום כבוי אומרים את זה, ולא "מחפש GPS" לנצח.
+            Text(when {
+                tracker.hasFix -> "עוקב אחרי המיקום"
+                hasLocationPermission && !tracker.isTracking -> "המיקום כבוי - הפעל מיקום בהגדרות"
+                else -> "מחפש GPS"
+            }, color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.label, modifier = Modifier.padding(bottom = 20.dp))
         } else {
             Spacer(Modifier.height(24.dp))
         }

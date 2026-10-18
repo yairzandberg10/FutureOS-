@@ -98,6 +98,15 @@ fun FitnessNavHost(store: WorkoutStore, heartRateMonitor: HeartRateMonitor, them
     LaunchedEffect(current) { rootFocusRequester.requestFocus() }
 
     var statsVersion by remember { mutableIntStateOf(0) }
+    // F16: "היום" מתאפס גם כשהאפליקציה נשארה פתוחה מעבר לחצות - רענון בכל חזרה למסך.
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) statsVersion++
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
     val stats = remember(statsVersion) { store.getStats() }
     val history = remember(statsVersion) { store.getHistory() }
     var units by remember { mutableStateOf(store.getUnits()) }
@@ -282,6 +291,8 @@ fun FitnessNavHost(store: WorkoutStore, heartRateMonitor: HeartRateMonitor, them
 
             is Route.ActivityTypes -> ActivityTypesScreen(
                 theme = theme,
+                // F23: הקלוריות ברשימה לפי המשקל של המשתמש, כמו בפרטי האימון.
+                weightKg = weightKg,
                 onBack = ::pop,
                 onSelect = { type ->
                     if (type.usesGps) push(Route.GpsActivity(type.id)) else push(Route.QuickStart(type.id))

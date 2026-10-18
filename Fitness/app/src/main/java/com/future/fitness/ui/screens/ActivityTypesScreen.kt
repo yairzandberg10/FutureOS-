@@ -43,7 +43,17 @@ fun ActivityTypesScreen(
     theme: FutureTheme,
     onBack: () -> Unit,
     onSelect: (WorkoutActivityType) -> Unit,
+    weightKg: Int = WorkoutStore.DEFAULT_WEIGHT_KG,
 ) {
+    // F21: פוקוס התחלתי על השורה הראשונה (אותו דפוס ניסיון חוזר של HomeScreen).
+    val firstRowFocus = androidx.compose.runtime.remember { androidx.compose.ui.focus.FocusRequester() }
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        repeat(6) {
+            androidx.compose.runtime.withFrameNanos { }
+            if (runCatching { firstRowFocus.requestFocus() }.isSuccess) return@LaunchedEffect
+        }
+    }
+    val firstType = WorkoutActivityTypes.byCategory.values.firstOrNull()?.firstOrNull()
     Column(modifier = Modifier.fillMaxSize()) {
         ScreenTopBar(title = "כל סוגי האימון", theme = theme, onBack = onBack)
 
@@ -61,13 +71,14 @@ fun ActivityTypesScreen(
                     )
                 }
                 items(types) { type ->
-                    val caloriesPerHour = WorkoutStore.estimateCalories(type.met, WorkoutStore.DEFAULT_WEIGHT_KG, 60)
+                    val caloriesPerHour = WorkoutStore.estimateCalories(type.met, weightKg, 60)
                     IconListRow(
                         icon = type.icon,
                         title = type.displayName,
                         subtitle = "~$caloriesPerHour קלוריות לשעה",
                         theme = theme,
                         onClick = { onSelect(type) },
+                        focusRequester = if (type == firstType) firstRowFocus else null,
                         showChevron = true,
                         modifier = Modifier.padding(vertical = 4.dp),
                     )

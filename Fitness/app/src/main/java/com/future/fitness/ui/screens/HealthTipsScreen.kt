@@ -73,6 +73,14 @@ private const val DISCLAIMER = "המידע כאן כללי-חינוכי בלבד
 @Composable
 fun HealthTipsScreen(theme: FutureTheme, store: WorkoutStore, onBack: () -> Unit) {
     val profile: UserProfile = store.getProfile()
+    // F21: פוקוס התחלתי על השורה הראשונה (אותו דפוס ניסיון חוזר של HomeScreen).
+    val firstRowFocus = androidx.compose.runtime.remember { androidx.compose.ui.focus.FocusRequester() }
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        repeat(6) {
+            androidx.compose.runtime.withFrameNanos { }
+            if (runCatching { firstRowFocus.requestFocus() }.isSuccess) return@LaunchedEffect
+        }
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         ScreenTopBar(title = "בריאות", theme = theme, onBack = onBack)
@@ -89,7 +97,7 @@ fun HealthTipsScreen(theme: FutureTheme, store: WorkoutStore, onBack: () -> Unit
             if (profile.age != null) {
                 item {
                     val maxHr = WorkoutStore.estimateMaxHr(profile.age)
-                    FocusableItem(onClick = {}, theme = theme, modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
+                    FocusableItem(onClick = {}, theme = theme, modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp), focusRequester = firstRowFocus) {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -103,8 +111,14 @@ fun HealthTipsScreen(theme: FutureTheme, store: WorkoutStore, onBack: () -> Unit
                 }
             }
 
-            items(tips) { tip ->
-                FocusableItem(onClick = {}, theme = theme, modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp)) {
+            items(tips.size) { tipIndex ->
+                val tip = tips[tipIndex]
+                FocusableItem(
+                    onClick = {},
+                    theme = theme,
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
+                    focusRequester = if (tipIndex == 0 && profile.age == null) firstRowFocus else null,
+                ) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()

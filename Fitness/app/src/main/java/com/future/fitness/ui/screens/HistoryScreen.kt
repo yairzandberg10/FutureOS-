@@ -47,6 +47,14 @@ fun HistoryScreen(
     theme: FutureTheme,
     onBack: () -> Unit,
 ) {
+    // F21: פוקוס התחלתי על השורה הראשונה (אותו דפוס ניסיון חוזר של HomeScreen).
+    val firstRowFocus = androidx.compose.runtime.remember { androidx.compose.ui.focus.FocusRequester() }
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        repeat(6) {
+            androidx.compose.runtime.withFrameNanos { }
+            if (runCatching { firstRowFocus.requestFocus() }.isSuccess) return@LaunchedEffect
+        }
+    }
     Column(modifier = Modifier.fillMaxSize()) {
         ScreenTopBar(title = "היסטוריה", theme = theme, onBack = onBack)
 
@@ -82,6 +90,7 @@ fun HistoryScreen(
                         // בלי זה רשומות היסטוריה שגולשות מחוץ למסך היו בלתי-נגישות
                         // לחלוטין במכשיר בלי מסך מגע.
                         onClick = {},
+                        focusRequester = if (index == 0) firstRowFocus else null,
                     )
                 }
             }
@@ -99,8 +108,13 @@ private fun relativeDay(millis: Long): String {
     yesterdayCal.add(Calendar.DAY_OF_YEAR, -1)
     if (entryDay == dayFormat.format(yesterdayCal.time)) return "אתמול"
 
-    val entryCal = Calendar.getInstance().apply { timeInMillis = millis }
-    val todayCal = Calendar.getInstance()
-    val diffDays = ((todayCal.timeInMillis - entryCal.timeInMillis) / (24 * 60 * 60 * 1000)).toInt()
-    return "לפני $diffDays ימים"
+    // F15: לפי ימים בלוח השנה ולא לפי 24 שעות, ובעברית תקינה.
+    val zone = java.time.ZoneId.systemDefault()
+    val entryDate = java.time.Instant.ofEpochMilli(millis).atZone(zone).toLocalDate()
+    val diffDays = java.time.temporal.ChronoUnit.DAYS.between(entryDate, java.time.LocalDate.now(zone)).toInt()
+    return when {
+        diffDays == 2 -> "לפני יומיים"
+        diffDays in 3..10 -> "לפני $diffDays ימים"
+        else -> SimpleDateFormat("d.M.yyyy", Locale.US).format(millis)
+    }
 }
