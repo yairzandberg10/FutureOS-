@@ -530,7 +530,8 @@ fun MediaViewerScreen(
                 }
         ) {
             AnimatedVisibility(visible = !immersive, enter = fadeIn(), exit = fadeOut()) {
-                ViewerHeader(item = item, position = if (items.size > 1 && currentIndex >= 0) "${currentIndex + 1} / ${items.size}" else null, theme = theme)
+                // GAL-N01: המונה בבידוד LTR - בתוך RTL הוא הוצג "200 / 1".
+                ViewerHeader(item = item, position = if (items.size > 1 && currentIndex >= 0) "${Char(0x2066)}${currentIndex + 1} / ${items.size}${Char(0x2069)}" else null, theme = theme)
             }
 
             Box(
@@ -725,7 +726,11 @@ private fun ViewerHeader(item: MediaItem, position: String?, theme: FutureTheme)
         listOf(date, item.bucketName).filter { it.isNotBlank() }.joinToString(" · ")
     }
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = FutureDimens.spacingLg, vertical = FutureDimens.spacingMd),
+        // GAL-N02: רווח מתחת לשורת המצב - השעה צוירה מעל שם הקובץ.
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = com.future.sharednav.systemui.StatusBarInset.TITLE_GAP_DP.dp)
+            .padding(horizontal = FutureDimens.spacingLg, vertical = FutureDimens.spacingMd),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingMd),
     ) {
