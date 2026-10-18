@@ -150,24 +150,34 @@ fun FilesScreen(
     var initialFocusDone by remember(currentDir) { mutableStateOf(false) }
     // תיקייה שנוצרה עכשיו מקבלת את הפוקוס אחרי הטעינה מחדש (ולא הפריט הראשון).
     var pendingFocusPath by remember(currentDir) { mutableStateOf<String?>(null) }
+    // מצב הגלילה לכל תיקייה בנפרד - כדי לגלול לשורה לפני בקשת הפוקוס.
+    val listState = remember(currentDir) { androidx.compose.foundation.lazy.LazyListState() }
+    val gridState = remember(currentDir) { androidx.compose.foundation.lazy.grid.LazyGridState() }
     LaunchedEffect(currentDir, entries) {
         // רשימה ישנה מהתיקייה הקודמת (הטעינה אסינכרונית) - מחכים לרשימה של התיקייה הזו.
         if (entries.isEmpty() || entries.first().file.parentFile?.absolutePath != currentDir.absolutePath) return@LaunchedEffect
         val wanted = pendingFocusPath ?: if (initialFocusDone) focusedEntry?.file?.absolutePath else lastSelectedPath
-        val target = entries.firstOrNull { it.file.absolutePath == wanted } ?: entries.first()
-        val targetPath = target.file.absolutePath
-        // השורות עדיין לא הורכבו (FocusRequester לא מחובר) או שהבקשה נבלעה - מנסים שוב.
-        // הצלחה נמדדת לפי הפוקוס בפועל (onFocused של השורה), לא לפי היעדר חריגה:
-        // requestFocus שלא נזרק לא מבטיח שהשורה קיבלה פוקוס, והפוקוס נשאר על "+".
-        repeat(15) {
+        val targetIndex = entries.indexOfFirst { it.file.absolutePath == wanted }.coerceAtLeast(0)
+        val targetPath = entries[targetIndex].file.absolutePath
+        // FL-D03 / FL-D08: שורה מחוץ למסך לא מורכבת ב-LazyColumn, ולכן אין לה FocusRequester
+        // מחובר והפוקוס נשאר על "+". גוללים אליה קודם (בלי אנימציה), ורק אז מבקשים פוקוס.
+        // הצלחה נמדדת לפי הפוקוס בפועל (onFocused של השורה), לא לפי היעדר חריגה.
+        // אחרי הצלחה בודקים שוב שהפוקוס לא נלקח (סגירת דיאלוג מחזירה פוקוס לכפתור שפתח אותו).
+        var settledChecks = 0
+        repeat(20) {
+            runCatching { if (gridView) gridState.scrollToItem(targetIndex) else listState.scrollToItem(targetIndex) }
             val requested = runCatching { rowFocusRequesters.getOrPut(targetPath) { FocusRequester() }.requestFocus() }.isSuccess
             repeat(3) { androidx.compose.runtime.withFrameNanos { } }
             if (requested && focusedEntry?.file?.absolutePath == targetPath) {
-                initialFocusDone = true
-                pendingFocusPath = null
-                return@LaunchedEffect
+                if (++settledChecks >= 2) {
+                    initialFocusDone = true
+                    pendingFocusPath = null
+                    return@LaunchedEffect
+                }
+                kotlinx.coroutines.delay(120)
+            } else {
+                kotlinx.coroutines.delay(30)
             }
-            kotlinx.coroutines.delay(30)
         }
         pendingFocusPath = null
     }
@@ -277,6 +287,7 @@ fun FilesScreen(
                 } else if (gridView) {
                     androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
                         columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(3),
+                        state = gridState,
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -300,6 +311,7 @@ fun FilesScreen(
                     }
                 } else {
                     LazyColumn(
+                        state = listState,
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
