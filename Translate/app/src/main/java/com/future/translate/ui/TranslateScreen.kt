@@ -209,6 +209,7 @@ fun TranslateScreen(
                             null -> Unit
                         }
                     },
+                    onRetry = viewModel::retry,
                 )
             }
 
@@ -242,6 +243,7 @@ private fun ResultCard(
     onCopy: (String) -> Unit,
     onShare: (String) -> Unit,
     onSave: () -> Unit,
+    onRetry: () -> Unit = {},
 ) {
     val type = rememberFutureType()
     FutureCard(theme = theme) {
@@ -278,7 +280,16 @@ private fun ResultCard(
                     Text("מוריד את $targetName", color = theme.mutedTextColor, fontSize = type.title)
                     FutureIndeterminateProgressBar(theme = theme)
                 }
-                is Result.Failed -> Text(result.message, color = theme.dangerColor, fontSize = type.title)
+                is Result.Failed -> {
+                    Text(result.message, color = theme.dangerColor, fontSize = type.title)
+                    // T-10: אחרי כשל אפשר לנסות שוב בלי לשנות את הטקסט.
+                    com.future.sharednav.components.FutureButton(
+                        "נסה שוב",
+                        theme,
+                        onRetry,
+                        variant = com.future.sharednav.components.FutureButtonVariant.Secondary,
+                    )
+                }
             }
         }
         // הפעולות מופיעות רק כשיש תרגום - מה שאי אפשר להפעיל לא מקבל פוקוס.

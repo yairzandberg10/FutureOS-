@@ -153,6 +153,9 @@ class TranslateViewModel(application: Application) : AndroidViewModel(applicatio
         translateJob?.cancel()
     }
 
+    /** T-10: "נסה שוב" אחרי תרגום שנכשל. */
+    fun retry() = scheduleTranslate(immediate = true)
+
     private fun scheduleTranslate(immediate: Boolean = false) {
         translateJob?.cancel()
         val source = _text.value.trim()

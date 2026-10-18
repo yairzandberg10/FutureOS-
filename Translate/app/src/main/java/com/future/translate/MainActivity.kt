@@ -96,7 +96,8 @@ class MainActivity : ComponentActivity() {
         try {
             com.future.sharednav.share.FutureShare.open(this, send, "שתף תרגום")
         } catch (e: Exception) {
-            // אין אפליקציה שמקבלת טקסט - אין לאן לשתף.
+            // T-14: אין אפליקציה שמקבלת טקסט - אומרים את זה, ולא שותקים.
+            android.widget.Toast.makeText(this, "אין אפליקציה לשיתוף", android.widget.Toast.LENGTH_SHORT).show()
         }
     }
 
