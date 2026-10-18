@@ -81,6 +81,12 @@ private const val MAX_HISTORY = 50
 private const val CWD_MARKER = "__PWD__"
 
 /** cd לבד (בלי שרשור, צינור או פקודה נוספת) - רק אלה מעדכנים את הנתיב הנוכחי. */
+/** מסיר מירכאות כפולות או בודדות שעוטפות את כל הנתיב. */
+private fun unquote(path: String): String =
+    if (path.length >= 2 && ((path.startsWith('"') && path.endsWith('"')) || (path.startsWith("'") && path.endsWith("'"))))
+        path.substring(1, path.length - 1)
+    else path
+
 private fun isPureCd(cmd: String): Boolean =
     (cmd == "cd" || cmd.startsWith("cd ")) && cmd.none { it in ";&|<>`()\n" }
 
@@ -120,6 +126,7 @@ class MainActivity : ComponentActivity() {
             val scope = rememberCoroutineScope()
             var isRunning by remember { mutableStateOf(false) }
             var showMenu by rememberSaveable { mutableStateOf(false) }
+            var confirmClear by remember { mutableStateOf(false) }
             val context = LocalContext.current
             // מקש Options הפיזי נחסם ברמת המערכת ולעולם לא מגיע כ-Key.Menu לאפליקציה -
             // זו הדרך האמיתית שהוא פותח את התפריט.
@@ -169,7 +176,8 @@ class MainActivity : ComponentActivity() {
                                 // "~" ו-"cd" לבד מובילים ל-/sdcard (הבית של המשתמש כאן); "cd -"
                                 // חוזר לתיקייה הקודמת. היעד מצוטט בגרשיים בודדים - בגרשיים
                                 // כפולים "~" לא הורחב בכלל ונתיב עם " שבר את הפקודה.
-                                val target = cmd.removePrefix("cd").trim().let {
+                                // TRM-34: נתיב במירכאות (cd "My Dir") - המירכאות לא חלק מהשם.
+                                val target = cmd.removePrefix("cd").trim().let { unquote(it) }.let {
                                     when {
                                         it.isBlank() || it == "~" -> "/sdcard"
                                         it.startsWith("~/") -> "/sdcard/" + it.removePrefix("~/")
@@ -203,6 +211,8 @@ class MainActivity : ComponentActivity() {
                     // היסטוריה ארוכה בלי הגבלה (למשל logcat) ממלאת את הזיכרון ומאטה את הרשימה
                     if (lines.size > MAX_LINES) lines.removeRange(0, lines.size - MAX_LINES)
                     isRunning = false
+                    // TRM-07: כפתור השליחה נעלם בזמן הריצה ולקח איתו את הפוקוס - מחזירים לשדה.
+                    runCatching { inputFocusRequester.requestFocus() }
                     listState.animateScrollToItem((lines.size - 1).coerceAtLeast(0))
                 }
             }
@@ -347,6 +357,19 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
+                    if (confirmClear) {
+                        com.future.sharednav.components.ConfirmDialog(
+                            message = "לנקות את כל הפלט וההיסטוריה שעל המסך?",
+                            theme = theme,
+                            confirmLabel = "נקה",
+                            onCancel = { confirmClear = false },
+                            onConfirm = {
+                                confirmClear = false
+                                lines.clear()
+                            },
+                        )
+                    }
+
                     if (showMenu) {
                         TerminalOptionsMenu(
                             theme = theme,
@@ -360,9 +383,10 @@ class MainActivity : ComponentActivity() {
                                     runCatching { inputFocusRequester.requestFocus() }
                                 }
                             },
+                            // TRM-11: ניקוי ההיסטוריה מבקש אישור.
                             onClear = {
                                 showMenu = false
-                                lines.clear()
+                                confirmClear = true
                             },
                             onCopyLastOutput = {
                                 showMenu = false

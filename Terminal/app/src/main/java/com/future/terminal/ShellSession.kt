@@ -34,6 +34,8 @@ class ShellSession {
         cancelled = false
         return try {
             val proc = Runtime.getRuntime().exec(arrayOf("su", "-c", command))
+            // TRM-05: אין קלט מהמשתמש - stdin נסגר, כך שפקודה שקוראת קלט מקבלת EOF ולא נתקעת.
+            runCatching { proc.outputStream.close() }
             currentProcess = proc
             var timedOut = false
             // קוראים את stdout ו-stderr בו-זמנית (לא ברצף) - קריאה של הזרם הראשון
