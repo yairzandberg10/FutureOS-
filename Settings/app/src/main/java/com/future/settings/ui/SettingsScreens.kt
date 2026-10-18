@@ -292,6 +292,7 @@ private val SEARCHABLE_SETTINGS = listOf(
     SearchableSetting("כללי", "general תאריך שעה שפה נגישות accessibility date time language", FutureIcons.Language, Screen.General.route),
     SearchableSetting("אבטחה", "security מסך נעילה קוד pin סיסמה זיהוי פנים face lock", FutureIcons.Security, Screen.Security.route),
     SearchableSetting("אפליקציות", "apps אפליקציה", FutureIcons.Apps, Screen.Apps.route),
+    SearchableSetting("ברירות מחדל", "default ברירת מחדל חייגן הודעות sms מסך בית launcher", FutureIcons.Tune, Screen.DefaultApps.route),
     SearchableSetting("אודות הטלפון", "about imei גרסה מספר טלפון version", FutureIcons.Info, Screen.About.route)
 ) + com.future.settings.utils.ExtraSystemSettings.ALL_SCREENS.flatMap { screen ->
     // המסך עצמו, ואז כל הגדרה שבו בנפרד - חיפוש "תאורת לילה" מוביל ישר למסך שלה.
@@ -303,7 +304,7 @@ private val SEARCHABLE_SETTINGS = listOf(
 fun MainMenu(navController: NavController, theme: ThemeConfig, viewModel: SettingsViewModel) {
     var konamiBuffer by remember { mutableStateOf(listOf<Int>()) }
     var confettiTrigger by remember { mutableStateOf(0) }
-    var searchQuery by remember { mutableStateOf("") }
+    var searchQuery by rememberSaveable { mutableStateOf("") }
 
     // מצב חגיגה זמני ל-5 דקות בלבד - הטיימר הזה מסמן מחדש כל שנייה כל עוד המצב
     // פעיל, כדי שהכרטיס "יתחבא" לבד ברגע שהזמן נגמר בלי צורך לצאת ולהיכנס שוב.
@@ -1480,7 +1481,7 @@ fun GeneralScreen(navController: NavController, theme: ThemeConfig, viewModel: S
                         }
                         SettingSwitch("השאר פעיל בזמן טעינה", "המסך לא יכבה כשהמכשיר מחובר למטען", viewModel.stayAwakeWhileCharging.value, { viewModel.toggleStayAwakeWhileCharging() }, theme)
                         SettingDivider(theme)
-                        SettingSwitch("חלון מרובה (Multi Window)", "מכריח כל אפליקציה להיפתח גם בחלון מפוצל", viewModel.multiWindowForced.value, {
+                        SettingSwitch("חלון מרובה", "מכריח כל אפליקציה להיפתח גם בחלון מפוצל (${Char(0x2068)}Multi Window${Char(0x2069)})", viewModel.multiWindowForced.value, {
                             if (viewModel.multiWindowForced.value) {
                                 // כיבוי הוא "דלת היציאה" - לא דורש אישור.
                                 viewModel.toggleMultiWindowForced()
@@ -1720,6 +1721,14 @@ fun AppsScreen(navController: NavController, theme: ThemeConfig) {
         Column {
             SmallHeader("אפליקציות", theme) { navController.popBackStack() }
             LazyColumn {
+                // N-03: מסך "ברירות מחדל" (טלפון, הודעות, בית) לא היה נגיש מאף מקום.
+                item {
+                    SettingsCard(theme) {
+                        SettingItem("ברירות מחדל", "טלפון, הודעות ומסך הבית", FutureIcons.Tune, theme) {
+                            navController.navigate(Screen.DefaultApps.route)
+                        }
+                    }
+                }
                 item {
                     SettingsCard(theme) {
                         FUTURE_OS_APPS.forEachIndexed { index, app ->
@@ -2015,12 +2024,21 @@ fun DefaultAppsScreen(navController: NavController, theme: ThemeConfig, viewMode
     }
 
     fun requestRole(roleName: String) {
-        val rm = roleManager ?: return
-        if (!rm.isRoleAvailable(roleName) || rm.isRoleHeld(roleName)) return
+        // SET-39: כל מקרה שבו הבורר לא נפתח מקבל הודעה, ולא חוזר בשקט.
+        val rm = roleManager
+        if (rm == null || !rm.isRoleAvailable(roleName)) {
+            android.widget.Toast.makeText(context, "המכשיר לא תומך בבחירה הזו", android.widget.Toast.LENGTH_SHORT).show()
+            return
+        }
+        if (rm.isRoleHeld(roleName)) {
+            android.widget.Toast.makeText(context, "ההגדרות כבר ברירת המחדל", android.widget.Toast.LENGTH_SHORT).show()
+            return
+        }
         try {
             roleRequestLauncher.launch(rm.createRequestRoleIntent(roleName))
         } catch (e: Exception) {
             android.util.Log.w("SettingsScreens", "requestRole failed", e)
+            android.widget.Toast.makeText(context, "לא ניתן לפתוח את בחירת ברירת המחדל", android.widget.Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -2107,6 +2125,21 @@ fun PrivacyScreen(navController: NavController, theme: ThemeConfig) {
 fun AppPermissionsScreen(navController: NavController, theme: ThemeConfig, viewModel: SettingsViewModel, packageName: String) {
     val app = remember(packageName) { FUTURE_OS_APPS.find { it.packageName == packageName } }
     var permissions by remember(packageName) { mutableStateOf(viewModel.getSystemInteractor().getAppPermissions(packageName)) }
+    // SET-36: ביטול הרשאה מבקש אישור - האפליקציה עלולה להפסיק לעבוד כראוי.
+    var pendingRevoke by remember { mutableStateOf<com.future.settings.utils.SystemInteractor.PermissionEntry?>(null) }
+    pendingRevoke?.let { perm ->
+        ConfirmDialog(
+            theme = theme,
+            title = "ביטול הרשאה",
+            message = "לבטל את ההרשאה \"${perm.shortLabel}\"? חלק מהפעולות באפליקציה עלולות להפסיק לעבוד.",
+            confirmLabel = "בטל הרשאה",
+            onConfirm = {
+                pendingRevoke = null
+                viewModel.revokePermission(packageName, perm.name) { updated -> permissions = updated }
+            },
+            onDismiss = { pendingRevoke = null }
+        )
+    }
 
     Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
         Column {
@@ -2127,9 +2160,7 @@ fun AppPermissionsScreen(navController: NavController, theme: ThemeConfig, viewM
                                     theme,
                                     showChevron = false
                                 ) {
-                                    if (perm.granted) {
-                                        viewModel.revokePermission(packageName, perm.name) { updated -> permissions = updated }
-                                    }
+                                    if (perm.granted) pendingRevoke = perm
                                 }
                                 if (index < permissions.lastIndex) SettingDivider(theme)
                             }
@@ -2656,8 +2687,20 @@ fun SosScreen(navController: NavController, theme: ThemeConfig, viewModel: Setti
     val contact = viewModel.emergencyContact.value
     var showEditDialog by remember { mutableStateOf(false) }
     var showSosConfirm by remember { mutableStateOf(false) }
-    var nameField by remember { mutableStateOf(contact?.first ?: "") }
-    var phoneField by remember { mutableStateOf(contact?.second ?: "") }
+    var nameField by rememberSaveable { mutableStateOf(contact?.first ?: "") }
+    var phoneField by rememberSaveable { mutableStateOf(contact?.second ?: "") }
+    // SET-36: הסרת איש הקשר לחירום מבקשת אישור.
+    var showRemoveContactConfirm by remember { mutableStateOf(false) }
+    if (showRemoveContactConfirm) {
+        ConfirmDialog(
+            theme = theme,
+            title = "הסרת איש קשר לחירום",
+            message = "אחרי ההסרה הודעת SOS לא תישלח לאף אחד. להסיר?",
+            confirmLabel = "הסר",
+            onConfirm = { showRemoveContactConfirm = false; viewModel.clearEmergencyContact() },
+            onDismiss = { showRemoveContactConfirm = false }
+        )
+    }
 
     if (showEditDialog) {
         FutureDialog(
@@ -2712,7 +2755,7 @@ fun SosScreen(navController: NavController, theme: ThemeConfig, viewModel: Setti
                                 showEditDialog = true
                             }
                             SettingDivider(theme)
-                            SettingItem("הסר איש קשר", null, Icons.Rounded.PersonRemove, theme, showChevron = false) { viewModel.clearEmergencyContact() }
+                            SettingItem("הסר איש קשר", null, Icons.Rounded.PersonRemove, theme, showChevron = false) { showRemoveContactConfirm = true }
                         } else {
                             SettingItem("הוסף איש קשר לחירום", "יקבל SMS עם מיקום בעת שליחת SOS", FutureIcons.PersonAdd, theme) {
                                 nameField = ""
