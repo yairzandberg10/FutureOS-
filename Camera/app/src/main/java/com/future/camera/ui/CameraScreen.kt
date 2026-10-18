@@ -38,6 +38,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -838,13 +839,18 @@ private fun FocusReticle(fraction: Offset, locked: Boolean, accent: Color) {
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val size = 64.dp
         val density = LocalDensity.current
-        val x = with(density) { (maxWidth.toPx() * fraction.x - size.toPx() / 2).toInt() }
-        val y = with(density) { (maxHeight.toPx() * fraction.y - size.toPx() / 2).toInt() }
+        // CAM-D01: המסגרת נשארת כולה בתוך התצוגה (קודם 1 ו-7 נחתכו בקצה).
+        val maxX = with(density) { (maxWidth.toPx() - size.toPx()).toInt() }.coerceAtLeast(0)
+        val maxY = with(density) { (maxHeight.toPx() - size.toPx()).toInt() }.coerceAtLeast(0)
+        val x = with(density) { (maxWidth.toPx() * fraction.x - size.toPx() / 2).toInt() }.coerceIn(0, maxX)
+        val y = with(density) { (maxHeight.toPx() * fraction.y - size.toPx() / 2).toInt() }.coerceIn(0, maxY)
         // המיקום כאן מוחלט (שבר מהרוחב מהקצה השמאלי), בלי קשר לכיוון הפריסה.
+        // CAM-D01: absoluteOffset ולא offset - offset משתקף לפי כיוון ההורה (RTL),
+        // ולכן 1 הוצג למעלה מימין במקום למעלה משמאל כמו על המקלדת.
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
             Box(
                 modifier = Modifier
-                    .offset { IntOffset(x, y) }
+                    .absoluteOffset { IntOffset(x, y) }
                     .size(size)
                     .graphicsLayer { scaleX = scale; scaleY = scale }
                     .border(2.dp, if (locked) accent else Color.White, FutureShapes.sm)
