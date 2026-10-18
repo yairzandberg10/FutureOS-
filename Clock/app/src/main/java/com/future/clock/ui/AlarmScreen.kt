@@ -119,14 +119,15 @@ fun AlarmScreen(
     // לא הגיב בכלל - מעורר שנוצר נשאר לתמיד.
     var focusedAlarmId by remember { mutableStateOf<Int?>(null) }
     var menuOpen by remember { mutableStateOf(false) }
+    var snoozePickerOpen by remember { mutableStateOf(false) }
     // CK8: אחרי סגירת הבורר או התפריט הפוקוס חוזר לשורת המעורר (שנוסף, נערך או
     // היה ממוקד), ואם אין כזו - ל-"+". קודם שום פריט לא היה ממוקד, ו-OK לא עשה כלום.
     val rowRequesters = remember { mutableMapOf<Int, FocusRequester>() }
     val addFocus = remember { FocusRequester() }
     var restoreFocusTo by remember { mutableStateOf<Int?>(null) }
-    LaunchedEffect(restoreFocusTo, editingAlarm, menuOpen) {
+    LaunchedEffect(restoreFocusTo, editingAlarm, menuOpen, snoozePickerOpen) {
         val target = restoreFocusTo ?: return@LaunchedEffect
-        if (editingAlarm != null || menuOpen) return@LaunchedEffect
+        if (editingAlarm != null || menuOpen || snoozePickerOpen) return@LaunchedEffect
         repeat(6) {
             androidx.compose.runtime.withFrameNanos { }
             val requester = if (target == RESTORE_TO_ADD) addFocus
@@ -138,7 +139,7 @@ fun AlarmScreen(
         }
         restoreFocusTo = null
     }
-    onOptionsKeyPress { if (!overlayOpen && pendingDelete == null) menuOpen = true }
+    onOptionsKeyPress { if (!overlayOpen && pendingDelete == null && !snoozePickerOpen) menuOpen = true }
 
     LaunchedEffect(Unit) { reloadAlarms() }
 
@@ -192,15 +193,14 @@ fun AlarmScreen(
                     editingAlarm = focused
                 })
             } else {
-                // הנודניק הוא הגדרה לכל המעוררים, ולכן רק בתפריט הכללי (לא בתפריט של
-                // מעורר בודד). התפריט נשאר פתוח אחרי הבחירה, והערך מתעדכן מיד בשורה.
+                // CLK-D11: הנודניק הוא הגדרה לכל המעוררים. השורה בתפריט הכללי לא משנה
+                // ערך בלחיצה - היא פותחת בורר מפורש עם כותרת "לכל המעוררים", והערך
+                // הנוכחי מסומן בו.
                 FutureMenuRow(
-                    "נודניק: " + (if (snoozeLimit == SNOOZE_LIMIT_UNLIMITED) "ללא הגבלה" else "$snoozeLimit פעמים"),
+                    "נודניק לכל המעוררים: " + snoozeLabel(snoozeLimit),
                     FutureIcons.Schedule, theme, {
-                        // מחזורי: ללא הגבלה, 3, 5, 10, ושוב ללא הגבלה.
-                        val next = when (snoozeLimit) { 0 -> 3; 3 -> 5; 5 -> 10; else -> SNOOZE_LIMIT_UNLIMITED }
-                        AlarmLogic.setSnoozeLimit(context, next)
-                        snoozeLimit = next
+                        menuOpen = false
+                        snoozePickerOpen = true
                     },
                 )
             }
@@ -216,6 +216,28 @@ fun AlarmScreen(
                     menuOpen = false
                     pendingDelete = focused
                 }, destructive = true)
+            }
+        }
+    }
+
+    if (snoozePickerOpen) {
+        FutureOptionsMenu(
+            theme = theme,
+            onDismissRequest = { snoozePickerOpen = false; restoreFocusTo = RESTORE_TO_ADD },
+            header = "נודניק - לכל המעוררים",
+        ) {
+            listOf(SNOOZE_LIMIT_UNLIMITED, 3, 5, 10).forEach { option ->
+                FutureMenuRow(
+                    snoozeLabel(option),
+                    if (option == snoozeLimit) FutureIcons.Check else null,
+                    theme,
+                    {
+                        AlarmLogic.setSnoozeLimit(context, option)
+                        snoozeLimit = option
+                        snoozePickerOpen = false
+                        restoreFocusTo = RESTORE_TO_ADD
+                    },
+                )
             }
         }
     }
@@ -245,7 +267,7 @@ fun AlarmScreen(
                 // מהרשימה אין מסלול מקשים ללשוניות התחתונות (הסרגל לא ממוקד). לכן מקשים
                 // 1-4 מחליפים לשונית. בבורר, בתפריטים ובדיאלוג מחיקה המקשים לא עוברים לכאן.
                 .onKeyEvent { event ->
-                    if (event.type != KeyEventType.KeyDown || overlayOpen || menuOpen || pendingDelete != null) return@onKeyEvent false
+                    if (event.type != KeyEventType.KeyDown || overlayOpen || menuOpen || snoozePickerOpen || pendingDelete != null) return@onKeyEvent false
                     val index = com.future.sharednav.nav.digitForKey(event.key)?.toInt()?.minus(1) ?: return@onKeyEvent false
                     if (index !in 0..3) return@onKeyEvent false
                     onTabDigit(index)
@@ -585,3 +607,7 @@ private fun TimeValue(text: String, theme: FutureTheme, color: Color = theme.tex
 
 /** 104dp - רוחב גלגל: שתי ספרות 48sp מונו עם ריפוד. */
 private val TimeWheelWidth = 104.dp
+
+/** תווית מגבלת הנודניק: "ללא הגבלה" או "N פעמים". */
+private fun snoozeLabel(limit: Int): String =
+    if (limit == SNOOZE_LIMIT_UNLIMITED) "ללא הגבלה" else "$limit פעמים"

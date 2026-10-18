@@ -89,6 +89,16 @@ class MainActivity : ComponentActivity() {
                         // מסך מגע ומעבר טאבים הוא פעולה תכופה שכדאי שתהיה נגישה מיד.
                         .onKeyEvent { event ->
                             if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
+                            // CLK-D12: ספרות 1-4 עוברות ללשונית מכל מסך, לא רק מהמעוררים.
+                            // onKeyEvent מגיע לכאן רק אם המסך לא צרך את המקש, ולכן בטיימר
+                            // (שם הספרות מקלידות זמן) ובבורר השעה הספרות נשארות הקלדה.
+                            val tabDigit = com.future.sharednav.nav.digitForKey(event.key)?.toInt()
+                            if (tabDigit != null) {
+                                if (overlayOpen || launchedAsShortcut) return@onKeyEvent false
+                                val target = tabs.getOrNull(tabDigit - 1) ?: return@onKeyEvent false
+                                route = target.first
+                                return@onKeyEvent true
+                            }
                             val direction = when (event.key) {
                                 Key.DirectionRight -> androidx.compose.ui.focus.FocusDirection.Right
                                 Key.DirectionLeft -> androidx.compose.ui.focus.FocusDirection.Left
