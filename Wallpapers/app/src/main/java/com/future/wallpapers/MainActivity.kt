@@ -96,9 +96,11 @@ private fun WallpapersApp(theme: FutureTheme) {
     var wallpapers by remember {
         mutableStateOf(WallpaperCatalog.cached(context).ifEmpty { WallpaperCatalog.builtIn })
     }
-    var category by remember { mutableStateOf<String?>(null) }
-    var preview by remember { mutableStateOf<Wallpaper?>(null) }
-    var lastFocused by remember { mutableStateOf<String?>(null) }
+    // W01: הקטגוריה, התצוגה המקדימה והפריט האחרון שורדים סיבוב מסך ושחזור תהליך.
+    var category by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<String?>(null) }
+    var previewId by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<String?>(null) }
+    val preview = previewId?.let { id -> wallpapers.firstOrNull { it.id == id } }
+    var lastFocused by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         if (WallpaperCatalog.isFirebaseConfigured(context)) {
@@ -106,7 +108,7 @@ private fun WallpapersApp(theme: FutureTheme) {
                 .getOrNull()?.takeIf { it.isNotEmpty() }?.let { wallpapers = it }
         }
     }
-    BackHandler(enabled = preview != null) { preview = null }
+    BackHandler(enabled = preview != null) { previewId = null }
 
     val categories = remember(wallpapers) { wallpapers.map { it.category }.distinct() }
     val shown = remember(wallpapers, category) { if (category == null) wallpapers else wallpapers.filter { it.category == category } }
@@ -124,6 +126,15 @@ private fun WallpapersApp(theme: FutureTheme) {
                     item { FutureChip("הכל", theme = theme, selected = category == null, onClick = { category = null }) }
                     items(categories) { c -> FutureChip(c, theme = theme, selected = category == c, onClick = { category = c }) }
                 }
+                // W18: קטגוריה ריקה מקבלת הודעה, ולא רשת ריקה.
+                if (shown.isEmpty()) {
+                    com.future.sharednav.components.EmptyState(
+                        icon = com.future.sharednav.icons.FutureIcons.Wallpaper,
+                        title = "אין רקעים בקטגוריה הזו",
+                        textColor = theme.textColor,
+                    )
+                    return@Column
+                }
                 val first = remember { FocusRequester() }
                 LaunchedEffect(shown.firstOrNull()?.id) { runCatching { first.requestFocus() } }
                 LazyVerticalGrid(
@@ -140,7 +151,7 @@ private fun WallpapersApp(theme: FutureTheme) {
                             wallpaper = wallpaper,
                             theme = theme,
                             focusRequester = if (wallpaper.id == focusId) first else null,
-                            onClick = { lastFocused = wallpaper.id; preview = wallpaper },
+                            onClick = { lastFocused = wallpaper.id; previewId = wallpaper.id },
                         )
                     }
                 }
@@ -152,8 +163,11 @@ private fun WallpapersApp(theme: FutureTheme) {
 @Composable
 private fun Thumbnail(wallpaper: Wallpaper, theme: FutureTheme, focusRequester: FocusRequester?, onClick: () -> Unit) {
     val context = LocalContext.current
+    // W03: טעינה שנכשלה מסומנת, ולא ספינר לנצח.
+    var loadFailed by remember(wallpaper.thumbUrl) { mutableStateOf(false) }
     val bitmap by produceState(ImageLoader.peek(wallpaper.thumbUrl), wallpaper.thumbUrl) {
         value = withContext(Dispatchers.IO) { ImageLoader.load(context, wallpaper.thumbUrl, 300) }
+        loadFailed = value == null
     }
     FocusableItem(
         onClick = onClick,
@@ -168,6 +182,10 @@ private fun Thumbnail(wallpaper: Wallpaper, theme: FutureTheme, focusRequester: 
         val b = bitmap
         if (b != null) {
             Image(b.asImageBitmap(), contentDescription = wallpaper.title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().clip(FutureShapes.sm))
+        } else if (loadFailed) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                androidx.compose.material3.Text("לא נטען", color = theme.textColor.copy(alpha = 0.6f), fontSize = com.future.sharednav.theme.FutureTypography.caption)
+            }
         } else {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { FutureSpinner(theme = theme) }
         }
@@ -199,7 +217,7 @@ private fun PreviewScreen(wallpaper: Wallpaper, theme: FutureTheme) {
 
     LaunchedEffect(wallpaper.url) {
         if (bitmap == null) {
-            bitmap = withContext(Dispatchers.IO) { ImageLoader.load(context, wallpaper.url, 1400) }
+            bitmap = withContext(Dispatchers.IO) { ImageLoader.load(context, wallpaper.url, 960) }
             failed = bitmap == null
         }
         runCatching { focus.requestFocus() }
