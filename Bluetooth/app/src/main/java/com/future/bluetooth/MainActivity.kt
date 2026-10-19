@@ -62,22 +62,24 @@ class MainActivity : ComponentActivity() {
             // (הגדרות, שורת המצב) - מרעננים בכל חזרה למסך.
             val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
             DisposableEffect(lifecycleOwner) {
+                // BT-17: הרסיבר חי רק כשהאפליקציה גלויה. ברקע הדלקת בלוטות' ממרכז הבקרה
+                // לא מתחילה סריקה בלי מסך, והסריקה נעצרת כשיוצאים.
                 val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
-                    if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
-                        hasPermission = hasRequiredPermissions()
-                        if (hasPermission) controller.refreshState()
+                    when (event) {
+                        androidx.lifecycle.Lifecycle.Event.ON_START -> controller.register()
+                        androidx.lifecycle.Lifecycle.Event.ON_RESUME -> {
+                            hasPermission = hasRequiredPermissions()
+                            if (hasPermission) controller.refreshState()
+                        }
+                        androidx.lifecycle.Lifecycle.Event.ON_STOP -> {
+                            controller.stopDiscovery()
+                            controller.unregister()
+                        }
+                        else -> {}
                     }
                 }
                 lifecycleOwner.lifecycle.addObserver(observer)
                 onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-            }
-
-            DisposableEffect(Unit) {
-                controller.register()
-                onDispose {
-                    controller.stopDiscovery()
-                    controller.unregister()
-                }
             }
 
             LaunchedEffect(Unit) {
@@ -132,16 +134,18 @@ class MainActivity : ComponentActivity() {
      * האחסון בחלק מהמכשירים). אם התיקייה קיימת נפתחת אפליקציית הקבצים; אם לא -
      * false, ואין מה להראות.
      */
-    private fun openReceivedFiles(): Boolean {
+    /** null כשאפליקציית הקבצים נפתחה, אחרת ההודעה שמסבירה למה לא. */
+    private fun openReceivedFiles(): String? {
         val root = Environment.getExternalStorageDirectory()
         val folders = listOf(
             File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Bluetooth"),
             File(root, "bluetooth"),
         )
-        if (folders.none { it.isDirectory }) return false
-        val launch = packageManager.getLaunchIntentForPackage(FILES_PACKAGE) ?: return false
+        // BT-10: אפליקציית קבצים חסרה היא לא "אין קבצים" - כל מצב מקבל הודעה משלו.
+        val launch = packageManager.getLaunchIntentForPackage(FILES_PACKAGE) ?: return "אפליקציית הקבצים לא מותקנת"
+        if (folders.none { it.isDirectory }) return "אין קבצים שהתקבלו"
         startActivity(launch)
-        return true
+        return null
     }
 
     private companion object {

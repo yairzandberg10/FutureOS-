@@ -82,8 +82,8 @@ class BluetoothActions(
     val requestEnable: () -> Unit,
     /** מסך הבלוטות' של המערכת - למה שהמכשיר לא מאפשר לעשות מכאן. */
     val openSystemSettings: () -> Unit,
-    /** false כשאין קבצים שהתקבלו. */
-    val openReceivedFiles: () -> Boolean,
+    /** null כשנפתחה אפליקציית הקבצים, אחרת הודעה למשתמש. */
+    val openReceivedFiles: () -> String?,
     /** מסך הגדרות האפליקציה - לאישור הרשאה שנדחתה לצמיתות (אחרי זה המערכת לא מציגה דיאלוג). */
     val openAppSettings: () -> Unit,
 )
@@ -93,6 +93,7 @@ private sealed interface Dialog {
     data class Forget(val device: BluetoothDeviceInfo) : Dialog
     data object RenamePhone : Dialog
     data class RenameDevice(val device: BluetoothDeviceInfo) : Dialog
+    data object DisconnectAll : Dialog
 }
 
 /**
@@ -146,8 +147,7 @@ fun BluetoothApp(
             snackbar.show("הבלוטות' כבוי")
             return
         }
-        controller.startDiscovery()
-        snackbar.show("מחפש מכשירים")
+        snackbar.show(if (controller.startDiscovery()) "מחפש מכשירים" else "הסריקה לא התחילה")
     }
 
     /** פעולה שהמכשיר לא מאפשר מכאן נפתחת במסך של המערכת, עם הסבר קצר. */
@@ -222,6 +222,9 @@ fun BluetoothApp(
                             val ok = controller.connect(device.address)
                             if (ok) snackbar.show("מתחבר · ${device.name}")
                             orSystem(ok)
+                        } else if (controller.isPairing(device.address)) {
+                            // BT-07: התאמה בתהליך היא לא חיבור - אין מה לנתק.
+                            snackbar.show("ההתאמה עדיין בתהליך")
                         } else {
                             val ok = controller.disconnect(device.address)
                             if (ok) snackbar.show("נותק · ${device.name}") else orSystem(false)
@@ -244,16 +247,28 @@ fun BluetoothApp(
                 scan()
             },
             onRenamePhone = { dialog = Dialog.RenamePhone },
-            onReceivedFiles = { if (!actions.openReceivedFiles()) snackbar.show("אין קבצים שהתקבלו") },
+            onReceivedFiles = { actions.openReceivedFiles()?.let { snackbar.show(it) } },
             onSettings = actions.openSystemSettings,
-            onDisconnectAll = {
-                val ok = controller.disconnectAll()
-                if (ok) snackbar.show("כל המכשירים נותקו") else orSystem(false)
-            },
+            // BT-08: ניתוק כל המכשירים מבקש אישור קודם.
+            onDisconnectAll = { dialog = Dialog.DisconnectAll },
         )
     }
 
     when (val d = dialog) {
+        Dialog.DisconnectAll -> ConfirmDialog(
+            message = "לנתק את כל המכשירים המחוברים?",
+            theme = theme,
+            confirmLabel = "נתק הכל",
+            onCancel = { dialog = null },
+            onConfirm = {
+                dialog = null
+                when (controller.disconnectAll()) {
+                    null -> snackbar.show("אין מכשירים מחוברים")
+                    0 -> orSystem(false)
+                    else -> snackbar.show("כל המכשירים נותקו")
+                }
+            },
+        )
         is Dialog.Pair -> ConfirmDialog(
             message = "להתאים את ${d.device.name}?",
             theme = theme,
@@ -379,7 +394,10 @@ private fun DeviceLists(
     }
     // הסריקה מתחילה לבד כשנכנסים עם רדיו דולק, כמו בערכת העיצוב.
     LaunchedEffect(on) {
-        if (on && !controller.isScanning && nearby.isEmpty()) controller.startDiscovery()
+        if (on && !controller.autoScanDone && !controller.isScanning && nearby.isEmpty()) {
+            controller.autoScanDone = true
+            controller.startDiscovery()
+        }
     }
 
     Column(
@@ -702,12 +720,15 @@ private fun DeviceScreen(
                         modifier = Modifier.size(HeroCircle / 2),
                     )
                 }
+                // BT-21: שם ארוך לא דוחף את הכפתורים למטה.
                 Text(
                     device.name,
                     color = theme.textColor,
                     fontSize = type.screenTitle,
                     fontWeight = FutureTypography.weightBold,
                     textAlign = TextAlign.Center,
+                    maxLines = 2,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                 )
                 Text(statusOf(device), color = theme.mutedTextColor, fontSize = type.body)
                 if (device.connection == Connection.Connecting) {

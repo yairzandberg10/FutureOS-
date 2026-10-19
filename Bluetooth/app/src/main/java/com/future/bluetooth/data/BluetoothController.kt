@@ -81,6 +81,12 @@ class BluetoothController(private val context: Context) {
     var isScanning by mutableStateOf(false)
         private set
 
+    /** BT-05: סריקה אוטומטית רק פעם אחת בפתיחת האפליקציה, לא בכל חזרה למסך הראשי. */
+    var autoScanDone = false
+
+    /** BT-07: התאמה שהתחלנו ועוד לא הסתיימה (מוצגת כ"מתחבר"). */
+    fun isPairing(address: String): Boolean = address in pairing
+
     var adapterName by mutableStateOf(readAdapterName())
         private set
 
@@ -100,11 +106,24 @@ class BluetoothController(private val context: Context) {
 
     private var receiver: BroadcastReceiver? = null
 
+    // BT-04: בקשת פרוקסי אחת בכל פעם לכל פרופיל. פרוקסי שמגיע כשכבר יש אחד, או אחרי
+    // unregister, נסגר מיד ולא נשאר פתוח בלי בעלים.
+    private var headsetPending = false
+    private var a2dpPending = false
+
     private val profileListener = object : BluetoothProfile.ServiceListener {
         override fun onServiceConnected(profile: Int, proxy: BluetoothProfile) {
             when (profile) {
-                BluetoothProfile.HEADSET -> headset = proxy as BluetoothHeadset
-                BluetoothProfile.A2DP -> a2dp = proxy as BluetoothA2dp
+                BluetoothProfile.HEADSET -> {
+                    headsetPending = false
+                    if (receiver == null || headset != null) adapter?.closeProfileProxy(profile, proxy)
+                    else headset = proxy as BluetoothHeadset
+                }
+                BluetoothProfile.A2DP -> {
+                    a2dpPending = false
+                    if (receiver == null || a2dp != null) adapter?.closeProfileProxy(profile, proxy)
+                    else a2dp = proxy as BluetoothA2dp
+                }
             }
             refreshPairedDevices()
         }
@@ -190,9 +209,10 @@ class BluetoothController(private val context: Context) {
 
     // בלי BLUETOOTH_SCAN כל קריאה כאן זורקת SecurityException - וה-onDispose של
     // MainActivity קורא ל-stopDiscovery גם כשההרשאה נדחתה, כך שיציאה מהאפליקציה קרסה.
-    fun startDiscovery() {
-        val a = adapter ?: return
-        if (!a.isEnabled) return
+    /** BT-12: false כשהסריקה לא התחילה בפועל (רדיו כבוי, אין הרשאה, או המערכת סירבה). */
+    fun startDiscovery(): Boolean {
+        val a = adapter ?: return false
+        if (!a.isEnabled) return false
         discoveredDevices.clear()
         isScanning = try {
             if (a.isDiscovering) a.cancelDiscovery()
@@ -200,6 +220,7 @@ class BluetoothController(private val context: Context) {
         } catch (e: SecurityException) {
             false
         }
+        return isScanning
     }
 
     fun stopDiscovery() {
@@ -255,6 +276,8 @@ class BluetoothController(private val context: Context) {
     /** מחבר את כל הפרופילים שהמכשיר תומך בהם. false אם אף אחד לא הצליח. */
     fun connect(address: String): Boolean {
         val device = remoteDevice(address) ?: return false
+        // BT-05: סריקה פעילה מאטה ומכשילה חיבורים.
+        stopDiscovery()
         val info = device.toInfo()
         var ok = false
         if (info.supportsCalls) ok = callProfile(headset, "connect", device) || ok
@@ -269,6 +292,10 @@ class BluetoothController(private val context: Context) {
 
     fun disconnect(address: String): Boolean {
         val device = remoteDevice(address) ?: return false
+        stopDiscovery()
+        // BT-14: ניתוק ידני באמצע חיבור הוא לא "החיבור נכשל".
+        userConnecting.remove(address)
+        connecting.remove(address)
         var ok = false
         ok = callProfile(headset, "disconnect", device) || ok
         ok = callProfile(a2dp, "disconnect", device) || ok
@@ -280,6 +307,8 @@ class BluetoothController(private val context: Context) {
     fun setProfile(address: String, calls: Boolean, enabled: Boolean): Boolean {
         val device = remoteDevice(address) ?: return false
         val proxy = if (calls) headset else a2dp
+        stopDiscovery()
+        if (!enabled) userConnecting.remove(address)
         val ok = callProfile(proxy, if (enabled) "connect" else "disconnect", device)
         if (ok) {
             if (enabled) {
@@ -291,11 +320,11 @@ class BluetoothController(private val context: Context) {
         return ok
     }
 
-    /** מנתק את כל המחוברים. false אם היה מה לנתק ואף ניתוק לא הצליח. */
-    fun disconnectAll(): Boolean {
+    /** BT-09: כמה מכשירים נותקו; null כשלא היה מחובר אף מכשיר. */
+    fun disconnectAll(): Int? {
         val connected = pairedDevices.filter { it.connection != Connection.Disconnected }
-        if (connected.isEmpty()) return true
-        return connected.map { disconnect(it.address) }.any { it }
+        if (connected.isEmpty()) return null
+        return connected.map { disconnect(it.address) }.count { it }
     }
 
     // ---- מחזור חיים ----
@@ -387,9 +416,10 @@ class BluetoothController(private val context: Context) {
                     BluetoothA2dp.ACTION_CONNECTION_STATE_CHANGED -> {
                         val address = device?.address ?: return
                         val state = intent.getIntExtra(BluetoothProfile.EXTRA_STATE, -1)
-                        when (state) {
-                            BluetoothProfile.STATE_CONNECTING -> connecting.add(address)
-                            else -> connecting.remove(address)
+                        // BT-13: הכתובת יוצאת מ"מתחבר" רק כשאף פרופיל לא מתחבר עוד.
+                        when {
+                            state == BluetoothProfile.STATE_CONNECTING -> connecting.add(address)
+                            !connectingOn(headset, device) && !connectingOn(a2dp, device) -> connecting.remove(address)
                         }
                         if (address in userConnecting) {
                             val stillTrying = connectingOn(headset, device) || connectingOn(a2dp, device)
@@ -416,7 +446,9 @@ class BluetoothController(private val context: Context) {
         }
         receiver = r
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            context.registerReceiver(r, filter, Context.RECEIVER_EXPORTED)
+            // BT-03: שידורי המערכת מגיעים גם לרסיבר לא מיוצא. ב-API 31-32 אין דגל כזה,
+            // ושם השידורים האלה מוגנים (protected-broadcast) ואפליקציה אחרת לא יכולה לשלוח אותם.
+            context.registerReceiver(r, filter, Context.RECEIVER_NOT_EXPORTED)
         } else {
             context.registerReceiver(r, filter)
         }
@@ -435,14 +467,16 @@ class BluetoothController(private val context: Context) {
         a2dp?.let { adapter?.closeProfileProxy(BluetoothProfile.A2DP, it) }
         headset = null
         a2dp = null
+        headsetPending = false
+        a2dpPending = false
     }
 
     private fun connectProfiles() {
         val a = adapter ?: return
         if (!a.isEnabled) return
         try {
-            if (headset == null) a.getProfileProxy(context, profileListener, BluetoothProfile.HEADSET)
-            if (a2dp == null) a.getProfileProxy(context, profileListener, BluetoothProfile.A2DP)
+            if (headset == null && !headsetPending) headsetPending = a.getProfileProxy(context, profileListener, BluetoothProfile.HEADSET)
+            if (a2dp == null && !a2dpPending) a2dpPending = a.getProfileProxy(context, profileListener, BluetoothProfile.A2DP)
         } catch (e: SecurityException) {
             // בלי BLUETOOTH_CONNECT אין פרופילים; המצב יתעדכן כשההרשאה תאושר.
         }
