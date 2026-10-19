@@ -126,27 +126,7 @@ fun SettingsScreen(
                 )
             }
 
-            item {
-                SectionLabel("יחידות", theme)
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                        .background(theme.surfaceColor, FutureShapes.xl)
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Text("יחידות משקל", color = theme.textColor, fontSize = FutureTypography.bodyLarge)
-                    SegmentedControl(
-                        options = listOf("ק״ג", "lb"),
-                        selected = if (units == "kg") "ק״ג" else "lb",
-                        theme = theme,
-                        onSelect = { onSetUnits(if (it == "ק״ג") "kg" else "lb") },
-                        segmentWidth = 48.dp,
-                    )
-                }
-            }
-
+            // F22: בורר ק"ג/lb הוסר - אין המרה, והבחירה לא שינתה כלום באפליקציה.
             item {
                 SectionLabel("פרופיל אישי", theme)
                 Text(
