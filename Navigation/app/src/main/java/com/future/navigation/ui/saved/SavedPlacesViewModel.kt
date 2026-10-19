@@ -104,6 +104,17 @@ class SavedPlacesViewModel(
         }
     }
 
+    /** F27: מנקה את אריח הבית או העבודה. */
+    fun clearSlot(slot: EditingSlot) {
+        viewModelScope.launch {
+            when (slot) {
+                EditingSlot.HOME -> repository.clearHome()
+                EditingSlot.WORK -> repository.clearWork()
+                else -> {}
+            }
+        }
+    }
+
     fun toggleFavorite(place: SavedPlaceEntity) {
         viewModelScope.launch { repository.toggleFavorite(place) }
     }

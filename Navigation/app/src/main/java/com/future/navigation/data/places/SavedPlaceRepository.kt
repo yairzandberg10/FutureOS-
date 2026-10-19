@@ -24,6 +24,17 @@ class SavedPlaceRepository(private val dao: SavedPlaceDao) {
         dao.upsert(SavedPlaceEntity(label = label, address = address, lat = lat, lon = lon, isWork = true))
     }
 
+    /** F27: הסרת כתובת הבית/העבודה. שורה שלא משמשת לכלום אחר נמחקת. */
+    suspend fun clearHome() {
+        dao.clearHome()
+        dao.deleteOrphans()
+    }
+
+    suspend fun clearWork() {
+        dao.clearWork()
+        dao.deleteOrphans()
+    }
+
     /** מועדף לכתובת שכבר קיימת לא נוסף שוב (F27: מניעת כפילויות). */
     suspend fun addFavorite(label: String, address: String, lat: Double, lon: Double) {
         if (dao.favoriteByAddress(address) != null) return

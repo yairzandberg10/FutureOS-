@@ -32,6 +32,8 @@ import com.future.navigation.data.gtfs.SavedPlaceEntity
 import com.future.navigation.ui.home.RowIcon
 import com.future.sharednav.components.ConfirmDialog
 import com.future.sharednav.components.FutureListItem
+import com.future.sharednav.components.FutureMenuRow
+import com.future.sharednav.components.FutureOptionsMenu
 import com.future.sharednav.components.FutureSectionHeader
 import com.future.sharednav.components.FutureTextField
 import com.future.sharednav.components.ScreenTopBar
@@ -78,6 +80,41 @@ fun SavedPlacesScreen(viewModel: SavedPlacesViewModel, onBack: () -> Unit, onNav
             confirmLabel = "מחק",
         )
     }
+    // F27: OK על אריח בית/עבודה שכבר יש בו כתובת פותח תפריט "שנה כתובת" / "הסר".
+    // אריח ריק נפתח ישר לחיפוש, כמו קודם.
+    var slotMenu by remember { mutableStateOf<EditingSlot?>(null) }
+    var pendingClear by remember { mutableStateOf<EditingSlot?>(null) }
+    slotMenu?.let { slot ->
+        FutureOptionsMenu(
+            theme = theme,
+            onDismissRequest = { slotMenu = null },
+            header = if (slot == EditingSlot.HOME) stringResource(R.string.quick_home) else stringResource(R.string.quick_work),
+        ) {
+            FutureMenuRow("שנה כתובת", FutureIcons.Edit, theme, {
+                slotMenu = null
+                viewModel.startEditing(slot)
+            })
+            FutureMenuRow("הסר", FutureIcons.Delete, theme, {
+                slotMenu = null
+                pendingClear = slot
+            }, destructive = true)
+        }
+    }
+    pendingClear?.let { slot ->
+        ConfirmDialog(
+            message = if (slot == EditingSlot.HOME) "להסיר את כתובת הבית?" else "להסיר את כתובת העבודה?",
+            surfaceColor = theme.surfaceColor,
+            textColor = theme.textColor,
+            dangerColor = theme.dangerColor,
+            onCancel = { pendingClear = null },
+            onConfirm = {
+                viewModel.clearSlot(slot)
+                pendingClear = null
+            },
+            cancelLabel = "ביטול",
+            confirmLabel = "הסר",
+        )
+    }
     val homeCardFocusRequester = remember { FocusRequester() }
     val workCardFocusRequester = remember { FocusRequester() }
 
@@ -107,10 +144,10 @@ fun SavedPlacesScreen(viewModel: SavedPlacesViewModel, onBack: () -> Unit, onNav
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(FutureDimens.itemSpacing)) {
                     PinTile(FutureIcons.Home, stringResource(R.string.quick_home), homePlace, stringResource(R.string.add_home_address), theme, modifier = Modifier.weight(1f), focusRequester = homeCardFocusRequester) {
-                        viewModel.startEditing(EditingSlot.HOME)
+                        if (homePlace != null) slotMenu = EditingSlot.HOME else viewModel.startEditing(EditingSlot.HOME)
                     }
                     PinTile(FutureIcons.Work, stringResource(R.string.quick_work), workPlace, stringResource(R.string.add_work_address), theme, modifier = Modifier.weight(1f), focusRequester = workCardFocusRequester) {
-                        viewModel.startEditing(EditingSlot.WORK)
+                        if (workPlace != null) slotMenu = EditingSlot.WORK else viewModel.startEditing(EditingSlot.WORK)
                     }
                 }
             }
