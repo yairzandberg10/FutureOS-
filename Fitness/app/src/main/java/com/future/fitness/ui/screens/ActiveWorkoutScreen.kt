@@ -51,6 +51,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.future.fitness.bluetooth.HeartRateMonitor
@@ -69,8 +70,11 @@ private const val REST_SECONDS = 15
 private fun restOverBeep() {
     runCatching {
         val tone = android.media.ToneGenerator(android.media.AudioManager.STREAM_NOTIFICATION, 90)
-        tone.startTone(android.media.ToneGenerator.TONE_PROP_BEEP2, 400)
-        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ tone.release() }, 800)
+        // F38: שחרור גם כשההשמעה נכשלת - אחרת ה-ToneGenerator נשאר פתוח.
+        runCatching {
+            tone.startTone(android.media.ToneGenerator.TONE_PROP_BEEP2, 400)
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ tone.release() }, 800)
+        }.onFailure { tone.release() }
     }
 }
 
@@ -178,7 +182,9 @@ fun ActiveWorkoutScreen(
 
     val exercise = workout.exercises[state.exerciseIndex]
     val totalSetsInWorkout = workout.exercises.sumOf { it.sets }
-    val doneSets = (0 until state.exerciseIndex).sumOf { workout.exercises[it].sets } + state.setIndex
+    // F48: נספרים הסטים שסומנו כבוצעו (ולא לפי מיקום הסט הבא), כך שבמנוחה
+    // הסרגל כבר כולל את הסט שהושלם.
+    val doneSets = state.totalCompletedSets()
     val overallProgress = doneSets.toFloat() / totalSetsInWorkout.toFloat()
 
     if (confirmExit) {
@@ -217,8 +223,11 @@ fun ActiveWorkoutScreen(
                     )
                     Text(if (state.running) "זמן אימון" else "מושהה", color = theme.mutedTextColor, fontSize = FutureTypography.label)
                 }
-                val liveCalories = remember(state.elapsedSec / 60, workout.met, weightKg) {
-                    WorkoutStore.estimateCalories(workout.met, weightKg, maxOf(1, state.elapsedSec / 60))
+                // F42: אותו עיגול דקות כמו בשמירה, ובלי מינימום דקה - קודם 6 קק״ל
+                // הופיעו כבר ב-00:03.
+                val liveMinutes = Math.round(state.elapsedSec / 60f)
+                val liveCalories = remember(liveMinutes, workout.met, weightKg) {
+                    WorkoutStore.estimateCalories(workout.met, weightKg, liveMinutes)
                 }
                 Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     MetricChip(FutureIcons.Favorite, if (isHrConnected && liveBpm != null) "$liveBpm" else "--", "BPM", theme.dangerColor, theme)
@@ -265,7 +274,7 @@ fun ActiveWorkoutScreen(
                         .padding(vertical = 14.dp, horizontal = 16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Text(exercise.name, color = theme.textColor, fontSize = FutureTypography.screenTitle, fontWeight = FontWeight.Bold, maxLines = 1)
+                    Text(exercise.name, color = theme.textColor, fontSize = FutureTypography.screenTitle, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(
                         "סט ${state.setIndex + 1} מתוך ${exercise.sets} · ${exercise.repsLabel}",
                         color = theme.mutedTextColor,
@@ -345,20 +354,5 @@ private fun MetricChip(icon: ImageVector, value: String, unit: String, color: Co
         Spacer(Modifier.width(6.dp))
         Text(value, color = theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Bold)
         Text(" $unit", color = theme.mutedTextColor, fontSize = FutureTypography.caption)
-    }
-}
-
-@Composable
-private fun BioTile(icon: ImageVector, value: String, unit: String, color: Color, theme: FutureTheme, modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier
-            .background(theme.surfaceColor, FutureShapes.lg)
-            .padding(12.dp),
-    ) {
-        Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(16.dp))
-        Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(top = 6.dp)) {
-            Text(value, color = theme.textColor, fontSize = FutureTypography.headline, fontWeight = FontWeight.ExtraBold)
-            Text(" $unit", color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.caption)
-        }
     }
 }

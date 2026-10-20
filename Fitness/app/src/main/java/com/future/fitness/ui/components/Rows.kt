@@ -39,20 +39,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.future.sharednav.theme.FutureTheme
 
-/** אריח סטטיסטיקה קטן - קלוריות/דקות/רצף בבית, ומספרי סיכום בהתקדמות. כרטיס (16dp). */
-@Composable
-fun StatTile(icon: ImageVector, value: String, label: String, theme: FutureTheme, modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier
-            .background(theme.surfaceColor, FutureShapes.lg)
-            .padding(FutureDimens.spacingMd),
-    ) {
-        Icon(icon, contentDescription = null, tint = theme.mutedTextColor, modifier = Modifier.size(FutureDimens.iconTopBar))
-        Text(value, color = theme.textColor, fontSize = FutureTypography.screenTitle, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = FutureDimens.spacingSm))
-        Text(label, color = theme.mutedTextColor, fontSize = FutureTypography.caption)
-    }
-}
-
 /**
  * שורת רשימה עם אייקון בעיגול, כותרת/סיכום, וספרת קיצור-דרך או חץ -
  * הפריט החוזר בתפריט הבית, ברשימת אימונים ובהיסטוריה. זו שורת הרשימה של
@@ -70,6 +56,7 @@ fun IconListRow(
     digit: String? = null,
     showChevron: Boolean = false,
     focusRequester: FocusRequester? = null,
+    summaryMaxLines: Int = 1,
 ) {
     val leading: @Composable () -> Unit = { FutureAvatar(theme = theme, icon = icon) }
     val trailing: @Composable RowScope.() -> Unit = {
@@ -90,6 +77,7 @@ fun IconListRow(
         FutureListItem(
             title = title,
             summary = subtitle,
+            summaryMaxLines = summaryMaxLines,
             theme = theme,
             onClick = onClick,
             modifier = modifier,
@@ -111,7 +99,7 @@ fun IconListRow(
             leading()
             Column(modifier = Modifier.weight(1f)) {
                 Text(title, color = theme.textColor, fontSize = FutureTypography.title, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(subtitle, color = theme.mutedTextColor, fontSize = FutureTypography.summary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(subtitle, color = theme.mutedTextColor, fontSize = FutureTypography.summary, maxLines = summaryMaxLines, overflow = TextOverflow.Ellipsis)
             }
             trailing()
         }

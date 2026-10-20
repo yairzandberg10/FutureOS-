@@ -1,6 +1,7 @@
 package com.future.fitness.ui.screens
 
 import com.future.sharednav.icons.FutureIcons
+import java.util.Locale
 import com.future.sharednav.theme.elevatedSurfaceColor
 import com.future.sharednav.theme.idleFieldColor
 import com.future.sharednav.theme.idleChipColor
@@ -12,6 +13,7 @@ import com.future.sharednav.theme.sectionHeaderColor
 import com.future.sharednav.theme.textAlpha
 import com.future.sharednav.components.FutureButton
 import com.future.sharednav.components.FutureButtonVariant
+import com.future.fitness.ui.components.InitialFocusEffect
 import com.future.fitness.ui.components.FitnessTextField
 
 import com.future.sharednav.theme.onReadableAccentColor
@@ -112,7 +114,8 @@ fun WorkoutTemplateScreen(
     val template = remember(activityType) { activityType.template() }
     val usesGps = activityType.usesGps
 
-    val tracker = remember { RunTracker(context) }
+    // F38: ה-tracker חי מעבר ל-Activity (לוקיישן), לכן מקבל applicationContext בלבד.
+    val tracker = remember { RunTracker(context.applicationContext) }
     var hasLocationPermission by remember {
         mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED)
     }
@@ -195,7 +198,7 @@ fun WorkoutTemplateScreen(
     val pagerState = rememberPagerState(pageCount = { pages.size })
     val pagerScope = rememberCoroutineScope()
     val pagerFocusRequester = remember { FocusRequester() }
-    LaunchedEffect(Unit) { pagerFocusRequester.requestFocus() }
+    InitialFocusEffect(pagerFocusRequester)
 
     val isHrConnected = heartRateMonitor.state == HrConnectionState.CONNECTED
     val bpm = heartRateMonitor.currentBpm
@@ -376,17 +379,18 @@ private fun MainPage(
             Spacer(Modifier.height(24.dp))
         }
 
-        val minutesSoFar = maxOf(0, elapsedSec / 60)
+        // F27: אותו עיגול דקות כמו בשמירה (Math.round), כדי שהתצוגה והשמירה יסכימו.
+        val minutesSoFar = maxOf(0, Math.round(elapsedSec / 60f))
         val calories = WorkoutStore.estimateCalories(activityType.met, weightKg, minutesSoFar)
 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
             if (usesGps) {
                 if (activityType.template() == WorkoutTemplate.CYCLING) {
-                    StatColumn(String.format("%.1f", tracker.currentSpeedKmh ?: 0.0), "קמ\"ש", theme)
+                    StatColumn(String.format(Locale.US, "%.1f", tracker.currentSpeedKmh ?: 0.0), "קמ״ש", theme)
                 } else {
-                    StatColumn(tracker.paceMinPerKm(elapsedSec)?.let { formatPace(it) } ?: "--:--", "קצב / ק\"מ", theme)
+                    StatColumn(tracker.paceMinPerKm(elapsedSec)?.let { formatPace(it) } ?: "--:--", "קצב / ק״מ", theme)
                 }
-                StatColumn(String.format("%.2f", tracker.distanceKm()), "ק\"מ", theme)
+                StatColumn(String.format(Locale.US, "%.2f", tracker.distanceKm()), "ק״מ", theme)
             }
             StatColumn(calories.toString(), "קלוריות", theme)
             if (isHrConnected && bpm != null) {
@@ -406,11 +410,11 @@ private fun RunningDynamicsPage(theme: FutureTheme, heartRateMonitor: HeartRateM
         }
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
             StatColumn(heartRateMonitor.runningCadenceSpm?.toString() ?: "--", "צעדים/דקה", theme)
-            StatColumn(heartRateMonitor.runningSpeedKmh?.let { String.format("%.1f", it) } ?: "--", "קמ\"ש", theme)
+            StatColumn(heartRateMonitor.runningSpeedKmh?.let { String.format(Locale.US, "%.1f", it) } ?: "--", "קמ״ש", theme)
         }
         heartRateMonitor.runningStrideLengthM?.let { stride ->
             Spacer(Modifier.height(16.dp))
-            StatColumn(String.format("%.2f", stride), "מ' לצעד", theme)
+            StatColumn(String.format(Locale.US, "%.2f", stride), "מ' לצעד", theme)
         }
     }
 }
@@ -425,7 +429,7 @@ private fun CyclingPowerPage(theme: FutureTheme, heartRateMonitor: HeartRateMoni
         }
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
             StatColumn("${heartRateMonitor.cyclingPowerWatts ?: "--"}", "וואט", theme)
-            StatColumn(heartRateMonitor.cyclingCadenceRpm?.toString() ?: "--", "סל\"ד", theme)
+            StatColumn(heartRateMonitor.cyclingCadenceRpm?.toString() ?: "--", "סל״ד", theme)
         }
     }
 }
@@ -436,8 +440,8 @@ private fun ElevationPage(theme: FutureTheme, tracker: RunTracker) {
         Icon(FutureIcons.Terrain, contentDescription = null, tint = theme.textColor, modifier = Modifier.size(32.dp))
         Spacer(Modifier.height(12.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-            StatColumn(tracker.currentAltitudeMeters?.let { "%.0f".format(it) } ?: "--", "מ' גובה", theme)
-            StatColumn("%.0f".format(tracker.elevationGainMeters), "מ' עלייה", theme)
+            StatColumn(tracker.currentAltitudeMeters?.let { "%.0f".format(Locale.US, it) } ?: "--", "מ' גובה", theme)
+            StatColumn("%.0f".format(Locale.US, tracker.elevationGainMeters), "מ' עלייה", theme)
         }
         Text(
             "מבוסס על GPS בלבד (בלי חיישן ברומטרי) - ייתכן רעש/אי-דיוק",
@@ -458,6 +462,9 @@ private fun HeartRateZonesPage(theme: FutureTheme, estimatedMaxHr: Int?, zoneSec
         }
         if (currentBpm != null) {
             Text("$currentBpm BPM כרגע", color = theme.textColor, fontSize = FutureTypography.headline, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 12.dp))
+        } else if (zoneSeconds.sum() == 0) {
+            // F30: בלי דופק כל האזורים 00:00 - אומרים למה, ולא רק מציגים אפסים.
+            NoSensorMessage(theme, "אין נתוני דופק. חברו שעון דופק כדי למלא את האזורים")
         }
         val zoneLabels = listOf("אזור 1 · חימום", "אזור 2 · קל", "אזור 3 · בינוני", "אזור 4 · קשה", "אזור 5 · מקסימלי")
         val totalSeconds = zoneSeconds.sum().coerceAtLeast(1)
@@ -545,7 +552,7 @@ private fun StatColumn(value: String, label: String, theme: FutureTheme, icon: I
 private fun formatPace(minPerKm: Double): String {
     val m = minPerKm.toInt()
     val s = ((minPerKm - m) * 60).toInt()
-    return "%d:%02d".format(m, s)
+    return "%d:%02d".format(Locale.US, m, s)
 }
 
 /** שולח אירוע מקש-מדיה סטנדרטי (ACTION_MEDIA_BUTTON) לנגן המדיה הפעיל כרגע

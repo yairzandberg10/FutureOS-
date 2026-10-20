@@ -54,6 +54,8 @@ import com.future.fitness.data.Workout
 import com.future.fitness.ui.components.FocusableItem
 import com.future.fitness.ui.components.ScreenTopBar
 import com.future.fitness.ui.components.SegmentedControl
+import com.future.fitness.ui.components.rememberInitialFocus
+import com.future.sharednav.components.ConfirmDialog
 import com.future.sharednav.focus.escapeTextFieldFocusTrap
 import com.future.sharednav.theme.FutureTheme
 
@@ -77,9 +79,28 @@ fun WorkoutBuilderScreen(
     val exercises = remember { mutableStateListOf(DraftExercise()) }
 
     val canSave = name.isNotBlank() && exercises.any { it.name.isNotBlank() }
+    // טיוטה שהוקלד בה משהו: יציאה (BACK או חץ הכותרת) מבקשת אישור, אחרת הכל הולך לאיבוד.
+    val hasDraft = name.isNotBlank() || exercises.any { it.name.isNotBlank() }
+    var confirmDiscard by remember { mutableStateOf(false) }
+    androidx.activity.compose.BackHandler(enabled = hasDraft) { confirmDiscard = true }
+    // פוקוס התחלתי על שם האימון - ר' rememberInitialFocus.
+    val nameFocus = rememberInitialFocus()
+
+    if (confirmDiscard) {
+        ConfirmDialog(
+            message = "לצאת בלי לשמור את האימון?",
+            surfaceColor = theme.surfaceColor,
+            textColor = theme.textColor,
+            dangerColor = theme.dangerColor,
+            onCancel = { confirmDiscard = false },
+            onConfirm = { confirmDiscard = false; onBack() },
+            cancelLabel = "המשך",
+            confirmLabel = "צא",
+        )
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        ScreenTopBar(title = "אימון חדש", theme = theme, onBack = onBack)
+        ScreenTopBar(title = "אימון חדש", theme = theme, onBack = { if (hasDraft) confirmDiscard = true else onBack() })
 
         LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp).escapeTextFieldFocusTrap()) {
             item {
@@ -90,6 +111,7 @@ fun WorkoutBuilderScreen(
                     label = "שם האימון",
                     modifier = Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 12.dp),
                     singleLine = true,
+                    focusRequester = nameFocus,
                 )
             }
 
@@ -212,7 +234,8 @@ fun WorkoutBuilderScreen(
                         id = "custom_${System.currentTimeMillis()}",
                         name = name.trim(),
                         difficulty = difficulty,
-                        durationMin = durationMin.toIntOrNull() ?: 30,
+                        // F39: 0 דקות לא תקין - אימון מתחיל מדקה אחת.
+                        durationMin = durationMin.toIntOrNull()?.takeIf { it > 0 } ?: 30,
                         met = met,
                         exercises = exercises.filter { it.name.isNotBlank() }.map { ex ->
                             Exercise(ex.name.trim(), ex.sets.toIntOrNull()?.coerceIn(1, 10) ?: 3, ex.reps.ifBlank { "10 חזרות" })

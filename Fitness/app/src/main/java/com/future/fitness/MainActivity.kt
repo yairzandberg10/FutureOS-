@@ -45,7 +45,8 @@ class MainActivity : ComponentActivity() {
 private fun FitnessApp() {
     val context = LocalContext.current
     val store = remember { WorkoutStore(context) }
-    val heartRateMonitor = remember { HeartRateMonitor(context) }
+    // F38: מחלקות שמחזיקות הקשר לאורך חיים הארוך מ-Activity - רק applicationContext.
+    val heartRateMonitor = remember { HeartRateMonitor(context.applicationContext) }
 
     var theme by remember {
         mutableStateOf(

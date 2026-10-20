@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.sp
 import com.future.fitness.data.WorkoutHistoryEntry
 import com.future.fitness.ui.components.IconListRow
 import com.future.fitness.ui.components.ScreenTopBar
+import com.future.fitness.ui.components.rememberInitialFocus
 import com.future.sharednav.theme.FutureTheme
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -47,14 +48,8 @@ fun HistoryScreen(
     theme: FutureTheme,
     onBack: () -> Unit,
 ) {
-    // F21: פוקוס התחלתי על השורה הראשונה (אותו דפוס ניסיון חוזר של HomeScreen).
-    val firstRowFocus = androidx.compose.runtime.remember { androidx.compose.ui.focus.FocusRequester() }
-    androidx.compose.runtime.LaunchedEffect(Unit) {
-        repeat(6) {
-            androidx.compose.runtime.withFrameNanos { }
-            if (runCatching { firstRowFocus.requestFocus() }.isSuccess) return@LaunchedEffect
-        }
-    }
+    // F21: פוקוס התחלתי על השורה הראשונה (ר' rememberInitialFocus).
+    val firstRowFocus = rememberInitialFocus()
     Column(modifier = Modifier.fillMaxSize()) {
         ScreenTopBar(title = "היסטוריה", theme = theme, onBack = onBack)
 
@@ -78,12 +73,15 @@ fun HistoryScreen(
                 items(history.size, key = { index -> history[index].dateMillis }) { index ->
                     val entry = history[index]
                     val parts = mutableListOf("${relativeDay(entry.dateMillis)}", "${entry.minutes} דק׳", "${entry.calories} קלוריות")
-                    entry.distanceKm?.let { parts.add("%.2f ק״מ".format(it)) }
+                    entry.distanceKm?.let { parts.add("%.2f ק״מ".format(Locale.US, it)) }
                     entry.avgHr?.let { parts.add("דופק ממוצע $it") }
                     IconListRow(
                         icon = FutureIcons.Check,
                         title = entry.name,
                         subtitle = parts.joinToString(" · "),
+                        // שתי שורות ולא ellipsis: בעברית החיתוך נשאר בתחילת השורה
+                        // ומסתיר את התאריך והמשך הפרטים (F55).
+                        summaryMaxLines = 2,
                         theme = theme,
                         // onClick={} ולא null בכוונה: מבטיח שהשורה תהיה focusable כדי
                         // שאפשר יהיה לגלול אליה עם D-pad (ראו IconListRow ב-Rows.kt) -

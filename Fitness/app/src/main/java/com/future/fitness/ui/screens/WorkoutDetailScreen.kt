@@ -12,6 +12,7 @@ import com.future.sharednav.theme.sectionHeaderColor
 import com.future.sharednav.theme.textAlpha
 import com.future.sharednav.components.FutureButton
 import com.future.sharednav.components.FutureButtonVariant
+import com.future.fitness.ui.components.InitialFocusEffect
 import com.future.fitness.ui.components.FitnessTextField
 
 import com.future.sharednav.theme.onReadableAccentColor
@@ -63,7 +64,7 @@ fun WorkoutDetailScreen(
 ) {
     val estimatedCalories = WorkoutStore.estimateCalories(workout.met, weightKg, workout.durationMin)
     val startButtonFocusRequester = remember { FocusRequester() }
-    LaunchedEffect(Unit) { startButtonFocusRequester.requestFocus() }
+    InitialFocusEffect(startButtonFocusRequester)
 
     Column(modifier = Modifier.fillMaxSize()) {
         ScreenTopBar(title = workout.name, theme = theme, onBack = onBack)
@@ -118,7 +119,7 @@ fun WorkoutDetailScreen(
                         Column {
                             Text(exercise.name, color = theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Medium)
                             Text(
-                                "${exercise.sets} סטים · ${exercise.repsLabel}",
+                                "${setsLabel(exercise.sets)} · ${exercise.repsLabel}",
                                 color = theme.textColor.copy(alpha = 0.6f),
                                 fontSize = FutureTypography.label,
                             )
@@ -135,6 +136,13 @@ fun WorkoutDetailScreen(
             FutureButton("התחל אימון", theme, onStart, fillMaxWidth = true, focusRequester = startButtonFocusRequester)
         }
     }
+}
+
+/** צורת הרבים בעברית: "סט אחד", "שני סטים", "3 סטים". */
+private fun setsLabel(count: Int): String = when (count) {
+    1 -> "סט אחד"
+    2 -> "שני סטים"
+    else -> "$count סטים"
 }
 
 @Composable

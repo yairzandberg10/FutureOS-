@@ -15,6 +15,7 @@ import com.future.sharednav.theme.sectionHeaderColor
 import com.future.sharednav.theme.textAlpha
 import com.future.sharednav.components.FutureButton
 import com.future.sharednav.components.FutureButtonVariant
+import com.future.fitness.ui.components.rememberInitialFocus
 import com.future.fitness.ui.components.FitnessTextField
 
 import com.future.sharednav.theme.FutureTypography
@@ -49,6 +50,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.future.fitness.data.Workout
@@ -76,16 +78,8 @@ fun WorkoutsScreen(
         if (selectedDifficulty == "הכל") workouts else workouts.filter { it.difficulty == selectedDifficulty }
     }
 
-    val firstRowFocusRequester = remember { FocusRequester() }
-    // הפריט הראשון עוד לא מצויר בפריים הראשון (רשימה, אנימציית מעבר), והבקשה
-    // נכשלה בשקט - הפוקוס נשאר על העוגן הבלתי נראה של ה-NavHost. מנסים שוב בכמה
-    // הפריימים הראשונים, עד שהפריט קיים.
-    LaunchedEffect(Unit) {
-        repeat(6) {
-            androidx.compose.runtime.withFrameNanos { }
-            if (runCatching { firstRowFocusRequester.requestFocus() }.isSuccess) return@LaunchedEffect
-        }
-    }
+    // ר' rememberInitialFocus - מבקשים שוב בכמה פריימים, כי העוגן של ה-NavHost דורס בקשה מוקדמת.
+    val firstRowFocusRequester = rememberInitialFocus()
 
     // מחיקת אימון מותאם היא בלתי הפיכה, וכפתור המחיקה יושב באותה שורה
     // שעליה המשתמש מנווט - בלי אישור, לחיצת OK אחת בשוגג מוחקת אותו.
@@ -214,8 +208,8 @@ private fun QuickActionCard(icon: androidx.compose.ui.graphics.vector.ImageVecto
             FutureAvatar(theme = theme, icon = icon, size = AvatarListSize)
             Spacer(Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(title, color = theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Bold, maxLines = 1)
-                Text(subtitle, color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.label, maxLines = 1)
+                Text(title, color = theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(subtitle, color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.label, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             Icon(FutureIcons.AutoMirrored.KeyboardArrowLeft, contentDescription = null, tint = theme.textColor.copy(alpha = 0.4f))
         }
@@ -237,7 +231,7 @@ private fun WorkoutCard(workout: Workout, weightKg: Int, theme: FutureTheme, onC
                 FutureAvatar(theme = theme, icon = FutureIcons.FitnessCenter, size = AvatarListSize)
                 Spacer(Modifier.width(14.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(workout.name, color = theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Bold, maxLines = 1)
+                    Text(workout.name, color = theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Spacer(Modifier.height(4.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(workout.difficulty, color = theme.sectionHeaderColor, fontSize = FutureTypography.label, fontWeight = FontWeight.SemiBold)

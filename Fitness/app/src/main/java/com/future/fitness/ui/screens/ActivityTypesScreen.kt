@@ -12,6 +12,7 @@ import com.future.sharednav.theme.sectionHeaderColor
 import com.future.sharednav.theme.textAlpha
 import com.future.sharednav.components.FutureButton
 import com.future.sharednav.components.FutureButtonVariant
+import com.future.fitness.ui.components.rememberInitialFocus
 import com.future.fitness.ui.components.FitnessTextField
 
 import com.future.sharednav.theme.FutureTypography
@@ -45,14 +46,8 @@ fun ActivityTypesScreen(
     onSelect: (WorkoutActivityType) -> Unit,
     weightKg: Int = WorkoutStore.DEFAULT_WEIGHT_KG,
 ) {
-    // F21: פוקוס התחלתי על השורה הראשונה (אותו דפוס ניסיון חוזר של HomeScreen).
-    val firstRowFocus = androidx.compose.runtime.remember { androidx.compose.ui.focus.FocusRequester() }
-    androidx.compose.runtime.LaunchedEffect(Unit) {
-        repeat(6) {
-            androidx.compose.runtime.withFrameNanos { }
-            if (runCatching { firstRowFocus.requestFocus() }.isSuccess) return@LaunchedEffect
-        }
-    }
+    // F21: פוקוס התחלתי על השורה הראשונה (ר' rememberInitialFocus).
+    val firstRowFocus = rememberInitialFocus()
     val firstType = WorkoutActivityTypes.byCategory.values.firstOrNull()?.firstOrNull()
     Column(modifier = Modifier.fillMaxSize()) {
         ScreenTopBar(title = "כל סוגי האימון", theme = theme, onBack = onBack)

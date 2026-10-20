@@ -1,6 +1,7 @@
 package com.future.fitness.ui.screens
 
 import com.future.sharednav.icons.FutureIcons
+import java.util.Locale
 import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.theme.elevatedSurfaceColor
 import com.future.sharednav.theme.idleFieldColor
@@ -14,6 +15,7 @@ import com.future.sharednav.theme.sectionHeaderColor
 import com.future.sharednav.theme.textAlpha
 import com.future.sharednav.components.FutureButton
 import com.future.sharednav.components.FutureButtonVariant
+import com.future.fitness.ui.components.rememberInitialFocus
 import com.future.fitness.ui.components.FitnessTextField
 
 import com.future.sharednav.theme.FutureTypography
@@ -42,6 +44,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -56,6 +61,7 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import com.future.fitness.data.DailyStats
 import com.future.fitness.data.WorkoutHistoryEntry
@@ -71,11 +77,22 @@ fun ProgressScreen(
     stats: DailyStats,
     theme: FutureTheme,
 ) {
-    val weekBars = remember(history) { buildWeekBars(history) }
+    // F46: אחרי חצות השבוע והחודש משתנים גם בלי אימון חדש - מחשבים מחדש בכל יום.
+    var dayTick by remember { mutableIntStateOf(0) }
+    LaunchedEffect(dayTick) {
+        val nextMidnight = Calendar.getInstance().apply {
+            add(Calendar.DAY_OF_YEAR, 1)
+            set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
+        delay((nextMidnight - System.currentTimeMillis()).coerceAtLeast(0L) + 1000L)
+        dayTick++
+    }
+
+    val weekBars = remember(history, dayTick) { buildWeekBars(history) }
     val maxMinutes = (weekBars.maxOfOrNull { it.minutes } ?: 0).coerceAtLeast(1)
 
     val calNow = Calendar.getInstance()
-    val monthEntries = remember(history) {
+    val monthEntries = remember(history, dayTick) {
         history.filter {
             val c = Calendar.getInstance().apply { timeInMillis = it.dateMillis }
             c.get(Calendar.YEAR) == calNow.get(Calendar.YEAR) && c.get(Calendar.MONTH) == calNow.get(Calendar.MONTH)
@@ -98,16 +115,8 @@ fun ProgressScreen(
     // בפריקסה עבור מסך גלילה-בלבד.
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
-    val focusRequester = remember { FocusRequester() }
-    // הפריט הראשון עוד לא מצויר בפריים הראשון (רשימה, אנימציית מעבר), והבקשה
-    // נכשלה בשקט - הפוקוס נשאר על העוגן הבלתי נראה של ה-NavHost. מנסים שוב בכמה
-    // הפריימים הראשונים, עד שהפריט קיים.
-    LaunchedEffect(Unit) {
-        repeat(6) {
-            androidx.compose.runtime.withFrameNanos { }
-            if (runCatching { focusRequester.requestFocus() }.isSuccess) return@LaunchedEffect
-        }
-    }
+    // ר' rememberInitialFocus - מבקשים שוב בכמה פריימים, כי העוגן של ה-NavHost דורס בקשה מוקדמת.
+    val focusRequester = rememberInitialFocus()
 
     Column(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 20.dp)) {
@@ -272,7 +281,7 @@ private fun buildPersonalRecords(history: List<WorkoutHistoryEntry>, theme: Futu
 
     val longestRun = history.filter { it.distanceKm != null }.maxByOrNull { it.distanceKm!! }
     if (longestRun?.distanceKm != null) {
-        records.add(PersonalRecord(FutureIcons.Route, "המרחק הארוך ביותר", longestRun.name, "%.2f".format(longestRun.distanceKm), "ק״מ", theme.successColor))
+        records.add(PersonalRecord(FutureIcons.Route, "המרחק הארוך ביותר", longestRun.name, "%.2f".format(Locale.US, longestRun.distanceKm), "ק״מ", theme.successColor))
     }
 
     return records

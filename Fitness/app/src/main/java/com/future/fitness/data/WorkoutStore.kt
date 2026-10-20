@@ -41,19 +41,23 @@ class WorkoutStore(context: Context) {
         val arr = runCatching { JSONArray(raw) }.getOrNull() ?: return emptyList()
         val result = mutableListOf<WorkoutHistoryEntry>()
         for (i in 0 until arr.length()) {
-            val o = arr.optJSONObject(i) ?: continue
-            if (!o.has("name") || !o.has("date")) continue
-            result.add(
-                WorkoutHistoryEntry(
-                    name = o.getString("name"),
-                    minutes = o.optInt("minutes"),
-                    calories = o.optInt("calories"),
-                    dateMillis = o.getLong("date"),
-                    avgHr = if (o.has("avgHr") && !o.isNull("avgHr")) o.getInt("avgHr") else null,
-                    maxHr = if (o.has("maxHr") && !o.isNull("maxHr")) o.getInt("maxHr") else null,
-                    distanceKm = if (o.has("distanceKm") && !o.isNull("distanceKm")) o.getDouble("distanceKm") else null,
+            // F17: רשומה פגומה מדולגת לבד - לא מפילה את כל ההיסטוריה (ואת האפליקציה).
+            runCatching {
+                val o = arr.optJSONObject(i) ?: return@runCatching
+                if (!o.has("name") || !o.has("date")) return@runCatching
+                result.add(
+                    WorkoutHistoryEntry(
+                        name = o.getString("name"),
+                        minutes = o.optInt("minutes"),
+                        calories = o.optInt("calories"),
+                        dateMillis = o.getLong("date"),
+                        avgHr = if (o.has("avgHr") && !o.isNull("avgHr")) o.getInt("avgHr") else null,
+                        maxHr = if (o.has("maxHr") && !o.isNull("maxHr")) o.getInt("maxHr") else null,
+                        distanceKm = if (o.has("distanceKm") && !o.isNull("distanceKm")) o.getDouble("distanceKm") else null,
+                    )
                 )
-            )
+                Unit
+            }
         }
         return result
     }
@@ -74,13 +78,25 @@ class WorkoutStore(context: Context) {
         prefs.edit().putString(KEY_HISTORY, arr.toString()).apply()
     }
 
+    /** קריאה בלבד - נקראת מתוך composition, לכן לא כותבת העדפות. האיפוס
+     * של היום והשבירה של הרצף נשמרים בפועל ב-[recordCompletedWorkout]. */
     fun getStats(): DailyStats {
-        rolloverIfNeeded()
-        return DailyStats(
-            caloriesToday = prefs.getInt(KEY_CALORIES_TODAY, 0),
-            activeMinutesToday = prefs.getInt(KEY_MINUTES_TODAY, 0),
-            streakDays = prefs.getInt(KEY_STREAK, 0),
-        )
+        val today = todayKey()
+        if (prefs.getString(KEY_LAST_DAY, null) == today) {
+            return DailyStats(
+                caloriesToday = prefs.getInt(KEY_CALORIES_TODAY, 0),
+                activeMinutesToday = prefs.getInt(KEY_MINUTES_TODAY, 0),
+                streakDays = prefs.getInt(KEY_STREAK, 0),
+            )
+        }
+        // יום חדש שטרם נשמר: "היום" מאופס, והרצף נשבר אם לא התאמנו אתמול.
+        val lastWorkoutDay = prefs.getString(KEY_LAST_WORKOUT_DAY, null)
+        val streak = if (lastWorkoutDay == null || (lastWorkoutDay != today && !isYesterday(lastWorkoutDay, today))) {
+            0
+        } else {
+            prefs.getInt(KEY_STREAK, 0)
+        }
+        return DailyStats(caloriesToday = 0, activeMinutesToday = 0, streakDays = streak)
     }
 
     /** מאפס את סטטיסטיקת "היום" כשמתחיל יום חדש, ושובר את הרצף אם עבר יותר

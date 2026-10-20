@@ -15,6 +15,7 @@ import com.future.sharednav.theme.sectionHeaderColor
 import com.future.sharednav.theme.textAlpha
 import com.future.sharednav.components.FutureButton
 import com.future.sharednav.components.FutureButtonVariant
+import com.future.fitness.ui.components.InitialFocusEffect
 import com.future.fitness.ui.components.FitnessTextField
 
 import com.future.sharednav.theme.onReadableAccentColor
@@ -92,7 +93,16 @@ fun SettingsScreen(
     var weightText by remember { mutableStateOf(profile.weightKg?.toString() ?: "") }
     var ageText by remember { mutableStateOf(profile.age?.toString() ?: "") }
     val weightFieldFocusRequester = remember { FocusRequester() }
-    LaunchedEffect(Unit) { weightFieldFocusRequester.requestFocus() }
+    InitialFocusEffect(weightFieldFocusRequester)
+    // F52: כפתור "סרוק מכשירים" נעלם בזמן הסריקה, ולכן הפוקוס עובר לשורה אחרת.
+    // השורה שבמקומו (סטטוס הסריקה) מקבלת פוקוס משלה, כדי שהוא יישאר במקום.
+    val scanStatusFocusRequester = remember { FocusRequester() }
+    LaunchedEffect(heartRateMonitor.state) {
+        if (heartRateMonitor.state == HrConnectionState.SCANNING) {
+            androidx.compose.runtime.withFrameNanos { }
+            runCatching { scanStatusFocusRequester.requestFocus() }
+        }
+    }
 
     val bluetoothPermissions = if (Build.VERSION.SDK_INT >= 31) {
         arrayOf(Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT)
@@ -102,9 +112,17 @@ fun SettingsScreen(
     var hasBluetoothPermission by remember {
         mutableStateOf(bluetoothPermissions.isEmpty() || bluetoothPermissions.all { ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED })
     }
+    // F32: אחרי דחייה "לא לשאול שוב" המערכת לא מציגה דיאלוג בכלל - מסבירים למשתמש.
+    var permissionBlocked by remember { mutableStateOf(false) }
     val bluetoothPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { results ->
         hasBluetoothPermission = results.values.all { it }
-        if (hasBluetoothPermission) heartRateMonitor.startScan()
+        if (hasBluetoothPermission) {
+            permissionBlocked = false
+            heartRateMonitor.startScan()
+        } else {
+            val activity = context as? android.app.Activity
+            permissionBlocked = activity != null && bluetoothPermissions.none { activity.shouldShowRequestPermissionRationale(it) }
+        }
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -207,11 +225,22 @@ fun SettingsScreen(
                             FutureButton("בטל", theme, { heartRateMonitor.disconnect() }, variant = FutureButtonVariant.Secondary, fillMaxWidth = true)
                         }
                         HrConnectionState.SCANNING -> {
-                            Text("סורק מכשירים בקרבת מקום", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.summary, modifier = Modifier.padding(vertical = 12.dp))
+                            // מידעי בלבד (onClick ריק), אבל ממוקד - ר' F52 למעלה.
+                            FocusableItem(onClick = {}, theme = theme, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), focusRequester = scanStatusFocusRequester) {
+                                Text("סורק מכשירים בקרבת מקום", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.summary, modifier = Modifier.padding(14.dp))
+                            }
                         }
                         HrConnectionState.DISCONNECTED -> {
                             heartRateMonitor.lastError?.let { error ->
                                 Text(error, color = theme.dangerColor, fontSize = FutureTypography.summary, modifier = Modifier.padding(bottom = 8.dp))
+                            }
+                            if (permissionBlocked) {
+                                Text(
+                                    "אין הרשאת Bluetooth לסריקה. אפשרו אותה בהגדרות המכשיר, ביישומים של FutureOS.",
+                                    color = theme.dangerColor,
+                                    fontSize = FutureTypography.summary,
+                                    modifier = Modifier.padding(bottom = 8.dp),
+                                )
                             }
                             FutureButton(
                                 "סרוק מכשירים",

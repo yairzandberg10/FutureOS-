@@ -66,7 +66,7 @@ import com.future.fitness.data.WorkoutHistoryEntry
 import com.future.fitness.ui.components.ActivityRings
 import com.future.fitness.ui.components.IconListRow
 import com.future.fitness.ui.components.RingSpec
-import com.future.fitness.ui.components.StatTile
+import com.future.fitness.ui.components.rememberInitialFocus
 
 import com.future.sharednav.theme.FutureTheme
 import java.util.Calendar
@@ -113,16 +113,9 @@ fun HomeScreen(
     // מידע בלבד - נחשפים כשחוזרים לרכיב הראשון.
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
-    val focusRequester = remember { FocusRequester() }
-    // הפריט הראשון עוד לא מצויר בפריים הראשון (רשימה, אנימציית מעבר), והבקשה
-    // נכשלה בשקט - הפוקוס נשאר על העוגן הבלתי נראה של ה-NavHost. מנסים שוב בכמה
-    // הפריימים הראשונים, עד שהפריט קיים.
-    LaunchedEffect(Unit) {
-        repeat(6) {
-            androidx.compose.runtime.withFrameNanos { }
-            if (runCatching { focusRequester.requestFocus() }.isSuccess) return@LaunchedEffect
-        }
-    }
+    // הפוקוס ההתחלתי על הכרטיס "האימון הבא" - ר' rememberInitialFocus (העוגן של
+    // ה-NavHost דורס בקשה מוקדמת, ולכן מבקשים שוב בכמה פריימים).
+    val focusRequester = rememberInitialFocus()
 
     Column(
         modifier = Modifier

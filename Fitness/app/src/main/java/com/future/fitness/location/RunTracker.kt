@@ -38,8 +38,7 @@ class RunTracker(private val context: Context) {
     private var lastLocation: Location? = null
     // בהשהיה של האימון קיבועים לא נספרים (המרחק והקצב נשארים עקביים עם הזמן שעמד).
     private var paused = false
-
-    fun isLocationAvailable(): Boolean = locationManager != null
+    private var altitudeAnchor: Double? = null
 
     fun start() {
         val manager = locationManager ?: return
@@ -49,6 +48,7 @@ class RunTracker(private val context: Context) {
         hasFix = false
         currentAltitudeMeters = null
         elevationGainMeters = 0.0
+        altitudeAnchor = null
         currentSpeedKmh = null
         isTracking = true
         try {
@@ -86,34 +86,51 @@ class RunTracker(private val context: Context) {
 
     private val listener = LocationListener { location ->
         if (paused) return@LocationListener
-        hasFix = true
         // קיבוע לא מדויק (בתוך בניין, תחילת ריצה) קופץ עשרות מטרים הלוך וחזור,
         // וכל קפיצה נספרה כמרחק - גם בעמידה במקום. מדלגים על קיבועים גרועים,
         // ועל תזוזה קטנה מטווח השגיאה של שני הקיבועים.
         if (location.hasAccuracy() && location.accuracy > MAX_ACCURACY_METERS) return@LocationListener
+        // F25: "עוקב" רק אחרי קיבוע שנקבל - קיבוע שנדחה לא משנה את המצב.
+        hasFix = true
         val last = lastLocation
+        // F47: סף הרעש קובע רק אם המרחק נספר - גובה ומהירות מתעדכנים גם בעמידה.
+        var moved = last == null
         if (last != null) {
             val step = last.distanceTo(location)
             val noise = maxOf(if (last.hasAccuracy()) last.accuracy else 0f, if (location.hasAccuracy()) location.accuracy else 0f)
-            if (step < noise / 2) return@LocationListener
-            distanceMeters += step
+            if (step >= noise / 2) {
+                distanceMeters += step
+                moved = true
+            }
         }
         if (location.hasAltitude()) {
-            val previousAltitude = if (last?.hasAltitude() == true) last.altitude else null
-            if (previousAltitude != null) {
-                val delta = location.altitude - previousAltitude
-                if (delta > 0) elevationGainMeters += delta
+            val altitude = location.altitude
+            currentAltitudeMeters = altitude
+            // F24: רעש הגובה של GPS קופץ הלוך וחזור. עולים רק כשהעלייה מהנקודה
+            // הנמוכה האחרונה חורגת מסף הרעש, ונקודת הייחוס יורדת עם הירידות.
+            val anchor = altitudeAnchor
+            if (anchor == null) {
+                altitudeAnchor = altitude
+            } else {
+                val delta = altitude - anchor
+                if (delta >= ELEVATION_NOISE_METERS) {
+                    elevationGainMeters += delta
+                    altitudeAnchor = altitude
+                } else if (delta <= -ELEVATION_NOISE_METERS) {
+                    altitudeAnchor = altitude
+                }
             }
-            currentAltitudeMeters = location.altitude
         }
         currentSpeedKmh = if (location.hasSpeed()) (location.speed * 3.6) else null
-        lastLocation = location
+        // נקודת הייחוס לחישוב המרחק מתעדכנת רק אחרי תזוזה שנספרה, כדי שרעש לא יצטבר.
+        if (moved) lastLocation = location
     }
 
     fun distanceKm(): Double = distanceMeters / 1000.0
 
     private companion object {
         const val MAX_ACCURACY_METERS = 35f
+        const val ELEVATION_NOISE_METERS = 3.0
     }
 
     /** קצב ריצה בדקות לק"מ - null אם עדיין אין מרחק משמעותי כדי לא להציג

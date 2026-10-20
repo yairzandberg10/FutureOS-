@@ -1,6 +1,7 @@
 package com.future.fitness.ui
 
 import androidx.activity.compose.BackHandler
+import java.util.Locale
 import androidx.compose.material.icons.automirrored.rounded.DirectionsRun
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
@@ -261,7 +262,7 @@ fun FitnessNavHost(store: WorkoutStore, heartRateMonitor: HeartRateMonitor, them
                 subtitle = "ריצה חופשית",
                 stats = listOf(
                     route.minutes.toString() to "דקות",
-                    "%.2f".format(route.distanceKm) to "ק״מ",
+                    "%.2f".format(Locale.US, route.distanceKm) to "ק״מ",
                     route.calories.toString() to "קלוריות",
                 ),
                 theme = theme,

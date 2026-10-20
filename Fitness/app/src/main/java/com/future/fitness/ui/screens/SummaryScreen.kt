@@ -13,6 +13,7 @@ import com.future.sharednav.theme.sectionHeaderColor
 import com.future.sharednav.theme.textAlpha
 import com.future.sharednav.components.FutureButton
 import com.future.sharednav.components.FutureButtonVariant
+import com.future.fitness.ui.components.InitialFocusEffect
 import com.future.fitness.ui.components.FitnessTextField
 
 import com.future.sharednav.theme.onReadableAccentColor
@@ -58,7 +59,7 @@ fun SummaryScreen(
     onDone: () -> Unit,
 ) {
     val doneButtonFocusRequester = remember { FocusRequester() }
-    LaunchedEffect(Unit) { doneButtonFocusRequester.requestFocus() }
+    InitialFocusEffect(doneButtonFocusRequester)
 
     Column(
         modifier = Modifier.fillMaxSize().padding(24.dp),

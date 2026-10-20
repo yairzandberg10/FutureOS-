@@ -12,6 +12,7 @@ import com.future.sharednav.theme.sectionHeaderColor
 import com.future.sharednav.theme.textAlpha
 import com.future.sharednav.components.FutureButton
 import com.future.sharednav.components.FutureButtonVariant
+import com.future.fitness.ui.components.rememberInitialFocus
 import com.future.fitness.ui.components.FitnessTextField
 
 import com.future.sharednav.theme.FutureTypography
@@ -73,14 +74,8 @@ private const val DISCLAIMER = "המידע כאן כללי-חינוכי בלבד
 @Composable
 fun HealthTipsScreen(theme: FutureTheme, store: WorkoutStore, onBack: () -> Unit) {
     val profile: UserProfile = store.getProfile()
-    // F21: פוקוס התחלתי על השורה הראשונה (אותו דפוס ניסיון חוזר של HomeScreen).
-    val firstRowFocus = androidx.compose.runtime.remember { androidx.compose.ui.focus.FocusRequester() }
-    androidx.compose.runtime.LaunchedEffect(Unit) {
-        repeat(6) {
-            androidx.compose.runtime.withFrameNanos { }
-            if (runCatching { firstRowFocus.requestFocus() }.isSuccess) return@LaunchedEffect
-        }
-    }
+    // F21: פוקוס התחלתי על השורה הראשונה (ר' rememberInitialFocus).
+    val firstRowFocus = rememberInitialFocus()
 
     Column(modifier = Modifier.fillMaxSize()) {
         ScreenTopBar(title = "בריאות", theme = theme, onBack = onBack)

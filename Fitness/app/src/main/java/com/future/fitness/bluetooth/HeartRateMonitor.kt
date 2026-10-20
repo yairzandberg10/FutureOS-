@@ -106,8 +106,6 @@ class HeartRateMonitor(private val context: Context) {
     private val adapter: BluetoothAdapter? get() = bluetoothManager?.adapter
     private var gatt: BluetoothGatt? = null
 
-    fun isBluetoothAvailable(): Boolean = adapter != null
-
     /**
      * סריקה בלי סינון לפי שירות הדופק: רוב השעונים לא מפרסמים את שירות
      * 0x180D בשידור הפרסום שלהם (רק רצועות דופק עושות זאת), ולכן הסינון הקודם
@@ -192,7 +190,12 @@ class HeartRateMonitor(private val context: Context) {
     fun connect(address: String) {
         val device = try { adapter?.getRemoteDevice(address) } catch (e: IllegalArgumentException) { null } ?: return
         stopScan()
+        // F44: החלפת מכשיר מנתקת קודם את החיבור הישן (close לבד לא שולח ניתוק),
+        // ורשימת הסריקה נסגרת - לא נשארת מוצגת בזמן החיבור.
+        gatt?.disconnect()
         gatt?.close()
+        gatt = null
+        foundDevices.clear()
         lastError = null
         if (connectingAddress != address) connectAttempts = 0
         connectingAddress = address
@@ -255,6 +258,11 @@ class HeartRateMonitor(private val context: Context) {
         }
 
         private fun handleConnectionStateChange(g: BluetoothGatt, status: Int, newState: Int) {
+            // F44: callback ישן מחיבור שהוחלף לא נוגע במצב של החיבור הנוכחי.
+            if (gatt !== g) {
+                g.close()
+                return
+            }
             if (status != BluetoothGatt.GATT_SUCCESS && newState != BluetoothProfile.STATE_CONNECTED) {
                 // כשל חיבור (133 וחבריו) - ניסיון חוזר אחד, ואז הודעה.
                 g.close()
@@ -337,6 +345,16 @@ class HeartRateMonitor(private val context: Context) {
 
         @Suppress("DEPRECATION")
         override fun onDescriptorWrite(g: BluetoothGatt, descriptor: BluetoothGattDescriptor, status: Int) {
+            // F49: אם ההרשמה לדופק נדחתה, לא מציגים "מחובר" - מודיעים על השגיאה ומתנתקים.
+            if (status != BluetoothGatt.GATT_SUCCESS && descriptor.characteristic.uuid == HEART_RATE_MEASUREMENT_UUID) {
+                mainHandler.post {
+                    if (gatt === g) {
+                        lastError = "לא ניתן להפעיל קבלת דופק מהשעון - נסה שוב"
+                        disconnect()
+                    }
+                }
+                return
+            }
             mainHandler.post { subscribeNext(g) }
         }
 
