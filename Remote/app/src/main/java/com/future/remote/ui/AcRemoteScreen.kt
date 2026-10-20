@@ -60,6 +60,7 @@ import com.future.remote.data.RemoteRepository
 import com.future.sharednav.components.FutureActionCell
 import com.future.sharednav.components.FutureMenuRow
 import com.future.sharednav.components.FutureOptionsMenu
+import com.future.sharednav.focus.FocusableItem
 import androidx.compose.material.icons.rounded.WaterDrop
 import androidx.compose.material.icons.rounded.AutoMode
 import com.future.sharednav.icons.FutureIcons
@@ -129,8 +130,9 @@ fun AcRemoteScreen(theme: FutureTheme, device: RemoteDevice, onBack: () -> Unit)
     fun fan() = whenOn { send(state.copy(fan = AcFan.entries[(state.fan.ordinal + 1) % AcFan.entries.size])) }
     fun swing() = whenOn { send(state.copy(swing = !state.swing)) }
 
-    val powerFocus = remember { FocusRequester() }
-    LaunchedEffect(Unit) { runCatching { powerFocus.requestFocus() } }
+    // RM-N03: הפוקוס ההתחלתי על הצג, לא על מקש שמשדר - OK מיד אחרי הכניסה לא מדליק את המזגן.
+    val displayFocus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { runCatching { displayFocus.requestFocus() } }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Column(
@@ -161,7 +163,10 @@ fun AcRemoteScreen(theme: FutureTheme, device: RemoteDevice, onBack: () -> Unit)
                     .padding(horizontal = FutureDimens.screenPadding),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                AcDisplay(theme, state, subtitle = listOfNotNull(company?.label, protocol.label).joinToString(" · "))
+                // הצג הוא נקודת הפוקוס ההתחלתית; OK עליו לא עושה כלום.
+                FocusableItem(onClick = {}, accentColor = theme.accentColor, focusRequester = displayFocus, modifier = Modifier.fillMaxWidth()) {
+                    AcDisplay(theme, state, subtitle = listOfNotNull(company?.label, protocol.label).joinToString(" · "))
+                }
                 Spacer(Modifier.height(FutureDimens.spacingLg))
 
                 // מקש ההפעלה - רחב, באדום כשהמזגן דלוק (כמו בשלט).
@@ -173,7 +178,6 @@ fun AcRemoteScreen(theme: FutureTheme, device: RemoteDevice, onBack: () -> Unit)
                     active = state.power,
                     iconColor = if (state.power) theme.dangerColor else null,
                     height = 72.dp,
-                    focusRequester = powerFocus,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(Modifier.height(FutureDimens.spacingSm))
@@ -205,7 +209,8 @@ fun AcRemoteScreen(theme: FutureTheme, device: RemoteDevice, onBack: () -> Unit)
         FutureOptionsMenu(theme = theme, onDismissRequest = { showMenu = false }, header = device.name) {
             company?.protocols?.filter { it != protocol }?.forEach { other ->
                 // RM2: "החלף ל..." - הנוסח הקודם ("דגם שלט: X") נקרא כמו הדגם הנוכחי, ונחתך.
-                FutureMenuRow("החלף ל-${other.label.removePrefix("שלט ")}", FutureIcons.SwapHoriz, theme, {
+                // RM-N04: בלי השם בסוגריים השורה נכנסת ברוחב התפריט ולא נחתכת.
+                FutureMenuRow("החלף ל-${other.label.removePrefix("שלט ").substringBefore(" (")}", FutureIcons.SwapHoriz, theme, {
                     showMenu = false
                     protocol = other
                     // R08: הטמפרטורה מותאמת לטווח של הדגם החדש, כדי שהמסך והשידור יסכימו.
@@ -255,7 +260,7 @@ private fun AcDisplay(theme: FutureTheme, state: AcState, subtitle: String) {
             Icon(modeIcon(state.mode), contentDescription = null, tint = lit, modifier = Modifier.size(28.dp))
             Spacer(Modifier.width(FutureDimens.spacingMd))
             Text(
-                if (state.power) "${state.temp}°" else "כבוי",
+                if (state.power) tempLabel(state.temp) else "כבוי",
                 color = if (state.power) theme.textColor else theme.subtleTextColor,
                 fontSize = 64.sp,
                 fontWeight = FontWeight.Light,

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -19,6 +20,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -59,9 +61,16 @@ fun RemoteHomeScreen(
             .filter { it.acCompany != null && it.acProtocol != null }
             .associateBy { it.acCompany!! }
     }
+    val listState = rememberLazyListState()
     LaunchedEffect(remotes) {
         val target = remotes.entries.firstOrNull { it.value.id == focusDeviceId }?.key
-        runCatching { (target?.let { rowFocus.getOrPut(it) { FocusRequester() } } ?: focusRequester).requestFocus() }
+        // R13: השורה נוצרת רק בסידור, אחרי שהאפקט רץ - לכן גוללים אליה ומנסים שוב בכל פריים.
+        if (target != null) listState.scrollToItem(AcCompany.entries.indexOf(target))
+        repeat(10) {
+            val requester = target?.let { rowFocus.getOrPut(it) { FocusRequester() } } ?: focusRequester
+            if (runCatching { requester.requestFocus() }.isSuccess) return@LaunchedEffect
+            withFrameNanos { }
+        }
     }
 
     fun open(company: AcCompany) {
@@ -102,6 +111,7 @@ fun RemoteHomeScreen(
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
                     )
                     LazyColumn(
+                        state = listState,
                         modifier = Modifier.weight(1f),
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -113,8 +123,8 @@ fun RemoteHomeScreen(
                                 label = company.label,
                                 subtitle = when {
                                     state == null -> company.protocols.joinToString(" / ") { it.label }
-                                    state.power -> "דלוק · ${state.temp}° · ${state.mode.label}"
-                                    else -> "כבוי · ${state.temp}° · ${state.mode.label}"
+                                    state.power -> "דלוק · ${tempLabel(state.temp)} · ${state.mode.label}"
+                                    else -> "כבוי · ${tempLabel(state.temp)} · ${state.mode.label}"
                                 },
                                 theme = theme,
                                 onClick = { open(company) },

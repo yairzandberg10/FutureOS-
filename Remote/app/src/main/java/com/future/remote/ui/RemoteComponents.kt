@@ -55,6 +55,9 @@ fun RemoteIconButton(icon: ImageVector, contentDescription: String, theme: Futur
     SharedTopBarIconButton(icon, contentDescription, tint, theme.accentColor, onClick)
 }
 
+/** מעלות עם כיווניות משמאל-לימין (LRI..PDI): בעברית בלי זה מופיעה "°24" במקום "24°". */
+fun tempLabel(temp: Int): String = "⁦$temp°⁩"
+
 /**
  * השורה העליונה - ScreenTopBar, או אותה שורה בדיוק (16/12dp, כותרת 20sp)
  * כשיש בצד השני תוכן חופשי. קודם הכותרת כאן הייתה 17sp.
