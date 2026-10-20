@@ -1,6 +1,7 @@
 package com.future.bluetooth
 
 import android.Manifest
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
@@ -16,6 +17,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import com.future.bluetooth.data.BluetoothController
 import com.future.bluetooth.ui.BluetoothActions
@@ -82,8 +84,13 @@ class MainActivity : ComponentActivity() {
                 onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
             }
 
+            // NEW-04: בקשת ההרשאות רק פעם אחת - יצירה מחדש של הפעילות לא שולחת אותה שוב.
+            var permissionAsked by rememberSaveable { mutableStateOf(false) }
             LaunchedEffect(Unit) {
-                if (!hasPermission) permissionLauncher.launch(requiredPermissions)
+                if (!hasPermission && !permissionAsked) {
+                    permissionAsked = true
+                    permissionLauncher.launch(requiredPermissions)
+                }
             }
 
             val actions = remember {
@@ -121,12 +128,12 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun openSystemBluetoothSettings() {
-        try {
-            startActivity(Intent(Settings.ACTION_BLUETOOTH_SETTINGS))
-        } catch (e: Exception) {
-            // אין מסך הגדרות בלוטות' במכשיר - אין לאן לפנות.
-        }
+    /** false כשאין מסך הגדרות בלוטות' במכשיר - אז ההודעה למשתמש צריכה להיות אחרת. */
+    private fun openSystemBluetoothSettings(): Boolean = try {
+        startActivity(Intent(Settings.ACTION_BLUETOOTH_SETTINGS))
+        true
+    } catch (e: ActivityNotFoundException) {
+        false
     }
 
     /**

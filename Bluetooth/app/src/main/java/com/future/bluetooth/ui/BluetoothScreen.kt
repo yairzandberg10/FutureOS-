@@ -1,14 +1,13 @@
 package com.future.bluetooth.ui
-import com.future.sharednav.systemui.StatusBarInset
 
 import com.future.sharednav.icons.FutureIcons
+import com.future.sharednav.systemui.StatusBarInset
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -33,8 +32,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.future.bluetooth.data.BluetoothController
 import com.future.bluetooth.data.BluetoothDeviceInfo
@@ -49,7 +48,6 @@ import com.future.sharednav.components.FutureCard
 import com.future.sharednav.components.FutureDivider
 import com.future.sharednav.components.FutureFocusCard
 import com.future.sharednav.components.FutureIndeterminateProgressBar
-import com.future.sharednav.components.FutureListItem
 import com.future.sharednav.components.FutureMenuRow
 import com.future.sharednav.components.FutureOptionsMenu
 import com.future.sharednav.components.FutureSectionHeader
@@ -58,6 +56,7 @@ import com.future.sharednav.components.FutureSnackbarHost
 import com.future.sharednav.components.FutureSnackbarState
 import com.future.sharednav.components.FutureSwitch
 import com.future.sharednav.components.InputDialog
+import com.future.sharednav.components.MarqueeText
 import com.future.sharednav.components.ScreenScaffold
 import com.future.sharednav.components.rememberFutureSnackbarState
 import com.future.sharednav.nav.onOptionsKeyPress
@@ -71,7 +70,6 @@ import com.future.sharednav.theme.chevronColor
 import com.future.sharednav.theme.mutedTextColor
 import com.future.sharednav.theme.readableAccentColor
 import com.future.sharednav.theme.rememberFutureType
-import com.future.sharednav.theme.sectionHeaderColor
 import com.future.sharednav.theme.subtleTextColor
 import com.future.sharednav.theme.textAlpha
 
@@ -80,8 +78,8 @@ class BluetoothActions(
     val requestPermission: () -> Unit,
     /** בקשת ההפעלה של המערכת - כש-enable() הישיר נדחה. */
     val requestEnable: () -> Unit,
-    /** מסך הבלוטות' של המערכת - למה שהמכשיר לא מאפשר לעשות מכאן. */
-    val openSystemSettings: () -> Unit,
+    /** מסך הבלוטות' של המערכת - למה שהמכשיר לא מאפשר לעשות מכאן. false כשאין מסך כזה. */
+    val openSystemSettings: () -> Boolean,
     /** null כשנפתחה אפליקציית הקבצים, אחרת הודעה למשתמש. */
     val openReceivedFiles: () -> String?,
     /** מסך הגדרות האפליקציה - לאישור הרשאה שנדחתה לצמיתות (אחרי זה המערכת לא מציגה דיאלוג). */
@@ -111,7 +109,8 @@ fun BluetoothApp(
     var lastOpened by rememberSaveable { mutableStateOf<String?>(null) }
     // "הצג עוד" - כל המותאמים. מכשיר שנפתח משם חוזר אליו ב-BACK.
     var showAllPaired by rememberSaveable { mutableStateOf(false) }
-    var menuOpen by remember { mutableStateOf(false) }
+    // BT-01: התפריט נשמר גם אחרי יצירה מחדש של הפעילות.
+    var menuOpen by rememberSaveable { mutableStateOf(false) }
     var dialog by remember { mutableStateOf<Dialog?>(null) }
     val snackbar = rememberFutureSnackbarState()
     // תוצאות שמגיעות מאוחר בשידור של המערכת (הותאם, מחובר, נכשל...).
@@ -124,9 +123,10 @@ fun BluetoothApp(
     onOptionsKeyPress { if (ready && dialog == null) menuOpen = !menuOpen }
 
     val openDevice = openAddress?.let { address -> controller.pairedDevices.firstOrNull { it.address == address } }
-    // מכשיר שנשכח (או שהרדיו כבה) - חוזרים לרשימה.
-    LaunchedEffect(openAddress, openDevice) {
-        if (openAddress != null && openDevice == null) openAddress = null
+    // מכשיר שנשכח (או שהרדיו כבה) - חוזרים לרשימה. BT-01: רק אחרי שהרשימה נטענה,
+    // אחרת מכשיר פתוח לפני יצירה מחדש של הפעילות היה נסגר על רשימה ריקה.
+    LaunchedEffect(openAddress, openDevice, controller.devicesLoaded) {
+        if (controller.devicesLoaded && openAddress != null && openDevice == null) openAddress = null
     }
     BackHandler(enabled = openAddress != null || showAllPaired) {
         if (openAddress != null) openAddress = null else showAllPaired = false
@@ -153,9 +153,21 @@ fun BluetoothApp(
     /** פעולה שהמכשיר לא מאפשר מכאן נפתחת במסך של המערכת, עם הסבר קצר. */
     fun orSystem(ok: Boolean) {
         if (!ok) {
-            snackbar.show("פותח את הגדרות הבלוטות' של המערכת")
-            actions.openSystemSettings()
+            // BT-11: ההודעה מתאימה למה שקרה בפועל - לא "פותח" כשהפתיחה נכשלה.
+            if (actions.openSystemSettings()) snackbar.show("פותח את הגדרות הבלוטות' של המערכת")
+            else snackbar.show("אין מסך הגדרות בלוטות' במכשיר")
         }
+    }
+
+    /**
+     * NEW-01: הפרוקסי של הפרופיל עוד לא מוכן (למשל אחרי הפעלה מחדש) - מבקשים שוב
+     * ומבקשים לנסות שוב, בלי לפתוח את מסך המערכת. true כשעצרנו כאן.
+     */
+    fun waitForProfiles(ready: Boolean): Boolean {
+        if (ready) return false
+        controller.refreshState()
+        snackbar.show("מתחבר לשירותי הבלוטות', נסה שוב")
+        return true
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -206,22 +218,29 @@ fun BluetoothApp(
                     onMenu = { menuOpen = true },
                     onCalls = {
                         val on = !device.callsConnected
-                        val ok = controller.setProfile(device.address, calls = true, enabled = on)
-                        if (ok) snackbar.show(if (on) "מחבר שיחות · ${device.name}" else "שיחות נותקו · ${device.name}")
-                        orSystem(ok)
+                        if (!waitForProfiles(controller.profileReady(calls = true))) {
+                            val ok = controller.setProfile(device.address, calls = true, enabled = on)
+                            if (ok) snackbar.show(if (on) "מחבר שיחות · ${device.name}" else "שיחות נותקו · ${device.name}")
+                            orSystem(ok)
+                        }
                     },
                     onMedia = {
                         val on = !device.mediaConnected
-                        val ok = controller.setProfile(device.address, calls = false, enabled = on)
-                        if (ok) snackbar.show(if (on) "מחבר מדיה · ${device.name}" else "מדיה נותקה · ${device.name}")
-                        orSystem(ok)
+                        if (!waitForProfiles(controller.profileReady(calls = false))) {
+                            val ok = controller.setProfile(device.address, calls = false, enabled = on)
+                            if (ok) snackbar.show(if (on) "מחבר מדיה · ${device.name}" else "מדיה נותקה · ${device.name}")
+                            orSystem(ok)
+                        }
                     },
                     onRename = { dialog = Dialog.RenameDevice(device) },
                     onConnect = {
                         if (device.connection == Connection.Disconnected) {
-                            val ok = controller.connect(device.address)
-                            if (ok) snackbar.show("מתחבר · ${device.name}")
-                            orSystem(ok)
+                            val profilesReady = controller.profileReady(calls = true) || controller.profileReady(calls = false)
+                            if (!waitForProfiles(profilesReady)) {
+                                val ok = controller.connect(device.address)
+                                if (ok) snackbar.show("מתחבר · ${device.name}")
+                                orSystem(ok)
+                            }
                         } else if (controller.isPairing(device.address)) {
                             // BT-07: התאמה בתהליך היא לא חיבור - אין מה לנתק.
                             snackbar.show("ההתאמה עדיין בתהליך")
@@ -248,7 +267,7 @@ fun BluetoothApp(
             },
             onRenamePhone = { dialog = Dialog.RenamePhone },
             onReceivedFiles = { actions.openReceivedFiles()?.let { snackbar.show(it) } },
-            onSettings = actions.openSystemSettings,
+            onSettings = { orSystem(false) },
             // BT-08: ניתוק כל המכשירים מבקש אישור קודם.
             onDisconnectAll = { dialog = Dialog.DisconnectAll },
         )
@@ -312,7 +331,8 @@ fun BluetoothApp(
         is Dialog.RenameDevice -> InputDialog(
             title = "שנה שם",
             theme = theme,
-            initialValue = d.device.name,
+            // בלי שם מהמערכת לא מציעים "מכשיר לא מזוהה" כשם לעריכה
+            initialValue = if (d.device.nameKnown) d.device.name else "",
             onDismiss = { dialog = null },
             onConfirm = { name ->
                 dialog = null
@@ -409,7 +429,12 @@ private fun DeviceLists(
         FutureCard(theme = theme) {
             FutureSettingItem(
                 title = "בלוטות'",
-                summary = if (on) "מופעל" else "כבוי",
+                // BT-25: בזמן ההדלקה (שנייה-שתיים) מראים שהבלוטות' בדרך.
+                summary = when {
+                    controller.isTurningOn -> "מופעל..."
+                    on -> "מופעל"
+                    else -> "כבוי"
+                },
                 icon = FutureIcons.Bluetooth,
                 theme = theme,
                 showChevron = false,
@@ -552,7 +577,7 @@ private fun DeviceCard(
 ) {
     val type = rememberFutureType()
     val connected = device.connection == Connection.Connected
-    FutureFocusCard(theme = theme, onClick = onClick, focusRequester = focusRequester) {
+    FutureFocusCard(theme = theme, onClick = onClick, focusRequester = focusRequester) { focused ->
         Box(
             modifier = Modifier
                 .size(DeviceCircle)
@@ -568,16 +593,20 @@ private fun DeviceCard(
             )
         }
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                device.name,
+            // BT-22: שם ארוך בכרטיס הממוקד גולל (MarqueeText), ובשאר נחתך בשלוש נקודות.
+            MarqueeText(
+                text = device.name,
                 color = theme.textColor,
-                fontSize = type.title,
-                fontWeight = FutureTypography.weightMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+                isFocused = focused,
+                style = TextStyle(fontSize = type.title, fontWeight = FutureTypography.weightMedium),
             )
+            // BT-23: בלי שם מהמערכת שורת המשנה היא הכתובת, כי השם הראשי הוא "מכשיר לא מזוהה".
             Text(
-                if (device.isBonded || device.connection != Connection.Disconnected) statusOf(device) else "זמין להתאמה",
+                when {
+                    !device.nameKnown -> device.address
+                    device.isBonded || device.connection != Connection.Disconnected -> statusOf(device)
+                    else -> "זמין להתאמה"
+                },
                 color = if (connected) accentOf(theme) else theme.mutedTextColor,
                 fontSize = type.summary,
                 maxLines = 1,
@@ -795,11 +824,12 @@ private fun DeviceScreen(
                     variant = FutureButtonVariant.Secondary,
                     fillMaxWidth = true,
                 )
+                // BT-39: פעולה הרסנית באותו סגנון כמו "נתק הכל" בתפריט.
                 FutureButton(
                     text = "שכח מכשיר",
                     theme = theme,
                     onClick = onForget,
-                    variant = FutureButtonVariant.Quiet,
+                    variant = FutureButtonVariant.Destructive,
                     fillMaxWidth = true,
                 )
             }
@@ -848,17 +878,6 @@ private const val SHOW_ALL_ROW = "#show-all"
 
 @Composable
 private fun accentOf(theme: FutureTheme): Color = LocalFutureAccent.current ?: theme.readableAccentColor
-
-/** אייקון סוג המכשיר - בהדגשה כשהוא מחובר, ב-40% כשלא. */
-@Composable
-private fun DeviceGlyph(kind: DeviceKind, theme: FutureTheme, lit: Boolean) {
-    Icon(
-        iconOf(kind),
-        contentDescription = null,
-        tint = if (lit) accentOf(theme) else theme.subtleTextColor,
-        modifier = Modifier.size(FutureDimens.iconSettingRow),
-    )
-}
 
 private fun iconOf(kind: DeviceKind): ImageVector = when (kind) {
     DeviceKind.Headphones -> FutureIcons.Headphones

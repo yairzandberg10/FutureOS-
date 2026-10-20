@@ -14,6 +14,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
 import android.os.ParcelUuid
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -59,15 +60,19 @@ class BluetoothController(private val context: Context) {
      * המותאמים לפי רלוונטיות: מחובר, מתחבר, ואחר כך לפי השימוש האחרון.
      * שלושת הראשונים הם מה שמוצג במסך הראשי.
      */
-    fun pairedByRelevance(): List<BluetoothDeviceInfo> = pairedDevices.sortedWith(
-        compareBy<BluetoothDeviceInfo> {
-            when (it.connection) {
-                Connection.Connected -> 0
-                Connection.Connecting -> 1
-                Connection.Disconnected -> 2
-            }
-        }.thenByDescending { lastUsed.getLong(it.address, 0L) }.thenBy { it.name }
-    )
+    fun pairedByRelevance(): List<BluetoothDeviceInfo> {
+        // BT-16: קוראים את כל הזמנים פעם אחת, ולא SharedPreferences בכל השוואה.
+        val used = lastUsed.all
+        return pairedDevices.sortedWith(
+            compareBy<BluetoothDeviceInfo> {
+                when (it.connection) {
+                    Connection.Connected -> 0
+                    Connection.Connecting -> 1
+                    Connection.Disconnected -> 2
+                }
+            }.thenByDescending { (used[it.address] as? Long) ?: 0L }.thenBy { it.name }
+        )
+    }
 
     fun isSupported(): Boolean = adapter != null
 
@@ -92,6 +97,10 @@ class BluetoothController(private val context: Context) {
 
     val pairedDevices = mutableStateListOf<BluetoothDeviceInfo>()
     val discoveredDevices = mutableStateListOf<BluetoothDeviceInfo>()
+
+    /** BT-01: true אחרי הטענת המותאמים הראשונה. לפניה הרשימה ריקה ואסור להסיק ממנה כלום. */
+    var devicesLoaded by mutableStateOf(false)
+        private set
 
     private var headset: BluetoothHeadset? = null
     private var a2dp: BluetoothA2dp? = null
@@ -155,6 +164,7 @@ class BluetoothController(private val context: Context) {
         val list = (bonded + bondingNow).distinctBy { it.address }.map { it.toInfo() }
         pairedDevices.clear()
         pairedDevices.addAll(list)
+        devicesLoaded = true
         // מכשיר שעבר להיות מותאם יוצא מרשימת הזמינים.
         discoveredDevices.removeAll { d -> list.any { it.address == d.address } }
     }
@@ -250,9 +260,16 @@ class BluetoothController(private val context: Context) {
     fun forget(address: String): Boolean {
         val device = remoteDevice(address) ?: return false
         val ok = callHidden(device, "removeBond")
-        if (ok) aliases.edit().remove(address).apply()
+        // BT-32: גם הזמן האחרון לשימוש נמחק, אחרת מכשיר שנרשם מחדש יורש סדר ישן.
+        if (ok) {
+            aliases.edit().remove(address).apply()
+            lastUsed.edit().remove(address).apply()
+        }
         return ok
     }
+
+    /** true כשהפרוקסי של הפרופיל מוכן. לפני כן חיבור נכשל בלי סיבה אמיתית (NEW-01). */
+    fun profileReady(calls: Boolean): Boolean = if (calls) headset != null else a2dp != null
 
     /** שם מקומי למכשיר. קודם ה-alias של המערכת, ואם היא דוחה - שמירה אצלנו. */
     fun renameDevice(address: String, name: String) {
@@ -498,6 +515,8 @@ class BluetoothController(private val context: Context) {
         } catch (e: Exception) {
             // SecurityException (עטוף ב-InvocationTargetException) במכשיר שדורש
             // BLUETOOTH_PRIVILEGED, או NoSuchMethodException בגרסה שהסירה אותה.
+            // BT-33: נרשם ביומן, בלי כתובת, כדי שכשל יהיה אפשר לאבחן.
+            Log.w(TAG, "$method נכשל: ${e.javaClass.simpleName}")
             false
         }
     }
@@ -506,6 +525,7 @@ class BluetoothController(private val context: Context) {
         try {
             device.javaClass.getMethod(method).invoke(device) as? Boolean ?: false
         } catch (e: Exception) {
+            Log.w(TAG, "$method נכשל: ${e.javaClass.simpleName}")
             false
         }
 
@@ -538,7 +558,9 @@ class BluetoothController(private val context: Context) {
         } catch (e: SecurityException) {
             null
         }
-        val displayName = aliases.getString(address, null) ?: systemName ?: address
+        val localName = aliases.getString(address, null)
+        // BT-23: בלי שם מציגים "מכשיר לא מזוהה" והכתובת בשורת המשנה, לא ככתובת בשם הראשי.
+        val displayName = localName ?: systemName ?: UNKNOWN_NAME
         val bonded = bondState == BluetoothDevice.BOND_BONDED
         val bonding = bondState == BluetoothDevice.BOND_BONDING
         val cls = try {
@@ -548,7 +570,8 @@ class BluetoothController(private val context: Context) {
         }
         val kind = kindOf(cls)
         val uuidList: List<ParcelUuid>? = try {
-            uuids?.toList()
+            // NEW-02: רשימה ריקה = SDP עוד לא נטען, כמו null - נופלים לסיווג לפי המחלקה.
+            uuids?.toList()?.takeIf { it.isNotEmpty() }
         } catch (e: SecurityException) {
             null
         }
@@ -574,6 +597,7 @@ class BluetoothController(private val context: Context) {
             supportsMedia = supportsMedia,
             callsConnected = calls,
             mediaConnected = media,
+            nameKnown = localName != null || systemName != null,
         )
     }
 
@@ -585,7 +609,11 @@ class BluetoothController(private val context: Context) {
                 BluetoothClass.Device.AUDIO_VIDEO_LOUDSPEAKER,
                 BluetoothClass.Device.AUDIO_VIDEO_HIFI_AUDIO,
                 BluetoothClass.Device.AUDIO_VIDEO_PORTABLE_AUDIO -> DeviceKind.Speaker
-                else -> DeviceKind.Headphones
+                // NEW-03: רק אוזניות ודיבורית; מצלמה, טלוויזיה וכו' לא מקבלים אייקון אוזניות.
+                BluetoothClass.Device.AUDIO_VIDEO_HEADPHONES,
+                BluetoothClass.Device.AUDIO_VIDEO_WEARABLE_HEADSET,
+                BluetoothClass.Device.AUDIO_VIDEO_HANDSFREE -> DeviceKind.Headphones
+                else -> DeviceKind.Other
             }
             BluetoothClass.Device.Major.PHONE -> DeviceKind.Phone
             BluetoothClass.Device.Major.COMPUTER -> DeviceKind.Computer
@@ -597,6 +625,11 @@ class BluetoothController(private val context: Context) {
     }
 
     private companion object {
+        const val TAG = "BluetoothController"
+
+        /** שם מוצג למכשיר שאין לו שם מהמערכת ומשתמש לא קרא לו. */
+        const val UNKNOWN_NAME = "מכשיר לא מזוהה"
+
         /** BluetoothStatusCodes.SUCCESS - הערך ש-setAlias מחזירה כשהצליחה (API 33+). */
         const val ALIAS_SUCCESS = 0
 

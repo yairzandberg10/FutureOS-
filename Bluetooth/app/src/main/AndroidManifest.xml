@@ -20,11 +20,9 @@
     </queries>
 
     <uses-permission android:name="com.future.futureui.permission.SYSTEM_SETTINGS" />
-    <uses-permission android:name="com.future.keyboard.permission.SETTINGS" />
+    <!-- BT-30: allowBackup=false, ולכן כללי גיבוי/חילוץ לא נאכפים - הוסרו. -->
     <application
         android:allowBackup="false"
-        android:dataExtractionRules="@xml/data_extraction_rules"
-        android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"

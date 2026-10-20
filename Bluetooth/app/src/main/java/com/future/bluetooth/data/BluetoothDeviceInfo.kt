@@ -20,4 +20,6 @@ data class BluetoothDeviceInfo(
     val supportsMedia: Boolean = false,
     val callsConnected: Boolean = false,
     val mediaConnected: Boolean = false,
+    /** false כשאין שם מהמערכת או מהמשתמש - אז השם הוא "מכשיר לא מזוהה" והכתובת מוצגת בשורת המשנה. */
+    val nameKnown: Boolean = true,
 )
