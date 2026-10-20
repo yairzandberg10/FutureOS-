@@ -211,8 +211,7 @@ class MainActivity : ComponentActivity() {
                     // היסטוריה ארוכה בלי הגבלה (למשל logcat) ממלאת את הזיכרון ומאטה את הרשימה
                     if (lines.size > MAX_LINES) lines.removeRange(0, lines.size - MAX_LINES)
                     isRunning = false
-                    // TRM-07: כפתור השליחה נעלם בזמן הריצה ולקח איתו את הפוקוס - מחזירים לשדה.
-                    runCatching { inputFocusRequester.requestFocus() }
+                    // TRM-D02: אין בקשת פוקוס אחרי הרצה - היא הייתה פותחת את המקלדת מחדש אחרי כל פקודה
                     listState.animateScrollToItem((lines.size - 1).coerceAtLeast(0))
                 }
             }
@@ -232,7 +231,8 @@ class MainActivity : ComponentActivity() {
                         },
                     color = theme.backgroundColor
                 ) {
-                    Column(modifier = Modifier.fillMaxSize().padding(top = StatusBarInset.TITLE_GAP_DP.dp)) {
+                    // TRM-D01: עם edge-to-edge adjustResize לא מקטין את החלון, אז שורת הקלט נשארה מתחת למקלדת
+                    Column(modifier = Modifier.fillMaxSize().imePadding().padding(top = StatusBarInset.TITLE_GAP_DP.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
@@ -246,12 +246,21 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                        // TRM-12: טבעת פוקוס על רשימת הפלט, כמו בשדה הקלט
+                        val listInteraction = remember { MutableInteractionSource() }
+                        val listFocused by listInteraction.collectIsFocusedAsState()
+                        val listRing by androidx.compose.animation.animateColorAsState(
+                            if (listFocused) theme.readableAccentColor else Color.Transparent,
+                            FutureMotion.focusColorSpec,
+                            label = "terminalListRing",
+                        )
                         LazyColumn(
                             state = listState,
                             modifier = Modifier
                                 .weight(1f)
                                 .fillMaxWidth()
-                                .focusable()
+                                .focusable(interactionSource = listInteraction)
+                                .border(FutureDimens.focusBorderControl, listRing, FutureShapes.textField)
                                 // גלילת הפלט ב-D-pad: אין מסך מגע במכשיר, אז בלי onKeyEvent
                                 // כאן אין שום דרך לגלול פלט ארוך מהמסך - המקשים היו נבלעים
                                 // קודם ע"י ה-Surface החיצוני בלי לזוז בכלל.
@@ -339,7 +348,10 @@ class MainActivity : ComponentActivity() {
                                 TerminalIconButton(
                                     icon = FutureIcons.Cancel,
                                     contentDescription = "בטל",
-                                    onClick = { shell.cancelCurrent() },
+                                    onClick = {
+                                        shell.cancelCurrent()
+                                        runCatching { inputFocusRequester.requestFocus() }
+                                    },
                                     theme = theme,
                                     tint = theme.dangerColor
                                 )
@@ -394,7 +406,9 @@ class MainActivity : ComponentActivity() {
                                 if (!lastOutput.isNullOrBlank()) {
                                     val clipboard = context.getSystemService(ClipboardManager::class.java)
                                     clipboard.setPrimaryClip(ClipData.newPlainText("terminal", lastOutput))
+                                    android.widget.Toast.makeText(context, context.getString(R.string.terminal_copied), android.widget.Toast.LENGTH_SHORT).show()
                                 }
+                                runCatching { inputFocusRequester.requestFocus() }
                             },
                             onShareHistory = {
                                 showMenu = false
@@ -402,6 +416,7 @@ class MainActivity : ComponentActivity() {
                                 if (historyText.isNotBlank()) {
                                     com.future.sharednav.share.FutureShare.text(this@MainActivity, historyText)
                                 }
+                                runCatching { inputFocusRequester.requestFocus() }
                             }
                         )
                     }

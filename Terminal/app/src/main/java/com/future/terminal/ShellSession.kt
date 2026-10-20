@@ -57,7 +57,7 @@ class ShellSession {
                 pair
             }
             val exit = proc.waitFor()
-            val text = out + err
+            val text = translateShellErrors(out + err)
             when {
                 cancelled -> text + "^C (בוטל)"
                 timedOut -> text + "\n[הפקודה נעצרה: עברו יותר מ-${COMMAND_TIMEOUT_MS / 1000} שניות]"
@@ -102,6 +102,14 @@ class ShellSession {
         currentProcess = null
     }
 }
+
+/** TRM-17: הודעות שגיאה סטנדרטיות של המעטפת מתורגמות לעברית, כדי שלא יופיעו באנגלית בממשק. */
+internal fun translateShellErrors(text: String): String = text
+    .replace("No such file or directory", "אין קובץ או תיקייה כזו")
+    .replace("Permission denied", "אין הרשאה")
+    .replace("Not a directory", "זו אינה תיקייה")
+    .replace("Is a directory", "זו תיקייה")
+    .replace("command not found", "הפקודה לא נמצאה")
 
 /** מצטט מחרוזת למעטפת בגרשיים בודדים - בתוך "..." נתיב עם $, ` או " היה מתפרש/נשבר. */
 internal fun shellQuote(value: String): String = "'" + value.replace("'", "'\\''") + "'"

@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">טרמינל</string>
+    <string name="terminal_copied">הפלט האחרון הועתק</string>
 </resources>
