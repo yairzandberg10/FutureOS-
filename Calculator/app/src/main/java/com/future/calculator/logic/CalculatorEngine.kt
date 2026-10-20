@@ -105,7 +105,8 @@ object CalculatorEngine {
                 val x = pv.toDouble()
                 val y = cur.toDouble()
                 if (y == 0.0) throw ArithmeticException("root 0")
-                val r = if (x < 0 && y % 2.0 == 1.0) -Math.pow(-x, 1.0 / y) else Math.pow(x, 1.0 / y)
+                // Math.abs: ב-Java סימן ה-% הוא סימן המחולק, אז -3 % 2.0 = -1.0 ולא 1.0
+                val r = if (x < 0 && Math.abs(y % 2.0) == 1.0) -Math.pow(-x, 1.0 / y) else Math.pow(x, 1.0 / y)
                 if (r.isNaN()) throw ArithmeticException("NaN")
                 BigDecimal(r, PRECISION)
             }

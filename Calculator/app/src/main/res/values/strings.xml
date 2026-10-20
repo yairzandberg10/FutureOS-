@@ -1,3 +1,20 @@
 <resources>
     <string name="app_name">מחשבון</string>
+    <string name="calc_title">מחשבון</string>
+    <string name="calc_title_scientific">מחשבון מדעי</string>
+    <string name="calc_mode_standard">רגיל</string>
+    <string name="calc_mode_scientific">מדעי</string>
+    <string name="calc_history_title">היסטוריה</string>
+    <string name="calc_empty">אין חישובים</string>
+    <string name="calc_confirm_clear_history">למחוק את כל ההיסטוריה?</string>
+    <string name="calc_key_back">חזור</string>
+    <string name="calc_key_menu">תפריט</string>
+    <string name="calc_menu_standard">מחשבון רגיל</string>
+    <string name="calc_menu_scientific">מחשבון מדעי</string>
+    <string name="calc_menu_clear">נקה (C)</string>
+    <string name="calc_menu_history">היסטוריה</string>
+    <string name="calc_menu_copy">העתק תוצאה</string>
+    <string name="calc_menu_clear_history">נקה היסטוריה</string>
+    <string name="calc_copied">הועתק</string>
+    <string name="calc_nothing_to_copy">אין תוצאה להעתקה</string>
 </resources>

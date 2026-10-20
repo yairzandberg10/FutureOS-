@@ -6,8 +6,6 @@
    See https://developer.android.com/about/versions/12/backup-restore
 -->
 <full-backup-content>
-    <!--
-   <include domain="sharedpref" path="."/>
-   <exclude domain="sharedpref" path="device.xml"/>
--->
+    <!-- היסטוריית המחשבון לא נכנסת לגיבוי. -->
+    <exclude domain="sharedpref" path="calculator.xml" />
 </full-backup-content>

@@ -2,7 +2,6 @@ package com.future.calculator
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import com.future.calculator.ui.CalculatorScreen
@@ -23,8 +22,6 @@ class MainActivity : ComponentActivity() {
             // מתעדכן בזמן אמת כשמצב כהה/בהיר או צבע ההדגשה משתנים - גם כשהשינוי
             // נעשה מהקונטרול סנטר שנפתח מעל המחשבון, בלי לצאת ממנו.
             val theme = rememberFutureTheme()
-
-            BackHandler { finish() }
 
             FutureAppTheme(theme) {
                 CalculatorScreen(theme = theme, onBack = { finish() })

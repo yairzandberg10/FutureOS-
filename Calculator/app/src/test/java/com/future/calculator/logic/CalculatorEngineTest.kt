@@ -77,4 +77,15 @@ class CalculatorEngineTest {
     @Test fun equalsWithoutOperationHasNoHistory() = assertNull(CalculatorEngine.equals(type("6")).second)
 
     @Test fun backspaceToZero() = assertEquals("0", CalculatorEngine.backspace(type("7")).display)
+
+    @Test fun addingFifteenDigitsKeepsEveryDigit() = assertEquals("1234567890124", CalculatorEngine.equals(type("1234567890123", "+", "1")).first.display)
+
+    @Test fun negateKeepsSignWhenTypingNextOperand() = assertEquals("2", CalculatorEngine.equals(CalculatorEngine.inputDigit(CalculatorEngine.negate(type("5", "+")), "3")).first.display)
+
+    @Test fun percentThenOperatorAppliesPendingAddition() = assertEquals("225", type("200", "+", "10", "%", "+", "5", "=").display)
+
+    @Test fun oddRootOfNegativeNumber() {
+        val s = CalculatorEngine.operator(CalcState(display = "-8", startFresh = false), CalcOp.ROOT)
+        assertEquals("-0.5", CalculatorEngine.equals(CalculatorEngine.inputDigit(s, "3")).first.display)
+    }
 }

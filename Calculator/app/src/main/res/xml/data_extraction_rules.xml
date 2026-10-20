@@ -4,16 +4,11 @@
    for details.
 -->
 <data-extraction-rules>
+    <!-- היסטוריית המחשבון היא נתוני משתמש מקומיים - לא נכנסת לגיבוי בענן ולא להעברה למכשיר אחר. -->
     <cloud-backup>
-        <!-- TODO: Use <include> and <exclude> to control what is backed up.
-        <include .../>
-        <exclude .../>
-        -->
+        <exclude domain="sharedpref" path="calculator.xml" />
     </cloud-backup>
-    <!--
     <device-transfer>
-        <include .../>
-        <exclude .../>
+        <exclude domain="sharedpref" path="calculator.xml" />
     </device-transfer>
-    -->
 </data-extraction-rules>

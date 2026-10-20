@@ -24,10 +24,6 @@
 # ואופטימיזציה לכל ה-UI של המערכת, ו-Compose עצמו לא צריך אותו: אף
 # composable לא נקרא ב-reflection, ו-Compose מביא כללי consumer משלו.
 
-# Room יוצרת מימושים בזמן קומפילציה ומאתרת אותם בשמם.
--keep class * extends androidx.room.RoomDatabase { *; }
--dontwarn androidx.room.paging.**
-
 # מודלים שעוברים סריאליזציה (העדפות, JSON) - שמירת שמות השדות.
 -keepclassmembers class com.future.** {
     <init>(...);
