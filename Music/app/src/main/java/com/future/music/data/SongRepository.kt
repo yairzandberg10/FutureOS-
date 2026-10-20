@@ -95,7 +95,9 @@ class SongRepository(private val context: Context) {
         } catch (e: Exception) {
             android.util.Log.e("SongRepository", "Error loading songs", e)
         }
-        return result
+        // M-18: מיון עקבי לפי Collator עברי (ולא לפי קוד יוניקוד של SQLite)
+        val collator = java.text.Collator.getInstance(java.util.Locale("he")).apply { strength = java.text.Collator.PRIMARY }
+        return result.sortedWith { a, b -> collator.compare(a.title, b.title) }
     }
 
     companion object {

@@ -71,10 +71,13 @@ class MusicPlaybackService : MediaSessionService() {
     override fun onDestroy() {
         AudioFx.onResumeRequested = null
         AudioFx.release()
-        mediaSession?.run {
-            player.release()
-            release()
-            mediaSession = null
+        // M-27: קודם ה-session ואז הנגן שהוא מחזיק
+        val session = mediaSession
+        mediaSession = null
+        session?.let {
+            val p = it.player
+            it.release()
+            p.release()
         }
         super.onDestroy()
     }

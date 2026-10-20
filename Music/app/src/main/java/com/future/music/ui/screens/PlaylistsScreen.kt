@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.sp
 import com.future.music.data.Playlist
 import com.future.music.ui.components.NameInputDialog
 import com.future.music.ui.components.ScreenTopBar
+import com.future.music.ui.components.songCountText
 import com.future.sharednav.theme.FutureTheme
 
 @Composable
@@ -66,9 +67,16 @@ fun PlaylistsScreen(
         )
 
         if (playlists.isEmpty()) {
-            Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Text("אין עדיין פלייליסטים - לחצו + כדי ליצור", color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.body)
-            }
+            // M-34: במכשיר מקשים אין "+" - שורה בפוקוס ליצירת פלייליסט
+            FutureListItem(
+                title = "פלייליסט חדש",
+                summary = "אין עדיין פלייליסטים",
+                theme = theme,
+                onClick = { showCreateDialog = true },
+                focusRequester = firstItemFocusRequester,
+                leading = { FutureAvatar(theme = theme, icon = FutureIcons.Add) },
+                modifier = Modifier.padding(horizontal = FutureDimens.screenPadding, vertical = FutureDimens.spacingXs),
+            )
         } else {
             LazyColumn(
                 modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = FutureDimens.screenPadding),
@@ -81,7 +89,7 @@ fun PlaylistsScreen(
                         onClick = { onOpenPlaylist(playlist) },
                         focusRequester = if (index == 0) firstItemFocusRequester else null,
                         leading = { FutureAvatar(theme = theme, icon = FutureIcons.AutoMirrored.QueueMusic) },
-                        trailing = { Text("${playlist.songIds.size} שירים", color = theme.subtleTextColor, fontSize = type.summary) },
+                        trailing = { Text(songCountText(playlist.songIds.size), color = theme.subtleTextColor, fontSize = type.summary) },
                     )
                 }
             }

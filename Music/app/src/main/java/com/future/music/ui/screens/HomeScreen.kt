@@ -78,7 +78,7 @@ fun HomeScreen(
         HomeItem("6", FutureIcons.Search, "חיפוש", "שיר, אמן או אלבום", onOpenSearch),
         HomeItem("7", FutureIcons.Equalizer, "אקולייזר", "אקולייזר מלא ואפקטים", onOpenEqualizer),
         HomeItem("8", FutureIcons.Headphones, "התקני שמע", "Bluetooth, אוזניות ורמקולים", onOpenDevices),
-        HomeItem("9", FutureIcons.AutoMirrored.QueueMusic, "תור הניגון", "מה מתנגן הבא", onOpenQueue),
+        HomeItem("9", FutureIcons.ViewList, "תור הניגון", "מה מתנגן הבא", onOpenQueue),
     )
 
     // פוקוס אוטומטי ומלא על הפריט הראשון בתפריט מיד כשהוא נפתח - בלי צורך

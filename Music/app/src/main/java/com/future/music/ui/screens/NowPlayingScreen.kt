@@ -121,8 +121,14 @@ fun NowPlayingScreen(
     var focusedControl by remember { mutableStateOf<String?>(null) }
     // פוקוס אוטומטי על נגן/השהה - וגם כשהשיר הראשון נטען אחרי שהמסך כבר
     // פתוח. בלי שיר אין כפתורים, והפוקוס נשאר על המסך עצמו (מקשי הספרות).
+    // M-42: אחרי חזרה מהמסך הקודם המסך עדיין באנימציית כניסה והבקשה הראשונה
+    // נכשלת בשקט (הטבעת לא מופיעה) - מנסים שוב כמה פעמים עד שהפוקוס נקלט.
     LaunchedEffect(song != null) {
-        runCatching { if (song != null) playButtonFocusRequester.requestFocus() else focusRequester.requestFocus() }
+        repeat(6) { attempt ->
+            val ok = runCatching { if (song != null) playButtonFocusRequester.requestFocus() else focusRequester.requestFocus() }.isSuccess
+            if (ok && attempt > 0) return@LaunchedEffect
+            delay(if (attempt == 0) 80L else 120L)
+        }
     }
 
     Column(
@@ -132,6 +138,12 @@ fun NowPlayingScreen(
             .focusable()
             .onKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
+                if (song == null) {
+                    when (digitForKey(event.key)) {
+                        "3" -> { onOpenSound(); return@onKeyEvent true }
+                        "9" -> { onOpenDevices(); return@onKeyEvent true }
+                    }
+                }
                 if (song != null) {
                     when (digitForKey(event.key)) {
                         "1" -> { onToggleFavorite(); return@onKeyEvent true }
@@ -267,6 +279,14 @@ fun NowPlayingScreen(
                             active = action.active, onClick = action.onClick, onFocusChanged = track(action.key),
                         )
                     }
+                }
+            } else {
+                // M-20: גם בלי שיר אפשר להגיע לסאונד ולהתקנים
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                    RoundIconButton(FutureIcons.Equalizer, "סאונד (3)", theme, size = 40.dp, onClick = onOpenSound)
+                    Spacer(modifier = Modifier.width(24.dp))
+                    RoundIconButton(FutureIcons.Bluetooth, "Bluetooth (9)", theme, size = 40.dp, onClick = onOpenDevices)
                 }
             }
             Spacer(modifier = Modifier.height(12.dp))

@@ -16,9 +16,17 @@ import com.future.sharednav.theme.subtleTextColor
 
 fun formatDuration(ms: Long): String {
     val totalSeconds = ms / 1000
-    val minutes = totalSeconds / 60
     val seconds = totalSeconds % 60
-    return "%d:%02d".format(minutes, seconds)
+    // M-17: מעל שעה מציגים h:mm:ss ולא "125:30"
+    if (totalSeconds >= 3600) return "%d:%02d:%02d".format(totalSeconds / 3600, (totalSeconds / 60) % 60, seconds)
+    return "%d:%02d".format(totalSeconds / 60, seconds)
+}
+
+/** M-15: ריבוי עברי - "שיר אחד", "שני שירים", "5 שירים". */
+fun songCountText(n: Int): String = when (n) {
+    1 -> "שיר אחד"
+    2 -> "שני שירים"
+    else -> "$n שירים"
 }
 
 /**

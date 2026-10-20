@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.future.music.data.ArtistGroup
 import com.future.music.ui.components.ScreenTopBar
+import com.future.music.ui.components.songCountText
 import com.future.sharednav.theme.FutureTheme
 
 @Composable
@@ -61,7 +62,7 @@ fun ArtistsScreen(artists: List<ArtistGroup>, theme: FutureTheme, onBack: () -> 
                         onClick = { onOpenArtist(artist.name) },
                         focusRequester = if (index == 0) firstItemFocusRequester else null,
                         leading = { FutureAvatar(theme = theme, icon = FutureIcons.Person) },
-                        trailing = { Text("${artist.songCount} שירים", color = theme.subtleTextColor, fontSize = type.summary) },
+                        trailing = { Text(songCountText(artist.songCount), color = theme.subtleTextColor, fontSize = type.summary) },
                     )
                 }
             }

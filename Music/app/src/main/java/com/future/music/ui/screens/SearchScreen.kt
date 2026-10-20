@@ -18,6 +18,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.future.music.data.Song
 import com.future.music.playback.PlayerUiState
+import com.future.music.util.T9Search
 import com.future.music.ui.components.MiniPlayerBar
 import com.future.music.ui.components.ScreenTopBar
 import com.future.music.ui.components.SongListItem
@@ -46,8 +47,11 @@ fun SearchScreen(
     var query by rememberSaveable { mutableStateOf("") }
     val results = remember(query, allSongs) {
         val q = query.trim()
+        // M-30: רצף ספרות מתפרש גם כ-T9 (קידומת של מילה בשם/אמן/אלבום), בנוסף לחיפוש טקסט רגיל
+        val t9 = q.all { it in '2'..'9' }
         if (q.isEmpty()) emptyList() else allSongs.filter {
-            it.title.contains(q, ignoreCase = true) || it.artist.contains(q, ignoreCase = true) || it.album.contains(q, ignoreCase = true)
+            it.title.contains(q, ignoreCase = true) || it.artist.contains(q, ignoreCase = true) || it.album.contains(q, ignoreCase = true) ||
+                (t9 && (T9Search.matchesAnyWord(it.title, q) || T9Search.matchesAnyWord(it.artist, q) || T9Search.matchesAnyWord(it.album, q)))
         }
     }
 

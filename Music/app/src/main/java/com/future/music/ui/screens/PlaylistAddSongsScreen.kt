@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -45,14 +45,20 @@ fun PlaylistAddSongsScreen(
         if (q.isEmpty()) allSongs else allSongs.filter { it.title.contains(q, true) || it.artist.contains(q, true) }
     }
 
+    // M-43: לא פותחים מקלדת אוטומטית - הפוקוס מתחיל בשורה הראשונה ברשימה
+    val firstRow = remember { androidx.compose.ui.focus.FocusRequester() }
+    androidx.compose.runtime.LaunchedEffect(shown.firstOrNull()?.id) {
+        if (shown.isNotEmpty()) runCatching { firstRow.requestFocus() }
+    }
+
     Column(modifier = Modifier.fillMaxSize().escapeTextFieldFocusTrap()) {
-        ScreenTopBar(title = "הוספה ל$playlistName", theme = theme, onBack = onBack)
+        ScreenTopBar(title = "הוספה לפלייליסט $playlistName", theme = theme, onBack = onBack)
         FutureTextField(
             value = filter,
             onValueChange = { filter = it },
             theme = theme,
             placeholder = "סינון שירים",
-            autoFocus = true,
+            autoFocus = false,
             leading = {
                 Icon(FutureIcons.Search, contentDescription = null, tint = theme.mutedTextColor, modifier = Modifier.size(FutureDimens.iconTopBar))
             },
@@ -62,8 +68,9 @@ fun PlaylistAddSongsScreen(
             modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = FutureDimens.screenPadding),
             verticalArrangement = Arrangement.spacedBy(FutureDimens.itemSpacing),
         ) {
-            items(shown, key = { it.id }) { song ->
+            itemsIndexed(shown, key = { _, song -> song.id }) { index, song ->
                 FutureListItem(
+                    focusRequester = if (index == 0) firstRow else null,
                     title = song.title,
                     summary = song.artist,
                     theme = theme,

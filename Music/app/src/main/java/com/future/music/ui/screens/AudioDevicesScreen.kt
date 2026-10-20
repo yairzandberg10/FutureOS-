@@ -147,7 +147,7 @@ fun AudioDevicesScreen(theme: FutureTheme, onBack: () -> Unit, onOpenEqualizer: 
                 }
             }
 
-            item { FutureSectionHeader("הגדרות ל$deviceName", theme, inset = false) }
+            item { FutureSectionHeader("הגדרות עבור $deviceName", theme, inset = false) }
             item {
                 FutureSettingItem(
                     title = "אפקט סאונד",

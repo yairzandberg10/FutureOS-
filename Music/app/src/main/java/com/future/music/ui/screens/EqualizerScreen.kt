@@ -40,6 +40,7 @@ fun EqualizerScreen(theme: FutureTheme, onBack: () -> Unit) {
     val settings by AudioFx.settings.collectAsState()
     val deviceName by AudioFx.deviceName.collectAsState()
     var showPresets by remember { mutableStateOf(false) }
+    var showResetConfirm by remember { mutableStateOf(false) }
     val first = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { first.requestFocus() } }
 
@@ -85,8 +86,8 @@ fun EqualizerScreen(theme: FutureTheme, onBack: () -> Unit) {
                 items(AudioFx.bands, key = { it.index }) { band ->
                     val level = levels.getOrElse(band.index) { 0 }
                     FxSlider(
-                        label = formatHz(band.centerHz),
-                        valueText = "%+.1f dB".format(level / 100f),
+                        label = ltr(formatHz(band.centerHz)),
+                        valueText = ltr("%+.1f dB".format(level / 100f)),
                         value = (level - range.first) / span,
                         step = 100f / span,
                         theme = theme,
@@ -98,7 +99,7 @@ fun EqualizerScreen(theme: FutureTheme, onBack: () -> Unit) {
             item {
                 FxSlider(
                     label = "הגברת באס",
-                    valueText = "${settings.bass / 10}%",
+                    valueText = ltr("${settings.bass / 10}%"),
                     value = settings.bass / 1000f,
                     theme = theme,
                     onValueChange = { v -> AudioFx.update { it.copy(bass = (v * 1000).roundToInt()) } },
@@ -107,7 +108,7 @@ fun EqualizerScreen(theme: FutureTheme, onBack: () -> Unit) {
             item {
                 FxSlider(
                     label = "סאונד 3D",
-                    valueText = "${settings.virtualizer / 10}%",
+                    valueText = ltr("${settings.virtualizer / 10}%"),
                     value = settings.virtualizer / 1000f,
                     theme = theme,
                     onValueChange = { v -> AudioFx.update { it.copy(virtualizer = (v * 1000).roundToInt()) } },
@@ -116,7 +117,7 @@ fun EqualizerScreen(theme: FutureTheme, onBack: () -> Unit) {
             item {
                 FxSlider(
                     label = "הגברת עוצמה",
-                    valueText = "+%.1f dB".format(settings.loudness / 100f),
+                    valueText = ltr("+%.1f dB".format(settings.loudness / 100f)),
                     value = settings.loudness / 1500f,
                     theme = theme,
                     onValueChange = { v -> AudioFx.update { it.copy(loudness = (v * 1500).roundToInt()) } },
@@ -129,10 +130,25 @@ fun EqualizerScreen(theme: FutureTheme, onBack: () -> Unit) {
                     theme = theme,
                     icon = FutureIcons.RestartAlt,
                     showChevron = false,
-                    onClick = { AudioFx.reset() },
+                    onClick = { showResetConfirm = true },
                 )
             }
         }
+    }
+
+    // M-21: איפוס מוחק את כל הפסים והאפקטים - מבקשים אישור (הפוקוס על "ביטול")
+    if (showResetConfirm) {
+        com.future.music.ui.components.ConfirmDialog(
+            title = "איפוס האקולייזר",
+            message = "לאפס את כל הפסים והאפקטים?",
+            theme = theme,
+            confirmLabel = "אפס",
+            onDismiss = { showResetConfirm = false },
+            onConfirm = {
+                showResetConfirm = false
+                AudioFx.reset()
+            },
+        )
     }
 
     if (showPresets) {
@@ -152,5 +168,8 @@ fun EqualizerScreen(theme: FutureTheme, onBack: () -> Unit) {
         }
     }
 }
+
+/** M-46: עטיפת LTR (isolate) כדי שסימן +/- ויחידה לא יתהפכו בתוך טקסט RTL. */
+private fun ltr(s: String): String = "⁦$s⁩"
 
 private fun formatHz(hz: Int): String = if (hz >= 1000) "%.1f kHz".format(hz / 1000f).replace(".0 ", " ") else "$hz Hz"

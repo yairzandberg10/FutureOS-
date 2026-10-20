@@ -25,7 +25,12 @@ import com.future.sharednav.theme.FutureTheme
 
 @Composable
 fun QueueScreen(playerState: PlayerUiState, theme: FutureTheme, onBack: () -> Unit, onPlayAt: (Int) -> Unit) {
+    // M-13: נפתח על השיר המתנגן (ואם אין - על הראשון), והרשימה נגללת אליו מראש.
+    val startIndex = playerState.currentIndex.coerceIn(0, (playerState.queue.size - 1).coerceAtLeast(0))
     val firstItemFocusRequester = remember { FocusRequester() }
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState(
+        initialFirstVisibleItemIndex = (startIndex - 2).coerceAtLeast(0),
+    )
     LaunchedEffect(Unit) { runCatching { firstItemFocusRequester.requestFocus() } }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -37,6 +42,7 @@ fun QueueScreen(playerState: PlayerUiState, theme: FutureTheme, onBack: () -> Un
             }
         } else {
             LazyColumn(
+                state = listState,
                 modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = FutureDimens.screenPadding),
                 verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(FutureDimens.itemSpacing),
             ) {
@@ -48,7 +54,7 @@ fun QueueScreen(playerState: PlayerUiState, theme: FutureTheme, onBack: () -> Un
                         isPlaying = playerState.isPlaying,
                         theme = theme,
                         onClick = { onPlayAt(index) },
-                        focusRequester = if (index == 0) firstItemFocusRequester else null,
+                        focusRequester = if (index == startIndex) firstItemFocusRequester else null,
                     )
                 }
             }

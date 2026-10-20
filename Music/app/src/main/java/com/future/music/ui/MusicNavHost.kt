@@ -104,19 +104,30 @@ fun MusicNavHost(
     var renamingArtist by rememberSaveable { mutableStateOf<String?>(null) }
     val playerState = playerController.state
 
+    // M-18/M-47: מיון שמות לפי Collator עברי, לא לפי קוד יוניקוד
+    val nameCollator = remember {
+        java.text.Collator.getInstance(java.util.Locale("he")).apply { strength = java.text.Collator.PRIMARY }
+    }
     val artists = remember(allSongs) {
         allSongs.groupBy { it.artist }
             .map { (name, songs) -> ArtistGroup(name, songs.size) }
-            .sortedBy { it.name }
+            .sortedWith { a, b -> nameCollator.compare(a.name, b.name) }
     }
     val albums = remember(allSongs) {
         allSongs.groupBy { it.albumId }
             .map { (id, songs) -> AlbumGroup(id, songs.first().album, songs.first().artist, songs.size) }
-            .sortedBy { it.name }
+            .sortedWith { a, b -> nameCollator.compare(a.name, b.name) }
     }
     val favoriteIds = remember(dataVersion) { playlistStore.getFavoriteIds() }
     val favorites = remember(allSongs, favoriteIds) { allSongs.filter { it.id in favoriteIds } }
-    val playlists = remember(dataVersion) { playlistStore.getPlaylists() }
+    // M-16: הספירה לא כוללת שירים שנמחקו מהמכשיר (בזמן שהספרייה עוד לא נטענה - בלי סינון)
+    val playlists = remember(dataVersion, allSongs) {
+        val all = playlistStore.getPlaylists()
+        if (allSongs.isEmpty()) all else {
+            val existing = allSongs.mapTo(HashSet()) { it.id }
+            all.map { p -> p.copy(songIds = p.songIds.filter { it in existing }) }
+        }
+    }
 
     // שחזור התור מהפעם הקודמת - רק פעם אחת, ורק אם עדיין אין ניגון פעיל
     // (למשל אם ה-service כבר רץ מריצה קודמת של התהליך).
@@ -223,6 +234,14 @@ fun MusicNavHost(
             onOpenNowPlaying = { push(Route.NowPlaying) },
             onTogglePlay = playerController::togglePlayPause,
             emptyMessage = "לא נמצאה מוזיקה בטלפון",
+            // M-40: ברשימה ריקה - שורה בפוקוס לסריקה מחדש
+            headerActionLabel = if (allSongs.isEmpty()) "סרוק מחדש" else null,
+            onHeaderAction = if (allSongs.isEmpty()) {
+                {
+                    kotlin.concurrent.thread { runCatching { repository.scanMediaFolders() } }
+                    libraryVersion++
+                }
+            } else null,
         )
 
         is Route.Artists -> ArtistsScreen(
@@ -358,6 +377,9 @@ fun MusicNavHost(
             onOpenNowPlaying = { push(Route.NowPlaying) },
             onTogglePlay = playerController::togglePlayPause,
             emptyMessage = "אין עדיין שירים מועדפים",
+            // M-51: במסך ריק - שורה בפוקוס שמובילה לכל השירים
+            headerActionLabel = if (favorites.isEmpty()) "לכל השירים" else null,
+            onHeaderAction = if (favorites.isEmpty()) ({ backStack[backStack.lastIndex] = Route.AllSongs }) else null,
         )
 
         is Route.Search -> SearchScreen(

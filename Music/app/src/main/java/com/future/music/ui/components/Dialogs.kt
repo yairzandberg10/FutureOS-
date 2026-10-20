@@ -64,8 +64,9 @@ fun ConfirmDialog(
         onDismissRequest = onDismiss,
         title = title,
         buttons = {
-            FutureButton("ביטול", theme, onDismiss, variant = FutureButtonVariant.Secondary)
-            FutureButton(confirmLabel, theme, onConfirm, variant = FutureButtonVariant.Destructive, focusRequester = confirmFocusRequester)
+            // M-41: הפוקוס הראשון על "ביטול" - OK מקרי לא מוחק.
+            FutureButton("ביטול", theme, onDismiss, variant = FutureButtonVariant.Secondary, focusRequester = confirmFocusRequester)
+            FutureButton(confirmLabel, theme, onConfirm, variant = FutureButtonVariant.Destructive)
         },
     ) {
         Text(

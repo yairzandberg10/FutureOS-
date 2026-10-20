@@ -34,14 +34,23 @@ class BluetoothAudio(private val context: Context) {
         context.getSystemService(BluetoothManager::class.java)?.adapter
     private var a2dp: BluetoothA2dp? = null
     private var receiver: BroadcastReceiver? = null
+    private var active = false
 
     val isSupported get() = adapter != null
     val isEnabled get() = runCatching { adapter?.isEnabled == true }.getOrDefault(false)
 
     /** [onChange] נקרא בכל שינוי (הפעלה, חיבור, סוללה) - לרענון המסך. */
     fun start(onChange: () -> Unit) {
+        // M-24: רישום חוזר לא משאיר receiver/proxy קודמים פתוחים
+        stop()
+        active = true
         adapter?.getProfileProxy(context, object : BluetoothProfile.ServiceListener {
             override fun onServiceConnected(profile: Int, proxy: BluetoothProfile) {
+                // proxy שהגיע אחרי stop() נסגר מיד
+                if (!active) {
+                    adapter?.closeProfileProxy(BluetoothProfile.A2DP, proxy)
+                    return
+                }
                 a2dp = proxy as? BluetoothA2dp
                 onChange()
             }
@@ -61,6 +70,7 @@ class BluetoothAudio(private val context: Context) {
     }
 
     fun stop() {
+        active = false
         receiver?.let { runCatching { context.unregisterReceiver(it) } }
         receiver = null
         a2dp?.let { adapter?.closeProfileProxy(BluetoothProfile.A2DP, it) }

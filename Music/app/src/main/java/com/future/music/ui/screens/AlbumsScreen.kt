@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.future.music.data.AlbumGroup
 import com.future.music.ui.components.ScreenTopBar
+import com.future.music.ui.components.songCountText
 import com.future.sharednav.theme.FutureTheme
 import com.future.sharednav.icons.FutureIcons
 
@@ -62,7 +63,7 @@ fun AlbumsScreen(albums: List<AlbumGroup>, theme: FutureTheme, onBack: () -> Uni
                         onClick = { onOpenAlbum(album.albumId, album.name) },
                         focusRequester = if (index == 0) firstItemFocusRequester else null,
                         leading = { FutureAvatar(theme = theme, icon = FutureIcons.Album) },
-                        trailing = { Text("${album.songCount}", color = theme.subtleTextColor, fontSize = type.summary) },
+                        trailing = { Text(songCountText(album.songCount), color = theme.subtleTextColor, fontSize = type.summary) },
                     )
                 }
             }

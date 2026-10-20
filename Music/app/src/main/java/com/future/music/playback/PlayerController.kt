@@ -74,6 +74,7 @@ class PlayerController(private val context: Context) {
     }
 
     fun playQueue(songs: List<Song>, startIndex: Int, startPositionMs: Long = 0L) {
+        if (songs.isEmpty()) return
         val c = controller ?: return
         currentQueue = songs
         c.setMediaItems(songs.map { it.toMediaItem() }, startIndex.coerceIn(0, songs.lastIndex), startPositionMs)
@@ -84,6 +85,7 @@ class PlayerController(private val context: Context) {
     /** טוען תור בלי להתחיל לנגן - לשחזור "המשך מהיכן שהפסקת" בפתיחת האפליקציה,
      * בלי להפתיע את המשתמש עם ניגון אוטומטי. */
     fun restoreQueue(songs: List<Song>, startIndex: Int, startPositionMs: Long = 0L) {
+        if (songs.isEmpty()) return
         val c = controller ?: return
         currentQueue = songs
         c.setMediaItems(songs.map { it.toMediaItem() }, startIndex.coerceIn(0, songs.lastIndex), startPositionMs)
