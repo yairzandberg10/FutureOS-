@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -33,9 +32,11 @@ import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
+import com.future.flashlight.R
 import com.future.flashlight.data.FlashlightController
 import com.future.flashlight.data.TorchService
 import com.future.sharednav.components.FutureRoundCapsule
@@ -70,15 +71,18 @@ fun FlashlightScreen(theme: FutureTheme) {
     DisposableEffect(Unit) {
         val stop = controller.observe { on, available ->
             isOn = on
-            errorMessage = if (!available) "הפנס לא זמין כשהמצלמה פתוחה" else null
+            errorMessage = if (!available) context.getString(R.string.torch_camera_busy) else null
         }
         onDispose { stop() }
     }
 
     val hasFlash = remember { controller.hasFlash() }
     val on by animateFloatAsState(if (isOn) 1f else 0f, tween(260), label = "torchOn")
+    // שינוי של הערך הרציף לא מרכיב מחדש את המסך בכל פריים - רק כשהאור נדלק/נכבה (FL-07)
+    val showGlow by remember { derivedStateOf { on > 0f } }
     val focusRequester = remember { FocusRequester() }
-    LaunchedEffect(Unit) { runCatching { focusRequester.requestFocus() } }
+    // הפוקוס נדרש רק כשהכפתור קיים (FL-16)
+    LaunchedEffect(hasFlash) { if (hasFlash) focusRequester.requestFocus() }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         BoxWithConstraints(modifier = Modifier.fillMaxSize().background(Color.Black)) {
@@ -86,16 +90,16 @@ fun FlashlightScreen(theme: FutureTheme) {
             val v = maxHeight / DESIGN_H
 
             DesignLayer(Modifier) { drawStage(on) }
-            if (on > 0f) {
-                DesignLayer(Modifier.glow(u * 40, on)) {
+            if (showGlow) {
+                DesignLayer(Modifier.glow(u * 40) { on }) {
                     inTorch { drawOval(Color(0xFFFFD60A), Offset(350f, -230f), Size(300f, 460f), alpha = 0.35f) }
                 }
-                DesignLayer(Modifier.glow(u * 6, on)) { inTorch { drawBeam() } }
-                DesignLayer(Modifier.glow(u * 14, on)) { inTorch { drawBeamCore() } }
+                DesignLayer(Modifier.glow(u * 6) { on }) { inTorch { drawBeam() } }
+                DesignLayer(Modifier.glow(u * 14) { on }) { inTorch { drawBeamCore() } }
             }
             DesignLayer(Modifier) { inTorch { drawTorch(on) } }
-            if (on > 0f) {
-                DesignLayer(Modifier.glow(u * 14, on)) {
+            if (showGlow) {
+                DesignLayer(Modifier.glow(u * 14) { on }) {
                     inTorch { drawOval(Color(0xFFFFFBEA), Offset(440f, -86f), Size(68f, 172f), alpha = 0.7f) }
                 }
             }
@@ -103,7 +107,7 @@ fun FlashlightScreen(theme: FutureTheme) {
             // המסך מצויר עד הקצה (BoxWithConstraints על כל החלון), ובלי הריווח הזה
             // הכותרת ישבה מתחת לשורת המצב של FutureUI ונראה רק חציה התחתון.
             Column(modifier = Modifier.padding(top = StatusBarInset.TITLE_GAP_DP.dp)) {
-                ScreenTopBar(title = "פנס", textColor = dark.textColor, accentColor = dark.accentColor, onBack = null)
+                ScreenTopBar(title = stringResource(R.string.app_name), textColor = dark.textColor, accentColor = dark.accentColor, onBack = null)
             }
 
             Column(
@@ -112,10 +116,10 @@ fun FlashlightScreen(theme: FutureTheme) {
                 verticalArrangement = Arrangement.spacedBy(v * 20),
             ) {
                 if (!hasFlash) {
-                    Text("לא נמצא פנס במכשיר הזה", color = dark.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.body, textAlign = TextAlign.Center)
+                    Text(stringResource(R.string.torch_no_flash), color = dark.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.body, textAlign = TextAlign.Center)
                 } else {
                     Text(
-                        errorMessage ?: if (isOn) "דלוק" else "כבוי",
+                        errorMessage ?: if (isOn) stringResource(R.string.torch_on) else stringResource(R.string.torch_off),
                         color = if (errorMessage != null) dark.dangerColor else dark.textColor.copy(alpha = 0.6f),
                         fontSize = FutureTypography.body,
                         textAlign = TextAlign.Center,
@@ -131,9 +135,8 @@ fun FlashlightScreen(theme: FutureTheme) {
                             if (now - lastToggleMs >= TOGGLE_DEBOUNCE_MS) {
                                 lastToggleMs = now
                                 if (isOn) {
-                                    // הפנס יכול להיות דלוק בלי השירות (למשל מהבקרה): stopService לבדו לא מכבה אותו
+                                    // מכבה גם כשהפנס דלוק בלי השירות (למשל מהבקרה) - ראו TorchService.turnOff
                                     TorchService.turnOff(context)
-                                    controller.setTorch(false)
                                 } else {
                                     TorchService.turnOn(context)
                                 }
@@ -141,7 +144,7 @@ fun FlashlightScreen(theme: FutureTheme) {
                         },
                         active = isOn,
                         size = PowerButtonSize,
-                        contentDescription = if (isOn) "כבה פנס" else "הדלק פנס",
+                        contentDescription = if (isOn) stringResource(R.string.torch_turn_off_cd) else stringResource(R.string.torch_turn_on_cd),
                         focusRequester = focusRequester,
                     )
                 }
@@ -160,8 +163,8 @@ private fun DesignLayer(modifier: Modifier, draw: DrawScope.() -> Unit) {
     }
 }
 
-private fun Modifier.glow(radius: Dp, alpha: Float) =
-    graphicsLayer { this.alpha = alpha }.blur(radius, BlurredEdgeTreatment.Unbounded)
+private fun Modifier.glow(radius: Dp, alphaProvider: () -> Float) =
+    graphicsLayer { alpha = alphaProvider() }.blur(radius, BlurredEdgeTreatment.Unbounded)
 
 private inline fun DrawScope.inTorch(block: DrawScope.() -> Unit) {
     withTransform({
@@ -246,6 +249,20 @@ private fun DrawScope.groove(x: Float, r: Float, width: Float) {
     drawArc(Color.White.copy(alpha = 0.13f), 90f, 180f, false, Offset(x + 3f - rx, -r), Size(rx * 2, r * 2), style = Stroke(1.5f))
 }
 
+// קווי האחיזה המחורצת - נבנים פעם אחת ולא בכל פריים ציור (FL-09)
+private val knurlPath: Path by lazy {
+    Path().apply {
+        var c = 42f
+        while (c <= 280f) {
+            moveTo(c - 40f, -40f)
+            lineTo(c + 40f, 40f)
+            moveTo(c + 40f, -40f)
+            lineTo(c - 40f, 40f)
+            c += 7f
+        }
+    }
+}
+
 private fun DrawScope.drawTorch(on: Float) {
     drawSection(section(0f, 36f, 38f), rubber(38f))
     drawSection(section(36f, 44f, 41f), steel(41f))
@@ -253,13 +270,7 @@ private fun DrawScope.drawTorch(on: Float) {
 
     // אחיזה מחורצת (knurling)
     clipRect(88f, -40f, 234f, 40f) {
-        val knurl = Color.Black.copy(alpha = 0.6f)
-        var c = 42f
-        while (c <= 280f) {
-            drawLine(knurl, Offset(c - 40f, -40f), Offset(c + 40f, 40f), 1.7f)
-            drawLine(knurl, Offset(c + 40f, -40f), Offset(c - 40f, 40f), 1.7f)
-            c += 7f
-        }
+        drawPath(knurlPath, Color.Black.copy(alpha = 0.6f), style = Stroke(1.7f))
     }
     groove(88f, 40f, 3f)
     groove(234f, 40f, 3f)

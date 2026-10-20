@@ -2,6 +2,8 @@
 <resources>
 
     <style name="Theme.Flashlight" parent="android:Theme.Material.Light.NoActionBar">
+        <!-- רקע שחור מההתחלה: בלי זה מוצג הבזק לבן לפני שהמסך השחור מצויר (FL-18) -->
+        <item name="android:windowBackground">@android:color/black</item>
         <item name="android:windowAnimationStyle">@style/FutureActivityAnimation</item>
     </style>
 </resources>

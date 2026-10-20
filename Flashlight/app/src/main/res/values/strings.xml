@@ -1,3 +1,18 @@
 <resources>
     <string name="app_name">פנס</string>
+
+    <!-- מסך הפנס -->
+    <string name="torch_on">דלוק</string>
+    <string name="torch_off">כבוי</string>
+    <string name="torch_no_flash">לא נמצא פנס במכשיר הזה</string>
+    <string name="torch_camera_busy">הפנס לא זמין כשהמצלמה פתוחה</string>
+    <string name="torch_turn_off_cd">כבה פנס</string>
+    <string name="torch_turn_on_cd">הדלק פנס</string>
+
+    <!-- שירות הפנס והתראה -->
+    <string name="torch_failed">לא ניתן להדליק את הפנס</string>
+    <string name="torch_channel_name">פנס</string>
+    <string name="torch_notif_title">הפנס דלוק</string>
+    <string name="torch_notif_text">לחץ כדי לכבות</string>
+    <string name="torch_notif_action_off">כבה</string>
 </resources>

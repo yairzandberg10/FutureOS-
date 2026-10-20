@@ -1,10 +1,12 @@
 package com.future.flashlight.data
 
 import android.content.Context
+import android.hardware.camera2.CameraAccessException
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 
 /**
  * שליטה בפנס דרך Camera2 (setTorchMode) - בלי לפתוח את המצלמה ובלי הרשאת
@@ -14,17 +16,8 @@ import android.os.Looper
 class FlashlightController(context: Context) {
     private val cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
 
-    private val cameraId: String? = try {
-        cameraManager.cameraIdList.firstOrNull { id ->
-            val chars = cameraManager.getCameraCharacteristics(id)
-            chars.get(CameraCharacteristics.FLASH_INFO_AVAILABLE) == true &&
-                chars.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_BACK
-        } ?: cameraManager.cameraIdList.firstOrNull { id ->
-            cameraManager.getCameraCharacteristics(id).get(CameraCharacteristics.FLASH_INFO_AVAILABLE) == true
-        }
-    } catch (e: Exception) {
-        null
-    }
+    // מזהה המצלמה נמצא פעם אחת לכל התהליך (FL-10), לא בכל מופע
+    private val cameraId: String? = cachedCameraId ?: resolveCameraId(cameraManager)?.also { cachedCameraId = it }
 
     fun hasFlash(): Boolean = cameraId != null
 
@@ -33,14 +26,22 @@ class FlashlightController(context: Context) {
         return try {
             cameraManager.setTorchMode(id, on)
             true
-        } catch (e: Exception) {
+        } catch (e: CameraAccessException) {
+            Log.w(TAG, "setTorchMode($on) נכשל: ${e.reason}", e)
+            false
+        } catch (e: IllegalArgumentException) {
+            Log.w(TAG, "setTorchMode($on) נכשל - מצלמה לא תקינה", e)
             false
         }
     }
 
     /** מאזין למצב האמיתי. [onChange] מקבל (דלוק, זמין). */
     fun observe(onChange: (on: Boolean, available: Boolean) -> Unit): () -> Unit {
-        val id = cameraId ?: return {}
+        val id = cameraId
+        if (id == null) {
+            Log.w(TAG, "אין מצלמה עם פנס - לא ניתן להאזין למצב הפנס")
+            return {}
+        }
         val callback = object : CameraManager.TorchCallback() {
             override fun onTorchModeChanged(cameraId: String, enabled: Boolean) {
                 if (cameraId == id) onChange(enabled, true)
@@ -52,5 +53,27 @@ class FlashlightController(context: Context) {
         }
         cameraManager.registerTorchCallback(callback, Handler(Looper.getMainLooper()))
         return { cameraManager.unregisterTorchCallback(callback) }
+    }
+
+    companion object {
+        private const val TAG = "FlashlightController"
+        @Volatile private var cachedCameraId: String? = null
+
+        /** המצלמה האחורית עם פנס, או כל מצלמה עם פנס אם אין אחורית. */
+        private fun resolveCameraId(cameraManager: CameraManager): String? = try {
+            cameraManager.cameraIdList.firstOrNull { id ->
+                val chars = cameraManager.getCameraCharacteristics(id)
+                chars.get(CameraCharacteristics.FLASH_INFO_AVAILABLE) == true &&
+                    chars.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_BACK
+            } ?: cameraManager.cameraIdList.firstOrNull { id ->
+                cameraManager.getCameraCharacteristics(id).get(CameraCharacteristics.FLASH_INFO_AVAILABLE) == true
+            }
+        } catch (e: CameraAccessException) {
+            Log.w(TAG, "איתור מצלמת הפנס נכשל", e)
+            null
+        } catch (e: IllegalArgumentException) {
+            Log.w(TAG, "איתור מצלמת הפנס נכשל - מזהה מצלמה לא תקין", e)
+            null
+        }
     }
 }

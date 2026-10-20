@@ -15,11 +15,8 @@
     <!-- שירות קדמי שמחזיק את הפנס דלוק כשהמסך נכבה (TorchService) -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="com.future.futureui.permission.SYSTEM_SETTINGS" />
-    <uses-permission android:name="com.future.keyboard.permission.SETTINGS" />
     <application
-        android:allowBackup="true"
-        android:dataExtractionRules="@xml/data_extraction_rules"
-        android:fullBackupContent="@xml/backup_rules"
+        android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
