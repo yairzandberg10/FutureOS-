@@ -79,6 +79,7 @@ import com.future.sfarim.ui.components.ScreenTopBar
 import com.future.sharednav.theme.FutureTheme
 import com.future.sfarim.util.HebrewNumerals
 import com.future.sfarim.util.stripHtmlTags
+import com.future.sfarim.util.requestFocusWhenReady
 import kotlinx.coroutines.launch
 import com.future.sharednav.focus.animateFocusColor
 import com.future.sharednav.theme.FutureMotion
@@ -155,13 +156,12 @@ fun ReaderScreen(
         // FocusRequester שלא מחובר זורק - קריסה בכל כניסה לפרק בספר שוטף.
         if (segments.isEmpty()) return@LaunchedEffect
         if (book.isVerseStyle && focusIndex > 0) listState.scrollToItem(focusIndex)
-        runCatching {
-            if (!book.isVerseStyle) pageFocusRequester.requestFocus() else firstSegmentFocusRequester.requestFocus()
-        }
+        if (!book.isVerseStyle) pageFocusRequester.requestFocusWhenReady() else firstSegmentFocusRequester.requestFocusWhenReady()
     }
 
     LaunchedEffect(commentaryPrefix) {
         val prefix = commentaryPrefix
+        commentaryResults = null
         commentaryResults = if (prefix != null) onLoadCommentaries(prefix) else null
     }
 
@@ -193,7 +193,7 @@ fun ReaderScreen(
                 },
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                ScreenTopBar(title = "${book.displayTitle} · $displayChapterLabel", theme = theme, onBack = onBack)
+                ScreenTopBar(title = book.displayTitle, theme = theme, onBack = onBack)
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp),
                     horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween,
@@ -202,6 +202,16 @@ fun ReaderScreen(
                         if (hasPrevChapter) "* לפרק קודם" else "",
                         color = theme.textColor.copy(alpha = 0.4f),
                         fontSize = FutureTypography.caption,
+                    )
+                    // N05: שם הפרק הנוכחי תמיד גלוי, גם כששם הספר ארוך ונחתך בכותרת
+                    Text(
+                        displayChapterLabel,
+                        color = theme.textColor.copy(alpha = 0.8f),
+                        fontSize = FutureTypography.caption,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
                     )
                     Text(
                         if (hasNextChapter) "לפרק הבא #" else "",
@@ -244,7 +254,10 @@ fun ReaderScreen(
                             .focusable()
                             .focusRequester(pageFocusRequester)
                             .onKeyEvent { event ->
-                                if (event.type == KeyEventType.KeyUp && (event.key == Key.Menu || event.key == Key.Settings)) {
+                                // S27: OK/מרכז על העמוד פותח את אותו תפריט, כמו בפסוק-בפסוק
+                                if (event.type == KeyEventType.KeyUp &&
+                                    (event.key == Key.Menu || event.key == Key.Settings || event.key == Key.DirectionCenter || event.key == Key.Enter)
+                                ) {
                                     showPageMenu = true
                                     true
                                 } else false
@@ -253,9 +266,10 @@ fun ReaderScreen(
                             .padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp),
                     ) {
-                        segments.forEach { segment ->
+                        val cleanedSegments = remember(segments) { segments.map { stripHtmlTags(it.textHe) } }
+                        cleanedSegments.forEach { cleaned ->
                             Text(
-                                stripHtmlTags(segment.textHe),
+                                cleaned,
                                 color = theme.textColor,
                                 fontSize = fontSize.sp,
                                 lineHeight = (fontSize * 1.6f).sp,
@@ -438,14 +452,20 @@ private fun CommentariesDialog(
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                 modifier = Modifier.fillMaxWidth().padding(vertical = FutureDimens.spacingLg),
             )
-            else -> Column(verticalArrangement = Arrangement.spacedBy(FutureDimens.spacingXs)) {
-                results.forEach { entry ->
-                    FutureListItem(
-                        title = entry.bookTitle,
-                        summary = entry.preview,
-                        theme = theme,
-                        onClick = { onOpen(entry) },
-                    )
+            else -> {
+                // N03: הטבעת מופיעה על המפרש הראשון מיד עם פתיחת הדיאלוג
+                val firstEntryFocus = remember(results) { FocusRequester() }
+                LaunchedEffect(results) { firstEntryFocus.requestFocusWhenReady() }
+                Column(verticalArrangement = Arrangement.spacedBy(FutureDimens.spacingXs)) {
+                    results.forEachIndexed { index, entry ->
+                        FutureListItem(
+                            title = entry.bookTitle,
+                            summary = entry.preview,
+                            theme = theme,
+                            onClick = { onOpen(entry) },
+                            focusRequester = if (index == 0) firstEntryFocus else null,
+                        )
+                    }
                 }
             }
         }

@@ -38,7 +38,7 @@ object LibraryDatabase {
     }
 
     fun expectedPath(context: Context): File =
-        File(context.getExternalFilesDir(null), DB_FILE_NAME)
+        File(context.getExternalFilesDir(null) ?: context.filesDir, DB_FILE_NAME)
 
     fun isInstalled(context: Context): Boolean = expectedPath(context).exists()
 

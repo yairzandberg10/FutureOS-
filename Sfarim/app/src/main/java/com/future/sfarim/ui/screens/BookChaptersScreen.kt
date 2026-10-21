@@ -43,6 +43,7 @@ import com.future.sfarim.ui.components.RowIcon
 
 import com.future.sharednav.nav.digitForKey
 import com.future.sharednav.theme.FutureTheme
+import com.future.sfarim.util.requestFocusWhenReady
 import com.future.sharednav.icons.FutureIcons
 
 /** פריט ברשימה: פרק להיכנס אליו, או חלק בספר (למשל "אורח חיים" בערוך השולחן,
@@ -87,6 +88,9 @@ fun BookChaptersScreen(
     onBack: () -> Unit,
     onOpenChapter: (Int) -> Unit,
     onOpenPart: (List<String>) -> Unit = {},
+    // המפתח (ראו keyOf) של הפריט שנפתח לאחרונה - אחרי BACK הפוקוס חוזר אליו.
+    lastSelectedKey: String? = null,
+    onSelected: (String) -> Unit = {},
 ) {
     var jumpBuffer by remember { mutableStateOf("") }
     val entries = remember(chapters, groupPath) { chapterEntries(chapters, groupPath) }
@@ -104,9 +108,16 @@ fun BookChaptersScreen(
         jumpTargets[target]?.let(onOpenChapter)
     }
     com.future.sharednav.nav.onStarKeyPress { jumpBuffer = "" }
-    val firstFocusRequester = remember(entries.firstOrNull()) { FocusRequester() }
-    LaunchedEffect(entries.firstOrNull()) {
-        if (entries.isNotEmpty()) firstFocusRequester.requestFocus()
+    val rowFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    LaunchedEffect(entries.map { keyOf(it) }) {
+        val target = entries.firstOrNull { keyOf(it) == lastSelectedKey } ?: entries.firstOrNull()
+        if (target != null) {
+            // גוללים ליעד ומחכים לפריים שבו השורה מורכבת - אחרת requestFocus נופל
+            listState.scrollToItem(entries.indexOf(target))
+            androidx.compose.runtime.withFrameNanos { }
+            rowFocusRequesters.getOrPut(keyOf(target)) { FocusRequester() }.requestFocusWhenReady()
+        }
     }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
@@ -166,16 +177,17 @@ fun BookChaptersScreen(
                     }
                 } else {
                     LazyColumn(
+                        state = listState,
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                         verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp),
                     ) {
                         itemsIndexed(entries, key = { _, it -> keyOf(it) }) { index, entry ->
-                            val focusRequester = if (index == 0) firstFocusRequester else null
+                            val focusRequester = rowFocusRequesters.getOrPut(keyOf(entry)) { FocusRequester() }
                             when (entry) {
                                 is ChapterEntry.Chapter -> FutureListItem(
                                     title = entry.chapter.label,
                                     theme = theme,
-                                    onClick = { onOpenChapter(entry.chapter.topIndex) },
+                                    onClick = { onSelected(keyOf(entry)); onOpenChapter(entry.chapter.topIndex) },
                                     focusRequester = focusRequester,
                                 )
                                 // חלק בספר מקבל את אותו מראה של קטגוריה במסך העיון -
@@ -183,7 +195,7 @@ fun BookChaptersScreen(
                                 is ChapterEntry.Part -> FutureListItem(
                                     title = entry.title,
                                     theme = theme,
-                                    onClick = { onOpenPart(entry.path) },
+                                    onClick = { onSelected(keyOf(entry)); onOpenPart(entry.path) },
                                     focusRequester = focusRequester,
                                     leading = { RowIcon(FutureIcons.AutoMirrored.MenuBook, theme) },
                                 )

@@ -20,7 +20,8 @@ object HebrewNumerals {
             sb.append(letters)
             remaining -= value
         }
-        return sb.toString()
+        // N02: גרש לאות בודדת (א׳), גרשיים לפני האות האחרונה (י״ב)
+        return if (sb.length == 1) "$sb\u05F3" else sb.insert(sb.length - 1, '\u05F4').toString()
     }
 
     private val SECTION_NAMES_HE = mapOf(

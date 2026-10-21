@@ -253,7 +253,9 @@ class LibraryRepository(private val db: SQLiteDatabase) {
      * כל מילה במירכאות: בלעדיהן AND / OR / NOT שהוקלדו הם אופרטורים של FTS5,
      * והשאילתה נכשלת בשגיאת תחביר (החיפוש מציג "נכשל" במקום תוצאות). */
     private fun buildFtsQuery(userInput: String): String? {
-        val cleaned = userInput.replace(Regex("[^\\p{L}\\p{N}\\s]"), " ")
+        // S13: גרש, גרשיים וניקוד נמחקים (לא הופכים לרווח) כדי ששם מקוצר יישאר מילה אחת
+        val stripped = userInput.replace(Regex("[\\p{Mn}'\"\u05F3\u05F4\u2019]"), "")
+        val cleaned = stripped.replace(Regex("[^\\p{L}\\p{N}\\s]"), " ")
         val tokens = cleaned.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
         if (tokens.isEmpty()) return null
         return tokens.joinToString(" ") { "\"$it\"*" }
@@ -315,9 +317,11 @@ class LibraryRepository(private val db: SQLiteDatabase) {
     }
 
     fun addBookmark(bookId: Long, segmentId: Long, note: String?, createdAt: Long) {
+        // S08: לחיצה כפולה מהירה לא יוצרת סימניה כפולה
         db.execSQL(
-            "INSERT INTO bookmarks (book_id, segment_id, note, created_at) VALUES (?, ?, ?, ?)",
-            arrayOf<Any?>(bookId, segmentId, note, createdAt),
+            "INSERT INTO bookmarks (book_id, segment_id, note, created_at) " +
+                "SELECT ?, ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM bookmarks WHERE segment_id = ?)",
+            arrayOf<Any?>(bookId, segmentId, note, createdAt, segmentId),
         )
     }
 
@@ -337,10 +341,10 @@ class LibraryRepository(private val db: SQLiteDatabase) {
     fun getBookmarks(): List<LibraryBookmark> {
         val cursor = db.rawQuery(
             "SELECT bm.id, bm.book_id, bm.segment_id, bm.note, bm.created_at, " +
-                "COALESCE(b.title_he, b.title_en), s.ref_display " +
+                "COALESCE(b.title_he, b.title_en), COALESCE(s.ref_display, 'קטע שאינו קיים עוד') " +
                 "FROM bookmarks bm " +
                 "JOIN books b ON b.id = bm.book_id " +
-                "JOIN segments s ON s.id = bm.segment_id " +
+                "LEFT JOIN segments s ON s.id = bm.segment_id " +
                 "ORDER BY bm.created_at DESC",
             null,
         )

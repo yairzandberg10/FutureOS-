@@ -32,6 +32,7 @@ import com.future.sfarim.ui.screens.LibraryNotInstalledScreen
 import com.future.sharednav.theme.FutureTheme
 import com.future.sharednav.theme.FutureDimens
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
@@ -59,12 +60,16 @@ private fun SfarimApp() {
         )
     }
 
+    val themeScope = androidx.compose.runtime.rememberCoroutineScope()
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                val shared = ThemeClient.getTheme(context)
-                theme = FutureTheme(isDarkMode = shared.isDarkMode, accentColor = Color(shared.primaryColor))
+                // S20: שאילתת הערכה חוצת-תהליכים לא רצה על ה-main thread
+                themeScope.launch {
+                    val shared = withContext(Dispatchers.IO) { ThemeClient.getTheme(context) }
+                    theme = FutureTheme(isDarkMode = shared.isDarkMode, accentColor = Color(shared.primaryColor))
+                }
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -86,6 +91,9 @@ private fun SfarimApp() {
         isLoadingDb = false
     }
     val repository = remember(db) { db?.let { LibraryRepository(it) } }
+    // S21: סוגרים את החיבור כשה-Activity נהרס או שה-DB מוחלף
+    val dbToClose = db
+    DisposableEffect(dbToClose) { onDispose { runCatching { dbToClose?.close() } } }
 
     // מרווח קטן מתחת לשורת המצב - בלעדיו הכותרת העליונה ישבה צמודה אליה.
     Surface(

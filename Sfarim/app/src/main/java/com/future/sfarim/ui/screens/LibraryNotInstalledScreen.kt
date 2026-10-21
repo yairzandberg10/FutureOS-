@@ -21,6 +21,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.future.sharednav.theme.FutureTheme
+import com.future.sfarim.util.requestFocusWhenReady
 import com.future.sharednav.icons.FutureIcons
 
 /** מוצג כשקובץ sefaria.db לא נמצא בנתיב הצפוי - האפליקציה לא יכולה להוריד
@@ -29,7 +30,7 @@ import com.future.sharednav.icons.FutureIcons
 fun LibraryNotInstalledScreen(expectedPath: String, theme: FutureTheme, onRetry: () -> Unit) {
     val focusRequester = remember { FocusRequester() }
     // בלי פוקוס התחלתי OK לא מפעיל "נסה שוב" מיד
-    androidx.compose.runtime.LaunchedEffect(Unit) { runCatching { focusRequester.requestFocus() } }
+    androidx.compose.runtime.LaunchedEffect(Unit) { focusRequester.requestFocusWhenReady() }
     Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor).padding(32.dp), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(FutureIcons.AutoMirrored.MenuBook, contentDescription = null, tint = theme.accentColor, modifier = Modifier.padding(bottom = 16.dp))
@@ -53,7 +54,8 @@ fun LibraryNotInstalledScreen(expectedPath: String, theme: FutureTheme, onRetry:
                     .background(theme.textColor.copy(alpha = 0.08f), FutureShapes.textField)
                     .padding(horizontal = 14.dp, vertical = 10.dp),
             ) {
-                Text(expectedPath, color = theme.textColor, fontSize = FutureTypography.label, textAlign = TextAlign.Center)
+                // S18: בידוד LTR לנתיב בתוך טקסט RTL
+                Text("⁦$expectedPath⁩", color = theme.textColor, fontSize = FutureTypography.label, textAlign = TextAlign.Center)
             }
 
             // בלי כפתור ניסיון-חוזר, אחרי adb push של הקובץ תוך כדי שהמסך הזה כבר

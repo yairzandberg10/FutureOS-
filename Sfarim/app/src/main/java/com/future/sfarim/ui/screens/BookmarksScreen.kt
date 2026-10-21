@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.sp
 import com.future.sfarim.data.LibraryBookmark
 import com.future.sfarim.ui.components.ScreenTopBar
 import com.future.sharednav.theme.FutureTheme
+import com.future.sfarim.util.requestFocusWhenReady
 
 @Composable
 fun BookmarksScreen(
@@ -58,7 +59,7 @@ fun BookmarksScreen(
 ) {
     val firstFocusRequester = remember(bookmarks.firstOrNull()) { FocusRequester() }
     LaunchedEffect(bookmarks.firstOrNull()) {
-        if (bookmarks.isNotEmpty()) firstFocusRequester.requestFocus()
+        if (bookmarks.isNotEmpty()) firstFocusRequester.requestFocusWhenReady()
     }
     // לפני התיקון, מקש Menu על שורת סימניה מחק אותה מיידית בלי שום אישור -
     // לחיצה אחת בטעות ואיבדת סימניה שמורה לצמיתות.
@@ -117,8 +118,9 @@ private fun BookmarkRow(
     onDelete: () -> Unit,
 ) {
     FutureListItem(
-        title = bookmark.bookTitle,
-        summary = bookmark.segmentRef,
+        // S14: ההפניה כבר מתחילה בשם הספר - בלי כפילות בין הכותרת לשורה השנייה
+        title = if (bookmark.segmentRef.startsWith(bookmark.bookTitle)) bookmark.segmentRef else bookmark.bookTitle,
+        summary = if (bookmark.segmentRef.startsWith(bookmark.bookTitle)) null else bookmark.segmentRef,
         theme = theme,
         onClick = onClick,
         focusRequester = focusRequester,

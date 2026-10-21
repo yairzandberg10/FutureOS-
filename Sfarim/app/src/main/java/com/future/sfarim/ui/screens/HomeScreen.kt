@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.sp
 import com.future.sfarim.data.LibraryCategory
 import com.future.sfarim.data.ReadingProgressEntry
 import com.future.sharednav.theme.FutureTheme
+import com.future.sfarim.util.requestFocusWhenReady
 
 @Composable
 fun HomeScreen(
@@ -51,7 +52,8 @@ fun HomeScreen(
     val firstFocusRequester = remember { FocusRequester() }
     // "המשך קריאה" נטען אחרי הפתיחה ומופיע מעל "חיפוש" - מבקשים פוקוס שוב כשהוא
     // מופיע, אחרת הפוקוס נשאר על "חיפוש" ו-↓ הראשון דילג עליו (SF1).
-    LaunchedEffect(continueReading != null) { runCatching { firstFocusRequester.requestFocus() } }
+    // N03: בכניסה הראשונה הבקשה נבלעת באנימציית המעבר - מנסים שוב עד שהטבעת מופיעה.
+    LaunchedEffect(continueReading != null) { firstFocusRequester.requestFocusWhenReady() }
 
     Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
         LazyColumn(

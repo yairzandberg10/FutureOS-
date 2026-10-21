@@ -9,6 +9,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import com.future.sfarim.data.LibraryRepository
 import com.future.sfarim.ui.screens.BookChaptersScreen
 import com.future.sfarim.ui.screens.ChapterEntry
@@ -25,7 +28,8 @@ import kotlinx.coroutines.withContext
 
 @Composable
 fun LibraryNavHost(repository: LibraryRepository, theme: FutureTheme) {
-    val backStack = remember { mutableStateListOf<Route>(Route.Home) }
+    // S03: המחסנית שורדת סיבוב מסך ושחזור תהליך
+    val backStack = rememberSaveable(saver = backStackSaver) { mutableStateListOf<Route>(Route.Home) }
     val scope = rememberCoroutineScope()
     val current = backStack.last()
     // גרסת נתונים - מוגברת אחרי כל כתיבה (סימניה/התקדמות) כדי לאלץ רענון של
@@ -37,6 +41,9 @@ fun LibraryNavHost(repository: LibraryRepository, theme: FutureTheme) {
     // חוזר בדיוק לפריט שממנו יצאנו, לא תמיד לראשון ברשימה.
     var lastBrowseSelection by remember { mutableStateOf<Map<Long?, String>>(emptyMap()) }
 
+    // כמו lastBrowseSelection: הפריט שנפתח לאחרונה בכל מסך פרקים (לפי ספר וחלק)
+    var lastChapterSelection by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
+
     BackHandler(enabled = backStack.size > 1) { backStack.removeAt(backStack.lastIndex) }
 
     fun push(route: Route) = backStack.add(route)
@@ -46,26 +53,41 @@ fun LibraryNavHost(repository: LibraryRepository, theme: FutureTheme) {
      * ישר לקורא, אחרת מציגים את רשימת הפרקים - ובספר שכולו חלק אחד ("שולחן
      * ערוך" שיש בו רק אורח חיים למשל) יורדים ישר לתוכו, בלי מסך שיש בו פריט
      * בודד שהמשתמש חייב ללחוץ עליו. */
+    // S26: לחיצה כפולה בזמן טעינה לא דוחפת שני מסלולים
+    var opening by remember { mutableStateOf(false) }
+
     fun openBook(bookId: Long) {
+        if (opening) return
+        opening = true
         scope.launch {
-            val chapters = withContext(Dispatchers.IO) { repository.getChapters(bookId) }
-            if (chapters.size <= 1) {
-                push(Route.Reader(bookId, chapters.firstOrNull()?.topIndex ?: 1))
-            } else {
-                var groupPath = emptyList<String>()
-                while (true) {
-                    val only = chapterEntries(chapters, groupPath).singleOrNull()
-                    if (only is ChapterEntry.Part) groupPath = only.path else break
+            try {
+                val chapters = withContext(Dispatchers.IO) { repository.getChapters(bookId) }
+                if (chapters.size <= 1) {
+                    push(Route.Reader(bookId, chapters.firstOrNull()?.topIndex ?: 1))
+                } else {
+                    var groupPath = emptyList<String>()
+                    while (true) {
+                        val only = chapterEntries(chapters, groupPath).singleOrNull()
+                        if (only is ChapterEntry.Part) groupPath = only.path else break
+                    }
+                    push(Route.BookChapters(bookId, groupPath))
                 }
-                push(Route.BookChapters(bookId, groupPath))
+            } finally {
+                opening = false
             }
         }
     }
 
     fun openSegment(bookId: Long, segmentId: Long) {
+        if (opening) return
+        opening = true
         scope.launch {
-            val segment = withContext(Dispatchers.IO) { repository.getSegment(segmentId) } ?: return@launch
-            push(Route.Reader(bookId, segment.topIndex, segmentId))
+            try {
+                val segment = withContext(Dispatchers.IO) { repository.getSegment(segmentId) } ?: return@launch
+                push(Route.Reader(bookId, segment.topIndex, segmentId))
+            } finally {
+                opening = false
+            }
         }
     }
 
@@ -119,6 +141,8 @@ fun LibraryNavHost(repository: LibraryRepository, theme: FutureTheme) {
                     isLoading = chaptersState == null,
                     theme = theme,
                     onBack = ::pop,
+                    lastSelectedKey = lastChapterSelection["${route.bookId}/${route.groupPath.joinToString("/")}"],
+                    onSelected = { key -> lastChapterSelection = lastChapterSelection + ("${route.bookId}/${route.groupPath.joinToString("/")}" to key) },
                     onOpenChapter = { topIndex -> push(Route.Reader(route.bookId, topIndex)) },
                     onOpenPart = { path -> push(Route.BookChapters(route.bookId, path)) },
                 )
@@ -133,7 +157,7 @@ fun LibraryNavHost(repository: LibraryRepository, theme: FutureTheme) {
             val segments = segmentsState ?: emptyList()
             val allChapters = rememberIoState(route.bookId) { repository.getChapters(route.bookId) } ?: emptyList()
             val allChapterIndices = remember(allChapters) { allChapters.map { c -> c.topIndex } }
-            val bookmarkedIds = rememberIoState(Triple(route.bookId, route.topIndex, dataVersion)) {
+            val bookmarkedIds = rememberIoState(Triple(route.bookId, route.topIndex, dataVersion), keepPrevious = true) {
                 repository.getBookmarkedSegmentIds(route.bookId)
             } ?: emptySet()
 
@@ -182,7 +206,15 @@ fun LibraryNavHost(repository: LibraryRepository, theme: FutureTheme) {
                         }
                     },
                     onLoadCommentaries = { prefix ->
-                        withContext(Dispatchers.IO) { repository.getCommentaries(book, prefix) }
+                        // S09: כשל בשאילתה מוצג כ"לא נמצאו מפרשים" ולא כספינר לנצח
+                        try {
+                            withContext(Dispatchers.IO) { repository.getCommentaries(book, prefix) }
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            android.util.Log.w("LibraryNavHost", "commentaries failed", e)
+                            emptyList()
+                        }
                     },
                     onOpenCommentary = { entry -> push(Route.Reader(entry.bookId, entry.topIndex, entry.segmentId)) },
                 )
@@ -201,7 +233,8 @@ fun LibraryNavHost(repository: LibraryRepository, theme: FutureTheme) {
         }
 
         is Route.Bookmarks -> {
-            val bookmarks = rememberIoState(dataVersion) { repository.getBookmarks() } ?: emptyList()
+            // S07: אחרי מחיקה הרשימה הקודמת נשארת עד שהחדשה נטענת - בלי הבהוב ובלי איבוד פוקוס
+            val bookmarks = rememberIoState(dataVersion, keepPrevious = true) { repository.getBookmarks() } ?: emptyList()
             BookmarksScreen(
                 bookmarks = bookmarks,
                 theme = theme,
@@ -218,3 +251,12 @@ fun LibraryNavHost(repository: LibraryRepository, theme: FutureTheme) {
     }
     }
 }
+
+/** מחסנית הניווט נשמרת כרשימת מחרוזות (מסלול אחד בכל שורה) - שורדת סיבוב ושחזור. */
+private val backStackSaver = listSaver<SnapshotStateList<Route>, String>(
+    save = { stack -> stack.map { it.encodeRoute() } },
+    restore = { encoded ->
+        val routes = encoded.mapNotNull { decodeRoute(it) }
+        mutableStateListOf<Route>().apply { addAll(routes.ifEmpty { listOf(Route.Home) }) }
+    },
+)

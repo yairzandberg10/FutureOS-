@@ -77,8 +77,10 @@ fun SearchScreen(
         // חיפוש כותרים ראשון (טבלה של אלפי שורות - מיידי) ומוצג מיד, ורק אחריו
         // החיפוש בגוף הטקסט (אינדקס של מיליוני קטעים) - כך יש תוצאות על המסך
         // בזמן שהחיפוש הכבד עדיין רץ.
+        var booksLoaded = false
         try {
             bookResults = withContext(Dispatchers.IO) { onSearchBooks(query) }
+            booksLoaded = true
             // אות בודדת = חיפוש קידומת שמתאים למיליוני קטעים; הוא לא מוסיף מידע
             // למשתמש ועולה סדר גודל יותר מכל שאילתה אחרת, אז הוא לא נשלח בכלל.
             segmentResults = if (query.trim().length >= MIN_FULLTEXT_QUERY_LENGTH) {
@@ -86,11 +88,15 @@ fun SearchScreen(
             } else {
                 emptyList()
             }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            // S10: ביטול (הקלדה חדשה) הוא לא כשל חיפוש
+            throw e
         } catch (e: Exception) {
             // שאילתת חיפוש שנכשלת (טבלת אינדקס חסרה ב-sefaria.db, DB פגום וכו')
             // לא מפילה את האפליקציה - מוצגת הודעה במקום.
             android.util.Log.w("SearchScreen", "search failed", e)
-            bookResults = emptyList()
+            // S11: תוצאות הכותרים שכבר נמצאו נשארות גם אם חיפוש הגוף נכשל
+            if (!booksLoaded) bookResults = emptyList()
             segmentResults = emptyList()
             failed = true
         }
@@ -160,7 +166,9 @@ fun SearchScreen(
                             }
                             items(segmentResults, key = { "seg${it.segmentId}" }) { result ->
                                 FutureListItem(
-                                    title = "${result.bookTitle} · ${result.refDisplay}",
+                                    // S14: ההפניה כבר מתחילה בשם הספר - בלי כפילות
+                                    title = if (result.refDisplay.startsWith(result.bookTitle)) result.refDisplay
+                                    else "${result.bookTitle} · ${result.refDisplay}",
                                     summary = stripHtmlTags(result.snippet),
                                     summaryMaxLines = 2,
                                     theme = theme,

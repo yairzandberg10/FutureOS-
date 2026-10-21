@@ -15,3 +15,42 @@ sealed class Route {
     data object Search : Route()
     data object Bookmarks : Route()
 }
+
+private const val SEP = '\u001F'
+private const val LIST_SEP = '\u001E'
+
+/** ייצוג מחרוזתי של מסלול לשמירה (S03). שמות מפורשים כי R8 משנה שמות מחלקות. */
+internal fun Route.encodeRoute(): String = when (this) {
+    Route.Home -> "Home"
+    is Route.Browse -> "Browse$SEP$categoryId$SEP$title"
+    is Route.BookChapters -> "BookChapters$SEP$bookId$SEP${groupPath.joinToString(LIST_SEP.toString())}"
+    is Route.Reader -> "Reader$SEP$bookId$SEP$topIndex$SEP${focusSegmentId ?: ""}"
+    Route.Search -> "Search"
+    Route.Bookmarks -> "Bookmarks"
+}
+
+internal fun decodeRoute(encoded: String): Route? {
+    val parts = encoded.split(SEP, limit = 4)
+    return when (parts[0]) {
+        "Home" -> Route.Home
+        "Browse" -> {
+            val full = encoded.split(SEP, limit = 3)
+            full.getOrNull(1)?.toLongOrNull()?.let { Route.Browse(it, full.getOrElse(2) { "" }) }
+        }
+        "BookChapters" -> {
+            val full = encoded.split(SEP, limit = 3)
+            full.getOrNull(1)?.toLongOrNull()?.let { id ->
+                val path = full.getOrElse(2) { "" }.takeIf { it.isNotEmpty() }?.split(LIST_SEP) ?: emptyList()
+                Route.BookChapters(id, path)
+            }
+        }
+        "Reader" -> {
+            val bookId = parts.getOrNull(1)?.toLongOrNull()
+            val top = parts.getOrNull(2)?.toIntOrNull()
+            if (bookId != null && top != null) Route.Reader(bookId, top, parts.getOrNull(3)?.toLongOrNull()) else null
+        }
+        "Search" -> Route.Search
+        "Bookmarks" -> Route.Bookmarks
+        else -> null
+    }
+}
