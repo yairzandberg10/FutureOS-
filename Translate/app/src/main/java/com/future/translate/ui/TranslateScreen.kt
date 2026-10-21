@@ -23,6 +23,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.style.TextAlign
@@ -79,8 +80,20 @@ fun TranslateScreen(
 
     val fromCapsule = remember { FocusRequester() }
     val toCapsule = remember { FocusRequester() }
-    // בחזרה מבורר השפות הפוקוס חוזר לקפסולה שממנה נפתח ("מ" או "אל"), ולא תמיד ל"מ".
-    LaunchedEffect(Unit) { runCatching { if (viewModel.lastPickWasSource) fromCapsule.requestFocus() else toCapsule.requestFocus() } }
+    val textField = remember { FocusRequester() }
+    val speakCell = remember { FocusRequester() }
+    // בחזרה ממסך משנה הפוקוס חוזר לשדה הטקסט (לא לבורר "מ" כמו בכניסה הראשונה).
+    // בחזרה מבורר השפות הפוקוס חוזר לקפסולה שממנה נפתח ("מ" או "אל").
+    LaunchedEffect(Unit) {
+        runCatching {
+            when {
+                viewModel.returnToText -> textField.requestFocus()
+                viewModel.lastPickWasSource -> fromCapsule.requestFocus()
+                else -> toCapsule.requestFocus()
+            }
+        }
+        viewModel.returnToText = false
+    }
 
     ScreenScaffold(
         modifier = Modifier.padding(top = StatusBarInset.TITLE_GAP_DP.dp),
@@ -163,10 +176,13 @@ fun TranslateScreen(
                         singleLine = false,
                         minLines = 3,
                         maxLines = 8,
+                        focusRequester = textField,
                         modifier = Modifier
                             .fillMaxWidth()
                             // יציאה מהשדה רושמת את התרגום בהיסטוריה - לא כל אות.
-                            .onFocusChanged { if (!it.hasFocus) viewModel.commit() },
+                            .onFocusChanged { if (!it.hasFocus) viewModel.commit() }
+                            // ↓ מהשדה נוחת על הפעולה הראשונה ("השמע") ולא על "העתק" באמצע השורה
+                            .focusProperties { down = if (result is Result.Done) speakCell else FocusRequester.Default },
                     )
                 }
             }
@@ -210,6 +226,7 @@ fun TranslateScreen(
                         }
                     },
                     onRetry = viewModel::retry,
+                    speakFocus = speakCell,
                 )
             }
 
@@ -244,6 +261,7 @@ private fun ResultCard(
     onShare: (String) -> Unit,
     onSave: () -> Unit,
     onRetry: () -> Unit = {},
+    speakFocus: FocusRequester? = null,
 ) {
     val type = rememberFutureType()
     FutureCard(theme = theme) {
@@ -306,6 +324,7 @@ private fun ResultCard(
                     active = speaking,
                     height = ActionHeight,
                     onClick = { onSpeak(result.text) },
+                    focusRequester = speakFocus,
                     modifier = Modifier.weight(1f),
                 )
                 FutureActionCell(

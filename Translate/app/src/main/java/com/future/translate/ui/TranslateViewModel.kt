@@ -35,6 +35,9 @@ class TranslateViewModel(application: Application) : AndroidViewModel(applicatio
     /** מאיזו קפסולה נפתח בורר השפות האחרון - לשם חוזר הפוקוס. */
     var lastPickWasSource = true
 
+    /** חזרה ממסך משנה (היסטוריה, הגדרות, שיחה...) - הפוקוס חוזר לשדה הטקסט. */
+    var returnToText = false
+
     private val engine = TranslationEngine()
     private val prefs = TranslatePrefs(application)
     val history = HistoryStore(application)

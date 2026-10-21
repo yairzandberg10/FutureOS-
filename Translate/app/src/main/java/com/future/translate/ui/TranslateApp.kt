@@ -56,7 +56,11 @@ fun TranslateApp(viewModel: TranslateViewModel, theme: FutureTheme, actions: Tra
         stack.add(route)
     }
     fun pop() {
-        if (stack.size > 1) stack.removeAt(stack.lastIndex)
+        if (stack.size > 1) {
+            // בורר השפות מחזיר לקפסולה שלו; כל מסך אחר - לשדה הטקסט (לא לבורר "מ")
+            if (stack.last() !is Route.Picker) viewModel.returnToText = true
+            stack.removeAt(stack.lastIndex)
+        }
     }
 
     // BACK ממסך השיחה עוצר את ההקשבה - אחרת התוצאה נכנסת למסך הראשי בשקט
