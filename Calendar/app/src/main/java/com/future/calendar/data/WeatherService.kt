@@ -1,13 +1,4 @@
 package com.future.calendar.data
-import androidx.compose.material.icons.rounded.WbSunny
-import androidx.compose.material.icons.rounded.WbCloudy
-import androidx.compose.material.icons.rounded.Cloud
-import androidx.compose.material.icons.rounded.Dehaze
-import androidx.compose.material.icons.rounded.Grain
-import androidx.compose.material.icons.rounded.Umbrella
-import androidx.compose.material.icons.rounded.AcUnit
-import androidx.compose.material.icons.rounded.FlashOn
-import androidx.compose.material.icons.rounded.Thermostat
 
 import org.json.JSONObject
 import java.net.HttpURLConnection
@@ -65,13 +56,13 @@ object WeatherService {
             connection.readTimeout = 8000
             connection.requestMethod = "GET"
 
-            if (connection.responseCode != 200) {
+            // החיבור נסגר תמיד, גם כשקריאת הגוף זורקת חריגה
+            val body = try {
+                if (connection.responseCode != 200) return null
+                connection.inputStream.bufferedReader().use { it.readText() }
+            } finally {
                 connection.disconnect()
-                return null
             }
-
-            val body = connection.inputStream.bufferedReader().use { it.readText() }
-            connection.disconnect()
 
             val json = JSONObject(body)
             val daily = json.getJSONObject("daily")

@@ -21,14 +21,13 @@ object LocationHelper {
         if (!hasPermission(context)) return null
         return try {
             val manager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-            val providers = manager.getProviders(true)
-            for (provider in providers) {
-                val loc = manager.getLastKnownLocation(provider)
-                if (loc != null && System.currentTimeMillis() - loc.time <= MAX_LOCATION_AGE_MILLIS) {
-                    return loc.latitude to loc.longitude
-                }
-            }
-            null
+            // המיקום הטרי ביותר מכל הספקים - לא הספק הראשון שמיקומו בתוך הטווח
+            val now = System.currentTimeMillis()
+            val best = manager.getProviders(true)
+                .mapNotNull { manager.getLastKnownLocation(it) }
+                .filter { now - it.time <= MAX_LOCATION_AGE_MILLIS }
+                .maxByOrNull { it.time }
+            best?.let { it.latitude to it.longitude }
         } catch (e: Exception) {
             null
         }

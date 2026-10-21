@@ -48,7 +48,8 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val repository = remember { CalendarRepository(this) }
-            val today = remember { LocalDate.now() }
+            // "היום" מתעדכן בחזרה לאפליקציה (ON_RESUME) - אחרת הוא נשאר תאריך ההפעלה אחרי חצות
+            var today by remember { mutableStateOf(LocalDate.now()) }
 
             // מצב התצוגה והתאריכים נשמרים גם במוות תהליך/שינוי שפה (לא remember בלבד)
             val viewModeSaver = Saver<CalendarViewMode, String>(save = { it.name }, restore = { CalendarViewMode.valueOf(it) })
@@ -59,6 +60,10 @@ class MainActivity : ComponentActivity() {
             var viewMode by rememberSaveable(stateSaver = viewModeSaver) { mutableStateOf(CalendarViewMode.MONTH) }
             var currentMonth by rememberSaveable(stateSaver = monthSaver) { mutableStateOf(YearMonth.from(today)) }
             var selectedDate by rememberSaveable(stateSaver = dateSaver) { mutableStateOf(today) }
+            // התצוגה שממנה נפתח היום - BACK מהיום חוזר אליה (שבוע או חודש), לא תמיד לחודש
+            var dayOrigin by rememberSaveable(stateSaver = viewModeSaver) { mutableStateOf(CalendarViewMode.MONTH) }
+            // אחרי חזרה מההגדרות הפוקוס חוזר לכפתור ההגדרות שממנו נפתחו
+            var focusSettingsOnReturn by remember { mutableStateOf(false) }
             var events by remember { mutableStateOf<List<CalendarEvent>>(emptyList()) }
             var editorState by remember { mutableStateOf<Pair<LocalDate, CalendarEvent?>?>(null) }
             var pendingDelete by remember { mutableStateOf<CalendarEvent?>(null) }
@@ -78,7 +83,9 @@ class MainActivity : ComponentActivity() {
                 hasLocationPermission = result.values.any { it }
             }
 
-            val gpsLatLon = remember(useGps, hasLocationPermission, region) {
+            // עולה ב-ON_RESUME כדי שהמיקום יחושב מחדש בחזרה מהרקע
+            var gpsRefresh by remember { mutableIntStateOf(0) }
+            val gpsLatLon = remember(useGps, hasLocationPermission, region, gpsRefresh) {
                 if (useGps && hasLocationPermission) LocationHelper.lastKnownLatLon(this@MainActivity) else null
             }
             val resolvedLatLon = gpsLatLon ?: (region.lat to region.lon)
@@ -86,7 +93,7 @@ class MainActivity : ComponentActivity() {
             // (או שהמיקום השמור היה ישן מדי - ראה LocationHelper) - נופלים
             // חזרה לאזור ברירת המחדל ומציגים על כך חיווי קטן למשתמש כדי
             // שיידע שהזמנים המוצגים לא בהכרח תואמים את מיקומו האמיתי.
-            val usingFallbackLocation = useGps && hasLocationPermission && gpsLatLon == null
+            val usingFallbackLocation = useGps && gpsLatLon == null
 
             var theme by remember {
                 mutableStateOf(
@@ -136,6 +143,9 @@ class MainActivity : ComponentActivity() {
                 val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
                     if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
                         hasPermission = repository.hasCalendarPermission()
+                        today = LocalDate.now()
+                        hasLocationPermission = LocationHelper.hasPermission(this@MainActivity)
+                        gpsRefresh++
                         val shared = ThemeClient.getTheme(this@MainActivity)
                         theme = FutureTheme(isDarkMode = shared.isDarkMode, accentColor = Color(shared.primaryColor))
                         refreshLatest()
@@ -159,8 +169,17 @@ class MainActivity : ComponentActivity() {
                 when {
                     editorState != null -> editorState = null
                     settingsPage != 0 -> settingsPage -= 1
+                    viewMode == CalendarViewMode.DAY -> viewMode = dayOrigin
                     else -> viewMode = CalendarViewMode.MONTH
                 }
+            }
+
+            /** פתיחת תצוגת יום ושמירת התצוגה שממנה באנו (שבוע/חודש) ל-BACK. */
+            fun enterDay() {
+                if (viewMode != CalendarViewMode.DAY) {
+                    dayOrigin = if (viewMode == CalendarViewMode.WEEK) CalendarViewMode.WEEK else CalendarViewMode.MONTH
+                }
+                viewMode = CalendarViewMode.DAY
             }
 
             fun goToDate(date: LocalDate) {
@@ -290,7 +309,7 @@ class MainActivity : ComponentActivity() {
                         onRequestPermission = {
                             permissionLauncher.launch(arrayOf(android.Manifest.permission.READ_CALENDAR, android.Manifest.permission.WRITE_CALENDAR))
                         },
-                        onChangeViewMode = { viewMode = it },
+                        onChangeViewMode = { mode -> if (mode == CalendarViewMode.DAY) { enterDay() } else { viewMode = mode } },
                         onPrevMonth = { shiftMonth(-1) },
                         onNextMonth = { shiftMonth(1) },
                         onPrevDay = { goToDate(selectedDate.minusDays(1)) },
@@ -300,7 +319,7 @@ class MainActivity : ComponentActivity() {
                         onPrevYear = { shiftYear(-1) },
                         onNextYear = { shiftYear(1) },
                         onSelectDate = { goToDate(it) },
-                        onOpenDay = { goToDate(it); viewMode = CalendarViewMode.DAY },
+                        onOpenDay = { goToDate(it); enterDay() },
                         onOpenMonth = { m ->
                             goToDate(if (selectedDate in m) selectedDate else if (today in m) today else m.first)
                             viewMode = CalendarViewMode.MONTH
@@ -312,9 +331,11 @@ class MainActivity : ComponentActivity() {
                         onGoToday = {
                             currentMonth = YearMonth.from(today)
                             selectedDate = today
-                            viewMode = CalendarViewMode.DAY
+                            enterDay()
                         },
-                        onOpenSettings = { settingsPage = 1 },
+                        onOpenSettings = { focusSettingsOnReturn = true; settingsPage = 1 },
+                        focusSettingsOnEnter = focusSettingsOnReturn,
+                        optionsEnabled = editorState == null && pendingDelete == null,
                         resolvedLat = resolvedLatLon.first,
                         resolvedLon = resolvedLatLon.second,
                         showWeather = showWeather,
@@ -329,7 +350,7 @@ class MainActivity : ComponentActivity() {
             // של אירוע ודיאלוג העריכה) - שניהם עוברים דרך אישור אחד כאן.
             pendingDelete?.let { event ->
                 ConfirmDialog(
-                    message = if (event.isRecurring) "למחוק את כל המופעים של \"${event.title}\"?" else "למחוק את האירוע \"${event.title}\"?",
+                    message = if (event.isRecurring) "למחוק את כל המופעים של \"\u2068${event.title}\u2069\"?" else "למחוק את האירוע \"\u2068${event.title}\u2069\"?",
                     surfaceColor = theme.surfaceColor,
                     textColor = theme.textColor,
                     dangerColor = theme.dangerColor,

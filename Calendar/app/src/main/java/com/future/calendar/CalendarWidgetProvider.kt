@@ -16,7 +16,7 @@ import com.future.sharednav.widget.WidgetContent
 class CalendarWidgetProvider : FutureContentWidget() {
     override fun content(context: Context): WidgetContent {
         val now = Date()
-        val hebrew = DateFormat.getDateInstance(DateFormat.LONG, ULocale.forLanguageTag("he-IL-u-ca-hebrew")).format(now)
+        val hebrew = DateFormat.getDateInstance(DateFormat.LONG, ULocale.forLanguageTag("he-IL-u-ca-hebrew-nu-hebr")).format(now)
         val gregorian = SimpleDateFormat("EEEE, d בMMMM", Locale("iw", "IL")).format(now)
         return WidgetContent(value = hebrew, subtitle = listOfNotNull(gregorian, nextEventToday(context)).joinToString(" · "))
     }
@@ -29,11 +29,14 @@ class CalendarWidgetProvider : FutureContentWidget() {
         }.timeInMillis
         val uri = CalendarContract.Instances.CONTENT_URI.buildUpon()
             .appendPath(start.toString()).appendPath(end.toString()).build()
-        context.contentResolver.query(
+        val queried = context.contentResolver.query(
             uri,
             arrayOf(CalendarContract.Instances.TITLE, CalendarContract.Instances.BEGIN, CalendarContract.Instances.ALL_DAY),
             "${CalendarContract.Instances.VISIBLE} = 1", null, "${CalendarContract.Instances.BEGIN} ASC",
-        )?.use { c ->
+        )
+        // שאילתה שנכשלה (cursor ריק) היא לא "אין אירועים" - לא מציגים טענה שלא נבדקה
+        if (queried == null) return null
+        queried.use { c ->
             if (c.moveToFirst()) {
                 val title = c.getString(0).orEmpty().ifBlank { "אירוע" }
                 return if (c.getInt(2) == 1) title else SimpleDateFormat("HH:mm", Locale.US).format(Date(c.getLong(1))) + " " + title
