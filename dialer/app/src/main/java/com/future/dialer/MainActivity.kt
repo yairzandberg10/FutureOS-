@@ -82,6 +82,7 @@ import com.future.dialer.ui.contacts.SearchScreen
 import com.future.dialer.ui.dialpad.DialpadScreen
 import com.future.dialer.ui.contacts.ContactsTabScreen
 import com.future.dialer.ui.CallFormat
+import com.future.dialer.ui.MAX_DIAL_LENGTH
 import com.future.dialer.ui.requestFocusWhenAttached
 import com.future.dialer.data.model.CallFilter
 import com.future.dialer.ui.incall.InCallScreen
@@ -176,7 +177,8 @@ class MainActivity : ComponentActivity() {
         registerProviderObservers()
 
         // אם המספר הגיע מכוונה חיצונית (ACTION_DIAL, למשל לחיצה על מספר באנשי קשר)
-        val prefillNumber = intentDialNumber(intent)
+        // רק בהפעלה ראשונה: יצירה מחדש (סיבוב, הריגה) לא דורסת את מה שהמשתמש הקליד מאז
+        val prefillNumber = if (savedInstanceState == null) intentDialNumber(intent) else null
         if (prefillNumber != null) callsViewModel.setNumber(prefillNumber)
 
         setContent {
@@ -240,7 +242,7 @@ class MainActivity : ComponentActivity() {
         // DIAL חשוף לכל אפליקציה: רק תווי חיוג, ובאורך סביר - לא טקסט שרירותי
         // שיושב בשדה ומחכה ללחיצה על מקש החיוג.
         return data.schemeSpecificPart
-            ?.filter { it.isDigit() || it in "+*#,;" }
+            ?.filter { it in '0'..'9' || it in "+*#,;" }
             ?.take(MAX_DIAL_LENGTH)
             ?.takeIf { it.isNotEmpty() }
     }
@@ -373,7 +375,8 @@ class MainActivity : ComponentActivity() {
         try {
             startActivity(intent)
         } catch (e: ActivityNotFoundException) {
-            // אין מי שמטפל בזה במכשיר - אין לאן לפנות.
+            // אין מי שמטפל בזה במכשיר - אבל המשתמש צריך לדעת שהלחיצה לא נבלעה.
+            android.widget.Toast.makeText(this, "אין אפליקציה לפתוח את זה", android.widget.Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -498,7 +501,6 @@ class MainActivity : ComponentActivity() {
 
     private companion object {
         const val CONTACTS_PACKAGE = "com.future.contact"
-        const val MAX_DIAL_LENGTH = 64
         const val DTMF_TAP_MILLIS = 150L
         const val RECALL_GUARD_MILLIS = 2_000L
         val TabRoutes = setOf(Screen.CallLog.route, Screen.Contacts.route, Screen.Dialpad.route)
@@ -878,7 +880,7 @@ private fun OngoingCallBanner(name: String, onReturn: () -> Unit) {
             Icon(imageVector = FutureIcons.Call, contentDescription = null, tint = onSuccess, modifier = Modifier.size(16.dp))
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "${stringResource(R.string.ongoing_call)} · $name",
+                text = "${stringResource(R.string.ongoing_call)} · ${CallFormat.displayName(name)}",
                 color = onSuccess,
                 fontWeight = FontWeight.Medium,
                 style = MaterialTheme.typography.bodyMedium,

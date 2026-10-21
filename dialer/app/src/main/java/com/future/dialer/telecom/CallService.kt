@@ -276,6 +276,7 @@ class CallService : InCallService() {
         private var recordingUri: Uri? = null
         private var recordingResolver: android.content.ContentResolver? = null
         private var recordingPfd: ParcelFileDescriptor? = null
+        private var recordingContext: android.content.Context? = null
 
         @Volatile
         private var ringingNotified = false
@@ -363,6 +364,7 @@ class CallService : InCallService() {
                     recorder = mr
                     recordingUri = uri
                     recordingResolver = resolver
+                    recordingContext = context.applicationContext
                     recordingPfd = pfd
                     _isRecording.value = true
                     return true
@@ -395,6 +397,13 @@ class CallService : InCallService() {
                         resolver.update(uri, ContentValues().apply { put(MediaStore.Audio.Media.IS_PENDING, 0) }, null, null)
                     }
                 }
+                // ההקלטה נשמרה בתיקייה שהמשתמש לא מכיר - אומרים לו איפה למצוא אותה (DL-27)
+                recordingContext?.let { appContext ->
+                    android.os.Handler(android.os.Looper.getMainLooper()).post {
+                        android.widget.Toast.makeText(appContext, "ההקלטה נשמרה בתיקייה: הקלטות/$RECORDINGS_FOLDER", android.widget.Toast.LENGTH_LONG).show()
+                    }
+                }
+                recordingContext = null
                 recordingUri = null
                 recordingResolver = null
                 _isRecording.value = false

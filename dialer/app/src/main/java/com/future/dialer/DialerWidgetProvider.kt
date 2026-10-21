@@ -23,10 +23,13 @@ class DialerWidgetProvider : FutureContentWidget() {
                     CallLog.Calls.INCOMING_TYPE -> "נכנסת"
                     CallLog.Calls.OUTGOING_TYPE -> "יוצאת"
                     CallLog.Calls.MISSED_TYPE -> "שלא נענתה"
-                    CallLog.Calls.REJECTED_TYPE, CallLog.Calls.BLOCKED_TYPE -> "שנדחתה"
+                    CallLog.Calls.REJECTED_TYPE -> "שנדחתה"
+                    CallLog.Calls.BLOCKED_TYPE -> "שנחסמה"
                     else -> ""
                 }
-                return WidgetContent(value = who, subtitle = "שיחה $type · ${ago(c.getLong(3))}", title = "שיחה אחרונה")
+                // בלי סוג מוכר אין רווח כפול ("שיחה  ·")
+                val label = if (type.isEmpty()) "שיחה" else "שיחה $type"
+                return WidgetContent(value = who, subtitle = "$label · ${ago(c.getLong(3))}", title = "שיחה אחרונה")
             }
         }
         return WidgetContent(value = "אין שיחות", subtitle = null)

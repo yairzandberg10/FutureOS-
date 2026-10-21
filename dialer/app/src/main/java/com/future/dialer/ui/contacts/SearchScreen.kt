@@ -18,6 +18,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.future.dialer.data.model.Contact
+import com.future.dialer.ui.CallFormat
 import com.future.sharednav.components.EmptyState
 import com.future.sharednav.components.FutureListItem
 import com.future.sharednav.components.FutureTextField
@@ -91,7 +92,7 @@ fun SearchScreen(
                 items(results, key = { it.id }) { contact ->
                     FutureListItem(
                         title = contact.name,
-                        summary = contact.phoneNumber,
+                        summary = CallFormat.isolate(contact.phoneNumber),
                         theme = theme,
                         onClick = { onOpen(contact) },
                     )

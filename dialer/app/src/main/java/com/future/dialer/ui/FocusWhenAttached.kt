@@ -11,9 +11,8 @@ import androidx.compose.ui.focus.FocusRequester
  */
 suspend fun FocusRequester.requestFocusWhenAttached(frames: Int = 5) {
     repeat(frames) {
-        // גרסאות Compose שונות: זורק כשהשורה לא מחוברת, או מחזיר false.
-        val result = runCatching { requestFocus() }.getOrNull()
-        if (result != null && result != false) return
+        // זורק כשהשורה עוד לא מחוברת - מצליח כשלא זרק, ואז מפסיקים לנסות.
+        if (runCatching { requestFocus() }.isSuccess) return
         withFrameNanos { }
     }
 }

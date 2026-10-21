@@ -7,15 +7,20 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import com.future.dialer.data.model.Contact
+import com.future.dialer.ui.CallFormat
 import com.future.dialer.ui.CallsViewModel
 import com.future.dialer.ui.requestFocusWhenAttached
 import com.future.sharednav.components.EmptyState
@@ -49,9 +54,17 @@ fun ContactsTabScreen(
                 .thenComparator { a, b -> collator.compare(a.name, b.name) }
         )
     }
-    val firstRow = remember { FocusRequester() }
+    // איש הקשר שנפתח אחרון: אחרי BACK הפוקוס חוזר אליו ולא לשורה הראשונה (נשמר עם מחסנית הניווט)
+    var lastOpenedId by rememberSaveable { mutableStateOf<String?>(null) }
+    val targetIndex = sorted.indexOfFirst { it.id == lastOpenedId }.coerceAtLeast(0)
+    val listState = rememberLazyListState()
+    val targetRow = remember { FocusRequester() }
     LaunchedEffect(sorted.isNotEmpty()) {
-        if (sorted.isNotEmpty()) firstRow.requestFocusWhenAttached()
+        if (sorted.isNotEmpty()) {
+            // שורה רחוקה עוד לא נבנתה ברשימה העצלה - גוללים אליה לפני בקשת הפוקוס
+            listState.scrollToItem(targetIndex)
+            targetRow.requestFocusWhenAttached()
+        }
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -68,15 +81,19 @@ fun ContactsTabScreen(
         }
         LazyColumn(
             modifier = Modifier.weight(1f),
-            contentPadding = PaddingValues(horizontal = FutureDimens.spacingMd, vertical = FutureDimens.spacingXs),
+            state = listState,
+            contentPadding = PaddingValues(start = FutureDimens.spacingMd, end = FutureDimens.spacingMd, top = FutureDimens.spacingXs, bottom = FutureDimens.spacingLg),
         ) {
             itemsIndexed(sorted, key = { _, c -> c.id }) { index, contact ->
                 FutureListItem(
                     title = contact.name,
-                    summary = contact.phoneNumber,
+                    summary = CallFormat.isolate(contact.phoneNumber),
                     theme = theme,
-                    onClick = { onOpen(contact) },
-                    focusRequester = if (index == 0) firstRow else null,
+                    onClick = {
+                        lastOpenedId = contact.id
+                        onOpen(contact)
+                    },
+                    focusRequester = if (index == targetIndex) targetRow else null,
                     leading = { FutureAvatar(theme = theme, name = contact.name, photoUri = contact.photoUri) },
                     trailing = {
                         if (contact.isFavorite) {

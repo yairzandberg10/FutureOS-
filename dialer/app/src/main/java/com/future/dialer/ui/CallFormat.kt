@@ -52,7 +52,17 @@ object CallFormat {
     fun durationOf(call: CallRecord): String? =
         if (call.duration <= 0L) null else duration(call.duration)
 
-    fun duration(seconds: Long): String = "%d:%02d".format(seconds / 60, seconds % 60)
+    /** "4:12", ומשעה ומעלה "1:02:03" (קודם שיחה של 62 דקות הוצגה "62:03"). */
+    fun duration(seconds: Long): String =
+        if (seconds >= 3600) "%d:%02d:%02d".format(seconds / 3600, (seconds % 3600) / 60, seconds % 60)
+        else "%d:%02d".format(seconds / 60, seconds % 60)
+
+    /** מספר טלפון בתוך טקסט RTL: LRI…PDI מבודד אותו כדי ש-"+972…" לא יוצג הפוך. */
+    fun isolate(number: String): String = "⁦$number⁩"
+
+    /** שם לתצוגה בשורה עברית: שם איש קשר כמו שהוא, ומספר (כשאין שם) עטוף בבידוד. */
+    fun displayName(name: String): String =
+        if (name.any { it in '0'..'9' } && name.all { it in '0'..'9' || it in "+-() *#,;" }) isolate(name) else name
 
     /** "נכנסת · 4:12" - הכיוון, ואחריו המשך רק אם הייתה שיחה. */
     fun summaryOf(call: CallRecord): String =

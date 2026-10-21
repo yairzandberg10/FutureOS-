@@ -188,14 +188,17 @@ private fun IncomingCall(
                 letterSpacing = FutureTypography.trackingSection,
             )
             CallerAvatar(name, phoneNumber, theme, IncomingAvatar)
-            Text(
-                name,
-                color = theme.textColor,
-                fontSize = type.display,
-                fontWeight = FutureTypography.weightBold,
-                textAlign = TextAlign.Center,
-                maxLines = 2,
-            )
+            // מספר בלי שם מוצג מתוך RTL - בלי זה התווים מתהפכים.
+            CompositionLocalProvider(LocalLayoutDirection provides if (name == phoneNumber) LayoutDirection.Ltr else LayoutDirection.Rtl) {
+                Text(
+                    name,
+                    color = theme.textColor,
+                    fontSize = type.display,
+                    fontWeight = FutureTypography.weightBold,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
+                )
+            }
             if (name != phoneNumber) Number(phoneNumber, theme)
         }
         Column(

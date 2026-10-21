@@ -24,8 +24,12 @@ class ContactsViewModel(private val repository: ContactRepository) : ViewModel()
     // נחוצה רק במסך החיפוש - והוא טוען אותה בכל כניסה (SearchScreen).
     // כך לא רצה שאילתת אנשי קשר כפולה בזמן שהיומן נטען.
 
+    private var refreshJob: kotlinx.coroutines.Job? = null
+
     fun refresh() {
-        viewModelScope.launch {
+        // טעינה חדשה מבטלת את הקודמת - לא שתי שאילתות מתחרות שהישנה מהן דורסת את החדשה
+        refreshJob?.cancel()
+        refreshJob = viewModelScope.launch {
             _allContacts.value = repository.getAllContacts()
             filterContacts()
         }

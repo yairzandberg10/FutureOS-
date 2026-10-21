@@ -68,7 +68,7 @@ class CallsViewModel(
         groupByDay(calls.filter { filter.matches(it.type) }) { call ->
             call.name
                 ?: matchKey(call.phoneNumber)?.let(byKey::get)
-                ?: call.phoneNumber.takeIf { it.isNotBlank() && !call.isPrivate }
+                ?: call.phoneNumber.takeIf { it.isNotBlank() && !call.isPrivate }?.let(CallFormat::isolate)
                 ?: "מספר חסוי"
         }
     }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
@@ -140,7 +140,7 @@ class CallsViewModel(
     }
 
     fun onDigitPressed(digit: String) {
-        if (_dialedNumber.value.length < MaxDialLength) _dialedNumber.value += digit
+        if (_dialedNumber.value.length < MAX_DIAL_LENGTH) _dialedNumber.value += digit
     }
 
     fun onDeletePressed() {
@@ -153,7 +153,7 @@ class CallsViewModel(
 
     /** ממלא את המקלדת במספר קיים בלי לחייג - המשתמש מחייג בעצמו. */
     fun setNumber(number: String) {
-        _dialedNumber.value = number
+        _dialedNumber.value = number.take(MAX_DIAL_LENGTH)
     }
 
     /** איש הקשר של מספר, לפי תשע הספרות האחרונות (052... מול +97252...). */
@@ -203,10 +203,8 @@ class CallsViewModel(
                     )
                 }
 
-        /** מספר טלפון ארוך ביותר שהמקלדת מקבלת (כולל קידומת בינלאומית). */
-        const val MaxDialLength = 20
-
-        fun digitsOf(number: String): String = number.filter { it.isDigit() }
+        // ספרות ASCII בלבד: Char.isDigit() מקבל גם ספרות ערביות-הודיות ופרסיות (DL-22)
+        fun digitsOf(number: String): String = number.filter { it in '0'..'9' }
 
         fun matchKey(number: String): String? {
             val digits = digitsOf(number)
@@ -215,6 +213,9 @@ class CallsViewModel(
         }
     }
 }
+
+/** מספר טלפון ארוך ביותר שהמקלדת מקבלת (כולל קידומת בינלאומית) - גם מהקלדה וגם מ-intent. */
+const val MAX_DIAL_LENGTH = 32
 
 /** יום אחד ביומן: הכותרת ("היום", "אתמול"...) והשורות שלו. */
 data class CallDay(val title: String, val rows: List<CallRow>)

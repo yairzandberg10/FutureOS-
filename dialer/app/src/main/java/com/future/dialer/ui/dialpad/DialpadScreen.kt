@@ -26,6 +26,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.future.dialer.ui.CallFormat
 import com.future.dialer.ui.CallsViewModel
 import com.future.sharednav.components.FutureAvatar
 import com.future.sharednav.components.FutureButton
@@ -105,7 +106,7 @@ fun DialpadScreen(
                     items(suggestions, key = { it.id }) { contact ->
                         FutureListItem(
                             title = contact.name,
-                            summary = contact.phoneNumber,
+                            summary = CallFormat.isolate(contact.phoneNumber),
                             theme = theme,
                             onClick = { onCall(contact.phoneNumber) },
                             leading = { FutureAvatar(theme = theme, name = contact.name, photoUri = contact.photoUri) },

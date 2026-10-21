@@ -28,7 +28,7 @@
     <string name="no_matching_contacts">לא נמצאו התאמות</string>
     <string name="send_message">שלח הודעה</string>
     <string name="close_message">סגור</string>
-    <string name="quick_message_sent">ההודעה נשלחה</string>
+    <string name="quick_message_sent">ההודעה נשלחת</string>
     <string name="minimize_call">מזער שיחה</string>
     <string name="ongoing_call">שיחה מתקיימת</string>
     <string name="tap_to_return">חזרה לשיחה</string>

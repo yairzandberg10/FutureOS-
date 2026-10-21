@@ -9,6 +9,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -50,10 +54,20 @@ fun CallLogScreen(
     val groups by viewModel.callDays.collectAsState()
     val filter by viewModel.filter.collectAsState()
 
-    val firstRow = remember { FocusRequester() }
+    // השיחה שנפתחה אחרונה: אחרי BACK מאיש הקשר הפוקוס חוזר אליה ולא לשורה הראשונה
+    var lastOpenedCallId by rememberSaveable { mutableStateOf<String?>(null) }
+    val listState = rememberLazyListState()
+    val targetRow = remember { FocusRequester() }
+    val targetId = lastOpenedCallId?.takeIf { id -> groups.any { day -> day.rows.any { it.call.id == id } } }
+        ?: groups.firstOrNull()?.rows?.firstOrNull()?.call?.id
     LaunchedEffect(groups.isNotEmpty(), filter) {
-        if (groups.isNotEmpty()) firstRow.requestFocusWhenAttached()
+        if (groups.isNotEmpty()) {
+            // יום רחוק עוד לא נבנה ברשימה העצלה - גוללים אליו לפני בקשת הפוקוס
+            listState.scrollToItem(groups.indexOfFirst { day -> day.rows.any { it.call.id == targetId } }.coerceAtLeast(0))
+            targetRow.requestFocusWhenAttached()
+        }
     }
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     Column(modifier = Modifier.fillMaxSize()) {
         ScreenTopBar(title = "שיחות", textColor = theme.textColor, accentColor = theme.accentColor)
@@ -67,7 +81,10 @@ fun CallLogScreen(
                     option.label,
                     theme = theme,
                     selected = option == filter,
-                    onClick = { viewModel.setFilter(option) },
+                    onClick = {
+                        lastOpenedCallId = null
+                        viewModel.setFilter(option)
+                    },
                 )
             }
         }
@@ -84,9 +101,9 @@ fun CallLogScreen(
         }
 
         // רשימה עצלה, יום לכל פריט: רק הימים שעל המסך נבנים.
-        val firstId = groups.first().rows.first().call.id
         LazyColumn(
             modifier = Modifier.weight(1f),
+            state = listState,
             contentPadding = PaddingValues(top = FutureDimens.spacingXs, bottom = FutureDimens.spacingLg),
         ) {
             items(groups, key = { it.title + it.rows.first().call.id }) { day ->
@@ -103,8 +120,16 @@ fun CallLogScreen(
                                 iconTint = CallFormat.colorOf(call.type, theme),
                                 theme = theme,
                                 showChevron = false,
-                                focusRequester = if (call.id == firstId) firstRow else null,
-                                onClick = { if (!call.isPrivate) onOpen(call.name.orEmpty(), call.phoneNumber) },
+                                focusRequester = if (call.id == targetId) targetRow else null,
+                                onClick = {
+                                    if (call.isPrivate || call.phoneNumber.isBlank()) {
+                                        // אין מספר לפתוח - הלחיצה לא נבלעת בשקט
+                                        android.widget.Toast.makeText(context, "המספר חסוי", android.widget.Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        lastOpenedCallId = call.id
+                                        onOpen(call.name.orEmpty(), call.phoneNumber)
+                                    }
+                                },
                                 trailing = {
                                     Text(row.time, color = theme.subtleTextColor, fontSize = type.summary)
                                 },
