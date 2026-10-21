@@ -93,7 +93,8 @@ fun AlarmScreen(
     onTabDigit: (Int) -> Unit = {},
 ) {
     val context = LocalContext.current
-    val alarms = remember { mutableStateListOf<Alarm>() }
+    // CLK-21: הטעינה הראשונה סינכרונית, כדי שלא יבהב מצב ריק לפני שהמעוררים מופיעים.
+    val alarms = remember { mutableStateListOf<Alarm>().apply { addAll(AlarmLogic.loadAlarms(context)) } }
     // הרשימה במסך היא עותק של ההעדפות בלבד: נטענת מחדש בכניסה, בחזרה למסך
     // (ON_RESUME) ואחרי כל שמירה או מחיקה. טעינה חוזרת מנקה לפני ההוספה, כך
     // שלא נוצרים כפילויות.
@@ -124,7 +125,8 @@ fun AlarmScreen(
     // היה ממוקד), ואם אין כזו - ל-"+". קודם שום פריט לא היה ממוקד, ו-OK לא עשה כלום.
     val rowRequesters = remember { mutableMapOf<Int, FocusRequester>() }
     val addFocus = remember { FocusRequester() }
-    var restoreFocusTo by remember { mutableStateOf<Int?>(null) }
+    // CLK-D20: בכניסה למסך הפוקוס מתחיל על "+", כדי שיהיה פוקוס גלוי לפני הלחיצה הראשונה.
+    var restoreFocusTo by remember { mutableStateOf<Int?>(RESTORE_TO_ADD) }
     LaunchedEffect(restoreFocusTo, editingAlarm, menuOpen, snoozePickerOpen) {
         val target = restoreFocusTo ?: return@LaunchedEffect
         if (editingAlarm != null || menuOpen || snoozePickerOpen) return@LaunchedEffect
@@ -140,8 +142,6 @@ fun AlarmScreen(
         restoreFocusTo = null
     }
     onOptionsKeyPress { if (!overlayOpen && pendingDelete == null && !snoozePickerOpen) menuOpen = true }
-
-    LaunchedEffect(Unit) { reloadAlarms() }
 
     // צלצול רץ ברקע (מסך נפרד) ומשנה את האזעקה - בחזרה למסך טוענים מחדש מההעדפות, כמו
     // בכניסה למסך, כדי שלא יוצג "מופעל" לאזעקה שכבר כבויה.
@@ -358,7 +358,7 @@ fun AlarmScreen(
                                 }
                             }
                             Text(
-                                "OK פותח את בורר השעה. מקש האפשרויות: הפעלה, כיבוי ומחיקה. מקשים 1 עד 4 מחליפים לשונית.",
+                                "OK פותח את בורר השעה. מקש האפשרויות: הפעלה, כיבוי, עריכת שעה, מעורר חדש ומחיקה. מקשים 1 עד 4 מחליפים לשוניות.",
                                 color = theme.subtleTextColor,
                                 fontSize = FutureTypography.summary,
                                 modifier = Modifier.padding(
@@ -476,7 +476,7 @@ fun TimePickerOverlay(alarm: Alarm, theme: FutureTheme, isNew: Boolean = false, 
             )
         }
         Spacer(modifier = Modifier.height(FutureDimens.spacingSm))
-        Text("↑↓ שינוי · ספרות הקלדה · OK הבא", color = theme.textAlpha(60), fontSize = FutureTypography.summary)
+        Text("↑↓ שינוי · ספרות הקלדה · OK לשדה הבא (בימים: OK מסמן יום)", color = theme.textAlpha(60), fontSize = FutureTypography.summary)
 
         Spacer(modifier = Modifier.height(FutureDimens.spacingLg))
         Text(
@@ -538,7 +538,10 @@ private fun TimeWheel(
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
     var typed by remember { mutableStateOf("") }
-    LaunchedEffect(isFocused) { if (!isFocused) typed = "" }
+    // CLK-D04/D16: שתי ספרות מהירות מגיעות לפני הרכבה מחדש, ו-typed שנקרא מה-state היה ישן
+    // (4 ואז 5 נתן 05). המאגר ללוגיקה נשמר מחוץ ל-state, ו-typed רק מציג את ההדגשה.
+    val typedBuffer = remember { arrayOf("") }
+    LaunchedEffect(isFocused) { if (!isFocused) { typed = ""; typedBuffer[0] = "" } }
     fun wrap(v: Int) = when {
         v > range.last -> range.first
         v < range.first -> range.last
@@ -558,16 +561,18 @@ private fun TimeWheel(
                 if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
                 val digit = com.future.sharednav.nav.digitForKey(event.key)
                 when {
-                    event.key == Key.DirectionUp -> { typed = ""; onChange(wrap(value + 1)); true }
-                    event.key == Key.DirectionDown -> { typed = ""; onChange(wrap(value - 1)); true }
+                    event.key == Key.DirectionUp -> { typed = ""; typedBuffer[0] = ""; onChange(wrap(value + 1)); true }
+                    event.key == Key.DirectionDown -> { typed = ""; typedBuffer[0] = ""; onChange(wrap(value - 1)); true }
                     // ↑/↓ שייכים לגלגל, אז OK הוא היציאה ממנו - לימי החזרה ולכפתורים.
                     event.key == Key.DirectionCenter || event.key == Key.Enter || event.key == Key.NumPadEnter -> {
                         typed = ""
+                        typedBuffer[0] = ""
                         onOk()
                         true
                     }
                     digit != null -> {
-                        val result = typeDigit(typed, digit.toInt(), range.last)
+                        val result = typeDigit(typedBuffer[0], digit.toInt(), range.last)
+                        typedBuffer[0] = result.buffer
                         typed = result.buffer
                         onChange(result.value)
                         if (result.complete) onTypedComplete()

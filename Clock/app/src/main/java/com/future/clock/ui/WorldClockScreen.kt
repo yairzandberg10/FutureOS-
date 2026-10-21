@@ -257,6 +257,15 @@ private fun CityPicker(theme: FutureTheme, exclude: List<CityClock>, onPick: (Ci
     val now = remember { System.currentTimeMillis() }
     Column(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
         ToolsHeader(title = "הוסף עיר", theme = theme)
+        // CLK-22: כל הערים כבר נוספו - מסבירים במקום מסך ריק.
+        if (options.isEmpty()) {
+            EmptyState(
+                icon = FutureIcons.Public,
+                title = "כל הערים כבר נוספו",
+                subtitle = "אפשר למחוק עיר מהרשימה ולהוסיף אחרת",
+                textColor = theme.textColor,
+            )
+        }
         LazyColumn(contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)) {
             itemsIndexed(options, key = { _, c -> c.name }) { index, city ->
                 FutureListItem(

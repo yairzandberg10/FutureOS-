@@ -155,6 +155,9 @@ class AlarmRingActivity : ComponentActivity() {
                             color = theme.mutedTextColor,
                             fontSize = FutureTypography.title,
                             textAlign = TextAlign.Center,
+                            // CLK-19: תווית ארוכה לא דוחפת את הכפתורים מחוץ למסך.
+                            maxLines = 2,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                         )
                         Spacer(modifier = Modifier.height(40.dp))
                         FutureButton(

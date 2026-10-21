@@ -41,6 +41,7 @@ import com.future.sharednav.theme.FutureDimens
 import com.future.sharednav.theme.mutedTextColor
 import com.future.sharednav.components.FutureButtonVariant
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import com.future.clock.logic.AlarmLogic
 
 private fun mmssToText(mmss: Int): String = "%02d:%02d".format(mmss / 100, mmss % 100)
@@ -137,6 +138,7 @@ fun TimerScreen(theme: FutureTheme, onBack: () -> Unit) {
         armSystemTimer()
     }
 
+    val scope = rememberCoroutineScope()
     fun resetTimer() {
         AlarmLogic.cancelTimer(context)
         AlarmLogic.clearPausedTimer(context)
@@ -145,6 +147,11 @@ fun TimerScreen(theme: FutureTheme, onBack: () -> Unit) {
         remainingMillis = 0
         totalMillis = 0
         mmss = 0
+        // CLK-D07: אחרי איפוס הפוקוס חוזר ל"התחל".
+        scope.launch {
+            androidx.compose.runtime.withFrameNanos { }
+            runCatching { focusRequester.requestFocus() }
+        }
     }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {

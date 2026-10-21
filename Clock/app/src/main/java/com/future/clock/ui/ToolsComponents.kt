@@ -133,13 +133,14 @@ fun ClockActionRow(
     onSecondary: () -> Unit,
     theme: FutureTheme,
     primaryFocus: FocusRequester? = null,
+    secondaryFocus: FocusRequester? = null,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingXxl, Alignment.CenterHorizontally),
     ) {
         FutureButton(primaryLabel, theme, onPrimary, variant = primaryVariant, focusRequester = primaryFocus, diameter = ClockActionDiameter)
-        FutureButton(secondaryLabel, theme, onSecondary, variant = FutureButtonVariant.Secondary, diameter = ClockActionDiameter)
+        FutureButton(secondaryLabel, theme, onSecondary, variant = FutureButtonVariant.Secondary, focusRequester = secondaryFocus, diameter = ClockActionDiameter)
     }
 }
 

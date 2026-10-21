@@ -35,6 +35,7 @@ import com.future.sharednav.theme.FutureDimens
 import com.future.sharednav.theme.mutedTextColor
 import com.future.sharednav.components.FutureButtonVariant
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 private fun formatElapsed(millis: Long): String {
     val totalCentis = millis / 10
@@ -81,6 +82,15 @@ fun StopwatchScreen(theme: FutureTheme, onBack: () -> Unit) {
     val snackbar = com.future.sharednav.components.rememberFutureSnackbarState()
     // אותה תקלת "אין פוקוס" שתועדה ותוקנה במחשבון/ממיר יחידות - ראו שם.
     val focusRequester = remember { FocusRequester() }
+    val secondaryFocus = remember { FocusRequester() }
+    val scope = rememberCoroutineScope()
+    // CLK-D06/D07: אחרי "התחל" הפוקוס עובר ל"הקפה" (OK שני לא עוצר בטעות), ואחרי "איפוס" חוזר ל"התחל".
+    fun focusAfterFrame(requester: FocusRequester) {
+        scope.launch {
+            androidx.compose.runtime.withFrameNanos { }
+            runCatching { requester.requestFocus() }
+        }
+    }
     LaunchedEffect(Unit) {
         // ניסיון חוזר: בקשה לפני שהרכיב מחובר נכשלת, ובלי זה המסך נפתח בלי פוקוס.
         repeat(6) {
@@ -134,6 +144,7 @@ fun StopwatchScreen(theme: FutureTheme, onBack: () -> Unit) {
                         } else {
                             StopwatchState.startedAtElapsedRealtime = android.os.SystemClock.elapsedRealtime()
                             StopwatchState.isRunning = true
+                            focusAfterFrame(secondaryFocus)
                         }
                     },
                     secondaryLabel = if (StopwatchState.isRunning) "הקפה" else "איפוס",
@@ -144,10 +155,12 @@ fun StopwatchScreen(theme: FutureTheme, onBack: () -> Unit) {
                             StopwatchState.elapsedBeforeStart = 0L
                             StopwatchState.displayedElapsed = 0L
                             laps.clear()
+                            focusAfterFrame(focusRequester)
                         }
                     },
                     theme = theme,
                     primaryFocus = focusRequester,
+                    secondaryFocus = secondaryFocus,
                 )
 
                 if (laps.isNotEmpty()) {
