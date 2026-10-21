@@ -118,6 +118,8 @@ fun FilesScreen(
     // הנתיב של הפריט שנפתח לאחרונה מהתיקייה הזו - כשחוזרים "אחורה" (מקובץ
     // שנפתח, או מתת-תיקייה) הפוקוס צריך לשוב אליו בדיוק, לא תמיד לפריט הראשון.
     lastSelectedPath: String? = null,
+    /** FL-N03: הפתיחה הגיעה מבקשת בחירת קובץ מאפליקציה אחרת - מסומן בשורה העליונה. */
+    pickMode: Boolean = false,
 ) {
     val repository = remember { FileRepository() }
     // בזמן העתקה או מחיקה נחסמים כל המקשים, חוץ מ"ביטול" (ר' ההודעה בשכבת הפעולה).
@@ -232,6 +234,7 @@ fun FilesScreen(
                         title = if (isRoot) "קבצים" else currentDir.displayName(currentDirIsTopLevelFolder),
                         theme = theme,
                         sortOrder = sortOrder,
+                        pickMode = pickMode,
                         gridView = gridView,
                         enabled = hasAccess,
                         onSort = onCycleSort,
@@ -460,6 +463,7 @@ private fun FilesTopBar(
     title: String,
     theme: FutureTheme,
     sortOrder: com.future.files.data.SortOrder,
+    pickMode: Boolean,
     gridView: Boolean,
     enabled: Boolean,
     onSort: () -> Unit,
@@ -483,7 +487,7 @@ private fun FilesTopBar(
                 maxLines = 1,
                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
             )
-            if (enabled) Text("ממוין לפי ${sortOrder.label}", color = theme.mutedTextColor, fontSize = type.summary, maxLines = 1)
+            if (enabled) Text((if (pickMode) "בחירת קובץ · " else "") + "ממוין לפי ${sortOrder.label}", color = theme.mutedTextColor, fontSize = type.summary, maxLines = 1)
         }
         if (enabled) {
             FocusableIconButton(FutureIcons.AutoMirrored.Sort, "מיון", theme, onSort)
@@ -589,7 +593,9 @@ private fun FileGlyph(entry: FileEntry, theme: FutureTheme, size: androidx.compo
 private fun FilePreviewIcon(entry: FileEntry, theme: FutureTheme, size: androidx.compose.ui.unit.Dp) {
     val category = remember(entry.file.absolutePath) { categorize(entry.file) }
     if (category == FileCategory.IMAGE) {
-        val thumb by produceState<Bitmap?>(ThumbnailCache.get(entry.file), entry.file.absolutePath, entry.file.lastModified()) {
+        // F18: lastModified נקרא פעם אחת לפריט ולא בכל הרכבה מחדש של השורה.
+        val modified = remember(entry) { entry.file.lastModified() }
+        val thumb by produceState<Bitmap?>(ThumbnailCache.get(entry.file), entry.file.absolutePath, modified) {
             value = withContext(Dispatchers.IO) { ThumbnailCache.decode(entry.file, 96) }
         }
         val bitmap = thumb
@@ -646,8 +652,9 @@ private fun FileOptionsMenu(
         FutureMenuRow("העתק", FutureIcons.ContentCopy, theme, onCopy)
         FutureMenuRow("העבר", FutureIcons.DriveFileMove, theme, onMove)
         FutureMenuRow("פרטים", FutureIcons.Info, theme, onDetails)
-        FutureMenuRow("מחק", FutureIcons.Delete, theme, onDelete, destructive = true)
+        // FL-D14: "מחק" האדום תמיד אחרון - פעולות התיקייה (הדבק כאן...) לפניו.
         folderRows()
+        FutureMenuRow("מחק", FutureIcons.Delete, theme, onDelete, destructive = true)
     }
 }
 
@@ -759,7 +766,34 @@ private fun FileDetailsDialog(entry: FileEntry, displayName: String, repository:
 
 @Composable
 private fun NameInputDialog(title: String, initialValue: String, theme: FutureTheme, onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
-    InputDialog(title = title, theme = theme, initialValue = initialValue, onDismiss = onDismiss, onConfirm = onConfirm)
+    // FL-N01: ב-InputDialog המשותף OK בשדה לא שומר (רק פעולת Done של מקלדת מסך). דיאלוג מקומי
+    // שבו OK/Enter בשדה שומר, בלי לשנות את SharedKeypadNav.
+    var text by remember { mutableStateOf(initialValue) }
+    val submit = { if (text.isNotBlank()) onConfirm(text.trim()) }
+    FutureDialog(
+        theme = theme,
+        onDismissRequest = onDismiss,
+        title = title,
+        buttons = {
+            FutureButton("ביטול", theme, onDismiss, variant = com.future.sharednav.components.FutureButtonVariant.Secondary)
+            FutureButton("שמור", theme, { submit() })
+        },
+    ) {
+        com.future.sharednav.components.FutureTextField(
+            value = text,
+            onValueChange = { text = it },
+            theme = theme,
+            autoFocus = true,
+            keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = { submit() }),
+            modifier = Modifier
+                .fillMaxWidth()
+                .onPreviewKeyEvent { event ->
+                    if (event.type == KeyEventType.KeyUp && (event.key == Key.DirectionCenter || event.key == Key.Enter || event.key == Key.NumPadEnter)) {
+                        submit(); true
+                    } else event.type == KeyEventType.KeyDown && (event.key == Key.DirectionCenter || event.key == Key.Enter || event.key == Key.NumPadEnter)
+                },
+        )
+    }
 }
 
 @Composable

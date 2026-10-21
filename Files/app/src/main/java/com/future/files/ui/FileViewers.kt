@@ -116,6 +116,10 @@ private fun decodeUtf8Strict(bytes: ByteArray, partial: Boolean): String? {
     return output.toString()
 }
 
+/** עוטף מספרים (כולל + ומקפים) ב-LRI/PDI לתצוגה בלבד, כך שבפסקה בעברית הם נשארים בסדר הנכון. */
+private val NUMBER_PATTERN = Regex("""\+?\d[\d\-+().:/]*\d""")
+private fun isolateNumbers(text: String): String = NUMBER_PATTERN.replace(text) { "\u2066" + it.value + "\u2069" }
+
 private fun loadText(file: File): LoadedText? = try {
     // readNBytes(int) קיים רק מ-API 33, והמכשיר הוא API 31 - קריאה ידנית בלולאה.
     val bytes = file.inputStream().use { input ->
@@ -283,7 +287,11 @@ fun TextViewerScreen(file: File, theme: FutureTheme, onBack: () -> Unit, onMessa
                                 )
                                 Text(text, color = theme.textColor, fontSize = FutureTypography.summary, fontFamily = FontFamily.Monospace)
                             }
-                            else -> Text(text, color = theme.textColor, fontSize = FutureTypography.summary, fontFamily = FontFamily.Monospace)
+                            else -> {
+                                // FL-D12: מספרים (טלפון +972-50-...) מבודדים כשמאל-לימין, כדי שה-+ לא יקפוץ לסוף.
+                                val shown = remember(text) { isolateNumbers(text) }
+                                Text(shown, color = theme.textColor, fontSize = FutureTypography.summary, fontFamily = FontFamily.Monospace)
+                            }
                         }
                     }
                 }

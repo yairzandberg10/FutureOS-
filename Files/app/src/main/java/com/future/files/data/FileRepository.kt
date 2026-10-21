@@ -165,7 +165,11 @@ class FileRepository {
                 SortOrder.NAME -> byName
                 SortOrder.DATE -> compareByDescending { it.file.lastModified() }
                 SortOrder.SIZE -> compareByDescending<FileEntry> { it.sizeBytes }.then(byName)
-                SortOrder.TYPE -> compareBy<FileEntry> { it.file.extension.lowercase() }.then(byName)
+                // FL-D09 / FL-N04: לפי קטגוריה (טקסט, תמונה, שמע, PDF, וידאו...) ואז סיומת ושם.
+                // לתיקיות אין סיומת ("com.apkpure.aegon" לא נחשב סיומת "aegon"), הן ממוינות לפי שם.
+                SortOrder.TYPE -> compareBy<FileEntry> { if (it.isDirectory) 0 else categorize(it.file).ordinal }
+                    .thenBy { if (it.isDirectory) "" else it.file.extension.lowercase() }
+                    .then(byName)
             }
             entries.sortedWith(compareByDescending<FileEntry> { it.isDirectory }.then(bySort))
         } catch (e: Exception) {

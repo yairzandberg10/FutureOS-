@@ -251,6 +251,7 @@ class MainActivity : ComponentActivity() {
                         uiPrefs.edit().putBoolean("grid", gridView).apply()
                     },
                     lastSelectedPath = lastSelectedPathByDir[currentDir.absolutePath],
+                    pickMode = pickRequest != null,
                     onBack = { goUp() },
                     onNewFolder = { name ->
                         coroutineScope.launch {
