@@ -11,10 +11,18 @@ data class MediaItem(
     val displayName: String,
     val size: Long,
     val bucketId: String,
-    val bucketName: String
+    val bucketName: String,
+    // תיקיה יחסית (למשל DCIM/Camera/) - מבדילה בין אלבומים שנקראים באותו שם
+    val relativePath: String = "",
 )
 
-data class Album(val bucketId: String, val bucketName: String, val coverUri: Uri, val count: Int)
+data class Album(
+    val bucketId: String,
+    val bucketName: String,
+    val coverUri: Uri,
+    val count: Int,
+    val path: String = "",
+)
 
 enum class SortOption { DATE_NEWEST, DATE_OLDEST, NAME_AZ, NAME_ZA, SIZE_LARGEST, SIZE_SMALLEST }
 
@@ -65,21 +73,6 @@ class MediaRepository(private val context: Context) {
         return queryImages()
     }
 
-    fun getAlbums(): List<Album> {
-        return getAllMedia()
-            .groupBy { it.bucketId }
-            .mapNotNull { (bucketId, items) ->
-                if (bucketId.isBlank() || items.isEmpty()) null
-                else Album(
-                    bucketId = bucketId,
-                    bucketName = items.first().bucketName,
-                    coverUri = items.first().uri,
-                    count = items.size
-                )
-            }
-            .sortedByDescending { album -> album.count }
-    }
-
     private fun queryImages(): List<MediaItem> {
         val result = mutableListOf<MediaItem>()
         val projection = arrayOf(
@@ -88,7 +81,8 @@ class MediaRepository(private val context: Context) {
             MediaStore.Images.Media.DISPLAY_NAME,
             MediaStore.Images.Media.SIZE,
             MediaStore.Images.Media.BUCKET_ID,
-            MediaStore.Images.Media.BUCKET_DISPLAY_NAME
+            MediaStore.Images.Media.BUCKET_DISPLAY_NAME,
+            MediaStore.Images.Media.RELATIVE_PATH
         )
         try {
             context.contentResolver.query(
@@ -101,6 +95,7 @@ class MediaRepository(private val context: Context) {
                 val sizeCol = cursor.getColumnIndex(MediaStore.Images.Media.SIZE)
                 val bucketIdCol = cursor.getColumnIndex(MediaStore.Images.Media.BUCKET_ID)
                 val bucketNameCol = cursor.getColumnIndex(MediaStore.Images.Media.BUCKET_DISPLAY_NAME)
+                val pathCol = cursor.getColumnIndex(MediaStore.Images.Media.RELATIVE_PATH)
                 while (cursor.moveToNext()) {
                     val id = cursor.getLong(idCol)
                     val uri = Uri.withAppendedPath(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id.toString())
@@ -112,7 +107,8 @@ class MediaRepository(private val context: Context) {
                             displayName = if (nameCol >= 0) cursor.getString(nameCol) ?: "" else "",
                             size = if (sizeCol >= 0) cursor.getLong(sizeCol) else 0L,
                             bucketId = if (bucketIdCol >= 0) cursor.getString(bucketIdCol) ?: "" else "",
-                            bucketName = if (bucketNameCol >= 0) cursor.getString(bucketNameCol) ?: "" else ""
+                            bucketName = if (bucketNameCol >= 0) cursor.getString(bucketNameCol) ?: "" else "",
+                            relativePath = if (pathCol >= 0) cursor.getString(pathCol) ?: "" else "",
                         )
                     )
                 }

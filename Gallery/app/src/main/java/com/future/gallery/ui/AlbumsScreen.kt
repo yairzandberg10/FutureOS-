@@ -1,21 +1,21 @@
 package com.future.gallery.ui
 import com.future.sharednav.theme.readableAccentColor
 import com.future.sharednav.theme.idleChipColor
+import com.future.sharednav.theme.mutedTextColor
 import com.future.sharednav.theme.FutureDimens
 import com.future.sharednav.focus.focusMotion
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.focus.bringIntoViewOnFocus
+import com.future.sharednav.icons.FutureIcons
 
 import android.graphics.Bitmap
 import android.util.Size
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
@@ -27,6 +27,7 @@ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.PhotoAlbum
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -34,15 +35,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.future.gallery.data.Album
 import com.future.sharednav.theme.FutureTheme
 import kotlinx.coroutines.Dispatchers
@@ -67,6 +65,10 @@ fun AlbumsScreen(
     }
     val cardFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
     val gridState = rememberLazyGridState()
+    // GAL-N06: שמות שחוזרים על עצמם (למשל שני אלבומי Camera) מקבלים נתיב להבחנה
+    val duplicateNames = remember(albums) {
+        albums.groupingBy { it.bucketName }.eachCount().filterValues { it > 1 }.keys
+    }
     LaunchedEffect(albums.map { it.bucketId }) {
         val target = albums.firstOrNull { it.bucketId == lastSelectedAlbumId } ?: albums.firstOrNull()
         if (target != null) {
@@ -90,32 +92,47 @@ fun AlbumsScreen(
                 theme,
                 onClick = { onAlbumClick(album) },
                 focusRequester = cardFocusRequesters.getOrPut(album.bucketId) { FocusRequester() },
+                showPath = album.bucketName in duplicateNames,
             )
         }
     }
 }
 
 @Composable
-private fun AlbumCard(album: Album, theme: FutureTheme, onClick: () -> Unit, focusRequester: FocusRequester? = null) {
+private fun AlbumCard(
+    album: Album,
+    theme: FutureTheme,
+    onClick: () -> Unit,
+    focusRequester: FocusRequester? = null,
+    showPath: Boolean = false,
+) {
     val context = LocalContext.current
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    var bitmap by remember(album.bucketId) { mutableStateOf<Bitmap?>(null) }
+    val cacheKey = album.coverUri.toString()
+    // ממוזערת השער מהמטמון המשותף של הגלריה (GAL-18)
+    var bitmap by remember(album.bucketId) { mutableStateOf<Bitmap?>(ThumbCache.get(cacheKey)) }
 
     LaunchedEffect(album.coverUri) {
-        bitmap = withContext(Dispatchers.IO) {
-            try {
-                if (android.os.Build.VERSION.SDK_INT >= 29) {
+        if (bitmap == null) {
+            val loaded = withContext(Dispatchers.IO) {
+                try {
                     context.contentResolver.loadThumbnail(album.coverUri, Size(300, 300), null)
-                } else null
-            } catch (e: Exception) {
-                null
+                } catch (e: Exception) {
+                    null
+                }
             }
+            if (loaded != null) ThumbCache.put(cacheKey, loaded)
+            bitmap = loaded
         }
     }
 
-    val scale by animateFloatAsState(if (isFocused) 0.97f else 1f, label = "albumScale")
     val shape = FutureShapes.sm
+    val titleText = if (showPath && album.path.isNotBlank()) {
+        "${album.bucketName} · ${album.path.trimEnd('/')}"
+    } else {
+        album.bucketName
+    }
 
     Column(
         modifier = Modifier
@@ -124,28 +141,39 @@ private fun AlbumCard(album: Album, theme: FutureTheme, onClick: () -> Unit, foc
             .background(theme.surfaceColor)
             .then(if (isFocused) Modifier.border(FutureDimens.focusBorderItem, theme.readableAccentColor, shape) else Modifier)
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
+            // GAL-08: clickable כבר מספק יעד פוקוס - בלי focusable נוסף.
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
+            .bringIntoViewOnFocus()
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(1.3f)
                 .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-                .background(theme.textColor.copy(alpha = 0.06f))
+                .background(theme.textColor.copy(alpha = 0.06f)),
+            contentAlignment = Alignment.Center,
         ) {
-            bitmap?.let {
+            val cover = bitmap
+            if (cover != null) {
                 Image(
-                    bitmap = it.asImageBitmap(),
+                    bitmap = cover.asImageBitmap(),
                     contentDescription = null,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
+                )
+            } else {
+                // GAL-N07: שער שלא נטען מוצג כאייקון תמונה ולא כמלבן ריק
+                Icon(
+                    FutureIcons.Image,
+                    contentDescription = null,
+                    tint = theme.mutedTextColor,
+                    modifier = Modifier.size(FutureDimens.iconEmptyState),
                 )
             }
         }
         Column(modifier = Modifier.padding(10.dp)) {
             Text(
-                album.bucketName,
+                titleText,
                 color = theme.textColor,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = FutureTypography.summary,

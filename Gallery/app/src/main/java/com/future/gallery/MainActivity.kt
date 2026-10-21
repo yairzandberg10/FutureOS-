@@ -46,9 +46,20 @@ class MainActivity : ComponentActivity() {
         finish()
     }
 
+    // ה-Intent הנוכחי כ-state: פתיחה חיצונית (VIEW) כשהאפליקציה כבר רצה מגיעה
+    // ל-onNewIntent, ואז המסך צריך להתעדכן (בלי זה נשארים במסך הבית).
+    private val launchIntentState = mutableStateOf<Intent?>(null)
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        launchIntentState.value = intent
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        launchIntentState.value = intent
 
         setContent {
             val repository = remember { MediaRepository(this) }
@@ -70,8 +81,9 @@ class MainActivity : ComponentActivity() {
             // רק content:// - ומספק זר רק אם השולח נתן עליו הרשאה. בלי זה אפליקציה אחרת
             // יכלה לפתוח כאן file:// או ספק שרק לגלריה יש גישה אליו (ומשם למחוק/לערוך
             // אותו בשם הגלריה).
-            val viewUri = remember {
-                intent?.takeIf { it.action == Intent.ACTION_VIEW }?.let { i ->
+            val launchIntent = launchIntentState.value
+            val viewUri = remember(launchIntent) {
+                launchIntent?.takeIf { it.action == Intent.ACTION_VIEW }?.let { i ->
                     i.data?.takeIf { uri ->
                         uri.scheme == "content" &&
                             (uri.authority == android.provider.MediaStore.AUTHORITY ||
@@ -137,7 +149,13 @@ class MainActivity : ComponentActivity() {
                 items.groupBy { it.bucketId }
                     .mapNotNull { (bucketId, its) ->
                         if (bucketId.isBlank() || its.isEmpty()) null
-                        else Album(bucketId = bucketId, bucketName = its.first().bucketName, coverUri = its.first().uri, count = its.size)
+                        else Album(
+                            bucketId = bucketId,
+                            bucketName = its.first().bucketName,
+                            coverUri = its.first().uri,
+                            count = its.size,
+                            path = its.first().relativePath,
+                        )
                     }
                     .sortedByDescending { it.count }
             }
@@ -182,15 +200,27 @@ class MainActivity : ComponentActivity() {
                                 onNavigate = { selectedItem = it; lastSelectedItemId = it.id },
                                 onDeleted = {
                                     // תמונה שנפתחה מאפליקציה אחרת - אחרי מחיקה סוגרים, לא מציגים את הגלריה.
-                                    if (viewUri != null) finish() else selectedItem = null
+                                    if (viewUri != null) {
+                                        finish()
+                                    } else {
+                                        // NEW-03: אחרי מחיקה עוברים לתמונה הבאה ברשימה (או הקודמת), לא לרשת.
+                                        val index = viewerList.indexOfFirst { it.id == current.id }
+                                        val remaining = viewerList.filter { it.id != current.id }
+                                        val next = remaining.getOrNull(index.coerceAtMost(remaining.lastIndex))
+                                        viewerList = remaining
+                                        selectedItem = next
+                                        if (next != null) lastSelectedItemId = next.id
+                                    }
                                     reloadItems()
                                 },
                                 onEdit = { editingItem = current },
+                                // GAL-30: פתיחה חיצונית היא צפייה בלבד - בלי עריכה ומחיקה.
+                                readOnly = viewUri != null,
                                 theme = theme
                             )
                             album != null -> AlbumDetailScreen(
                                 albumName = album.bucketName,
-                                items = items.filter { it.bucketId == album.bucketId },
+                                items = remember(items, album) { items.filter { it.bucketId == album.bucketId } },
                                 theme = theme,
                                 onBack = { selectedAlbum = null },
                                 onItemClick = { list, item ->

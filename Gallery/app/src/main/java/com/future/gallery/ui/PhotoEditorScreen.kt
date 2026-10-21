@@ -126,9 +126,15 @@ fun PhotoEditorScreen(item: MediaItem, theme: FutureTheme, onBack: () -> Unit, o
     var showMenu by remember { mutableStateOf(false) }
     // פעולות שמאבדות עריכות מבקשות אישור קודם (GAL-11): "reset", "stickers" או "exit".
     var confirmAction by remember { mutableStateOf<String?>(null) }
-    fun requestExit() { if (state.hasEdits) confirmAction = "exit" else onBack() }
+    fun requestExit() {
+        // NEW-02: לא יוצאים באמצע שמירה - השמירה צריכה להסתיים עם משוב למשתמש
+        if (isSaving) return
+        if (state.hasEdits) confirmAction = "exit" else onBack()
+    }
     // BACK עם עריכות לא יוצא בשקט - קודם שואלים.
     androidx.activity.compose.BackHandler(enabled = state.hasEdits && confirmAction == null) { requestExit() }
+    // NEW-02: בזמן שמירה BACK לא יוצא מהעורך
+    androidx.activity.compose.BackHandler(enabled = isSaving) { }
     var hint by remember { mutableStateOf<String?>(null) }
     var isDetecting by remember { mutableStateOf(false) }
     val stickerScope = rememberCoroutineScope()
@@ -136,9 +142,10 @@ fun PhotoEditorScreen(item: MediaItem, theme: FutureTheme, onBack: () -> Unit, o
 
     com.future.sharednav.nav.onOptionsKeyPress { showMenu = !showMenu }
 
-    val rotatedBitmap by produceState<Bitmap?>(initialValue = null, sourceBitmap, state.rotationDegrees, state.flipHorizontal, state.flipVertical) {
+    // GAL-17: העותק המסובב מחושב רק בחיתוך (שם הוא נחוץ); בכלים אחרים לא מקצים אותו
+    val rotatedBitmap by produceState<Bitmap?>(initialValue = null, sourceBitmap, state.rotationDegrees, state.flipHorizontal, state.flipVertical, activeTool) {
         val src = sourceBitmap
-        value = if (src == null) null else withContext(Dispatchers.Default) { ImageEditor.applyRotationAndFlip(src, state) }
+        value = if (src == null || activeTool != EditorTool.CROP) null else withContext(Dispatchers.Default) { ImageEditor.applyRotationAndFlip(src, state) }
     }
 
     LaunchedEffect(item.id) {
@@ -163,8 +170,8 @@ fun PhotoEditorScreen(item: MediaItem, theme: FutureTheme, onBack: () -> Unit, o
 
     LaunchedEffect(sourceBitmap, state) {
         val src = sourceBitmap ?: return@LaunchedEffect
-        // דיבאונס: מקש מוחזק לא מרנדר כל צעד בנפרד.
-        delay(100)
+        // דיבאונס: מקש מוחזק לא מרנדר כל צעד בנפרד (GAL-17: 150ms, פחות הקצאות ביניים).
+        delay(150)
         previewBitmap = withContext(Dispatchers.Default) { ImageEditor.renderFinal(src, state) }
     }
     LaunchedEffect(hint) { if (hint != null) { delay(2200); hint = null } }
@@ -222,10 +229,18 @@ fun PhotoEditorScreen(item: MediaItem, theme: FutureTheme, onBack: () -> Unit, o
         stickerScope.launch {
             val (placed, found) = withContext(Dispatchers.Default) {
                 val base = ImageEditor.renderFinal(src, current.copy(stickers = emptyList(), vignette = 0f))
-                ImageEditor.placeStickers(base, kind)
+                val result = ImageEditor.placeStickers(base, kind)
+                // הבסיס היה רק לזיהוי הפנים - משחררים אותו מיד
+                base.recycle()
+                result
             }
-            state = state.copy(stickers = state.stickers + placed)
-            hint = if (found) "זוהו ${placed.size} פנים" else "לא זוהו פנים - 2/4/6/8 להזזה, 1/3 לגודל"
+            // GAL-N03: בלי פנים לא מוסיפים מדבקה במרכז בשקט - מודיעים למשתמש
+            if (found) {
+                state = state.copy(stickers = state.stickers + placed)
+                hint = "זוהו ${placed.size} פנים"
+            } else {
+                hint = "לא זוהו פנים בתמונה"
+            }
             isDetecting = false
         }
     }
@@ -284,7 +299,7 @@ fun PhotoEditorScreen(item: MediaItem, theme: FutureTheme, onBack: () -> Unit, o
                     if (isSaving) {
                         FutureSpinner(theme = theme, size = 24.dp)
                     } else if (state.hasEdits) {
-                        Text("Options לשמירה", color = theme.mutedTextColor, fontSize = FutureTypography.caption)
+                        Text("תפריט לשמירה", color = theme.mutedTextColor, fontSize = FutureTypography.caption)
                     }
                 }
 
@@ -338,10 +353,11 @@ fun PhotoEditorScreen(item: MediaItem, theme: FutureTheme, onBack: () -> Unit, o
                     onAddSticker = { addStickers(it) },
                 )
 
+                // GAL-N04: 6 לשוניות ברוחב 60dp נכנסות במסך בלי חיתוך בקצה
                 LazyRow(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                     contentPadding = PaddingValues(horizontal = 10.dp),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    horizontalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
                     items(EditorTool.entries) { tool ->
                         EditorToolTab(
@@ -359,7 +375,12 @@ fun PhotoEditorScreen(item: MediaItem, theme: FutureTheme, onBack: () -> Unit, o
                 FutureOptionsMenu(theme = theme, onDismissRequest = { showMenu = false }, header = "עריכה") {
                     FutureMenuRow("שמור כעותק חדש", FutureIcons.Check, theme, onClick = {
                         showMenu = false
-                        if (state.hasEdits && !isSaving) isSaving = true
+                        // GAL-31: בלי שינויים מודיעים במקום לשמור בשקט
+                        if (!state.hasEdits) {
+                            android.widget.Toast.makeText(context, "אין שינויים לשמירה", android.widget.Toast.LENGTH_SHORT).show()
+                        } else if (!isSaving) {
+                            isSaving = true
+                        }
                     })
                     FutureMenuRow("איפוס כל השינויים", FutureIcons.RestartAlt, theme, onClick = {
                         showMenu = false
@@ -554,14 +575,15 @@ private fun EditorToolTab(
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
-            .width(64.dp)
+            .width(60.dp)
             .focusMotion(interactionSource)
             .clip(shape)
             .background(bgColor)
             .then(if (isFocused) Modifier.border(FutureDimens.focusBorderItem, theme.readableAccentColor, shape) else Modifier)
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
+            // GAL-08: clickable כבר מספק יעד פוקוס - בלי focusable נוסף.
             .clickable(interactionSource = interactionSource, indication = null, onClick = onFocus)
-            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
+            .bringIntoViewOnFocus()
             .padding(vertical = FutureDimens.spacingSm)
     ) {
         Icon(tool.icon, contentDescription = tool.label, tint = tint, modifier = Modifier.size(FutureDimens.iconSettingRow))

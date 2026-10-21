@@ -13,3 +13,6 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# לוגים של JVM/Gradle שנשארים בשורש
+*.log

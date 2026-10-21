@@ -13,7 +13,6 @@ import android.graphics.RadialGradient
 import android.graphics.RectF
 import android.graphics.Shader
 import android.net.Uri
-import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 
@@ -272,13 +271,20 @@ object ImageEditor {
             var w = (preview.width * scale).toInt().coerceAtLeast(2)
             if (w % 2 == 1) w -= 1
             val h = (preview.height * scale).toInt().coerceAtLeast(2)
-            val small = Bitmap.createScaledBitmap(preview, w, h, true).copy(Bitmap.Config.RGB_565, false)
-            val found = arrayOfNulls<android.media.FaceDetector.Face>(5)
-            val count = android.media.FaceDetector(w, h, found.size).findFaces(small, found)
-            found.take(count).filterNotNull().filter { it.confidence() >= 0.3f }.map { face ->
-                val mid = android.graphics.PointF()
-                face.getMidPoint(mid)
-                Sticker(kind, mid.x / w, mid.y / h, face.eyesDistance() / w)
+            val scaled = Bitmap.createScaledBitmap(preview, w, h, true)
+            val small = scaled.copy(Bitmap.Config.RGB_565, false)
+            try {
+                val found = arrayOfNulls<android.media.FaceDetector.Face>(5)
+                val count = android.media.FaceDetector(w, h, found.size).findFaces(small, found)
+                found.take(count).filterNotNull().filter { it.confidence() >= 0.3f }.map { face ->
+                    val mid = android.graphics.PointF()
+                    face.getMidPoint(mid)
+                    Sticker(kind, mid.x / w, mid.y / h, face.eyesDistance() / w)
+                }
+            } finally {
+                // NEW-01: שני הביניים האלה לא נשארים לתקוע זיכרון
+                if (scaled !== preview) scaled.recycle()
+                small.recycle()
             }
         }.getOrDefault(emptyList())
         return if (faces.isNotEmpty()) faces to true
@@ -382,14 +388,13 @@ object ImageEditor {
 
     /** שומר את התוצאה כתמונה חדשה ב-MediaStore, בלי לגעת במקור. */
     fun saveAsNewImage(context: Context, bitmap: Bitmap, baseName: String): Uri? {
-        val displayName = "${baseName}_edited_${System.currentTimeMillis()}.jpg"
+        // GAL-N08: שם קריא בלי חותמת מילישניות; כפילויות מטופלות ע"י MediaStore
+        val displayName = "${baseName}_edited.jpg"
         val values = ContentValues().apply {
             put(MediaStore.Images.Media.DISPLAY_NAME, displayName)
             put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
-            if (Build.VERSION.SDK_INT >= 29) {
-                put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES)
-                put(MediaStore.Images.Media.IS_PENDING, 1)
-            }
+            put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES)
+            put(MediaStore.Images.Media.IS_PENDING, 1)
         }
         val uri = context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values) ?: return null
         return try {
@@ -401,13 +406,11 @@ object ImageEditor {
                 context.contentResolver.delete(uri, null, null)
                 return null
             }
-            if (Build.VERSION.SDK_INT >= 29) {
-                val done = ContentValues().apply { put(MediaStore.Images.Media.IS_PENDING, 0) }
-                val rows = context.contentResolver.update(uri, done, null, null)
-                if (rows <= 0) {
-                    context.contentResolver.delete(uri, null, null)
-                    return null
-                }
+            val done = ContentValues().apply { put(MediaStore.Images.Media.IS_PENDING, 0) }
+            val rows = context.contentResolver.update(uri, done, null, null)
+            if (rows <= 0) {
+                context.contentResolver.delete(uri, null, null)
+                return null
             }
             uri
         } catch (e: Exception) {

@@ -4,7 +4,6 @@ import com.future.sharednav.systemui.StatusBarInset
 import android.app.RecoverableSecurityException
 import android.content.Intent
 import android.graphics.Bitmap
-import android.os.Build
 import android.util.Size
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -92,6 +91,22 @@ private val SORT_LABELS = mapOf(
     SortOption.SIZE_LARGEST to "גודל - הגדול קודם",
     SortOption.SIZE_SMALLEST to "גודל - הקטן קודם"
 )
+
+/**
+ * מטמון ממוזערות בזיכרון (GAL-18): בלי זה כל כניסה למסך טוענת מחדש את כל
+ * התמונות מ-MediaStore. משותף לרשת התמונות ולכרטיסי האלבומים (לפי uri).
+ */
+internal object ThumbCache {
+    private val cache = object : android.util.LruCache<String, Bitmap>(4 * 1024) {
+        override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount / 1024
+    }
+
+    fun get(key: String): Bitmap? = synchronized(cache) { cache.get(key) }
+
+    fun put(key: String, bitmap: Bitmap) {
+        synchronized(cache) { cache.put(key, bitmap) }
+    }
+}
 
 /** רמות הזום: מ-1x (כל התמונה) עד 8x; OK מדלג בין 1/2/4, 1 ו-3 בצעדים רציפים. */
 private const val ZOOM_MAX = 8f
@@ -226,6 +241,13 @@ fun AlbumDetailScreen(
     onItemClick: (List<MediaItem>, MediaItem) -> Unit,
     lastSelectedItemId: Long? = null,
 ) {
+    // GAL-24: לאלבום יש מיון משלו (כמו במסך הבית), באותו תפריט Options.
+    var sortOption by rememberSaveable { mutableStateOf(SortOption.DATE_NEWEST) }
+    var showMenu by remember { mutableStateOf(false) }
+    val sortedItems = remember(items, sortOption) { items.sortedBy(sortOption) }
+
+    com.future.sharednav.nav.onOptionsKeyPress { showMenu = !showMenu }
+
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize()) {
@@ -233,7 +255,15 @@ fun AlbumDetailScreen(
                     modifier = Modifier.fillMaxWidth().padding(top = StatusBarInset.TITLE_GAP_DP.dp).padding(horizontal = 20.dp, vertical = 14.dp),
                     verticalAlignment = Alignment.Bottom
                 ) {
-                    Text(albumName, fontSize = FutureTypography.screenTitle, fontWeight = FontWeight.Bold, color = theme.textColor, modifier = Modifier.weight(1f), maxLines = 1)
+                    Text(
+                        albumName,
+                        fontSize = FutureTypography.screenTitle,
+                        fontWeight = FontWeight.Bold,
+                        color = theme.textColor,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    )
                     Text("${items.size} תמונות", color = theme.mutedTextColor, fontSize = FutureTypography.caption)
                 }
                 if (items.isEmpty()) {
@@ -241,7 +271,23 @@ fun AlbumDetailScreen(
                         Text("האלבום ריק", color = theme.mutedTextColor, fontSize = FutureTypography.bodyLarge)
                     }
                 } else {
-                    MediaGrid(items, theme, onItemClick = { item -> onItemClick(items, item) }, lastSelectedId = lastSelectedItemId)
+                    MediaGrid(sortedItems, theme, onItemClick = { item -> onItemClick(sortedItems, item) }, lastSelectedId = lastSelectedItemId)
+                }
+            }
+
+            if (showMenu) {
+                FutureOptionsMenu(theme = theme, onDismissRequest = { showMenu = false }, header = albumName) {
+                    SortOption.entries.forEach { option ->
+                        FutureMenuRow(
+                            label = SORT_LABELS.getValue(option),
+                            icon = null,
+                            theme = theme,
+                            onClick = { sortOption = option; showMenu = false },
+                            trailing = if (option == sortOption) {
+                                { Icon(FutureIcons.Check, contentDescription = null, tint = theme.readableAccentColor, modifier = Modifier.size(FutureDimens.iconMenuRow)) }
+                            } else null,
+                        )
+                    }
                 }
             }
         }
@@ -259,7 +305,10 @@ private fun MediaGrid(
     val gridState = rememberLazyGridState()
     val thumbnailFocusRequesters = remember { mutableMapOf<Long, FocusRequester>() }
     val ids = remember(items) { items.map { it.id } }
+    // GAL-25: הפוקוס מוחזר לפריט האחרון רק בכניסה למסך - לא בכל טעינה מחדש של הרשימה.
+    var entryFocusDone by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(ids) {
+        if (entryFocusDone) return@LaunchedEffect
         val index = items.indexOfFirst { it.id == lastSelectedId }.takeIf { it >= 0 } ?: 0
         val target = items.getOrNull(index) ?: return@LaunchedEffect
         // פריט רחוק ברשת עוד לא מורכב - קודם גוללים אליו, ורק אז מבקשים פוקוס.
@@ -267,6 +316,7 @@ private fun MediaGrid(
         if (index > 0) gridState.scrollToItem(index)
         withFrameNanos { }
         runCatching { thumbnailFocusRequesters.getOrPut(target.id) { FocusRequester() }.requestFocus() }
+        entryFocusDone = true
     }
     LazyVerticalGrid(
         columns = GridCells.Fixed(3),
@@ -293,15 +343,21 @@ private fun MediaThumbnail(item: MediaItem, onClick: () -> Unit, theme: FutureTh
     val context = LocalContext.current
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    var bitmap by remember(item.id) { mutableStateOf<Bitmap?>(null) }
+    val cacheKey = item.uri.toString()
+    // מהמטמון אם כבר נטענה - בלי הבהוב ובלי קריאה חוזרת ל-MediaStore
+    var bitmap by remember(item.id) { mutableStateOf<Bitmap?>(ThumbCache.get(cacheKey)) }
 
     LaunchedEffect(item.id) {
-        bitmap = withContext(Dispatchers.IO) {
-            try {
-                context.contentResolver.loadThumbnail(item.uri, Size(220, 220), null)
-            } catch (e: Exception) {
-                null
+        if (bitmap == null) {
+            val loaded = withContext(Dispatchers.IO) {
+                try {
+                    context.contentResolver.loadThumbnail(item.uri, Size(220, 220), null)
+                } catch (e: Exception) {
+                    null
+                }
             }
+            if (loaded != null) ThumbCache.put(cacheKey, loaded)
+            bitmap = loaded
         }
     }
     val alpha by animateFloatAsState(if (bitmap != null) 1f else 0f, FutureMotion.fast(), label = "thumbFade")
@@ -315,8 +371,9 @@ private fun MediaThumbnail(item: MediaItem, onClick: () -> Unit, theme: FutureTh
             .clip(shape)
             .background(theme.textColor.copy(alpha = 0.08f))
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
+            // GAL-08: clickable כבר מספק יעד פוקוס - בלי focusable נוסף (שיצר שני יעדים מקוננים).
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
+            .bringIntoViewOnFocus()
     ) {
         bitmap?.let {
             Image(
@@ -353,6 +410,8 @@ fun MediaViewerScreen(
     onNavigate: (MediaItem) -> Unit = {},
     onDeleted: () -> Unit = {},
     onEdit: () -> Unit = {},
+    // פתיחה חיצונית (VIEW): רק צפייה - בלי עריכה ומחיקה (GAL-30).
+    readOnly: Boolean = false,
     theme: FutureTheme
 ) {
     val context = LocalContext.current
@@ -361,11 +420,13 @@ fun MediaViewerScreen(
     var imageSize by remember(item.id) { mutableStateOf<android.util.Size?>(null) }
     var loadFailed by remember(item.id) { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
-    var showMenu by remember { mutableStateOf(false) }
+    var confirmWallpaper by remember { mutableStateOf(false) }
+    var showMenu by rememberSaveable { mutableStateOf(false) }
     var showInfo by remember { mutableStateOf(false) }
-    var zoomTarget by remember(item.id) { mutableFloatStateOf(1f) }
-    var panX by remember(item.id) { mutableFloatStateOf(0f) }
-    var panY by remember(item.id) { mutableFloatStateOf(0f) }
+    // GAL-33: זום והזזה נשמרים בסיבוב מסך
+    var zoomTarget by rememberSaveable(item.id) { mutableStateOf(1f) }
+    var panX by rememberSaveable(item.id) { mutableStateOf(0f) }
+    var panY by rememberSaveable(item.id) { mutableStateOf(0f) }
     var boxSize by remember { mutableStateOf(IntSize.Zero) }
     var direction by remember { mutableIntStateOf(1) }
     var zoomBadgeTick by remember { mutableIntStateOf(0) }
@@ -613,11 +674,11 @@ fun MediaViewerScreen(
                     theme = theme,
                     firstFocusRequester = actionBarFocus,
                     onFocusChanged = { actionBarFocused = it },
-                    actions = listOf(
+                    actions = listOfNotNull(
                         com.future.sharednav.components.FutureAction("שיתוף", FutureIcons.Share) { share() },
-                        com.future.sharednav.components.FutureAction("עריכה", FutureIcons.Edit, enabled = bitmap != null) { onEdit() },
+                        if (!readOnly) com.future.sharednav.components.FutureAction("עריכה", FutureIcons.Edit, enabled = bitmap != null) { onEdit() } else null,
                         com.future.sharednav.components.FutureAction("פרטים", FutureIcons.Info) { showInfo = true },
-                        com.future.sharednav.components.FutureAction("מחיקה", FutureIcons.Delete, destructive = true) { showDeleteConfirm = true },
+                        if (!readOnly) com.future.sharednav.components.FutureAction("מחיקה", FutureIcons.Delete, destructive = true) { showDeleteConfirm = true } else null,
                     ),
                 )
             }
@@ -645,12 +706,13 @@ fun MediaViewerScreen(
 
         if (showMenu) {
             FutureOptionsMenu(theme = theme, onDismissRequest = { showMenu = false }, header = item.displayName.ifBlank { "תמונה" }) {
-                if (bitmap != null) FutureMenuRow("עריכה ואפקטים", FutureIcons.Edit, theme, onClick = { showMenu = false; onEdit() })
+                if (!readOnly && bitmap != null) FutureMenuRow("עריכה ואפקטים", FutureIcons.Edit, theme, onClick = { showMenu = false; onEdit() })
                 FutureMenuRow("שיתוף", FutureIcons.Share, theme, onClick = { showMenu = false; share() })
                 if (zoomTarget > 1f) FutureMenuRow("חזרה לתמונה המלאה", FutureIcons.RestartAlt, theme, onClick = { showMenu = false; setZoom(1f) })
                 FutureMenuRow("פרטים", FutureIcons.Info, theme, onClick = { showMenu = false; showInfo = true })
-                FutureMenuRow("הגדר כרקע", FutureIcons.Palette, theme, onClick = { showMenu = false; setAsWallpaper() })
-                FutureMenuRow("מחיקה", FutureIcons.Delete, theme, destructive = true, onClick = { showMenu = false; showDeleteConfirm = true })
+                // GAL-12: הגדרת רקע דורסת את הרקע הנוכחי - קודם שואלים
+                FutureMenuRow("הגדר כרקע", FutureIcons.Palette, theme, onClick = { showMenu = false; confirmWallpaper = true })
+                if (!readOnly) FutureMenuRow("מחיקה", FutureIcons.Delete, theme, destructive = true, onClick = { showMenu = false; showDeleteConfirm = true })
             }
         }
 
@@ -687,7 +749,7 @@ fun MediaViewerScreen(
                         }
                         when {
                             failure == null -> onDeleted()
-                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && failure is RecoverableSecurityException -> {
+                            failure is RecoverableSecurityException -> {
                                 pendingDeleteUri = item.uri
                                 try {
                                     val intentSender = failure.userAction.actionIntent.intentSender
@@ -704,6 +766,20 @@ fun MediaViewerScreen(
                 }
             )
         }
+
+        if (confirmWallpaper) {
+            ConfirmDialog(
+                message = "להגדיר את התמונה כרקע?",
+                theme = theme,
+                onCancel = { confirmWallpaper = false },
+                onConfirm = {
+                    confirmWallpaper = false
+                    setAsWallpaper()
+                },
+                confirmLabel = "הגדר",
+                destructive = false,
+            )
+        }
     }
 }
 
@@ -714,7 +790,17 @@ private fun InfoRow(label: String, value: String, theme: FutureTheme, onClick: (
         icon = null,
         theme = theme,
         onClick = onClick,
-        trailing = { Text(value, color = theme.mutedTextColor, fontSize = FutureTypography.summary, maxLines = 1) },
+        // GAL-N05: שם ארוך נחתך עם אליפסיס ולא נחתך בלי רמז
+        trailing = {
+            Text(
+                value,
+                color = theme.mutedTextColor,
+                fontSize = FutureTypography.summary,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                modifier = Modifier.widthIn(max = 200.dp),
+            )
+        },
     )
 }
 
@@ -778,23 +864,38 @@ private fun ViewerBadge(text: String, theme: FutureTheme) {
     )
 }
 
-/** מפה קטנה: מסגרת התמונה, והמלבן הממוקד = החלק שרואים עכשיו. */
+/**
+ * מפה קטנה: מסגרת התמונה, והמלבן הממוקד = החלק שרואים עכשיו.
+ * GAL-26: המסגרת נשמרת ביחס התמונה גם כשהגובה נחתך (24..96dp), כך שהמלבן לא מתעוות.
+ */
 @Composable
 private fun ZoomMiniMap(zoom: Float, panX: Float, panY: Float, renderedW: Float, renderedH: Float, theme: FutureTheme, modifier: Modifier = Modifier) {
     val w = 64f
     val h = w * renderedH / renderedW
     val accent = theme.readableAccentColor
+    val frameColor = theme.mutedTextColor
     androidx.compose.foundation.Canvas(
         modifier = modifier
             .size(w.dp, h.coerceIn(24f, 96f).dp)
             .clip(FutureShapes.xs)
             .background(theme.surfaceColor.copy(alpha = 0.8f))
     ) {
-        val viewW = size.width / zoom
-        val viewH = size.height / zoom
+        // מסגרת התמונה בתוך הקנבס, בגודל שמכבד את יחס הגובה-רוחב שלה
+        val frameW = minOf(size.width, size.height * renderedW / renderedH)
+        val frameH = frameW * renderedH / renderedW
+        val left = (size.width - frameW) / 2f
+        val top = (size.height - frameH) / 2f
+        val viewW = frameW / zoom
+        val viewH = frameH / zoom
         // פאן חיובי = התמונה זזה ימינה/למטה, כלומר רואים את החלק השמאלי/העליון.
-        val cx = size.width / 2f - panX / renderedW * size.width / zoom
-        val cy = size.height / 2f - panY / renderedH * size.height / zoom
+        val cx = left + frameW / 2f - panX / renderedW * frameW / zoom
+        val cy = top + frameH / 2f - panY / renderedH * frameH / zoom
+        drawRect(
+            color = frameColor,
+            topLeft = androidx.compose.ui.geometry.Offset(left, top),
+            size = androidx.compose.ui.geometry.Size(frameW, frameH),
+            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.dp.toPx()),
+        )
         drawRect(
             color = accent,
             topLeft = androidx.compose.ui.geometry.Offset(cx - viewW / 2f, cy - viewH / 2f),
