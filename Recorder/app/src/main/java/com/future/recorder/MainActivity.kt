@@ -35,6 +35,8 @@ class MainActivity : ComponentActivity() {
         setContent {
             // null = המסך הראשי; נתיב = נגן ההקלטה הזו. נשמר כמחרוזת כדי לשרוד יצירה מחדש.
             var playingPath by rememberSaveable { mutableStateOf<String?>(null) }
+            // ההקלטה האחרונה שהושמעה - אחרי BACK מהנגן הפוקוס חוזר אליה ברשימה.
+            var lastPlayedPath by rememberSaveable { mutableStateOf<String?>(null) }
             val playing = playingPath?.let { File(it) }
             BackHandler(enabled = playing != null) { playingPath = null }
             val theme = rememberFutureTheme()
@@ -47,7 +49,11 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.padding(top = StatusBarInset.TITLE_GAP_DP.dp),
                     ) { file ->
                         if (file == null) {
-                            RecorderHomeScreen(theme = theme, onPlay = { playingPath = it.path })
+                            RecorderHomeScreen(
+                                theme = theme,
+                                focusPath = lastPlayedPath,
+                                onPlay = { lastPlayedPath = it.path; playingPath = it.path },
+                            )
                         } else {
                             PlayerScreen(theme = theme, file = file, onBack = { playingPath = null })
                         }

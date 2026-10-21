@@ -13,12 +13,12 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -41,10 +41,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -60,8 +63,9 @@ import com.future.sharednav.components.EmptyState
 import com.future.sharednav.components.FutureAvatar
 import com.future.sharednav.components.FutureButton
 import com.future.sharednav.components.FutureButtonVariant
-import com.future.sharednav.components.FutureListItem
 import com.future.sharednav.components.FutureMenuRow
+import com.future.sharednav.components.MarqueeText
+import com.future.sharednav.focus.FocusableItem
 import com.future.sharednav.components.FutureOptionsMenu
 import com.future.sharednav.components.InputDialog
 import com.future.sharednav.components.ScreenTopBar
@@ -93,7 +97,7 @@ import com.future.sharednav.theme.rememberFutureType
 import androidx.compose.ui.draw.clip
 
 @Composable
-fun RecorderHomeScreen(theme: FutureTheme, onPlay: (File) -> Unit) {
+fun RecorderHomeScreen(theme: FutureTheme, focusPath: String?, onPlay: (File) -> Unit) {
     val context = LocalContext.current
     // בלי רמות הקול (מתעדכנות כל 80ms) - אחרת כל המסך מורכב מחדש בכל דגימה.
     val state by remember { RecorderService.state.map { it.copy(levels = emptyList()) }.distinctUntilChanged() }
@@ -172,6 +176,16 @@ fun RecorderHomeScreen(theme: FutureTheme, onPlay: (File) -> Unit) {
     val mainButton = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { mainButton.requestFocus() } }
 
+    // פוקוס חוזר לשורה שנערכה או הושמעה אחרונה (אחרי שינוי שם או BACK מהנגן), ולא לכפתור הראשי.
+    val rowFocus = remember { mutableMapOf<String, FocusRequester>() }
+    var restorePath by remember { mutableStateOf(focusPath) }
+    LaunchedEffect(recordings) {
+        val path = restorePath ?: return@LaunchedEffect
+        if (recordings?.any { it.file.path == path } != true) return@LaunchedEffect
+        restorePath = null
+        runCatching { rowFocus[path]?.requestFocus() }
+    }
+
     var focused by remember { mutableStateOf<Recording?>(null) }
     var menuFor by remember { mutableStateOf<Recording?>(null) }
     var renaming by remember { mutableStateOf<Recording?>(null) }
@@ -226,12 +240,12 @@ fun RecorderHomeScreen(theme: FutureTheme, onPlay: (File) -> Unit) {
                         )
                     }
                     items(list, key = { it.file.path }) { rec ->
-                        FutureListItem(
+                        RecordingRow(
                             title = com.future.recorder.data.isolated(rec.name),
-                            summary = "${formatDate(context, rec.modified)} · ${formatDuration(rec.durationMs)}",
+                            summary = "${com.future.recorder.data.isolated(formatDate(context, rec.modified))} · ${com.future.recorder.data.isolated(formatDuration(rec.durationMs))}",
                             theme = theme,
                             onClick = { onPlay(rec.file) },
-                            leading = { FutureAvatar(theme = theme, icon = FutureIcons.GraphicEq, size = AvatarListSize) },
+                            focusRequester = rowFocus.getOrPut(rec.file.path) { FocusRequester() },
                             modifier = Modifier.onFocusChanged { if (it.isFocused) focused = rec },
                         )
                     }
@@ -265,9 +279,12 @@ fun RecorderHomeScreen(theme: FutureTheme, onPlay: (File) -> Unit) {
             onDismiss = { renaming = null },
             onConfirm = { name ->
                 renaming = null
-                if (Recordings.rename(rec.file, name) == null) {
+                val renamed = Recordings.rename(rec.file, name)
+                if (renamed == null) {
                     Toast.makeText(context, "השם לא חוקי או כבר קיים", Toast.LENGTH_SHORT).show()
                 }
+                // הפוקוס חוזר לאותה שורה (בנתיב החדש אם השינוי הצליח).
+                restorePath = (renamed ?: rec.file).path
                 focused = null
                 reloadKey++
             },
@@ -281,6 +298,7 @@ fun RecorderHomeScreen(theme: FutureTheme, onPlay: (File) -> Unit) {
             onConfirm = {
                 deleting = null
                 Recordings.delete(rec.file)
+                restorePath = null
                 focused = null
                 reloadKey++
             },
@@ -351,6 +369,57 @@ private fun RecorderPanel(
     // כשעוברים בין "מוכן" להקלטה הכפתור הממוקד נעלם ואחר בא במקומו - הפוקוס עובר לכפתור הראשי.
     // השהה/המשך לא מזיזים את הפוקוס (מפתח לפי "מוכן" בלבד, לא לפי הסטטוס).
     LaunchedEffect(status == RecorderStatus.Idle) { runCatching { mainButton.requestFocus() } }
+}
+
+/**
+ * שורת הקלטה - כמו FutureListItem, אבל השם גולל כשהשורה ממוקדת (R-21) במקום להיחתך
+ * בשלוש נקודות בלי דרך לקרוא את הסוף.
+ */
+@Composable
+private fun RecordingRow(
+    title: String,
+    summary: String,
+    theme: FutureTheme,
+    onClick: () -> Unit,
+    focusRequester: FocusRequester,
+    modifier: Modifier = Modifier,
+) {
+    val type = rememberFutureType()
+    FocusableItem(
+        onClick = onClick,
+        accentColor = theme.accentColor,
+        modifier = modifier.fillMaxWidth(),
+        idleBackgroundColor = Color.Transparent,
+        contentPadding = 0.dp,
+        focusRequester = focusRequester,
+    ) { isFocused ->
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = FutureDimens.rowHeightList)
+                .padding(horizontal = FutureDimens.spacingMd, vertical = FutureDimens.spacingSm),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingMd),
+        ) {
+            FutureAvatar(theme = theme, icon = FutureIcons.GraphicEq, size = AvatarListSize)
+            Column(modifier = Modifier.weight(1f)) {
+                MarqueeText(
+                    text = title,
+                    color = theme.textColor,
+                    isFocused = isFocused,
+                    style = TextStyle(fontSize = type.title, fontWeight = FutureTypography.weightMedium),
+                )
+                Text(
+                    summary,
+                    color = theme.mutedTextColor,
+                    fontSize = type.summary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = FutureDimens.spacingXxs),
+                )
+            }
+        }
+    }
 }
 
 /** גלי קול: עמודה לכל דגימה, החדשה ביותר מימין (תחילת השורה ב-RTL). */
