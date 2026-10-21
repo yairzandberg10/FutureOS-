@@ -342,6 +342,9 @@ fun MessagesApp(theme: FutureTheme) {
                         val deleted = withContext(Dispatchers.IO) { repository.deleteThread(conversation.threadId) }
                         if (!deleted) {
                             android.widget.Toast.makeText(context, "מחיקת השיחה נכשלה", android.widget.Toast.LENGTH_SHORT).show()
+                        } else if (conversation.threadId in archivedThreadIds) {
+                            // שיחה שנמחקה לא נשארת ברשימת הארכיון
+                            archivedThreadIds = archiveStore.setArchived(conversation.threadId, false)
                         }
                         refreshConversations()
                     }
@@ -380,7 +383,15 @@ fun MessagesApp(theme: FutureTheme) {
                     val handler = android.os.Handler(android.os.Looper.getMainLooper())
                     val observer = object : android.database.ContentObserver(handler) {
                         override fun onChange(selfChange: Boolean) {
-                            loadMessages(current.conversation.threadId)
+                            val threadId = current.conversation.threadId
+                            loadMessages(threadId)
+                            // הודעה שהגיעה לשיחה הפתוחה (והמסך בחזית) נקראת מיד, כולל אישור קריאה לשולח.
+                            // markThreadRead מעדכן רק READ=0 - אחרי העדכון אין שינוי נוסף ואין לולאה.
+                            if (resumeOwner.lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) {
+                                ioScope.launch(Dispatchers.IO) {
+                                    if (repository.hasUnreadIncoming(threadId)) repository.markThreadRead(threadId)
+                                }
+                            }
                         }
                     }
                     context.contentResolver.registerContentObserver(Telephony.Sms.CONTENT_URI, true, observer)

@@ -38,7 +38,14 @@ class SmsSentReceiver : BroadcastReceiver() {
         if (stillWaiting <= 0) {
             remainingParts.remove(messageId)
             val failed = anyPartFailed.remove(messageId) ?: false
-            SmsRepository(context.applicationContext).updateSentMessageStatus(messageId, success = !failed)
+            val pending = goAsync()
+            Thread {
+                try {
+                    SmsRepository(context.applicationContext).updateSentMessageStatus(messageId, success = !failed)
+                } finally {
+                    pending.finish()
+                }
+            }.start()
         }
     }
 }

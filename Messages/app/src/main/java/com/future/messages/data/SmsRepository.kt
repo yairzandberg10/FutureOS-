@@ -35,7 +35,9 @@ import java.io.File
  * שכבת גישה אמיתית לספק ה-SMS של אנדרואיד. אין כאן שום נתון מדומה - הכל
  * נקרא/נכתב דרך content://sms ו-content://mms-sms/conversations בפועל.
  */
-class SmsRepository(private val context: Context) {
+class SmsRepository(appContext: Context) {
+    // לא מחזיקים Activity: המטמון והתור הגלובלי של הצ'אט חיים יותר ממנו (M35)
+    private val context: Context = appContext.applicationContext
 
     /**
      * מטמון שם איש קשר לפי מספר. בלעדיו getConversations ביצעה שאילתת
@@ -117,10 +119,6 @@ class SmsRepository(private val context: Context) {
                 )
             }
             .sortedByDescending { it.lastMessageTimestamp }
-    }
-
-    fun hasReadSmsPermission(): Boolean {
-        return context.checkSelfPermission(android.Manifest.permission.READ_SMS) == android.content.pm.PackageManager.PERMISSION_GRANTED
     }
 
     fun getMessages(threadId: Long): List<Message> {
@@ -265,7 +263,14 @@ class SmsRepository(private val context: Context) {
             } else {
                 ContentUris.withAppendedId(Telephony.Sms.CONTENT_URI, message.id)
             }
-            context.contentResolver.delete(uri, null, null) > 0
+            val deleted = context.contentResolver.delete(uri, null, null) > 0
+            // תמונת צ'אט מפוענחת נשארה בדיסק אחרי מחיקת ההודעה (M02)
+            if (deleted && !message.isMms) runCatching {
+                val chat = ChatStore.get(context)
+                chat.imagePathFor(message.id)?.let { File(it).delete() }
+                chat.remove(message.id)
+            }
+            deleted
         } catch (e: Exception) {
             Log.e("SmsRepository", "Error deleting message ${message.id}", e)
             false
@@ -323,7 +328,7 @@ class SmsRepository(private val context: Context) {
                 sentPendingIntent(messageId, index, parts.size)
             })
             val deliveryIntents = ArrayList(parts.indices.map { index ->
-                deliveryPendingIntent(messageId, index)
+                deliveryPendingIntent(messageId, index, parts.size)
             })
             smsManager.sendMultipartTextMessage(address, null, parts, sentIntents, deliveryIntents)
         } catch (e: Exception) {
@@ -348,10 +353,11 @@ class SmsRepository(private val context: Context) {
         )
     }
 
-    private fun deliveryPendingIntent(messageId: Long, partIndex: Int): PendingIntent {
+    private fun deliveryPendingIntent(messageId: Long, partIndex: Int, partCount: Int): PendingIntent {
         val intent = Intent(context, SmsDeliveredReceiver::class.java).apply {
             action = SmsDeliveredReceiver.ACTION_SMS_DELIVERED
             putExtra(SmsDeliveredReceiver.EXTRA_MESSAGE_ID, messageId)
+            putExtra(SmsDeliveredReceiver.EXTRA_PART_COUNT, partCount)
         }
         val requestCode = (messageId * 256 + partIndex).toInt()
         return PendingIntent.getBroadcast(
@@ -658,6 +664,17 @@ class SmsRepository(private val context: Context) {
         }
     }
 
+    /** יש בשיחה הודעה נכנסת שעוד לא נקראה (SMS). */
+    fun hasUnreadIncoming(threadId: Long): Boolean = try {
+        context.contentResolver.query(
+            Telephony.Sms.CONTENT_URI, arrayOf(Telephony.Sms._ID),
+            "${Telephony.Sms.THREAD_ID} = ? AND ${Telephony.Sms.READ} = 0 AND ${Telephony.Sms.TYPE} = ?",
+            arrayOf(threadId.toString(), Telephony.Sms.MESSAGE_TYPE_INBOX.toString()), null
+        )?.use { it.count > 0 } ?: false
+    } catch (e: Exception) {
+        false
+    }
+
     fun markThreadRead(threadId: Long) {
         try {
             val values = ContentValues().apply { put(Telephony.Sms.READ, 1) }
@@ -670,6 +687,8 @@ class SmsRepository(private val context: Context) {
         }
         RcsStack.onThreadRead(context, threadId)
         FutureChat.onThreadRead(context, threadId)
+        // הווידג'ט מציג מספר הודעות שלא נקראו - מתעדכן כאן ולא רק כל 30 דקות
+        com.future.sharednav.widget.FutureContentWidget.refresh(context, com.future.messages.MessagesWidgetProvider::class.java)
     }
 
     /** מזהה שם איש קשר אמיתי לפי מספר טלפון; אם לא נמצא, מציג את המספר עצמו. */
@@ -739,14 +758,30 @@ class SmsRepository(private val context: Context) {
         return results
     }
 
+    private fun threadHasMessages(threadId: Long): Boolean = try {
+        context.contentResolver.query(
+            Telephony.Sms.CONTENT_URI, arrayOf(Telephony.Sms._ID),
+            "${Telephony.Sms.THREAD_ID} = ?", arrayOf(threadId.toString()), null
+        )?.use { it.count > 0 } ?: false
+    } catch (e: Exception) {
+        true
+    }
+
     /** מוחקת שיחה שלמה (כל ה-SMS/MMS שלה) לפי thread_id - אותו URI תקני
      * (content://mms-sms/conversations/<id>) שאפליקציות מסרונים סטנדרטיות
      * משתמשות בו למחיקת שיחה שלמה בבת אחת. */
     fun deleteThread(threadId: Long): Boolean {
         return try {
-            context.contentResolver.delete(
+            val count = context.contentResolver.delete(
                 ContentUris.withAppendedId(Telephony.Threads.CONTENT_URI, threadId), null, null
-            ) >= 0
+            )
+            // 0 שורות נמחקו = הצלחה רק אם השיחה באמת ריקה; אחרת המחיקה נכשלה והמשתמש צריך לדעת (M27)
+            val ok = count > 0 || !threadHasMessages(threadId)
+            if (ok) runCatching {
+                // תמונות הצ'אט המפוענחות של השיחה נמחקות איתה (M02)
+                ChatStore.get(context).removeThread(threadId).forEach { File(it).delete() }
+            }
+            ok
         } catch (e: Exception) {
             Log.e("SmsRepository", "Error deleting thread $threadId", e)
             false

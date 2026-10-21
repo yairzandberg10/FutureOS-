@@ -41,6 +41,9 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.future.messages.data.Contact
+import com.future.messages.data.NumberActions
+import com.future.sharednav.components.ConfirmDialog
+import com.future.sharednav.components.FutureButton
 import com.future.messages.data.SmsRepository
 import com.future.sharednav.focus.bringIntoViewOnFocus
 import com.future.sharednav.focus.escapeTextFieldFocusTrap
@@ -59,10 +62,19 @@ fun GroupComposeScreen(
     onCancel: () -> Unit,
     onSend: (List<Contact>, String) -> Unit,
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     var allContacts by remember { mutableStateOf<List<Contact>>(emptyList()) }
-    LaunchedEffect(Unit) {
+    // בלי הרשאת אנשי קשר הרשימה ריקה - מציגים הסבר וכפתור בקשה במקום "אין אנשי קשר" (M39)
+    var hasContactsPermission by remember {
+        mutableStateOf(context.checkSelfPermission(android.Manifest.permission.READ_CONTACTS) == android.content.pm.PackageManager.PERMISSION_GRANTED)
+    }
+    val contactsPermissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { granted -> hasContactsPermission = granted }
+    LaunchedEffect(hasContactsPermission) {
         allContacts = withContext(Dispatchers.IO) { repository.getAllContacts() }
     }
+    var confirmSend by remember { mutableStateOf(false) }
 
     var query by remember { mutableStateOf("") }
     var selectedNumbers by remember { mutableStateOf(setOf<String>()) }
@@ -118,7 +130,25 @@ fun GroupComposeScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            if (filteredContacts.isEmpty()) {
+            if (!hasContactsPermission) {
+                Column(
+                    modifier = Modifier.weight(1f).fillMaxWidth().padding(FutureDimens.spacingXxl),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    Text(
+                        "כדי לבחור נמענים צריך לאשר גישה לאנשי קשר",
+                        color = theme.mutedTextColor,
+                        fontSize = FutureTypography.body,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    )
+                    FutureButton(
+                        "אשר גישה לאנשי קשר", theme,
+                        { contactsPermissionLauncher.launch(android.Manifest.permission.READ_CONTACTS) },
+                        modifier = Modifier.padding(top = FutureDimens.spacingLg),
+                    )
+                }
+            } else if (filteredContacts.isEmpty()) {
                 EmptyState(
                     icon = FutureIcons.Person,
                     title = "אין אנשי קשר",
@@ -163,10 +193,25 @@ fun GroupComposeScreen(
                 GroupSendButton(
                     theme = theme,
                     enabled = selectedContacts.isNotEmpty() && messageText.isNotBlank(),
-                    onClick = { onSend(selectedContacts, messageText) }
+                    onClick = { confirmSend = true }
                 )
             }
         }
+    }
+
+    // שליחה לכמה נמענים אינה הפיכה - אישור לפני (ולחיצה כפולה נחסמת ב-MainActivity)
+    if (confirmSend) {
+        ConfirmDialog(
+            message = "לשלוח את ההודעה ל-${selectedContacts.size} אנשי קשר?",
+            theme = theme,
+            confirmLabel = "שלח",
+            destructive = false,
+            onCancel = { confirmSend = false },
+            onConfirm = {
+                confirmSend = false
+                onSend(selectedContacts, messageText)
+            },
+        )
     }
 }
 
@@ -175,7 +220,7 @@ fun GroupComposeScreen(
 private fun GroupContactRow(contact: Contact, isSelected: Boolean, theme: FutureTheme, onToggle: () -> Unit) {
     FutureListItem(
         title = contact.name,
-        summary = contact.phoneNumber,
+        summary = NumberActions.isolateLtr(contact.phoneNumber),
         theme = theme,
         onClick = onToggle,
         leading = { FutureAvatar(theme = theme, name = contact.name) },

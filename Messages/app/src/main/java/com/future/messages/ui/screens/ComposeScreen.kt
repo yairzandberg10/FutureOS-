@@ -219,7 +219,7 @@ fun ComposeScreen(
                     if (typedNumber != null) {
                         item(key = "number") {
                             FutureListItem(
-                                title = typedNumber,
+                                title = NumberActions.isolateLtr(typedNumber),
                                 summary = "OK לפעולות על המספר",
                                 theme = theme,
                                 onClick = { menuNumber = typedNumber },
@@ -237,7 +237,7 @@ fun ComposeScreen(
                     items(suggestions, key = { it.phoneNumber }) { contact ->
                         FutureListItem(
                             title = contact.name,
-                            summary = contact.phoneNumber,
+                            summary = NumberActions.isolateLtr(contact.phoneNumber),
                             theme = theme,
                             onClick = { startWith(contact) },
                             leading = { FutureAvatar(theme = theme, name = contact.name) },
@@ -311,7 +311,7 @@ fun ComposeScreen(
     // שורה הרסנית בתפריט עוברת דרך אישור (DS).
     pendingBlock?.let { number ->
         com.future.sharednav.components.ConfirmDialog(
-            message = "לחסום את ⁦$number⁩?",
+            message = "לחסום את ${NumberActions.isolateLtr(number)}?",
             surfaceColor = theme.surfaceColor,
             textColor = theme.textColor,
             dangerColor = theme.dangerColor,
@@ -344,7 +344,7 @@ private fun NumberActionsMenu(
     onFavorite: () -> Unit,
     onBlock: () -> Unit,
 ) {
-    FutureOptionsMenu(theme = theme, onDismissRequest = onDismiss, header = number) {
+    FutureOptionsMenu(theme = theme, onDismissRequest = onDismiss, header = NumberActions.isolateLtr(number)) {
         FutureMenuRow("שליחת הודעה", FutureIcons.Send, theme, onMessage)
         FutureMenuRow("חיוג", FutureIcons.Call, theme, onCall)
         FutureMenuRow("הוספה לאנשי קשר", FutureIcons.PersonAdd, theme, onAddContact)

@@ -382,7 +382,15 @@ object FutureChat {
         for (doc in docs) {
             try {
                 handle(context, me, doc, delivered)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
+                // כשל רשת/שרת זמני: ההודעה נשארת בתור ותטופל בסנכרון הבא - לא נמחקת. רק הודעה
+                // שאי אפשר לפענח לעולם (חתימה, פורמט) נזרקת.
+                if (e is java.io.IOException || e is com.google.firebase.FirebaseException) {
+                    Log.w(TAG, "Keeping message ${doc.id} for retry", e)
+                    continue
+                }
                 Log.w(TAG, "Dropping undecryptable message ${doc.id}", e)
             }
             runCatching { ChatBackend.delete(doc) }
@@ -419,13 +427,15 @@ object FutureChat {
                 if (store.hasIncoming(id)) return
                 val isImage = json.optString("t") == "i"
                 var imagePath: String? = null
+                var mediaPath: String? = null
                 val caption = if (isImage) json.optString("c") else json.optString("b")
                 if (isImage) {
                     // הנתיב מגיע מהשולח: רק מהתיקייה שלנו, אחרת שולח יכל לגרום לנו
                     // להוריד ולמחוק קובץ אחר (downloadAndDelete).
                     val path = json.getString("p")
                     require(path.startsWith("media/$me/") && ".." !in path && SAFE_ID.matches(path.substringAfterLast('/'))) { "Bad media path" }
-                    val encrypted = ChatBackend.downloadAndDelete(path)
+                    mediaPath = path
+                    val encrypted = ChatBackend.download(path)
                     val bytes = ChatCrypto.decryptFile(encrypted, ChatCrypto.FileKey(json.getString("k"), json.getString("v")))
                     imagePath = mediaFile(context, id).apply { writeBytes(bytes) }.absolutePath
                 }
@@ -434,6 +444,8 @@ object FutureChat {
                 val smsId = insertSms(context, phone, body, incoming = true) ?: return
                 val threadId = threadIdOf(context, smsId)
                 store.putIncoming(smsId, id, phone, threadId, imagePath, imageOnly)
+                // נשמר אצלנו - עכשיו אפשר למחוק את הקובץ המוצפן מהשרת
+                mediaPath?.let { ChatBackend.deleteMedia(it) }
                 delivered.getOrPut(phone) { mutableListOf() }.add(id)
                 clearTyping(phone)
                 // השיחה פתוחה על המסך - ההודעה נקראת מיד, והשולח מקבל "נקרא" (M17).

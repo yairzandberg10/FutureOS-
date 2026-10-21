@@ -36,9 +36,18 @@ class SmsDeliverReceiver : BroadcastReceiver() {
             put(Telephony.Sms.READ, 0)
             put(Telephony.Sms.TYPE, Telephony.Sms.MESSAGE_TYPE_INBOX)
         }
-        context.contentResolver.insert(Telephony.Sms.CONTENT_URI, values)
-
-        notifyIncoming(context, address, body)
+        // כתיבה לספק ושאילתת איש קשר לא על ה-main thread של ה-receiver (M12)
+        val pending = goAsync()
+        Thread {
+            try {
+                context.contentResolver.insert(Telephony.Sms.CONTENT_URI, values)
+                notifyIncoming(context, address, body)
+                // מונה ההודעות שלא נקראו בווידג'ט מתעדכן מיד
+                com.future.sharednav.widget.FutureContentWidget.refresh(context, com.future.messages.MessagesWidgetProvider::class.java)
+            } finally {
+                pending.finish()
+            }
+        }.start()
     }
 
     companion object {
@@ -63,7 +72,7 @@ class SmsDeliverReceiver : BroadcastReceiver() {
 
             val notification = NotificationCompat.Builder(context, channelId)
                 .setSmallIcon(android.R.drawable.sym_action_chat)
-                .setContentTitle(contact.name)
+                .setContentTitle(com.future.messages.data.NumberActions.displayName(contact.name))
                 .setContentText(body)
                 .setStyle(NotificationCompat.BigTextStyle().bigText(body))
                 .setPriority(NotificationCompat.PRIORITY_HIGH)

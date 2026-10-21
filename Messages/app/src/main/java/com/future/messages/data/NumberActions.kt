@@ -23,6 +23,12 @@ object NumberActions {
         return digits >= 3 && trimmed.all { it.isDigit() || it in "+-() *#" }
     }
 
+    /** מספר בתוך טקסט RTL: LRI…PDI מבודד אותו כדי ש-"+972…" לא יוצג כ-"972…+" (M21). */
+    fun isolateLtr(text: String): String = "⁦$text⁩"
+
+    /** שם לתצוגה: שם איש קשר כמו שהוא, ומספר טלפון (שיחה בלי איש קשר) עטוף ב-LRI…PDI. */
+    fun displayName(name: String): String = if (looksLikePhoneNumber(name)) isolateLtr(name.trim()) else name
+
     /** מזהה איש הקשר שהמספר שייך לו, או null. */
     fun contactIdFor(context: Context, number: String): Long? = try {
         val uri = Uri.withAppendedPath(ContactsContract.PhoneLookup.CONTENT_FILTER_URI, Uri.encode(number))

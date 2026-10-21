@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.future.messages.data.Conversation
+import com.future.messages.data.NumberActions
 import com.future.sharednav.components.AppDialog
 import com.future.sharednav.components.ConfirmDialog
 import com.future.sharednav.theme.FutureTheme
@@ -147,6 +148,18 @@ fun ConversationListScreen(
         if (focused != null) menuFor = focused else listMenuOpen = true
     }
 
+    // השיחה הממוקדת נעלמה מהרשימה (מחיקה, ארכיון): הפוקוס עובר לשורה שנכנסה לאותו מקום,
+    // ולא נופל לראש המסך
+    var lastFocusedIndex by remember { mutableStateOf(0) }
+    val shownIds = shown.map { it.threadId }
+    LaunchedEffect(shownIds) {
+        rowFocusRequesters.keys.retainAll(shownIds.toSet())
+        val gone = focusedConversation?.let { it.threadId !in shownIds } == true
+        if (gone && !searchOpen && shownIds.isNotEmpty()) {
+            runCatching { rowFocusRequesters.getOrPut(shownIds[lastFocusedIndex.coerceIn(0, shownIds.size - 1)]) { FocusRequester() }.requestFocus() }
+        }
+    }
+
     LaunchedEffect(shown.isEmpty(), showingArchive) {
         if (shown.isEmpty()) {
             focusedConversation = null
@@ -202,7 +215,7 @@ fun ConversationListScreen(
 
     pendingDelete?.let { conversation ->
         ConfirmDialog(
-            message = "למחוק את השיחה עם \"${conversation.contact.name}\"?",
+            message = "למחוק את השיחה עם \"${NumberActions.displayName(conversation.contact.name)}\"?",
             surfaceColor = theme.surfaceColor,
             textColor = theme.textColor,
             dangerColor = theme.dangerColor,
@@ -314,7 +327,10 @@ fun ConversationListScreen(
                                 conversation,
                                 theme,
                                 onClick = { onConversationClick(conversation) },
-                                onFocused = { focusedConversation = conversation },
+                                onFocused = {
+                                    focusedConversation = conversation
+                                    lastFocusedIndex = index
+                                },
                                 focusRequester = rowFocusRequesters.getOrPut(conversation.threadId) { FocusRequester() },
                                 // בשורה העליונה, מקש למעלה תמיד קופץ במפורש לכפתור "הודעה חדשה" -
                                 // לא מסתמכים על חיפוש פוקוס גיאומטרי שנשבר אחרי גלילה למטה ואז למעלה
@@ -395,10 +411,13 @@ private fun ConversationRow(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingMd),
         ) {
-            FutureAvatar(theme = theme, name = conversation.contact.name)
+            // שיחה עם מספר בלי שם: אייקון במקום "+" כאות ראשונה
+            val unnamed = NumberActions.looksLikePhoneNumber(conversation.contact.name)
+            if (unnamed) FutureAvatar(theme = theme, icon = FutureIcons.Person)
+            else FutureAvatar(theme = theme, name = conversation.contact.name)
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = conversation.contact.name,
+                    text = NumberActions.displayName(conversation.contact.name),
                     color = theme.textColor,
                     fontWeight = if (hasUnread) FontWeight.Bold else FontWeight.Medium,
                     fontSize = FutureTypography.title,
@@ -414,7 +433,7 @@ private fun ConversationRow(
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(FutureDimens.spacingXs)) {
                 Text(
-                    text = formatTime(conversation.lastMessageTimestamp),
+                    text = remember(conversation.lastMessageTimestamp) { formatTime(conversation.lastMessageTimestamp) },
                     color = theme.mutedTextColor,
                     fontSize = FutureTypography.caption
                 )
@@ -442,7 +461,7 @@ private fun ConversationOptionsMenu(
     onDelete: () -> Unit,
     listRows: @Composable () -> Unit,
 ) {
-    FutureOptionsMenu(theme = theme, onDismissRequest = onDismiss, header = conversation.contact.name) {
+    FutureOptionsMenu(theme = theme, onDismissRequest = onDismiss, header = NumberActions.displayName(conversation.contact.name)) {
         FutureMenuRow("התקשר", FutureIcons.Call, theme, onCall)
         if (onAddToContacts != null) {
             FutureMenuRow("הוסף לאנשי קשר", FutureIcons.PersonAdd, theme, onAddToContacts)

@@ -80,6 +80,19 @@ internal class ChatStore private constructor(context: Context) :
         writableDatabase.delete("messages", "sms_id = ?", arrayOf(smsId.toString()))
     }
 
+    /** נתיב התמונה המפוענחת של הודעה אחת (אם יש). */
+    fun imagePathFor(smsId: Long): String? =
+        readableDatabase.rawQuery("SELECT image_path FROM messages WHERE sms_id = ?", arrayOf(smsId.toString()))
+            .use { if (it.moveToFirst()) it.getString(0) else null }
+
+    /** מנקה את כל שורות הצ'אט של שיחה שנמחקה, ומחזיר את נתיבי התמונות שלהן למחיקה מהדיסק. */
+    fun removeThread(threadId: Long): List<String> {
+        val paths = readableDatabase.rawQuery("SELECT image_path FROM messages WHERE thread_id = ? AND image_path IS NOT NULL", arrayOf(threadId.toString()))
+            .use { c -> buildList { while (c.moveToNext()) add(c.getString(0)) } }
+        writableDatabase.delete("messages", "thread_id = ?", arrayOf(threadId.toString()))
+        return paths
+    }
+
     /** הודעות נכנסות בשיחה שעוד לא נשלח עליהן אישור קריאה: טלפון → מזהים. */
     fun takeReadPending(threadId: Long): Map<String, List<String>> {
         val result = readableDatabase.rawQuery(

@@ -134,7 +134,7 @@ fun MessageThreadScreen(
         // עיגול הפינות שלה - נשאר רקע החלון, שקבוע לשחור ב-themes.xml.
         Column(modifier = Modifier.fillMaxSize().background(theme.backgroundColor).imePadding().padding(top = StatusBarInset.TITLE_GAP_DP.dp)) {
             ScreenTopBar(
-                title = conversation.contact.name,
+                title = com.future.messages.data.NumberActions.displayName(conversation.contact.name),
                 textColor = theme.textColor,
                 accentColor = theme.accentColor,
                 onBack = onBack,
@@ -214,7 +214,7 @@ fun MessageThreadScreen(
 
             MessageComposeBar(
                 theme = theme,
-                recipient = conversation.contact.name,
+                recipient = com.future.messages.data.NumberActions.displayName(conversation.contact.name),
                 text = textState,
                 onTextChange = {
                     textState = it
@@ -381,7 +381,7 @@ private fun MessageBubble(message: Message, theme: FutureTheme, onClick: () -> U
         bottomStart = if (message.isFromMe) BubbleRadius else BubbleTailRadius,
         bottomEnd = if (message.isFromMe) BubbleTailRadius else BubbleRadius,
     )
-    val time = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(message.timestamp))
+    val time = remember(message.timestamp) { SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(message.timestamp)) }
 
     Column(
         modifier = Modifier

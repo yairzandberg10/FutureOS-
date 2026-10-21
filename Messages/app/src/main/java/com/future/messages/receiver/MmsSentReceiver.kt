@@ -29,7 +29,14 @@ class MmsSentReceiver : BroadcastReceiver() {
         val succeeded = resultCode == Activity.RESULT_OK
         val mmsId = intent.getLongExtra(EXTRA_MMS_ID, -1L)
         if (mmsId != -1L) {
-            SmsRepository(context.applicationContext).updateMmsStatus(mmsId, success = succeeded)
+            val pending = goAsync()
+            Thread {
+                try {
+                    SmsRepository(context.applicationContext).updateMmsStatus(mmsId, success = succeeded)
+                } finally {
+                    pending.finish()
+                }
+            }.start()
         }
 
         if (resultCode != Activity.RESULT_OK) {

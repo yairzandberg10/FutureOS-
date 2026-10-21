@@ -27,6 +27,8 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.LayoutDirection
 import com.future.messages.chat.FutureChat
+import com.future.messages.data.NumberActions
+import com.future.sharednav.components.ConfirmDialog
 import com.future.sharednav.components.FutureButton
 import com.future.sharednav.components.FutureButtonVariant
 import com.future.sharednav.components.FutureSpinner
@@ -51,6 +53,7 @@ fun ChatSetupScreen(theme: FutureTheme, onBack: () -> Unit) {
     var codeSent by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
+    var confirmSignOut by remember { mutableStateOf(false) }
     val fieldFocus = remember { FocusRequester() }
     val buttonFocus = remember { FocusRequester() }
 
@@ -79,13 +82,13 @@ fun ChatSetupScreen(theme: FutureTheme, onBack: () -> Unit) {
                         theme,
                     )
                     FutureChat.State.ACTIVE -> {
-                        Body("הצ'אט פעיל עבור ${FutureChat.myPhone() ?: ""}.", theme)
+                        Body("הצ'אט פעיל עבור ${NumberActions.isolateLtr(FutureChat.myPhone() ?: "")}.", theme)
                         Body(
                             "הודעות לאנשי קשר עם FutureOS נשלחות באינטרנט, מוצפנות מקצה לקצה, עם \"נמסר\", \"נקרא\" ו\"מקליד...\". לכל נמען אחר, או כשאין רשת, ההודעה יוצאת כ-SMS.",
                             theme,
                         )
                         FutureButton(
-                            "התנתק", theme, { FutureChat.signOut(context) },
+                            "התנתק", theme, { confirmSignOut = true },
                             variant = FutureButtonVariant.Destructive, fillMaxWidth = true, focusRequester = buttonFocus,
                         )
                     }
@@ -123,6 +126,20 @@ fun ChatSetupScreen(theme: FutureTheme, onBack: () -> Unit) {
                 error?.let { Text(it, color = theme.dangerColor, fontSize = FutureTypography.caption) }
             }
         }
+    }
+
+    // התנתקות מוחקת מפתחות והרשמה - לא בלחיצה אחת (הפוקוס ההתחלתי על "ביטול")
+    if (confirmSignOut) {
+        ConfirmDialog(
+            message = "להתנתק מצ'אט FutureOS?",
+            theme = theme,
+            confirmLabel = "התנתק",
+            onCancel = { confirmSignOut = false },
+            onConfirm = {
+                confirmSignOut = false
+                FutureChat.signOut(context)
+            },
+        )
     }
 }
 
