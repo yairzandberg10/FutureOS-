@@ -73,6 +73,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -208,6 +209,10 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
     var showHints by remember { mutableStateOf(true) }
 
     val shutterFocus = remember { FocusRequester() }
+    // CAM-13: אחרי סגירת הגדרות/מציג הפוקוס חוזר למקור שממנו נפתחו, לא לכפתור הצילום
+    val settingsFocus = remember { FocusRequester() }
+    val thumbFocus = remember { FocusRequester() }
+    var focusReturn by remember { mutableStateOf<FocusRequester?>(null) }
     val isVideo = captureMode == CaptureMode.VIDEO
 
     val imageCapture = remember(options.aspect, options.photoQuality) {
@@ -245,8 +250,9 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
                 it == SceneOption.NONE || runCatching { manager.isExtensionAvailable(base, it.mode) }.getOrDefault(false)
             }
             extensionsManager = manager
-            if (options.scene !in availableScenes) update { it.copy(scene = SceneOption.NONE) }
         }
+        // CAM-34: בלי ExtensionsManager מצב סצנה שנשמר לא נתמך - מאפסים גם אז
+        if (options.scene !in availableScenes) update { it.copy(scene = SceneOption.NONE) }
     }
 
     // קישור המצלמה - רק כשמשהו שבאמת משפיע על הקישור משתנה. קודם הקישור ישב
@@ -386,6 +392,7 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
                     onFinished = { uri ->
                         isRecording = false
                         recordingSeconds = 0
+                        currentRecording = null // CAM-33
                         uri?.let { onSaved(it) }
                         snackbar.show("הווידאו נשמר")
                         if (exitAfterRecording) onExit()
@@ -393,6 +400,7 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
                     onError = {
                         isRecording = false
                         recordingSeconds = 0
+                        currentRecording = null // CAM-33
                         snackbar.show("ההקלטה נכשלה")
                         if (exitAfterRecording) onExit()
                     },
@@ -472,6 +480,7 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
             snackbar.show("עדיין לא צולם כלום")
             return
         }
+        focusReturn = thumbFocus
         showViewer = true
     }
 
@@ -641,7 +650,8 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
                         accentColor = theme.accentColor,
                         size = 40.dp,
                         iconSize = 20.dp,
-                        onClick = { showSettings = true }
+                        focusRequester = settingsFocus,
+                        onClick = { focusReturn = settingsFocus; showSettings = true }
                     )
                     CameraIconButton(
                         icon = FutureIcons.FilterVintage,
@@ -649,12 +659,14 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
                         accentColor = theme.accentColor,
                         size = 40.dp,
                         iconSize = 20.dp,
-                        tint = if (options.filter != CameraFilter.NONE) theme.accentColor else Color.White,
+                        // CAM-35: במצב מסמך הפילטר לא מוחל, ולכן לא מסומן כפעיל
+                        tint = if (options.filter != CameraFilter.NONE && captureMode != CaptureMode.DOCUMENT) theme.accentColor else Color.White,
                         onClick = { if (!isVideo) showFilters = !showFilters else snackbar.show("פילטרים זמינים בצילום תמונות") }
                     )
                 }
                 if (isRecording) RecordingIndicator(seconds = recordingSeconds)
-                else if (options.filter != CameraFilter.NONE && !isVideo && !showFilters) OverlayChip(options.filter.label)
+                // CAM-35: במצב מסמך הפילטר לא מוחל - השבב לא מוצג כאילו הוא פעיל
+                else if (options.filter != CameraFilter.NONE && !isVideo && !showFilters && captureMode != CaptureMode.DOCUMENT) OverlayChip(options.filter.label)
                 ZoomBadge(zoomRatio = zoomRatio, visibleUntil = zoomBadgeUntil)
                 CameraIconButton(
                     icon = flashIcon(options.flashMode),
@@ -676,7 +688,8 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
                 exit = fadeOut(FutureMotion.exit()),
                 modifier = Modifier.align(Alignment.TopCenter).padding(top = 96.dp),
             ) {
-                OverlayChip("1-9 מיקוד · OK מוחזק מיקוד במרכז · * מצב")
+                // CAM-D06: ניסוח קצר וטבעי יותר
+                OverlayChip("1-9 מיקוד · OK ארוך - מרכז · * מצב")
             }
 
             countdownRemaining?.let { remaining ->
@@ -708,7 +721,7 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    PreviewThumbButton(thumb = lastThumb, accentColor = theme.accentColor, onClick = ::openPreview)
+                    PreviewThumbButton(thumb = lastThumb, accentColor = theme.accentColor, focusRequester = thumbFocus, onClick = ::openPreview)
                     Box(modifier = Modifier.onFocusChanged { shutterFocused = it.hasFocus }) {
                         CameraIconButton(
                             icon = when {
@@ -756,7 +769,9 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
 
             LaunchedEffect(hasCameraPermission, cameraAvailable, showSettings, showViewer) {
                 if (hasCameraPermission && cameraAvailable && !showSettings && !showViewer) {
-                    runCatching { shutterFocus.requestFocus() }
+                    // חוזרים למקור שממנו נפתח המסך (ר' focusReturn), ואם אין - לכפתור הצילום
+                    runCatching { (focusReturn ?: shutterFocus).requestFocus() }
+                    focusReturn = null
                 }
             }
         }
@@ -872,7 +887,7 @@ private fun SquareMask() {
 
 /** המדיה האחרונה מהסשן בעיגול - לחיצה פותחת את המציג. */
 @Composable
-private fun PreviewThumbButton(thumb: Bitmap?, accentColor: Color, onClick: () -> Unit) {
+private fun PreviewThumbButton(thumb: Bitmap?, accentColor: Color, focusRequester: FocusRequester? = null, onClick: () -> Unit) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
     Box(
@@ -882,6 +897,7 @@ private fun PreviewThumbButton(thumb: Bitmap?, accentColor: Color, onClick: () -
             .clip(CircleShape)
             .background(ScrimOverPreview)
             .border(FutureDimens.focusBorderControl, animateFocusColor(isFocused, accentColor, Color.White.copy(alpha = 0.3f)).value, CircleShape)
+            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
             .focusable(interactionSource = interactionSource),
         contentAlignment = Alignment.Center

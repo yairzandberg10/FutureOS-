@@ -26,7 +26,7 @@ object PhotoStorage {
         onSaved: (Uri) -> Unit,
         onError: (Exception) -> Unit
     ) {
-        val name = "IMG_" + SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.US).format(System.currentTimeMillis())
+        val name = newPhotoName()
         val contentValues = ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, name)
             put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
@@ -96,8 +96,12 @@ object PhotoStorage {
         })
     }
 
+    // CAM-29: שם הקובץ נבנה במקום אחד, גם לצילום רגיל וגם למעובד
+    private fun newPhotoName(): String =
+        "IMG_" + SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.US).format(System.currentTimeMillis())
+
     private fun saveJpeg(context: Context, bmp: android.graphics.Bitmap): Uri? {
-        val name = "IMG_" + SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.US).format(System.currentTimeMillis())
+        val name = newPhotoName()
         val values = ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, name)
             put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
@@ -115,7 +119,12 @@ object PhotoStorage {
                 resolver.delete(uri, null, null)
                 return null
             }
-            resolver.update(uri, ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) }, null, null)
+            // CAM-36: אם שחרור IS_PENDING נכשל הקובץ נשאר "בתהליך" - מוחקים ולא מדווחים "נשמר"
+            val rows = resolver.update(uri, ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) }, null, null)
+            if (rows <= 0) {
+                resolver.delete(uri, null, null)
+                return null
+            }
             uri
         } catch (e: Exception) {
             resolver.delete(uri, null, null)

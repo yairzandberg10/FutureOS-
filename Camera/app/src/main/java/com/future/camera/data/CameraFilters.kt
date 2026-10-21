@@ -53,8 +53,6 @@ enum class CameraFilter(val label: String) {
         NOIR -> ColorMatrix().apply { setSaturation(0f) }.also { it.postConcat(contrast(1.45f)) }
     }
 
-    fun paint(): Paint? = matrix()?.let { Paint().apply { colorFilter = ColorMatrixColorFilter(it) } }
-
     companion object {
         /** מסמך: שחור-לבן בניגודיות גבוהה, כדי שטקסט על נייר ייקרא. */
         val DOCUMENT: ColorMatrix get() = ColorMatrix().apply { setSaturation(0f) }.also { it.postConcat(contrast(1.8f)) }

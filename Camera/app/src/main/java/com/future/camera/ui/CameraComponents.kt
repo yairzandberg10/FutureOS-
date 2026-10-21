@@ -28,8 +28,8 @@ import androidx.compose.ui.unit.dp
 import com.future.sharednav.focus.focusMotion
 import com.future.sharednav.focus.animateFocusColor
 
-/** כפתור עגול צף מעל תצוגת המצלמה - אותה שפת עיצוב כמו ToolsIconButton
- * (טבעת מיקוד בצבע ההדגשה, רקע כהה למראה שקוף מעל התצוגה החיה). */
+// אותה שפת עיצוב כמו ToolsIconButton (טבעת מיקוד בצבע ההדגשה, רקע כהה למראה שקוף מעל התצוגה החיה).
+
 /**
  * כפתור עגול צף מעל תצוגת המצלמה. במנוחה - עיגול בהכהיה של המערכת (60%
  * שחור, קבוע ולכן קריא מעל כל תמונה חיה); בפוקוס - מילוי מלא בהדגשה, והאייקון

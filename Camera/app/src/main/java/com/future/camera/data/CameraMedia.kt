@@ -8,11 +8,10 @@ import android.net.Uri
 import android.provider.MediaStore
 import android.util.Size
 
-/**
- * התמונות שהמצלמה שמרה (DCIM/Camera, ותמונות ישנות מ-Pictures/Camera) - לתצוגה המקדימה ליד כפתור הצילום
- * ולמציג התמונות האחרונות בתוך האפליקציה. קבצים שהאפליקציה יצרה נקראים
- * בלי הרשאת אחסון (Scoped Storage).
- */
+// התמונות שהמצלמה שמרה (DCIM/Camera, ותמונות ישנות מ-Pictures/Camera) - לתצוגה המקדימה ליד כפתור הצילום
+// ולמציג התמונות האחרונות בתוך האפליקציה. קבצים שהאפליקציה יצרה נקראים
+// בלי הרשאת אחסון (Scoped Storage).
+
 /**
  * תיקיית המצלמה הסטנדרטית באנדרואיד - שם גלריות, גיבוי ומחשב (MTP) מחפשים
  * תמונות. קודם התמונות נשמרו ב-Pictures/Camera והסרטונים ב-Movies/Camera.
@@ -56,8 +55,9 @@ object CameraMedia {
         ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
             val w = info.size.width
             val h = info.size.height
-            val scale = maxOf(1, maxOf(w, h) / maxPx)
-            decoder.setTargetSize(w / scale, h / scale)
+            // CAM-18: מחלקים בשבר (לא בחלוקה שלמה), כך שהצד הארוך מתאים בדיוק ל-maxPx
+            val scale = maxOf(1f, maxOf(w, h).toFloat() / maxPx)
+            decoder.setTargetSize((w / scale).toInt().coerceAtLeast(1), (h / scale).toInt().coerceAtLeast(1))
             decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
         }
     } catch (e: Exception) {

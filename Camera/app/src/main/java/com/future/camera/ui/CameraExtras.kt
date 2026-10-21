@@ -210,13 +210,15 @@ fun PhotoViewer(theme: FutureTheme, items: List<Uri>) {
                     Key.DirectionLeft -> { if (index > 0) index--; true }
                     Key.DirectionCenter, Key.Enter -> {
                         current?.let { uri ->
-                            runCatching {
+                            val opened = runCatching {
                                 context.startActivity(
                                     android.content.Intent(android.content.Intent.ACTION_VIEW, uri)
                                         .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
                                         .addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                 )
-                            }
+                            }.isSuccess
+                            // CAM-17: בלי אפליקציה מתאימה מודיעים, ולא נכשלים בשקט
+                            if (!opened) android.widget.Toast.makeText(context, "אין אפליקציה לפתיחת הקובץ", android.widget.Toast.LENGTH_SHORT).show()
                         }
                         true
                     }
@@ -252,7 +254,8 @@ fun PhotoViewer(theme: FutureTheme, items: List<Uri>) {
                 fontSize = FutureTypography.summary,
                 modifier = Modifier
                     .align(Alignment.TopCenter)
-                    .padding(top = 12.dp)
+                    // CAM-D02: מתחת לשורת המצב (המסך מצויר עד הקצה), כמו שורת הפקדים במסך הצילום
+                    .padding(top = StatusBarInset.HEIGHT_DP.dp + 6.dp)
                     .background(ScrimOverPreview, com.future.sharednav.theme.FutureShapes.pill)
                     .padding(horizontal = 12.dp, vertical = 4.dp),
             )
