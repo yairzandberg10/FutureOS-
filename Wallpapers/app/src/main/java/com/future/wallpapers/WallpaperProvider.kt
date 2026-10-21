@@ -46,7 +46,8 @@ class WallpaperProvider : ContentProvider() {
     }
 
     override fun getType(uri: Uri): String? = if (uri.pathSegments.firstOrNull() == "list") null else "image/jpeg"
-    override fun insert(uri: Uri, values: ContentValues?): Uri? = null
-    override fun delete(uri: Uri, selection: String?, selectionArgs: Array<out String>?) = 0
-    override fun update(uri: Uri, values: ContentValues?, selection: String?, selectionArgs: Array<out String>?) = 0
+    // W23: הרשאת הכתיבה נשארת כשער, ולכן כתיבה מחזירה שגיאה ברורה ולא no-op שקט
+    override fun insert(uri: Uri, values: ContentValues?): Uri? = throw UnsupportedOperationException("read only")
+    override fun delete(uri: Uri, selection: String?, selectionArgs: Array<out String>?): Int = throw UnsupportedOperationException("read only")
+    override fun update(uri: Uri, values: ContentValues?, selection: String?, selectionArgs: Array<out String>?): Int = throw UnsupportedOperationException("read only")
 }

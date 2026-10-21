@@ -1,4 +1,4 @@
-// Seeds the Firestore "wallpapers" collection with the app's 100 built-in wallpapers.
+// Seeds the Firestore "wallpapers" collection with the app's 91 built-in wallpapers.
 //
 // Usage:
 //   node seed-firestore.js <projectId> <accessToken>

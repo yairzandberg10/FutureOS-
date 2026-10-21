@@ -3,12 +3,21 @@ package com.future.wallpapers
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.util.Log
 import android.util.LruCache
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.withContext
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
+import java.net.URLEncoder
 import java.security.MessageDigest
+import java.util.concurrent.ConcurrentHashMap
 
 /** רקע אחד בקטלוג. */
 data class Wallpaper(
@@ -31,14 +40,17 @@ data class Wallpaper(
  * עדכון לאפליקציה. פרטי הפרויקט נקראים מ-assets/firebase.json:
  * {"projectId": "...", "apiKey": "..."}.
  *
- * עד שהקובץ קיים, ובכל פעם שאין רשת, מוצג הקטלוג המובנה - 90 צילומים אמיתיים
+ * עד שהקובץ קיים, ובכל פעם שאין רשת, מוצג הקטלוג המובנה - 91 צילומים אמיתיים
  * (Unsplash דרך picsum.photos, ברישיון חופשי) - ואחרון שנטען מ-Firebase נשמר.
  */
 object WallpaperCatalog {
     private const val PREFS = "wallpaper_catalog"
     private const val KEY_CACHE = "firestore"
+    private const val TAG = "WallpaperCatalog"
+    /** תקרה לעמודי Firestore - 300 מסמכים לעמוד, כלומר עד 3000 רקעים. */
+    private const val MaxPages = 10
 
-    /** 90 צילומים מובנים, בגודל המסך (640x960). */
+    /** 91 צילומים מובנים, בגודל המסך (640x960). */
     val builtIn: List<Wallpaper> = BUILT_IN_IDS.mapIndexed { index, (pid, category) ->
         Wallpaper(
             id = "picsum-$pid",
@@ -62,38 +74,74 @@ object WallpaperCatalog {
     fun cached(context: Context): List<Wallpaper> =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_CACHE, null)?.let(::parseFirestore).orEmpty()
 
-    /** מושך את האוסף מ-Firebase. זורק חריגה כשאין רשת או הגדרה. */
+    /**
+     * מושך את האוסף מ-Firebase, עמוד אחר עמוד (N03). זורק חריגה כשאין רשת או
+     * הגדרה. קטלוג ריק לא דורס את המטמון השמור.
+     */
     fun fetch(context: Context): List<Wallpaper> {
         val (projectId, apiKey) = config(context) ?: error("firebase.json missing")
-        val url = "https://firestore.googleapis.com/v1/projects/$projectId/databases/(default)/documents/wallpapers?pageSize=300&key=$apiKey"
-        val body = (URL(url).openConnection() as HttpURLConnection).run {
-            connectTimeout = 10_000
-            readTimeout = 20_000
-            inputStream.bufferedReader().use { it.readText() }.also { disconnect() }
-        }
+        val docs = JSONArray()
+        var token: String? = null
+        var pages = 0
+        do {
+            val url = "https://firestore.googleapis.com/v1/projects/$projectId/databases/(default)/documents/wallpapers?pageSize=300" +
+                token?.let { "&pageToken=${URLEncoder.encode(it, "UTF-8")}" }.orEmpty()
+            val page = JSONObject(get(url, apiKey))
+            page.optJSONArray("documents")?.let { arr -> for (i in 0 until arr.length()) docs.put(arr.get(i)) }
+            token = page.optString("nextPageToken").ifBlank { null }
+        } while (token != null && ++pages < MaxPages)
+        val body = JSONObject().put("documents", docs).toString()
         val list = parseFirestore(body)
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY_CACHE, body).apply()
+        if (list.isNotEmpty()) {
+            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY_CACHE, body).apply()
+        }
         return list
+    }
+
+    /**
+     * GET ל-Firestore. המפתח נשלח בכותרת ולא בכתובת (W15), דף שגיאה לא נקרא
+     * כקטלוג (W16), והחיבור נסגר תמיד.
+     */
+    private fun get(url: String, apiKey: String): String {
+        val connection = URL(url).openConnection() as HttpURLConnection
+        return try {
+            connection.connectTimeout = 10_000
+            connection.readTimeout = 20_000
+            connection.setRequestProperty("x-goog-api-key", apiKey)
+            check(connection.responseCode in 200..299) { "Firestore HTTP ${connection.responseCode}" }
+            connection.inputStream.bufferedReader().use { it.readText() }
+        } finally {
+            connection.disconnect()
+        }
     }
 
     private fun parseFirestore(json: String): List<Wallpaper> = try {
         val docs = JSONObject(json).optJSONArray("documents") ?: return emptyList()
         (0 until docs.length()).mapNotNull { i ->
-            val doc = docs.getJSONObject(i)
-            val f = doc.optJSONObject("fields") ?: return@mapNotNull null
-            fun str(name: String) = f.optJSONObject(name)?.optString("stringValue").orEmpty()
-            val url = str("url").ifBlank { return@mapNotNull null }
-            Wallpaper(
-                id = doc.getString("name").substringAfterLast('/'),
-                title = str("title"),
-                category = str("category").ifBlank { "כללי" },
-                url = url,
-                thumbUrl = str("thumb").ifBlank { url },
-                order = f.optJSONObject("order")?.optString("integerValue")?.toIntOrNull() ?: 0,
-            )
+            // W14: מסמך שבור מדולג עם לוג, ולא מפיל את כל הקטלוג
+            try {
+                parseDoc(docs.getJSONObject(i))
+            } catch (e: Exception) {
+                Log.w(TAG, "מסמך קטלוג מספר $i דולג", e)
+                null
+            }
         }.sortedBy { it.order }
     } catch (e: Exception) {
         emptyList()
+    }
+
+    private fun parseDoc(doc: JSONObject): Wallpaper? {
+        val f = doc.optJSONObject("fields") ?: return null
+        fun str(name: String) = f.optJSONObject(name)?.optString("stringValue").orEmpty()
+        val url = str("url").ifBlank { return null }
+        return Wallpaper(
+            id = doc.getString("name").substringAfterLast('/'),
+            title = str("title"),
+            category = str("category").ifBlank { "כללי" },
+            url = url,
+            thumbUrl = str("thumb").ifBlank { url },
+            order = f.optJSONObject("order")?.optString("integerValue")?.toIntOrNull() ?: 0,
+        )
     }
 }
 
@@ -124,34 +172,62 @@ private val BUILT_IN_IDS: List<Pair<Int, String>> = listOf(
 object ImageLoader {
     private const val MAX_IMAGE_BYTES = 30L * 1024 * 1024
 
+    /** מגבלת הורדות במקביל: גלילה מהירה בין 91 תמונות לא פותחת עשרות חיבורים (W11). */
+    private val gate = Semaphore(4)
+
+    /** מנעול לכל כתובת: שתי טעינות של אותה תמונה (רשת + תצוגה מלאה) מחכות להורדה אחת. */
+    private val locks = ConcurrentHashMap<String, Any>()
+
     private val memory = object : LruCache<String, Bitmap>(12 * 1024 * 1024) {
         override fun sizeOf(key: String, value: Bitmap) = value.byteCount
     }
 
-    fun peek(url: String): Bitmap? = memory.get(url)
+    /** המפתח כולל את הגודל: אותה כתובת בגודל אחר היא תמונה אחרת (W06). */
+    private fun memoryKey(url: String, maxPx: Int) = "$url@$maxPx"
 
-    fun load(context: Context, url: String, maxPx: Int): Bitmap? {
-        memory.get(url)?.let { return it }
-        val file = fetchFile(context, url) ?: return null
-        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        BitmapFactory.decodeFile(file.path, bounds)
-        var sample = 1
-        while (maxOf(bounds.outWidth, bounds.outHeight) / (sample * 2) >= maxPx) sample *= 2
-        val bitmap = BitmapFactory.decodeFile(file.path, BitmapFactory.Options().apply { inSampleSize = sample }) ?: run {
-            file.delete()
-            return null
+    fun peek(url: String, maxPx: Int): Bitmap? = memory.get(memoryKey(url, maxPx))
+
+    /**
+     * מוריד (אם צריך) ומפענח. מתבטל יחד עם ה-coroutine - גלילה מהירה לא משאירה
+     * הורדות תלויות עד הזמן הקצוב.
+     */
+    suspend fun load(context: Context, url: String, maxPx: Int): Bitmap? {
+        memory.get(memoryKey(url, maxPx))?.let { return it }
+        return withContext(Dispatchers.IO) {
+            gate.withPermit {
+                // הקובץ יכול להימחק בין ההורדה לפענוח (ניקוי מטמון במקביל): מורידים שוב פעם אחת
+                repeat(2) {
+                    val file = fetchFile(context, url) { !isActive } ?: return@withContext null
+                    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                    BitmapFactory.decodeFile(file.path, bounds)
+                    var sample = 1
+                    while (maxOf(bounds.outWidth, bounds.outHeight) / (sample * 2) >= maxPx) sample *= 2
+                    val bitmap = BitmapFactory.decodeFile(file.path, BitmapFactory.Options().apply { inSampleSize = sample })
+                    if (bitmap != null) {
+                        memory.put(memoryKey(url, maxPx), bitmap)
+                        return@withContext bitmap
+                    }
+                    file.delete()
+                }
+                null
+            }
         }
-        memory.put(url, bitmap)
-        return bitmap
     }
 
-    /** הקובץ במטמון הדיסק - מוריד אם צריך. חוסם. null כשאין רשת. */
-    fun fetchFile(context: Context, url: String): File? {
+    /**
+     * הקובץ במטמון הדיסק - מוריד אם צריך. חוסם (לקרוא מ-IO). null כשאין רשת,
+     * או כש-[cancelled] מחזיר true באמצע ההורדה.
+     */
+    fun fetchFile(context: Context, url: String, cancelled: () -> Boolean = { false }): File? {
         val file = File(File(context.cacheDir, "images").apply { mkdirs() }, sha1(url))
-        if (!file.exists()) {
+        return synchronized(locks.computeIfAbsent(url) { Any() }) {
+            if (file.exists()) {
+                // W09: שימוש מעדכן את הזמן - ניקוי המטמון מסיר לפי שימוש אחרון, לא לפי הורדה
+                file.setLastModified(System.currentTimeMillis())
+                return file
+            }
             // הורדה לקובץ זמני ייחודי ואז rename: הורדה שנקטעה (תהליך נהרג, רשת נפלה)
-            // השאירה קודם קובץ חתוך בשם הסופי, ושתי טעינות במקביל של אותה תמונה (רשת
-            // + תצוגה מלאה) כתבו לאותו קובץ בו-זמנית.
+            // השאירה קודם קובץ חתוך בשם הסופי.
             val tmp = File(file.parentFile, "${file.name}.${Thread.currentThread().id}.part")
             try {
                 // הכתובות מגיעות מהאוסף ברשת: רק https, ועד גודל סביר - אחרת רשומה אחת
@@ -170,6 +246,7 @@ object ImageLoader {
                             val buf = ByteArray(64 * 1024)
                             var total = 0L
                             while (true) {
+                                if (cancelled()) return null
                                 val n = input.read(buf)
                                 if (n < 0) break
                                 total += n
@@ -188,8 +265,8 @@ object ImageLoader {
             } finally {
                 tmp.delete()
             }
+            file
         }
-        return file
     }
 
     /** מטמון הדיסק גדל בלי גבול (כל רקע שנצפה); שומרים את ה-[DISK_LIMIT] האחרונים. */

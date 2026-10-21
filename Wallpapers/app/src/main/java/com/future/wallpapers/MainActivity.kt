@@ -5,6 +5,7 @@ import com.future.sharednav.systemui.StatusBarInset
 import android.app.WallpaperManager
 import android.graphics.Bitmap
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -24,21 +25,25 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.key.Key
@@ -72,10 +77,16 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+private const val TAG = "Wallpapers"
+/** גודל הממוזערת ברשת, וגודל התצוגה המלאה - לפי המסך 640x960. */
+private const val ThumbPx = 300
+private const val FullPx = 960
+
 /**
  * רקעים: רשת של תמונות ממוזערות (שלוש בשורה), סינון לפי קטגוריה, OK פותח
- * תצוגה מלאה ומשם מקש Options - הגדר למסך הבית / לנעילה / לשניהם. אין
- * לה אייקון בלאנצ'ר; נפתחת מעריכת מסך הבית ומהגדרות הלאנצ'ר.
+ * תצוגה מלאה ומשם מקש Options - הגדר למסך הבית / לנעילה / לשניהם. מקש Options
+ * ברשת פותח את התפריט של התמונה הממוקדת. אין לה אייקון בלאנצ'ר; נפתחת
+ * מעריכת מסך הבית ומהגדרות הלאנצ'ר.
  */
 class MainActivity : ComponentActivity() {
     override fun dispatchTouchEvent(ev: android.view.MotionEvent): Boolean = true
@@ -93,17 +104,22 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun WallpapersApp(theme: FutureTheme) {
     val context = LocalContext.current
-    var wallpapers by remember {
-        mutableStateOf(WallpaperCatalog.cached(context).ifEmpty { WallpaperCatalog.builtIn })
-    }
+    // הקטלוג המובנה מוצג מיד; המטמון וה-Firebase נטענים ברקע (W17) ומחליפים אותו.
+    var wallpapers by remember { mutableStateOf(WallpaperCatalog.builtIn) }
     // W01: הקטגוריה, התצוגה המקדימה והפריט האחרון שורדים סיבוב מסך ושחזור תהליך.
-    var category by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<String?>(null) }
-    var previewId by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<String?>(null) }
+    var category by rememberSaveable { mutableStateOf<String?>(null) }
+    var previewId by rememberSaveable { mutableStateOf<String?>(null) }
+    // Options ברשת פותח את התצוגה המלאה עם התפריט פתוח; OK פותח בלי תפריט.
+    var previewMenu by rememberSaveable { mutableStateOf(false) }
+    // OK על צ'יפ: הפוקוס עובר לתמונה הראשונה בקטגוריה החדשה (ולא נשאר על הצ'יפ).
+    var chipPicked by rememberSaveable { mutableStateOf(false) }
+    var lastFocused by rememberSaveable { mutableStateOf<String?>(null) }
     val preview = previewId?.let { id -> wallpapers.firstOrNull { it.id == id } }
-    var lastFocused by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
-        if (WallpaperCatalog.isFirebaseConfigured(context)) {
+        val cached = withContext(Dispatchers.IO) { WallpaperCatalog.cached(context) }
+        if (cached.isNotEmpty()) wallpapers = cached
+        if (withContext(Dispatchers.IO) { WallpaperCatalog.isFirebaseConfigured(context) }) {
             withContext(Dispatchers.IO) { runCatching { WallpaperCatalog.fetch(context) } }
                 .getOrNull()?.takeIf { it.isNotEmpty() }?.let { wallpapers = it }
         }
@@ -113,9 +129,18 @@ private fun WallpapersApp(theme: FutureTheme) {
     val categories = remember(wallpapers) { wallpapers.map { it.category }.distinct() }
     val shown = remember(wallpapers, category) { if (category == null) wallpapers else wallpapers.filter { it.category == category } }
 
+    // W19: Options ברשת הראשית פותח את התפריט (הגדר למסך הבית/הנעילה/שניהם) לתמונה הממוקדת
+    onOptionsKeyPress {
+        val id = lastFocused
+        if (preview == null && id != null && shown.any { it.id == id }) {
+            previewMenu = true
+            previewId = id
+        }
+    }
+
     AnimatedScreenHost(targetState = preview, depthOf = { if (it == null) 0 else 1 }, contentKey = { it?.id }) { open ->
         if (open != null) {
-            PreviewScreen(open, theme)
+            PreviewScreen(open, theme, openMenu = previewMenu)
         } else {
             Column(modifier = Modifier.fillMaxSize().background(theme.backgroundColor).padding(top = StatusBarInset.TITLE_GAP_DP.dp)) {
                 ScreenTopBar(title = "רקעים", textColor = theme.textColor, accentColor = theme.accentColor)
@@ -123,8 +148,18 @@ private fun WallpapersApp(theme: FutureTheme) {
                     contentPadding = PaddingValues(horizontal = FutureDimens.spacingLg),
                     horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm),
                 ) {
-                    item { FutureChip("הכל", theme = theme, selected = category == null, onClick = { category = null }) }
-                    items(categories) { c -> FutureChip(c, theme = theme, selected = category == c, onClick = { category = c }) }
+                    item { FutureChip("הכל", theme = theme, selected = category == null, onClick = { category = null; chipPicked = true }) }
+                    items(categories) { c -> FutureChip(c, theme = theme, selected = category == c, onClick = { category = c; chipPicked = true }) }
+                }
+                val first = remember { FocusRequester() }
+                val gridState = rememberLazyGridState()
+                // כניסה למסך - הפוקוס לתמונה האחרונה שהייתה ממוקדת. OK על צ'יפ - לראש הרשת ולתמונה הראשונה.
+                LaunchedEffect(category, shown.firstOrNull()?.id) {
+                    runCatching {
+                        if (chipPicked) gridState.scrollToItem(0)
+                        first.requestFocus()
+                    }
+                    chipPicked = false
                 }
                 // W18: קטגוריה ריקה מקבלת הודעה, ולא רשת ריקה.
                 if (shown.isEmpty()) {
@@ -135,23 +170,32 @@ private fun WallpapersApp(theme: FutureTheme) {
                     )
                     return@Column
                 }
-                val first = remember { FocusRequester() }
-                LaunchedEffect(shown.firstOrNull()?.id) { runCatching { first.requestFocus() } }
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(3),
+                    state = gridState,
                     contentPadding = PaddingValues(12.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     // אחרי מעבר קטגוריה הרקע האחרון שנבחר כבר לא ברשימה - אז אף תמונה לא
                     // קיבלה את ה-FocusRequester והפוקוס נשאר תקוע על הצ'יפים.
-                    val focusId = lastFocused?.takeIf { id -> shown.any { it.id == id } } ?: shown.firstOrNull()?.id
+                    val focusId = if (chipPicked) {
+                        shown.firstOrNull()?.id
+                    } else {
+                        lastFocused?.takeIf { id -> shown.any { it.id == id } } ?: shown.firstOrNull()?.id
+                    }
                     itemsIndexed(shown, key = { _, w -> w.id }) { _, wallpaper ->
                         Thumbnail(
                             wallpaper = wallpaper,
                             theme = theme,
                             focusRequester = if (wallpaper.id == focusId) first else null,
-                            onClick = { lastFocused = wallpaper.id; previewId = wallpaper.id },
+                            onFocus = { lastFocused = wallpaper.id },
+                            onClick = {
+                                lastFocused = wallpaper.id
+                                chipPicked = false
+                                previewMenu = false
+                                previewId = wallpaper.id
+                            },
                         )
                     }
                 }
@@ -161,12 +205,18 @@ private fun WallpapersApp(theme: FutureTheme) {
 }
 
 @Composable
-private fun Thumbnail(wallpaper: Wallpaper, theme: FutureTheme, focusRequester: FocusRequester?, onClick: () -> Unit) {
+private fun Thumbnail(
+    wallpaper: Wallpaper,
+    theme: FutureTheme,
+    focusRequester: FocusRequester?,
+    onFocus: () -> Unit,
+    onClick: () -> Unit,
+) {
     val context = LocalContext.current
     // W03: טעינה שנכשלה מסומנת, ולא ספינר לנצח.
     var loadFailed by remember(wallpaper.thumbUrl) { mutableStateOf(false) }
-    val bitmap by produceState(ImageLoader.peek(wallpaper.thumbUrl), wallpaper.thumbUrl) {
-        value = withContext(Dispatchers.IO) { ImageLoader.load(context, wallpaper.thumbUrl, 300) }
+    val bitmap by produceState(ImageLoader.peek(wallpaper.thumbUrl, ThumbPx), wallpaper.thumbUrl) {
+        value = ImageLoader.load(context, wallpaper.thumbUrl, ThumbPx)
         loadFailed = value == null
     }
     FocusableItem(
@@ -177,7 +227,10 @@ private fun Thumbnail(wallpaper: Wallpaper, theme: FutureTheme, focusRequester: 
         cornerRadius = FutureShapes.radiusLg,
         contentPadding = 3.dp,
         focusRequester = focusRequester,
-        modifier = Modifier.fillMaxWidth().aspectRatio(2f / 3f),
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(2f / 3f)
+            .onFocusChanged { if (it.hasFocus) onFocus() },
     ) {
         val b = bitmap
         if (b != null) {
@@ -201,23 +254,26 @@ private enum class Target(val label: String, val flags: Int) {
 /**
  * תצוגה מלאה: OK - הגדר למסך הבית (אחרי אישור); Options - בחירה בין בית,
  * נעילה ושניהם. קודם OK החליף את הרקע מיד, והרקע הקודם אבד בלחיצה מקרית.
+ * אחרי כשל טעינה OK מנסה שוב (N01).
  */
 @Composable
-private fun PreviewScreen(wallpaper: Wallpaper, theme: FutureTheme) {
+private fun PreviewScreen(wallpaper: Wallpaper, theme: FutureTheme, openMenu: Boolean) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val snackbar = rememberFutureSnackbarState()
-    var bitmap by remember { mutableStateOf<Bitmap?>(ImageLoader.peek(wallpaper.url)) }
+    var bitmap by remember { mutableStateOf<Bitmap?>(ImageLoader.peek(wallpaper.url, FullPx)) }
     var failed by remember { mutableStateOf(false) }
-    var menuOpen by remember { mutableStateOf(false) }
+    var retry by remember { mutableIntStateOf(0) }
+    var menuOpen by remember { mutableStateOf(openMenu) }
     var applying by remember { mutableStateOf(false) }
     var confirmHome by remember { mutableStateOf(false) }
     val focus = remember { FocusRequester() }
     val darkTheme = remember(theme.accentColor) { FutureTheme(isDarkMode = true, accentColor = theme.accentColor) }
 
-    LaunchedEffect(wallpaper.url) {
+    LaunchedEffect(wallpaper.url, retry) {
         if (bitmap == null) {
-            bitmap = withContext(Dispatchers.IO) { ImageLoader.load(context, wallpaper.url, 960) }
+            failed = false
+            bitmap = ImageLoader.load(context, wallpaper.url, FullPx)
             failed = bitmap == null
         }
         runCatching { focus.requestFocus() }
@@ -230,11 +286,19 @@ private fun PreviewScreen(wallpaper: Wallpaper, theme: FutureTheme) {
         val b = bitmap ?: return
         applying = true
         scope.launch {
-            val ok = withContext(Dispatchers.IO) {
-                runCatching { WallpaperManager.getInstance(context).setBitmap(b, null, true, target.flags) }.isSuccess
+            // W20: הכשל נרשם ביומן, והמשתמש מקבל הודעה שמתאימה לסיבה
+            val result = withContext(Dispatchers.IO) {
+                runCatching { WallpaperManager.getInstance(context).setBitmap(b, null, true, target.flags) }
+                    .onFailure { Log.w(TAG, "הגדרת הרקע נכשלה", it) }
             }
             applying = false
-            snackbar.show(if (ok) "הרקע הוגדר ל${target.label}" else "לא ניתן להגדיר את הרקע")
+            snackbar.show(
+                when {
+                    result.isSuccess -> "הרקע הוגדר ל${target.label}"
+                    result.exceptionOrNull() is SecurityException -> "אין הרשאה להגדיר רקע"
+                    else -> "לא ניתן להגדיר את הרקע"
+                },
+            )
         }
     }
 
@@ -246,8 +310,11 @@ private fun PreviewScreen(wallpaper: Wallpaper, theme: FutureTheme) {
             .focusable()
             .onKeyEvent { event ->
                 val isOk = event.key == Key.DirectionCenter || event.key == Key.Enter
-                if (event.type == KeyEventType.KeyUp && isOk && !applying && bitmap != null) {
-                    confirmHome = true
+                if (event.type == KeyEventType.KeyUp && isOk && !applying && (bitmap != null || failed)) {
+                    if (bitmap != null) confirmHome = true else {
+                        failed = false
+                        retry++
+                    }
                     true
                 } else false
             },
@@ -260,16 +327,24 @@ private fun PreviewScreen(wallpaper: Wallpaper, theme: FutureTheme) {
             else -> FutureSpinner(theme = darkTheme)
         }
         if (applying) FutureSpinner(theme = darkTheme, label = "מגדיר רקע")
-        Text(
-            if (b != null) "OK - מסך הבית · Options - עוד" else "",
-            color = Color.White,
-            fontSize = FutureTypography.summary,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 24.dp)
-                .background(darkTheme.idleChipColor.copy(alpha = 0.6f), FutureShapes.pill)
-                .padding(horizontal = 14.dp, vertical = 6.dp),
-        )
+        // W04: הכתובית מוצגת רק כשיש לה תוכן (בלי פיל שקוף ריק)
+        val hint = when {
+            b != null -> "OK - מסך הבית · Options - עוד"
+            failed -> "OK - נסה שוב"
+            else -> null
+        }
+        if (hint != null) {
+            Text(
+                hint,
+                color = Color.White,
+                fontSize = FutureTypography.summary,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 24.dp)
+                    .background(darkTheme.idleChipColor.copy(alpha = 0.6f), FutureShapes.pill)
+                    .padding(horizontal = 14.dp, vertical = 6.dp),
+            )
+        }
         FutureSnackbarHost(snackbar, darkTheme)
     }
 
