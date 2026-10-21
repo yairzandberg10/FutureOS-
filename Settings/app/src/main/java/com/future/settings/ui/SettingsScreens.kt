@@ -352,8 +352,12 @@ fun MainMenu(navController: NavController, theme: ThemeConfig, viewModel: Settin
                 false
             }
     ) {
+        // N-01/N-02: הרשימה מתחילה מתחת לשורת המצב, כך שגם פריט שנגלל למעלה (חיפוש, כותרת)
+        // לא מצויר מתחתיה ולא נחתך.
         LazyColumn(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = StatusBarInset.HEIGHT_DP.dp),
             contentPadding = PaddingValues(bottom = 40.dp)
         ) {
             item { LargeHeader("הגדרות", theme) }
