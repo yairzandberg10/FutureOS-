@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import com.future.contact.data.MyProfile
 import com.future.contact.data.MyProfileStore
 import com.future.contact.data.SimStatus
+import com.future.sharednav.components.ConfirmDialog
 import com.future.sharednav.components.FutureAvatar
 import com.future.sharednav.components.FutureCard
 import com.future.sharednav.components.FutureDivider
@@ -67,6 +68,7 @@ fun MyProfileScreen(theme: FutureTheme) {
     var hasPhoneState by remember { mutableStateOf(store.hasPhoneStatePermission()) }
     var editingName by remember { mutableStateOf(false) }
     var editingDescription by remember { mutableStateOf(false) }
+    var pendingRemovePhoto by remember { mutableStateOf(false) }
 
     fun reload() {
         scope.launch {
@@ -120,9 +122,9 @@ fun MyProfileScreen(theme: FutureTheme) {
             ) {
                 Text("אני", fontSize = type.screenTitle, fontWeight = FutureTypography.weightBold, color = theme.textColor)
             }
-            Column(modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(bottom = FutureDimens.spacingLg)) {
+            Column(modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(bottom = FutureDimens.spacingXl)) {
                 Column(
-                    modifier = Modifier.fillMaxWidth().padding(top = FutureDimens.spacingSm, bottom = 20.dp),
+                    modifier = Modifier.fillMaxWidth().padding(top = FutureDimens.spacingSm, bottom = FutureDimens.spacingXl),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm),
                 ) {
@@ -187,7 +189,7 @@ fun MyProfileScreen(theme: FutureTheme) {
                             icon = FutureIcons.NoPhotography,
                             theme = theme,
                             showChevron = false,
-                            onClick = { store.removePhoto(); reload() },
+                            onClick = { pendingRemovePhoto = true },
                         )
                     }
                     FutureDivider(theme = theme)
@@ -231,6 +233,16 @@ fun MyProfileScreen(theme: FutureTheme) {
         }
     }
 
+    if (pendingRemovePhoto) {
+        ConfirmDialog(message = "להסיר את תמונת הפרופיל?", theme = theme, confirmLabel = "הסר", onCancel = { pendingRemovePhoto = false }, onConfirm = {
+            pendingRemovePhoto = false
+            // מחיקת קובץ ועדכון העדפות - לא על התהליך הראשי
+            scope.launch {
+                withContext(Dispatchers.IO) { store.removePhoto() }
+                reload()
+            }
+        })
+    }
     if (editingName) {
         InputDialog(
             title = "השם שלי",

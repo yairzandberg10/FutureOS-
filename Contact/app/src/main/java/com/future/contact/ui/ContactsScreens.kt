@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -157,6 +159,18 @@ fun ContactsListScreen(
 
     val rowFocus = remember { mutableMapOf<String, FocusRequester>() }
     fun focusFor(id: String) = rowFocus.getOrPut(id) { FocusRequester() }
+    // מוחקים requesters של אנשי קשר שנעלמו (מחיקה / טעינה מחדש) - המפה לא גדלה בלי גבול
+    LaunchedEffect(inTab) { rowFocus.keys.retainAll(inTab.map { it.id }.toSet()) }
+    // השורה הממוקדת נעלמה (מחיקה מתפריט Options או סינון): הפוקוס עובר לשורה שנכנסה לאותו מקום,
+    // ולא קופץ לכפתור החיפוש בראש המסך
+    var lastFocusedIndex by remember { mutableStateOf(0) }
+    val shownIds = shown.map { it.id }
+    LaunchedEffect(shownIds) {
+        val gone = focusedContact?.let { it.id !in shownIds } == true
+        if (gone && !searchOpen && shownIds.isNotEmpty()) {
+            runCatching { focusFor(shownIds[lastFocusedIndex.coerceIn(0, shownIds.size - 1)]).requestFocus() }
+        }
+    }
     val searchButtonFocus = remember { FocusRequester() }
     val addButtonFocus = remember { FocusRequester() }
     LaunchedEffect(hasPermission, tab, inTab.isEmpty()) {
@@ -232,12 +246,12 @@ fun ContactsListScreen(
 
             when {
                 !hasPermission -> Column(
-                    modifier = Modifier.fillMaxSize().padding(32.dp),
+                    modifier = Modifier.fillMaxSize().padding(FutureDimens.spacingXxl),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
                 ) {
                     Text("כדי להציג אנשי קשר צריך לאשר הרשאה", color = theme.mutedTextColor, fontSize = type.bodyLarge, textAlign = TextAlign.Center)
-                    FutureButton("אשר הרשאה", theme, onRequestPermission, modifier = Modifier.padding(top = 16.dp))
+                    FutureButton("אשר הרשאה", theme, onRequestPermission, modifier = Modifier.padding(top = FutureDimens.spacingLg))
                 }
                 inTab.isEmpty() -> EmptyState(
                     icon = when (tab) {
@@ -254,7 +268,7 @@ fun ContactsListScreen(
                     textColor = theme.textColor,
                 )
                 shown.isEmpty() -> EmptyState(icon = FutureIcons.SearchOff, title = "לא נמצאו תוצאות", textColor = theme.textColor)
-                else -> LazyColumn(contentPadding = PaddingValues(horizontal = FutureDimens.spacingMd, vertical = FutureDimens.spacingXs)) {
+                else -> LazyColumn(contentPadding = PaddingValues(start = FutureDimens.spacingMd, end = FutureDimens.spacingMd, top = FutureDimens.spacingXs, bottom = FutureDimens.spacingXl)) {
                     itemsIndexed(shown, key = { _, c -> c.id }) { _, contact ->
                         FutureListItem(
                             title = contact.name,
@@ -262,7 +276,12 @@ fun ContactsListScreen(
                             theme = theme,
                             onClick = { onContactClick(contact) },
                             focusRequester = focusFor(contact.id),
-                            modifier = Modifier.onFocusChanged { if (it.isFocused) focusedContact = contact },
+                            modifier = Modifier.onFocusChanged {
+                                if (it.isFocused) {
+                                    focusedContact = contact
+                                    lastFocusedIndex = shown.indexOfFirst { c -> c.id == contact.id }.coerceAtLeast(0)
+                                }
+                            },
                             leading = { FutureAvatar(theme = theme, name = contact.name, photoUri = contact.photoUri) },
                             trailing = {
                                 when {
@@ -283,9 +302,10 @@ fun ContactsListScreen(
         FutureOptionsMenu(theme = theme, onDismissRequest = { menuOpen = false }, header = target?.name ?: tab.title) {
             fun pick(action: () -> Unit): () -> Unit = { menuOpen = false; action() }
             if (target != null) {
+                // CT-D01: "שלח הודעה" ראשון - הפוקוס הראשון בתפריט לא יחייג ב-OK אחד
                 target.phoneNumbers.firstOrNull()?.let { number ->
-                    FutureMenuRow("התקשר", FutureIcons.Call, theme, pick { actions.call(number) })
                     FutureMenuRow("שלח הודעה", FutureIcons.AutoMirrored.Chat, theme, pick { actions.message(number) })
+                    FutureMenuRow("התקשר", FutureIcons.Call, theme, pick { actions.call(number) })
                 }
                 ContactMenuRows(target, theme, actions, onDelete = { pendingDelete = target }, pick = ::pick)
             }
@@ -308,7 +328,7 @@ fun ContactsListScreen(
         }
     }
     pendingDelete?.let { contact ->
-        ConfirmDialog(message = "למחוק את ${contact.name}?", theme = theme, confirmLabel = "מחק", onCancel = { pendingDelete = null }, onConfirm = {
+        ConfirmDialog(message = "למחוק את ${contact.name}?$SYNC_DELETE_NOTE", theme = theme, confirmLabel = "מחק", onCancel = { pendingDelete = null }, onConfirm = {
             pendingDelete = null
             actions.delete(contact)
         })
@@ -320,6 +340,13 @@ fun ContactsListScreen(
         })
     }
 }
+
+/** המחיקה חלה על כל החשבונות של איש הקשר, כולל חשבון מסונכרן (Google) ובמכשירים האחרים שלו. */
+private const val SYNC_DELETE_NOTE = "\nהמחיקה חלה גם על חשבונות מסונכרנים."
+
+/** מספר טלפון תקין לשמירה: תווי חיוג בלבד ולפחות 3 ספרות ("abc" נדחה). */
+private fun isValidPhone(number: String): Boolean =
+    number.all { it.isDigit() || it in "+*#,;() -" } && number.count { it.isDigit() } >= 3
 
 /** השורות של תפריט איש קשר שמשותפות לרשימה ולכרטיס. */
 @Composable
@@ -352,6 +379,7 @@ fun ContactDetailScreen(contact: Contact, theme: FutureTheme, actions: ContactAc
     var editing by remember { mutableStateOf(false) }
     var menuOpen by remember { mutableStateOf(false) }
     var pendingDelete by remember { mutableStateOf(false) }
+    var pendingRemovePhoto by remember { mutableStateOf(false) }
     LaunchedEffect(contact.id) {
         details = withContext(Dispatchers.IO) { repository.getContactDetails(contact.id) }
         detailsLoaded = true
@@ -365,9 +393,9 @@ fun ContactDetailScreen(contact: Contact, theme: FutureTheme, actions: ContactAc
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Column(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
             ScreenTopBar(title = "איש קשר", textColor = theme.textColor, accentColor = theme.accentColor, onBack = onBack)
-            Column(modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(bottom = FutureDimens.spacingLg)) {
+            Column(modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(bottom = FutureDimens.spacingXl)) {
                 Column(
-                    modifier = Modifier.fillMaxWidth().padding(top = FutureDimens.spacingMd, bottom = 20.dp),
+                    modifier = Modifier.fillMaxWidth().padding(top = FutureDimens.spacingMd, bottom = FutureDimens.spacingXl),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm),
                 ) {
@@ -392,7 +420,6 @@ fun ContactDetailScreen(contact: Contact, theme: FutureTheme, actions: ContactAc
                             icon = FutureIcons.Call,
                             theme = theme,
                             showChevron = false,
-                            focusRequester = if (index == 0) first else null,
                             onClick = { actions.call(number) },
                         )
                     }
@@ -406,7 +433,8 @@ fun ContactDetailScreen(contact: Contact, theme: FutureTheme, actions: ContactAc
                         icon = if (contact.isFavorite) FutureIcons.Star else FutureIcons.StarBorder,
                         theme = theme,
                         showChevron = false,
-                        focusRequester = if (contact.phoneNumbers.isEmpty()) first else null,
+                        // CT-D01: הפוקוס הראשון על פעולה לא מזיקה - לא על "התקשר", שמחייג ב-OK אחד.
+                        focusRequester = first,
                         onClick = { actions.toggleFavorite(contact) },
                     )
                 }
@@ -439,7 +467,7 @@ fun ContactDetailScreen(contact: Contact, theme: FutureTheme, actions: ContactAc
                     )
                     if (contact.photoUri != null) {
                         FutureDivider(theme = theme)
-                        FutureSettingItem(title = "הסר תמונה", icon = FutureIcons.NoPhotography, theme = theme, showChevron = false, onClick = { actions.removePhoto(contact) })
+                        FutureSettingItem(title = "הסר תמונה", icon = FutureIcons.NoPhotography, theme = theme, showChevron = false, onClick = { pendingRemovePhoto = true })
                     }
                     FutureDivider(theme = theme)
                     FutureSettingItem(
@@ -465,9 +493,15 @@ fun ContactDetailScreen(contact: Contact, theme: FutureTheme, actions: ContactAc
         }
     }
     if (pendingDelete) {
-        ConfirmDialog(message = "למחוק את ${contact.name}?", theme = theme, confirmLabel = "מחק", onCancel = { pendingDelete = false }, onConfirm = {
+        ConfirmDialog(message = "למחוק את ${contact.name}?$SYNC_DELETE_NOTE", theme = theme, confirmLabel = "מחק", onCancel = { pendingDelete = false }, onConfirm = {
             pendingDelete = false
             actions.delete(contact)
+        })
+    }
+    if (pendingRemovePhoto) {
+        ConfirmDialog(message = "להסיר את התמונה של ${contact.name}?", theme = theme, confirmLabel = "הסר", onCancel = { pendingRemovePhoto = false }, onConfirm = {
+            pendingRemovePhoto = false
+            actions.removePhoto(contact)
         })
     }
     if (editing) {
@@ -517,15 +551,17 @@ private fun ContactEditDetailsDialog(initial: ContactDetails, theme: FutureTheme
 /** איש קשר חדש, בתוך האפליקציה - עורך אנשי הקשר של המערכת מושבת במכשיר. */
 @Composable
 fun AddContactDialog(theme: FutureTheme, initialNumber: String = "", onDismiss: () -> Unit, onSave: (String, String) -> Unit) {
+    val type = rememberFutureType()
     var name by remember { mutableStateOf("") }
     var number by remember { mutableStateOf(initialNumber) }
+    val numberOk = number.isBlank() || isValidPhone(number)
     FutureDialog(
         theme = theme,
         onDismissRequest = onDismiss,
         title = "איש קשר חדש",
         buttons = {
             FutureButton("ביטול", theme, onDismiss, variant = FutureButtonVariant.Secondary)
-            FutureButton("שמור", theme, { if (name.isNotBlank()) onSave(name.trim(), number.trim()) }, enabled = name.isNotBlank())
+            FutureButton("שמור", theme, { if (name.isNotBlank() && numberOk) onSave(name.trim(), number.trim()) }, enabled = name.isNotBlank() && numberOk)
         },
     ) {
         Column(modifier = Modifier.escapeTextFieldFocusTrap()) {
@@ -536,7 +572,11 @@ fun AddContactDialog(theme: FutureTheme, initialNumber: String = "", onDismiss: 
                 { number = it },
                 theme,
                 modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
             )
+            if (!numberOk) {
+                Text("מספר טלפון לא תקין", color = theme.dangerColor, fontSize = type.summary)
+            }
         }
     }
 }

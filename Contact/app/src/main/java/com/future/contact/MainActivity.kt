@@ -52,6 +52,7 @@ import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.share.FutureShare
 import com.future.sharednav.theme.FutureMaterialTheme
 import com.future.sharednav.theme.rememberFutureTheme
+import com.future.sharednav.widget.FutureContentWidget
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -119,6 +120,11 @@ class MainActivity : ComponentActivity() {
                 reloadJob?.cancel()
                 reloadJob = scope.launch { contacts = withContext(Dispatchers.IO) { repository.getAllContacts(sort) } }
             }
+            // אחרי כתיבה (מועדף, חסימה, מחיקה...) גם הווידג'ט במסך הבית מתעדכן, לא רק בעוד 30 דקות
+            fun reloadAfterWrite() {
+                reload()
+                FutureContentWidget.refresh(this@MainActivity, ContactWidgetProvider::class.java)
+            }
 
             val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { results ->
                 hasPermission = results[Manifest.permission.READ_CONTACTS] == true || repository.hasContactsPermission()
@@ -145,14 +151,20 @@ class MainActivity : ComponentActivity() {
 
             LaunchedEffect(hasPermission, sort) { reload() }
             // מי שכבר אישר קריאה מקבל עכשיו גם את בקשת הכתיבה, פעם אחת בפתיחה.
+            // הדגל נשמר: אחרי סירוב או סיבוב מסך הבקשה לא חוזרת (withWrite מבקש שוב רק בפעולה בפועל).
+            var writeAsked by rememberSaveable { mutableStateOf(false) }
             LaunchedEffect(hasPermission) {
-                if (hasPermission && !repository.hasWritePermission()) {
+                if (hasPermission && !writeAsked && !repository.hasWritePermission()) {
+                    writeAsked = true
                     writePermission.launch(Manifest.permission.WRITE_CONTACTS)
                 }
             }
 
             val selected = contacts.firstOrNull { it.id == selectedId }
             BackHandler(enabled = selected != null) { selectedId = null }
+            // BACK מהרשימה סוגר את האפליקציה לגמרי: אחרת (אנדרואיד 12+) המשימה רק יורדת לרקע
+            // וכניסה מחדש מציגה את הכרטיס האחרון. מטפלים פנימיים (חיפוש) נרשמים אחרי הזה ולכן קודמים לו.
+            BackHandler(enabled = selected == null) { finish() }
 
             val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
             DisposableEffect(lifecycleOwner) {
@@ -210,7 +222,7 @@ class MainActivity : ComponentActivity() {
                         scope.launch {
                             val ok = withContext(Dispatchers.IO) { repository.removePhoto(contact.id) }
                             snackbar.show(if (ok) "התמונה הוסרה" else "לא ניתן להסיר את התמונה")
-                            reload()
+                            reloadAfterWrite()
                         }
                     } },
                     toggleFavorite = { contact -> withWrite {
@@ -223,7 +235,7 @@ class MainActivity : ComponentActivity() {
                                     else -> "נוסף למועדפים"
                                 }
                             )
-                            reload()
+                            reloadAfterWrite()
                         }
                     } },
                     toggleBlocked = { contact -> withWrite {
@@ -236,10 +248,14 @@ class MainActivity : ComponentActivity() {
                                     else -> "${contact.name} נחסם"
                                 }
                             )
-                            reload()
+                            reloadAfterWrite()
                         }
                     } },
                     delete = { contact -> withWrite {
+                        // הפוקוס חוזר לשורה הסמוכה (אחרי איש הקשר, ואם הוא אחרון - לפניו) ולא לראש המסך
+                        val inTab = if (tab == ContactsTab.FAVORITES) contacts.filter { it.isFavorite && !it.isBlocked } else contacts
+                        val at = inTab.indexOfFirst { it.id == contact.id }
+                        if (at >= 0) lastSelectedContactId = (inTab.getOrNull(at + 1) ?: inTab.getOrNull(at - 1))?.id
                         scope.launch {
                             val ok = withContext(Dispatchers.IO) { repository.deleteContact(contact.id) }
                             if (ok) {
@@ -248,14 +264,14 @@ class MainActivity : ComponentActivity() {
                             } else {
                                 snackbar.show("לא ניתן למחוק את איש הקשר")
                             }
-                            reload()
+                            reloadAfterWrite()
                         }
                     } },
                     add = { name, number -> withWrite {
                         scope.launch {
                             val ok = withContext(Dispatchers.IO) { repository.addContact(name, number) }
                             snackbar.show(if (ok) "$name נוסף" else "לא ניתן לשמור")
-                            reload()
+                            reloadAfterWrite()
                         }
                     } },
                     setSort = { option ->

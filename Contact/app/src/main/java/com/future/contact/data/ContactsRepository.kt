@@ -136,7 +136,7 @@ class ContactsRepository(private val context: Context) {
      * מסונכרן (Google) - גם בכל מכשיר אחר של אותו חשבון.
      */
     fun setPhoto(contactId: String, image: Uri): Boolean = try {
-        val rawId = findRawContactId(contactId)?.toLong() ?: error("no raw contact")
+        val rawIds = findRawContactIds(contactId).ifEmpty { error("no raw contact") }
         val source = ImageDecoder.createSource(context.contentResolver, image)
         val bitmap = ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
             // גם לפי הצלע הארוכה: תמונה צרה וארוכה מאוד (100000x700) לא הוקטנה בכלל
@@ -150,13 +150,21 @@ class ContactsRepository(private val context: Context) {
             centerSquare(bitmap).compress(Bitmap.CompressFormat.JPEG, 88, out)
             out.toByteArray()
         }
-        val photoUri = Uri.withAppendedPath(
-            ContentUris.withAppendedId(ContactsContract.RawContacts.CONTENT_URI, rawId),
-            ContactsContract.RawContacts.DisplayPhoto.CONTENT_DIRECTORY
-        )
-        context.contentResolver.openAssetFileDescriptor(photoUri, "rw")?.use { fd ->
-            fd.createOutputStream().use { it.write(bytes) }
-        } ?: error("no photo descriptor")
+        // איש קשר מאוחד מכמה חשבונות: התמונה נכתבת לכל ה-RawContact, אחרת אחר מהם יכול להציג תמונה אחרת
+        var written = 0
+        rawIds.forEach { rawId ->
+            val photoUri = Uri.withAppendedPath(
+                ContentUris.withAppendedId(ContactsContract.RawContacts.CONTENT_URI, rawId.toLong()),
+                ContactsContract.RawContacts.DisplayPhoto.CONTENT_DIRECTORY
+            )
+            runCatching {
+                context.contentResolver.openAssetFileDescriptor(photoUri, "rw")?.use { fd ->
+                    fd.createOutputStream().use { it.write(bytes) }
+                    written++
+                }
+            }
+        }
+        if (written == 0) error("no photo descriptor")
         true
     } catch (e: Exception) {
         android.util.Log.e("ContactsRepository", "Error setting photo", e)
@@ -164,12 +172,15 @@ class ContactsRepository(private val context: Context) {
     }
 
     fun removePhoto(contactId: String): Boolean = try {
-        val rawId = findRawContactId(contactId) ?: error("no raw contact")
-        context.contentResolver.delete(
-            ContactsContract.Data.CONTENT_URI,
-            "${ContactsContract.Data.RAW_CONTACT_ID} = ? AND ${ContactsContract.Data.MIMETYPE} = ?",
-            arrayOf(rawId, ContactsContract.CommonDataKinds.Photo.CONTENT_ITEM_TYPE)
-        )
+        // כל ה-RawContact של איש הקשר, לא רק הראשון - אחרת התמונה נשארת באחרים
+        val rawIds = findRawContactIds(contactId).ifEmpty { error("no raw contact") }
+        rawIds.forEach { rawId ->
+            context.contentResolver.delete(
+                ContactsContract.Data.CONTENT_URI,
+                "${ContactsContract.Data.RAW_CONTACT_ID} = ? AND ${ContactsContract.Data.MIMETYPE} = ?",
+                arrayOf(rawId, ContactsContract.CommonDataKinds.Photo.CONTENT_ITEM_TYPE)
+            )
+        }
         true
     } catch (e: Exception) {
         false
@@ -261,19 +272,19 @@ class ContactsRepository(private val context: Context) {
     fun updateContactDetails(contactId: String, details: ContactDetails): Boolean {
         return try {
             val rawContactId = findRawContactId(contactId) ?: return false
-            upsertDataRow(rawContactId, ContactsContract.CommonDataKinds.Email.CONTENT_ITEM_TYPE) { values ->
+            upsertDataRow(rawContactId, ContactsContract.CommonDataKinds.Email.CONTENT_ITEM_TYPE, details.email.isBlank()) { values ->
                 values.put(ContactsContract.CommonDataKinds.Email.ADDRESS, details.email)
                 values.put(ContactsContract.CommonDataKinds.Email.TYPE, ContactsContract.CommonDataKinds.Email.TYPE_HOME)
             }
-            upsertDataRow(rawContactId, ContactsContract.CommonDataKinds.Organization.CONTENT_ITEM_TYPE) { values ->
+            upsertDataRow(rawContactId, ContactsContract.CommonDataKinds.Organization.CONTENT_ITEM_TYPE, details.organization.isBlank() && details.jobTitle.isBlank()) { values ->
                 values.put(ContactsContract.CommonDataKinds.Organization.COMPANY, details.organization)
                 values.put(ContactsContract.CommonDataKinds.Organization.TITLE, details.jobTitle)
             }
-            upsertDataRow(rawContactId, ContactsContract.CommonDataKinds.StructuredPostal.CONTENT_ITEM_TYPE) { values ->
+            upsertDataRow(rawContactId, ContactsContract.CommonDataKinds.StructuredPostal.CONTENT_ITEM_TYPE, details.address.isBlank()) { values ->
                 values.put(ContactsContract.CommonDataKinds.StructuredPostal.FORMATTED_ADDRESS, details.address)
                 values.put(ContactsContract.CommonDataKinds.StructuredPostal.TYPE, ContactsContract.CommonDataKinds.StructuredPostal.TYPE_HOME)
             }
-            upsertDataRow(rawContactId, ContactsContract.CommonDataKinds.Note.CONTENT_ITEM_TYPE) { values ->
+            upsertDataRow(rawContactId, ContactsContract.CommonDataKinds.Note.CONTENT_ITEM_TYPE, details.notes.isBlank()) { values ->
                 values.put(ContactsContract.CommonDataKinds.Note.NOTE, details.notes)
             }
             true
@@ -289,6 +300,18 @@ class ContactsRepository(private val context: Context) {
         false
     }
 
+    private fun findRawContactIds(contactId: String): List<String> {
+        val ids = mutableListOf<String>()
+        context.contentResolver.query(
+            ContactsContract.RawContacts.CONTENT_URI,
+            arrayOf(ContactsContract.RawContacts._ID),
+            "${ContactsContract.RawContacts.CONTACT_ID} = ?",
+            arrayOf(contactId),
+            null
+        )?.use { cursor -> while (cursor.moveToNext()) ids += cursor.getString(0) }
+        return ids
+    }
+
     private fun findRawContactId(contactId: String): String? {
         return context.contentResolver.query(
             ContactsContract.RawContacts.CONTENT_URI,
@@ -299,7 +322,8 @@ class ContactsRepository(private val context: Context) {
         )?.use { cursor -> if (cursor.moveToFirst()) cursor.getString(0) else null }
     }
 
-    private fun upsertDataRow(rawContactId: String, mimeType: String, fill: (ContentValues) -> Unit) {
+    /** [empty]: השדה נוקה - שורה קיימת נמחקת (לא נכתבת שורה ריקה) ושורה חדשה לא נוצרת. */
+    private fun upsertDataRow(rawContactId: String, mimeType: String, empty: Boolean, fill: (ContentValues) -> Unit) {
         val existingId = context.contentResolver.query(
             ContactsContract.Data.CONTENT_URI,
             arrayOf(ContactsContract.Data._ID),
@@ -307,6 +331,11 @@ class ContactsRepository(private val context: Context) {
             arrayOf(rawContactId, mimeType),
             null
         )?.use { cursor -> if (cursor.moveToFirst()) cursor.getString(0) else null }
+
+        if (empty) {
+            if (existingId != null) context.contentResolver.delete(ContactsContract.Data.CONTENT_URI, "${ContactsContract.Data._ID} = ?", arrayOf(existingId))
+            return
+        }
 
         val values = ContentValues().apply {
             put(ContactsContract.Data.RAW_CONTACT_ID, rawContactId)
