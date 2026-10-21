@@ -26,6 +26,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -104,6 +105,9 @@ fun QrScannerScreen(theme: FutureTheme, onBack: () -> Unit) {
 private fun QrResultView(value: String, theme: FutureTheme, onScanAgain: () -> Unit) {
     val context = LocalContext.current
     val isUrl = value.startsWith("http://") || value.startsWith("https://")
+    // פוקוס התחלתי על "העתק" - הכפתור הראשון אחרי הסריקה, כדי ש-OK לא יפתח קישור בטעות
+    val copyFocus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { runCatching { copyFocus.requestFocus() } }
 
     Column(
         modifier = Modifier
@@ -124,9 +128,20 @@ private fun QrResultView(value: String, theme: FutureTheme, onScanAgain: () -> U
             maxLines = 5,
             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
         )
+        if (isUrl) {
+            // הדומיין מוצג לפני פתיחת הקישור, כדי לדעת לאן הוא מוביל
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                "אתר: ⁦${Uri.parse(value).host.orEmpty()}⁩",
+                color = theme.mutedTextColor,
+                fontSize = FutureTypography.caption,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            )
+        }
         Spacer(modifier = Modifier.height(20.dp))
 
-        QrActionButton("העתק", theme = theme) {
+        QrActionButton("העתק", theme = theme, focusRequester = copyFocus) {
             val clipboard = context.getSystemService(ClipboardManager::class.java)
             clipboard.setPrimaryClip(ClipData.newPlainText("qr", value))
             Toast.makeText(context, "הועתק", Toast.LENGTH_SHORT).show()
@@ -149,9 +164,16 @@ private fun QrResultView(value: String, theme: FutureTheme, onScanAgain: () -> U
 }
 
 @Composable
-private fun QrActionButton(label: String, theme: FutureTheme, isPrimary: Boolean = true, onClick: () -> Unit) {
+private fun QrActionButton(
+    label: String,
+    theme: FutureTheme,
+    isPrimary: Boolean = true,
+    focusRequester: FocusRequester? = null,
+    onClick: () -> Unit,
+) {
     FutureButton(
         label, theme, onClick, Modifier.fillMaxWidth(0.8f),
         variant = if (isPrimary) FutureButtonVariant.Primary else FutureButtonVariant.Secondary,
+        focusRequester = focusRequester,
     )
 }

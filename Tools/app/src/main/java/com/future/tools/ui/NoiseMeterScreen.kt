@@ -7,6 +7,8 @@ import android.Manifest
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
+import android.os.Handler
+import android.os.Looper
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -30,44 +32,60 @@ import kotlin.math.roundToInt
 
 private const val SAMPLE_RATE = 44100
 
+/** מצב המדידה: עוצמה, ואם המיקרופון לא זמין (תפוס באפליקציה אחרת או נכשל באתחול). */
+private data class NoiseState(val db: Float, val micUnavailable: Boolean)
+
 /** קורא רמת עוצמה גולמית מהמיקרופון וממיר אותה לדציבלים משוערים (יחסי - לא
  * כיול אבסולוטי מול מד SPL מקצועי, אבל שימושי להשוואה בין סביבות). */
 @Composable
-private fun rememberDecibels(enabled: Boolean): Float {
+private fun rememberDecibels(enabled: Boolean): NoiseState {
     var db by remember { mutableFloatStateOf(0f) }
+    var micUnavailable by remember { mutableStateOf(false) }
+    // הקריאות מגיעות מ-Thread ההקלטה - ה-state של Compose מתעדכן רק מה-Main thread
+    val mainHandler = remember { Handler(Looper.getMainLooper()) }
 
     DisposableEffect(enabled) {
         if (!enabled) return@DisposableEffect onDispose {}
 
-        var record: AudioRecord? = null
-        var running = true
+        val running = java.util.concurrent.atomic.AtomicBoolean(true)
         val thread = Thread {
+            var record: AudioRecord? = null
             try {
                 val minBufSize = AudioRecord.getMinBufferSize(
                     SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT
                 )
-                if (minBufSize <= 0) return@Thread
+                if (minBufSize <= 0) {
+                    mainHandler.post { micUnavailable = true }
+                    return@Thread
+                }
                 val bufSize = max(minBufSize, 2048)
                 @Suppress("MissingPermission")
-                record = AudioRecord(
+                val rec = AudioRecord(
                     MediaRecorder.AudioSource.MIC, SAMPLE_RATE,
                     AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, bufSize
                 )
-                if (record?.state != AudioRecord.STATE_INITIALIZED) return@Thread
-                record?.startRecording()
+                record = rec
+                if (rec.state != AudioRecord.STATE_INITIALIZED) {
+                    // המיקרופון תפוס באפליקציה אחרת - מציגים את זה, לא 0 dB "שקט"
+                    mainHandler.post { micUnavailable = true }
+                    return@Thread
+                }
+                rec.startRecording()
                 val buffer = ShortArray(bufSize)
-                while (running) {
-                    val read = record?.read(buffer, 0, bufSize) ?: 0
+                while (running.get()) {
+                    val read = rec.read(buffer, 0, bufSize)
                     if (read > 0) {
                         var sum = 0.0
                         for (i in 0 until read) sum += (buffer[i] * buffer[i]).toDouble()
                         val rms = kotlin.math.sqrt(sum / read)
                         val calculatedDb = if (rms > 1.0) 20 * log10(rms) else 0.0
-                        db = calculatedDb.toFloat().coerceIn(0f, 120f)
+                        val value = calculatedDb.toFloat().coerceIn(0f, 120f)
+                        mainHandler.post { db = value }
                     }
                 }
             } catch (e: Exception) {
-                // אין הרשאה/מיקרופון תפוס - נשארים על 0
+                // אין הרשאה/מיקרופון תפוס - מסמנים שהמיקרופון לא זמין
+                mainHandler.post { micUnavailable = true }
             } finally {
                 try { record?.stop() } catch (e: Exception) {
                     android.util.Log.w("NoiseMeterScreen", "rememberDecibels failed", e)
@@ -78,12 +96,13 @@ private fun rememberDecibels(enabled: Boolean): Float {
         thread.start()
 
         onDispose {
-            running = false
+            // דגל volatile-כמו: הלולאה נעצרת אחרי read הבא, וה-finally משחרר את המיקרופון
+            running.set(false)
             thread.interrupt()
         }
     }
 
-    return db
+    return NoiseState(db, micUnavailable)
 }
 
 private fun levelLabel(db: Float): String = when {
@@ -98,7 +117,8 @@ private fun levelLabel(db: Float): String = when {
 @Composable
 fun NoiseMeterScreen(theme: FutureTheme, onBack: () -> Unit) {
     val hasPermission by rememberRuntimePermission(Manifest.permission.RECORD_AUDIO)
-    val db = rememberDecibels(enabled = hasPermission)
+    val noise = rememberDecibels(enabled = hasPermission)
+    val db = noise.db
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
@@ -113,12 +133,19 @@ fun NoiseMeterScreen(theme: FutureTheme, onBack: () -> Unit) {
                             fontSize = FutureTypography.body,
                             modifier = Modifier.padding(horizontal = 32.dp)
                         )
+                    } else if (noise.micUnavailable) {
+                        Text(
+                            "המיקרופון בשימוש באפליקציה אחרת או לא זמין כרגע",
+                            color = theme.mutedTextColor,
+                            fontSize = FutureTypography.body,
+                            modifier = Modifier.padding(horizontal = 32.dp)
+                        )
                     } else {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             NoiseGauge(db = db, theme = theme)
                             Spacer(modifier = Modifier.height(20.dp))
                             // LRI…PDI: בלי זה ה-BiDi של המסך הציג "dB 19".
-                            Text("\u2066${db.roundToInt()} dB\u2069", color = theme.textColor, fontSize = FutureTypography.display, fontWeight = FontWeight.Light)
+                            Text("⁦${db.roundToInt()} dB⁩", color = theme.textColor, fontSize = FutureTypography.display, fontWeight = FontWeight.Light)
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(levelLabel(db), color = theme.accentColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Medium)
                         }

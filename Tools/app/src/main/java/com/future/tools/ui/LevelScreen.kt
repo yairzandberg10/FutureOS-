@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -31,15 +32,20 @@ import kotlin.math.roundToInt
 
 private const val LEVEL_THRESHOLD_DEG = 2f
 
+/** הטיה: null עד הקריאה הראשונה מהחיישן, כדי לא להציג "מאוזן" לפני שנמדד משהו. */
+private data class TiltState(val tilt: Offset?, val hasSensor: Boolean)
+
 /** מחזיר את זווית ההטיה של המכשיר (ציר X ו-Y, ב-90 = שכיבה שטוחה לגמרי) מחיישן התאוצה, מוחלק בפילטר low-pass. */
 @Composable
-private fun rememberTilt(): Offset {
+private fun rememberTilt(): TiltState {
     val context = LocalContext.current
-    var tilt by remember { mutableStateOf(Offset.Zero) }
+    var tilt by remember { mutableStateOf<Offset?>(null) }
+    var hasSensor by remember { mutableStateOf(true) }
 
     DisposableEffect(Unit) {
         val sensorManager = context.getSystemService(android.content.Context.SENSOR_SERVICE) as SensorManager
         val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+        hasSensor = accelerometer != null
         var smoothedX = 0f
         var smoothedY = 0f
 
@@ -64,13 +70,14 @@ private fun rememberTilt(): Offset {
         onDispose { sensorManager.unregisterListener(listener) }
     }
 
-    return tilt
+    return TiltState(tilt, hasSensor)
 }
 
 @Composable
 fun LevelScreen(theme: FutureTheme, onBack: () -> Unit) {
-    val tilt = rememberTilt()
-    val isLevel = abs(tilt.x) < LEVEL_THRESHOLD_DEG && abs(tilt.y) < LEVEL_THRESHOLD_DEG
+    val state = rememberTilt()
+    val current = state.tilt
+    val isLevel = current != null && abs(current.x) < LEVEL_THRESHOLD_DEG && abs(current.y) < LEVEL_THRESHOLD_DEG
     val bubbleColor by animateColorAsState(
         if (isLevel) theme.successColor else theme.accentColor,
         FutureMotion.focusColorSpec,
@@ -83,22 +90,37 @@ fun LevelScreen(theme: FutureTheme, onBack: () -> Unit) {
                 ToolsHeader(title = "פלס", theme = theme, onBack = onBack)
 
                 Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        LevelBubble(tilt = tilt, bubbleColor = bubbleColor, theme = theme)
-                        Spacer(modifier = Modifier.height(24.dp))
+                    if (!state.hasSensor) {
                         Text(
-                            "%.1f° / %.1f°".format(tilt.x, tilt.y),
-                            color = theme.textColor,
-                            fontSize = FutureTypography.headline,
-                            fontWeight = FontWeight.Light
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            if (isLevel) "מאוזן" else "הטה עד לאיזון",
-                            color = if (isLevel) bubbleColor else theme.mutedTextColor,
+                            "לא נמצא חיישן תאוצה במכשיר הזה",
+                            color = theme.mutedTextColor,
                             fontSize = FutureTypography.body,
-                            fontWeight = if (isLevel) FontWeight.Bold else FontWeight.Normal
+                            modifier = Modifier.padding(horizontal = 32.dp),
+                            textAlign = TextAlign.Center,
                         )
+                    } else {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            LevelBubble(tilt = current ?: Offset.Zero, bubbleColor = bubbleColor, theme = theme)
+                            Spacer(modifier = Modifier.height(24.dp))
+                            // LRI…PDI: בלי זה המינוס והמעלות מתהפכים בטקסט העברי
+                            Text(
+                                if (current == null) "-- / --" else "⁦%.1f° / %.1f°⁩".format(current.x, current.y),
+                                color = theme.textColor,
+                                fontSize = FutureTypography.headline,
+                                fontWeight = FontWeight.Light
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                when {
+                                    current == null -> "ממתין לחיישן"
+                                    isLevel -> "מאוזן"
+                                    else -> "הטה עד לאיזון"
+                                },
+                                color = if (isLevel) bubbleColor else theme.mutedTextColor,
+                                fontSize = FutureTypography.body,
+                                fontWeight = if (isLevel) FontWeight.Bold else FontWeight.Normal
+                            )
+                        }
                     }
                 }
             }

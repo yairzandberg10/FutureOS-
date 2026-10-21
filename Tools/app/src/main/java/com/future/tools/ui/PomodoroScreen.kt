@@ -6,9 +6,8 @@ import com.future.sharednav.theme.subtleTextColor
 import com.future.sharednav.theme.mutedTextColor
 
 import com.future.sharednav.theme.FutureTypography
-import android.os.Build
+import android.os.SystemClock
 import android.os.VibrationEffect
-import android.os.Vibrator
 import android.os.VibratorManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -48,12 +47,8 @@ private fun PomodoroPhase.color(theme: FutureTheme): Color = when (this) {
 
 private fun vibrate(context: android.content.Context) {
     try {
-        val vibrator = if (Build.VERSION.SDK_INT >= 31) {
-            (context.getSystemService(android.content.Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager).defaultVibrator
-        } else {
-            @Suppress("DEPRECATION")
-            context.getSystemService(android.content.Context.VIBRATOR_SERVICE) as Vibrator
-        }
+        // minSdk = 31: VibratorManager תמיד קיים
+        val vibrator = (context.getSystemService(android.content.Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager).defaultVibrator
         vibrator.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 300, 150, 300), -1))
     } catch (e: Exception) {
         android.util.Log.w("PomodoroScreen", "vibrate failed", e)
@@ -86,9 +81,13 @@ fun PomodoroScreen(theme: FutureTheme, onBack: () -> Unit) {
     }
 
     LaunchedEffect(isRunning) {
+        // מפחיתים את הזמן האמיתי שעבר בין הטיקים, ולא 200ms קבועים - אחרת הטיימר מאחר מהשעון
+        var last = SystemClock.elapsedRealtime()
         while (isRunning) {
             delay(200)
-            remainingMillis -= 200
+            val now = SystemClock.elapsedRealtime()
+            remainingMillis -= now - last
+            last = now
             if (remainingMillis <= 0) {
                 startNextPhase()
             }
@@ -127,17 +126,24 @@ fun PomodoroScreen(theme: FutureTheme, onBack: () -> Unit) {
                     }
                 }
 
-                Row(
+                // התחל בשורה עליונה ברוחב מלא, ודלג/איפוס בשורה תחתונה - שלושה כפתורים בשורה
+                // חתכו את התוויות ("התח", "איפו") בגלל הריפוד הפנימי של הכפתור
+                Column(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = FutureDimens.screenPadding, vertical = FutureDimens.spacingXl),
-                    horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm)
+                    verticalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm)
                 ) {
                     FutureButton(
                         if (isRunning) "השהה" else "התחל", theme, { isRunning = !isRunning },
-                        modifier = Modifier.weight(1f),
+                        fillMaxWidth = true,
                         focusRequester = startFocus,
                     )
-                    FutureButton("דלג", theme, { startNextPhase(completed = false) }, modifier = Modifier.weight(1f), variant = FutureButtonVariant.Secondary)
-                    FutureButton("איפוס", theme, { resetAll() }, modifier = Modifier.weight(1f), variant = FutureButtonVariant.Secondary)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm)
+                    ) {
+                        FutureButton("דלג", theme, { startNextPhase(completed = false) }, modifier = Modifier.weight(1f), variant = FutureButtonVariant.Secondary)
+                        FutureButton("איפוס", theme, { resetAll() }, modifier = Modifier.weight(1f), variant = FutureButtonVariant.Secondary)
+                    }
                 }
             }
         }

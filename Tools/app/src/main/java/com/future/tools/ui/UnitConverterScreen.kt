@@ -75,6 +75,11 @@ private enum class ConvCategory(val label: String, val units: List<UnitDef>) {
 }
 
 private val resultFormat = DecimalFormat("#,##0.####")
+// ערכים קטנים (למשל 1 ס"מ במייל) לא נעגלים ל-0 - מציגים בסימון מדעי
+private val smallResultFormat = DecimalFormat("0.00E0")
+
+private fun formatResult(value: Double): String =
+    if (value != 0.0 && Math.abs(value) < 0.001) smallResultFormat.format(value) else resultFormat.format(value)
 
 @Composable
 fun UnitConverterScreen(theme: FutureTheme, onBack: () -> Unit) {
@@ -204,7 +209,7 @@ fun UnitConverterScreen(theme: FutureTheme, onBack: () -> Unit) {
                 Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
                     UnitChip(units[toIndex].label, theme = theme) { toIndex = (toIndex + 1) % units.size }
                     Text(
-                        resultFormat.format(resultValue),
+                        formatResult(resultValue),
                         color = theme.accentColor,
                         fontSize = FutureTypography.display,
                         fontWeight = FontWeight.Medium,

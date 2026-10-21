@@ -13,6 +13,8 @@ import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.os.Handler
+import android.os.Looper
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -64,6 +66,7 @@ private fun passwordStrength(length: Int, useUpper: Boolean, useDigits: Boolean,
 @Composable
 fun PasswordGeneratorScreen(theme: FutureTheme, onBack: () -> Unit) {
     val context = LocalContext.current
+    val clearHandler = remember { Handler(Looper.getMainLooper()) }
     var length by remember { mutableIntStateOf(12) }
     var useUpper by remember { mutableStateOf(true) }
     var useDigits by remember { mutableStateOf(true) }
@@ -112,6 +115,14 @@ fun PasswordGeneratorScreen(theme: FutureTheme, onBack: () -> Unit) {
                                 putBoolean("android.content.extra.IS_SENSITIVE", true)
                             }
                         })
+                        // מנקים את הלוח אחרי דקה, רק אם עדיין שם הסיסמה הזו (לא מוחקים העתקה חדשה של המשתמש).
+                        // IS_SENSITIVE נתמך רק מ-API 33, והמכשיר על API 31.
+                        clearHandler.removeCallbacksAndMessages(null)
+                        clearHandler.postDelayed({
+                            if (clipboard.primaryClip?.getItemAt(0)?.text?.toString() == password) {
+                                clipboard.setPrimaryClip(ClipData.newPlainText("", ""))
+                            }
+                        }, 60_000L)
                         Toast.makeText(context, "הסיסמה הועתקה", Toast.LENGTH_SHORT).show()
                     }
                 }

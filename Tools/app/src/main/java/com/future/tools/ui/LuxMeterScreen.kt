@@ -27,12 +27,13 @@ import androidx.compose.ui.unit.sp
 import com.future.sharednav.theme.FutureTheme
 import kotlin.math.roundToInt
 
-private data class LuxState(val lux: Float, val hasSensor: Boolean)
+// lux = null עד הקריאה הראשונה - בלי זה המסך מציג "חושך מוחלט" לפני שנמדד משהו
+private data class LuxState(val lux: Float?, val hasSensor: Boolean)
 
 @Composable
 private fun rememberLux(): LuxState {
     val context = LocalContext.current
-    var lux by remember { mutableFloatStateOf(0f) }
+    var lux by remember { mutableStateOf<Float?>(null) }
     var hasSensor by remember { mutableStateOf(true) }
 
     DisposableEffect(Unit) {
@@ -42,7 +43,9 @@ private fun rememberLux(): LuxState {
 
         val listener = object : SensorEventListener {
             override fun onSensorChanged(event: SensorEvent) {
-                lux += (event.values[0] - lux) * 0.3f
+                val reading = event.values[0]
+                val current = lux
+                lux = if (current == null) reading else current + (reading - current) * 0.3f
             }
             override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) {}
         }
@@ -85,12 +88,19 @@ fun LuxMeterScreen(theme: FutureTheme, onBack: () -> Unit) {
                         )
                     } else {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            LuxGauge(lux = state.lux, theme = theme)
+                            val lux = state.lux
+                            LuxGauge(lux = lux ?: 0f, theme = theme)
                             Spacer(modifier = Modifier.height(20.dp))
                             // LRI…PDI: בלי זה ה-BiDi של המסך הציג "lux 333".
-                            Text("\u2066${state.lux.roundToInt()} lux\u2069", color = theme.textColor, fontSize = FutureTypography.display, fontWeight = FontWeight.Light)
+                            Text(
+                                if (lux == null) "-- lux" else "\u2066${lux.roundToInt()} lux\u2069",
+                                color = theme.textColor, fontSize = FutureTypography.display, fontWeight = FontWeight.Light
+                            )
                             Spacer(modifier = Modifier.height(6.dp))
-                            Text(lightingLabel(state.lux), color = theme.accentColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Medium)
+                            Text(
+                                if (lux == null) "ממתין לחיישן" else lightingLabel(lux),
+                                color = theme.accentColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Medium
+                            )
                         }
                     }
                 }

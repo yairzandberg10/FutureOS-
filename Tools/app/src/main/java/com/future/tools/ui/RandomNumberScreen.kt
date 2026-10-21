@@ -147,7 +147,9 @@ private fun RangeField(label: String, value: String, isActive: Boolean, theme: F
         Text(
             value,
             color = theme.textColor,
-            fontSize = FutureTypography.display,
+            // מספר ארוך (עד 10 ספרות) בגופן רגיל נשבר לשתי שורות - מקטינים ושורה אחת בלבד
+            fontSize = if (value.length > 7) FutureTypography.headline else FutureTypography.display,
+            maxLines = 1,
             fontWeight = FutureTypography.weightLight,
             textAlign = TextAlign.Center,
             modifier = Modifier

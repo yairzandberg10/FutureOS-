@@ -31,11 +31,13 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.future.sharednav.nav.digitForKey
 import com.future.sharednav.theme.FutureTheme
+import java.math.RoundingMode
 import java.text.DecimalFormat
 import kotlin.math.pow
 import com.future.sharednav.focus.animateFocusColor
 
-private val moneyFormat = DecimalFormat("#,##0.##")
+// אותו פורמט ואותו עיגול כמו במחשבון הטיפים - מספר של 2 ספרות אחרי הנקודה בכל המסכים הכספיים
+private val moneyFormat = DecimalFormat("#,##0.00").apply { roundingMode = RoundingMode.HALF_UP }
 
 private enum class FinanceMode(val label: String) { DISCOUNT("הנחה"), TAX("מע\"מ"), LOAN("הלוואה") }
 

@@ -109,7 +109,7 @@ fun TextScannerScreen(theme: FutureTheme, onBack: () -> Unit) {
                     }
 
                     Text(
-                        "התמיכה כרגע היא לטקסט לטיני וספרות (לא עברית) · הפניה למצלמה",
+                        "זיהוי טקסט לטיני וספרות בלבד (לא עברית) · הצב את הטקסט מול המצלמה",
                         color = theme.subtleTextColor,
                         fontSize = FutureTypography.caption,
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),

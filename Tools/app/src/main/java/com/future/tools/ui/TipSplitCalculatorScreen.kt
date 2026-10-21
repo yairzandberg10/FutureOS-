@@ -29,10 +29,12 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.future.sharednav.nav.digitForKey
 import com.future.sharednav.theme.FutureTheme
+import java.math.RoundingMode
 import java.text.DecimalFormat
 
 // סכומי כסף תמיד עם שתי ספרות אחרי הנקודה ("3,602.70" ולא "3,602.7").
-private val moneyFormat = DecimalFormat("#,##0.00")
+// HALF_UP: ברירת המחדל של DecimalFormat היא HALF_EVEN, שהציגה 4.965 כ-4.96
+private val moneyFormat = DecimalFormat("#,##0.00").apply { roundingMode = RoundingMode.HALF_UP }
 private val TIP_PRESETS = listOf(10, 15, 18, 20)
 
 @Composable

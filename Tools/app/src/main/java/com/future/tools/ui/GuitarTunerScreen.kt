@@ -6,6 +6,8 @@ import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.mutedTextColor
 import com.future.sharednav.theme.subtleTextColor
 import android.Manifest
+import android.os.Handler
+import android.os.Looper
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
@@ -120,6 +122,8 @@ private fun detectPitch(buffer: FloatArray, diff: FloatArray): Double? {
 @Composable
 private fun rememberDetectedPitch(enabled: Boolean): Double? {
     var pitch by remember { mutableStateOf<Double?>(null) }
+    // הקריאות מגיעות מ-Thread ההקלטה - ה-state של Compose מתעדכן רק מה-Main thread
+    val mainHandler = remember { Handler(Looper.getMainLooper()) }
 
     DisposableEffect(enabled) {
         if (!enabled) return@DisposableEffect onDispose {}
@@ -160,13 +164,14 @@ private fun rememberDetectedPitch(enabled: Boolean): Double? {
                     val detected = if (rms > 0.01) detectPitch(samples, diff) else null
                     if (detected == null || detected < 60.0 || detected > 1200.0) {
                         // שומרים את הקריאה האחרונה עוד רגע קצר כדי שהמחוג לא יהבהב בין פריטות
-                        if (++silentFrames > 8) { recent.clear(); pitch = null }
+                        if (++silentFrames > 8) { recent.clear(); mainHandler.post { pitch = null } }
                         continue
                     }
                     silentFrames = 0
                     recent.addLast(detected)
                     if (recent.size > 5) recent.removeFirst()
-                    pitch = recent.sorted()[recent.size / 2]
+                    val median = recent.sorted()[recent.size / 2]
+                    mainHandler.post { pitch = median }
                 }
             } catch (e: Exception) {
                 android.util.Log.w("GuitarTuner", "pitch capture failed", e)
@@ -232,7 +237,7 @@ fun GuitarTunerScreen(theme: FutureTheme, onBack: () -> Unit) {
                 ToolsHeader(title = "מכוון גיטרה", theme = theme, onBack = onBack)
 
                 Text(
-                    "${tuning.name} · A4 = ${a4}Hz" + if (selected == -1) " · זיהוי אוטומטי" else "",
+                    "${tuning.name} · ⁦A4 = ${a4}Hz⁩" + if (selected == -1) " · זיהוי אוטומטי" else "",
                     color = theme.mutedTextColor,
                     fontSize = FutureTypography.summary,
                     textAlign = TextAlign.Center,
@@ -273,7 +278,7 @@ fun GuitarTunerScreen(theme: FutureTheme, onBack: () -> Unit) {
                                 fontWeight = FontWeight.Light,
                             )
                             Text(
-                                if (pitch != null) "%.1f Hz".format(pitch) else "נגן מיתר אחד",
+                                if (pitch != null) "⁦%.1f Hz⁩".format(pitch) else "נגן מיתר אחד",
                                 color = theme.mutedTextColor,
                                 fontSize = FutureTypography.bodyLarge,
                             )
@@ -284,8 +289,8 @@ fun GuitarTunerScreen(theme: FutureTheme, onBack: () -> Unit) {
                                 when {
                                     centsOff == null -> " "
                                     inTune -> "מכוון"
-                                    centsOff < 0 -> "נמוך - הדק את המיתר (${centsOff.roundToInt()})"
-                                    else -> "גבוה - שחרר את המיתר (+${centsOff.roundToInt()})"
+                                    centsOff < 0 -> "נמוך - הדק את המיתר (⁦${centsOff.roundToInt()}⁩)"
+                                    else -> "גבוה - שחרר את המיתר (⁦+${centsOff.roundToInt()}⁩)"
                                 },
                                 color = when {
                                     centsOff == null -> theme.mutedTextColor
