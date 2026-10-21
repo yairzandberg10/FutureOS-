@@ -76,7 +76,8 @@ class MainActivity : ComponentActivity() {
             FutureAppTheme(futureTheme) {
                 KeyboardSetupScreen(
                     onOpenInputMethodSettings = {
-                        startActivity(Intent(Settings.ACTION_INPUT_METHOD_SETTINGS))
+                        // K-21: מכשיר בלי מסך הגדרות כזה לא מפיל את האפליקציה
+                        runCatching { startActivity(Intent(Settings.ACTION_INPUT_METHOD_SETTINGS)) }
                     }
                 )
             }
@@ -96,6 +97,34 @@ fun KeyboardSetupScreen(onOpenInputMethodSettings: () -> Unit) {
         ActivityResultContracts.RequestPermission()
     ) { granted -> micGranted = granted }
 
+    // מצב ההפעלה של המקלדת בהגדרות המערכת: 0 לא מופעלת, 1 מופעלת אבל לא נבחרה, 2 פעילה
+    fun readImeState(): Int {
+        val enabled = runCatching {
+            val imm = context.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+            imm.enabledInputMethodList.any { it.packageName == context.packageName }
+        }.getOrDefault(false)
+        val current = Settings.Secure.getString(context.contentResolver, Settings.Secure.DEFAULT_INPUT_METHOD).orEmpty()
+        return when {
+            current.startsWith(context.packageName + "/") -> 2
+            enabled -> 1
+            else -> 0
+        }
+    }
+    var imeState by remember { mutableStateOf(readImeState()) }
+
+    // K-21 / KB-NEW-02: בחזרה למסך (מההגדרות) בודקים מחדש את ההרשאה ואת מצב המקלדת
+    val resumeOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(resumeOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                micGranted = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+                imeState = readImeState()
+            }
+        }
+        resumeOwner.lifecycle.addObserver(observer)
+        onDispose { resumeOwner.lifecycle.removeObserver(observer) }
+    }
+
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Surface(modifier = Modifier.fillMaxSize()) {
             Column(
@@ -105,21 +134,32 @@ fun KeyboardSetupScreen(onOpenInputMethodSettings: () -> Unit) {
             ) {
                 Text(stringResource(R.string.settings_title), style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
                 Text(
-                    stringResource(R.string.enable_in_settings),
+                    stringResource(
+                        when (imeState) {
+                            2 -> R.string.setup_ready
+                            1 -> R.string.setup_select_active
+                            else -> R.string.enable_in_settings
+                        }
+                    ),
                     modifier = Modifier.padding(top = 16.dp, bottom = 24.dp),
                     textAlign = TextAlign.Center,
                     style = MaterialTheme.typography.bodyMedium
                 )
                 FutureButton(stringResource(R.string.open_input_method_settings), LocalFutureTheme.current, onOpenInputMethodSettings)
-                Text(
-                    stringResource(R.string.voice_permission_summary),
-                    modifier = Modifier.padding(top = 32.dp, bottom = 16.dp),
-                    textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.bodyMedium
-                )
                 if (micGranted) {
-                    Text(stringResource(R.string.voice_permission_granted), textAlign = TextAlign.Center)
+                    // KB-NEW-01: רק הודעה אחת - בלי "יש לאשר" מעל "אושרה"
+                    Text(
+                        stringResource(R.string.voice_permission_granted),
+                        modifier = Modifier.padding(top = 32.dp),
+                        textAlign = TextAlign.Center,
+                    )
                 } else {
+                    Text(
+                        stringResource(R.string.voice_permission_summary),
+                        modifier = Modifier.padding(top = 32.dp, bottom = 16.dp),
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
                     FutureButton(stringResource(R.string.voice_permission_grant), LocalFutureTheme.current, { requestMicPermission.launch(Manifest.permission.RECORD_AUDIO) })
                 }
             }

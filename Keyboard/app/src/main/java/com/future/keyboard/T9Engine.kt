@@ -34,6 +34,10 @@ class T9Engine(
     }
 
     companion object {
+        // K-13: תקרת מועמדות שמוחזרות, ומאגר העבודה לפני המיון לפי תדירות
+        private const val MAX_CANDIDATES = 50
+        private const val CANDIDATE_POOL = 400
+
         // מיפוי לכל שפה משותף לכל הסוויטה - חי ב-SharedKeypadNav (T9DigitMap),
         // כדי שלא יידרש יותר לשמור אותו מסונכרן ידנית מול T9Search.kt של החייגן/המוזיקה.
         private val ENGLISH_MAP = T9DigitMap.ENGLISH
@@ -231,7 +235,9 @@ class T9Engine(
     fun candidatesFor(digits: String, wordFrequency: (String) -> Int = { 0 }): List<String> {
         if (digits.isEmpty()) return emptyList()
         val base = externalCandidates?.invoke(digits) ?: digitIndex?.get(digits) ?: return emptyList()
-        return base.sortedByDescending { wordFrequency(it) }
+        // K-13: תקרה על הרשימה לפני המיון - רצף קצר יכול להתאים לאלפי מילים
+        val limited = if (base.size > CANDIDATE_POOL) base.subList(0, CANDIDATE_POOL) else base
+        return limited.sortedByDescending { wordFrequency(it) }.take(MAX_CANDIDATES)
     }
 
 }

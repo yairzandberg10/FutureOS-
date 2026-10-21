@@ -115,6 +115,7 @@ class KeyboardService : InputMethodService() {
     // (ראו onCreate) והקריאה ב-buildEngine קורית ב-thread הראשי.
     @Volatile
     private var hebrewDb: HebrewDictionaryDb? = null
+    @Volatile private var destroyed = false
     private var engine: T9Engine = T9Engine(T9Engine.Language.HEBREW, buildIndexInBackground = true)
 
     // כשה-DB עוד לא מוכן (null) מחזירים null, לא רשימה ריקה - כדי ש-T9Engine
@@ -339,7 +340,8 @@ class KeyboardService : InputMethodService() {
         // הפנימי הקטן, והמשתמש מקבל הודעה בשורת המועמדות במקום כלום.
         Thread {
             try {
-                hebrewDb = HebrewDictionaryDb(this)
+                val opened = HebrewDictionaryDb(this)
+                if (destroyed) opened.close() else hebrewDb = opened
             } catch (e: Throwable) {
                 android.util.Log.e("KeyboardService", "Hebrew dictionary unavailable", e)
                 android.os.Handler(android.os.Looper.getMainLooper()).post {
@@ -360,6 +362,12 @@ class KeyboardService : InputMethodService() {
 
     override fun onDestroy() {
         super.onDestroy()
+        // K-23: טיימר התמלול לא ירוץ אחרי שהשירות נסגר
+        voiceHandler.removeCallbacksAndMessages(null)
+        // K-11: הטעינה ברקע לא תעדכן שירות שנסגר, והמילון נסגר
+        destroyed = true
+        runCatching { hebrewDb?.close() }
+        hebrewDb = null
         releaseRecognizer()
         com.future.sharednav.nav.KeyPressBroadcasts.unregister(this, optionsKeyReceiver)
         com.future.sharednav.nav.KeyPressBroadcasts.unregister(this, starKeyReceiver)
@@ -584,11 +592,14 @@ class KeyboardService : InputMethodService() {
             return
         }
         val list = customWords.getOrPut(digitSequence) { mutableListOf() }
-        if (word !in list) {
+        val added = word !in list
+        if (added) {
             list.add(0, word)
             saveCustomWords()
         }
         refreshComposing(ic)
+        // K-18: משוב קצר שהמילה נוספה לניבוי
+        if (added) showPanelMessage("נוספה לניבוי")
     }
 
     // --- UI -------------------------------------------------------------------
@@ -625,6 +636,9 @@ class KeyboardService : InputMethodService() {
             setTextColor(mutedTextColor)
         }
         digitsView = TextView(this).apply {
+            // K-25: רצף ארוך נחתך מההתחלה ולא דוחף את המונה החוצה
+            maxLines = 1
+            ellipsize = android.text.TextUtils.TruncateAt.START
             textSize = 11f
             typeface = Typeface.MONOSPACE
             letterSpacing = 0.12f
@@ -827,8 +841,14 @@ class KeyboardService : InputMethodService() {
     // אינדיקציה לשפה הנוכחית רוב הזמן.
     override fun onEvaluateInputViewShown(): Boolean = true
 
+    // הערכה שהפאנל נבנה לפיה (K-05) - onStartInput בונה מחדש אם היא השתנתה
+    private var appliedDarkMode: Boolean? = null
+    private var appliedAccent: Int = 0
+
     private fun applyTheme() {
         val theme = ThemeClient.getTheme(this)
+        appliedDarkMode = theme.isDarkMode
+        appliedAccent = theme.primaryColor
         if (theme.isDarkMode) {
             backgroundColor = 0xFF1C1C1E.toInt()
             textColor = Color.WHITE
@@ -853,6 +873,11 @@ class KeyboardService : InputMethodService() {
 
     override fun onStartInput(attribute: EditorInfo?, restarting: Boolean) {
         super.onStartInput(attribute, restarting)
+        // K-05: החלפת מצב כהה/צבע הדגשה ב-FutureUI מתעדכנת בפאנל בלי להפעיל מחדש את ה-IME
+        if (appliedDarkMode != null) {
+            val t = ThemeClient.getTheme(this)
+            if (t.isDarkMode != appliedDarkMode || t.primaryColor != appliedAccent) setInputView(onCreateInputView())
+        }
         resetComposing()
         isPunctuationMenuOpen = false
         isLanguageMenuOpen = false
@@ -1474,7 +1499,8 @@ class KeyboardService : InputMethodService() {
                 KeyEvent.KEYCODE_DPAD_UP -> moveLanguageSelection(-1)
                 KeyEvent.KEYCODE_DPAD_DOWN -> moveLanguageSelection(1)
                 KeyEvent.KEYCODE_DPAD_CENTER -> selectLanguageMenuItem(languageMenuIndex)
-                KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_DEL -> closeLanguageMenu()
+                // K-07: המקרא מבטיח "← ביטול" - חץ שמאלי סוגר כמו BACK
+                KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_DEL, KeyEvent.KEYCODE_DPAD_LEFT -> closeLanguageMenu()
                 else -> { /* נבלע - שום פעולה */ }
             }
             return true
@@ -1485,7 +1511,7 @@ class KeyboardService : InputMethodService() {
                 KeyEvent.KEYCODE_DPAD_UP -> moveClipboardSelection(-1)
                 KeyEvent.KEYCODE_DPAD_DOWN -> moveClipboardSelection(1)
                 KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> runClipAction(clipboardIndex)
-                KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_DEL,
+                KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_DEL, KeyEvent.KEYCODE_DPAD_LEFT,
                 KeyEvent.KEYCODE_STAR, KeyEvent.KEYCODE_NUMPAD_MULTIPLY -> closeClipboard()
                 else -> { /* נבלע - שום פעולה */ }
             }
@@ -2062,7 +2088,8 @@ class KeyboardService : InputMethodService() {
     }
 
     private fun handleDigitPress(digit: Char, ic: InputConnection) {
-        val now = System.currentTimeMillis()
+        // K-22: שעון מונוטוני - שינוי שעה במערכת לא שובר את המולטי-טאפ
+        val now = android.os.SystemClock.uptimeMillis()
         val isSameKeyRepeat = lastTapDigit == digit && (now - lastTapTimeMillis) < multiTapTimeoutMillis
         lastTapTimeMillis = now
 

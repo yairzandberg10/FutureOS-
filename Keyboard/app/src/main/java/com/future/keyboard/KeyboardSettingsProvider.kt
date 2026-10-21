@@ -60,7 +60,8 @@ class KeyboardSettingsProvider : ContentProvider() {
         if (values == null) return 0
         if (uri.lastPathSegment == "languages") {
             val lang = values.getAsString(COL_CODE)?.let { code -> T9Engine.Language.entries.firstOrNull { it.name == code } } ?: return 0
-            if (values.containsKey(COL_ENABLED)) KeyboardLanguages.setEnabled(prefs, lang, values.getAsInteger(COL_ENABLED) == 1)
+            // K-19: ביטול השפה האחרונה נדחה - מחזירים 0 כדי שהלקוח יידע
+            if (values.containsKey(COL_ENABLED) && !KeyboardLanguages.setEnabled(prefs, lang, values.getAsInteger(COL_ENABLED) == 1)) return 0
             if (values.containsKey(COL_PREDICT)) KeyboardLanguages.setPredicted(prefs, lang, values.getAsInteger(COL_PREDICT) == 1)
             context?.contentResolver?.notifyChange(LANGUAGES_URI, null)
             return 1
@@ -99,10 +100,12 @@ object KeyboardLanguages {
     fun enabled(prefs: SharedPreferences): Set<T9Engine.Language> = read(prefs, KEY_ENABLED).ifEmpty { setOf(T9Engine.Language.HEBREW) }
     fun predicted(prefs: SharedPreferences): Set<T9Engine.Language> = read(prefs, KEY_PREDICT)
 
-    fun setEnabled(prefs: SharedPreferences, lang: T9Engine.Language, on: Boolean) {
+    /** false כשהשינוי נדחה (אי אפשר לבטל את השפה האחרונה). */
+    fun setEnabled(prefs: SharedPreferences, lang: T9Engine.Language, on: Boolean): Boolean {
         val next = if (on) enabled(prefs) + lang else enabled(prefs) - lang
-        if (next.isEmpty()) return
+        if (next.isEmpty()) return false
         write(prefs, KEY_ENABLED, next)
+        return true
     }
 
     fun setPredicted(prefs: SharedPreferences, lang: T9Engine.Language, on: Boolean) {

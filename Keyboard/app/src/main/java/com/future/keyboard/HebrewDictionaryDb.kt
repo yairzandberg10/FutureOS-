@@ -29,6 +29,10 @@ class HebrewDictionaryDb(context: Context) {
             // התהליך נהרג) הייתה משאירה קובץ חלקי שנראה תקין - ומאז ואילך
             // כל פתיחה נכשלת בלי שום ניסיון להעתיק שוב.
             val tempFile = File(dbFile.parentFile, "$DB_NAME.tmp")
+            // K-10: בלי מקום פנוי לא מתחילים העתקה שתיכשל באמצע
+            if ((dbFile.parentFile?.usableSpace ?: Long.MAX_VALUE) < MIN_FREE_BYTES) {
+                throw IOException("Not enough free space for the dictionary")
+            }
             try {
                 context.assets.open(DB_NAME).use { input ->
                     tempFile.outputStream().use { output -> input.copyTo(output) }
@@ -58,6 +62,11 @@ class HebrewDictionaryDb(context: Context) {
         return queryCandidates(digits).also { cache.put(digits, it) }
     }
 
+    /** סוגר את המסד (K-11) - נקרא מ-onDestroy של השירות. */
+    fun close() {
+        runCatching { db.close() }
+    }
+
     private fun queryCandidates(digits: String): List<String> {
         val words = mutableListOf<String>()
         db.rawQuery(
@@ -71,6 +80,9 @@ class HebrewDictionaryDb(context: Context) {
 
     companion object {
         private const val DB_NAME = "dict_he.db"
+
+        // קובץ המילון ~345MB - דורשים מרווח מעבר לכך
+        private const val MIN_FREE_BYTES = 420L * 1024 * 1024
 
         // תקרה על מספר המועמדים שמוחזרים לרצף ספרות בודד - חלק מהרצפים
         // הקצרים תואמים עשרות אלפי מילים במילון בגודל הזה, ואין תועלת
