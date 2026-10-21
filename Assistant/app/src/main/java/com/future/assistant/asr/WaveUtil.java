@@ -2,6 +2,7 @@ package com.future.assistant.asr;
 
 import android.util.Log;
 
+import java.io.DataInputStream;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -14,11 +15,11 @@ public class WaveUtil {
     public static final String RECORDING_FILE = "MicInput.wav";
 
     public static void createWaveFile(String filePath, byte[] samples, int sampleRate, int numChannels, int bytesPerSample) {
-        try {
-            int dataSize = samples.length; // actual data size in bytes
-            int audioFormat = (bytesPerSample == 2) ? 1 : (bytesPerSample == 4) ? 3 : 0; // PCM_16 = 1, PCM_FLOAT = 3
+        int dataSize = samples.length; // actual data size in bytes
+        int audioFormat = (bytesPerSample == 2) ? 1 : (bytesPerSample == 4) ? 3 : 0; // PCM_16 = 1, PCM_FLOAT = 3
 
-            FileOutputStream fileOutputStream = new FileOutputStream(filePath);
+        // try-with-resources: הקובץ נסגר גם אם כתיבה נכשלה באמצע
+        try (FileOutputStream fileOutputStream = new FileOutputStream(filePath)) {
             fileOutputStream.write("RIFF".getBytes(StandardCharsets.UTF_8)); // Write the "RIFF" chunk descriptor
             fileOutputStream.write(intToByteArray(36 + dataSize), 0, 4); // Total file size - 8 bytes
             fileOutputStream.write("WAVE".getBytes(StandardCharsets.UTF_8)); // Write the "WAVE" format
@@ -35,9 +36,6 @@ public class WaveUtil {
 
             // Write audio samples
             fileOutputStream.write(samples);
-
-            // Close the file output stream
-            fileOutputStream.close();
         } catch (IOException e) {
             e.printStackTrace();
             Log.e(TAG, "Error...", e);
@@ -45,12 +43,11 @@ public class WaveUtil {
     }
 
     public static float[] getSamples(String filePath) {
-        try {
-            FileInputStream fileInputStream = new FileInputStream(filePath);
-
-            // Read the WAV file header
+        // try-with-resources: הקובץ נסגר גם כשהקריאה נכשלת
+        try (DataInputStream fileInputStream = new DataInputStream(new FileInputStream(filePath))) {
+            // Read the WAV file header - readFully, כי read יכול להחזיר פחות מ-44 בתים
             byte[] header = new byte[44];
-            fileInputStream.read(header);
+            fileInputStream.readFully(header);
 
             // Check if it's a valid WAV file (contains "RIFF" and "WAVE" markers)
             String headerStr = new String(header, 0, 4);
@@ -76,7 +73,7 @@ public class WaveUtil {
 
             // Read the audio data
             byte[] audioData = new byte[dataLength];
-            fileInputStream.read(audioData);
+            fileInputStream.readFully(audioData);
             ByteBuffer byteBuffer = ByteBuffer.wrap(audioData);
             byteBuffer.order(ByteOrder.nativeOrder());
 

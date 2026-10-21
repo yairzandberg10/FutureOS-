@@ -78,7 +78,8 @@ class PiperTts(private val context: Context) {
     /** מקריא את הטקסט. חוסם עד סוף ההשמעה - יש לקרוא מ-thread ברקע.
      *  [onLevel] - עוצמת ההשמעה 0..1 בזמן אמת, לגלי הקול במסך. */
     fun speak(text: String, onLevel: ((Float) -> Unit)? = null) {
-        if (voice == null || text.isBlank()) return
+        // ready רק אחרי אתחול מלא - אתחול חלקי לא ממשיך להקריא בשקט
+        if (!ready || text.isBlank()) return
         stopRequested = false
         // משפט-משפט: המשפט הבא מסונתז בזמן שהקודם מושמע, כך שתשובה ארוכה
         // מתחילה להישמע אחרי סינתוז המשפט הראשון בלבד.
@@ -90,7 +91,13 @@ class PiperTts(private val context: Context) {
                 next?.cancel(true)
                 break
             }
-            val pcm = next!!.get()
+            // משפט שהסינתוז שלו נכשל מדלגים עליו - לא מפילים את כל ההקראה
+            val pcm = try {
+                next!!.get()
+            } catch (e: Exception) {
+                Log.w(TAG, "synthesis failed, skipping sentence", e)
+                ShortArray(0)
+            }
             next = sentences.getOrNull(i + 1)?.let { s -> synthExecutor.submit<ShortArray> { synthesize(s) } }
             if (pcm.isNotEmpty()) PcmPlayback.playAndWait(pcm, sampleRate, onLevel)
         }

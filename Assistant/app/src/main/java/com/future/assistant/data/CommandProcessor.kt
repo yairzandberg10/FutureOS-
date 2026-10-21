@@ -77,16 +77,18 @@ object CommandProcessor {
 
         // פתיחת אפליקציה - דורש חילוץ שם האפליקציה מתוך המשפט, לכן מטופל
         // בנפרד ולא כ-VoiceIntent רגיל.
+        // בלי אפליקציה מתאימה לא עוצרים כאן: "תעלה את הקול" או "לך לישון" הן פקודות
+        // אחרות שנבדקות בהמשך; רק אם גם הן לא תופסות - מחזירים "לא מצאתי אפליקציה".
+        var openAppMiss: String? = null
         val matchedOpenPrefix = openAppPrefixes.firstOrNull { text.startsWith(it) }
         if (matchedOpenPrefix != null) {
             val appQuery = text.removePrefix(matchedOpenPrefix).trim()
             val apps = AppLauncher.listApps(context)
             val match = AppLauncher.findBestMatch(apps, appQuery)
-            return if (match != null && AppLauncher.launch(context, match.packageName)) {
-                CommandResult("פותח את ${match.label}", shouldClose = true)
-            } else {
-                CommandResult("לא מצאתי אפליקציה בשם $appQuery")
+            if (match != null && AppLauncher.launch(context, match.packageName)) {
+                return CommandResult("פותח את ${ltr(match.label)}", shouldClose = true)
             }
+            openAppMiss = "לא מצאתי אפליקציה בשם $appQuery"
         }
 
         // חיוג מספר - דורש חילוץ ספרות מהמשפט.
@@ -110,8 +112,11 @@ object CommandProcessor {
         // כל שאר הפקודות - התאמה לפי מילות מפתח מתוך הרשימה הגדולה למטה.
         firstMatchingIntent(text)?.let { return it.respond(context) }
 
-        return CommandResult("לא הבנתי את הבקשה, אפשר לנסות שוב")
+        return CommandResult(openAppMiss ?: "לא הבנתי את הבקשה, אפשר לנסות שוב")
     }
+
+    /** מבודד שם לועזי/מספר בתוך משפט בעברית (LRI..PDI), כדי שלא ישבש את סדר המילים. */
+    private fun ltr(text: String): String = "⁦$text⁩"
 
     private val BEATBOX_TRIGGERS = listOf(
         "ביטבוקס", "ביט בוקס", "בית בוקס", "ביט-בוקס", "ביטבוקסינג", "ביט בוקסינג", "תעשה ביט", "תעשי ביט",
@@ -319,11 +324,11 @@ object CommandProcessor {
     }
 
     private fun volumeUpIntents(): List<VoiceIntent> {
-        // "תעלה את הקול" הוסר בכוונה - מתנגש עם קידומת פתיחת אפליקציה
-        // "תעלה את" (OPEN_APP_PREFIXES); "תעלה קול" (בלי "את") נשאר תקין.
+        // "תעלה את הקול" - קידומת "תעלה את" נבדקת קודם כפתיחת אפליקציה, ואם אין כזו
+        // (ראו process) הפקודה נופלת לכאן.
         val cores = listOf(
             "תגביר קול", "תגביר את הקול", "הגבר קול", "הגבר את הקול",
-            "תעלה קול", "העלה עוצמה", "יותר קול", "תרים קול", "קול חזק יותר"
+            "תעלה קול", "תעלה את הקול", "תעלה את הווליום", "העלה עוצמה", "יותר קול", "תרים קול", "קול חזק יותר"
         )
         // מתוך MASSIVE dataset (Amazon Science, CC BY 4.0) - audio_volume_up
         val massiveCores = listOf(
@@ -333,8 +338,13 @@ object CommandProcessor {
         )
         return listOf(voiceIntent(withExtra(cores + massiveCores, ExtraPhrasings.VOLUME_UP)) { context ->
             val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-            audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_RAISE, AudioManager.FLAG_SHOW_UI)
-            "הגברתי את עוצמת הקול"
+            // בשיא כבר - לא עונים "הגברתי" על משהו שלא קרה
+            if (audioManager.getStreamVolume(AudioManager.STREAM_MUSIC) >= audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)) {
+                "הקול כבר בשיא"
+            } else {
+                audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_RAISE, AudioManager.FLAG_SHOW_UI)
+                "הגברתי את עוצמת הקול"
+            }
         })
     }
 
@@ -351,8 +361,13 @@ object CommandProcessor {
         )
         return listOf(voiceIntent(withExtra(cores + massiveCores, ExtraPhrasings.VOLUME_DOWN)) { context ->
             val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-            audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_LOWER, AudioManager.FLAG_SHOW_UI)
-            "הנמכתי את עוצמת הקול"
+            // בשקט כבר - לא עונים "הנמכתי" על משהו שלא קרה
+            if (audioManager.getStreamVolume(AudioManager.STREAM_MUSIC) <= 0) {
+                "הקול כבר בשקט"
+            } else {
+                audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_LOWER, AudioManager.FLAG_SHOW_UI)
+                "הנמכתי את עוצמת הקול"
+            }
         })
     }
 
@@ -488,7 +503,7 @@ object CommandProcessor {
         val apps = AppLauncher.listApps(context)
         val match = AppLauncher.findBestMatch(apps, appName)
         return if (match != null && AppLauncher.launch(context, match.packageName)) {
-            CommandResult("$message פותח את ${match.label}", shouldClose = true)
+            CommandResult("$message פותח את ${ltr(match.label)}", shouldClose = true)
         } else {
             CommandResult("לא הצלחתי למצוא את אפליקציית $appName")
         }
@@ -501,8 +516,14 @@ object CommandProcessor {
             val result = CalendarReader.eventsForDay(context, daysFromToday)
             when {
                 !result.hasPermission -> CommandResult("אין לי הרשאה לגשת ליומן")
+                result.failed -> CommandResult("לא הצלחתי לקרוא את היומן")
                 result.events.isEmpty() -> CommandResult(if (daysFromToday == 0) "אין לך שום אירוע היום" else "אין לך שום אירוע מחר")
-                else -> CommandResult(result.events.take(5).joinToString(", "))
+                else -> {
+                    // חמישה ראשונים, והשאר נאמר במספר - שלא ייראה כאילו זה כל היומן
+                    val more = result.events.size - 5
+                    val shown = result.events.take(5).joinToString(", ")
+                    CommandResult(if (more > 0) "$shown, ועוד $more אירועים" else shown)
+                }
             }
         })
     }
@@ -611,7 +632,10 @@ object CommandProcessor {
             val totalMinutes = SystemClock.elapsedRealtime() / 60000
             val hours = totalMinutes / 60
             val minutes = totalMinutes % 60
-            if (hours > 0) "המכשיר פועל כבר $hours שעות ו-$minutes דקות" else "המכשיר פועל כבר $minutes דקות"
+            // צורת יחיד ורבים לפי הערך: "שעה" ו"דקה" ולא "1 שעות"
+            val hoursText = when (hours) { 1L -> "שעה"; 2L -> "שעתיים"; else -> "$hours שעות" }
+            val minutesText = when (minutes) { 1L -> "דקה"; 2L -> "דקותיים"; else -> "$minutes דקות" }
+            if (hours > 0) "המכשיר פועל כבר $hoursText ו-$minutesText" else "המכשיר פועל כבר $minutesText"
         })
     }
 
@@ -823,8 +847,12 @@ object CommandProcessor {
         if (text == "עצור") return true
         val words = text.split(" ").map { it.trim { c -> c in EDGE_PUNCTUATION } }.filter { it.isNotBlank() }
         if (words.any { it in CLOSE_WORDS }) return true
-        return CLOSE_PHRASES.any { text.contains(it) }
+        // התחלת מילה בלבד: "צא מ" לא נתפס בתוך "מוצא מידע"
+        return CLOSE_PHRASES.any { containsWordStart(text, it) }
     }
+
+    private fun containsWordStart(text: String, phrase: String): Boolean =
+        Regex("(?<!\\p{L})" + Regex.escape(phrase)).containsMatchIn(text)
 
     private val DIAL_PREFIXES = listOf(
         "חייג את המספר", "חייג ל", "חייג", "תחייג את המספר", "תחייג ל", "תחייג",

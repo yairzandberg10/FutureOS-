@@ -26,7 +26,8 @@ class AssistantRecognitionService : RecognitionService() {
     /** נפתח כשהטעינה נגמרה - בהצלחה או בכישלון, כך שכישלון לא מחכה דקה שלמה. */
     private val modelLoaded = java.util.concurrent.CountDownLatch(1)
     private val workerThread = java.util.concurrent.Executors.newSingleThreadExecutor()
-    private var isRecording = false
+    // נכתב מ-workerThread ונקרא מה-callback של ההקלטה - חייב להיות volatile
+    @Volatile private var isRecording = false
 
     // נשמר מ-onStartListening כדי ש-onStopListening (שמקבל רק Callback, בלי ה-Intent
     // המקורי) עדיין ידע לאיזו שפה לתמלל.
@@ -107,8 +108,9 @@ class AssistantRecognitionService : RecognitionService() {
                 }
                 listener.results(bundle)
             } catch (e: Exception) {
+                // תקלה בתמלול היא תקלת שרת מקומי, לא "המזהה עסוק" (שגוי למשתמש/לקלינט)
                 Log.e(TAG, "Failed to transcribe", e)
-                safeError(listener, SpeechRecognizer.ERROR_RECOGNIZER_BUSY)
+                safeError(listener, SpeechRecognizer.ERROR_SERVER)
             }
         }
     }

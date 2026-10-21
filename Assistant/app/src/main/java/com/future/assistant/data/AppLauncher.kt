@@ -33,9 +33,13 @@ object AppLauncher {
     fun findBestMatch(apps: List<LaunchableApp>, query: String): LaunchableApp? {
         val normalizedQuery = query.trim()
         if (normalizedQuery.isEmpty()) return null
-        apps.firstOrNull { it.label.trim() == normalizedQuery }?.let { return it }
+        apps.firstOrNull { it.label.trim().equals(normalizedQuery, ignoreCase = true) }?.let { return it }
         apps.firstOrNull { it.label.contains(normalizedQuery, ignoreCase = true) }?.let { return it }
-        return apps.firstOrNull { normalizedQuery.contains(it.label.trim(), ignoreCase = true) }
+        // תווית קצרה מדי (למשל "א") לא תתאים לכל שאילתה שמכילה אותה
+        return apps.firstOrNull {
+            val label = it.label.trim()
+            label.length >= 3 && normalizedQuery.contains(label, ignoreCase = true)
+        }
     }
 
     fun launch(context: Context, packageName: String): Boolean {

@@ -21,7 +21,8 @@ object KnowledgeBase {
 
     /** טעינה מראש ברקע, כדי שהשאלה הראשונה לא תחכה לקריאת הקבצים. */
     fun preload(context: Context) {
-        data(context)
+        // חריגה בטעינה לא מפילה את התהליך מתוך ה-scope של הרקע; תיכשל שוב בשאילתה עצמה
+        runCatching { data(context) }
     }
 
     fun answer(context: Context, text: String): CommandResult? = answer(data(context), text)
@@ -115,7 +116,8 @@ object KnowledgeBase {
             names(row[1]).forEach { capitals.getOrPut(it) { mutableListOf() }.add(country) }
         }
 
-        val elementRows = rows(read("elements.tsv"), 3)
+        // שורה פגומה (מספר לא תקין) מדלגים עליה - לא מפילים את כל המאגר
+        val elementRows = rows(read("elements.tsv"), 3).filter { it[0].toIntOrNull() != null }
         val elements = index(elementRows, 1) { Element(it[0].toInt(), it[1].substringBefore("|"), it[2]) }
         val elementsByNumber = elements.values.associateBy { it.number }
 
@@ -131,7 +133,7 @@ object KnowledgeBase {
         val blessingRows = rows(read("blessings.tsv"), 3)
         val blessings = index(blessingRows, 0) { Blessing(it[0].substringBefore("|"), it[1], it[2]) }
 
-        val bookRows = rows(read("tanakh.tsv"), 3)
+        val bookRows = rows(read("tanakh.tsv"), 3).filter { it[1].toIntOrNull() != null }
         val books = index(bookRows, 0) { Book(it[0].substringBefore("|"), it[1].toInt(), it[2]) }
 
         val parashaRows = rows(read("parashot.tsv"), 2)
@@ -142,7 +144,7 @@ object KnowledgeBase {
         val animalRows = rows(read("animals.tsv"), 4)
         val animals = index(animalRows, 0) { Animal(it[0].substringBefore("|"), it[1], it[2], it[3]) }
 
-        val planetRows = rows(read("planets.tsv"), 4)
+        val planetRows = rows(read("planets.tsv"), 4).filter { it[1].toIntOrNull() != null && it[2].toIntOrNull() != null }
         val planets = index(planetRows, 0) { Planet(it[0].substringBefore("|"), it[1].toInt(), it[2].toInt(), it[3]) }
 
         val peopleRows = rows(read("people.tsv"), 2)
@@ -298,10 +300,13 @@ object KnowledgeBase {
         if (!text.hasAny(listOf("מברכים", "מברך", "ברכה", "לברך", "מברכת"))) return null
         val food = find(data.blessings, all) ?: return null
         val isLast = text.hasAny(listOf("אחרונה", "אחרי", "לאחר", "בסוף"))
+        // קוד ברכה שלא ממופה - לא עונים "מברכים null"
         return if (isLast) {
-            CommandResult("אחרי ${food.food} מברכים ${LAST_BLESSING[food.last]}")
+            val blessing = LAST_BLESSING[food.last] ?: return null
+            CommandResult("אחרי ${food.food} מברכים $blessing")
         } else {
-            CommandResult("על ${food.food} מברכים ${FIRST_BLESSING[food.first]}")
+            val blessing = FIRST_BLESSING[food.first] ?: return null
+            CommandResult("על ${food.food} מברכים $blessing")
         }
     }
 

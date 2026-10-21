@@ -32,9 +32,11 @@ class HybridSpeech(private val context: Context, private val whisper: LocalSpeec
     private var usingGoogle = false
     private var result: CompletableDeferred<String>? = null
     private var lastPartial = ""
-    private var stopRequested = false
+    @Volatile private var stopRequested = false
     private var onLevel: ((Float) -> Unit)? = null
     private var onAutoResult: ((String) -> Unit)? = null
+    /** נועל את ההתחלה וההפסקה של הקלטת Whisper - מונע מרוץ בין thread ההקלטה ל-cancel. */
+    private val lock = Any()
 
     /**
      * מתחיל להאזין. [onLevel] - עוצמה 0..1 לגלים. [onAutoResult] - כשגוגל מסיים
@@ -52,7 +54,7 @@ class HybridSpeech(private val context: Context, private val whisper: LocalSpeec
 
     /** OK בזמן האזנה: עוצר ומחזיר את הטקסט. חוסם עד שהתוצאה מוכנה. */
     suspend fun stopAndTranscribe(): String {
-        stopRequested = true
+        synchronized(lock) { stopRequested = true }
         if (!usingGoogle) return withContext(Dispatchers.IO) { whisper.stopRecordingAndTranscribe() }
         val deferred = result ?: return lastPartial
         withContext(Dispatchers.Main) { runCatching { recognizer?.stopListening() } }
@@ -62,12 +64,16 @@ class HybridSpeech(private val context: Context, private val whisper: LocalSpeec
     }
 
     fun cancel() {
-        stopRequested = true
         if (usingGoogle) {
+            stopRequested = true
             runCatching { recognizer?.cancel() }
             release()
         } else {
-            whisper.cancelRecording()
+            // בתוך הנעילה: thread ההקלטה לא יכול להתחיל אחרי הביטול ולהשאיר מיקרופון פתוח
+            synchronized(lock) {
+                stopRequested = true
+                whisper.cancelRecording()
+            }
         }
     }
 
@@ -75,7 +81,12 @@ class HybridSpeech(private val context: Context, private val whisper: LocalSpeec
         usingGoogle = false
         val levelCb = onLevel
         Thread {
-            whisper.startRecording { db -> levelCb?.invoke(((db + 2f) / 12f).coerceIn(0f, 1f)) }
+            // OK/BACK שהגיעו לפני שה-thread התחיל - לא פותחים הקלטה שאף אחד לא יעצור
+            synchronized(lock) {
+                if (!stopRequested) {
+                    whisper.startRecording { db -> levelCb?.invoke(((db + 2f) / 12f).coerceIn(0f, 1f)) }
+                }
+            }
         }.start()
     }
 

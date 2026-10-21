@@ -8,6 +8,23 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.type
+import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.foundation.border
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.heightIn
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
+import android.content.pm.PackageManager
 import android.Manifest
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
@@ -96,7 +113,10 @@ private enum class AssistantState { IDLE, LISTENING, THINKING, SPEAKING }
 fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
     val context = LocalContext.current
     val type = rememberFutureType()
-    val hasPermission by rememberRuntimePermission(Manifest.permission.RECORD_AUDIO)
+    val micGranted = rememberRuntimePermission(Manifest.permission.RECORD_AUDIO)
+    val hasPermission by micGranted
+    // כפתור המיקרופון מבקש הרשאה כשהיא חסרה (ואין דרך אחרת לתקן מהמקלדת)
+    val micPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { micGranted.value = it }
     // לא חוסמות את שאר העוזר אם המשתמש מסרב - רק "מה יש לי היום" ו"התקשר
     // ל..." לא יעבדו במלואן (יחזירו הודעה מתאימה במקום לקרוס).
     rememberRuntimePermission(Manifest.permission.READ_CALENDAR)
@@ -105,6 +125,10 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
     var state by remember { mutableStateOf(AssistantState.IDLE) }
     var heardText by remember { mutableStateOf("") }
     var responseText by remember { mutableStateOf("במה אפשר לעזור?") }
+    // גלילת התשובה (כשהיא ארוכה מהכרטיס) בחיצים, ומצב הפוקוס שלה
+    val answerScroll = rememberScrollState()
+    var answerFocused by remember { mutableStateOf(false) }
+    val density = LocalDensity.current
     var pendingClose by remember { mutableStateOf(false) }
     var modelFailed by remember { mutableStateOf(false) }
     // עוצמה 0..1 - מהמיקרופון בזמן הקשבה ומההשמעה בזמן דיבור. מניע את הגלים.
@@ -184,6 +208,11 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
                 state = AssistantState.IDLE
                 speech.cancel()
             }
+            // חזרה מהגדרות ההרשאות - מעדכנים את המצב (אחרת נשאר "נדרשת הרשאה" אחרי שאושרה)
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                micGranted.value = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
+                    PackageManager.PERMISSION_GRANTED
+            }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
@@ -216,9 +245,24 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
                     handleRecognizedText(text)
                 }
             }
+            // OK בזמן הקראה - עוצר אותה (נבדק בין משפטים, ר' PiperTts.speak)
+            AssistantState.SPEAKING -> piperTts.stop()
             else -> {}
         }
     }
+
+    // הטקסט שמוצג באזור התשובה - נקבע לפי המצב
+    val answerText = when {
+        !hasPermission -> "נדרשת הרשאת מיקרופון"
+        modelFailed -> "טעינת מנוע זיהוי הדיבור נכשלה"
+        state == AssistantState.LISTENING -> "מקשיב"
+        state == AssistantState.THINKING -> "מתמלל"
+        else -> responseText
+    }
+    // תשובה חדשה מתחילה מהתחלה
+    LaunchedEffect(answerText) { answerScroll.scrollTo(0) }
+    // גלילה אפשרית רק כשהתשובה ארוכה מהאזור - אז בלבד היא מקבלת פוקוס
+    val answerScrollable = answerScroll.maxValue > 0
 
     // הכרטיס עולה מלמטה כשהחלונית נפתחת.
     var shown by remember { mutableStateOf(false) }
@@ -260,21 +304,50 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
                             modifier = Modifier.padding(top = FutureDimens.spacingSm),
                         )
                     }
-                    Text(
-                        when {
-                            !hasPermission -> "נדרשת הרשאת מיקרופון"
-                            modelFailed -> "טעינת מנוע זיהוי הדיבור נכשלה"
-                            state == AssistantState.LISTENING -> "מקשיב"
-                            state == AssistantState.THINKING -> "מתמלל"
-                            else -> responseText
-                        },
-                        color = theme.textColor,
-                        fontSize = type.title,
-                        fontWeight = FutureTypography.weightMedium,
-                        maxLines = 4,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(top = FutureDimens.spacingSm),
-                    )
+                    // תשובה ארוכה נגללת בחיצים במקום להיחתך אחרי ארבע שורות
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = FutureDimens.spacingSm)
+                            .heightIn(max = AnswerMaxHeight)
+                            .verticalScroll(answerScroll)
+                            .then(
+                                if (answerScrollable) {
+                                    Modifier
+                                        .focusable()
+                                        .onFocusChanged { answerFocused = it.isFocused }
+                                        .onKeyEvent { event ->
+                                            if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
+                                            val step = with(density) { AnswerScrollStep.toPx() }
+                                            when (event.key) {
+                                                // בקצה הגלילה החיצים עוברים לפוקוס הבא (כמו בשאר המסך)
+                                                Key.DirectionDown -> if (answerScroll.value < answerScroll.maxValue) {
+                                                    scope.launch { answerScroll.animateScrollBy(step) }
+                                                    true
+                                                } else false
+                                                Key.DirectionUp -> if (answerScroll.value > 0) {
+                                                    scope.launch { answerScroll.animateScrollBy(-step) }
+                                                    true
+                                                } else false
+                                                else -> false
+                                            }
+                                        }
+                                        .then(
+                                            if (answerFocused) Modifier.border(FutureDimens.focusBorderControl, theme.readableAccentColor, FutureShapes.md)
+                                            else Modifier,
+                                        )
+                                } else {
+                                    Modifier
+                                },
+                            ),
+                    ) {
+                        Text(
+                            answerText,
+                            color = theme.textColor,
+                            fontSize = type.title,
+                            fontWeight = FutureTypography.weightMedium,
+                        )
+                    }
 
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(top = FutureDimens.spacingLg),
@@ -288,15 +361,17 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
                             thinking = state == AssistantState.THINKING,
                             modifier = Modifier.weight(1f).height(WaveHeight),
                         )
-                        if (hasPermission) {
-                            MicButton(
-                                state = state,
-                                theme = theme,
-                                focusRequester = micFocus,
-                                autoFocus = true,
-                                onClick = { onMicClick() },
-                            )
-                        }
+                        // תמיד על המסך (גם בלי הרשאה) - בלעדיו אין פוקוס לתקן את ההרשאה
+                        MicButton(
+                            state = state,
+                            theme = theme,
+                            focusRequester = micFocus,
+                            autoFocus = true,
+                            onClick = {
+                                if (hasPermission) onMicClick()
+                                else micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                            },
+                        )
                     }
                     Text(
                         text = "כשהחיבור זמין, קטע אודיו עשוי להישלח לשירות חיצוני לצורך תמלול.",
@@ -305,7 +380,11 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
                         modifier = Modifier.padding(top = FutureDimens.spacingSm),
                     )
                     Text(
-                        if (state == AssistantState.LISTENING) "OK לסיום" else "OK לדיבור",
+                        when (state) {
+                            AssistantState.LISTENING -> "OK לסיום"
+                            AssistantState.SPEAKING -> "OK להפסקה"
+                            else -> if (hasPermission) "OK לדיבור" else "OK לבקשת הרשאה"
+                        },
                         color = theme.mutedTextColor,
                         fontSize = type.summary,
                         modifier = Modifier.padding(top = FutureDimens.spacingSm),
@@ -325,11 +404,14 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
 @Composable
 private fun SiriWave(theme: FutureTheme, level: Float, active: Boolean, thinking: Boolean, modifier: Modifier) {
     var phase by remember { mutableFloatStateOf(0f) }
+    // הלולאה רצה מ-LaunchedEffect(Unit), לכן קוראים את הערך העדכני דרך rememberUpdatedState
+    val currentActive by rememberUpdatedState(active)
     LaunchedEffect(Unit) {
         var last = 0L
         while (true) {
             withFrameNanos { now ->
-                if (last != 0L) phase += (now - last) / 1_000_000_000f * if (active) 9f else 2.5f
+                // במנוחה הפאזה עוצרת - הגל נשאר קו ישר ולא זז בלי שהעוזר מקשיב
+                if (last != 0L && currentActive) phase += (now - last) / 1_000_000_000f * 9f
                 last = now
             }
         }
@@ -404,6 +486,10 @@ private fun MicButton(state: AssistantState, theme: FutureTheme, focusRequester:
 
 private val WaveHeight = 56.dp
 private val MicSize = 56.dp
+/** גובה מקסימלי לאזור התשובה - מעבר לו התשובה נגללת. */
+private val AnswerMaxHeight = 160.dp
+/** כמה גוללים בלחיצת חץ אחת. */
+private val AnswerScrollStep = 48.dp
 
 /**
  * זוהר צבעוני סביב שולי המסך בזמן הקשבה, תמלול ודיבור: מסגרת של גרדיאנט
@@ -433,6 +519,11 @@ private fun EdgeGlow(active: Boolean, level: Float, thinking: Boolean, modifier:
                 // כניסה ויציאה מהירות (~0.25 שנייה) אבל ברורות.
                 val targetPresence = if (currentActive) 1f else 0f
                 presence += (targetPresence - presence) * (dt * 8f).coerceAtMost(1f)
+                // אחרי שהזוהר נעלם - לא כותבים state בכל פריים (אין מה לצייר)
+                if (!currentActive && presence < 0.01f) {
+                    presence = 0f
+                    return@withFrameNanos
+                }
                 // הפעימה עוקבת אחרי עוצמת הקול; בתמלול - נשימה קבועה.
                 val targetPulse = if (currentThinking) 0.35f + 0.25f * sin(rotation / 180f * PI.toFloat() * 2f) else currentLevel
                 pulse += (targetPulse - pulse) * (dt * 14f).coerceAtMost(1f)

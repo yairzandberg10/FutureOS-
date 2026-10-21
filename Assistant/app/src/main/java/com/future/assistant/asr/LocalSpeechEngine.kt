@@ -15,7 +15,9 @@ import java.io.FileOutputStream
  */
 class LocalSpeechEngine(private val context: Context) {
     private val recorder = Recorder(context)
-    private val wavFile = File(context.filesDir, "assistant_recording.wav")
+    // קובץ ייחודי לכל מופע: העוזר והשירות (AssistantRecognitionService) לא מוחקים
+    // את ההקלטה של השני (cancelRecording מוחק את הקובץ).
+    private val wavFile = File(context.filesDir, "assistant_recording_${System.nanoTime()}.wav")
 
     /** טוען את המודל מה-assets (מעתיק לאחסון פנימי בפעם הראשונה). חוסם - יש לקרוא מ-thread ברקע. */
     fun loadModel() = preload(context)

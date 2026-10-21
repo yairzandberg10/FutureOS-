@@ -12,6 +12,8 @@ import android.util.Log
  */
 class AsrWarmupReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
+        // הערוץ מיוצא - מתעלמים מכל פעולה חוץ מחימום המודל (בלי טעינה של 264MB סתם).
+        if (intent.action != ACTION_WARM_UP) return
         val pending = goAsync()
         val app = context.applicationContext
         Thread {
