@@ -29,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -65,7 +66,7 @@ fun TaskEditorScreen(
 
     fun saveIfNeeded() {
         if (title.isNotBlank() || notes.isNotBlank()) {
-            onSave(title, notes, priority, isDone, reminderAt)
+            onSave(title.trim(), notes, priority, isDone, reminderAt)
         } else if (task == null) {
             onBack()
         }
@@ -141,7 +142,18 @@ fun TaskEditorScreen(
                     // מופיע רק לפני 20:00, אז אין שמירה שנחסמת ו-BACK תמיד יוצא (TK1).
                     Column {
                         FutureSectionHeader("תזכורת", theme, inset = false)
-                        androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        androidx.compose.foundation.lazy.LazyRow(
+                            // 16dp מכל צד כדי שמסגרת הפוקוס של שבב בקצה לא תיחתך; הרוחב מורחב
+                            // באותו ערך כדי שהשבב הראשון יישאר מיושר עם הכותרת (TK-NEW-03).
+                            modifier = Modifier.layout { measurable, constraints ->
+                                val bleed = 16.dp.roundToPx()
+                                val w = constraints.maxWidth + 2 * bleed
+                                val placeable = measurable.measure(constraints.copy(minWidth = w, maxWidth = w))
+                                layout(constraints.maxWidth, placeable.height) { placeable.place(-bleed, 0) }
+                            },
+                            contentPadding = PaddingValues(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
                             item {
                                 FutureChip("ללא", theme, selected = reminderAt == null, onClick = { reminderAt = null })
                             }

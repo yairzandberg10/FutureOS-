@@ -97,18 +97,27 @@ fun TaskListScreen(
     }
     val rowFocusRequesters = remember { mutableMapOf<Int, FocusRequester>() }
     val addFocusRequester = remember { FocusRequester() }
+    // מזהי המשימות שכבר נראו ברשימה - משימה חדשה שנוספה אחרי שמירה מקבלת את הפוקוס (TK-NEW-02).
+    val knownIds = remember { mutableSetOf<Int>() }
+    var knownInitialized by remember { mutableStateOf(false) }
     LaunchedEffect(tasks.map { it.id }) {
+        val ids = tasks.map { it.id }.toSet()
+        val added = if (knownInitialized) ids - knownIds else emptySet()
+        knownIds.clear(); knownIds.addAll(ids)
+        knownInitialized = true
         // בזמן חיפוש הפוקוס נשאר בשדה החיפוש - עדכון התוצאות לא גונב אותו לשורה.
         if (searchQuery.isNotBlank()) return@LaunchedEffect
         if (tasks.isEmpty()) {
             // כפתור ההוספה מחובר ל-ScreenScaffold (trailingFocusRequester) - בלי זה הבקשה נזרקת.
             runCatching { addFocusRequester.requestFocus() }
         } else {
-            // השורה שממוקדת כרגע נשארת ממוקדת (סימון/שינוי סדר לא מעביר את הפוקוס ממנה).
-            val target = tasks.firstOrNull { it.id == focusedTaskId }
+            // משימה חדשה שנוספה - עליה הפוקוס. אחרת השורה שממוקדת כרגע נשארת ממוקדת
+            // (סימון/שינוי סדר לא מעביר את הפוקוס ממנה).
+            val target = tasks.firstOrNull { it.id in added }
+                ?: tasks.firstOrNull { it.id == focusedTaskId }
                 ?: tasks.firstOrNull { it.id == lastSelectedTaskId }
                 ?: tasks.first()
-            rowFocusRequesters.getOrPut(target.id) { FocusRequester() }.requestFocus()
+            runCatching { rowFocusRequesters.getOrPut(target.id) { FocusRequester() }.requestFocus() }
         }
     }
 
@@ -188,7 +197,7 @@ private fun TaskRow(task: Task, theme: FutureTheme, focusRequester: FocusRequest
         ?.let { "תזכורת: " + com.future.tasks.data.TaskReminders.label(it) }
     FutureListItem(
         title = task.title.ifEmpty { "משימה ללא שם" },
-        summary = listOfNotNull(reminder, task.notes.ifBlank { null }).joinToString(" · ").ifEmpty { null },
+        summary = listOfNotNull(reminder, task.notes.ifBlank { null }?.let { "\u2068$it\u2069" }).joinToString(" · ").ifEmpty { null },
         modifier = modifier,
         theme = theme,
         onClick = onClick,
