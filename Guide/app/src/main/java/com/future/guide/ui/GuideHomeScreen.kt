@@ -12,10 +12,14 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -27,11 +31,14 @@ fun GuideHomeScreen(theme: FutureTheme, focusedAppId: String? = null, onOpen: (S
     val firstRowFocusRequester = remember { FocusRequester() }
     val focusIndex = GUIDE_APPS.indexOfFirst { it.id == focusedAppId }.coerceAtLeast(0)
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = focusIndex)
+    var rowFocused by remember { mutableStateOf(false) }
     // runCatching: בזמן אנימציית המעבר השורה עוד לא מחוברת, ו-requestFocus זורק
-    // ניסיון יחיד לא מספיק: בזמן האנימציה השורה מתחברת בפריים מאוחר יותר - מנסים שוב בכל פריים
+    // ניסיון יחיד לא מספיק: בזמן האנימציה השורה מתחברת בפריים מאוחר יותר - מנסים שוב בכל פריים.
+    // R13 (GD-01): המסך היוצא (הפרטים) מחזיק פוקוס בזמן המעבר ונעלם בסופו, והפוקוס נופל.
+    // לכן מחזירים את הפוקוס לשורה כל עוד היא לא ממוקדת, לזמן קצר בלבד (כמו המעבר).
     LaunchedEffect(Unit) {
-        repeat(30) {
-            if (runCatching { firstRowFocusRequester.requestFocus() }.isSuccess) return@LaunchedEffect
+        repeat(40) {
+            if (!rowFocused) runCatching { firstRowFocusRequester.requestFocus() }
             withFrameNanos { }
         }
     }
@@ -54,6 +61,7 @@ fun GuideHomeScreen(theme: FutureTheme, focusedAppId: String? = null, onOpen: (S
                             theme = theme,
                             onClick = { onOpen(app.id) },
                             focusRequester = if (index == focusIndex) firstRowFocusRequester else null,
+                            modifier = if (index == focusIndex) Modifier.onFocusChanged { rowFocused = it.hasFocus } else Modifier,
                         )
                     }
                 }

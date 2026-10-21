@@ -1,20 +1,23 @@
 package com.future.guide.ui
 
 import com.future.sharednav.icons.FutureIcons
-import com.future.sharednav.components.FutureListItem
 import com.future.sharednav.components.FutureAvatar
 import com.future.sharednav.components.FutureSectionHeader
 import com.future.sharednav.theme.FutureDimens
 import com.future.sharednav.theme.idleChipColor
+import com.future.sharednav.theme.mutedTextColor
+import com.future.sharednav.theme.rememberFutureType
 
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -68,16 +71,50 @@ fun GuideHeader(title: String, theme: FutureTheme, onBack: (() -> Unit)? = null,
     }
 }
 
+/**
+ * שורת אפליקציה ברשימה. כמו FutureListItem, אבל הכותרת והתיאור עד שתי שורות -
+ * שמות כמו "שורת המצב, מרכז הבקרה וההתראות" נחתכו בשורה אחת.
+ */
 @Composable
-fun GuideAppRow(icon: ImageVector, packageName: String, label: String, subtitle: String, theme: FutureTheme, onClick: () -> Unit, focusRequester: FocusRequester? = null) {
-    FutureListItem(
-        title = label,
-        summary = subtitle,
-        theme = theme,
+fun GuideAppRow(icon: ImageVector, packageName: String, label: String, subtitle: String, theme: FutureTheme, onClick: () -> Unit, focusRequester: FocusRequester? = null, modifier: Modifier = Modifier) {
+    val type = rememberFutureType()
+    SharedFocusableItem(
         onClick = onClick,
+        accentColor = theme.accentColor,
+        modifier = modifier.fillMaxWidth(),
+        idleBackgroundColor = Color.Transparent,
+        contentPadding = 0.dp,
         focusRequester = focusRequester,
-        leading = { GuideAppIcon(packageName, icon, theme, size = 40.dp) },
-    )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = FutureDimens.rowHeightList)
+                .padding(horizontal = FutureDimens.spacingMd, vertical = FutureDimens.spacingSm),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingMd),
+        ) {
+            GuideAppIcon(packageName, icon, theme, size = 40.dp)
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    label,
+                    color = theme.textColor,
+                    fontSize = type.title,
+                    fontWeight = FutureTypography.weightMedium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    subtitle,
+                    color = theme.mutedTextColor,
+                    fontSize = type.summary,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = FutureDimens.spacingXxs),
+                )
+            }
+        }
+    }
 }
 
 /**
