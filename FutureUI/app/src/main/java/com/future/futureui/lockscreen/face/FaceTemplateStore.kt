@@ -24,8 +24,10 @@ import javax.crypto.spec.GCMParameterSpec
  * והמשתמש מיד הזין קוד נכון, הדגימה האחרונה נוספת (עד 10, הישנה יוצאת),
  * כך שהזיהוי משתפר עם משקפיים, זקן או תאורה חדשה - כמו באייפון.
  */
-class FaceTemplateStore(context: Context) {
+class FaceTemplateStore private constructor(context: Context) {
     private val file = File(context.filesDir, FILE_NAME)
+    // קריאה-שינוי-כתיבה של התבניות (לימוד, רישום, מחיקה) תמיד תחת מנעול אחד
+    private val lock = Any()
 
     class Data(val enrolled: List<FloatArray>, val adaptive: List<FloatArray>, val calibration: Float) {
         val all: List<FloatArray> get() = enrolled + adaptive
@@ -35,7 +37,12 @@ class FaceTemplateStore(context: Context) {
 
     fun isEnrolled(): Boolean = file.exists() && (load()?.enrolled?.isNotEmpty() == true)
 
-    fun load(): Data? {
+    /** בדיקה זולה לנעילה: בלי פענוח Keystore. הקובץ קיים = רשום (פענוח פגום יידווח בסריקה עצמה). */
+    fun isEnrolledFast(): Boolean = cache?.enrolled?.isNotEmpty() ?: file.exists()
+
+    fun load(): Data? = synchronized(lock) { loadLocked() }
+
+    private fun loadLocked(): Data? {
         cache?.let { return it }
         if (!file.exists()) return null
         return try {
@@ -51,32 +58,44 @@ class FaceTemplateStore(context: Context) {
         }
     }
 
-    fun saveEnrollment(samples: List<FloatArray>, calibration: Float) {
+    /** true רק אם הרישום באמת נכתב לדיסק. */
+    fun saveEnrollment(samples: List<FloatArray>, calibration: Float): Boolean =
         write(Data(samples.take(MAX_ENROLLED), emptyList(), calibration))
-    }
 
-    fun addAdaptive(sample: FloatArray) {
-        val d = load() ?: return
+    fun addAdaptive(sample: FloatArray) = synchronized(lock) {
+        val d = load() ?: return@synchronized
         write(Data(d.enrolled, (d.adaptive + listOf(sample)).takeLast(MAX_ADAPTIVE), d.calibration))
+        Unit
     }
 
-    fun clear() {
+    fun clear() = synchronized(lock) {
         cache = null
         file.delete()
         runCatching { KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }.deleteEntry(KEY_ALIAS) }
+        Unit
     }
 
-    private fun write(data: Data) {
+    private fun write(data: Data): Boolean = synchronized(lock) {
         try {
             val cipher = Cipher.getInstance(TRANSFORMATION)
             cipher.init(Cipher.ENCRYPT_MODE, getOrCreateKey())
             val enc = cipher.doFinal(encode(data))
             val tmp = File(file.parentFile, "$FILE_NAME.tmp")
             tmp.writeBytes(cipher.iv + enc)
-            if (!tmp.renameTo(file)) { file.delete(); tmp.renameTo(file) }
+            // החלפה אטומית: הקובץ הישן לא נמחק לפני שהחדש במקומו
+            try {
+                java.nio.file.Files.move(
+                    tmp.toPath(), file.toPath(),
+                    java.nio.file.StandardCopyOption.ATOMIC_MOVE, java.nio.file.StandardCopyOption.REPLACE_EXISTING
+                )
+            } catch (e: Exception) {
+                if (!tmp.renameTo(file)) throw e
+            }
             cache = data
+            true
         } catch (e: Exception) {
             Log.e(TAG, "Failed to save face templates", e)
+            false
         }
     }
 
@@ -124,6 +143,14 @@ class FaceTemplateStore(context: Context) {
     }
 
     companion object {
+        @Volatile private var instance: FaceTemplateStore? = null
+
+        /** מופע יחיד לכל התהליך: מטמון אחד, כדי שרישום מחדש לא יידרס ממטמון ישן. */
+        fun shared(context: Context): FaceTemplateStore =
+            instance ?: synchronized(this) {
+                instance ?: FaceTemplateStore(context.applicationContext).also { instance = it }
+            }
+
         private const val TAG = "FaceTemplates"
         private const val FILE_NAME = "face_templates.bin"
         private const val ANDROID_KEYSTORE = "AndroidKeyStore"

@@ -101,7 +101,9 @@ class LockScreenController(
             // תחילת נעילה חדשה: זוכרים את האורך שלה בשביל פס ההתקדמות
             if (state.lockoutSeconds == 0 || secs > state.lockoutTotal) state.lockoutTotal = secs
             state.lockoutSeconds = secs
-            if (ms > 0) main.postDelayed(this, 1_000) else state.pinError = false
+            // בלי איפוס pinError כשאין נעילה: זה מחק את 'קוד שגוי' מיד אחרי הניסיון (F01);
+            // appendDigit מנקה אותו בספרה הבאה
+            if (ms > 0) main.postDelayed(this, 1_000)
         }
     }
 
@@ -120,6 +122,8 @@ class LockScreenController(
             addAction(Intent.ACTION_SCREEN_ON)
         }
         service.registerReceiver(screenReceiver, filter)
+        // פענוח תבניות הפנים (Keystore) ברקע, לא על ה-main thread בכל נעילה
+        io.execute { runCatching { face.warmUp() } }
         // אחרי הפעלה (או התקנה מחדש של FutureUI) - נועלים מיד אם יש קוד.
         if (settings.enabled && settings.pin.hasPin()) lock()
     }
@@ -189,6 +193,7 @@ class LockScreenController(
         state.pinReason = null
         faceFailedThisSession = false
         pendingAction = null
+        showFailures = 0
         clearPin()
         loadSettings()
         // עריכה שלא הסתיימה (המסך נכבה באמצע) - מבוטלת, כולל רקע שנבחר ולא נשמר
@@ -212,6 +217,8 @@ class LockScreenController(
         state.ownerMessage = settings.ownerMessage
         state.notificationPrivacy = settings.notificationPrivacy
     }
+
+    private var showFailures = 0
 
     private fun showWindow() {
         if (view != null) { runCatching { refreshDynamic() }; return }
@@ -247,13 +254,19 @@ class LockScreenController(
             }
             windowManager.addView(v, params)
             view = v
+            showFailures = 0
             bringStatusBarFront()
             main.removeCallbacks(ticker)
             main.postDelayed(ticker, 3_000)
         } catch (e: Exception) {
             Log.e(TAG, "Error showing lock screen", e)
-            // לא נשארים נעולים-בלי-חלון: מנסים שוב עד שהחלון עולה
-            if (locked && !suspended) main.postDelayed({ if (locked && !suspended && view == null) showWindow() }, 500)
+            // לא נשארים נעולים-בלי-חלון: מנסים שוב, עם backoff ועד MAX_SHOW_RETRIES (F10)
+            if (locked && !suspended && showFailures < MAX_SHOW_RETRIES) {
+                showFailures++
+                main.postDelayed({ if (locked && !suspended && view == null) showWindow() }, 500L * showFailures)
+            } else if (showFailures >= MAX_SHOW_RETRIES) {
+                Log.e(TAG, "lock window failed $showFailures times, giving up until the next lock/screen-on")
+            }
         }
     }
 
@@ -261,6 +274,7 @@ class LockScreenController(
         main.removeCallbacks(ticker)
         view?.let { runCatching { windowManager.removeView(it) } }
         view = null
+        wallpaperGen++
         state.wallpaper = null
         state.deviceWallpaper = null
         state.wallpaperCatalog.clear()
@@ -592,8 +606,13 @@ class LockScreenController(
             settings.leftShortcut = state.leftShortcut
             settings.rightShortcut = state.rightShortcut
             if (state.wallpaperId != settings.wallpaperId) {
-                LockWallpapers.commit(service, state.wallpaperId)
-                settings.wallpaperId = state.wallpaperId
+                // ההגדרה מתעדכנת רק אם הקובץ באמת הוחלף (F36)
+                if (LockWallpapers.commit(service, state.wallpaperId)) {
+                    settings.wallpaperId = state.wallpaperId
+                } else {
+                    state.wallpaperId = settings.wallpaperId
+                    loadWallpaper()
+                }
             } else {
                 LockWallpapers.discardPending(service)
             }
@@ -823,7 +842,7 @@ class LockScreenController(
             state.batteryPercent = bm?.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY) ?: 0
             state.charging = bm?.isCharging == true
             val alarm = service.getSystemService(AlarmManager::class.java)?.nextAlarmClock
-            state.nextAlarm = alarm?.let { SimpleDateFormat("EEE HH:mm", Locale("he")).format(it.triggerTime) }
+            state.nextAlarm = alarm?.let { alarmFormat.format(it.triggerTime) }
             state.mediaTitle = runCatching {
                 MediaControlService.getActiveControllers(service).firstOrNull()?.metadata?.getString(MediaMetadata.METADATA_KEY_TITLE)
             }.getOrNull()
@@ -837,11 +856,14 @@ class LockScreenController(
     private fun refreshNotifications() {
         val active = runCatching { MediaControlService.instance?.activeNotifications }.getOrNull() ?: return
         val pm = service.packageManager
-        val list = active
+        val visible = active
             .filter { it.packageName != service.packageName && !it.isOngoing && it.notification.safeText("android.title") != null }
             // האפליקציה ביקשה שההתראה לא תופיע במסך נעילה בכלל (VISIBILITY_SECRET) -
             // כמו באנדרואיד, גם כשההגדרה היא "הצג הכל"
             .filter { it.notification.visibility != android.app.Notification.VISIBILITY_SECRET }
+        // הספירה בווידג'ט היא של כל ההתראות, לא רק של הארבע שמוצגות (F02)
+        state.totalNotifications = visible.size
+        val list = visible
             .sortedByDescending { it.postTime }
             .take(MAX_NOTIFICATIONS)
             .map { sbn ->
@@ -849,7 +871,9 @@ class LockScreenController(
                 LockNotification(
                     key = sbn.key,
                     packageName = sbn.packageName,
-                    appName = appInfo?.let { pm.getApplicationLabel(it).toString() } ?: sbn.packageName,
+                    appName = labelCache.getOrPut(sbn.packageName) {
+                        appInfo?.let { pm.getApplicationLabel(it).toString() } ?: sbn.packageName
+                    },
                     title = sbn.notification.safeText("android.title")?.toString() ?: "",
                     text = sbn.notification.safeText("android.text")?.toString() ?: "",
                     time = sbn.postTime,
@@ -858,7 +882,9 @@ class LockScreenController(
                     },
                 )
             }
-        if (list.map { it.key } != state.notifications.map { it.key }) {
+        // חתימה מלאה ולא רק key: עדכון טקסט של התראה קיימת (אותו key) חייב להתעדכן (F03)
+        fun sig(n: LockNotification) = listOf(n.key, n.title, n.text, n.time.toString())
+        if (list.map(::sig) != state.notifications.map(::sig)) {
             state.notifications.clear()
             state.notifications.addAll(list)
             if (state.focusedNotification > list.lastIndex) state.focusedNotification = list.lastIndex
@@ -866,22 +892,32 @@ class LockScreenController(
     }
 
     private val iconCache = HashMap<String, androidx.compose.ui.graphics.ImageBitmap?>()
+    private val labelCache = HashMap<String, String>()
+    private val alarmFormat = SimpleDateFormat("EEE HH:mm", Locale.forLanguageTag("he"))
 
+    /** מונה שמבטל תוצאת טעינה שהגיעה אחרי שהחלון הוסר / התחילה טעינה חדשה. */
+    private var wallpaperGen = 0
+
+    /** פענוח הטפט ב-io ולא על ה-main thread (F08); עד שהוא מוכן הרקע שחור. */
     private fun loadWallpaper() {
-        val device = LockWallpapers.device(service)
-        state.deviceWallpaper = device?.asImageBitmap()
-        state.wallpaper =
-            if (state.wallpaperId.isEmpty()) state.deviceWallpaper
-            else LockWallpapers.load(service, state.wallpaperId)?.asImageBitmap()
+        val gen = ++wallpaperGen
+        val id = state.wallpaperId
+        io.execute {
+            val device = runCatching { LockWallpapers.device(service) }.getOrNull()?.asImageBitmap()
+            val chosen = if (id.isEmpty()) device
+            else runCatching { LockWallpapers.load(service, id) }.getOrNull()?.asImageBitmap()
+            main.post {
+                if (gen != wallpaperGen) return@post
+                state.deviceWallpaper = device
+                state.wallpaper = chosen
+            }
+        }
     }
 
     private fun drawableToBitmap(d: Drawable, size: Int): Bitmap {
-        if (d is BitmapDrawable && d.bitmap != null && size == 0) return d.bitmap
-        val w = if (size > 0) size else d.intrinsicWidth.coerceAtLeast(1)
-        val h = if (size > 0) size else d.intrinsicHeight.coerceAtLeast(1)
-        val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
         val c = Canvas(bmp)
-        d.setBounds(0, 0, w, h)
+        d.setBounds(0, 0, size, size)
         d.draw(c)
         return bmp
     }
@@ -897,5 +933,6 @@ class LockScreenController(
         private const val DIALER_PACKAGE = "com.future.dialer"
         private const val CLOCK_PACKAGE = "com.future.clock"
         private const val MAX_NOTIFICATIONS = 4
+        private const val MAX_SHOW_RETRIES = 8
     }
 }

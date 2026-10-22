@@ -48,6 +48,8 @@ class LockUiState {
 
     // התראות
     val notifications = mutableStateListOf<LockNotification>()
+    /** כמה התראות יש בסך הכל (הרשימה למעלה חתוכה לארבע). */
+    var totalNotifications by mutableIntStateOf(0)
     var focusedNotification by mutableIntStateOf(-1)
     var notificationPrivacy by mutableIntStateOf(1)
 

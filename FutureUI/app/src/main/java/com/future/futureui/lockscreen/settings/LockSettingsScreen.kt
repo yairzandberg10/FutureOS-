@@ -68,7 +68,7 @@ private val Danger = Color(0xFFFF6B6B)
 fun LockSettingsScreen(modifier: Modifier = Modifier, onExit: () -> Unit) {
     val context = LocalContext.current
     val settings = remember { LockSettings(context) }
-    val faceStore = remember { FaceTemplateStore(context) }
+    val faceStore = remember { FaceTemplateStore.shared(context) }
     var page by remember { mutableStateOf(if (settings.pin.hasPin()) Page.VERIFY else Page.MAIN) }
     var newPin by remember { mutableStateOf("") }
     var version by remember { mutableIntStateOf(0) } // מרענן את הערכים אחרי שינוי

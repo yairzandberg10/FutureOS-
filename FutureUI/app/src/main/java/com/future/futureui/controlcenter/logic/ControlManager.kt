@@ -78,7 +78,12 @@ class ControlManager(private val context: Context) {
     private var cameraId: String? = null
     private var activeController: MediaController? = null
     
-    private val scope = CoroutineScope(Dispatchers.IO)
+    // פעולות המתגים (Wi-Fi, Bluetooth...) - מתבטלות ב-dispose
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    // פקודות root "ירה ושכח" (למשל שחזור שורת המערכת ב-onDestroy ממש לפני dispose)
+    // חייבות לרוץ גם אחרי dispose, ולכן ב-scope נפרד שלא מתבטל
+    private val rootScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     // מוגדרים כאן, לפני init, ולא ליד updateStates שמשתמשת בהם: init קורא ל-
     // updateStates, ו-Kotlin מאתחל שדות לפי סדר הופעתם בקובץ - שדה שמוגדר אחרי
@@ -124,7 +129,7 @@ class ControlManager(private val context: Context) {
 
     /** גרסה לא-חוסמת לקוראים שרצים על ה-main thread (שירותי הנגישות). */
     fun runRootCommandAsync(command: String) {
-        scope.launch { RootShell.run(command) }
+        rootScope.launch { RootShell.run(command) }
     }
 
     private val torchCallback = object : CameraManager.TorchCallback() {
@@ -185,6 +190,10 @@ class ControlManager(private val context: Context) {
      */
     fun dispose() {
         mainScope.cancel()
+        scope.cancel()
+        runCatching { activeController?.unregisterCallback(callback) }
+        activeController = null
+        mainHandler.removeCallbacksAndMessages(null)
         try {
             context.contentResolver.unregisterContentObserver(settingsObserver)
         } catch (t: Throwable) {
@@ -235,7 +244,7 @@ class ControlManager(private val context: Context) {
             "predictive_text" -> togglePredictiveText()
         }
         // Poll state after a short delay to sync with actual system result
-        Handler(Looper.getMainLooper()).postDelayed({ updateStates() }, 800)
+        mainHandler.postDelayed({ updateStates() }, 800)
     }
 
     fun getControlState(id: String): Boolean {
@@ -297,7 +306,11 @@ class ControlManager(private val context: Context) {
     fun updateProgress() {
         activeController?.let { controller ->
             if (isPlaying) {
-                mediaPosition = controller.playbackState?.position ?: 0L
+                val state = controller.playbackState
+                // הנגן מדווח מיקום רק בשינוי מצב: מוסיפים את הזמן שעבר מאז, כפול המהירות (SU-18)
+                val estimated = if (state == null) 0L else
+                    state.position + ((android.os.SystemClock.elapsedRealtime() - state.lastPositionUpdateTime) * state.playbackSpeed).toLong()
+                mediaPosition = if (mediaDuration > 0) estimated.coerceIn(0L, mediaDuration) else estimated.coerceAtLeast(0L)
             }
         }
     }
@@ -393,9 +406,13 @@ class ControlManager(private val context: Context) {
                 context.startActivity(intent)
                 return
             }
-            val newFilter = if (isDndOn) NotificationManager.INTERRUPTION_FILTER_ALL else NotificationManager.INTERRUPTION_FILTER_PRIORITY
+            // המצב האמיתי מהמערכת ולא הדגל המקומי: DND שהשתנה מבחוץ לא נקלט כאן (SU-05)
+            val currentlyOn = nm.currentInterruptionFilter.let {
+                it != NotificationManager.INTERRUPTION_FILTER_ALL && it != NotificationManager.INTERRUPTION_FILTER_UNKNOWN
+            }
+            val newFilter = if (currentlyOn) NotificationManager.INTERRUPTION_FILTER_ALL else NotificationManager.INTERRUPTION_FILTER_PRIORITY
             nm.setInterruptionFilter(newFilter)
-            isDndOn = !isDndOn
+            isDndOn = !currentlyOn
         } catch (t: Throwable) {
             android.util.Log.w("ControlManager", "toggleDnd failed", t)
         }
@@ -749,6 +766,8 @@ class ControlManager(private val context: Context) {
                 method.invoke(device) as? Boolean ?: false
             } ?: false
         } catch (e: Exception) {
+            // בלי BLUETOOTH_CONNECT זו SecurityException: לא בולעים בשקט (SU-02)
+            Log.w("ControlManager", "bluetooth connected check failed", e)
             false
         }
     }

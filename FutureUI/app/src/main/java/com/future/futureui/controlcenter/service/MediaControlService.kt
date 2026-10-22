@@ -17,6 +17,12 @@ class MediaControlService : NotificationListenerService() {
         var instance: MediaControlService? = null
             private set
 
+        /** עולה בכל התראה שנוספה/הוסרה - מרכז ההתראות מתרענן לפיו מיד (F30). */
+        val changeTick = androidx.compose.runtime.mutableIntStateOf(0)
+
+        // מפתחות שכבר הוצג להם באנר - עדכון שקט של אותה התראה (FLAG_ONLY_ALERT_ONCE) לא יקפיץ שוב
+        private val bannerShown = HashSet<String>()
+
         fun getActiveControllers(context: Context): List<MediaController> {
             val manager = context.getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager
             return try {
@@ -46,7 +52,9 @@ class MediaControlService : NotificationListenerService() {
 
     override fun onNotificationPosted(sbn: StatusBarNotification) {
         super.onNotificationPosted(sbn)
+        changeTick.intValue++
         if (!shouldShowHeadsUp(sbn)) return
+        bannerShown.add(sbn.key)
         try {
             HeadsUpNotificationService.show(this, sbn.key)
         } catch (e: Exception) {
@@ -57,6 +65,8 @@ class MediaControlService : NotificationListenerService() {
     /** שיחה שנענתה/נדחתה מוחקת את התראת הצלצול - הבאנר שלה נסגר מיד במקום להישאר 30 שניות. */
     override fun onNotificationRemoved(sbn: StatusBarNotification) {
         super.onNotificationRemoved(sbn)
+        changeTick.intValue++
+        bannerShown.remove(sbn.key)
         HeadsUpNotificationService.dismiss(this, sbn.key)
     }
 
@@ -64,6 +74,8 @@ class MediaControlService : NotificationListenerService() {
      * התראות "מתמשכות" (למשל התקדמות נגן מוזיקה, שירותים ברקע), והכל כשה-DND פעיל. */
     private fun shouldShowHeadsUp(sbn: StatusBarNotification): Boolean {
         if (sbn.packageName == packageName) return false
+        // עדכון של התראה שכבר הוצגה, שהאפליקציה סימנה "להתריע פעם אחת" (SU-17)
+        if (sbn.notification.flags and android.app.Notification.FLAG_ONLY_ALERT_ONCE != 0 && sbn.key in bannerShown) return false
         // במסך הנעילה ההתראה מופיעה ברשימה שלו (עם הגדרת הפרטיות) - לא כבאנר
         if (com.future.futureui.utils.FutureUIState.isLocked) return false
         val n = sbn.notification

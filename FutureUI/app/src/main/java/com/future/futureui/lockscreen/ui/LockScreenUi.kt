@@ -262,8 +262,13 @@ private fun ScanningFace(accent: Color, size: Dp) {
 
 @Composable
 fun LockClock(now: Date, is24: Boolean, style: Int, color: Color, scale: Float = 1f) {
-    val time = SimpleDateFormat(if (is24) "HH:mm" else "h:mm", Locale.getDefault()).format(now)
-    val date = SimpleDateFormat("EEEE, d בMMMM", Locale("he")).format(now)
+    // הפורמטרים נוצרים פעם אחת ולא בכל הרכבה (השעון מתעדכן כל שנייה)
+    val timeFormat = remember(is24) { SimpleDateFormat(if (is24) "HH:mm" else "h:mm", Locale.getDefault()) }
+    val dateFormat = remember { SimpleDateFormat("EEEE, d בMMMM", Locale("he")) }
+    val dayFormat = remember { SimpleDateFormat("EEEE", Locale("he")) }
+    val dayMonthFormat = remember { SimpleDateFormat("d בMMMM", Locale("he")) }
+    val time = timeFormat.format(now)
+    val date = dateFormat.format(now)
     fun s(v: Int) = (v * scale).sp
     AnimatedContent(targetState = style, transitionSpec = { fadeIn(tween(FutureMotion.DurationStandard)) togetherWith fadeOut(tween(FutureMotion.DurationFast)) }, label = "clockStyle") { st ->
         when (st) {
@@ -299,8 +304,8 @@ fun LockClock(now: Date, is24: Boolean, style: Int, color: Color, scale: Float =
                 Text(time, color = color, fontSize = s(64), fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.width(12.dp))
                 Column {
-                    Text(SimpleDateFormat("EEEE", Locale("he")).format(now), color = Color.White, fontSize = s(17), fontWeight = FontWeight.SemiBold)
-                    Text(SimpleDateFormat("d בMMMM", Locale("he")).format(now), color = Color.White.copy(alpha = 0.8f), fontSize = s(14))
+                    Text(dayFormat.format(now), color = Color.White, fontSize = s(17), fontWeight = FontWeight.SemiBold)
+                    Text(dayMonthFormat.format(now), color = Color.White.copy(alpha = 0.8f), fontSize = s(14))
                 }
             }
         }
@@ -309,11 +314,13 @@ fun LockClock(now: Date, is24: Boolean, style: Int, color: Color, scale: Float =
 
 @Composable
 private fun CompactClock(now: Date, is24: Boolean, color: Color, sizeSp: Int, showDate: Boolean = true) {
-    val time = SimpleDateFormat(if (is24) "HH:mm" else "h:mm", Locale.getDefault()).format(now)
+    val timeFormat = remember(is24) { SimpleDateFormat(if (is24) "HH:mm" else "h:mm", Locale.getDefault()) }
+    val dateFormat = remember { SimpleDateFormat("EEEE, d בMMMM", Locale("he")) }
+    val time = timeFormat.format(now)
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(time, color = color, fontSize = sizeSp.sp, fontWeight = FontWeight.Light, lineHeight = (sizeSp * 1.05f).sp)
         if (showDate) {
-            Text(SimpleDateFormat("EEEE, d בMMMM", Locale("he")).format(now), color = Color.White.copy(alpha = 0.9f), fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            Text(dateFormat.format(now), color = Color.White.copy(alpha = 0.9f), fontSize = 14.sp, fontWeight = FontWeight.Medium)
         }
     }
 }
@@ -369,7 +376,7 @@ private fun WidgetItem(id: String, state: LockUiState, now: Date, accent: Color)
         "alarm" -> state.nextAlarm ?: "אין"
         "hebdate" -> hebrewDate(now)
         "media" -> state.mediaTitle ?: "לא מתנגן"
-        "notifications" -> "${state.notifications.size}"
+        "notifications" -> "${state.totalNotifications}"
         else -> return
     }
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -438,14 +445,15 @@ private fun NotificationCard(n: LockNotification, showContent: Boolean, focused:
     ) {
         Row(verticalAlignment = if (focused) Alignment.Top else Alignment.CenterVertically) {
             Box(Modifier.size(32.dp).clip(CircleShape).background(Raised), contentAlignment = Alignment.Center) {
-                if (n.icon != null) Image(n.icon, null, Modifier.size(20.dp).clip(CircleShape))
+                // במצב 'הסתר תוכן' גם שם האפליקציה, האייקון והשעה מוסתרים (F13)
+                if (n.icon != null && showContent) Image(n.icon, null, Modifier.size(20.dp).clip(CircleShape))
                 else Icon(Icons.Rounded.Notifications, null, tint = Color.White, modifier = Modifier.size(16.dp))
             }
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(n.appName, color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp, modifier = Modifier.weight(1f), maxLines = 1)
-                    Text(time, color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
+                    Text(if (showContent) n.appName else "", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp, modifier = Modifier.weight(1f), maxLines = 1)
+                    Text(if (showContent) time else "", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
                 }
                 Text(
                     if (showContent) n.title else "התראה",
@@ -512,13 +520,14 @@ private fun PinScreen(state: LockUiState, accent: Color, now: Date, is24: Boolea
             )
         }
     }
+    val pinTimeFormat = remember(is24) { SimpleDateFormat(if (is24) "HH:mm" else "h:mm", Locale.getDefault()) }
     val lockedOut = state.lockoutSeconds > 0
     val bad = state.pinError || lockedOut
     Column(
         Modifier.fillMaxSize().padding(top = topInset + 16.dp, start = 20.dp, end = 20.dp, bottom = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(SimpleDateFormat(if (is24) "HH:mm" else "h:mm", Locale.getDefault()).format(now), color = Color.White.copy(alpha = 0.8f), fontSize = 15.sp, fontWeight = FontWeight.Medium)
+        Text(pinTimeFormat.format(now), color = Color.White.copy(alpha = 0.8f), fontSize = 15.sp, fontWeight = FontWeight.Medium)
         Spacer(Modifier.weight(1f))
         Icon(Icons.Rounded.Lock, null, tint = if (bad) Danger else Color.White, modifier = Modifier.size(28.dp))
         Spacer(Modifier.height(14.dp))
@@ -590,7 +599,15 @@ private fun PinScreen(state: LockUiState, accent: Color, now: Date, is24: Boolea
     }
 }
 
-private fun formatSeconds(s: Int): String = if (s >= 60) "${(s + 59) / 60} דקות" else "$s שניות"
+private fun formatSeconds(s: Int): String {
+    // יחיד ויחידה/זוגי בעברית: דקה, שתי דקות, 3 דקות / שנייה, שתי שניות, 3 שניות (F12)
+    fun unit(n: Int, one: String, two: String, many: String) = when (n) {
+        1 -> one
+        2 -> two
+        else -> "$n $many"
+    }
+    return if (s >= 60) unit((s + 59) / 60, "דקה", "שתי דקות", "דקות") else unit(s, "שנייה", "שתי שניות", "שניות")
+}
 
 // ---------------------------------------------------------------- עריכה
 

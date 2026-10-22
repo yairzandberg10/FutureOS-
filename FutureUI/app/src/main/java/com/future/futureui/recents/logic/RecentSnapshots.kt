@@ -10,7 +10,9 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import java.io.File
-import java.util.concurrent.Executors
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.TimeUnit
 
 /**
  * צילומי המסך של האפליקציות האחרונות - מה שמוצג בכרטיסים של מסך "אחרונות".
@@ -33,7 +35,8 @@ class RecentSnapshots(
     val images = mutableStateMapOf<String, ImageBitmap>()
 
     private val main = Handler(Looper.getMainLooper())
-    private val io = Executors.newSingleThreadExecutor()
+    // thread אחד שנסגר לבד אחרי 30 שניות בטלה - לא נשאר חי אחרי הפעלה מחדש של השירות
+    private val io = ThreadPoolExecutor(1, 1, 30, TimeUnit.SECONDS, LinkedBlockingQueue<Runnable>()).apply { allowCoreThreadTimeOut(true) }
     private val dir = File(service.cacheDir, "recents").apply { mkdirs() }
     private var pending: Runnable? = null
     private var lastShotAt = 0L
@@ -41,6 +44,8 @@ class RecentSnapshots(
     init {
         io.execute {
             dir.listFiles()?.forEach { file ->
+                // צילום ישן מדי נמחק (SU-16): צילומי מסך של אפליקציות לא נשארים בדיסק לנצח
+                if (System.currentTimeMillis() - file.lastModified() > MAX_AGE_MS) { file.delete(); return@forEach }
                 val pkg = file.nameWithoutExtension
                 runCatching { android.graphics.BitmapFactory.decodeFile(file.path) }.getOrNull()?.let { bmp ->
                     main.post { if (pkg !in images) images[pkg] = bmp.asImageBitmap() }
@@ -99,6 +104,11 @@ class RecentSnapshots(
         }
     }
 
+    /** onDestroy של השירות: מבטל צילום מתוזמן (ה-thread של הדיסק נסגר לבד). */
+    fun dispose() {
+        cancelPending()
+    }
+
     fun remove(pkg: String) {
         images.remove(pkg)
         io.execute { File(dir, "$pkg.webp").delete() }
@@ -123,5 +133,6 @@ class RecentSnapshots(
 
     private companion object {
         const val SCALE = 3
+        const val MAX_AGE_MS = 24L * 60 * 60 * 1000
     }
 }

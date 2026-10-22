@@ -42,6 +42,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -121,13 +122,32 @@ class ShareActivity : ComponentActivity() {
             finish()
             return
         }
-        val title = intent.getStringExtra(Intent.EXTRA_TITLE) ?: "שיתוף"
-        val summary = describe(send)
+        // הכותרת קבועה: EXTRA_TITLE הוא טקסט חופשי של השולח והיה נראה כהודעת מערכת
+        // (SU-13 / F21). במקומה מוצג מי שולח, בתת-הכותרת.
+        val title = "שיתוף"
         val quick = buildQuickActions(send)
-        val apps = buildAppTargets(send)
+        val summaryState = mutableStateOf<String?>(null)
+        val appsState = mutableStateOf<List<Target>?>(null)
+        // תוויות, אייקונים ושאילתת שם הקובץ לא על ה-main thread לפני הפריים הראשון (F22)
+        Thread {
+            val summary = runCatching { describe(send) }.getOrNull()
+            val sender = runCatching { senderLabel() }.getOrNull()
+            val subtitle = listOfNotNull(sender?.let { "מאת $it" }, summary).joinToString(" · ").ifEmpty { null }
+            val apps = runCatching { buildAppTargets(send) }.getOrDefault(emptyList())
+            runOnUiThread {
+                summaryState.value = subtitle
+                appsState.value = apps
+            }
+        }.start()
         setContent {
-            FutureUITheme { ShareSheet(title, summary, quick, apps, onClose = { finish() }) }
+            FutureUITheme { ShareSheet(title, summaryState.value, quick, appsState.value, onClose = { finish() }) }
         }
+    }
+
+    /** שם האפליקציה ששלחה את השיתוף (referrer), אם ידוע. */
+    private fun senderLabel(): String? {
+        val pkg = referrer?.takeIf { it.scheme == "android-app" }?.host ?: callingPackage ?: return null
+        return runCatching { packageManager.getApplicationLabel(packageManager.getApplicationInfo(pkg, 0)).toString() }.getOrNull()
     }
 
     private fun streamsGrantedByCaller(send: Intent): Boolean {
@@ -220,9 +240,11 @@ class ShareActivity : ComponentActivity() {
         title: String,
         summary: String?,
         quick: List<Target>,
-        apps: List<Target>,
+        appsOrNull: List<Target>?,
         onClose: () -> Unit,
     ) {
+        // appsOrNull == null: עדיין נטענות ברקע
+        val apps = appsOrNull ?: emptyList()
         // מיקום אחד רציף: קודם הפעולות המהירות (שורה), אחר כך רשת האפליקציות.
         val all = quick + apps
         var focused by remember { mutableIntStateOf(0) }
@@ -330,7 +352,14 @@ class ShareActivity : ComponentActivity() {
                             )
                         }
 
-                        if (apps.isEmpty()) {
+                        if (appsOrNull == null) {
+                            Text(
+                                "טוען...",
+                                color = Color.White.copy(alpha = 0.55f),
+                                fontSize = FutureTypography.body,
+                                modifier = Modifier.padding(20.dp),
+                            )
+                        } else if (apps.isEmpty()) {
                             Text(
                                 "אין אפליקציות שיכולות לקבל את התוכן הזה",
                                 color = Color.White.copy(alpha = 0.55f),

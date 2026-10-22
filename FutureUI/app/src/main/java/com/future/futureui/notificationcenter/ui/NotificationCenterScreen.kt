@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
+import com.future.futureui.controlcenter.service.MediaControlService
 import com.future.futureui.controlcenter.ui.components.focusEffect
 import com.future.futureui.notificationcenter.logic.NotificationCenterManager
 import kotlinx.coroutines.delay
@@ -86,13 +87,26 @@ fun NotificationCenterScreen(
     }
 
     // עדכון זמן ותאריך ורענון התראות כל 30 שניות
-    LaunchedEffect(Unit) {
+    // פורמט השעה לפי הגדרת 12/24 של המערכת (F18)
+    val timePattern = if (android.text.format.DateFormat.is24HourFormat(context)) "HH:mm" else "h:mm"
+    LaunchedEffect(timePattern) {
         while (true) {
             val now = Calendar.getInstance().time
-            currentTime = SimpleDateFormat("HH:mm", Locale.getDefault()).format(now)
+            currentTime = SimpleDateFormat(timePattern, Locale.getDefault()).format(now)
             currentDate = hebrewDateFormat.format(now)
+            // השעון מתעדכן בגבול הדקה ולא עם פיגור של עד חצי דקה
+            delay(60_000L - System.currentTimeMillis() % 60_000L + 50L)
+        }
+    }
+
+    // התראה שנוספה/הוסרה מרעננת את הרשימה מיד (F30 / SU-08); בנוסף רענון כל 30 שניות כגיבוי
+    LaunchedEffect(MediaControlService.changeTick.intValue) {
+        ncManager.updateNotifications()
+    }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(1000 * 30)
             ncManager.updateNotifications()
-            delay(1000 * 30) // רענון כל 30 שניות
         }
     }
 
@@ -110,16 +124,26 @@ fun NotificationCenterScreen(
     // התחתונים ("נקה הכל"/"השתק") נשארים בלתי-נגישים לחלוטין. ממקדים את הראשון
     // מביניהם באופן מפורש במקרה הזה.
     val clearAllFocusRequester = remember { FocusRequester() }
-    LaunchedEffect(isVisible, ncManager.notifications.size) {
-        if (isVisible && ncManager.notifications.isNotEmpty()) {
+    var clearArmed by remember { mutableStateOf(false) }
+    LaunchedEffect(clearArmed) {
+        if (clearArmed) {
+            delay(4000)
+            clearArmed = false
+        }
+    }
+    // המפתח הוא "האם הרשימה ריקה" ולא גודלה: הוספה/הסרה של התראה לא מקפיצה את
+    // הפוקוס לראש הרשימה (SU-07)
+    val hasNotifications = ncManager.notifications.isNotEmpty()
+    LaunchedEffect(isVisible, hasNotifications) {
+        if (isVisible && hasNotifications) {
             delay(150)
             try { initialFocusRequester.requestFocus() } catch (e: Exception) {
                 android.util.Log.w("NotificationCenterScree", "NotificationCenterScreen failed", e)
             }
         }
     }
-    LaunchedEffect(isVisible, ncManager.notifications.size) {
-        if (isVisible && ncManager.notifications.isEmpty()) {
+    LaunchedEffect(isVisible, hasNotifications) {
+        if (isVisible && !hasNotifications) {
             delay(150)
             try { clearAllFocusRequester.requestFocus() } catch (e: Exception) {
                 android.util.Log.w("NotificationCenterScree", "NotificationCenterScreen failed", e)
@@ -278,9 +302,17 @@ fun NotificationCenterScreen(
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         NotificationCenterButton(
-                            text = "נקה הכל",
+                            text = if (clearArmed) "לחצו OK שוב" else "נקה הכל",
                             icon = Icons.Rounded.DeleteSweep,
-                            onClick = { ncManager.clearAll() },
+                            // OK ראשון רק מזהיר, שני (תוך 4 שניות) מנקה - כמו בתפריט הכיבוי (F29)
+                            onClick = {
+                                if (clearArmed || !hasNotifications) {
+                                    clearArmed = false
+                                    ncManager.clearAll()
+                                } else {
+                                    clearArmed = true
+                                }
+                            },
                             modifier = Modifier.weight(1f),
                             color = Color.Black.copy(alpha = 0.3f),
                             focusRequester = clearAllFocusRequester
@@ -340,7 +372,8 @@ fun NotificationItem(
                     }
                 })
             }
-            add(NotificationOption(label = "כבה התראות", isDestructive = true) { onMuteApp() })
+            // פותח את הגדרות ההתראות של האפליקציה (לא משתיק בעצמו) - התווית תואמת (SU-35)
+            add(NotificationOption(label = "הגדרות התראות", isDestructive = true) { onMuteApp() })
             add(NotificationOption(label = "חזור") { })
         }
     }
@@ -535,7 +568,13 @@ fun NotificationItem(
                     // תוכן ההתראה: שם אפליקציה ותקציר הודעה
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = if (title.isNotBlank()) "$appName: $title" else appName,
+                            // שם האפליקציה פעם אחת: כותרת זהה לשם (או שמתחילה בו) לא מוכפלת (N-03)
+                            text = when {
+                                title.isBlank() -> appName
+                                title.equals(appName, ignoreCase = true) -> appName
+                                title.startsWith("$appName:", ignoreCase = true) -> title
+                                else -> "$appName: $title"
+                            },
                             fontSize = FutureTypography.body,
                             fontWeight = FontWeight.Bold,
                             color = textColor,

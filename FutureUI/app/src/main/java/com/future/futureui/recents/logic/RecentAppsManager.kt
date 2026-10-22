@@ -52,6 +52,10 @@ class RecentAppsManager(private val context: Context) {
         .filter { it.isNotBlank() }
         .toMutableList()
 
+    // תווית וצבע ממוצע לכל חבילה - לא מחשבים מחדש בכל פתיחה של "אחרונות" (F23)
+    private val labelCache = HashMap<String, String>()
+    private val tintCache = HashMap<String, Int>()
+
     /** האם רכיב הוא פעילות של אפליקציה שאפשר לפתוח - נשמר כדי לא לשאול שוב על כל חלון. */
     private val verdicts = HashMap<String, Boolean>()
 
@@ -115,10 +119,10 @@ class RecentAppsManager(private val context: Context) {
                 val icon = pm.getApplicationIcon(appInfo)
                 RecentAppInfo(
                     packageName = pkg,
-                    label = pm.getApplicationLabel(appInfo).toString(),
+                    label = labelCache.getOrPut(pkg) { pm.getApplicationLabel(appInfo).toString() },
                     icon = icon,
                     lastTimeUsed = now - index,
-                    tint = averageColor(icon),
+                    tint = tintCache.getOrPut(pkg) { averageColor(icon) },
                 )
             } catch (e: PackageManager.NameNotFoundException) {
                 // הוסרה מאז.

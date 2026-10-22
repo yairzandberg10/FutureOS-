@@ -88,16 +88,19 @@ object LockWallpapers {
     }.getOrNull()
 
     /** סיום עריכה: הרקע הממתין הופך לרקע של מסך הנעילה ("" = הטפט של המכשיר). */
-    fun commit(context: Context, id: String) {
+    fun commit(context: Context, id: String): Boolean {
         val file = File(context.filesDir, FILE)
         val pending = File(context.filesDir, PENDING)
+        var ok = true
         if (id.isEmpty()) {
             file.delete()
         } else if (pending.exists()) {
-            file.delete()
-            pending.renameTo(file)
+            // rename דורס את הקובץ הקיים בעצמו; אם נכשל - העתקה. הקובץ הישן לא נמחק לפני.
+            ok = pending.renameTo(file) ||
+                runCatching { pending.copyTo(file, overwrite = true); true }.getOrDefault(false)
         }
         pending.delete()
+        return ok
     }
 
     fun discardPending(context: Context) {

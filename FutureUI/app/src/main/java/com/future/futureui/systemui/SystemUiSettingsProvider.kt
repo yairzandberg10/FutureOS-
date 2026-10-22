@@ -44,10 +44,12 @@ class SystemUiSettingsProvider : ContentProvider() {
             arrayOf(
                 if (statusBarPrefs.getBoolean(COL_SHOW_BATTERY, true)) 1 else 0,
                 if (statusBarPrefs.getBoolean(COL_SHOW_BLUETOOTH, true)) 1 else 0,
-                if (statusBarPrefs.getBoolean(COL_USE_24_HOUR_CLOCK, true)) 1 else 0,
+                // ברירת המחדל מהגדרת 12/24 של המערכת, כמו בשורת המצב עצמה (F18)
+                if (StatusBarLayoutManager(context!!).getUse24HourClock()) 1 else 0,
                 if (statusBarPrefs.getBoolean(COL_SUPPRESS_SYSTEM_BARS, true)) 1 else 0,
                 statusBarPrefs.getString(COL_BAR_STYLE, StatusBarLayoutManager.STYLE_CLASSIC),
-                if (com.future.futureui.utils.FutureUIState.isSecured) 1 else 0,
+                // גם נעילת המערכת עצמה (KeyguardManager), לא רק הדגל בזיכרון שמתאפס עם התהליך (F14)
+                if (com.future.futureui.utils.FutureUIState.isSecured || systemLocked()) 1 else 0,
             )
         )
         return cursor
@@ -65,6 +67,10 @@ class SystemUiSettingsProvider : ContentProvider() {
         context?.contentResolver?.notifyChange(CONTENT_URI, null)
         return 1
     }
+
+    private fun systemLocked(): Boolean = runCatching {
+        (context?.getSystemService(Context.KEYGUARD_SERVICE) as? android.app.KeyguardManager)?.isDeviceLocked == true
+    }.getOrDefault(false)
 
     override fun insert(uri: Uri, values: ContentValues?): Uri? = null
     override fun delete(uri: Uri, selection: String?, selectionArgs: Array<out String>?): Int = 0

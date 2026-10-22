@@ -57,7 +57,9 @@ class ControlLayoutManager(context: Context) {
 
     fun getTopToggleIds(): List<String> {
         val saved = prefs.getString("top_toggle_ids", "wifi,bluetooth")
-        return saved?.split(",") ?: listOf("wifi", "bluetooth")
+        // בלי מזהים ריקים או כאלה שכבר לא קיימים (SU-29)
+        return saved?.split(",")?.filter { getControlById(it) != null }?.distinct()?.takeIf { it.isNotEmpty() }
+            ?: listOf("wifi", "bluetooth")
     }
 
     fun saveTopToggleIds(ids: List<String>) {
@@ -66,7 +68,8 @@ class ControlLayoutManager(context: Context) {
 
     fun getBottomToggleIds(): List<String> {
         val saved = prefs.getString("bottom_toggle_ids", "airplane,dnd")
-        return saved?.split(",") ?: listOf("airplane", "dnd")
+        return saved?.split(",")?.filter { getControlById(it) != null }?.distinct()?.takeIf { it.isNotEmpty() }
+            ?: listOf("airplane", "dnd")
     }
 
     fun saveBottomToggleIds(ids: List<String>) {

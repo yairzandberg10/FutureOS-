@@ -19,7 +19,7 @@ enum class FaceStatus { SCANNING, NO_FACE, TOO_FAR, TOO_DARK, NOT_RECOGNIZED, RE
 class FaceAuthenticator(context: Context, private val settings: LockSettings) {
     private val appContext = context.applicationContext
     private val camera = FaceCamera(appContext)
-    private val store = FaceTemplateStore(appContext)
+    private val store = FaceTemplateStore.shared(appContext)
     private val main = Handler(Looper.getMainLooper())
 
     @Volatile private var active = false
@@ -36,7 +36,11 @@ class FaceAuthenticator(context: Context, private val settings: LockSettings) {
     @Volatile private var lastThreshold = 0f
         private set
 
-    fun isAvailable(): Boolean = settings.faceEnabled && store.isEnrolled() && !settings.strongAuthRequired()
+    // isEnrolledFast: לא מפענח את מפתח ה-Keystore על ה-main thread בכל נעילה (F09)
+    fun isAvailable(): Boolean = settings.faceEnabled && store.isEnrolledFast() && !settings.strongAuthRequired()
+
+    /** מפענח את התבניות מראש (לקרוא מחוץ ל-main), כדי שהסריקה הראשונה לא תחכה. */
+    fun warmUp() { store.load() }
 
     fun start(onStatus: (FaceStatus) -> Unit, onSuccess: () -> Unit) {
         if (active) return
@@ -73,7 +77,7 @@ class FaceAuthenticator(context: Context, private val settings: LockSettings) {
                     lastProbeDistance = d
                     lastProbeAt = SystemClock.elapsedRealtime()
                     // debug בלבד (לא נשמר ב-release): מרחקי הזיהוי עוזרים לכייל תמונה מזויפת
-                    Log.d(TAG, "face distance=%.4f threshold=%.4f".format(d, threshold))
+                    if (Log.isLoggable(TAG, Log.DEBUG)) Log.d(TAG, "face distance=%.4f threshold=%.4f".format(d, threshold))
                     if (d <= threshold) {
                         if (++matches >= REQUIRED_MATCHES) {
                             finish()
@@ -218,10 +222,13 @@ class FaceEnroller(context: Context, private val settings: LockSettings) {
                 camera.stop()
                 val copy = samples.toList()
                 val calibration = FaceEngine.calibrate(copy)
-                Log.d("FaceEnroll", "enrolled ${copy.size} samples, calibration=%.4f".format(calibration))
-                FaceTemplateStore(appContext).saveEnrollment(copy, calibration)
-                settings.onFaceSuccess()
-                main.post(onDone)
+                // הצלחה רק אם הרישום באמת נשמר (F06)
+                if (FaceTemplateStore.shared(appContext).saveEnrollment(copy, calibration)) {
+                    settings.onFaceSuccess()
+                    main.post(onDone)
+                } else {
+                    main.post { onError("שמירת הרישום נכשלה") }
+                }
             }
         }, onError = { msg ->
             active = false

@@ -76,7 +76,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
         showRecentAppsWithFreshSnapshot()
     }
     private val recentSnapshots by lazy {
-        RecentSnapshots(this, (com.future.futureui.statusbar.logic.StatusBarLayoutManager.HEIGHT_DP * resources.displayMetrics.density).toInt())
+        RecentSnapshots(this, StatusBarLayoutManager.heightPx(this))
     }
 
     /** האם אפשר לצלם עכשיו את [pkg]: היא בחזית, רשומה באחרונות, ואין מעליה חלון שלנו. */
@@ -95,9 +95,23 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
     // רץ באותו תהליך/UID בדיוק כמו ה-ContentProvider עצמו (שניהם בתוך FutureUI).
     private val themePrefs by lazy { getSharedPreferences("shared_theme_prefs", Context.MODE_PRIVATE) }
     private val recentsAccentColor = mutableStateOf(Color.White)
+    // ערכת הנושא (כהה/בהיר) של המערכת - צבע הרקע האטום של שורת המצב (N-01)
+    private val barDarkMode = mutableStateOf(true)
     private val themePrefsListener = SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
         if (key == ThemeProvider.COL_PRIMARY_COLOR) {
             recentsAccentColor.value = Color(prefs.getInt(ThemeProvider.COL_PRIMARY_COLOR, android.graphics.Color.WHITE))
+        }
+        if (key == ThemeProvider.COL_IS_DARK_MODE) {
+            barDarkMode.value = prefs.getBoolean(ThemeProvider.COL_IS_DARK_MODE, true)
+        }
+    }
+
+    // המתג "הסתר שורת מצב מקורית" בהגדרות חל מיד (SU-04), לא רק בהפעלה הבאה של השירות
+    private val suppressListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == "suppress_system_bars") {
+            mainHandler.post {
+                if (layoutManager?.getSuppressSystemBars() == true) suppressSystemBars() else restoreSystemBars()
+            }
         }
     }
 
@@ -163,6 +177,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
             layoutManager = StatusBarLayoutManager(this)
 
             recentsAccentColor.value = Color(themePrefs.getInt(ThemeProvider.COL_PRIMARY_COLOR, android.graphics.Color.WHITE))
+            barDarkMode.value = themePrefs.getBoolean(ThemeProvider.COL_IS_DARK_MODE, true)
             themePrefs.registerOnSharedPreferenceChangeListener(themePrefsListener)
 
             val filter = IntentFilter(FutureUIActions.ACTION_BRING_STATUS_BAR_FRONT).apply {
@@ -195,6 +210,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
         if (layoutManager?.getSuppressSystemBars() == true) {
             suppressSystemBars()
         }
+        layoutManager?.registerListener(suppressListener)
         showStatusBar()
         exemptCallAppsFromBackgroundRestriction()
         if (lockController == null) {
@@ -350,10 +366,17 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
     private fun adjustVolume(direction: Int) {
         try {
             val audio = getSystemService(Context.AUDIO_SERVICE) as? AudioManager ?: return
-            val max = audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
-            val current = audio.getStreamVolume(AudioManager.STREAM_MUSIC)
-            val next = (current + direction).coerceIn(0, max)
-            audio.setStreamVolume(AudioManager.STREAM_MUSIC, next, 0)
+            // הזרם לפי המצב: בשיחה - עוצמת השיחה, בצלצול - הצלצול, אחרת מוזיקה (SU-03)
+            val stream = when (audio.mode) {
+                AudioManager.MODE_IN_CALL, AudioManager.MODE_IN_COMMUNICATION -> AudioManager.STREAM_VOICE_CALL
+                AudioManager.MODE_RINGTONE -> AudioManager.STREAM_RING
+                else -> AudioManager.STREAM_MUSIC
+            }
+            val max = audio.getStreamMaxVolume(stream)
+            val min = audio.getStreamMinVolume(stream)
+            val current = audio.getStreamVolume(stream)
+            val next = (current + direction).coerceIn(min, max)
+            audio.setStreamVolume(stream, next, 0)
             val fraction = if (max > 0) next.toFloat() / max else 0f
             volumeLevelState.floatValue = fraction
             showVolumeOverlay()
@@ -365,8 +388,8 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
     private fun showStatusBar() {
         if (statusBarView != null) return
         try {
-            val density = resources.displayMetrics.density
-            val heightPx = (StatusBarLayoutManager.HEIGHT_DP * density).toInt()
+            // גובה החלון מכסה לפחות את שורת המערכת (48px במכשיר) ולא רק 28dp
+            val heightPx = StatusBarLayoutManager.heightPx(this)
 
             val params = WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT,
@@ -391,7 +414,8 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
                             modifier = Modifier.fillMaxSize(),
                             controlManager = controlManager,
                             layoutManager = layoutManager,
-                            accentColor = recentsAccentColor.value
+                            accentColor = recentsAccentColor.value,
+                            darkMode = barDarkMode.value
                         )
                     }
                 }
@@ -457,6 +481,8 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
                 windowManager.addView(volumeOverlayView, params)
             } catch (e: Exception) {
                 Log.e("FutureUI", "Error showing volume overlay", e)
+                // בלי איפוס השדה הקריאה הבאה חושבת שהחלון קיים ולא מנסה שוב
+                volumeOverlayView = null
             }
         }
 
@@ -496,7 +522,8 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
         val byClass = POWER_MENU_CLASS_HINTS.any { cls.contains(it, ignoreCase = true) }
         val texts = if (byClass) emptyList() else windowTexts(event)
         // בלי הטקסטים עצמם: חלון מערכת יכול להציג תוכן פרטי (שם, מספר, הודעה).
-        Log.i("FutureUI", "system window: $pkg / $cls / ${texts.size} texts")
+        // Log.d ולא i: R8 מסיר רק d/v ב-release, וחלון מערכת יכול להכיל תוכן פרטי (SU-25)
+        Log.d("FutureUI", "system window: $pkg / $cls / ${texts.size} texts")
         val byText = texts.count { t -> POWER_MENU_LABELS.any { t.equals(it, ignoreCase = true) } } >= 1 &&
             texts.any { t -> POWER_OFF_LABELS.any { t.equals(it, ignoreCase = true) } }
         if (!byClass && !byText) return
@@ -599,6 +626,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
                 }
             }
             windowManager.addView(powerMenuView, params)
+            FutureUIState.powerMenuOpen.value = true
         } catch (e: Exception) {
             Log.e("FutureUI", "Error showing power menu", e)
             powerMenuView = null
@@ -612,6 +640,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
             Log.e("FutureUI", "Error hiding power menu", e)
         }
         powerMenuView = null
+        FutureUIState.powerMenuOpen.value = false
     }
 
     /**
@@ -700,6 +729,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
 
             windowManager.addView(recentsView, params)
             recentsVisible = true
+            FutureUIState.recentsOpen.value = true
 
             val bringFrontIntent = Intent(FutureUIActions.ACTION_BRING_STATUS_BAR_FRONT)
             bringFrontIntent.setPackage(packageName)
@@ -717,6 +747,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
         }
         recentsView = null
         recentsVisible = false
+        FutureUIState.recentsOpen.value = false
     }
 
     /**
@@ -725,11 +756,33 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
      * לוודא שהפקודה עובדת על ה-ROM הספציפי (יאיר: תבדוק על המכשיר בפועל).
      */
     private fun suppressSystemBars() {
-        controlManager?.runRootCommandAsync("settings put global policy_control immersive.full=*")
+        val ours = "immersive.full=*"
+        // שומרים את הערך הקודם פעם אחת בלבד (לא דורסים אותו בהפעלה חוזרת)
+        layoutManager?.let { lm ->
+            if (!lm.hasSavedPolicyControl()) {
+                val current = runCatching { android.provider.Settings.Global.getString(contentResolver, "policy_control") }.getOrNull()
+                lm.savePolicyControl(current?.takeIf { it != ours })
+            }
+        }
+        controlManager?.runRootCommandAsync("settings put global policy_control $ours")
     }
 
+    /** מחזיר את policy_control למה שהיה לפני שלנו; אם לא שינינו - לא נוגעים. */
     private fun restoreSystemBars() {
-        controlManager?.runRootCommandAsync("settings put global policy_control immersive.none=*")
+        val lm = layoutManager ?: return
+        if (!lm.hasSavedPolicyControl()) return
+        val prev = lm.getSavedPolicyControl()
+        controlManager?.runRootCommandAsync(
+            if (prev.isEmpty()) "settings delete global policy_control"
+            else "settings put global policy_control ${com.future.sharednav.root.RootShell.quote(prev)}"
+        )
+        lm.clearSavedPolicyControl()
+    }
+
+    override fun onUnbind(intent: Intent?): Boolean {
+        // השירות הופסק (המשתמש כיבה את הנגישות): שורת המערכת חוזרת
+        restoreSystemBars()
+        return super.onUnbind(intent)
     }
 
     override fun onDestroy() {
@@ -740,6 +793,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
             hidePowerMenu()
             lockController?.dispose()
             lockController = null
+            recentSnapshots.dispose()
             statusBarView?.let { windowManager.removeView(it) }
             statusBarView = null
         } catch (e: Exception) {
@@ -753,6 +807,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
         } catch (e: Exception) {
             android.util.Log.w("StatusBarAccessibilityS", "onDestroy failed", e)
         }
+        layoutManager?.unregisterListener(suppressListener)
         try {
             themePrefs.unregisterOnSharedPreferenceChangeListener(themePrefsListener)
         } catch (e: Exception) {

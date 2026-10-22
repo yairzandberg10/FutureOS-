@@ -81,6 +81,17 @@ fun ControlCenterScreen(
     DisposableEffect(gridManager) { onDispose { gridManager.dispose() } }
     var sectionOrder by remember { mutableStateOf(layoutManager.getSectionOrder()) }
     var movingSectionId by remember { mutableStateOf<String?>(null) }
+    // יציאה (BACK) באמצע מצב עריכה שומרת את השינויים במקום לאבד אותם בשקט (SU-30)
+    DisposableEffect(Unit) {
+        onDispose {
+            if (isEditMode) {
+                layoutManager.saveLayout(activeControlIds)
+                layoutManager.saveSectionOrder(sectionOrder)
+                layoutManager.saveTopToggleIds(topToggleIds)
+                layoutManager.saveBottomToggleIds(bottomToggleIds)
+            }
+        }
+    }
 
     // בלי בקשת פוקוס ראשונית מפורש, אף אלמנט לא ממוקד כשהמסך נפתח - ואז מקשי
     // הכיוונים/OK של השלט לא מגיעים לשום מקום, וכל הכפתורים נראים "לא עובדים".
@@ -115,12 +126,14 @@ fun ControlCenterScreen(
         )
     }
 
-    LaunchedEffect(Unit) {
+    // פורמט השעה לפי הגדרת 12/24 של המערכת, והעדכון בגבול הדקה (F18)
+    val timePattern = if (android.text.format.DateFormat.is24HourFormat(LocalContext.current)) "HH:mm" else "h:mm"
+    LaunchedEffect(timePattern) {
         while (true) {
             val now = Calendar.getInstance().time
-            currentTime = SimpleDateFormat("HH:mm", Locale.getDefault()).format(now)
+            currentTime = SimpleDateFormat(timePattern, Locale.getDefault()).format(now)
             currentDate = hebrewDateFormat.format(now)
-            delay(1000 * 60)
+            delay(60_000L - System.currentTimeMillis() % 60_000L + 50L)
         }
     }
 

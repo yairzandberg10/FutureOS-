@@ -90,7 +90,7 @@ class NotificationCenterAccessibilityService : AccessibilityService(), Lifecycle
 
     override fun onServiceConnected() {
         super.onServiceConnected()
-        Toast.makeText(this, "Notification Center מוכן: לחיצה ארוכה על #", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "מרכז ההתראות מוכן: לחיצה ארוכה על #", Toast.LENGTH_SHORT).show()
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {}
@@ -219,6 +219,7 @@ class NotificationCenterAccessibilityService : AccessibilityService(), Lifecycle
             windowParams = params
             windowManager.addView(composeView, params)
             isVisible = true
+            com.future.futureui.utils.FutureUIState.notificationCenterOpen.value = true
 
             val bringFrontIntent = Intent(FutureUIActions.ACTION_BRING_STATUS_BAR_FRONT)
             bringFrontIntent.setPackage(packageName)
@@ -229,10 +230,13 @@ class NotificationCenterAccessibilityService : AccessibilityService(), Lifecycle
     }
 
     private fun drawableToBitmap(drawable: Drawable): Bitmap {
-        if (drawable is BitmapDrawable) return drawable.bitmap
+        // הטפט מוצג מטושטש ברקע בלבד: מקטינים לעד 1024 בצלע הארוכה במקום ARGB מלא (F24)
+        val w = drawable.intrinsicWidth.coerceAtLeast(1)
+        val h = drawable.intrinsicHeight.coerceAtLeast(1)
+        val scale = (1024f / maxOf(w, h)).coerceAtMost(1f)
         val bitmap = Bitmap.createBitmap(
-            drawable.intrinsicWidth.coerceAtLeast(1),
-            drawable.intrinsicHeight.coerceAtLeast(1),
+            (w * scale).toInt().coerceAtLeast(1),
+            (h * scale).toInt().coerceAtLeast(1),
             Bitmap.Config.ARGB_8888
         )
         val canvas = Canvas(bitmap)
@@ -282,10 +286,13 @@ class NotificationCenterAccessibilityService : AccessibilityService(), Lifecycle
         composeView = null
         windowParams = null
         isVisible = false
+        com.future.futureui.utils.FutureUIState.notificationCenterOpen.value = false
         closing = false
     }
 
     override fun onDestroy() {
+        // Runnable של לחיצה ארוכה / הסרה מתוזמנת לא ירוצו על שירות שכבר נהרס (SU-31)
+        mainHandler.removeCallbacksAndMessages(null)
         removeNotificationCenterNow()
         try {
             unregisterReceiver(receiver)

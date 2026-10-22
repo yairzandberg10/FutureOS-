@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.sp
 import com.future.futureui.controlcenter.logic.ControlManager
 import com.future.futureui.controlcenter.service.MediaControlService
 import com.future.futureui.statusbar.logic.StatusBarLayoutManager
+import com.future.futureui.utils.FutureUIState
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.theme.FutureTheme
 import androidx.core.graphics.drawable.toBitmap
@@ -66,19 +67,22 @@ fun StatusBarScreen(
     modifier: Modifier = Modifier,
     controlManager: ControlManager? = null,
     layoutManager: StatusBarLayoutManager? = null,
-    accentColor: Color = StatusBarAccent
+    accentColor: Color = StatusBarAccent,
+    darkMode: Boolean = true
 ) {
     val context = LocalContext.current
     val manager = controlManager ?: remember { ControlManager(context) }
     val layout = layoutManager ?: remember { StatusBarLayoutManager(context) }
 
     var currentTime by remember { mutableStateOf("") }
-    var batteryPercent by remember { mutableIntStateOf(100) }
-    var isCharging by remember { mutableStateOf(false) }
-    var notificationCount by remember { mutableIntStateOf(0) }
-    var isCallActive by remember { mutableStateOf(false) }
+    // הערכים ההתחלתיים מהעותק האחרון: החלון מוסר ונוסף מחדש כדי לעלות לחזית
+    // (bringStatusBarToFront), וההרכבה מתחילה מאפס - בלי זה האינדיקטורים מבהבים.
+    var batteryPercent by remember { mutableIntStateOf(BarMemory.batteryPercent) }
+    var isCharging by remember { mutableStateOf(BarMemory.isCharging) }
+    var notificationCount by remember { mutableIntStateOf(BarMemory.notificationCount) }
+    var isCallActive by remember { mutableStateOf(BarMemory.isCallActive) }
     // האפליקציות שיש להן התראה, החדשה ביותר ראשונה, כל אפליקציה פעם אחת
-    var notifApps by remember { mutableStateOf<List<NotifApp>>(emptyList()) }
+    var notifApps by remember { mutableStateOf(BarMemory.notifApps) }
     var callSeconds by remember { mutableIntStateOf(0) }
     // אייקון ההתראה הקטן של אפליקציה שאין לה סמל במיפוי - נטען פעם אחת לכל חבילה
     val smallIconCache = remember { HashMap<String, ImageBitmap?>() }
@@ -116,6 +120,8 @@ fun StatusBarScreen(
             if (level >= 0 && scale > 0) batteryPercent = (level * 100) / scale
             val status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
             isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL
+            BarMemory.batteryPercent = batteryPercent
+            BarMemory.isCharging = isCharging
         }
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(receiverContext: Context?, intent: Intent?) {
@@ -198,6 +204,9 @@ fun StatusBarScreen(
             notificationCount = notifications
             isCallActive = inCall
             notifApps = apps
+            BarMemory.notificationCount = notifications
+            BarMemory.isCallActive = inCall
+            BarMemory.notifApps = apps
 
             delay(15_000)
         }
@@ -207,11 +216,15 @@ fun StatusBarScreen(
     LaunchedEffect(isCallActive) {
         callSeconds = 0
         if (isCallActive) {
-            val start = SystemClock.elapsedRealtime()
+            // אחרי הרכבה מחדש ממשיכים מאותה נקודת התחלה ולא מאפסים את הספירה
+            if (BarMemory.callStart == 0L) BarMemory.callStart = SystemClock.elapsedRealtime()
+            val start = BarMemory.callStart
             while (true) {
                 callSeconds = ((SystemClock.elapsedRealtime() - start) / 1000).toInt()
                 delay(1_000)
             }
+        } else {
+            BarMemory.callStart = 0L
         }
     }
 
@@ -226,12 +239,23 @@ fun StatusBarScreen(
         callDuration = if (isCallActive) "%d:%02d".format(callSeconds / 60, callSeconds % 60) else null
     )
 
+    // N-01: מעל אפליקציה רגילה (גם מסך הבית) שורת המערכת של אנדרואיד עדיין מצוירת
+    // מתחת לשלנו (policy_control לא עובד ב-Android 12), ורקע שקוף חושף אותה - שעה
+    // ואייקונים כפולים. לכן שם הרקע אטום בצבע ערכת הנושא. נעילה, מרכז בקרה,
+    // מרכז התראות, אחרונות ותפריט כיבוי מכסים את כל המסך בעצמם עם רקע שקוף בכוונה.
+    val opaque = !FutureUIState.isLocked &&
+        !FutureUIState.controlCenterOpen.value &&
+        !FutureUIState.notificationCenterOpen.value &&
+        !FutureUIState.recentsOpen.value &&
+        !FutureUIState.powerMenuOpen.value
+    val barTheme = remember(darkMode) { FutureTheme(isDarkMode = darkMode) }
+
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         when (barStyle) {
             StatusBarLayoutManager.STYLE_QUIET -> QuietBar(modifier, manager, status)
             StatusBarLayoutManager.STYLE_CAPSULES -> CapsulesBar(modifier, manager, status)
             StatusBarLayoutManager.STYLE_CENTERED -> CenteredBar(modifier, manager, status)
-            else -> ClassicBar(modifier, manager, status, isCallActive, opacity, accentColor)
+            else -> ClassicBar(modifier, manager, status, isCallActive, opacity, accentColor, opaque, barTheme)
         }
     }
 }
@@ -244,8 +268,13 @@ private fun ClassicBar(
     status: BarStatus,
     isCallActive: Boolean,
     opacity: Float,
-    accentColor: Color
+    accentColor: Color,
+    opaque: Boolean,
+    theme: FutureTheme
 ) {
+    // אטום: צבעי ערכת הנושא. שקוף (מעל חלון מסך מלא כהה): טקסט לבן כמו קודם.
+    val bg = if (opaque) theme.backgroundColor else Color.Black.copy(alpha = opacity.coerceIn(0f, 0.55f))
+    val fg = if (opaque) theme.textColor else Color.White
     val notificationCount = status.notificationCount
     val currentTime = status.time
     val showBluetooth = status.showBluetooth
@@ -259,7 +288,7 @@ private fun ClassicBar(
                 // One UI לא מציירת רקע כהה מלא מאחורי שורת המצב - היא כמעט שקופה מעל
                 // הטפט/תוכן, עם רק ערפול קל לקריאות. שכבה שטוחה אחת (לא גרדיאנט
                 // דו-שלבי) + hairline דק מאוד בצבע ההדגשה המשותף במקום כחול קבוע.
-                .background(Color.Black.copy(alpha = opacity.coerceIn(0f, 0.55f)))
+                .background(bg)
                 .drawBottomHairline(accentColor.copy(alpha = 0.18f))
                 .padding(horizontal = 14.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -279,7 +308,7 @@ private fun ClassicBar(
                 }
                 Text(
                     text = currentTime,
-                    color = Color.White,
+                    color = fg,
                     fontSize = FutureTypography.summary,
                     fontWeight = FontWeight.SemiBold,
                     letterSpacing = 0.2.sp
@@ -294,37 +323,48 @@ private fun ClassicBar(
                     Icon(Icons.Rounded.Call, contentDescription = null, tint = Color(0xFF30D158), modifier = Modifier.size(13.dp))
                 }
                 if (manager.isDndOn) {
-                    Icon(Icons.Rounded.DoNotDisturbOn, contentDescription = null, tint = Color.White.copy(alpha = 0.9f), modifier = Modifier.size(13.dp))
+                    Icon(Icons.Rounded.DoNotDisturbOn, contentDescription = null, tint = fg.copy(alpha = 0.9f), modifier = Modifier.size(13.dp))
                 }
                 if (manager.isAirplaneOn) {
-                    Icon(Icons.Rounded.AirplanemodeActive, contentDescription = null, tint = Color.White.copy(alpha = 0.9f), modifier = Modifier.size(13.dp))
+                    Icon(Icons.Rounded.AirplanemodeActive, contentDescription = null, tint = fg.copy(alpha = 0.9f), modifier = Modifier.size(13.dp))
                 }
                 if (showBluetooth && manager.isBluetoothOn) {
                     Icon(
                         if (manager.isBluetoothDeviceConnected) Icons.Rounded.BluetoothConnected else Icons.Rounded.Bluetooth,
                         contentDescription = null,
-                        tint = Color.White.copy(alpha = 0.9f),
+                        tint = fg.copy(alpha = 0.9f),
                         modifier = Modifier.size(13.dp)
                     )
                 }
                 if (manager.isDataOn) {
-                    Icon(Icons.Rounded.SignalCellularAlt, contentDescription = null, tint = Color.White.copy(alpha = 0.9f), modifier = Modifier.size(13.dp))
+                    Icon(Icons.Rounded.SignalCellularAlt, contentDescription = null, tint = fg.copy(alpha = 0.9f), modifier = Modifier.size(13.dp))
                 }
                 if (manager.isBatterySaverOn) {
                     Icon(Icons.Rounded.BatterySaver, contentDescription = null, tint = Color(0xFFFFD60A), modifier = Modifier.size(13.dp))
                 }
                 if (showBattery) {
-                    Text(text = "$batteryPercent%", color = Color.White.copy(alpha = 0.9f), fontSize = FutureTypography.caption, fontWeight = FontWeight.Medium)
+                    Text(text = "$batteryPercent%", color = fg.copy(alpha = 0.9f), fontSize = FutureTypography.caption, fontWeight = FontWeight.Medium)
                     BatteryPill(
                         percent = batteryPercent,
                         isCharging = isCharging,
                         accentColor = accentColor,
+                        contentColor = fg,
                         modifier = Modifier.padding(start = 1.dp)
                     )
                 }
             }
         }
     }
+}
+
+/** העותק האחרון של מצב השורה (בתהליך), כדי שהרכבה מחדש לא תתחיל מאפס. */
+private object BarMemory {
+    @Volatile var batteryPercent = 100
+    @Volatile var isCharging = false
+    @Volatile var notificationCount = 0
+    @Volatile var isCallActive = false
+    @Volatile var notifApps: List<NotifApp> = emptyList()
+    @Volatile var callStart = 0L
 }
 
 /** ברירת מחדל כשאין עדיין צבע הדגשה משותף זמין (למשל בתצוגה מקדימה). */
@@ -347,11 +387,11 @@ private fun Modifier.drawBottomHairline(color: Color): Modifier = this.then(
  * נראים כמו וידג'ט גנרי ולא כמו סוללה אמיתית של מכשיר.
  */
 @Composable
-private fun BatteryPill(percent: Int, isCharging: Boolean, accentColor: Color, modifier: Modifier = Modifier) {
+private fun BatteryPill(percent: Int, isCharging: Boolean, accentColor: Color, contentColor: Color, modifier: Modifier = Modifier) {
     val fillColor = when {
         isCharging -> accentColor
         percent <= 15 -> Color(0xFFFF453A)
-        else -> Color.White
+        else -> contentColor
     }
     Canvas(modifier = modifier.size(width = 21.dp, height = 11.dp)) {
         val nubWidth = 1.6.dp.toPx()
@@ -360,13 +400,13 @@ private fun BatteryPill(percent: Int, isCharging: Boolean, accentColor: Color, m
         val bodyCorner = CornerRadius(2.6.dp.toPx())
 
         drawRoundRect(
-            color = Color.White.copy(alpha = 0.85f),
+            color = contentColor.copy(alpha = 0.85f),
             size = Size(bodyWidth, size.height),
             cornerRadius = bodyCorner,
             style = Stroke(width = strokeWidth)
         )
         drawRoundRect(
-            color = Color.White.copy(alpha = 0.85f),
+            color = contentColor.copy(alpha = 0.85f),
             topLeft = Offset(bodyWidth, size.height / 2f - 2.dp.toPx()),
             size = Size(nubWidth, 4.dp.toPx()),
             cornerRadius = CornerRadius(0.8.dp.toPx())

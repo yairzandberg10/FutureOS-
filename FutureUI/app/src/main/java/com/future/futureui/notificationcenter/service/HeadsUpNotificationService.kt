@@ -45,6 +45,9 @@ import com.future.futureui.utils.FutureUIActions
 class HeadsUpNotificationService : Service(), LifecycleOwner, SavedStateRegistryOwner, ViewModelStoreOwner {
 
     companion object {
+        /** ההודעה על חוסר הרשאת overlay מוצגת פעם אחת בתהליך. */
+        @Volatile private var overlayWarned = false
+
         private const val EXTRA_KEY = "notification_key"
 
         /** כמה מחכים לצילום הזכוכית לפני שמציגים בלעדיה. */
@@ -158,6 +161,17 @@ class HeadsUpNotificationService : Service(), LifecycleOwner, SavedStateRegistry
             val st = com.future.futureui.utils.FutureUIState
             val sbn = current.value ?: return
             if ((st.isLocked || st.isSecured) && sbn.notification.category != android.app.Notification.CATEGORY_CALL) {
+                stopSelf(latestStartId)
+                return
+            }
+
+            // בלי הרשאת "הצג מעל אפליקציות" addView זורק והבאנר פשוט נעלם בלי הסבר (F39)
+            if (!android.provider.Settings.canDrawOverlays(this)) {
+                Log.w("HeadsUpNotification", "SYSTEM_ALERT_WINDOW not granted - banners are disabled")
+                if (!overlayWarned) {
+                    overlayWarned = true
+                    android.widget.Toast.makeText(this, "אין הרשאת הצגה מעל אפליקציות - באנרי ההתראות כבויים", android.widget.Toast.LENGTH_LONG).show()
+                }
                 stopSelf(latestStartId)
                 return
             }

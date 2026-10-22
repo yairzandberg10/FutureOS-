@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">System UI</string>
+    <!-- שמות שירותי הנגישות / ההתראות כפי שהם מופיעים בהגדרות המערכת (N-05) -->
+    <string name="service_label_status_bar">FutureUI - שורת מצב</string>
+    <string name="service_label_control_center">FutureUI - מרכז בקרה</string>
+    <string name="service_label_notification_center">FutureUI - מרכז התראות</string>
+    <string name="service_label_media">FutureUI - שליטה במדיה</string>
 </resources>
