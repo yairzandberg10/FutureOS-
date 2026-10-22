@@ -90,6 +90,15 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
         }
     }
 
+    // המתג "הסתר שורת מצב מקורית" בהגדרות חל מיד (SU-04), לא רק בהפעלה הבאה של השירות
+    private val suppressListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == "suppress_system_bars") {
+            mainHandler.post {
+                if (layoutManager?.getSuppressSystemBars() == true) suppressSystemBars() else restoreSystemBars()
+            }
+        }
+    }
+
     private val bringToFrontReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
@@ -173,6 +182,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
 
     override fun onServiceConnected() {
         super.onServiceConnected()
+        layoutManager?.registerListener(suppressListener)
         if (layoutManager?.getSuppressSystemBars() == true) {
             suppressSystemBars()
         }
@@ -301,10 +311,17 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
     private fun adjustVolume(direction: Int) {
         try {
             val audio = getSystemService(Context.AUDIO_SERVICE) as? AudioManager ?: return
-            val max = audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
-            val current = audio.getStreamVolume(AudioManager.STREAM_MUSIC)
-            val next = (current + direction).coerceIn(0, max)
-            audio.setStreamVolume(AudioManager.STREAM_MUSIC, next, 0)
+            // הזרם לפי המצב: בשיחה - עוצמת השיחה, בצלצול - הצלצול, אחרת מוזיקה (SU-03)
+            val stream = when (audio.mode) {
+                AudioManager.MODE_IN_CALL, AudioManager.MODE_IN_COMMUNICATION -> AudioManager.STREAM_VOICE_CALL
+                AudioManager.MODE_RINGTONE -> AudioManager.STREAM_RING
+                else -> AudioManager.STREAM_MUSIC
+            }
+            val max = audio.getStreamMaxVolume(stream)
+            val min = audio.getStreamMinVolume(stream)
+            val current = audio.getStreamVolume(stream)
+            val next = (current + direction).coerceIn(min, max)
+            audio.setStreamVolume(stream, next, 0)
             val fraction = if (max > 0) next.toFloat() / max else 0f
             volumeLevelState.floatValue = fraction
             showVolumeOverlay()
@@ -405,6 +422,8 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
                 windowManager.addView(volumeOverlayView, params)
             } catch (e: Exception) {
                 Log.e("FutureUI", "Error showing volume overlay", e)
+                // בלי איפוס השדה הקריאה הבאה חושבת שהחלון קיים ולא מנסה שוב
+                volumeOverlayView = null
             }
         }
 
@@ -435,7 +454,8 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
         val byClass = POWER_MENU_CLASS_HINTS.any { cls.contains(it, ignoreCase = true) }
         val texts = if (byClass) emptyList() else windowTexts(event)
         // בלי הטקסטים עצמם: חלון מערכת יכול להציג תוכן פרטי (שם, מספר, הודעה).
-        Log.i("FutureUI", "system window: $pkg / $cls / ${texts.size} texts")
+        // Log.d ולא i: R8 מסיר רק d/v ב-release, וחלון מערכת יכול להכיל תוכן פרטי (SU-25)
+        Log.d("FutureUI", "system window: $pkg / $cls / ${texts.size} texts")
         val byText = texts.count { t -> POWER_MENU_LABELS.any { t.equals(it, ignoreCase = true) } } >= 1 &&
             texts.any { t -> POWER_OFF_LABELS.any { t.equals(it, ignoreCase = true) } }
         if (!byClass && !byText) return
@@ -656,11 +676,33 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
      * לוודא שהפקודה עובדת על ה-ROM הספציפי (יאיר: תבדוק על המכשיר בפועל).
      */
     private fun suppressSystemBars() {
-        controlManager?.runRootCommandAsync("settings put global policy_control immersive.full=*")
+        val ours = "immersive.full=*"
+        // שומרים את הערך הקודם פעם אחת בלבד (לא דורסים אותו בהפעלה חוזרת)
+        layoutManager?.let { lm ->
+            if (!lm.hasSavedPolicyControl()) {
+                val current = runCatching { android.provider.Settings.Global.getString(contentResolver, "policy_control") }.getOrNull()
+                lm.savePolicyControl(current?.takeIf { it != ours })
+            }
+        }
+        controlManager?.runRootCommandAsync("settings put global policy_control $ours")
     }
 
+    /** מחזיר את policy_control למה שהיה לפני שלנו; אם לא שינינו - לא נוגעים. */
     private fun restoreSystemBars() {
-        controlManager?.runRootCommandAsync("settings put global policy_control immersive.none=*")
+        val lm = layoutManager ?: return
+        if (!lm.hasSavedPolicyControl()) return
+        val prev = lm.getSavedPolicyControl()
+        controlManager?.runRootCommandAsync(
+            if (prev.isEmpty()) "settings delete global policy_control"
+            else "settings put global policy_control ${com.future.sharednav.root.RootShell.quote(prev)}"
+        )
+        lm.clearSavedPolicyControl()
+    }
+
+    override fun onUnbind(intent: Intent?): Boolean {
+        // השירות הופסק (המשתמש כיבה את הנגישות): שורת המערכת חוזרת
+        restoreSystemBars()
+        return super.onUnbind(intent)
     }
 
     override fun onDestroy() {
@@ -681,6 +723,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
         } catch (e: Exception) {
             android.util.Log.w("StatusBarAccessibilityS", "onDestroy failed", e)
         }
+        layoutManager?.unregisterListener(suppressListener)
         try {
             themePrefs.unregisterOnSharedPreferenceChangeListener(themePrefsListener)
         } catch (e: Exception) {

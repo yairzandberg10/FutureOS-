@@ -32,15 +32,15 @@ rm -rf "$dst/java/com/android/sistemui"
 mkdir -p "$dst/java/com/android/sistemui"
 cp -r "$src/java/com/future/futureui/." "$dst/java/com/android/sistemui/"
 find "$dst/java/com/android/sistemui" -name '*.kt' -print0 | xargs -0 sed -i \
-    -e 's/com\.future\.futureui\.ACTION_/@@KEEP_ACTION@@/g' \
+    -e 's/com\.future\.futureui\.permission\./@@KEEP_PERM@@/g'     -e 's/com\.future\.futureui\.ACTION_/@@KEEP_ACTION@@/g' \
     -e 's/com\.future\.futureui/com.android.sistemui/g' \
-    -e 's/@@KEEP_ACTION@@/com.future.futureui.ACTION_/g'
+    -e 's/@@KEEP_ACTION@@/com.future.futureui.ACTION_/g'     -e 's/@@KEEP_PERM@@/com.future.futureui.permission./g'
 
 # Manifest
 sed \
-    -e 's/com\.future\.futureui\.ACTION_/@@KEEP_ACTION@@/g' \
+    -e 's/com\.future\.futureui\.permission\./@@KEEP_PERM@@/g'     -e 's/com\.future\.futureui\.ACTION_/@@KEEP_ACTION@@/g' \
     -e 's/com\.future\.futureui/com.android.sistemui/g' \
-    -e 's/@@KEEP_ACTION@@/com.future.futureui.ACTION_/g' \
+    -e 's/@@KEEP_ACTION@@/com.future.futureui.ACTION_/g'     -e 's/@@KEEP_PERM@@/com.future.futureui.permission./g' \
     -e 's/android:label="FutureUI /android:label="SystemUI /g' \
     "$src/AndroidManifest.xml" > "$dst/AndroidManifest.xml"
 

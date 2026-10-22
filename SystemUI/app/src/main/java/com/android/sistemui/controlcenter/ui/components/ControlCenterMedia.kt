@@ -76,7 +76,7 @@ fun MusicPlayerCard(manager: ControlManager, labelColor: Color = Color.Black) {
                 .clickable(
                     interactionSource = interactionSource,
                     indication = null,
-                    onClick = { /* Could open music player if desired */ }
+                    onClick = { manager.openMusic() }
                 )
                 .focusable(interactionSource = interactionSource)
                 .padding(6.dp)
@@ -218,7 +218,10 @@ fun MusicPlayerCard(manager: ControlManager, labelColor: Color = Color.Black) {
 private fun formatMillis(millis: Long): String {
     val seconds = (millis / 1000) % 60
     val minutes = (millis / (1000 * 60)) % 60
-    return String.format("%02d:%02d", minutes, seconds)
+    val hours = millis / (1000 * 60 * 60)
+    // שיר ארוך משעה מציג שעות (SU-19)
+    return if (hours > 0) String.format("%d:%02d:%02d", hours, minutes, seconds)
+    else String.format("%02d:%02d", minutes, seconds)
 }
 
 @Composable

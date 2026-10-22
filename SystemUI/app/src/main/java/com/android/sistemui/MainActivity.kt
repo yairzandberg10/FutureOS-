@@ -16,7 +16,10 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.core.content.ContextCompat
-import androidx.compose.material3.Button
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import com.future.sharednav.components.FutureButton
+import com.future.sharednav.theme.rememberFutureTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -37,6 +40,13 @@ class MainActivity : ComponentActivity() {
     // dispatchKeyEvent הוא נתיב נפרד לגמרי מ-dispatchTouchEvent.
     override fun dispatchTouchEvent(ev: android.view.MotionEvent): Boolean = true
 
+    // עולה בכל חזרה למסך (למשל מהגדרות הנגישות) - מרענן את סטטוס השירותים
+    private val resumeTick = mutableIntStateOf(0)
+
+    override fun onResume() {
+        super.onResume()
+        resumeTick.intValue++
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -47,8 +57,8 @@ class MainActivity : ComponentActivity() {
                 var isNotificationEnabled by remember { mutableStateOf(false) }
                 var isStatusBarEnabled by remember { mutableStateOf(false) }
 
-                // Update status when returning to app
-                LaunchedEffect(Unit) {
+                // מתעדכן גם בחזרה למסך (resumeTick), לא רק בהרכבה הראשונה
+                LaunchedEffect(resumeTick.intValue) {
                     isControlEnabled = isAccessibilityServiceEnabled(this@MainActivity, ControlCenterAccessibilityService::class.java)
                     isNotificationEnabled = isAccessibilityServiceEnabled(this@MainActivity, NotificationCenterAccessibilityService::class.java)
                     isStatusBarEnabled = isAccessibilityServiceEnabled(this@MainActivity, StatusBarAccessibilityService::class.java)
@@ -64,7 +74,9 @@ class MainActivity : ComponentActivity() {
                 LaunchedEffect(Unit) {
                     val missing = listOf(
                         android.Manifest.permission.READ_PHONE_STATE,
-                        android.Manifest.permission.CAMERA
+                        // חיבור Bluetooth (מצב 'מחובר' בשורת המצב) דורש הרשאת זמן ריצה (SU-02).
+                        // CAMERA לא נשאלת כאן יותר: מסך הניהול לא מצלם (SU-38).
+                        android.Manifest.permission.BLUETOOTH_CONNECT
                     ).filter {
                         ContextCompat.checkSelfPermission(this@MainActivity, it) != PackageManager.PERMISSION_GRANTED
                     }
@@ -72,6 +84,11 @@ class MainActivity : ComponentActivity() {
                         dangerousPermissionsLauncher.launch(missing.toTypedArray())
                     }
                 }
+
+                val theme = rememberFutureTheme()
+                val firstButton = remember { FocusRequester() }
+                // פוקוס ראשוני על הכפתור הראשון (F20)
+                LaunchedEffect(Unit) { runCatching { firstButton.requestFocus() } }
 
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     Column(
@@ -91,24 +108,29 @@ class MainActivity : ComponentActivity() {
                         
                         Spacer(modifier = Modifier.height(24.dp))
                         
-                        Button(onClick = {
-                            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-                        }) {
-                            Text("הפעל שירותי נגישות")
-                        }
+                        // כפתורי מערכת העיצוב: טבעת פוקוס ברורה. ↑ בראשון ו-↓ באחרון לא
+                        // עוטפים לצד השני (N-04).
+                        FutureButton(
+                            text = "הפעל שירותי נגישות",
+                            theme = theme,
+                            onClick = { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) },
+                            modifier = Modifier.focusProperties { up = FocusRequester.Cancel },
+                            focusRequester = firstButton,
+                        )
 
                         Spacer(modifier = Modifier.height(12.dp))
 
-                        Button(onClick = {
-                            startActivity(Intent(this@MainActivity, SettingsActivity::class.java))
-                        }) {
-                            Text("התאמה אישית")
-                        }
+                        FutureButton(
+                            text = "התאמה אישית",
+                            theme = theme,
+                            onClick = { startActivity(Intent(this@MainActivity, SettingsActivity::class.java)) },
+                            modifier = Modifier.focusProperties { down = FocusRequester.Cancel },
+                        )
 
                         Spacer(modifier = Modifier.height(24.dp))
                         
                         Text(
-                            text = "הנחיות:\n1. הפעל את השירותים הרצויים.\n2. במסך הנעילה: לחיצה ארוכה על מקש ההגדרות לעריכה.\n3. לחץ OK לביטול נעילה.",
+                            text = "הנחיות:\n1. הפעל את השירותים הרצויים.\n2. לחיצה ארוכה על * פותחת את מרכז הבקרה, ועל # את מרכז ההתראות.\n3. לחיצה ארוכה על Menu פותחת את האפליקציות האחרונות.",
                             textAlign = TextAlign.Center
                         )
                     }

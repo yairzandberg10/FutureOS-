@@ -77,6 +77,21 @@ fun RecentAppsScreen(
     val focusRequester = remember { FocusRequester() }
     val clearFocused = focusedIndex == CLEAR_ALL && apps.isNotEmpty()
 
+    // סגירה דו-שלבית (SU-14): הלחיצה הראשונה (Menu/מחיקה/0) רק מסמנת, והשנייה תוך
+    // 4 שניות מכבה את האפליקציה. מי שמסומן: חבילה, או CLOSE_ALL_KEY לכולן.
+    var armed by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(armed) {
+        if (armed != null) {
+            kotlinx.coroutines.delay(4000)
+            armed = null
+        }
+    }
+    fun confirmed(key: String): Boolean {
+        if (armed == key) { armed = null; return true }
+        armed = key
+        return false
+    }
+
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
     LaunchedEffect(apps.size) {
         if (focusedIndex > apps.lastIndex) focusedIndex = apps.lastIndex.coerceAtLeast(0)
@@ -86,6 +101,7 @@ fun RecentAppsScreen(
     }
 
     fun move(delta: Int) {
+        armed = null
         if (apps.isEmpty()) return
         if (focusedIndex == CLEAR_ALL) {
             if (delta < 0) focusedIndex = apps.lastIndex
@@ -104,7 +120,8 @@ fun RecentAppsScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xF20E0E10))
+                // כמעט אטום: בלי זה טקסט של המסך שמאחור נראה דרך הכותרת והכרטיסים (N-06)
+                .background(Color(0xFC0E0E10))
                 .focusRequester(focusRequester)
                 .focusable()
                 .onKeyEvent { event ->
@@ -119,7 +136,7 @@ fun RecentAppsScreen(
                             true
                         }
                         Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> {
-                            if (focusedIndex == CLEAR_ALL) onCloseAll() else apps.getOrNull(focusedIndex)?.let(onLaunch)
+                            if (focusedIndex == CLEAR_ALL) { if (confirmed(CLOSE_ALL_KEY)) onCloseAll() } else apps.getOrNull(focusedIndex)?.let(onLaunch)
                             true
                         }
                         Key.Back -> {
@@ -127,11 +144,12 @@ fun RecentAppsScreen(
                             true
                         }
                         Key.Menu, Key.Settings, Key.Delete, Key.Backspace -> {
-                            if (focusedIndex == CLEAR_ALL) onCloseAll() else apps.getOrNull(focusedIndex)?.let(onClose)
+                            if (focusedIndex == CLEAR_ALL) { if (confirmed(CLOSE_ALL_KEY)) onCloseAll() }
+                            else apps.getOrNull(focusedIndex)?.let { if (confirmed(it.packageName)) onClose(it) }
                             true
                         }
                         Key.Zero -> {
-                            onCloseAll()
+                            if (confirmed(CLOSE_ALL_KEY)) onCloseAll()
                             true
                         }
                         else -> false
@@ -201,8 +219,8 @@ fun RecentAppsScreen(
                 }
 
                 Text(
-                    "OK פתיחה · אפשרויות סגירת חלון · 0 סגירת הכל",
-                    color = Color.White.copy(alpha = 0.35f),
+                    if (armed != null) "לחצו שוב לאישור הסגירה" else "OK פתיחה · אפשרויות סגירת חלון · מקש 0 סגירת הכל",
+                    color = Color.White.copy(alpha = if (armed != null) 0.8f else 0.35f),
                     fontSize = FutureTypography.caption,
                     modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
                     textAlign = TextAlign.Center
@@ -271,6 +289,7 @@ private fun Color.compositeOverBlack(): Color = Color(red * alpha, green * alpha
 
 private const val COLUMNS = 2
 private const val CLEAR_ALL = -1
+private const val CLOSE_ALL_KEY = "*all*"
 // מסך 640x960 ב-320dpi = 320x480dp: כרטיס ברוחב ~140dp; 156dp מראה את רוב
 // המסך של האפליקציה (החלק התחתון נחתך) ועדיין שתי שורות כמעט שלמות נכנסות
 private val CardHeight = 156.dp

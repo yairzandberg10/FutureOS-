@@ -34,7 +34,7 @@
         android:protectionLevel="signature" />
 
     <uses-permission android:name="com.future.keyboard.permission.SETTINGS" />
-    <!-- מקשי CALL/ENDCALL נשלחים ל-dialer (CallActionReceiver), שדורש את ההרשאה הזו
+    <!-- שידורי המערכת ל-dialer (מקשי CALL/ENDCALL, שיחה) דורשים את ההרשאה הזו
          מהשולח. SystemUI (עותק) שומר את השם הזה כמו שהוא - ר' sync-from-futureui.sh. -->
     <uses-permission android:name="com.future.futureui.permission.SYSTEM_SETTINGS" />
 
@@ -80,7 +80,7 @@
         <service
             android:name=".statusbar.service.StatusBarAccessibilityService"
             android:exported="true"
-            android:label="SystemUI Status Bar"
+            android:label="SystemUI - שורת מצב"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>
                 <action android:name="android.accessibilityservice.AccessibilityService" />
@@ -93,7 +93,7 @@
         <service
             android:name=".controlcenter.service.ControlCenterAccessibilityService"
             android:exported="true"
-            android:label="SystemUI Control Center"
+            android:label="SystemUI - מרכז בקרה"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>
                 <action android:name="android.accessibilityservice.AccessibilityService" />
@@ -106,7 +106,7 @@
         <service
             android:name=".notificationcenter.service.NotificationCenterAccessibilityService"
             android:exported="true"
-            android:label="SystemUI Notification Center"
+            android:label="SystemUI - מרכז התראות"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>
                 <action android:name="android.accessibilityservice.AccessibilityService" />
@@ -122,7 +122,7 @@
 
         <service
             android:name=".controlcenter.service.MediaControlService"
-            android:label="SystemUI Media Controller"
+            android:label="SystemUI - שליטה במדיה"
             android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
             android:exported="true">
             <intent-filter>
