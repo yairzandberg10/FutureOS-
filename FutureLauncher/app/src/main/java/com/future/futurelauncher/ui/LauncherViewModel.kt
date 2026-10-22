@@ -95,12 +95,21 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     // מקור האמת לעיצוב (כהה/בהיר, צבע הדגשה) הוא ThemeProvider של FutureUI -
     // משותף בין כל אפליקציות FutureOS, לא רק תוך-אפליקציה.
     fun loadTheme() {
-        val shared = ThemeClient.getTheme(context)
+        // cachedTheme: IPC אחד ואז מטמון שמתאפס בשינוי עיצוב, לא בכל חזרה למסך (FL-13)
+        val shared = ThemeClient.cachedTheme(context)
         theme = FutureTheme(isDarkMode = shared.isDarkMode, accentColor = Color(shared.primaryColor))
     }
 
-    fun loadData() {
-        viewModelScope.launch {
+    private var loadJob: Job? = null
+
+    /**
+     * [debounceMs] > 0 לשידורי התקנה/הסרה: טעינה אחת אחרי שהסתדרו, וטעינה ישנה
+     * שעוד רצה מבוטלת כדי שלא תדרוס פריסה חדשה (FL-14).
+     */
+    fun loadData(debounceMs: Long = 0L) {
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
+            if (debounceMs > 0) delay(debounceMs)
             val (savedPagesJsons, savedHomeIndex) = loadPagesFromPrefs()
             homePageIndex = savedHomeIndex
             val removedIds = loadRemovedAppIds()
@@ -150,8 +159,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
                     for (i in 0 until jsonArray.length()) {
                         val obj = jsonArray.optJSONObject(i) ?: continue
-                        if (!obj.has("id")) continue
-                        val id = obj.getString("id")
+                        if (!obj.has("id") || obj.isNull("id")) continue
+                        val id = obj.optString("id")
                         val type = obj.optString("type", "app")
                         val label = obj.optString("label", "")
                         val customLabel = if (obj.isNull("customLabel")) null else obj.optString("customLabel")
@@ -172,7 +181,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                                 val appsArray = obj.optJSONArray("apps")
                                 if (appsArray != null) {
                                     for (j in 0 until appsArray.length()) {
-                                        val appId = appsArray.getString(j)
+                                        // פריט פגום בתיקייה לא מפיל את הטעינה (FL-17)
+                                        val appId = appsArray.optString(j, "")
+                                        if (appId.isEmpty()) continue
                                         val app = remainingApps.find { it.id == appId }
                                         if (app != null) {
                                             remainingApps.remove(app)
@@ -210,6 +221,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                         pageItems.add(item)
                     }
                     while (pageItems.size < 16) pageItems.add(LauncherItem.Empty())
+                    // תאים תפוסים של ווידג'ט שנעלם לא נשארים "רפאים" (FL-04)
+                    recalculateOccupiedSlots(pageItems)
                     reconstructedPages.add(pageItems)
                 }
 
@@ -241,6 +254,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 }
                 pages = if (initialPages.isEmpty()) listOf(List(16) { LauncherItem.Empty() }) else initialPages
             }
+            // אינדקס שמור מחוץ לטווח הדפים (למשל אחרי מחיקת דף) לא נשאר (FL-18)
+            homePageIndex = homePageIndex.coerceIn(0, (pages.size - 1).coerceAtLeast(0))
         }
     }
 
@@ -364,7 +379,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         val newWidget = LauncherItem.Widget(
             id = "widget:${UUID.randomUUID()}",
             widgetId = widgetId,
-            label = widgetInfo.loadLabel(pm) ?: "Widget",
+            label = widgetInfo.loadLabel(pm) ?: context.getString(com.future.futurelauncher.R.string.widget_default_label),
             spanX = sx,
             spanY = sy,
         )

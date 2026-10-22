@@ -42,7 +42,7 @@ sealed class LauncherItem {
     data class Widget(
         override val id: String,
         val widgetId: Int,
-        override val label: String = "Widget",
+        override val label: String = "ווידג'ט",
         var spanX: Int = 1,
         var spanY: Int = 1,
         override var customLabel: String? = null,

@@ -9,6 +9,7 @@ import android.content.pm.PackageManager
 import android.provider.Settings
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -34,6 +35,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
@@ -208,7 +210,7 @@ fun LauncherSettingsScreen(
                 FutureDivider(theme = theme)
                 FutureSettingItem(title = "איפוס פריסה", summary = "החזרת מסך הבית לברירת המחדל", icon = FutureIcons.RestartAlt, theme = theme, showChevron = false, onClick = { confirmReset = true })
                 FutureDivider(theme = theme)
-                FutureSettingItem(title = "מקשים", summary = "Options פעמיים - עריכה · OK מוחזק - הזזה", icon = FutureIcons.Keyboard, theme = theme, showChevron = false, onClick = null)
+                FutureSettingItem(title = "מקשים", summary = "אפשרויות פעמיים - עריכה · החזקת אישור - הזזה", icon = FutureIcons.Keyboard, theme = theme, showChevron = false, onClick = null)
             }
         }
     }
@@ -261,9 +263,12 @@ fun AppPickerScreen(
     var apps by remember { mutableStateOf<List<LauncherItem.App>>(emptyList()) }
     var digits by remember { mutableStateOf("") }
     val first = remember { FocusRequester() }
+    // יעד פוקוס לשורש הדיאלוג: גם כשאין התאמות (אין אף תא) הספרות עדיין נקלטות (FL-10)
+    val rootFocus = remember { FocusRequester() }
 
     LaunchedEffect(restrictToDefaultApps) {
-        apps = withContext(Dispatchers.IO) {
+        // כשל בשליפה לא משאיר 'טוען' לנצח - רשימה ריקה מוצגת כ'אין התאמות' (FL-25)
+        apps = runCatching { withContext(Dispatchers.IO) {
             val devMode = Settings.Global.getInt(context.contentResolver, Settings.Global.DEVELOPMENT_SETTINGS_ENABLED, 0) != 0
             pm.queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER), 0)
                 .filter { !restrictToDefaultApps || DefaultApps.isDefault(it.activityInfo.packageName) }
@@ -276,7 +281,7 @@ fun AppPickerScreen(
                     )
                 }
                 .sortedBy { it.label.lowercase() }
-        }
+        } }.getOrDefault(emptyList())
     }
     LaunchedEffect(digits) {
         if (digits.isEmpty()) return@LaunchedEffect
@@ -286,6 +291,12 @@ fun AppPickerScreen(
         digits = ""
     }
     val shown = remember(apps, digits) { if (digits.isEmpty()) apps else apps.filter { matchesT9(it.label, digits) } }
+    LaunchedEffect(shown.isEmpty()) {
+        if (shown.isEmpty()) {
+            delay(60)
+            runCatching { rootFocus.requestFocus() }
+        }
+    }
 
     AppDialog(onDismissRequest = onDismiss, anchorTop = true) {
         Column(
@@ -294,15 +305,22 @@ fun AppPickerScreen(
                 .clip(FutureShapes.dialog)
                 .background(theme.surfaceColor)
                 .padding(vertical = 8.dp)
+                .focusRequester(rootFocus)
+                .focusable()
                 .onKeyEvent { event ->
                     if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
+                    // BACK מוחק ספרה אחת; רק בלי ספרות הוא סוגר את הבורר (FL-09)
+                    if (event.key == Key.Back && digits.isNotEmpty()) {
+                        digits = digits.dropLast(1)
+                        return@onKeyEvent true
+                    }
                     val d = digitForKey(event.key) ?: return@onKeyEvent false
                     digits += d
                     true
                 },
         ) {
             Text(
-                if (digits.isEmpty()) "הוספת אפליקציה" else "הוספת אפליקציה · $digits",
+                if (digits.isEmpty()) "הוספת אפליקציה" else "הוספת אפליקציה · " + "•".repeat(digits.length),
                 color = theme.mutedTextColor,
                 fontSize = FutureTypography.label,
                 maxLines = 1,
@@ -321,13 +339,13 @@ fun AppPickerScreen(
                     delay(60)
                     runCatching { first.requestFocus() }
                 }
-                Column(
+                // עצלני: רק השורות הנראות נמדדות ומצוירות (FL-11)
+                LazyColumn(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .verticalScroll(rememberScrollState())
                         .padding(horizontal = 8.dp),
                 ) {
-                    shown.chunked(PICKER_COLUMNS).forEachIndexed { rowIndex, row ->
+                    itemsIndexed(shown.chunked(PICKER_COLUMNS)) { rowIndex, row ->
                         Row(modifier = Modifier.fillMaxWidth()) {
                             row.forEachIndexed { colIndex, app ->
                                 AppPickerCell(
@@ -395,7 +413,7 @@ private fun AppPickerCell(
 }
 
 /** ווידג'ט אחד שאפשר להוסיף, עם שם האפליקציה שלו. */
-private class WidgetOption(val info: AppWidgetProviderInfo, val appLabel: String, val widgetLabel: String, val cells: String)
+private class WidgetOption(val info: AppWidgetProviderInfo, val appLabel: String, val widgetLabel: String, val cells: String, val preview: androidx.compose.ui.graphics.ImageBitmap?)
 
 /**
  * בחירת ווידג'ט - רק ווידג'טים של אפליקציות שמותקנות ופעילות במכשיר (עם
@@ -415,7 +433,7 @@ fun WidgetPickerScreen(
     val first = remember { FocusRequester() }
 
     LaunchedEffect(restrictToDefaultApps) {
-        options = withContext(Dispatchers.IO) {
+        options = runCatching { withContext(Dispatchers.IO) {
             val manager = AppWidgetManager.getInstance(context)
             val density = context.resources.displayMetrics.density
             manager.installedProviders
@@ -427,12 +445,15 @@ fun WidgetPickerScreen(
                 }
                 .map { info ->
                     val appLabel = runCatching { pm.getApplicationLabel(pm.getApplicationInfo(info.provider.packageName, 0)).toString() }.getOrDefault(info.provider.packageName)
-                    val cols = (((info.minWidth / density) + 30) / 70).toInt().coerceIn(1, 4)
-                    val rows = (((info.minHeight / density) + 30) / 70).toInt().coerceIn(1, 4)
-                    WidgetOption(info, appLabel, info.loadLabel(pm), "$cols×$rows")
+                    // אותה נוסחת גודל כמו בהוספה בפועל (targetCell אם הוגדר), כדי שהתווית תתאים (FL-24)
+                    val cols = (if (info.targetCellWidth > 0) info.targetCellWidth else (((info.minWidth / density) + 30) / 70).toInt()).coerceIn(1, 4)
+                    val rows = (if (info.targetCellHeight > 0) info.targetCellHeight else (((info.minHeight / density) + 30) / 70).toInt()).coerceIn(1, 4)
+                    // התצוגה המקדימה נטענת כאן ברקע, לא בגלילה על ה-main thread (FL-12)
+                    val preview = runCatching { info.loadIcon(context, 0)?.toBitmap(96, 96)?.asImageBitmap() }.getOrNull()
+                    WidgetOption(info, appLabel, info.loadLabel(pm), "$cols×$rows", preview)
                 }
                 .sortedWith(compareBy({ it.appLabel.lowercase() }, { it.widgetLabel.lowercase() }))
-        }
+        } }.getOrDefault(emptyList())
     }
     LaunchedEffect(options?.size) { if (!options.isNullOrEmpty()) runCatching { first.requestFocus() } }
 
@@ -454,9 +475,7 @@ fun WidgetPickerScreen(
                         onClick = { onPick(option.info) },
                         focusRequester = if (index == 0) first else null,
                         leading = {
-                            val preview = remember(option.info.provider) {
-                                runCatching { option.info.loadIcon(context, 0)?.toBitmap(96, 96)?.asImageBitmap() }.getOrNull()
-                            }
+                            val preview = option.preview
                             if (preview != null) Image(preview, contentDescription = null, modifier = Modifier.size(36.dp))
                         },
                     )

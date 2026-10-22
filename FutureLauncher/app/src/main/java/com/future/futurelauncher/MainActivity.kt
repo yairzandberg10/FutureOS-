@@ -197,7 +197,7 @@ class MainActivity : ComponentActivity() {
                         com.future.futurelauncher.ui.evictAppIconCache(packageName)
                     }
                 }
-                viewModel.loadData()
+                viewModel.loadData(debounceMs = 400L)
             }
         }
         val filter = android.content.IntentFilter().apply {
@@ -272,7 +272,12 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun configureWidget(appWidgetId: Int) {
-        val appWidgetInfo = appWidgetManager.getAppWidgetInfo(appWidgetId) ?: return
+        val appWidgetInfo = appWidgetManager.getAppWidgetInfo(appWidgetId)
+        if (appWidgetInfo == null) {
+            // המזהה נשאר רשום אצל ה-host אם לא משחררים אותו (FL-19)
+            appWidgetHost.deleteAppWidgetId(appWidgetId)
+            return
+        }
         if (appWidgetInfo.configure != null) {
             val intent = Intent(AppWidgetManager.ACTION_APPWIDGET_CONFIGURE).apply {
                 component = appWidgetInfo.configure
@@ -339,6 +344,8 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
         viewModel.dialogState == LauncherDialog.Widgets ||
         viewModel.dialogState is LauncherDialog.AppList
     LaunchedEffect(overlayOpen) { if (!overlayOpen) runCatching { focusRequester.requestFocus() } }
+    // המאזין למטה נרשם פעם אחת (Unit) - בלי State עדכני הוא ראה overlayOpen=false לתמיד (FL-05)
+    val overlayOpenNow by rememberUpdatedState(overlayOpen)
 
     // מרענן את העיצוב המשותף (כהה/בהיר, צבע הדגשה) בכל חזרה למסך, כדי
     // שלשינויים שנעשו באפליקציית ההגדרות תהיה השפעה מיידית על הלאנצ'ר.
@@ -398,7 +405,7 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                     menuClickJob?.cancel()
                     menuClickJob = scope.launch {
                         delay(350)
-                        if (!viewModel.isEditMode && !overlayOpen && !prefs.lockLayout) {
+                        if (!viewModel.isEditMode && !overlayOpenNow && !prefs.lockLayout) {
                             val freshItems = viewModel.pages.getOrNull(pagerState.currentPage) ?: emptyList()
                             val item = freshItems.getOrNull(viewModel.focusedIndex)
                             if (item != null) viewModel.dialogState = LauncherDialog.AppOptions(item)
@@ -1108,10 +1115,21 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                         val newPages = viewModel.pages.toMutableList()
                         val currentPageItems = newPages[currentPage].toMutableList()
                         
-                        val targetIndex = viewModel.pendingSlot?.let { if (it.first == currentPage) it.second else null } ?: 
-                                         currentPageItems.indexOfFirst { it is LauncherItem.Empty && it.isOccupiedBy == null }
+                        val pendingIndex = viewModel.pendingSlot?.let { if (it.first == currentPage) it.second else null }
+                        // התא שנבחר חייב להיות עדיין ריק ולא תפוס (טעינה מחדש יכולה למלא אותו) (FL-06)
+                        val pendingValid = pendingIndex != null && currentPageItems.getOrNull(pendingIndex).let {
+                            it is LauncherItem.Empty && it.isOccupiedBy == null
+                        }
+                        val targetIndex = if (pendingValid) pendingIndex!!
+                            else currentPageItems.indexOfFirst { it is LauncherItem.Empty && it.isOccupiedBy == null }
+                        // אפליקציה שכבר על מסך הבית (בכל דף או תיקייה) לא נוספת פעמיים (FL-07)
+                        val alreadyPlaced = viewModel.pages.any { page ->
+                            page.any { it.id == app.id || (it is LauncherItem.Folder && it.apps.any { a -> a.id == app.id }) }
+                        }
 
-                        if (targetIndex != -1) {
+                        if (alreadyPlaced) {
+                            Toast.makeText(activity, "האפליקציה כבר על מסך הבית", Toast.LENGTH_SHORT).show()
+                        } else if (targetIndex != -1) {
                             currentPageItems[targetIndex] = app
                             newPages[currentPage] = currentPageItems
                             viewModel.pages = newPages
