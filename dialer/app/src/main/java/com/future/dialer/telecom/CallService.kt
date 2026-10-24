@@ -32,8 +32,13 @@ import kotlinx.coroutines.flow.asStateFlow
  */
 class CallService : InCallService() {
 
+    // DL-05 (#8, בסיסי, לא נבדק במכשיר - אסור לבצע שיחות אמיתיות): עד כה כל שיחה חדשה דרסה את
+    // הקודמת. עכשיו רשימת שיחות; שיחה שעוברת להמתנה כשיש עוד שיחה לא גוזלת את מקום הפעילה.
+    private val calls = mutableListOf<Call>()
+
     private val callCallback = object : Call.Callback() {
         override fun onStateChanged(call: Call, state: Int) {
+            if (state == Call.STATE_HOLDING && calls.size > 1) return
             _activeCall.value = call
             _callState.value = state
             onCallStateKnown(state)
@@ -43,6 +48,7 @@ class CallService : InCallService() {
     override fun onCallAdded(call: Call) {
         super.onCallAdded(call)
         call.registerCallback(callCallback)
+        calls.add(call)
         _activeCall.value = call
         _callState.value = call.details.state
         instance = this
@@ -52,6 +58,15 @@ class CallService : InCallService() {
     override fun onCallRemoved(call: Call) {
         super.onCallRemoved(call)
         call.unregisterCallback(callCallback)
+        calls.remove(call)
+        val remaining = calls.lastOrNull()
+        if (_activeCall.value == call && remaining != null) {
+            // נשארה שיחה אחרת (בהמתנה או פעילה) - היא הופכת לפעילה, ומשחררים אותה מהמתנה
+            _activeCall.value = remaining
+            _callState.value = remaining.details.state
+            if (remaining.details.state == Call.STATE_HOLDING) remaining.unhold()
+            return
+        }
         if (_activeCall.value == call) {
             _activeCall.value = null
             _callState.value = null
@@ -302,6 +317,14 @@ class CallService : InCallService() {
         /** המתנה - השיחה נשארת פתוחה, השמע נעצר בשני הצדדים (Call.hold/unhold). */
         fun setOnHold(hold: Boolean) {
             val call = _activeCall.value ?: return
+            // יש שיחה אחרת בהמתנה: כפתור ההמתנה מחליף ביניהן (השיחה הנוכחית עוברת להמתנה אוטומטית)
+            val other = instance?.calls?.firstOrNull { it !== call && it.details.state == Call.STATE_HOLDING }
+            if (hold && other != null) {
+                other.unhold()
+                _activeCall.value = other
+                _callState.value = other.details.state
+                return
+            }
             if (hold) call.hold() else call.unhold()
         }
 
