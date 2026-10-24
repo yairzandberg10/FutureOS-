@@ -40,6 +40,10 @@ class SmsDeliverReceiver : BroadcastReceiver() {
         val pending = goAsync()
         Thread {
             try {
+                // #53: הודעה ממספר חסום נזרקת בשקט (כמו שהמערכת חוסמת שיחות) - בלי שמירה ובלי התראה.
+                // לא נבדק במכשיר (אסור לשלוח SMS בבדיקה).
+                val blocked = runCatching { android.provider.BlockedNumberContract.isBlocked(context, address) }.getOrDefault(false)
+                if (blocked) return@Thread
                 context.contentResolver.insert(Telephony.Sms.CONTENT_URI, values)
                 notifyIncoming(context, address, body)
                 // מונה ההודעות שלא נקראו בווידג'ט מתעדכן מיד
