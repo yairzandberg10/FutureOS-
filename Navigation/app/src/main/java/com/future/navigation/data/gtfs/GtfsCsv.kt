@@ -15,7 +15,8 @@ class GtfsCsvReader(inputStream: InputStream) {
     private val columnIndex: Map<String, Int>
 
     init {
-        val headerLine = reader.readLine() ?: ""
+        // F38: BOM בתחילת הקובץ היה נדבק לשם העמודה הראשונה ושובר את הסינון לפיה.
+        val headerLine = (reader.readLine() ?: "").removePrefix("\uFEFF")
         val headers = parseCsvLine(headerLine)
         columnIndex = headers.mapIndexed { index, name -> name.trim() to index }.toMap()
     }

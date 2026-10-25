@@ -135,7 +135,8 @@ fun HomeScreen(
                 modifier = Modifier.weight(1f)
             )
             TopBarIconButton(
-                icon = FutureIcons.LocationOn,
+                // F33 / NT-D05: אייקון הורדה, שונה מאייקון המיקום שבשורה לידו.
+                icon = FutureIcons.Download,
                 contentDescription = stringResource(R.string.gtfs_setup_title),
                 textColor = theme.textColor,
                 accentColor = theme.accentColor,

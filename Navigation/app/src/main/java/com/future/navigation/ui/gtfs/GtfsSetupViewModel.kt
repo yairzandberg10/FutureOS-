@@ -39,9 +39,14 @@ class GtfsSetupViewModel(
             GtfsConfig.TEL_AVIV_BBOX
         }
         viewModelScope.launch {
-            importer.importFeed(appContext, bbox).collect { update ->
-                _progress.value = update
-                if (update.phase == ImportPhase.DONE || update.phase == ImportPhase.ERROR) importing = false
+            // F24: הדגל מתאפס גם כשהזרם מסתיים בלי DONE/ERROR או נכשל בחריגה.
+            try {
+                importer.importFeed(appContext, bbox).collect { update ->
+                    _progress.value = update
+                    if (update.phase == ImportPhase.DONE || update.phase == ImportPhase.ERROR) importing = false
+                }
+            } finally {
+                importing = false
             }
         }
     }
