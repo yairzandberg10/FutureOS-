@@ -34,6 +34,8 @@
         android:protectionLevel="signature" />
 
     <uses-permission android:name="com.future.keyboard.permission.SETTINGS" />
+    <!-- מקשי CALL/ENDCALL נשלחים ל-dialer (CallActionReceiver), שדורש את ההרשאה הזו מהשולח. -->
+    <uses-permission android:name="com.future.futureui.permission.SYSTEM_SETTINGS" />
     <!-- שידורי המערכת ל-dialer (מקשי CALL/ENDCALL, שיחה) דורשים את ההרשאה הזו
          מהשולח. SystemUI (עותק) שומר את השם הזה כמו שהוא - ר' sync-from-futureui.sh. -->
     <uses-permission android:name="com.future.futureui.permission.SYSTEM_SETTINGS" />

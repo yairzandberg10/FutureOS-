@@ -143,7 +143,12 @@ fun AcRemoteScreen(theme: FutureTheme, device: RemoteDevice, onBack: () -> Unit)
                     if (e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                     // R07: החזקת מקש לא שולחת שידור לכל חזרה - אחרת המזגן ממשיך לזוז אחרי השחרור.
                     if (e.nativeKeyEvent.repeatCount > 0) return@onPreviewKeyEvent digitForKey(e.key) != null
-                    when (digitForKey(e.key)) {
+                    val digit = digitForKey(e.key)
+                    // החזקה לא מחליפה הפעלה/מצב/מאוורר/תנודה שוב ושוב - רק טמפרטורה חוזרת.
+                    if (e.nativeKeyEvent.repeatCount > 0 && digit != "2" && digit != "8") {
+                        return@onPreviewKeyEvent digit != null
+                    }
+                    when (digit) {
                         "5" -> { power(); true }
                         "2" -> { temp(+1); true }
                         "8" -> { temp(-1); true }

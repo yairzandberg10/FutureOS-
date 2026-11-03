@@ -299,7 +299,11 @@ class LockScreenController(
 
     /** שיחה נכנסת בזמן נעילה: מפנים את המסך למסך השיחה, ונועלים שוב כשהיא נגמרת. */
     fun onCallRinging() {
-        if (locked && !suspended) suspend()
+        // השידור הוא ציבורי: מפנים את הנעילה רק אם באמת יש שיחה (בודקים שוב אחרי
+        // רגע, כי מצב הטלפוניה יכול להתעדכן מעט אחרי השידור מה-dialer).
+        if (!locked || suspended) return
+        if (isInCall()) { suspend(); return }
+        main.postDelayed({ if (locked && !suspended && isInCall()) suspend() }, 700)
     }
 
     /**

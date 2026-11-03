@@ -63,8 +63,8 @@ fun GuideDetailScreen(app: GuideApp, theme: FutureTheme, onBack: () -> Unit) {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .focusable()
                         .focusRequester(contentFocusRequester)
+                        .focusable()
                         .onKeyEvent { event ->
                             if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
                             when (event.nativeKeyEvent.keyCode) {

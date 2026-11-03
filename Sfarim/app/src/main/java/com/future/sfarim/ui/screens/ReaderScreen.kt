@@ -251,8 +251,8 @@ fun ReaderScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .focusable()
                             .focusRequester(pageFocusRequester)
+                            .focusable()
                             .onKeyEvent { event ->
                                 // S27: OK/מרכז על העמוד פותח את אותו תפריט, כמו בפסוק-בפסוק
                                 if (event.type == KeyEventType.KeyUp &&

@@ -595,8 +595,8 @@ fun PdfViewerScreen(file: File, theme: FutureTheme, onBack: () -> Unit) {
 
     DisposableEffect(file) {
         onDispose {
-            rendererRef.value?.close()
-            pfdRef.value?.close()
+            runCatching { rendererRef.value?.close() }
+            runCatching { pfdRef.value?.close() }
         }
     }
 

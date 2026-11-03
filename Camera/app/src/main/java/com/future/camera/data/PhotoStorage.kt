@@ -43,7 +43,10 @@ object PhotoStorage {
             ContextCompat.getMainExecutor(context),
             object : ImageCapture.OnImageSavedCallback {
                 override fun onImageSaved(output: ImageCapture.OutputFileResults) {
-                    output.savedUri?.let(onSaved)
+                    // בלי URI ה-callback לא היה נקרא, ומצב הרצף נתקע על "עסוק".
+                    val uri = output.savedUri
+                    if (uri != null) onSaved(uri)
+                    else onError(ImageCaptureException(ImageCapture.ERROR_UNKNOWN, "no saved uri", null))
                 }
 
                 override fun onError(exception: ImageCaptureException) {
