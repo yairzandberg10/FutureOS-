@@ -3,7 +3,6 @@ package com.future.settings.receiver
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.media.AudioManager
 import com.future.settings.utils.SystemInteractor
 
 /** מקבל שידורים מ-AlarmManager עבור "מיקוד עכשיו" ו"שעות שינה" - מריץ אותם גם
@@ -18,8 +17,10 @@ class FocusActionReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val interactor = SystemInteractor(context)
         when (intent.action) {
-            ACTION_FOCUS_REVERT, ACTION_SLEEP_END -> interactor.setRingerMode(AudioManager.RINGER_MODE_NORMAL)
-            ACTION_SLEEP_START -> interactor.setRingerMode(AudioManager.RINGER_MODE_SILENT)
+            // SET-03: הסיום משחזר את מצב הצלצול שהיה לפני ההשתקה, ולא תמיד "צליל".
+            ACTION_FOCUS_REVERT -> interactor.endFocusSilence()
+            ACTION_SLEEP_END -> interactor.endSleepSilence()
+            ACTION_SLEEP_START -> interactor.beginSleepSilence()
         }
     }
 }

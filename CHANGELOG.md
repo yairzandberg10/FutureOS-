@@ -21,15 +21,32 @@ the build on the phone) with `main` merged in (the 20 alternative bodies under
    `RootShell.quote()`; `security-check.py` now passes with 0 problems (it
    reported 2).
 4. **Root command quoting, SystemUI.** Same fix in the SystemUI copy.
-5. **Messages: a chat message whose sender could not be stored is dropped**
-   instead of throwing a NullPointerException inside the sync loop.
+5. **Messages: no forced NullPointerException in chat receive.** A message
+   whose sender could not be stored is dropped by an explicit check. The
+   outcome for the user is unchanged (it was dropped before too).
 6. **Settings: a failed brightness write is logged** with a tag instead of
    `printStackTrace()`.
 7. **Control Center media time, FutureUI:** formatted with a fixed locale, so
    the digits stay Western under any system language.
 8. **Control Center media time, SystemUI:** same fix.
 
-Not included: the uncommitted changes in the local `FutureOS--main` folder
+9. **Settings: Focus and Sleep hours restore the previous ringer mode
+   (SET-03).** Ending Focus or Sleep hours used to switch to "sound" always,
+   cancelling a manual mute and cancelling the other mode if it was still
+   running. The mode from before the first silence is now saved and restored
+   only when neither mode is active. Turning Sleep hours off in the middle of
+   the window also restores it.
+
+Items 3-4 and 7-8 are one fix applied to two copies of the same code, so
+this is 7 distinct changes. Compiled: Settings, Messages, FutureUI, SystemUI.
+Nothing here was checked on the device.
+
+Not included: Navigation is still the `qa-install` copy; the 7 Navigation
+commits on `navigation-no-gms` (the build on the phone) are not merged.
+The large assets are Git LFS pointers in this worktree: run `git lfs pull`
+before a release build of Assistant, Keyboard or Sfarim.
+
+Also not included: the uncommitted changes in the local `FutureOS--main` folder
 (about 500 files that differ from both `main` and `qa-install`).
 
 ### Focus transitions everywhere, 6 October

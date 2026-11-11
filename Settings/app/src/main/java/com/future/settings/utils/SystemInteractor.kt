@@ -118,6 +118,9 @@ class SystemInteractor(private val context: Context) {
 
     companion object {
         private const val KEYBOARD_IME_ID = "com.future.keyboard/.KeyboardService"
+        private const val FLAG_FOCUS_ACTIVE = "silence_focus_active"
+        private const val FLAG_SLEEP_ACTIVE = "silence_sleep_active"
+        private const val KEY_RINGER_BEFORE_SILENCE = "ringer_before_silence"
     }
 
     /** מחזיר false אם השינוי נחסם (למשל: מצב שקט/רטט בלי הרשאת מדיניות התראות). */
@@ -839,7 +842,7 @@ class SystemInteractor(private val context: Context) {
 
     /** משתיק צלילים למשך [minutes] דקות, ומתזמן חזרה אוטומטית למצב רגיל - "מיקוד עכשיו". */
     fun scheduleFocusNow(minutes: Int): Boolean {
-        val succeeded = setRingerMode(AudioManager.RINGER_MODE_SILENT)
+        val succeeded = beginSilence(FLAG_FOCUS_ACTIVE)
         if (!succeeded) return false
         val triggerAt = System.currentTimeMillis() + minutes * 60_000L
         alarmManager.setAndAllowWhileIdle(
@@ -851,8 +854,37 @@ class SystemInteractor(private val context: Context) {
 
     fun cancelFocusNow() {
         alarmManager.cancel(focusPendingIntent(com.future.settings.receiver.FocusActionReceiver.ACTION_FOCUS_REVERT, 1001))
-        setRingerMode(AudioManager.RINGER_MODE_NORMAL)
+        endFocusSilence()
     }
+
+    // SET-03: מיקוד ושעות שינה החזירו תמיד "צליל" בסיומם, גם כשהטלפון היה מושתק ידנית
+    // לפני כן, וגם כשהמצב השני (שינה בזמן מיקוד, או להפך) עדיין פעיל. עכשיו מצב הצלצול
+    // שהיה לפני ההשתקה הראשונה נשמר, ומשוחזר רק כשאף אחד משני המצבים כבר לא פעיל.
+    private fun beginSilence(flag: String): Boolean {
+        val before = audioManager.ringerMode
+        if (!setRingerMode(AudioManager.RINGER_MODE_SILENT)) return false
+        val p = prefs()
+        val edit = p.edit().putBoolean(flag, true)
+        if (!p.contains(KEY_RINGER_BEFORE_SILENCE)) edit.putInt(KEY_RINGER_BEFORE_SILENCE, before)
+        edit.apply()
+        return true
+    }
+
+    private fun endSilence(flag: String, otherFlag: String) {
+        val p = prefs()
+        val edit = p.edit().remove(flag)
+        if (p.getBoolean(otherFlag, false)) {
+            edit.apply()
+            return
+        }
+        val saved = p.getInt(KEY_RINGER_BEFORE_SILENCE, AudioManager.RINGER_MODE_NORMAL)
+        edit.remove(KEY_RINGER_BEFORE_SILENCE).apply()
+        if (!setRingerMode(saved)) setRingerMode(AudioManager.RINGER_MODE_NORMAL)
+    }
+
+    fun endFocusSilence() = endSilence(FLAG_FOCUS_ACTIVE, FLAG_SLEEP_ACTIVE)
+    fun beginSleepSilence(): Boolean = beginSilence(FLAG_SLEEP_ACTIVE)
+    fun endSleepSilence() = endSilence(FLAG_SLEEP_ACTIVE, FLAG_FOCUS_ACTIVE)
 
     fun isSleepModeEnabled(): Boolean = prefsBoolean("sleep_mode_enabled", false)
 
@@ -866,6 +898,8 @@ class SystemInteractor(private val context: Context) {
         } else {
             alarmManager.cancel(startPi)
             alarmManager.cancel(endPi)
+            // כיבוי שעות שינה באמצע החלון: בלי זה הטלפון נשאר מושתק עד שמשנים ידנית.
+            if (prefs().getBoolean(FLAG_SLEEP_ACTIVE, false)) endSleepSilence()
         }
     }
 
