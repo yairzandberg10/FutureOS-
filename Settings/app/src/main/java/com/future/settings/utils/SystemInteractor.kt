@@ -142,7 +142,7 @@ class SystemInteractor(private val context: Context) {
         try {
             Settings.System.putInt(contentResolver, Settings.System.SCREEN_BRIGHTNESS, value)
         } catch (e: Exception) {
-            e.printStackTrace()
+            android.util.Log.w("SystemInteractor", "setBrightness failed", e)
         }
     }
 

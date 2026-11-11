@@ -1,5 +1,6 @@
 package com.future.sharednav.components
 
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -57,7 +58,7 @@ fun FutureListItem(
         idleBackgroundColor = idleBackgroundColor,
         contentPadding = 0.dp,
         focusRequester = focusRequester,
-    ) {
+    ) { isFocused ->
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -75,7 +76,10 @@ fun FutureListItem(
                     fontWeight = FutureTypography.weightMedium,
                     textDecoration = titleDecoration,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                    // S37: כותרת ארוכה בשורה הממוקדת נגללת (כמו MarqueeText) במקום להיחתך
+                    // בלי דרך לקרוא את הסוף שלה. שורה לא ממוקדת נשארת עם שלוש נקודות.
+                    overflow = if (isFocused) TextOverflow.Clip else TextOverflow.Ellipsis,
+                    modifier = if (isFocused) Modifier.basicMarquee() else Modifier,
                 )
                 if (summary != null) {
                     Text(

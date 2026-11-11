@@ -764,7 +764,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
                 lm.savePolicyControl(current?.takeIf { it != ours })
             }
         }
-        controlManager?.runRootCommandAsync("settings put global policy_control $ours")
+        controlManager?.runRootCommandAsync("settings put global policy_control ${com.future.sharednav.root.RootShell.quote(ours)}")
     }
 
     /** מחזיר את policy_control למה שהיה לפני שלנו; אם לא שינינו - לא נוגעים. */

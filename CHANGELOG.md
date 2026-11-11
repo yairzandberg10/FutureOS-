@@ -4,6 +4,34 @@ This repo has no carried-over git history (see root [README](README.md)), so thi
 
 ## Unreleased
 
+### v2-improvements: a separate version line (2026-11-11)
+
+Branch `v2-improvements`, worktree `FutureOS-v2`. Base: `qa-install` (8d1cc60,
+the build on the phone) with `main` merged in (the 20 alternative bodies under
+`hardware/`). Not installed on the device and not pushed.
+
+1. **Long list titles scroll when focused (S37).** `FutureListItem` in
+   SharedKeypadNav now scrolls the focused row's title instead of cutting it
+   with an ellipsis. Applies to every list in every app that uses the shared
+   row (book names in Sfarim, contacts, settings, files).
+2. **Long screen titles scroll (M-48).** `ScreenTopBar` scrolls a title that
+   does not fit the 640 px width (artist name, folder name). A title that
+   fits does not move.
+3. **Root command quoting, FutureUI.** `policy_control` is written through
+   `RootShell.quote()`; `security-check.py` now passes with 0 problems (it
+   reported 2).
+4. **Root command quoting, SystemUI.** Same fix in the SystemUI copy.
+5. **Messages: a chat message whose sender could not be stored is dropped**
+   instead of throwing a NullPointerException inside the sync loop.
+6. **Settings: a failed brightness write is logged** with a tag instead of
+   `printStackTrace()`.
+7. **Control Center media time, FutureUI:** formatted with a fixed locale, so
+   the digits stay Western under any system language.
+8. **Control Center media time, SystemUI:** same fix.
+
+Not included: the uncommitted changes in the local `FutureOS--main` folder
+(about 500 files that differ from both `main` and `qa-install`).
+
 ### Focus transitions everywhere, 6 October
 
 Every place where the focus mark still jumped in one frame now fades and

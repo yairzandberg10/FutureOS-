@@ -418,7 +418,8 @@ object FutureChat {
             peer = store.peerByUid(from)
             ChatCrypto.open(sealed, identity.signKey, contextString)
         }
-        val phone = peer!!.phone
+        // peer יכול להיות null רק אם השמירה למסד נכשלה - ההודעה נזרקת ולא מפילה את הסנכרון.
+        val phone = peer?.phone ?: return
         val json = JSONObject(String(plaintext))
         // המזהה מגיע מהשולח ונכנס לשם קובץ (mediaFile) - רק תווים בטוחים, בלי "../".
         val id = json.optString("id", doc.id).takeIf { SAFE_ID.matches(it) } ?: doc.id

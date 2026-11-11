@@ -1,4 +1,5 @@
 package com.future.sharednav.components
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
 import androidx.activity.compose.BackHandler
 
@@ -84,7 +85,10 @@ fun ScreenTopBar(
                 fontWeight = FontWeight.Bold,
                 color = textColor,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+                // M-48: כותרת שלא נכנסת ברוחב המסך (שם אמן, שם תיקייה) נגללת לאט במקום
+                // להיחתך. כותרת שנכנסת לא זזה כלל - basicMarquee פועל רק כשיש גלישה.
+                overflow = TextOverflow.Clip,
+                modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE, initialDelayMillis = 1500),
             )
         }
         if (trailingIcon != null && onTrailingClick != null) {
