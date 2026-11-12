@@ -170,13 +170,16 @@ fun FeedbackScreen(
                                 scope.launch {
                                     result = FeedbackRepository.submit(context, payload)
                                     busy = false
-                                    // הדוח עבר למשוב (נשלח או בתור): לא מציעים אותו שוב
-                                    crash?.let {
-                                        CrashStore.remove(context, it.id)
-                                        FutureNotifications.cancelCrash(context, it.pkg)
+                                    // הדוח עבר למשוב (נשלח או בתור): לא מציעים אותו שוב.
+                                    // משוב שהשרת דחה משאיר את הדוח, כדי שאפשר יהיה לנסות שוב
+                                    if (result != SubmitResult.Rejected) {
+                                        crash?.let {
+                                            CrashStore.remove(context, it.id)
+                                            FutureNotifications.cancelCrash(context, it.pkg)
+                                        }
+                                        crashAttached = null
+                                        text = ""
                                     }
-                                    crashAttached = null
-                                    text = ""
                                     refresh++
                                     step = FeedbackStep.Done
                                 }

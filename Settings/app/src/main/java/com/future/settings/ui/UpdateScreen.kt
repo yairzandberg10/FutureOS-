@@ -24,6 +24,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -113,7 +114,16 @@ fun UpdateScreen(navController: NavController, theme: ThemeConfig) {
             LazyColumn {
                 item {
                     SettingsCard(theme) {
-                        SettingItem("גרסת FutureOS", Build.DISPLAY, FutureIcons.Info, theme, showChevron = false, infoFocusable = true)
+                        // בלי שרת אין כפתור "בדוק עכשיו": הפוקוס ההתחלתי עובר לשורה הראשונה
+                        SettingItem(
+                            "גרסת FutureOS",
+                            Build.DISPLAY,
+                            FutureIcons.Info,
+                            theme,
+                            showChevron = false,
+                            infoFocusable = true,
+                            modifier = if (configured) Modifier else Modifier.focusRequester(checkFocus),
+                        )
                         SettingDivider(theme)
                         val status = when {
                             !configured -> "שרת העדכונים לא מוגדר בגרסה הזו"
