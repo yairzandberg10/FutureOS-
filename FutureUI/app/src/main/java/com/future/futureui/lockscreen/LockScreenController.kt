@@ -36,6 +36,7 @@ import com.future.futureui.lockscreen.face.FaceStatus
 import com.future.futureui.lockscreen.logic.LockCatalog
 import com.future.futureui.lockscreen.logic.LockSettings
 import com.future.futureui.lockscreen.logic.LockWallpapers
+import com.future.futureui.lockscreen.logic.SecurityLog
 import com.future.futureui.lockscreen.ui.LockScreenUi
 import com.future.futureui.ui.theme.FutureUITheme
 import com.future.futureui.utils.FutureUIState
@@ -64,6 +65,8 @@ class LockScreenController(
     private val bringStatusBarFront: () -> Unit,
 ) {
     val settings = LockSettings(service)
+    /** יומן ניסיונות שגויים - קובץ נפרד, לא משפיע על בדיקת הקוד. */
+    private val securityLog = SecurityLog(service)
     private val face = FaceAuthenticator(service, settings)
     private val state = LockUiState()
     private val main = Handler(Looper.getMainLooper())
@@ -288,10 +291,13 @@ class LockScreenController(
         FutureUIState.isSecured = false
         state.unlocking = true
         clearPin()
+        // ניסיונות שגויים מאז הפתיחה הקודמת - נלקחים עכשיו, מוצגים אחרי שהחלון ירד
+        val unseen = securityLog.takeUnseen()
         // אנימציית היציאה (המסך עולה ודועך) ואז מסירים את החלון
         main.postDelayed({
             if (!locked) removeWindow()
             action?.invoke()
+            unseen?.let { showFailedAttemptsNotice(it) }
         }, 300)
     }
 
@@ -514,6 +520,7 @@ class LockScreenController(
         if (pinBuffer.length < state.pinLength) return
         val entered = pinBuffer.toString()
         clearPin()
+        val failuresBefore = settings.pin.failedAttempts()
         if (settings.pin.verifyPin(entered)) {
             settings.onStrongAuth()
             if (faceFailedThisSession) face.learnFromLastProbe()
@@ -523,11 +530,28 @@ class LockScreenController(
             pendingAction = null
             if (action != null) action() else unlock()
         } else {
+            // רק כישלון אמיתי (המונה של PinStore עלה) - לא מפתח Keystore שעוד לא מוכן
+            if (settings.pin.failedAttempts() > failuresBefore) securityLog.onFailedPin()
             state.pinError = true
             state.pinErrorTick++
             main.removeCallbacks(lockoutTicker)
             lockoutTicker.run()
         }
+    }
+
+    /** "2 ניסיונות פתיחה שגויים מאז הפעם הקודמת · האחרון היום ב-14:32". */
+    private fun showFailedAttemptsNotice(unseen: SecurityLog.Unseen) {
+        val countText = if (unseen.count == 1) "ניסיון פתיחה שגוי אחד" else "${unseen.count} ניסיונות פתיחה שגויים"
+        val whenText = if (unseen.lastAt > 0) " · האחרון ${formatWhen(unseen.lastAt)}" else ""
+        runCatching {
+            android.widget.Toast.makeText(service, "$countText מאז הפעם הקודמת$whenText", android.widget.Toast.LENGTH_LONG).show()
+        }.onFailure { Log.w(TAG, "failed-attempts notice", it) }
+    }
+
+    private fun formatWhen(at: Long): String {
+        val time = SimpleDateFormat("HH:mm", Locale.getDefault()).format(java.util.Date(at))
+        val today = SimpleDateFormat("yyyyMMdd", Locale.US).let { it.format(java.util.Date()) == it.format(java.util.Date(at)) }
+        return if (today) "היום ב-$time" else "ב-${SimpleDateFormat("d.M", Locale.getDefault()).format(java.util.Date(at))} $time"
     }
 
     private fun clearPin() {

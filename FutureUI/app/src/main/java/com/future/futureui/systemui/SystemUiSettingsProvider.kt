@@ -29,6 +29,14 @@ class SystemUiSettingsProvider : ContentProvider() {
         // קריאה בלבד: המכשיר נעול (גם כשמסך הנעילה פינה מקום לשיחה). החייגן בודק
         // את זה כדי לא לחשוף יומן/אנשי קשר מתוך שיחה במכשיר נעול.
         const val COL_DEVICE_SECURED = "device_secured"
+
+        // content://…/security - מצב האבטחה למרכז האבטחה בהגדרות. קריאה בלבד, ורק
+        // דגלים ומונים: לא הקוד, לא ה-HMAC שלו ולא אורכו.
+        const val PATH_SECURITY = "security"
+        val SECURITY_COLUMNS = arrayOf(
+            "lock_enabled", "has_pin", "face_enabled", "notif_privacy",
+            "auto_lock_ms", "failed_week", "last_failed_at", "lockout_ms",
+        )
     }
 
     private lateinit var statusBarPrefs: android.content.SharedPreferences
@@ -39,6 +47,7 @@ class SystemUiSettingsProvider : ContentProvider() {
     }
 
     override fun query(uri: Uri, projection: Array<out String>?, selection: String?, selectionArgs: Array<out String>?, sortOrder: String?): Cursor {
+        if (uri.lastPathSegment == PATH_SECURITY) return securityStatus()
         val cursor = MatrixCursor(arrayOf(COL_SHOW_BATTERY, COL_SHOW_BLUETOOTH, COL_USE_24_HOUR_CLOCK, COL_SUPPRESS_SYSTEM_BARS, COL_BAR_STYLE, COL_DEVICE_SECURED))
         cursor.addRow(
             arrayOf(
@@ -66,6 +75,25 @@ class SystemUiSettingsProvider : ContentProvider() {
         }.apply()
         context?.contentResolver?.notifyChange(CONTENT_URI, null)
         return 1
+    }
+
+    private fun securityStatus(): Cursor {
+        val lock = com.future.futureui.lockscreen.logic.LockSettings(context!!)
+        val log = com.future.futureui.lockscreen.logic.SecurityLog(context!!)
+        return MatrixCursor(SECURITY_COLUMNS).apply {
+            addRow(
+                arrayOf<Any>(
+                    if (lock.enabled) 1 else 0,
+                    if (lock.pin.hasPin()) 1 else 0,
+                    if (lock.faceEnabled) 1 else 0,
+                    lock.notificationPrivacy,
+                    lock.autoLockDelayMs,
+                    log.failuresLastWeek(),
+                    log.lastFailureAt(),
+                    lock.pin.remainingLockoutMs(),
+                )
+            )
+        }
     }
 
     private fun systemLocked(): Boolean = runCatching {

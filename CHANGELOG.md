@@ -4,6 +4,44 @@ This repo has no carried-over git history (see root [README](README.md)), so thi
 
 ## Unreleased
 
+### security-center: upgraded security system (2026-11-12)
+
+Branch `security-center`, on top of `os-updates-feedback`. FutureUI and
+Settings build (`assembleRelease`), `security-check.py` passes. Not installed
+(no device was connected) and not pushed. Items 375, 376 and 529 from the OS
+checklist triage.
+
+1. **Camera and microphone indicators** (FutureUI status bar, all four bar
+   styles). Green camera glyph while any app has a camera open
+   (`CameraManager.AvailabilityCallback`), orange mic glyph while anything
+   records (`AudioRecordingCallback`). Both are events, no polling, no new
+   permission. Android's own indicators sit under FutureUI's bar and were
+   hidden. Face unlock opens the camera too, so the green glyph shows during
+   a face scan - on purpose.
+2. **PIN policy.** A new PIN is rejected when it is one repeated digit, a
+   run (1234 / 4321), a repeated block (1212, 123123), a year 1940-2039, or
+   a common code (2580 - the middle keypad column - 1004, 6969 ...).
+   Applied only when choosing a new PIN: an existing weak PIN keeps working.
+3. **Failed-unlock log.** Every wrong PIN (lock screen and the lock-settings
+   gate) is logged with its time only, in a separate prefs file
+   (`security_log`) - `PinStore`, its keys and the lockout are untouched.
+   After the next unlock the owner sees "N wrong unlock attempts since last
+   time · last at 14:32".
+4. **Security center in Settings** (Settings > Security). Security level,
+   four checks with a direct fix (PIN on, auto-lock up to 30 s, notification
+   content hidden on the lock screen, USB debugging off), wrong attempts this
+   week and the current lockout, and an honest "limits" row: the FutureOS
+   lock is a UI layer that adb or safe mode bypass. The old top card read the
+   Android keyguard and said "not secured" even with a FutureOS PIN set.
+   Data comes from a new read-only `content://com.future.futureui.systemui/security`
+   path (signature permission, flags and counters only - never the PIN, its
+   HMAC or its length).
+
+Not done: SystemUI (`com.android.sistemui`) is not synced - its sources
+already differ from FutureUI, so `sync-from-futureui.sh` would overwrite
+them. Not built on purpose: remote wipe / wipe after N failures, PIN reset
+(530), intruder photo, and a per-app permission-usage history.
+
 ### os-updates-feedback: update engine and feedback / bug-report engine (2026-11-12)
 
 Branch `os-updates-feedback`, on top of `v2-improvements`. Not installed, not

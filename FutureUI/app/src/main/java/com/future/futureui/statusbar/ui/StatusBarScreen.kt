@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.future.futureui.controlcenter.logic.ControlManager
 import com.future.futureui.controlcenter.service.MediaControlService
+import com.future.futureui.statusbar.logic.PrivacyIndicators
 import com.future.futureui.statusbar.logic.StatusBarLayoutManager
 import com.future.futureui.utils.FutureUIState
 import com.future.sharednav.icons.FutureIcons
@@ -150,6 +151,12 @@ fun StatusBarScreen(
                 Log.w("StatusBarScreen", "receiver already unregistered", e)
             }
         }
+    }
+
+    // חיווי מצלמה/מיקרופון - אירועי מערכת, בלי סקר (ר' PrivacyIndicators)
+    DisposableEffect(Unit) {
+        PrivacyIndicators.start(context)
+        onDispose { PrivacyIndicators.stop() }
     }
 
     // שאר האינדיקטורים (DND, טיסה, Bluetooth, נתונים, התראות, שיחה) עדיין
@@ -319,6 +326,7 @@ private fun ClassicBar(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                PrivacyDots()
                 if (isCallActive) {
                     Icon(Icons.Rounded.Call, contentDescription = null, tint = Color(0xFF30D158), modifier = Modifier.size(13.dp))
                 }
@@ -512,9 +520,28 @@ private fun StatusGlyph(icon: ImageVector) {
     Icon(icon, contentDescription = null, tint = FosText70, modifier = Modifier.size(14.dp))
 }
 
+/**
+ * מצלמה / מיקרופון בשימוש עכשיו - הצבעים של אנדרואיד ו-iOS (ירוק למצלמה,
+ * כתום למיקרופון) כדי שיזוהו מיד. סמל ולא רק נקודה: במסך 640×960 נקודה של
+ * 6dp לא מספרת מה בדיוק פועל.
+ */
+@Composable
+private fun PrivacyDots() {
+    if (PrivacyIndicators.cameraInUse.value) {
+        Icon(FutureIcons.Videocam, contentDescription = "המצלמה פעילה", tint = PrivacyCamera, modifier = Modifier.size(14.dp))
+    }
+    if (PrivacyIndicators.micInUse.value) {
+        Icon(FutureIcons.Mic, contentDescription = "המיקרופון פעיל", tint = PrivacyMic, modifier = Modifier.size(14.dp))
+    }
+}
+
+private val PrivacyCamera = com.future.sharednav.theme.FutureAccents.Green
+private val PrivacyMic = com.future.sharednav.theme.FutureAccents.Orange
+
 /** אייקוני מצב המכשיר בטקסט 70% - כדי שלא ייראו כמו התראות. */
 @Composable
 private fun DeviceGlyphs(manager: ControlManager, status: BarStatus) {
+    PrivacyDots()
     if (manager.isDndOn) StatusGlyph(FutureIcons.DoNotDisturbOn)
     if (manager.isAirplaneOn) StatusGlyph(FutureIcons.AirplanemodeActive)
     if (manager.isWifiOn) StatusGlyph(FutureIcons.Wifi)

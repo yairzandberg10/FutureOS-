@@ -428,7 +428,7 @@ fun MainMenu(navController: NavController, theme: ThemeConfig, viewModel: Settin
                 item { SettingHeader("אבטחה", theme) }
                 item {
                     SettingsCard(theme) {
-                        SettingItem("אבטחה", "מסך נעילה, קוד וזיהוי פנים", FutureIcons.Security, theme, modifier = menuFocus(Screen.Security.route)) { navController.navigate(Screen.Security.route) }
+                        SettingItem("אבטחה", "בדיקת אבטחה, מסך נעילה וקוד", FutureIcons.Security, theme, modifier = menuFocus(Screen.Security.route)) { navController.navigate(Screen.Security.route) }
                     }
                 }
 
@@ -1638,8 +1638,34 @@ fun LanguageScreen(navController: NavController, theme: ThemeConfig, viewModel: 
 @Composable
 fun SecurityScreen(navController: NavController, theme: ThemeConfig) {
     val context = LocalContext.current
-    val interactor = remember { com.future.settings.utils.SystemInteractor(context) }
-    val isSecure = remember { interactor.isDeviceSecure() }
+    // מרכז האבטחה: המצב נקרא מחדש בכל חזרה למסך - למשל אחרי הגדרת קוד ב-FutureUI
+    var status by remember { mutableStateOf(com.future.settings.theme.SecurityStatusClient.get(context)) }
+    val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(lifecycle) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                status = com.future.settings.theme.SecurityStatusClient.get(context)
+            }
+        }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer) }
+    }
+    val openLockSettings: () -> Unit = {
+        safeStartActivity(
+            context,
+            Intent(FUTURE_UI_LOCK_SETTINGS_ACTION).setPackage(FUTURE_UI_PACKAGE),
+            "לא ניתן לפתוח את הגדרות מסך הנעילה"
+        )
+    }
+    val openDeveloperOptions: () -> Unit = {
+        safeStartActivity(
+            context,
+            Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS),
+            "לא ניתן לפתוח את אפשרויות המפתחים"
+        )
+    }
+    val checks = securityChecks(status)
+    val passed = checks.count { it.ok }
 
     Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
         Column {
@@ -1647,15 +1673,69 @@ fun SecurityScreen(navController: NavController, theme: ThemeConfig) {
             LazyColumn {
                 item {
                     SettingsCard(theme) {
+                        val level = when {
+                            !status.linked -> "לא ידועה"
+                            passed == checks.size -> "גבוהה"
+                            checks.first().ok && passed >= checks.size - 2 -> "בינונית"
+                            else -> "נמוכה"
+                        }
                         SettingItem(
-                            if (isSecure) "המכשיר מאובטח" else "המכשיר לא מאובטח",
-                            if (isSecure) "הוגדר קוד נעילה של אנדרואיד" else "לא הוגדר קוד נעילה של אנדרואיד",
-                            if (isSecure) FutureIcons.Lock else FutureIcons.LockOpen,
+                            "רמת האבטחה: $level",
+                            if (status.linked) "$passed מתוך ${checks.size} בדיקות עברו" else "אין חיבור לממשק המערכת (FutureUI)",
+                            if (passed == checks.size) FutureIcons.Security else FutureIcons.PrivacyTip,
                             theme,
-                            showChevron = false
+                            showChevron = false,
+                            infoFocusable = true
                         )
                     }
                 }
+
+                item { SettingHeader("בדיקות", theme) }
+                item {
+                    SettingsCard(theme) {
+                        checks.forEachIndexed { index, check ->
+                            SettingItem(
+                                check.title,
+                                check.summary,
+                                if (check.ok) FutureIcons.Check else FutureIcons.Error,
+                                theme,
+                                showChevron = !check.ok,
+                                infoFocusable = true,
+                                onClick = if (check.ok) null else when (check.fix) {
+                                    SecurityFix.LOCK_SETTINGS -> openLockSettings
+                                    SecurityFix.DEVELOPER -> openDeveloperOptions
+                                }
+                            )
+                            if (index < checks.lastIndex) SettingDivider(theme)
+                        }
+                    }
+                }
+
+                if (status.linked && status.hasPin) {
+                    item { SettingHeader("ניסיונות פתיחה", theme) }
+                    item {
+                        SettingsCard(theme) {
+                            val summary = when {
+                                status.lockoutMs > 0 -> "הטלפון חסום כרגע לניסיונות נוספים (${(status.lockoutMs + 59_999) / 60_000} דק')"
+                                status.failedLastWeek == 0 -> "לא היו ניסיונות שגויים בשבוע האחרון"
+                                else -> "האחרון: ${formatSecurityTime(status.lastFailedAt)}"
+                            }
+                            SettingItem(
+                                when (status.failedLastWeek) {
+                                    0 -> "אין ניסיונות שגויים"
+                                    1 -> "ניסיון שגוי אחד השבוע"
+                                    else -> "${status.failedLastWeek} ניסיונות שגויים השבוע"
+                                },
+                                summary,
+                                FutureIcons.History,
+                                theme,
+                                showChevron = false,
+                                infoFocusable = true
+                            )
+                        }
+                    }
+                }
+
                 // מסך הנעילה של FutureOS. ההגדרות עצמן רצות בתוך FutureUI, כי הקוד
                 // ונתוני הפנים מוצפנים במפתח Keystore של FutureUI בלבד; המסך שם
                 // דורש את הקוד הנוכחי לפני כל שינוי.
@@ -1663,11 +1743,7 @@ fun SecurityScreen(navController: NavController, theme: ThemeConfig) {
                 item {
                     SettingsCard(theme) {
                         SettingItem("מסך נעילה, קוד וזיהוי פנים", "קוד, פתיחה בפנים, שעון, ווידג'טים והתראות", FutureIcons.Lock, theme) {
-                            safeStartActivity(
-                                context,
-                                Intent(FUTURE_UI_LOCK_SETTINGS_ACTION).setPackage(FUTURE_UI_PACKAGE),
-                                "לא ניתן לפתוח את הגדרות מסך הנעילה"
-                            )
+                            openLockSettings()
                         }
                     }
                 }
@@ -1704,9 +1780,71 @@ fun SecurityScreen(navController: NavController, theme: ThemeConfig) {
                         }
                     }
                 }
+                // מה מסך הנעילה לא מגן מפניו - בכנות, כדי שהבדיקות למעלה לא ייתנו תחושת ביטחון כוזבת
+                item { SettingHeader("גבולות ההגנה", theme) }
+                item {
+                    SettingsCard(theme) {
+                        SettingItem(
+                            if (status.androidLockSet) "קוד נעילה של אנדרואיד: מוגדר" else "קוד נעילה של אנדרואיד: לא מוגדר",
+                            "מסך הנעילה של FutureOS רץ כשכבת ממשק. מחשב עם ניפוי באגים ב-USB, או אתחול למצב בטוח, עוקפים אותו. קוד של אנדרואיד מצפין את הנתונים עצמם.",
+                            FutureIcons.Info,
+                            theme,
+                            showChevron = false,
+                            infoFocusable = true
+                        )
+                    }
+                }
             }
         }
     }
+}
+
+private enum class SecurityFix { LOCK_SETTINGS, DEVELOPER }
+
+private data class SecurityCheck(val ok: Boolean, val title: String, val summary: String, val fix: SecurityFix)
+
+/** הבדיקות של מרכז האבטחה. הראשונה (קוד נעילה) היא תנאי לכל רמה מעל "נמוכה". */
+private fun securityChecks(s: com.future.settings.theme.SecurityStatus): List<SecurityCheck> {
+    val pinOn = s.linked && s.lockEnabled && s.hasPin
+    return listOf(
+        SecurityCheck(
+            pinOn,
+            if (pinOn) "קוד נעילה פעיל" else "אין קוד נעילה",
+            if (pinOn) "צריך קוד כדי לפתוח את הטלפון" else "כל מי שמחזיק בטלפון יכול לפתוח אותו",
+            SecurityFix.LOCK_SETTINGS
+        ),
+        SecurityCheck(
+            pinOn && s.autoLockMs <= 30_000L,
+            "נעילה אוטומטית",
+            when {
+                !pinOn -> "פועלת רק כשמוגדר קוד"
+                s.autoLockMs == 0L -> "הטלפון ננעל מיד כשהמסך כבה"
+                s.autoLockMs <= 30_000L -> "הטלפון ננעל תוך ${s.autoLockMs / 1000} שניות"
+                else -> "הטלפון נשאר פתוח ${s.autoLockMs / 60_000} דק' אחרי כיבוי המסך. מומלץ עד 30 שניות"
+            },
+            SecurityFix.LOCK_SETTINGS
+        ),
+        SecurityCheck(
+            pinOn && s.notificationPrivacy != 0,
+            "תוכן התראות במסך הנעילה",
+            if (s.notificationPrivacy != 0) "תוכן ההודעות מוסתר עד שהטלפון מזהה אותך" else "כל אחד יכול לקרוא הודעות מהמסך הנעול",
+            SecurityFix.LOCK_SETTINGS
+        ),
+        SecurityCheck(
+            !s.adbEnabled,
+            "ניפוי באגים ב-USB",
+            if (s.adbEnabled) "פועל: מחשב שמחובר בכבל יכול לעקוף את מסך הנעילה. כבה כשלא מתקינים מהמחשב" else "כבוי",
+            SecurityFix.DEVELOPER
+        ),
+    )
+}
+
+private fun formatSecurityTime(at: Long): String {
+    if (at <= 0L) return "לא ידוע"
+    val time = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(java.util.Date(at))
+    val dayFmt = java.text.SimpleDateFormat("yyyyMMdd", java.util.Locale.US)
+    val today = dayFmt.format(java.util.Date()) == dayFmt.format(java.util.Date(at))
+    return if (today) "היום ב-$time" else "${java.text.SimpleDateFormat("d.M", java.util.Locale.getDefault()).format(java.util.Date(at))} ב-$time"
 }
 
 private val LEET_SEQUENCE = listOf(1, 3, 3, 7)

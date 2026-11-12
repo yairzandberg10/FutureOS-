@@ -54,7 +54,9 @@ import com.future.futureui.lockscreen.face.FaceStatus
 import com.future.futureui.lockscreen.face.FaceTemplateStore
 import com.future.futureui.lockscreen.logic.LockCatalog
 import com.future.futureui.lockscreen.logic.LockSettings
+import com.future.futureui.lockscreen.logic.PinPolicy
 import com.future.futureui.lockscreen.logic.PinStore
+import com.future.futureui.lockscreen.logic.SecurityLog
 import com.future.futureui.statusbar.service.StatusBarAccessibilityService
 import com.future.sharednav.nav.digitForKey
 import com.future.sharednav.theme.FutureShapes
@@ -82,8 +84,13 @@ fun LockSettingsScreen(modifier: Modifier = Modifier, onExit: () -> Unit) {
                     lockoutMs = { settings.pin.remainingLockoutMs() },
                     onBack = onExit,
                     onDone = { pin ->
+                        val before = settings.pin.failedAttempts()
                         if (settings.pin.verifyPin(pin)) { settings.onStrongAuth(); page = Page.MAIN; null }
-                        else "קוד שגוי"
+                        else {
+                            // גם ניחוש בכניסה להגדרות הנעילה נרשם ביומן
+                            if (settings.pin.failedAttempts() > before) SecurityLog(context).onFailedPin()
+                            "קוד שגוי"
+                        }
                     }
                 )
                 Page.NEW_PIN -> PinPage(
@@ -91,7 +98,8 @@ fun LockSettingsScreen(modifier: Modifier = Modifier, onExit: () -> Unit) {
                     subtitle = "${PinStore.MIN_LENGTH} עד ${PinStore.MAX_LENGTH} ספרות, ואז OK",
                     fixedLength = null,
                     onBack = { page = Page.MAIN },
-                    onDone = { pin -> newPin = pin; page = Page.CONFIRM_PIN; null }
+                    // מדיניות קוד: 1234, 0000, 2580, שנים וכו' נדחים כבר כאן
+                    onDone = { pin -> PinPolicy.weakReason(pin) ?: run { newPin = pin; page = Page.CONFIRM_PIN; null } }
                 )
                 Page.CONFIRM_PIN -> PinPage(
                     title = "הזן שוב לאישור",
