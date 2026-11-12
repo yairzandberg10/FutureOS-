@@ -1,4 +1,5 @@
 package com.future.sfarim.ui.screens
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.components.FutureListItem
 import com.future.sharednav.components.FutureAvatar
 import com.future.sharednav.components.FutureSectionHeader
@@ -76,14 +77,14 @@ fun BrowseScreen(
         target?.let { rowFocusRequesters.getOrPut(keyOf(it)) { FocusRequester() }.requestFocus() }
     }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize()) {
                 ScreenTopBar(title = title, theme = theme, onBack = onBack)
                 if (entries.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text(
-                            if (isLoading) "טוען" else "אין תוכן בקטגוריה זו",
+                            if (isLoading) tr("טוען") else tr("אין תוכן בקטגוריה זו"),
                             color = theme.textColor.copy(alpha = 0.5f),
                             fontSize = FutureTypography.bodyLarge,
                         )

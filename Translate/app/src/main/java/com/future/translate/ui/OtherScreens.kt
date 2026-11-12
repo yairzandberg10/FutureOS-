@@ -1,4 +1,5 @@
 package com.future.translate.ui
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.systemui.StatusBarInset
 
 import com.future.sharednav.icons.FutureIcons
@@ -97,7 +98,7 @@ fun LanguagePickerScreen(
     ScreenScaffold(
         modifier = Modifier.padding(top = StatusBarInset.TITLE_GAP_DP.dp),
         backgroundColor = theme.backgroundColor,
-        title = if (source) "תרגם מ" else "תרגם אל",
+        title = if (source) tr("תרגם מ") else tr("תרגם אל"),
         textColor = theme.textColor,
         accentColor = theme.accentColor,
         onBack = onBack,
@@ -113,7 +114,7 @@ fun LanguagePickerScreen(
                 value = query,
                 onValueChange = { query = it },
                 theme = theme,
-                placeholder = "חפש שפה",
+                placeholder = tr("חפש שפה"),
                 autoFocus = true,
                 leading = { Icon(FutureIcons.Search, contentDescription = null, tint = theme.subtleTextColor) },
                 modifier = Modifier
@@ -121,15 +122,15 @@ fun LanguagePickerScreen(
                     .padding(start = FutureDimens.screenPadding, end = FutureDimens.screenPadding, bottom = 6.dp),
             )
             if (recents.isNotEmpty()) {
-                FutureSectionHeader("אחרונות", theme)
+                FutureSectionHeader(tr("אחרונות"), theme)
                 LanguageCard(recents, current, theme, onSelect)
             }
-            FutureSectionHeader("כל השפות", theme)
+            FutureSectionHeader(tr("כל השפות"), theme)
             if (list.isEmpty()) {
                 EmptyState(
                     icon = FutureIcons.SearchOff,
-                    title = "לא נמצאה שפה",
-                    subtitle = "נסה מילה אחרת",
+                    title = tr("לא נמצאה שפה"),
+                    subtitle = tr("נסה מילה אחרת"),
                     textColor = theme.textColor,
                 )
             } else {
@@ -150,7 +151,7 @@ private fun LanguageCard(languages: List<Language>, current: String, theme: Futu
                 theme = theme,
                 onClick = { onSelect(language.code) },
                 trailing = if (language.code == current) {
-                    { Icon(FutureIcons.Check, contentDescription = "נבחרה", tint = accent, modifier = Modifier.size(FutureDimens.iconSettingRow)) }
+                    { Icon(FutureIcons.Check, contentDescription = tr("נבחרה"), tint = accent, modifier = Modifier.size(FutureDimens.iconSettingRow)) }
                 } else null,
             )
         }
@@ -181,7 +182,7 @@ fun HistoryScreen(
     ScreenScaffold(
         modifier = Modifier.padding(top = StatusBarInset.TITLE_GAP_DP.dp),
         backgroundColor = theme.backgroundColor,
-        title = "היסטוריה",
+        title = tr("היסטוריה"),
         textColor = theme.textColor,
         accentColor = theme.accentColor,
         onBack = onBack,
@@ -193,7 +194,7 @@ fun HistoryScreen(
                     .padding(horizontal = FutureDimens.spacingLg, vertical = 6.dp),
                 horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm),
             ) {
-                listOf("הכול", "שמורים").forEachIndexed { index, label ->
+                listOf(tr("הכול"), tr("שמורים")).forEachIndexed { index, label ->
                     FutureTabItem(
                         label = label,
                         selected = tab == index,
@@ -210,15 +211,15 @@ fun HistoryScreen(
                 if (tab == 1) {
                     EmptyState(
                         icon = FutureIcons.StarBorder,
-                        title = "אין תרגומים שמורים",
-                        subtitle = "לחץ על שמור בתרגום כדי להוסיף",
+                        title = tr("אין תרגומים שמורים"),
+                        subtitle = tr("לחץ על שמור בתרגום כדי להוסיף"),
                         textColor = theme.textColor,
                     )
                 } else {
                     EmptyState(
                         icon = FutureIcons.History,
-                        title = "אין תרגומים",
-                        subtitle = "לחץ על חזרה והקלד טקסט לתרגום",
+                        title = tr("אין תרגומים"),
+                        subtitle = tr("לחץ על חזרה והקלד טקסט לתרגום"),
                         textColor = theme.textColor,
                     )
                 }
@@ -277,7 +278,7 @@ fun TalkScreen(
     ScreenScaffold(
         modifier = Modifier.padding(top = StatusBarInset.TITLE_GAP_DP.dp),
         backgroundColor = theme.backgroundColor,
-        title = "שיחה",
+        title = tr("שיחה"),
         textColor = theme.textColor,
         accentColor = theme.accentColor,
         onBack = {
@@ -297,8 +298,8 @@ fun TalkScreen(
                 if (lines.isEmpty()) {
                     EmptyState(
                         icon = FutureIcons.Forum,
-                        title = "אין עדיין שיחה",
-                        subtitle = "${Languages.of(a).name} ו${Languages.of(b).name}",
+                        title = tr("אין עדיין שיחה"),
+                        subtitle = tr("{0} ו{1}", Languages.of(a).name, Languages.of(b).name),
                         textColor = theme.textColor,
                     )
                 }
@@ -325,7 +326,7 @@ fun TalkScreen(
                     },
                     theme = theme,
                     active = listening,
-                    contentDescription = if (canListen) "דבר" else "הקלד",
+                    contentDescription = if (canListen) tr("דבר") else tr("הקלד"),
                     focusRequester = mic,
                     onClick = ::activate,
                     modifier = Modifier.onKeyEvent { event ->
@@ -338,9 +339,9 @@ fun TalkScreen(
                 )
                 Text(
                     when {
-                        listening -> "מקשיב · $speakerName"
-                        canListen -> "לחץ על אישור כדי לדבר ב$speakerName"
-                        else -> "לחץ על אישור כדי להקליד ב$speakerName"
+                        listening -> tr("מקשיב · {0}", speakerName)
+                        canListen -> tr("לחץ על אישור כדי לדבר ב{0}", speakerName)
+                        else -> tr("לחץ על אישור כדי להקליד ב{0}", speakerName)
                     },
                     color = theme.mutedTextColor,
                     fontSize = type.body,
@@ -353,7 +354,7 @@ fun TalkScreen(
         InputDialog(
             title = speakerName,
             theme = theme,
-            confirmLabel = "תרגם",
+            confirmLabel = tr("תרגם"),
             onDismiss = { typing = false },
             onConfirm = { typed ->
                 typing = false
@@ -388,7 +389,7 @@ private fun TalkBubble(line: TalkLine, firstSide: Boolean, theme: FutureTheme) {
                 Text(line.text, color = theme.textColor, fontSize = type.bodyLarge)
             }
             CompositionLocalProvider(LocalLayoutDirection provides if (target.rtl) LayoutDirection.Rtl else LayoutDirection.Ltr) {
-                Text(line.translation ?: "מתרגם", color = theme.mutedTextColor, fontSize = type.body)
+                Text(line.translation ?: tr("מתרגם"), color = theme.mutedTextColor, fontSize = type.body)
             }
         }
     }
@@ -423,20 +424,20 @@ fun DownloadsScreen(
     ScreenScaffold(
         modifier = Modifier.padding(top = StatusBarInset.TITLE_GAP_DP.dp),
         backgroundColor = theme.backgroundColor,
-        title = "הורדת שפה",
+        title = tr("הורדת שפה"),
         textColor = theme.textColor,
         accentColor = theme.accentColor,
         onBack = onBack,
     ) {
         Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = FutureDimens.spacingXl)) {
             if (have.isNotEmpty()) {
-                FutureSectionHeader("הורדו", theme)
+                FutureSectionHeader(tr("הורדו"), theme)
                 FutureCard(theme = theme) {
                     have.forEachIndexed { index, language ->
                         if (index > 0) FutureDivider(theme = theme)
                         FutureSettingItem(
                             title = language.name,
-                            summary = "זמינה בלי רשת",
+                            summary = tr("זמינה בלי רשת"),
                             icon = FutureIcons.DownloadDone,
                             theme = theme,
                             showChevron = false,
@@ -446,21 +447,21 @@ fun DownloadsScreen(
                     }
                 }
             }
-            FutureSectionHeader("זמינות להורדה", theme)
+            FutureSectionHeader(tr("זמינות להורדה"), theme)
             FutureCard(theme = theme) {
                 rest.forEachIndexed { index, language ->
                     if (index > 0) FutureDivider(theme = theme)
                     val busy = language.code in downloading
                     FutureSettingItem(
                         title = language.name,
-                        summary = if (busy) "מוריד" else "לא הורדה",
+                        summary = if (busy) tr("מוריד") else tr("לא הורדה"),
                         icon = FutureIcons.Download,
                         theme = theme,
                         showChevron = false,
                         focusRequester = if (have.isEmpty() && index == 0) first else null,
                         onClick = {
                             if (!busy) viewModel.download(language.code) { ok ->
-                                snackbar.show(if (ok) "${language.name} זמינה בלי רשת" else "ההורדה נכשלה")
+                                snackbar.show(if (ok) tr("{0} זמינה בלי רשת", language.name) else tr("ההורדה נכשלה"))
                             }
                         },
                         trailing = if (busy) {
@@ -474,7 +475,7 @@ fun DownloadsScreen(
 
     deleting?.let { language ->
         ConfirmDialog(
-            message = "למחוק את ${language.name} מהמכשיר?",
+            message = tr("למחוק את {0} מהמכשיר?", language.name),
             theme = theme,
             onCancel = { deleting = null },
             onConfirm = {
@@ -497,7 +498,7 @@ fun SettingsScreen(viewModel: TranslateViewModel, theme: FutureTheme, onBack: ()
     ScreenScaffold(
         modifier = Modifier.padding(top = StatusBarInset.TITLE_GAP_DP.dp),
         backgroundColor = theme.backgroundColor,
-        title = "הגדרות",
+        title = tr("הגדרות"),
         textColor = theme.textColor,
         accentColor = theme.accentColor,
         onBack = onBack,
@@ -505,8 +506,8 @@ fun SettingsScreen(viewModel: TranslateViewModel, theme: FutureTheme, onBack: ()
         Column(modifier = Modifier.fillMaxSize()) {
             FutureCard(theme = theme) {
                 FutureSettingItem(
-                    title = "שמירת היסטוריה",
-                    summary = if (saveHistory) "מופעל" else "כבוי",
+                    title = tr("שמירת היסטוריה"),
+                    summary = if (saveHistory) tr("מופעל") else tr("כבוי"),
                     icon = FutureIcons.History,
                     theme = theme,
                     showChevron = false,
@@ -516,8 +517,8 @@ fun SettingsScreen(viewModel: TranslateViewModel, theme: FutureTheme, onBack: ()
                 )
                 FutureDivider(theme = theme)
                 FutureSettingItem(
-                    title = "הורדה ב-Wi-Fi בלבד",
-                    summary = if (wifiOnly) "מופעל" else "כבוי",
+                    title = tr("הורדה ב-Wi-Fi בלבד"),
+                    summary = if (wifiOnly) tr("מופעל") else tr("כבוי"),
                     icon = FutureIcons.Wifi,
                     theme = theme,
                     showChevron = false,

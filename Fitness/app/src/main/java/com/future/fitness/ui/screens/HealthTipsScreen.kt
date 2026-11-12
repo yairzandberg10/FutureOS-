@@ -1,4 +1,5 @@
 package com.future.fitness.ui.screens
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.theme.elevatedSurfaceColor
 import com.future.sharednav.theme.idleFieldColor
@@ -43,28 +44,28 @@ private data class HealthTip(val title: String, val body: String)
  * במקומות שבהם ההערכה גסה (למשל דופק מקסימלי משוער). */
 private val tips = listOf(
     HealthTip(
-        "כמה פעילות מומלצת בשבוע?",
-        "לפי הנחיות ארגון הבריאות העולמי למבוגרים: לפחות 150 דקות בשבוע של פעילות אירובית בעצימות בינונית (או 75 דקות בעצימות גבוהה), ועוד לפחות יומיים בשבוע של אימוני חיזוק לקבוצות שרירים עיקריות.",
+        tr("כמה פעילות מומלצת בשבוע?"),
+        tr("לפי הנחיות ארגון הבריאות העולמי למבוגרים: לפחות 150 דקות בשבוע של פעילות אירובית בעצימות בינונית (או 75 דקות בעצימות גבוהה), ועוד לפחות יומיים בשבוע של אימוני חיזוק לקבוצות שרירים עיקריות."),
     ),
     HealthTip(
-        "מה זה אזורי דופק?",
-        "דופק מקסימלי משוער (220 פחות גיל) הוא כלל אצבע גס, לא מדד רפואי מדויק. אזורים נפוצים: קל 50-60% מהמקסימום, בינוני 60-70%, אירובי 70-80%, סף 80-90%, מאמץ מרבי 90-100%. האפליקציה מציגה הערכה בהתאם לגיל שהזנת בהגדרות.",
+        tr("מה זה אזורי דופק?"),
+        tr("דופק מקסימלי משוער (220 פחות גיל) הוא כלל אצבע גס, לא מדד רפואי מדויק. אזורים נפוצים: קל 50-60% מהמקסימום, בינוני 60-70%, אירובי 70-80%, סף 80-90%, מאמץ מרבי 90-100%. האפליקציה מציגה הערכה בהתאם לגיל שהזנת בהגדרות."),
     ),
     HealthTip(
-        "מנוחה והתאוששות",
-        "מקובל לתת לאותה קבוצת שרירים כ-48 שעות מנוחה בין אימוני כוח, כדי לאפשר התאוששות ובניית שריר. שינה מספקת והידרציה משפיעות ישירות על ביצועים והתאוששות.",
+        tr("מנוחה והתאוששות"),
+        tr("מקובל לתת לאותה קבוצת שרירים כ-48 שעות מנוחה בין אימוני כוח, כדי לאפשר התאוששות ובניית שריר. שינה מספקת והידרציה משפיעות ישירות על ביצועים והתאוששות."),
     ),
     HealthTip(
-        "עומס הדרגתי (Progressive Overload)",
-        "כדי להתקדם לאורך זמן, מומלץ להעלות בהדרגה משקל, חזרות או עצימות - לא הכל בבת אחת. קפיצות גדולות מדי מעלות סיכון לפציעה.",
+        tr("עומס הדרגתי (Progressive Overload)"),
+        tr("כדי להתקדם לאורך זמן, מומלץ להעלות בהדרגה משקל, חזרות או עצימות - לא הכל בבת אחת. קפיצות גדולות מדי מעלות סיכון לפציעה."),
     ),
     HealthTip(
-        "חימום ושחרור",
-        "כמה דקות חימום קל לפני אימון וכמה דקות שחרור/מתיחות אחריו מקובלים כהרגל טוב להפחתת סיכון לפציעה ולשיפור טווחי תנועה - לדוגמה, אימון הריצה באפליקציה כולל חימום ושחרור מובנים.",
+        tr("חימום ושחרור"),
+        tr("כמה דקות חימום קל לפני אימון וכמה דקות שחרור/מתיחות אחריו מקובלים כהרגל טוב להפחתת סיכון לפציעה ולשיפור טווחי תנועה - לדוגמה, אימון הריצה באפליקציה כולל חימום ושחרור מובנים."),
     ),
     HealthTip(
-        "הערכת הקלוריות באפליקציה",
-        "מספר הקלוריות המוצג מחושב מנוסחת ההערכה הסטנדרטית met × משקל(ק״ג) × שעות, לפי סוג האימון והמשקל שהזנת בהגדרות. זו הערכה כללית ולא מדידה מדויקת - הערך הופך למדויק יותר ככל שהפרופיל שלך (משקל) מעודכן.",
+        tr("הערכת הקלוריות באפליקציה"),
+        tr("מספר הקלוריות המוצג מחושב מנוסחת ההערכה הסטנדרטית met × משקל(ק״ג) × שעות, לפי סוג האימון והמשקל שהזנת בהגדרות. זו הערכה כללית ולא מדידה מדויקת - הערך הופך למדויק יותר ככל שהפרופיל שלך (משקל) מעודכן."),
     ),
 )
 
@@ -75,7 +76,7 @@ fun HealthTipsScreen(theme: FutureTheme, store: WorkoutStore, onBack: () -> Unit
     val profile: UserProfile = store.getProfile()
 
     Column(modifier = Modifier.fillMaxSize()) {
-        ScreenTopBar(title = "בריאות", theme = theme, onBack = onBack)
+        ScreenTopBar(title = tr("בריאות"), theme = theme, onBack = onBack)
 
         // כל כרטיס עטוף ב-FocusableItem (onClick={} - מידעי בלבד, לא פעולה) כדי
         // שיהיה focusable ואפשר יהיה לגלול אליו עם D-pad; בלי זה תוכן שגולש
@@ -96,8 +97,8 @@ fun HealthTipsScreen(theme: FutureTheme, store: WorkoutStore, onBack: () -> Unit
                                 .background(theme.elevatedSurfaceColor, FutureShapes.xl)
                                 .padding(16.dp),
                         ) {
-                            Text("דופק מקסימלי משוער עבורך", color = theme.textColor, fontSize = FutureTypography.summary, fontWeight = FontWeight.Bold)
-                            Text("$maxHr פעימות לדקה (לפי גיל ${profile.age}, הערכה גסה)", color = theme.textColor, fontSize = FutureTypography.body, modifier = Modifier.padding(top = 4.dp))
+                            Text(tr("דופק מקסימלי משוער עבורך"), color = theme.textColor, fontSize = FutureTypography.summary, fontWeight = FontWeight.Bold)
+                            Text(tr("{0} פעימות לדקה (לפי גיל {1}, הערכה גסה)", maxHr, profile.age), color = theme.textColor, fontSize = FutureTypography.body, modifier = Modifier.padding(top = 4.dp))
                         }
                     }
                 }

@@ -1,4 +1,5 @@
 package com.future.messages.ui.screens
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.systemui.StatusBarInset
 import androidx.compose.material.icons.rounded.ErrorOutline
 
@@ -117,7 +118,7 @@ fun MessageThreadScreen(
         textFieldFocusRequester.requestFocus()
     }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         // enableEdgeToEdge() מבטל את decorFitsSystemWindows, ואז
         // windowSoftInputMode="adjustResize" כבר לא מקטין את החלון כשהמקלדת עולה -
         // בלי imePadding שורת כתיבת ההודעה נשארת מתחת למקלדת ולא רואים מה מקלידים.
@@ -132,7 +133,7 @@ fun MessageThreadScreen(
                 accentColor = theme.accentColor,
                 onBack = onBack,
                 trailingIcon = FutureIcons.Call,
-                trailingContentDescription = "התקשר",
+                trailingContentDescription = tr("התקשר"),
                 onTrailingClick = onCall,
             )
             // "מקליד..." - מגיע רק מצ'אט FutureOS, כשהצד השני כותב עכשיו.
@@ -142,7 +143,7 @@ fun MessageThreadScreen(
             }
             if (peerTyping) {
                 Text(
-                    "מקליד…",
+                    tr("מקליד…"),
                     color = theme.readableAccentColor,
                     fontSize = FutureTypography.caption,
                     fontWeight = FutureTypography.weightMedium,
@@ -247,13 +248,8 @@ fun MessageThreadScreen(
                         .setType("text/plain")
                         .setPackage("com.future.notes")
                         .putExtra(android.content.Intent.EXTRA_TEXT, message.text)
-                    // תוכן ההודעה נשלח רק לאפליקציית הפתקים האמיתית (אותה חתימה)
-                    val genuine = runCatching {
-                        context.packageManager.checkSignatures(context.packageName, "com.future.notes") ==
-                            android.content.pm.PackageManager.SIGNATURE_MATCH
-                    }.getOrDefault(false)
-                    runCatching { check(genuine); context.startActivity(intent) }.onFailure {
-                        android.widget.Toast.makeText(context, "אפליקציית הפתקים לא מותקנת", android.widget.Toast.LENGTH_SHORT).show()
+                    runCatching { context.startActivity(intent) }.onFailure {
+                        android.widget.Toast.makeText(context, tr("אפליקציית הפתקים לא מותקנת"), android.widget.Toast.LENGTH_SHORT).show()
                     }
                 }
             } else null,
@@ -263,7 +259,7 @@ fun MessageThreadScreen(
 
     pendingDelete?.let { message ->
         ConfirmDialog(
-            message = "למחוק את ההודעה?",
+            message = tr("למחוק את ההודעה?"),
             surfaceColor = theme.surfaceColor,
             textColor = theme.textColor,
             dangerColor = theme.dangerColor,
@@ -292,11 +288,11 @@ private fun AttachmentPreview(uri: Uri, theme: FutureTheme, onRemove: () -> Unit
             modifier = Modifier.size(56.dp).clip(FutureShapes.sm).background(theme.idleFieldColor)
         ) {
             if (bitmap != null) {
-                Image(bitmap = bitmap, contentDescription = "תמונה מצורפת", modifier = Modifier.fillMaxSize())
+                Image(bitmap = bitmap, contentDescription = tr("תמונה מצורפת"), modifier = Modifier.fillMaxSize())
             }
         }
-        Text("תמונה מצורפת MMS", color = theme.secondaryTextColor, fontSize = FutureTypography.summary, modifier = Modifier.weight(1f))
-        TopBarIconButton(FutureIcons.Close, "הסר תמונה", theme.textColor, theme.accentColor, onRemove)
+        Text(tr("תמונה מצורפת MMS"), color = theme.secondaryTextColor, fontSize = FutureTypography.summary, modifier = Modifier.weight(1f))
+        TopBarIconButton(FutureIcons.Close, tr("הסר תמונה"), theme.textColor, theme.accentColor, onRemove)
     }
 }
 
@@ -359,7 +355,7 @@ private fun MessageBubble(message: Message, theme: FutureTheme, onClick: () -> U
                 if (bitmap != null) {
                     Image(
                         bitmap = bitmap,
-                        contentDescription = "תמונה",
+                        contentDescription = tr("תמונה"),
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(FutureShapes.md)
@@ -389,17 +385,17 @@ private fun MessageMeta(message: Message, time: String, theme: FutureTheme) {
     val status = message.status
     // הודעה שעברה בצ'אט (FutureOS או RCS) מסומנת בסיומת - כדי שיהיה ברור מתי זה לא SMS.
     val via = when {
-        message.isChat -> " · צ'אט"
+        message.isChat -> tr(" · צ'אט")
         message.isRcs -> " · RCS"
         else -> ""
     }
     val (icon, label, color) = when (status) {
         null -> Triple(null, "$time$via", theme.subtleTextColor)
-        com.future.messages.data.MessageStatus.SENDING -> Triple(FutureIcons.Schedule, "שולח", theme.mutedTextColor)
-        com.future.messages.data.MessageStatus.SENT -> Triple(FutureIcons.Check, "נשלח · $time$via", theme.readableAccentColor)
-        com.future.messages.data.MessageStatus.DELIVERED -> Triple(FutureIcons.Check, "נמסר · $time$via", theme.readableAccentColor)
-        com.future.messages.data.MessageStatus.READ -> Triple(FutureIcons.Visibility, "נקרא · $time$via", theme.readableAccentColor)
-        com.future.messages.data.MessageStatus.FAILED -> Triple(FutureIcons.Error, "לא נשלח", theme.dangerColor)
+        com.future.messages.data.MessageStatus.SENDING -> Triple(FutureIcons.Schedule, tr("שולח"), theme.mutedTextColor)
+        com.future.messages.data.MessageStatus.SENT -> Triple(FutureIcons.Check, tr("נשלח · {0}{1}", time, via), theme.readableAccentColor)
+        com.future.messages.data.MessageStatus.DELIVERED -> Triple(FutureIcons.Check, tr("נמסר · {0}{1}", time, via), theme.readableAccentColor)
+        com.future.messages.data.MessageStatus.READ -> Triple(FutureIcons.Visibility, tr("נקרא · {0}{1}", time, via), theme.readableAccentColor)
+        com.future.messages.data.MessageStatus.FAILED -> Triple(FutureIcons.Error, tr("לא נשלח"), theme.dangerColor)
     }
     Row(
         modifier = Modifier.padding(horizontal = 3.dp, vertical = FutureDimens.spacingXs),
@@ -427,16 +423,14 @@ private fun MessageActionDialog(
     onDismiss: () -> Unit,
     onSaveToNotes: (() -> Unit)? = null,
 ) {
-    FutureOptionsMenu(theme = theme, onDismissRequest = onDismiss, header = "הודעה") {
-        FutureMenuRow("העבר הודעה", FutureIcons.AutoMirrored.Send, theme, onForward)
-        if (onSaveToNotes != null) FutureMenuRow("שמירה בפתקים", FutureIcons.Description, theme, onSaveToNotes)
-        FutureMenuRow("מחק הודעה", FutureIcons.Delete, theme, onDelete, destructive = true)
+    FutureOptionsMenu(theme = theme, onDismissRequest = onDismiss, header = tr("הודעה")) {
+        FutureMenuRow(tr("העבר הודעה"), FutureIcons.AutoMirrored.Send, theme, onForward)
+        if (onSaveToNotes != null) FutureMenuRow(tr("שמירה בפתקים"), FutureIcons.Description, theme, onSaveToNotes)
+        FutureMenuRow(tr("מחק הודעה"), FutureIcons.Delete, theme, onDelete, destructive = true)
     }
 }
 
 
-
-private const val MAX_IMAGE_SIDE = 1280
 
 /** טוען Bitmap מ-content Uri בלי ספריית טעינת תמונות חיצונית - אין כזו תלות בפרויקט. */
 @Composable
@@ -445,19 +439,11 @@ internal fun rememberMmsBitmap(uri: Uri): androidx.compose.ui.graphics.ImageBitm
     var bitmap by remember(uri) { mutableStateOf<android.graphics.Bitmap?>(null) }
     LaunchedEffect(uri) {
         bitmap = withContext(Dispatchers.IO) {
-            // התמונה מגיעה מכל מי ששולח MMS/צ'אט: קובץ PNG קטן יכול להצהיר על
-            // 20000x20000 פיקסלים, ופענוח בגודל מלא הפיל את האפליקציה (OutOfMemoryError)
-            // בכל פתיחה של השיחה. קודם הגודל, אחר כך פענוח מוקטן.
-            runCatching {
-                val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-                context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
-                if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return@runCatching null
-                var sample = 1
-                while (maxOf(bounds.outWidth, bounds.outHeight) / (sample * 2) >= MAX_IMAGE_SIDE) sample *= 2
-                context.contentResolver.openInputStream(uri)?.use {
-                    BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = sample })
-                }
-            }.getOrNull()
+            try {
+                context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) }
+            } catch (e: Exception) {
+                null
+            }
         }
     }
     return bitmap?.asImageBitmap()

@@ -1,5 +1,6 @@
 package com.future.contact.ui
 
+import com.future.sharednav.i18n.tr
 import android.content.Intent
 import android.net.Uri
 import android.provider.ContactsContract
@@ -83,7 +84,7 @@ import kotlinx.coroutines.withContext
 
 /** שלוש הלשוניות בסרגל התחתון, בסדר RTL (הראשונה מימין). "אני" החליפה את
  * "חסומים" - חסומים מופיעים ברשימה הרגילה עם סימן חסימה. */
-enum class ContactsTab(val title: String) { FAVORITES("מועדפים"), CONTACTS("אנשי קשר"), ME("אני") }
+enum class ContactsTab(val title: String) { FAVORITES(tr("מועדפים")), CONTACTS(tr("אנשי קשר")), ME(tr("אני")) }
 
 /** פעולות על איש קשר - MainActivity מממש (Intent-ים, הרשאות, בוחר תמונות). */
 class ContactActions(
@@ -169,7 +170,7 @@ fun ContactsListScreen(
     }
 
     val type = rememberFutureType()
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -193,7 +194,7 @@ fun ContactsListScreen(
                         value = searchText,
                         onValueChange = { searchText = it },
                         theme = theme,
-                        placeholder = "חיפוש ב${tab.title}",
+                        placeholder = tr("חיפוש ב{0}", tab.title),
                         autoFocus = true,
                         modifier = Modifier.fillMaxWidth().padding(horizontal = FutureDimens.spacingLg, vertical = FutureDimens.spacingMd).escapeTextFieldFocusTrap(),
                         leading = { Icon(FutureIcons.Search, contentDescription = null, tint = theme.mutedTextColor, modifier = Modifier.size(FutureDimens.iconMenuRow)) },
@@ -204,14 +205,14 @@ fun ContactsListScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(tab.title, fontSize = type.screenTitle, fontWeight = FutureTypography.weightBold, color = theme.textColor, modifier = Modifier.weight(1f))
-                        TopBarIconButton(FutureIcons.Search, "חיפוש", theme.textColor, theme.accentColor, { searchOpen = true }, focusRequester = searchButtonFocus)
+                        TopBarIconButton(FutureIcons.Search, tr("חיפוש"), theme.textColor, theme.accentColor, { searchOpen = true }, focusRequester = searchButtonFocus)
                     }
                 }
             }
             // כפתור ראשי ברוחב מלא - קודם הוספת איש קשר הייתה רק בתפריט Options.
             if (tab == ContactsTab.CONTACTS && hasPermission && !searchOpen) {
                 FutureButton(
-                    "איש קשר חדש",
+                    tr("איש קשר חדש"),
                     theme,
                     { adding = true },
                     fillMaxWidth = true,
@@ -221,7 +222,7 @@ fun ContactsListScreen(
             }
             if (t9Query.isNotEmpty() && !searchOpen) {
                 Text(
-                    "$t9Query · ${shown.size} תוצאות",
+                    tr("{0} · {1} תוצאות", t9Query, shown.size),
                     color = theme.mutedTextColor,
                     fontSize = type.summary,
                     modifier = Modifier.padding(horizontal = FutureDimens.spacingXl, vertical = FutureDimens.spacingXs),
@@ -234,8 +235,8 @@ fun ContactsListScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
                 ) {
-                    Text("כדי להציג אנשי קשר צריך לאשר הרשאה", color = theme.mutedTextColor, fontSize = type.bodyLarge, textAlign = TextAlign.Center)
-                    FutureButton("אשר הרשאה", theme, onRequestPermission, modifier = Modifier.padding(top = 16.dp))
+                    Text(tr("כדי להציג אנשי קשר צריך לאשר הרשאה"), color = theme.mutedTextColor, fontSize = type.bodyLarge, textAlign = TextAlign.Center)
+                    FutureButton(tr("אשר הרשאה"), theme, onRequestPermission, modifier = Modifier.padding(top = 16.dp))
                 }
                 inTab.isEmpty() -> EmptyState(
                     icon = when (tab) {
@@ -244,14 +245,14 @@ fun ContactsListScreen(
                         ContactsTab.ME -> FutureIcons.Person
                     },
                     title = when (tab) {
-                        ContactsTab.FAVORITES -> "אין מועדפים"
-                        ContactsTab.CONTACTS -> "אין אנשי קשר"
-                        ContactsTab.ME -> "אין אנשי קשר"
+                        ContactsTab.FAVORITES -> tr("אין מועדפים")
+                        ContactsTab.CONTACTS -> tr("אין אנשי קשר")
+                        ContactsTab.ME -> tr("אין אנשי קשר")
                     },
-                    subtitle = if (tab == ContactsTab.CONTACTS) "\"איש קשר חדש\" למעלה מוסיף" else null,
+                    subtitle = if (tab == ContactsTab.CONTACTS) tr("\"איש קשר חדש\" למעלה מוסיף") else null,
                     textColor = theme.textColor,
                 )
-                shown.isEmpty() -> EmptyState(icon = FutureIcons.SearchOff, title = "לא נמצאו תוצאות", textColor = theme.textColor)
+                shown.isEmpty() -> EmptyState(icon = FutureIcons.SearchOff, title = tr("לא נמצאו תוצאות"), textColor = theme.textColor)
                 else -> LazyColumn(contentPadding = PaddingValues(horizontal = FutureDimens.spacingMd, vertical = FutureDimens.spacingXs)) {
                     itemsIndexed(shown, key = { _, c -> c.id }) { _, contact ->
                         FutureListItem(
@@ -264,8 +265,8 @@ fun ContactsListScreen(
                             leading = { FutureAvatar(theme = theme, name = contact.name, photoUri = contact.photoUri) },
                             trailing = {
                                 when {
-                                    contact.isBlocked -> Icon(FutureIcons.Block, contentDescription = "חסום", tint = theme.dangerColor, modifier = Modifier.size(FutureDimens.iconMenuRow))
-                                    contact.isFavorite && tab != ContactsTab.FAVORITES -> Icon(FutureIcons.Star, contentDescription = "מועדף", tint = theme.favoriteColor, modifier = Modifier.size(FutureDimens.iconMenuRow))
+                                    contact.isBlocked -> Icon(FutureIcons.Block, contentDescription = tr("חסום"), tint = theme.dangerColor, modifier = Modifier.size(FutureDimens.iconMenuRow))
+                                    contact.isFavorite && tab != ContactsTab.FAVORITES -> Icon(FutureIcons.Star, contentDescription = tr("מועדף"), tint = theme.favoriteColor, modifier = Modifier.size(FutureDimens.iconMenuRow))
                                 }
                             },
                         )
@@ -281,19 +282,19 @@ fun ContactsListScreen(
             fun pick(action: () -> Unit): () -> Unit = { menuOpen = false; action() }
             if (target != null) {
                 target.phoneNumbers.firstOrNull()?.let { number ->
-                    FutureMenuRow("התקשר", FutureIcons.Call, theme, pick { actions.call(number) })
-                    FutureMenuRow("שלח הודעה", FutureIcons.AutoMirrored.Chat, theme, pick { actions.message(number) })
+                    FutureMenuRow(tr("התקשר"), FutureIcons.Call, theme, pick { actions.call(number) })
+                    FutureMenuRow(tr("שלח הודעה"), FutureIcons.AutoMirrored.Chat, theme, pick { actions.message(number) })
                 }
                 ContactMenuRows(target, theme, actions, onDelete = { pendingDelete = target }, pick = ::pick)
             }
-            FutureMenuRow("איש קשר חדש", FutureIcons.PersonAdd, theme, pick { adding = true })
-            FutureMenuRow("מיון לפי · $sortLabel", FutureIcons.AutoMirrored.Sort, theme, pick { sortMenuOpen = true })
-            FutureMenuRow("חיפוש", FutureIcons.Search, theme, pick { searchOpen = true })
+            FutureMenuRow(tr("איש קשר חדש"), FutureIcons.PersonAdd, theme, pick { adding = true })
+            FutureMenuRow(tr("מיון לפי · {0}", sortLabel), FutureIcons.AutoMirrored.Sort, theme, pick { sortMenuOpen = true })
+            FutureMenuRow(tr("חיפוש"), FutureIcons.Search, theme, pick { searchOpen = true })
         }
     }
     // "מיון לפי" - תפריט משני עם כל האפשרויות, והנבחרת מסומנת.
     if (sortMenuOpen) {
-        FutureOptionsMenu(theme = theme, onDismissRequest = { sortMenuOpen = false }, header = "מיון לפי") {
+        FutureOptionsMenu(theme = theme, onDismissRequest = { sortMenuOpen = false }, header = tr("מיון לפי")) {
             com.future.contact.data.ContactSort.entries.forEach { option ->
                 FutureMenuRow(
                     option.label,
@@ -305,7 +306,7 @@ fun ContactsListScreen(
         }
     }
     pendingDelete?.let { contact ->
-        ConfirmDialog(message = "למחוק את ${contact.name}?", theme = theme, confirmLabel = "מחק", onCancel = { pendingDelete = null }, onConfirm = {
+        ConfirmDialog(message = tr("למחוק את {0}?", contact.name), theme = theme, confirmLabel = tr("מחק"), onCancel = { pendingDelete = null }, onConfirm = {
             pendingDelete = null
             actions.delete(contact)
         })
@@ -322,15 +323,15 @@ fun ContactsListScreen(
 @Composable
 private fun ContactMenuRows(contact: Contact, theme: FutureTheme, actions: ContactActions, onDelete: () -> Unit, pick: (() -> Unit) -> () -> Unit) {
     FutureMenuRow(
-        if (contact.isFavorite) "הסר ממועדפים" else "הוסף למועדפים",
+        if (contact.isFavorite) tr("הסר ממועדפים") else tr("הוסף למועדפים"),
         if (contact.isFavorite) FutureIcons.Star else FutureIcons.StarBorder,
         theme,
         pick { actions.toggleFavorite(contact) },
     )
-    FutureMenuRow("שתף איש קשר", FutureIcons.Share, theme, pick { actions.share(contact) })
-    FutureMenuRow(if (contact.photoUri == null) "הגדר תמונה" else "החלף תמונה", FutureIcons.AddAPhoto, theme, pick { actions.pickPhoto(contact) })
-    FutureMenuRow(if (contact.isBlocked) "בטל חסימה" else "חסום", FutureIcons.Block, theme, pick { actions.toggleBlocked(contact) }, destructive = !contact.isBlocked)
-    FutureMenuRow("מחק איש קשר", FutureIcons.Delete, theme, pick(onDelete), destructive = true)
+    FutureMenuRow(tr("שתף איש קשר"), FutureIcons.Share, theme, pick { actions.share(contact) })
+    FutureMenuRow(if (contact.photoUri == null) tr("הגדר תמונה") else tr("החלף תמונה"), FutureIcons.AddAPhoto, theme, pick { actions.pickPhoto(contact) })
+    FutureMenuRow(if (contact.isBlocked) tr("בטל חסימה") else tr("חסום"), FutureIcons.Block, theme, pick { actions.toggleBlocked(contact) }, destructive = !contact.isBlocked)
+    FutureMenuRow(tr("מחק איש קשר"), FutureIcons.Delete, theme, pick(onDelete), destructive = true)
 }
 
 /**
@@ -354,9 +355,9 @@ fun ContactDetailScreen(contact: Contact, theme: FutureTheme, actions: ContactAc
     LaunchedEffect(Unit) { runCatching { first.requestFocus() } }
     val primary = contact.phoneNumbers.firstOrNull()
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Column(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
-            ScreenTopBar(title = "איש קשר", textColor = theme.textColor, accentColor = theme.accentColor, onBack = onBack)
+            ScreenTopBar(title = tr("איש קשר"), textColor = theme.textColor, accentColor = theme.accentColor, onBack = onBack)
             Column(modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(bottom = FutureDimens.spacingLg)) {
                 Column(
                     modifier = Modifier.fillMaxWidth().padding(top = FutureDimens.spacingMd, bottom = 20.dp),
@@ -370,17 +371,17 @@ fun ContactDetailScreen(contact: Contact, theme: FutureTheme, actions: ContactAc
                             Text(primary, color = theme.mutedTextColor, fontSize = type.body)
                         }
                     }
-                    if (contact.isBlocked) Text("חסום", color = theme.dangerColor, fontSize = type.summary)
+                    if (contact.isBlocked) Text(tr("חסום"), color = theme.dangerColor, fontSize = type.summary)
                 }
 
                 FutureCard(theme = theme) {
                     if (contact.phoneNumbers.isEmpty()) {
-                        FutureSettingItem(title = "אין מספר טלפון", theme = theme, showChevron = false, onClick = null)
+                        FutureSettingItem(title = tr("אין מספר טלפון"), theme = theme, showChevron = false, onClick = null)
                     }
                     contact.phoneNumbers.forEachIndexed { index, number ->
                         if (index > 0) FutureDivider(theme = theme)
                         FutureSettingItem(
-                            title = if (contact.phoneNumbers.size > 1) "התקשר · $number" else "התקשר",
+                            title = if (contact.phoneNumbers.size > 1) tr("התקשר · {0}", number) else tr("התקשר"),
                             icon = FutureIcons.Call,
                             theme = theme,
                             showChevron = false,
@@ -390,11 +391,11 @@ fun ContactDetailScreen(contact: Contact, theme: FutureTheme, actions: ContactAc
                     }
                     if (primary != null) {
                         FutureDivider(theme = theme)
-                        FutureSettingItem(title = "שלח הודעה", icon = FutureIcons.AutoMirrored.Chat, theme = theme, showChevron = false, onClick = { actions.message(primary) })
+                        FutureSettingItem(title = tr("שלח הודעה"), icon = FutureIcons.AutoMirrored.Chat, theme = theme, showChevron = false, onClick = { actions.message(primary) })
                     }
                     FutureDivider(theme = theme)
                     FutureSettingItem(
-                        title = if (contact.isFavorite) "הסר ממועדפים" else "הוסף למועדפים",
+                        title = if (contact.isFavorite) tr("הסר ממועדפים") else tr("הוסף למועדפים"),
                         icon = if (contact.isFavorite) FutureIcons.Star else FutureIcons.StarBorder,
                         theme = theme,
                         showChevron = false,
@@ -409,41 +410,41 @@ fun ContactDetailScreen(contact: Contact, theme: FutureTheme, actions: ContactAc
                     details.address.takeIf { it.isNotBlank() }?.let { FutureIcons.LocationOn to it },
                     details.notes.takeIf { it.isNotBlank() }?.let { FutureIcons.Description to it },
                 )
-                FutureSectionHeader("פרטים", theme)
+                FutureSectionHeader(tr("פרטים"), theme)
                 FutureCard(theme = theme) {
                     info.forEachIndexed { index, (icon, text) ->
                         if (index > 0) FutureDivider(theme = theme)
                         FutureSettingItem(title = text, icon = icon, theme = theme, showChevron = false, onClick = null)
                     }
                     if (info.isNotEmpty()) FutureDivider(theme = theme)
-                    FutureSettingItem(title = "ערוך פרטים", icon = FutureIcons.Edit, theme = theme, onClick = { editing = true })
+                    FutureSettingItem(title = tr("ערוך פרטים"), icon = FutureIcons.Edit, theme = theme, onClick = { editing = true })
                 }
 
-                FutureSectionHeader("ניהול", theme)
+                FutureSectionHeader(tr("ניהול"), theme)
                 FutureCard(theme = theme) {
-                    FutureSettingItem(title = "שתף איש קשר", icon = FutureIcons.Share, theme = theme, showChevron = false, onClick = { actions.share(contact) })
+                    FutureSettingItem(title = tr("שתף איש קשר"), icon = FutureIcons.Share, theme = theme, showChevron = false, onClick = { actions.share(contact) })
                     FutureDivider(theme = theme)
                     FutureSettingItem(
-                        title = if (contact.photoUri == null) "הגדר תמונה" else "החלף תמונה",
+                        title = if (contact.photoUri == null) tr("הגדר תמונה") else tr("החלף תמונה"),
                         icon = FutureIcons.AddAPhoto,
                         theme = theme,
                         onClick = { actions.pickPhoto(contact) },
                     )
                     if (contact.photoUri != null) {
                         FutureDivider(theme = theme)
-                        FutureSettingItem(title = "הסר תמונה", icon = FutureIcons.NoPhotography, theme = theme, showChevron = false, onClick = { actions.removePhoto(contact) })
+                        FutureSettingItem(title = tr("הסר תמונה"), icon = FutureIcons.NoPhotography, theme = theme, showChevron = false, onClick = { actions.removePhoto(contact) })
                     }
                     FutureDivider(theme = theme)
                     FutureSettingItem(
-                        title = if (contact.isBlocked) "בטל חסימה" else "חסום",
-                        summary = if (contact.isBlocked) "שיחות והודעות ממנו חסומות" else null,
+                        title = if (contact.isBlocked) tr("בטל חסימה") else tr("חסום"),
+                        summary = if (contact.isBlocked) tr("שיחות והודעות ממנו חסומות") else null,
                         icon = FutureIcons.Block,
                         theme = theme,
                         showChevron = false,
                         onClick = { actions.toggleBlocked(contact) },
                     )
                     FutureDivider(theme = theme)
-                    FutureSettingItem(title = "מחק איש קשר", icon = FutureIcons.Delete, theme = theme, showChevron = false, onClick = { pendingDelete = true })
+                    FutureSettingItem(title = tr("מחק איש קשר"), icon = FutureIcons.Delete, theme = theme, showChevron = false, onClick = { pendingDelete = true })
                 }
             }
         }
@@ -453,11 +454,11 @@ fun ContactDetailScreen(contact: Contact, theme: FutureTheme, actions: ContactAc
         FutureOptionsMenu(theme = theme, onDismissRequest = { menuOpen = false }, header = contact.name) {
             fun pick(action: () -> Unit): () -> Unit = { menuOpen = false; action() }
             ContactMenuRows(contact, theme, actions, onDelete = { pendingDelete = true }, pick = ::pick)
-            FutureMenuRow("ערוך פרטים", FutureIcons.Edit, theme, pick { editing = true })
+            FutureMenuRow(tr("ערוך פרטים"), FutureIcons.Edit, theme, pick { editing = true })
         }
     }
     if (pendingDelete) {
-        ConfirmDialog(message = "למחוק את ${contact.name}?", theme = theme, confirmLabel = "מחק", onCancel = { pendingDelete = false }, onConfirm = {
+        ConfirmDialog(message = tr("למחוק את {0}?", contact.name), theme = theme, confirmLabel = tr("מחק"), onCancel = { pendingDelete = false }, onConfirm = {
             pendingDelete = false
             actions.delete(contact)
         })
@@ -487,18 +488,18 @@ private fun ContactEditDetailsDialog(initial: ContactDetails, theme: FutureTheme
     FutureDialog(
         theme = theme,
         onDismissRequest = onDismiss,
-        title = "עריכת פרטים",
+        title = tr("עריכת פרטים"),
         buttons = {
-            FutureButton("ביטול", theme, onDismiss, variant = FutureButtonVariant.Secondary)
-            FutureButton("שמור", theme, { onSave(ContactDetails(email, organization, jobTitle, address, notes)) })
+            FutureButton(tr("ביטול"), theme, onDismiss, variant = FutureButtonVariant.Secondary)
+            FutureButton(tr("שמור"), theme, { onSave(ContactDetails(email, organization, jobTitle, address, notes)) })
         },
     ) {
         Column(modifier = Modifier.escapeTextFieldFocusTrap()) {
-            FutureFormField("אימייל", email, { email = it }, theme, modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp))
-            FutureFormField("ארגון", organization, { organization = it }, theme, modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp))
-            FutureFormField("תפקיד", jobTitle, { jobTitle = it }, theme, modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp))
-            FutureFormField("כתובת", address, { address = it }, theme, modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp))
-            FutureFormField("הערות", notes, { notes = it }, theme, modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp))
+            FutureFormField(tr("אימייל"), email, { email = it }, theme, modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp))
+            FutureFormField(tr("ארגון"), organization, { organization = it }, theme, modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp))
+            FutureFormField(tr("תפקיד"), jobTitle, { jobTitle = it }, theme, modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp))
+            FutureFormField(tr("כתובת"), address, { address = it }, theme, modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp))
+            FutureFormField(tr("הערות"), notes, { notes = it }, theme, modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp))
         }
     }
 }
@@ -511,16 +512,16 @@ fun AddContactDialog(theme: FutureTheme, initialNumber: String = "", onDismiss: 
     FutureDialog(
         theme = theme,
         onDismissRequest = onDismiss,
-        title = "איש קשר חדש",
+        title = tr("איש קשר חדש"),
         buttons = {
-            FutureButton("ביטול", theme, onDismiss, variant = FutureButtonVariant.Secondary)
-            FutureButton("שמור", theme, { if (name.isNotBlank()) onSave(name.trim(), number.trim()) }, enabled = name.isNotBlank())
+            FutureButton(tr("ביטול"), theme, onDismiss, variant = FutureButtonVariant.Secondary)
+            FutureButton(tr("שמור"), theme, { if (name.isNotBlank()) onSave(name.trim(), number.trim()) }, enabled = name.isNotBlank())
         },
     ) {
         Column(modifier = Modifier.escapeTextFieldFocusTrap()) {
-            FutureFormField("שם", name, { name = it }, theme, autoFocus = true, modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp))
+            FutureFormField(tr("שם"), name, { name = it }, theme, autoFocus = true, modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp))
             FutureFormField(
-                "טלפון",
+                tr("טלפון"),
                 number,
                 { number = it },
                 theme,

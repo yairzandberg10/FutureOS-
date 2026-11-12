@@ -1,5 +1,6 @@
 package com.future.sharednav.components
 
+import com.future.sharednav.i18n.tr
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -142,8 +143,8 @@ fun InputDialog(
     onConfirm: (String) -> Unit,
     initialValue: String = "",
     placeholder: String? = null,
-    confirmLabel: String = "שמור",
-    cancelLabel: String = "ביטול",
+    confirmLabel: String = tr("שמור"),
+    cancelLabel: String = tr("ביטול"),
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     allowBlank: Boolean = false,
 ) {

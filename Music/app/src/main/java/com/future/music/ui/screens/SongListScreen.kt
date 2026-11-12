@@ -1,4 +1,5 @@
 package com.future.music.ui.screens
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.theme.FutureDimens
 
 import com.future.sharednav.theme.FutureTypography
@@ -39,7 +40,7 @@ fun SongListScreen(
     onPlaySong: (index: Int) -> Unit,
     onOpenNowPlaying: () -> Unit,
     onTogglePlay: () -> Unit,
-    emptyMessage: String = "אין כאן שירים",
+    emptyMessage: String = tr("אין כאן שירים"),
     topBarTrailingIcon: ImageVector? = null,
     topBarTrailingDescription: String? = null,
     onTopBarTrailingClick: (() -> Unit)? = null,

@@ -1,4 +1,5 @@
 package com.future.terminal
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.systemui.StatusBarInset
 
 import com.future.sharednav.icons.FutureIcons
@@ -187,7 +188,7 @@ class MainActivity : ComponentActivity() {
 
             // רק אזור פלט/קלט הפקודות (טקסט שורת-פקודה, בדרך כלל אנגלית/נתיבים)
             // נשאר בכיוון LTR - הכותרת ותפריט האפשרויות העבריים נשארים ב-RTL הטבעי.
-            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+            CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
                 Surface(
                     modifier = Modifier
                         .fillMaxSize()
@@ -206,7 +207,7 @@ class MainActivity : ComponentActivity() {
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                "טרמינל",
+                                tr("טרמינל"),
                                 fontSize = FutureTypography.title,
                                 fontWeight = FontWeight.Bold,
                                 color = theme.accentColor,
@@ -289,7 +290,7 @@ class MainActivity : ComponentActivity() {
                                 // בלעדיו תהליך su תקוע יכול להישאר רץ ברקע ללא הגבלה.
                                 TerminalIconButton(
                                     icon = FutureIcons.Cancel,
-                                    contentDescription = "בטל",
+                                    contentDescription = tr("בטל"),
                                     onClick = { shell.cancelCurrent() },
                                     theme = theme,
                                     tint = theme.dangerColor
@@ -297,7 +298,7 @@ class MainActivity : ComponentActivity() {
                             } else {
                                 TerminalIconButton(
                                     icon = FutureIcons.AutoMirrored.Send,
-                                    contentDescription = "הרץ",
+                                    contentDescription = tr("הרץ"),
                                     onClick = { runCommand(input) },
                                     theme = theme,
                                     tint = theme.textColor,
@@ -365,11 +366,11 @@ private fun TerminalIconButton(
 
 @Composable
 private fun TerminalOptionsMenu(theme: FutureTheme, onDismiss: () -> Unit, onRecallLast: (() -> Unit)?, onClear: () -> Unit, onCopyLastOutput: () -> Unit, onShareHistory: () -> Unit) {
-    FutureOptionsMenu(theme = theme, onDismissRequest = onDismiss, header = "טרמינל") {
-        if (onRecallLast != null) FutureMenuRow("פקודה קודמת", FutureIcons.Refresh, theme, onRecallLast)
-        FutureMenuRow("העתק פלט אחרון", FutureIcons.ContentCopy, theme, onCopyLastOutput)
-        FutureMenuRow("שתף היסטוריה", FutureIcons.Share, theme, onShareHistory)
-        FutureMenuRow("נקה היסטוריה", FutureIcons.Delete, theme, onClear, destructive = true)
+    FutureOptionsMenu(theme = theme, onDismissRequest = onDismiss, header = tr("טרמינל")) {
+        if (onRecallLast != null) FutureMenuRow(tr("פקודה קודמת"), FutureIcons.Refresh, theme, onRecallLast)
+        FutureMenuRow(tr("העתק פלט אחרון"), FutureIcons.ContentCopy, theme, onCopyLastOutput)
+        FutureMenuRow(tr("שתף היסטוריה"), FutureIcons.Share, theme, onShareHistory)
+        FutureMenuRow(tr("נקה היסטוריה"), FutureIcons.Delete, theme, onClear, destructive = true)
     }
 }
 

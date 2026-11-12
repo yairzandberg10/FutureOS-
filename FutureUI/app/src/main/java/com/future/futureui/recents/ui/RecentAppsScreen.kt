@@ -1,5 +1,6 @@
 package com.future.futureui.recents.ui
 
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
 import androidx.compose.animation.AnimatedVisibility
@@ -48,6 +49,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.launch
+import androidx.compose.ui.composed
 import androidx.core.graphics.drawable.toBitmap
 import com.future.futureui.recents.logic.RecentAppInfo
 
@@ -78,6 +84,24 @@ fun RecentAppsScreen(
     val clearFocused = focusedIndex == CLEAR_ALL && apps.isNotEmpty()
 
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
+
+    // כניסה: הרקע מתכהה והכרטיסים עולים מלמטה בגל לפי שורה (riseIn).
+    // יציאה ב-BACK: הכול נסוג מעט ונעלם לפני שהחלון מוסר; "סגור הכל": הרשת
+    // עפה למעלה. קודם החלון הופיע ונעלם בפריים אחד.
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val enter = remember { androidx.compose.animation.core.Animatable(0f) }
+    val leave = remember { androidx.compose.animation.core.Animatable(0f) }
+    var flyUp by remember { androidx.compose.runtime.mutableStateOf(false) }
+    LaunchedEffect(Unit) { enter.animateTo(1f, com.future.sharednav.theme.FutureMotion.enter()) }
+    fun dismissAnimated() {
+        if (leave.isRunning) return
+        scope.launch { leave.animateTo(1f, com.future.sharednav.theme.FutureMotion.exit()); onDismiss() }
+    }
+    fun closeAllAnimated() {
+        if (leave.isRunning) return
+        flyUp = true
+        scope.launch { leave.animateTo(1f, androidx.compose.animation.core.tween(220, easing = com.future.sharednav.theme.FutureMotion.EasingAccelerate)); onCloseAll() }
+    }
     LaunchedEffect(apps.size) {
         if (focusedIndex > apps.lastIndex) focusedIndex = apps.lastIndex.coerceAtLeast(0)
     }
@@ -100,10 +124,11 @@ fun RecentAppsScreen(
         }
     }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .graphicsLayer { alpha = enter.value * (1f - leave.value) }
                 .background(Color(0xF20E0E10))
                 .focusRequester(focusRequester)
                 .focusable()
@@ -119,19 +144,19 @@ fun RecentAppsScreen(
                             true
                         }
                         Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> {
-                            if (focusedIndex == CLEAR_ALL) onCloseAll() else apps.getOrNull(focusedIndex)?.let(onLaunch)
+                            if (focusedIndex == CLEAR_ALL) closeAllAnimated() else apps.getOrNull(focusedIndex)?.let(onLaunch)
                             true
                         }
                         Key.Back -> {
-                            onDismiss()
+                            dismissAnimated()
                             true
                         }
                         Key.Menu, Key.Settings, Key.Delete, Key.Backspace -> {
-                            if (focusedIndex == CLEAR_ALL) onCloseAll() else apps.getOrNull(focusedIndex)?.let(onClose)
+                            if (focusedIndex == CLEAR_ALL) closeAllAnimated() else apps.getOrNull(focusedIndex)?.let(onClose)
                             true
                         }
                         Key.Zero -> {
-                            onCloseAll()
+                            closeAllAnimated()
                             true
                         }
                         else -> false
@@ -145,7 +170,7 @@ fun RecentAppsScreen(
                         .padding(top = com.future.futureui.statusbar.logic.StatusBarLayoutManager.HEIGHT_DP.dp + 10.dp, bottom = 6.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Text("אפליקציות אחרונות", color = Color.White, fontSize = FutureTypography.title, fontWeight = FontWeight.Bold)
+                    Text(tr("אפליקציות אחרונות"), color = Color.White, fontSize = FutureTypography.title, fontWeight = FontWeight.Bold)
                     if (memorySummary != null) {
                         Text(memorySummary, color = Color.White.copy(alpha = 0.5f), fontSize = FutureTypography.caption, modifier = Modifier.padding(top = 2.dp))
                     }
@@ -154,13 +179,17 @@ fun RecentAppsScreen(
                 Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 if (apps.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("אין אפליקציות אחרונות", color = Color.White.copy(alpha = 0.5f), fontSize = FutureTypography.body)
+                        Text(tr("אין אפליקציות אחרונות"), color = Color.White.copy(alpha = 0.5f), fontSize = FutureTypography.body)
                     }
                 } else {
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(COLUMNS),
                         state = gridState,
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier.fillMaxSize().graphicsLayer {
+                            val l = leave.value
+                            if (flyUp) translationY = -l * 160.dp.toPx()
+                            else { val sc = 1f - 0.06f * l; scaleX = sc; scaleY = sc }
+                        },
                         // ריווח תחתון כדי שהשורה האחרונה תוכל לעלות מעל כפתור ה-X המרחף
                         contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 8.dp, bottom = 84.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -172,7 +201,9 @@ fun RecentAppsScreen(
                                 app = app,
                                 snapshot = snapshots[app.packageName],
                                 isFocused = index == focusedIndex,
-                                modifier = Modifier.animateItem(),
+                                modifier = Modifier
+                                    .animateItem(placementSpec = com.future.sharednav.theme.FutureMotion.Springs.dialogOffset)
+                                    .riseIn(index),
                             )
                         }
                         item(span = { GridItemSpan(maxLineSpan) }) { Spacer(modifier = Modifier.height(4.dp)) }
@@ -195,13 +226,13 @@ fun RecentAppsScreen(
                             .border(if (clearFocused) 2.dp else 1.dp, if (clearFocused) Color.LightGray else Color.White.copy(alpha = 0.18f), CircleShape),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Icon(Icons.Rounded.Close, contentDescription = "סגור הכל", tint = Color.White, modifier = Modifier.size(28.dp))
+                        Icon(Icons.Rounded.Close, contentDescription = tr("סגור הכל"), tint = Color.White, modifier = Modifier.size(28.dp))
                     }
                 }
                 }
 
                 Text(
-                    "OK פתיחה · אפשרויות סגירת חלון · 0 סגירת הכל",
+                    tr("OK פתיחה · אפשרויות סגירת חלון · 0 סגירת הכל"),
                     color = Color.White.copy(alpha = 0.35f),
                     fontSize = FutureTypography.caption,
                     modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
@@ -216,9 +247,7 @@ fun RecentAppsScreen(
 private fun RecentAppCard(app: RecentAppInfo, snapshot: ImageBitmap?, isFocused: Boolean, modifier: Modifier = Modifier) {
     val shape = RoundedCornerShape(FutureShapes.radiusXl)
     val scale by animateFloatAsState(if (isFocused) 1.03f else 1f, label = "recentCardScale")
-    // גודל קבוע: אייקון של אפליקציה זרה יכול להצהיר על גודל עצום, ו-toBitmap() בגודל
-    // המקורי היה מפיל את FutureUI (ואיתו את מסך הנעילה) מחוסר זיכרון
-    val icon = remember(app.packageName) { app.icon.toBitmap(96, 96).asImageBitmap() }
+    val icon = remember(app.packageName) { app.icon.toBitmap().asImageBitmap() }
     val tint = Color(app.tint)
 
     Column(
@@ -276,3 +305,26 @@ private const val CLEAR_ALL = -1
 // מסך 640x960 ב-320dpi = 320x480dp: כרטיס ברוחב ~140dp; 156dp מראה את רוב
 // המסך של האפליקציה (החלק התחתון נחתך) ועדיין שתי שורות כמעט שלמות נכנסות
 private val CardHeight = 156.dp
+
+
+/**
+ * הכרטיס עולה מלמטה (70dp), מתנפח מ-0.8 ומופיע, בקפיץ lift - שורה אחרי
+ * שורה (55ms) ובתוך השורה עמודה אחרי עמודה (25ms). רק 6 הכרטיסים הראשונים;
+ * כל השאר מתחת לקצה המסך ממילא.
+ */
+private fun Modifier.riseIn(index: Int): Modifier = composed {
+    if (index >= 6) return@composed this
+    val p = remember { androidx.compose.animation.core.Animatable(0f) }
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay((40 + (index / COLUMNS) * 55 + (index % COLUMNS) * 25).toLong())
+        p.animateTo(1f, com.future.sharednav.theme.FutureMotion.Springs.lift())
+    }
+    graphicsLayer {
+        val v = p.value
+        alpha = v.coerceIn(0f, 1f)
+        translationY = (1f - v) * 70.dp.toPx()
+        val sc = 0.8f + 0.2f * v
+        scaleX = sc
+        scaleY = sc
+    }
+}

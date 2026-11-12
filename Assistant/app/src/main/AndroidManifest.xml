@@ -31,7 +31,7 @@
     <uses-permission android:name="com.future.futureui.permission.SYSTEM_SETTINGS" />
     <uses-permission android:name="com.future.keyboard.permission.SETTINGS" />
     <application
-        android:allowBackup="false"
+        android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
@@ -72,7 +72,7 @@
         <receiver
             android:name=".asr.AsrWarmupReceiver"
             android:exported="true"
-            android:permission="com.future.futureui.permission.SYSTEM_SETTINGS">
+            android:permission="com.future.keyboard.permission.SETTINGS">
             <intent-filter>
                 <action android:name="com.future.assistant.action.WARM_UP_ASR" />
             </intent-filter>

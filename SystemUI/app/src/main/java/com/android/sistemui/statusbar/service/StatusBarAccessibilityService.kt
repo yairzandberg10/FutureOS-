@@ -1,5 +1,6 @@
 package com.android.sistemui.statusbar.service
 
+import com.future.sharednav.i18n.tr
 import android.accessibilityservice.AccessibilityService
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -24,7 +25,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ComposeView
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.*
 import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
@@ -41,7 +41,6 @@ import com.android.sistemui.statusbar.ui.VolumeOverlay
 import com.android.sistemui.theme.ThemeProvider
 import com.android.sistemui.ui.theme.FutureUITheme
 import com.android.sistemui.utils.FutureUIActions
-import com.future.sharednav.actions.FutureUIActions as SharedActions
 import com.android.sistemui.utils.FutureUIState
 
 /**
@@ -152,20 +151,24 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
             val filter = IntentFilter(FutureUIActions.ACTION_BRING_STATUS_BAR_FRONT).apply {
                 addAction(ACTION_SHOW_POWER_MENU)
             }
-            // שני השידורים נשלחים רק מתוך FutureUI עצמו (מסכי overlay, מרכז הבקרה) -
-            // NOT_EXPORTED כדי שאפליקציה זרה לא תוכל להקפיץ את תפריט הכיבוי.
-            ContextCompat.registerReceiver(this, bringToFrontReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                registerReceiver(bringToFrontReceiver, filter, Context.RECEIVER_EXPORTED)
+            } else {
+                registerReceiver(bringToFrontReceiver, filter)
+            }
 
-            // ACTION_CALL_RINGING/ENDED מגיעים משידור מפורש (setPackage) של dialer.
-            // השולח חייב להחזיק את הרשאת המערכת - אחרת כל אפליקציה יכלה לזייף "שיחה
-            // מצלצלת" ולנטרל את הדאבל-קליק על OK / לפתוח את מסך השיחה.
+            // ACTION_CALL_RINGING/ENDED מגיעים משידור מפורש (setPackage) של dialer -
+            // מ-API 33 חובה להצהיר EXPORTED כדי לקבל שידור כזה מאפליקציה אחרת.
             val callFilter = IntentFilter().apply {
                 addAction(FutureUIActions.ACTION_CALL_RINGING)
                 addAction(FutureUIActions.ACTION_CALL_ENDED)
             }
-            ContextCompat.registerReceiver(
-                this, callReceiver, callFilter, SharedActions.PERMISSION_SYSTEM, null, ContextCompat.RECEIVER_EXPORTED
-            )
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                registerReceiver(callReceiver, callFilter, Context.RECEIVER_EXPORTED)
+            } else {
+                @Suppress("UnspecifiedRegisterReceiverFlag")
+                registerReceiver(callReceiver, callFilter)
+            }
         } catch (e: Exception) {
             Log.e("FutureUI", "Error in StatusBar onCreate", e)
         }
@@ -292,7 +295,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
      * bringFrontIntent), כדי שכל אפליקציה בחזית תוכל להאזין ולהגיב. */
     private fun sendOptionsShortPressBroadcast() {
         try {
-            sendBroadcast(Intent(FutureUIActions.ACTION_OPTIONS_SHORT_PRESS), FutureUIActions.PERMISSION_SYSTEM)
+            sendBroadcast(Intent(FutureUIActions.ACTION_OPTIONS_SHORT_PRESS))
         } catch (e: Exception) {
             Log.e("FutureUI", "Error sending options short-press broadcast", e)
         }
@@ -434,8 +437,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
         if (cls == null) return
         val byClass = POWER_MENU_CLASS_HINTS.any { cls.contains(it, ignoreCase = true) }
         val texts = if (byClass) emptyList() else windowTexts(event)
-        // בלי הטקסטים עצמם: חלון מערכת יכול להציג תוכן פרטי (שם, מספר, הודעה).
-        Log.i("FutureUI", "system window: $pkg / $cls / ${texts.size} texts")
+        Log.i("FutureUI", "system window: $pkg / $cls / ${texts.take(8)}")
         val byText = texts.count { t -> POWER_MENU_LABELS.any { t.equals(it, ignoreCase = true) } } >= 1 &&
             texts.any { t -> POWER_OFF_LABELS.any { t.equals(it, ignoreCase = true) } }
         if (!byClass && !byText) return
@@ -487,12 +489,12 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
                         com.android.sistemui.controlcenter.ui.PowerMenuScreen(
                             onPowerOff = {
                                 hidePowerMenu()
-                                android.widget.Toast.makeText(this@StatusBarAccessibilityService, "מכבה את המכשיר...", android.widget.Toast.LENGTH_SHORT).show()
+                                android.widget.Toast.makeText(this@StatusBarAccessibilityService, tr("מכבה את המכשיר..."), android.widget.Toast.LENGTH_SHORT).show()
                                 controlManager?.runRootCommandAsync("reboot -p")
                             },
                             onRestart = {
                                 hidePowerMenu()
-                                android.widget.Toast.makeText(this@StatusBarAccessibilityService, "מפעיל מחדש...", android.widget.Toast.LENGTH_SHORT).show()
+                                android.widget.Toast.makeText(this@StatusBarAccessibilityService, tr("מפעיל מחדש..."), android.widget.Toast.LENGTH_SHORT).show()
                                 controlManager?.runRootCommandAsync("reboot")
                             },
                             onCancel = { hidePowerMenu() },
@@ -602,9 +604,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
                                 hideRecentApps()
                             },
                             onClose = { app ->
-                                if (com.future.sharednav.root.RootShell.isSafeToken(app.packageName)) {
-                                    controlManager?.runRootCommandAsync("am force-stop ${com.future.sharednav.root.RootShell.quote(app.packageName)}")
-                                }
+                                controlManager?.runRootCommandAsync("am force-stop ${app.packageName}")
                                 recentAppsManager.remove(app.packageName)
                                 recentSnapshots.remove(app.packageName)
                                 recentAppsList.remove(app)
@@ -612,10 +612,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
                             onCloseAll = {
                                 val all = recentAppsList.toList()
                                 if (all.isNotEmpty()) {
-                                    controlManager?.runRootCommandAsync(
-                                        all.map { it.packageName }.filter(com.future.sharednav.root.RootShell::isSafeToken)
-                                            .joinToString("; ") { "am force-stop ${com.future.sharednav.root.RootShell.quote(it)}" }
-                                    )
+                                    controlManager?.runRootCommandAsync(all.joinToString("; ") { "am force-stop ${it.packageName}" })
                                 }
                                 recentAppsManager.clear()
                                 recentSnapshots.clear()
@@ -699,7 +696,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
         const val ACTION_SHOW_POWER_MENU = "com.future.futureui.ACTION_SHOW_POWER_MENU"
         private val POWER_MENU_CLASS_HINTS = listOf("globalactions", "ActionsDialog", "PowerMenu", "ShutdownDialog")
         /** השורות של תפריט הכיבוי של אנדרואיד, עברית ואנגלית. */
-        private val POWER_OFF_LABELS = listOf("כיבוי", "כבה", "Power off", "Shut down", "Shutdown")
-        private val POWER_MENU_LABELS = POWER_OFF_LABELS + listOf("הפעלה מחדש", "אתחול", "Restart", "Reboot", "מצב טיסה", "Airplane mode")
+        private val POWER_OFF_LABELS = listOf(tr("כיבוי"), tr("כבה"), "Power off", "Shut down", "Shutdown")
+        private val POWER_MENU_LABELS = POWER_OFF_LABELS + listOf(tr("הפעלה מחדש"), tr("אתחול"), "Restart", "Reboot", tr("מצב טיסה"), "Airplane mode")
     }
 }

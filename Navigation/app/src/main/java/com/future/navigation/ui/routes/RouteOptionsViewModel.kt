@@ -1,5 +1,6 @@
 package com.future.navigation.ui.routes
 
+import com.future.sharednav.i18n.tr
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -52,23 +53,20 @@ class RouteOptionsViewModel(
     fun search(mode: TravelMode, destination: Destination) {
         val origin = LocationHelper.lastKnownLatLon(appContext)?.let { LatLng(it.first, it.second) }
         if (origin == null) {
-            _error.value = "לא ניתן לאתר את המיקום הנוכחי"
+            _error.value = tr("לא ניתן לאתר את המיקום הנוכחי")
             return
         }
 
         searchJob?.cancel()
         _loading.value = true
         _error.value = null
-        // תוצאות של יעד קודם לא נשארות על המסך מתחת להודעת שגיאה של היעד החדש
-        _drivingRoute.value = null
-        _itineraries.value = emptyList()
         searchJob = viewModelScope.launch {
             try {
                 when (mode) {
                     TravelMode.DRIVE -> {
                         val route = routingRepository.getDrivingRoute(origin, destination.location)
                         _drivingRoute.value = route
-                        if (route == null) _error.value = "לא נמצא מסלול נסיעה"
+                        if (route == null) _error.value = tr("לא נמצא מסלול נסיעה")
                     }
                     TravelMode.TRANSIT -> {
                         ensureTransitDataFor(origin, destination.location)
@@ -77,13 +75,13 @@ class RouteOptionsViewModel(
                         // שכבת זמן אמת (SIRI) - "best effort" בעיצוב (ר' TransitRealtimeEnricher),
                         // אף פעם לא זורקת ולא יכולה להפוך תוצאה תקינה לריקה.
                         _itineraries.value = transitRealtimeEnricher.enrich(results)
-                        if (results.isEmpty()) _error.value = "לא נמצא מסלול תחבורה ציבורית ליעד הזה"
+                        if (results.isEmpty()) _error.value = tr("לא נמצא מסלול תחבורה ציבורית ליעד הזה")
                     }
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _error.value = "אירעה שגיאה בחישוב המסלול"
+                _error.value = tr("אירעה שגיאה בחישוב המסלול")
             } finally {
                 _loading.value = false
             }
@@ -101,16 +99,12 @@ class RouteOptionsViewModel(
         if (alreadyImported != null && alreadyImported.covers(neededBbox)) return
 
         _downloadFraction.value = 0f
-        // finally: הורדה שנקטעה (רשת, ביטול) השאירה קודם את פס ההורדה על המסך לתמיד
-        try {
-            gtfsImporter.importFeed(appContext, neededBbox).collect { progress ->
-                _downloadFraction.value = if (progress.phase == ImportPhase.DOWNLOADING) progress.fraction else null
-                if (progress.phase == ImportPhase.DONE) {
-                    GtfsImportState.recordImportedBoundingBox(appContext, neededBbox)
-                }
+        gtfsImporter.importFeed(appContext, neededBbox).collect { progress ->
+            _downloadFraction.value = if (progress.phase == ImportPhase.DOWNLOADING) progress.fraction else null
+            if (progress.phase == ImportPhase.DONE) {
+                GtfsImportState.recordImportedBoundingBox(appContext, neededBbox)
             }
-        } finally {
-            _downloadFraction.value = null
         }
+        _downloadFraction.value = null
     }
 }

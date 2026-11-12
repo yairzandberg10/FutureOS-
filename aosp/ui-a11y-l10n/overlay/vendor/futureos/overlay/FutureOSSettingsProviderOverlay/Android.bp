@@ -1,0 +1,8 @@
+// RRO סטטי מעל SettingsProvider: ברירות מחדל להגדרות.
+runtime_resource_overlay {
+    name: "FutureOSSettingsProviderOverlay",
+    resource_dirs: ["res"],
+    certificate: "platform",
+    sdk_version: "current",
+    product_specific: true,
+}

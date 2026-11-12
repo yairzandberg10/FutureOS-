@@ -1,4 +1,5 @@
 package com.future.navigation.ui.gtfs
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.components.FutureButton
 import com.future.sharednav.components.FutureProgressBar
 import com.future.sharednav.theme.LocalFutureTheme
@@ -55,7 +56,7 @@ fun GtfsSetupScreen(viewModel: GtfsSetupViewModel, onBack: () -> Unit) {
                 ImportPhase.DOWNLOADING -> stringResource(R.string.gtfs_downloading)
                 ImportPhase.PARSING_STOPS, ImportPhase.PARSING_STOP_TIMES, ImportPhase.PARSING_TRIPS, ImportPhase.PARSING_ROUTES, ImportPhase.PARSING_CALENDAR -> stringResource(R.string.gtfs_parsing)
                 ImportPhase.DONE -> stringResource(R.string.gtfs_done)
-                ImportPhase.ERROR -> progress?.error ?: "שגיאה"
+                ImportPhase.ERROR -> progress?.error ?: tr("שגיאה")
                 null -> null
             }
 

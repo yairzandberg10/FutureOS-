@@ -1,5 +1,6 @@
 package com.future.futureui.controlcenter.logic
 
+import com.future.sharednav.i18n.tr
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.material.icons.Icons
@@ -11,22 +12,22 @@ class ControlLayoutManager(context: Context) {
     val allAvailableControls = listOf(
         ControlInfo("wifi", "Wi-Fi", Icons.Rounded.Wifi),
         ControlInfo("bluetooth", "Bluetooth", Icons.Rounded.Bluetooth),
-        ControlInfo("flashlight", "פנס", Icons.Rounded.FlashlightOn),
-        ControlInfo("airplane", "מצב טיסה", Icons.Rounded.AirplanemodeActive),
-        ControlInfo("data", "נתונים", Icons.Rounded.SignalCellularAlt),
-        ControlInfo("dnd", "נא לא להפריע", Icons.Rounded.DoNotDisturbOn),
-        ControlInfo("location", "מיקום", Icons.Rounded.LocationOn),
-        ControlInfo("rotation", "סיבוב", Icons.Rounded.ScreenRotation),
-        ControlInfo("battery", "סוללה", Icons.Rounded.BatterySaver),
-        ControlInfo("night", "לילה", Icons.Rounded.Nightlight),
-        ControlInfo("settings", "הגדרות", Icons.Rounded.Settings),
-        ControlInfo("camera", "מצלמה", Icons.Rounded.CameraAlt),
-        ControlInfo("search", "חיפוש", Icons.Rounded.Search),
-        ControlInfo("music", "מוזיקה", Icons.Rounded.MusicNote),
-        ControlInfo("account", "חשבון", Icons.Rounded.Person),
-        ControlInfo("calendar", "יומן", Icons.Rounded.CalendarMonth),
-        ControlInfo("security", "אבטחה", Icons.Rounded.Security),
-        ControlInfo("predictive_text", "ניבוי טקסט", Icons.Rounded.Spellcheck)
+        ControlInfo("flashlight", tr("פנס"), Icons.Rounded.FlashlightOn),
+        ControlInfo("airplane", tr("מצב טיסה"), Icons.Rounded.AirplanemodeActive),
+        ControlInfo("data", tr("נתונים"), Icons.Rounded.SignalCellularAlt),
+        ControlInfo("dnd", tr("נא לא להפריע"), Icons.Rounded.DoNotDisturbOn),
+        ControlInfo("location", tr("מיקום"), Icons.Rounded.LocationOn),
+        ControlInfo("rotation", tr("סיבוב"), Icons.Rounded.ScreenRotation),
+        ControlInfo("battery", tr("סוללה"), Icons.Rounded.BatterySaver),
+        ControlInfo("night", tr("לילה"), Icons.Rounded.Nightlight),
+        ControlInfo("settings", tr("הגדרות"), Icons.Rounded.Settings),
+        ControlInfo("camera", tr("מצלמה"), Icons.Rounded.CameraAlt),
+        ControlInfo("search", tr("חיפוש"), Icons.Rounded.Search),
+        ControlInfo("music", tr("מוזיקה"), Icons.Rounded.MusicNote),
+        ControlInfo("account", tr("חשבון"), Icons.Rounded.Person),
+        ControlInfo("calendar", tr("יומן"), Icons.Rounded.CalendarMonth),
+        ControlInfo("security", tr("אבטחה"), Icons.Rounded.Security),
+        ControlInfo("predictive_text", tr("ניבוי טקסט"), Icons.Rounded.Spellcheck)
     )
 
     private val defaultSectionOrder = listOf("toggles", "media", "grid", "sliders", "bottom_toggles")

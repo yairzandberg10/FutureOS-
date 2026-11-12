@@ -1,5 +1,6 @@
 package com.future.navigation.ui.saved
 
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.icons.FutureIcons
 
 import androidx.compose.foundation.layout.Arrangement
@@ -127,7 +128,7 @@ fun SavedPlacesScreen(viewModel: SavedPlacesViewModel, onBack: () -> Unit, onNav
                     )
                     TopBarIconButton(
                         icon = FutureIcons.Delete,
-                        contentDescription = "מחק",
+                        contentDescription = tr("מחק"),
                         textColor = theme.textColor,
                         accentColor = theme.accentColor,
                         onClick = { viewModel.delete(place) },

@@ -1,4 +1,5 @@
 package com.future.music.ui.components
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.components.InputDialog
 import com.future.sharednav.components.FutureDialog
 import com.future.sharednav.components.FutureButton
@@ -31,7 +32,7 @@ fun NameInputDialog(
     title: String,
     theme: FutureTheme,
     initialValue: String = "",
-    confirmLabel: String = "אישור",
+    confirmLabel: String = tr("אישור"),
     onDismiss: () -> Unit,
     onConfirm: (String) -> Unit,
 ) {
@@ -54,7 +55,7 @@ fun ConfirmDialog(
     title: String,
     message: String,
     theme: FutureTheme,
-    confirmLabel: String = "מחק",
+    confirmLabel: String = tr("מחק"),
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
 ) {
@@ -64,7 +65,7 @@ fun ConfirmDialog(
         onDismissRequest = onDismiss,
         title = title,
         buttons = {
-            FutureButton("ביטול", theme, onDismiss, variant = FutureButtonVariant.Secondary)
+            FutureButton(tr("ביטול"), theme, onDismiss, variant = FutureButtonVariant.Secondary)
             FutureButton(confirmLabel, theme, onConfirm, variant = FutureButtonVariant.Destructive, focusRequester = confirmFocusRequester)
         },
     ) {

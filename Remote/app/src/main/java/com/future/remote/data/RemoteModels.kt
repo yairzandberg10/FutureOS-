@@ -1,12 +1,13 @@
 package com.future.remote.data
 
+import com.future.sharednav.i18n.tr
 import java.util.UUID
 
 enum class DeviceCategory(val label: String) {
-    AC("מזגן"),
-    FAN("מאוורר"),
-    AUDIO("מערכת שמע"),
-    CUSTOM("מותאם אישית")
+    AC(tr("מזגן")),
+    FAN(tr("מאוורר")),
+    AUDIO(tr("מערכת שמע")),
+    CUSTOM(tr("מותאם אישית"))
 }
 
 /** מצב הקידוד של כפתור: NEC (כתובת+פקודה בהקסדצימלי - הפורמט הכי נפוץ

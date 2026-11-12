@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 734: תבנית. הופכת את Heebo לגופן sans-serif של המערכת, עם Noto Sans Hebrew כגיבוי של AOSP.
+     דורש את קבצי ה-TTF ב-/product/fonts (ר' ui_a11y_l10n.mk). קבצי הגופן אינם כלולים כאן. -->
+<fonts-modification version="1">
+    <family customizationType="new-named-family" name="futureos-sans">
+        <font weight="400" style="normal">Heebo-Regular.ttf</font>
+        <font weight="700" style="normal">Heebo-Bold.ttf</font>
+    </family>
+    <alias name="sans-serif" to="futureos-sans" weight="400" />
+</fonts-modification>

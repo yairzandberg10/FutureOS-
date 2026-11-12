@@ -1,5 +1,6 @@
 package com.future.calendar.data
 
+import com.future.sharednav.i18n.tr
 import java.time.LocalDate
 
 data class DafYomiEntry(val masechet: String, val daf: Int)
@@ -17,51 +18,51 @@ object DafYomi {
 
     // (שם מסכת, מספר ימי לימוד - דף ב' עד דף אחרון = סה"כ_דפים-1, חוץ מהזנב המיוחד)
     private val MASECHTOS = listOf(
-        "ברכות" to 63,
-        "שבת" to 156,
-        "עירובין" to 104,
-        "פסחים" to 120,
-        "שקלים" to 21,
-        "יומא" to 87,
-        "סוכה" to 55,
-        "ביצה" to 39,
-        "ראש השנה" to 34,
-        "תענית" to 30,
-        "מגילה" to 31,
-        "מועד קטן" to 28,
-        "חגיגה" to 26,
-        "יבמות" to 121,
-        "כתובות" to 111,
-        "נדרים" to 90,
-        "נזיר" to 65,
-        "סוטה" to 48,
-        "גיטין" to 89,
-        "קידושין" to 81,
-        "בבא קמא" to 118,
-        "בבא מציעא" to 118,
-        "בבא בתרא" to 175,
-        "סנהדרין" to 112,
-        "מכות" to 23,
-        "שבועות" to 48,
-        "עבודה זרה" to 75,
-        "הוריות" to 13,
-        "זבחים" to 119,
-        "מנחות" to 109,
-        "חולין" to 141,
-        "בכורות" to 60,
-        "ערכין" to 33,
-        "תמורה" to 33,
-        "כריתות" to 27,
-        "מעילה" to 21,
-        "קינים" to 3,
-        "תמיד" to 8,
-        "מדות" to 4,
-        "נדה" to 72
+        tr("ברכות") to 63,
+        tr("שבת") to 156,
+        tr("עירובין") to 104,
+        tr("פסחים") to 120,
+        tr("שקלים") to 21,
+        tr("יומא") to 87,
+        tr("סוכה") to 55,
+        tr("ביצה") to 39,
+        tr("ראש השנה") to 34,
+        tr("תענית") to 30,
+        tr("מגילה") to 31,
+        tr("מועד קטן") to 28,
+        tr("חגיגה") to 26,
+        tr("יבמות") to 121,
+        tr("כתובות") to 111,
+        tr("נדרים") to 90,
+        tr("נזיר") to 65,
+        tr("סוטה") to 48,
+        tr("גיטין") to 89,
+        tr("קידושין") to 81,
+        tr("בבא קמא") to 118,
+        tr("בבא מציעא") to 118,
+        tr("בבא בתרא") to 175,
+        tr("סנהדרין") to 112,
+        tr("מכות") to 23,
+        tr("שבועות") to 48,
+        tr("עבודה זרה") to 75,
+        tr("הוריות") to 13,
+        tr("זבחים") to 119,
+        tr("מנחות") to 109,
+        tr("חולין") to 141,
+        tr("בכורות") to 60,
+        tr("ערכין") to 33,
+        tr("תמורה") to 33,
+        tr("כריתות") to 27,
+        tr("מעילה") to 21,
+        tr("קינים") to 3,
+        tr("תמיד") to 8,
+        tr("מדות") to 4,
+        tr("נדה") to 72
     )
 
     private val CYCLE_LENGTH_DAYS = MASECHTOS.sumOf { it.second }
 
-    private val FIRST_DAF = mapOf("קינים" to 23, "תמיד" to 26, "מדות" to 34)
+    private val FIRST_DAF = mapOf(tr("קינים") to 23, tr("תמיד") to 26, tr("מדות") to 34)
 
     /**
      * @param afterNightfall יום הדף היומי מתחלף בצאת הכוכבים, לא בחצות - אם

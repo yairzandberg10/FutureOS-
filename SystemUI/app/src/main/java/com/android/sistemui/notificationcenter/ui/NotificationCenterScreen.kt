@@ -1,4 +1,5 @@
 package com.android.sistemui.notificationcenter.ui
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.theme.FutureMotion
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
@@ -121,7 +122,7 @@ fun NotificationCenterScreen(
         }
     }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         AnimatedVisibility(
             visible = isVisible,
             // כניסה עם spring קליל (overshoot עדין) במקום tween ליניארי - מרגישה
@@ -206,7 +207,7 @@ fun NotificationCenterScreen(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
-                                        text = "אין התראות חדשות",
+                                        text = tr("אין התראות חדשות"),
                                         color = subTextColor,
                                         fontSize = FutureTypography.bodyLarge
                                     )
@@ -270,7 +271,7 @@ fun NotificationCenterScreen(
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         NotificationCenterButton(
-                            text = "נקה הכל",
+                            text = tr("נקה הכל"),
                             icon = Icons.Rounded.DeleteSweep,
                             onClick = { ncManager.clearAll() },
                             modifier = Modifier.weight(1f),
@@ -278,7 +279,7 @@ fun NotificationCenterScreen(
                             focusRequester = clearAllFocusRequester
                         )
                         NotificationCenterButton(
-                            text = "השתק",
+                            text = tr("השתק"),
                             icon = if (ncManager.controlManager.isDndOn) Icons.Rounded.NotificationsOff else Icons.Rounded.NotificationsActive,
                             onClick = { ncManager.toggleDnd() },
                             modifier = Modifier.weight(1f),
@@ -332,8 +333,8 @@ fun NotificationItem(
                     }
                 })
             }
-            add(NotificationOption(label = "כבה התראות", isDestructive = true) { onMuteApp() })
-            add(NotificationOption(label = "חזור") { })
+            add(NotificationOption(label = tr("כבה התראות"), isDestructive = true) { onMuteApp() })
+            add(NotificationOption(label = tr("חזור")) { })
         }
     }
     LaunchedEffect(showOptions) { if (showOptions) selectedOptionIndex = 0 }

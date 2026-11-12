@@ -1,5 +1,6 @@
 package com.future.dialer.telecom
 
+import com.future.sharednav.i18n.tr
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -81,7 +82,7 @@ class CallService : InCallService() {
     /** שם איש הקשר של השיחה, ואם אין - המספר. קודם ההתראה הציגה תמיד מספר. */
     private fun callerLabel(): String {
         val number = _activeCall.value?.details?.handle?.schemeSpecificPart
-        if (number.isNullOrBlank()) return "מספר חסוי"
+        if (number.isNullOrBlank()) return tr("מספר חסוי")
         return com.future.sharednav.contacts.ContactLookup.nameForNumber(this, number) ?: number
     }
 
@@ -104,12 +105,12 @@ class CallService : InCallService() {
     private fun showOngoingNotification(state: Int) {
         val manager = applicationContext.getSystemService(NotificationManager::class.java) ?: return
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            manager.createNotificationChannel(NotificationChannel(ONGOING_CHANNEL_ID, "שיחה פעילה", NotificationManager.IMPORTANCE_LOW))
+            manager.createNotificationChannel(NotificationChannel(ONGOING_CHANNEL_ID, tr("שיחה פעילה"), NotificationManager.IMPORTANCE_LOW))
         }
         val title = when (state) {
-            Call.STATE_HOLDING -> "שיחה בהמתנה"
-            Call.STATE_ACTIVE -> "שיחה פעילה"
-            else -> "מחייג…"
+            Call.STATE_HOLDING -> tr("שיחה בהמתנה")
+            Call.STATE_ACTIVE -> tr("שיחה פעילה")
+            else -> tr("מחייג…")
         }
         val builder = NotificationCompat.Builder(applicationContext, ONGOING_CHANNEL_ID)
             .setSmallIcon(android.R.drawable.sym_action_call)
@@ -119,8 +120,8 @@ class CallService : InCallService() {
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setContentIntent(callUiIntent(1))
-            .addAction(0, "חזרה לשיחה", callUiIntent(1))
-            .addAction(0, "נתק", actionIntent(CallActionReceiver.ACTION_HANGUP_CALL, 3))
+            .addAction(0, tr("חזרה לשיחה"), callUiIntent(1))
+            .addAction(0, tr("נתק"), actionIntent(CallActionReceiver.ACTION_HANGUP_CALL, 3))
         if (state == Call.STATE_ACTIVE) {
             builder.setUsesChronometer(true).setWhen(_activeCall.value?.details?.connectTimeMillis?.takeIf { it > 0 } ?: System.currentTimeMillis())
         }
@@ -153,7 +154,7 @@ class CallService : InCallService() {
 
         val manager = applicationContext.getSystemService(NotificationManager::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(CALL_CHANNEL_ID, "שיחות נכנסות", NotificationManager.IMPORTANCE_HIGH)
+            val channel = NotificationChannel(CALL_CHANNEL_ID, tr("שיחות נכנסות"), NotificationManager.IMPORTANCE_HIGH)
             manager.createNotificationChannel(channel)
         }
 
@@ -161,10 +162,10 @@ class CallService : InCallService() {
         // חסמה את פתיחת המסך מהרקע), זו הדרך לענות בלי לחפש את האפליקציה.
         val notification = NotificationCompat.Builder(applicationContext, CALL_CHANNEL_ID)
             .setSmallIcon(android.R.drawable.sym_call_incoming)
-            .setContentTitle("שיחה נכנסת")
+            .setContentTitle(tr("שיחה נכנסת"))
             .setContentText(callerLabel())
-            .addAction(0, "דחה", actionIntent(CallActionReceiver.ACTION_REJECT_CALL, 4))
-            .addAction(0, "ענה", actionIntent(CallActionReceiver.ACTION_ANSWER_CALL, 5))
+            .addAction(0, tr("דחה"), actionIntent(CallActionReceiver.ACTION_REJECT_CALL, 4))
+            .addAction(0, tr("ענה"), actionIntent(CallActionReceiver.ACTION_ANSWER_CALL, 5))
             .setCategory(NotificationCompat.CATEGORY_CALL)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setOngoing(true)

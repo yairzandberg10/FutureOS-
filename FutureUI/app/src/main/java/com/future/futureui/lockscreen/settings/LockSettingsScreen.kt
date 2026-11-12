@@ -1,5 +1,6 @@
 package com.future.futureui.lockscreen.settings
 
+import com.future.sharednav.i18n.tr
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -73,28 +74,28 @@ fun LockSettingsScreen(modifier: Modifier = Modifier, onExit: () -> Unit) {
     var newPin by remember { mutableStateOf("") }
     var version by remember { mutableIntStateOf(0) } // מרענן את הערכים אחרי שינוי
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Box(modifier.background(Color.Black)) {
             when (page) {
                 Page.VERIFY -> PinPage(
-                    title = "הזן את הקוד הנוכחי",
+                    title = tr("הזן את הקוד הנוכחי"),
                     fixedLength = settings.pin.pinLength(),
                     lockoutMs = { settings.pin.remainingLockoutMs() },
                     onBack = onExit,
                     onDone = { pin ->
                         if (settings.pin.verifyPin(pin)) { settings.onStrongAuth(); page = Page.MAIN; null }
-                        else "קוד שגוי"
+                        else tr("קוד שגוי")
                     }
                 )
                 Page.NEW_PIN -> PinPage(
-                    title = "קוד חדש",
-                    subtitle = "${PinStore.MIN_LENGTH} עד ${PinStore.MAX_LENGTH} ספרות, ואז OK",
+                    title = tr("קוד חדש"),
+                    subtitle = tr("{0} עד {1} ספרות, ואז OK", PinStore.MIN_LENGTH, PinStore.MAX_LENGTH),
                     fixedLength = null,
                     onBack = { page = Page.MAIN },
                     onDone = { pin -> newPin = pin; page = Page.CONFIRM_PIN; null }
                 )
                 Page.CONFIRM_PIN -> PinPage(
-                    title = "הזן שוב לאישור",
+                    title = tr("הזן שוב לאישור"),
                     fixedLength = newPin.length,
                     onBack = { newPin = ""; page = Page.NEW_PIN },
                     onDone = { pin ->
@@ -102,16 +103,16 @@ fun LockSettingsScreen(modifier: Modifier = Modifier, onExit: () -> Unit) {
                             settings.onStrongAuth()
                             newPin = ""
                             version++
-                            Toast.makeText(context, "הקוד נשמר", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, tr("הקוד נשמר"), Toast.LENGTH_SHORT).show()
                             page = Page.MAIN
                             null
-                        } else "הקודים לא תואמים"
+                        } else tr("הקודים לא תואמים")
                     }
                 )
                 Page.ENROLL -> EnrollPage(settings, onFinish = { ok ->
                     if (ok) {
                         settings.faceEnabled = true
-                        Toast.makeText(context, "הפנים נרשמו", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, tr("הפנים נרשמו"), Toast.LENGTH_SHORT).show()
                     }
                     version++
                     page = Page.MAIN
@@ -168,20 +169,20 @@ private fun MainPage(
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp, vertical = 24.dp)
     ) {
-        Text("מסך נעילה ואבטחה", color = Color.White, fontSize = FutureTypography.headline, fontWeight = FontWeight.Bold)
+        Text(tr("מסך נעילה ואבטחה"), color = Color.White, fontSize = FutureTypography.headline, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(20.dp))
 
-        Section("אבטחה") {
-            ToggleRow("מסך נעילה", enabled, Modifier.focusRequester(firstFocus)) { enabled = it; settings.enabled = it }
-            ValueRow("קוד נעילה", if (hasPin) "${settings.pin.pinLength()} ספרות" else "לא מוגדר", onClick = onSetPin)
+        Section(tr("אבטחה")) {
+            ToggleRow(tr("מסך נעילה"), enabled, Modifier.focusRequester(firstFocus)) { enabled = it; settings.enabled = it }
+            ValueRow(tr("קוד נעילה"), if (hasPin) tr("{0} ספרות", settings.pin.pinLength()) else tr("לא מוגדר"), onClick = onSetPin)
             if (hasPin) {
-                ValueRow("הסר קוד", "", danger = true) {
+                ValueRow(tr("הסר קוד"), "", danger = true) {
                     settings.pin.clearPin()
                     settings.faceEnabled = false
-                    Toast.makeText(context, "הקוד הוסר", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, tr("הקוד הוסר"), Toast.LENGTH_SHORT).show()
                     onChanged()
                 }
-                ValueRow("נעילה אוטומטית", LockSettings.autoLockLabel(autoLock)) {
+                ValueRow(tr("נעילה אוטומטית"), LockSettings.autoLockLabel(autoLock)) {
                     autoLock = LockCatalog.cycle(LockSettings.AUTO_LOCK_OPTIONS, autoLock, 1)
                     settings.autoLockDelayMs = autoLock
                 }
@@ -189,68 +190,68 @@ private fun MainPage(
         }
 
         Spacer(Modifier.height(20.dp))
-        Section("זיהוי פנים") {
+        Section(tr("זיהוי פנים")) {
             if (!hasPin) {
-                Hint("כדי להשתמש בזיהוי פנים צריך קודם להגדיר קוד - הוא הגיבוי כשהפנים לא מזוהות.")
+                Hint(tr("כדי להשתמש בזיהוי פנים צריך קודם להגדיר קוד - הוא הגיבוי כשהפנים לא מזוהות."))
             } else {
-                ValueRow(if (enrolled) "רשום פנים מחדש" else "רישום פנים", if (enrolled) "רשום" else "", onClick = onEnroll)
+                ValueRow(if (enrolled) tr("רשום פנים מחדש") else tr("רישום פנים"), if (enrolled) tr("רשום") else "", onClick = onEnroll)
                 if (enrolled) {
-                    ToggleRow("פתיחה בזיהוי פנים", faceOn) { faceOn = it; settings.faceEnabled = it }
-                    ToggleRow("הישאר במסך הנעילה אחרי זיהוי", faceStay) { faceStay = it; settings.faceStayOnLock = it }
-                    ValueRow("רגישות", LockSettings.SENSITIVITY_LABELS[sensitivity]) {
+                    ToggleRow(tr("פתיחה בזיהוי פנים"), faceOn) { faceOn = it; settings.faceEnabled = it }
+                    ToggleRow(tr("הישאר במסך הנעילה אחרי זיהוי"), faceStay) { faceStay = it; settings.faceStayOnLock = it }
+                    ValueRow(tr("רגישות"), LockSettings.SENSITIVITY_LABELS[sensitivity]) {
                         sensitivity = LockCatalog.cycleIndex(3, sensitivity, 1)
                         settings.faceSensitivity = sensitivity
                     }
-                    ValueRow("מחק את נתוני הפנים", "", danger = true) {
+                    ValueRow(tr("מחק את נתוני הפנים"), "", danger = true) {
                         faceStore.clear()
                         settings.faceEnabled = false
-                        Toast.makeText(context, "נתוני הפנים נמחקו", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, tr("נתוני הפנים נמחקו"), Toast.LENGTH_SHORT).show()
                         onChanged()
                     }
                 }
                 Hint(
-                    "הזיהוי נעשה רק על המכשיר ונשמר מוצפן - בלי תמונות. זה זיהוי בסיסי במצלמה רגילה, " +
-                        "לא Face ID: תמונה טובה שלך עלולה לפתוח. הקוד נדרש תמיד אחרי הפעלה מחדש, " +
-                        "אחרי 48 שעות ואחרי 5 ניסיונות כושלים."
+                    tr("הזיהוי נעשה רק על המכשיר ונשמר מוצפן - בלי תמונות. זה זיהוי בסיסי במצלמה רגילה, ") +
+                        tr("לא Face ID: תמונה טובה שלך עלולה לפתוח. הקוד נדרש תמיד אחרי הפעלה מחדש, ") +
+                        tr("אחרי 48 שעות ואחרי 5 ניסיונות כושלים.")
                 )
             }
         }
 
         Spacer(Modifier.height(20.dp))
-        Section("התראות") {
-            ValueRow("במסך הנעילה", LockSettings.PRIVACY_LABELS[privacy]) {
+        Section(tr("התראות")) {
+            ValueRow(tr("במסך הנעילה"), LockSettings.PRIVACY_LABELS[privacy]) {
                 privacy = LockCatalog.cycleIndex(3, privacy, 1)
                 settings.notificationPrivacy = privacy
             }
         }
 
         Spacer(Modifier.height(20.dp))
-        Section("עיצוב") {
-            ValueRow("סגנון שעון", LockCatalog.clockStyles[clockStyle]) {
+        Section(tr("עיצוב")) {
+            ValueRow(tr("סגנון שעון"), LockCatalog.clockStyles[clockStyle]) {
                 clockStyle = LockCatalog.cycleIndex(LockCatalog.clockStyles.size, clockStyle, 1); settings.clockStyle = clockStyle
             }
-            ValueRow("צבע השעון", LockCatalog.clockColors[clockColor]) {
+            ValueRow(tr("צבע השעון"), LockCatalog.clockColors[clockColor]) {
                 clockColor = LockCatalog.cycleIndex(LockCatalog.clockColors.size, clockColor, 1); settings.clockColor = clockColor
             }
-            ValueRow("רקע", LockCatalog.backgrounds[background]) {
+            ValueRow(tr("רקע"), LockCatalog.backgrounds[background]) {
                 background = LockCatalog.cycleIndex(LockCatalog.backgrounds.size, background, 1); settings.background = background
             }
             for (slot in 0 until LockSettings.WIDGET_SLOTS) {
-                ValueRow("ווידג'ט ${slot + 1}", LockCatalog.widgetLabel(widgets[slot])) {
+                ValueRow(tr("ווידג'ט {0}", slot + 1), LockCatalog.widgetLabel(widgets[slot])) {
                     widgets = widgets.toMutableList().also { it[slot] = LockCatalog.cycle(LockCatalog.widgets, it[slot], 1) }
                     settings.widgets = widgets
                 }
             }
-            ValueRow("קיצור שמאלי (חזור)", LockCatalog.shortcutLabel(left)) {
+            ValueRow(tr("קיצור שמאלי (חזור)"), LockCatalog.shortcutLabel(left)) {
                 left = LockCatalog.cycle(LockCatalog.shortcuts, left, 1); settings.leftShortcut = left
             }
-            ValueRow("קיצור ימני (תפריט)", LockCatalog.shortcutLabel(right)) {
+            ValueRow(tr("קיצור ימני (תפריט)"), LockCatalog.shortcutLabel(right)) {
                 right = LockCatalog.cycle(LockCatalog.shortcuts, right, 1); settings.rightShortcut = right
             }
             OutlinedTextField(
                 value = message,
                 onValueChange = { message = it.take(60); settings.ownerMessage = message },
-                label = { Text("הודעה במסך הנעילה") },
+                label = { Text(tr("הודעה במסך הנעילה")) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 colors = OutlinedTextFieldDefaults.colors(
@@ -265,13 +266,13 @@ private fun MainPage(
 
         Spacer(Modifier.height(20.dp))
         Section("") {
-            ValueRow("נעל עכשיו", "") {
+            ValueRow(tr("נעל עכשיו"), "") {
                 context.sendBroadcast(Intent(StatusBarAccessibilityService.ACTION_LOCK_NOW).setPackage(context.packageName))
                 onExit()
             }
         }
         Spacer(Modifier.height(12.dp))
-        Hint("במסך הנעילה: לחיצה ארוכה על תפריט פותחת עריכה מהירה של השעון, הווידג'טים והקיצורים.")
+        Hint(tr("במסך הנעילה: לחיצה ארוכה על תפריט פותחת עריכה מהירה של השעון, הווידג'טים והקיצורים."))
     }
 }
 
@@ -359,7 +360,7 @@ private fun PinPage(
 
     fun submit() {
         val lock = lockoutMs()
-        if (lock > 0) { error = "נסה שוב בעוד ${(lock + 999) / 1000} שניות"; pin = ""; return }
+        if (lock > 0) { error = tr("נסה שוב בעוד {0} שניות", (lock + 999) / 1000); pin = ""; return }
         error = onDone(pin)
         pin = ""
     }
@@ -380,7 +381,7 @@ private fun PinPage(
                     e.key == Key.Back || e.key == Key.Backspace -> if (pin.isEmpty()) onBack() else pin = pin.dropLast(1)
                     e.key == Key.DirectionCenter || e.key == Key.Enter -> {
                         if (fixedLength == null) {
-                            if (pin.length >= PinStore.MIN_LENGTH) submit() else error = "לפחות ${PinStore.MIN_LENGTH} ספרות"
+                            if (pin.length >= PinStore.MIN_LENGTH) submit() else error = tr("לפחות {0} ספרות", PinStore.MIN_LENGTH)
                         }
                     }
                 }
@@ -407,7 +408,7 @@ private fun PinPage(
         Spacer(Modifier.height(16.dp))
         Text(error ?: "", color = Danger, fontSize = FutureTypography.summary)
         Spacer(Modifier.height(16.dp))
-        Text("חזור - מחיקה / ביטול", color = Color.White.copy(alpha = 0.45f), fontSize = FutureTypography.caption)
+        Text(tr("חזור - מחיקה / ביטול"), color = Color.White.copy(alpha = 0.45f), fontSize = FutureTypography.caption)
     }
 }
 
@@ -452,7 +453,7 @@ private fun EnrollPage(settings: LockSettings, onFinish: (Boolean) -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text("רישום פנים", color = Color.White, fontSize = FutureTypography.screenTitle, fontWeight = FontWeight.SemiBold)
+        Text(tr("רישום פנים"), color = Color.White, fontSize = FutureTypography.screenTitle, fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.height(16.dp))
         Box(
             Modifier
@@ -476,16 +477,16 @@ private fun EnrollPage(settings: LockSettings, onFinish: (Boolean) -> Unit) {
         Spacer(Modifier.height(12.dp))
         Text(
             text = error ?: when (status) {
-                FaceStatus.TOO_FAR -> "קרב את הטלפון לפנים"
-                FaceStatus.TOO_DARK -> "חשוך מדי - עבור למקום מואר"
-                FaceStatus.SCANNING -> "הזז את הראש לאט במעגל"
-                else -> "הבט במצלמה הקדמית"
+                FaceStatus.TOO_FAR -> tr("קרב את הטלפון לפנים")
+                FaceStatus.TOO_DARK -> tr("חשוך מדי - עבור למקום מואר")
+                FaceStatus.SCANNING -> tr("הזז את הראש לאט במעגל")
+                else -> tr("הבט במצלמה הקדמית")
             },
             color = if (error != null) Danger else Color.White.copy(alpha = 0.85f),
             fontSize = FutureTypography.body,
             textAlign = TextAlign.Center
         )
         Spacer(Modifier.height(20.dp))
-        Text("חזור - ביטול", color = Color.White.copy(alpha = 0.45f), fontSize = FutureTypography.caption)
+        Text(tr("חזור - ביטול"), color = Color.White.copy(alpha = 0.45f), fontSize = FutureTypography.caption)
     }
 }

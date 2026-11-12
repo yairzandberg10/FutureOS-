@@ -1,5 +1,6 @@
 package com.future.navigation.ui.saved
 
+import com.future.sharednav.i18n.tr
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.future.navigation.data.geocoding.GeocodeResult
@@ -52,16 +53,15 @@ class SavedPlacesViewModel(
         }
         searchJob = viewModelScope.launch {
             delay(500)
-            _searchResults.value = runCatching { geocodingRepository.search(query) }
-                .getOrElse { if (it is kotlinx.coroutines.CancellationException) throw it else emptyList() }
+            _searchResults.value = geocodingRepository.search(query)
         }
     }
 
     fun pickResult(result: GeocodeResult) {
         viewModelScope.launch {
             when (_editingSlot.value) {
-                EditingSlot.HOME -> repository.setHome(label = "בית", address = result.label, lat = result.location.lat, lon = result.location.lon)
-                EditingSlot.WORK -> repository.setWork(label = "עבודה", address = result.label, lat = result.location.lat, lon = result.location.lon)
+                EditingSlot.HOME -> repository.setHome(label = tr("בית"), address = result.label, lat = result.location.lat, lon = result.location.lon)
+                EditingSlot.WORK -> repository.setWork(label = tr("עבודה"), address = result.label, lat = result.location.lat, lon = result.location.lon)
                 EditingSlot.FAVORITE -> repository.addFavorite(label = result.label.substringBefore(","), address = result.label, lat = result.location.lat, lon = result.location.lon)
                 EditingSlot.NONE -> {}
             }

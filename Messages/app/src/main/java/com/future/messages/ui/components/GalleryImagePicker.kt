@@ -1,5 +1,6 @@
 package com.future.messages.ui.components
 
+import com.future.sharednav.i18n.tr
 import android.app.Activity
 import android.content.Intent
 import android.net.Uri
@@ -24,9 +25,7 @@ fun rememberGalleryImagePicker(onPicked: (Uri) -> Unit): () -> Unit {
     val context = LocalContext.current
     val currentOnPicked by rememberUpdatedState(onPicked)
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        // רק content:// שלא שייך לנו: בורר מזויף בשם החבילה של הגלריה יכל להחזיר
-        // file:// או URI של ה-FileProvider שלנו, וקובץ פרטי היה יוצא כקובץ מצורף.
-        val uri = result.data?.data?.takeIf { it.scheme == "content" && it.authority?.startsWith(context.packageName) != true }
+        val uri = result.data?.data
         if (result.resultCode == Activity.RESULT_OK && uri != null) currentOnPicked(uri)
     }
     return remember {
@@ -39,7 +38,7 @@ fun rememberGalleryImagePicker(onPicked: (Uri) -> Unit): () -> Unit {
             if (intent.resolveActivity(context.packageManager) != null) {
                 launcher.launch(intent)
             } else {
-                Toast.makeText(context, "אפליקציית הגלריה לא מותקנת", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, tr("אפליקציית הגלריה לא מותקנת"), Toast.LENGTH_SHORT).show()
             }
         }
     }

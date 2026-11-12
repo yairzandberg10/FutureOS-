@@ -1,5 +1,6 @@
 package com.future.futureui.lockscreen.logic
 
+import com.future.sharednav.i18n.tr
 import android.content.Context
 import android.content.SharedPreferences
 import android.provider.Settings
@@ -123,13 +124,13 @@ class LockSettings(context: Context) {
 
         val AUTO_LOCK_OPTIONS = listOf(0L, 5_000L, 30_000L, 60_000L, 300_000L)
         fun autoLockLabel(ms: Long): String = when (ms) {
-            0L -> "מיד"
-            5_000L -> "אחרי 5 שניות"
-            30_000L -> "אחרי 30 שניות"
-            60_000L -> "אחרי דקה"
-            else -> "אחרי 5 דקות"
+            0L -> tr("מיד")
+            5_000L -> tr("אחרי 5 שניות")
+            30_000L -> tr("אחרי 30 שניות")
+            60_000L -> tr("אחרי דקה")
+            else -> tr("אחרי 5 דקות")
         }
-        val SENSITIVITY_LABELS = listOf("מחמירה", "רגילה", "מקלה")
-        val PRIVACY_LABELS = listOf("הצג הכל", "תוכן רק אחרי זיהוי", "הסתר תוכן")
+        val SENSITIVITY_LABELS = listOf(tr("מחמירה"), tr("רגילה"), tr("מקלה"))
+        val PRIVACY_LABELS = listOf(tr("הצג הכל"), tr("תוכן רק אחרי זיהוי"), tr("הסתר תוכן"))
     }
 }

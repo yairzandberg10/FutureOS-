@@ -1,4 +1,5 @@
 package com.future.music.ui.screens
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.components.FutureListItem
 import com.future.sharednav.components.FutureAvatar
 import com.future.sharednav.theme.subtleTextColor
@@ -44,10 +45,10 @@ fun AlbumsScreen(albums: List<AlbumGroup>, theme: FutureTheme, onBack: () -> Uni
     LaunchedEffect(Unit) { runCatching { firstItemFocusRequester.requestFocus() } }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        ScreenTopBar(title = "אלבומים", theme = theme, onBack = onBack)
+        ScreenTopBar(title = tr("אלבומים"), theme = theme, onBack = onBack)
         if (albums.isEmpty()) {
             Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Text("לא נמצאו אלבומים", color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.body)
+                Text(tr("לא נמצאו אלבומים"), color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.body)
             }
         } else {
             LazyColumn(

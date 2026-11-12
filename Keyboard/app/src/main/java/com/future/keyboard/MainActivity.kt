@@ -96,7 +96,7 @@ fun KeyboardSetupScreen(onOpenInputMethodSettings: () -> Unit) {
         ActivityResultContracts.RequestPermission()
     ) { granted -> micGranted = granted }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Surface(modifier = Modifier.fillMaxSize()) {
             Column(
                 modifier = Modifier.fillMaxSize().padding(32.dp),

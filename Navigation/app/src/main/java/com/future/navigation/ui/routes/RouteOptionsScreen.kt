@@ -1,4 +1,5 @@
 package com.future.navigation.ui.routes
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.components.FutureButton
 import com.future.sharednav.components.FutureProgressBar
 import com.future.sharednav.components.FutureSpinner
@@ -103,7 +104,7 @@ fun RouteOptionsScreen(
                     // אורך ידוע (הורדה) = פס התקדמות; אורך לא ידוע (חישוב) = ספינר.
                     if (downloadFraction != null) {
                         Text(
-                            text = "מוריד נתוני תחבורה ציבורית לאזור הזה %d%%".format((downloadFraction!! * 100).toInt()),
+                            text = tr("מוריד נתוני תחבורה ציבורית לאזור הזה %d%%").format((downloadFraction!! * 100).toInt()),
                             color = theme.mutedTextColor
                         )
                         Spacer(modifier = Modifier.height(FutureDimens.spacingMd))
@@ -147,12 +148,12 @@ private fun DrivingRouteCard(route: DrivingRoute) {
             Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "%d דק׳".format((route.durationSeconds / 60).toInt()),
+                        text = tr("%d דק׳").format((route.durationSeconds / 60).toInt()),
                         fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.headlineSmall
                     )
                     Text(
-                        text = "%.1f ק״מ".format(route.distanceMeters / 1000.0),
+                        text = tr("%.1f ק״מ").format(route.distanceMeters / 1000.0),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                     )
@@ -172,13 +173,13 @@ private fun ItineraryCard(itinerary: TransitItinerary, onClick: () -> Unit, focu
         Column(modifier = Modifier.fillMaxWidth().padding(FutureDimens.spacingSm)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = "%d דק׳".format((itinerary.totalDurationSeconds / 60)),
+                    text = tr("%d דק׳").format((itinerary.totalDurationSeconds / 60)),
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.weight(1f)
                 )
                 Text(
-                    text = "הגעה " + secondsToClock(itinerary.arrivalSeconds),
+                    text = tr("הגעה ") + secondsToClock(itinerary.arrivalSeconds),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

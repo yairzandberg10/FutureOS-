@@ -1,5 +1,6 @@
 package com.future.files.ui
 
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.theme.FutureDimens
 import com.future.sharednav.theme.FutureMotion
@@ -9,7 +10,6 @@ import com.future.sharednav.theme.elevatedSurfaceColor
 import com.future.sharednav.theme.raisedSurfaceColor
 import com.future.sharednav.theme.readableAccentColor
 import com.future.sharednav.theme.onReadableAccentColor
-import com.future.sharednav.theme.mutedTextColor
 import com.future.sharednav.components.FutureSpinner
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.ui.draw.alpha
@@ -71,6 +71,8 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
+import com.future.sharednav.focus.focusMotion
+import com.future.sharednav.focus.animateFocusColor
 
 @Composable
 private fun ViewerHeader(title: String, theme: FutureTheme, onBack: () -> Unit) {
@@ -79,192 +81,86 @@ private fun ViewerHeader(title: String, theme: FutureTheme, onBack: () -> Unit) 
     com.future.sharednav.components.ScreenTopBar(title = title, textColor = theme.textColor, accentColor = theme.accentColor, onBack = onBack)
 }
 
-/** קבצי קוד - מוצגים ונערכים משמאל לימין, בגופן מונו ועם מספרי שורות. */
-private val CODE_EXTENSIONS = setOf(
-    "kt", "kts", "java", "py", "js", "ts", "json", "xml", "html", "htm", "css", "yml", "yaml", "ini", "conf",
-    "cfg", "sh", "bash", "c", "cpp", "h", "hpp", "gradle", "properties", "toml", "sql", "gitignore", "env", "bat",
-    "ps1", "rb", "pl", "md", "csv", "log",
-)
-
-fun isCodeFile(file: File): Boolean = file.extension.lowercase() in CODE_EXTENSIONS
-
-/**
- * קובץ טקסט או קוד: צפייה, ועריכה מתפריט Options ("ערוך" / "שמור").
- *
- * קוד נקרא ונערך משמאל לימין (LTR) בגופן מונו עם מספרי שורות - קוד בתוך
- * מסך RTL נשבר: סוגריים מתהפכים והזחה נדבקת לצד הלא נכון. טקסט רגיל נשאר
- * בכיוון של המסך. העריכה היא שדה הטקסט של הדיזיין סיסטם (TextArea) עם
- * המקלדת של המערכת. BACK בעריכה עם שינויים שואל לפני שהוא זורק אותם.
- */
 @Composable
-fun TextViewerScreen(file: File, theme: FutureTheme, onBack: () -> Unit, onMessage: (String) -> Unit = {}) {
+fun TextViewerScreen(file: File, theme: FutureTheme, onBack: () -> Unit) {
     var content by remember(file) { mutableStateOf<String?>(null) }
-    var truncated by remember(file) { mutableStateOf(false) }
-    var editing by remember { mutableStateOf(false) }
-    var draft by remember { mutableStateOf(androidx.compose.ui.text.input.TextFieldValue("")) }
-    var confirmDiscard by remember { mutableStateOf(false) }
-    var menuOpen by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
     val focusRequester = remember { FocusRequester() }
     val coroutineScope = rememberCoroutineScope()
-    val repository = remember { FileRepository() }
-    val code = remember(file) { isCodeFile(file) }
-    val dirty = editing && draft.text != content
 
     LaunchedEffect(file) {
         content = withContext(Dispatchers.IO) {
             try {
                 val maxBytes = 300_000L
                 if (file.length() > maxBytes) {
-                    truncated = true
-                    file.readText().take(maxBytes.toInt())
+                    file.inputStream().use { input ->
+                        val buf = ByteArray(maxBytes.toInt())
+                        String(buf, 0, input.read(buf).coerceAtLeast(0), Charsets.UTF_8)
+                    } + tr("\n\nהקובץ נחתך כי הוא גדול מדי להצגה מלאה")
                 } else {
                     file.readText()
                 }
             } catch (e: Exception) {
-                null
+                tr("לא ניתן לקרוא את הקובץ")
             }
         }
     }
     // בלי זה אין שום רכיב פוקוסבילי במסך הזה, ולכן אין דרך במקלדת/D-pad לגלול
     // קובץ טקסט שחורג מגובה המסך - dead end מוחלט למשתמש בלי מסך מגע.
-    LaunchedEffect(editing) { if (!editing) runCatching { focusRequester.requestFocus() } }
+    LaunchedEffect(Unit) { focusRequester.requestFocus() }
 
-    fun startEditing() {
-        val text = content ?: return onMessage("לא ניתן לקרוא את הקובץ")
-        if (truncated) return onMessage("הקובץ גדול מדי לעריכה")
-        draft = androidx.compose.ui.text.input.TextFieldValue(text)
-        editing = true
-    }
-
-    fun save() {
-        val text = draft.text
-        coroutineScope.launch {
-            val ok = withContext(Dispatchers.IO) { repository.saveText(file, text) }
-            if (ok) {
-                content = text
-                editing = false
-                onMessage("נשמר")
-            } else {
-                onMessage("לא ניתן לשמור את הקובץ")
-            }
-        }
-    }
-
-    com.future.sharednav.nav.onOptionsKeyPress { menuOpen = true }
-    androidx.activity.compose.BackHandler(enabled = editing) {
-        if (dirty) confirmDiscard = true else editing = false
-    }
-
-    val contentDirection = if (code) LayoutDirection.Ltr else LayoutDirection.Rtl
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Column(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
-            ViewerHeader(if (dirty) "${file.name} *" else file.name, theme, onBack = { if (!editing) onBack() })
-            if (com.future.files.data.isScript(file) && !editing) {
+            ViewerHeader(file.name, theme, onBack)
+            // סקריפט (sh, py, bat...) מוצג כטקסט לקריאה בלבד - קבצים לא מריצים
+            // קוד. להרצה יש את הטרמינל, בפעולה מודעת של המשתמש.
+            if (com.future.files.data.isScript(file)) {
                 Text(
-                    "סקריפט · נערך כאן, לא מורץ",
+                    tr("סקריפט · מוצג לקריאה בלבד, לא מורץ"),
                     color = theme.warningColor,
                     fontSize = FutureTypography.summary,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                 )
             }
-            CompositionLocalProvider(LocalLayoutDirection provides contentDirection) {
-                if (editing) {
-                    com.future.sharednav.components.FutureTextField(
-                        value = draft,
-                        onValueChange = { draft = it },
-                        theme = theme,
-                        singleLine = false,
-                        autoFocus = true,
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth()
-                            .padding(horizontal = FutureDimens.screenPadding, vertical = FutureDimens.spacingSm),
-                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                            autoCorrectEnabled = false,
-                            capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.None,
-                        ),
-                    )
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth()
-                            .verticalScroll(scrollState)
-                            .focusRequester(focusRequester)
-                            .focusable().bringIntoViewOnFocus()
-                            .onKeyEvent { event ->
-                                if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
-                                val step = 400f
-                                when (event.key) {
-                                    Key.DirectionDown -> {
-                                        coroutineScope.launch { scrollState.animateScrollBy(step) }
-                                        true
-                                    }
-                                    Key.DirectionUp -> {
-                                        coroutineScope.launch { scrollState.animateScrollBy(-step) }
-                                        true
-                                    }
-                                    // OK פותח עריכה - הדרך הקצרה, בלי לפתוח תפריט.
-                                    Key.DirectionCenter, Key.Enter -> { startEditing(); true }
-                                    else -> false
-                                }
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .verticalScroll(scrollState)
+                    .focusRequester(focusRequester)
+                    .focusable().bringIntoViewOnFocus()
+                    .onKeyEvent { event ->
+                        if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
+                        val step = 400f
+                        when (event.key) {
+                            Key.DirectionDown -> {
+                                coroutineScope.launch { scrollState.animateScrollBy(step) }
+                                true
                             }
-                            .padding(16.dp)
-                    ) {
-                        val text = content
-                        when {
-                            text == null -> Text("טוען", color = theme.mutedTextColor, fontSize = FutureTypography.summary)
-                            code -> Row {
-                                val lines = text.lines()
-                                Text(
-                                    (1..lines.size).joinToString("\n"),
-                                    color = theme.textColor.copy(alpha = 0.3f),
-                                    fontSize = FutureTypography.summary,
-                                    fontFamily = FontFamily.Monospace,
-                                    textAlign = androidx.compose.ui.text.style.TextAlign.End,
-                                    modifier = Modifier.padding(end = FutureDimens.spacingSm),
-                                )
-                                Text(text, color = theme.textColor, fontSize = FutureTypography.summary, fontFamily = FontFamily.Monospace)
+                            Key.DirectionUp -> {
+                                coroutineScope.launch { scrollState.animateScrollBy(-step) }
+                                true
                             }
-                            else -> Text(text, color = theme.textColor, fontSize = FutureTypography.summary, fontFamily = FontFamily.Monospace)
+                            else -> false
                         }
                     }
-                }
+                    .padding(16.dp)
+            ) {
+                Text(
+                    text = content ?: tr("טוען"),
+                    color = theme.textColor,
+                    fontSize = FutureTypography.summary,
+                    fontFamily = FontFamily.Monospace,
+                    modifier = Modifier.align(Alignment.TopStart)
+                )
             }
         }
-    }
-
-    if (menuOpen) {
-        com.future.sharednav.components.FutureOptionsMenu(theme = theme, onDismissRequest = { menuOpen = false }, header = file.name) {
-            if (editing) {
-                com.future.sharednav.components.FutureMenuRow("שמור", FutureIcons.Save, theme, { menuOpen = false; save() })
-                com.future.sharednav.components.FutureMenuRow("בטל שינויים", FutureIcons.Close, theme, { menuOpen = false; editing = false })
-            } else {
-                com.future.sharednav.components.FutureMenuRow("ערוך", FutureIcons.Edit, theme, { menuOpen = false; startEditing() })
-            }
-        }
-    }
-    if (confirmDiscard) {
-        com.future.sharednav.components.ConfirmDialog(
-            message = "לצאת בלי לשמור?",
-            theme = theme,
-            confirmLabel = "צא",
-            onCancel = { confirmDiscard = false },
-            onConfirm = { confirmDiscard = false; editing = false },
-        )
     }
 }
 
-/**
- * תמונה במסך מלא. OK (או "פתח בגלריה" בתפריט הקבצים) פותח אותה בגלריה,
- * שם יש זום, מעבר בין תמונות ושיתוף.
- */
 @Composable
-fun ImageFileViewerScreen(file: File, theme: FutureTheme, onBack: () -> Unit, onOpenInGallery: () -> Unit = {}) {
+fun ImageFileViewerScreen(file: File, theme: FutureTheme, onBack: () -> Unit) {
     var bitmap by remember(file) { mutableStateOf<Bitmap?>(null) }
-    val focus = remember { FocusRequester() }
-    LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
 
     LaunchedEffect(file) {
         bitmap = withContext(Dispatchers.IO) {
@@ -276,19 +172,8 @@ fun ImageFileViewerScreen(file: File, theme: FutureTheme, onBack: () -> Unit, on
         }
     }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black)
-                .focusRequester(focus)
-                .focusable()
-                .onKeyEvent { event ->
-                    if (event.type == KeyEventType.KeyUp && (event.key == Key.DirectionCenter || event.key == Key.Enter)) {
-                        onOpenInGallery(); true
-                    } else false
-                }
-        ) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
+        Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
             bitmap?.let {
                 Image(
                     bitmap = it.asImageBitmap(),
@@ -297,17 +182,6 @@ fun ImageFileViewerScreen(file: File, theme: FutureTheme, onBack: () -> Unit, on
                     contentScale = ContentScale.Fit
                 )
             }
-            Text(
-                "OK · פתח בגלריה",
-                color = Color.White,
-                fontSize = FutureTypography.summary,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = FutureDimens.spacingLg)
-                    .clip(FutureShapes.pill)
-                    .background(theme.scrimColor)
-                    .padding(horizontal = FutureDimens.spacingMd, vertical = 6.dp),
-            )
             // אין כפתור חזרה מעל התמונה - מקש BACK הפיזי חוזר.
             androidx.activity.compose.BackHandler(onBack = onBack)
         }
@@ -330,6 +204,7 @@ private fun ViewerBackChip(theme: FutureTheme, onBack: () -> Unit) {
     Box(
         modifier = Modifier
             .size(FutureDimens.rowHeightTopBarButton)
+            .focusMotion(interactionSource, focusedScale = 1.1f)
             .clip(FutureShapes.pill)
             .background(bgColor)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onBack)
@@ -338,8 +213,8 @@ private fun ViewerBackChip(theme: FutureTheme, onBack: () -> Unit) {
     ) {
         Icon(
             FutureIcons.AutoMirrored.ArrowBack,
-            contentDescription = "חזור",
-            tint = if (isFocused) FutureContrast.onColor(theme.accentColor) else Color.White,
+            contentDescription = tr("חזור"),
+            tint = animateFocusColor(isFocused, FutureContrast.onColor(theme.accentColor), Color.White).value,
             modifier = Modifier.size(FutureDimens.iconTopBar),
         )
     }
@@ -366,13 +241,13 @@ fun AudioPlayerScreen(file: File, theme: FutureTheme, onBack: () -> Unit) {
             player.setOnCompletionListener { isPlaying = false }
             player.setOnErrorListener { _, _, _ ->
                 loadFailed = true
-                android.widget.Toast.makeText(context, "לא ניתן לנגן קובץ זה", android.widget.Toast.LENGTH_SHORT).show()
+                android.widget.Toast.makeText(context, tr("לא ניתן לנגן קובץ זה"), android.widget.Toast.LENGTH_SHORT).show()
                 true
             }
             player.prepareAsync()
         } catch (e: Exception) {
             loadFailed = true
-            android.widget.Toast.makeText(context, "לא ניתן לנגן קובץ זה", android.widget.Toast.LENGTH_SHORT).show()
+            android.widget.Toast.makeText(context, tr("לא ניתן לנגן קובץ זה"), android.widget.Toast.LENGTH_SHORT).show()
         }
         onDispose {
             player.release()
@@ -386,7 +261,7 @@ fun AudioPlayerScreen(file: File, theme: FutureTheme, onBack: () -> Unit) {
         }
     }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Column(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
             ViewerHeader(file.name, theme, onBack)
             Column(
@@ -420,7 +295,7 @@ fun AudioPlayerScreen(file: File, theme: FutureTheme, onBack: () -> Unit) {
                     ) {
                         Icon(
                             if (isPlaying) FutureIcons.Pause else FutureIcons.PlayArrow,
-                            contentDescription = if (isPlaying) "השהה" else "נגן",
+                            contentDescription = if (isPlaying) tr("השהה") else tr("נגן"),
                             tint = theme.onReadableAccentColor,
                             modifier = Modifier.size(32.dp)
                         )
@@ -430,7 +305,7 @@ fun AudioPlayerScreen(file: File, theme: FutureTheme, onBack: () -> Unit) {
                 Text(file.name, color = theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.SemiBold, maxLines = 2)
                 Spacer(modifier = Modifier.height(12.dp))
                 if (loadFailed) {
-                    Text("לא ניתן לנגן קובץ זה", color = theme.dangerColor, fontSize = FutureTypography.summary)
+                    Text(tr("לא ניתן לנגן קובץ זה"), color = theme.dangerColor, fontSize = FutureTypography.summary)
                 }
                 if (durationMs > 0) {
                     val progress = (positionMs.toFloat() / durationMs).coerceIn(0f, 1f)
@@ -465,8 +340,8 @@ fun PdfViewerScreen(file: File, theme: FutureTheme, onBack: () -> Unit) {
 
     DisposableEffect(file) {
         onDispose {
-            rendererRef.value?.close()
-            pfdRef.value?.close()
+            runCatching { rendererRef.value?.close() }
+            runCatching { pfdRef.value?.close() }
         }
     }
 
@@ -511,15 +386,15 @@ fun PdfViewerScreen(file: File, theme: FutureTheme, onBack: () -> Unit) {
     // PDF מרובה-עמודים - רק העמוד הראשון (הגלוי מיד) היה נגיש בפועל.
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Column(modifier = Modifier.fillMaxSize().background(theme.raisedSurfaceColor)) {
             ViewerHeader(file.name, theme, onBack)
             when {
                 isLoading -> Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    FutureSpinner(theme = theme, label = "טוען PDF")
+                    FutureSpinner(theme = theme, label = tr("טוען PDF"))
                 }
                 loadFailed || pageCount == 0 -> Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    Text("לא ניתן להציג את הקובץ", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.summary)
+                    Text(tr("לא ניתן להציג את הקובץ"), color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.summary)
                 }
                 else -> LazyColumn(
                     state = listState,
@@ -563,6 +438,89 @@ fun PdfViewerScreen(file: File, theme: FutureTheme, onBack: () -> Unit) {
                         } else {
                             Box(modifier = Modifier.fillMaxWidth().height(280.dp).background(theme.elevatedSurfaceColor))
                         }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * נגן וידאו בתוך הקבצים - הגלריה כבר לא מנגנת וידאו, ולא היה במכשיר מי
+ * שיפתח סרטון. OK - הפעלה/השהיה, ימינה/שמאלה - 10 שניות אחורה/קדימה (RTL:
+ * שמאלה היא קדימה), BACK - חזרה.
+ */
+@Composable
+fun VideoPlayerScreen(file: File, theme: FutureTheme, onBack: () -> Unit) {
+    var view by remember { mutableStateOf<android.widget.VideoView?>(null) }
+    var playing by remember { mutableStateOf(true) }
+    var position by remember { mutableIntStateOf(0) }
+    var duration by remember { mutableIntStateOf(0) }
+    var failed by remember { mutableStateOf(false) }
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
+    LaunchedEffect(view) {
+        while (view != null) {
+            view?.let {
+                position = it.currentPosition
+                if (it.duration > 0) duration = it.duration
+            }
+            kotlinx.coroutines.delay(250)
+        }
+    }
+    DisposableEffect(Unit) { onDispose { view?.stopPlayback() } }
+    androidx.activity.compose.BackHandler(onBack = onBack)
+
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black)
+                .focusRequester(focus)
+                .focusable()
+                .onKeyEvent { event ->
+                    if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
+                    val v = view ?: return@onKeyEvent false
+                    when (event.key) {
+                        Key.DirectionCenter, Key.Enter -> {
+                            if (v.isPlaying) v.pause() else v.start()
+                            playing = v.isPlaying
+                            true
+                        }
+                        Key.DirectionLeft -> { v.seekTo((v.currentPosition + 10_000).coerceAtMost(maxOf(0, v.duration))); true }
+                        Key.DirectionRight -> { v.seekTo((v.currentPosition - 10_000).coerceAtLeast(0)); true }
+                        else -> false
+                    }
+                },
+            contentAlignment = Alignment.Center,
+        ) {
+            androidx.compose.ui.viewinterop.AndroidView(
+                modifier = Modifier.fillMaxWidth(),
+                factory = { ctx ->
+                    android.widget.VideoView(ctx).apply {
+                        setVideoURI(android.net.Uri.fromFile(file))
+                        setOnPreparedListener { it.start(); playing = true }
+                        setOnCompletionListener { playing = false }
+                        setOnErrorListener { _, _, _ -> failed = true; true }
+                        view = this
+                    }
+                },
+            )
+            if (failed) {
+                Text(tr("לא ניתן לנגן את הסרטון"), color = Color.White.copy(alpha = 0.7f), fontSize = FutureTypography.body)
+            }
+            Column(
+                modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                com.future.sharednav.components.FutureProgressBar(
+                    progress = if (duration > 0) position.toFloat() / duration else 0f,
+                    theme = com.future.sharednav.theme.FutureTheme(isDarkMode = true, accentColor = theme.accentColor),
+                )
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(if (playing) file.nameWithoutExtension else tr("מושהה"), color = Color.White, fontSize = FutureTypography.summary, maxLines = 1, modifier = Modifier.weight(1f))
+                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                        Text("${formatMs(position)} / ${formatMs(duration)}", color = Color.White.copy(alpha = 0.7f), fontSize = FutureTypography.summary)
                     }
                 }
             }

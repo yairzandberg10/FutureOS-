@@ -1,5 +1,6 @@
 package com.future.terminal
 
+import com.future.sharednav.i18n.tr
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import kotlinx.coroutines.async
@@ -42,14 +43,14 @@ class ShellSession {
             val exit = proc.waitFor()
             val text = out + err
             when {
-                cancelled -> text + "^C (בוטל)"
+                cancelled -> text + tr("^C (בוטל)")
                 // פקודה שנכשלה בלי שום פלט (למשל `test -f x`) נראתה בדיוק כמו פקודה
                 // שהצליחה - קוד היציאה הוא המידע היחיד שיש.
-                exit != 0 && text.isBlank() -> "[קוד יציאה $exit]"
+                exit != 0 && text.isBlank() -> tr("[קוד יציאה {0}]", exit)
                 else -> text
             }
         } catch (e: Exception) {
-            if (cancelled) "^C (בוטל)" else "שגיאה: ${e.message}"
+            if (cancelled) tr("^C (בוטל)") else tr("שגיאה: {0}", e.message)
         } finally {
             currentProcess = null
         }

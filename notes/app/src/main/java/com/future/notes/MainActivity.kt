@@ -1,5 +1,6 @@
 package com.future.notes
 
+import com.future.sharednav.i18n.tr
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
@@ -70,13 +71,11 @@ class MainActivity : ComponentActivity() {
                 LaunchedEffect(pendingShare) {
                     val share = pendingShare ?: return@LaunchedEffect
                     pendingShare = null
-                    // כל אפליקציה יכולה לשתף לכאן - פתק נשמר מיד, אז אורך סביר בלבד
-                    // (מגה-בייטים של טקסט היו נשמרים ומאטים את כל רשימת הפתקים)
-                    val text = runCatching { share.getStringExtra(Intent.EXTRA_TEXT) }.getOrNull().orEmpty().take(100_000)
+                    val text = share.getStringExtra(Intent.EXTRA_TEXT).orEmpty()
                     if (text.isNotBlank()) {
                         val parsed = NoteShare.parse(text, share.getStringExtra(Intent.EXTRA_SUBJECT))
                         viewModel.importShared(parsed.title, parsed.content, parsed.isChecklist)
-                        Toast.makeText(this@MainActivity, "הפתק נשמר", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@MainActivity, tr("הפתק נשמר"), Toast.LENGTH_SHORT).show()
                     }
                 }
 

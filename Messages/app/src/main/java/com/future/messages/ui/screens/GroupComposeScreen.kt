@@ -1,4 +1,5 @@
 package com.future.messages.ui.screens
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.systemui.StatusBarInset
 
 import com.future.sharednav.icons.FutureIcons
@@ -86,7 +87,7 @@ fun GroupComposeScreen(
         }
     }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         // ראו MessageThreadScreen: edge-to-edge מנטרל את adjustResize, ובלי
         // imePadding שדה החיפוש/הנמען נחבא מתחת למקלדת. background לפני
         // imePadding כדי שהרקע ימלא גם את השטח שמאחורי המקלדת.
@@ -96,10 +97,10 @@ fun GroupComposeScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("הודעה קבוצתית", color = theme.textColor, fontWeight = FontWeight.Bold, fontSize = FutureTypography.screenTitle)
+                    Text(tr("הודעה קבוצתית"), color = theme.textColor, fontWeight = FontWeight.Bold, fontSize = FutureTypography.screenTitle)
                     if (selectedContacts.isNotEmpty()) {
                         Text(
-                            "${selectedContacts.size} נבחרו",
+                            tr("{0} נבחרו", selectedContacts.size),
                             color = theme.mutedTextColor,
                             fontSize = FutureTypography.summary
                         )
@@ -111,7 +112,7 @@ fun GroupComposeScreen(
                 value = query,
                 onValueChange = { query = it },
                 theme = theme,
-                placeholder = "חיפוש איש קשר",
+                placeholder = tr("חיפוש איש קשר"),
                 focusRequester = queryFocusRequester,
                 modifier = Modifier.escapeTextFieldFocusTrap().fillMaxWidth().padding(horizontal = FutureDimens.screenPadding),
             )
@@ -121,7 +122,7 @@ fun GroupComposeScreen(
             if (filteredContacts.isEmpty()) {
                 EmptyState(
                     icon = FutureIcons.Person,
-                    title = "אין אנשי קשר",
+                    title = tr("אין אנשי קשר"),
                     textColor = theme.textColor,
                     modifier = Modifier.weight(1f),
                 )
@@ -154,7 +155,7 @@ fun GroupComposeScreen(
                     value = messageText,
                     onValueChange = { messageText = it },
                     theme = theme,
-                    placeholder = "הודעה לכל הנבחרים",
+                    placeholder = tr("הודעה לכל הנבחרים"),
                     singleLine = false,
                     maxLines = 4,
                     modifier = Modifier.weight(1f),
@@ -185,5 +186,5 @@ private fun GroupContactRow(contact: Contact, isSelected: Boolean, theme: Future
 
 @Composable
 private fun GroupSendButton(theme: FutureTheme, enabled: Boolean, onClick: () -> Unit) {
-    TopBarIconButton(FutureIcons.AutoMirrored.Send, "שלח לכולם", theme.textColor, theme.accentColor, onClick, enabled = enabled)
+    TopBarIconButton(FutureIcons.AutoMirrored.Send, tr("שלח לכולם"), theme.textColor, theme.accentColor, onClick, enabled = enabled)
 }

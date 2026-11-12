@@ -1,5 +1,6 @@
 package com.future.flashlight.ui
 
+import com.future.sharednav.i18n.tr
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -36,9 +37,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import com.future.flashlight.data.FlashlightController
 import com.future.flashlight.data.TorchService
-import com.future.sharednav.components.FutureRoundCapsule
-import com.future.sharednav.icons.FutureIcons
-import androidx.compose.ui.unit.dp
+import com.future.sharednav.components.FutureButton
 import com.future.sharednav.components.ScreenTopBar
 import com.future.sharednav.theme.FutureTheme
 import com.future.sharednav.theme.FutureTypography
@@ -65,7 +64,7 @@ fun FlashlightScreen(theme: FutureTheme) {
     DisposableEffect(Unit) {
         val stop = controller.observe { on, available ->
             isOn = on
-            errorMessage = if (!available) "הפנס לא זמין כשהמצלמה פתוחה" else null
+            errorMessage = if (!available) tr("הפנס לא זמין כשהמצלמה פתוחה") else null
         }
         onDispose { stop() }
     }
@@ -75,7 +74,7 @@ fun FlashlightScreen(theme: FutureTheme) {
     val focusRequester = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { focusRequester.requestFocus() } }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         BoxWithConstraints(modifier = Modifier.fillMaxSize().background(Color.Black)) {
             val u = maxWidth / DESIGN_W
             val v = maxHeight / DESIGN_H
@@ -95,42 +94,35 @@ fun FlashlightScreen(theme: FutureTheme) {
                 }
             }
 
-            ScreenTopBar(title = "פנס", textColor = dark.textColor, accentColor = dark.accentColor, onBack = null)
+            ScreenTopBar(title = tr("פנס"), textColor = dark.textColor, accentColor = dark.accentColor, onBack = null)
 
             Column(
-                modifier = Modifier.offset(y = v * 700).fillMaxWidth(),
+                modifier = Modifier.offset(y = v * 772).fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(v * 20),
             ) {
                 if (!hasFlash) {
-                    Text("לא נמצא פנס במכשיר הזה", color = dark.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.body, textAlign = TextAlign.Center)
+                    Text(tr("לא נמצא פנס במכשיר הזה"), color = dark.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.body, textAlign = TextAlign.Center)
                 } else {
                     Text(
-                        errorMessage ?: if (isOn) "דלוק" else "כבוי",
+                        errorMessage ?: if (isOn) tr("דלוק") else tr("כבוי"),
                         color = if (errorMessage != null) dark.dangerColor else dark.textColor.copy(alpha = 0.6f),
                         fontSize = FutureTypography.body,
                         textAlign = TextAlign.Center,
                     )
-                    // כפתור הדלקה/כיבוי עגול - FutureRoundCapsule של הדיזיין סיסטם (Capsule.jsx,
-                    // round): 8% מילוי כשכבוי, 20% הדגשה ואייקון בהדגשה כשדולק, טבעת 2dp בפוקוס.
-                    // הדלקה דרך שירות קדמי - כך הפנס נשאר דלוק גם כשהמסך נכבה/ננעל.
-                    FutureRoundCapsule(
-                        icon = FutureIcons.PowerSettingsNew,
+                    FutureButton(
+                        text = if (isOn) tr("כבה פנס") else tr("הדלק פנס"),
                         theme = dark,
+                        // הדלקה דרך שירות קדמי - כך הפנס נשאר דלוק גם כשהמסך נכבה/ננעל.
                         onClick = { if (isOn) TorchService.turnOff(context) else TorchService.turnOn(context) },
-                        active = isOn,
-                        size = PowerButtonSize,
-                        contentDescription = if (isOn) "כבה פנס" else "הדלק פנס",
                         focusRequester = focusRequester,
+                        modifier = Modifier.width(u * 320),
                     )
                 }
             }
         }
     }
 }
-
-/** 80dp - כפתור ההדלקה העגול (160px על המסך). */
-private val PowerButtonSize = 80.dp
 
 @Composable
 private fun DesignLayer(modifier: Modifier, draw: DrawScope.() -> Unit) {

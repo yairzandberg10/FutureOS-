@@ -1,5 +1,6 @@
 package com.future.navigation.data.gtfs
 
+import com.future.sharednav.i18n.tr
 import android.content.Context
 import com.future.navigation.data.backend.TransitBundleSource
 import kotlinx.coroutines.Dispatchers
@@ -12,7 +13,7 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 
 private fun ZipFile.requiredEntry(name: String): ZipEntry =
-    getEntry(name) ?: throw IllegalStateException("קובץ $name חסר בתוך ה-GTFS שהתקבל")
+    getEntry(name) ?: throw IllegalStateException(tr("קובץ {0} חסר בתוך ה-GTFS שהתקבל", name))
 
 enum class ImportPhase { DOWNLOADING, PARSING_STOPS, PARSING_STOP_TIMES, PARSING_TRIPS, PARSING_ROUTES, PARSING_CALENDAR, DONE, ERROR }
 
@@ -63,7 +64,7 @@ class GtfsImporter(private val database: GtfsDatabase) {
                 emit(ImportProgress(ImportPhase.DOWNLOADING, fraction))
             }
         } catch (e: Exception) {
-            emit(ImportProgress(ImportPhase.ERROR, 0f, error = e.message ?: "שגיאת הורדה"))
+            emit(ImportProgress(ImportPhase.ERROR, 0f, error = e.message ?: tr("שגיאת הורדה")))
             return@flow
         }
 
@@ -206,7 +207,7 @@ class GtfsImporter(private val database: GtfsDatabase) {
             zipFile.delete()
             emit(ImportProgress(ImportPhase.DONE, 1f))
         } catch (e: Exception) {
-            emit(ImportProgress(ImportPhase.ERROR, 0f, error = e.message ?: "שגיאת ייבוא"))
+            emit(ImportProgress(ImportPhase.ERROR, 0f, error = e.message ?: tr("שגיאת ייבוא")))
         }
     }.flowOn(Dispatchers.IO)
 
@@ -215,11 +216,11 @@ class GtfsImporter(private val database: GtfsDatabase) {
         val response = client.newCall(request).execute()
         if (!response.isSuccessful) {
             response.close()
-            throw IllegalStateException("הורדת קובץ ה-GTFS נכשלה: ${response.code}")
+            throw IllegalStateException(tr("הורדת קובץ ה-GTFS נכשלה: {0}", response.code))
         }
         val body = response.body ?: run {
             response.close()
-            throw IllegalStateException("תשובה ריקה מהשרת")
+            throw IllegalStateException(tr("תשובה ריקה מהשרת"))
         }
 
         val totalBytes = body.contentLength()

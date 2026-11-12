@@ -1,5 +1,6 @@
 package com.android.sistemui.share
 
+import com.future.sharednav.i18n.tr
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.ComponentName
@@ -100,45 +101,19 @@ class ShareActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // החלון חשוף לכל אפליקציה: Intent פנימי עם Parcelable לא מוכר זורק כבר
-        // בפריסה. רץ בתהליך נפרד (:share) - קריסה כאן לא מפילה את שורת המצב ואת
-        // מסך הנעילה - ובכל זאת נסגרים בשקט במקום לקרוס.
         @Suppress("DEPRECATION")
-        val send: Intent? = runCatching { intent.getParcelableExtra<Intent>(Intent.EXTRA_INTENT) }.getOrNull()
-        // החלון חשוף לכל אפליקציה - מקבלים רק שיתוף אמיתי, לא Intent שרירותי
-        // שיופעל בשם FutureUI.
-        if (send == null || send.action != Intent.ACTION_SEND && send.action != Intent.ACTION_SEND_MULTIPLE) {
+        val send: Intent? = intent.getParcelableExtra(Intent.EXTRA_INTENT)
+        if (send == null) {
             finish()
             return
         }
-        // קבצים עוברים הלאה רק אם השולח עצמו נתן לנו גישה אליהם (ClipData של החלון
-        // עם FLAG_GRANT_READ - כך FutureShare שולח). בלי זה, אפליקציה זרה יכלה לבקש
-        // "שתף את content://media/..." ולקבל לעצמה גישה לקבצים דרך ההרשאות של
-        // FutureUI (READ_EXTERNAL_STORAGE), שלה עצמה אין.
-        if (runCatching { !streamsGrantedByCaller(send) }.getOrDefault(true)) {
-            finish()
-            return
-        }
-        val title = intent.getStringExtra(Intent.EXTRA_TITLE) ?: "שיתוף"
+        val title = intent.getStringExtra(Intent.EXTRA_TITLE) ?: tr("שיתוף")
         val summary = describe(send)
         val quick = buildQuickActions(send)
         val apps = buildAppTargets(send)
         setContent {
             FutureUITheme { ShareSheet(title, summary, quick, apps, onClose = { finish() }) }
         }
-    }
-
-    private fun streamsGrantedByCaller(send: Intent): Boolean {
-        @Suppress("DEPRECATION")
-        val streams: List<Uri> = send.getParcelableArrayListExtra<Uri>(Intent.EXTRA_STREAM)
-            ?: listOfNotNull(runCatching { send.getParcelableExtra<Uri>(Intent.EXTRA_STREAM) }.getOrNull())
-        val inner = send.clipData
-        val innerUris = if (inner == null) emptyList() else (0 until inner.itemCount).mapNotNull { inner.getItemAt(it).uri }
-        val all = streams + innerUris
-        if (all.isEmpty()) return true
-        val granted = intent.clipData?.let { clip -> (0 until clip.itemCount).mapNotNull { clip.getItemAt(it).uri } }.orEmpty().toSet()
-        if (intent.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION == 0) return false
-        return all.all { it.scheme == "content" && it in granted }
     }
 
     /** שורה אחת שאומרת מה משותף: תחילת הטקסט, שם הקובץ, או מספר הפריטים. */
@@ -148,7 +123,7 @@ class ShareActivity : ComponentActivity() {
         }
         @Suppress("DEPRECATION")
         val many: ArrayList<Uri>? = send.getParcelableArrayListExtra(Intent.EXTRA_STREAM)
-        if (!many.isNullOrEmpty()) return "${many.size} פריטים"
+        if (!many.isNullOrEmpty()) return tr("{0} פריטים", many.size)
         @Suppress("DEPRECATION")
         val one: Uri? = send.getParcelableExtra(Intent.EXTRA_STREAM)
         if (one != null) {
@@ -158,9 +133,9 @@ class ShareActivity : ComponentActivity() {
                 }
             }.getOrNull()
             return name ?: when {
-                send.type?.startsWith("image/") == true -> "תמונה"
-                send.type?.startsWith("audio/") == true -> "קובץ שמע"
-                else -> "קובץ"
+                send.type?.startsWith("image/") == true -> tr("תמונה")
+                send.type?.startsWith("audio/") == true -> tr("קובץ שמע")
+                else -> tr("קובץ")
             }
         }
         return null
@@ -170,10 +145,10 @@ class ShareActivity : ComponentActivity() {
         val text = send.getCharSequenceExtra(Intent.EXTRA_TEXT)
         if (text.isNullOrBlank()) return emptyList()
         return listOf(
-            Target("copy", "העתקה", null, FutureIcons.ContentCopy) {
+            Target("copy", tr("העתקה"), null, FutureIcons.ContentCopy) {
                 (getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
                     .setPrimaryClip(ClipData.newPlainText("text", text))
-                Toast.makeText(this, "הועתק", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, tr("הועתק"), Toast.LENGTH_SHORT).show()
                 finish()
             }
         )
@@ -195,17 +170,15 @@ class ShareActivity : ComponentActivity() {
                 glyph = null,
                 run = {
                     prefs.edit().putLong(key, System.currentTimeMillis()).apply()
-                    val out = Intent(send).setComponent(component)
-                    out.selector = null
-                    // רק קריאה עוברת הלאה ליעד (ה-ClipData הגיע עם החלון) - לא כתיבה ולא
-                    // הרשאה קבועה שהשולח ניסה להבריח בדגלים של ה-Intent הפנימי.
+                    val out = Intent(send).setComponent(component).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    // הרשאת הקריאה לקובץ עוברת הלאה ליעד (ה-ClipData הגיע עם החלון).
                     intent.clipData?.let { out.clipData = it }
-                    out.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    out.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                     try {
                         startActivity(out)
                     } catch (e: Exception) {
                         android.util.Log.w("ShareActivity", "share to $key failed", e)
-                        Toast.makeText(this, "לא ניתן לשתף אל $label", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, tr("לא ניתן לשתף אל {0}", label), Toast.LENGTH_SHORT).show()
                     }
                     finish()
                 },
@@ -250,7 +223,7 @@ class ShareActivity : ComponentActivity() {
             }
         }
 
-        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+        CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -330,7 +303,7 @@ class ShareActivity : ComponentActivity() {
 
                         if (apps.isEmpty()) {
                             Text(
-                                "אין אפליקציות שיכולות לקבל את התוכן הזה",
+                                tr("אין אפליקציות שיכולות לקבל את התוכן הזה"),
                                 color = Color.White.copy(alpha = 0.55f),
                                 fontSize = FutureTypography.body,
                                 modifier = Modifier.padding(20.dp),

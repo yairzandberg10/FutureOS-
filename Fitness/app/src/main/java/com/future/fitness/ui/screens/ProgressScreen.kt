@@ -1,5 +1,6 @@
 package com.future.fitness.ui.screens
 
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.theme.elevatedSurfaceColor
@@ -99,8 +100,8 @@ fun ProgressScreen(
 
     Column(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 20.dp)) {
-            Text("סקירה ואנליטיקה", color = theme.sectionHeaderColor, fontSize = FutureTypography.label, fontWeight = FontWeight.Bold)
-            Text("התקדמות", color = theme.textColor, fontSize = FutureTypography.headline, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 2.dp))
+            Text(tr("סקירה ואנליטיקה"), color = theme.sectionHeaderColor, fontSize = FutureTypography.label, fontWeight = FontWeight.Bold)
+            Text(tr("התקדמות"), color = theme.textColor, fontSize = FutureTypography.headline, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 2.dp))
         }
 
         LazyColumn(
@@ -130,9 +131,9 @@ fun ProgressScreen(
                     modifier = Modifier.fillMaxWidth().background(theme.surfaceColor, FutureShapes.xl).padding(16.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    SummaryStat(monthWorkouts.toString(), "אימונים החודש", theme)
-                    SummaryStat("$totalCalories", "קק״ל סה״כ", theme)
-                    SummaryStat(stats.streakDays.toString(), "ימי רצף", theme)
+                    SummaryStat(monthWorkouts.toString(), tr("אימונים החודש"), theme)
+                    SummaryStat("$totalCalories", tr("קק״ל סה״כ"), theme)
+                    SummaryStat(stats.streakDays.toString(), tr("ימי רצף"), theme)
                 }
             }
 
@@ -143,7 +144,7 @@ fun ProgressScreen(
                         .background(theme.surfaceColor, FutureShapes.xl)
                         .padding(18.dp),
                 ) {
-                    Text("עומס שבועי (דקות)", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.summary, fontWeight = FontWeight.Bold)
+                    Text(tr("עומס שבועי (דקות)"), color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.summary, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(14.dp))
                     Row(modifier = Modifier.fillMaxWidth().height(110.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         weekBars.forEach { bar ->
@@ -176,9 +177,9 @@ fun ProgressScreen(
                         Row {
                             Icon(FutureIcons.EmojiEvents, contentDescription = null, tint = theme.dangerColor, modifier = Modifier.size(20.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text("שיאים אישיים", color = theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Bold)
+                            Text(tr("שיאים אישיים"), color = theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Bold)
                         }
-                        Text("${records.size} נקודות ציון", color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.label)
+                        Text(tr("{0} נקודות ציון", records.size), color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.label)
                     }
                 }
                 items(records.size) { index ->
@@ -219,8 +220,8 @@ fun ProgressScreen(
                     }
                     Spacer(Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("יעד הבא: $nextMilestone אימונים", color = theme.textColor, fontSize = FutureTypography.body, fontWeight = FontWeight.SemiBold)
-                        Text("השלמת ${history.size} אימונים עד כה", color = theme.textColor.copy(alpha = 0.55f), fontSize = FutureTypography.caption)
+                        Text(tr("יעד הבא: {0} אימונים", nextMilestone), color = theme.textColor, fontSize = FutureTypography.body, fontWeight = FontWeight.SemiBold)
+                        Text(tr("השלמת {0} אימונים עד כה", history.size), color = theme.textColor.copy(alpha = 0.55f), fontSize = FutureTypography.caption)
                     }
                     Text(
                         "${((history.size.toFloat() / nextMilestone) * 100).toInt()}%",
@@ -250,24 +251,24 @@ private fun buildPersonalRecords(history: List<WorkoutHistoryEntry>, theme: Futu
 
     val longest = history.maxByOrNull { it.minutes }
     if (longest != null) {
-        records.add(PersonalRecord(FutureIcons.Timer, "האימון הארוך ביותר", longest.name, longest.minutes.toString(), "דקות", theme.readableAccentColor))
+        records.add(PersonalRecord(FutureIcons.Timer, tr("האימון הארוך ביותר"), longest.name, longest.minutes.toString(), tr("דקות"), theme.readableAccentColor))
     }
 
     val mostCalories = history.maxByOrNull { it.calories }
     if (mostCalories != null) {
-        records.add(PersonalRecord(FutureIcons.LocalFireDepartment, "שריפת הקלוריות הגדולה ביותר", mostCalories.name, mostCalories.calories.toString(), "קק״ל", theme.dangerColor))
+        records.add(PersonalRecord(FutureIcons.LocalFireDepartment, tr("שריפת הקלוריות הגדולה ביותר"), mostCalories.name, mostCalories.calories.toString(), tr("קק״ל"), theme.dangerColor))
     }
 
     val longestRun = history.filter { it.distanceKm != null }.maxByOrNull { it.distanceKm!! }
     if (longestRun?.distanceKm != null) {
-        records.add(PersonalRecord(FutureIcons.Route, "המרחק הארוך ביותר", longestRun.name, "%.2f".format(longestRun.distanceKm), "ק״מ", theme.successColor))
+        records.add(PersonalRecord(FutureIcons.Route, tr("המרחק הארוך ביותר"), longestRun.name, "%.2f".format(longestRun.distanceKm), tr("ק״מ"), theme.successColor))
     }
 
     return records
 }
 
 private fun buildWeekBars(history: List<WorkoutHistoryEntry>): List<DayBar> {
-    val labels = listOf("א", "ב", "ג", "ד", "ה", "ו", "ש")
+    val labels = listOf(tr("א"), tr("ב"), tr("ג"), tr("ד"), tr("ה"), tr("ו"), tr("ש"))
     val today = Calendar.getInstance()
     val todayDayOfWeek = today.get(Calendar.DAY_OF_WEEK)
 

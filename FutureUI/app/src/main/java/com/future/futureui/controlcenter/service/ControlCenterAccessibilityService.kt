@@ -1,12 +1,12 @@
 package com.future.futureui.controlcenter.service
 
+import com.future.sharednav.i18n.tr
 import android.accessibilityservice.AccessibilityService
 import android.app.WallpaperManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import androidx.core.content.ContextCompat
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.PixelFormat
@@ -44,10 +44,25 @@ class ControlCenterAccessibilityService : AccessibilityService(), LifecycleOwner
     private var controlManager: ControlManager? = null
     private val powerMenuVisible = androidx.compose.runtime.mutableStateOf(false)
 
+    // פתיחה וסגירה מונפשות: הסגירה רק מחליפה את היעד, והחלון מוסר כשהיציאה
+    // נגמרת (ר' OverlayMotion). בזמן היציאה החלון לא לוקח מקשים.
+    private val motion = com.future.futureui.utils.OverlayMotion()
+    private var closing = false
+    private var windowParams: WindowManager.LayoutParams? = null
+    private val forceRemove = Runnable { removeControlCenterNow() }
+
+    // תמונת הרקע נשמרת לפי מזהה הרקע. קודם היא הומרה ל-Bitmap בכל פתיחה, על
+    // ה-main thread, בדיוק בפריים שבו אנימציית הכניסה מתחילה.
+    private var cachedWallpaperId = -1
+    private var cachedWallpaper: androidx.compose.ui.graphics.ImageBitmap? = null
+
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == FutureUIActions.ACTION_SHOW_CONTROL_CENTER) {
-                showControlCenter()
+                // לא פותחים מעל מסך נעול (גם לא בזמן שיחה שפינתה אותו).
+                if (com.future.futureui.utils.FutureUIState.isLocked ||
+                    com.future.futureui.utils.FutureUIState.isSecured) return
+                showControlCenter(intent.getIntExtra(FutureUIActions.EXTRA_FROM_DIRECTION, 0))
             }
         }
     }
@@ -74,8 +89,11 @@ class ControlCenterAccessibilityService : AccessibilityService(), LifecycleOwner
             windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
             
             val filter = IntentFilter(FutureUIActions.ACTION_SHOW_CONTROL_CENTER)
-            // נשלח רק מתוך FutureUI עצמו - אפליקציה זרה לא צריכה לפתוח את המסך הזה.
-            ContextCompat.registerReceiver(this, receiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                registerReceiver(receiver, filter, "com.future.futureui.permission.SYSTEM_SETTINGS", null, Context.RECEIVER_EXPORTED)
+            } else {
+                registerReceiver(receiver, filter, "com.future.futureui.permission.SYSTEM_SETTINGS", null)
+            }
         } catch (e: Exception) {
             Log.e("FutureUI", "Error in onCreate", e)
         }
@@ -83,7 +101,7 @@ class ControlCenterAccessibilityService : AccessibilityService(), LifecycleOwner
 
     override fun onServiceConnected() {
         super.onServiceConnected()
-        Toast.makeText(this, "FutureUI מוכן: לחיצה ארוכה על כוכבית", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, tr("FutureUI מוכן: לחיצה ארוכה על כוכבית"), Toast.LENGTH_SHORT).show()
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
@@ -94,8 +112,8 @@ class ControlCenterAccessibilityService : AccessibilityService(), LifecycleOwner
 
     override fun onKeyEvent(event: KeyEvent): Boolean {
         // מסך הנעילה מוצג - הוא מטפל בכל המקשים
-        // גם כשהמכשיר נעול ומסך הנעילה פינה מקום לשיחה/מעורר: לא מתגים (טיסה, רשת...)
-        if (com.future.futureui.utils.FutureUIState.isLocked || com.future.futureui.utils.FutureUIState.isSecured) return false
+        if (com.future.futureui.utils.FutureUIState.isLocked ||
+            com.future.futureui.utils.FutureUIState.isSecured) return false
         val keyCode = event.keyCode
         val action = event.action
 
@@ -120,7 +138,7 @@ class ControlCenterAccessibilityService : AccessibilityService(), LifecycleOwner
                     // נפתח. הלחיצה הקצרה משודרת גלובלית, בדיוק כמו מקש Options (ר'
                     // FutureUIActions), כדי שהאפליקציה שבחזית תוכל להגיב - בלי לגעת בהחזקה הארוכה.
                     try {
-                        sendBroadcast(Intent(FutureUIActions.ACTION_STAR_SHORT_PRESS), FutureUIActions.PERMISSION_SYSTEM)
+                        sendBroadcast(Intent(FutureUIActions.ACTION_STAR_SHORT_PRESS))
                     } catch (e: Exception) {
                         Log.w("FutureUI", "star short-press broadcast failed", e)
                     }
@@ -131,7 +149,7 @@ class ControlCenterAccessibilityService : AccessibilityService(), LifecycleOwner
             return true
         }
 
-        if (isVisible) {
+        if (isVisible && !closing) {
             if (keyCode == KeyEvent.KEYCODE_BACK) {
                 if (action == KeyEvent.ACTION_UP) {
                     // BACK מתפריט הכיבוי חוזר ל-Control Center במקום לסגור הכל.
@@ -148,22 +166,27 @@ class ControlCenterAccessibilityService : AccessibilityService(), LifecycleOwner
 
     private fun toggleControlCenter() {
         mainHandler.post {
-            if (isVisible) hideControlCenter() else showControlCenter()
+            if (isVisible && !closing) hideControlCenter() else showControlCenter()
         }
     }
 
-    private fun showControlCenter() {
-        if (isVisible) return
-        // כל דרך פתיחה (מקש, שידור פנימי, מעבר מהפאנל השני) - לא כשהמכשיר נעול
-        if (com.future.futureui.utils.FutureUIState.isLocked || com.future.futureui.utils.FutureUIState.isSecured) return
+    private fun showControlCenter(fromDirection: Int = 0) {
+        if (isVisible) {
+            // פתיחה מחדש באמצע היציאה - האנימציה מתהפכת מהנקודה שבה היא נמצאת
+            if (closing) {
+                closing = false
+                mainHandler.removeCallbacks(forceRemove)
+                setWindowFocusable(true)
+                motion.enter(fromDirection)
+            }
+            return
+        }
         try {
             if (controlManager == null) {
                 controlManager = ControlManager(this)
             }
 
-            val wallpaperManager = WallpaperManager.getInstance(this)
-            val wallpaperDrawable = wallpaperManager.drawable
-            val wallpaperBitmap = wallpaperDrawable?.let { drawableToBitmap(it) }
+            val wallpaperImage = loadWallpaper()
 
             val params = WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT,
@@ -195,7 +218,7 @@ class ControlCenterAccessibilityService : AccessibilityService(), LifecycleOwner
                             ControlCenterScreen(
                                 modifier = Modifier.fillMaxSize(),
                                 isVisibleByDefault = true,
-                                wallpaper = wallpaperBitmap?.asImageBitmap(),
+                                wallpaper = wallpaperImage,
                                 controlManager = controlManager,
                                 // תפריט כיבוי אחד לכל המערכת - של שירות שורת המצב (גם החזקת
                                 // מקש ההפעלה פותחת אותו). מרכז הבקרה נסגר קודם.
@@ -211,12 +234,18 @@ class ControlCenterAccessibilityService : AccessibilityService(), LifecycleOwner
                                     hideControlCenter()
                                 },
                                 onSwitchToNotificationCenter = {
+                                    // שתי השכבות באותו עומק: מרכז הבקרה יוצא שמאלה ומרכז
+                                    // ההתראות נכנס מימין, באותה תנועה. קודם CC נסגר אחרי
+                                    // postDelayed(50) בלי אנימציה, וזה יצר הבזק.
+                                    hideControlCenter(toDirection = -1)
                                     val intent = Intent(FutureUIActions.ACTION_SHOW_NOTIFICATION_CENTER)
                                     intent.setPackage(packageName)
+                                    intent.putExtra(FutureUIActions.EXTRA_FROM_DIRECTION, 1)
                                     sendBroadcast(intent)
-                                    mainHandler.postDelayed({ hideControlCenter() }, 50)
                                 },
-                                onRequestClose = { hideControlCenter() }
+                                onRequestClose = { hideControlCenter() },
+                                motion = motion,
+                                onExitFinished = { removeControlCenterNow() }
                             )
 
                         }
@@ -229,6 +258,9 @@ class ControlCenterAccessibilityService : AccessibilityService(), LifecycleOwner
             }
             lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
             
+            motion.enter(fromDirection)
+            closing = false
+            windowParams = params
             windowManager.addView(composeView, params)
             isVisible = true
 
@@ -254,22 +286,56 @@ class ControlCenterAccessibilityService : AccessibilityService(), LifecycleOwner
         return bitmap
     }
 
-    private fun hideControlCenter() {
+    private fun loadWallpaper(): androidx.compose.ui.graphics.ImageBitmap? {
+        val wm = WallpaperManager.getInstance(this)
+        val id = runCatching { wm.getWallpaperId(WallpaperManager.FLAG_SYSTEM) }.getOrDefault(-1)
+        if (id != -1 && id == cachedWallpaperId && cachedWallpaper != null) return cachedWallpaper
+        val image = runCatching { wm.drawable?.let { drawableToBitmap(it).asImageBitmap() } }.getOrNull()
+        cachedWallpaperId = id
+        cachedWallpaper = image
+        return image
+    }
+
+    private fun setWindowFocusable(focusable: Boolean) {
+        val view = composeView ?: return
+        val params = windowParams ?: return
+        params.flags = if (focusable) params.flags and WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE.inv()
+        else params.flags or WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+        runCatching { windowManager.updateViewLayout(view, params) }
+    }
+
+    /** מתחיל את היציאה; החלון מוסר כשהיא נגמרת ([removeControlCenterNow]). */
+    private fun hideControlCenter(toDirection: Int = 0) {
+        if (!isVisible || closing) return
+        closing = true
+        powerMenuVisible.value = false
+        // המקשים חוזרים לאפליקציה שמתחת מיד, לא רק אחרי שהאנימציה נגמרת
+        setWindowFocusable(false)
+        motion.exit(toDirection)
+        // רשת ביטחון: אם המסך לא דיווח על סוף היציאה (למשל לא צויר), מסירים בכל זאת
+        mainHandler.removeCallbacks(forceRemove)
+        mainHandler.postDelayed(forceRemove, 900)
+    }
+
+    private fun removeControlCenterNow() {
+        mainHandler.removeCallbacks(forceRemove)
         if (!isVisible) return
         try {
             powerMenuVisible.value = false
             lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
             lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
             windowManager.removeView(composeView)
-            composeView = null
-            isVisible = false
         } catch (e: Exception) {
             Log.e("FutureUI", "Error hiding overlay", e)
         }
+        composeView = null
+        windowParams = null
+        isVisible = false
+        closing = false
     }
 
     override fun onDestroy() {
-        hideControlCenter()
+        removeControlCenterNow()
         try {
             unregisterReceiver(receiver)
         } catch (e: Exception) {

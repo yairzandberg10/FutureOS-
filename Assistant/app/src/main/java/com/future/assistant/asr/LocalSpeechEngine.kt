@@ -30,7 +30,6 @@ class LocalSpeechEngine(private val context: Context) {
     /** עוצר את ההקלטה בלי לתמלל (ביטול). */
     fun cancelRecording() {
         recorder.stop()
-        wavFile.delete()
     }
 
     /** עוצר את ההקלטה ומתמלל. חוסם - יש לקרוא מ-thread ברקע. מחזיר טקסט ריק אם נכשל.
@@ -39,18 +38,15 @@ class LocalSpeechEngine(private val context: Context) {
      * שמעביר כאן את שפת המקלדת הנוכחית כשמקלדת T9 מבקשת תמלול). */
     fun stopRecordingAndTranscribe(language: String = "he"): String {
         recorder.stop()
-        val raw = WaveUtil.getSamples(wavFile.absolutePath)
-        // ההקלטה (קול המשתמש, כל מה שהוכתב - גם מהמקלדת) לא נשארת על הדיסק אחרי התמלול.
-        wavFile.delete()
-        val samples = trimSilence(raw)
+        val samples = trimSilence(WaveUtil.getSamples(wavFile.absolutePath))
         if (samples.isEmpty()) return ""
         // ההקלטה מתחילה עוד לפני שהמודל סיים להיטען - כאן מחכים לטעינה אם
         // היא עדיין רצה (preload נועל את אותו lock), במקום להחזיר טקסט ריק.
         val whisper = sharedWhisper ?: runCatching { preload(context); sharedWhisper }.getOrNull() ?: return ""
         // העוזר והשירות (AssistantRecognitionService) רצים באותו תהליך וחולקים
         // את אותו context, ש-whisper_full לא בטוח להריץ עליו במקביל.
-        val text = synchronized(lock) { whisper.transcribe(samples, language) }
-        return RepetitionFilter.collapse(text)
+        val raw = synchronized(lock) { whisper.transcribe(samples, language) }
+        return RepetitionFilter.collapse(raw)
     }
 
     /**

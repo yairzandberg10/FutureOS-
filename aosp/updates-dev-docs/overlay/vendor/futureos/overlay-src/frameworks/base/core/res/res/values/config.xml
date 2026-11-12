@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- FutureOS overlay: frameworks/base/core/res/res/values/config.xml -->
+<resources>
+    <!-- 933: מצב בטוח. אנדרואיד נכנס אליו כשמחזיקים במהלך האתחול (אחרי אנימציית ה-boot):
+         MENU, S, DPAD_CENTER, מקש עוצמה למטה (WindowManagerService.detectSafeMode).
+         בטלפון מקשים: להחזיק DPAD_CENTER או מקש התפריט. false = מצב בטוח מופעל.
+         לאמת מול העץ: grep -rn config_safeModeDisabled frameworks/base -->
+    <bool name="config_safeModeDisabled">false</bool>
+</resources>

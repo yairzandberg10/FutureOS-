@@ -1,5 +1,6 @@
 package com.future.flashlight.data
 
+import com.future.sharednav.i18n.tr
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -52,15 +53,15 @@ class TorchService : Service() {
 
     private fun notification(): Notification {
         val manager = getSystemService(NotificationManager::class.java)
-        manager.createNotificationChannel(NotificationChannel(CHANNEL, "פנס", NotificationManager.IMPORTANCE_LOW))
+        manager.createNotificationChannel(NotificationChannel(CHANNEL, tr("פנס"), NotificationManager.IMPORTANCE_LOW))
         val off = PendingIntent.getService(
             this, 0, Intent(this, TorchService::class.java).setAction(ACTION_OFF),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
         return Notification.Builder(this, CHANNEL)
             .setSmallIcon(android.R.drawable.ic_menu_view)
-            .setContentTitle("הפנס דלוק")
-            .setContentText("לחץ כדי לכבות")
+            .setContentTitle(tr("הפנס דלוק"))
+            .setContentText(tr("לחץ כדי לכבות"))
             .setContentIntent(off)
             .setOngoing(true)
             .build()

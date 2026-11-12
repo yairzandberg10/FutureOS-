@@ -1,4 +1,5 @@
 package com.future.tools.ui
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.theme.FutureMotion
 import com.future.sharednav.theme.textAlpha
 import com.future.sharednav.theme.subtleTextColor
@@ -77,10 +78,10 @@ fun LevelScreen(theme: FutureTheme, onBack: () -> Unit) {
         label = "levelBubbleColor"
     )
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize()) {
-                ToolsHeader(title = "פלס", theme = theme, onBack = onBack)
+                ToolsHeader(title = tr("פלס"), theme = theme, onBack = onBack)
 
                 Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -94,7 +95,7 @@ fun LevelScreen(theme: FutureTheme, onBack: () -> Unit) {
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            if (isLevel) "מאוזן" else "הטה עד לאיזון",
+                            if (isLevel) tr("מאוזן") else tr("הטה עד לאיזון"),
                             color = if (isLevel) bubbleColor else theme.mutedTextColor,
                             fontSize = FutureTypography.body,
                             fontWeight = if (isLevel) FontWeight.Bold else FontWeight.Normal

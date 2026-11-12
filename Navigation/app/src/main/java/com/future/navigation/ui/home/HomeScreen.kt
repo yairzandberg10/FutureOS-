@@ -1,5 +1,6 @@
 package com.future.navigation.ui.home
 
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureAvatar
 
@@ -165,7 +166,7 @@ fun HomeScreen(
             if (query.isNotBlank()) {
                 item {
                     FutureSectionHeader(
-                        text = if (searching) "מחפש" else "תוצאות חיפוש",
+                        text = if (searching) tr("מחפש") else tr("תוצאות חיפוש"),
                         theme = theme,
                         inset = false,
                     )
@@ -216,7 +217,7 @@ fun HomeScreen(
                     items(nearbyStops) { nearby ->
                         FutureListItem(
                             title = nearby.stop.name,
-                            summary = "%.0f מ׳".format(nearby.distanceMeters),
+                            summary = tr("%.0f מ׳").format(nearby.distanceMeters),
                             theme = theme,
                             onClick = {
                                 onDestinationPicked(GeocodeResult(nearby.stop.name, LatLng(nearby.stop.lat, nearby.stop.lon)))

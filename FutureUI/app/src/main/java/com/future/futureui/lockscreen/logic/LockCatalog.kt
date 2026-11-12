@@ -1,13 +1,15 @@
 package com.future.futureui.lockscreen.logic
 
+import com.future.sharednav.i18n.tr
+
 /** האפשרויות של כל פריט הניתן להתאמה אישית, עם השמות בעברית. */
 object LockCatalog {
-    val clockStyles = listOf("קלאסי", "דק", "מוערם", "אנלוגי", "צד")
+    val clockStyles = listOf(tr("קלאסי"), tr("דק"), tr("מוערם"), tr("אנלוגי"), tr("צד"))
 
     /** 0 = צבע ההדגשה של המערכת, השאר FutureAccents.presets לפי הסדר. */
-    val clockColors = listOf("הדגשה", "לבן", "תכלת", "כתום", "ירוק", "סגול")
+    val clockColors = listOf(tr("הדגשה"), tr("לבן"), tr("תכלת"), tr("כתום"), tr("ירוק"), tr("סגול"))
 
-    val backgrounds = listOf("טפט", "טפט מטושטש")
+    val backgrounds = listOf(tr("טפט"), tr("טפט מטושטש"))
 
     /** הווידג'טים שאפשר לבחור, בסדר שבלוח העריכה. */
     val widgetChoices = listOf("battery", "alarm", "hebdate", "media", "notifications")
@@ -17,25 +19,25 @@ object LockCatalog {
 
     val widgets = listOf("none", "battery", "alarm", "hebdate", "media", "notifications")
     fun widgetLabel(id: String) = when (id) {
-        "battery" -> "סוללה"
-        "alarm" -> "שעון מעורר"
-        "hebdate" -> "תאריך עברי"
-        "media" -> "מוזיקה"
-        "notifications" -> "מונה התראות"
-        else -> "ללא"
+        "battery" -> tr("סוללה")
+        "alarm" -> tr("שעון מעורר")
+        "hebdate" -> tr("תאריך עברי")
+        "media" -> tr("מוזיקה")
+        "notifications" -> tr("מונה התראות")
+        else -> tr("ללא")
     }
 
     val shortcuts = listOf("none", "flashlight", "camera", "phone", "messages", "notes", "recorder", "calculator", "music")
     fun shortcutLabel(id: String) = when (id) {
-        "flashlight" -> "פנס"
-        "camera" -> "מצלמה"
-        "phone" -> "טלפון"
-        "messages" -> "הודעות"
-        "notes" -> "פתקים"
-        "recorder" -> "מקליט"
-        "calculator" -> "מחשבון"
-        "music" -> "מוזיקה"
-        else -> "ללא"
+        "flashlight" -> tr("פנס")
+        "camera" -> tr("מצלמה")
+        "phone" -> tr("טלפון")
+        "messages" -> tr("הודעות")
+        "notes" -> tr("פתקים")
+        "recorder" -> tr("מקליט")
+        "calculator" -> tr("מחשבון")
+        "music" -> tr("מוזיקה")
+        else -> tr("ללא")
     }
 
     fun shortcutPackage(id: String): String? = when (id) {

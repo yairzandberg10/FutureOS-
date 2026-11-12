@@ -7,11 +7,10 @@
     <!-- חיפוש מקומות שמוכרים פריקסה (OpenStreetMap) -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    <!-- מיקום משוער בלבד: מספיק לתחזית/לחיפוש ברדיוס, בלי לתת לאפליקציה את המיקום המדויק -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 
-    <!-- פריקסה היא אפליקציה רגילה ולא חלק מהמערכת: בלי הרשאות החתימה של
-         FutureOS (SYSTEM_SETTINGS / הגדרות המקלדת). העיצוב חוזר לברירת המחדל
-         (כהה, הדגשה לבנה) - ThemeClient נופל אליה כשאין גישה ל-ThemeProvider. -->
+    <uses-permission android:name="com.future.futureui.permission.SYSTEM_SETTINGS" />
+    <uses-permission android:name="com.future.keyboard.permission.SETTINGS" />
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"

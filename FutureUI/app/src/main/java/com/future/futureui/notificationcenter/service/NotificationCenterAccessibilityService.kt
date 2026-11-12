@@ -1,12 +1,12 @@
 package com.future.futureui.notificationcenter.service
 
+import com.future.sharednav.i18n.tr
 import android.accessibilityservice.AccessibilityService
 import android.app.WallpaperManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import androidx.core.content.ContextCompat
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.PixelFormat
@@ -43,10 +43,21 @@ class NotificationCenterAccessibilityService : AccessibilityService(), Lifecycle
     private val mainHandler = Handler(Looper.getMainLooper())
     private var notificationManager: NotificationCenterManager? = null
 
+    // ר' ControlCenterAccessibilityService: הסגירה מונפשת והחלון מוסר בסופה.
+    private val motion = com.future.futureui.utils.OverlayMotion()
+    private var closing = false
+    private var windowParams: WindowManager.LayoutParams? = null
+    private val forceRemove = Runnable { removeNotificationCenterNow() }
+    private var cachedWallpaperId = -1
+    private var cachedWallpaper: androidx.compose.ui.graphics.ImageBitmap? = null
+
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == FutureUIActions.ACTION_SHOW_NOTIFICATION_CENTER) {
-                showNotificationCenter()
+                // לא פותחים מעל מסך נעול (גם לא בזמן שיחה שפינתה אותו).
+                if (com.future.futureui.utils.FutureUIState.isLocked ||
+                    com.future.futureui.utils.FutureUIState.isSecured) return
+                showNotificationCenter(intent.getIntExtra(FutureUIActions.EXTRA_FROM_DIRECTION, 0))
             }
         }
     }
@@ -73,8 +84,11 @@ class NotificationCenterAccessibilityService : AccessibilityService(), Lifecycle
             windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
             
             val filter = IntentFilter(FutureUIActions.ACTION_SHOW_NOTIFICATION_CENTER)
-            // נשלח רק מתוך FutureUI עצמו - אפליקציה זרה לא צריכה לפתוח את המסך הזה.
-            ContextCompat.registerReceiver(this, receiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                registerReceiver(receiver, filter, "com.future.futureui.permission.SYSTEM_SETTINGS", null, Context.RECEIVER_EXPORTED)
+            } else {
+                registerReceiver(receiver, filter, "com.future.futureui.permission.SYSTEM_SETTINGS", null)
+            }
         } catch (e: Exception) {
             Log.e("FutureUI", "Error in NC onCreate", e)
         }
@@ -82,7 +96,7 @@ class NotificationCenterAccessibilityService : AccessibilityService(), Lifecycle
 
     override fun onServiceConnected() {
         super.onServiceConnected()
-        Toast.makeText(this, "Notification Center מוכן: לחיצה ארוכה על #", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, tr("Notification Center מוכן: לחיצה ארוכה על #"), Toast.LENGTH_SHORT).show()
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {}
@@ -90,8 +104,8 @@ class NotificationCenterAccessibilityService : AccessibilityService(), Lifecycle
 
     override fun onKeyEvent(event: KeyEvent): Boolean {
         // מסך הנעילה מוצג - הוא מטפל בכל המקשים
-        // גם בזמן שיחה/מעורר כשהמכשיר נעול: מרכז ההתראות מציג תוכן הודעות
-        if (com.future.futureui.utils.FutureUIState.isLocked || com.future.futureui.utils.FutureUIState.isSecured) return false
+        if (com.future.futureui.utils.FutureUIState.isLocked ||
+            com.future.futureui.utils.FutureUIState.isSecured) return false
         val keyCode = event.keyCode
         val action = event.action
 
@@ -112,7 +126,7 @@ class NotificationCenterAccessibilityService : AccessibilityService(), Lifecycle
                     // אותה סיבה כמו ב-* (ר' ControlCenterAccessibilityService): המקש נצרך כאן
                     // גם בלחיצה קצרה, ולכן החלפת שפת ההקלדה במקלדת לא עבדה בפועל.
                     try {
-                        sendBroadcast(Intent(FutureUIActions.ACTION_POUND_SHORT_PRESS), FutureUIActions.PERMISSION_SYSTEM)
+                        sendBroadcast(Intent(FutureUIActions.ACTION_POUND_SHORT_PRESS))
                     } catch (e: Exception) {
                         Log.w("FutureUI", "pound short-press broadcast failed", e)
                     }
@@ -122,7 +136,7 @@ class NotificationCenterAccessibilityService : AccessibilityService(), Lifecycle
             return true
         }
 
-        if (isVisible) {
+        if (isVisible && !closing) {
             if (keyCode == KeyEvent.KEYCODE_BACK) {
                 if (action == KeyEvent.ACTION_UP) hideNotificationCenter()
                 return true
@@ -135,22 +149,26 @@ class NotificationCenterAccessibilityService : AccessibilityService(), Lifecycle
 
     private fun toggleNotificationCenter() {
         mainHandler.post {
-            if (isVisible) hideNotificationCenter() else showNotificationCenter()
+            if (isVisible && !closing) hideNotificationCenter() else showNotificationCenter()
         }
     }
 
-    private fun showNotificationCenter() {
-        if (isVisible) return
-        // כל דרך פתיחה (מקש, שידור פנימי, מעבר מהפאנל השני) - לא כשהמכשיר נעול
-        if (com.future.futureui.utils.FutureUIState.isLocked || com.future.futureui.utils.FutureUIState.isSecured) return
+    private fun showNotificationCenter(fromDirection: Int = 0) {
+        if (isVisible) {
+            if (closing) {
+                closing = false
+                mainHandler.removeCallbacks(forceRemove)
+                setWindowFocusable(true)
+                motion.enter(fromDirection)
+            }
+            return
+        }
         try {
             if (notificationManager == null) {
                 notificationManager = NotificationCenterManager(this)
             }
 
-            val wallpaperManager = WallpaperManager.getInstance(this)
-            val wallpaperDrawable = wallpaperManager.drawable
-            val wallpaperBitmap = wallpaperDrawable?.let { drawableToBitmap(it) }
+            val wallpaperImage = loadWallpaper()
 
             val params = WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT,
@@ -178,14 +196,18 @@ class NotificationCenterAccessibilityService : AccessibilityService(), Lifecycle
                     FutureUITheme {
                         NotificationCenterScreen(
                             modifier = Modifier.fillMaxSize(),
-                            wallpaper = wallpaperBitmap?.asImageBitmap(),
+                            wallpaper = wallpaperImage,
                             manager = notificationManager,
                             onSwitchToControlCenter = {
+                                // אותו עומק: מרכז ההתראות יוצא ימינה ומרכז הבקרה נכנס משמאל.
+                                hideNotificationCenter(toDirection = 1)
                                 val intent = Intent(FutureUIActions.ACTION_SHOW_CONTROL_CENTER)
                                 intent.setPackage(packageName)
+                                intent.putExtra(FutureUIActions.EXTRA_FROM_DIRECTION, -1)
                                 sendBroadcast(intent)
-                                mainHandler.postDelayed({ hideNotificationCenter() }, 50)
-                            }
+                            },
+                            motion = motion,
+                            onExitFinished = { removeNotificationCenterNow() }
                         )
                     }
                 }
@@ -196,6 +218,9 @@ class NotificationCenterAccessibilityService : AccessibilityService(), Lifecycle
             }
             lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
             
+            motion.enter(fromDirection)
+            closing = false
+            windowParams = params
             windowManager.addView(composeView, params)
             isVisible = true
 
@@ -220,21 +245,52 @@ class NotificationCenterAccessibilityService : AccessibilityService(), Lifecycle
         return bitmap
     }
 
-    private fun hideNotificationCenter() {
+    private fun loadWallpaper(): androidx.compose.ui.graphics.ImageBitmap? {
+        val wm = WallpaperManager.getInstance(this)
+        val id = runCatching { wm.getWallpaperId(WallpaperManager.FLAG_SYSTEM) }.getOrDefault(-1)
+        if (id != -1 && id == cachedWallpaperId && cachedWallpaper != null) return cachedWallpaper
+        val image = runCatching { wm.drawable?.let { drawableToBitmap(it).asImageBitmap() } }.getOrNull()
+        cachedWallpaperId = id
+        cachedWallpaper = image
+        return image
+    }
+
+    private fun setWindowFocusable(focusable: Boolean) {
+        val view = composeView ?: return
+        val params = windowParams ?: return
+        params.flags = if (focusable) params.flags and WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE.inv()
+        else params.flags or WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+        runCatching { windowManager.updateViewLayout(view, params) }
+    }
+
+    /** מתחיל את היציאה; החלון מוסר כשהיא נגמרת ([removeNotificationCenterNow]). */
+    private fun hideNotificationCenter(toDirection: Int = 0) {
+        if (!isVisible || closing) return
+        closing = true
+        setWindowFocusable(false)
+        motion.exit(toDirection)
+        mainHandler.removeCallbacks(forceRemove)
+        mainHandler.postDelayed(forceRemove, 900)
+    }
+
+    private fun removeNotificationCenterNow() {
+        mainHandler.removeCallbacks(forceRemove)
         if (!isVisible) return
         try {
             lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
             lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
             windowManager.removeView(composeView)
-            composeView = null
-            isVisible = false
         } catch (e: Exception) {
             Log.e("FutureUI", "Error hiding NC overlay", e)
         }
+        composeView = null
+        windowParams = null
+        isVisible = false
+        closing = false
     }
 
     override fun onDestroy() {
-        hideNotificationCenter()
+        removeNotificationCenterNow()
         try {
             unregisterReceiver(receiver)
         } catch (e: Exception) {

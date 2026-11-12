@@ -1,5 +1,6 @@
 package com.future.dialer.ui.incall
 
+import com.future.sharednav.i18n.tr
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -128,7 +129,7 @@ class InCallViewModel : ViewModel() {
         if (phoneNumber.isBlank()) return
 
         val appContext = context.applicationContext
-        val uri = Uri.fromParts("smsto", phoneNumber, null)
+        val uri = Uri.parse("smsto:$phoneNumber")
         val smsPackage = try {
             Telephony.Sms.getDefaultSmsPackage(appContext)
         } catch (e: Exception) {
@@ -161,10 +162,10 @@ class InCallViewModel : ViewModel() {
     companion object {
         /** תשובות מהירות קבועות מראש - אין צורך במקלדת כדי לשלוח אחת מהן. */
         val quickMessages = listOf(
-            "אני בדרך, מגיע/ה בקרוב",
-            "לא יכול/ה לדבר עכשיו, אחזור אליך",
-            "אני בפגישה",
-            "אתקשר אליך מיד כשאסיים"
+            tr("אני בדרך, מגיע/ה בקרוב"),
+            tr("לא יכול/ה לדבר עכשיו, אחזור אליך"),
+            tr("אני בפגישה"),
+            tr("אתקשר אליך מיד כשאסיים")
         )
     }
 }

@@ -1,5 +1,6 @@
 package com.future.camera.ui
 
+import com.future.sharednav.i18n.tr
 import android.Manifest
 import android.graphics.Bitmap
 import android.media.MediaActionSound
@@ -117,14 +118,16 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.resume
+import com.future.sharednav.focus.focusMotion
+import com.future.sharednav.focus.animateFocusColor
 
 /** מצבי הצילום. וידאו הוא היחיד שקושר VideoCapture; השאר מצלמים תמונה. */
 private enum class CaptureMode(val label: String) {
-    PHOTO("תמונה"),
-    VIDEO("וידאו"),
-    BURST("רצף"),
-    SQUARE("ריבוע"),
-    DOCUMENT("מסמך"),
+    PHOTO(tr("תמונה")),
+    VIDEO(tr("וידאו")),
+    BURST(tr("רצף")),
+    SQUARE(tr("ריבוע")),
+    DOCUMENT(tr("מסמך")),
 }
 
 /** קפיצת הזום בכל חזרה של מקש מוחזק - בערך שנייה וחצי מ-1x עד הזום המרבי. */
@@ -298,7 +301,7 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
     com.future.sharednav.nav.onOptionsKeyPress {
         if (!showSettings && !showViewer && !isRecording && !busy) {
             lensFacing = if (lensFacing == CameraSelector.LENS_FACING_BACK) CameraSelector.LENS_FACING_FRONT else CameraSelector.LENS_FACING_BACK
-            snackbar.show(if (lensFacing == CameraSelector.LENS_FACING_FRONT) "מצלמה קדמית" else "מצלמה אחורית")
+            snackbar.show(if (lensFacing == CameraSelector.LENS_FACING_FRONT) tr("מצלמה קדמית") else tr("מצלמה אחורית"))
         }
     }
 
@@ -310,7 +313,7 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
             else -> {
                 focusPoint = null
                 camera?.cameraControl?.cancelFocusAndMetering()
-                snackbar.show("מיקוד אוטומטי")
+                snackbar.show(tr("מיקוד אוטומטי"))
             }
         }
     }
@@ -330,7 +333,7 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
                 context = context,
                 imageCapture = imageCapture,
                 onSaved = { onSaved(it); onDone(true) },
-                onError = { snackbar.show("הצילום נכשל"); onDone(false) },
+                onError = { snackbar.show(tr("הצילום נכשל")); onDone(false) },
             )
         } else {
             PhotoStorage.captureProcessed(
@@ -339,7 +342,7 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
                 square = square,
                 matrix = matrix,
                 onSaved = { onSaved(it); onDone(true) },
-                onError = { snackbar.show("הצילום נכשל"); onDone(false) },
+                onError = { snackbar.show(tr("הצילום נכשל")); onDone(false) },
             )
         }
     }
@@ -352,7 +355,7 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
             } else {
                 burstShot = null
                 busy = false
-                if (ok) snackbar.show("$BURST_COUNT תמונות נשמרו")
+                if (ok) snackbar.show(tr("{0} תמונות נשמרו", BURST_COUNT))
             }
         }
     }
@@ -374,12 +377,12 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
                         isRecording = false
                         recordingSeconds = 0
                         uri?.let { onSaved(it) }
-                        snackbar.show("הווידאו נשמר")
+                        snackbar.show(tr("הווידאו נשמר"))
                     },
                     onError = {
                         isRecording = false
                         recordingSeconds = 0
-                        snackbar.show("ההקלטה נכשלה")
+                        snackbar.show(tr("ההקלטה נכשלה"))
                     },
                 )
                 if (recording != null) {
@@ -413,7 +416,7 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
         val point = view.meteringPointFactory.createPoint(fraction.x * view.width, fraction.y * view.height)
         val action = FocusMeteringAction.Builder(point).setAutoCancelDuration(5, java.util.concurrent.TimeUnit.SECONDS).build()
         if (!cam.cameraInfo.isFocusMeteringSupported(action)) {
-            snackbar.show("המצלמה הזו לא תומכת במיקוד ידני")
+            snackbar.show(tr("המצלמה הזו לא תומכת במיקוד ידני"))
             return
         }
         focusPoint = fraction
@@ -422,13 +425,13 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
         future.addListener({
             val ok = runCatching { future.get().isFocusSuccessful }.getOrDefault(false)
             focusLocked = ok
-            snackbar.show(if (ok) "המיקוד ננעל" else "לא הצליח להתמקד")
+            snackbar.show(if (ok) tr("המיקוד ננעל") else tr("לא הצליח להתמקד"))
         }, ContextCompat.getMainExecutor(context))
     }
 
     fun openPreview() {
         if (sessionMedia.isEmpty()) {
-            snackbar.show("עדיין לא צולם כלום")
+            snackbar.show(tr("עדיין לא צולם כלום"))
             return
         }
         showViewer = true
@@ -437,18 +440,6 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
     fun nextMode() {
         if (isRecording || busy) return
         captureMode = CaptureMode.entries[(captureMode.ordinal + 1) % CaptureMode.entries.size]
-    }
-
-    // * ו-# נצרכים ברמת המערכת ומגיעים לאפליקציה רק כשידור של לחיצה קצרה (ר'
-    // onStarKeyPress) - ה-KEYCODE_STAR/POUND ב-cameraKeys נשארים רק למקלדת בלי FutureUI.
-    com.future.sharednav.nav.onStarKeyPress {
-        if (!showSettings && !showViewer && !showFilters) nextMode()
-    }
-    com.future.sharednav.nav.onPoundKeyPress {
-        if (!showSettings && !showViewer && !showFilters) {
-            update { it.copy(flashMode = nextFlash(it.flashMode)) }
-            snackbar.show(flashLabel(options.flashMode))
-        }
     }
 
     LaunchedEffect(countdownRemaining) {
@@ -527,7 +518,7 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
                     AndroidKeyEvent.KEYCODE_0 -> {
                         focusPoint = null
                         camera?.cameraControl?.cancelFocusAndMetering()
-                        snackbar.show("מיקוד אוטומטי")
+                        snackbar.show(tr("מיקוד אוטומטי"))
                         true
                     }
                     AndroidKeyEvent.KEYCODE_STAR -> {
@@ -545,12 +536,12 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
         }
     }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Box(modifier = Modifier.fillMaxSize().background(Color.Black).then(cameraKeys)) {
             if (!hasCameraPermission) {
-                CenterMessage("נדרשת הרשאת מצלמה כדי לצלם")
+                CenterMessage(tr("נדרשת הרשאת מצלמה כדי לצלם"))
             } else if (!cameraAvailable) {
-                CenterMessage("אין מצלמה זמינה במכשיר הזה")
+                CenterMessage(tr("אין מצלמה זמינה במכשיר הזה"))
             } else {
                 AndroidView(
                     modifier = Modifier.fillMaxSize(),
@@ -581,7 +572,7 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
                 Row(horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm)) {
                     CameraIconButton(
                         icon = FutureIcons.Settings,
-                        contentDescription = "הגדרות",
+                        contentDescription = tr("הגדרות"),
                         accentColor = theme.accentColor,
                         size = 40.dp,
                         iconSize = 20.dp,
@@ -589,12 +580,12 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
                     )
                     CameraIconButton(
                         icon = FutureIcons.FilterVintage,
-                        contentDescription = "פילטרים",
+                        contentDescription = tr("פילטרים"),
                         accentColor = theme.accentColor,
                         size = 40.dp,
                         iconSize = 20.dp,
                         tint = if (options.filter != CameraFilter.NONE) theme.accentColor else Color.White,
-                        onClick = { if (!isVideo) showFilters = !showFilters else snackbar.show("פילטרים זמינים בצילום תמונות") }
+                        onClick = { if (!isVideo) showFilters = !showFilters else snackbar.show(tr("פילטרים זמינים בצילום תמונות")) }
                     )
                 }
                 if (isRecording) RecordingIndicator(seconds = recordingSeconds)
@@ -602,7 +593,7 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
                 ZoomBadge(zoomRatio = zoomRatio, visibleUntil = zoomBadgeUntil)
                 CameraIconButton(
                     icon = flashIcon(options.flashMode),
-                    contentDescription = "הבזק",
+                    contentDescription = tr("הבזק"),
                     accentColor = theme.accentColor,
                     size = 40.dp,
                     iconSize = 20.dp,
@@ -620,7 +611,7 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
                 exit = fadeOut(FutureMotion.exit()),
                 modifier = Modifier.align(Alignment.TopCenter).padding(top = 64.dp),
             ) {
-                OverlayChip("1-9 מיקוד · OK מוחזק מיקוד במרכז · * מצב")
+                OverlayChip(tr("1-9 מיקוד · OK מוחזק מיקוד במרכז · * מצב"))
             }
 
             countdownRemaining?.let { remaining ->
@@ -661,7 +652,7 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
                                 captureMode == CaptureMode.DOCUMENT -> FutureIcons.DocumentScanner
                                 else -> FutureIcons.Camera
                             },
-                            contentDescription = if (isVideo) "הקלט וידאו" else "צלם",
+                            contentDescription = if (isVideo) tr("הקלט וידאו") else tr("צלם"),
                             accentColor = if (isRecording) CameraDanger else theme.accentColor,
                             size = 72.dp,
                             iconSize = 32.dp,
@@ -720,9 +711,9 @@ private fun nextFlash(mode: Int): Int = when (mode) {
 }
 
 private fun flashLabel(mode: Int): String = when (mode) {
-    ImageCapture.FLASH_MODE_ON -> "הבזק מופעל"
-    ImageCapture.FLASH_MODE_AUTO -> "הבזק אוטומטי"
-    else -> "הבזק כבוי"
+    ImageCapture.FLASH_MODE_ON -> tr("הבזק מופעל")
+    ImageCapture.FLASH_MODE_AUTO -> tr("הבזק אוטומטי")
+    else -> tr("הבזק כבוי")
 }
 
 private fun flashIcon(mode: Int) = when (mode) {
@@ -817,17 +808,18 @@ private fun PreviewThumbButton(thumb: Bitmap?, accentColor: Color, onClick: () -
     Box(
         modifier = Modifier
             .size(52.dp)
+            .focusMotion(interactionSource, focusedScale = 1.08f)
             .clip(CircleShape)
             .background(ScrimOverPreview)
-            .border(FutureDimens.focusBorderControl, if (isFocused) accentColor else Color.White.copy(alpha = 0.3f), CircleShape)
+            .border(FutureDimens.focusBorderControl, animateFocusColor(isFocused, accentColor, Color.White.copy(alpha = 0.3f)).value, CircleShape)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
             .focusable(interactionSource = interactionSource),
         contentAlignment = Alignment.Center
     ) {
         if (thumb != null) {
-            Image(thumb.asImageBitmap(), contentDescription = "התמונה האחרונה", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+            Image(thumb.asImageBitmap(), contentDescription = tr("התמונה האחרונה"), contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
         } else {
-            Icon(FutureIcons.Image, contentDescription = "התמונה האחרונה", tint = Color.White, modifier = Modifier.size(24.dp))
+            Icon(FutureIcons.Image, contentDescription = tr("התמונה האחרונה"), tint = Color.White, modifier = Modifier.size(24.dp))
         }
     }
 }
@@ -915,9 +907,10 @@ private fun CaptureModeSegment(label: String, isSelected: Boolean, theme: Future
     )
     Box(
         modifier = Modifier
+            .focusMotion(interactionSource, focusedScale = 1.06f)
             .clip(shape)
             .background(bgColor)
-            .border(FutureDimens.focusBorderControl, if (isFocused && isSelected) Color.White else Color.Transparent, shape)
+            .border(FutureDimens.focusBorderControl, animateFocusColor(isFocused && isSelected, Color.White, Color.Transparent).value, shape)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
             .focusable(interactionSource = interactionSource)
             .padding(horizontal = 12.dp, vertical = 7.dp),

@@ -1,0 +1,30 @@
+# FutureOS platform-core (vendor): כוונון זיכרון, cpuset, I/O. יעד: /vendor/etc/init/
+# הערכים נקודת פתיחה ל-MT6768 (2xA75 בליבות 6-7, 6xA55 בליבות 0-5). לאמת טופולוגיה:
+#   adb shell cat /sys/devices/system/cpu/cpu*/cpufreq/cpuinfo_max_freq
+
+on boot
+    # זיכרון עם zram (127-132, 144, 156, 158)
+    write /proc/sys/vm/swappiness 100
+    write /proc/sys/vm/page-cluster 0
+    write /proc/sys/vm/vfs_cache_pressure 100
+    write /proc/sys/vm/watermark_scale_factor 30
+    write /proc/sys/vm/dirty_background_ratio 5
+    write /proc/sys/vm/dirty_ratio 20
+
+    # cpuset: קדמית על כל הליבות, רקע על הקטנות בלבד (92, 93, 118)
+    write /dev/cpuset/top-app/cpus 0-7
+    write /dev/cpuset/foreground/cpus 0-7
+    write /dev/cpuset/system-background/cpus 0-5
+    write /dev/cpuset/background/cpus 0-3
+
+    # זימון I/O (114, 115): לבחור אחרי ls /sys/block/mmcblk0/queue/scheduler. כבוי כברירת מחדל.
+    # write /sys/block/mmcblk0/queue/scheduler cfq
+    # write /sys/block/mmcblk0/queue/read_ahead_kb 128
+
+    # governor (91): MTK מנהל DVFS דרך PerfService. לא לדרוס בלי מדידה.
+    # write /sys/devices/system/cpu/cpufreq/policy0/scaling_governor schedutil
+
+# יומן אתחול קודם (26): pmsg וקונסול נקראים עם logcat -L אחרי אתחול
+on post-fs
+    chmod 0640 /sys/fs/pstore/console-ramoops-0
+    chmod 0640 /sys/fs/pstore/pmsg-ramoops-0

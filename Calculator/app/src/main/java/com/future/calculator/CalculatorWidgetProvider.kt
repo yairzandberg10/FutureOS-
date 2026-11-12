@@ -1,17 +1,28 @@
 package com.future.calculator
 
+import android.app.PendingIntent
+import android.appwidget.AppWidgetManager
+import android.appwidget.AppWidgetProvider
 import android.content.Context
-import com.future.sharednav.widget.FutureContentWidget
-import com.future.sharednav.widget.WidgetContent
+import android.widget.RemoteViews
 
-/** התוצאה האחרונה וחישוב שלה, מההיסטוריה שהמחשבון שומר. */
-class CalculatorWidgetProvider : FutureContentWidget() {
-    override fun content(context: Context): WidgetContent {
-        val last = context.getSharedPreferences("calculator", Context.MODE_PRIVATE)
-            .getString("history", "").orEmpty().lineSequence().firstOrNull { it.isNotEmpty() }
-            ?.split("\u001F")?.takeIf { it.size == 2 }
-            ?: return WidgetContent(value = "0", subtitle = "אין חישובים")
-        // ספרות וסימני פעולה משמאל לימין גם בווידג'ט RTL.
-        return WidgetContent(value = "\u2066${last[1]}\u2069", subtitle = "\u2066${last[0]} =\u2069")
+/**
+ * ווידג'ט קיצור-דרך למסך הבית - אייקון ושם האפליקציה, לחיצה פותחת אותה.
+ * חלק מהעיצוב האחיד של ווידג'טים ייעודיים לכל אפליקציית FutureOS מובנית.
+ */
+class CalculatorWidgetProvider : AppWidgetProvider() {
+    override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
+        appWidgetIds.forEach { widgetId ->
+            val views = RemoteViews(context.packageName, R.layout.app_widget)
+            val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+            if (launchIntent != null) {
+                val pendingIntent = PendingIntent.getActivity(
+                    context, 0, launchIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+                views.setOnClickPendingIntent(R.id.widget_root, pendingIntent)
+            }
+            appWidgetManager.updateAppWidget(widgetId, views)
+        }
     }
 }

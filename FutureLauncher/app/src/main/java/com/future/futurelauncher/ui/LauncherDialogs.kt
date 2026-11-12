@@ -1,5 +1,6 @@
 package com.future.futurelauncher.ui
 
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.AppDialog
 import com.future.sharednav.components.FutureButton
@@ -69,6 +70,8 @@ import com.future.futurelauncher.DefaultApps
 import com.future.futurelauncher.DeveloperApps
 import com.future.futurelauncher.R
 import com.future.sharednav.theme.FutureTheme
+import com.future.sharednav.focus.animateFocusColor
+import com.future.sharednav.focus.focusScale
 
 /**
  * מעטפת אחידה לכל תפריטי ה"אופציות" של הלאנצ'ר - זכוכית כהה/בהירה עקבית עם
@@ -91,7 +94,7 @@ private fun GlassDialog(
     content: @Composable ColumnScope.() -> Unit
 ) {
     AppDialog(onDismissRequest = onDismissRequest, widthFraction = widthFraction) {
-        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+        CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -227,10 +230,11 @@ fun FolderDialog(
                     Surface(
                         modifier = Modifier
                             .size(44.dp)
+                            .focusScale(isAppFocused, focusedScale = 1.12f)
                             .onFocusChanged { isAppFocused = it.isFocused },
                         shape = RoundedCornerShape(percent = 28),
-                        color = if (isAppFocused) theme.readableAccentColor.copy(alpha = 0.14f) else theme.idleFieldColor,
-                        border = androidx.compose.foundation.BorderStroke(FutureDimens.focusBorderItem, if (isAppFocused) theme.readableAccentColor else Color.Transparent),
+                        color = animateFocusColor(isAppFocused, theme.readableAccentColor.copy(alpha = 0.14f), theme.idleFieldColor).value,
+                        border = androidx.compose.foundation.BorderStroke(FutureDimens.focusBorderItem, animateFocusColor(isAppFocused, theme.readableAccentColor, Color.Transparent).value),
                         onClick = { onAppClick(app) }
                     ) {
                         if (icon != null) Image(bitmap = icon, contentDescription = null, modifier = Modifier.fillMaxSize())
@@ -290,15 +294,15 @@ fun AppOptionsDialog(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(stringResource(R.string.width, item.spanX), color = theme.textColor, fontSize = FutureTypography.label)
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            TopBarIconButton(FutureIcons.Remove, "הקטן", theme.textColor, theme.accentColor, { if (item.spanX > 1) onResize(item.spanX - 1, item.spanY) })
-                            TopBarIconButton(FutureIcons.Add, "הגדל", theme.textColor, theme.accentColor, { if (item.spanX < 4) onResize(item.spanX + 1, item.spanY) })
+                            TopBarIconButton(FutureIcons.Remove, tr("הקטן"), theme.textColor, theme.accentColor, { if (item.spanX > 1) onResize(item.spanX - 1, item.spanY) })
+                            TopBarIconButton(FutureIcons.Add, tr("הגדל"), theme.textColor, theme.accentColor, { if (item.spanX < 4) onResize(item.spanX + 1, item.spanY) })
                         }
                     }
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(stringResource(R.string.height, item.spanY), color = theme.textColor, fontSize = FutureTypography.label)
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            TopBarIconButton(FutureIcons.Remove, "הקטן", theme.textColor, theme.accentColor, { if (item.spanY > 1) onResize(item.spanX, item.spanY - 1) })
-                            TopBarIconButton(FutureIcons.Add, "הגדל", theme.textColor, theme.accentColor, { if (item.spanY < 4) onResize(item.spanX, item.spanY + 1) })
+                            TopBarIconButton(FutureIcons.Remove, tr("הקטן"), theme.textColor, theme.accentColor, { if (item.spanY > 1) onResize(item.spanX, item.spanY - 1) })
+                            TopBarIconButton(FutureIcons.Add, tr("הגדל"), theme.textColor, theme.accentColor, { if (item.spanY < 4) onResize(item.spanX, item.spanY + 1) })
                         }
                     }
                 }

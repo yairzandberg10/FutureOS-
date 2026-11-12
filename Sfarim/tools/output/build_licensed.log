@@ -1,0 +1,248 @@
+[1/4] loading table of contents (cached under C:\Users\yairz\Downloads\FutureOS--main\FutureOS--main\Sfarim\tools\output\_cache) ...
+[2/4] loading Hebrew text index (books.json, cached) ...
+      6211 titles have a Hebrew version available
+[licenses] checking 6211 titles against the Sefaria versions API (cached) ...
+  500/6211
+  1000/6211
+  1500/6211
+  2000/6211
+  2500/6211
+  3000/6211
+  3500/6211
+  4000/6211
+  4500/6211
+  5000/6211
+  5500/6211
+  6000/6211
+  allowed: 5423 | excluded: 788 | API failures (re-run to retry): 0
+  wrote C:\Users\yairz\Downloads\FutureOS--main\FutureOS--main\Sfarim\LICENSES.md
+[3/4] building/verifying category tree (idempotent) ...
+[4/4] 5423 Hebrew books matched to the TOC; 0 already imported, 5423 to fetch now
+  25/5423 books | 11621 segments | 9s elapsed | ETA 33.1min
+  50/5423 books | 16221 segments | 12s elapsed | ETA 20.7min
+  75/5423 books | 16301 segments | 13s elapsed | ETA 15.2min
+  100/5423 books | 16385 segments | 14s elapsed | ETA 12.5min
+  125/5423 books | 20512 segments | 15s elapsed | ETA 10.8min
+  150/5423 books | 24090 segments | 16s elapsed | ETA 9.6min
+  175/5423 books | 43052 segments | 23s elapsed | ETA 11.7min
+  200/5423 books | 72253 segments | 29s elapsed | ETA 12.5min
+  225/5423 books | 88244 segments | 32s elapsed | ETA 12.1min
+  250/5423 books | 109098 segments | 36s elapsed | ETA 12.5min
+  275/5423 books | 167686 segments | 40s elapsed | ETA 12.6min
+  300/5423 books | 178590 segments | 41s elapsed | ETA 11.8min
+  325/5423 books | 183356 segments | 42s elapsed | ETA 10.9min
+  350/5423 books | 189618 segments | 43s elapsed | ETA 10.3min
+  375/5423 books | 192006 segments | 43s elapsed | ETA 9.6min
+  400/5423 books | 195583 segments | 45s elapsed | ETA 9.4min
+  425/5423 books | 201879 segments | 46s elapsed | ETA 9.0min
+  450/5423 books | 227985 segments | 51s elapsed | ETA 9.5min
+  475/5423 books | 232814 segments | 53s elapsed | ETA 9.2min
+  500/5423 books | 238919 segments | 55s elapsed | ETA 9.1min
+  525/5423 books | 240198 segments | 56s elapsed | ETA 8.7min
+  550/5423 books | 246080 segments | 59s elapsed | ETA 8.7min
+  575/5423 books | 275622 segments | 62s elapsed | ETA 8.7min
+  600/5423 books | 289941 segments | 63s elapsed | ETA 8.5min
+  625/5423 books | 298761 segments | 66s elapsed | ETA 8.5min
+  650/5423 books | 304702 segments | 67s elapsed | ETA 8.2min
+  675/5423 books | 306156 segments | 68s elapsed | ETA 8.0min
+  700/5423 books | 309533 segments | 70s elapsed | ETA 7.8min
+  725/5423 books | 311099 segments | 71s elapsed | ETA 7.6min
+  750/5423 books | 314395 segments | 72s elapsed | ETA 7.5min
+  775/5423 books | 319966 segments | 74s elapsed | ETA 7.4min
+  800/5423 books | 322504 segments | 75s elapsed | ETA 7.2min
+  825/5423 books | 331383 segments | 78s elapsed | ETA 7.2min
+  850/5423 books | 341208 segments | 78s elapsed | ETA 7.0min
+  875/5423 books | 341399 segments | 79s elapsed | ETA 6.9min
+  900/5423 books | 341530 segments | 80s elapsed | ETA 6.7min
+  925/5423 books | 359377 segments | 82s elapsed | ETA 6.7min
+  950/5423 books | 373623 segments | 86s elapsed | ETA 6.7min
+  975/5423 books | 399610 segments | 91s elapsed | ETA 6.9min
+  1000/5423 books | 407720 segments | 92s elapsed | ETA 6.8min
+  1025/5423 books | 457451 segments | 98s elapsed | ETA 7.0min
+  1050/5423 books | 461308 segments | 98s elapsed | ETA 6.8min
+  1075/5423 books | 462012 segments | 100s elapsed | ETA 6.7min
+  1100/5423 books | 469479 segments | 102s elapsed | ETA 6.7min
+  ERROR importing 'Chovat HaTalmidim': failed to fetch https://storage.googleapis.com/sefaria-export/json/Chasidut/Piaseczno Rebbe/Chovat HaTalmidim/Hebrew/Chovat HaTalmidim, Warsaw 1932.json: HTTP Error 404: Not Found
+  1125/5423 books | 473926 segments | 103s elapsed | ETA 6.6min
+  1150/5423 books | 479887 segments | 105s elapsed | ETA 6.5min
+  1175/5423 books | 489383 segments | 107s elapsed | ETA 6.4min
+  1200/5423 books | 505795 segments | 111s elapsed | ETA 6.5min
+  1225/5423 books | 511862 segments | 112s elapsed | ETA 6.4min
+  1250/5423 books | 526029 segments | 114s elapsed | ETA 6.3min
+  1275/5423 books | 529995 segments | 114s elapsed | ETA 6.2min
+  1300/5423 books | 531421 segments | 115s elapsed | ETA 6.1min
+  1325/5423 books | 532183 segments | 116s elapsed | ETA 6.0min
+  1350/5423 books | 539327 segments | 118s elapsed | ETA 5.9min
+  1375/5423 books | 541241 segments | 119s elapsed | ETA 5.8min
+  1400/5423 books | 541869 segments | 120s elapsed | ETA 5.7min
+  1425/5423 books | 542400 segments | 121s elapsed | ETA 5.6min
+  1450/5423 books | 543680 segments | 124s elapsed | ETA 5.7min
+  1475/5423 books | 553409 segments | 125s elapsed | ETA 5.6min
+  1500/5423 books | 555070 segments | 126s elapsed | ETA 5.5min
+  1525/5423 books | 571258 segments | 128s elapsed | ETA 5.5min
+  1550/5423 books | 581872 segments | 130s elapsed | ETA 5.4min
+  1575/5423 books | 590852 segments | 131s elapsed | ETA 5.3min
+  1600/5423 books | 595440 segments | 132s elapsed | ETA 5.3min
+  1625/5423 books | 605030 segments | 134s elapsed | ETA 5.2min
+  1650/5423 books | 615286 segments | 137s elapsed | ETA 5.2min
+  1675/5423 books | 625159 segments | 141s elapsed | ETA 5.3min
+  1700/5423 books | 642953 segments | 147s elapsed | ETA 5.4min
+  1725/5423 books | 663040 segments | 149s elapsed | ETA 5.3min
+  1750/5423 books | 669495 segments | 149s elapsed | ETA 5.2min
+  1775/5423 books | 673254 segments | 150s elapsed | ETA 5.1min
+  1800/5423 books | 681409 segments | 150s elapsed | ETA 5.0min
+  1825/5423 books | 682682 segments | 151s elapsed | ETA 5.0min
+  1850/5423 books | 684151 segments | 152s elapsed | ETA 4.9min
+  1875/5423 books | 694890 segments | 156s elapsed | ETA 4.9min
+  1900/5423 books | 741866 segments | 160s elapsed | ETA 4.9min
+  1925/5423 books | 749535 segments | 161s elapsed | ETA 4.9min
+  1950/5423 books | 751960 segments | 161s elapsed | ETA 4.8min
+  1975/5423 books | 758410 segments | 162s elapsed | ETA 4.7min
+  2000/5423 books | 761237 segments | 164s elapsed | ETA 4.7min
+  2025/5423 books | 763899 segments | 165s elapsed | ETA 4.6min
+  2050/5423 books | 768804 segments | 167s elapsed | ETA 4.6min
+  2075/5423 books | 776180 segments | 170s elapsed | ETA 4.6min
+  2100/5423 books | 789024 segments | 174s elapsed | ETA 4.6min
+  2125/5423 books | 799944 segments | 176s elapsed | ETA 4.5min
+  2150/5423 books | 806540 segments | 177s elapsed | ETA 4.5min
+  2175/5423 books | 818219 segments | 181s elapsed | ETA 4.5min
+  2200/5423 books | 861359 segments | 186s elapsed | ETA 4.5min
+  2225/5423 books | 881139 segments | 187s elapsed | ETA 4.5min
+  2250/5423 books | 883588 segments | 188s elapsed | ETA 4.4min
+  2275/5423 books | 891577 segments | 188s elapsed | ETA 4.3min
+  2300/5423 books | 905684 segments | 191s elapsed | ETA 4.3min
+  2325/5423 books | 917255 segments | 194s elapsed | ETA 4.3min
+  2350/5423 books | 921185 segments | 195s elapsed | ETA 4.2min
+  2375/5423 books | 922587 segments | 196s elapsed | ETA 4.2min
+  2400/5423 books | 924407 segments | 197s elapsed | ETA 4.1min
+  2425/5423 books | 931576 segments | 198s elapsed | ETA 4.1min
+  2450/5423 books | 960697 segments | 202s elapsed | ETA 4.1min
+  2475/5423 books | 990872 segments | 205s elapsed | ETA 4.1min
+  2500/5423 books | 993193 segments | 205s elapsed | ETA 4.0min
+  2525/5423 books | 994314 segments | 205s elapsed | ETA 3.9min
+  2550/5423 books | 1000515 segments | 207s elapsed | ETA 3.9min
+  2575/5423 books | 1006780 segments | 208s elapsed | ETA 3.8min
+  2600/5423 books | 1011719 segments | 209s elapsed | ETA 3.8min
+  2625/5423 books | 1011825 segments | 210s elapsed | ETA 3.7min
+  2650/5423 books | 1012290 segments | 211s elapsed | ETA 3.7min
+  2675/5423 books | 1040072 segments | 215s elapsed | ETA 3.7min
+  2700/5423 books | 1053857 segments | 222s elapsed | ETA 3.7min
+  2725/5423 books | 1071991 segments | 224s elapsed | ETA 3.7min
+  2750/5423 books | 1083208 segments | 226s elapsed | ETA 3.7min
+  2775/5423 books | 1100973 segments | 227s elapsed | ETA 3.6min
+  2800/5423 books | 1103747 segments | 228s elapsed | ETA 3.6min
+  2825/5423 books | 1115401 segments | 230s elapsed | ETA 3.5min
+  2850/5423 books | 1121140 segments | 231s elapsed | ETA 3.5min
+  2875/5423 books | 1127892 segments | 234s elapsed | ETA 3.5min
+  2900/5423 books | 1145182 segments | 236s elapsed | ETA 3.4min
+  2925/5423 books | 1150017 segments | 240s elapsed | ETA 3.4min
+  2950/5423 books | 1183436 segments | 242s elapsed | ETA 3.4min
+  2975/5423 books | 1191717 segments | 244s elapsed | ETA 3.3min
+  3000/5423 books | 1192381 segments | 244s elapsed | ETA 3.3min
+  3025/5423 books | 1195730 segments | 245s elapsed | ETA 3.2min
+  3050/5423 books | 1198263 segments | 246s elapsed | ETA 3.2min
+  3075/5423 books | 1203031 segments | 247s elapsed | ETA 3.1min
+  3100/5423 books | 1207743 segments | 249s elapsed | ETA 3.1min
+  3125/5423 books | 1212505 segments | 250s elapsed | ETA 3.1min
+  3150/5423 books | 1215010 segments | 251s elapsed | ETA 3.0min
+  3175/5423 books | 1219188 segments | 253s elapsed | ETA 3.0min
+  3200/5423 books | 1244779 segments | 256s elapsed | ETA 3.0min
+  3225/5423 books | 1271680 segments | 264s elapsed | ETA 3.0min
+  3250/5423 books | 1294355 segments | 270s elapsed | ETA 3.0min
+  3275/5423 books | 1301151 segments | 271s elapsed | ETA 3.0min
+  3300/5423 books | 1302124 segments | 271s elapsed | ETA 2.9min
+  3325/5423 books | 1315002 segments | 273s elapsed | ETA 2.9min
+  3350/5423 books | 1357523 segments | 290s elapsed | ETA 3.0min
+  3375/5423 books | 1395005 segments | 293s elapsed | ETA 3.0min
+  3400/5423 books | 1418937 segments | 298s elapsed | ETA 3.0min
+  3425/5423 books | 1439691 segments | 301s elapsed | ETA 2.9min
+  3450/5423 books | 1441487 segments | 302s elapsed | ETA 2.9min
+  3475/5423 books | 1443478 segments | 303s elapsed | ETA 2.8min
+  3500/5423 books | 1448835 segments | 304s elapsed | ETA 2.8min
+  3525/5423 books | 1455176 segments | 307s elapsed | ETA 2.8min
+  3550/5423 books | 1470637 segments | 312s elapsed | ETA 2.7min
+  3575/5423 books | 1519146 segments | 319s elapsed | ETA 2.7min
+  3600/5423 books | 1534138 segments | 321s elapsed | ETA 2.7min
+  3625/5423 books | 1543144 segments | 321s elapsed | ETA 2.7min
+  3650/5423 books | 1545607 segments | 323s elapsed | ETA 2.6min
+  3675/5423 books | 1556840 segments | 326s elapsed | ETA 2.6min
+  3700/5423 books | 1573285 segments | 327s elapsed | ETA 2.5min
+  3725/5423 books | 1584432 segments | 329s elapsed | ETA 2.5min
+  3750/5423 books | 1586731 segments | 330s elapsed | ETA 2.5min
+  3775/5423 books | 1588100 segments | 331s elapsed | ETA 2.4min
+  3800/5423 books | 1607316 segments | 333s elapsed | ETA 2.4min
+  3825/5423 books | 1621706 segments | 336s elapsed | ETA 2.3min
+  ERROR importing 'Rashi on Deuteronomy': [WinError 10053] An established connection was aborted by the software in your host machine
+  3850/5423 books | 1657803 segments | 373s elapsed | ETA 2.5min
+  3875/5423 books | 1701639 segments | 375s elapsed | ETA 2.5min
+  3900/5423 books | 1744767 segments | 377s elapsed | ETA 2.5min
+  3925/5423 books | 1802387 segments | 386s elapsed | ETA 2.5min
+  3950/5423 books | 1811140 segments | 387s elapsed | ETA 2.4min
+  3975/5423 books | 1823948 segments | 391s elapsed | ETA 2.4min
+  4000/5423 books | 1831723 segments | 395s elapsed | ETA 2.3min
+  4025/5423 books | 1841763 segments | 398s elapsed | ETA 2.3min
+  4050/5423 books | 1856194 segments | 403s elapsed | ETA 2.3min
+  4075/5423 books | 1883014 segments | 410s elapsed | ETA 2.3min
+  4100/5423 books | 1897018 segments | 414s elapsed | ETA 2.2min
+  4125/5423 books | 1919494 segments | 414s elapsed | ETA 2.2min
+  4150/5423 books | 1920130 segments | 417s elapsed | ETA 2.1min
+  4175/5423 books | 1930925 segments | 419s elapsed | ETA 2.1min
+  4200/5423 books | 1934782 segments | 421s elapsed | ETA 2.0min
+  4225/5423 books | 1966402 segments | 425s elapsed | ETA 2.0min
+  4250/5423 books | 1973602 segments | 428s elapsed | ETA 2.0min
+  4275/5423 books | 1989663 segments | 432s elapsed | ETA 1.9min
+  ERROR importing 'Shorshei HaYam on Mishneh Torah, Agents and Partners': Remote end closed connection without response
+  4300/5423 books | 2000387 segments | 486s elapsed | ETA 2.1min
+  4325/5423 books | 2000549 segments | 486s elapsed | ETA 2.1min
+  4350/5423 books | 2000678 segments | 488s elapsed | ETA 2.0min
+  4375/5423 books | 2026603 segments | 498s elapsed | ETA 2.0min
+  4400/5423 books | 2071743 segments | 508s elapsed | ETA 2.0min
+  4425/5423 books | 2095564 segments | 514s elapsed | ETA 1.9min
+  4450/5423 books | 2098343 segments | 516s elapsed | ETA 1.9min
+  4475/5423 books | 2099500 segments | 517s elapsed | ETA 1.8min
+  4500/5423 books | 2129361 segments | 531s elapsed | ETA 1.8min
+  4525/5423 books | 2158316 segments | 541s elapsed | ETA 1.8min
+  4550/5423 books | 2172784 segments | 547s elapsed | ETA 1.7min
+  4575/5423 books | 2179314 segments | 553s elapsed | ETA 1.7min
+  4600/5423 books | 2190838 segments | 565s elapsed | ETA 1.7min
+  4625/5423 books | 2193335 segments | 566s elapsed | ETA 1.6min
+  4650/5423 books | 2206526 segments | 573s elapsed | ETA 1.6min
+  4675/5423 books | 2211407 segments | 575s elapsed | ETA 1.5min
+  4700/5423 books | 2217742 segments | 577s elapsed | ETA 1.5min
+  4725/5423 books | 2223817 segments | 578s elapsed | ETA 1.4min
+  4750/5423 books | 2230027 segments | 588s elapsed | ETA 1.4min
+  4775/5423 books | 2246319 segments | 592s elapsed | ETA 1.3min
+  4800/5423 books | 2256698 segments | 594s elapsed | ETA 1.3min
+  4825/5423 books | 2258847 segments | 594s elapsed | ETA 1.2min
+  4850/5423 books | 2270072 segments | 601s elapsed | ETA 1.2min
+  4875/5423 books | 2274390 segments | 606s elapsed | ETA 1.1min
+  4900/5423 books | 2276712 segments | 606s elapsed | ETA 1.1min
+  4925/5423 books | 2278461 segments | 607s elapsed | ETA 1.0min
+  4950/5423 books | 2291143 segments | 612s elapsed | ETA 1.0min
+  4975/5423 books | 2295793 segments | 613s elapsed | ETA 0.9min
+  5000/5423 books | 2297104 segments | 613s elapsed | ETA 0.9min
+  5025/5423 books | 2297717 segments | 614s elapsed | ETA 0.8min
+  5050/5423 books | 2297835 segments | 615s elapsed | ETA 0.8min
+  5075/5423 books | 2321955 segments | 617s elapsed | ETA 0.7min
+  5100/5423 books | 2361654 segments | 620s elapsed | ETA 0.7min
+  5125/5423 books | 2384317 segments | 621s elapsed | ETA 0.6min
+  5150/5423 books | 2394956 segments | 622s elapsed | ETA 0.5min
+  5175/5423 books | 2402493 segments | 623s elapsed | ETA 0.5min
+  5200/5423 books | 2403029 segments | 623s elapsed | ETA 0.4min
+  5225/5423 books | 2403167 segments | 623s elapsed | ETA 0.4min
+  5250/5423 books | 2403368 segments | 623s elapsed | ETA 0.3min
+  5275/5423 books | 2404133 segments | 623s elapsed | ETA 0.3min
+  5300/5423 books | 2419498 segments | 625s elapsed | ETA 0.2min
+  5325/5423 books | 2422327 segments | 625s elapsed | ETA 0.2min
+  5350/5423 books | 2428594 segments | 631s elapsed | ETA 0.1min
+  5375/5423 books | 2428981 segments | 631s elapsed | ETA 0.1min
+  5400/5423 books | 2431200 segments | 632s elapsed | ETA 0.0min
+
+=== DONE ===
+categories: 1258 | books: 5420 (0 with no text) | segments: 2445744
+db size: 2440.0 MB at C:\Users\yairz\Downloads\FutureOS--main\FutureOS--main\Sfarim\tools\output\sefaria.db
+3 books failed (re-run the script to retry them, it's resumable):
+  - Chovat HaTalmidim: failed to fetch https://storage.googleapis.com/sefaria-export/json/Chasidut/Piaseczno Rebbe/Chovat HaTalmidim/Hebrew/Chovat HaTalmidim, Warsaw 1932.json: HTTP Error 404: Not Found
+  - Rashi on Deuteronomy: [WinError 10053] An established connection was aborted by the software in your host machine
+  - Shorshei HaYam on Mishneh Torah, Agents and Partners: Remote end closed connection without response
+exit=0

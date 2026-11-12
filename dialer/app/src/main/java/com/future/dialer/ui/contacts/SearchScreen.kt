@@ -1,5 +1,6 @@
 package com.future.dialer.ui.contacts
 
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.icons.FutureIcons
 
 import androidx.compose.foundation.layout.Arrangement
@@ -50,7 +51,7 @@ fun SearchScreen(
 
     Column(modifier = Modifier.fillMaxSize()) {
         ScreenTopBar(
-            title = "חיפוש",
+            title = tr("חיפוש"),
             textColor = theme.textColor,
             accentColor = theme.accentColor,
             onBack = onBack,
@@ -59,7 +60,7 @@ fun SearchScreen(
             value = query,
             onValueChange = viewModel::onSearchQueryChanged,
             theme = theme,
-            placeholder = "שם או מספר",
+            placeholder = tr("שם או מספר"),
             autoFocus = true,
             leading = {
                 Icon(
@@ -77,8 +78,8 @@ fun SearchScreen(
         if (results.isEmpty()) {
             EmptyState(
                 icon = FutureIcons.SearchOff,
-                title = "אין תוצאות",
-                subtitle = "נסה שם או ספרות אחרות",
+                title = tr("אין תוצאות"),
+                subtitle = tr("נסה שם או ספרות אחרות"),
                 textColor = theme.textColor,
                 modifier = Modifier.weight(1f).fillMaxWidth(),
             )

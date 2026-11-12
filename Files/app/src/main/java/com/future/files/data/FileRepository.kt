@@ -1,6 +1,8 @@
 package com.future.files.data
 
+import com.future.sharednav.i18n.tr
 import java.io.File
+import java.nio.file.Files as NioFiles
 
 data class FileEntry(val file: File, val isDirectory: Boolean, val sizeBytes: Long)
 
@@ -26,23 +28,23 @@ private val ROOT_HIDDEN_NAMES = setOf(
  * אחרות שכותבות/קוראות מהתיקיות האלה לפי השם האנגלי הסטנדרטי (למשל מצלמה
  * שכותבת ל-DCIM) ימשיכו לעבוד כרגיל. */
 private val ROOT_FOLDER_DISPLAY_NAMES = mapOf(
-    "Download" to "הורדות",
-    "Downloads" to "הורדות",
-    "DCIM" to "מצלמה",
-    "Pictures" to "תמונות",
-    "Documents" to "מסמכים",
-    "Music" to "מוזיקה",
-    "Movies" to "סרטונים",
-    "Alarms" to "התראות שעון",
-    "Notifications" to "צלילי התראה",
-    "Podcasts" to "פודקאסטים",
-    "Ringtones" to "רינגטונים",
-    "Screenshots" to "צילומי מסך",
-    "Audiobooks" to "ספרי שמע",
-    "Recordings" to "הקלטות",
-    "WhatsApp" to "וואטסאפ",
-    "Telegram" to "טלגרם",
-    "Bluetooth" to "בלוטות'"
+    "Download" to tr("הורדות"),
+    "Downloads" to tr("הורדות"),
+    "DCIM" to tr("מצלמה"),
+    "Pictures" to tr("תמונות"),
+    "Documents" to tr("מסמכים"),
+    "Music" to tr("מוזיקה"),
+    "Movies" to tr("סרטונים"),
+    "Alarms" to tr("התראות שעון"),
+    "Notifications" to tr("צלילי התראה"),
+    "Podcasts" to tr("פודקאסטים"),
+    "Ringtones" to tr("רינגטונים"),
+    "Screenshots" to tr("צילומי מסך"),
+    "Audiobooks" to tr("ספרי שמע"),
+    "Recordings" to tr("הקלטות"),
+    "WhatsApp" to tr("וואטסאפ"),
+    "Telegram" to tr("טלגרם"),
+    "Bluetooth" to tr("בלוטות'")
 )
 
 /** שם התצוגה של תיקייה: מתורגם לעברית אם זו תיקיית-שורש מוכרת (isTopLevel),
@@ -84,7 +86,7 @@ fun categorize(file: File): FileCategory {
 }
 
 /** סדר הרשימה - נבחר בכפתור המיון שבשורה העליונה. תיקיות תמיד לפני קבצים. */
-enum class SortOrder(val label: String) { NAME("שם"), DATE("תאריך"), SIZE("גודל"), TYPE("סוג") }
+enum class SortOrder(val label: String) { NAME(tr("שם")), DATE(tr("תאריך")), SIZE(tr("גודל")), TYPE(tr("סוג")) }
 
 /** התקדמות של העתקה/העברה ארוכה, וביטול שלה מהמסך. */
 class CopyProgress {
@@ -98,17 +100,15 @@ class CopyProgress {
 
 /**
  * מצב מפתח (הגדרות > אפשרויות מפתח). בלעדיו הקבצים מציגים רק את מה ששייך
- * למשתמש: בלי תיקיות של אפליקציות (Android, backups, com.xxx), בלי קבצי
- * מערכת (xml, log, apk) ובלי וידאו, שהקבצים לא תומכים בו.
+ * למשתמש: בלי תיקיות של אפליקציות (Android, backups, com.xxx) ובלי קבצי
+ * מערכת (xml, log, apk). סרטונים תמיד מוצגים.
  */
 fun isDeveloperMode(context: android.content.Context): Boolean =
     android.provider.Settings.Global.getInt(context.contentResolver, android.provider.Settings.Global.DEVELOPMENT_SETTINGS_ENABLED, 0) == 1
 
-/** תיקיות טכניות שאפליקציות יוצרות - מוסתרות כשמצב מפתח כבוי. */
-private val TECHNICAL_FOLDERS = setOf(
-    "android", "lost.dir", "backups", "backup", "baidu", "baiduasr", "apkpure", "tencent", "miui",
-    "bugreports", "logs", "log", "mtklog", "debuglogger", "data", "obb", "system", "cache", "temp", "tmp",
-    "sharedit", "shareit", "amap", "autonavi", "netease", "sogou", "ucdownloads",
+/** תיקיות מערכת - מוסתרות תמיד. תיקיות אחרות (למשל logs או project.v2) מוצגות למשתמש. */
+private val SYSTEM_FOLDERS = setOf(
+    "android", "lost.dir", "backups", "backup", "bugreports", "mtklog", "debuglogger", "data", "obb", "system", "cache", "temp", "tmp",
 )
 
 /** סיומות של קבצים טכניים - מוסתרות כשמצב מפתח כבוי. */
@@ -117,21 +117,37 @@ private val TECHNICAL_EXTENSIONS = setOf(
     "prop", "dat", "lock", "bak", "json", "nomedia",
 )
 
-/** "com.apkpure.aegon" - תיקייה בשם של חבילה היא תיקיית נתונים של אפליקציה. */
-private val PACKAGE_NAME = Regex("^[a-z][a-z0-9_]*(\\.[a-z0-9_]+)+$")
 
 private fun isTechnical(entry: File): Boolean {
     val lower = entry.name.lowercase()
-    return if (entry.isDirectory) lower in TECHNICAL_FOLDERS || PACKAGE_NAME.matches(lower)
-    else entry.extension.lowercase() in TECHNICAL_EXTENSIONS || categorize(entry) == FileCategory.VIDEO
+    return if (entry.isDirectory) lower in SYSTEM_FOLDERS
+    else entry.extension.lowercase() in TECHNICAL_EXTENSIONS
+}
+
+/** קישור סמלי - לא נעקב בשום פעולה (מחיקה, העתקה), כדי לא לגעת במקור שלו. */
+private fun isLink(file: File): Boolean = NioFiles.isSymbolicLink(file.toPath())
+
+/** עץ הקבצים של [source] בלי לרדת לתוך קישורים סמליים (ואף לא להעתיק אותם). */
+private fun ownTree(source: File): Sequence<File> =
+    source.walkTopDown()
+        .onEnter { it == source || !isLink(it) }
+        .filter { it == source || !isLink(it) }
+
+/** מחיקה רקורסיבית שלא עוקבת אחרי קישורים: קישור נמחק כקישור בלבד. */
+private fun deleteTree(file: File): Boolean {
+    if (!file.exists() && !isLink(file)) return true
+    if (isLink(file)) return file.delete()
+    if (file.isDirectory) file.listFiles()?.forEach { if (!deleteTree(it)) return false }
+    return file.delete()
 }
 
 /** גישה אמיתית למערכת הקבצים של המכשיר - בלי נתונים מדומים. */
 class FileRepository {
 
-    fun listDirectory(dir: File, isRoot: Boolean, sort: SortOrder = SortOrder.NAME, developer: Boolean = false): List<FileEntry> {
+    /** null כשהתיקייה לא נקראת (שגיאת קריאה) - כדי להבדיל ממצב "תיקייה ריקה". */
+    fun listDirectory(dir: File, isRoot: Boolean, sort: SortOrder = SortOrder.NAME, developer: Boolean = false): List<FileEntry>? {
         return try {
-            val entries = (dir.listFiles() ?: emptyArray())
+            val entries = (dir.listFiles() ?: return null)
                 .filter { entry ->
                     val name = entry.name
                     if (name.startsWith(".")) return@filter false
@@ -142,15 +158,23 @@ class FileRepository {
                     true
                 }
                 .map { FileEntry(it, it.isDirectory, if (it.isFile) it.length() else 0L) }
+            // סדר אלפביתי אמיתי (ICU, עברית): עברית לחוד ואנגלית לחוד, כל אחת לפי
+            // הא"ב שלה, בלי תלות באותיות גדולות. קודם השמות התערבבו.
+            val collator = java.text.Collator.getInstance(java.util.Locale("he")).apply { strength = java.text.Collator.SECONDARY }
+            val byName = Comparator<FileEntry> { a, b -> collator.compare(a.file.name, b.file.name) }
             val bySort: Comparator<FileEntry> = when (sort) {
-                SortOrder.NAME -> compareBy { it.file.name.lowercase() }
+                SortOrder.NAME -> byName
                 SortOrder.DATE -> compareByDescending { it.file.lastModified() }
-                SortOrder.SIZE -> compareByDescending<FileEntry> { it.sizeBytes }.thenBy { it.file.name.lowercase() }
-                SortOrder.TYPE -> compareBy<FileEntry> { it.file.extension.lowercase() }.thenBy { it.file.name.lowercase() }
+                SortOrder.SIZE -> compareByDescending<FileEntry> { it.sizeBytes }.then(byName)
+                // FL-D09 / FL-N04: לפי קטגוריה (טקסט, תמונה, שמע, PDF, וידאו...) ואז סיומת ושם.
+                // לתיקיות אין סיומת ("com.apkpure.aegon" לא נחשב סיומת "aegon"), הן ממוינות לפי שם.
+                SortOrder.TYPE -> compareBy<FileEntry> { if (it.isDirectory) 0 else categorize(it.file).ordinal }
+                    .thenBy { if (it.isDirectory) "" else it.file.extension.lowercase() }
+                    .then(byName)
             }
             entries.sortedWith(compareByDescending<FileEntry> { it.isDirectory }.then(bySort))
         } catch (e: Exception) {
-            emptyList()
+            null
         }
     }
 
@@ -167,7 +191,7 @@ class FileRepository {
 
     fun deleteEntry(file: File): Boolean {
         return try {
-            file.deleteRecursively()
+            deleteTree(file)
         } catch (e: Exception) {
             false
         }
@@ -193,12 +217,12 @@ class FileRepository {
     }
 
     /** העתקה עם התקדמות וביטול. ביטול באמצע מוחק את מה שכבר הועתק. */
-    fun copyEntry(source: File, destDir: File, progress: CopyProgress = CopyProgress()): Boolean {
-        val target = File(destDir, source.name)
+    fun copyEntry(source: File, destDir: File, progress: CopyProgress = CopyProgress(), targetName: String = source.name): Boolean {
+        val target = File(destDir, targetName)
         return try {
             if (target.exists() || target.absolutePath.startsWith(source.absolutePath + File.separator)) return false
-            progress.total = source.walkTopDown().filter { it.isFile }.sumOf { it.length() }.coerceAtLeast(1L)
-            source.walkTopDown().forEach { from ->
+            progress.total = ownTree(source).filter { it.isFile }.sumOf { it.length() }.coerceAtLeast(1L)
+            ownTree(source).forEach { from ->
                 if (progress.cancelled) throw java.util.concurrent.CancellationException()
                 val to = File(target, from.relativeTo(source).path)
                 if (from.isDirectory) {
@@ -226,25 +250,51 @@ class FileRepository {
         }
     }
 
-    fun moveEntry(source: File, destDir: File, progress: CopyProgress = CopyProgress()): Boolean {
+    fun moveEntry(source: File, destDir: File, progress: CopyProgress = CopyProgress(), targetName: String = source.name): Boolean {
         return try {
-            val target = File(destDir, source.name)
+            val target = File(destDir, targetName)
             if (target.exists()) return false
             if (source.renameTo(target)) return true
-            if (copyEntry(source, destDir, progress)) { source.deleteRecursively(); true } else false
+            if (copyEntry(source, destDir, progress, targetName)) { deleteEntry(source); true } else false
         } catch (e: Exception) {
             false
         }
     }
 
     /** שמירת קובץ טקסט/קוד מהעורך. כתיבה לקובץ זמני ואז החלפה - בלי קובץ חצי-כתוב. */
-    fun saveText(file: File, text: String): Boolean = try {
+    /**
+     * שמירה אטומית: כותבים לקובץ זמני, מסנכרנים לדיסק, ואז מחליפים את המקור.
+     * כשלון בכתיבה או בהחלפה משאיר את הקובץ המקורי בלי שינוי ומוחק את הזמני.
+     */
+    fun saveText(file: File, text: String): Boolean {
         val tmp = File(file.parentFile, ".${file.name}.saving")
-        tmp.writeText(text)
-        if (!tmp.renameTo(file)) { file.writeText(text); tmp.delete() }
-        true
-    } catch (e: Exception) {
-        false
+        return try {
+            java.io.FileOutputStream(tmp).use { out ->
+                out.write(text.toByteArray(Charsets.UTF_8))
+                out.flush()
+                out.fd.sync()
+            }
+            try {
+                NioFiles.move(tmp.toPath(), file.toPath(), java.nio.file.StandardCopyOption.ATOMIC_MOVE, java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+            } catch (e: java.nio.file.AtomicMoveNotSupportedException) {
+                NioFiles.move(tmp.toPath(), file.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+            }
+            true
+        } catch (e: Exception) {
+            tmp.delete()
+            false
+        }
+    }
+
+    /** שם פנוי בתיקייה: אם השם תפוס - "שם (2)", "שם (3)"... (לקבצים - לפני הסיומת). */
+    fun availableName(destDir: File, name: String, isDirectory: Boolean): String {
+        if (!File(destDir, name).exists()) return name
+        val dot = if (isDirectory) -1 else name.lastIndexOf('.').takeIf { it > 0 } ?: -1
+        val base = if (dot > 0) name.substring(0, dot) else name
+        val ext = if (dot > 0) name.substring(dot) else ""
+        var n = 2
+        while (File(destDir, "$base ($n)$ext").exists()) n++
+        return "$base ($n)$ext"
     }
 
     fun createFolder(parent: File, name: String): Boolean {
@@ -267,6 +317,7 @@ class FileRepository {
             value /= 1024
             unitIndex++
         }
-        return "%.1f %s".format(value, units[unitIndex])
+        // בייטים שלמים בלי ".0" (14 B, לא 14.0 B).
+        return if (unitIndex == 0) "%d B".format(bytes) else "%.1f %s".format(value, units[unitIndex])
     }
 }

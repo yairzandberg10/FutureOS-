@@ -1,0 +1,2 @@
+persist.sys.futureos.    u:object_r:futureos_prop:s0
+sys.futureos.            u:object_r:futureos_prop:s0

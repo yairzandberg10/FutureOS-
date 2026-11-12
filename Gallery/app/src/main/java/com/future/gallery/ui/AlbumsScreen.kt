@@ -1,4 +1,5 @@
 package com.future.gallery.ui
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.theme.readableAccentColor
 import com.future.sharednav.theme.idleChipColor
 import com.future.sharednav.theme.FutureDimens
@@ -59,7 +60,7 @@ fun AlbumsScreen(
     if (albums.isEmpty()) {
         com.future.sharednav.components.EmptyState(
             icon = Icons.Rounded.PhotoAlbum,
-            title = "אין אלבומים עדיין",
+            title = tr("אין אלבומים עדיין"),
             textColor = theme.textColor,
         )
         return
@@ -144,7 +145,7 @@ private fun AlbumCard(album: Album, theme: FutureTheme, onClick: () -> Unit, foc
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            Text("${album.count} פריטים", color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.caption)
+            Text(tr("{0} פריטים", album.count), color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.caption)
         }
     }
 }

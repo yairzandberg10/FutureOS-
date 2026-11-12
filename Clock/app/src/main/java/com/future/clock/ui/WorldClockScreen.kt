@@ -1,5 +1,6 @@
 package com.future.clock.ui
 
+import com.future.sharednav.i18n.tr
 import android.content.Context
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
@@ -47,43 +48,43 @@ data class CityClock(val name: String, val timezone: String)
 
 /** הערים שאפשר להוסיף. */
 val WORLD_CITIES = listOf(
-    CityClock("ירושלים", "Asia/Jerusalem"),
-    CityClock("לונדון", "Europe/London"),
-    CityClock("פריז", "Europe/Paris"),
-    CityClock("ברלין", "Europe/Berlin"),
-    CityClock("רומא", "Europe/Rome"),
-    CityClock("מדריד", "Europe/Madrid"),
-    CityClock("אמסטרדם", "Europe/Amsterdam"),
-    CityClock("אתונה", "Europe/Athens"),
-    CityClock("איסטנבול", "Europe/Istanbul"),
-    CityClock("מוסקבה", "Europe/Moscow"),
-    CityClock("קייב", "Europe/Kiev"),
-    CityClock("קהיר", "Africa/Cairo"),
-    CityClock("יוהנסבורג", "Africa/Johannesburg"),
-    CityClock("דובאי", "Asia/Dubai"),
-    CityClock("מומבאי", "Asia/Kolkata"),
-    CityClock("בנגקוק", "Asia/Bangkok"),
-    CityClock("סינגפור", "Asia/Singapore"),
-    CityClock("הונג קונג", "Asia/Hong_Kong"),
-    CityClock("בייג'ינג", "Asia/Shanghai"),
-    CityClock("סיאול", "Asia/Seoul"),
-    CityClock("טוקיו", "Asia/Tokyo"),
-    CityClock("סידני", "Australia/Sydney"),
-    CityClock("מלבורן", "Australia/Melbourne"),
-    CityClock("אוקלנד", "Pacific/Auckland"),
-    CityClock("הונולולו", "Pacific/Honolulu"),
-    CityClock("לוס אנג'לס", "America/Los_Angeles"),
-    CityClock("דנוור", "America/Denver"),
-    CityClock("שיקגו", "America/Chicago"),
-    CityClock("ניו יורק", "America/New_York"),
-    CityClock("מיאמי", "America/New_York"),
-    CityClock("טורונטו", "America/Toronto"),
-    CityClock("מקסיקו סיטי", "America/Mexico_City"),
-    CityClock("בואנוס איירס", "America/Argentina/Buenos_Aires"),
-    CityClock("סאו פאולו", "America/Sao_Paulo"),
+    CityClock(tr("ירושלים"), "Asia/Jerusalem"),
+    CityClock(tr("לונדון"), "Europe/London"),
+    CityClock(tr("פריז"), "Europe/Paris"),
+    CityClock(tr("ברלין"), "Europe/Berlin"),
+    CityClock(tr("רומא"), "Europe/Rome"),
+    CityClock(tr("מדריד"), "Europe/Madrid"),
+    CityClock(tr("אמסטרדם"), "Europe/Amsterdam"),
+    CityClock(tr("אתונה"), "Europe/Athens"),
+    CityClock(tr("איסטנבול"), "Europe/Istanbul"),
+    CityClock(tr("מוסקבה"), "Europe/Moscow"),
+    CityClock(tr("קייב"), "Europe/Kiev"),
+    CityClock(tr("קהיר"), "Africa/Cairo"),
+    CityClock(tr("יוהנסבורג"), "Africa/Johannesburg"),
+    CityClock(tr("דובאי"), "Asia/Dubai"),
+    CityClock(tr("מומבאי"), "Asia/Kolkata"),
+    CityClock(tr("בנגקוק"), "Asia/Bangkok"),
+    CityClock(tr("סינגפור"), "Asia/Singapore"),
+    CityClock(tr("הונג קונג"), "Asia/Hong_Kong"),
+    CityClock(tr("בייג'ינג"), "Asia/Shanghai"),
+    CityClock(tr("סיאול"), "Asia/Seoul"),
+    CityClock(tr("טוקיו"), "Asia/Tokyo"),
+    CityClock(tr("סידני"), "Australia/Sydney"),
+    CityClock(tr("מלבורן"), "Australia/Melbourne"),
+    CityClock(tr("אוקלנד"), "Pacific/Auckland"),
+    CityClock(tr("הונולולו"), "Pacific/Honolulu"),
+    CityClock(tr("לוס אנג'לס"), "America/Los_Angeles"),
+    CityClock(tr("דנוור"), "America/Denver"),
+    CityClock(tr("שיקגו"), "America/Chicago"),
+    CityClock(tr("ניו יורק"), "America/New_York"),
+    CityClock(tr("מיאמי"), "America/New_York"),
+    CityClock(tr("טורונטו"), "America/Toronto"),
+    CityClock(tr("מקסיקו סיטי"), "America/Mexico_City"),
+    CityClock(tr("בואנוס איירס"), "America/Argentina/Buenos_Aires"),
+    CityClock(tr("סאו פאולו"), "America/Sao_Paulo"),
 )
 
-private val DEFAULT_CITY_NAMES = listOf("ירושלים", "לונדון", "ניו יורק", "טוקיו")
+private val DEFAULT_CITY_NAMES = listOf(tr("ירושלים"), tr("לונדון"), tr("ניו יורק"), tr("טוקיו"))
 
 /** הערים שבחר המשתמש, בסדר שלו. */
 private object WorldClockStore {
@@ -132,7 +133,7 @@ fun WorldClockScreen(theme: FutureTheme, onBack: () -> Unit) {
     onOptionsKeyPress { if (!picking) menuOpen = !menuOpen }
     BackHandler(enabled = picking) { picking = false }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         AnimatedScreenHost(targetState = picking, depthOf = { if (it) 1 else 0 }) { showPicker ->
             if (showPicker) {
                 CityPicker(
@@ -147,12 +148,12 @@ fun WorldClockScreen(theme: FutureTheme, onBack: () -> Unit) {
             } else {
                 Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
                     Column(modifier = Modifier.fillMaxSize()) {
-                        ToolsHeader(title = "שעון עולמי", theme = theme)
+                        ToolsHeader(title = tr("שעון עולמי"), theme = theme)
                         if (cities.isEmpty()) {
                             EmptyState(
                                 icon = FutureIcons.Public,
-                                title = "אין שעונים",
-                                subtitle = "לחץ על מקש התפריט כדי להוסיף",
+                                title = tr("אין שעונים"),
+                                subtitle = tr("לחץ על מקש התפריט כדי להוסיף"),
                                 textColor = theme.textColor,
                             )
                         } else {
@@ -185,13 +186,13 @@ fun WorldClockScreen(theme: FutureTheme, onBack: () -> Unit) {
     }
 
     if (menuOpen) {
-        FutureOptionsMenu(theme = theme, onDismissRequest = { menuOpen = false }, header = "שעון עולמי") {
-            FutureMenuRow("הוסף עיר", FutureIcons.Add, theme, {
+        FutureOptionsMenu(theme = theme, onDismissRequest = { menuOpen = false }, header = tr("שעון עולמי")) {
+            FutureMenuRow(tr("הוסף עיר"), FutureIcons.Add, theme, {
                 menuOpen = false
                 picking = true
             })
             cities.getOrNull(focusedIndex)?.let { city ->
-                FutureMenuRow("מחק את ${city.name}", FutureIcons.Delete, theme, {
+                FutureMenuRow(tr("מחק את {0}", city.name), FutureIcons.Delete, theme, {
                     menuOpen = false
                     persist(cities - city)
                     focusedIndex = (focusedIndex - 1).coerceAtLeast(0)
@@ -210,15 +211,15 @@ private fun relativeLabel(zone: ZoneId, now: Long): String {
     val there = ZonedDateTime.ofInstant(instant, zone)
     val day = when (there.toLocalDate().compareTo(here.toLocalDate())) {
         0 -> "היום"
-        in 1..Int.MAX_VALUE -> "מחר"
-        else -> "אתמול"
+        in 1..Int.MAX_VALUE -> tr("מחר")
+        else -> tr("אתמול")
     }
     val diffMinutes = (there.offset.totalSeconds - here.offset.totalSeconds) / 60
-    if (diffMinutes == 0) return "$day · אותה שעה"
+    if (diffMinutes == 0) return tr("{0} · אותה שעה", day)
     val sign = if (diffMinutes > 0) "+" else "−"
     val abs = kotlin.math.abs(diffMinutes)
     val hours = if (abs % 60 == 0) "${abs / 60}" else "%d:%02d".format(abs / 60, abs % 60)
-    return "$day · $sign$hours שע׳"
+    return tr("{0} · {1}{2} שע׳", day, sign, hours)
 }
 
 @Composable
@@ -250,7 +251,7 @@ private fun CityPicker(theme: FutureTheme, exclude: List<CityClock>, onPick: (Ci
     LaunchedEffect(Unit) { runCatching { first.requestFocus() } }
     val now = remember { System.currentTimeMillis() }
     Column(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
-        ToolsHeader(title = "הוסף עיר", theme = theme)
+        ToolsHeader(title = tr("הוסף עיר"), theme = theme)
         LazyColumn(contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)) {
             itemsIndexed(options, key = { _, c -> c.name }) { index, city ->
                 FutureListItem(

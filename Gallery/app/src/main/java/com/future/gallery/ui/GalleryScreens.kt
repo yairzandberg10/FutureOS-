@@ -1,4 +1,5 @@
 package com.future.gallery.ui
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.systemui.StatusBarInset
 
 import android.app.RecoverableSecurityException
@@ -84,12 +85,12 @@ import kotlinx.coroutines.withContext
 private enum class GalleryTab { ALL, ALBUMS }
 
 private val SORT_LABELS = mapOf(
-    SortOption.DATE_NEWEST to "תאריך - החדש קודם",
-    SortOption.DATE_OLDEST to "תאריך - הישן קודם",
-    SortOption.NAME_AZ to "שם - א' עד ת'",
-    SortOption.NAME_ZA to "שם - ת' עד א'",
-    SortOption.SIZE_LARGEST to "גודל - הגדול קודם",
-    SortOption.SIZE_SMALLEST to "גודל - הקטן קודם"
+    SortOption.DATE_NEWEST to tr("תאריך - החדש קודם"),
+    SortOption.DATE_OLDEST to tr("תאריך - הישן קודם"),
+    SortOption.NAME_AZ to tr("שם - א' עד ת'"),
+    SortOption.NAME_ZA to tr("שם - ת' עד א'"),
+    SortOption.SIZE_LARGEST to tr("גודל - הגדול קודם"),
+    SortOption.SIZE_SMALLEST to tr("גודל - הקטן קודם")
 )
 
 /** רמות הזום: מ-1x (כל התמונה) עד 8x; OK מדלג בין 1/2/4, 1 ו-3 בצעדים רציפים. */
@@ -116,17 +117,17 @@ fun GalleryHomeScreen(
 
     com.future.sharednav.nav.onOptionsKeyPress { showMenu = !showMenu }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize()) {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 14.dp + StatusBarInset.TITLE_GAP_DP.dp, bottom = 8.dp),
                     verticalAlignment = Alignment.Bottom
                 ) {
-                    Text("גלריה", fontSize = FutureTypography.headline, fontWeight = FontWeight.Bold, color = theme.textColor, modifier = Modifier.weight(1f))
+                    Text(tr("גלריה"), fontSize = FutureTypography.headline, fontWeight = FontWeight.Bold, color = theme.textColor, modifier = Modifier.weight(1f))
                     if (hasPermission) {
                         Text(
-                            if (tab == GalleryTab.ALL) "${items.size} תמונות" else "${albums.size} אלבומים",
+                            if (tab == GalleryTab.ALL) tr("{0} תמונות", items.size) else tr("{0} אלבומים", albums.size),
                             color = theme.mutedTextColor,
                             fontSize = FutureTypography.caption,
                         )
@@ -137,8 +138,8 @@ fun GalleryHomeScreen(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    FutureChip("הכל", theme, selected = tab == GalleryTab.ALL, onClick = { tab = GalleryTab.ALL })
-                    FutureChip("אלבומים", theme, selected = tab == GalleryTab.ALBUMS, onClick = { tab = GalleryTab.ALBUMS })
+                    FutureChip(tr("הכל"), theme, selected = tab == GalleryTab.ALL, onClick = { tab = GalleryTab.ALL })
+                    FutureChip(tr("אלבומים"), theme, selected = tab == GalleryTab.ALBUMS, onClick = { tab = GalleryTab.ALBUMS })
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -150,16 +151,16 @@ fun GalleryHomeScreen(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center
                         ) {
-                            Text("כדי להציג תמונות צריך לאשר הרשאה", color = theme.mutedTextColor, fontSize = FutureTypography.bodyLarge)
+                            Text(tr("כדי להציג תמונות צריך לאשר הרשאה"), color = theme.mutedTextColor, fontSize = FutureTypography.bodyLarge)
                             Spacer(modifier = Modifier.height(16.dp))
-                            FutureButton("אשר הרשאה", theme, onRequestPermission)
+                            FutureButton(tr("אשר הרשאה"), theme, onRequestPermission)
                         }
                     }
                     tab == GalleryTab.ALBUMS -> AlbumsScreen(albums, theme, onAlbumClick, lastSelectedAlbumId = lastSelectedAlbumId)
                     sortedItems.isEmpty() -> {
                         com.future.sharednav.components.EmptyState(
                             icon = FutureIcons.Image,
-                            title = "אין תמונות במכשיר",
+                            title = tr("אין תמונות במכשיר"),
                             textColor = theme.textColor,
                         )
                     }
@@ -168,9 +169,9 @@ fun GalleryHomeScreen(
             }
 
             if (showMenu) {
-                FutureOptionsMenu(theme = theme, onDismissRequest = { showMenu = false }, header = "גלריה") {
+                FutureOptionsMenu(theme = theme, onDismissRequest = { showMenu = false }, header = tr("גלריה")) {
                     FutureMenuRow(
-                        if (tab == GalleryTab.ALL) "הצג אלבומים" else "הצג את כל התמונות",
+                        if (tab == GalleryTab.ALL) tr("הצג אלבומים") else tr("הצג את כל התמונות"),
                         if (tab == GalleryTab.ALL) FutureIcons.Folder else FutureIcons.Image,
                         theme,
                         onClick = {
@@ -207,7 +208,7 @@ fun AlbumDetailScreen(
     onItemClick: (List<MediaItem>, MediaItem) -> Unit,
     lastSelectedItemId: Long? = null,
 ) {
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize()) {
                 Row(
@@ -215,11 +216,11 @@ fun AlbumDetailScreen(
                     verticalAlignment = Alignment.Bottom
                 ) {
                     Text(albumName, fontSize = FutureTypography.screenTitle, fontWeight = FontWeight.Bold, color = theme.textColor, modifier = Modifier.weight(1f), maxLines = 1)
-                    Text("${items.size} תמונות", color = theme.mutedTextColor, fontSize = FutureTypography.caption)
+                    Text(tr("{0} תמונות", items.size), color = theme.mutedTextColor, fontSize = FutureTypography.caption)
                 }
                 if (items.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("האלבום ריק", color = theme.mutedTextColor, fontSize = FutureTypography.bodyLarge)
+                        Text(tr("האלבום ריק"), color = theme.mutedTextColor, fontSize = FutureTypography.bodyLarge)
                     }
                 } else {
                     MediaGrid(items, theme, onItemClick = { item -> onItemClick(items, item) }, lastSelectedId = lastSelectedItemId)
@@ -444,7 +445,7 @@ fun MediaViewerScreen(
             clipData = android.content.ClipData.newRawUri(item.displayName, item.uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-        com.future.sharednav.share.FutureShare.open(context, send, "שיתוף תמונה")
+        com.future.sharednav.share.FutureShare.open(context, send, tr("שיתוף תמונה"))
     }
 
     fun setAsWallpaper() {
@@ -457,11 +458,11 @@ fun MediaViewerScreen(
                     true
                 }.getOrDefault(false)
             }
-            android.widget.Toast.makeText(context, if (ok) "הוגדר כרקע" else "לא ניתן להגדיר כרקע", android.widget.Toast.LENGTH_SHORT).show()
+            android.widget.Toast.makeText(context, if (ok) tr("הוגדר כרקע") else tr("לא ניתן להגדיר כרקע"), android.widget.Toast.LENGTH_SHORT).show()
         }
     }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -540,7 +541,7 @@ fun MediaViewerScreen(
                                 verticalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm),
                             ) {
                                 Icon(FutureIcons.Image, contentDescription = null, tint = theme.mutedTextColor, modifier = Modifier.size(FutureDimens.iconEmptyState))
-                                Text("לא ניתן לטעון את התמונה", color = theme.mutedTextColor, fontSize = FutureTypography.body)
+                                Text(tr("לא ניתן לטעון את התמונה"), color = theme.mutedTextColor, fontSize = FutureTypography.body)
                             }
                             bmp != null -> Image(
                                 bitmap = bmp.asImageBitmap(),
@@ -583,7 +584,7 @@ fun MediaViewerScreen(
                     enter = fadeIn(), exit = fadeOut(),
                     modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = FutureDimens.spacingMd),
                 ) {
-                    ViewerBadge(if (items.size > 1) "‹ › תמונה אחרת · ↓ פעולות" else "↓ פעולות · 5 מסך מלא", theme)
+                    ViewerBadge(if (items.size > 1) tr("‹ › תמונה אחרת · ↓ פעולות") else tr("↓ פעולות · 5 מסך מלא"), theme)
                 }
             }
 
@@ -594,10 +595,10 @@ fun MediaViewerScreen(
                     firstFocusRequester = actionBarFocus,
                     onFocusChanged = { actionBarFocused = it },
                     actions = listOf(
-                        com.future.sharednav.components.FutureAction("שיתוף", FutureIcons.Share) { share() },
-                        com.future.sharednav.components.FutureAction("עריכה", FutureIcons.Edit, enabled = bitmap != null) { onEdit() },
-                        com.future.sharednav.components.FutureAction("פרטים", FutureIcons.Info) { showInfo = true },
-                        com.future.sharednav.components.FutureAction("מחיקה", FutureIcons.Delete, destructive = true) { showDeleteConfirm = true },
+                        com.future.sharednav.components.FutureAction(tr("שיתוף"), FutureIcons.Share) { share() },
+                        com.future.sharednav.components.FutureAction(tr("עריכה"), FutureIcons.Edit, enabled = bitmap != null) { onEdit() },
+                        com.future.sharednav.components.FutureAction(tr("פרטים"), FutureIcons.Info) { showInfo = true },
+                        com.future.sharednav.components.FutureAction(tr("מחיקה"), FutureIcons.Delete, destructive = true) { showDeleteConfirm = true },
                     ),
                 )
             }
@@ -609,37 +610,37 @@ fun MediaViewerScreen(
             if (result.resultCode == android.app.Activity.RESULT_OK) {
                 onDeleted()
             } else {
-                android.widget.Toast.makeText(context, "המחיקה בוטלה", android.widget.Toast.LENGTH_SHORT).show()
+                android.widget.Toast.makeText(context, tr("המחיקה בוטלה"), android.widget.Toast.LENGTH_SHORT).show()
             }
         }
 
         if (showMenu) {
-            FutureOptionsMenu(theme = theme, onDismissRequest = { showMenu = false }, header = item.displayName.ifBlank { "תמונה" }) {
-                if (bitmap != null) FutureMenuRow("עריכה ואפקטים", FutureIcons.Edit, theme, onClick = { showMenu = false; onEdit() })
-                FutureMenuRow("שיתוף", FutureIcons.Share, theme, onClick = { showMenu = false; share() })
-                if (zoomTarget > 1f) FutureMenuRow("חזרה לתמונה המלאה", FutureIcons.RestartAlt, theme, onClick = { showMenu = false; setZoom(1f) })
-                FutureMenuRow("פרטים", FutureIcons.Info, theme, onClick = { showMenu = false; showInfo = true })
-                FutureMenuRow("הגדר כרקע", FutureIcons.Palette, theme, onClick = { showMenu = false; setAsWallpaper() })
-                FutureMenuRow("מחיקה", FutureIcons.Delete, theme, destructive = true, onClick = { showMenu = false; showDeleteConfirm = true })
+            FutureOptionsMenu(theme = theme, onDismissRequest = { showMenu = false }, header = item.displayName.ifBlank { tr("תמונה") }) {
+                if (bitmap != null) FutureMenuRow(tr("עריכה ואפקטים"), FutureIcons.Edit, theme, onClick = { showMenu = false; onEdit() })
+                FutureMenuRow(tr("שיתוף"), FutureIcons.Share, theme, onClick = { showMenu = false; share() })
+                if (zoomTarget > 1f) FutureMenuRow(tr("חזרה לתמונה המלאה"), FutureIcons.RestartAlt, theme, onClick = { showMenu = false; setZoom(1f) })
+                FutureMenuRow(tr("פרטים"), FutureIcons.Info, theme, onClick = { showMenu = false; showInfo = true })
+                FutureMenuRow(tr("הגדר כרקע"), FutureIcons.Palette, theme, onClick = { showMenu = false; setAsWallpaper() })
+                FutureMenuRow(tr("מחיקה"), FutureIcons.Delete, theme, destructive = true, onClick = { showMenu = false; showDeleteConfirm = true })
             }
         }
 
         if (showInfo) {
-            FutureOptionsMenu(theme = theme, onDismissRequest = { showInfo = false }, header = "פרטים") {
+            FutureOptionsMenu(theme = theme, onDismissRequest = { showInfo = false }, header = tr("פרטים")) {
                 val date = remember(item.dateAdded) {
                     java.text.SimpleDateFormat("d.M.yyyy HH:mm", java.util.Locale.getDefault()).format(java.util.Date(item.dateAdded * 1000))
                 }
-                InfoRow("שם", item.displayName, theme) { showInfo = false }
-                InfoRow("תאריך", date, theme) { showInfo = false }
-                imageSize?.let { InfoRow("רזולוציה", "${it.width}×${it.height}", theme) { showInfo = false } }
-                InfoRow("גודל", android.text.format.Formatter.formatShortFileSize(context, item.size), theme) { showInfo = false }
-                if (item.bucketName.isNotBlank()) InfoRow("אלבום", item.bucketName, theme) { showInfo = false }
+                InfoRow(tr("שם"), item.displayName, theme) { showInfo = false }
+                InfoRow(tr("תאריך"), date, theme) { showInfo = false }
+                imageSize?.let { InfoRow(tr("רזולוציה"), "${it.width}×${it.height}", theme) { showInfo = false } }
+                InfoRow(tr("גודל"), android.text.format.Formatter.formatShortFileSize(context, item.size), theme) { showInfo = false }
+                if (item.bucketName.isNotBlank()) InfoRow(tr("אלבום"), item.bucketName, theme) { showInfo = false }
             }
         }
 
         if (showDeleteConfirm) {
             ConfirmDialog(
-                message = "למחוק את התמונה?",
+                message = tr("למחוק את התמונה?"),
                 theme = theme,
                 onCancel = { showDeleteConfirm = false },
                 onConfirm = {
@@ -653,13 +654,13 @@ fun MediaViewerScreen(
                                 val intentSender = securityException.userAction.actionIntent.intentSender
                                 deleteIntentLauncher.launch(IntentSenderRequest.Builder(intentSender).build())
                             } catch (e: Exception) {
-                                android.widget.Toast.makeText(context, "לא ניתן למחוק - צריך אישור נוסף", android.widget.Toast.LENGTH_SHORT).show()
+                                android.widget.Toast.makeText(context, tr("לא ניתן למחוק - צריך אישור נוסף"), android.widget.Toast.LENGTH_SHORT).show()
                             }
                         } else {
-                            android.widget.Toast.makeText(context, "לא ניתן למחוק - צריך אישור נוסף", android.widget.Toast.LENGTH_SHORT).show()
+                            android.widget.Toast.makeText(context, tr("לא ניתן למחוק - צריך אישור נוסף"), android.widget.Toast.LENGTH_SHORT).show()
                         }
                     } catch (e: Exception) {
-                        android.widget.Toast.makeText(context, "לא ניתן למחוק", android.widget.Toast.LENGTH_SHORT).show()
+                        android.widget.Toast.makeText(context, tr("לא ניתן למחוק"), android.widget.Toast.LENGTH_SHORT).show()
                     }
                 }
             )
@@ -692,7 +693,7 @@ private fun ViewerHeader(item: MediaItem, position: String?, theme: FutureTheme)
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                item.displayName.ifBlank { "תמונה" },
+                item.displayName.ifBlank { tr("תמונה") },
                 color = theme.textColor,
                 fontSize = FutureTypography.title,
                 fontWeight = FontWeight.Bold,

@@ -1,4 +1,5 @@
 package com.future.tools.ui
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.components.FutureButton
 import com.future.sharednav.theme.textAlpha
 import com.future.sharednav.components.FutureTabItem
@@ -33,7 +34,7 @@ import com.future.sharednav.theme.FutureTheme
 import kotlinx.coroutines.launch
 import kotlin.random.Random
 
-private enum class CoinDiceMode(val label: String) { COIN("מטבע"), DICE("קובייה") }
+private enum class CoinDiceMode(val label: String) { COIN(tr("מטבע")), DICE(tr("קובייה")) }
 
 @Composable
 fun CoinDiceScreen(theme: FutureTheme, onBack: () -> Unit) {
@@ -55,10 +56,10 @@ fun CoinDiceScreen(theme: FutureTheme, onBack: () -> Unit) {
         }
     }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize()) {
-                ToolsHeader(title = "מטבע וקובייה", theme = theme, onBack = onBack)
+                ToolsHeader(title = tr("מטבע וקובייה"), theme = theme, onBack = onBack)
 
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
@@ -75,7 +76,7 @@ fun CoinDiceScreen(theme: FutureTheme, onBack: () -> Unit) {
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        Text("מספר קוביות", color = theme.mutedTextColor, fontSize = FutureTypography.summary, modifier = Modifier.weight(1f))
+                        Text(tr("מספר קוביות"), color = theme.mutedTextColor, fontSize = FutureTypography.summary, modifier = Modifier.weight(1f))
                         ToolsStepperButton("-", theme = theme) { diceCount = (diceCount - 1).coerceAtLeast(1) }
                         Text("$diceCount", color = theme.textColor, fontSize = FutureTypography.title, fontWeight = FontWeight.Medium)
                         ToolsStepperButton("+", theme = theme) { diceCount = (diceCount + 1).coerceAtMost(6) }
@@ -115,8 +116,8 @@ private fun CoinFace(result: Boolean?, rotationDeg: Float, theme: FutureTheme) {
         ) {
             Text(
                 when (result) {
-                    true -> "עץ"
-                    false -> "פלי"
+                    true -> tr("עץ")
+                    false -> tr("פלי")
                     null -> "?"
                 },
                 color = theme.textColor, fontSize = FutureTypography.display, fontWeight = FontWeight.Bold
@@ -125,9 +126,9 @@ private fun CoinFace(result: Boolean?, rotationDeg: Float, theme: FutureTheme) {
         Spacer(modifier = Modifier.height(16.dp))
         Text(
             when (result) {
-                true -> "יצא עץ"
-                false -> "יצא פלי"
-                null -> "לחץ על \"הטל\" כדי להתחיל"
+                true -> tr("יצא עץ")
+                false -> tr("יצא פלי")
+                null -> tr("לחץ על \"הטל\" כדי להתחיל")
             },
             color = theme.mutedTextColor, fontSize = FutureTypography.body
         )
@@ -146,9 +147,9 @@ private fun DiceRow(results: List<Int>, rotationDeg: Float, theme: FutureTheme) 
         }
         Spacer(modifier = Modifier.height(16.dp))
         if (results.isNotEmpty()) {
-            Text("סה\"כ: ${results.sum()}", color = theme.textColor, fontSize = FutureTypography.title, fontWeight = FontWeight.Bold)
+            Text(tr("סה\"כ: {0}", results.sum()), color = theme.textColor, fontSize = FutureTypography.title, fontWeight = FontWeight.Bold)
         } else {
-            Text("לחץ על \"הטל\" כדי להתחיל", color = theme.mutedTextColor, fontSize = FutureTypography.body)
+            Text(tr("לחץ על \"הטל\" כדי להתחיל"), color = theme.mutedTextColor, fontSize = FutureTypography.body)
         }
     }
 }
@@ -169,7 +170,7 @@ private fun DiceFace(value: Int?, rotationDeg: Float, theme: FutureTheme) {
 
 @Composable
 private fun RollButton(theme: FutureTheme, onClick: () -> Unit) {
-    FutureButton("הטל", theme, onClick, fillMaxWidth = true)
+    FutureButton(tr("הטל"), theme, onClick, fillMaxWidth = true)
 }
 
 /** סיבוב ההטלה - אנימציה של התוכן (המטבע מסתובב), לא מעבר של ממשק, ולכן מחוץ לסקאלת התנועה. */

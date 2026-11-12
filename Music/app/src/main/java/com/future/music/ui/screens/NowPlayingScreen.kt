@@ -1,5 +1,6 @@
 package com.future.music.ui.screens
 
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureProgressBar
 import com.future.sharednav.components.FutureDialog
@@ -154,7 +155,7 @@ fun NowPlayingScreen(
             }
     ) {
         ScreenTopBar(
-            title = "מתנגן כעת",
+            title = tr("מתנגן כעת"),
             theme = theme,
             onBack = onBack,
         )
@@ -193,7 +194,7 @@ fun NowPlayingScreen(
 
             Spacer(modifier = Modifier.height(10.dp))
             Text(
-                song?.title ?: "נגן",
+                song?.title ?: tr("נגן"),
                 color = theme.textColor,
                 fontSize = FutureTypography.bodyLarge,
                 fontWeight = FontWeight.Bold,
@@ -202,7 +203,7 @@ fun NowPlayingScreen(
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
-                song?.artist ?: "לחצו על מקש Options לבחירת שיר",
+                song?.artist ?: tr("לחצו על מקש Options לבחירת שיר"),
                 color = theme.textColor.copy(alpha = 0.6f),
                 fontSize = FutureTypography.label,
                 maxLines = 1,
@@ -231,16 +232,16 @@ fun NowPlayingScreen(
 
                 Spacer(modifier = Modifier.height(10.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                    RoundIconButton(FutureIcons.SkipPrevious, "קודם (4)", theme, size = 50.dp, onClick = onPrevious, onFocusChanged = track("prev"))
+                    RoundIconButton(FutureIcons.SkipPrevious, tr("קודם (4)"), theme, size = 50.dp, onClick = onPrevious, onFocusChanged = track("prev"))
                     Spacer(modifier = Modifier.width(24.dp))
                     RoundIconButton(
                         if (playerState.isPlaying) FutureIcons.Pause else FutureIcons.PlayArrow,
-                        if (playerState.isPlaying) "השהה (5)" else "נגן (5)",
+                        if (playerState.isPlaying) tr("השהה (5)") else tr("נגן (5)"),
                         theme, size = 58.dp, filled = true, onClick = onTogglePlay,
                         focusRequester = playButtonFocusRequester, onFocusChanged = track("play"),
                     )
                     Spacer(modifier = Modifier.width(24.dp))
-                    RoundIconButton(FutureIcons.SkipNext, "הבא (6)", theme, size = 50.dp, onClick = onNext, onFocusChanged = track("next"))
+                    RoundIconButton(FutureIcons.SkipNext, tr("הבא (6)"), theme, size = 50.dp, onClick = onNext, onFocusChanged = track("next"))
                 }
                 }
                 }
@@ -248,14 +249,14 @@ fun NowPlayingScreen(
                 // שאר הפעולות - שורה אחת של כפתורים עגולים מתחת לנגן והדילוג.
                 Spacer(modifier = Modifier.height(12.dp))
                 val actions = listOf(
-                    NowPlayingAction("fav", if (isFavorite) FutureIcons.Favorite else FutureIcons.FavoriteBorder, "מועדף (1)", isFavorite, onToggleFavorite),
-                    NowPlayingAction("playlist", FutureIcons.AutoMirrored.PlaylistAdd, "פלייליסט (2)", false) { showPlaylistDialog = true },
-                    NowPlayingAction("sound", FutureIcons.Equalizer, "סאונד (3)", false, onOpenSound),
-                    NowPlayingAction("shuffle", FutureIcons.Shuffle, "ערבוב (7)", playerState.shuffleEnabled, onToggleShuffle),
+                    NowPlayingAction("fav", if (isFavorite) FutureIcons.Favorite else FutureIcons.FavoriteBorder, tr("מועדף (1)"), isFavorite, onToggleFavorite),
+                    NowPlayingAction("playlist", FutureIcons.AutoMirrored.PlaylistAdd, tr("פלייליסט (2)"), false) { showPlaylistDialog = true },
+                    NowPlayingAction("sound", FutureIcons.Equalizer, tr("סאונד (3)"), false, onOpenSound),
+                    NowPlayingAction("shuffle", FutureIcons.Shuffle, tr("ערבוב (7)"), playerState.shuffleEnabled, onToggleShuffle),
                     NowPlayingAction(
                         "repeat",
                         if (playerState.repeatMode == Player.REPEAT_MODE_ONE) FutureIcons.RepeatOne else FutureIcons.Repeat,
-                        "חזרה (8)", playerState.repeatMode != Player.REPEAT_MODE_OFF, onCycleRepeat,
+                        tr("חזרה (8)"), playerState.repeatMode != Player.REPEAT_MODE_OFF, onCycleRepeat,
                     ),
                     NowPlayingAction("bt", FutureIcons.Bluetooth, "Bluetooth (9)", false, onOpenDevices),
                 )
@@ -367,12 +368,12 @@ private fun AddToPlaylistDialog(
     FutureDialog(
         theme = theme,
         onDismissRequest = onDismiss,
-        title = "הוספה לפלייליסט",
-        buttons = { FutureButton("סגור", theme, onDismiss) },
+        title = tr("הוספה לפלייליסט"),
+        buttons = { FutureButton(tr("סגור"), theme, onDismiss) },
     ) {
         if (playlists.isEmpty()) {
             Text(
-                "אין פלייליסטים",
+                tr("אין פלייליסטים"),
                 color = theme.mutedTextColor,
                 fontSize = FutureTypography.body,
                 textAlign = TextAlign.Center,

@@ -1,4 +1,5 @@
 package com.future.dialer
+import com.future.sharednav.i18n.tr
 import androidx.compose.material.icons.rounded.StarBorder
 
 import com.future.sharednav.icons.FutureIcons
@@ -223,12 +224,7 @@ class MainActivity : ComponentActivity() {
         if (intent?.action != Intent.ACTION_DIAL && intent?.action != Intent.ACTION_VIEW) return null
         val data = intent.data ?: return null
         if (data.scheme != "tel") return null
-        // DIAL חשוף לכל אפליקציה: רק תווי חיוג, ובאורך סביר - לא טקסט שרירותי
-        // שיושב בשדה ומחכה ללחיצה על מקש החיוג.
         return data.schemeSpecificPart
-            ?.filter { it.isDigit() || it in "+*#,;" }
-            ?.take(MAX_DIAL_LENGTH)
-            ?.takeIf { it.isNotEmpty() }
     }
 
     private val providerObservers = mutableListOf<android.database.ContentObserver>()
@@ -450,7 +446,6 @@ class MainActivity : ComponentActivity() {
 
     private companion object {
         const val CONTACTS_PACKAGE = "com.future.contact"
-        const val MAX_DIAL_LENGTH = 64
         val TabRoutes = setOf(Screen.CallLog.route, Screen.Contacts.route, Screen.Dialpad.route)
     }
 }
@@ -547,9 +542,9 @@ fun MainScreen(
 
     // מימין לשמאל: יומן, אנשי קשר, מקלדת.
     val tabs = listOf(
-        Triple(Screen.CallLog.route, "יומן", FutureIcons.Call),
-        Triple(Screen.Contacts.route, "אנשי קשר", FutureIcons.Contacts),
-        Triple(Screen.Dialpad.route, "מקלדת", FutureIcons.Dialpad),
+        Triple(Screen.CallLog.route, tr("יומן"), FutureIcons.Call),
+        Triple(Screen.Contacts.route, tr("אנשי קשר"), FutureIcons.Contacts),
+        Triple(Screen.Dialpad.route, tr("מקלדת"), FutureIcons.Dialpad),
     )
     val tabIndex = tabs.indexOfFirst { it.first == currentRoute }
     val isOnTab = tabIndex >= 0
@@ -689,19 +684,11 @@ fun MainScreen(
                 ) { entry ->
                     val number = decodeArg(entry.arguments?.getString("number"))
                     val name = decodeArg(entry.arguments?.getString("name")).ifEmpty { number.ifEmpty { stringResource(R.string.unknown) } }
-                    val context = androidx.compose.ui.platform.LocalContext.current
-                    // מכשיר נעול: מסך השיחה בלבד. BACK לא מוביל ליומן/לאנשי הקשר, ובסוף
-                    // השיחה החייגן נסגר ומסך הנעילה חוזר (ר' DeviceLock).
-                    val secured = remember { com.future.dialer.telecom.DeviceLock.isSecured(context) }
-                    BackHandler(enabled = secured) { }
                     InCallScreen(
                         name = name,
                         phoneNumber = number,
                         viewModel = inCallViewModel,
-                        onCallEnded = {
-                            if (com.future.dialer.telecom.DeviceLock.isSecured(context)) (context as? android.app.Activity)?.finish()
-                            else navController.popBackStack()
-                        },
+                        onCallEnded = { navController.popBackStack() },
                         onCallAgain = { again ->
                             navController.popBackStack()
                             actions.placeCall(again)
@@ -715,18 +702,18 @@ fun MainScreen(
     }
 
     if (menuOpen) {
-        FutureOptionsMenu(theme = theme, onDismissRequest = { menuOpen = false }, header = "שיחות") {
+        FutureOptionsMenu(theme = theme, onDismissRequest = { menuOpen = false }, header = tr("שיחות")) {
             fun pick(action: () -> Unit): () -> Unit = { menuOpen = false; action() }
-            FutureMenuRow("חיפוש", FutureIcons.Search, theme, pick { navController.navigate(Screen.Search.route) })
+            FutureMenuRow(tr("חיפוש"), FutureIcons.Search, theme, pick { navController.navigate(Screen.Search.route) })
             if (currentRoute == Screen.CallLog.route) {
                 val filter = callsViewModel.filter.value
                 val next = CallFilter.entries[(filter.ordinal + 1) % CallFilter.entries.size]
-                FutureMenuRow("סינון · ${filter.label}", FutureIcons.Call, theme, pick { callsViewModel.setFilter(next) })
-                FutureMenuRow("סטטיסטיקות", FutureIcons.TrendingUp, theme, pick { showStats = true })
+                FutureMenuRow(tr("סינון · {0}", filter.label), FutureIcons.Call, theme, pick { callsViewModel.setFilter(next) })
+                FutureMenuRow(tr("סטטיסטיקות"), FutureIcons.TrendingUp, theme, pick { showStats = true })
             }
-            FutureMenuRow("פתח את אנשי קשר", FutureIcons.Contacts, theme, pick(actions.openContactsApp))
-            FutureMenuRow("הגדרות", FutureIcons.Settings, theme, pick(actions.openCallSettings))
-            FutureMenuRow("נקה יומן", FutureIcons.Delete, theme, pick { confirmClear = true }, destructive = true)
+            FutureMenuRow(tr("פתח את אנשי קשר"), FutureIcons.Contacts, theme, pick(actions.openContactsApp))
+            FutureMenuRow(tr("הגדרות"), FutureIcons.Settings, theme, pick(actions.openCallSettings))
+            FutureMenuRow(tr("נקה יומן"), FutureIcons.Delete, theme, pick { confirmClear = true }, destructive = true)
         }
     }
 
@@ -735,13 +722,13 @@ fun MainScreen(
         com.future.sharednav.components.FutureDialog(
             theme = theme,
             onDismissRequest = { showStats = false },
-            title = "סטטיסטיקות",
-            buttons = { FutureButton("סגור", theme, { showStats = false }, fillMaxWidth = true) },
+            title = tr("סטטיסטיקות"),
+            buttons = { FutureButton(tr("סגור"), theme, { showStats = false }, fillMaxWidth = true) },
         ) {
-            fun minutes(seconds: Long): String = "${(seconds + 59) / 60} דק׳"
+            fun minutes(seconds: Long): String = tr("{0} דק׳", (seconds + 59) / 60)
             com.future.sharednav.components.FutureSettingItem(
-                title = "התקבלו",
-                summary = "${stats.incomingCount} שיחות",
+                title = tr("התקבלו"),
+                summary = tr("{0} שיחות", stats.incomingCount),
                 icon = FutureIcons.CallReceived,
                 iconTint = CallFormat.colorOf(com.future.dialer.data.model.CallType.INCOMING, theme),
                 theme = theme,
@@ -749,8 +736,8 @@ fun MainScreen(
                 trailing = { Text(minutes(stats.incomingSeconds), color = theme.textColor, fontWeight = FontWeight.SemiBold) },
             )
             com.future.sharednav.components.FutureSettingItem(
-                title = "חויגו",
-                summary = "${stats.outgoingCount} שיחות",
+                title = tr("חויגו"),
+                summary = tr("{0} שיחות", stats.outgoingCount),
                 icon = FutureIcons.CallMade,
                 iconTint = CallFormat.colorOf(com.future.dialer.data.model.CallType.OUTGOING, theme),
                 theme = theme,
@@ -758,8 +745,8 @@ fun MainScreen(
                 trailing = { Text(minutes(stats.outgoingSeconds), color = theme.textColor, fontWeight = FontWeight.SemiBold) },
             )
             com.future.sharednav.components.FutureSettingItem(
-                title = "סה״כ דקות שיחה",
-                summary = "${stats.missedCount} לא נענו",
+                title = tr("סה״כ דקות שיחה"),
+                summary = tr("{0} לא נענו", stats.missedCount),
                 icon = FutureIcons.Call,
                 theme = theme,
                 onClick = null,
@@ -770,16 +757,16 @@ fun MainScreen(
 
     if (confirmClear) {
         ConfirmDialog(
-            message = "לנקות את יומן השיחות?",
+            message = tr("לנקות את יומן השיחות?"),
             theme = theme,
-            confirmLabel = "נקה",
+            confirmLabel = tr("נקה"),
             onCancel = { confirmClear = false },
             onConfirm = {
                 confirmClear = false
                 if (actions.ensureCallLogWrite()) {
-                    callsViewModel.clearCallLog { ok -> snackbar.show(if (ok) "היומן נוקה" else "היומן לא נוקה") }
+                    callsViewModel.clearCallLog { ok -> snackbar.show(if (ok) tr("היומן נוקה") else tr("היומן לא נוקה")) }
                 } else {
-                    snackbar.show("אשר את ההרשאה ונסה שוב")
+                    snackbar.show(tr("אשר את ההרשאה ונסה שוב"))
                 }
             },
         )

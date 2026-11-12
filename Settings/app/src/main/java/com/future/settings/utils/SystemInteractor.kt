@@ -1,5 +1,6 @@
 package com.future.settings.utils
 
+import com.future.sharednav.i18n.tr
 import android.app.KeyguardManager
 import android.app.NotificationManager
 import android.content.ContentResolver
@@ -468,16 +469,16 @@ class SystemInteractor(private val context: Context) {
             val tempTenths = intent?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0
             val voltageMillis = intent?.getIntExtra(BatteryManager.EXTRA_VOLTAGE, 0) ?: 0
             val health = when (intent?.getIntExtra(BatteryManager.EXTRA_HEALTH, -1)) {
-                BatteryManager.BATTERY_HEALTH_GOOD -> "תקינה"
-                BatteryManager.BATTERY_HEALTH_OVERHEAT -> "התחממות יתר"
-                BatteryManager.BATTERY_HEALTH_DEAD -> "פגומה"
-                BatteryManager.BATTERY_HEALTH_OVER_VOLTAGE -> "מתח יתר"
-                BatteryManager.BATTERY_HEALTH_COLD -> "קרה מדי"
-                else -> "לא ידועה"
+                BatteryManager.BATTERY_HEALTH_GOOD -> tr("תקינה")
+                BatteryManager.BATTERY_HEALTH_OVERHEAT -> tr("התחממות יתר")
+                BatteryManager.BATTERY_HEALTH_DEAD -> tr("פגומה")
+                BatteryManager.BATTERY_HEALTH_OVER_VOLTAGE -> tr("מתח יתר")
+                BatteryManager.BATTERY_HEALTH_COLD -> tr("קרה מדי")
+                else -> tr("לא ידועה")
             }
             BatteryDetails(tempTenths / 10f, voltageMillis / 1000f, health)
         } catch (e: Exception) {
-            BatteryDetails(0f, 0f, "לא ידועה")
+            BatteryDetails(0f, 0f, tr("לא ידועה"))
         }
     }
 
@@ -590,6 +591,8 @@ class SystemInteractor(private val context: Context) {
 
     fun setSystemLocale(languageTag: String): Boolean {
         if (!RootShell.isSafeToken(languageTag)) return false
+        // persist.sys.locale הוא מה שאנדרואיד קורא באתחול - בלעדיו השפה חוזרת אחרי הפעלה מחדש
+        runRootCommand("setprop persist.sys.locale ${RootShell.quote(languageTag)}")
         val r1 = runRootCommand("settings put system system_locales ${RootShell.quote(languageTag)}")
         val r2 = runRootCommand("am broadcast -a android.intent.action.LOCALE_CHANGED")
         return r1.success && r2.success
@@ -616,7 +619,7 @@ class SystemInteractor(private val context: Context) {
         val totalSeconds = SystemClock.elapsedRealtime() / 1000
         val hours = totalSeconds / 3600
         val minutes = (totalSeconds % 3600) / 60
-        return if (hours > 0) "$hours שעות ו-$minutes דקות" else "$minutes דקות"
+        return if (hours > 0) tr("{0} שעות ו-{1} דקות", hours, minutes) else tr("{0} דקות", minutes)
     }
 
     fun getTotalRamString(): String {
@@ -627,11 +630,11 @@ class SystemInteractor(private val context: Context) {
             val gb = info.totalMem / (1024.0 * 1024.0 * 1024.0)
             "%.1f GB".format(gb)
         } catch (e: Exception) {
-            "לא ידוע"
+            tr("לא ידוע")
         }
     }
 
-    fun getKernelVersion(): String = try { System.getProperty("os.version") ?: "לא ידוע" } catch (e: Exception) { "לא ידוע" }
+    fun getKernelVersion(): String = try { System.getProperty("os.version") ?: tr("לא ידוע") } catch (e: Exception) { tr("לא ידוע") }
 
     // --- ביצועים וזיכרון ---
 
@@ -650,8 +653,8 @@ class SystemInteractor(private val context: Context) {
 
     fun getCpuInfo(): String {
         val cores = Runtime.getRuntime().availableProcessors()
-        val abi = Build.SUPPORTED_ABIS.firstOrNull() ?: "לא ידוע"
-        return "$cores ליבות ($abi)"
+        val abi = Build.SUPPORTED_ABIS.firstOrNull() ?: tr("לא ידוע")
+        return tr("{0} ליבות ({1})", cores, abi)
     }
 
     /** אפליקציות FutureOS שאסור לעצור בכפייה בניקוי RAM - מערכת ההפעלה עצמה,
@@ -746,22 +749,22 @@ class SystemInteractor(private val context: Context) {
     data class PermissionEntry(val name: String, val shortLabel: String, val granted: Boolean)
 
     private val knownDangerousPermissions = mapOf(
-        "android.permission.READ_CONTACTS" to "אנשי קשר",
-        "android.permission.WRITE_CONTACTS" to "אנשי קשר",
-        "android.permission.SEND_SMS" to "הודעות SMS",
-        "android.permission.READ_SMS" to "הודעות SMS",
-        "android.permission.RECEIVE_SMS" to "הודעות SMS",
-        "android.permission.CALL_PHONE" to "שיחות",
-        "android.permission.READ_PHONE_STATE" to "מצב הטלפון",
-        "android.permission.READ_CALL_LOG" to "יומן שיחות",
-        "android.permission.WRITE_CALL_LOG" to "יומן שיחות",
-        "android.permission.CAMERA" to "מצלמה",
-        "android.permission.RECORD_AUDIO" to "מיקרופון",
-        "android.permission.ACCESS_FINE_LOCATION" to "מיקום מדויק",
-        "android.permission.ACCESS_COARSE_LOCATION" to "מיקום משוער",
-        "android.permission.READ_EXTERNAL_STORAGE" to "אחסון",
-        "android.permission.MANAGE_EXTERNAL_STORAGE" to "אחסון",
-        "android.permission.POST_NOTIFICATIONS" to "התראות"
+        "android.permission.READ_CONTACTS" to tr("אנשי קשר"),
+        "android.permission.WRITE_CONTACTS" to tr("אנשי קשר"),
+        "android.permission.SEND_SMS" to tr("הודעות SMS"),
+        "android.permission.READ_SMS" to tr("הודעות SMS"),
+        "android.permission.RECEIVE_SMS" to tr("הודעות SMS"),
+        "android.permission.CALL_PHONE" to tr("שיחות"),
+        "android.permission.READ_PHONE_STATE" to tr("מצב הטלפון"),
+        "android.permission.READ_CALL_LOG" to tr("יומן שיחות"),
+        "android.permission.WRITE_CALL_LOG" to tr("יומן שיחות"),
+        "android.permission.CAMERA" to tr("מצלמה"),
+        "android.permission.RECORD_AUDIO" to tr("מיקרופון"),
+        "android.permission.ACCESS_FINE_LOCATION" to tr("מיקום מדויק"),
+        "android.permission.ACCESS_COARSE_LOCATION" to tr("מיקום משוער"),
+        "android.permission.READ_EXTERNAL_STORAGE" to tr("אחסון"),
+        "android.permission.MANAGE_EXTERNAL_STORAGE" to tr("אחסון"),
+        "android.permission.POST_NOTIFICATIONS" to tr("התראות")
     )
 
     fun getAppPermissions(packageName: String): List<PermissionEntry> {
@@ -960,9 +963,9 @@ class SystemInteractor(private val context: Context) {
                 SimEntry(
                     subscriptionId = subId,
                     slotIndex = info.simSlotIndex,
-                    carrierName = info.carrierName?.toString() ?: "לא ידוע",
+                    carrierName = info.carrierName?.toString() ?: tr("לא ידוע"),
                     phoneNumber = number,
-                    displayName = savedName ?: info.displayName?.toString() ?: "קו ${info.simSlotIndex + 1}",
+                    displayName = savedName ?: info.displayName?.toString() ?: tr("קו {0}", info.simSlotIndex + 1),
                     colorArgb = savedColor
                 )
             }
@@ -1112,8 +1115,7 @@ class SystemInteractor(private val context: Context) {
             usedMinutes >= timer.dailyLimitMinutes
         }
         if (exceeded.isNotEmpty()) {
-            // שם חבילה מההעדפות נכנס לפקודת root - מסוננים ומצוטטים כמו בשאר המקומות
-            runRootCommands(exceeded.map { it.packageName }.filter(RootShell::isSafeToken).map { "am force-stop ${RootShell.quote(it)}" })
+            runRootCommands(exceeded.map { "am force-stop ${it.packageName}" })
         }
         return exceeded.map { it.packageName }
     }

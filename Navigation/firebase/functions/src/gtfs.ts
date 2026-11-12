@@ -19,8 +19,7 @@ import * as readline from "readline";
 import * as zlib from "zlib";
 import { Readable } from "stream";
 import { pipeline } from "stream/promises";
-import { getFirestore } from "firebase-admin/firestore";
-import { getStorage } from "firebase-admin/storage";
+import * as admin from "firebase-admin";
 import * as logger from "firebase-functions/logger";
 import unzipper from "unzipper";
 
@@ -282,14 +281,14 @@ export async function buildRegionBundle(region: Region): Promise<BundleSummary> 
 
     const version = new Date().toISOString().slice(0, 10).replace(/-/g, "");
     const storagePath = `transit/${region.id}-${version}.ndjson.gz`;
-    const bucket = getStorage().bucket();
+    const bucket = admin.storage().bucket();
     await bucket.upload(bundlePath, {
       destination: storagePath,
       metadata: { contentType: "application/gzip", cacheControl: "public, max-age=3600" },
     });
 
     const bytes = fs.statSync(bundlePath).size;
-    const bundleDoc = getFirestore().collection("transit_bundles").doc(region.id);
+    const bundleDoc = admin.firestore().collection("transit_bundles").doc(region.id);
 
     // Yesterday's bundle is dead weight in storage the moment this one is
     // published - nothing ever asks for an older version.

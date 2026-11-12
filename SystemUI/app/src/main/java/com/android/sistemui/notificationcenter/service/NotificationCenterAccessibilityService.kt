@@ -1,12 +1,12 @@
 package com.android.sistemui.notificationcenter.service
 
+import com.future.sharednav.i18n.tr
 import android.accessibilityservice.AccessibilityService
 import android.app.WallpaperManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import androidx.core.content.ContextCompat
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.PixelFormat
@@ -73,8 +73,11 @@ class NotificationCenterAccessibilityService : AccessibilityService(), Lifecycle
             windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
             
             val filter = IntentFilter(FutureUIActions.ACTION_SHOW_NOTIFICATION_CENTER)
-            // נשלח רק מתוך FutureUI עצמו - אפליקציה זרה לא צריכה לפתוח את המסך הזה.
-            ContextCompat.registerReceiver(this, receiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)
+            } else {
+                registerReceiver(receiver, filter)
+            }
         } catch (e: Exception) {
             Log.e("FutureUI", "Error in NC onCreate", e)
         }
@@ -82,7 +85,7 @@ class NotificationCenterAccessibilityService : AccessibilityService(), Lifecycle
 
     override fun onServiceConnected() {
         super.onServiceConnected()
-        Toast.makeText(this, "Notification Center מוכן: לחיצה ארוכה על #", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, tr("Notification Center מוכן: לחיצה ארוכה על #"), Toast.LENGTH_SHORT).show()
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {}
@@ -109,7 +112,7 @@ class NotificationCenterAccessibilityService : AccessibilityService(), Lifecycle
                     // אותה סיבה כמו ב-* (ר' ControlCenterAccessibilityService): המקש נצרך כאן
                     // גם בלחיצה קצרה, ולכן החלפת שפת ההקלדה במקלדת לא עבדה בפועל.
                     try {
-                        sendBroadcast(Intent(FutureUIActions.ACTION_POUND_SHORT_PRESS), FutureUIActions.PERMISSION_SYSTEM)
+                        sendBroadcast(Intent(FutureUIActions.ACTION_POUND_SHORT_PRESS))
                     } catch (e: Exception) {
                         Log.w("FutureUI", "pound short-press broadcast failed", e)
                     }

@@ -1,5 +1,6 @@
 package com.future.dialer.ui.contacts
 
+import com.future.sharednav.i18n.tr
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -55,12 +56,12 @@ fun ContactsTabScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        ScreenTopBar(title = "אנשי קשר", textColor = theme.textColor, accentColor = theme.accentColor)
+        ScreenTopBar(title = tr("אנשי קשר"), textColor = theme.textColor, accentColor = theme.accentColor)
         if (sorted.isEmpty()) {
             EmptyState(
                 icon = FutureIcons.Contacts,
-                title = "אין אנשי קשר",
-                subtitle = "לחץ על מקש התפריט כדי לפתוח את אנשי הקשר",
+                title = tr("אין אנשי קשר"),
+                subtitle = tr("לחץ על מקש התפריט כדי לפתוח את אנשי הקשר"),
                 textColor = theme.textColor,
                 modifier = Modifier.weight(1f).fillMaxWidth(),
             )
@@ -80,7 +81,7 @@ fun ContactsTabScreen(
                     leading = { FutureAvatar(theme = theme, name = contact.name, photoUri = contact.photoUri) },
                     trailing = {
                         if (contact.isFavorite) {
-                            Icon(FutureIcons.Star, contentDescription = "מועדף", tint = theme.favoriteColor, modifier = Modifier.size(FutureDimens.iconMenuRow))
+                            Icon(FutureIcons.Star, contentDescription = tr("מועדף"), tint = theme.favoriteColor, modifier = Modifier.size(FutureDimens.iconMenuRow))
                         }
                     },
                 )

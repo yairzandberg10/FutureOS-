@@ -1,5 +1,7 @@
 package com.future.notes.data
 
+import com.future.sharednav.i18n.tr
+
 /**
  * פתק כטקסט לשיתוף, ובחזרה. השיתוף עובר בחלון השיתוף של FutureUI (בדרך כלל
  * להודעות), ובטלפון FuturePhone השני "שמור בפתקים" בהודעה שולח את הטקסט
@@ -11,7 +13,7 @@ object NoteShare {
 
     fun format(note: Note): String {
         val body = if (note.isChecklist) Checklist.display(note.content) else note.content
-        return MARKER + note.title.ifBlank { "ללא כותרת" } + "\n" + body
+        return MARKER + note.title.ifBlank { tr("ללא כותרת") } + "\n" + body
     }
 
     data class Parsed(val title: String, val content: String, val isChecklist: Boolean)

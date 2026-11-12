@@ -1,5 +1,6 @@
 package com.future.tools.ui
 
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureButton
 import com.future.sharednav.components.FutureButtonVariant
@@ -55,9 +56,9 @@ private fun passwordStrength(length: Int, useUpper: Boolean, useDigits: Boolean,
     val variety = 1 + listOf(useUpper, useDigits, useSymbols).count { it }
     val score = length * variety
     return when {
-        score < 40 -> "חלשה" to theme.dangerColor
-        score < 70 -> "בינונית" to theme.warningColor
-        else -> "חזקה" to theme.successColor
+        score < 40 -> tr("חלשה") to theme.dangerColor
+        score < 70 -> tr("בינונית") to theme.warningColor
+        else -> tr("חזקה") to theme.successColor
     }
 }
 
@@ -76,10 +77,10 @@ fun PasswordGeneratorScreen(theme: FutureTheme, onBack: () -> Unit) {
 
     val (strengthLabel, strengthColor) = passwordStrength(length, useUpper, useDigits, useSymbols, theme)
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize()) {
-                ToolsHeader(title = "מחולל סיסמאות", theme = theme, onBack = onBack)
+                ToolsHeader(title = tr("מחולל סיסמאות"), theme = theme, onBack = onBack)
 
                 Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp)) {
                     Text(
@@ -94,23 +95,18 @@ fun PasswordGeneratorScreen(theme: FutureTheme, onBack: () -> Unit) {
                             .padding(16.dp)
                     )
                     Spacer(modifier = Modifier.height(6.dp))
-                    Text("חוזק: $strengthLabel", color = strengthColor, fontSize = FutureTypography.summary, fontWeight = FontWeight.Bold)
+                    Text(tr("חוזק: {0}", strengthLabel), color = strengthColor, fontSize = FutureTypography.summary, fontWeight = FontWeight.Bold)
                 }
 
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    PwActionButton(FutureIcons.Refresh, "חדש", theme = theme, modifier = Modifier.weight(1f), primary = false) { regenerate() }
-                    PwActionButton(FutureIcons.ContentCopy, "העתק", theme = theme, modifier = Modifier.weight(1f)) {
+                    PwActionButton(FutureIcons.Refresh, tr("חדש"), theme = theme, modifier = Modifier.weight(1f), primary = false) { regenerate() }
+                    PwActionButton(FutureIcons.ContentCopy, tr("העתק"), theme = theme, modifier = Modifier.weight(1f)) {
                         val clipboard = context.getSystemService(ClipboardManager::class.java)
-                        // מסומן כרגיש: לא נשמר בהיסטוריית הלוח של המקלדת ולא מוצג בתצוגה המקדימה של המערכת.
-                        clipboard.setPrimaryClip(ClipData.newPlainText("password", password).apply {
-                            description.extras = android.os.PersistableBundle().apply {
-                                putBoolean("android.content.extra.IS_SENSITIVE", true)
-                            }
-                        })
-                        Toast.makeText(context, "הסיסמה הועתקה", Toast.LENGTH_SHORT).show()
+                        clipboard.setPrimaryClip(ClipData.newPlainText("password", password))
+                        Toast.makeText(context, tr("הסיסמה הועתקה"), Toast.LENGTH_SHORT).show()
                     }
                 }
 
@@ -121,7 +117,7 @@ fun PasswordGeneratorScreen(theme: FutureTheme, onBack: () -> Unit) {
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Text("אורך", color = theme.mutedTextColor, fontSize = FutureTypography.summary, modifier = Modifier.weight(1f))
+                    Text(tr("אורך"), color = theme.mutedTextColor, fontSize = FutureTypography.summary, modifier = Modifier.weight(1f))
                     ToolsStepperButton("-", theme = theme) { length = (length - 1).coerceAtLeast(4); regenerate() }
                     Text("$length", color = theme.textColor, fontSize = FutureTypography.title, fontWeight = FontWeight.Medium)
                     ToolsStepperButton("+", theme = theme) { length = (length + 1).coerceAtMost(32); regenerate() }
@@ -129,9 +125,9 @@ fun PasswordGeneratorScreen(theme: FutureTheme, onBack: () -> Unit) {
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                PwToggleRow("אותיות גדולות (A-Z)", useUpper, theme = theme) { useUpper = it; regenerate() }
-                PwToggleRow("ספרות (0-9)", useDigits, theme = theme) { useDigits = it; regenerate() }
-                PwToggleRow("סימנים מיוחדים !@#\$", useSymbols, theme = theme) { useSymbols = it; regenerate() }
+                PwToggleRow(tr("אותיות גדולות (A-Z)"), useUpper, theme = theme) { useUpper = it; regenerate() }
+                PwToggleRow(tr("ספרות (0-9)"), useDigits, theme = theme) { useDigits = it; regenerate() }
+                PwToggleRow(tr("סימנים מיוחדים !@#\\$"), useSymbols, theme = theme) { useSymbols = it; regenerate() }
             }
         }
     }

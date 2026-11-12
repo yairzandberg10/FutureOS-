@@ -95,9 +95,6 @@ class MusicPlaybackService : MediaSessionService() {
     private val sessionCallback = object : MediaSession.Callback {
         override fun onConnect(session: MediaSession, controller: MediaSession.ControllerInfo): MediaSession.ConnectionResult {
             val defaultResult = super.onConnect(session, controller)
-            // השירות חשוף לכל אפליקציה (כך עובדים בקרי מדיה) - אבל שינוי האקולייזר
-            // שמור לאפליקציית המוזיקה עצמה, לא לכל מי שמתחבר.
-            if (controller.packageName != packageName) return defaultResult
             val sessionCommands = defaultResult.availableSessionCommands.buildUpon()
                 .add(SessionCommand(CMD_SET_EQ_PRESET, Bundle.EMPTY))
                 .build()
@@ -110,8 +107,8 @@ class MusicPlaybackService : MediaSessionService() {
             customCommand: SessionCommand,
             args: Bundle,
         ): ListenableFuture<SessionResult> {
-            if (customCommand.customAction == CMD_SET_EQ_PRESET && controller.packageName == packageName) {
-                applyEqPreset(args.getInt(ARG_PRESET, EQ_PRESET_NORMAL).coerceIn(EQ_PRESET_NORMAL, EQ_PRESET_VOCAL))
+            if (customCommand.customAction == CMD_SET_EQ_PRESET) {
+                applyEqPreset(args.getInt(ARG_PRESET, EQ_PRESET_NORMAL))
                 return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
             }
             return super.onCustomCommand(session, controller, customCommand, args)

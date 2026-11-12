@@ -1,4 +1,5 @@
 package com.future.camera.ui
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.systemui.StatusBarInset
 
 import android.graphics.Bitmap
@@ -75,15 +76,15 @@ fun CameraSettingsScreen(
         ScreenScaffold(
             modifier = Modifier.padding(top = StatusBarInset.TITLE_GAP_DP.dp),
             backgroundColor = theme.backgroundColor,
-            title = "הגדרות מצלמה",
+            title = tr("הגדרות מצלמה"),
             textColor = theme.textColor,
             accentColor = theme.accentColor,
         ) {
             Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 24.dp)) {
-                FutureSectionHeader("תמונה", theme)
+                FutureSectionHeader(tr("תמונה"), theme)
                 FutureCard(theme = theme) {
                     FutureSettingItem(
-                        title = "יחס תמונה",
+                        title = tr("יחס תמונה"),
                         summary = options.aspect.label,
                         icon = FutureIcons.AspectRatio,
                         theme = theme,
@@ -93,7 +94,7 @@ fun CameraSettingsScreen(
                     )
                     FutureDivider(theme = theme)
                     FutureSettingItem(
-                        title = "איכות צילום",
+                        title = tr("איכות צילום"),
                         summary = options.photoQuality.label,
                         icon = FutureIcons.HighQuality,
                         theme = theme,
@@ -104,7 +105,7 @@ fun CameraSettingsScreen(
                     if (availableScenes.size > 1) {
                         FutureDivider(theme = theme)
                         FutureSettingItem(
-                            title = "מצב צילום",
+                            title = tr("מצב צילום"),
                             summary = options.scene.label,
                             icon = FutureIcons.AutoAwesome,
                             theme = theme,
@@ -114,8 +115,8 @@ fun CameraSettingsScreen(
                     }
                     FutureDivider(theme = theme)
                     FutureSettingItem(
-                        title = "טיימר עצמי",
-                        summary = if (options.timerSeconds == 0) "כבוי" else "${options.timerSeconds} שניות",
+                        title = tr("טיימר עצמי"),
+                        summary = if (options.timerSeconds == 0) tr("כבוי") else tr("{0} שניות", options.timerSeconds),
                         icon = FutureIcons.Timer,
                         theme = theme,
                         showChevron = false,
@@ -123,8 +124,8 @@ fun CameraSettingsScreen(
                     )
                     FutureDivider(theme = theme)
                     FutureSettingItem(
-                        title = "קווי רשת",
-                        summary = if (options.showGrid) "מוצגים" else "כבויים",
+                        title = tr("קווי רשת"),
+                        summary = if (options.showGrid) tr("מוצגים") else tr("כבויים"),
                         icon = FutureIcons.GridOn,
                         theme = theme,
                         showChevron = false,
@@ -132,10 +133,10 @@ fun CameraSettingsScreen(
                         trailing = { FutureSwitch(checked = options.showGrid, theme = theme) },
                     )
                 }
-                FutureSectionHeader("וידאו", theme)
+                FutureSectionHeader(tr("וידאו"), theme)
                 FutureCard(theme = theme) {
                     FutureSettingItem(
-                        title = "איכות וידאו",
+                        title = tr("איכות וידאו"),
                         summary = options.videoQuality.label,
                         icon = FutureIcons.Videocam,
                         theme = theme,
@@ -143,17 +144,17 @@ fun CameraSettingsScreen(
                         onClick = { onChange(options.copy(videoQuality = VideoQualityOption.entries.after(options.videoQuality))) },
                     )
                 }
-                FutureSectionHeader("מקשים", theme)
+                FutureSectionHeader(tr("מקשים"), theme)
                 FutureCard(theme = theme) {
-                    KeyHintRow("Options", "החלפת מצלמה", theme)
+                    KeyHintRow("Options", tr("החלפת מצלמה"), theme)
                     FutureDivider(theme = theme)
-                    KeyHintRow("↑ / ↓ מוחזק", "זום", theme)
+                    KeyHintRow(tr("↑ / ↓ מוחזק"), tr("זום"), theme)
                     FutureDivider(theme = theme)
-                    KeyHintRow("1-9", "נקודת מיקוד · 0 אוטומטי", theme)
+                    KeyHintRow("1-9", tr("נקודת מיקוד · 0 אוטומטי"), theme)
                     FutureDivider(theme = theme)
-                    KeyHintRow("OK מוחזק", "מיקוד במרכז", theme)
+                    KeyHintRow(tr("OK מוחזק"), tr("מיקוד במרכז"), theme)
                     FutureDivider(theme = theme)
-                    KeyHintRow("* / #", "מצב צילום · הבזק", theme)
+                    KeyHintRow("* / #", tr("מצב צילום · הבזק"), theme)
                 }
             }
         }
@@ -228,13 +229,13 @@ fun PhotoViewer(theme: FutureTheme, items: List<Uri>) {
         if (isVideo && bitmap != null) {
             androidx.compose.material3.Icon(
                 FutureIcons.PlayCircle,
-                contentDescription = "וידאו",
+                contentDescription = tr("וידאו"),
                 tint = Color.White,
                 modifier = Modifier.size(64.dp),
             )
         }
         if (items.isEmpty()) {
-            Text("עדיין לא צולם כלום", color = theme.mutedTextColor, fontSize = FutureTypography.body)
+            Text(tr("עדיין לא צולם כלום"), color = theme.mutedTextColor, fontSize = FutureTypography.body)
         } else {
             Text(
                 "${index + 1}/${items.size}",

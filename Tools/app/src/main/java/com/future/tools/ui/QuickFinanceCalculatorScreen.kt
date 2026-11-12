@@ -1,4 +1,5 @@
 package com.future.tools.ui
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.theme.readableAccentColor
 import com.future.sharednav.components.FutureTabItem
 import com.future.sharednav.theme.subtleTextColor
@@ -34,7 +35,7 @@ import kotlin.math.pow
 
 private val moneyFormat = DecimalFormat("#,##0.##")
 
-private enum class FinanceMode(val label: String) { DISCOUNT("הנחה"), TAX("מע\"מ"), LOAN("הלוואה") }
+private enum class FinanceMode(val label: String) { DISCOUNT(tr("הנחה")), TAX(tr("מע\"מ")), LOAN(tr("הלוואה")) }
 
 @Composable
 fun QuickFinanceCalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
@@ -56,7 +57,7 @@ fun QuickFinanceCalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
     val primary = primaryText.toDoubleOrNull() ?: 0.0
     val secondary = secondaryText.toDoubleOrNull() ?: 0.0
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -98,7 +99,7 @@ fun QuickFinanceCalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
                 }
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                ToolsHeader(title = "מחשבון פיננסי", theme = theme, onBack = onBack)
+                ToolsHeader(title = tr("מחשבון פיננסי"), theme = theme, onBack = onBack)
 
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
@@ -120,9 +121,9 @@ fun QuickFinanceCalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
 
                 FinanceField(
                     label = when (mode) {
-                        FinanceMode.DISCOUNT -> "מחיר מקורי"
-                        FinanceMode.TAX -> "סכום לפני מע\"מ"
-                        FinanceMode.LOAN -> "סכום ההלוואה"
+                        FinanceMode.DISCOUNT -> tr("מחיר מקורי")
+                        FinanceMode.TAX -> tr("סכום לפני מע\"מ")
+                        FinanceMode.LOAN -> tr("סכום ההלוואה")
                     },
                     value = primaryText, isActive = activeField == 0, theme = theme
                 )
@@ -131,9 +132,9 @@ fun QuickFinanceCalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
 
                 FinanceField(
                     label = when (mode) {
-                        FinanceMode.DISCOUNT -> "אחוז הנחה"
-                        FinanceMode.TAX -> "אחוז מע\"מ"
-                        FinanceMode.LOAN -> "ריבית שנתית (%)"
+                        FinanceMode.DISCOUNT -> tr("אחוז הנחה")
+                        FinanceMode.TAX -> tr("אחוז מע\"מ")
+                        FinanceMode.LOAN -> tr("ריבית שנתית (%)")
                     },
                     value = secondaryText, isActive = activeField == 1, theme = theme
                 )
@@ -145,7 +146,7 @@ fun QuickFinanceCalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        Text("תקופה (חודשים)", color = theme.mutedTextColor, fontSize = FutureTypography.label, modifier = Modifier.weight(1f))
+                        Text(tr("תקופה (חודשים)"), color = theme.mutedTextColor, fontSize = FutureTypography.label, modifier = Modifier.weight(1f))
                         ToolsStepperButton("-", theme = theme) { months = (months - 1).coerceAtLeast(1) }
                         Text("$months", color = theme.textColor, fontSize = FutureTypography.title, fontWeight = FontWeight.Medium)
                         ToolsStepperButton("+", theme = theme) { months = (months + 1).coerceAtMost(480) }
@@ -153,7 +154,7 @@ fun QuickFinanceCalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
                 }
 
                 Text(
-                    "# להחלפת שדה קלט · הקלד ספרות מהמקלדת",
+                    tr("# להחלפת שדה קלט · הקלד ספרות מהמקלדת"),
                     color = theme.subtleTextColor,
                     fontSize = FutureTypography.caption,
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
@@ -169,13 +170,13 @@ fun QuickFinanceCalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
                     when (mode) {
                         FinanceMode.DISCOUNT -> {
                             val discountAmount = primary * secondary / 100.0
-                            FinanceResultRow("סכום ההנחה", moneyFormat.format(discountAmount), theme = theme)
-                            FinanceResultRow("מחיר סופי", moneyFormat.format(primary - discountAmount), theme = theme, isAccent = true)
+                            FinanceResultRow(tr("סכום ההנחה"), moneyFormat.format(discountAmount), theme = theme)
+                            FinanceResultRow(tr("מחיר סופי"), moneyFormat.format(primary - discountAmount), theme = theme, isAccent = true)
                         }
                         FinanceMode.TAX -> {
                             val taxAmount = primary * secondary / 100.0
-                            FinanceResultRow("סכום המע\"מ", moneyFormat.format(taxAmount), theme = theme)
-                            FinanceResultRow("מחיר כולל מע\"מ", moneyFormat.format(primary + taxAmount), theme = theme, isAccent = true)
+                            FinanceResultRow(tr("סכום המע\"מ"), moneyFormat.format(taxAmount), theme = theme)
+                            FinanceResultRow(tr("מחיר כולל מע\"מ"), moneyFormat.format(primary + taxAmount), theme = theme, isAccent = true)
                         }
                         FinanceMode.LOAN -> {
                             val monthlyRate = secondary / 100.0 / 12.0
@@ -185,9 +186,9 @@ fun QuickFinanceCalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
                                 primary * monthlyRate * (1 + monthlyRate).pow(months) / ((1 + monthlyRate).pow(months) - 1)
                             }
                             val totalPaid = payment * months
-                            FinanceResultRow("החזר חודשי", moneyFormat.format(payment), theme = theme, isAccent = true)
-                            FinanceResultRow("סה\"כ ריבית", moneyFormat.format(totalPaid - primary), theme = theme)
-                            FinanceResultRow("סה\"כ החזר", moneyFormat.format(totalPaid), theme = theme)
+                            FinanceResultRow(tr("החזר חודשי"), moneyFormat.format(payment), theme = theme, isAccent = true)
+                            FinanceResultRow(tr("סה\"כ ריבית"), moneyFormat.format(totalPaid - primary), theme = theme)
+                            FinanceResultRow(tr("סה\"כ החזר"), moneyFormat.format(totalPaid), theme = theme)
                         }
                     }
                 }

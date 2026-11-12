@@ -1,5 +1,6 @@
 package com.future.navigation.ui.navigate
 
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.TopBarIconButton
 import com.future.sharednav.theme.FutureDimens
@@ -52,13 +53,6 @@ fun NavigateScreen(viewModel: NavigateViewModel, onClose: () -> Unit = {}) {
     val cameraController = remember { MapCameraController() }
     var followMode by remember { mutableStateOf(true) }
 
-    // המסך לא נכבה באמצע ניווט (קודם הוא כבה אחרי זמן ההמתנה הרגיל)
-    val view = androidx.compose.ui.platform.LocalView.current
-    androidx.compose.runtime.DisposableEffect(view) {
-        view.keepScreenOn = true
-        onDispose { view.keepScreenOn = false }
-    }
-
     androidx.compose.runtime.LaunchedEffect(state.currentLocation, followMode) {
         val loc = state.currentLocation
         if (loc != null && followMode) {
@@ -103,10 +97,9 @@ fun NavigateScreen(viewModel: NavigateViewModel, onClose: () -> Unit = {}) {
                         color = theme.textColor
                     )
                     Text(
-                        // מעל קילומטר - בק"מ ("בעוד 12400 מ׳" לא נקרא במבט אחד בנהיגה)
-                        text = "בעוד %s%s".format(
-                            state.distanceToManeuverMeters.let { if (it >= 1000) "%.1f ק״מ".format(it / 1000) else "${it.toInt()} מ׳" },
-                            state.currentStep.streetName.takeIf { it.isNotBlank() }?.let { " · ל$it" } ?: ""
+                        text = tr("בעוד %d מ׳%s").format(
+                            state.distanceToManeuverMeters.toInt(),
+                            state.currentStep.streetName.takeIf { it.isNotBlank() }?.let { tr(" · ל{0}", it) } ?: ""
                         ),
                         style = MaterialTheme.typography.bodyMedium,
                         color = theme.mutedTextColor
@@ -119,15 +112,14 @@ fun NavigateScreen(viewModel: NavigateViewModel, onClose: () -> Unit = {}) {
             if (!state.ended) {
                 Surface(shape = FutureShapes.lg, color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxWidth()) {
                     Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        TopBarIconButton(if (state.muted) FutureIcons.AutoMirrored.VolumeOff else FutureIcons.AutoMirrored.VolumeUp, "השתק", theme.textColor, theme.accentColor, viewModel::toggleMute)
+                        TopBarIconButton(if (state.muted) FutureIcons.AutoMirrored.VolumeOff else FutureIcons.AutoMirrored.VolumeUp, tr("השתק"), theme.textColor, theme.accentColor, viewModel::toggleMute)
                         Spacer(modifier = Modifier.width(12.dp))
                         Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            // עיגול למעלה - בדקה האחרונה הוצג "0 דק׳"
-                            Text("%d דק׳".format(kotlin.math.ceil(state.remainingDurationSeconds / 60).toInt()), fontWeight = FontWeight.Bold)
+                            Text(tr("%d דק׳").format((state.remainingDurationSeconds / 60).toInt()), fontWeight = FontWeight.Bold)
                             Text("·", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f))
-                            Text("%.1f ק״מ".format(state.remainingDistanceMeters / 1000.0))
+                            Text(tr("%.1f ק״מ").format(state.remainingDistanceMeters / 1000.0))
                         }
-                        TopBarIconButton(FutureIcons.Close, "סיים ניווט", theme.dangerColor, theme.accentColor, onClick = {
+                        TopBarIconButton(FutureIcons.Close, tr("סיים ניווט"), theme.dangerColor, theme.accentColor, onClick = {
                             // הכפתור הזה משמעו "בטל/צא מהניווט" - לא רק לסמן ended=true (זה
                             // קורה גם אוטומטית בהגעה בפועל ליעד) אלא גם לצאת בפועל מהמסך,
                             // אחרת המשתמש נשאר תקוע על מסך המפה עם באנר "הגעת ליעד" שגוי.
@@ -171,18 +163,18 @@ private fun ManeuverIcon(step: Maneuver) {
     )
 }
 
-internal fun maneuverText(step: Maneuver): String = when (step.type) {
-    "depart" -> "יציאה לדרך"
-    "arrive" -> "הגעה ליעד"
-    "roundabout", "rotary" -> "כיכר - המשך לפי השילוט"
+private fun maneuverText(step: Maneuver): String = when (step.type) {
+    "depart" -> tr("יציאה לדרך")
+    "arrive" -> tr("הגעה ליעד")
+    "roundabout", "rotary" -> tr("כיכר - המשך לפי השילוט")
     else -> when (step.modifier) {
-        "left" -> "פנה שמאלה"
-        "slight left" -> "פנה מעט שמאלה"
-        "sharp left" -> "פנה חדות שמאלה"
-        "right" -> "פנה ימינה"
-        "slight right" -> "פנה מעט ימינה"
-        "sharp right" -> "פנה חדות ימינה"
-        "uturn" -> "פנה פרסה"
-        else -> "המשך ישר"
+        "left" -> tr("פנה שמאלה")
+        "slight left" -> tr("פנה מעט שמאלה")
+        "sharp left" -> tr("פנה חדות שמאלה")
+        "right" -> tr("פנה ימינה")
+        "slight right" -> tr("פנה מעט ימינה")
+        "sharp right" -> tr("פנה חדות ימינה")
+        "uturn" -> tr("פנה פרסה")
+        else -> tr("המשך ישר")
     }
 }

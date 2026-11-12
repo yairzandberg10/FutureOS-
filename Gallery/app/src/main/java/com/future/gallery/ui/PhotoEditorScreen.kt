@@ -1,4 +1,5 @@
 package com.future.gallery.ui
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.systemui.StatusBarInset
 
 import android.graphics.Bitmap
@@ -71,16 +72,16 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 private enum class EditorTool(val label: String, val icon: ImageVector) {
-    ROTATE("סיבוב", FutureIcons.RotateLeft),
-    FLIP("היפוך", FutureIcons.Flip),
-    CROP("חיתוך", FutureIcons.Crop),
-    ADJUST("כוונון", FutureIcons.Tune),
-    FILTER("מסנן", FutureIcons.FilterVintage),
-    EFFECTS("אפקטים", FutureIcons.AutoAwesome),
+    ROTATE(tr("סיבוב"), FutureIcons.RotateLeft),
+    FLIP(tr("היפוך"), FutureIcons.Flip),
+    CROP(tr("חיתוך"), FutureIcons.Crop),
+    ADJUST(tr("כוונון"), FutureIcons.Tune),
+    FILTER(tr("מסנן"), FutureIcons.FilterVintage),
+    EFFECTS(tr("אפקטים"), FutureIcons.AutoAwesome),
 }
 
 private enum class AdjustParam(val label: String) {
-    BRIGHTNESS("בהירות"), CONTRAST("ניגודיות"), SATURATION("רוויה"), WARMTH("חום"), VIGNETTE("וינייטה")
+    BRIGHTNESS(tr("בהירות")), CONTRAST(tr("ניגודיות")), SATURATION(tr("רוויה")), WARMTH(tr("חום")), VIGNETTE(tr("וינייטה"))
 }
 
 private fun EditState.valueOf(p: AdjustParam) = when (p) {
@@ -98,8 +99,6 @@ private fun EditState.with(p: AdjustParam, v: Float) = when (p) {
     AdjustParam.WARMTH -> copy(warmth = v)
     AdjustParam.VIGNETTE -> copy(vignette = v.coerceAtLeast(0f))
 }
-
-private const val MAX_FULL_SIDE = 4096
 
 /**
  * עורך התמונות. בתחתית שורת כלים (הכלי נבחר כשהפוקוס עליו), ומעליה
@@ -166,17 +165,10 @@ fun PhotoEditorScreen(item: MediaItem, theme: FutureTheme, onBack: () -> Unit, o
         val uri = withContext(Dispatchers.IO) {
             val fullSource = try {
                 val full = android.graphics.ImageDecoder.createSource(context.contentResolver, item.uri)
-                android.graphics.ImageDecoder.decodeBitmap(full) { decoder, info, _ ->
+                android.graphics.ImageDecoder.decodeBitmap(full) { decoder, _, _ ->
                     decoder.allocator = android.graphics.ImageDecoder.ALLOCATOR_SOFTWARE
-                    // "רזולוציה מלאה" עד גבול: תמונה שהגיעה מבחוץ (MMS, הורדה) יכולה להצהיר
-                    // על מימדים עצומים, ופענוח מלא שלה היה מפיל את העורך מחוסר זיכרון
-                    val longest = maxOf(info.size.width, info.size.height)
-                    if (longest > MAX_FULL_SIDE) {
-                        val scale = MAX_FULL_SIDE.toFloat() / longest
-                        decoder.setTargetSize((info.size.width * scale).toInt().coerceAtLeast(1), (info.size.height * scale).toInt().coerceAtLeast(1))
-                    }
                 }
-            } catch (e: Throwable) {
+            } catch (e: Exception) {
                 src
             }
             val rendered = ImageEditor.renderFinal(fullSource, state)
@@ -184,10 +176,10 @@ fun PhotoEditorScreen(item: MediaItem, theme: FutureTheme, onBack: () -> Unit, o
         }
         isSaving = false
         if (uri != null) {
-            android.widget.Toast.makeText(context, "נשמר כעותק חדש", android.widget.Toast.LENGTH_SHORT).show()
+            android.widget.Toast.makeText(context, tr("נשמר כעותק חדש"), android.widget.Toast.LENGTH_SHORT).show()
             onSaved(uri)
         } else {
-            android.widget.Toast.makeText(context, "לא ניתן לשמור את התמונה", android.widget.Toast.LENGTH_SHORT).show()
+            android.widget.Toast.makeText(context, tr("לא ניתן לשמור את התמונה"), android.widget.Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -196,7 +188,7 @@ fun PhotoEditorScreen(item: MediaItem, theme: FutureTheme, onBack: () -> Unit, o
         val base = ImageEditor.renderFinal(src, state.copy(stickers = emptyList(), vignette = 0f))
         val (placed, found) = ImageEditor.placeStickers(base, kind)
         state = state.copy(stickers = state.stickers + placed)
-        hint = if (found) "זוהו ${placed.size} פנים" else "לא זוהו פנים - 2/4/6/8 להזזה, 1/3 לגודל"
+        hint = if (found) tr("זוהו {0} פנים", placed.size) else tr("לא זוהו פנים - 2/4/6/8 להזזה, 1/3 לגודל")
     }
 
     // מקשי המספרים: הזזה/גודל בחיתוך ובאפקטים. החצים נשארים לניווט בלבד.
@@ -234,7 +226,7 @@ fun PhotoEditorScreen(item: MediaItem, theme: FutureTheme, onBack: () -> Unit, o
         }
     }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -249,11 +241,11 @@ fun PhotoEditorScreen(item: MediaItem, theme: FutureTheme, onBack: () -> Unit, o
                     modifier = Modifier.fillMaxWidth().padding(top = StatusBarInset.TITLE_GAP_DP.dp).padding(horizontal = FutureDimens.spacingLg, vertical = FutureDimens.spacingSm),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("עריכת תמונה", color = theme.textColor, fontWeight = FontWeight.Bold, fontSize = FutureTypography.screenTitle, modifier = Modifier.weight(1f))
+                    Text(tr("עריכת תמונה"), color = theme.textColor, fontWeight = FontWeight.Bold, fontSize = FutureTypography.screenTitle, modifier = Modifier.weight(1f))
                     if (isSaving) {
                         FutureSpinner(theme = theme, size = 24.dp)
                     } else if (state.hasEdits) {
-                        Text("Options לשמירה", color = theme.mutedTextColor, fontSize = FutureTypography.caption)
+                        Text(tr("Options לשמירה"), color = theme.mutedTextColor, fontSize = FutureTypography.caption)
                     }
                 }
 
@@ -276,7 +268,7 @@ fun PhotoEditorScreen(item: MediaItem, theme: FutureTheme, onBack: () -> Unit, o
                         }
                     }
                     if (sourceBitmap == null) {
-                        FutureSpinner(theme = theme, label = "טוען תמונה")
+                        FutureSpinner(theme = theme, label = tr("טוען תמונה"))
                     }
                     hint?.let {
                         Text(
@@ -321,22 +313,22 @@ fun PhotoEditorScreen(item: MediaItem, theme: FutureTheme, onBack: () -> Unit, o
             }
 
             if (showMenu) {
-                FutureOptionsMenu(theme = theme, onDismissRequest = { showMenu = false }, header = "עריכה") {
-                    FutureMenuRow("שמור כעותק חדש", FutureIcons.Check, theme, onClick = {
+                FutureOptionsMenu(theme = theme, onDismissRequest = { showMenu = false }, header = tr("עריכה")) {
+                    FutureMenuRow(tr("שמור כעותק חדש"), FutureIcons.Check, theme, onClick = {
                         showMenu = false
                         if (state.hasEdits && !isSaving) isSaving = true
                     })
-                    FutureMenuRow("איפוס כל השינויים", FutureIcons.RestartAlt, theme, onClick = {
+                    FutureMenuRow(tr("איפוס כל השינויים"), FutureIcons.RestartAlt, theme, onClick = {
                         showMenu = false
                         state = EditState()
                     })
                     if (state.stickers.isNotEmpty()) {
-                        FutureMenuRow("הסר את כל המדבקות", FutureIcons.Delete, theme, onClick = {
+                        FutureMenuRow(tr("הסר את כל המדבקות"), FutureIcons.Delete, theme, onClick = {
                             showMenu = false
                             state = state.copy(stickers = emptyList())
                         })
                     }
-                    FutureMenuRow("יציאה בלי לשמור", FutureIcons.Close, theme, destructive = true, onClick = {
+                    FutureMenuRow(tr("יציאה בלי לשמור"), FutureIcons.Close, theme, destructive = true, onClick = {
                         showMenu = false
                         onBack()
                     })
@@ -359,13 +351,13 @@ private fun EditorToolPanel(
     Column(modifier = Modifier.fillMaxWidth().heightIn(min = 88.dp), verticalArrangement = Arrangement.Center) {
         when (tool) {
             EditorTool.ROTATE -> ChipRow {
-                item { FutureChip("סובב שמאלה", theme, onClick = { onStateChange(state.copy(rotationDegrees = ((state.rotationDegrees - 90) % 360 + 360) % 360)) }) }
-                item { FutureChip("סובב ימינה", theme, onClick = { onStateChange(state.copy(rotationDegrees = (state.rotationDegrees + 90) % 360)) }) }
+                item { FutureChip(tr("סובב שמאלה"), theme, onClick = { onStateChange(state.copy(rotationDegrees = ((state.rotationDegrees - 90) % 360 + 360) % 360)) }) }
+                item { FutureChip(tr("סובב ימינה"), theme, onClick = { onStateChange(state.copy(rotationDegrees = (state.rotationDegrees + 90) % 360)) }) }
                 item { FutureChip("180°", theme, onClick = { onStateChange(state.copy(rotationDegrees = (state.rotationDegrees + 180) % 360)) }) }
             }
             EditorTool.FLIP -> ChipRow {
-                item { FutureChip("הפוך אופקית", theme, selected = state.flipHorizontal, onClick = { onStateChange(state.copy(flipHorizontal = !state.flipHorizontal)) }) }
-                item { FutureChip("הפוך אנכית", theme, selected = state.flipVertical, onClick = { onStateChange(state.copy(flipVertical = !state.flipVertical)) }) }
+                item { FutureChip(tr("הפוך אופקית"), theme, selected = state.flipHorizontal, onClick = { onStateChange(state.copy(flipHorizontal = !state.flipHorizontal)) }) }
+                item { FutureChip(tr("הפוך אנכית"), theme, selected = state.flipVertical, onClick = { onStateChange(state.copy(flipVertical = !state.flipVertical)) }) }
             }
             EditorTool.CROP -> {
                 ChipRow {
@@ -395,8 +387,8 @@ private fun EditorToolPanel(
                     }
                 }
                 PanelHint(
-                    if (state.stickers.isEmpty()) "OK מוסיף על הפנים שבתמונה"
-                    else "2/4/6/8 הזזה · 1/3 גודל · 0 מחיקה",
+                    if (state.stickers.isEmpty()) tr("OK מוסיף על הפנים שבתמונה")
+                    else tr("2/4/6/8 הזזה · 1/3 גודל · 0 מחיקה"),
                     theme
                 )
             }

@@ -1,5 +1,6 @@
 package com.future.frixa.ui
 
+import com.future.sharednav.i18n.tr
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -37,10 +38,10 @@ fun HomeScreen(theme: FutureTheme, onOpenRecipes: () -> Unit, onOpenTool: () -> 
     ) {
         Frixa3DModel(accentColor = theme.accentColor, size = 132.dp)
         Text("Fricassé", color = theme.textColor, fontSize = FutureTypography.headline, fontWeight = FontWeight.ExtraBold)
-        Text("פריקסה טוניסאית", color = theme.mutedTextColor, fontSize = FutureTypography.body, modifier = Modifier.padding(bottom = 8.dp))
+        Text(tr("פריקסה טוניסאית"), color = theme.mutedTextColor, fontSize = FutureTypography.body, modifier = Modifier.padding(bottom = 8.dp))
         FutureListItem(
-            title = "מתכונים",
-            summary = "${RecipeCatalog.all.size} מתכונים - בצק, מילוי ותוספות",
+            title = tr("מתכונים"),
+            summary = tr("{0} מתכונים - בצק, מילוי ותוספות", RecipeCatalog.all.size),
             theme = theme,
             onClick = onOpenRecipes,
             focusRequester = first,
@@ -48,16 +49,16 @@ fun HomeScreen(theme: FutureTheme, onOpenRecipes: () -> Unit, onOpenTool: () -> 
             leading = { FutureAvatar(theme = theme, icon = FutureIcons.Restaurant) },
         )
         FutureListItem(
-            title = "כלי הכנה",
-            summary = "כמויות לפי מספר הפריקסה, וטיימרים",
+            title = tr("כלי הכנה"),
+            summary = tr("כמויות לפי מספר הפריקסה, וטיימרים"),
             theme = theme,
             onClick = onOpenTool,
             modifier = Modifier.fillMaxWidth(),
             leading = { FutureAvatar(theme = theme, icon = FutureIcons.Calculate) },
         )
         FutureListItem(
-            title = "איפה קונים",
-            summary = "מקומות שמוכרים פריקסה, מהקרוב",
+            title = tr("איפה קונים"),
+            summary = tr("מקומות שמוכרים פריקסה, מהקרוב"),
             theme = theme,
             onClick = onOpenStores,
             modifier = Modifier.fillMaxWidth(),

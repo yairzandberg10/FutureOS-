@@ -153,7 +153,7 @@ fun StatusBarScreen(
         }
     }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Row(
             modifier = modifier
                 .fillMaxWidth()

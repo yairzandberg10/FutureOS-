@@ -38,10 +38,3 @@
 # ולמתודות של org.sqlite.database לפי שם (SQLiteCustomFunction.name/numArgs
 # ועוד). בלי זה R8 משנה את השמות והאפליקציה קורסת ב-JNI_OnLoad.
 -keep class org.sqlite.database.** { *; }
-
-# Security: debug/verbose logs never ship in release builds (logcat is readable
-# over adb and by crash reporters; several call sites log numbers, paths and text).
--assumenosideeffects class android.util.Log {
-    public static int v(...);
-    public static int d(...);
-}

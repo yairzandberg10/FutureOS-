@@ -1,5 +1,6 @@
 package com.future.remote.ui
 
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.icons.FutureIcons
 
 import androidx.compose.foundation.background
@@ -66,7 +67,7 @@ fun RemoteHomeScreen(
             return
         }
         val device = RemoteDevice(
-            name = "מזגן ${company.label}",
+            name = tr("מזגן {0}", company.label),
             category = DeviceCategory.AC,
             acCompany = company,
             acProtocol = company.protocols.first(),
@@ -76,22 +77,22 @@ fun RemoteHomeScreen(
         onOpenRemote(device.id)
     }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize()) {
-                RemoteHeader(title = "שלט למזגן", theme = theme)
+                RemoteHeader(title = tr("שלט למזגן"), theme = theme)
 
                 if (!irTransmitter.isAvailable) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text(
-                            "המכשיר הזה לא כולל משדר אינפרא אדום, אז אי אפשר להשתמש בשלט",
+                            tr("המכשיר הזה לא כולל משדר אינפרא אדום, אז אי אפשר להשתמש בשלט"),
                             color = theme.textColor.copy(alpha = 0.6f),
                             modifier = Modifier.padding(horizontal = 32.dp)
                         )
                     }
                 } else {
                     Text(
-                        "בחרו את החברה של המזגן. לא מגיב? בשלט: Options ← דגם שלט אחר.",
+                        tr("בחרו את החברה של המזגן. לא מגיב? בשלט: Options ← דגם שלט אחר."),
                         color = theme.textColor.copy(alpha = 0.55f),
                         fontSize = FutureTypography.summary,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
@@ -108,8 +109,8 @@ fun RemoteHomeScreen(
                                 label = company.label,
                                 subtitle = when {
                                     state == null -> company.protocols.joinToString(" / ") { it.label }
-                                    state.power -> "דלוק · ${state.temp}° · ${state.mode.label}"
-                                    else -> "כבוי · ${state.temp}° · ${state.mode.label}"
+                                    state.power -> tr("דלוק · {0}° · {1}", state.temp, state.mode.label)
+                                    else -> tr("כבוי · {0}° · {1}", state.temp, state.mode.label)
                                 },
                                 theme = theme,
                                 onClick = { open(company) },

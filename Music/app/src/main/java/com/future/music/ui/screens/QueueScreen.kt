@@ -1,4 +1,5 @@
 package com.future.music.ui.screens
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.theme.FutureDimens
 
 import com.future.sharednav.theme.FutureTypography
@@ -29,11 +30,11 @@ fun QueueScreen(playerState: PlayerUiState, theme: FutureTheme, onBack: () -> Un
     LaunchedEffect(Unit) { runCatching { firstItemFocusRequester.requestFocus() } }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        ScreenTopBar(title = "תור הניגון", theme = theme, onBack = onBack)
+        ScreenTopBar(title = tr("תור הניגון"), theme = theme, onBack = onBack)
 
         if (playerState.queue.isEmpty()) {
             Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Text("התור ריק", color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.body)
+                Text(tr("התור ריק"), color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.body)
             }
         } else {
             LazyColumn(

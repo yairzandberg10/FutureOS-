@@ -1,5 +1,6 @@
 package com.future.sfarim.ui.screens
 
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureListItem
 import com.future.sharednav.components.FutureAvatar
@@ -64,14 +65,14 @@ fun BookmarksScreen(
     // לחיצה אחת בטעות ואיבדת סימניה שמורה לצמיתות.
     var pendingDelete by remember { mutableStateOf<LibraryBookmark?>(null) }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize()) {
-                ScreenTopBar(title = "סימניות", theme = theme, onBack = onBack)
+                ScreenTopBar(title = tr("סימניות"), theme = theme, onBack = onBack)
                 if (bookmarks.isEmpty()) {
                     EmptyState(
                         icon = FutureIcons.Bookmark,
-                        title = "אין סימניות עדיין",
+                        title = tr("אין סימניות עדיין"),
                         textColor = theme.textColor,
                     )
                 } else {
@@ -93,7 +94,7 @@ fun BookmarksScreen(
 
             pendingDelete?.let { bookmark ->
                 ConfirmDialog(
-                    message = "למחוק את הסימניה \"${bookmark.bookTitle}\"?",
+                    message = tr("למחוק את הסימניה \"{0}\"?", bookmark.bookTitle),
                     surfaceColor = theme.surfaceColor,
                     textColor = theme.textColor,
                     dangerColor = theme.dangerColor,
@@ -133,7 +134,7 @@ private fun BookmarkRow(
         trailing = {
             Icon(
                 FutureIcons.Delete,
-                contentDescription = "מחק סימניה",
+                contentDescription = tr("מחק סימניה"),
                 tint = theme.mutedTextColor,
                 modifier = Modifier.size(FutureDimens.iconTopBar),
             )

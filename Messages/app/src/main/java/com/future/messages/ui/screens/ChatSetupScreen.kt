@@ -1,4 +1,5 @@
 package com.future.messages.ui.screens
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.systemui.StatusBarInset
 import androidx.compose.ui.unit.dp
 
@@ -66,58 +67,58 @@ fun ChatSetupScreen(theme: FutureTheme, onBack: () -> Unit) {
         runCatching { if (state == FutureChat.State.ACTIVE) buttonFocus.requestFocus() else fieldFocus.requestFocus() }
     }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Column(Modifier.fillMaxSize().background(theme.backgroundColor).padding(top = StatusBarInset.TITLE_GAP_DP.dp)) {
-            ScreenTopBar(title = "צ'אט FutureOS", textColor = theme.textColor, accentColor = theme.accentColor, onBack = onBack)
+            ScreenTopBar(title = tr("צ'אט FutureOS"), textColor = theme.textColor, accentColor = theme.accentColor, onBack = onBack)
             Column(
                 Modifier.fillMaxWidth().padding(horizontal = FutureDimens.spacingLg),
                 verticalArrangement = Arrangement.spacedBy(FutureDimens.spacingMd),
             ) {
                 when (state) {
                     FutureChat.State.NOT_CONFIGURED -> Body(
-                        "הצ'אט עוד לא מחובר לשרת. צריך להוסיף את google-services.json של פרויקט ה-Firebase ולבנות מחדש (ראו Messages/firebase/README.md).",
+                        tr("הצ'אט עוד לא מחובר לשרת. צריך להוסיף את google-services.json של פרויקט ה-Firebase ולבנות מחדש (ראו Messages/firebase/README.md)."),
                         theme,
                     )
                     FutureChat.State.ACTIVE -> {
                         Body("הצ'אט פעיל עבור ${FutureChat.myPhone() ?: ""}.", theme)
                         Body(
-                            "הודעות לאנשי קשר עם FutureOS נשלחות באינטרנט, מוצפנות מקצה לקצה, עם \"נמסר\", \"נקרא\" ו\"מקליד...\". לכל נמען אחר, או כשאין רשת, ההודעה יוצאת כ-SMS.",
+                            tr("הודעות לאנשי קשר עם FutureOS נשלחות באינטרנט, מוצפנות מקצה לקצה, עם \"נמסר\", \"נקרא\" ו\"מקליד...\". לכל נמען אחר, או כשאין רשת, ההודעה יוצאת כ-SMS."),
                             theme,
                         )
                         FutureButton(
-                            "התנתק", theme, { FutureChat.signOut(context) },
+                            tr("התנתק"), theme, { FutureChat.signOut(context) },
                             variant = FutureButtonVariant.Destructive, fillMaxWidth = true, focusRequester = buttonFocus,
                         )
                     }
                     FutureChat.State.SIGNED_OUT -> {
                         if (!codeSent) {
-                            Body("הקלד את המספר שלך. יישלח אליו קוד אימות ב-SMS.", theme)
+                            Body(tr("הקלד את המספר שלך. יישלח אליו קוד אימות ב-SMS."), theme)
                             FutureTextField(
                                 phone, { phone = it }, theme,
-                                placeholder = "מספר טלפון",
+                                placeholder = tr("מספר טלפון"),
                                 focusRequester = fieldFocus,
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                             )
-                            FutureButton("שלח קוד", theme, {
+                            FutureButton(tr("שלח קוד"), theme, {
                                 busy = true; error = null
                                 FutureChat.startVerification(context as Activity, phone, listener)
                             }, fillMaxWidth = true, enabled = !busy && phone.isNotBlank())
                         } else {
-                            Body("הקלד את הקוד שקיבלת ב-SMS.", theme)
+                            Body(tr("הקלד את הקוד שקיבלת ב-SMS."), theme)
                             FutureTextField(
                                 code, { code = it.filter(Char::isDigit).take(6) }, theme,
-                                placeholder = "קוד אימות",
+                                placeholder = tr("קוד אימות"),
                                 focusRequester = fieldFocus,
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
                             )
-                            FutureButton("אמת", theme, {
+                            FutureButton(tr("אמת"), theme, {
                                 busy = true; error = null
                                 FutureChat.submitCode(code, listener)
                             }, fillMaxWidth = true, enabled = !busy && code.length == 6)
-                            FutureButton("שנה מספר", theme, { codeSent = false; code = "" },
+                            FutureButton(tr("שנה מספר"), theme, { codeSent = false; code = "" },
                                 variant = FutureButtonVariant.Secondary, fillMaxWidth = true)
                         }
-                        if (busy) FutureSpinner(theme, label = "מתחבר…")
+                        if (busy) FutureSpinner(theme, label = tr("מתחבר…"))
                     }
                 }
                 error?.let { Text(it, color = theme.dangerColor, fontSize = FutureTypography.caption) }

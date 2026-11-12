@@ -1,4 +1,5 @@
 package com.future.tools.ui
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.components.FutureButton
 import com.future.sharednav.components.FutureButtonVariant
 import com.future.sharednav.theme.subtleTextColor
@@ -48,14 +49,14 @@ fun QrScannerScreen(theme: FutureTheme, onBack: () -> Unit) {
 
     DisposableEffect(Unit) { onDispose { scanner.close() } }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize()) {
-                ToolsHeader(title = "סורק קודים", theme = theme, onBack = onBack)
+                ToolsHeader(title = tr("סורק קודים"), theme = theme, onBack = onBack)
 
                 if (!hasPermission) {
                     Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        Text("נדרשת הרשאת מצלמה כדי לסרוק קודים", color = theme.mutedTextColor, fontSize = FutureTypography.body, modifier = Modifier.padding(horizontal = 32.dp))
+                        Text(tr("נדרשת הרשאת מצלמה כדי לסרוק קודים"), color = theme.mutedTextColor, fontSize = FutureTypography.body, modifier = Modifier.padding(horizontal = 32.dp))
                     }
                 } else {
                     Box(
@@ -113,30 +114,28 @@ private fun QrResultView(value: String, theme: FutureTheme, onScanAgain: () -> U
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("נסרק בהצלחה", color = theme.accentColor, fontSize = FutureTypography.body, fontWeight = FontWeight.Bold)
+        Text(tr("נסרק בהצלחה"), color = theme.accentColor, fontSize = FutureTypography.body, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(8.dp))
         Text(value, color = theme.textColor, fontSize = FutureTypography.title, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
         Spacer(modifier = Modifier.height(20.dp))
 
-        QrActionButton("העתק", theme = theme) {
+        QrActionButton(tr("העתק"), theme = theme) {
             val clipboard = context.getSystemService(ClipboardManager::class.java)
             clipboard.setPrimaryClip(ClipData.newPlainText("qr", value))
-            Toast.makeText(context, "הועתק", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, tr("הועתק"), Toast.LENGTH_SHORT).show()
         }
         Spacer(modifier = Modifier.height(10.dp))
         if (isUrl) {
-            QrActionButton("פתח קישור", theme = theme) {
+            QrActionButton(tr("פתח קישור"), theme = theme) {
                 try {
-                    // BROWSABLE: קישור מקוד QR זר נפתח רק במה שמוכן לקבל קישורים מהרשת,
-                    // לא בכל Activity שבמקרה רשום לסכמה.
-                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(value)).addCategory(Intent.CATEGORY_BROWSABLE))
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(value)))
                 } catch (e: Exception) {
                     android.util.Log.w("QrScannerScreen", "QrResultView failed", e)
                 }
             }
             Spacer(modifier = Modifier.height(10.dp))
         }
-        QrActionButton("סרוק שוב", theme = theme, isPrimary = false, onClick = onScanAgain)
+        QrActionButton(tr("סרוק שוב"), theme = theme, isPrimary = false, onClick = onScanAgain)
     }
 }
 

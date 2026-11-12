@@ -1,5 +1,6 @@
 package com.future.music.ui.screens
 
+import com.future.sharednav.i18n.tr
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -52,13 +53,13 @@ fun SearchScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize().escapeTextFieldFocusTrap()) {
-        ScreenTopBar(title = "חיפוש", theme = theme, onBack = onBack)
+        ScreenTopBar(title = tr("חיפוש"), theme = theme, onBack = onBack)
 
         FutureTextField(
             value = query,
             onValueChange = { query = it },
             theme = theme,
-            placeholder = "שיר, אמן או אלבום",
+            placeholder = tr("שיר, אמן או אלבום"),
             autoFocus = true,
             leading = {
                 Icon(FutureIcons.Search, contentDescription = null, tint = theme.mutedTextColor, modifier = Modifier.size(FutureDimens.iconTopBar))
@@ -71,14 +72,14 @@ fun SearchScreen(
         when {
             query.isBlank() -> EmptyState(
                 icon = FutureIcons.Search,
-                title = "מה לנגן?",
-                subtitle = "הקלידו שם של שיר, אמן או אלבום",
+                title = tr("מה לנגן?"),
+                subtitle = tr("הקלידו שם של שיר, אמן או אלבום"),
                 textColor = theme.textColor,
                 modifier = Modifier.weight(1f),
             )
             results.isEmpty() -> EmptyState(
                 icon = FutureIcons.SearchOff,
-                title = "לא נמצאו שירים",
+                title = tr("לא נמצאו שירים"),
                 textColor = theme.textColor,
                 modifier = Modifier.weight(1f),
             )

@@ -1,6 +1,6 @@
 /* FutureOS colors. Source: FutureTheme.kt (core + app extensions),
-   ThemeConfig.kt (glassColor, dividerColor), SettingsScreens.kt:894 (accent choices),
-   plus the home-screen widget. Dark is the default theme; .fos-light scopes the light theme. */
+   ThemeConfig.kt (glassColor, dividerColor), SettingsScreens.kt:894 (accent choices).
+   Dark is the default theme; .fos-light scopes the light theme. */
 :root {
   /* --- accent palette: the only user-selectable color in the whole system --- */
   --fos-accent-white: #FFFFFF;
@@ -53,14 +53,6 @@
   --fos-on-accent: #000000;
   --fos-switch-track-off: #C8C8CC;
   --fos-headsup-bg: #E61C1C1E;
-
-  /* --- home-screen widget (FutureContentWidget, future_widget_background.xml) ---
-     The widget sits on the user's wallpaper, so it is theme-independent (same in light
-     and dark) and its ink is always white. App screens never use these. */
-  --fos-widget-bg: #E61C1C1E;       /* #1C1C1E at 90% */
-  --fos-hairline-dark: #FFFFFF26;   /* 0.5dp hairline: white at 15% */
-  --fos-shell-ink: #FFFFFF;         /* value text and app icon */
-  --fos-shell-ink-60: #FFFFFF99;    /* title and subtitle */
 
   /* --- semantic aliases --- */
   --fos-text-primary: var(--fos-text);

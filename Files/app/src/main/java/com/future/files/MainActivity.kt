@@ -1,4 +1,5 @@
 package com.future.files
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.systemui.StatusBarInset
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.padding
@@ -24,6 +25,7 @@ import com.future.files.data.FileEntry
 import com.future.files.data.FileRepository
 import com.future.files.data.categorize
 import com.future.files.data.isInsideUserStorage
+import com.future.files.ui.VideoPlayerScreen
 import com.future.sharednav.components.FutureSnackbarHost
 import com.future.sharednav.theme.ThemeClient
 import com.future.files.ui.AudioPlayerScreen
@@ -77,8 +79,8 @@ class MainActivity : ComponentActivity() {
                 val p = copyProgress ?: return@LaunchedEffect
                 while (true) { progressValue = p.fraction; kotlinx.coroutines.delay(200) }
             }
-            // מצב מפתח: רק בו מוצגים קבצים ותיקיות טכניים (ר' isDeveloperMode).
-            var developer by remember { mutableStateOf(com.future.files.data.isDeveloperMode(this@MainActivity)) }
+            // התקנת APK מחכה לאישור מפורש של המשתמש.
+            var pendingApk by remember { mutableStateOf<FileEntry?>(null) }
             fun message(text: String) = snackbar.show(text)
             val coroutineScope = rememberCoroutineScope()
             var theme by remember {
@@ -94,7 +96,6 @@ class MainActivity : ComponentActivity() {
                 val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
                     if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
                         hasAccess = repository.hasAllFilesAccess()
-                        developer = com.future.files.data.isDeveloperMode(this@MainActivity)
                         val shared = ThemeClient.getTheme(this@MainActivity)
                         theme = FutureTheme(isDarkMode = shared.isDarkMode, accentColor = Color(shared.primaryColor))
                     }
@@ -106,8 +107,8 @@ class MainActivity : ComponentActivity() {
             val isRootDir = currentDir.absolutePath == root.absolutePath
             val isCurrentDirTopLevel = currentDir.parentFile?.absolutePath == root.absolutePath
 
-            LaunchedEffect(hasAccess, currentDir, sortOrder, developer) {
-                if (hasAccess) entries = repository.listDirectory(currentDir, isRootDir, sortOrder, developer)
+            LaunchedEffect(hasAccess, currentDir, sortOrder) {
+                if (hasAccess) entries = repository.listDirectory(currentDir, isRootDir, sortOrder).orEmpty()
             }
 
             fun goUp() {
@@ -134,12 +135,11 @@ class MainActivity : ComponentActivity() {
                 ) { viewing ->
                 if (viewing != null) {
                     when (categorize(viewing.file)) {
-                        FileCategory.TEXT -> TextViewerScreen(viewing.file, theme, onBack = { viewingFile = null }, onMessage = ::message)
-                        FileCategory.IMAGE -> ImageFileViewerScreen(viewing.file, theme, onBack = { viewingFile = null }, onOpenInGallery = {
-                            if (!openFile(viewing.file, GALLERY_PACKAGE)) message("הגלריה לא מותקנת")
-                        })
+                        FileCategory.TEXT -> TextViewerScreen(viewing.file, theme, onBack = { viewingFile = null })
+                        FileCategory.IMAGE -> ImageFileViewerScreen(viewing.file, theme, onBack = { viewingFile = null })
                         FileCategory.AUDIO -> AudioPlayerScreen(viewing.file, theme, onBack = { viewingFile = null })
                         FileCategory.PDF -> PdfViewerScreen(viewing.file, theme, onBack = { viewingFile = null })
+                        FileCategory.VIDEO -> VideoPlayerScreen(viewing.file, theme, onBack = { viewingFile = null })
                         else -> {}
                     }
                 } else FilesScreen(
@@ -166,15 +166,13 @@ class MainActivity : ComponentActivity() {
                         if (entry.isDirectory) {
                             // תיקיות מערכת ונתוני אפליקציות לא נפתחים, גם דרך קישור.
                             if (isInsideUserStorage(entry.file, root)) currentDir = entry.file
-                            else message("אין גישה לתיקייה הזו")
+                            else message(tr("אין גישה לתיקייה הזו"))
                         } else {
                             when (categorize(entry.file)) {
-                                // הקבצים לא מתקינים אפליקציות ולא מנגנים וידאו (הם מוצגים רק במצב מפתח).
-                                FileCategory.APK -> message("התקנת אפליקציות לא נתמכת")
-                                FileCategory.VIDEO -> message("קבצי וידאו לא נתמכים")
+                                FileCategory.APK -> pendingApk = entry
                                 // שירים וקבצי שמע נפתחים במוזיקה; בלעדיה - בנגן הפנימי.
                                 FileCategory.AUDIO -> if (!openInMusic(entry.file)) viewingFile = entry
-                                FileCategory.OTHER -> if (!openFile(entry.file)) message("אין אפליקציה שפותחת את הקובץ")
+                                FileCategory.OTHER -> if (!openFile(entry.file)) message(tr("אין אפליקציה שפותחת את הקובץ"))
                                 else -> viewingFile = entry
                             }
                         }
@@ -187,7 +185,6 @@ class MainActivity : ComponentActivity() {
                     },
                     busyProgress = copyProgress?.let { progressValue },
                     onCancelBusy = copyProgress?.let { p -> { p.cancel() } },
-                    onOpenInGallery = { entry -> if (!openFile(entry.file, GALLERY_PACKAGE)) message("הגלריה לא מותקנת") },
                     onToggleGridView = {
                         gridView = !gridView
                         uiPrefs.edit().putBoolean("grid", gridView).apply()
@@ -196,16 +193,16 @@ class MainActivity : ComponentActivity() {
                     onBack = { goUp() },
                     onNewFolder = { name ->
                         if (repository.createFolder(currentDir, name)) {
-                            entries = repository.listDirectory(currentDir, isRootDir, sortOrder, developer)
+                            entries = repository.listDirectory(currentDir, isRootDir, sortOrder).orEmpty()
                         } else {
-                            message("לא ניתן ליצור את התיקייה")
+                            message(tr("לא ניתן ליצור את התיקייה"))
                         }
                     },
                     onRename = { entry, newName ->
                         if (repository.renameEntry(entry.file, newName)) {
-                            entries = repository.listDirectory(currentDir, isRootDir, sortOrder, developer)
+                            entries = repository.listDirectory(currentDir, isRootDir, sortOrder).orEmpty()
                         } else {
-                            message("לא ניתן לשנות את השם")
+                            message(tr("לא ניתן לשנות את השם"))
                         }
                     },
                     isBusy = isBusy,
@@ -215,9 +212,9 @@ class MainActivity : ComponentActivity() {
                             coroutineScope.launch {
                                 val ok = withContext(Dispatchers.IO) { repository.deleteEntry(entry.file) }
                                 if (ok) {
-                                    entries = repository.listDirectory(currentDir, isRootDir, sortOrder, developer)
+                                    entries = repository.listDirectory(currentDir, isRootDir, sortOrder).orEmpty()
                                 } else {
-                                    message("לא ניתן למחוק")
+                                    message(tr("לא ניתן למחוק"))
                                 }
                                 isBusy = false
                             }
@@ -233,12 +230,12 @@ class MainActivity : ComponentActivity() {
                                 clipData = android.content.ClipData.newRawUri(entry.file.name, uri)
                                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                             }
-                            com.future.sharednav.share.FutureShare.open(this@MainActivity, shareIntent, "שיתוף קובץ")
+                            com.future.sharednav.share.FutureShare.open(this@MainActivity, shareIntent, tr("שיתוף קובץ"))
                         } catch (e: Exception) {
-                            message("לא ניתן לשתף")
+                            message(tr("לא ניתן לשתף"))
                         }
                     },
-                    onOpenExternally = { entry -> if (!openFile(entry.file)) message("אין אפליקציה שפותחת את הקובץ") },
+                    onOpenExternally = { entry -> if (!openFile(entry.file)) message(tr("אין אפליקציה שפותחת את הקובץ")) },
                     onCopy = { entry -> clipboardEntry = entry; clipboardIsMove = false },
                     onMove = { entry -> clipboardEntry = entry; clipboardIsMove = true },
                     onPaste = {
@@ -253,10 +250,10 @@ class MainActivity : ComponentActivity() {
                                     if (clipboardIsMove) repository.moveEntry(toPaste.file, currentDir, progress)
                                     else repository.copyEntry(toPaste.file, currentDir, progress)
                                 }
-                                entries = repository.listDirectory(currentDir, isRootDir, sortOrder, developer)
+                                entries = repository.listDirectory(currentDir, isRootDir, sortOrder).orEmpty()
                                 when {
-                                    progress.cancelled -> message("הפעולה בוטלה")
-                                    !ok -> message("לא ניתן להדביק כאן")
+                                    progress.cancelled -> message(tr("הפעולה בוטלה"))
+                                    !ok -> message(tr("לא ניתן להדביק כאן"))
                                 }
                                 // ביטול משאיר את הפריט בלוח - אפשר להדביק שוב
                                 if (!progress.cancelled) clipboardEntry = null
@@ -272,9 +269,9 @@ class MainActivity : ComponentActivity() {
                                 val allOk = withContext(Dispatchers.IO) {
                                     selected.all { repository.deleteEntry(it.file) }
                                 }
-                                entries = repository.listDirectory(currentDir, isRootDir, sortOrder, developer)
+                                entries = repository.listDirectory(currentDir, isRootDir, sortOrder).orEmpty()
                                 if (!allOk) {
-                                    message("חלק מהפריטים לא נמחקו")
+                                    message(tr("חלק מהפריטים לא נמחקו"))
                                 }
                                 isBusy = false
                             }
@@ -289,7 +286,7 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
                             if (uris.isEmpty()) {
-                                message("אין קבצים לשתף")
+                                message(tr("אין קבצים לשתף"))
                                 return@FilesScreen
                             }
                             val shareIntent = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
@@ -300,15 +297,29 @@ class MainActivity : ComponentActivity() {
                                 }
                                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                             }
-                            com.future.sharednav.share.FutureShare.open(this@MainActivity, shareIntent, "שיתוף קבצים")
+                            com.future.sharednav.share.FutureShare.open(this@MainActivity, shareIntent, tr("שיתוף קבצים"))
                         } catch (e: Exception) {
-                            message("לא ניתן לשתף")
+                            message(tr("לא ניתן לשתף"))
                         }
                     }
                 )
                 }
                 FutureSnackbarHost(snackbar, theme)
               }
+            }
+
+            pendingApk?.let { apk ->
+                com.future.sharednav.components.ConfirmDialog(
+                    message = tr("להתקין את {0}?", apk.file.name),
+                    theme = theme,
+                    confirmLabel = tr("התקן"),
+                    destructive = false,
+                    onCancel = { pendingApk = null },
+                    onConfirm = {
+                        pendingApk = null
+                        if (!installApk(apk.file)) message(tr("לא ניתן להתקין את הקובץ"))
+                    },
+                )
             }
         }
     }
@@ -331,8 +342,43 @@ class MainActivity : ComponentActivity() {
     /** שירים וקבצי שמע - באפליקציית המוזיקה של המערכת. */
     private fun openInMusic(file: File): Boolean = openFile(file, MUSIC_PACKAGE)
 
+    /**
+     * התקנת APK - אחרי שהמשתמש אישר בדיאלוג. בפעם הראשונה אנדרואיד מבקש
+     * לאשר ל"קבצים" להתקין אפליקציות (מקורות לא ידועים) - מסך המערכת נפתח.
+     */
+    private fun installApk(file: File): Boolean {
+        if (!packageManager.canRequestPackageInstalls()) {
+            return try {
+                startActivity(
+                    Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:$packageName"))
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                )
+                true
+            } catch (e: Exception) {
+                false
+            }
+        }
+        return try {
+            val uri = FileProvider.getUriForFile(this, "$packageName.fileprovider", file)
+            val intent = Intent(Intent.ACTION_VIEW)
+                .setDataAndType(uri, "application/vnd.android.package-archive")
+            // רק למתקין של המערכת - כוונה מרומזת עם הרשאת קריאה ניתנת לחטיפה
+            // ע"י כל אפליקציה שמצהירה על מסנן לצפייה ב-APK.
+            val installer = packageManager
+                .queryIntentActivities(intent, PackageManager.MATCH_SYSTEM_ONLY)
+                .firstOrNull()?.activityInfo?.packageName ?: return false
+            startActivity(
+                intent.setPackage(installer)
+                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
     private companion object {
         const val MUSIC_PACKAGE = "com.future.music"
-        const val GALLERY_PACKAGE = "com.future.gallery"
     }
 }

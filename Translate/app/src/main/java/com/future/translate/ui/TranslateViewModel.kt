@@ -1,5 +1,6 @@
 package com.future.translate.ui
 
+import com.future.sharednav.i18n.tr
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -173,7 +174,7 @@ class TranslateViewModel(application: Application) : AndroidViewModel(applicatio
             val from = if (fromCode == Languages.AUTO) {
                 val detected = engine.identify(source)
                 onDetected(detected)
-                detected ?: return Result.Failed("לא זוהתה שפה")
+                detected ?: return Result.Failed(tr("לא זוהתה שפה"))
             } else fromCode
             val text = engine.translate(source, from, toCode, _wifiOnly.value) { phase ->
                 if (phase == TranslationEngine.Phase.Downloading) _result.value = Result.Downloading
@@ -185,13 +186,13 @@ class TranslateViewModel(application: Application) : AndroidViewModel(applicatio
         } catch (e: MlKitException) {
             Result.Failed(
                 when (e.errorCode) {
-                    MlKitException.NETWORK_ISSUE, MlKitException.UNAVAILABLE -> "אין חיבור להורדת השפה"
-                    MlKitException.NOT_ENOUGH_SPACE -> "אין מקום להורדת השפה"
-                    else -> "התרגום נכשל"
+                    MlKitException.NETWORK_ISSUE, MlKitException.UNAVAILABLE -> tr("אין חיבור להורדת השפה")
+                    MlKitException.NOT_ENOUGH_SPACE -> tr("אין מקום להורדת השפה")
+                    else -> tr("התרגום נכשל")
                 }
             )
         } catch (e: Exception) {
-            Result.Failed("התרגום נכשל")
+            Result.Failed(tr("התרגום נכשל"))
         }
     }
 
@@ -310,7 +311,7 @@ class TranslateViewModel(application: Application) : AndroidViewModel(applicatio
             // לפי זהות השורה ולא לפי אינדקס - אם השיחה נוקתה בינתיים, האינדקס
             // הישן היה כותב את התרגום לשורה אחרת
             _talk.value = _talk.value.map {
-                if (it === line) it.copy(translation = translated ?: "התרגום נכשל") else it
+                if (it === line) it.copy(translation = translated ?: tr("התרגום נכשל")) else it
             }
             if (translated != null) speaker.speak(translated, target)
         }

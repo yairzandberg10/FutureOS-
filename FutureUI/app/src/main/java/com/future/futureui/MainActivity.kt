@@ -1,5 +1,6 @@
 package com.future.futureui
 
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.theme.FutureTypography
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
@@ -82,19 +83,19 @@ class MainActivity : ComponentActivity() {
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        Text(text = "ניהול FutureUI", fontSize = FutureTypography.headline, fontWeight = FontWeight.Bold)
+                        Text(text = tr("ניהול FutureUI"), fontSize = FutureTypography.headline, fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.height(24.dp))
                         
-                        ServiceStatusRow("שורת מצב", isStatusBarEnabled)
-                        ServiceStatusRow("מרכז בקרה", isControlEnabled)
-                        ServiceStatusRow("מרכז התראות", isNotificationEnabled)
+                        ServiceStatusRow(tr("שורת מצב"), isStatusBarEnabled)
+                        ServiceStatusRow(tr("מרכז בקרה"), isControlEnabled)
+                        ServiceStatusRow(tr("מרכז התראות"), isNotificationEnabled)
                         
                         Spacer(modifier = Modifier.height(24.dp))
                         
                         Button(onClick = {
                             startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
                         }) {
-                            Text("הפעל שירותי נגישות")
+                            Text(tr("הפעל שירותי נגישות"))
                         }
 
                         Spacer(modifier = Modifier.height(12.dp))
@@ -102,13 +103,13 @@ class MainActivity : ComponentActivity() {
                         Button(onClick = {
                             startActivity(Intent(this@MainActivity, SettingsActivity::class.java))
                         }) {
-                            Text("התאמה אישית")
+                            Text(tr("התאמה אישית"))
                         }
 
                         Spacer(modifier = Modifier.height(24.dp))
                         
                         Text(
-                            text = "הנחיות:\n1. הפעל את השירותים הרצויים.\n2. במסך הנעילה: לחיצה ארוכה על מקש ההגדרות לעריכה.\n3. לחץ OK לביטול נעילה.",
+                            text = tr("הנחיות:\n1. הפעל את השירותים הרצויים.\n2. במסך הנעילה: לחיצה ארוכה על מקש ההגדרות לעריכה.\n3. לחץ OK לביטול נעילה."),
                             textAlign = TextAlign.Center
                         )
                     }
@@ -126,7 +127,7 @@ class MainActivity : ComponentActivity() {
         ) {
             Text(text = label)
             Text(
-                text = if (isEnabled) "✅ פעיל" else "❌ כבוי",
+                text = if (isEnabled) tr("✅ פעיל") else tr("❌ כבוי"),
                 color = if (isEnabled) androidx.compose.material3.MaterialTheme.colorScheme.primary else androidx.compose.material3.MaterialTheme.colorScheme.error
             )
         }

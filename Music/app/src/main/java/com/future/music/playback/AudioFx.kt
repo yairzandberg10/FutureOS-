@@ -1,5 +1,6 @@
 package com.future.music.playback
 
+import com.future.sharednav.i18n.tr
 import android.content.Context
 import android.content.SharedPreferences
 import android.media.AudioDeviceCallback
@@ -32,7 +33,7 @@ object AudioFx {
     data class Settings(
         val enabled: Boolean = true,
         val bandLevels: List<Int> = emptyList(),
-        val presetName: String = "רגיל",
+        val presetName: String = tr("רגיל"),
         val bass: Int = 0,
         val virtualizer: Int = 0,
         val loudness: Int = 0,
@@ -65,7 +66,7 @@ object AudioFx {
     /** מזהה התקן הפלט הנוכחי: SPEAKER או כתובת Bluetooth. */
     val device: StateFlow<String> = _device
 
-    private val _deviceName = MutableStateFlow("רמקול הטלפון")
+    private val _deviceName = MutableStateFlow(tr("רמקול הטלפון"))
     val deviceName: StateFlow<String> = _deviceName
 
     private val _settings = MutableStateFlow(Settings())
@@ -113,7 +114,7 @@ object AudioFx {
     fun setBand(index: Int, level: Int) = update { s ->
         val levels = currentLevels(s).toMutableList()
         if (index in levels.indices) levels[index] = level.coerceIn(levelRange)
-        s.copy(bandLevels = levels, presetName = "מותאם אישית")
+        s.copy(bandLevels = levels, presetName = tr("מותאם אישית"))
     }
 
     fun usePreset(name: String) {
@@ -150,7 +151,7 @@ object AudioFx {
     }
 
     enum class Effect(val label: String) {
-        FLAT("רגיל"), PARTY("מסיבה"), BASS("באס עמוק"), VOCAL("קולות"), CLEAR("צלול")
+        FLAT(tr("רגיל")), PARTY(tr("מסיבה")), BASS(tr("באס עמוק")), VOCAL(tr("קולות")), CLEAR(tr("צלול"))
     }
 
     fun reset() = update { Settings(volumeLimit = it.volumeLimit, autoResume = it.autoResume) }
@@ -190,7 +191,7 @@ object AudioFx {
             it.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP
         }
         val id = bt?.address?.takeIf { it.isNotBlank() } ?: SPEAKER
-        val name = bt?.productName?.toString()?.takeIf { it.isNotBlank() } ?: "רמקול הטלפון"
+        val name = bt?.productName?.toString()?.takeIf { it.isNotBlank() } ?: tr("רמקול הטלפון")
         val changed = id != _device.value
         val connectedNow = changed && id != SPEAKER
         _device.value = id

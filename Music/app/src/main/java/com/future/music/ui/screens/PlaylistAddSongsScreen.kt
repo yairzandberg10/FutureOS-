@@ -1,5 +1,6 @@
 package com.future.music.ui.screens
 
+import com.future.sharednav.i18n.tr
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -46,12 +47,12 @@ fun PlaylistAddSongsScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize().escapeTextFieldFocusTrap()) {
-        ScreenTopBar(title = "הוספה ל$playlistName", theme = theme, onBack = onBack)
+        ScreenTopBar(title = tr("הוספה ל{0}", playlistName), theme = theme, onBack = onBack)
         FutureTextField(
             value = filter,
             onValueChange = { filter = it },
             theme = theme,
-            placeholder = "סינון שירים",
+            placeholder = tr("סינון שירים"),
             autoFocus = true,
             leading = {
                 Icon(FutureIcons.Search, contentDescription = null, tint = theme.mutedTextColor, modifier = Modifier.size(FutureDimens.iconTopBar))

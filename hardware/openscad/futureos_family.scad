@@ -1,5 +1,5 @@
 // =====================================================================
-//  משפחת מכשירי FutureOS - Mini (2.8") / Regular (3.5") / Pro (4.5" ריבועי)
+//  משפחת מכשירי FutureOS - Mini (2.8") / Regular (3.5") / Pro (5")
 //  מודל מעטפת פרמטרי ל-OpenSCAD. מפרט מלא: hardware/MODELS_SPEC.md
 //
 //  מה זה כן: מודל אריזה (packaging) - מידות חיצוניות, חלון מסך, פריסת
@@ -7,14 +7,8 @@
 //  משמש לבדיקת ארגונומיה, הדפסת דמה (dummy) להחזקה ביד, ובסיס ל-RFQ מול ODM.
 //  מה זה לא: CAD לייצור. קבצי STEP לתבניות הזרקה מייצר ה-ODM מהמודל הזה.
 //
-//  מהדורת אב-טיפוס (10 יחידות): גוף מודפס (MJF PA12), מסכים וסוללות מחלקי חילוף,
-//  ומודול Android מוכן (SoM) על לוח נושא. בלי תבניות ובלי פאנל בהזמנה אישית.
-//  עובי 8 מ"מ בכל הדגמים (היה 10). ר' hardware/PROTOTYPE_10_UNITS.md
-//
-//  הקנבס של ה-UI הוא 320x480dp (FutureDimens.screenWidth/Height), לכן Regular
-//  ביחס 2:3 בדיוק. Mini: אין פאנל 2:3 קטן מדף, אז פאנל החילוף של Qin F21 Pro
-//  (2.8" 480x640, יחס 3:4) בצפיפות 213 = 360x480dp - אותו גובה, 40dp רוחב עודף. Pro הוא bar עם מסך רחב יותר, ריבועי (1:1):
-//  480x480dp - אותו גובה, רוחב גדול ב-160dp.
+//  הקנבס של ה-UI הוא 320x480dp בכל הדגמים (FutureDimens.screenWidth/Height),
+//  לכן כל המסכים ביחס 2:3 בדיוק.
 //
 //  שימוש: לבחור MODEL ו-PART (או דרך ה-Customizer). F5 לתצוגה, F6+STL להדפסה.
 //  הקונסולה מדפיסה (echo) את המידות החיצוניות שחושבו.
@@ -23,20 +17,21 @@
 $fn = 48;
 
 MODEL = "regular"; // [mini, regular, pro]
-PART  = "assembly"; // [assembly, front_shell, back_shell, keypad, markings, side_keys, keepouts]
+PART  = "assembly"; // [assembly, front_shell, back_shell, keypad, markings, keepouts]
+PRO_FORM = "slider"; // [slider, bar] - Pro כ-bar יוצא כ-190 מ"מ אורך, ר' המפרט
+SLIDE_OPEN = 1;      // 0 = סגור, 1 = פתוח (Pro slider בלבד)
 
 // ---------------------------------------------------------------------
 // טבלת פרמטרים לפי דגם: [mini, regular, pro]
 // ---------------------------------------------------------------------
 function sel(v) = MODEL == "mini" ? v[0] : MODEL == "regular" ? v[1] : v[2];
 
-DIAG_IN     = sel([2.8, 3.5, 4.5]);
-SCR_AR      = sel([3 / 4, 2 / 3, 1]);          // רוחב/גובה: Mini 3:4 (פאנל F21 Pro), Regular 2:3, Pro ריבועי
-SCR_W       = DIAG_IN * 25.4 * SCR_AR / sqrt(1 + SCR_AR * SCR_AR); // רוחב אזור פעיל
-SCR_H       = DIAG_IN * 25.4 / sqrt(1 + SCR_AR * SCR_AR);          // גובה אזור פעיל
+DIAG_IN     = sel([2.8, 3.5, 5.0]);
+SCR_W       = DIAG_IN * 25.4 * 2 / sqrt(13);   // רוחב אזור פעיל (2:3)
+SCR_H       = DIAG_IN * 25.4 * 3 / sqrt(13);   // גובה אזור פעיל
 LCD_SIDE    = 0.8;   // שוליים של מודול המסך בצדדים ולמעלה (מודול narrow-bezel)
 LCD_BOTTOM  = 3.5;   // שוליים למטה (FPC / IC של המסך)
-LCD_T       = sel([2.6, 2.8, 3.2]);            // עובי מודול מסך כולל זכוכית - למדוד על חלק החילוף שנקנה
+LCD_T       = sel([2.6, 2.8, 3.2]);            // עובי מודול מסך כולל זכוכית
 
 TOP_BAND    = sel([2.5, 2.5, 3]); // פס דק מעל הזכוכית: חריץ רמקול שיחה בלבד (מצלמה קדמית = punch-hole במסך)
 NAV_GAP     = 1.5;                // מרווח בין תחתית הזכוכית לאזור הניווט
@@ -46,41 +41,19 @@ KEY_P       = sel([14, 17, 21]);  // פסיעת עמודות
 BOTTOM_BAND = 5;                  // מיקרופון, USB-C
 SIDE_WALL   = 1.0;                // מסגרת סביב הזכוכית - מסך מקצה לקצה
 CORNER_R    = sel([6, 7, 8]);
-FILLET_BACK  = sel([1.5, 1.5, 1.5]); // עיגול קצה אחורי של הגוף - קטן, כי בגוף של 8 מ"מ מקשי הצד קרובים לגב
+FILLET_BACK  = sel([2.5, 2.5, 3]); // עיגול קצה אחורי של הגוף
 FILLET_FRONT = 0.6;                // עיגול קצה קדמי (סביב הזכוכית)
 PUNCH_D      = 3.2;                // חור מצלמה קדמית בתוך המסך
-BODY_T      = sel([8, 8, 8.5]);     // היה 10. Pro: ‏8.5 - מודול המסך שלו עבה יותר, וה-SoM צריך לעבור מאחוריו
-FRONT_T     = 1.0;                 // עובי דופן פנים (MJF PA12: 1.0 מספיק; היה 1.4)
-MIDFRAME    = 0.4;                 // לוחית נירוסטה 0.2 + דבק, עם תעלה ל-FPC, בין מודול המסך לסוללה
-LCD_SINK    = 0.2;                 // הזכוכית שקועה מתחת לפני החזית
-WALL        = 1.0;                 // דפנות וגב (היה 1.4)
+BODY_T      = sel([12, 12, 16.5]); // Pro slider: שתי יחידות
+FRONT_T     = 1.4;                 // עובי דופן פנים
+WALL        = 1.4;
 
-// מעטפת מקסימלית לסוללה, מ"מ. האורך נגזר מהלוח הראשי (futureos_mainboard.scad), העובי מ-BODY_T.
-// ב-10 יחידות: תא Li-Po מדף או מחלק חילוף בגודל הכי קרוב שלא עובר את המעטפת.
-// הערכה ב-~150mAh לסמ"ק: Mini ~900, Regular ~1,700, Pro ~2,700mAh
-BATT        = sel([[40, 44, 3.5], [47, 70, 3.4], [66, 79, 3.5]]);
-BOARD       = sel([[40, 55, 1.0], [48, 70, 1.0], [76, 58, 1.0]]); // PCBA (ללא מגנים) - צר מספיק לגוף מקצה לקצה
+BATT        = sel([[36, 62, 4.0], [48, 83, 4.5], [60, 85, 4.7]]); // Li-Po, מ"מ (1500/3000/4000mAh)
+BOARD       = sel([[40, 55, 1.0], [48, 70, 1.0], [70, 58, 1.0]]); // PCBA (ללא מגנים) - צר מספיק לגוף מקצה לקצה
 BOARD_Z     = sel([3.2, 3.5, 3.5]); // גובה רכיבים + מגני RF
 
 DIGIT_ROWS  = 4;
-
-// מקשי ווליום: שני מקשים נפרדים (Vol+ למעלה, Vol- למטה) בדופן הימנית,
-// כמו ב-F22 Pro. נלחצים על כיפות מתכת על FPC צד שמודבק לדופן מבפנים.
-VOL_L       = sel([9, 10, 11]);  // אורך כל מקש (לאורך הגוף)
-VOL_H       = 2.4;               // גובה המקש (בעובי הגוף) - היה 3.0, הגוף דק יותר
-VOL_SPACING = 1.6;               // מרווח בין Vol+ ל-Vol-
-VOL_FROM_TOP = sel([30, 36, 38]); // מרכז הזוג, מ"מ מהקצה העליון - בהישג האצבע כשמחזיקים ביד
-VOL_PROUD   = 0.6;               // כמה המקש בולט מהדופן
-VOL_FLANGE  = 0.5;               // שפה פנימית סביב המקש שמונעת ממנו ליפול החוצה
-VOL_FLANGE_T = 0.4;
-VOL_PLUNGER = 0.2;               // בליטה קטנה מאחורי המקש שלוחצת על הכיפה
-VOL_FPC_T   = 0.7;               // כיפה 0.3 + FPC 0.12 + stiffener פלדה 0.2 + דבק
-VOL_NUB     = 1.0;               // נקודה מורגשת על Vol+ - לזיהוי בלי להסתכל
-// מקש הפעלה: באותה דופן, מתחת ל-Vol-, קצר יותר ועם מרווח גדול כדי שלא יתבלבל
-// עם הווליום במגע. אותו גובה, אותה שפה ואותו FPC צד (הכיפה שלו מחוברת ל-PWRKEY).
-PWR_L       = sel([7, 8, 8]);
-PWR_GAP     = sel([5, 6, 6]);   // מרווח בין Vol- למקש ההפעלה
-PWR_GROOVE  = 0.3;              // עומק חריץ לאורך מקש ההפעלה - מורגש באצבע
+IS_SLIDER   = MODEL == "pro" && PRO_FORM == "slider";
 
 // ---------------------------------------------------------------------
 // פריסה אנכית (מלמטה למעלה, Y=0 בתחתית הגוף)
@@ -89,66 +62,54 @@ DIGITS_H   = DIGIT_ROWS * ROW_P;
 SCR_OUT_W  = SCR_W + 2 * LCD_SIDE;
 SCR_OUT_H  = SCR_H + LCD_SIDE + LCD_BOTTOM;
 
+// ב-slider הספרות יושבות על המזחלת ולכן לא נכנסות לאורך היחידה העליונה
 Y_DIGITS   = BOTTOM_BAND;
-Y_NAV      = Y_DIGITS + DIGITS_H;
+Y_NAV      = IS_SLIDER ? BOTTOM_BAND : Y_DIGITS + DIGITS_H;
 Y_SCR      = Y_NAV + NAV_H + NAV_GAP;
 BODY_L     = Y_SCR + SCR_OUT_H + TOP_BAND;
 BODY_W     = max(SCR_OUT_W, 3 * KEY_P) + 2 * SIDE_WALL;
 
-echo(str("MODEL=", MODEL,
+SLED_T     = 6.0;                  // Pro slider: עובי המזחלת
+TOP_T      = IS_SLIDER ? BODY_T - SLED_T : BODY_T;
+SLED_L     = DIGITS_H + BOTTOM_BAND + 6;
+SLIDE_TRAVEL = DIGITS_H + 2;
+
+echo(str("MODEL=", MODEL, IS_SLIDER ? " (slider)" : "",
          "  body W x L x T = ", BODY_W, " x ", BODY_L, " x ", BODY_T, " mm",
+         IS_SLIDER ? str("  open L = ", BODY_L + SLIDE_TRAVEL) : "",
          "  active area = ", SCR_W, " x ", SCR_H));
-
-// מקשי צד: Z במערכת ההרכבה (0 = פני החזית), בגובה אמצע הסוללה - מתחת
-// למודול המסך ומעל עיגול הקצה האחורי. Y: [Vol+, Vol-]
-BATT_TOP_Z = -(LCD_SINK + LCD_T + MIDFRAME);  // הסוללה יושבת ישר מאחורי מודול המסך
-VOL_Z  = BATT_TOP_Z - BATT[2] / 2;
-VOL_Y  = [BODY_L - VOL_FROM_TOP + (VOL_L + VOL_SPACING) / 2,
-          BODY_L - VOL_FROM_TOP - (VOL_L + VOL_SPACING) / 2];
-PWR_Y  = VOL_Y[1] - VOL_L / 2 - PWR_GAP - PWR_L / 2;
-// [מרכז Y, אורך, סוג] - מלמעלה למטה
-SIDE_KEYS = [[VOL_Y[0], VOL_L, "vol+"], [VOL_Y[1], VOL_L, "vol-"], [PWR_Y, PWR_L, "power"]];
-SK_Y0  = PWR_Y - PWR_L / 2;       // קצה תחתון של מקש ההפעלה
-SK_Y1  = VOL_Y[0] + VOL_L / 2;    // קצה עליון של Vol+
-VOL_IN = VOL_FLANGE_T + VOL_PLUNGER + VOL_FPC_T; // עומק המכלול מתחת לדופן הפנימית
-VOL_BATT_CLEAR = (BODY_W - WALL - VOL_IN) - (BODY_W / 2 + BATT[0] / 2);
-
-echo(str("side keys: Vol+ y=", VOL_Y[0], "  Vol- y=", VOL_Y[1], "  Power y=", PWR_Y, "  z=", VOL_Z,
-         "  battery clearance = ", VOL_BATT_CLEAR, " mm"));
-assert(VOL_BATT_CLEAR >= 0.25, "מקשי הצד נכנסים לסוללה - להקטין את BATT[0]");
-assert(VOL_Z - VOL_H / 2 > -BODY_T + FILLET_BACK, "מקשי הצד יושבים על עיגול הקצה האחורי");
-assert(VOL_Z + VOL_H / 2 + VOL_FLANGE < -LCD_T - LCD_SINK, "מקשי הצד נכנסים למודול המסך");
-assert(SK_Y0 - VOL_FLANGE > BOARD[1] + BOTTOM_BAND - 1, "מקש ההפעלה יורד לאזור ה-PCBA");
-BATT_BACK_CLEAR = (BATT_TOP_Z - BATT[2]) - (-BODY_T + WALL);
-echo(str("battery to back wall clearance = ", BATT_BACK_CLEAR, " mm"));
-assert(BATT_BACK_CLEAR >= 0.2 - 1e-6, "הסוללה נכנסת בדופן האחורית - להגדיל את BODY_T או להקטין את BATT[2]");
 
 // ---------------------------------------------------------------------
 // גיאומטריה בסיסית
 // ---------------------------------------------------------------------
+// כל הצורות המעוגלות בנויות מ-2D (offset) או מ-hull של ענן נקודות מחושב.
+// hull על צורות תלת-ממדיות (גלילים/טורוסים) איטי מאוד ב-OpenSCAD 2021 - דקות לכל חלק.
 module rbox(w, l, t, r) {
-    hull() for (x = [r, w - r], y = [r, l - r])
-        translate([x, y, 0]) cylinder(r = r, h = t);
+    linear_extrude(height = t) translate([r, r]) offset(r = r) square([w - 2 * r, l - 2 * r]);
 }
 
+// נקודות של מלבן מעוגל בגובה z, פינה שמאלית-תחתונה ב-(x0, y0)
+function rr_pts(w, l, r, z, x0 = 0, y0 = 0, n = 10) = [
+    for (c = [[r, r, 180], [w - r, r, 270], [w - r, l - r, 0], [r, l - r, 90]])
+        for (i = [0 : n]) let (a = c[2] + 90 * i / n)
+            [x0 + c[0] + r * cos(a), y0 + c[1] + r * sin(a), z]
+];
+
+module hull_pts(p) hull() polyhedron(points = p, faces = [[for (i = [0 : len(p) - 1]) i]]);
+
 // כמו rbox אבל עם קצוות מעוגלים (fillet) למטה (fb) ו/או למעלה (ft)
-module sbox(w, l, t, r, fb = 0, ft = 0) {
-    hull() for (x = [r, w - r], y = [r, l - r]) translate([x, y, 0]) {
-        if (fb > 0) translate([0, 0, fb]) rotate_extrude() translate([r - fb, 0]) circle(r = fb);
-        else cylinder(r = r, h = 0.01);
-        if (ft > 0) translate([0, 0, t - ft]) rotate_extrude() translate([r - ft, 0]) circle(r = ft);
-        else translate([0, 0, t - 0.01]) cylinder(r = r, h = 0.01);
-    }
+module sbox(w, l, t, r, fb = 0, ft = 0, m = 6) {
+    hull_pts(concat(
+        fb > 0 ? [for (j = [0 : m]) let (a = -90 + 90 * j / m)
+                      each rr_pts(w, l, r - fb + fb * cos(a), fb + fb * sin(a))]
+               : rr_pts(w, l, r, 0),
+        ft > 0 ? [for (j = [0 : m]) let (a = 90 * j / m)
+                      each rr_pts(w, l, r - ft + ft * cos(a), t - ft + ft * sin(a))]
+               : rr_pts(w, l, r, t)
+    ));
 }
 
 CX = BODY_W / 2;
-
-// מצלמה אחורית + פלאש: בשורה העליונה של הלוח הראשי (מעל ה-SoM), ליד הקצה העליון.
-// CAM_BUMP: טבעת בולטת סביב העדשה - מודול AF לא נכנס בעובי של 8 מ"מ בלעדיה
-CAM_XY   = [BODY_W - sel([9, 10, 11]), BODY_L - sel([4.95, 5.95, 5.95])];
-FLASH_XY = [CAM_XY[0] - sel([6.5, 8, 8]), CAM_XY[1]];
-CAM_HOLE = sel([5, 6, 8]);
-CAM_BUMP = sel([0, 0.4, 0.6]);
 
 // מיקומי מקשים: [x, y, w, h, צורה, תווית]
 function digit_keys() = [
@@ -188,7 +149,7 @@ module key_shape(k, grow = 0, h = 1, r = 1.2) {
 // ---------------------------------------------------------------------
 // חלקים
 // ---------------------------------------------------------------------
-FRONT_KEYS = concat(nav_keys(), digit_keys());
+FRONT_KEYS = IS_SLIDER ? nav_keys() : concat(nav_keys(), digit_keys());
 GAP = 0.25; // מרווח בין מקש לחור
 
 // חלון הזכוכית: כל רוחב החזית פחות מסגרת SIDE_WALL, מעל אזור הניווט ועד הפס העליון.
@@ -199,11 +160,11 @@ WIN_R_TOP = max(CORNER_R - SIDE_WALL, 1);
 WIN_R_BOT = 2;
 
 module screen_window(t = FRONT_T + 0.02) {
-    hull() {
+    linear_extrude(height = t) hull() {
         for (x = [SIDE_WALL + WIN_R_BOT, BODY_W - SIDE_WALL - WIN_R_BOT])
-            translate([x, Y_SCR + WIN_R_BOT, 0]) cylinder(r = WIN_R_BOT, h = t);
+            translate([x, Y_SCR + WIN_R_BOT]) circle(r = WIN_R_BOT);
         for (x = [SIDE_WALL + WIN_R_TOP, BODY_W - SIDE_WALL - WIN_R_TOP])
-            translate([x, BODY_L - TOP_BAND - WIN_R_TOP, 0]) cylinder(r = WIN_R_TOP, h = t);
+            translate([x, BODY_L - TOP_BAND - WIN_R_TOP]) circle(r = WIN_R_TOP);
     }
 }
 
@@ -219,65 +180,16 @@ module front_shell() {
 }
 
 module back_shell() {
-    t = BODY_T - FRONT_T;
+    t = TOP_T - FRONT_T;
     difference() {
-        union() {
-            sbox(BODY_W, BODY_L, t, CORNER_R, FILLET_BACK, 0);
-            if (CAM_BUMP > 0) translate([CAM_XY[0], CAM_XY[1], -CAM_BUMP])
-                cylinder(d1 = CAM_HOLE + 2.4, d2 = CAM_HOLE + 3.2, h = CAM_BUMP + 0.5);
-        }
+        sbox(BODY_W, BODY_L, t, CORNER_R, FILLET_BACK, 0);
         translate([WALL, WALL, WALL]) rbox(BODY_W - 2 * WALL, BODY_L - 2 * WALL, t, CORNER_R - WALL);
         // USB-C בתחתית
-        translate([CX - 4.5, -0.01, USB_Z + BODY_T - 1.75]) cube([9, WALL + 0.02, 3.5]);
+        translate([CX - 4.5, -0.01, t / 2 - 1.75]) cube([9, WALL + 0.02, 3.5]);
         // מצלמה אחורית + פלאש
-        translate([CAM_XY[0], CAM_XY[1], -CAM_BUMP - 0.01]) cylinder(d = CAM_HOLE, h = WALL + CAM_BUMP + 0.02);
-        translate([FLASH_XY[0], FLASH_XY[1], -0.01]) cylinder(d = 3, h = WALL + 0.02);
-        // חריצי מקשי הצד (ווליום + הפעלה) בדופן הימנית
-        for (k = SIDE_KEYS) translate([BODY_W - WALL - 0.01, k[0], VOL_Z + BODY_T])
-            pill_x(k[1] + 2 * GAP, VOL_H + 2 * GAP, WALL + 0.02);
+        translate([BODY_W - 11, BODY_L - 12, -0.01]) cylinder(d = sel([7, 8, 11]), h = WALL + 0.02);
+        translate([BODY_W - 11, BODY_L - 22, -0.01]) cylinder(d = 3, h = WALL + 0.02);
     }
-}
-
-// ---------------------------------------------------------------------
-// מקשי צד: ווליום + הפעלה
-// ---------------------------------------------------------------------
-// גלולה (צורת מקש צד) שהציר שלה לאורך X, מ-x=0 עד x=len, ממורכזת ב-Y וב-Z
-module pill_x(l, h, len) {
-    hull() for (y = [-(l - h) / 2, (l - h) / 2])
-        translate([0, y, 0]) rotate([0, 90, 0]) cylinder(d = h, h = len);
-}
-
-// מקש צד במערכת מקומית: x=0 הוא פני הדופן הפנימיים, X חיובי החוצה
-// l = אורך המקש, kind = "vol+" (עם נקודה) / "vol-" (חלק) / "power" (עם חריץ)
-module side_key(l, kind, plunger = true) {
-    tip = WALL + VOL_PROUD;
-    translate([-VOL_FLANGE_T, 0, 0]) pill_x(l + 2 * VOL_FLANGE, VOL_H + 2 * VOL_FLANGE, VOL_FLANGE_T);
-    difference() {
-        union() {
-            pill_x(l, VOL_H, tip - 0.3);
-            hull() { // קצה חיצוני מעוגל
-                translate([tip - 0.31, 0, 0]) pill_x(l, VOL_H, 0.01);
-                translate([tip - 0.01, 0, 0]) pill_x(l - 0.6, VOL_H - 0.6, 0.01);
-            }
-        }
-        if (kind == "power")
-            translate([tip - PWR_GROOVE, -(l - VOL_H) / 2, -0.3]) cube([1, l - VOL_H, 0.6]);
-    }
-    if (plunger)
-        translate([-VOL_FLANGE_T - VOL_PLUNGER, 0, 0]) rotate([0, 90, 0]) cylinder(d = 1.5, h = VOL_PLUNGER + 0.01);
-    if (kind == "vol+") translate([tip - 0.05, 0, 0]) scale([0.5, 1, 1]) sphere(d = VOL_NUB);
-}
-
-// במקום, במערכת ההרכבה
-module side_keys_placed() {
-    for (k = SIDE_KEYS) translate([BODY_W - WALL, k[0], VOL_Z]) side_key(k[1], k[2]);
-}
-
-// להדפסה: השפה על המגש, הקצה כלפי מעלה. משמאל לימין: Vol+ (נקודה), Vol-, הפעלה (חריץ).
-// בלי הבליטה האחורית - בדמה מודפסת אין כיפות, והיא רק הייתה מרימה את השפה מהמגש
-module side_keys_print() {
-    for (i = [0 : len(SIDE_KEYS) - 1]) translate([i * (VOL_H + 2 * VOL_FLANGE + 3), 0, VOL_FLANGE_T])
-        rotate([0, -90, 0]) side_key(SIDE_KEYS[i][1], SIDE_KEYS[i][2], plunger = false);
 }
 
 // ---------------------------------------------------------------------
@@ -290,12 +202,9 @@ KEY_RISE   = 1.1;   // גובה המקש מעל הממברנה
 MARK_DEPTH = 0.4;   // עומק הסימון (שקוע בתוך המקש, ממולא בגוף הסימונים)
 FLANGE     = 1.2;   // שפה מתחת לחזית שמחזיקה את הממברנה (נחתכת לפי החלל הפנימי)
 FLANGE_T   = 0.6;
-// USB-C: במרכז הגובה של המחבר, שיושב בגב לוח המקלדת (ר' KB_* ב-futureos_mainboard.scad)
-USB_Z    = -(FRONT_T + FLANGE_T + 0.4 + 0.6) - 3.2 / 2;
 
 LATIN  = ["", "ABC", "DEF", "GHI", "JKL", "MNO", "PQRS", "TUV", "WXYZ"];
-// התקן הישראלי, זהה ל-T9 של המערכת (SharedKeypadNav/t9/T9DigitMap.kt). אותיות סופיות לא מודפסות
-HEBREW = ["", "דהו", "אבג", "מנ", "יכל", "זחט", "רשת", "צק", "סעפ"];
+HEBREW = ["", "אבג", "דהו", "זחט", "יכל", "מנס", "עפצ", "קרש", "ת"];
 
 function kp_x0(ks) = min([for (k = ks) k[0] - k[2] / 2]);
 function kp_x1(ks) = max([for (k = ks) k[0] + k[2] / 2]);
@@ -309,12 +218,15 @@ module keypad_outline(ks, m, h) {
 
 // גוף מקש מעוגל: פינות כמעט חצי-עיגול וראש כיפתי (שכבות מוקטנות בהדרגה בתוך hull)
 KEY_ROUND = 0.8;   // 0..1 - חלק מחצי גובה המקש שמשמש רדיוס פינה
-DOME = [[0, 0], [0.45, 0.1], [0.75, 0.35], [0.92, 0.7], [1, 1.2]]; // [גובה יחסי, הקטנה במ"מ]
+DOME = [[0, 0], [0.5, 0.05], [0.8, 0.2], [0.94, 0.4], [1, 0.6]]; // [גובה יחסי, הקטנה במ"מ] - שוליים מעוגלים, ראש שטוח לסימונים
 
 module key_dome(k) {
     r = KEY_ROUND * k[3] / 2;
-    hull() for (d = DOME)
-        translate([0, 0, d[0] * (KEY_RISE - 0.05)]) key_shape(k, -d[1], 0.05, r);
+    hull_pts([for (d = DOME) let (z = d[0] * KEY_RISE, w = k[2] - d[1], h = k[3] - d[1])
+        each (k[4] == "rect"
+            ? rr_pts(w, h, max(min(r - d[1] / 2, h / 2 - 0.01), 0.1), z, k[0] - w / 2, k[1] - h / 2)
+            : [for (i = [0 : 47]) [k[0] + w / 2 * cos(i * 7.5), k[1] + w / 2 * sin(i * 7.5), z]])
+    ]);
 }
 
 module key_body(k) {
@@ -328,7 +240,8 @@ module key_body(k) {
 
 // אייקונים מהפונט המובנה של Windows (Segoe MDL2 Assets), מעובים מעט כדי שיהיו ניתנים להדפסה
 ICON_FONT = "Segoe MDL2 Assets";
-ICONS = [["softL", 59136], ["call", 59159], ["softR", 59303], ["end", 59256]]; // תפריט, שיחה, חזרה, ניתוק (ההפעלה במקש צד)
+TEXT_FN   = 8;   // רזולוציית עקומות בטקסט/אייקונים - מספיק לסימונים של 2-4 מ"מ
+ICONS = [["softL", 59136], ["call", 59159], ["softR", 59303], ["end", 59368]]; // תפריט, שיחה, חזרה, הפעלה
 
 module icon2d(code, size) {
     offset(r = 0.15) text(chr(code), size = size, font = ICON_FONT, halign = "center", valign = "center");
@@ -336,6 +249,7 @@ module icon2d(code, size) {
 
 // סימון דו-ממדי של מקש, במרכז (0,0) של המקש
 module key_label2d(k) {
+    $fn = TEXT_FN; // גופנים עם $fn גבוה = אלפי קודקודים ודקות של F6
     n = k[5]; w = k[2]; h = k[3];
     ts = min(w, h);
     ic = [for (c = ICONS) if (c[0] == n) c[1]];
@@ -344,7 +258,7 @@ module key_label2d(k) {
     } else if (n == "ok") {
         text("OK", size = ts * 0.28, font = "Arial:style=Bold", halign = "center", valign = "center");
     } else if (len(ic) > 0) {
-        icon2d(ic[0], ts * 0.45);
+        icon2d(ic[0], ts * 0.55);
     } else {
         if (n >= "2" && n <= "9") {
             i = ord(n) - 49;
@@ -361,15 +275,10 @@ module key_label2d(k) {
     }
 }
 
-// הסימון הוא "עור" בעובי MARK_DEPTH מתחת לפני הכיפה - עוקב אחרי הקימור, לא בולט החוצה
+// הסימון שקוע MARK_DEPTH בתוך הראש השטוח של המקש (פריזמה פשוטה - מהיר ב-F5 וב-F6)
 module key_marks(k) {
-    intersection() {
-        difference() {
-            key_body(k);
-            translate([0, 0, -MARK_DEPTH]) key_body(k);
-        }
-        translate([k[0], k[1], -0.01]) linear_extrude(height = KEY_RISE + 0.02) key_label2d(k);
-    }
+    translate([k[0], k[1], KEY_RISE - MARK_DEPTH])
+        linear_extrude(height = MARK_DEPTH + 0.01) key_label2d(k);
 }
 
 // הממברנה + המקשים. מערכת צירים: Z=0 הוא גב החזית, Z=FRONT_T הוא פני החזית
@@ -381,34 +290,42 @@ module keypad(ks) {
             rbox(BODY_W - 2 * WALL - 0.4, BODY_L - 2 * WALL - 0.4, FLANGE_T + 0.02, CORNER_R - WALL);
     }
     keypad_outline(ks, KP_MARGIN, top);
-    // כל מקש מחושב כגוף סגור אחד (render) - אחרת עץ ה-CSG מתפוצץ ב-F5
     for (k = ks) translate([0, 0, top - 0.01])
-        render() difference() { key_body(k); key_marks(k); }
+        difference() { key_body(k); key_marks(k); }
 }
 
 module keypad_markings(ks) {
-    for (k = ks) translate([0, 0, FRONT_T - KP_RECESS - 0.01]) render() key_marks(k);
+    for (k = ks) translate([0, 0, FRONT_T - KP_RECESS - 0.01]) key_marks(k);
 }
 
 KEYPAD_COLOR = "#2a2a2d";
 BODY_COLOR   = "#1c1c1e";
 
+module sled() {
+    // Pro slider: מזחלת הספרות, יושבת מתחת ליחידה העליונה - אותה ממברנה ואותם סימונים
+    ks = digit_keys();
+    color(BODY_COLOR) difference() {
+        sbox(BODY_W, SLED_L, SLED_T, CORNER_R, 2, 0.6);
+        translate([0, 0, SLED_T - FRONT_T - 0.01]) keypad_outline(ks, KP_MARGIN + GAP, FRONT_T + 0.02);
+    }
+    translate([0, 0, SLED_T - FRONT_T]) {
+        color(KEYPAD_COLOR) keypad(ks);
+        color("WhiteSmoke") keypad_markings(ks);
+    }
+}
+
 module keepouts() {
     inner_z = FRONT_T;
     // מודול המסך
     color("SteelBlue", 0.8)
-        translate([CX - SCR_OUT_W / 2, Y_SCR, -LCD_T + FRONT_T - LCD_SINK]) cube([SCR_OUT_W, SCR_OUT_H, LCD_T]); // מתחת לזכוכית
+        translate([CX - SCR_OUT_W / 2, Y_SCR, -LCD_T + FRONT_T - 0.35]) cube([SCR_OUT_W, SCR_OUT_H, LCD_T]); // מתחת לזכוכית
     // סוללה - מאחורי המסך
     color("Orange", 0.8)
-        translate([CX - BATT[0] / 2, BODY_L - TOP_BAND - BATT[1], BATT_TOP_Z + FRONT_T - BATT[2]])
+        translate([CX - BATT[0] / 2, BODY_L - TOP_BAND - BATT[1], -LCD_T - BATT[2] - 0.65])
             cube(BATT);
-    // PCBA - מאחורי אזור המקלדת
+    // PCBA - מאחורי אזור המקלדת (bar) / מאחורי ה-nav (slider)
     color("ForestGreen", 0.8)
         translate([CX - BOARD[0] / 2, BOTTOM_BAND - 1, -BOARD_Z - 1.5]) cube([BOARD[0], BOARD[1], BOARD_Z]);
-    // FPC צד של מקשי הצד (כיפות + stiffener), מודבק לדופן הימנית מבפנים
-    color("Gold", 0.8)
-        translate([BODY_W - WALL - VOL_IN, SK_Y0 - VOL_FLANGE, VOL_Z + FRONT_T - VOL_H / 2 - VOL_FLANGE])
-            cube([VOL_FPC_T, SK_Y1 - SK_Y0 + 2 * VOL_FLANGE, VOL_H + 2 * VOL_FLANGE]);
 }
 
 // ---------------------------------------------------------------------
@@ -426,8 +343,9 @@ module assembly() {
     color("#0d1422") translate([CX - SCR_W / 2, Y_SCR + LCD_BOTTOM, -0.04]) cube([SCR_W, SCR_H, 0.02]);
     color("Black") translate([CX, BODY_L - TOP_BAND - LCD_SIDE - PUNCH_D, -0.02]) cylinder(d = PUNCH_D, h = 0.04);
     translate([0, 0, -FRONT_T]) keepouts();
-    color(BODY_COLOR) translate([0, 0, -BODY_T]) back_shell();
-    color(KEYPAD_COLOR) side_keys_placed();
+    color(BODY_COLOR) translate([0, 0, -TOP_T]) back_shell();
+    if (IS_SLIDER)
+        translate([0, -SLIDE_OPEN * SLIDE_TRAVEL, -TOP_T - SLED_T]) sled();
 }
 
 if (PART == "assembly")         assembly();
@@ -435,5 +353,4 @@ else if (PART == "front_shell") front_shell();
 else if (PART == "back_shell")  back_shell();
 else if (PART == "keypad")      keypad(FRONT_KEYS);
 else if (PART == "markings")    keypad_markings(FRONT_KEYS);
-else if (PART == "side_keys")   side_keys_print();
 else if (PART == "keepouts")    keepouts();

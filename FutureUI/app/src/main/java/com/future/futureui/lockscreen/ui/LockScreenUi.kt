@@ -1,5 +1,6 @@
 package com.future.futureui.lockscreen.ui
 
+import com.future.sharednav.i18n.tr
 import android.icu.util.ULocale
 import android.text.format.DateFormat
 import androidx.compose.animation.AnimatedContent
@@ -101,24 +102,34 @@ fun LockScreenUi(state: LockUiState, accent: Color) {
     val is24 = remember { DateFormat.is24HourFormat(context) }
     val clockColor = if (state.clockColor == 0) accent else FutureAccents.presets.getOrElse(state.clockColor - 1) { Color.White }
 
-    // כניסה: עולה מלמטה. פתיחה: ממשיך למעלה ודועך.
+    // כניסה: השעון והתוכן "נופלים" למקום מ-1.1 בקפיץ layer.
+    // ביטול נעילה - "דרך הזכוכית": התוכן גדל ל-1.5 ונעלם, והרקע נעלם איתו,
+    // כך שמתחת מתגלה האפליקציה עצמה. קודם התוכן עלה 500dp מעל Box שחור בחלון
+    // אטום, ובמשך 300ms ראו מסך שחור לפני שהאפליקציה הופיעה בבת אחת.
     var entered by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { entered = true }
     val density = LocalDensity.current
-    val offset by animateFloatAsState(
-        targetValue = when {
-            state.unlocking -> with(density) { (-500).dp.toPx() }
-            entered -> 0f
-            else -> with(density) { 60.dp.toPx() }
-        },
-        animationSpec = tween(FutureMotion.DurationSlow, easing = if (state.unlocking) FutureMotion.EasingAccelerate else FutureMotion.EasingDecelerate),
-        label = "lockOffset"
+    val enter by animateFloatAsState(
+        targetValue = if (entered) 1f else 0f,
+        animationSpec = FutureMotion.Springs.layer(),
+        label = "lockEnter"
     )
-    val alpha by animateFloatAsState(if (state.unlocking) 0f else 1f, tween(FutureMotion.DurationSlow), label = "lockAlpha")
+    val unlock by animateFloatAsState(
+        targetValue = if (state.unlocking) 1f else 0f,
+        animationSpec = tween(FutureMotion.DurationSlow, easing = FutureMotion.EasingAccelerate),
+        label = "lockUnlock"
+    )
+    val offset = with(density) { (1f - enter) * (-40).dp.toPx() }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-        Box(Modifier.fillMaxSize().background(Color.Black)) {
-            Box(Modifier.fillMaxSize().graphicsLayer { translationY = offset; this.alpha = alpha }) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
+        Box(Modifier.fillMaxSize().graphicsLayer { this.alpha = 1f - unlock }.background(Color.Black)) {
+            Box(Modifier.fillMaxSize().graphicsLayer {
+                translationY = offset
+                val s = (1.1f - 0.1f * enter) + 0.5f * unlock
+                scaleX = s
+                scaleY = s
+                this.alpha = (enter.coerceIn(0f, 1f)) * (1f - (unlock * 1.4f).coerceIn(0f, 1f))
+            }) {
                 when (state.mode) {
                     LockMode.PIN -> {
                         LockBackground(state, blurred = true, scrim = 0.55f)
@@ -198,15 +209,15 @@ private fun StatusLine(state: LockUiState, accent: Color, modifier: Modifier) {
     val open = state.authenticated || !state.hasPin
     val status = state.faceStatus
     val text = when {
-        state.focusedNotification >= 0 -> "OK לפתיחת ההתראה"
-        state.hasPin && state.authenticated -> "זוהית · לחץ OK"
-        !state.hasPin -> "לחץ OK לפתיחה"
-        status == FaceStatus.SCANNING -> "מחפש את הפנים שלך"
-        status == FaceStatus.TOO_FAR -> "קרב את הטלפון"
-        status == FaceStatus.TOO_DARK -> "חשוך מדי לזיהוי"
-        status == FaceStatus.NOT_RECOGNIZED -> "הפנים לא זוהו"
-        status == FaceStatus.UNAVAILABLE -> "המצלמה לא זמינה"
-        else -> "לחץ OK או הקלד קוד"
+        state.focusedNotification >= 0 -> tr("OK לפתיחת ההתראה")
+        state.hasPin && state.authenticated -> tr("זוהית · לחץ OK")
+        !state.hasPin -> tr("לחץ OK לפתיחה")
+        status == FaceStatus.SCANNING -> tr("מחפש את הפנים שלך")
+        status == FaceStatus.TOO_FAR -> tr("קרב את הטלפון")
+        status == FaceStatus.TOO_DARK -> tr("חשוך מדי לזיהוי")
+        status == FaceStatus.NOT_RECOGNIZED -> tr("הפנים לא זוהו")
+        status == FaceStatus.UNAVAILABLE -> tr("המצלמה לא זמינה")
+        else -> tr("לחץ OK או הקלד קוד")
     }
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         if (status == FaceStatus.SCANNING && !open) {
@@ -248,7 +259,7 @@ private fun ScanningFace(accent: Color, size: Dp) {
 @Composable
 fun LockClock(now: Date, is24: Boolean, style: Int, color: Color, scale: Float = 1f) {
     val time = SimpleDateFormat(if (is24) "HH:mm" else "h:mm", Locale.getDefault()).format(now)
-    val date = SimpleDateFormat("EEEE, d בMMMM", Locale("he")).format(now)
+    val date = SimpleDateFormat(tr("EEEE, d בMMMM"), java.util.Locale.getDefault()).format(now)
     fun s(v: Int) = (v * scale).sp
     AnimatedContent(targetState = style, transitionSpec = { fadeIn(tween(FutureMotion.DurationStandard)) togetherWith fadeOut(tween(FutureMotion.DurationFast)) }, label = "clockStyle") { st ->
         when (st) {
@@ -285,7 +296,7 @@ fun LockClock(now: Date, is24: Boolean, style: Int, color: Color, scale: Float =
                 Spacer(Modifier.width(12.dp))
                 Column {
                     Text(SimpleDateFormat("EEEE", Locale("he")).format(now), color = Color.White, fontSize = s(17), fontWeight = FontWeight.SemiBold)
-                    Text(SimpleDateFormat("d בMMMM", Locale("he")).format(now), color = Color.White.copy(alpha = 0.8f), fontSize = s(14))
+                    Text(SimpleDateFormat(tr("d בMMMM"), java.util.Locale.getDefault()).format(now), color = Color.White.copy(alpha = 0.8f), fontSize = s(14))
                 }
             }
         }
@@ -298,7 +309,7 @@ private fun CompactClock(now: Date, is24: Boolean, color: Color, sizeSp: Int, sh
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(time, color = color, fontSize = sizeSp.sp, fontWeight = FontWeight.Light, lineHeight = (sizeSp * 1.05f).sp)
         if (showDate) {
-            Text(SimpleDateFormat("EEEE, d בMMMM", Locale("he")).format(now), color = Color.White.copy(alpha = 0.9f), fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            Text(SimpleDateFormat(tr("EEEE, d בMMMM"), java.util.Locale.getDefault()).format(now), color = Color.White.copy(alpha = 0.9f), fontSize = 14.sp, fontWeight = FontWeight.Medium)
         }
     }
 }
@@ -339,7 +350,7 @@ private fun AnalogClock(now: Date, color: Color, modifier: Modifier) {
 private fun WidgetsLine(state: LockUiState, now: Date, accent: Color) {
     val items = state.widgets.filter { it != "none" }
     if (items.isEmpty()) {
-        if (state.mode == LockMode.EDIT) Text("אין ווידג'טים", color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp)
+        if (state.mode == LockMode.EDIT) Text(tr("אין ווידג'טים"), color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp)
         return
     }
     Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -351,9 +362,9 @@ private fun WidgetsLine(state: LockUiState, now: Date, accent: Color) {
 private fun WidgetItem(id: String, state: LockUiState, now: Date, accent: Color) {
     val text = when (id) {
         "battery" -> "${state.batteryPercent}%"
-        "alarm" -> state.nextAlarm ?: "אין"
+        "alarm" -> state.nextAlarm ?: tr("אין")
         "hebdate" -> hebrewDate(now)
-        "media" -> state.mediaTitle ?: "לא מתנגן"
+        "media" -> state.mediaTitle ?: tr("לא מתנגן")
         "notifications" -> "${state.notifications.size}"
         else -> return
     }
@@ -432,7 +443,7 @@ private fun NotificationCard(n: LockNotification, showContent: Boolean, focused:
                     Text(time, color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
                 }
                 Text(
-                    if (showContent) n.title else "התראה",
+                    if (showContent) n.title else tr("התראה"),
                     color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis
                 )
                 if (focused && showContent && n.text.isNotBlank()) {
@@ -442,7 +453,7 @@ private fun NotificationCard(n: LockNotification, showContent: Boolean, focused:
         }
         if (focused) {
             Text(
-                "OK לפתיחת ההתראה",
+                tr("OK לפתיחת ההתראה"),
                 color = Color.White.copy(alpha = 0.6f),
                 fontSize = 12.sp,
                 textAlign = TextAlign.Center,
@@ -484,12 +495,16 @@ fun shortcutIcon(id: String, active: Boolean = false): ImageVector = when (id) {
 @Composable
 private fun PinScreen(state: LockUiState, accent: Color, now: Date, is24: Boolean) {
     val shake = remember { androidx.compose.animation.core.Animatable(0f) }
+    // קוד שגוי: השדה נזרק הצידה ומתנדנד עד שהוא נעצר - קפיץ עם ריסון נמוך
+    // ומהירות התחלתית, במקום 3 צעדים קבועים של 50ms שנראו כמו רעד מכני.
     LaunchedEffect(state.pinErrorTick) {
         if (state.pinErrorTick > 0) {
-            repeat(3) {
-                shake.animateTo(1f, tween(50)); shake.animateTo(-1f, tween(50))
-            }
-            shake.animateTo(0f, tween(50))
+            shake.snapTo(0f)
+            shake.animateTo(
+                0f,
+                androidx.compose.animation.core.spring(dampingRatio = 0.22f, stiffness = 900f),
+                initialVelocity = -30f,
+            )
         }
     }
     val lockedOut = state.lockoutSeconds > 0
@@ -504,16 +519,16 @@ private fun PinScreen(state: LockUiState, accent: Color, now: Date, is24: Boolea
         Spacer(Modifier.height(14.dp))
         Text(
             text = when {
-                lockedOut -> "יותר מדי ניסיונות"
-                state.pinError -> "קוד שגוי"
-                else -> "הזן קוד"
+                lockedOut -> tr("יותר מדי ניסיונות")
+                state.pinError -> tr("קוד שגוי")
+                else -> tr("הזן קוד")
             },
             color = if (state.pinError && !lockedOut) Danger else Color.White,
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold
         )
         if (lockedOut) {
-            Text("נסה שוב בעוד ${formatSeconds(state.lockoutSeconds)}", color = Color.White.copy(alpha = 0.65f), fontSize = 14.sp, modifier = Modifier.padding(top = 4.dp))
+            Text(tr("נסה שוב בעוד {0}", formatSeconds(state.lockoutSeconds)), color = Color.White.copy(alpha = 0.65f), fontSize = 14.sp, modifier = Modifier.padding(top = 4.dp))
             Spacer(Modifier.height(24.dp))
             Box(Modifier.clip(RoundedCornerShape(20.dp)).background(Surface).padding(horizontal = 24.dp, vertical = 8.dp)) {
                 val s = state.lockoutSeconds
@@ -552,25 +567,25 @@ private fun PinScreen(state: LockUiState, accent: Color, now: Date, is24: Boolea
             val reason = state.pinReason
             when {
                 reason != null -> Text(reason, color = Color.White.copy(alpha = 0.75f), fontSize = 13.sp, textAlign = TextAlign.Center)
-                state.pinError -> Text("הזן קוד שוב", color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp)
+                state.pinError -> Text(tr("הזן קוד שוב"), color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp)
                 state.faceStatus == FaceStatus.SCANNING -> Row(verticalAlignment = Alignment.CenterVertically) {
                     ScanningFace(accent, 22.dp)
                     Spacer(Modifier.width(6.dp))
-                    Text("או הבט בטלפון", color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp)
+                    Text(tr("או הבט בטלפון"), color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp)
                 }
                 state.faceEnabled -> Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Rounded.Face, null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(14.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("או הבט בטלפון", color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp)
+                    Text(tr("או הבט בטלפון"), color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp)
                 }
             }
         }
         Spacer(Modifier.weight(1f))
-        Text("חזור - מחיקה", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp)
+        Text(tr("חזור - מחיקה"), color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp)
     }
 }
 
-private fun formatSeconds(s: Int): String = if (s >= 60) "${(s + 59) / 60} דקות" else "$s שניות"
+private fun formatSeconds(s: Int): String = if (s >= 60) tr("{0} דקות", (s + 59) / 60) else tr("{0} שניות", s)
 
 // ---------------------------------------------------------------- עריכה
 
@@ -603,8 +618,8 @@ private fun EditScreen(state: LockUiState, accent: Color, clockColor: Color, now
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Pill("ביטול", Glass, Color.White)
-                Pill("סיום", accent, Color.Black)
+                Pill(tr("ביטול"), Glass, Color.White)
+                Pill(tr("סיום"), accent, Color.Black)
             }
             when (panel) {
                 EditPanel.NONE -> {
@@ -632,12 +647,12 @@ private fun EditScreen(state: LockUiState, accent: Color, clockColor: Color, now
                         ) {
                             Icon(Icons.Rounded.Image, null, tint = Color.White, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text("רקע", color = Color.White, fontSize = 14.sp)
+                            Text(tr("רקע"), color = Color.White, fontSize = 14.sp)
                         }
                         EditShortcut(state.rightShortcut, target == EditTarget.RIGHT_SHORTCUT, accent, Modifier.align(AbsoluteAlignment.CenterRight))
                     }
                     Spacer(Modifier.height(14.dp))
-                    Text("OK לעריכה · תפריט לסיום · חזור לביטול", color = Color.White.copy(alpha = 0.75f), fontSize = 12.sp)
+                    Text(tr("OK לעריכה · תפריט לסיום · חזור לביטול"), color = Color.White.copy(alpha = 0.75f), fontSize = 12.sp)
                     Spacer(Modifier.height(16.dp))
                 }
                 EditPanel.CLOCK -> Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
@@ -724,9 +739,9 @@ private fun SheetHint(text: String) {
 @Composable
 private fun ClockPanel(state: LockUiState, accent: Color, now: Date, is24: Boolean) {
     val time = SimpleDateFormat(if (is24) "HH:mm" else "h:mm", Locale.getDefault()).format(now)
-    SheetTitle("שעון")
+    SheetTitle(tr("שעון"))
     Spacer(Modifier.height(14.dp))
-    SectionLabel("סגנון", state.panelRow == 0)
+    SectionLabel(tr("סגנון"), state.panelRow == 0)
     Spacer(Modifier.height(8.dp))
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         LockCatalog.clockStyles.indices.forEach { i ->
@@ -746,7 +761,7 @@ private fun ClockPanel(state: LockUiState, accent: Color, now: Date, is24: Boole
         }
     }
     Spacer(Modifier.height(14.dp))
-    SectionLabel("צבע", state.panelRow == 1)
+    SectionLabel(tr("צבע"), state.panelRow == 1)
     Spacer(Modifier.height(8.dp))
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         LockCatalog.clockColors.indices.forEach { i ->
@@ -761,7 +776,7 @@ private fun ClockPanel(state: LockUiState, accent: Color, now: Date, is24: Boole
             )
         }
     }
-    SheetHint("${LockCatalog.clockStyles[state.clockStyle]} · ${LockCatalog.clockColors[state.clockColor]} · חצים לשינוי · חזור לסיום")
+    SheetHint(tr("{0} · {1} · חצים לשינוי · חזור לסיום", LockCatalog.clockStyles[state.clockStyle], LockCatalog.clockColors[state.clockColor]))
 }
 
 @Composable
@@ -787,7 +802,7 @@ private fun ClockStyleThumb(style: Int, time: String, color: Color) {
 @Composable
 private fun WidgetsPanel(state: LockUiState, accent: Color) {
     val selected = state.widgets.filter { it != "none" }
-    SheetTitle("ווידג'טים", "${selected.size} מתוך ${LockSettings.WIDGET_SLOTS}")
+    SheetTitle(tr("ווידג'טים"), tr("{0} מתוך {1}", selected.size, LockSettings.WIDGET_SLOTS))
     Spacer(Modifier.height(10.dp))
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         LockCatalog.widgetChoices.forEachIndexed { i, id ->
@@ -816,19 +831,19 @@ private fun WidgetsPanel(state: LockUiState, accent: Color) {
             }
         }
     }
-    SheetHint("OK להוספה או הסרה · חזור לסיום")
+    SheetHint(tr("OK להוספה או הסרה · חזור לסיום"))
 }
 
 // --- קיצורים
 
 @Composable
 private fun ShortcutsPanel(state: LockUiState, accent: Color) {
-    SheetTitle("קיצורים")
+    SheetTitle(tr("קיצורים"))
     Spacer(Modifier.height(12.dp))
     // הלשוניות לפי המיקום הפיזי של המקשים: שמאל = חזור, ימין = תפריט
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
         Row(Modifier.fillMaxWidth().height(36.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.06f)).padding(3.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-            listOf("שמאלי · חזור", "ימני · תפריט").forEachIndexed { side, label ->
+            listOf(tr("שמאלי · חזור"), tr("ימני · תפריט")).forEachIndexed { side, label ->
                 val selected = side == state.shortcutSide
                 Box(
                     Modifier
@@ -873,14 +888,14 @@ private fun ShortcutsPanel(state: LockUiState, accent: Color) {
             }
         }
     }
-    SheetHint("חצים לבחירה · חזור לסיום")
+    SheetHint(tr("חצים לבחירה · חזור לסיום"))
 }
 
 // --- רקע
 
 @Composable
 private fun WallpaperPanel(state: LockUiState, accent: Color) {
-    SheetTitle("רקע")
+    SheetTitle(tr("רקע"))
     Spacer(Modifier.height(12.dp))
     val categories = state.wallpaperCategories
     val chips = rememberLazyListState()
@@ -938,10 +953,10 @@ private fun WallpaperPanel(state: LockUiState, accent: Color) {
             .padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text("טשטוש", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+        Text(tr("טשטוש"), color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
         LockSwitch(state.background == 1, accent)
     }
-    SheetHint("OK לבחירה · חזור לסיום")
+    SheetHint(tr("OK לבחירה · חזור לסיום"))
 }
 
 @Composable
@@ -967,7 +982,7 @@ private fun WallpaperTile(state: LockUiState, id: String, focused: Boolean, acce
         if (image != null) Image(image, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
         if (id.isEmpty()) {
             Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().background(Color.Black.copy(alpha = 0.5f)).padding(vertical = 3.dp), contentAlignment = Alignment.Center) {
-                Text("נוכחי", color = Color.White, fontSize = 12.sp)
+                Text(tr("נוכחי"), color = Color.White, fontSize = 12.sp)
             }
         }
         if (id == state.wallpaperId) {

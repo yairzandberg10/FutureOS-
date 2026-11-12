@@ -1,5 +1,6 @@
 package com.future.fitness.ui.screens
 
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.AvatarListSize
 import com.future.sharednav.components.FutureAvatar
@@ -69,6 +70,7 @@ import com.future.sharednav.focus.escapeTextFieldFocusTrap
 import com.future.fitness.ui.components.ScreenTopBar
 import com.future.sharednav.theme.FutureTheme
 import androidx.compose.foundation.layout.PaddingValues
+import com.future.sharednav.focus.animateFocusColor
 
 /** מצב כהה/בהיר וצבע הדגשה משותפים לכל אפליקציות FutureOS ונשלטים ממסך
  * ההגדרות המרכזי של המערכת (כמו בכל שאר אפליקציות הסוויטה - אף אחת מהן לא
@@ -107,7 +109,7 @@ fun SettingsScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        ScreenTopBar(title = "הגדרות", theme = theme, onBack = onBack)
+        ScreenTopBar(title = tr("הגדרות"), theme = theme, onBack = onBack)
 
         LazyColumn(
             modifier = Modifier.weight(1f).fillMaxWidth().escapeTextFieldFocusTrap(),
@@ -116,9 +118,9 @@ fun SettingsScreen(
             contentPadding = PaddingValues(top = 4.dp),
         ) {
             item {
-                SectionLabel("עיצוב", theme)
+                SectionLabel(tr("עיצוב"), theme)
                 Text(
-                    "מצב כהה/בהיר וצבע הדגשה משותפים לכל האפליקציות ונקבעים במסך ההגדרות המרכזי של המערכת.",
+                    tr("מצב כהה/בהיר וצבע הדגשה משותפים לכל האפליקציות ונקבעים במסך ההגדרות המרכזי של המערכת."),
                     color = theme.mutedTextColor,
                     fontSize = FutureTypography.label,
                     modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 18.dp),
@@ -126,7 +128,7 @@ fun SettingsScreen(
             }
 
             item {
-                SectionLabel("יחידות", theme)
+                SectionLabel(tr("יחידות"), theme)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -135,10 +137,10 @@ fun SettingsScreen(
                         .padding(16.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    Text("יחידות משקל", color = theme.textColor, fontSize = FutureTypography.bodyLarge)
+                    Text(tr("יחידות משקל"), color = theme.textColor, fontSize = FutureTypography.bodyLarge)
                     SegmentedControl(
-                        options = listOf("ק״ג", "lb"),
-                        selected = if (units == "kg") "ק״ג" else "lb",
+                        options = listOf(tr("ק״ג"), "lb"),
+                        selected = if (units == "kg") tr("ק״ג") else "lb",
                         theme = theme,
                         onSelect = { onSetUnits(if (it == "ק״ג") "kg" else "lb") },
                         segmentWidth = 48.dp,
@@ -147,9 +149,9 @@ fun SettingsScreen(
             }
 
             item {
-                SectionLabel("פרופיל אישי", theme)
+                SectionLabel(tr("פרופיל אישי"), theme)
                 Text(
-                    "משמש לחישוב קלוריות מדויק (met × משקל × זמן) ולהערכת אזורי דופק.",
+                    tr("משמש לחישוב קלוריות מדויק (met × משקל × זמן) ולהערכת אזורי דופק."),
                     color = theme.mutedTextColor,
                     fontSize = FutureTypography.label,
                     modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 10.dp),
@@ -164,7 +166,7 @@ fun SettingsScreen(
                                 onSetProfile(v.toIntOrNull(), ageText.toIntOrNull())
                             }
                         },
-                        label = "משקל (ק״ג)",
+                        label = tr("משקל (ק״ג)"),
                         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Number),
                         focusRequester = weightFieldFocusRequester,
                         modifier = Modifier.weight(1f),
@@ -180,7 +182,7 @@ fun SettingsScreen(
                                 onSetProfile(weightText.toIntOrNull(), v.toIntOrNull())
                             }
                         },
-                        label = "גיל",
+                        label = tr("גיל"),
                         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.weight(1f),
                         singleLine = true,
@@ -190,9 +192,9 @@ fun SettingsScreen(
             }
 
             item {
-                SectionLabel("שעון חכם / רצועת דופק", theme)
+                SectionLabel(tr("שעון חכם / רצועת דופק"), theme)
                 Text(
-                    "חיבור Bluetooth סטנדרטי (Heart Rate Service) - תואם לרוב השעונים החכמים ורצועות הדופק. הדופק החי יוצג באימונים ובריצות ויישמר בהיסטוריה.",
+                    tr("חיבור Bluetooth סטנדרטי (Heart Rate Service) - תואם לרוב השעונים החכמים ורצועות הדופק. הדופק החי יוצג באימונים ובריצות ויישמר בהיסטוריה."),
                     color = theme.mutedTextColor,
                     fontSize = FutureTypography.label,
                     modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 10.dp),
@@ -213,24 +215,24 @@ fun SettingsScreen(
                                 Icon(FutureIcons.Watch, contentDescription = null, tint = theme.textColor, modifier = Modifier.size(20.dp))
                                 Spacer(Modifier.width(10.dp))
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Text(heartRateMonitor.connectedDeviceName ?: "מכשיר מחובר", color = theme.textColor, fontSize = FutureTypography.body, fontWeight = FontWeight.Bold)
-                                    Text("מחובר", color = theme.successColor, fontSize = FutureTypography.label)
+                                    Text(heartRateMonitor.connectedDeviceName ?: tr("מכשיר מחובר"), color = theme.textColor, fontSize = FutureTypography.body, fontWeight = FontWeight.Bold)
+                                    Text(tr("מחובר"), color = theme.successColor, fontSize = FutureTypography.label)
                                 }
-                                FutureButton("נתק", theme, { heartRateMonitor.disconnect(); onDeviceDisconnected() }, variant = FutureButtonVariant.Secondary)
+                                FutureButton(tr("נתק"), theme, { heartRateMonitor.disconnect(); onDeviceDisconnected() }, variant = FutureButtonVariant.Secondary)
                             }
                         }
                         HrConnectionState.CONNECTING -> {
-                            Text("מתחבר", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.summary, modifier = Modifier.padding(vertical = 12.dp))
+                            Text(tr("מתחבר"), color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.summary, modifier = Modifier.padding(vertical = 12.dp))
                         }
                         HrConnectionState.SCANNING -> {
-                            Text("סורק מכשירים בקרבת מקום", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.summary, modifier = Modifier.padding(vertical = 12.dp))
+                            Text(tr("סורק מכשירים בקרבת מקום"), color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.summary, modifier = Modifier.padding(vertical = 12.dp))
                         }
                         HrConnectionState.DISCONNECTED -> {
                             heartRateMonitor.lastError?.let { error ->
                                 Text(error, color = theme.dangerColor, fontSize = FutureTypography.summary, modifier = Modifier.padding(bottom = 8.dp))
                             }
                             FutureButton(
-                                "סרוק מכשירים",
+                                tr("סרוק מכשירים"),
                                 theme,
                                 { if (hasBluetoothPermission) heartRateMonitor.startScan() else bluetoothPermissionLauncher.launch(bluetoothPermissions) },
                                 fillMaxWidth = true,
@@ -253,7 +255,7 @@ fun SettingsScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(if (isFocused) theme.focusFillChipColor else theme.idleChipColor, FutureShapes.lg)
+                                .background(animateFocusColor(isFocused, theme.focusFillChipColor, theme.idleChipColor).value, FutureShapes.lg)
                                 .padding(14.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {

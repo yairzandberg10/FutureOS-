@@ -33,6 +33,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -94,14 +96,17 @@ fun FutureSwitch(
         FutureMotion.focusColorSpec,
         label = "switchThumb",
     )
+    // הכפתור נוסע בקפיץ toggle ונוחת עם overshoot קטן. המיקום נקרא בשלב
+    // ה-placement (offset עם lambda) ולא כ-padding, כך שכל פריים של הנסיעה
+    // לא מודד מחדש את המתג.
     val thumbSize by animateDpAsState(
         if (checked) SwitchThumbOn else SwitchThumbOff,
-        FutureMotion.fast(),
+        FutureMotion.Springs.toggle(),
         label = "switchThumbSize",
     )
-    val thumbStart by animateDpAsState(
+    val thumbStart = animateDpAsState(
         if (checked) SwitchTrackInner - SwitchThumbOn - SwitchThumbInset else SwitchThumbInset,
-        FutureMotion.fast(),
+        FutureMotion.Springs.toggle(),
         label = "switchThumbStart",
     )
     Box(
@@ -114,7 +119,7 @@ fun FutureSwitch(
     ) {
         Box(
             modifier = Modifier
-                .padding(start = thumbStart)
+                .offset { IntOffset(thumbStart.value.roundToPx(), 0) }
                 .size(thumbSize)
                 .clip(FutureShapes.pill)
                 .animatedFill { thumb.value },

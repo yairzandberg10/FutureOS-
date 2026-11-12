@@ -1,5 +1,6 @@
 package com.future.frixa.ui
 
+import com.future.sharednav.i18n.tr
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.layout.Box
@@ -85,21 +86,21 @@ fun StoresScreen(theme: FutureTheme) {
     Column(modifier = Modifier.fillMaxSize()) {
         if (loading) FutureIndeterminateProgressBar(theme = theme, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp))
         val note = when {
-            offline && stores.isNotEmpty() -> "אין חיבור - מוצגות התוצאות האחרונות"
-            myLocation == null && !locationGranted.value -> "אשר מיקום כדי לראות מה קרוב אליך"
-            myLocation == null -> "בלי מיקום - מוצגים מקומות בכל הארץ"
+            offline && stores.isNotEmpty() -> tr("אין חיבור - מוצגות התוצאות האחרונות")
+            myLocation == null && !locationGranted.value -> tr("אשר מיקום כדי לראות מה קרוב אליך")
+            myLocation == null -> tr("בלי מיקום - מוצגים מקומות בכל הארץ")
             else -> null
         }
         note?.let { Text(it, color = theme.mutedTextColor, fontSize = FutureTypography.summary, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) }
 
         when {
             sorted.isEmpty() && loading -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("מחפש מקומות", color = theme.mutedTextColor, fontSize = FutureTypography.body)
+                Text(tr("מחפש מקומות"), color = theme.mutedTextColor, fontSize = FutureTypography.body)
             }
             sorted.isEmpty() -> EmptyState(
                 icon = FutureIcons.Storefront,
-                title = if (offline) "אין חיבור לרשת" else "לא נמצאו מקומות",
-                subtitle = "לחץ על מקש התפריט כדי לרענן",
+                title = if (offline) tr("אין חיבור לרשת") else tr("לא נמצאו מקומות"),
+                subtitle = tr("לחץ על מקש התפריט כדי לרענן"),
                 textColor = theme.textColor,
             )
             else -> LazyColumn(contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)) {
@@ -124,20 +125,20 @@ fun StoresScreen(theme: FutureTheme) {
     }
 
     if (menuOpen) {
-        FutureOptionsMenu(theme = theme, onDismissRequest = { menuOpen = false }, header = focused?.name ?: "חנויות") {
+        FutureOptionsMenu(theme = theme, onDismissRequest = { menuOpen = false }, header = focused?.name ?: tr("חנויות")) {
             focused?.let { store ->
-                FutureMenuRow("נווט", FutureIcons.DirectionsCar, theme, { menuOpen = false; navigate(store) })
+                FutureMenuRow(tr("נווט"), FutureIcons.DirectionsCar, theme, { menuOpen = false; navigate(store) })
                 store.phone?.let { phone ->
-                    FutureMenuRow("התקשר", FutureIcons.Call, theme, {
+                    FutureMenuRow(tr("התקשר"), FutureIcons.Call, theme, {
                         menuOpen = false
-                        runCatching { context.startActivity(Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", phone, null)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                        runCatching { context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
                     })
                 }
             }
-            FutureMenuRow("רענן", FutureIcons.Refresh, theme, { menuOpen = false; refreshKey++ })
+            FutureMenuRow(tr("רענן"), FutureIcons.Refresh, theme, { menuOpen = false; refreshKey++ })
         }
     }
 }
 
 private fun formatDistance(meters: Double): String =
-    if (meters < 1000) "${meters.toInt()} מ'" else "%.1f ק\"מ".format(meters / 1000)
+    if (meters < 1000) tr("{0} מ'", meters.toInt()) else tr("%.1f ק\"מ").format(meters / 1000)

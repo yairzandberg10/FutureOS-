@@ -1,5 +1,6 @@
 package com.future.clock
 
+import com.future.sharednav.i18n.tr
 import android.media.AudioAttributes
 import android.media.Ringtone
 import android.media.RingtoneManager
@@ -112,7 +113,7 @@ class AlarmRingActivity : ComponentActivity() {
             )
 
             FutureAppTheme(theme) {
-                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
                     Column(
                         modifier = Modifier.fillMaxSize().background(theme.backgroundColor).padding(24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -138,14 +139,14 @@ class AlarmRingActivity : ComponentActivity() {
                             fontFamily = FutureTypography.monoFamily,
                         )
                         Text(
-                            label.ifBlank { "שעון מעורר" },
+                            label.ifBlank { tr("שעון מעורר") },
                             color = theme.mutedTextColor,
                             fontSize = FutureTypography.title,
                             textAlign = TextAlign.Center,
                         )
                         Spacer(modifier = Modifier.height(40.dp))
                         FutureButton(
-                            text = "עצור",
+                            text = tr("עצור"),
                             theme = theme,
                             onClick = ::dismiss,
                             fillMaxWidth = true,
@@ -155,7 +156,7 @@ class AlarmRingActivity : ComponentActivity() {
                         if (alarmId != -1) {
                             Spacer(modifier = Modifier.height(FutureDimens.spacingMd))
                             FutureButton(
-                                text = "נודניק · $SNOOZE_MINUTES דקות",
+                                text = tr("נודניק · {0} דקות", SNOOZE_MINUTES),
                                 theme = theme,
                                 onClick = ::snooze,
                                 variant = FutureButtonVariant.Secondary,

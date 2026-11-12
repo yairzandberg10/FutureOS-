@@ -152,11 +152,6 @@ no shadow at all* · 4 dialog — surface plus a 60% black scrim over the screen
 5 heads-up notification — `#1C1C1E` at 90% with a 0.5dp 15% white hairline, floating over
 everything and **always dark even in light mode**.
 
-The **home-screen widget** borrows the heads-up surface: `#1C1C1E` at 90% (`--fos-widget-bg`),
-22dp radius, a 0.5dp 15% white hairline; a 12sp title at 60%, a 20sp bold value (28sp for the
-clock) and a 13sp subtitle. It sits on the user's wallpaper, so it is always dark and its ink is
-always white (`--fos-shell-ink`). See the `Widget` component.
-
 ### States
 
 Only three states exist: **normal, focused, selected**. Hover, pressed and dragged are physically
@@ -171,8 +166,7 @@ cannot activate looks like a row you can — a known gap).
   dialog button all read this way.
 - Anything that cannot receive focus cannot be activated at all. That is a design rule, not an
   implementation detail — the bottom nav is deliberately unfocusable because the screen-level arrow
-  keys move between its tabs, and the calculator's key legend (an `ActionGrid` of `legend` cells that
-  only reminds you what a physical key does) never takes the focus ring.
+  keys move between its tabs.
 
 ### Motion
 
@@ -268,8 +262,8 @@ non-systemic; if you need them, they should be designed rather than reconstructe
 | file | contents |
 |---|---|
 | `tokens/fonts.css` | Heebo, Roboto Mono, Material Symbols Rounded; the `.fos-icon` class |
-| `tokens/colors.css` | core dark/light, accent palette, alpha ladder, app extensions, home-screen widget |
-| `tokens/typography.css` | the seven sizes (plus the 28sp widget clock), weights, the 0.8–1.4 multiplier |
+| `tokens/colors.css` | core dark/light, accent palette, alpha ladder, app extensions |
+| `tokens/typography.css` | the seven sizes, weights, the 0.8–1.4 multiplier |
 | `tokens/spacing.css` | the two named tokens, the dp ladder, screen size, focus row heights |
 | `tokens/shape.css` | nine radii, border widths |
 | `tokens/focus.css` | focus borders, scale, and every focus/idle background |
@@ -279,7 +273,7 @@ non-systemic; if you need them, they should be designed rather than reconstructe
 **Components** — `components/<group>/`, each with `.jsx`, `.d.ts`, `.prompt.md`, and one card:
 
 - `core/` — `TopBar`, `IconButton`, `ListItem`, `EmptyState`, `Button`, `Card`, `SectionHeader`,
-  `Divider`, `Icon`, `FosIcon`, `Avatar`, `ScreenHero`, `MonoValue`, `ActionGrid`, `Widget`
+  `Divider`, `Icon`, `FosIcon`, `Avatar`, `ScreenHero`, `MonoValue`, `ActionGrid`
 - `forms/` — `Switch`, `Slider`, `TextField`, `TextArea`, `Chip`, `DayChip`, `Capsule`,
   `ToggleButton`, `Checkbox`, `RadioButton`, `TimePicker`, `DatePicker`, `SettingItem`
 - `feedback/` — `ConfirmDialog`, `InputDialog`, `HeadsUpNotification`, `Snackbar`, `ProgressBar`,

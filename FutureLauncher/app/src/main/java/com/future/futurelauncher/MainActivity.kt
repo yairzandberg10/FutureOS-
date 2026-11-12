@@ -1,5 +1,6 @@
 package com.future.futurelauncher
 
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.theme.scrimColor
 import com.future.sharednav.theme.FutureShapes
@@ -52,6 +53,9 @@ import com.future.sharednav.theme.FutureTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
+import com.future.sharednav.focus.animateFocusColor
+import com.future.sharednav.focus.focusScale
+import androidx.compose.runtime.getValue
 
 class MainActivity : ComponentActivity() {
     // המכשיר האמיתי הוא מקלדת T9 בלבד בלי מסך מגע - מבטלים קלט מגע לגמרי כדי
@@ -110,7 +114,7 @@ class MainActivity : ComponentActivity() {
             FutureLauncherTheme {
                 // כמו בכל אפליקציה אחרת - RTL כפוי, גם אם שפת המערכת אחרת.
                 androidx.compose.runtime.CompositionLocalProvider(
-                    androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Rtl
+                    androidx.compose.ui.platform.LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection
                 ) {
                     LauncherScreen(viewModel, onSelectWidget = { selectWidget() })
                 }
@@ -180,7 +184,6 @@ class MainActivity : ComponentActivity() {
         } catch (e: Exception) {
             pruneOrphanedWidgetIds()
         }
-        refreshHostedWidgets()
 
         // אפליקציות שהותקנו/הוסרו/הוחלפו אחרי הטעינה הראשונית של הרשימה חייבות
         // לגרום לרענון שלה, אחרת אפליקציה חדשה לעולם לא תופיע ואפליקציה שהוסרה
@@ -218,30 +221,6 @@ class MainActivity : ComponentActivity() {
         }
         packageChangeReceiver?.let { unregisterReceiver(it) }
         packageChangeReceiver = null
-    }
-
-    private var lastWidgetRefresh = 0L
-
-    /**
-     * מבקש מכל ווידג'ט שמוצג במסך הבית לעדכן את התוכן שלו (APPWIDGET_UPDATE
-     * ישירות לספק שלו). בלי זה ווידג'ט התעדכן רק במחזור של המערכת (חצי שעה,
-     * או אף פעם - רוב הווידג'טים הוגדרו עם updatePeriodMillis=0), ומסך הבית
-     * הציג נתונים ישנים: שיחה, הודעה או מעורר מלפני שעות. לכל היותר פעם בדקה.
-     */
-    private fun refreshHostedWidgets() {
-        val now = android.os.SystemClock.elapsedRealtime()
-        if (now - lastWidgetRefresh < 60_000L) return
-        lastWidgetRefresh = now
-        appWidgetHost.appWidgetIds.forEach { id ->
-            val provider = runCatching { appWidgetManager.getAppWidgetInfo(id)?.provider }.getOrNull() ?: return@forEach
-            runCatching {
-                sendBroadcast(
-                    Intent(AppWidgetManager.ACTION_APPWIDGET_UPDATE)
-                        .setComponent(provider)
-                        .putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, intArrayOf(id))
-                )
-            }
-        }
     }
 
     private fun selectWidget() {
@@ -286,7 +265,7 @@ class MainActivity : ComponentActivity() {
         // A better way is for LauncherScreen to observe a "PendingWidget" state in ViewModel.
         if (!viewModel.addWidget(appWidgetId, viewModel.visiblePage)) {
             appWidgetHost.deleteAppWidgetId(appWidgetId)
-            Toast.makeText(this, "אין מספיק מקום פנוי בדף הזה לווידג'ט", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, tr("אין מספיק מקום פנוי בדף הזה לווידג'ט"), Toast.LENGTH_SHORT).show()
         }
     }
 }
@@ -305,7 +284,19 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
         pageCount = { maxOf(1, pages.size) }
     )
 
-    val editModeScale by animateFloatAsState(if (viewModel.isEditMode) 0.95f else 1f)
+    val editModeScale by animateFloatAsState(
+        if (viewModel.isEditMode) 0.95f else 1f,
+        com.future.sharednav.theme.FutureMotion.Springs.layer(),
+        label = "editModeScale",
+    )
+    // Icon Bloom: הבית נסוג לעומק כשאפליקציה נפתחת ממנו, ובחזרה "קולט" אותה -
+    // גדל חזרה בקפיץ (ר' LaunchMotion). graphicsLayer בלבד.
+    val homeDepth = remember { androidx.compose.animation.core.Animatable(1f) }
+    LaunchedEffect(com.future.futurelauncher.ui.LaunchMotion.launchTick) {
+        if (com.future.futurelauncher.ui.LaunchMotion.launchTick > 0) {
+            homeDepth.animateTo(0.88f, androidx.compose.animation.core.tween(240, easing = com.future.sharednav.theme.FutureMotion.EasingAccelerate))
+        }
+    }
     val scope = rememberCoroutineScope()
     var menuClickJob by remember { mutableStateOf<Job?>(null) }
     var lastMenuKeyUpTime by remember { mutableStateOf(0L) }
@@ -321,6 +312,9 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
     val overlayOpen = viewModel.dialogState == LauncherDialog.LauncherSettings ||
         viewModel.dialogState == LauncherDialog.Widgets ||
         viewModel.dialogState is LauncherDialog.AppList
+    // ה-receiver של Options נרשם פעם אחת ב-DisposableEffect(Unit), אז הוא חייב לקרוא
+    // את המצב העדכני ולא את הערך שנלכד ברישום.
+    val overlayOpenNow = rememberUpdatedState(overlayOpen)
     LaunchedEffect(overlayOpen) { if (!overlayOpen) runCatching { focusRequester.requestFocus() } }
 
     // מרענן את העיצוב המשותף (כהה/בהיר, צבע הדגשה) בכל חזרה למסך, כדי
@@ -330,6 +324,14 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
             if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
                 viewModel.loadTheme()
+                if (com.future.futurelauncher.ui.LaunchMotion.onHomeResumed()) {
+                    scope.launch {
+                        homeDepth.snapTo(0.88f)
+                        homeDepth.animateTo(1f, com.future.sharednav.theme.FutureMotion.Springs.layer())
+                    }
+                } else if (homeDepth.value != 1f) {
+                    scope.launch { homeDepth.snapTo(1f) }
+                }
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -373,7 +375,7 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                     menuClickJob?.cancel()
                     menuClickJob = scope.launch {
                         delay(350)
-                        if (!viewModel.isEditMode && !overlayOpen && !prefs.lockLayout) {
+                        if (!viewModel.isEditMode && !overlayOpenNow.value && !prefs.lockLayout) {
                             val freshItems = viewModel.pages.getOrNull(pagerState.currentPage) ?: emptyList()
                             val item = freshItems.getOrNull(viewModel.focusedIndex)
                             if (item != null) viewModel.dialogState = LauncherDialog.AppOptions(item)
@@ -383,10 +385,13 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                 }
             }
         }
-        // רק FutureUI (או adb) - לא כל אפליקציה שמשדרת את הפעולה (ר' KeyPressBroadcasts)
-        val filter = android.content.IntentFilter(com.future.sharednav.actions.FutureUIActions.ACTION_OPTIONS_SHORT_PRESS)
-        com.future.sharednav.nav.KeyPressBroadcasts.register(context, receiver, filter)
-        onDispose { com.future.sharednav.nav.KeyPressBroadcasts.unregister(context, receiver) }
+        val filter = android.content.IntentFilter("com.future.futureui.ACTION_OPTIONS_SHORT_PRESS")
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            context.registerReceiver(receiver, filter, android.content.Context.RECEIVER_EXPORTED)
+        } else {
+            context.registerReceiver(receiver, filter)
+        }
+        onDispose { context.unregisterReceiver(receiver) }
     }
 
     Box(
@@ -450,7 +455,7 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                                 when (item) {
                                     is LauncherItem.App -> {
                                         try {
-                                            context.startActivity(item.resolveInfo.launchIntent())
+                                            com.future.futurelauncher.ui.LaunchMotion.start(context, item.resolveInfo.launchIntent())
                                         } catch (e: android.content.ActivityNotFoundException) {
                                             Toast.makeText(context, context.getString(R.string.app_no_longer_installed), Toast.LENGTH_SHORT).show()
                                             viewModel.loadData()
@@ -581,7 +586,7 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                             // בדף הבית המוגדר, "חזור" מחזיר אליו - בדיוק כמו ברוב הלאנצ'רים;
                             // אם כבר בדף הבית, המקש נבלע ולא עושה כלום.
                             if (currentPage != viewModel.homePageIndex) {
-                                scope.launch { pagerState.animateScrollToPage(viewModel.homePageIndex) }
+                                scope.launch { pagerState.animateScrollToPage(viewModel.homePageIndex, animationSpec = com.future.sharednav.theme.FutureMotion.Springs.layer()) }
                             }
                             return@onKeyEvent true
                         }
@@ -673,14 +678,14 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                                     if (currentPage < pages.size - 1) {
                                         viewModel.moveItemBetweenPages(currentPage, index, currentPage + 1, index - 3)
                                         viewModel.focusedIndex = index - 3
-                                        scope.launch { pagerState.animateScrollToPage(currentPage + 1) }
+                                        scope.launch { pagerState.animateScrollToPage(currentPage + 1, animationSpec = com.future.sharednav.theme.FutureMotion.Springs.layer()) }
                                     }
                                 } else if (index + 1 < currentItems.size) {
                                     viewModel.swapItems(currentPage, index, index + 1)
                                 }
                             } else {
                                 if (index % 4 == 3) {
-                                    if (currentPage < pages.size - 1) scope.launch { pagerState.animateScrollToPage(currentPage + 1) }
+                                    if (currentPage < pages.size - 1) scope.launch { pagerState.animateScrollToPage(currentPage + 1, animationSpec = com.future.sharednav.theme.FutureMotion.Springs.layer()) }
                                 } else if (index + 1 < currentItems.size) {
                                     val item = currentItems.getOrNull(index)
                                     val skip = if (item is LauncherItem.Widget) item.spanX else 1
@@ -711,14 +716,14 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                                     if (currentPage > 0) {
                                         viewModel.moveItemBetweenPages(currentPage, index, currentPage - 1, index + 3)
                                         viewModel.focusedIndex = index + 3
-                                        scope.launch { pagerState.animateScrollToPage(currentPage - 1) }
+                                        scope.launch { pagerState.animateScrollToPage(currentPage - 1, animationSpec = com.future.sharednav.theme.FutureMotion.Springs.layer()) }
                                     }
                                 } else if (index > 0) {
                                     viewModel.swapItems(currentPage, index, index - 1)
                                 }
                             } else {
                                 if (index % 4 == 0) {
-                                    if (currentPage > 0) scope.launch { pagerState.animateScrollToPage(currentPage - 1) }
+                                    if (currentPage > 0) scope.launch { pagerState.animateScrollToPage(currentPage - 1, animationSpec = com.future.sharednav.theme.FutureMotion.Springs.layer()) }
                                 } else if (index > 0) {
                                     var nextIndex = index - 1
                                     while (nextIndex >= 0 && nextIndex % 4 != 3) {
@@ -755,26 +760,21 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                     // בהחלפת האייקון עצמו.
                     val isCurrentHome = currentPage == viewModel.homePageIndex
                     val isHomeFocused = viewModel.isTopBarFocused && viewModel.topBarSelectedIndex == 0
-                    val homeColor = if (isHomeFocused) theme.accentColor else if (isCurrentHome) OnWallpaperColor else OnWallpaperColor.copy(alpha = 0.5f)
+                    val homeColor by animateFocusColor(isHomeFocused, theme.accentColor, if (isCurrentHome) OnWallpaperColor else OnWallpaperColor.copy(alpha = 0.5f))
                     Icon(
                         imageVector = FutureIcons.Home,
                         contentDescription = stringResource(R.string.home), 
                         tint = homeColor, 
-                        modifier = Modifier.size(32.dp).graphicsLayer {
-                            scaleX = if (isHomeFocused) 1.2f else 1f
-                            scaleY = if (isHomeFocused) 1.2f else 1f
-                        }
+                        modifier = Modifier.size(32.dp).focusScale(isHomeFocused, focusedScale = 1.2f)
                     )
                     Spacer(modifier = Modifier.width(64.dp))
-                    val trashColor = if (viewModel.isTopBarFocused && viewModel.topBarSelectedIndex == 1) theme.accentColor else OnWallpaperColor
+                    val isTrashFocused = viewModel.isTopBarFocused && viewModel.topBarSelectedIndex == 1
+                    val trashColor by animateFocusColor(isTrashFocused, theme.accentColor, OnWallpaperColor)
                     Icon(
                         imageVector = FutureIcons.Delete, 
                         contentDescription = stringResource(R.string.trash), 
                         tint = trashColor, 
-                        modifier = Modifier.size(32.dp).graphicsLayer {
-                            scaleX = if (viewModel.isTopBarFocused && viewModel.topBarSelectedIndex == 1) 1.2f else 1f
-                            scaleY = if (viewModel.isTopBarFocused && viewModel.topBarSelectedIndex == 1) 1.2f else 1f
-                        }
+                        modifier = Modifier.size(32.dp).focusScale(isTrashFocused, focusedScale = 1.2f)
                     )
                 }
             }
@@ -784,15 +784,12 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if (viewModel.isEditMode) {
-                    val leftPlusColor = if (viewModel.isLeftPlusFocused) theme.accentColor else OnWallpaperColor
+                    val leftPlusColor by animateFocusColor(viewModel.isLeftPlusFocused, theme.accentColor, OnWallpaperColor)
                     Icon(
                         FutureIcons.Add, 
                         contentDescription = null, 
                         tint = leftPlusColor,
-                        modifier = Modifier.size(48.dp).padding(8.dp).graphicsLayer {
-                            scaleX = if (viewModel.isLeftPlusFocused) 1.2f else 1f
-                            scaleY = if (viewModel.isLeftPlusFocused) 1.2f else 1f
-                        }
+                        modifier = Modifier.size(48.dp).padding(8.dp).focusScale(viewModel.isLeftPlusFocused, focusedScale = 1.2f)
                     )
                 }
 
@@ -805,9 +802,11 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                             else Modifier.fillMaxSize()
                         )
                         .graphicsLayer {
-                            scaleX = editModeScale
-                            scaleY = editModeScale
-                            alpha = if (viewModel.isEditMode) 0.85f else 1f
+                            val depth = homeDepth.value
+                            scaleX = editModeScale * depth
+                            scaleY = editModeScale * depth
+                            val depthAlpha = (0.35f + 0.65f * ((depth - 0.88f) / 0.12f)).coerceIn(0f, 1f)
+                            alpha = (if (viewModel.isEditMode) 0.85f else 1f) * depthAlpha
                         }
                         .then(
                             if (viewModel.isEditMode) {
@@ -857,15 +856,12 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                 }
 
                 if (viewModel.isEditMode) {
-                    val rightPlusColor = if (viewModel.isRightPlusFocused) theme.accentColor else OnWallpaperColor
+                    val rightPlusColor by animateFocusColor(viewModel.isRightPlusFocused, theme.accentColor, OnWallpaperColor)
                     Icon(
                         FutureIcons.Add, 
                         contentDescription = null, 
                         tint = rightPlusColor,
-                        modifier = Modifier.size(48.dp).padding(8.dp).graphicsLayer {
-                            scaleX = if (viewModel.isRightPlusFocused) 1.2f else 1f
-                            scaleY = if (viewModel.isRightPlusFocused) 1.2f else 1f
-                        }
+                        modifier = Modifier.size(48.dp).padding(8.dp).focusScale(viewModel.isRightPlusFocused, focusedScale = 1.2f)
                     )
                 }
             }
@@ -1008,7 +1004,7 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                     pm = pm,
                     onAppClick = { app ->
                         try {
-                            context.startActivity(app.resolveInfo.launchIntent())
+                            com.future.futurelauncher.ui.LaunchMotion.start(context, app.resolveInfo.launchIntent())
                         } catch (e: android.content.ActivityNotFoundException) {
                             Toast.makeText(context, context.getString(R.string.app_no_longer_installed), Toast.LENGTH_SHORT).show()
                             viewModel.loadData()

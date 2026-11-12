@@ -24,7 +24,7 @@ import com.future.sharednav.theme.ThemeClient
  * שלד מסך תקני: רקע מהתמה + כפיית RTL + ScreenTopBar אופציונלי. מחליף את
  * הדפוס שהיה חוזר ידנית בעשרות מסכים:
  * ```
- * CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+ * CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
  *     Box(Modifier.fillMaxSize().background(theme.backgroundColor)) { ... }
  * }
  * ```
@@ -54,7 +54,7 @@ fun ScreenScaffold(
         FutureContrast.accentForText(accentColor, textColor)
     }
     CompositionLocalProvider(
-        LocalLayoutDirection provides LayoutDirection.Rtl,
+        LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection,
         LocalFutureType provides type,
         LocalFutureAccent provides accent,
     ) {

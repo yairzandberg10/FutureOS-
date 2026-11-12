@@ -1,5 +1,6 @@
 package com.future.messages.receiver
 
+import com.future.sharednav.i18n.tr
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -47,7 +48,7 @@ class SmsDeliverReceiver : BroadcastReceiver() {
             val channelId = "sms_incoming"
             val manager = context.getSystemService(NotificationManager::class.java)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                val channel = NotificationChannel(channelId, "הודעות נכנסות", NotificationManager.IMPORTANCE_HIGH)
+                val channel = NotificationChannel(channelId, tr("הודעות נכנסות"), NotificationManager.IMPORTANCE_HIGH)
                 manager.createNotificationChannel(channel)
             }
 

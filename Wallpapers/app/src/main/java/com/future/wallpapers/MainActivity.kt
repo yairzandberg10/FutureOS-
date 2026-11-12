@@ -1,4 +1,5 @@
 package com.future.wallpapers
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.systemui.StatusBarInset
 
 import android.app.WallpaperManager
@@ -115,12 +116,12 @@ private fun WallpapersApp(theme: FutureTheme) {
             PreviewScreen(open, theme)
         } else {
             Column(modifier = Modifier.fillMaxSize().background(theme.backgroundColor).padding(top = StatusBarInset.TITLE_GAP_DP.dp)) {
-                ScreenTopBar(title = "רקעים", textColor = theme.textColor, accentColor = theme.accentColor)
+                ScreenTopBar(title = tr("רקעים"), textColor = theme.textColor, accentColor = theme.accentColor)
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = FutureDimens.spacingLg),
                     horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm),
                 ) {
-                    item { FutureChip("הכל", theme = theme, selected = category == null, onClick = { category = null }) }
+                    item { FutureChip(tr("הכל"), theme = theme, selected = category == null, onClick = { category = null }) }
                     items(categories) { c -> FutureChip(c, theme = theme, selected = category == c, onClick = { category = c }) }
                 }
                 val first = remember { FocusRequester() }
@@ -174,9 +175,9 @@ private fun Thumbnail(wallpaper: Wallpaper, theme: FutureTheme, focusRequester: 
 }
 
 private enum class Target(val label: String, val flags: Int) {
-    HOME("מסך הבית", WallpaperManager.FLAG_SYSTEM),
-    LOCK("מסך הנעילה", WallpaperManager.FLAG_LOCK),
-    BOTH("שניהם", WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK),
+    HOME(tr("מסך הבית"), WallpaperManager.FLAG_SYSTEM),
+    LOCK(tr("מסך הנעילה"), WallpaperManager.FLAG_LOCK),
+    BOTH(tr("שניהם"), WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK),
 }
 
 /** תצוגה מלאה: OK - הגדר למסך הבית; Options - בחירה בין בית, נעילה ושניהם. */
@@ -211,7 +212,7 @@ private fun PreviewScreen(wallpaper: Wallpaper, theme: FutureTheme) {
                 runCatching { WallpaperManager.getInstance(context).setBitmap(b, null, true, target.flags) }.isSuccess
             }
             applying = false
-            snackbar.show(if (ok) "הרקע הוגדר ל${target.label}" else "לא ניתן להגדיר את הרקע")
+            snackbar.show(if (ok) tr("הרקע הוגדר ל{0}", target.label) else tr("לא ניתן להגדיר את הרקע"))
         }
     }
 
@@ -233,12 +234,12 @@ private fun PreviewScreen(wallpaper: Wallpaper, theme: FutureTheme) {
         val b = bitmap
         when {
             b != null -> Image(b.asImageBitmap(), contentDescription = wallpaper.title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-            failed -> Text("לא ניתן לטעון את התמונה", color = darkTheme.mutedTextColor, fontSize = FutureTypography.body)
+            failed -> Text(tr("לא ניתן לטעון את התמונה"), color = darkTheme.mutedTextColor, fontSize = FutureTypography.body)
             else -> FutureSpinner(theme = darkTheme)
         }
-        if (applying) FutureSpinner(theme = darkTheme, label = "מגדיר רקע")
+        if (applying) FutureSpinner(theme = darkTheme, label = tr("מגדיר רקע"))
         Text(
-            if (b != null) "OK - מסך הבית · Options - עוד" else "",
+            if (b != null) tr("OK - מסך הבית · Options - עוד") else "",
             color = Color.White,
             fontSize = FutureTypography.summary,
             modifier = Modifier
@@ -253,7 +254,7 @@ private fun PreviewScreen(wallpaper: Wallpaper, theme: FutureTheme) {
     if (menuOpen) {
         FutureOptionsMenu(theme = theme, onDismissRequest = { menuOpen = false }, header = wallpaper.title) {
             Target.entries.forEach { target ->
-                FutureMenuRow("הגדר ל${target.label}", FutureIcons.Image, theme, { menuOpen = false; apply(target) })
+                FutureMenuRow(tr("הגדר ל{0}", target.label), FutureIcons.Image, theme, { menuOpen = false; apply(target) })
             }
         }
     }

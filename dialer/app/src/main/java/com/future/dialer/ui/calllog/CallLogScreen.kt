@@ -1,5 +1,6 @@
 package com.future.dialer.ui.calllog
 
+import com.future.sharednav.i18n.tr
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -56,7 +57,7 @@ fun CallLogScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        ScreenTopBar(title = "שיחות", textColor = theme.textColor, accentColor = theme.accentColor)
+        ScreenTopBar(title = tr("שיחות"), textColor = theme.textColor, accentColor = theme.accentColor)
         LazyRow(
             modifier = Modifier.fillMaxWidth(),
             contentPadding = PaddingValues(horizontal = FutureDimens.spacingLg),
@@ -75,8 +76,8 @@ fun CallLogScreen(
         if (groups.isEmpty()) {
             EmptyState(
                 icon = if (filter == CallFilter.MISSED) FutureIcons.CallMissed else FutureIcons.Call,
-                title = if (filter == CallFilter.ALL) "אין שיחות" else "אין שיחות ב${filter.label}",
-                subtitle = if (filter == CallFilter.ALL) "הקלד מספר כדי להתקשר" else "בחר הכל כדי לראות את כל השיחות",
+                title = if (filter == CallFilter.ALL) tr("אין שיחות") else tr("אין שיחות ב{0}", filter.label),
+                subtitle = if (filter == CallFilter.ALL) tr("הקלד מספר כדי להתקשר") else tr("בחר הכל כדי לראות את כל השיחות"),
                 textColor = theme.textColor,
                 modifier = Modifier.weight(1f).fillMaxWidth(),
             )

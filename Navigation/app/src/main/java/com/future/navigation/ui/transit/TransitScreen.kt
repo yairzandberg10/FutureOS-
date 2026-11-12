@@ -1,4 +1,5 @@
 package com.future.navigation.ui.transit
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.theme.FutureDimens
 import com.future.sharednav.theme.LocalFutureTheme
 
@@ -64,9 +65,9 @@ fun TransitScreen(itinerary: TransitItinerary, onBack: () -> Unit) {
             color = MaterialTheme.colorScheme.surface
         ) {
             Row(modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
-                Stat(stringResource(R.string.total_time), "%d דק׳".format(itinerary.totalDurationSeconds / 60))
+                Stat(stringResource(R.string.total_time), tr("%d דק׳").format(itinerary.totalDurationSeconds / 60))
                 Stat(stringResource(R.string.arrival_time), secondsToClock(itinerary.arrivalSeconds))
-                Stat(stringResource(R.string.walk_time), "%d דק׳".format(itinerary.legs.filter { it.type == LegType.WALK }.sumOf { it.walkDurationSeconds ?: 0 } / 60))
+                Stat(stringResource(R.string.walk_time), tr("%d דק׳").format(itinerary.legs.filter { it.type == LegType.WALK }.sumOf { it.walkDurationSeconds ?: 0 } / 60))
             }
         }
 
@@ -128,9 +129,9 @@ private fun LegRow(leg: TransitLeg, isLast: Boolean, expanded: Boolean, onToggle
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f).padding(bottom = 20.dp)) {
             if (leg.type == LegType.WALK) {
-                Text("הליכה", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
+                Text(tr("הליכה"), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
                 Text(
-                    "%d דק׳ · %d מ׳".format((leg.walkDurationSeconds ?: 0) / 60, (leg.walkDistanceMeters ?: 0.0).toInt()),
+                    tr("%d דק׳ · %d מ׳").format((leg.walkDurationSeconds ?: 0) / 60, (leg.walkDistanceMeters ?: 0.0).toInt()),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                 )
@@ -143,14 +144,14 @@ private fun LegRow(leg: TransitLeg, isLast: Boolean, expanded: Boolean, onToggle
                 ) {
                     Column(modifier = Modifier.fillMaxWidth().padding(4.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(leg.routeLongName?.takeIf { it.isNotBlank() } ?: leg.routeShortName ?: "קו", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
+                            Text(leg.routeLongName?.takeIf { it.isNotBlank() } ?: leg.routeShortName ?: tr("קו"), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
                             if (leg.isRealtime) {
                                 Spacer(modifier = Modifier.width(8.dp))
                                 RealtimeBadge(delaySeconds = leg.delaySeconds)
                             }
                         }
                         Text(
-                            "מ${leg.fromStopName} · אל ${leg.toStopName}",
+                            tr("מ{0} · אל {1}", leg.fromStopName, leg.toStopName),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                         )

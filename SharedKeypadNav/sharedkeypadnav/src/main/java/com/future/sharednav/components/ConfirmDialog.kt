@@ -1,5 +1,6 @@
 package com.future.sharednav.components
 
+import com.future.sharednav.i18n.tr
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -36,8 +37,8 @@ fun ConfirmDialog(
     dangerColor: Color,
     onCancel: () -> Unit,
     onConfirm: () -> Unit,
-    cancelLabel: String = "ביטול",
-    confirmLabel: String = "מחק",
+    cancelLabel: String = tr("ביטול"),
+    confirmLabel: String = tr("מחק"),
 ) {
     ConfirmDialogContent(
         message = message,
@@ -61,8 +62,8 @@ fun ConfirmDialog(
     theme: FutureTheme,
     onCancel: () -> Unit,
     onConfirm: () -> Unit,
-    cancelLabel: String = "ביטול",
-    confirmLabel: String = "מחק",
+    cancelLabel: String = tr("ביטול"),
+    confirmLabel: String = tr("מחק"),
     destructive: Boolean = true,
 ) {
     val accent = LocalFutureAccent.current ?: theme.readableAccentColor

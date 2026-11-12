@@ -1,5 +1,6 @@
 package com.future.settings.viewmodel
 
+import com.future.sharednav.i18n.tr
 import android.app.Application
 import android.content.Context
 import android.media.AudioManager
@@ -115,7 +116,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     private val _autoTimeZone = mutableStateOf(true)
     val autoTimeZone: State<Boolean> = _autoTimeZone
 
-    private val _batteryDetails = mutableStateOf(SystemInteractor.BatteryDetails(0f, 0f, "לא ידועה"))
+    private val _batteryDetails = mutableStateOf(SystemInteractor.BatteryDetails(0f, 0f, tr("לא ידועה")))
     val batteryDetails: State<SystemInteractor.BatteryDetails> = _batteryDetails
 
     private val _lowBatteryWarningLevel = mutableStateOf(15)
@@ -335,7 +336,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
                 if (success) {
                     state.value = newValue
                 } else {
-                    showToast("לא ניתן לשנות הגדרה זו - נדרשת הרשאת root")
+                    showToast(tr("לא ניתן לשנות הגדרה זו - נדרשת הרשאת root"))
                 }
             }
         }
@@ -349,17 +350,17 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     fun setRingerMode(mode: Int) {
         val modeStr = when(mode) {
-            AudioManager.RINGER_MODE_NORMAL -> "צליל"
-            AudioManager.RINGER_MODE_VIBRATE -> "רטט"
-            else -> "השתק"
+            AudioManager.RINGER_MODE_NORMAL -> tr("צליל")
+            AudioManager.RINGER_MODE_VIBRATE -> tr("רטט")
+            else -> tr("השתק")
         }
         val succeeded = systemInteractor.setRingerMode(mode) ||
             (systemInteractor.grantNotificationPolicyAccessViaRoot() && systemInteractor.setRingerMode(mode))
         if (succeeded) {
             _ringerMode.value = mode
-            showToast("מצב שמע שונה ל: $modeStr")
+            showToast(tr("מצב שמע שונה ל: {0}", modeStr))
         } else {
-            showToast("צריך לאשר גישה למדיניות התראות כדי לעבור למצב $modeStr")
+            showToast(tr("צריך לאשר גישה למדיניות התראות כדי לעבור למצב {0}", modeStr))
             systemInteractor.openNotificationPolicyAccessSettings()
         }
     }
@@ -399,7 +400,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun forgetBluetoothDevice(address: String, deviceName: String) {
         val success = systemInteractor.forgetBluetoothDevice(address)
         _pairedBluetoothDevices.value = systemInteractor.getPairedBluetoothDevicesList()
-        showToast(if (success) "$deviceName הוסר מהמכשירים המשויכים" else "לא ניתן היה להסיר את $deviceName")
+        showToast(if (success) tr("{0} הוסר מהמכשירים המשויכים", deviceName) else tr("לא ניתן היה להסיר את {0}", deviceName))
     }
 
     // --- טפט ---
@@ -410,7 +411,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             val success = systemInteractor.setWallpaperBitmap(bitmap)
             viewModelScope.launch(Dispatchers.Main) {
                 _isApplyingWallpaper.value = false
-                showToast(if (success) "הטפט הוחל" else "החלת הטפט נכשלה")
+                showToast(if (success) tr("הטפט הוחל") else tr("החלת הטפט נכשלה"))
             }
         }
     }
@@ -424,9 +425,9 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             viewModelScope.launch(Dispatchers.Main) {
                 _isApplyingWallpaper.value = false
                 showToast(
-                    if (success) "הטפט הוחל"
-                    else if (bitmap == null) "אין חיבור לרשת - לא ניתן היה להוריד את הטפט"
-                    else "החלת הטפט נכשלה"
+                    if (success) tr("הטפט הוחל")
+                    else if (bitmap == null) tr("אין חיבור לרשת - לא ניתן היה להוריד את הטפט")
+                    else tr("החלת הטפט נכשלה")
                 )
             }
         }
@@ -438,7 +439,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             val success = systemInteractor.setWallpaperFromUri(uri)
             viewModelScope.launch(Dispatchers.Main) {
                 _isApplyingWallpaper.value = false
-                showToast(if (success) "הטפט הוחל" else "לא ניתן היה להחיל את התמונה שנבחרה")
+                showToast(if (success) tr("הטפט הוחל") else tr("לא ניתן היה להחיל את התמונה שנבחרה"))
             }
         }
     }
@@ -468,10 +469,10 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     val screenTimeoutPresets = listOf(15000, 30000, 60000, 120000, 300000, 600000)
 
     fun screenTimeoutLabel(millis: Int): String = when {
-        millis < 60000 -> "${millis / 1000} שניות"
-        millis < 120000 -> "דקה"
-        millis < 3600000 -> "${millis / 60000} דקות"
-        else -> "${millis / 3600000} שעות"
+        millis < 60000 -> tr("{0} שניות", millis / 1000)
+        millis < 120000 -> tr("דקה")
+        millis < 3600000 -> tr("{0} דקות", millis / 60000)
+        else -> tr("{0} שעות", millis / 3600000)
     }
 
     fun cycleScreenTimeout() {
@@ -490,8 +491,8 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             val success = systemInteractor.setSystemLocale(languageTag)
             withContext(Dispatchers.Main) {
                 showToast(
-                    if (success) "שפת המערכת עודכנה - ייתכן שיידרש רענון של חלק מהאפליקציות"
-                    else "לא ניתן לשנות הגדרה זו - נדרשת הרשאת root"
+                    if (success) tr("שפת המערכת עודכנה - ייתכן שיידרש רענון של חלק מהאפליקציות")
+                    else tr("לא ניתן לשנות הגדרה זו - נדרשת הרשאת root")
                 )
             }
         }
@@ -508,7 +509,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             val success = systemInteractor.setMultiWindowForced(false)
             withContext(Dispatchers.Main) {
                 if (success) _multiWindowForced.value = false
-                showToast("הגדרות FutureOS אופסו")
+                showToast(tr("הגדרות FutureOS אופסו"))
             }
         }
     }
@@ -584,7 +585,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             val success = systemInteractor.setLowBatteryWarningLevel(percent)
             withContext(Dispatchers.Main) {
                 if (success) _lowBatteryWarningLevel.value = percent
-                else showToast("לא ניתן לשנות הגדרה זו - נדרשת הרשאת root")
+                else showToast(tr("לא ניתן לשנות הגדרה זו - נדרשת הרשאת root"))
             }
         }
     }
@@ -595,7 +596,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             val success = systemInteractor.freeUpSpace()
             viewModelScope.launch(Dispatchers.Main) {
                 _isFreeingSpace.value = false
-                showToast(if (success) "פינוי מקום הופעל" else "פינוי המקום נכשל")
+                showToast(if (success) tr("פינוי מקום הופעל") else tr("פינוי המקום נכשל"))
             }
         }
     }
@@ -611,14 +612,14 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun forceStopApp(packageName: String, appName: String) {
         viewModelScope.launch(Dispatchers.IO) {
             systemInteractor.forceStopApp(packageName)
-            viewModelScope.launch(Dispatchers.Main) { showToast("$appName נעצרה") }
+            viewModelScope.launch(Dispatchers.Main) { showToast(tr("{0} נעצרה", appName)) }
         }
     }
 
     fun clearAppData(packageName: String, appName: String) {
         viewModelScope.launch(Dispatchers.IO) {
             systemInteractor.clearAppData(packageName)
-            viewModelScope.launch(Dispatchers.Main) { showToast("הנתונים של $appName נמחקו") }
+            viewModelScope.launch(Dispatchers.Main) { showToast(tr("הנתונים של {0} נמחקו", appName)) }
         }
     }
 
@@ -638,7 +639,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             viewModelScope.launch(Dispatchers.Main) {
                 _ramInfo.value = ram
                 _isOptimizing.value = false
-                showToast(if (count > 0) "האופטימיזציה הושלמה - $count אפליקציות נוקו" else "האופטימיזציה הושלמה")
+                showToast(if (count > 0) tr("האופטימיזציה הושלמה - {0} אפליקציות נוקו", count) else tr("האופטימיזציה הושלמה"))
             }
         }
     }
@@ -670,7 +671,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun requestNotificationPolicyAccess() {
-        if (systemInteractor.grantNotificationPolicyAccessViaRoot()) showToast("גישה למדיניות התראות פעילה")
+        if (systemInteractor.grantNotificationPolicyAccessViaRoot()) showToast(tr("גישה למדיניות התראות פעילה"))
         else systemInteractor.openNotificationPolicyAccessSettings()
     }
 
@@ -678,16 +679,16 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         val succeeded = systemInteractor.scheduleFocusNow(minutes) ||
             (systemInteractor.grantNotificationPolicyAccessViaRoot() && systemInteractor.scheduleFocusNow(minutes))
         if (succeeded) {
-            showToast("מצב מיקוד הופעל ל-$minutes דקות")
+            showToast(tr("מצב מיקוד הופעל ל-{0} דקות", minutes))
         } else {
-            showToast("צריך לאשר גישה למדיניות התראות כדי להפעיל מיקוד")
+            showToast(tr("צריך לאשר גישה למדיניות התראות כדי להפעיל מיקוד"))
             systemInteractor.openNotificationPolicyAccessSettings()
         }
     }
 
     fun cancelFocusNow() {
         systemInteractor.cancelFocusNow()
-        showToast("מצב מיקוד בוטל")
+        showToast(tr("מצב מיקוד בוטל"))
     }
 
     fun revokePermission(packageName: String, permission: String, onDone: (List<SystemInteractor.PermissionEntry>) -> Unit) {
@@ -701,7 +702,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun enableDeveloperMode() {
         systemInteractor.enableDeveloperMode()
         _developerModeEnabled.value = true
-        showToast("מצב מפתחים הופעל")
+        showToast(tr("מצב מפתחים הופעל"))
     }
 
     /** מפעיל/מאריך את "מצב חגיגה" ל-5 דקות מעכשיו - הזנה חוזרת של הקוד הסודי
@@ -757,7 +758,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             val success = systemInteractor.setDisplayDensityDpi(dpi)
             withContext(Dispatchers.Main) {
                 if (success) _densityDpi.value = dpi
-                else showToast("לא ניתן לשנות הגדרה זו - נדרשת הרשאת root")
+                else showToast(tr("לא ניתן לשנות הגדרה זו - נדרשת הרשאת root"))
             }
         }
     }
@@ -767,7 +768,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             val success = systemInteractor.resetDisplayDensity()
             withContext(Dispatchers.Main) {
                 if (success) _densityDpi.value = defaultDensityDpi
-                else showToast("לא ניתן לשנות הגדרה זו - נדרשת הרשאת root")
+                else showToast(tr("לא ניתן לשנות הגדרה זו - נדרשת הרשאת root"))
             }
         }
     }
@@ -782,7 +783,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch(Dispatchers.IO) {
             val success = systemInteractor.setAppAudioMuted(packageName, muted)
             viewModelScope.launch(Dispatchers.Main) {
-                if (!success) showToast("לא ניתן לשנות הגדרה זו - נדרשת הרשאת root")
+                if (!success) showToast(tr("לא ניתן לשנות הגדרה זו - נדרשת הרשאת root"))
                 onDone(muted)
             }
         }
@@ -886,7 +887,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun saveEmergencyContact(name: String, phone: String) {
         systemInteractor.setEmergencyContact(name, phone)
         _emergencyContact.value = name to phone
-        showToast("איש קשר לחירום נשמר")
+        showToast(tr("איש קשר לחירום נשמר"))
     }
 
     fun clearEmergencyContact() {
@@ -897,7 +898,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun sendSosNow() {
         val contact = _emergencyContact.value
         if (contact == null) {
-            showToast("קודם צריך לשמור איש קשר לחירום")
+            showToast(tr("קודם צריך לשמור איש קשר לחירום"))
             return
         }
         _sosSending.value = true
@@ -905,15 +906,15 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             systemInteractor.ensureSosPermissions()
             val location = systemInteractor.getLastKnownLocation()
             val locationText = if (location != null) {
-                "מיקום אחרון: https://maps.google.com/?q=${location.latitude},${location.longitude}"
+                tr("מיקום אחרון: https://maps.google.com/?q={0},{1}", location.latitude, location.longitude)
             } else {
-                "מיקום לא זמין כרגע"
+                tr("מיקום לא זמין כרגע")
             }
-            val message = "SOS - זקוק/ה לעזרה. $locationText"
+            val message = tr("SOS - זקוק/ה לעזרה. {0}", locationText)
             val sent = systemInteractor.sendEmergencySms(contact.second, message)
             viewModelScope.launch(Dispatchers.Main) {
                 _sosSending.value = false
-                showToast(if (sent) "הודעת חירום נשלחה ל-${contact.first}" else "שליחת הודעת החירום נכשלה")
+                showToast(if (sent) tr("הודעת חירום נשלחה ל-{0}", contact.first) else tr("שליחת הודעת החירום נכשלה"))
             }
         }
     }
@@ -936,7 +937,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             val success = com.future.settings.utils.ExtraSystemSettings.write(systemInteractor, setting, value)
             withContext(Dispatchers.Main) {
                 if (success) extraValues[setting.id] = value
-                else showToast("לא ניתן לשנות הגדרה זו - נדרשת הרשאת root")
+                else showToast(tr("לא ניתן לשנות הגדרה זו - נדרשת הרשאת root"))
             }
         }
     }

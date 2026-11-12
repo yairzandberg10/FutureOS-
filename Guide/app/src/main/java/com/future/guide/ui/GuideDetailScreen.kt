@@ -1,4 +1,5 @@
 package com.future.guide.ui
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.theme.elevatedSurfaceColor
 
 import com.future.sharednav.theme.FutureTypography
@@ -49,15 +50,15 @@ fun GuideDetailScreen(app: GuideApp, theme: FutureTheme, onBack: () -> Unit) {
     val contentFocusRequester = remember { FocusRequester() }
     LaunchedEffect(app.id) { runCatching { contentFocusRequester.requestFocus() } }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize()) {
                 GuideHeader(title = app.name, theme = theme, onBack = onBack)
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .focusable()
                         .focusRequester(contentFocusRequester)
+                        .focusable()
                         .onKeyEvent { event ->
                             if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
                             when (event.nativeKeyEvent.keyCode) {
@@ -99,7 +100,7 @@ fun GuideDetailScreen(app: GuideApp, theme: FutureTheme, onBack: () -> Unit) {
                         modifier = Modifier.padding(top = 14.dp)
                     )
 
-                    GuideSectionTitle("איך משתמשים", theme = theme)
+                    GuideSectionTitle(tr("איך משתמשים"), theme = theme)
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         app.steps.forEachIndexed { index, step ->
                             GuideStepRow(number = index + 1, text = step, theme = theme)
@@ -107,14 +108,14 @@ fun GuideDetailScreen(app: GuideApp, theme: FutureTheme, onBack: () -> Unit) {
                     }
 
                     if (app.keys.isNotEmpty()) {
-                        GuideSectionTitle("מקשים", theme = theme)
+                        GuideSectionTitle(tr("מקשים"), theme = theme)
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             app.keys.forEach { key -> GuideKeyRow(key, theme = theme) }
                         }
                     }
 
                     if (app.tips.isNotEmpty()) {
-                        GuideSectionTitle("טיפים", theme = theme)
+                        GuideSectionTitle(tr("טיפים"), theme = theme)
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             app.tips.forEach { tip -> GuideTip(tip, theme = theme) }
                         }

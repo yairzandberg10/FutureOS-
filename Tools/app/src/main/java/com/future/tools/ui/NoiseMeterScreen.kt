@@ -1,4 +1,5 @@
 package com.future.tools.ui
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.theme.subtleTextColor
 import com.future.sharednav.theme.mutedTextColor
 
@@ -87,12 +88,12 @@ private fun rememberDecibels(enabled: Boolean): Float {
 }
 
 private fun levelLabel(db: Float): String = when {
-    db < 30f -> "שקט"
-    db < 50f -> "רגוע"
-    db < 65f -> "שיחה רגילה"
-    db < 80f -> "רועש"
-    db < 95f -> "רועש מאוד"
-    else -> "חשוף לנזק שמיעה"
+    db < 30f -> tr("שקט")
+    db < 50f -> tr("רגוע")
+    db < 65f -> tr("שיחה רגילה")
+    db < 80f -> tr("רועש")
+    db < 95f -> tr("רועש מאוד")
+    else -> tr("חשוף לנזק שמיעה")
 }
 
 @Composable
@@ -100,15 +101,15 @@ fun NoiseMeterScreen(theme: FutureTheme, onBack: () -> Unit) {
     val hasPermission by rememberRuntimePermission(Manifest.permission.RECORD_AUDIO)
     val db = rememberDecibels(enabled = hasPermission)
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize()) {
-                ToolsHeader(title = "מד רעש", theme = theme, onBack = onBack)
+                ToolsHeader(title = tr("מד רעש"), theme = theme, onBack = onBack)
 
                 Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                     if (!hasPermission) {
                         Text(
-                            "נדרשת הרשאת מיקרופון כדי למדוד רעש",
+                            tr("נדרשת הרשאת מיקרופון כדי למדוד רעש"),
                             color = theme.mutedTextColor,
                             fontSize = FutureTypography.body,
                             modifier = Modifier.padding(horizontal = 32.dp)

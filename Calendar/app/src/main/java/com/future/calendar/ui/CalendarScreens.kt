@@ -1,4 +1,5 @@
 package com.future.calendar.ui
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.systemui.StatusBarInset
 
 import com.future.sharednav.icons.FutureIcons
@@ -83,10 +84,11 @@ import java.time.LocalTime
 import java.time.YearMonth
 import java.time.format.TextStyle as JavaTextStyle
 import java.util.Locale
+import com.future.sharednav.focus.animateFocusColor
 
 enum class CalendarViewMode { DAY, WEEK, MONTH, YEAR }
 
-private val HEBREW_WEEKDAY_LABELS = listOf("א", "ב", "ג", "ד", "ה", "ו", "ש")
+private val HEBREW_WEEKDAY_LABELS = listOf(tr("א"), tr("ב"), tr("ג"), tr("ד"), tr("ה"), tr("ו"), tr("ש"))
 private val HE_LOCALE = Locale.forLanguageTag("he")
 
 private fun LocalDate.sundayStartColumn(): Int = dayOfWeek.value % 7
@@ -125,7 +127,7 @@ fun CalendarHomeScreen(
     kind: CalendarKind = CalendarKind.COMBINED,
     usingFallbackLocation: Boolean = false
 ) {
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize()) {
                 Row(
@@ -142,7 +144,7 @@ fun CalendarHomeScreen(
 
                 if (usingFallbackLocation) {
                     Text(
-                        "אין מיקום GPS זמין - הזמנים מוצגים לפי עיר ברירת המחדל",
+                        tr("אין מיקום GPS זמין - הזמנים מוצגים לפי עיר ברירת המחדל"),
                         color = theme.textColor.copy(alpha = 0.55f),
                         fontSize = FutureTypography.caption,
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 2.dp)
@@ -151,7 +153,7 @@ fun CalendarHomeScreen(
 
                 val modes = listOf(CalendarViewMode.DAY, CalendarViewMode.WEEK, CalendarViewMode.MONTH, CalendarViewMode.YEAR)
                 com.future.sharednav.components.FutureTabRow(
-                    items = listOf("יום", "שבוע", "חודש", "שנה"),
+                    items = listOf(tr("יום"), tr("שבוע"), tr("חודש"), tr("שנה")),
                     selectedIndex = modes.indexOf(viewMode),
                     theme = theme,
                     onSelect = { onChangeViewMode(modes[it]) },
@@ -232,9 +234,9 @@ private fun PermissionRequiredMessage(theme: FutureTheme, onRequestPermission: (
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text("כדי להציג את לוח השנה צריך לאשר הרשאה", color = theme.textColor.copy(alpha = 0.7f), fontSize = FutureTypography.bodyLarge, textAlign = TextAlign.Center)
+        Text(tr("כדי להציג את לוח השנה צריך לאשר הרשאה"), color = theme.textColor.copy(alpha = 0.7f), fontSize = FutureTypography.bodyLarge, textAlign = TextAlign.Center)
         Spacer(modifier = Modifier.height(16.dp))
-        FutureButton("אשר הרשאה", theme, onRequestPermission)
+        FutureButton(tr("אשר הרשאה"), theme, onRequestPermission)
     }
 }
 
@@ -482,12 +484,12 @@ private fun WeekDayRow(date: LocalDate, isToday: Boolean, events: List<CalendarE
             }
             Text(dayTitle, fontSize = FutureTypography.summary, fontWeight = FontWeight.SemiBold, color = theme.textColor, maxLines = 1)
             if (events.isEmpty()) {
-                Text("אין אירועים", fontSize = FutureTypography.caption, color = theme.textColor.copy(alpha = 0.4f))
+                Text(tr("אין אירועים"), fontSize = FutureTypography.caption, color = theme.textColor.copy(alpha = 0.4f))
             } else {
                 val shown = events.take(2)
                 shown.forEach { Text("• ${it.title}", fontSize = FutureTypography.caption, color = theme.textColor.copy(alpha = 0.7f)) }
                 if (events.size > shown.size) {
-                    Text("+${events.size - shown.size} נוספים", fontSize = FutureTypography.caption, color = theme.textColor.copy(alpha = 0.4f))
+                    Text(tr("+{0} נוספים", events.size - shown.size), fontSize = FutureTypography.caption, color = theme.textColor.copy(alpha = 0.4f))
                 }
             }
         }
@@ -554,7 +556,7 @@ private fun DayView(
             FocusableIconButton(icon = FutureIcons.ChevronRight, theme = theme, onClick = onPrevDay, focusRequester = prevDayFocusRequester)
             Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(date.dayOfWeek.getDisplayName(JavaTextStyle.FULL, HE_LOCALE), fontSize = FutureTypography.label, color = theme.mutedTextColor)
-                val gregorianDate = "${date.dayOfMonth} ב${date.month.getDisplayName(JavaTextStyle.FULL, HE_LOCALE)}"
+                val gregorianDate = tr("{0} ב{1}", date.dayOfMonth, date.month.getDisplayName(JavaTextStyle.FULL, HE_LOCALE))
                 // בלוח עברי התאריך העברי הוא הראשי; בלועזי בלבד - אין תאריך עברי.
                 val primary = if (kind == CalendarKind.HEBREW && hebrewDate.isNotBlank()) hebrewDate else gregorianDate
                 val secondary = when (kind) {
@@ -579,7 +581,7 @@ private fun DayView(
             if (events.isEmpty()) {
                 item {
                     Box(modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp), contentAlignment = Alignment.Center) {
-                        Text("אין אירועים ביום זה", color = theme.mutedTextColor, fontSize = FutureTypography.body)
+                        Text(tr("אין אירועים ביום זה"), color = theme.mutedTextColor, fontSize = FutureTypography.body)
                     }
                 }
             } else {
@@ -599,16 +601,16 @@ private fun ZmanimPanel(zmanim: DayZmanim, theme: FutureTheme) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(FutureIcons.WbTwilight, contentDescription = null, tint = theme.accentColor, modifier = Modifier.size(16.dp))
             Spacer(modifier = Modifier.width(6.dp))
-            Text("זמני היום", fontSize = FutureTypography.label, fontWeight = FontWeight.SemiBold, color = theme.textColor.copy(alpha = 0.7f))
+            Text(tr("זמני היום"), fontSize = FutureTypography.label, fontWeight = FontWeight.SemiBold, color = theme.textColor.copy(alpha = 0.7f))
         }
         Spacer(modifier = Modifier.height(8.dp))
         val rows = buildList {
-            zmanim.sunrise?.let { add("נץ החמה" to it) }
-            zmanim.chatzot?.let { add("חצות היום" to it) }
-            zmanim.sofZmanShema?.let { add("סוף זמן ק״ש" to it) }
-            zmanim.sunset?.let { add("שקיעה" to it) }
-            zmanim.candleLighting?.let { add("הדלקת נרות" to it) }
-            zmanim.motzeiShabbat?.let { add("צאת שבת" to it) }
+            zmanim.sunrise?.let { add(tr("נץ החמה") to it) }
+            zmanim.chatzot?.let { add(tr("חצות היום") to it) }
+            zmanim.sofZmanShema?.let { add(tr("סוף זמן ק״ש") to it) }
+            zmanim.sunset?.let { add(tr("שקיעה") to it) }
+            zmanim.candleLighting?.let { add(tr("הדלקת נרות") to it) }
+            zmanim.motzeiShabbat?.let { add(tr("צאת שבת") to it) }
         }
         rows.chunked(2).forEach { rowPair ->
             Row(modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
@@ -633,8 +635,8 @@ private fun DafYomiPanel(masechet: String, daf: Int, theme: FutureTheme) {
         Icon(FutureIcons.MenuBook, contentDescription = null, tint = theme.accentColor, modifier = Modifier.size(18.dp))
         Spacer(modifier = Modifier.width(10.dp))
         Column {
-            Text("דף יומי", fontSize = FutureTypography.caption, color = theme.mutedTextColor)
-            Text("$masechet דף ${com.future.calendar.data.HebrewNumerals.toHebrew(daf)}", fontSize = FutureTypography.body, fontWeight = FontWeight.Bold, color = theme.textColor)
+            Text(tr("דף יומי"), fontSize = FutureTypography.caption, color = theme.mutedTextColor)
+            Text(tr("{0} דף {1}", masechet, com.future.calendar.data.HebrewNumerals.toHebrew(daf)), fontSize = FutureTypography.body, fontWeight = FontWeight.Bold, color = theme.textColor)
         }
     }
 }
@@ -650,9 +652,9 @@ private fun WeatherPanel(weather: com.future.calendar.data.DailyWeather, theme: 
         Column(modifier = Modifier.weight(1f)) {
             Text(weather.description, fontSize = FutureTypography.label, color = theme.textColor.copy(alpha = 0.6f))
             val tempLabel = if (weather.currentTemp != null) {
-                "${weather.currentTemp.toInt()}° (מקסימום ${weather.maxTemp.toInt()}° · מינימום ${weather.minTemp.toInt()}°)"
+                tr("{0}° (מקסימום {1}° · מינימום {2}°)", weather.currentTemp.toInt(), weather.maxTemp.toInt(), weather.minTemp.toInt())
             } else {
-                "מקסימום ${weather.maxTemp.toInt()}° · מינימום ${weather.minTemp.toInt()}°"
+                tr("מקסימום {0}° · מינימום {1}°", weather.maxTemp.toInt(), weather.minTemp.toInt())
             }
             Text(tempLabel, fontSize = FutureTypography.body, fontWeight = FontWeight.SemiBold, color = theme.textColor)
         }
@@ -781,7 +783,7 @@ private fun EventRow(event: CalendarEvent, theme: FutureTheme, onClick: () -> Un
     LaunchedEffect(isFocused) { onFocusChanged(isFocused) }
     val shape = FutureShapes.row
     val bgColor by animateColorAsState(if (isFocused) theme.readableAccentColor.copy(alpha = 0.14f) else theme.idleChipColor, FutureMotion.focusColorSpec, label = "eventRowBg")
-    val timeLabel = if (event.allDay) "כל היום" else {
+    val timeLabel = if (event.allDay) tr("כל היום") else {
         val start = java.time.Instant.ofEpochMilli(event.startMillis).atZone(java.time.ZoneId.systemDefault()).toLocalTime()
         val end = java.time.Instant.ofEpochMilli(event.endMillis).atZone(java.time.ZoneId.systemDefault()).toLocalTime()
         "%02d:%02d–%02d:%02d".format(start.hour, start.minute, end.hour, end.minute)
@@ -820,8 +822,8 @@ private fun EventRow(event: CalendarEvent, theme: FutureTheme, onClick: () -> Un
 @Composable
 private fun EventOptionsMenu(event: CalendarEvent, theme: FutureTheme, onDismiss: () -> Unit, onEdit: () -> Unit, onDelete: () -> Unit) {
     FutureOptionsMenu(theme = theme, onDismissRequest = onDismiss, header = event.title) {
-        FutureMenuRow("ערוך אירוע", FutureIcons.Edit, theme, onEdit)
-        FutureMenuRow("מחק אירוע", FutureIcons.Delete, theme, onDelete, destructive = true)
+        FutureMenuRow(tr("ערוך אירוע"), FutureIcons.Edit, theme, onEdit)
+        FutureMenuRow(tr("מחק אירוע"), FutureIcons.Delete, theme, onDelete, destructive = true)
     }
 }
 
@@ -855,7 +857,7 @@ fun EventEditDialog(
     var endMinute by remember { mutableIntStateOf(initialEnd.minute) }
 
     AppDialog(onDismissRequest = onDismiss) {
-        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+        CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
             Column(
                 modifier = Modifier
                     .escapeTextFieldFocusTrap()
@@ -864,17 +866,17 @@ fun EventEditDialog(
                     .verticalScroll(rememberScrollState())
                     .padding(20.dp)
             ) {
-                Text(if (editingEvent != null) "עריכת אירוע" else "אירוע חדש", color = theme.textColor, fontWeight = FontWeight.Bold, fontSize = FutureTypography.dialog)
+                Text(if (editingEvent != null) tr("עריכת אירוע") else tr("אירוע חדש"), color = theme.textColor, fontWeight = FontWeight.Bold, fontSize = FutureTypography.dialog)
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    "${initialDate.dayOfMonth} ב${initialDate.month.getDisplayName(JavaTextStyle.FULL, HE_LOCALE)}",
+                    tr("{0} ב{1}", initialDate.dayOfMonth, initialDate.month.getDisplayName(JavaTextStyle.FULL, HE_LOCALE)),
                     color = theme.mutedTextColor,
                     fontSize = FutureTypography.label
                 )
                 Spacer(modifier = Modifier.height(12.dp))
-                EditField("כותרת", title, theme) { title = it }
-                EditField("מיקום", location, theme) { location = it }
-                EditField("הערות", description, theme) { description = it }
+                EditField(tr("כותרת"), title, theme) { title = it }
+                EditField(tr("מיקום"), location, theme) { location = it }
+                EditField(tr("הערות"), description, theme) { description = it }
 
                 Spacer(modifier = Modifier.height(8.dp))
                 AllDayToggleRow(allDay = allDay, theme = theme, onToggle = { allDay = !allDay })
@@ -887,7 +889,7 @@ fun EventEditDialog(
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         TimeStepperField(
-                            label = "התחלה", hour = startHour, minute = startMinute, theme = theme,
+                            label = tr("התחלה"), hour = startHour, minute = startMinute, theme = theme,
                             onHourChange = { startHour = ((startHour + it) + 24) % 24 },
                             onMinuteChange = {
                                 var m = startMinute + it; var h = startHour
@@ -897,7 +899,7 @@ fun EventEditDialog(
                             }
                         )
                         TimeStepperField(
-                            label = "סיום", hour = endHour, minute = endMinute, theme = theme,
+                            label = tr("סיום"), hour = endHour, minute = endMinute, theme = theme,
                             onHourChange = { endHour = ((endHour + it) + 24) % 24 },
                             onMinuteChange = {
                                 var m = endMinute + it; var h = endHour
@@ -910,12 +912,12 @@ fun EventEditDialog(
                 }
 
                 FutureDialogButtons {
-                    FutureButton("ביטול", theme, onDismiss, variant = FutureButtonVariant.Secondary)
-                    FutureButton(if (editingEvent != null) "שמור" else "צור", theme, {
+                    FutureButton(tr("ביטול"), theme, onDismiss, variant = FutureButtonVariant.Secondary)
+                    FutureButton(if (editingEvent != null) tr("שמור") else tr("צור"), theme, {
                         onSave(title, description, location, startHour, startMinute, endHour, endMinute, allDay, repeat)
                     })
                     if (onDelete != null) {
-                        FutureButton("מחק", theme, onDelete, variant = FutureButtonVariant.Destructive)
+                        FutureButton(tr("מחק"), theme, onDelete, variant = FutureButtonVariant.Destructive)
                     }
                 }
             }
@@ -930,15 +932,16 @@ private fun AllDayToggleRow(allDay: Boolean, theme: FutureTheme, onToggle: () ->
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .focusMotion(interactionSource)
             .clip(FutureShapes.md)
-            .background(if (isFocused) theme.textColor.copy(alpha = 0.1f) else Color.Transparent)
+            .background(animateFocusColor(isFocused, theme.textColor.copy(alpha = 0.1f), Color.Transparent).value)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onToggle)
             .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
             .padding(vertical = 10.dp, horizontal = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text("כל היום", color = theme.textColor, fontSize = FutureTypography.body)
+        Text(tr("כל היום"), color = theme.textColor, fontSize = FutureTypography.body)
         FutureSwitch(checked = allDay, theme = theme)
     }
 }
@@ -954,15 +957,16 @@ private fun RepeatRow(repeat: EventRepeat, theme: FutureTheme, onCycle: () -> Un
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .focusMotion(interactionSource)
             .clip(FutureShapes.md)
-            .background(if (isFocused) theme.textColor.copy(alpha = 0.1f) else Color.Transparent)
+            .background(animateFocusColor(isFocused, theme.textColor.copy(alpha = 0.1f), Color.Transparent).value)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onCycle)
             .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
             .padding(vertical = 10.dp, horizontal = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text("חזרה", color = theme.textColor, fontSize = FutureTypography.body)
+        Text(tr("חזרה"), color = theme.textColor, fontSize = FutureTypography.body)
         Text(repeat.label, color = if (repeat.rrule != null) theme.readableAccentColor else theme.mutedTextColor, fontSize = FutureTypography.body)
     }
 }
@@ -1037,21 +1041,21 @@ fun CalendarSettingsScreen(
     com.future.sharednav.components.ScreenScaffold(
         modifier = Modifier.padding(top = StatusBarInset.TITLE_GAP_DP.dp),
         backgroundColor = theme.backgroundColor,
-        title = "הגדרות לוח שנה",
+        title = tr("הגדרות לוח שנה"),
         textColor = theme.textColor,
         accentColor = theme.accentColor,
     ) {
         Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 24.dp)) {
-            FutureSectionHeader("סוג לוח", theme)
+            FutureSectionHeader(tr("סוג לוח"), theme)
             FutureCard(theme = theme) {
                 CalendarKind.entries.forEachIndexed { index, option ->
                     if (index > 0) FutureDivider(theme = theme)
                     FutureSettingItem(
-                        title = "לוח ${option.label}",
+                        title = tr("לוח {0}", option.label),
                         summary = when (option) {
-                            CalendarKind.HEBREW -> "חודשים עבריים, ימים באותיות"
-                            CalendarKind.GREGORIAN -> "חודשים לועזיים"
-                            CalendarKind.COMBINED -> "לועזי, ובכל יום גם התאריך העברי"
+                            CalendarKind.HEBREW -> tr("חודשים עבריים, ימים באותיות")
+                            CalendarKind.GREGORIAN -> tr("חודשים לועזיים")
+                            CalendarKind.COMBINED -> tr("לועזי, ובכל יום גם התאריך העברי")
                         },
                         icon = if (option == CalendarKind.HEBREW) FutureIcons.Translate else FutureIcons.CalendarToday,
                         theme = theme,
@@ -1060,17 +1064,17 @@ fun CalendarSettingsScreen(
                         onClick = { onSelectKind(option) },
                         trailing = {
                             if (option == kind) {
-                                Icon(FutureIcons.Check, contentDescription = "נבחר", tint = theme.readableAccentColor, modifier = Modifier.size(FutureDimens.iconSettingRow))
+                                Icon(FutureIcons.Check, contentDescription = tr("נבחר"), tint = theme.readableAccentColor, modifier = Modifier.size(FutureDimens.iconSettingRow))
                             }
                         },
                     )
                 }
             }
 
-            FutureSectionHeader("כללי", theme)
+            FutureSectionHeader(tr("כללי"), theme)
             FutureCard(theme = theme) {
                 FutureSettingItem(
-                    title = "מיקום",
+                    title = tr("מיקום"),
                     summary = locationSummary,
                     icon = FutureIcons.LocationOn,
                     theme = theme,
@@ -1078,8 +1082,8 @@ fun CalendarSettingsScreen(
                 )
                 FutureDivider(theme = theme)
                 FutureSettingItem(
-                    title = "תחזית מזג אוויר",
-                    summary = if (showWeather) "מוצגת בתצוגת היום" else "כבויה",
+                    title = tr("תחזית מזג אוויר"),
+                    summary = if (showWeather) tr("מוצגת בתצוגת היום") else tr("כבויה"),
                     icon = FutureIcons.WbTwilight,
                     theme = theme,
                     showChevron = false,
@@ -1107,18 +1111,18 @@ fun CalendarLocationScreen(
     com.future.sharednav.components.ScreenScaffold(
         modifier = Modifier.padding(top = StatusBarInset.TITLE_GAP_DP.dp),
         backgroundColor = theme.backgroundColor,
-        title = "מיקום",
+        title = tr("מיקום"),
         textColor = theme.textColor,
         accentColor = theme.accentColor,
     ) {
         Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 24.dp)) {
             FutureCard(theme = theme) {
                 FutureSettingItem(
-                    title = "מיקום GPS",
+                    title = tr("מיקום GPS"),
                     summary = when {
-                        useGps && !hasLocationPermission -> "צריך לאשר הרשאת מיקום"
-                        useGps -> "מיקום המכשיר בפועל"
-                        else -> "כבוי"
+                        useGps && !hasLocationPermission -> tr("צריך לאשר הרשאת מיקום")
+                        useGps -> tr("מיקום המכשיר בפועל")
+                        else -> tr("כבוי")
                     },
                     icon = FutureIcons.MyLocation,
                     theme = theme,
@@ -1129,7 +1133,7 @@ fun CalendarLocationScreen(
                 )
             }
             if (!useGps) {
-                FutureSectionHeader("עיר", theme)
+                FutureSectionHeader(tr("עיר"), theme)
                 FutureCard(theme = theme) {
                     com.future.calendar.data.KNOWN_REGIONS.forEachIndexed { index, region ->
                         if (index > 0) FutureDivider(theme = theme)
@@ -1140,7 +1144,7 @@ fun CalendarLocationScreen(
                             onClick = { onSelectRegion(region) },
                             trailing = {
                                 if (region.id == currentRegion.id) {
-                                    Icon(FutureIcons.Check, contentDescription = "נבחר", tint = theme.readableAccentColor, modifier = Modifier.size(FutureDimens.iconSettingRow))
+                                    Icon(FutureIcons.Check, contentDescription = tr("נבחר"), tint = theme.readableAccentColor, modifier = Modifier.size(FutureDimens.iconSettingRow))
                                 }
                             },
                         )

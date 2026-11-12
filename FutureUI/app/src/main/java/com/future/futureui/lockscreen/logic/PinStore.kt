@@ -1,7 +1,6 @@
 package com.future.futureui.lockscreen.logic
 
 import android.content.SharedPreferences
-import android.os.SystemClock
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
@@ -38,7 +37,6 @@ class PinStore(private val prefs: SharedPreferences) {
             .putInt(KEY_PIN_LENGTH, pin.length)
             .remove(KEY_FAILED_ATTEMPTS)
             .remove(KEY_LOCKED_UNTIL)
-            .remove(KEY_LOCKED_UNTIL_ELAPSED)
             .apply()
         return true
     }
@@ -49,7 +47,6 @@ class PinStore(private val prefs: SharedPreferences) {
             .remove(KEY_PIN_LENGTH)
             .remove(KEY_FAILED_ATTEMPTS)
             .remove(KEY_LOCKED_UNTIL)
-            .remove(KEY_LOCKED_UNTIL_ELAPSED)
             .apply()
         runCatching { KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }.deleteEntry(KEY_ALIAS) }
     }
@@ -59,13 +56,7 @@ class PinStore(private val prefs: SharedPreferences) {
         val until = prefs.getLong(KEY_LOCKED_UNTIL, 0L)
         val left = until - System.currentTimeMillis()
         // שעון שהוזז אחורה לא יכול להאריך חסימה לנצח
-        val byWallClock = if (left > MAX_LOCKOUT_MS) MAX_LOCKOUT_MS else left.coerceAtLeast(0L)
-        // שעון שהוזז קדימה לא יכול לקצר אותה: באותה הפעלה של המכשיר סופרים גם
-        // לפי elapsedRealtime, שאי אפשר לשנות מההגדרות.
-        val untilElapsed = prefs.getLong(KEY_LOCKED_UNTIL_ELAPSED, 0L)
-        val now = SystemClock.elapsedRealtime()
-        val byElapsed = if (untilElapsed > now) (untilElapsed - now).coerceAtMost(MAX_LOCKOUT_MS) else 0L
-        return maxOf(byWallClock, byElapsed)
+        return if (left > MAX_LOCKOUT_MS) MAX_LOCKOUT_MS else left.coerceAtLeast(0L)
     }
 
     fun failedAttempts(): Int = prefs.getInt(KEY_FAILED_ATTEMPTS, 0)
@@ -77,7 +68,7 @@ class PinStore(private val prefs: SharedPreferences) {
         val matched = candidate != null &&
             MessageDigest.isEqual(stored.toByteArray(Charsets.UTF_8), candidate.toByteArray(Charsets.UTF_8))
         if (matched) {
-            prefs.edit().remove(KEY_FAILED_ATTEMPTS).remove(KEY_LOCKED_UNTIL).remove(KEY_LOCKED_UNTIL_ELAPSED).apply()
+            prefs.edit().remove(KEY_FAILED_ATTEMPTS).remove(KEY_LOCKED_UNTIL).apply()
         } else {
             recordFailure()
         }
@@ -91,11 +82,8 @@ class PinStore(private val prefs: SharedPreferences) {
             val step = (attempts - FREE_ATTEMPTS).coerceAtMost(MAX_BACKOFF_STEPS)
             val delayMs = (BASE_LOCKOUT_MS shl step).coerceAtMost(MAX_LOCKOUT_MS)
             editor.putLong(KEY_LOCKED_UNTIL, System.currentTimeMillis() + delayMs)
-            editor.putLong(KEY_LOCKED_UNTIL_ELAPSED, SystemClock.elapsedRealtime() + delayMs)
         }
-        // commit ולא apply: ניסיון כושל חייב להגיע לדיסק לפני שמחזירים תשובה, אחרת
-        // כיבוי מיידי של המכשיר אחרי כל ניחוש מאפס את המונה - ניחושים בלי הגבלה.
-        editor.commit()
+        editor.apply()
     }
 
     private fun computeMac(pin: String): String? = try {
@@ -127,7 +115,6 @@ class PinStore(private val prefs: SharedPreferences) {
         private const val KEY_PIN_LENGTH = "pin_length"
         private const val KEY_FAILED_ATTEMPTS = "pin_failed_attempts"
         private const val KEY_LOCKED_UNTIL = "pin_locked_until"
-        private const val KEY_LOCKED_UNTIL_ELAPSED = "pin_locked_until_elapsed"
 
         const val MIN_LENGTH = 4
         const val MAX_LENGTH = 8

@@ -1,4 +1,5 @@
 package com.future.futurelauncher.ui
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.systemui.StatusBarInset
 
 import android.appwidget.AppWidgetManager
@@ -77,6 +78,7 @@ import com.future.sharednav.theme.mutedTextColor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import com.future.sharednav.focus.animateFocusColor
 
 /** הגדרות הלאנצ'ר - נשמרות מקומית, ונקראות בכל ציור של מסך הבית. */
 class LauncherPrefs(context: Context) {
@@ -115,7 +117,7 @@ class LauncherPrefs(context: Context) {
 /** מסך מלא מעל מסך הבית, מתחת לשורת המצב, בצבעי הערכה. */
 @Composable
 private fun LauncherOverlay(theme: FutureTheme, title: String, content: @Composable () -> Unit) {
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -150,69 +152,69 @@ fun LauncherSettingsScreen(
     LaunchedEffect(Unit) { runCatching { first.requestFocus() } }
     var confirmReset by remember { mutableStateOf(false) }
 
-    LauncherOverlay(theme, "הגדרות מסך הבית") {
+    LauncherOverlay(theme, tr("הגדרות מסך הבית")) {
         Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 24.dp)) {
-            FutureSectionHeader("מראה", theme)
+            FutureSectionHeader(tr("מראה"), theme)
             FutureCard(theme = theme) {
-                FutureSettingItem(title = "רקע", summary = "בחירת תמונת רקע", icon = FutureIcons.Wallpaper, theme = theme, focusRequester = first, onClick = onOpenWallpapers)
+                FutureSettingItem(title = tr("רקע"), summary = tr("בחירת תמונת רקע"), icon = FutureIcons.Wallpaper, theme = theme, focusRequester = first, onClick = onOpenWallpapers)
                 FutureDivider(theme = theme)
-                FutureSettingItem(title = "גודל אייקונים", summary = prefs.iconSizeLabel, icon = FutureIcons.Apps, theme = theme, showChevron = false, onClick = prefs::cycleIconSize)
+                FutureSettingItem(title = tr("גודל אייקונים"), summary = prefs.iconSizeLabel, icon = FutureIcons.Apps, theme = theme, showChevron = false, onClick = prefs::cycleIconSize)
                 FutureDivider(theme = theme)
-                SwitchRow("שמות אפליקציות", if (prefs.showLabels) "מוצגים" else "מוסתרים", prefs.showLabels, theme) { prefs.updateShowLabels(!prefs.showLabels) }
+                SwitchRow(tr("שמות אפליקציות"), if (prefs.showLabels) tr("מוצגים") else tr("מוסתרים"), prefs.showLabels, theme) { prefs.updateShowLabels(!prefs.showLabels) }
                 FutureDivider(theme = theme)
-                SwitchRow("טקסט גדול", "שמות האפליקציות בגודל גדול יותר", prefs.largeLabels, theme) { prefs.updateLargeLabels(!prefs.largeLabels) }
+                SwitchRow(tr("טקסט גדול"), tr("שמות האפליקציות בגודל גדול יותר"), prefs.largeLabels, theme) { prefs.updateLargeLabels(!prefs.largeLabels) }
                 FutureDivider(theme = theme)
                 FutureSettingItem(
-                    title = "הכהיית רקע",
-                    summary = if (prefs.dimWallpaper == 0) "כבויה" else "${prefs.dimWallpaper}%",
+                    title = tr("הכהיית רקע"),
+                    summary = if (prefs.dimWallpaper == 0) tr("כבויה") else "${prefs.dimWallpaper}%",
                     icon = FutureIcons.Brightness6,
                     theme = theme,
                     showChevron = false,
                     onClick = prefs::cycleDim,
                 )
                 FutureDivider(theme = theme)
-                SwitchRow("מחוון עמודים", "הנקודות בתחתית המסך", prefs.showPageIndicator, theme) { prefs.updateShowPageIndicator(!prefs.showPageIndicator) }
+                SwitchRow(tr("מחוון עמודים"), tr("הנקודות בתחתית המסך"), prefs.showPageIndicator, theme) { prefs.updateShowPageIndicator(!prefs.showPageIndicator) }
             }
 
-            FutureSectionHeader("ניווט ופריסה", theme)
+            FutureSectionHeader(tr("ניווט ופריסה"), theme)
             FutureCard(theme = theme) {
-                SwitchRow("ניווט מעגלי", "חץ בקצה הרשת חוזר לצד השני", prefs.wrapNavigation, theme) { prefs.updateWrapNavigation(!prefs.wrapNavigation) }
+                SwitchRow(tr("ניווט מעגלי"), tr("חץ בקצה הרשת חוזר לצד השני"), prefs.wrapNavigation, theme) { prefs.updateWrapNavigation(!prefs.wrapNavigation) }
                 FutureDivider(theme = theme)
-                SwitchRow("נעילת פריסה", "בלי עריכה, הזזה או הסרה", prefs.lockLayout, theme) { prefs.updateLockLayout(!prefs.lockLayout) }
+                SwitchRow(tr("נעילת פריסה"), tr("בלי עריכה, הזזה או הסרה"), prefs.lockLayout, theme) { prefs.updateLockLayout(!prefs.lockLayout) }
                 FutureDivider(theme = theme)
                 FutureSettingItem(
-                    title = "הגדר כדף הבית",
-                    summary = if (currentPage == homePage) "זה דף הבית" else "דף ${currentPage + 1} מתוך $pageCount",
+                    title = tr("הגדר כדף הבית"),
+                    summary = if (currentPage == homePage) tr("זה דף הבית") else tr("דף {0} מתוך {1}", currentPage + 1, pageCount),
                     icon = FutureIcons.Home,
                     theme = theme,
                     showChevron = false,
                     onClick = onSetHome,
                 )
                 FutureDivider(theme = theme)
-                FutureSettingItem(title = "הוסף דף", summary = "$pageCount דפים", icon = FutureIcons.Add, theme = theme, showChevron = false, onClick = onAddPage)
+                FutureSettingItem(title = tr("הוסף דף"), summary = tr("{0} דפים", pageCount), icon = FutureIcons.Add, theme = theme, showChevron = false, onClick = onAddPage)
                 FutureDivider(theme = theme)
-                FutureSettingItem(title = "ווידג'טים", summary = "הוספת ווידג'ט לדף הנוכחי", icon = FutureIcons.Widgets, theme = theme, onClick = onOpenWidgets)
+                FutureSettingItem(title = tr("ווידג'טים"), summary = tr("הוספת ווידג'ט לדף הנוכחי"), icon = FutureIcons.Widgets, theme = theme, onClick = onOpenWidgets)
             }
 
-            FutureSectionHeader("מתקדם", theme)
+            FutureSectionHeader(tr("מתקדם"), theme)
             FutureCard(theme = theme) {
                 FutureSettingItem(
-                    title = "אפליקציות במסך הבית",
-                    summary = if (restrictToDefaultApps) "אפליקציות FutureOS בלבד" else "כל האפליקציות המותקנות",
+                    title = tr("אפליקציות במסך הבית"),
+                    summary = if (restrictToDefaultApps) tr("אפליקציות FutureOS בלבד") else tr("כל האפליקציות המותקנות"),
                     icon = FutureIcons.Info,
                     theme = theme,
                     showChevron = false,
                     onClick = null,
                 )
                 FutureDivider(theme = theme)
-                FutureSettingItem(title = "איפוס פריסה", summary = "החזרת מסך הבית לברירת המחדל", icon = FutureIcons.RestartAlt, theme = theme, showChevron = false, onClick = { confirmReset = true })
+                FutureSettingItem(title = tr("איפוס פריסה"), summary = tr("החזרת מסך הבית לברירת המחדל"), icon = FutureIcons.RestartAlt, theme = theme, showChevron = false, onClick = { confirmReset = true })
                 FutureDivider(theme = theme)
-                FutureSettingItem(title = "מקשים", summary = "Options פעמיים - עריכה · OK מוחזק - הזזה", icon = FutureIcons.Keyboard, theme = theme, showChevron = false, onClick = null)
+                FutureSettingItem(title = tr("מקשים"), summary = tr("Options פעמיים - עריכה · OK מוחזק - הזזה"), icon = FutureIcons.Keyboard, theme = theme, showChevron = false, onClick = null)
             }
         }
     }
     if (confirmReset) {
-        ConfirmDialog(message = "לאפס את מסך הבית?", theme = theme, confirmLabel = "אפס", onCancel = { confirmReset = false }, onConfirm = {
+        ConfirmDialog(message = tr("לאפס את מסך הבית?"), theme = theme, confirmLabel = tr("אפס"), onCancel = { confirmReset = false }, onConfirm = {
             confirmReset = false
             onResetLayout()
         })
@@ -301,7 +303,7 @@ fun AppPickerScreen(
                 },
         ) {
             Text(
-                if (digits.isEmpty()) "הוספת אפליקציה" else "הוספת אפליקציה · $digits",
+                if (digits.isEmpty()) tr("הוספת אפליקציה") else tr("הוספת אפליקציה · {0}", digits),
                 color = theme.mutedTextColor,
                 fontSize = FutureTypography.label,
                 maxLines = 1,
@@ -309,7 +311,7 @@ fun AppPickerScreen(
             )
             if (shown.isEmpty()) {
                 Text(
-                    if (apps.isEmpty()) "טוען…" else "אין התאמות",
+                    if (apps.isEmpty()) tr("טוען…") else tr("אין התאמות"),
                     color = theme.mutedTextColor,
                     fontSize = FutureTypography.body,
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
@@ -370,7 +372,7 @@ private fun AppPickerCell(
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .focusMotion(interaction)
             .clip(shape)
-            .background(if (focused) theme.focusFillMenuColor else Color.Transparent)
+            .background(animateFocusColor(focused, theme.focusFillMenuColor, Color.Transparent).value)
             .clickable(interactionSource = interaction, indication = null, onClick = onClick)
             .bringIntoViewOnFocus()
             .padding(vertical = 8.dp, horizontal = 2.dp),
@@ -383,7 +385,7 @@ private fun AppPickerCell(
         }
         Text(
             app.label,
-            color = if (focused) theme.textColor else theme.mutedTextColor,
+            color = animateFocusColor(focused, theme.textColor, theme.mutedTextColor).value,
             fontSize = FutureTypography.caption,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -435,11 +437,11 @@ fun WidgetPickerScreen(
     }
     LaunchedEffect(options?.size) { if (!options.isNullOrEmpty()) runCatching { first.requestFocus() } }
 
-    LauncherOverlay(theme, "ווידג'טים") {
+    LauncherOverlay(theme, tr("ווידג'טים")) {
         val list = options
         when {
-            list == null -> EmptyState(icon = FutureIcons.Widgets, title = "טוען", textColor = theme.textColor)
-            list.isEmpty() -> EmptyState(icon = FutureIcons.Widgets, title = "אין ווידג'טים", subtitle = "אף אפליקציה מותקנת לא מציעה ווידג'ט", textColor = theme.textColor)
+            list == null -> EmptyState(icon = FutureIcons.Widgets, title = tr("טוען"), textColor = theme.textColor)
+            list.isEmpty() -> EmptyState(icon = FutureIcons.Widgets, title = tr("אין ווידג'טים"), subtitle = tr("אף אפליקציה מותקנת לא מציעה ווידג'ט"), textColor = theme.textColor)
             else -> LazyColumn(contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)) {
                 itemsIndexed(list, key = { _, o -> o.info.provider.flattenToString() }) { index, option ->
                     val showHeader = index == 0 || list[index - 1].appLabel != option.appLabel

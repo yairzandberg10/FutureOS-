@@ -1,5 +1,6 @@
 package com.future.tasks.ui.screens
 
+import com.future.sharednav.i18n.tr
 import androidx.compose.material.icons.rounded.CheckCircle
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureTextField
@@ -66,11 +67,11 @@ fun TaskListScreen(
     ScreenScaffold(
         modifier = Modifier.escapeTextFieldFocusTrap(),
         backgroundColor = theme.backgroundColor,
-        title = "משימות",
+        title = tr("משימות"),
         textColor = theme.textColor,
         accentColor = theme.accentColor,
         trailingIcon = FutureIcons.Add,
-        trailingContentDescription = "משימה חדשה",
+        trailingContentDescription = tr("משימה חדשה"),
         onTrailingClick = onAddTask,
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -79,8 +80,8 @@ fun TaskListScreen(
             if (tasks.isEmpty()) {
                 EmptyState(
                     icon = FutureIcons.Checklist,
-                    title = if (searchQuery.isBlank()) "אין משימות" else "לא נמצאו משימות",
-                    subtitle = if (searchQuery.isBlank()) "נווט לכפתור ההוספה שלמעלה ולחץ OK" else null,
+                    title = if (searchQuery.isBlank()) tr("אין משימות") else tr("לא נמצאו משימות"),
+                    subtitle = if (searchQuery.isBlank()) tr("נווט לכפתור ההוספה שלמעלה ולחץ OK") else null,
                     textColor = theme.textColor,
                     modifier = Modifier.weight(1f),
                 )
@@ -110,7 +111,7 @@ private fun SearchField(query: String, onQueryChanged: (String) -> Unit, theme: 
         value = query,
         onValueChange = onQueryChanged,
         theme = theme,
-        placeholder = "חיפוש משימות",
+        placeholder = tr("חיפוש משימות"),
         leading = {
             Icon(FutureIcons.Search, contentDescription = null, tint = theme.mutedTextColor, modifier = Modifier.size(FutureDimens.iconTopBar))
         },
@@ -124,7 +125,7 @@ private fun SearchField(query: String, onQueryChanged: (String) -> Unit, theme: 
 @Composable
 private fun TaskRow(task: Task, theme: FutureTheme, focusRequester: FocusRequester, onClick: () -> Unit) {
     FutureListItem(
-        title = task.title.ifEmpty { "משימה ללא שם" },
+        title = task.title.ifEmpty { tr("משימה ללא שם") },
         summary = task.notes.ifBlank { null },
         theme = theme,
         onClick = onClick,

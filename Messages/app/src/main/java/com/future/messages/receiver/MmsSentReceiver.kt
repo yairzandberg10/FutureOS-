@@ -1,5 +1,6 @@
 package com.future.messages.receiver
 
+import com.future.sharednav.i18n.tr
 import android.app.Activity
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -34,18 +35,18 @@ class MmsSentReceiver : BroadcastReceiver() {
 
         if (resultCode != Activity.RESULT_OK) {
             val reason = when (resultCode) {
-                SmsManager.MMS_ERROR_UNSPECIFIED -> "שגיאה לא מזוהה"
-                SmsManager.MMS_ERROR_INVALID_APN -> "הגדרות APN שגויות"
-                SmsManager.MMS_ERROR_UNABLE_CONNECT_MMS -> "אין אפשרות להתחבר לשרת ה-MMS"
-                SmsManager.MMS_ERROR_HTTP_FAILURE -> "שגיאת רשת בשליחה"
-                SmsManager.MMS_ERROR_IO_ERROR -> "שגיאת קלט/פלט"
-                SmsManager.MMS_ERROR_RETRY -> "נדרש ניסיון חוזר"
-                SmsManager.MMS_ERROR_CONFIGURATION_ERROR -> "שגיאת תצורה"
-                SmsManager.MMS_ERROR_NO_DATA_NETWORK -> "אין חיבור לרשת סלולרית לנתונים"
-                else -> "קוד שגיאה $resultCode"
+                SmsManager.MMS_ERROR_UNSPECIFIED -> tr("שגיאה לא מזוהה")
+                SmsManager.MMS_ERROR_INVALID_APN -> tr("הגדרות APN שגויות")
+                SmsManager.MMS_ERROR_UNABLE_CONNECT_MMS -> tr("אין אפשרות להתחבר לשרת ה-MMS")
+                SmsManager.MMS_ERROR_HTTP_FAILURE -> tr("שגיאת רשת בשליחה")
+                SmsManager.MMS_ERROR_IO_ERROR -> tr("שגיאת קלט/פלט")
+                SmsManager.MMS_ERROR_RETRY -> tr("נדרש ניסיון חוזר")
+                SmsManager.MMS_ERROR_CONFIGURATION_ERROR -> tr("שגיאת תצורה")
+                SmsManager.MMS_ERROR_NO_DATA_NETWORK -> tr("אין חיבור לרשת סלולרית לנתונים")
+                else -> tr("קוד שגיאה {0}", resultCode)
             }
             Log.e(TAG, "MMS send failed: $reason")
-            Toast.makeText(context, "שליחת ה-MMS נכשלה: $reason", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, tr("שליחת ה-MMS נכשלה: {0}", reason), Toast.LENGTH_LONG).show()
         }
 
         intent.getStringExtra(EXTRA_FILE_PATH)?.let { path ->

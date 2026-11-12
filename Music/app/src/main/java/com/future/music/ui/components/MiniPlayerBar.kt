@@ -1,5 +1,6 @@
 package com.future.music.ui.components
 
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureProgressBar
 import com.future.sharednav.components.FutureAvatar
@@ -77,7 +78,7 @@ fun MiniPlayerBar(playerState: PlayerUiState, theme: FutureTheme, onClick: () ->
             ) {
                 Icon(
                     if (playerState.isPlaying) FutureIcons.Pause else FutureIcons.PlayArrow,
-                    contentDescription = if (playerState.isPlaying) "השהה" else "נגן",
+                    contentDescription = if (playerState.isPlaying) tr("השהה") else tr("נגן"),
                     tint = theme.onReadableAccentColor,
                     modifier = Modifier.size(18.dp),
                 )

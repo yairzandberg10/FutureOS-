@@ -1,5 +1,6 @@
 package com.future.music.ui.screens
 
+import com.future.sharednav.i18n.tr
 import android.Manifest
 import android.content.pm.PackageManager
 import android.widget.Toast
@@ -79,7 +80,7 @@ fun AudioDevicesScreen(theme: FutureTheme, onBack: () -> Unit, onOpenEqualizer: 
     LaunchedEffect(Unit) { runCatching { first.requestFocus() } }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        ScreenTopBar(title = "התקני שמע", theme = theme, onBack = onBack)
+        ScreenTopBar(title = tr("התקני שמע"), theme = theme, onBack = onBack)
         LazyColumn(
             modifier = Modifier.weight(1f).fillMaxWidth(),
             contentPadding = PaddingValues(horizontal = FutureDimens.screenPadding, vertical = FutureDimens.spacingSm),
@@ -89,9 +90,9 @@ fun AudioDevicesScreen(theme: FutureTheme, onBack: () -> Unit, onOpenEqualizer: 
                 FutureSettingItem(
                     title = "Bluetooth",
                     summary = when {
-                        !hasPermission -> "צריך הרשאת Bluetooth"
-                        enabled -> "מופעל"
-                        else -> "כבוי"
+                        !hasPermission -> tr("צריך הרשאת Bluetooth")
+                        enabled -> tr("מופעל")
+                        else -> tr("כבוי")
                     },
                     theme = theme,
                     icon = if (enabled) FutureIcons.Bluetooth else FutureIcons.BluetoothDisabled,
@@ -101,7 +102,7 @@ fun AudioDevicesScreen(theme: FutureTheme, onBack: () -> Unit, onOpenEqualizer: 
                         if (!hasPermission) {
                             permission.launch(Manifest.permission.BLUETOOTH_CONNECT)
                         } else if (!bt.setEnabled(!enabled)) {
-                            Toast.makeText(context, "לא ניתן לשנות את מצב ה-Bluetooth", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, tr("לא ניתן לשנות את מצב ה-Bluetooth"), Toast.LENGTH_SHORT).show()
                         }
                         version++
                     },
@@ -110,12 +111,12 @@ fun AudioDevicesScreen(theme: FutureTheme, onBack: () -> Unit, onOpenEqualizer: 
             }
 
             if (enabled) {
-                item { FutureSectionHeader("אוזניות ורמקולים", theme, inset = false) }
+                item { FutureSectionHeader(tr("אוזניות ורמקולים"), theme, inset = false) }
                 if (devices.isEmpty()) {
                     item {
                         FutureSettingItem(
-                            title = "אין התקנים מצומדים",
-                            summary = "צמדו אוזניות או בוקסה באפליקציית Bluetooth",
+                            title = tr("אין התקנים מצומדים"),
+                            summary = tr("צמדו אוזניות או בוקסה באפליקציית Bluetooth"),
                             theme = theme,
                             onClick = null,
                         )
@@ -125,13 +126,13 @@ fun AudioDevicesScreen(theme: FutureTheme, onBack: () -> Unit, onOpenEqualizer: 
                     FutureListItem(
                         title = device.name,
                         summary = buildString {
-                            append(if (device.connected) "מחובר · OK לניתוק" else "OK לחיבור")
-                            device.battery?.let { append(" · סוללה $it%") }
+                            append(if (device.connected) tr("מחובר · OK לניתוק") else tr("OK לחיבור"))
+                            device.battery?.let { append(tr(" · סוללה {0}%", it)) }
                         },
                         theme = theme,
                         onClick = {
                             val ok = if (device.connected) bt.disconnect(device.address) else bt.connect(device.address)
-                            if (!ok) Toast.makeText(context, "הפעולה נכשלה", Toast.LENGTH_SHORT).show()
+                            if (!ok) Toast.makeText(context, tr("הפעולה נכשלה"), Toast.LENGTH_SHORT).show()
                             version++
                         },
                         leading = {
@@ -145,10 +146,10 @@ fun AudioDevicesScreen(theme: FutureTheme, onBack: () -> Unit, onOpenEqualizer: 
                 }
             }
 
-            item { FutureSectionHeader("הגדרות ל$deviceName", theme, inset = false) }
+            item { FutureSectionHeader(tr("הגדרות ל{0}", deviceName), theme, inset = false) }
             item {
                 FutureSettingItem(
-                    title = "אפקט סאונד",
+                    title = tr("אפקט סאונד"),
                     summary = settings.presetName,
                     theme = theme,
                     icon = FutureIcons.GraphicEq,
@@ -157,8 +158,8 @@ fun AudioDevicesScreen(theme: FutureTheme, onBack: () -> Unit, onOpenEqualizer: 
             }
             item {
                 FutureSettingItem(
-                    title = "אקולייזר מלא",
-                    summary = "כל התדרים, באס, 3D והגברה",
+                    title = tr("אקולייזר מלא"),
+                    summary = tr("כל התדרים, באס, 3D והגברה"),
                     theme = theme,
                     icon = FutureIcons.Equalizer,
                     onClick = onOpenEqualizer,
@@ -166,8 +167,8 @@ fun AudioDevicesScreen(theme: FutureTheme, onBack: () -> Unit, onOpenEqualizer: 
             }
             item {
                 FxSlider(
-                    label = "תקרת עוצמה",
-                    valueText = if (settings.volumeLimit >= 100) "ללא" else "${settings.volumeLimit}%",
+                    label = tr("תקרת עוצמה"),
+                    valueText = if (settings.volumeLimit >= 100) tr("ללא") else "${settings.volumeLimit}%",
                     value = settings.volumeLimit / 100f,
                     theme = theme,
                     onValueChange = { v -> AudioFx.update { it.copy(volumeLimit = (v * 100).toInt().coerceIn(10, 100)) } },
@@ -176,8 +177,8 @@ fun AudioDevicesScreen(theme: FutureTheme, onBack: () -> Unit, onOpenEqualizer: 
             if (currentDevice != AudioFx.SPEAKER) {
                 item {
                     FutureSettingItem(
-                        title = "המשך ניגון בחיבור",
-                        summary = "הניגון ממשיך כשההתקן הזה מתחבר",
+                        title = tr("המשך ניגון בחיבור"),
+                        summary = tr("הניגון ממשיך כשההתקן הזה מתחבר"),
                         theme = theme,
                         icon = FutureIcons.PlayArrow,
                         showChevron = false,
@@ -190,7 +191,7 @@ fun AudioDevicesScreen(theme: FutureTheme, onBack: () -> Unit, onOpenEqualizer: 
     }
 
     if (showEffects) {
-        FutureOptionsMenu(theme = theme, onDismissRequest = { showEffects = false }, header = "אפקט סאונד") {
+        FutureOptionsMenu(theme = theme, onDismissRequest = { showEffects = false }, header = tr("אפקט סאונד")) {
             AudioFx.Effect.entries.forEach { effect ->
                 FutureMenuRow(effect.label, FutureIcons.GraphicEq, theme, {
                     showEffects = false

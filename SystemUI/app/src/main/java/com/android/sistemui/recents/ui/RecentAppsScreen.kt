@@ -1,5 +1,6 @@
 package com.android.sistemui.recents.ui
 
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
 import androidx.compose.animation.AnimatedVisibility
@@ -100,7 +101,7 @@ fun RecentAppsScreen(
         }
     }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -145,7 +146,7 @@ fun RecentAppsScreen(
                         .padding(top = com.android.sistemui.statusbar.logic.StatusBarLayoutManager.HEIGHT_DP.dp + 10.dp, bottom = 6.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Text("אפליקציות אחרונות", color = Color.White, fontSize = FutureTypography.title, fontWeight = FontWeight.Bold)
+                    Text(tr("אפליקציות אחרונות"), color = Color.White, fontSize = FutureTypography.title, fontWeight = FontWeight.Bold)
                     if (memorySummary != null) {
                         Text(memorySummary, color = Color.White.copy(alpha = 0.5f), fontSize = FutureTypography.caption, modifier = Modifier.padding(top = 2.dp))
                     }
@@ -154,7 +155,7 @@ fun RecentAppsScreen(
                 Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 if (apps.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("אין אפליקציות אחרונות", color = Color.White.copy(alpha = 0.5f), fontSize = FutureTypography.body)
+                        Text(tr("אין אפליקציות אחרונות"), color = Color.White.copy(alpha = 0.5f), fontSize = FutureTypography.body)
                     }
                 } else {
                     LazyVerticalGrid(
@@ -195,13 +196,13 @@ fun RecentAppsScreen(
                             .border(if (clearFocused) 2.dp else 1.dp, if (clearFocused) Color.LightGray else Color.White.copy(alpha = 0.18f), CircleShape),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Icon(Icons.Rounded.Close, contentDescription = "סגור הכל", tint = Color.White, modifier = Modifier.size(28.dp))
+                        Icon(Icons.Rounded.Close, contentDescription = tr("סגור הכל"), tint = Color.White, modifier = Modifier.size(28.dp))
                     }
                 }
                 }
 
                 Text(
-                    "OK פתיחה · אפשרויות סגירת חלון · 0 סגירת הכל",
+                    tr("OK פתיחה · אפשרויות סגירת חלון · 0 סגירת הכל"),
                     color = Color.White.copy(alpha = 0.35f),
                     fontSize = FutureTypography.caption,
                     modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 12.dp),

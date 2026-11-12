@@ -30,11 +30,10 @@ fun Modifier.keypadListNav(
     when (event.key) {
         Key.DirectionDown -> { if (!horizontal) { state.moveDown(); true } else false }
         Key.DirectionUp -> { if (!horizontal) { state.moveUp(); true } else false }
-        // RTL: כל המערכת כופה LayoutDirection.Rtl (ראו ScreenScaffold), ובעברית
-        // "הפריט הבא" נמצא שמאלה - לכן שמאלה=moveDown וימינה=moveUp. המיפוי
-        // ההפוך היה מלכודת שהייתה מתפוצצת אצל הקורא הראשון של horizontal=true.
-        Key.DirectionLeft -> { if (horizontal) { state.moveDown(); true } else false }
-        Key.DirectionRight -> { if (horizontal) { state.moveUp(); true } else false }
+        // כיוון הפריסה נקבע לפי שפת המערכת (Tr.layoutDirection). ב-RTL "הפריט
+        // הבא" נמצא שמאלה - לכן שמאלה=moveDown וימינה=moveUp; ב-LTR הפוך.
+        Key.DirectionLeft -> { if (horizontal) { if (rtl()) state.moveDown() else state.moveUp(); true } else false }
+        Key.DirectionRight -> { if (horizontal) { if (rtl()) state.moveUp() else state.moveDown(); true } else false }
         Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> {
             if (state.itemCount > 0) onSelect(state.focusedIndex)
             true
@@ -42,3 +41,5 @@ fun Modifier.keypadListNav(
         else -> false
     }
 }
+
+private fun rtl() = com.future.sharednav.i18n.Tr.layoutDirection == androidx.compose.ui.unit.LayoutDirection.Rtl

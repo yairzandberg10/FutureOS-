@@ -1,5 +1,6 @@
 package com.future.navigation.data.backend
 
+import com.future.sharednav.i18n.tr
 import android.util.Log
 import com.future.navigation.data.gtfs.BoundingBox
 import com.future.navigation.data.gtfs.CalendarEntity
@@ -77,17 +78,17 @@ class TransitBundleSource(private val database: GtfsDatabase) {
      */
     suspend fun import(bundle: BundleRef, collector: FlowCollector<ImportProgress>) {
         val storage = FirebaseBackend.storage
-            ?: throw IllegalStateException("אחסון Firebase לא זמין")
+            ?: throw IllegalStateException(tr("אחסון Firebase לא זמין"))
 
-        collector.emit(ImportProgress(ImportPhase.DOWNLOADING, 0f, message = "מוריד נתוני תחבורה"))
+        collector.emit(ImportProgress(ImportPhase.DOWNLOADING, 0f, message = tr("מוריד נתוני תחבורה")))
         val downloadUrl = storage.reference.child(bundle.storagePath).downloadUrl.awaitResult()
 
         val request = Request.Builder().url(downloadUrl.toString()).build()
         NetworkModule.okHttpClient.newCall(request).execute().use { response ->
             if (!response.isSuccessful) {
-                throw IllegalStateException("הורדת חבילת התחבורה נכשלה: ${response.code}")
+                throw IllegalStateException(tr("הורדת חבילת התחבורה נכשלה: {0}", response.code))
             }
-            val body = response.body ?: throw IllegalStateException("תשובה ריקה מהשרת")
+            val body = response.body ?: throw IllegalStateException(tr("תשובה ריקה מהשרת"))
             val dao = database.gtfsDao()
 
             dao.clearStops()
@@ -213,7 +214,7 @@ class TransitBundleSource(private val database: GtfsDatabase) {
                         if (percent != lastReportedPercent) {
                             lastReportedPercent = percent
                             collector.emit(
-                                ImportProgress(ImportPhase.PARSING_STOP_TIMES, fraction, message = "מייבא נתוני תחבורה")
+                                ImportProgress(ImportPhase.PARSING_STOP_TIMES, fraction, message = tr("מייבא נתוני תחבורה"))
                             )
                         }
                     }

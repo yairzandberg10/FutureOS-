@@ -1,5 +1,6 @@
 package com.future.fitness.ui.screens
 
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.theme.elevatedSurfaceColor
@@ -48,7 +49,7 @@ fun HistoryScreen(
     onBack: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
-        ScreenTopBar(title = "היסטוריה", theme = theme, onBack = onBack)
+        ScreenTopBar(title = tr("היסטוריה"), theme = theme, onBack = onBack)
 
         if (history.isEmpty()) {
             Column(
@@ -57,7 +58,7 @@ fun HistoryScreen(
                 verticalArrangement = Arrangement.Center,
             ) {
                 Icon(FutureIcons.History, contentDescription = null, tint = theme.textColor.copy(alpha = 0.3f), modifier = Modifier.padding(bottom = 12.dp))
-                Text("עדיין אין אימונים שהושלמו", color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.body, fontWeight = FontWeight.Medium)
+                Text(tr("עדיין אין אימונים שהושלמו"), color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.body, fontWeight = FontWeight.Medium)
             }
         } else {
             LazyColumn(
@@ -69,9 +70,9 @@ fun HistoryScreen(
             ) {
                 items(history.size, key = { index -> history[index].dateMillis }) { index ->
                     val entry = history[index]
-                    val parts = mutableListOf("${relativeDay(entry.dateMillis)}", "${entry.minutes} דק׳", "${entry.calories} קלוריות")
-                    entry.distanceKm?.let { parts.add("%.2f ק״מ".format(it)) }
-                    entry.avgHr?.let { parts.add("דופק ממוצע $it") }
+                    val parts = mutableListOf("${relativeDay(entry.dateMillis)}", tr("{0} דק׳", entry.minutes), tr("{0} קלוריות", entry.calories))
+                    entry.distanceKm?.let { parts.add(tr("%.2f ק״מ").format(it)) }
+                    entry.avgHr?.let { parts.add(tr("דופק ממוצע {0}", it)) }
                     IconListRow(
                         icon = FutureIcons.Check,
                         title = entry.name,
@@ -93,14 +94,14 @@ private fun relativeDay(millis: Long): String {
     val dayFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
     val entryDay = dayFormat.format(millis)
     val today = dayFormat.format(System.currentTimeMillis())
-    if (entryDay == today) return "היום"
+    if (entryDay == today) return tr("היום")
 
     val yesterdayCal = Calendar.getInstance()
     yesterdayCal.add(Calendar.DAY_OF_YEAR, -1)
-    if (entryDay == dayFormat.format(yesterdayCal.time)) return "אתמול"
+    if (entryDay == dayFormat.format(yesterdayCal.time)) return tr("אתמול")
 
     val entryCal = Calendar.getInstance().apply { timeInMillis = millis }
     val todayCal = Calendar.getInstance()
     val diffDays = ((todayCal.timeInMillis - entryCal.timeInMillis) / (24 * 60 * 60 * 1000)).toInt()
-    return "לפני $diffDays ימים"
+    return tr("לפני {0} ימים", diffDays)
 }

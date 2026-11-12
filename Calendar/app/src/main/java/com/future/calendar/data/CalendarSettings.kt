@@ -1,20 +1,21 @@
 package com.future.calendar.data
 
+import com.future.sharednav.i18n.tr
 import android.content.Context
 
 data class Region(val id: String, val displayName: String, val lat: Double, val lon: Double)
 
 val KNOWN_REGIONS = listOf(
-    Region("jerusalem", "ירושלים", 31.7683, 35.2137),
-    Region("tel_aviv", "תל אביב", 32.0853, 34.7818),
-    Region("haifa", "חיפה", 32.7940, 34.9896),
-    Region("beer_sheva", "באר שבע", 31.2518, 34.7913),
-    Region("eilat", "אילת", 29.5581, 34.9482),
-    Region("tzfat", "צפת", 32.9646, 35.4960),
-    Region("tiberias", "טבריה", 32.7922, 35.5312),
-    Region("ashdod", "אשדוד", 31.8014, 34.6435),
-    Region("modiin", "מודיעין", 31.8969, 35.0095),
-    Region("bnei_brak", "בני ברק", 32.0807, 34.8338)
+    Region("jerusalem", tr("ירושלים"), 31.7683, 35.2137),
+    Region("tel_aviv", tr("תל אביב"), 32.0853, 34.7818),
+    Region("haifa", tr("חיפה"), 32.7940, 34.9896),
+    Region("beer_sheva", tr("באר שבע"), 31.2518, 34.7913),
+    Region("eilat", tr("אילת"), 29.5581, 34.9482),
+    Region("tzfat", tr("צפת"), 32.9646, 35.4960),
+    Region("tiberias", tr("טבריה"), 32.7922, 35.5312),
+    Region("ashdod", tr("אשדוד"), 31.8014, 34.6435),
+    Region("modiin", tr("מודיעין"), 31.8969, 35.0095),
+    Region("bnei_brak", tr("בני ברק"), 32.0807, 34.8338)
 )
 
 /** הגדרות ספציפיות לאפליקציית לוח השנה - שמורות ב-SharedPreferences מקומי לאפליקציה. */

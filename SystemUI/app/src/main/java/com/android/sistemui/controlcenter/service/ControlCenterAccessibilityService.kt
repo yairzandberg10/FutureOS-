@@ -1,12 +1,12 @@
 package com.android.sistemui.controlcenter.service
 
+import com.future.sharednav.i18n.tr
 import android.accessibilityservice.AccessibilityService
 import android.app.WallpaperManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import androidx.core.content.ContextCompat
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.PixelFormat
@@ -74,8 +74,11 @@ class ControlCenterAccessibilityService : AccessibilityService(), LifecycleOwner
             windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
             
             val filter = IntentFilter(FutureUIActions.ACTION_SHOW_CONTROL_CENTER)
-            // נשלח רק מתוך FutureUI עצמו - אפליקציה זרה לא צריכה לפתוח את המסך הזה.
-            ContextCompat.registerReceiver(this, receiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)
+            } else {
+                registerReceiver(receiver, filter)
+            }
         } catch (e: Exception) {
             Log.e("FutureUI", "Error in onCreate", e)
         }
@@ -83,7 +86,7 @@ class ControlCenterAccessibilityService : AccessibilityService(), LifecycleOwner
 
     override fun onServiceConnected() {
         super.onServiceConnected()
-        Toast.makeText(this, "FutureUI מוכן: לחיצה ארוכה על כוכבית", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, tr("FutureUI מוכן: לחיצה ארוכה על כוכבית"), Toast.LENGTH_SHORT).show()
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
@@ -117,7 +120,7 @@ class ControlCenterAccessibilityService : AccessibilityService(), LifecycleOwner
                     // נפתח. הלחיצה הקצרה משודרת גלובלית, בדיוק כמו מקש Options (ר'
                     // FutureUIActions), כדי שהאפליקציה שבחזית תוכל להגיב - בלי לגעת בהחזקה הארוכה.
                     try {
-                        sendBroadcast(Intent(FutureUIActions.ACTION_STAR_SHORT_PRESS), FutureUIActions.PERMISSION_SYSTEM)
+                        sendBroadcast(Intent(FutureUIActions.ACTION_STAR_SHORT_PRESS))
                     } catch (e: Exception) {
                         Log.w("FutureUI", "star short-press broadcast failed", e)
                     }

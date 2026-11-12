@@ -1,5 +1,6 @@
 package com.future.calendar.data
 
+import com.future.sharednav.i18n.tr
 import android.content.ContentUris
 import android.content.ContentValues
 import android.content.Context
@@ -51,11 +52,11 @@ data class CalendarEvent(
 
 /** תדירות חזרה של אירוע, וה-RRULE (RFC 5545) שהיא נשמרת בו. */
 enum class EventRepeat(val label: String, val rrule: String?) {
-    NONE("לא חוזר", null),
-    DAILY("כל יום", "FREQ=DAILY"),
-    WEEKLY("כל שבוע", "FREQ=WEEKLY"),
-    MONTHLY("כל חודש", "FREQ=MONTHLY"),
-    YEARLY("כל שנה", "FREQ=YEARLY");
+    NONE(tr("לא חוזר"), null),
+    DAILY(tr("כל יום"), "FREQ=DAILY"),
+    WEEKLY(tr("כל שבוע"), "FREQ=WEEKLY"),
+    MONTHLY(tr("כל חודש"), "FREQ=MONTHLY"),
+    YEARLY(tr("כל שנה"), "FREQ=YEARLY");
 
     fun next(): EventRepeat = entries[(ordinal + 1) % entries.size]
 }
@@ -157,7 +158,7 @@ class CalendarRepository(private val context: Context) {
                         CalendarEvent(
                             id = cursor.getLong(0),
                             calendarId = cursor.getLong(1),
-                            title = cursor.getString(2) ?: "(ללא כותרת)",
+                            title = cursor.getString(2) ?: tr("(ללא כותרת)"),
                             description = cursor.getString(3) ?: "",
                             location = cursor.getString(4) ?: "",
                             startMillis = cursor.getLong(5),

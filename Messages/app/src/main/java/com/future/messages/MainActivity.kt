@@ -1,4 +1,5 @@
 package com.future.messages
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.components.FutureButton
 
 import android.content.Intent
@@ -57,8 +58,6 @@ private val OPTIONAL_PERMISSIONS = buildList {
 
 private val REQUIRED_PERMISSIONS = CORE_PERMISSIONS + OPTIONAL_PERMISSIONS
 
-private const val MAX_PREFILL_BODY = 5000
-
 class MainActivity : ComponentActivity() {
     // המכשיר האמיתי הוא מקלדת T9 בלבד בלי מסך מגע - מבטלים קלט מגע לגמרי כדי
     // שההתנהגות תישאר תואמת לחומרה האמיתית. לא פוגע בניווט/הפעלה במקשים -
@@ -83,12 +82,11 @@ class MainActivity : ComponentActivity() {
         val data = intent?.data ?: return
         if (intent.action != Intent.ACTION_SENDTO && intent.action != Intent.ACTION_VIEW) return
         if (data.scheme?.lowercase() !in setOf("sms", "smsto", "mms", "mmsto")) return
-        val (address, bodyFromUri) = com.future.messages.data.SmsTarget.parse(data.schemeSpecificPart.orEmpty())
+        val address = Uri.decode(data.schemeSpecificPart.orEmpty().substringBefore('?')).trim()
         val body = intent.getStringExtra("sms_body")
             ?: intent.getStringExtra(Intent.EXTRA_TEXT)
-            ?: bodyFromUri
-        // מגיע מכל אפליקציה: אורך סביר, לא מגה-בייט של טקסט שנתקע בשדה הכתיבה
-        pendingSendTo.value = address.take(200) to body.take(MAX_PREFILL_BODY)
+            ?: data.schemeSpecificPart.orEmpty().substringAfter("?body=", "").let(Uri::decode)
+        pendingSendTo.value = address to body.orEmpty()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -104,10 +102,7 @@ class MainActivity : ComponentActivity() {
                 val hasCallPermission = androidx.core.content.ContextCompat.checkSelfPermission(
                     this, android.Manifest.permission.CALL_PHONE
                 ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-                // חיוג ישיר רק למספר רגיל. כתובת שולח עם * או # (למשל "*21*...#") היא קוד
-                // MMI - חיוג ישיר שלה היה מפעיל פעולה ברשת (כמו הפניית שיחות) בלחיצה אחת.
-                val plainNumber = phone.all { it.isDigit() || it == '+' || it == ' ' || it == '-' }
-                val action = if (hasCallPermission && plainNumber) Intent.ACTION_CALL else Intent.ACTION_DIAL
+                val action = if (hasCallPermission && phone.any { it.isDigit() }) Intent.ACTION_CALL else Intent.ACTION_DIAL
                 startActivity(Intent(action, Uri.fromParts("tel", phone, null)))
                 return true
             }
@@ -237,7 +232,7 @@ fun MessagesApp(theme: FutureTheme) {
         val (address, body) = sendTo ?: return@LaunchedEffect
         if (!hasPermissions || !isDefaultSmsApp) return@LaunchedEffect
         activity?.pendingSendTo?.value = null
-        if (address.isBlank() || com.future.messages.data.SmsTarget.isGroup(address)) {
+        if (address.isBlank() || address.contains(',') || address.contains(';')) {
             screen = MessagesScreen.Compose(forwardText = body)
             return@LaunchedEffect
         }
@@ -306,7 +301,7 @@ fun MessagesApp(theme: FutureTheme) {
                     ioScope.launch {
                         val deleted = withContext(Dispatchers.IO) { repository.deleteThread(conversation.threadId) }
                         if (!deleted) {
-                            android.widget.Toast.makeText(context, "מחיקת השיחה נכשלה", android.widget.Toast.LENGTH_SHORT).show()
+                            android.widget.Toast.makeText(context, tr("מחיקת השיחה נכשלה"), android.widget.Toast.LENGTH_SHORT).show()
                         }
                         refreshConversations()
                     }
@@ -321,7 +316,7 @@ fun MessagesApp(theme: FutureTheme) {
                     archivedThreadIds = archiveStore.setArchived(conversation.threadId, archive)
                     android.widget.Toast.makeText(
                         context,
-                        if (archive) "השיחה הועברה לארכיון" else "השיחה הוצאה מהארכיון",
+                        if (archive) tr("השיחה הועברה לארכיון") else tr("השיחה הוצאה מהארכיון"),
                         android.widget.Toast.LENGTH_SHORT,
                     ).show()
                 },
@@ -372,7 +367,7 @@ fun MessagesApp(theme: FutureTheme) {
                         }
                     }
                     if (!dispatchedOk) {
-                        val message = if (imageUri != null) "שליחת ה-MMS נכשלה" else "שליחת ההודעה נכשלה"
+                        val message = if (imageUri != null) tr("שליחת ה-MMS נכשלה") else tr("שליחת ההודעה נכשלה")
                         android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show()
                     }
                     messages = withContext(Dispatchers.IO) { repository.getMessages(current.conversation.threadId) }
@@ -385,7 +380,7 @@ fun MessagesApp(theme: FutureTheme) {
                     ioScope.launch {
                         val deleted = withContext(Dispatchers.IO) { repository.deleteMessage(message) }
                         if (!deleted) {
-                            android.widget.Toast.makeText(context, "מחיקת ההודעה נכשלה", android.widget.Toast.LENGTH_SHORT).show()
+                            android.widget.Toast.makeText(context, tr("מחיקת ההודעה נכשלה"), android.widget.Toast.LENGTH_SHORT).show()
                         }
                         messages = withContext(Dispatchers.IO) { repository.getMessages(current.conversation.threadId) }
                     }
@@ -437,9 +432,9 @@ fun MessagesApp(theme: FutureTheme) {
                         contacts.count { repository.sendMessage(it.phoneNumber, text) == null }
                     }
                     val summary = if (failures == 0) {
-                        "ההודעה נשלחה ל-${contacts.size} אנשי קשר"
+                        tr("ההודעה נשלחה ל-{0} אנשי קשר", contacts.size)
                     } else {
-                        "נכשלה שליחה ל-$failures מתוך ${contacts.size} אנשי קשר"
+                        tr("נכשלה שליחה ל-{0} מתוך {1} אנשי קשר", failures, contacts.size)
                     }
                     android.widget.Toast.makeText(context, summary, android.widget.Toast.LENGTH_SHORT).show()
                     refreshConversations()
@@ -454,12 +449,12 @@ fun MessagesApp(theme: FutureTheme) {
 private fun PermissionRequiredScreen(theme: FutureTheme, onRequest: () -> Unit) {
     val focusRequester = remember { FocusRequester() }
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
-                Text("כדי להשתמש בהודעות, יש לאשר הרשאות SMS ואנשי קשר", color = theme.textColor, textAlign = TextAlign.Center)
+                Text(tr("כדי להשתמש בהודעות, יש לאשר הרשאות SMS ואנשי קשר"), color = theme.textColor, textAlign = TextAlign.Center)
                 Spacer(modifier = Modifier.height(16.dp))
-                FutureButton("אשר הרשאות", theme, onRequest, focusRequester = focusRequester)
+                FutureButton(tr("אשר הרשאות"), theme, onRequest, focusRequester = focusRequester)
             }
         }
     }
@@ -469,12 +464,12 @@ private fun PermissionRequiredScreen(theme: FutureTheme, onRequest: () -> Unit) 
 private fun DefaultAppRequiredScreen(theme: FutureTheme, onRequest: () -> Unit) {
     val focusRequester = remember { FocusRequester() }
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
-                Text("צריך להגדיר את Messages כאפליקציית ברירת המחדל למסרונים", color = theme.textColor, textAlign = TextAlign.Center)
+                Text(tr("צריך להגדיר את Messages כאפליקציית ברירת המחדל למסרונים"), color = theme.textColor, textAlign = TextAlign.Center)
                 Spacer(modifier = Modifier.height(16.dp))
-                FutureButton("הגדר כברירת מחדל", theme, onRequest, focusRequester = focusRequester)
+                FutureButton(tr("הגדר כברירת מחדל"), theme, onRequest, focusRequester = focusRequester)
             }
         }
     }

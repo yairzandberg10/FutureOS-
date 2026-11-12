@@ -1,5 +1,6 @@
 package com.future.notes.ui.screens
 
+import com.future.sharednav.i18n.tr
 import androidx.compose.material.icons.rounded.ViewAgenda
 import com.future.sharednav.icons.FutureIcons
 
@@ -182,7 +183,7 @@ fun ListScreen(
                 showMenu = false
                 onAddNote()
             })
-            FutureMenuRow("רשימה חדשה", FutureIcons.Checklist, theme, {
+            FutureMenuRow(tr("רשימה חדשה"), FutureIcons.Checklist, theme, {
                 showMenu = false
                 onAddChecklist()
             })
@@ -197,7 +198,7 @@ fun ListScreen(
                     },
                 )
             }
-            FutureMenuRow(if (gridView) "תצוגת רשימה" else "תצוגת רשת", if (gridView) Icons.Rounded.ViewAgenda else FutureIcons.GridView, theme, {
+            FutureMenuRow(if (gridView) tr("תצוגת רשימה") else tr("תצוגת רשת"), if (gridView) Icons.Rounded.ViewAgenda else FutureIcons.GridView, theme, {
                 showMenu = false
                 onToggleGrid()
             })
@@ -232,7 +233,7 @@ private fun notePreview(note: Note): String =
 @Composable
 private fun NoteBadges(note: Note, theme: FutureTheme) {
     if (note.audioPath != null) {
-        Icon(FutureIcons.Mic, contentDescription = "הקלטה", tint = theme.subtleTextColor, modifier = Modifier.size(FutureDimens.iconTopBar))
+        Icon(FutureIcons.Mic, contentDescription = tr("הקלטה"), tint = theme.subtleTextColor, modifier = Modifier.size(FutureDimens.iconTopBar))
     }
     if (note.isPinned) {
         Icon(FutureIcons.PushPin, contentDescription = stringResource(R.string.pinned), tint = theme.subtleTextColor, modifier = Modifier.size(FutureDimens.iconTopBar))

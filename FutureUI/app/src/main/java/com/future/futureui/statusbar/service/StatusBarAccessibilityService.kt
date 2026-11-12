@@ -1,5 +1,6 @@
 package com.future.futureui.statusbar.service
 
+import com.future.sharednav.i18n.tr
 import android.accessibilityservice.AccessibilityService
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -24,7 +25,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ComposeView
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.*
 import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
@@ -41,7 +41,6 @@ import com.future.futureui.statusbar.ui.VolumeOverlay
 import com.future.futureui.theme.ThemeProvider
 import com.future.futureui.ui.theme.FutureUITheme
 import com.future.futureui.utils.FutureUIActions
-import com.future.sharednav.actions.FutureUIActions as SharedActions
 import com.future.futureui.utils.FutureUIState
 
 /**
@@ -59,6 +58,9 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
     private val mainHandler = Handler(Looper.getMainLooper())
     private val volumeLevelState = mutableFloatStateOf(0.5f)
     private var hideVolumeRunnable: Runnable? = null
+    // מצב הכניסה/יציאה של חלון הווליום - היציאה רצה ורק אחריה החלון מוסר
+    private val volumeVisible = androidx.compose.animation.core.MutableTransitionState(false)
+    private val removeVolumeRunnable = Runnable { removeVolumeOverlayNow() }
     private var statusBarParams: WindowManager.LayoutParams? = null
     private var recentsView: ComposeView? = null
     private var powerMenuView: ComposeView? = null
@@ -78,14 +80,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
 
     /** האם אפשר לצלם עכשיו את [pkg]: היא בחזית, רשומה באחרונות, ואין מעליה חלון שלנו. */
     private fun isSnapshotTarget(pkg: String): Boolean =
-        FutureUIState.foregroundPackage == pkg && !recentsVisible && powerMenuView == null && recentAppsManager.isTop(pkg) &&
-            // צילום נשמר לדיסק ומוצג באחרונות: לא כשהמכשיר נעול, ולא כשהמקלדת
-            // פתוחה - סיסמה או קוד שמוקלדים עכשיו היו נכנסים לתמונה.
-            !FutureUIState.isLocked && !FutureUIState.isSecured && !isKeyboardShowing()
-
-    private fun isKeyboardShowing(): Boolean = runCatching {
-        windows.any { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD }
-    }.getOrDefault(true)
+        FutureUIState.foregroundPackage == pkg && !recentsVisible && powerMenuView == null && recentAppsManager.isTop(pkg)
 
     // צבע ההדגשה/פוקוס המשותף בין כל אפליקציות FutureOS (ThemeProvider). כאן
     // ניגשים ל-SharedPreferences ישירות במקום דרך ContentResolver כי השירות
@@ -166,20 +161,24 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
                 addAction(ACTION_SHOW_POWER_MENU)
                 addAction(ACTION_LOCK_NOW)
             }
-            // שני השידורים נשלחים רק מתוך FutureUI עצמו (מסכי overlay, מרכז הבקרה) -
-            // NOT_EXPORTED כדי שאפליקציה זרה לא תוכל להקפיץ את תפריט הכיבוי.
-            ContextCompat.registerReceiver(this, bringToFrontReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                registerReceiver(bringToFrontReceiver, filter, "com.future.futureui.permission.SYSTEM_SETTINGS", null, Context.RECEIVER_EXPORTED)
+            } else {
+                registerReceiver(bringToFrontReceiver, filter, "com.future.futureui.permission.SYSTEM_SETTINGS", null)
+            }
 
-            // ACTION_CALL_RINGING/ENDED מגיעים משידור מפורש (setPackage) של dialer.
-            // השולח חייב להחזיק את הרשאת המערכת - אחרת כל אפליקציה יכלה לזייף "שיחה
-            // מצלצלת" ולנטרל את הדאבל-קליק על OK / לפתוח את מסך השיחה.
+            // ACTION_CALL_RINGING/ENDED מגיעים משידור מפורש (setPackage) של dialer -
+            // מ-API 33 חובה להצהיר EXPORTED כדי לקבל שידור כזה מאפליקציה אחרת.
             val callFilter = IntentFilter().apply {
                 addAction(FutureUIActions.ACTION_CALL_RINGING)
                 addAction(FutureUIActions.ACTION_CALL_ENDED)
             }
-            ContextCompat.registerReceiver(
-                this, callReceiver, callFilter, SharedActions.PERMISSION_SYSTEM, null, ContextCompat.RECEIVER_EXPORTED
-            )
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                registerReceiver(callReceiver, callFilter, "com.future.futureui.permission.SYSTEM_SETTINGS", null, Context.RECEIVER_EXPORTED)
+            } else {
+                @Suppress("UnspecifiedRegisterReceiverFlag")
+                registerReceiver(callReceiver, callFilter, "com.future.futureui.permission.SYSTEM_SETTINGS", null)
+            }
         } catch (e: Exception) {
             Log.e("FutureUI", "Error in StatusBar onCreate", e)
         }
@@ -187,11 +186,12 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
 
     override fun onServiceConnected() {
         super.onServiceConnected()
+        // השירות הזה מורשה לצלם מסך - ההתראה הצפה משתמשת בו לרקע הזכוכית
+        com.future.futureui.utils.FrostedBackdrop.service = this
         if (layoutManager?.getSuppressSystemBars() == true) {
             suppressSystemBars()
         }
         showStatusBar()
-        exemptCallAppsFromBackgroundRestriction()
         if (lockController == null) {
             lockController = com.future.futureui.lockscreen.LockScreenController(
                 service = this,
@@ -202,19 +202,6 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
                 bringStatusBarFront = { bringStatusBarToFront() },
             ).also { it.start() }
         }
-    }
-
-    /**
-     * מנהל הסוללה של היצרן מסמן כמעט כל אפליקציה כ"מוגבלת ברקע" (RUN_ANY_IN_BACKGROUND
-     * ignore). על החייגן זה קטלני: כשהתהליך שלו לא רץ, Telecom לא מצליח להעיר את
-     * ה-InCallService בשיחה נכנסת - אין מסך, אין באנר, והשיחה נראית רק מתוך החייגן.
-     * כאן (שרץ תמיד) מחזירים את ההיתר בכל הפעלה, כי היצרן עלול להחיל את ההגבלה מחדש.
-     */
-    private fun exemptCallAppsFromBackgroundRestriction() {
-        val packages = listOf("com.future.dialer", "com.future.messages", "com.future.clock", packageName)
-        controlManager?.runRootCommandAsync(
-            packages.joinToString("; ") { "cmd appops set $it RUN_ANY_IN_BACKGROUND allow; dumpsys deviceidle whitelist +$it" }
-        )
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
@@ -321,8 +308,6 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
     }
 
     private fun launchVoiceAssistant() {
-        // נעול (גם כשמסך הנעילה פינה מקום לשיחה/מעורר): לא פותחים אפליקציה מעליו
-        if (FutureUIState.isSecured) return
         try {
             val intent = packageManager.getLaunchIntentForPackage(VOICE_ASSISTANT_PACKAGE) ?: return
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -336,7 +321,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
      * bringFrontIntent), כדי שכל אפליקציה בחזית תוכל להאזין ולהגיב. */
     private fun sendOptionsShortPressBroadcast() {
         try {
-            sendBroadcast(Intent(FutureUIActions.ACTION_OPTIONS_SHORT_PRESS), FutureUIActions.PERMISSION_SYSTEM)
+            sendBroadcast(Intent(FutureUIActions.ACTION_OPTIONS_SHORT_PRESS))
         } catch (e: Exception) {
             Log.e("FutureUI", "Error sending options short-press broadcast", e)
         }
@@ -418,6 +403,8 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
 
     private fun showVolumeOverlay() {
         hideVolumeRunnable?.let { mainHandler.removeCallbacks(it) }
+        mainHandler.removeCallbacks(removeVolumeRunnable)
+        volumeVisible.targetState = true
 
         if (volumeOverlayView == null) {
             try {
@@ -441,7 +428,8 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
                         FutureUITheme {
                             VolumeOverlay(
                                 level = volumeLevelState.floatValue,
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth(),
+                                visibleState = volumeVisible,
                             )
                         }
                     }
@@ -456,7 +444,16 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
         mainHandler.postDelayed(hideVolumeRunnable!!, 1500)
     }
 
+    /** מתחיל את היציאה; החלון מוסר אחריה. */
     private fun hideVolumeOverlay() {
+        if (volumeOverlayView == null) return
+        volumeVisible.targetState = false
+        mainHandler.removeCallbacks(removeVolumeRunnable)
+        mainHandler.postDelayed(removeVolumeRunnable, 260)
+    }
+
+    private fun removeVolumeOverlayNow() {
+        mainHandler.removeCallbacks(removeVolumeRunnable)
         try {
             volumeOverlayView?.let { windowManager.removeView(it) }
         } catch (e: Exception) {
@@ -478,8 +475,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
         if (cls == null) return
         val byClass = POWER_MENU_CLASS_HINTS.any { cls.contains(it, ignoreCase = true) }
         val texts = if (byClass) emptyList() else windowTexts(event)
-        // בלי הטקסטים עצמם: חלון מערכת יכול להציג תוכן פרטי (שם, מספר, הודעה).
-        Log.i("FutureUI", "system window: $pkg / $cls / ${texts.size} texts")
+        Log.i("FutureUI", "system window: $pkg / $cls / ${texts.take(8)}")
         val byText = texts.count { t -> POWER_MENU_LABELS.any { t.equals(it, ignoreCase = true) } } >= 1 &&
             texts.any { t -> POWER_OFF_LABELS.any { t.equals(it, ignoreCase = true) } }
         if (!byClass && !byText) return
@@ -531,23 +527,17 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
                         com.future.futureui.controlcenter.ui.PowerMenuScreen(
                             onPowerOff = {
                                 hidePowerMenu()
-                                android.widget.Toast.makeText(this@StatusBarAccessibilityService, "מכבה את המכשיר...", android.widget.Toast.LENGTH_SHORT).show()
+                                android.widget.Toast.makeText(this@StatusBarAccessibilityService, tr("מכבה את המכשיר..."), android.widget.Toast.LENGTH_SHORT).show()
                                 controlManager?.runRootCommandAsync("reboot -p")
                             },
                             onRestart = {
                                 hidePowerMenu()
-                                android.widget.Toast.makeText(this@StatusBarAccessibilityService, "מפעיל מחדש...", android.widget.Toast.LENGTH_SHORT).show()
+                                android.widget.Toast.makeText(this@StatusBarAccessibilityService, tr("מפעיל מחדש..."), android.widget.Toast.LENGTH_SHORT).show()
                                 controlManager?.runRootCommandAsync("reboot")
                             },
                             onCancel = { hidePowerMenu() },
                             airplaneOn = powerAirplaneState.value,
-                            onAirplane = onAirplane@{
-                                // מצב טיסה מהמכשיר נעול = גנב מנתק אותו מהרשת ומאיתור. כמו
-                                // "נעילת רשת ואבטחה" בסמסונג: רק אחרי פתיחה.
-                                if (FutureUIState.isSecured) {
-                                    android.widget.Toast.makeText(this@StatusBarAccessibilityService, "צריך לפתוח את הנעילה קודם", android.widget.Toast.LENGTH_SHORT).show()
-                                    return@onAirplane
-                                }
+                            onAirplane = {
                                 val next = !powerAirplaneState.value
                                 powerAirplaneState.value = next
                                 controlManager?.let { cm ->
@@ -614,8 +604,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
     /** מסך "אפליקציות אחרונות" עצמאי מבוסס UsageStatsManager, במקום GLOBAL_ACTION_RECENTS המכוער. */
     private fun showRecentApps() {
         if (recentsVisible) return
-        // נעול (גם כשמסך הנעילה פינה מקום לשיחה): האחרונות מציגות צילומים של כל האפליקציות
-        if (FutureUIState.isSecured) return
+        if (FutureUIState.isLocked || FutureUIState.isSecured) return
         try {
             if (!recentAppsManager.hasUsageAccess()) {
                 controlManager?.runRootCommandAsync("appops set $packageName GET_USAGE_STATS allow")
@@ -654,9 +643,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
                                 hideRecentApps()
                             },
                             onClose = { app ->
-                                if (com.future.sharednav.root.RootShell.isSafeToken(app.packageName)) {
-                                    controlManager?.runRootCommandAsync("am force-stop ${com.future.sharednav.root.RootShell.quote(app.packageName)}")
-                                }
+                                controlManager?.runRootCommandAsync("am force-stop ${app.packageName}")
                                 recentAppsManager.remove(app.packageName)
                                 recentSnapshots.remove(app.packageName)
                                 recentAppsList.remove(app)
@@ -664,10 +651,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
                             onCloseAll = {
                                 val all = recentAppsList.toList()
                                 if (all.isNotEmpty()) {
-                                    controlManager?.runRootCommandAsync(
-                                        all.map { it.packageName }.filter(com.future.sharednav.root.RootShell::isSafeToken)
-                                            .joinToString("; ") { "am force-stop ${com.future.sharednav.root.RootShell.quote(it)}" }
-                                    )
+                                    controlManager?.runRootCommandAsync(all.joinToString("; ") { "am force-stop ${it.packageName}" })
                                 }
                                 recentAppsManager.clear()
                                 recentSnapshots.clear()
@@ -716,8 +700,9 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
     }
 
     override fun onDestroy() {
+        if (com.future.futureui.utils.FrostedBackdrop.service === this) com.future.futureui.utils.FrostedBackdrop.service = null
         try {
-            hideVolumeOverlay()
+            removeVolumeOverlayNow()
             hideRecentApps()
             hidePowerMenu()
             lockController?.dispose()
@@ -754,7 +739,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
         const val ACTION_LOCK_NOW = "com.future.futureui.ACTION_LOCK_NOW"
         private val POWER_MENU_CLASS_HINTS = listOf("globalactions", "ActionsDialog", "PowerMenu", "ShutdownDialog")
         /** השורות של תפריט הכיבוי של אנדרואיד, עברית ואנגלית. */
-        private val POWER_OFF_LABELS = listOf("כיבוי", "כבה", "Power off", "Shut down", "Shutdown")
-        private val POWER_MENU_LABELS = POWER_OFF_LABELS + listOf("הפעלה מחדש", "אתחול", "Restart", "Reboot", "מצב טיסה", "Airplane mode")
+        private val POWER_OFF_LABELS = listOf(tr("כיבוי"), tr("כבה"), "Power off", "Shut down", "Shutdown")
+        private val POWER_MENU_LABELS = POWER_OFF_LABELS + listOf(tr("הפעלה מחדש"), tr("אתחול"), "Restart", "Reboot", tr("מצב טיסה"), "Airplane mode")
     }
 }

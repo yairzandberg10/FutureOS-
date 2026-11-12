@@ -1,5 +1,6 @@
 package com.future.translate
 
+import com.future.sharednav.i18n.tr
 import android.Manifest
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -85,7 +86,7 @@ class MainActivity : ComponentActivity() {
 
     private fun copyToClipboard(text: String) {
         val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager ?: return
-        clipboard.setPrimaryClip(ClipData.newPlainText("תרגום", text))
+        clipboard.setPrimaryClip(ClipData.newPlainText(tr("תרגום"), text))
     }
 
     private fun shareText(text: String) {
@@ -94,7 +95,7 @@ class MainActivity : ComponentActivity() {
             putExtra(Intent.EXTRA_TEXT, text)
         }
         try {
-            com.future.sharednav.share.FutureShare.open(this, send, "שתף תרגום")
+            com.future.sharednav.share.FutureShare.open(this, send, tr("שתף תרגום"))
         } catch (e: Exception) {
             // אין אפליקציה שמקבלת טקסט - אין לאן לשתף.
         }

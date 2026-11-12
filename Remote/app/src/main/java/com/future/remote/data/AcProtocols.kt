@@ -1,5 +1,7 @@
 package com.future.remote.data
 
+import com.future.sharednav.i18n.tr
+
 /**
  * שלטי מזגנים של החברות הגדולות בישראל (אלקטרה, תדיראן, טורנדו,
  * מיצובישי אלקטריק, פוג'יטסו, LG, Gree, Midea) והדגמים הנפוצים שלהן.
@@ -14,28 +16,28 @@ package com.future.remote.data
  * Midea, תדיראן משתמשת בשלטי Gree, טורנדו עבדה עם Midea ועם Gree).
  */
 enum class AcProtocol(val label: String) {
-    ELECTRA("שלט YKR (קלאסי)"),
-    MIDEA("שלט Midea (דגמים חדשים)"),
-    TADIRAN("שלט תדיראן"),
-    GREE("שלט Gree"),
-    MITSUBISHI("שלט Mitsubishi Electric"),
-    FUJITSU("שלט Fujitsu ARRAH2E"),
-    LG("שלט LG"),
+    ELECTRA(tr("שלט YKR (קלאסי)")),
+    MIDEA(tr("שלט Midea (דגמים חדשים)")),
+    TADIRAN(tr("שלט תדיראן")),
+    GREE(tr("שלט Gree")),
+    MITSUBISHI(tr("שלט Mitsubishi Electric")),
+    FUJITSU(tr("שלט Fujitsu ARRAH2E")),
+    LG(tr("שלט LG")),
 }
 
 enum class AcCompany(val label: String, val protocols: List<AcProtocol>) {
-    ELECTRA("אלקטרה", listOf(AcProtocol.ELECTRA, AcProtocol.MIDEA)),
-    TADIRAN("תדיראן", listOf(AcProtocol.TADIRAN, AcProtocol.GREE)),
-    TORNADO("טורנדו", listOf(AcProtocol.GREE, AcProtocol.MIDEA)),
-    MITSUBISHI("מיצובישי אלקטריק", listOf(AcProtocol.MITSUBISHI)),
-    FUJITSU("פוג'יטסו", listOf(AcProtocol.FUJITSU)),
+    ELECTRA(tr("אלקטרה"), listOf(AcProtocol.ELECTRA, AcProtocol.MIDEA)),
+    TADIRAN(tr("תדיראן"), listOf(AcProtocol.TADIRAN, AcProtocol.GREE)),
+    TORNADO(tr("טורנדו"), listOf(AcProtocol.GREE, AcProtocol.MIDEA)),
+    MITSUBISHI(tr("מיצובישי אלקטריק"), listOf(AcProtocol.MITSUBISHI)),
+    FUJITSU(tr("פוג'יטסו"), listOf(AcProtocol.FUJITSU)),
     LG("LG", listOf(AcProtocol.LG)),
     GREE("Gree", listOf(AcProtocol.GREE)),
     MIDEA("Midea", listOf(AcProtocol.MIDEA)),
 }
 
-enum class AcMode(val label: String) { COOL("קירור"), HEAT("חימום"), FAN("מאוורר"), DRY("ייבוש"), AUTO("אוטומטי") }
-enum class AcFan(val label: String) { AUTO("אוטו'"), LOW("נמוך"), MED("בינוני"), HIGH("גבוה") }
+enum class AcMode(val label: String) { COOL(tr("קירור")), HEAT(tr("חימום")), FAN(tr("מאוורר")), DRY(tr("ייבוש")), AUTO(tr("אוטומטי")) }
+enum class AcFan(val label: String) { AUTO(tr("אוטו'")), LOW(tr("נמוך")), MED(tr("בינוני")), HIGH(tr("גבוה")) }
 
 data class AcState(
     val power: Boolean = false,

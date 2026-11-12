@@ -116,8 +116,8 @@ fun BoxScope.FutureSnackbarHost(state: FutureSnackbarState, theme: FutureTheme) 
     AnimatedVisibility(
         visible = message != null,
         modifier = Modifier.align(Alignment.BottomCenter),
-        enter = slideInVertically(FutureMotion.enter()) { it / 2 } + fadeIn(FutureMotion.enter()),
-        exit = fadeOut(FutureMotion.exit()),
+        enter = slideInVertically(FutureMotion.Springs.dialogOffset) { it } + fadeIn(FutureMotion.enter()),
+        exit = slideOutVertically(FutureMotion.exit()) { it / 2 } + fadeOut(FutureMotion.exit()),
     ) {
         Box { FutureSnackbar(message ?: last[0], theme) }
     }

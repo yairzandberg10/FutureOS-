@@ -226,7 +226,7 @@ fun StatusBarScreen(
         callDuration = if (isCallActive) "%d:%02d".format(callSeconds / 60, callSeconds % 60) else null
     )
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         when (barStyle) {
             StatusBarLayoutManager.STYLE_QUIET -> QuietBar(modifier, manager, status)
             StatusBarLayoutManager.STYLE_CAPSULES -> CapsulesBar(modifier, manager, status)

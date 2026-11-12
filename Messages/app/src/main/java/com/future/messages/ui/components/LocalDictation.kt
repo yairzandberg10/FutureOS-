@@ -1,5 +1,6 @@
 package com.future.messages.ui.components
 
+import com.future.sharednav.i18n.tr
 import android.Manifest
 import android.content.ComponentName
 import android.content.Context
@@ -46,10 +47,7 @@ private val AssistantRecognizer = ComponentName(
     "com.future.assistant.asr.AssistantRecognitionService",
 )
 
-// רק העוזר האמיתי של FutureOS (אותה חתימה): מה שמוכתב עובר אליו, והטקסט שחוזר נכנס להודעה
 private fun assistantRecognizerInstalled(context: Context): Boolean =
-    context.packageManager.checkSignatures(context.packageName, AssistantRecognizer.packageName) ==
-        android.content.pm.PackageManager.SIGNATURE_MATCH &&
     context.packageManager.queryIntentServices(
         Intent("android.speech.RecognitionService").setPackage(AssistantRecognizer.packageName), 0,
     ).isNotEmpty()
@@ -83,10 +81,10 @@ fun rememberLocalDictation(onText: (String) -> Unit): LocalDictation {
             override fun onEvent(eventType: Int, params: Bundle?) {}
             override fun onError(error: Int) {
                 val message = when (error) {
-                    SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "לא זוהה דיבור"
-                    SpeechRecognizer.ERROR_AUDIO -> "שגיאה במיקרופון"
-                    SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "אין הרשאת מיקרופון"
-                    else -> "התמלול נכשל"
+                    SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> tr("לא זוהה דיבור")
+                    SpeechRecognizer.ERROR_AUDIO -> tr("שגיאה במיקרופון")
+                    SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> tr("אין הרשאת מיקרופון")
+                    else -> tr("התמלול נכשל")
                 }
                 Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                 finish()
@@ -109,7 +107,7 @@ fun rememberLocalDictation(onText: (String) -> Unit): LocalDictation {
     }
 
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (granted) start() else Toast.makeText(context, "צריך הרשאת מיקרופון להכתבה", Toast.LENGTH_SHORT).show()
+        if (granted) start() else Toast.makeText(context, tr("צריך הרשאת מיקרופון להכתבה"), Toast.LENGTH_SHORT).show()
     }
 
     dictation = remember {
@@ -129,18 +127,8 @@ fun rememberLocalDictation(onText: (String) -> Unit): LocalDictation {
         }
     }
 
-    // יציאה מהמסך באמצע הכתבה (HOME, שיחה) - ההקלטה נעצרת ולא נמשכת ברקע
-    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner) {
-        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
-            if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP && (dictation.listening || dictation.processing)) {
-                recognizerHolder[0]?.cancel()
-                finish()
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
+    DisposableEffect(Unit) {
         onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
             recognizerHolder[0]?.destroy()
             recognizerHolder[0] = null
         }

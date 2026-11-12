@@ -39,6 +39,7 @@ object DefaultApps {
         "com.future.remote",
         "com.future.assistant",
         "com.future.flashlight",
+        "com.future.frixa",
         "com.future.translate",
         "com.future.recorder",
         "com.alert.meserhadash"

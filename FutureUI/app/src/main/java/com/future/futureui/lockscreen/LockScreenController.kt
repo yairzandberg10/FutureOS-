@@ -1,5 +1,6 @@
 package com.future.futureui.lockscreen
 
+import com.future.sharednav.i18n.tr
 import com.future.futureui.utils.safeText
 import android.app.AlarmManager
 import android.content.BroadcastReceiver
@@ -214,12 +215,10 @@ class LockScreenController(
     }
 
     private fun showWindow() {
-        if (view != null) { runCatching { refreshDynamic() }; return }
-        // תקלה בטפט או בווידג'טים לא יכולה למנוע את החלון עצמו - אחרת המכשיר
-        // "נעול" בלי מסך נעילה (פתוח לגמרי).
-        runCatching { loadWallpaper() }.onFailure { Log.e(TAG, "wallpaper failed", it) }
-        runCatching { refreshDynamic() }.onFailure { Log.e(TAG, "refresh failed", it) }
+        if (view != null) { refreshDynamic(); return }
         try {
+            loadWallpaper()
+            refreshDynamic()
             val params = WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT,
                 WindowManager.LayoutParams.MATCH_PARENT,
@@ -231,7 +230,9 @@ class LockScreenController(
                     // הקלטת מסך/צילום של אפליקציה אחרת לא תופסת את מסך הנעילה
                     // (התראות, הקלדת הקוד)
                     WindowManager.LayoutParams.FLAG_SECURE,
-                PixelFormat.OPAQUE
+                // TRANSLUCENT ולא OPAQUE: בביטול הנעילה הרקע נעלם עם התוכן ומתחת
+                // מתגלה האפליקציה. כל עוד המסך נעול התוכן אטום ממילא.
+                PixelFormat.TRANSLUCENT
             )
             val v = ComposeView(service).apply {
                 setViewTreeLifecycleOwner(owner as LifecycleOwner)
@@ -250,8 +251,6 @@ class LockScreenController(
             main.postDelayed(ticker, 3_000)
         } catch (e: Exception) {
             Log.e(TAG, "Error showing lock screen", e)
-            // לא נשארים נעולים-בלי-חלון: מנסים שוב עד שהחלון עולה
-            if (locked && !suspended) main.postDelayed({ if (locked && !suspended && view == null) showWindow() }, 500)
         }
     }
 
@@ -283,7 +282,11 @@ class LockScreenController(
 
     /** שיחה נכנסת בזמן נעילה: מפנים את המסך למסך השיחה, ונועלים שוב כשהיא נגמרת. */
     fun onCallRinging() {
-        if (locked && !suspended) suspend()
+        // השידור הוא ציבורי: מפנים את הנעילה רק אם באמת יש שיחה (בודקים שוב אחרי
+        // רגע, כי מצב הטלפוניה יכול להתעדכן מעט אחרי השידור מה-dialer).
+        if (!locked || suspended) return
+        if (isInCall()) { suspend(); return }
+        main.postDelayed({ if (locked && !suspended && isInCall()) suspend() }, 700)
     }
 
     /**
@@ -391,8 +394,8 @@ class LockScreenController(
     }
 
     private fun strongAuthReason(): String =
-        if (settings.prefs.getInt("face_failures", 0) >= LockSettings.MAX_FACE_FAILURES) "יותר מדי ניסיונות זיהוי - הזן קוד"
-        else "נדרש קוד כדי להפעיל את זיהוי הפנים"
+        if (settings.prefs.getInt("face_failures", 0) >= LockSettings.MAX_FACE_FAILURES) tr("יותר מדי ניסיונות זיהוי - הזן קוד")
+        else tr("נדרש קוד כדי להפעיל את זיהוי הפנים")
 
     // --------------------------------------------------------------- מקשים
 

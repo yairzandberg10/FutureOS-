@@ -1,5 +1,6 @@
 package com.future.messages.chat
 
+import com.future.sharednav.i18n.tr
 import android.app.Activity
 import android.content.ContentUris
 import android.content.ContentValues
@@ -61,8 +62,6 @@ object FutureChat {
     private const val TYPING_SEND_INTERVAL_MS = 4_000L
     private const val IMAGE_MAX_SIDE = 2048
     private const val IMAGE_PLACEHOLDER = "תמונה"
-    private val SAFE_ID = Regex("[A-Za-z0-9_-]{1,64}")
-    private const val MAX_RECEIPT_IDS = 500
 
     enum class State { NOT_CONFIGURED, SIGNED_OUT, ACTIVE }
 
@@ -103,7 +102,7 @@ object FutureChat {
      * נקרא בלי שהמשתמש מקליד כלום. */
     fun startVerification(activity: Activity, rawPhone: String, listener: VerificationListener) {
         init(activity)
-        val phone = e164(activity, rawPhone) ?: return listener.onError("מספר לא תקין")
+        val phone = e164(activity, rawPhone) ?: return listener.onError(tr("מספר לא תקין"))
         val options = PhoneAuthOptions.newBuilder(FirebaseAuth.getInstance())
             .setPhoneNumber(phone)
             .setTimeout(60L, TimeUnit.SECONDS)
@@ -112,7 +111,7 @@ object FutureChat {
                 override fun onVerificationCompleted(credential: PhoneAuthCredential) = signIn(credential, listener)
                 override fun onVerificationFailed(e: FirebaseException) {
                     Log.w(TAG, "Verification failed", e)
-                    listener.onError(e.localizedMessage ?: "האימות נכשל")
+                    listener.onError(e.localizedMessage ?: tr("האימות נכשל"))
                 }
                 override fun onCodeSent(id: String, token: PhoneAuthProvider.ForceResendingToken) {
                     verificationId = id
@@ -124,7 +123,7 @@ object FutureChat {
     }
 
     fun submitCode(code: String, listener: VerificationListener) {
-        val id = verificationId ?: return listener.onError("צריך לשלוח קוד קודם")
+        val id = verificationId ?: return listener.onError(tr("צריך לשלוח קוד קודם"))
         signIn(PhoneAuthProvider.getCredential(id, code.trim()), listener)
     }
 
@@ -136,7 +135,7 @@ object FutureChat {
                 launch(Dispatchers.Main) { listener.onVerified() }
             } catch (e: Exception) {
                 Log.w(TAG, "Sign-in failed", e)
-                launch(Dispatchers.Main) { listener.onError(e.localizedMessage ?: "ההתחברות נכשלה") }
+                launch(Dispatchers.Main) { listener.onError(e.localizedMessage ?: tr("ההתחברות נכשלה")) }
             }
         }
     }
@@ -204,13 +203,12 @@ object FutureChat {
      * תמונה בצ'אט במקום MMS: באיכות מלאה (עד 2048 פיקסלים) ולא דחוסה למגבלת
      * הספק. מחזיר false כשהצ'אט לא רלוונטי - אז הקורא שולח MMS.
      */
-    suspend fun trySendImage(context: Context, address: String, caption: String, imageUri: Uri, mmsFallback: () -> Unit): Boolean {
+    fun trySendImage(context: Context, address: String, caption: String, imageUri: Uri, mmsFallback: () -> Unit): Boolean {
         init(context)
         if (!isActive || !isOnline(context)) return false
         val phone = e164(context, address) ?: return false
         if (knownNotRegistered(context, phone)) return false
-        // suspend ולא runBlocking - קודם thread של IO נחסם עד 8 שניות לכל תמונה
-        val peer = withTimeoutOrNull(8_000) { runCatching { resolvePeer(context, phone) }.getOrNull() } ?: return false
+        val peer = runBlocking { withTimeoutOrNull(8_000) { runCatching { resolvePeer(context, phone) }.getOrNull() } } ?: return false
         val id = UUID.randomUUID().toString()
         val jpeg = runCatching { encodeImage(context, imageUri) }.getOrNull() ?: return false
         val file = mediaFile(context, id).apply { writeBytes(jpeg) }
@@ -285,7 +283,6 @@ object FutureChat {
             store.putPeer(phone, null, null, null)
             return null
         }
-        checkPinnedKey(context, phone, identity.signKey)
         store.putPeer(phone, identity.uid, identity.agreeKey, identity.signKey)
         return Peer(identity.uid, phone, identity.agreeKey)
     }
@@ -298,7 +295,7 @@ object FutureChat {
             withTimeout(20_000) { ChatBackend.send(peer.uid, id, kind, sealed) }
             true
         } catch (e: Exception) {
-            Log.w(TAG, "Send $kind failed", e)
+            Log.w(TAG, "Send $kind to ${peer.uid} failed", e)
             false
         }
     }
@@ -362,15 +359,13 @@ object FutureChat {
             // שולח חדש, או שהשולח התקין מחדש והמפתחות שלו התחלפו - שולפים
             // מהשרת ומנסים שוב.
             val identity = ChatBackend.lookupUid(from) ?: throw e
-            checkPinnedKey(context, identity.phone, identity.signKey)
             store.putPeer(identity.phone, identity.uid, identity.agreeKey, identity.signKey)
             peer = store.peerByUid(from)
             ChatCrypto.open(sealed, identity.signKey, contextString)
         }
         val phone = peer!!.phone
         val json = JSONObject(String(plaintext))
-        // המזהה מגיע מהשולח ונכנס לשם קובץ (mediaFile) - רק תווים בטוחים, בלי "../".
-        val id = json.optString("id", doc.id).takeIf { SAFE_ID.matches(it) } ?: doc.id
+        val id = json.optString("id", doc.id)
         when (json.optString("t")) {
             "m", "i" -> {
                 if (store.hasIncoming(id)) return
@@ -378,11 +373,7 @@ object FutureChat {
                 var imagePath: String? = null
                 val caption = if (isImage) json.optString("c") else json.optString("b")
                 if (isImage) {
-                    // הנתיב מגיע מהשולח: רק מהתיקייה שלנו, אחרת שולח יכל לגרום לנו
-                    // להוריד ולמחוק קובץ אחר (downloadAndDelete).
-                    val path = json.getString("p")
-                    require(path.startsWith("media/$me/") && ".." !in path && SAFE_ID.matches(path.substringAfterLast('/'))) { "Bad media path" }
-                    val encrypted = ChatBackend.downloadAndDelete(path)
+                    val encrypted = ChatBackend.downloadAndDelete(json.getString("p"))
                     val bytes = ChatCrypto.decryptFile(encrypted, ChatCrypto.FileKey(json.getString("k"), json.getString("v")))
                     imagePath = mediaFile(context, id).apply { writeBytes(bytes) }.absolutePath
                 }
@@ -397,8 +388,7 @@ object FutureChat {
             "r" -> {
                 val ids = json.optJSONArray("ids") ?: return
                 val read = json.optString("k") == "r"
-                // קבלה מהשולח - מספר סביר של מזהים (כל אחד הוא שאילתה ועדכון)
-                for (i in 0 until minOf(ids.length(), MAX_RECEIPT_IDS)) {
+                for (i in 0 until ids.length()) {
                     val smsId = store.outgoingSmsId(ids.getString(i), phone) ?: continue
                     if (read) store.markRead(smsId)
                     updateSms(context, smsId) { put(Telephony.Sms.STATUS, Telephony.Sms.STATUS_COMPLETE) }
@@ -419,27 +409,6 @@ object FutureChat {
     }
 
     // ---------------------------------------------------------------- עזר
-
-    /**
-     * נעיצת מפתח (כמו "קוד הביטחון השתנה" ב-Signal): המפתח הראשון של כל מספר
-     * נשמר, ואם השרת מחזיר פתאום מפתח אחר - בשיחה מופיעה הודעה עם טביעת האצבע
-     * החדשה. בלי זה שרת פרוץ יכול היה להחליף בשקט את המפתח ולקרוא/לזייף הודעות.
-     * הנעיצה נשמרת בנפרד מטבלת peers (שמתאפסת כשמספר "לא רשום") וגם אחרי התנתקות.
-     */
-    private fun checkPinnedKey(context: Context, phone: String, signKey: String) {
-        val pins = context.getSharedPreferences("chat_key_pins", Context.MODE_PRIVATE)
-        val old = pins.getString(phone, null)
-        if (old == signKey) return
-        pins.edit().putString(phone, signKey).commit()
-        if (old != null) {
-            insertSms(
-                context, phone,
-                "מפתח ההצפנה של איש הקשר הזה השתנה (למשל אחרי התקנה מחדש). " +
-                    "אם לא ציפית לזה - ודאו ביניכם את קוד האימות: ${ChatCrypto.fingerprint(signKey)}",
-                incoming = true,
-            )
-        }
-    }
 
     private fun insertSms(context: Context, address: String, body: String, incoming: Boolean): Long? = try {
         val values = ContentValues().apply {

@@ -1,5 +1,6 @@
 package com.future.recorder.ui
 
+import com.future.sharednav.i18n.tr
 import android.media.MediaPlayer
 import android.widget.Toast
 import androidx.compose.foundation.Canvas
@@ -77,7 +78,7 @@ fun PlayerScreen(theme: FutureTheme, file: File, onBack: () -> Unit) {
             player.start()
             isPlaying = true
         }.onFailure {
-            Toast.makeText(context, "לא ניתן להשמיע את ההקלטה", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, tr("לא ניתן להשמיע את ההקלטה"), Toast.LENGTH_SHORT).show()
         }
         onDispose { runCatching { player.stop() }; player.release() }
     }
@@ -123,7 +124,7 @@ fun PlayerScreen(theme: FutureTheme, file: File, onBack: () -> Unit) {
     var confirmDelete by remember { mutableStateOf(false) }
     onOptionsKeyPress { menuOpen = !menuOpen }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -155,7 +156,7 @@ fun PlayerScreen(theme: FutureTheme, file: File, onBack: () -> Unit) {
                     fontFamily = FutureTypography.monoFamily,
                 )
                 Text(
-                    "מתוך ${formatDuration(durationMs.toLong())}",
+                    tr("מתוך {0}", formatDuration(durationMs.toLong())),
                     color = theme.mutedTextColor,
                     fontSize = FutureTypography.summary,
                 )
@@ -165,12 +166,12 @@ fun PlayerScreen(theme: FutureTheme, file: File, onBack: () -> Unit) {
                 }
                 Spacer(modifier = Modifier.height(FutureDimens.spacingLg))
                 FutureButton(
-                    if (isPlaying) "השהה" else "הפעל", theme, ::toggle,
+                    if (isPlaying) tr("השהה") else tr("הפעל"), theme, ::toggle,
                     fillMaxWidth = true, focusRequester = playButton,
                 )
             }
             Text(
-                "חצים 5 שניות · 4/6 חצי דקה · אפשרויות",
+                tr("חצים 5 שניות · 4/6 חצי דקה · אפשרויות"),
                 color = theme.subtleTextColor,
                 fontSize = FutureTypography.caption,
                 textAlign = TextAlign.Center,
@@ -183,13 +184,13 @@ fun PlayerScreen(theme: FutureTheme, file: File, onBack: () -> Unit) {
 
     if (menuOpen) {
         FutureOptionsMenu(theme = theme, onDismissRequest = { menuOpen = false }, header = file.nameWithoutExtension) {
-            FutureMenuRow("שתף", FutureIcons.Share, theme, { menuOpen = false; shareRecording(context, file) })
-            FutureMenuRow("מחק", FutureIcons.Delete, theme, { menuOpen = false; confirmDelete = true }, destructive = true)
+            FutureMenuRow(tr("שתף"), FutureIcons.Share, theme, { menuOpen = false; shareRecording(context, file) })
+            FutureMenuRow(tr("מחק"), FutureIcons.Delete, theme, { menuOpen = false; confirmDelete = true }, destructive = true)
         }
     }
     if (confirmDelete) {
         ConfirmDialog(
-            message = "למחוק את \"${file.nameWithoutExtension}\"?",
+            message = tr("למחוק את \"{0}\"?", file.nameWithoutExtension),
             theme = theme,
             onCancel = { confirmDelete = false },
             onConfirm = {

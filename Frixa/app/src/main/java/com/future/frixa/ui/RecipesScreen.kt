@@ -1,5 +1,6 @@
 package com.future.frixa.ui
 
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.theme.readableAccentColor
 import com.future.sharednav.theme.FutureShapes
@@ -84,7 +85,7 @@ private fun RecipeRow(recipe: Recipe, theme: FutureTheme, isFocused: Boolean) {
                     tint = theme.textColor.copy(alpha = 0.5f),
                     modifier = Modifier.padding(end = 2.dp),
                 )
-                Text("${recipe.minutes} דק'", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.label)
+                Text(tr("{0} דק'", recipe.minutes), color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.label)
             }
         }
         Icon(FutureIcons.AutoMirrored.KeyboardArrowLeft, contentDescription = null, tint = theme.textColor.copy(alpha = 0.4f))

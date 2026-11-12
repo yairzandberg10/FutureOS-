@@ -78,10 +78,7 @@ class Listener(private val context: Context) {
      * משלה או לא זמינה בלי רשת/חשבון.
      */
     private val assistantService: ComponentName? = try {
-        // רק העוזר האמיתי של FutureOS (אותה חתימה) - לא אפליקציה זרה בשם החבילה שלו
-        if (context.packageManager.checkSignatures(context.packageName, "com.future.assistant") !=
-            android.content.pm.PackageManager.SIGNATURE_MATCH) null
-        else context.packageManager
+        context.packageManager
             .queryIntentServices(Intent("android.speech.RecognitionService").setPackage("com.future.assistant"), 0)
             .firstOrNull()
             ?.serviceInfo

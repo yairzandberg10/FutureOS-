@@ -1,5 +1,6 @@
 package com.future.futureui.controlcenter.ui.components
 
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
 import androidx.compose.foundation.Image
@@ -55,7 +56,7 @@ fun MusicPlayerCard(manager: ControlManager, labelColor: Color = Color.Black) {
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = "לחצו OK לאישור גישה למוזיקה",
+                text = tr("לחצו OK לאישור גישה למוזיקה"),
                 color = labelColor,
                 fontSize = FutureTypography.body,
                 fontWeight = FontWeight.Bold,
@@ -101,7 +102,7 @@ fun MusicPlayerCard(manager: ControlManager, labelColor: Color = Color.Black) {
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
-                    text = "אין מוזיקה מתנגנת",
+                    text = tr("אין מוזיקה מתנגנת"),
                     fontSize = FutureTypography.summary,
                     color = labelColor,
                     fontWeight = FontWeight.Bold,

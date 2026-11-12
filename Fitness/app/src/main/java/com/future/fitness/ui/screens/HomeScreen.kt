@@ -1,5 +1,6 @@
 package com.future.fitness.ui.screens
 
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.AvatarListSize
 import com.future.sharednav.components.FutureAvatar
@@ -90,9 +91,9 @@ fun HomeScreen(
     onOpenNextWorkoutDetail: () -> Unit,
 ) {
     val items = listOf(
-        MenuItem("1", FutureIcons.History, "היסטוריה", "אימונים קודמים", onOpenHistory),
-        MenuItem("2", FutureIcons.FavoriteBorder, "בריאות", "הסברים ואזורי דופק", onOpenHealth),
-        MenuItem("3", FutureIcons.Settings, "הגדרות", "עיצוב, פרופיל ושעון חכם", onOpenSettings),
+        MenuItem("1", FutureIcons.History, tr("היסטוריה"), tr("אימונים קודמים"), onOpenHistory),
+        MenuItem("2", FutureIcons.FavoriteBorder, tr("בריאות"), tr("הסברים ואזורי דופק"), onOpenHealth),
+        MenuItem("3", FutureIcons.Settings, tr("הגדרות"), tr("עיצוב, פרופיל ושעון חכם"), onOpenSettings),
     )
 
     val weekDays = remember(history) { buildWeekDots(history) }
@@ -135,7 +136,7 @@ fun HomeScreen(
             modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 4.dp),
         )
         Text(
-            "מוכנים לשבור את השיא היומי?",
+            tr("מוכנים לשבור את השיא היומי?"),
             color = theme.textColor.copy(alpha = 0.6f),
             fontSize = FutureTypography.summary,
             modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 16.dp),
@@ -163,8 +164,8 @@ fun HomeScreen(
                         .padding(vertical = 14.dp, horizontal = 14.dp),
                 ) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("רצף אימונים שבועי", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.label, fontWeight = FontWeight.Bold)
-                        Text("$doneCount מתוך 7 ימים", color = theme.sectionHeaderColor, fontSize = FutureTypography.label, fontWeight = FontWeight.Bold)
+                        Text(tr("רצף אימונים שבועי"), color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.label, fontWeight = FontWeight.Bold)
+                        Text(tr("{0} מתוך 7 ימים", doneCount), color = theme.sectionHeaderColor, fontSize = FutureTypography.label, fontWeight = FontWeight.Bold)
                     }
                     Spacer(Modifier.height(10.dp))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -209,15 +210,15 @@ fun HomeScreen(
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("${stats.activeMinutesToday}", color = theme.textColor, fontSize = FutureTypography.screenTitle, fontWeight = FontWeight.ExtraBold)
-                            Text("דק׳ מ-$WHO_DAILY_ACTIVE_MINUTES_TARGET", color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.caption)
+                            Text(tr("דק׳ מ-{0}", WHO_DAILY_ACTIVE_MINUTES_TARGET), color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.caption)
                         }
                     }
                     Spacer(Modifier.width(16.dp))
                     Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        MiniStatRow(FutureIcons.LocalFireDepartment, "${stats.caloriesToday} קק״ל היום", theme.dangerColor, theme)
-                        MiniStatRow(FutureIcons.LocalFireDepartment, "${stats.streakDays} ימי רצף", theme.readableAccentColor, theme)
+                        MiniStatRow(FutureIcons.LocalFireDepartment, tr("{0} קק״ל היום", stats.caloriesToday), theme.dangerColor, theme)
+                        MiniStatRow(FutureIcons.LocalFireDepartment, tr("{0} ימי רצף", stats.streakDays), theme.readableAccentColor, theme)
                         Text(
-                            "יעד יומי מומלץ (WHO): $WHO_DAILY_ACTIVE_MINUTES_TARGET דק׳ פעילות",
+                            tr("יעד יומי מומלץ (WHO): {0} דק׳ פעילות", WHO_DAILY_ACTIVE_MINUTES_TARGET),
                             color = theme.mutedTextColor,
                             fontSize = FutureTypography.caption,
                         )
@@ -248,10 +249,10 @@ fun HomeScreen(
                             FutureAvatar(theme = theme, icon = FutureIcons.FitnessCenter, size = AvatarListSize)
                             Spacer(Modifier.width(14.dp))
                             Column(modifier = Modifier.weight(1f)) {
-                                Text("האימון המומלץ הבא", color = theme.sectionHeaderColor, fontSize = FutureTypography.caption, fontWeight = FontWeight.Bold)
+                                Text(tr("האימון המומלץ הבא"), color = theme.sectionHeaderColor, fontSize = FutureTypography.caption, fontWeight = FontWeight.Bold)
                                 Text(nextWorkout.name, color = theme.textColor, fontSize = FutureTypography.title, fontWeight = FontWeight.Bold)
                                 Text(
-                                    "${nextWorkout.exercises.size} תרגילים · ${nextWorkout.durationMin} דקות · ${nextWorkout.difficulty}",
+                                    tr("{0} תרגילים · {1} דקות · {2}", nextWorkout.exercises.size, nextWorkout.durationMin, nextWorkout.difficulty),
                                     color = theme.textColor.copy(alpha = 0.6f),
                                     fontSize = FutureTypography.label,
                                 )
@@ -268,7 +269,7 @@ fun HomeScreen(
                         ) {
                             Icon(FutureIcons.PlayCircle, contentDescription = null, tint = theme.backgroundColor, modifier = Modifier.size(20.dp))
                             Spacer(Modifier.width(8.dp))
-                            Text("פתח והתחל אימון", color = theme.backgroundColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Bold)
+                            Text(tr("פתח והתחל אימון"), color = theme.backgroundColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -306,15 +307,15 @@ private data class DayDot(val label: String, val done: Boolean, val isToday: Boo
 private fun greeting(): String {
     val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
     return when {
-        hour < 5 -> "לילה טוב"
-        hour < 12 -> "בוקר טוב"
-        hour < 18 -> "צהריים טובים"
-        else -> "ערב טוב"
+        hour < 5 -> tr("לילה טוב")
+        hour < 12 -> tr("בוקר טוב")
+        hour < 18 -> tr("צהריים טובים")
+        else -> tr("ערב טוב")
     }
 }
 
 private fun buildWeekDots(history: List<WorkoutHistoryEntry>): List<DayDot> {
-    val labels = listOf("א", "ב", "ג", "ד", "ה", "ו", "ש")
+    val labels = listOf(tr("א"), tr("ב"), tr("ג"), tr("ד"), tr("ה"), tr("ו"), tr("ש"))
     val today = Calendar.getInstance()
     val todayDayOfWeek = today.get(Calendar.DAY_OF_WEEK)
 

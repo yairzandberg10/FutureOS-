@@ -1,4 +1,5 @@
 package com.future.tools.ui
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.components.FutureTabItem
 import com.future.sharednav.theme.subtleTextColor
 import com.future.sharednav.theme.mutedTextColor
@@ -47,7 +48,7 @@ fun TipSplitCalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
     val total = bill + tipAmount
     val perPerson = total / people
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -74,10 +75,10 @@ fun TipSplitCalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
                 }
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                ToolsHeader(title = "טיפים ופיצול חשבון", theme = theme, onBack = onBack)
+                ToolsHeader(title = tr("טיפים ופיצול חשבון"), theme = theme, onBack = onBack)
 
                 Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
-                    Text("סכום החשבון", color = theme.mutedTextColor, fontSize = FutureTypography.label)
+                    Text(tr("סכום החשבון"), color = theme.mutedTextColor, fontSize = FutureTypography.label)
                     Text(
                         billText,
                         color = theme.textColor,
@@ -89,7 +90,7 @@ fun TipSplitCalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
-                Text("אחוז טיפ", color = theme.mutedTextColor, fontSize = FutureTypography.label, modifier = Modifier.padding(horizontal = 20.dp))
+                Text(tr("אחוז טיפ"), color = theme.mutedTextColor, fontSize = FutureTypography.label, modifier = Modifier.padding(horizontal = 20.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -104,7 +105,7 @@ fun TipSplitCalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
-                Text("מספר סועדים", color = theme.mutedTextColor, fontSize = FutureTypography.label, modifier = Modifier.padding(horizontal = 20.dp))
+                Text(tr("מספר סועדים"), color = theme.mutedTextColor, fontSize = FutureTypography.label, modifier = Modifier.padding(horizontal = 20.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -121,9 +122,9 @@ fun TipSplitCalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    ResultRow("סכום הטיפ", moneyFormat.format(tipAmount), theme = theme)
-                    ResultRow("סה\"כ לתשלום", moneyFormat.format(total), theme = theme, isEmphasized = true)
-                    ResultRow("לתשלום לכל סועד", moneyFormat.format(perPerson), theme = theme, isAccent = true)
+                    ResultRow(tr("סכום הטיפ"), moneyFormat.format(tipAmount), theme = theme)
+                    ResultRow(tr("סה\"כ לתשלום"), moneyFormat.format(total), theme = theme, isEmphasized = true)
+                    ResultRow(tr("לתשלום לכל סועד"), moneyFormat.format(perPerson), theme = theme, isAccent = true)
                 }
             }
         }

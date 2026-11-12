@@ -1,5 +1,6 @@
 package com.future.clock.ui
 
+import com.future.sharednav.i18n.tr
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -33,10 +34,10 @@ fun ClockShortcutMenu(
     val pinned = ClockShortcuts.isPinnedToHome(context, route)
     FutureOptionsMenu(theme = theme, onDismissRequest = { open = false }, header = title) {
         extra?.invoke { open = false }
-        FutureMenuRow(if (pinned) "הסר מרשימת האפליקציות" else "הוסף כאפליקציה", FutureIcons.Apps, theme, {
+        FutureMenuRow(if (pinned) tr("הסר מרשימת האפליקציות") else tr("הוסף כאפליקציה"), FutureIcons.Apps, theme, {
             open = false
             ClockShortcuts.setPinnedToHome(context, route, !pinned)
-            onMessage(if (pinned) "$title הוסר מרשימת האפליקציות" else "$title נוסף לרשימת האפליקציות")
+            onMessage(if (pinned) tr("{0} הוסר מרשימת האפליקציות", title) else tr("{0} נוסף לרשימת האפליקציות", title))
         })
     }
 }

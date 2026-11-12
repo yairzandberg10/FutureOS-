@@ -1,5 +1,6 @@
 package com.future.futureui.recents.logic
 
+import com.future.sharednav.i18n.tr
 import android.app.ActivityManager
 import android.app.AppOpsManager
 import android.content.ComponentName
@@ -137,7 +138,7 @@ class RecentAppsManager(private val context: Context) {
         val am = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
         val info = ActivityManager.MemoryInfo().also { am.getMemoryInfo(it) }
         fun gb(bytes: Long) = String.format(java.util.Locale.US, "%.1fGB", bytes / (1024.0 * 1024 * 1024))
-        "פנוי ${gb(info.availMem)} | ${gb(info.totalMem)}"
+        tr("פנוי {0} | {1}", gb(info.availMem), gb(info.totalMem))
     }.getOrNull()
 
     private fun save() {

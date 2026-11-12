@@ -1,5 +1,6 @@
 package com.future.music.ui.screens
 
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureListItem
 import com.future.sharednav.components.FutureAvatar
@@ -57,17 +58,17 @@ fun PlaylistsScreen(
 
     Column(modifier = Modifier.fillMaxSize()) {
         ScreenTopBar(
-            title = "פלייליסטים",
+            title = tr("פלייליסטים"),
             theme = theme,
             onBack = onBack,
             trailingIcon = FutureIcons.Add,
-            trailingContentDescription = "פלייליסט חדש",
+            trailingContentDescription = tr("פלייליסט חדש"),
             onTrailingClick = { showCreateDialog = true },
         )
 
         if (playlists.isEmpty()) {
             Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Text("אין עדיין פלייליסטים - לחצו + כדי ליצור", color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.body)
+                Text(tr("אין עדיין פלייליסטים - לחצו + כדי ליצור"), color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.body)
             }
         } else {
             LazyColumn(
@@ -81,7 +82,7 @@ fun PlaylistsScreen(
                         onClick = { onOpenPlaylist(playlist) },
                         focusRequester = if (index == 0) firstItemFocusRequester else null,
                         leading = { FutureAvatar(theme = theme, icon = FutureIcons.AutoMirrored.QueueMusic) },
-                        trailing = { Text("${playlist.songIds.size} שירים", color = theme.subtleTextColor, fontSize = type.summary) },
+                        trailing = { Text(tr("{0} שירים", playlist.songIds.size), color = theme.subtleTextColor, fontSize = type.summary) },
                     )
                 }
             }
@@ -90,9 +91,9 @@ fun PlaylistsScreen(
 
     if (showCreateDialog) {
         NameInputDialog(
-            title = "פלייליסט חדש",
+            title = tr("פלייליסט חדש"),
             theme = theme,
-            confirmLabel = "צור",
+            confirmLabel = tr("צור"),
             onDismiss = { showCreateDialog = false },
             onConfirm = { name ->
                 onCreatePlaylist(name)

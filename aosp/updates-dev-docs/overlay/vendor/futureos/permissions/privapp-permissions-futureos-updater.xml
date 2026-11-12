@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- הרשאות privileged ל-FutureUpdater (com.future.updater). האפליקציה מתוכננת ב-docs/update-feedback-design.md סעיף 2.2.
+     ro.control_privapp_permissions=enforce: כל הרשאה signature|privileged שחסרה כאן = האפליקציה לא עולה.
+     רשימה זו מבוססת על SystemUpdaterSample של AOSP. להשלים לפי logcat בעליית האפליקציה הראשונה. -->
+<permissions>
+    <privapp-permissions package="com.future.updater">
+        <permission name="android.permission.ACCESS_CACHE_FILESYSTEM"/>
+        <permission name="android.permission.REBOOT"/>
+        <permission name="android.permission.RECOVERY"/>
+        <permission name="android.permission.INSTALL_PACKAGES"/>
+        <permission name="android.permission.READ_LOGS"/>
+        <permission name="android.permission.WRITE_SECURE_SETTINGS"/>
+    </privapp-permissions>
+</permissions>

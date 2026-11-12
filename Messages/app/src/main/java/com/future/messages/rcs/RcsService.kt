@@ -1,5 +1,6 @@
 package com.future.messages.rcs
 
+import com.future.sharednav.i18n.tr
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
@@ -35,10 +36,10 @@ class RcsService : Service() {
 
     private fun notification() = run {
         val manager = getSystemService(NotificationManager::class.java)
-        manager.createNotificationChannel(NotificationChannel(CHANNEL_ID, "צ'אט RCS", NotificationManager.IMPORTANCE_MIN))
+        manager.createNotificationChannel(NotificationChannel(CHANNEL_ID, tr("צ'אט RCS"), NotificationManager.IMPORTANCE_MIN))
         NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.sym_action_chat)
-            .setContentTitle("צ'אט RCS פעיל")
+            .setContentTitle(tr("צ'אט RCS פעיל"))
             .setPriority(NotificationCompat.PRIORITY_MIN)
             .setOngoing(true)
             .build()

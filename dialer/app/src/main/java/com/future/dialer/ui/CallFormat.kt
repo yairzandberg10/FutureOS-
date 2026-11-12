@@ -1,4 +1,5 @@
 package com.future.dialer.ui
+import com.future.sharednav.i18n.tr
 import androidx.compose.ui.graphics.Color
 import com.future.sharednav.theme.FutureTheme
 import com.future.sharednav.theme.callMissedColor
@@ -28,12 +29,12 @@ object CallFormat {
     }
 
     fun labelOf(type: CallType): String = when (type) {
-        CallType.INCOMING -> "התקבלה"
-        CallType.OUTGOING -> "חויגה"
-        CallType.MISSED -> "לא נענתה"
-        CallType.REJECTED -> "נדחתה"
-        CallType.BLOCKED -> "נחסמה"
-        CallType.VOICEMAIL -> "תא קולי"
+        CallType.INCOMING -> tr("התקבלה")
+        CallType.OUTGOING -> tr("חויגה")
+        CallType.MISSED -> tr("לא נענתה")
+        CallType.REJECTED -> tr("נדחתה")
+        CallType.BLOCKED -> tr("נחסמה")
+        CallType.VOICEMAIL -> tr("תא קולי")
     }
 
     /**
@@ -63,14 +64,14 @@ object CallFormat {
     /** שעה להיום, "אתמול", ותאריך קצר לפני כן - למסך איש הקשר, שאין בו כותרות יום. */
     fun whenOf(call: CallRecord): String = when (dayOffset(call.timestamp)) {
         0 -> timeOf(call)
-        1 -> "אתמול"
+        1 -> tr("אתמול")
         else -> shortDate.formatSafely(call.timestamp)
     }
 
     /** כותרת יום ביומן: "היום", "אתמול", או "יום שני, 21 בספטמבר". */
     fun dayTitle(timestamp: Long): String = when (dayOffset(timestamp)) {
-        0 -> "היום"
-        1 -> "אתמול"
+        0 -> tr("היום")
+        1 -> tr("אתמול")
         else -> dayFormat.formatSafely(timestamp)
     }
 
@@ -91,5 +92,5 @@ object CallFormat {
 
     private val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
     private val shortDate = SimpleDateFormat("d.M", Locale.getDefault())
-    private val dayFormat = SimpleDateFormat("EEEE, d בMMMM", Locale("he"))
+    private val dayFormat = SimpleDateFormat(tr("EEEE, d בMMMM"), java.util.Locale.getDefault())
 }

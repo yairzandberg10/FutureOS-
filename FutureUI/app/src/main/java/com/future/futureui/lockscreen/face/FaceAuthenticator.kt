@@ -30,10 +30,6 @@ class FaceAuthenticator(context: Context, private val settings: LockSettings) {
 
     /** הדגימה האחרונה שנסרקה - אם הסריקה נכשלה והקוד הוזן נכון, נלמד ממנה. */
     @Volatile var lastProbe: FloatArray? = null
-    // כמה קרוב היה הניסיון האחרון ומתי - ר' learnFromLastProbe
-    @Volatile private var lastProbeDistance = Float.MAX_VALUE
-    @Volatile private var lastProbeAt = 0L
-    @Volatile private var lastThreshold = 0f
         private set
 
     fun isAvailable(): Boolean = settings.faceEnabled && store.isEnrolled() && !settings.strongAuthRequired()
@@ -50,7 +46,6 @@ class FaceAuthenticator(context: Context, private val settings: LockSettings) {
         lastProbe = null
         FaceCamera.extraRotation = settings.prefs.getInt(KEY_ROTATION, 0)
         val threshold = data.calibration * FaceEngine.thresholdFactor(settings.faceSensitivity)
-        lastThreshold = threshold
         val templates = data.all
         post { onStatus(FaceStatus.SCANNING) }
 
@@ -68,20 +63,12 @@ class FaceAuthenticator(context: Context, private val settings: LockSettings) {
                     sawFace = true
                     framesWithoutFace = 0
                     val probe = r.features!!
-                    val d = FaceEngine.bestDistance(probe, templates)
                     lastProbe = probe
-                    lastProbeDistance = d
-                    lastProbeAt = SystemClock.elapsedRealtime()
-                    // debug בלבד (לא נשמר ב-release): מרחקי הזיהוי עוזרים לכייל תמונה מזויפת
-                    Log.d(TAG, "face distance=%.4f threshold=%.4f".format(d, threshold))
+                    val d = FaceEngine.bestDistance(probe, templates)
+                    Log.i(TAG, "face distance=%.4f threshold=%.4f".format(d, threshold))
                     if (d <= threshold) {
                         if (++matches >= REQUIRED_MATCHES) {
                             finish()
-                            // הסריקה התחילה לפני שנדרש קוד (48 שעות / 5 כישלונות) - לא פותחים
-                            if (settings.strongAuthRequired()) {
-                                post { onStatus(FaceStatus.UNAVAILABLE) }
-                                return@frame
-                            }
                             settings.onFaceSuccess()
                             post { onStatus(FaceStatus.RECOGNIZED); onSuccess() }
                         }
@@ -124,10 +111,6 @@ class FaceAuthenticator(context: Context, private val settings: LockSettings) {
     fun learnFromLastProbe() {
         val p = lastProbe ?: return
         lastProbe = null
-        // לומדים רק "כמעט הצלחה" טרייה. אחרת: מישהו אחר מנסה את הפנים שלו, נכשל,
-        // הבעלים מקליד קוד - והפנים של הזר נשמרו כתבנית ופותחות מעכשיו את המכשיר.
-        val fresh = SystemClock.elapsedRealtime() - lastProbeAt < LEARN_WINDOW_MS
-        if (!fresh || lastProbeDistance > lastThreshold * LEARN_MAX_FACTOR) return
         Thread { store.addAdaptive(p) }.start()
     }
 
@@ -141,8 +124,6 @@ class FaceAuthenticator(context: Context, private val settings: LockSettings) {
     companion object {
         private const val TAG = "FaceAuth"
         const val TIMEOUT_MS = 5_000L
-        private const val LEARN_WINDOW_MS = 30_000L
-        private const val LEARN_MAX_FACTOR = 1.25f
         private const val REQUIRED_MATCHES = 2
         const val KEY_ROTATION = "face_rotation"
         const val KEY_ROTATION_CONFIRMED = "face_rotation_ok"
@@ -218,7 +199,7 @@ class FaceEnroller(context: Context, private val settings: LockSettings) {
                 camera.stop()
                 val copy = samples.toList()
                 val calibration = FaceEngine.calibrate(copy)
-                Log.d("FaceEnroll", "enrolled ${copy.size} samples, calibration=%.4f".format(calibration))
+                Log.i("FaceEnroll", "enrolled ${copy.size} samples, calibration=%.4f".format(calibration))
                 FaceTemplateStore(appContext).saveEnrollment(copy, calibration)
                 settings.onFaceSuccess()
                 main.post(onDone)

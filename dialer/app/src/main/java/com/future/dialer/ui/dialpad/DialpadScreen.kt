@@ -1,5 +1,6 @@
 package com.future.dialer.ui.dialpad
 
+import com.future.sharednav.i18n.tr
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -65,7 +66,7 @@ fun DialpadScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        ScreenTopBar(title = "מקלדת", textColor = theme.textColor, accentColor = theme.accentColor)
+        ScreenTopBar(title = tr("מקלדת"), textColor = theme.textColor, accentColor = theme.accentColor)
 
         Column(
             modifier = Modifier
@@ -78,7 +79,7 @@ fun DialpadScreen(
             // מספרים לא מתהפכים בתוך ממשק RTL.
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
                 Text(
-                    digits.ifEmpty { "הקלד מספר" },
+                    digits.ifEmpty { tr("הקלד מספר") },
                     color = if (digits.isEmpty()) theme.textAlpha(30) else theme.textColor,
                     fontSize = when {
                         digits.isEmpty() -> type.headline
@@ -121,7 +122,7 @@ fun DialpadScreen(
                 .padding(start = FutureDimens.spacingXl, end = FutureDimens.spacingXl, top = FutureDimens.spacingMd, bottom = FutureDimens.spacingLg),
         ) {
             FutureButton(
-                text = "התקשר",
+                text = tr("התקשר"),
                 theme = theme,
                 onClick = { if (digits.isNotEmpty()) onCall(digits) },
                 fillMaxWidth = true,

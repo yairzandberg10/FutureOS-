@@ -1,0 +1,16 @@
+# נקודת התחלה בלבד. להשלים עם audit2allow במכשיר (logcat | grep avc).
+type futureos_core_job, domain, coredomain;
+type futureos_core_job_exec, system_file_type, exec_type, file_type;
+init_daemon_domain(futureos_core_job)
+
+allow futureos_core_job shell_exec:file rx_file_perms;
+allow futureos_core_job system_file:file rx_file_perms;
+allow futureos_core_job toolbox_exec:file rx_file_perms;
+
+binder_use(futureos_core_job)
+allow futureos_core_job servicemanager:service_manager list;
+allow futureos_core_job settings_service:service_manager find;
+allow futureos_core_job activity_service:service_manager find;
+
+allow futureos_core_job shell_data_file:dir { search read open write remove_name getattr rmdir };
+allow futureos_core_job shell_data_file:file { getattr unlink };
