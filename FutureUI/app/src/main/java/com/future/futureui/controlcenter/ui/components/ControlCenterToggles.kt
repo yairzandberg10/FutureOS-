@@ -32,9 +32,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.future.futureui.ui.LocalOneUiPalette
-import com.future.futureui.ui.oneUiFocus
-import com.future.futureui.ui.oneUiTileColor
 import kotlinx.coroutines.delay
 
 /** Subtle drop shadow applied to label text so it stays legible over any wallpaper/blur behind the glass chips. */
@@ -60,13 +57,12 @@ fun TogglePill(
     // האמיתית שהוא מפעיל את "החלפת הקיצור" הזה כשהוא ממוקד במצב עריכה.
     com.future.sharednav.nav.onOptionsKeyPress { if (isFocused && isEditMode) onOptionPressed() }
 
-    val palette = LocalOneUiPalette.current
     Box(
         modifier = modifier
             .height(55.dp)
-            .oneUiFocus(isFocused, shape)
             .clip(shape)
-            .background(oneUiTileColor(isFocused))
+            .focusEffect(isFocused, shape)
+            .background(Color(0x80E0E0E0))
             .padding(6.dp)
             .onKeyEvent { event ->
                 if (isEditMode && event.type == KeyEventType.KeyDown && event.key == Key.Menu) {
@@ -90,23 +86,24 @@ fun TogglePill(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(CircleShape)
-                    .background(if (isOn) palette.chipOn else palette.chipOff),
+                    .background(if (isOn) Color(0xFF6E6969) else Color(0xFF616161)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = if (isOn) palette.chipOnIcon else palette.chipOffIcon,
-                    modifier = Modifier.size(20.dp)
+                    tint = Color.White,
+                    modifier = Modifier.size(18.dp)
                 )
             }
             Spacer(modifier = Modifier.width(10.dp))
             Text(
                 text = label,
                 fontSize = FutureTypography.label,
-                color = palette.text,
+                color = labelColor,
                 fontWeight = FontWeight.Medium,
-                maxLines = 1
+                maxLines = 1,
+                style = TextStyle(shadow = LegibilityShadow)
             )
         }
     }
@@ -131,23 +128,16 @@ fun FocusableIcon(
     // האמיתית שהוא מפעיל את onMenuClick כשהאייקון הזה ממוקד.
     com.future.sharednav.nav.onOptionsKeyPress { if (isFocused) onMenuClick() }
 
-    val palette = LocalOneUiPalette.current
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.width(54.dp)
     ) {
         Box(
             modifier = Modifier
-                .size(40.dp)
-                .oneUiFocus(isFocused, CircleShape)
+                .size(38.dp)
+                .focusEffect(isFocused, CircleShape)
                 .clip(CircleShape)
-                .background(
-                    when {
-                        isOn -> palette.chipOn
-                        isFocused -> palette.tileFocused
-                        else -> palette.tile
-                    }
-                )
+                .background(if (isOn) Color(0xFF969494).copy(alpha = 0.9f) else Color(0xFF616161).copy(alpha = 0.8f))
                 .onKeyEvent { event ->
                     if (event.type == KeyEventType.KeyDown) {
                         if (event.key == Key.Menu || event.key == Key.Settings || event.key == Key.F1 || event.key == Key.Back) {
@@ -167,8 +157,8 @@ fun FocusableIcon(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = if (isOn) palette.chipOnIcon else palette.text,
-                modifier = Modifier.size(22.dp)
+                tint = Color.White,
+                modifier = Modifier.size(20.dp)
             )
 
             if (isEditMode) {
@@ -202,9 +192,10 @@ fun FocusableIcon(
                 Text(
                     text = label,
                     fontSize = FutureTypography.caption,
-                    color = palette.text,
+                    color = labelColor,
                     textAlign = TextAlign.Center,
-                    maxLines = 1
+                    maxLines = 1,
+                    style = TextStyle(shadow = LegibilityShadow)
                 )
             }
         }
@@ -252,7 +243,7 @@ fun FocusableSection(
                             color = androidx.compose.animation.animateColorAsState(
                                 when {
                                     isMoving -> Color.Red
-                                    isFocused -> LocalOneUiPalette.current.ring
+                                    isFocused -> Color(0xFF111114)
                                     else -> Color.Transparent
                                 },
                                 com.future.sharednav.theme.FutureMotion.focusColorSpec,

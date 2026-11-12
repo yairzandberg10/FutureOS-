@@ -44,9 +44,6 @@ import com.future.futureui.controlcenter.logic.GridCatalog
 import com.future.futureui.controlcenter.logic.GridControlManager
 import com.future.futureui.controlcenter.ui.components.*
 import com.future.futureui.utils.cascadeIn
-import com.future.futureui.ui.LocalOneUiPalette
-import com.future.futureui.ui.oneUiFocus
-import com.future.futureui.ui.rememberOneUiPalette
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.*
@@ -137,12 +134,11 @@ fun ControlCenterScreen(
     }
 
     val scrollState = rememberScrollState()
-    val palette = rememberOneUiPalette()
-    val isDarkBackground = palette.isDark
-    val clockColor = palette.text
-    val dateColor = palette.subText
+    val isDarkBackground = wallpaper != null
+    val clockColor = if (isDarkBackground) Color.White else Color.Black
+    val dateColor = if (isDarkBackground) Color.LightGray else Color.Gray
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl, LocalOneUiPalette provides palette) {
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         // השכבה נופלת מהקצה העליון בקפיץ (או נכנסת מהצד, במעבר ממרכז
         // ההתראות), והקבוצות שבה נכנסות בגל (cascadeIn). העיצוב לא השתנה.
         val overlay = motion ?: remember { com.future.futureui.utils.OverlayMotion().also { it.enter() } }
@@ -179,7 +175,10 @@ fun ControlCenterScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(palette.scrim)
+                        .background(
+                            if (wallpaper != null) Color.White.copy(alpha = 0.2f)
+                            else Color(0xCCFFFFFF)
+                        )
                 )
 
                 Column(
@@ -201,12 +200,18 @@ fun ControlCenterScreen(
                                 text = currentTime,
                                 fontSize = FutureTypography.display,
                                 fontWeight = FontWeight.Bold,
-                                color = clockColor
+                                color = clockColor,
+                                style = androidx.compose.ui.text.TextStyle(
+                                    shadow = androidx.compose.ui.graphics.Shadow(color = Color.Black.copy(alpha = 0.3f), blurRadius = 8f)
+                                )
                             )
                             Text(
                                 text = currentDate,
                                 fontSize = FutureTypography.caption,
-                                color = dateColor
+                                color = dateColor,
+                                style = androidx.compose.ui.text.TextStyle(
+                                    shadow = androidx.compose.ui.graphics.Shadow(color = Color.Black.copy(alpha = 0.3f), blurRadius = 8f)
+                                )
                             )
                         }
 
@@ -291,7 +296,8 @@ fun ControlCenterScreen(
                                                     topToggleIds = newList
                                                 },
                                                 focusRequester = if (index == 0) initialFocusRequester else null,
-                                                labelColor = clockColor
+                                                // SY3: הכיתוב על אריח הזכוכית הבהיר תמיד כהה, בלי קשר לטפט.
+                                                labelColor = Color(0xFF111114)
                                             )
                                         }
                                     }
@@ -302,9 +308,11 @@ fun ControlCenterScreen(
                                             .fillMaxWidth()
                                             .animateContentSize(animationSpec = tween(FutureMotion.DurationSlow))
                                             .clip(FutureShapes.xxl)
-                                            .background(palette.tile)
-                                            .then(
-                                                if (isGridEditing) Modifier.border(2.dp, Color(0xFFFF453A), FutureShapes.xxl) else Modifier
+                                            .background(Color(0x80E0E0E0))
+                                            .border(
+                                                width = if (isGridEditing) 2.dp else 0.5.dp, 
+                                                color = if (isGridEditing) Color.Red else Color.White.copy(alpha = 0.5f), 
+                                                shape = FutureShapes.xxl
                                             )
                                             .onKeyEvent { event ->
                                                 if (isEditMode && (event.key == Key.DirectionCenter || event.key == Key.Enter)) {
@@ -367,7 +375,7 @@ fun ControlCenterScreen(
                                                         .padding(vertical = 12.dp)
                                                         .fillMaxWidth(0.95f)
                                                         .height(1.5.dp)
-                                                        .background(palette.subText.copy(alpha = 0.3f))
+                                                        .background(Color.White.copy(alpha = 0.6f))
                                                 )
                                             }
                                         }
@@ -442,14 +450,14 @@ fun ControlCenterScreen(
                                             val isIndicatorFocused by indicatorInteractionSource.collectIsFocusedAsState()
                                             val indicatorShape = FutureShapes.md
                                             Box(
-                                                modifier = Modifier.width(80.dp).height(20.dp).oneUiFocus(isIndicatorFocused, indicatorShape)
+                                                modifier = Modifier.width(80.dp).height(20.dp).focusEffect(isIndicatorFocused, indicatorShape)
                                                     .clip(indicatorShape)
                                                     .clickable(interactionSource = indicatorInteractionSource, indication = null, onClick = { isExpanded = !isExpanded })
                                                     .focusable(interactionSource = indicatorInteractionSource).padding(vertical = 8.dp),
                                                 contentAlignment = Alignment.Center
                                             ) {
                                                 Box(modifier = Modifier.width(36.dp).height(4.dp).clip(CircleShape)
-                                                    .background(animateFocusColor(isIndicatorFocused, palette.ring, palette.subText.copy(alpha = 0.55f)).value))
+                                                    .background(animateFocusColor(isIndicatorFocused, Color(0xFF525252), Color(0xFFBDBDBD)).value))
                                             }
                                         }
                                     }

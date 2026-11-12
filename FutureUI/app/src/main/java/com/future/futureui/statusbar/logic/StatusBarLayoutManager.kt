@@ -16,6 +16,13 @@ class StatusBarLayoutManager(context: Context) {
         const val STYLE_CENTERED = "centered"
         val STYLES = listOf(STYLE_CLASSIC, STYLE_QUIET, STYLE_CAPSULES, STYLE_CENTERED)
         const val KEY_BAR_STYLE = "bar_style"
+
+        // רקע השורה: אוטומטי (שקוף מעל תוכן בהיר, כהה מעל תוכן כהה), תמיד שקוף, או תמיד כהה.
+        const val TONE_AUTO = "auto"
+        const val TONE_TRANSPARENT = "transparent"
+        const val TONE_DARK = "dark"
+        val TONES = listOf(TONE_AUTO, TONE_TRANSPARENT, TONE_DARK)
+        const val KEY_BAR_TONE = "bar_tone"
     }
 
     private val prefs: SharedPreferences = context.getSharedPreferences("status_bar_prefs", Context.MODE_PRIVATE)
@@ -35,6 +42,9 @@ class StatusBarLayoutManager(context: Context) {
 
     fun getBarStyle(): String = prefs.getString(KEY_BAR_STYLE, STYLE_CLASSIC)?.takeIf { it in STYLES } ?: STYLE_CLASSIC
     fun saveBarStyle(value: String) = prefs.edit().putString(KEY_BAR_STYLE, value).apply()
+
+    fun getBarTone(): String = prefs.getString(KEY_BAR_TONE, TONE_AUTO)?.takeIf { it in TONES } ?: TONE_AUTO
+    fun saveBarTone(value: String) = prefs.edit().putString(KEY_BAR_TONE, value).apply()
 
     fun registerListener(listener: SharedPreferences.OnSharedPreferenceChangeListener) = prefs.registerOnSharedPreferenceChangeListener(listener)
     fun unregisterListener(listener: SharedPreferences.OnSharedPreferenceChangeListener) = prefs.unregisterOnSharedPreferenceChangeListener(listener)

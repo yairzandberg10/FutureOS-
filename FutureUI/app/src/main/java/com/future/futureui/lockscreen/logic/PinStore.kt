@@ -73,9 +73,18 @@ class PinStore(private val prefs: SharedPreferences) {
     fun verifyPin(pin: String): Boolean {
         if (remainingLockoutMs() > 0) return false
         val stored = prefs.getString(KEY_PIN_MAC, null) ?: return false
-        val candidate = computeMac(pin)
-        val matched = candidate != null &&
-            MessageDigest.isEqual(stored.toByteArray(Charsets.UTF_8), candidate.toByteArray(Charsets.UTF_8))
+        // בבדיקה לעולם לא יוצרים מפתח חדש: קודם getOrCreateKey רץ גם כאן, ואם ה-Keystore
+        // החזיר null (למשל מיד אחרי אתחול, לפני שהוא מוכן) נוצר מפתח חדש בשקט - מאותו רגע
+        // שום קוד, גם הנכון, לא תאם יותר, וכל ניסיון נספר ככישלון עד חסימה.
+        // מפתח שלא זמין = לא נספר ככישלון; מנסים שוב בהקשה הבאה.
+        val key = existingKey()
+        if (key == null) {
+            Log.e(TAG, "PIN key unavailable - not counting the attempt")
+            return false
+        }
+        val candidate = computeMac(pin, key)
+        if (candidate == null) return false
+        val matched = MessageDigest.isEqual(stored.toByteArray(Charsets.UTF_8), candidate.toByteArray(Charsets.UTF_8))
         if (matched) {
             prefs.edit().remove(KEY_FAILED_ATTEMPTS).remove(KEY_LOCKED_UNTIL).remove(KEY_LOCKED_UNTIL_ELAPSED).apply()
         } else {
@@ -83,6 +92,9 @@ class PinStore(private val prefs: SharedPreferences) {
         }
         return matched
     }
+
+    /** האם אפשר לבדוק קוד עכשיו (המפתח קיים וזמין ב-Keystore). */
+    fun isKeyAvailable(): Boolean = existingKey() != null
 
     private fun recordFailure() {
         val attempts = prefs.getInt(KEY_FAILED_ATTEMPTS, 0) + 1
@@ -98,18 +110,26 @@ class PinStore(private val prefs: SharedPreferences) {
         editor.commit()
     }
 
-    private fun computeMac(pin: String): String? = try {
+    private fun computeMac(pin: String, key: SecretKey? = null): String? = try {
         val mac = Mac.getInstance(MAC_ALGORITHM)
-        mac.init(getOrCreateKey())
+        mac.init(key ?: getOrCreateKey())
         Base64.encodeToString(mac.doFinal(pin.toByteArray(Charsets.UTF_8)), Base64.NO_WRAP)
     } catch (e: Exception) {
         Log.e(TAG, "PIN MAC failed", e)
         null
     }
 
-    private fun getOrCreateKey(): SecretKey {
+    private fun existingKey(): SecretKey? = try {
         val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
-        (keyStore.getEntry(KEY_ALIAS, null) as? KeyStore.SecretKeyEntry)?.let { return it.secretKey }
+        (keyStore.getEntry(KEY_ALIAS, null) as? KeyStore.SecretKeyEntry)?.secretKey
+    } catch (e: Exception) {
+        Log.e(TAG, "PIN key lookup failed", e)
+        null
+    }
+
+    /** רק בהגדרת קוד חדש (setPin) - שם מותר ליצור מפתח. */
+    private fun getOrCreateKey(): SecretKey {
+        existingKey()?.let { return it }
         val generator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_HMAC_SHA256, ANDROID_KEYSTORE)
         generator.init(KeyGenParameterSpec.Builder(KEY_ALIAS, KeyProperties.PURPOSE_SIGN).build())
         return generator.generateKey()

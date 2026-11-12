@@ -70,7 +70,7 @@ import java.util.*
 /**
  * שורת המצב הקבועה (Status Bar) - מוצגת תמיד בראש המסך, לא רק לפי דרישה.
  *
- * בסגנון One UI: שורה אטומה שמתחלפת בין לבן (טקסט ואייקונים שחורים) לשחור (לבנים)
+ * בסגנון One UI: שורה שמתחלפת בין שקופה (טקסט ואייקונים שחורים, מעל תוכן בהיר) לכהה (לבנים)
  * לפי מה שמוצג מתחתיה ([lightTone] - השירות דוגם אותו מצילום המסך), עם אייקונים
  * גדולים וצפופים וסוללה מצוירת. כל האינדיקטורים מתעדכנים מאירועי מערכת ולא מסקר,
  * והגופן קבוע (בלי הגדלת גופן של המערכת) כדי שהשורה לא תידחס ותתעוות.
@@ -111,6 +111,7 @@ fun StatusBarScreen(
     @Suppress("UNUSED_VARIABLE") val tick = prefsTick
 
     val barStyle = layout.getBarStyle()
+    val barTone = layout.getBarTone()
     val showBattery = layout.getShowBattery()
     val showBluetooth = layout.getShowBluetooth()
     val use24Hour = layout.getUse24HourClock()
@@ -285,11 +286,15 @@ fun StatusBarScreen(
         hasAlarm = hasAlarm
     )
 
+    // אוטומטי/שקוף: הטקסט נגזר מהתוכן שמתחת; כהה: תמיד רקע שחור וטקסט לבן.
+    val inkLight = lightTone && barTone != StatusBarLayoutManager.TONE_DARK
+    val clearBar = barTone == StatusBarLayoutManager.TONE_TRANSPARENT ||
+        (barTone == StatusBarLayoutManager.TONE_AUTO && lightTone)
     // המעבר בין לבן לשחור מונפש (300ms), כך שהוא נראה ולא נקרא כהבהוב.
-    val colors = remember(lightTone) { FutureTheme(isDarkMode = !lightTone) }
-    val bg by animateColorAsState(if (lightTone) Color.White else Color.Black, tween(300), label = "barBg")
-    val ink by animateColorAsState(if (lightTone) Color(0xFF111113) else Color.White, tween(300), label = "barInk")
-    val glass by animateColorAsState(if (lightTone) Color(0xFFE5E5EA) else Color(0xFF2C2C2E), tween(300), label = "barGlass")
+    val colors = remember(inkLight) { FutureTheme(isDarkMode = !inkLight) }
+    val bg by animateColorAsState(if (clearBar) Color.Transparent else Color.Black, tween(300), label = "barBg")
+    val ink by animateColorAsState(if (inkLight) Color(0xFF111113) else Color.White, tween(300), label = "barInk")
+    val glass by animateColorAsState(if (inkLight) Color(0xFFE5E5EA) else Color(0xFF2C2C2E), tween(300), label = "barGlass")
     val palette = BarPalette(
         background = bg,
         text = ink,
@@ -346,7 +351,7 @@ private val GlyphSize = 16.dp
 private val GlyphGap = 3.dp
 
 /** כמה אייקוני אפליקציות מוצגים לפני שהם הופכים למונה +N. */
-private const val MAX_APP_GLYPHS = 4
+private const val MAX_APP_GLYPHS = 2
 
 /** אפליקציה עם התראה: סמל Future Glyphs לפי שם החבילה, או אייקון ההתראה של האפליקציה עצמה. */
 private data class NotifApp(val packageName: String, val smallIcon: ImageBitmap?)
@@ -444,8 +449,6 @@ private fun DeviceGlyphs(manager: ControlManager, status: BarStatus) {
     }
     if (manager.isDndOn) StatusGlyph(FutureIcons.DoNotDisturbOn)
     if (manager.isAirplaneOn) StatusGlyph(FutureIcons.AirplanemodeActive)
-    if (manager.isFlashlightOn) StatusGlyph(FutureIcons.FlashlightOn, bar.warning)
-    if (manager.isLocationOn) StatusGlyph(FutureIcons.LocationOn)
     if (status.showBluetooth && manager.isBluetoothOn) {
         StatusGlyph(FutureIcons.Bluetooth, if (manager.isBluetoothDeviceConnected) bar.text else bar.text70)
     }
