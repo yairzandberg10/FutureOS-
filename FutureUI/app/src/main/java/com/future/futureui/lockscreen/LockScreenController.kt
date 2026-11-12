@@ -292,7 +292,8 @@ class LockScreenController(
         state.unlocking = true
         clearPin()
         // ניסיונות שגויים מאז הפתיחה הקודמת - נלקחים עכשיו, מוצגים אחרי שהחלון ירד
-        val unseen = securityLog.takeUnseen()
+        // runCatching: היומן לעולם לא יכול להשאיר את חלון הנעילה למעלה
+        val unseen = runCatching { securityLog.takeUnseen() }.getOrNull()
         // אנימציית היציאה (המסך עולה ודועך) ואז מסירים את החלון
         main.postDelayed({
             if (!locked) removeWindow()
@@ -531,7 +532,7 @@ class LockScreenController(
             if (action != null) action() else unlock()
         } else {
             // רק כישלון אמיתי (המונה של PinStore עלה) - לא מפתח Keystore שעוד לא מוכן
-            if (settings.pin.failedAttempts() > failuresBefore) securityLog.onFailedPin()
+            if (settings.pin.failedAttempts() > failuresBefore) runCatching { securityLog.onFailedPin() }
             state.pinError = true
             state.pinErrorTick++
             main.removeCallbacks(lockoutTicker)

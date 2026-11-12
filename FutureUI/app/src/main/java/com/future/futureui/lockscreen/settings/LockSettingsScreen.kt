@@ -88,7 +88,7 @@ fun LockSettingsScreen(modifier: Modifier = Modifier, onExit: () -> Unit) {
                         if (settings.pin.verifyPin(pin)) { settings.onStrongAuth(); page = Page.MAIN; null }
                         else {
                             // גם ניחוש בכניסה להגדרות הנעילה נרשם ביומן
-                            if (settings.pin.failedAttempts() > before) SecurityLog(context).onFailedPin()
+                            if (settings.pin.failedAttempts() > before) runCatching { SecurityLog(context).onFailedPin() }
                             "קוד שגוי"
                         }
                     }

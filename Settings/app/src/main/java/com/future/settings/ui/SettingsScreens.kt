@@ -1805,7 +1805,19 @@ private data class SecurityCheck(val ok: Boolean, val title: String, val summary
 
 /** הבדיקות של מרכז האבטחה. הראשונה (קוד נעילה) היא תנאי לכל רמה מעל "נמוכה". */
 private fun securityChecks(s: com.future.settings.theme.SecurityStatus): List<SecurityCheck> {
-    val pinOn = s.linked && s.lockEnabled && s.hasPin
+    val adbCheck = SecurityCheck(
+        !s.adbEnabled,
+        "ניפוי באגים ב-USB",
+        if (s.adbEnabled) "פועל: מחשב שמחובר בכבל יכול לעקוף את מסך הנעילה. כבה כשלא מתקינים מהמחשב" else "כבוי",
+        SecurityFix.DEVELOPER
+    )
+    // בלי קישור ל-FutureUI (גרסה ישנה, או ממשק מערכת אחר) מצב מסך הנעילה לא ידוע -
+    // לא אומרים "אין קוד" כשאולי יש
+    if (!s.linked) return listOf(
+        SecurityCheck(false, "מצב מסך הנעילה לא ידוע", "עדכן את ממשק המערכת (FutureUI) כדי לראות את הבדיקות", SecurityFix.LOCK_SETTINGS),
+        adbCheck,
+    )
+    val pinOn = s.lockEnabled && s.hasPin
     return listOf(
         SecurityCheck(
             pinOn,
@@ -1827,15 +1839,14 @@ private fun securityChecks(s: com.future.settings.theme.SecurityStatus): List<Se
         SecurityCheck(
             pinOn && s.notificationPrivacy != 0,
             "תוכן התראות במסך הנעילה",
-            if (s.notificationPrivacy != 0) "תוכן ההודעות מוסתר עד שהטלפון מזהה אותך" else "כל אחד יכול לקרוא הודעות מהמסך הנעול",
+            when {
+                !pinOn -> "פועלת רק כשמוגדר קוד"
+                s.notificationPrivacy != 0 -> "תוכן ההודעות מוסתר עד שהטלפון מזהה אותך"
+                else -> "כל אחד יכול לקרוא הודעות מהמסך הנעול"
+            },
             SecurityFix.LOCK_SETTINGS
         ),
-        SecurityCheck(
-            !s.adbEnabled,
-            "ניפוי באגים ב-USB",
-            if (s.adbEnabled) "פועל: מחשב שמחובר בכבל יכול לעקוף את מסך הנעילה. כבה כשלא מתקינים מהמחשב" else "כבוי",
-            SecurityFix.DEVELOPER
-        ),
+        adbCheck,
     )
 }
 
