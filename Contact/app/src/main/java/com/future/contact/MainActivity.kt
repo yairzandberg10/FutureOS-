@@ -1,4 +1,6 @@
 package com.future.contact
+
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.systemui.StatusBarInset
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.padding
@@ -103,7 +105,7 @@ class MainActivity : ComponentActivity() {
             val writePermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
                 val action = pendingWrite
                 pendingWrite = null
-                if (granted) action?.invoke() else snackbar.show("נדרשת הרשאה לעריכת אנשי קשר")
+                if (granted) action?.invoke() else snackbar.show(tr("נדרשת הרשאה לעריכת אנשי קשר"))
             }
             fun withWrite(action: () -> Unit) {
                 if (repository.hasWritePermission()) action()
@@ -143,7 +145,7 @@ class MainActivity : ComponentActivity() {
                 if (uri != null && targetId != null) {
                     scope.launch {
                         val ok = withContext(Dispatchers.IO) { repository.setPhoto(targetId, uri) }
-                        snackbar.show(if (ok) "התמונה עודכנה" else "לא ניתן לשמור את התמונה")
+                        snackbar.show(if (ok) tr("התמונה עודכנה") else tr("לא ניתן לשמור את התמונה"))
                         reload()
                     }
                 }
@@ -192,7 +194,7 @@ class MainActivity : ComponentActivity() {
                     message = { number ->
                         runCatching {
                             startActivity(Intent(Intent.ACTION_SENDTO, Uri.fromParts("smsto", number, null)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                        }.onFailure { snackbar.show("אין אפליקציית הודעות") }
+                        }.onFailure { snackbar.show(tr("אין אפליקציית הודעות")) }
                     },
                     share = { contact ->
                         val vcard = repository.vcardUri(contact)
@@ -206,7 +208,7 @@ class MainActivity : ComponentActivity() {
                             Intent(Intent.ACTION_SEND).setType("text/plain")
                                 .putExtra(Intent.EXTRA_TEXT, (listOf(contact.name) + contact.phoneNumbers).joinToString("\n"))
                         }
-                        FutureShare.open(this@MainActivity, send, "שיתוף איש קשר")
+                        FutureShare.open(this@MainActivity, send, tr("שיתוף איש קשר"))
                     },
                     pickPhoto = { contact -> withWrite {
                         photoTargetId = contact.id
@@ -215,13 +217,13 @@ class MainActivity : ComponentActivity() {
                         val intent = if (gallery.resolveActivity(packageManager) != null) gallery else any
                         runCatching { photoPicker.launch(intent) }.onFailure {
                             photoTargetId = null
-                            snackbar.show("אין אפליקציה לבחירת תמונה")
+                            snackbar.show(tr("אין אפליקציה לבחירת תמונה"))
                         }
                     } },
                     removePhoto = { contact -> withWrite {
                         scope.launch {
                             val ok = withContext(Dispatchers.IO) { repository.removePhoto(contact.id) }
-                            snackbar.show(if (ok) "התמונה הוסרה" else "לא ניתן להסיר את התמונה")
+                            snackbar.show(if (ok) tr("התמונה הוסרה") else tr("לא ניתן להסיר את התמונה"))
                             reloadAfterWrite()
                         }
                     } },
@@ -231,8 +233,8 @@ class MainActivity : ComponentActivity() {
                             snackbar.show(
                                 when {
                                     !ok -> "לא ניתן לשנות את המועדפים"
-                                    contact.isFavorite -> "הוסר מהמועדפים"
-                                    else -> "נוסף למועדפים"
+                                    contact.isFavorite -> tr("הוסר מהמועדפים")
+                                    else -> tr("נוסף למועדפים")
                                 }
                             )
                             reloadAfterWrite()
@@ -243,9 +245,9 @@ class MainActivity : ComponentActivity() {
                             val ok = withContext(Dispatchers.IO) { repository.setBlocked(contact, !contact.isBlocked) }
                             snackbar.show(
                                 when {
-                                    !ok -> "לא ניתן לשנות את החסימה"
-                                    contact.isBlocked -> "החסימה בוטלה"
-                                    else -> "${contact.name} נחסם"
+                                    !ok -> tr("לא ניתן לשנות את החסימה")
+                                    contact.isBlocked -> tr("החסימה בוטלה")
+                                    else -> tr("{0} נחסם", contact.name)
                                 }
                             )
                             reloadAfterWrite()
@@ -260,9 +262,9 @@ class MainActivity : ComponentActivity() {
                             val ok = withContext(Dispatchers.IO) { repository.deleteContact(contact.id) }
                             if (ok) {
                                 if (selectedId == contact.id) selectedId = null
-                                snackbar.show("איש הקשר נמחק")
+                                snackbar.show(tr("איש הקשר נמחק"))
                             } else {
-                                snackbar.show("לא ניתן למחוק את איש הקשר")
+                                snackbar.show(tr("לא ניתן למחוק את איש הקשר"))
                             }
                             reloadAfterWrite()
                         }
@@ -270,7 +272,7 @@ class MainActivity : ComponentActivity() {
                     add = { name, number -> withWrite {
                         scope.launch {
                             val ok = withContext(Dispatchers.IO) { repository.addContact(name, number) }
-                            snackbar.show(if (ok) "$name נוסף" else "לא ניתן לשמור")
+                            snackbar.show(if (ok) tr("{0} נוסף", name) else tr("לא ניתן לשמור"))
                             reloadAfterWrite()
                         }
                     } },
@@ -392,9 +394,9 @@ private fun ContactsHome(
         }
         FutureBottomNav(
             items = listOf(
-                FutureNavItem("מועדפים", FutureIcons.Star),
-                FutureNavItem("אנשי קשר", FutureIcons.Contacts),
-                FutureNavItem("אני", FutureIcons.Person),
+                FutureNavItem(tr("מועדפים"), FutureIcons.Star),
+                FutureNavItem(tr("אנשי קשר"), FutureIcons.Contacts),
+                FutureNavItem(tr("אני"), FutureIcons.Person),
             ),
             selectedIndex = tab.ordinal,
             theme = theme,

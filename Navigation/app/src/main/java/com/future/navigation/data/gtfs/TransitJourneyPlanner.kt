@@ -1,5 +1,7 @@
 package com.future.navigation.data.gtfs
 
+import com.future.sharednav.i18n.tr
+
 import com.future.navigation.data.common.LatLng
 import com.future.navigation.data.common.distanceMetersTo
 import java.time.Instant
@@ -179,7 +181,7 @@ class TransitJourneyPlanner(private val dao: GtfsDao) {
         )
 
         val legs = mutableListOf<TransitLeg>()
-        legs += walkLeg("המיקום שלך", origin.stop.name, origin.distanceMeters)
+        legs += walkLeg(tr("המיקום שלך"), origin.stop.name, origin.distanceMeters)
         legs += TransitLeg(
             type = LegType.RIDE,
             routeShortName = dep.routeShortName,
@@ -191,7 +193,7 @@ class TransitJourneyPlanner(private val dao: GtfsDao) {
             intermediateStopNames = intermediate,
             fromStopId = origin.stop.stopId
         )
-        legs += walkLeg(dest.stop.name, "היעד שלך", dest.distanceMeters)
+        legs += walkLeg(dest.stop.name, tr("היעד שלך"), dest.distanceMeters)
 
         return TransitItinerary(
             legs = legs,
@@ -224,7 +226,7 @@ class TransitJourneyPlanner(private val dao: GtfsDao) {
         )
 
         val legs = mutableListOf<TransitLeg>()
-        legs += walkLeg("המיקום שלך", origin.stop.name, origin.distanceMeters)
+        legs += walkLeg(tr("המיקום שלך"), origin.stop.name, origin.distanceMeters)
         legs += TransitLeg(
             type = LegType.RIDE,
             routeShortName = firstLegDep.routeShortName,
@@ -247,7 +249,7 @@ class TransitJourneyPlanner(private val dao: GtfsDao) {
             intermediateStopNames = secondIntermediate,
             fromStopId = transferStop.stopId
         )
-        legs += walkLeg(dest.stop.name, "היעד שלך", dest.distanceMeters)
+        legs += walkLeg(dest.stop.name, tr("היעד שלך"), dest.distanceMeters)
 
         return TransitItinerary(
             legs = legs,

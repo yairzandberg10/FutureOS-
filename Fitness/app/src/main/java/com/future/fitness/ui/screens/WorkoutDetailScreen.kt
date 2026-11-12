@@ -1,5 +1,7 @@
 package com.future.fitness.ui.screens
 
+import com.future.sharednav.i18n.tr
+
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.theme.elevatedSurfaceColor
 import com.future.sharednav.theme.idleFieldColor
@@ -73,19 +75,19 @@ fun WorkoutDetailScreen(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            MetaChip(FutureIcons.FitnessCenter, "${workout.exercises.size} תרגילים", theme)
-            MetaChip(FutureIcons.Timer, "${workout.durationMin} דקות", theme)
+            MetaChip(FutureIcons.FitnessCenter, tr("{0} תרגילים", workout.exercises.size), theme)
+            MetaChip(FutureIcons.Timer, tr("{0} דקות", workout.durationMin), theme)
             MetaChip(FutureIcons.AutoMirrored.TrendingUp, workout.difficulty, theme)
         }
         Text(
-            "~$estimatedCalories קלוריות משוער",
+            tr("~{0} קלוריות משוער", estimatedCalories),
             color = theme.mutedTextColor,
             fontSize = FutureTypography.caption,
             modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 4.dp),
         )
 
         Text(
-            "תרגילים",
+            tr("תרגילים"),
             color = theme.textColor.copy(alpha = 0.6f),
             fontSize = FutureTypography.summary,
             fontWeight = FontWeight.Bold,
@@ -133,7 +135,7 @@ fun WorkoutDetailScreen(
         Row(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
         ) {
-            FutureButton("התחל אימון", theme, onStart, fillMaxWidth = true, focusRequester = startButtonFocusRequester)
+            FutureButton(tr("התחל אימון"), theme, onStart, fillMaxWidth = true, focusRequester = startButtonFocusRequester)
         }
     }
 }

@@ -1,5 +1,7 @@
 package com.future.recorder.ui
 
+import com.future.sharednav.i18n.tr
+
 import android.media.MediaPlayer
 import android.widget.Toast
 import androidx.compose.foundation.Canvas
@@ -103,7 +105,7 @@ fun PlayerScreen(theme: FutureTheme, file: File, onBack: () -> Unit) {
         // כשל השמעה באמצע (לא רק בהכנה) מציג הודעה ולא נשאר שקט.
         player.setOnErrorListener { _, _, _ ->
             isPlaying = false
-            Toast.makeText(context, "לא ניתן להשמיע את ההקלטה", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, tr("לא ניתן להשמיע את ההקלטה"), Toast.LENGTH_SHORT).show()
             true
         }
         runCatching {
@@ -121,7 +123,7 @@ fun PlayerScreen(theme: FutureTheme, file: File, onBack: () -> Unit) {
                 isPlaying = true
             }
         }.onFailure {
-            Toast.makeText(context, "לא ניתן להשמיע את ההקלטה", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, tr("לא ניתן להשמיע את ההקלטה"), Toast.LENGTH_SHORT).show()
         }
         onDispose {
             audioManager.abandonAudioFocusRequest(focusRequest)
@@ -162,7 +164,7 @@ fun PlayerScreen(theme: FutureTheme, file: File, onBack: () -> Unit) {
                 applySpeed()
             }
         }.onFailure {
-            Toast.makeText(context, "לא ניתן להשמיע את ההקלטה", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, tr("לא ניתן להשמיע את ההקלטה"), Toast.LENGTH_SHORT).show()
         }
     }
     fun seekBy(deltaMs: Int) {
@@ -180,7 +182,7 @@ fun PlayerScreen(theme: FutureTheme, file: File, onBack: () -> Unit) {
     // # נצרך ב-FutureUI ומגיע רק כשידור (ר' SharedKeypadNav).
     com.future.sharednav.nav.onPoundKeyPress { if (!menuOpen && !confirmDelete) cycleSpeed() }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -222,7 +224,7 @@ fun PlayerScreen(theme: FutureTheme, file: File, onBack: () -> Unit) {
                 }
                 Spacer(modifier = Modifier.height(FutureDimens.spacingLg))
                 FutureButton(
-                    if (isPlaying) "השהה" else "הפעל", theme, ::toggle,
+                    if (isPlaying) tr("השהה") else tr("הפעל"), theme, ::toggle,
                     fillMaxWidth = true, focusRequester = playButton,
                 )
             }
@@ -241,13 +243,13 @@ fun PlayerScreen(theme: FutureTheme, file: File, onBack: () -> Unit) {
     if (menuOpen) {
         FutureOptionsMenu(theme = theme, onDismissRequest = { menuOpen = false }, header = com.future.recorder.data.isolated(file.nameWithoutExtension)) {
             FutureMenuRow("מהירות: ${speedLabel(speed)}", FutureIcons.Speed, theme, { cycleSpeed() })
-            FutureMenuRow("שתף", FutureIcons.Share, theme, { menuOpen = false; shareRecording(context, file) })
-            FutureMenuRow("מחק", FutureIcons.Delete, theme, { menuOpen = false; confirmDelete = true }, destructive = true)
+            FutureMenuRow(tr("שתף"), FutureIcons.Share, theme, { menuOpen = false; shareRecording(context, file) })
+            FutureMenuRow(tr("מחק"), FutureIcons.Delete, theme, { menuOpen = false; confirmDelete = true }, destructive = true)
         }
     }
     if (confirmDelete) {
         ConfirmDialog(
-            message = "למחוק את \"${com.future.recorder.data.isolated(file.nameWithoutExtension)}\"?",
+            message = tr("למחוק את \"{0}\"?", com.future.recorder.data.isolated(file.nameWithoutExtension)),
             theme = theme,
             onCancel = { confirmDelete = false },
             onConfirm = {

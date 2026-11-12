@@ -1,5 +1,7 @@
 package com.future.fitness.ui.screens
 
+import com.future.sharednav.i18n.tr
+
 import com.future.sharednav.icons.FutureIcons
 import java.util.Locale
 import com.future.sharednav.theme.elevatedSurfaceColor
@@ -106,7 +108,7 @@ fun WorkoutTemplateScreen(
     age: Int?,
     heartRateMonitor: HeartRateMonitor,
     title: String = activityType.displayName,
-    finishLabel: String = "סיום",
+    finishLabel: String = tr("סיום"),
     onBack: () -> Unit,
     onFinish: (minutes: Int, distanceKm: Double?, calories: Int, avgHr: Int?, maxHr: Int?) -> Unit,
 ) {
@@ -211,7 +213,7 @@ fun WorkoutTemplateScreen(
             dangerColor = theme.dangerColor,
             onCancel = { confirmExit = false },
             onConfirm = { confirmExit = false; onBack() },
-            cancelLabel = "המשך",
+            cancelLabel = tr("המשך"),
             confirmLabel = "צא",
         )
     }
@@ -305,7 +307,7 @@ fun WorkoutTemplateScreen(
                 ) {
                     Icon(
                         if (running) FutureIcons.Pause else FutureIcons.PlayArrow,
-                        contentDescription = if (running) "השהה" else "המשך",
+                        contentDescription = if (running) tr("השהה") else tr("המשך"),
                         tint = theme.textColor,
                     )
                 }
@@ -358,12 +360,12 @@ private fun MainPage(
         if (usesGps && !hasLocationPermission) {
             Icon(FutureIcons.LocationOn, contentDescription = null, tint = theme.textColor.copy(alpha = 0.4f), modifier = Modifier.size(48.dp))
             Text(
-                "כדי למדוד מרחק וקצב צריך הרשאת מיקום",
+                tr("כדי למדוד מרחק וקצב צריך הרשאת מיקום"),
                 color = theme.textColor.copy(alpha = 0.6f),
                 fontSize = FutureTypography.body,
                 modifier = Modifier.padding(top = 12.dp, bottom = 16.dp),
             )
-            FutureButton("אפשר הרשאת מיקום", theme, onRequestLocationPermission)
+            FutureButton(tr("אפשר הרשאת מיקום"), theme, onRequestLocationPermission)
             return@Column
         }
 
@@ -371,9 +373,9 @@ private fun MainPage(
         if (usesGps) {
             // F31: כשהמיקום כבוי אומרים את זה, ולא "מחפש GPS" לנצח.
             Text(when {
-                tracker.hasFix -> "עוקב אחרי המיקום"
+                tracker.hasFix -> tr("עוקב אחרי המיקום")
                 hasLocationPermission && !tracker.isTracking -> "המיקום כבוי - הפעל מיקום בהגדרות"
-                else -> "מחפש GPS"
+                else -> tr("מחפש GPS")
             }, color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.label, modifier = Modifier.padding(bottom = 20.dp))
         } else {
             Spacer(Modifier.height(24.dp))
@@ -392,9 +394,9 @@ private fun MainPage(
                 }
                 StatColumn(String.format(Locale.US, "%.2f", tracker.distanceKm()), "ק״מ", theme)
             }
-            StatColumn(calories.toString(), "קלוריות", theme)
+            StatColumn(calories.toString(), tr("קלוריות"), theme)
             if (isHrConnected && bpm != null) {
-                StatColumn(bpm.toString(), "דופק", theme, icon = FutureIcons.Favorite)
+                StatColumn(bpm.toString(), tr("דופק"), theme, icon = FutureIcons.Favorite)
             }
         }
     }
@@ -403,18 +405,18 @@ private fun MainPage(
 @Composable
 private fun RunningDynamicsPage(theme: FutureTheme, heartRateMonitor: HeartRateMonitor) {
     Column(modifier = Modifier.fillMaxSize().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-        Text("דינמיקת ריצה", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.summary, modifier = Modifier.padding(bottom = 16.dp))
+        Text(tr("דינמיקת ריצה"), color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.summary, modifier = Modifier.padding(bottom = 16.dp))
         if (!heartRateMonitor.hasRunningCadenceSensor) {
-            NoSensorMessage(theme, "אין חיישן קצב-צעדים מחובר (Running Speed and Cadence) - התחברו לשעון/חיישן תואם בהגדרות")
+            NoSensorMessage(theme, tr("אין חיישן קצב-צעדים מחובר (Running Speed and Cadence) - התחברו לשעון/חיישן תואם בהגדרות"))
             return@Column
         }
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-            StatColumn(heartRateMonitor.runningCadenceSpm?.toString() ?: "--", "צעדים/דקה", theme)
+            StatColumn(heartRateMonitor.runningCadenceSpm?.toString() ?: "--", tr("צעדים/דקה"), theme)
             StatColumn(heartRateMonitor.runningSpeedKmh?.let { String.format(Locale.US, "%.1f", it) } ?: "--", "קמ״ש", theme)
         }
         heartRateMonitor.runningStrideLengthM?.let { stride ->
             Spacer(Modifier.height(16.dp))
-            StatColumn(String.format(Locale.US, "%.2f", stride), "מ' לצעד", theme)
+            StatColumn(String.format(Locale.US, "%.2f", stride), tr("מ' לצעד"), theme)
         }
     }
 }
@@ -422,9 +424,9 @@ private fun RunningDynamicsPage(theme: FutureTheme, heartRateMonitor: HeartRateM
 @Composable
 private fun CyclingPowerPage(theme: FutureTheme, heartRateMonitor: HeartRateMonitor) {
     Column(modifier = Modifier.fillMaxSize().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-        Text("עוצמה וקצב דיווש", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.summary, modifier = Modifier.padding(bottom = 16.dp))
+        Text(tr("עוצמה וקצב דיווש"), color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.summary, modifier = Modifier.padding(bottom = 16.dp))
         if (!heartRateMonitor.hasCyclingPowerSensor) {
-            NoSensorMessage(theme, "אין מד-כוח מחובר (Cycling Power) - התחברו לשעון/מד-כוח תואם בהגדרות")
+            NoSensorMessage(theme, tr("אין מד-כוח מחובר (Cycling Power) - התחברו לשעון/מד-כוח תואם בהגדרות"))
             return@Column
         }
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
@@ -440,11 +442,11 @@ private fun ElevationPage(theme: FutureTheme, tracker: RunTracker) {
         Icon(FutureIcons.Terrain, contentDescription = null, tint = theme.textColor, modifier = Modifier.size(32.dp))
         Spacer(Modifier.height(12.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-            StatColumn(tracker.currentAltitudeMeters?.let { "%.0f".format(Locale.US, it) } ?: "--", "מ' גובה", theme)
-            StatColumn("%.0f".format(Locale.US, tracker.elevationGainMeters), "מ' עלייה", theme)
+            StatColumn(tracker.currentAltitudeMeters?.let { "%.0f".format(Locale.US, it) } ?: "--", tr("מ' גובה"), theme)
+            StatColumn("%.0f".format(Locale.US, tracker.elevationGainMeters), tr("מ' עלייה"), theme)
         }
         Text(
-            "מבוסס על GPS בלבד (בלי חיישן ברומטרי) - ייתכן רעש/אי-דיוק",
+            tr("מבוסס על GPS בלבד (בלי חיישן ברומטרי) - ייתכן רעש/אי-דיוק"),
             color = theme.textColor.copy(alpha = 0.4f),
             fontSize = FutureTypography.caption,
             modifier = Modifier.padding(top = 16.dp),
@@ -455,9 +457,9 @@ private fun ElevationPage(theme: FutureTheme, tracker: RunTracker) {
 @Composable
 private fun HeartRateZonesPage(theme: FutureTheme, estimatedMaxHr: Int?, zoneSeconds: List<Int>, currentBpm: Int?) {
     Column(modifier = Modifier.fillMaxSize().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text("אזורי דופק", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.summary, modifier = Modifier.padding(bottom = 12.dp))
+        Text(tr("אזורי דופק"), color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.summary, modifier = Modifier.padding(bottom = 12.dp))
         if (estimatedMaxHr == null) {
-            NoSensorMessage(theme, "הגדירו גיל בהגדרות כדי לחשב אזורי דופק (מבוסס על 220-גיל)")
+            NoSensorMessage(theme, tr("הגדירו גיל בהגדרות כדי לחשב אזורי דופק (מבוסס על 220-גיל)"))
             return@Column
         }
         if (currentBpm != null) {
@@ -466,7 +468,7 @@ private fun HeartRateZonesPage(theme: FutureTheme, estimatedMaxHr: Int?, zoneSec
             // F30: בלי דופק כל האזורים 00:00 - אומרים למה, ולא רק מציגים אפסים.
             NoSensorMessage(theme, "אין נתוני דופק. חברו שעון דופק כדי למלא את האזורים")
         }
-        val zoneLabels = listOf("אזור 1 · חימום", "אזור 2 · קל", "אזור 3 · בינוני", "אזור 4 · קשה", "אזור 5 · מקסימלי")
+        val zoneLabels = listOf(tr("אזור 1 · חימום"), tr("אזור 2 · קל"), tr("אזור 3 · בינוני"), tr("אזור 4 · קשה"), tr("אזור 5 · מקסימלי"))
         val totalSeconds = zoneSeconds.sum().coerceAtLeast(1)
         zoneLabels.forEachIndexed { index, label ->
             val seconds = zoneSeconds.getOrElse(index) { 0 }
@@ -496,22 +498,22 @@ private fun HeartRateZonesPage(theme: FutureTheme, estimatedMaxHr: Int?, zoneSec
 private fun MusicControlPage(theme: FutureTheme) {
     val context = LocalContext.current
     Column(modifier = Modifier.fillMaxSize().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-        Text("בקרת מוזיקה", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.summary, modifier = Modifier.padding(bottom = 4.dp))
+        Text(tr("בקרת מוזיקה"), color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.summary, modifier = Modifier.padding(bottom = 4.dp))
         Text(
-            "שולט על נגן המדיה הפעיל כרגע במערכת",
+            tr("שולט על נגן המדיה הפעיל כרגע במערכת"),
             color = theme.textColor.copy(alpha = 0.4f),
             fontSize = FutureTypography.caption,
             modifier = Modifier.padding(bottom = 20.dp),
         )
         Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            MediaButton(theme, FutureIcons.SkipPrevious, "הקודם") { sendMediaKey(context, AndroidKeyEvent.KEYCODE_MEDIA_PREVIOUS) }
-            MediaButton(theme, FutureIcons.PlayArrow, "נגן/השהה", primary = true) { sendMediaKey(context, AndroidKeyEvent.KEYCODE_MEDIA_PLAY_PAUSE) }
-            MediaButton(theme, FutureIcons.SkipNext, "הבא") { sendMediaKey(context, AndroidKeyEvent.KEYCODE_MEDIA_NEXT) }
+            MediaButton(theme, FutureIcons.SkipPrevious, tr("הקודם")) { sendMediaKey(context, AndroidKeyEvent.KEYCODE_MEDIA_PREVIOUS) }
+            MediaButton(theme, FutureIcons.PlayArrow, tr("נגן/השהה"), primary = true) { sendMediaKey(context, AndroidKeyEvent.KEYCODE_MEDIA_PLAY_PAUSE) }
+            MediaButton(theme, FutureIcons.SkipNext, tr("הבא")) { sendMediaKey(context, AndroidKeyEvent.KEYCODE_MEDIA_NEXT) }
         }
         Spacer(Modifier.height(20.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            MediaButton(theme, FutureIcons.AutoMirrored.VolumeDown, "הנמך") { adjustVolume(context, AudioManager.ADJUST_LOWER) }
-            MediaButton(theme, FutureIcons.AutoMirrored.VolumeUp, "הגבר") { adjustVolume(context, AudioManager.ADJUST_RAISE) }
+            MediaButton(theme, FutureIcons.AutoMirrored.VolumeDown, tr("הנמך")) { adjustVolume(context, AudioManager.ADJUST_LOWER) }
+            MediaButton(theme, FutureIcons.AutoMirrored.VolumeUp, tr("הגבר")) { adjustVolume(context, AudioManager.ADJUST_RAISE) }
         }
     }
 }

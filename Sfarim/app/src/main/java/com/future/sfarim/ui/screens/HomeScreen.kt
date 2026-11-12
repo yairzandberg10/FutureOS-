@@ -1,5 +1,7 @@
 package com.future.sfarim.ui.screens
 
+import com.future.sharednav.i18n.tr
+
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureListItem
 import com.future.sfarim.ui.components.RowIcon
@@ -62,7 +64,7 @@ fun HomeScreen(
         ) {
             item {
                 Text(
-                    "בלכתך בדרך",
+                    tr("בלכתך בדרך"),
                     fontSize = FutureTypography.headline,
                     fontWeight = FontWeight.Bold,
                     color = theme.textColor,
@@ -75,7 +77,7 @@ fun HomeScreen(
                         // ההפניה כבר מתחילה בשם הספר ("בראשית פרק ב") - בלי כפילות "בראשית · בראשית...".
                         title = if (continueReading.segmentRef.startsWith(continueReading.bookTitle)) continueReading.segmentRef
                         else "${continueReading.bookTitle} · ${continueReading.segmentRef}",
-                        summary = "המשך קריאה",
+                        summary = tr("המשך קריאה"),
                         theme = theme,
                         onClick = { onContinueReading(continueReading) },
                         focusRequester = firstFocusRequester,
@@ -86,15 +88,15 @@ fun HomeScreen(
             item {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
                     HomeShortcut(
-                        FutureIcons.Search, "חיפוש", theme, Modifier.weight(1f),
+                        FutureIcons.Search, tr("חיפוש"), theme, Modifier.weight(1f),
                         focusRequester = if (continueReading == null) firstFocusRequester else null,
                         onClick = onOpenSearch,
                     )
-                    HomeShortcut(FutureIcons.Bookmark, "סימניות", theme, Modifier.weight(1f), onClick = onOpenBookmarks)
+                    HomeShortcut(FutureIcons.Bookmark, tr("סימניות"), theme, Modifier.weight(1f), onClick = onOpenBookmarks)
                 }
             }
             item {
-                FutureSectionHeader("קטגוריות", theme, inset = false)
+                FutureSectionHeader(tr("קטגוריות"), theme, inset = false)
             }
             items(categories, key = { it.id }) { category ->
                 FutureListItem(

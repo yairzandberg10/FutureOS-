@@ -1,5 +1,7 @@
 package com.future.fitness.ui.screens
 
+import com.future.sharednav.i18n.tr
+
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureAvatar
 import com.future.sharednav.theme.elevatedSurfaceColor
@@ -75,7 +77,7 @@ fun SummaryScreen(
             stats.forEach { (value, label) -> SummaryStat(value, label, theme) }
         }
 
-        FutureButton("חזרה לבית", theme, onDone, focusRequester = doneButtonFocusRequester)
+        FutureButton(tr("חזרה לבית"), theme, onDone, focusRequester = doneButtonFocusRequester)
     }
 }
 

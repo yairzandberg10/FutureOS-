@@ -1,5 +1,7 @@
 package com.future.navigation.ui.saved
 
+import com.future.sharednav.i18n.tr
+
 import com.future.sharednav.icons.FutureIcons
 
 import androidx.compose.foundation.layout.Arrangement
@@ -77,7 +79,7 @@ fun SavedPlacesScreen(viewModel: SavedPlacesViewModel, onBack: () -> Unit, onNav
                 pendingDelete = null
             },
             cancelLabel = "ביטול",
-            confirmLabel = "מחק",
+            confirmLabel = tr("מחק"),
         )
     }
     // F27: OK על אריח בית/עבודה שכבר יש בו כתובת פותח תפריט "שנה כתובת" / "הסר".
@@ -198,7 +200,7 @@ fun SavedPlacesScreen(viewModel: SavedPlacesViewModel, onBack: () -> Unit, onNav
                     )
                     TopBarIconButton(
                         icon = FutureIcons.Delete,
-                        contentDescription = "מחק",
+                        contentDescription = tr("מחק"),
                         textColor = theme.textColor,
                         accentColor = theme.accentColor,
                         onClick = { pendingDelete = place },

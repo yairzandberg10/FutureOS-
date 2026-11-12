@@ -1,5 +1,7 @@
 package com.future.tools.ui
 
+import com.future.sharednav.i18n.tr
+
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.theme.FutureDimens
 import com.future.sharednav.theme.FutureMotion
@@ -59,33 +61,33 @@ data class ToolEntry(val icon: ImageVector, val label: String, val subtitle: Str
 val TOOL_ENTRIES = listOf(
     // כלים קיימים - המחשבון, השעון עצר/טיימר והפנס עברו לאפליקציות עצמאיות
     // משלהם (Calculator, Clock, Flashlight) ואינם חלק מ-Tools יותר.
-    ToolEntry(FutureIcons.SwapHoriz, "ממיר יחידות", "אורך, משקל, טמפרטורה, נפח", ToolRoute.UnitConverter),
-    ToolEntry(FutureIcons.Explore, "מצפן", "צפון אמיתי, קואורדינטות וגובה", ToolRoute.Compass),
-    ToolEntry(FutureIcons.Straighten, "פלס", "איזון אופקי לפי חיישן תאוצה", ToolRoute.Level),
+    ToolEntry(FutureIcons.SwapHoriz, tr("ממיר יחידות"), tr("אורך, משקל, טמפרטורה, נפח"), ToolRoute.UnitConverter),
+    ToolEntry(FutureIcons.Explore, tr("מצפן"), "צפון אמיתי, קואורדינטות וגובה", ToolRoute.Compass),
+    ToolEntry(FutureIcons.Straighten, tr("פלס"), tr("איזון אופקי לפי חיישן תאוצה"), ToolRoute.Level),
 
     // מדידה וחיישנים (תיאורים קצרים - שורה אחת בלי חיתוך)
-    ToolEntry(FutureIcons.GraphicEq, "מד רעש", "עוצמת קול בדציבלים מהמיקרופון", ToolRoute.NoiseMeter),
-    ToolEntry(FutureIcons.WbSunny, "מד אור", "עוצמת תאורה בלוקס", ToolRoute.LuxMeter),
-    ToolEntry(FutureIcons.Architecture, "סרגל וזווית", "סרגל וירטואלי ומד זווית הטיה", ToolRoute.AngleRuler),
-    ToolEntry(FutureIcons.MusicNote, "מכוון גיטרה", "כיוון מיתרים לפי המיקרופון", ToolRoute.GuitarTuner),
+    ToolEntry(FutureIcons.GraphicEq, tr("מד רעש"), tr("עוצמת קול בדציבלים מהמיקרופון"), ToolRoute.NoiseMeter),
+    ToolEntry(FutureIcons.WbSunny, tr("מד אור"), "עוצמת תאורה בלוקס", ToolRoute.LuxMeter),
+    ToolEntry(FutureIcons.Architecture, tr("סרגל וזווית"), tr("סרגל וירטואלי ומד זווית הטיה"), ToolRoute.AngleRuler),
+    ToolEntry(FutureIcons.MusicNote, tr("מכוון גיטרה"), tr("כיוון מיתרים לפי המיקרופון"), ToolRoute.GuitarTuner),
 
     // מחשבונים וממירים
-    ToolEntry(FutureIcons.Receipt, "טיפים ופיצול חשבון", "תשר וחלוקה בין סועדים", ToolRoute.TipSplitCalculator),
-    ToolEntry(FutureIcons.Percent, "מחשבון פיננסי", "הנחות, מע\"מ והחזרי הלוואה", ToolRoute.QuickFinanceCalculator),
-    ToolEntry(FutureIcons.Public, "ממיר אזורי זמן", "השעה הנוכחית בכל העולם", ToolRoute.TimeZoneConverter),
+    ToolEntry(FutureIcons.Receipt, tr("טיפים ופיצול חשבון"), tr("תשר וחלוקה בין סועדים"), ToolRoute.TipSplitCalculator),
+    ToolEntry(FutureIcons.Percent, tr("מחשבון פיננסי"), tr("הנחות, מע\"מ והחזרי הלוואה"), ToolRoute.QuickFinanceCalculator),
+    ToolEntry(FutureIcons.Public, tr("ממיר אזורי זמן"), tr("השעה הנוכחית בכל העולם"), ToolRoute.TimeZoneConverter),
 
     // פרודוקטיביות
-    ToolEntry(FutureIcons.QrCodeScanner, "סורק קודים", "QR וברקוד ללא פרסומות", ToolRoute.QrScanner),
-    ToolEntry(FutureIcons.LocalCafe, "פומודורו", "מחזורי מיקוד והפסקה", ToolRoute.Pomodoro),
-    ToolEntry(FutureIcons.VpnKey, "מחולל סיסמאות", "סיסמאות חזקות ואקראיות", ToolRoute.PasswordGenerator),
+    ToolEntry(FutureIcons.QrCodeScanner, tr("סורק קודים"), tr("QR וברקוד ללא פרסומות"), ToolRoute.QrScanner),
+    ToolEntry(FutureIcons.LocalCafe, tr("פומודורו"), tr("מחזורי מיקוד והפסקה"), ToolRoute.Pomodoro),
+    ToolEntry(FutureIcons.VpnKey, tr("מחולל סיסמאות"), tr("סיסמאות חזקות ואקראיות"), ToolRoute.PasswordGenerator),
 
     // כלי עזר אקראיים ופנאי
-    ToolEntry(FutureIcons.Casino, "מטבע וקובייה", "הטלת מטבע או קוביות", ToolRoute.CoinDice),
-    ToolEntry(FutureIcons.Shuffle, "בורר אקראי", "בחירת אפשרות אקראית מרשימה", ToolRoute.RandomPicker),
-    ToolEntry(FutureIcons.Numbers, "מספר אקראי", "הגרלת מספר בטווח שתבחר", ToolRoute.RandomNumber),
+    ToolEntry(FutureIcons.Casino, tr("מטבע וקובייה"), tr("הטלת מטבע או קוביות"), ToolRoute.CoinDice),
+    ToolEntry(FutureIcons.Shuffle, tr("בורר אקראי"), tr("בחירת אפשרות אקראית מרשימה"), ToolRoute.RandomPicker),
+    ToolEntry(FutureIcons.Numbers, tr("מספר אקראי"), tr("הגרלת מספר בטווח שתבחר"), ToolRoute.RandomNumber),
 
     // שדרוגי AI
-    ToolEntry(FutureIcons.DocumentScanner, "סורק טקסט", "צילום מסמך והפיכתו לטקסט", ToolRoute.TextScanner)
+    ToolEntry(FutureIcons.DocumentScanner, tr("סורק טקסט"), tr("צילום מסמך והפיכתו לטקסט"), ToolRoute.TextScanner)
 )
 
 @Composable
@@ -111,10 +113,10 @@ fun ToolsHomeScreen(theme: FutureTheme, onOpen: (ToolRoute) -> Unit, lastOpenedR
     var menuFor by remember { mutableStateOf<ToolEntry?>(null) }
     onOptionsKeyPress { menuFor = if (menuFor == null) focusedEntry else null }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize()) {
-                ToolsHeader(title = "כלים", theme = theme)
+                ToolsHeader(title = tr("כלים"), theme = theme)
                 LazyColumn(
                     state = listState,
                     contentPadding = PaddingValues(horizontal = FutureDimens.screenPadding, vertical = FutureDimens.spacingXs),
@@ -136,9 +138,9 @@ fun ToolsHomeScreen(theme: FutureTheme, onOpen: (ToolRoute) -> Unit, lastOpenedR
     menuFor?.let { entry ->
         val isPinned = ToolShortcuts.isPinnedToHome(context, entry.route)
         FutureOptionsMenu(theme = theme, onDismissRequest = { menuFor = null }, header = entry.label) {
-            FutureMenuRow("פתח", entry.icon, theme, { menuFor = null; onOpen(entry.route) })
+            FutureMenuRow(tr("פתח"), entry.icon, theme, { menuFor = null; onOpen(entry.route) })
             FutureMenuRow(
-                if (isPinned) "הסר ממסך הבית" else "הצמד למסך הבית",
+                if (isPinned) tr("הסר ממסך הבית") else tr("הצמד למסך הבית"),
                 FutureIcons.PushPin,
                 theme,
                 {
@@ -148,8 +150,8 @@ fun ToolsHomeScreen(theme: FutureTheme, onOpen: (ToolRoute) -> Unit, lastOpenedR
                     FutureContentWidget.refresh(context, ToolsWidgetProvider::class.java)
                     Toast.makeText(
                         context,
-                        if (!isPinned) "${entry.label} נוסף כאפליקציה עצמאית - אפשר להוסיף אותו למסך הבית דרך \"הוספת אפליקציה\" בלאנצ'ר"
-                        else "${entry.label} הוסר מרשימת האפליקציות העצמאיות",
+                        if (!isPinned) tr("{0} נוסף כאפליקציה עצמאית - אפשר להוסיף אותו למסך הבית דרך \"הוספת אפליקציה\" בלאנצ'ר", entry.label)
+                        else tr("{0} הוסר מרשימת האפליקציות העצמאיות", entry.label),
                         Toast.LENGTH_LONG
                     ).show()
                 },

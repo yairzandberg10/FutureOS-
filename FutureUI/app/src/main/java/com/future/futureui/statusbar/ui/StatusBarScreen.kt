@@ -340,7 +340,7 @@ fun StatusBarScreen(
     // לתוך 28dp ומעוות אותם.
     val density = LocalDensity.current
     CompositionLocalProvider(
-        LocalLayoutDirection provides LayoutDirection.Rtl,
+        LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection,
         LocalDensity provides Density(density.density, fontScale = 1f),
         LocalBar provides palette
     ) {

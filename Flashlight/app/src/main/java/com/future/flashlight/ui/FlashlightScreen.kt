@@ -84,7 +84,7 @@ fun FlashlightScreen(theme: FutureTheme) {
     // הפוקוס נדרש רק כשהכפתור קיים (FL-16)
     LaunchedEffect(hasFlash) { if (hasFlash) focusRequester.requestFocus() }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         BoxWithConstraints(modifier = Modifier.fillMaxSize().background(Color.Black)) {
             val u = maxWidth / DESIGN_W
             val v = maxHeight / DESIGN_H

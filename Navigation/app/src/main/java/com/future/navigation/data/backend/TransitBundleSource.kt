@@ -1,5 +1,7 @@
 package com.future.navigation.data.backend
 
+import com.future.sharednav.i18n.tr
+
 import android.util.Log
 import com.future.navigation.data.gtfs.BoundingBox
 import com.future.navigation.data.gtfs.CalendarEntity
@@ -72,15 +74,15 @@ class TransitBundleSource(private val database: GtfsDatabase) {
      * מציג, כדי שמסך ההתקנה לא ידע להבדיל בין שני המקורות.
      */
     suspend fun import(bundle: BundleRef, collector: FlowCollector<ImportProgress>) {
-        collector.emit(ImportProgress(ImportPhase.DOWNLOADING, 0f, message = "מוריד נתוני תחבורה"))
+        collector.emit(ImportProgress(ImportPhase.DOWNLOADING, 0f, message = tr("מוריד נתוני תחבורה")))
         val request = FirebaseBackend.storageDownloadRequest(bundle.storagePath)
-            ?: throw IllegalStateException("אחסון Firebase לא זמין")
+            ?: throw IllegalStateException(tr("אחסון Firebase לא זמין"))
 
         NetworkModule.okHttpClient.newCall(request).execute().use { response ->
             if (!response.isSuccessful) {
                 throw IllegalStateException("הורדת חבילת התחבורה נכשלה: ${response.code}")
             }
-            val body = response.body ?: throw IllegalStateException("תשובה ריקה מהשרת")
+            val body = response.body ?: throw IllegalStateException(tr("תשובה ריקה מהשרת"))
             val dao = database.gtfsDao()
 
             dao.clearStops()
@@ -206,7 +208,7 @@ class TransitBundleSource(private val database: GtfsDatabase) {
                         if (percent != lastReportedPercent) {
                             lastReportedPercent = percent
                             collector.emit(
-                                ImportProgress(ImportPhase.PARSING_STOP_TIMES, fraction, message = "מייבא נתוני תחבורה")
+                                ImportProgress(ImportPhase.PARSING_STOP_TIMES, fraction, message = tr("מייבא נתוני תחבורה"))
                             )
                         }
                     }

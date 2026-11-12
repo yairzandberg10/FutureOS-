@@ -1,5 +1,7 @@
 package com.future.files.data
 
+import com.future.sharednav.i18n.tr
+
 import java.io.File
 import java.nio.file.Files as NioFiles
 
@@ -85,7 +87,7 @@ fun categorize(file: File): FileCategory {
 }
 
 /** סדר הרשימה - נבחר בכפתור המיון שבשורה העליונה. תיקיות תמיד לפני קבצים. */
-enum class SortOrder(val label: String) { NAME("שם"), DATE("תאריך"), SIZE("גודל"), TYPE("סוג") }
+enum class SortOrder(val label: String) { NAME(tr("שם")), DATE(tr("תאריך")), SIZE(tr("גודל")), TYPE(tr("סוג")) }
 
 /** התקדמות של העתקה/העברה ארוכה, וביטול שלה מהמסך. */
 class CopyProgress {

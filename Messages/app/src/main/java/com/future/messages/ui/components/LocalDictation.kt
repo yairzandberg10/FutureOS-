@@ -1,5 +1,7 @@
 package com.future.messages.ui.components
 
+import com.future.sharednav.i18n.tr
+
 import android.Manifest
 import android.content.ComponentName
 import android.content.Context
@@ -83,10 +85,10 @@ fun rememberLocalDictation(onText: (String) -> Unit): LocalDictation {
             override fun onEvent(eventType: Int, params: Bundle?) {}
             override fun onError(error: Int) {
                 val message = when (error) {
-                    SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "לא זוהה דיבור"
-                    SpeechRecognizer.ERROR_AUDIO -> "שגיאה במיקרופון"
-                    SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "אין הרשאת מיקרופון"
-                    else -> "התמלול נכשל"
+                    SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> tr("לא זוהה דיבור")
+                    SpeechRecognizer.ERROR_AUDIO -> tr("שגיאה במיקרופון")
+                    SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> tr("אין הרשאת מיקרופון")
+                    else -> tr("התמלול נכשל")
                 }
                 Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                 finish()
@@ -109,7 +111,7 @@ fun rememberLocalDictation(onText: (String) -> Unit): LocalDictation {
     }
 
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (granted) start() else Toast.makeText(context, "צריך הרשאת מיקרופון להכתבה", Toast.LENGTH_SHORT).show()
+        if (granted) start() else Toast.makeText(context, tr("צריך הרשאת מיקרופון להכתבה"), Toast.LENGTH_SHORT).show()
     }
 
     dictation = remember {

@@ -1,5 +1,7 @@
 package com.future.futureui.controlcenter.ui
 
+import com.future.sharednav.i18n.tr
+
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
 import androidx.compose.animation.AnimatedVisibility
@@ -88,7 +90,7 @@ fun PowerMenuScreen(
     }
     val shown = remember { MutableTransitionState(false).apply { targetState = true } }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -122,14 +124,14 @@ fun PowerMenuScreen(
                     )
                     PowerMenuRow(
                         icon = if (armed == "power") Icons.Rounded.PowerSettingsNew else Icons.Rounded.RestartAlt,
-                        label = if (armed == "power") "כיבוי" else "הפעלה מחדש",
+                        label = if (armed == "power") tr("כיבוי") else tr("הפעלה מחדש"),
                         tint = if (armed == "power") Color(0xFFFF453A) else Color.White,
                         circle = if (armed == "power") Color(0xFFFF453A).copy(alpha = 0.18f) else Color(0xFF30D158).copy(alpha = 0.2f),
                         onClick = { confirmArmed() },
                     )
                   } else {
                     Text(
-                        text = "אפשרויות כיבוי",
+                        text = tr("אפשרויות כיבוי"),
                         color = Color.White.copy(alpha = 0.55f),
                         fontSize = FutureTypography.label,
                         fontWeight = FontWeight.Medium,
@@ -145,14 +147,14 @@ fun PowerMenuScreen(
                     )
                     PowerMenuRow(
                         icon = Icons.Rounded.PowerSettingsNew,
-                        label = "כיבוי",
+                        label = tr("כיבוי"),
                         tint = Color(0xFFFF453A),
                         circle = Color(0xFFFF453A).copy(alpha = 0.18f),
                         onClick = { armedAt = android.os.SystemClock.uptimeMillis(); armed = "power" },
                     )
                     PowerMenuRow(
                         icon = Icons.Rounded.RestartAlt,
-                        label = "הפעלה מחדש",
+                        label = tr("הפעלה מחדש"),
                         tint = Color.White,
                         circle = Color(0xFF30D158).copy(alpha = 0.2f),
                         onClick = { armedAt = android.os.SystemClock.uptimeMillis(); armed = "restart" },
@@ -169,8 +171,8 @@ fun PowerMenuScreen(
                     if (onAirplane != null) {
                         PowerMenuRow(
                             icon = Icons.Rounded.AirplanemodeActive,
-                            label = "מצב טיסה",
-                            status = if (airplaneOn == true) "פועל" else "כבוי",
+                            label = tr("מצב טיסה"),
+                            status = if (airplaneOn == true) tr("פועל") else tr("כבוי"),
                             statusOn = airplaneOn == true,
                             tint = Color.White,
                             circle = Color(0xFF0A84FF).copy(alpha = if (airplaneOn == true) 0.45f else 0.18f),
@@ -180,8 +182,8 @@ fun PowerMenuScreen(
                     if (onSilent != null) {
                         PowerMenuRow(
                             icon = Icons.Rounded.NotificationsOff,
-                            label = "מצב שקט",
-                            status = if (silentOn == true) "פועל" else "כבוי",
+                            label = tr("מצב שקט"),
+                            status = if (silentOn == true) tr("פועל") else tr("כבוי"),
                             statusOn = silentOn == true,
                             tint = Color.White,
                             circle = Color(0xFFBF5AF2).copy(alpha = if (silentOn == true) 0.45f else 0.18f),
@@ -191,7 +193,7 @@ fun PowerMenuScreen(
                     if (onScreenshot != null) {
                         PowerMenuRow(
                             icon = Icons.Rounded.Screenshot,
-                            label = "צילום מסך",
+                            label = tr("צילום מסך"),
                             tint = Color.White,
                             circle = Color.White.copy(alpha = 0.12f),
                             onClick = onScreenshot,
@@ -199,7 +201,7 @@ fun PowerMenuScreen(
                     }
                   }
                     Text(
-                        "חזרה לביטול",
+                        tr("חזרה לביטול"),
                         color = Color.White.copy(alpha = 0.35f),
                         fontSize = FutureTypography.caption,
                         textAlign = TextAlign.Center,

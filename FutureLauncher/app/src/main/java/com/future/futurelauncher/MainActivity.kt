@@ -1,5 +1,7 @@
 package com.future.futurelauncher
 
+import com.future.sharednav.i18n.tr
+
 import com.future.sharednav.focus.focusGlideHost
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.theme.scrimColor
@@ -114,7 +116,7 @@ class MainActivity : ComponentActivity() {
             FutureLauncherTheme {
                 // כמו בכל אפליקציה אחרת - RTL כפוי, גם אם שפת המערכת אחרת.
                 androidx.compose.runtime.CompositionLocalProvider(
-                    androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Rtl
+                    androidx.compose.ui.platform.LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection
                 ) {
                     LauncherScreen(viewModel, onSelectWidget = { selectWidget() })
                 }
@@ -295,7 +297,7 @@ class MainActivity : ComponentActivity() {
         // A better way is for LauncherScreen to observe a "PendingWidget" state in ViewModel.
         if (!viewModel.addWidget(appWidgetId, viewModel.visiblePage)) {
             appWidgetHost.deleteAppWidgetId(appWidgetId)
-            Toast.makeText(this, "אין מספיק מקום פנוי בדף הזה לווידג'ט", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, tr("אין מספיק מקום פנוי בדף הזה לווידג'ט"), Toast.LENGTH_SHORT).show()
         }
     }
 }

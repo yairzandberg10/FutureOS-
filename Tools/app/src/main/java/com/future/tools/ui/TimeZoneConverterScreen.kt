@@ -1,4 +1,6 @@
 package com.future.tools.ui
+
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.theme.subtleTextColor
 import com.future.sharednav.theme.mutedTextColor
 
@@ -32,17 +34,17 @@ import java.util.Locale
 private data class WorldCity(val label: String, val zoneId: String)
 
 private val WORLD_CITIES = listOf(
-    WorldCity("ירושלים", "Asia/Jerusalem"),
-    WorldCity("ניו יורק", "America/New_York"),
-    WorldCity("לוס אנג'לס", "America/Los_Angeles"),
-    WorldCity("לונדון", "Europe/London"),
-    WorldCity("פריז", "Europe/Paris"),
-    WorldCity("מוסקבה", "Europe/Moscow"),
-    WorldCity("דובאי", "Asia/Dubai"),
-    WorldCity("מומבאי", "Asia/Kolkata"),
-    WorldCity("בנגקוק", "Asia/Bangkok"),
-    WorldCity("טוקיו", "Asia/Tokyo"),
-    WorldCity("סידני", "Australia/Sydney")
+    WorldCity(tr("ירושלים"), "Asia/Jerusalem"),
+    WorldCity(tr("ניו יורק"), "America/New_York"),
+    WorldCity(tr("לוס אנג'לס"), "America/Los_Angeles"),
+    WorldCity(tr("לונדון"), "Europe/London"),
+    WorldCity(tr("פריז"), "Europe/Paris"),
+    WorldCity(tr("מוסקבה"), "Europe/Moscow"),
+    WorldCity(tr("דובאי"), "Asia/Dubai"),
+    WorldCity(tr("מומבאי"), "Asia/Kolkata"),
+    WorldCity(tr("בנגקוק"), "Asia/Bangkok"),
+    WorldCity(tr("טוקיו"), "Asia/Tokyo"),
+    WorldCity(tr("סידני"), "Australia/Sydney")
 )
 
 private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss")
@@ -61,10 +63,10 @@ fun TimeZoneConverterScreen(theme: FutureTheme, onBack: () -> Unit) {
 
     val localZone = ZoneId.systemDefault()
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize()) {
-                ToolsHeader(title = "ממיר אזורי זמן", theme = theme, onBack = onBack)
+                ToolsHeader(title = tr("ממיר אזורי זמן"), theme = theme, onBack = onBack)
 
                 LazyColumn(
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
@@ -104,8 +106,8 @@ private fun CityTimeRow(city: WorldCity, zoned: ZonedDateTime, dayDiff: Long, th
             Text(
                 zoned.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale("he")) + " · " + zoned.format(dateFormatter) +
                     when {
-                        dayDiff > 0 -> " (מחר)"
-                        dayDiff < 0 -> " (אתמול)"
+                        dayDiff > 0 -> tr(" (מחר)")
+                        dayDiff < 0 -> tr(" (אתמול)")
                         else -> ""
                     },
                 color = theme.mutedTextColor,

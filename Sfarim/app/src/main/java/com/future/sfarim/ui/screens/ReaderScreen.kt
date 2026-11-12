@@ -1,5 +1,7 @@
 package com.future.sfarim.ui.screens
 
+import com.future.sharednav.i18n.tr
+
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureOptionsMenu
 import com.future.sharednav.components.FutureMenuRow
@@ -199,7 +201,7 @@ fun ReaderScreen(
                     horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween,
                 ) {
                     Text(
-                        if (hasPrevChapter) "* לפרק קודם" else "",
+                        if (hasPrevChapter) tr("* לפרק קודם") else "",
                         color = theme.textColor.copy(alpha = 0.4f),
                         fontSize = FutureTypography.caption,
                     )
@@ -214,7 +216,7 @@ fun ReaderScreen(
                         modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
                     )
                     Text(
-                        if (hasNextChapter) "לפרק הבא #" else "",
+                        if (hasNextChapter) tr("לפרק הבא #") else "",
                         color = theme.textColor.copy(alpha = 0.4f),
                         fontSize = FutureTypography.caption,
                     )
@@ -222,7 +224,7 @@ fun ReaderScreen(
                 if (segments.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text(
-                            if (isLoading) "טוען" else "אין תוכן זמין בפרק זה",
+                            if (isLoading) tr("טוען") else tr("אין תוכן זמין בפרק זה"),
                             color = theme.textColor.copy(alpha = 0.5f),
                             fontSize = FutureTypography.bodyLarge,
                         )
@@ -391,7 +393,7 @@ private fun SegmentRow(
         verticalAlignment = Alignment.Top,
     ) {
         if (isBookmarked) {
-            Icon(FutureIcons.Bookmark, contentDescription = "מסומן", tint = theme.accentColor, modifier = Modifier.padding(top = 3.dp))
+            Icon(FutureIcons.Bookmark, contentDescription = tr("מסומן"), tint = theme.accentColor, modifier = Modifier.padding(top = 3.dp))
             Spacer(modifier = Modifier.width(6.dp))
         }
         Column {
@@ -416,15 +418,15 @@ private fun ContentOptionsMenu(
 ) {
     FutureOptionsMenu(theme = theme, onDismissRequest = onDismiss, header = refDisplay) {
         FutureMenuRow(
-            if (isBookmarked) "הסר $contentLabel מהסימניות" else "הוסף $contentLabel לסימניות",
+            if (isBookmarked) tr("הסר {0} מהסימניות", contentLabel) else tr("הוסף {0} לסימניות", contentLabel),
             if (isBookmarked) FutureIcons.Bookmark else FutureIcons.BookmarkBorder,
             theme,
             onToggleBookmark,
         )
         FutureMenuRow("שתף $contentLabel", FutureIcons.Share, theme, onShare)
         FutureMenuRow("מפרשים על ה$contentLabel", FutureIcons.Forum, theme, onShowCommentaries)
-        FutureMenuRow("הגדל גופן", FutureIcons.TextIncrease, theme, onIncreaseFont)
-        FutureMenuRow("הקטן גופן", FutureIcons.TextDecrease, theme, onDecreaseFont)
+        FutureMenuRow(tr("הגדל גופן"), FutureIcons.TextIncrease, theme, onIncreaseFont)
+        FutureMenuRow(tr("הקטן גופן"), FutureIcons.TextDecrease, theme, onDecreaseFont)
     }
 }
 
@@ -437,7 +439,7 @@ private fun CommentariesDialog(
     onDismiss: () -> Unit,
     onOpen: (CommentaryEntry) -> Unit,
 ) {
-    FutureDialog(theme = theme, onDismissRequest = onDismiss, title = "מפרשים על ה$contentLabel") {
+    FutureDialog(theme = theme, onDismissRequest = onDismiss, title = tr("מפרשים על ה{0}", contentLabel)) {
         when {
             results == null -> Box(
                 modifier = Modifier.fillMaxWidth().padding(FutureDimens.spacingXl),
@@ -446,7 +448,7 @@ private fun CommentariesDialog(
                 FutureSpinner(theme = theme)
             }
             results.isEmpty() -> Text(
-                "לא נמצאו מפרשים",
+                tr("לא נמצאו מפרשים"),
                 color = theme.mutedTextColor,
                 fontSize = FutureTypography.body,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,

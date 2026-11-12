@@ -1,4 +1,6 @@
 package com.future.files.ui
+
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.theme.idleChipColor
 import com.future.sharednav.theme.readableAccentColor
 
@@ -215,7 +217,7 @@ fun FilesScreen(
 
     fun displayNameOf(entry: FileEntry): String = entry.file.displayName(isRoot && entry.isDirectory)
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Box(
             modifier = Modifier
                 .escapeTextFieldFocusTrap()
@@ -231,7 +233,7 @@ fun FilesScreen(
                     // הכותרת, ובסופה שלושה כפתורי סרגל עליון: מיון, תצוגה (רשימה/רשת)
                     // ותיקייה חדשה. חזרה במקש BACK, ושאר הפעולות במקש Options.
                     FilesTopBar(
-                        title = if (isRoot) "קבצים" else currentDir.displayName(currentDirIsTopLevelFolder),
+                        title = if (isRoot) tr("קבצים") else currentDir.displayName(currentDirIsTopLevelFolder),
                         theme = theme,
                         sortOrder = sortOrder,
                         pickMode = pickMode,
@@ -250,21 +252,21 @@ fun FilesScreen(
                             .padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        FocusableIconButton(FutureIcons.Close, "בטל בחירה", theme, ::clearSelection)
+                        FocusableIconButton(FutureIcons.Close, tr("בטל בחירה"), theme, ::clearSelection)
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
-                            "${selectedEntries.size} נבחרו",
+                            tr("{0} נבחרו", selectedEntries.size),
                             fontSize = FutureTypography.title,
                             fontWeight = FontWeight.Bold,
                             color = theme.textColor,
                             modifier = Modifier.weight(1f)
                         )
-                        FocusableIconButton(FutureIcons.Share, "שתף נבחרים", theme, {
+                        FocusableIconButton(FutureIcons.Share, tr("שתף נבחרים"), theme, {
                             onShareMultiple(selectedEntries.toList())
                             clearSelection()
                         })
                         Spacer(modifier = Modifier.width(8.dp))
-                        FocusableIconButton(FutureIcons.Delete, "מחק נבחרים", theme, {
+                        FocusableIconButton(FutureIcons.Delete, tr("מחק נבחרים"), theme, {
                             deleteMultipleState = selectedEntries.toList()
                         })
                     }
@@ -276,14 +278,14 @@ fun FilesScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        Text("כדי לגשת לקבצים צריך לאשר הרשאת ניהול קבצים", color = theme.textColor.copy(alpha = 0.7f), fontSize = FutureTypography.bodyLarge)
+                        Text(tr("כדי לגשת לקבצים צריך לאשר הרשאת ניהול קבצים"), color = theme.textColor.copy(alpha = 0.7f), fontSize = FutureTypography.bodyLarge)
                         Spacer(modifier = Modifier.height(16.dp))
-                        FutureButton("אשר הרשאה", theme, onRequestAccess)
+                        FutureButton(tr("אשר הרשאה"), theme, onRequestAccess)
                     }
                 } else if (entries.isEmpty()) {
                     EmptyState(
                         icon = FutureIcons.Folder,
-                        title = if (loadFailed) "לא ניתן לקרוא את התיקייה" else "התיקייה ריקה",
+                        title = if (loadFailed) "לא ניתן לקרוא את התיקייה" else tr("התיקייה ריקה"),
                         textColor = theme.textColor,
                         subtitle = if (loadFailed) "לחזרה לתיקייה הקודמת לחץ BACK" else null,
                     )
@@ -361,7 +363,7 @@ fun FilesScreen(
             }
 
             if (generalMenu) {
-                FutureOptionsMenu(theme = theme, onDismissRequest = { generalMenu = false }, header = if (isRoot) "קבצים" else currentDir.name) {
+                FutureOptionsMenu(theme = theme, onDismissRequest = { generalMenu = false }, header = if (isRoot) tr("קבצים") else currentDir.name) {
                     FolderMenuRows(theme, hasClipboard, gridView, onDone = { generalMenu = false }, onNewFolder = { showNewFolder = true }, onPaste = onPaste, onToggleGridView = onToggleGridView)
                 }
             }
@@ -372,7 +374,7 @@ fun FilesScreen(
 
             renameEntry?.let { entry ->
                 NameInputDialog(
-                    title = "שינוי שם",
+                    title = tr("שינוי שם"),
                     initialValue = entry.file.name,
                     theme = theme,
                     onDismiss = { renameEntry = null },
@@ -385,7 +387,7 @@ fun FilesScreen(
 
             deleteEntryState?.let { entry ->
                 ConfirmDialog(
-                    message = "למחוק את \"${displayNameOf(entry)}\"?",
+                    message = tr("למחוק את \"{0}\"?", displayNameOf(entry)),
                     theme = theme,
                     onCancel = { deleteEntryState = null },
                     onConfirm = { deleteEntryState = null; onDelete(entry) }
@@ -394,7 +396,7 @@ fun FilesScreen(
 
             deleteMultipleState?.let { entriesToDelete ->
                 ConfirmDialog(
-                    message = "למחוק ${entriesToDelete.size} פריטים?",
+                    message = tr("למחוק {0} פריטים?", entriesToDelete.size),
                     theme = theme,
                     onCancel = { deleteMultipleState = null },
                     onConfirm = {
@@ -407,7 +409,7 @@ fun FilesScreen(
 
             if (showNewFolder) {
                 NameInputDialog(
-                    title = "תיקייה חדשה",
+                    title = tr("תיקייה חדשה"),
                     initialValue = "",
                     theme = theme,
                     onDismiss = { showNewFolder = false },
@@ -444,7 +446,7 @@ fun FilesScreen(
                                 FutureButton("ביטול", theme, onCancelBusy, variant = com.future.sharednav.components.FutureButtonVariant.Secondary, focusRequester = cancelFocus)
                             }
                         } else {
-                            FutureSpinner(theme = theme, label = "מבצע פעולה")
+                            FutureSpinner(theme = theme, label = tr("מבצע פעולה"))
                         }
                     }
                 }
@@ -491,8 +493,8 @@ private fun FilesTopBar(
         }
         if (enabled) {
             FocusableIconButton(FutureIcons.AutoMirrored.Sort, "מיון", theme, onSort)
-            FocusableIconButton(if (gridView) FutureIcons.AutoMirrored.ViewList else FutureIcons.GridView, if (gridView) "תצוגת רשימה" else "תצוגת רשת", theme, onToggleView)
-            FocusableIconButton(FutureIcons.CreateNewFolder, "תיקייה חדשה", theme, onNewFolder)
+            FocusableIconButton(if (gridView) FutureIcons.AutoMirrored.ViewList else FutureIcons.GridView, if (gridView) tr("תצוגת רשימה") else tr("תצוגת רשת"), theme, onToggleView)
+            FocusableIconButton(FutureIcons.CreateNewFolder, tr("תיקייה חדשה"), theme, onNewFolder)
         }
     }
 }
@@ -645,16 +647,16 @@ private fun FileOptionsMenu(
     FutureOptionsMenu(theme = theme, onDismissRequest = onDismiss, header = entryName) {
         if (isImage) FutureMenuRow("פתח בגלריה", FutureIcons.Image, theme, onOpenInGallery)
         if (!isDirectory) {
-            FutureMenuRow("שתף", FutureIcons.Share, theme, onShare)
-            FutureMenuRow("פתח באפליקציה חיצונית", Icons.Rounded.OpenInNew, theme, onOpenExternally)
+            FutureMenuRow(tr("שתף"), FutureIcons.Share, theme, onShare)
+            FutureMenuRow(tr("פתח באפליקציה חיצונית"), Icons.Rounded.OpenInNew, theme, onOpenExternally)
         }
-        FutureMenuRow("שנה שם", FutureIcons.DriveFileRenameOutline, theme, onRename)
-        FutureMenuRow("העתק", FutureIcons.ContentCopy, theme, onCopy)
-        FutureMenuRow("העבר", FutureIcons.DriveFileMove, theme, onMove)
-        FutureMenuRow("פרטים", FutureIcons.Info, theme, onDetails)
+        FutureMenuRow(tr("שנה שם"), FutureIcons.DriveFileRenameOutline, theme, onRename)
+        FutureMenuRow(tr("העתק"), FutureIcons.ContentCopy, theme, onCopy)
+        FutureMenuRow(tr("העבר"), FutureIcons.DriveFileMove, theme, onMove)
+        FutureMenuRow(tr("פרטים"), FutureIcons.Info, theme, onDetails)
         // FL-D14: "מחק" האדום תמיד אחרון - פעולות התיקייה (הדבק כאן...) לפניו.
         folderRows()
-        FutureMenuRow("מחק", FutureIcons.Delete, theme, onDelete, destructive = true)
+        FutureMenuRow(tr("מחק"), FutureIcons.Delete, theme, onDelete, destructive = true)
     }
 }
 
@@ -670,10 +672,10 @@ private fun FolderMenuRows(
     onToggleGridView: () -> Unit,
 ) {
     fun pick(action: () -> Unit): () -> Unit = { onDone(); action() }
-    if (hasClipboard) FutureMenuRow("הדבק כאן", FutureIcons.ContentPaste, theme, pick(onPaste))
-    FutureMenuRow("תיקייה חדשה", FutureIcons.CreateNewFolder, theme, pick(onNewFolder))
+    if (hasClipboard) FutureMenuRow(tr("הדבק כאן"), FutureIcons.ContentPaste, theme, pick(onPaste))
+    FutureMenuRow(tr("תיקייה חדשה"), FutureIcons.CreateNewFolder, theme, pick(onNewFolder))
     FutureMenuRow(
-        if (gridView) "תצוגת רשימה" else "תצוגת רשת",
+        if (gridView) tr("תצוגת רשימה") else tr("תצוגת רשת"),
         if (gridView) FutureIcons.AutoMirrored.ViewList else FutureIcons.GridView,
         theme,
         pick(onToggleGridView),
@@ -745,15 +747,15 @@ private fun FileDetailsDialog(entry: FileEntry, displayName: String, repository:
         theme = theme,
         onDismissRequest = onDismiss,
         title = displayName,
-        buttons = { FutureButton("סגור", theme, onDismiss) },
+        buttons = { FutureButton(tr("סגור"), theme, onDismiss) },
     ) {
-        FutureDetailRow("סוג", if (entry.isDirectory) "תיקייה" else "קובץ", theme)
+        FutureDetailRow(tr("סוג"), if (entry.isDirectory) tr("תיקייה") else tr("קובץ"), theme)
         if (!entry.isDirectory) {
-            FutureDetailRow("גודל", repository.formatSize(entry.sizeBytes), theme)
+            FutureDetailRow(tr("גודל"), repository.formatSize(entry.sizeBytes), theme)
         }
-        FutureDetailRow("נתיב", "\u2066${entry.file.absolutePath}\u2069", theme) // LRI…PDI: הנתיב משמאל לימין, בלי "/" בסוף
+        FutureDetailRow(tr("נתיב"), "\u2066${entry.file.absolutePath}\u2069", theme) // LRI…PDI: הנתיב משמאל לימין, בלי "/" בסוף
         FutureDetailRow(
-            "שונה לאחרונה",
+            tr("שונה לאחרונה"),
             android.text.format.DateFormat.format("dd/MM/yyyy HH:mm", entry.file.lastModified()).toString(),
             theme
         )

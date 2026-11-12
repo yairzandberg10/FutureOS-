@@ -1,5 +1,7 @@
 package com.future.notes
 
+import com.future.sharednav.i18n.tr
+
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
@@ -76,7 +78,7 @@ class MainActivity : ComponentActivity() {
                     if (text.isNotBlank()) {
                         val parsed = NoteShare.parse(text, share.getStringExtra(Intent.EXTRA_SUBJECT))
                         viewModel.importShared(parsed.title, parsed.content, parsed.isChecklist)
-                        Toast.makeText(this@MainActivity, "הפתק נשמר", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@MainActivity, tr("הפתק נשמר"), Toast.LENGTH_SHORT).show()
                     }
                 }
 

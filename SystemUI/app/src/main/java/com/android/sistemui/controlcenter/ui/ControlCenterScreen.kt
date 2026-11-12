@@ -1,5 +1,7 @@
 package com.android.sistemui.controlcenter.ui
 
+import com.future.sharednav.i18n.tr
+
 import com.future.sharednav.theme.FutureMotion
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
@@ -144,7 +146,7 @@ fun ControlCenterScreen(
     val clockColor = if (isDarkBackground) Color.White else Color.Black
     val dateColor = if (isDarkBackground) Color.LightGray else Color.Gray
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         AnimatedVisibility(
             visible = isVisible,
             enter = slideInVertically(
@@ -337,7 +339,7 @@ fun ControlCenterScreen(
                                             }
                                             if (availableControls.isNotEmpty()) {
                                                 Text(
-                                                    text = "הוספת כפתורים",
+                                                    text = tr("הוספת כפתורים"),
                                                     color = clockColor.copy(alpha = 0.7f),
                                                     fontSize = FutureTypography.label,
                                                     fontWeight = FontWeight.Bold,
@@ -400,7 +402,7 @@ fun ControlCenterScreen(
 
                                         if (gridControls.isEmpty() && !isGridEditing) {
                                             Text(
-                                                text = "אין פקדים - היכנס לעריכה ולחץ Options על הרשת כדי להוסיף (עד ${GridCatalog.MAX_CONTROLS})",
+                                                text = tr("אין פקדים - היכנס לעריכה ולחץ Options על הרשת כדי להוסיף (עד {0})", GridCatalog.MAX_CONTROLS),
                                                 color = clockColor.copy(alpha = 0.7f),
                                                 fontSize = FutureTypography.label,
                                                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,

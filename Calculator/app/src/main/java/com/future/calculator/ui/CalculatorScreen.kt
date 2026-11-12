@@ -170,7 +170,7 @@ fun CalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
             listOf("÷" to { onOperator(CalcOp.DIV) }, "×" to { onOperator(CalcOp.MUL) }, "−" to { onOperator(CalcOp.SUB) }, "+" to { onOperator(CalcOp.ADD) }),
         ) }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
     // הפוקוס ההתחלתי צריך לנחות על כפתור אמיתי (למשל "C"), לא על ה-Box החיצוני
     // עצמו: Box עם .focusable() משלו "בולע" את הפוקוס לצמיתות ומונע ניווט D-pad
     // אל כפתורי הפעולה (+, -, ×, ÷, נקה) שמתחתיו - זה בדיוק מה שגרם ל"אין פוקוס

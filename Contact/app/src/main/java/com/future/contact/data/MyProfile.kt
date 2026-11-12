@@ -1,5 +1,7 @@
 package com.future.contact.data
 
+import com.future.sharednav.i18n.tr
+
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
@@ -108,15 +110,15 @@ class MyProfileStore(private val context: Context) {
     private fun statusOf(telephony: TelephonyManager, label: String, number: String?): SimStatus = SimStatus(
         slotLabel = label,
         state = when (telephony.simState) {
-            TelephonyManager.SIM_STATE_READY -> "פעיל"
-            TelephonyManager.SIM_STATE_ABSENT -> "אין כרטיס SIM"
-            TelephonyManager.SIM_STATE_PIN_REQUIRED -> "נעול - נדרש PIN"
-            TelephonyManager.SIM_STATE_PUK_REQUIRED -> "נעול - נדרש PUK"
-            TelephonyManager.SIM_STATE_NETWORK_LOCKED -> "נעול לרשת"
-            TelephonyManager.SIM_STATE_NOT_READY -> "לא מוכן"
-            TelephonyManager.SIM_STATE_PERM_DISABLED -> "מושבת"
-            TelephonyManager.SIM_STATE_CARD_IO_ERROR -> "שגיאת כרטיס"
-            else -> "לא ידוע"
+            TelephonyManager.SIM_STATE_READY -> tr("פעיל")
+            TelephonyManager.SIM_STATE_ABSENT -> tr("אין כרטיס SIM")
+            TelephonyManager.SIM_STATE_PIN_REQUIRED -> tr("נעול - נדרש PIN")
+            TelephonyManager.SIM_STATE_PUK_REQUIRED -> tr("נעול - נדרש PUK")
+            TelephonyManager.SIM_STATE_NETWORK_LOCKED -> tr("נעול לרשת")
+            TelephonyManager.SIM_STATE_NOT_READY -> tr("לא מוכן")
+            TelephonyManager.SIM_STATE_PERM_DISABLED -> tr("מושבת")
+            TelephonyManager.SIM_STATE_CARD_IO_ERROR -> tr("שגיאת כרטיס")
+            else -> tr("לא ידוע")
         },
         carrier = telephony.simOperatorName?.takeIf { it.isNotBlank() },
         network = telephony.networkOperatorName?.takeIf { it.isNotBlank() },

@@ -1,5 +1,7 @@
 package com.future.navigation.data.gtfs
 
+import com.future.sharednav.i18n.tr
+
 import android.content.Context
 import com.future.navigation.data.backend.TransitBundleSource
 import kotlinx.coroutines.Dispatchers
@@ -236,7 +238,7 @@ class GtfsImporter(private val database: GtfsDatabase) {
         }
         val body = response.body ?: run {
             response.close()
-            throw IllegalStateException("תשובה ריקה מהשרת")
+            throw IllegalStateException(tr("תשובה ריקה מהשרת"))
         }
 
         val totalBytes = body.contentLength()

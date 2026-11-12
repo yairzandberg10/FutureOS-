@@ -1,4 +1,6 @@
 package com.future.tools.ui
+
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.nav.onPoundKeyPress
 import com.future.sharednav.nav.onStarKeyPress
 import com.future.sharednav.components.FutureChip
@@ -43,35 +45,35 @@ import com.future.sharednav.icons.FutureIcons
 private data class UnitDef(val label: String, val toBase: (Double) -> Double, val fromBase: (Double) -> Double)
 
 private val LENGTH_UNITS = listOf(
-    UnitDef("מטר", { it }, { it }),
-    UnitDef("ק\"מ", { it * 1000 }, { it / 1000 }),
-    UnitDef("ס\"מ", { it * 0.01 }, { it / 0.01 }),
-    UnitDef("מייל", { it * 1609.344 }, { it / 1609.344 }),
-    UnitDef("רגל", { it * 0.3048 }, { it / 0.3048 })
+    UnitDef(tr("מטר"), { it }, { it }),
+    UnitDef(tr("ק\"מ"), { it * 1000 }, { it / 1000 }),
+    UnitDef(tr("ס\"מ"), { it * 0.01 }, { it / 0.01 }),
+    UnitDef(tr("מייל"), { it * 1609.344 }, { it / 1609.344 }),
+    UnitDef(tr("רגל"), { it * 0.3048 }, { it / 0.3048 })
 )
 private val WEIGHT_UNITS = listOf(
-    UnitDef("ק\"ג", { it }, { it }),
-    UnitDef("גרם", { it * 0.001 }, { it / 0.001 }),
-    UnitDef("פאונד", { it * 0.453592 }, { it / 0.453592 }),
-    UnitDef("אונקיה", { it * 0.0283495 }, { it / 0.0283495 })
+    UnitDef(tr("ק\"ג"), { it }, { it }),
+    UnitDef(tr("גרם"), { it * 0.001 }, { it / 0.001 }),
+    UnitDef(tr("פאונד"), { it * 0.453592 }, { it / 0.453592 }),
+    UnitDef(tr("אונקיה"), { it * 0.0283495 }, { it / 0.0283495 })
 )
 private val TEMP_UNITS = listOf(
-    UnitDef("צלזיוס", { it }, { it }),
-    UnitDef("פרנהייט", { (it - 32) * 5.0 / 9.0 }, { it * 9.0 / 5.0 + 32 }),
-    UnitDef("קלווין", { it - 273.15 }, { it + 273.15 })
+    UnitDef(tr("צלזיוס"), { it }, { it }),
+    UnitDef(tr("פרנהייט"), { (it - 32) * 5.0 / 9.0 }, { it * 9.0 / 5.0 + 32 }),
+    UnitDef(tr("קלווין"), { it - 273.15 }, { it + 273.15 })
 )
 private val VOLUME_UNITS = listOf(
-    UnitDef("ליטר", { it }, { it }),
-    UnitDef("מ\"ל", { it * 0.001 }, { it / 0.001 }),
-    UnitDef("גלון (US)", { it * 3.78541 }, { it / 3.78541 }),
-    UnitDef("כוס", { it * 0.24 }, { it / 0.24 })
+    UnitDef(tr("ליטר"), { it }, { it }),
+    UnitDef(tr("מ\"ל"), { it * 0.001 }, { it / 0.001 }),
+    UnitDef(tr("גלון (US)"), { it * 3.78541 }, { it / 3.78541 }),
+    UnitDef(tr("כוס"), { it * 0.24 }, { it / 0.24 })
 )
 
 private enum class ConvCategory(val label: String, val units: List<UnitDef>) {
-    LENGTH("אורך", LENGTH_UNITS),
-    WEIGHT("משקל", WEIGHT_UNITS),
-    TEMP("טמפ'", TEMP_UNITS),
-    VOLUME("נפח", VOLUME_UNITS)
+    LENGTH(tr("אורך"), LENGTH_UNITS),
+    WEIGHT(tr("משקל"), WEIGHT_UNITS),
+    TEMP(tr("טמפ'"), TEMP_UNITS),
+    VOLUME(tr("נפח"), VOLUME_UNITS)
 }
 
 private val resultFormat = DecimalFormat("#,##0.####")
@@ -135,7 +137,7 @@ fun UnitConverterScreen(theme: FutureTheme, onBack: () -> Unit) {
         toIndex = (1).coerceAtMost(c.units.size - 1)
     }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         // כמו במחשבון: הפוקוס לא יושב על ה-Box החיצוני (אחרת הוא "בולע" אותו
         // לצמיתות ומונע ניווט D-pad לצ'יפים/כפתורים) אלא על הצ'יפ הראשון בפועל.
         Box(
@@ -165,7 +167,7 @@ fun UnitConverterScreen(theme: FutureTheme, onBack: () -> Unit) {
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
                 // אין במכשיר מקש מחיקה: BACK מוחק ספרה, ויוצא רק כשהקלט ריק.
-                ToolsHeader(title = "ממיר יחידות", theme = theme, onBack = {
+                ToolsHeader(title = tr("ממיר יחידות"), theme = theme, onBack = {
                     if (inputText != "0") deleteDigit() else onBack()
                 })
 
@@ -219,7 +221,7 @@ fun UnitConverterScreen(theme: FutureTheme, onBack: () -> Unit) {
                 }
 
                 Text(
-                    "הקלד ערך במקלדת · אישור על יחידה כדי להחליף",
+                    tr("הקלד ערך במקלדת · אישור על יחידה כדי להחליף"),
                     color = theme.subtleTextColor,
                     fontSize = FutureTypography.caption,
                     modifier = Modifier.fillMaxWidth().padding(20.dp),
@@ -250,5 +252,5 @@ private fun UnitChip(label: String, theme: FutureTheme, onClick: () -> Unit) {
 
 @Composable
 private fun SwapButton(theme: FutureTheme, onClick: () -> Unit) {
-    ToolsIconButton(FutureIcons.SwapVert, "החלף כיוון", theme, onClick = onClick)
+    ToolsIconButton(FutureIcons.SwapVert, tr("החלף כיוון"), theme, onClick = onClick)
 }

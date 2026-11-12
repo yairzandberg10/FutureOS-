@@ -1,4 +1,6 @@
 package com.future.clock.ui
+
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.components.FutureSnackbarHost
 import com.future.sharednav.theme.readableAccentColor
 import com.future.sharednav.theme.LocalFutureTheme
@@ -154,7 +156,7 @@ fun TimerScreen(theme: FutureTheme, onBack: () -> Unit) {
         }
     }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -176,7 +178,7 @@ fun TimerScreen(theme: FutureTheme, onBack: () -> Unit) {
                 }
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                ToolsHeader(title = "טיימר", theme = theme, onBack = onBack)
+                ToolsHeader(title = tr("טיימר"), theme = theme, onBack = onBack)
 
                 // הטבעת: החלק הצבוע הוא מה שנשאר, והוא מתקצר עם הזמן.
                 val progress = when {
@@ -208,11 +210,11 @@ fun TimerScreen(theme: FutureTheme, onBack: () -> Unit) {
                             fontFamily = FutureTypography.monoFamily
                         )
                         val caption = when {
-                            isFinished -> "הזמן נגמר"
-                            !isRunning && remainingMillis <= 0 -> "הקלד דקות ושניות"
+                            isFinished -> tr("הזמן נגמר")
+                            !isRunning && remainingMillis <= 0 -> tr("הקלד דקות ושניות")
                             totalMillis > 0 -> {
                                 val passed = ((totalMillis - remainingMillis) / 1000).coerceAtLeast(0)
-                                "עברו %d:%02d".format(passed / 60, passed % 60)
+                                tr("עברו %d:%02d").format(passed / 60, passed % 60)
                             }
                             else -> ""
                         }
@@ -227,7 +229,7 @@ fun TimerScreen(theme: FutureTheme, onBack: () -> Unit) {
                 }
 
                 ClockActionRow(
-                    primaryLabel = if (isRunning) "השהה" else "התחל",
+                    primaryLabel = if (isRunning) tr("השהה") else tr("התחל"),
                     primaryVariant = FutureButtonVariant.Primary,
                     onPrimary = {
                         if (isRunning) {
@@ -246,7 +248,7 @@ fun TimerScreen(theme: FutureTheme, onBack: () -> Unit) {
                             startTimer()
                         }
                     },
-                    secondaryLabel = "איפוס",
+                    secondaryLabel = tr("איפוס"),
                     onSecondary = { resetTimer() },
                     theme = theme,
                     primaryFocus = focusRequester,
@@ -255,7 +257,7 @@ fun TimerScreen(theme: FutureTheme, onBack: () -> Unit) {
             FutureSnackbarHost(snackbar, theme)
         }
     }
-    ClockShortcutMenu(route = ClockRoute.Timer, title = "טיימר", theme = theme, onMessage = snackbar::show)
+    ClockShortcutMenu(route = ClockRoute.Timer, title = tr("טיימר"), theme = theme, onMessage = snackbar::show)
 }
 
 /** 190dp - הטבעת סביב הזמן; נכנסת עם הכפתורים והסרגל התחתון במסך אחד. */

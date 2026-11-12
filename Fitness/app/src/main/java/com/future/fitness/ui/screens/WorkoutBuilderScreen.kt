@@ -1,5 +1,7 @@
 package com.future.fitness.ui.screens
 
+import com.future.sharednav.i18n.tr
+
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.theme.elevatedSurfaceColor
 import com.future.sharednav.theme.idleFieldColor
@@ -74,7 +76,7 @@ fun WorkoutBuilderScreen(
     onSave: (Workout) -> Unit,
 ) {
     var name by remember { mutableStateOf("") }
-    var difficulty by remember { mutableStateOf("בינוני") }
+    var difficulty by remember { mutableStateOf(tr("בינוני")) }
     var durationMin by remember { mutableStateOf("30") }
     val exercises = remember { mutableStateListOf(DraftExercise()) }
 
@@ -100,7 +102,7 @@ fun WorkoutBuilderScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        ScreenTopBar(title = "אימון חדש", theme = theme, onBack = { if (hasDraft) confirmDiscard = true else onBack() })
+        ScreenTopBar(title = tr("אימון חדש"), theme = theme, onBack = { if (hasDraft) confirmDiscard = true else onBack() })
 
         LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp).escapeTextFieldFocusTrap()) {
             item {
@@ -108,7 +110,7 @@ fun WorkoutBuilderScreen(
                         theme = theme,
                     value = name,
                     onValueChange = { name = it },
-                    label = "שם האימון",
+                    label = tr("שם האימון"),
                     modifier = Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 12.dp),
                     singleLine = true,
                     focusRequester = nameFocus,
@@ -116,9 +118,9 @@ fun WorkoutBuilderScreen(
             }
 
             item {
-                Text("רמת קושי", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.summary, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
+                Text(tr("רמת קושי"), color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.summary, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
                 SegmentedControl(
-                    options = listOf("קל", "בינוני", "קשה"),
+                    options = listOf(tr("קל"), tr("בינוני"), tr("קשה")),
                     selected = difficulty,
                     theme = theme,
                     onSelect = { difficulty = it },
@@ -131,7 +133,7 @@ fun WorkoutBuilderScreen(
                         theme = theme,
                     value = durationMin,
                     onValueChange = { v -> if (v.length <= 3 && v.all { it.isDigit() }) durationMin = v },
-                    label = "משך משוער (דקות)",
+                    label = tr("משך משוער (דקות)"),
                     keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth().padding(bottom = 18.dp),
                     singleLine = true,
@@ -139,7 +141,7 @@ fun WorkoutBuilderScreen(
             }
 
             item {
-                Text("תרגילים", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.summary, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
+                Text(tr("תרגילים"), color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.summary, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
             }
 
             itemsIndexed(exercises) { index, ex ->
@@ -155,7 +157,7 @@ fun WorkoutBuilderScreen(
                         theme = theme,
                             value = ex.name,
                             onValueChange = { ex.name = it },
-                            label = "תרגיל ${index + 1}",
+                            label = tr("תרגיל {0}", index + 1),
                             modifier = Modifier.weight(1f),
                             singleLine = true,
                         )
@@ -173,7 +175,7 @@ fun WorkoutBuilderScreen(
                                     .padding(8.dp),
                                 contentAlignment = Alignment.Center,
                             ) {
-                                Icon(FutureIcons.Close, contentDescription = "הסר תרגיל", tint = theme.textColor.copy(alpha = if (exercises.size > 1) 0.7f else 0.2f))
+                                Icon(FutureIcons.Close, contentDescription = tr("הסר תרגיל"), tint = theme.textColor.copy(alpha = if (exercises.size > 1) 0.7f else 0.2f))
                             }
                         }
                     }
@@ -184,7 +186,7 @@ fun WorkoutBuilderScreen(
                             value = ex.sets,
                             // F19: 1-10 סטים - יותר מזה לא נכנס בשורת העיגולים של האימון.
                             onValueChange = { v -> if (v.isEmpty() || (v.all { it.isDigit() } && v.toInt() in 1..10)) ex.sets = v },
-                            label = "סטים",
+                            label = tr("סטים"),
                             keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Number),
                             modifier = Modifier.width(90.dp),
                             singleLine = true,
@@ -194,7 +196,7 @@ fun WorkoutBuilderScreen(
                         theme = theme,
                             value = ex.reps,
                             onValueChange = { ex.reps = it },
-                            label = "חזרות/משך",
+                            label = tr("חזרות/משך"),
                             modifier = Modifier.weight(1f),
                             singleLine = true,
                         )
@@ -218,7 +220,7 @@ fun WorkoutBuilderScreen(
                     ) {
                         Icon(FutureIcons.Add, contentDescription = null, tint = theme.textColor, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("הוסף תרגיל", color = theme.textColor, fontSize = FutureTypography.body, fontWeight = FontWeight.SemiBold)
+                        Text(tr("הוסף תרגיל"), color = theme.textColor, fontSize = FutureTypography.body, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
@@ -226,7 +228,7 @@ fun WorkoutBuilderScreen(
 
         Box(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
             FutureButton(
-                "שמור אימון",
+                tr("שמור אימון"),
                 theme,
                 {
                     val met = when (difficulty) { "קל" -> 3.5; "קשה" -> 6.5; else -> 5.0 }
@@ -238,7 +240,7 @@ fun WorkoutBuilderScreen(
                         durationMin = durationMin.toIntOrNull()?.takeIf { it > 0 } ?: 30,
                         met = met,
                         exercises = exercises.filter { it.name.isNotBlank() }.map { ex ->
-                            Exercise(ex.name.trim(), ex.sets.toIntOrNull()?.coerceIn(1, 10) ?: 3, ex.reps.ifBlank { "10 חזרות" })
+                            Exercise(ex.name.trim(), ex.sets.toIntOrNull()?.coerceIn(1, 10) ?: 3, ex.reps.ifBlank { tr("10 חזרות") })
                         },
                         isCustom = true,
                     )

@@ -1,5 +1,7 @@
 package com.future.contact.data
 
+import com.future.sharednav.i18n.tr
+
 import android.content.ContentProviderOperation
 import android.content.ContentUris
 import android.content.ContentValues
@@ -37,10 +39,10 @@ data class ContactDetails(
 )
 
 enum class ContactSort(val label: String) {
-    FIRST_NAME("שם פרטי"),
-    LAST_NAME("שם משפחה"),
-    RECENT("עודכנו לאחרונה"),
-    FAVORITES("מועדפים תחילה"),
+    FIRST_NAME(tr("שם פרטי")),
+    LAST_NAME(tr("שם משפחה")),
+    RECENT(tr("עודכנו לאחרונה")),
+    FAVORITES(tr("מועדפים תחילה")),
 }
 
 /** גישה אמיתית לספק אנשי הקשר של אנדרואיד - בלי נתונים מדומים. */

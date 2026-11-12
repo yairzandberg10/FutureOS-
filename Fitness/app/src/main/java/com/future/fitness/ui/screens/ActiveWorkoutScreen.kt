@@ -1,5 +1,7 @@
 package com.future.fitness.ui.screens
 
+import com.future.sharednav.i18n.tr
+
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.ConfirmDialog
 import com.future.sharednav.components.FutureAvatar
@@ -195,7 +197,7 @@ fun ActiveWorkoutScreen(
             dangerColor = theme.dangerColor,
             onCancel = { confirmExit = false },
             onConfirm = { confirmExit = false; onBack() },
-            cancelLabel = "המשך",
+            cancelLabel = tr("המשך"),
             confirmLabel = "צא",
         )
     }
@@ -221,7 +223,7 @@ fun ActiveWorkoutScreen(
                         fontWeight = FontWeight.Bold,
                         fontFamily = FutureTypography.monoFamily,
                     )
-                    Text(if (state.running) "זמן אימון" else "מושהה", color = theme.mutedTextColor, fontSize = FutureTypography.label)
+                    Text(if (state.running) tr("זמן אימון") else tr("מושהה"), color = theme.mutedTextColor, fontSize = FutureTypography.label)
                 }
                 // F42: אותו עיגול דקות כמו בשמירה, ובלי מינימום דקה - קודם 6 קק״ל
                 // הופיעו כבר ב-00:03.
@@ -231,13 +233,13 @@ fun ActiveWorkoutScreen(
                 }
                 Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     MetricChip(FutureIcons.Favorite, if (isHrConnected && liveBpm != null) "$liveBpm" else "--", "BPM", theme.dangerColor, theme)
-                    MetricChip(FutureIcons.LocalFireDepartment, "$liveCalories", "קק״ל", theme.textColor, theme)
+                    MetricChip(FutureIcons.LocalFireDepartment, "$liveCalories", tr("קק״ל"), theme.textColor, theme)
                 }
             }
 
             Row(modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp)) {
                 Text(
-                    "תרגיל ${state.exerciseIndex + 1} מתוך ${workout.exercises.size}",
+                    tr("תרגיל {0} מתוך {1}", state.exerciseIndex + 1, workout.exercises.size),
                     color = theme.mutedTextColor,
                     fontSize = FutureTypography.label,
                     modifier = Modifier.weight(1f),
@@ -255,12 +257,12 @@ fun ActiveWorkoutScreen(
                         .padding(vertical = 16.dp, horizontal = 16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Text("מנוחה", color = theme.textColor, fontSize = FutureTypography.summary, fontWeight = FontWeight.Bold)
+                    Text(tr("מנוחה"), color = theme.textColor, fontSize = FutureTypography.summary, fontWeight = FontWeight.Bold)
                     Text(state.restRemaining.toString(), color = theme.textColor, fontSize = FutureTypography.hero, fontWeight = FontWeight.Bold)
                     val next = workout.exercises[state.pendingExerciseIndex]
                     Text("הבא: ${next.name} · סט ${state.pendingSetIndex + 1}", color = theme.mutedTextColor, fontSize = FutureTypography.summary)
                     Spacer(Modifier.height(10.dp))
-                    FutureButton("דלג על המנוחה", theme, {
+                    FutureButton(tr("דלג על המנוחה"), theme, {
                         state.resting = false
                         state.exerciseIndex = state.pendingExerciseIndex
                         state.setIndex = state.pendingSetIndex
@@ -276,7 +278,7 @@ fun ActiveWorkoutScreen(
                 ) {
                     Text(exercise.name, color = theme.textColor, fontSize = FutureTypography.screenTitle, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(
-                        "סט ${state.setIndex + 1} מתוך ${exercise.sets} · ${exercise.repsLabel}",
+                        tr("סט {0} מתוך {1} · {2}", state.setIndex + 1, exercise.sets, exercise.repsLabel),
                         color = theme.mutedTextColor,
                         fontSize = FutureTypography.summary,
                     )
@@ -310,13 +312,13 @@ fun ActiveWorkoutScreen(
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             Icon(
                                 if (state.running) FutureIcons.Pause else FutureIcons.PlayArrow,
-                                contentDescription = if (state.running) "השהה" else "המשך",
+                                contentDescription = if (state.running) tr("השהה") else tr("המשך"),
                                 tint = theme.textColor,
                             )
                         }
                     }
                     FutureButton(
-                        text = "סיימתי סט",
+                        text = tr("סיימתי סט"),
                         theme = theme,
                         onClick = {
                             state.markSetDone(state.exerciseIndex, state.setIndex)

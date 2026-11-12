@@ -1,5 +1,7 @@
 package com.future.futureui.controlcenter.logic
 
+import com.future.sharednav.i18n.tr
+
 import android.app.NotificationManager
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothManager
@@ -68,7 +70,7 @@ class ControlManager(private val context: Context) {
     // Media States
     var isPlaying by mutableStateOf(false)
     var hasActiveMedia by mutableStateOf(false)
-    var currentSongTitle by mutableStateOf("אין מוזיקה מנגנת")
+    var currentSongTitle by mutableStateOf(tr("אין מוזיקה מנגנת"))
     var currentArtist by mutableStateOf("")
     var currentAlbumArt by mutableStateOf<Bitmap?>(null)
     var mediaPosition by mutableLongStateOf(0L)
@@ -153,8 +155,8 @@ class ControlManager(private val context: Context) {
         }
 
         override fun onMetadataChanged(metadata: MediaMetadata?) {
-            currentSongTitle = metadata?.getString(MediaMetadata.METADATA_KEY_TITLE) ?: "שיר לא ידוע"
-            currentArtist = metadata?.getString(MediaMetadata.METADATA_KEY_ARTIST) ?: "אמן לא ידוע"
+            currentSongTitle = metadata?.getString(MediaMetadata.METADATA_KEY_TITLE) ?: tr("שיר לא ידוע")
+            currentArtist = metadata?.getString(MediaMetadata.METADATA_KEY_ARTIST) ?: tr("אמן לא ידוע")
             currentAlbumArt = metadata?.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART)
             mediaDuration = metadata?.getLong(MediaMetadata.METADATA_KEY_DURATION) ?: 0L
         }
@@ -296,7 +298,7 @@ class ControlManager(private val context: Context) {
             isPlaying = activeController?.playbackState?.state == PlaybackState.STATE_PLAYING
             mediaPosition = activeController?.playbackState?.position ?: 0L
             val metadata = activeController?.metadata
-            currentSongTitle = metadata?.getString(MediaMetadata.METADATA_KEY_TITLE) ?: "אין מוזיקה מנגנת"
+            currentSongTitle = metadata?.getString(MediaMetadata.METADATA_KEY_TITLE) ?: tr("אין מוזיקה מנגנת")
             currentArtist = metadata?.getString(MediaMetadata.METADATA_KEY_ARTIST) ?: ""
             currentAlbumArt = metadata?.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART)
             mediaDuration = metadata?.getLong(MediaMetadata.METADATA_KEY_DURATION) ?: 0L

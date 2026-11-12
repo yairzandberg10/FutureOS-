@@ -45,7 +45,7 @@ fun FutureSoftKeyBar(
     backgroundColor: Color = theme.backgroundColor,
 ) {
     val type = rememberFutureType()
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Column(modifier = modifier.fillMaxWidth().background(backgroundColor)) {
             Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(theme.textAlpha(10)))
             Row(

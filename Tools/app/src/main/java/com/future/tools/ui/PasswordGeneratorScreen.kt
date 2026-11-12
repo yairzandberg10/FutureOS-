@@ -1,5 +1,7 @@
 package com.future.tools.ui
 
+import com.future.sharednav.i18n.tr
+
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureButton
 import com.future.sharednav.components.FutureButtonVariant
@@ -79,10 +81,10 @@ fun PasswordGeneratorScreen(theme: FutureTheme, onBack: () -> Unit) {
 
     val (strengthLabel, strengthColor) = passwordStrength(length, useUpper, useDigits, useSymbols, theme)
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize()) {
-                ToolsHeader(title = "מחולל סיסמאות", theme = theme, onBack = onBack)
+                ToolsHeader(title = tr("מחולל סיסמאות"), theme = theme, onBack = onBack)
 
                 Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp)) {
                     // LRI…PDI: סיסמה מוצגת משמאל לימין. בהקשר RTL סימנים בקצוות
@@ -106,8 +108,8 @@ fun PasswordGeneratorScreen(theme: FutureTheme, onBack: () -> Unit) {
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    PwActionButton(FutureIcons.Refresh, "חדש", theme = theme, modifier = Modifier.weight(1f), primary = false) { regenerate() }
-                    PwActionButton(FutureIcons.ContentCopy, "העתק", theme = theme, modifier = Modifier.weight(1f)) {
+                    PwActionButton(FutureIcons.Refresh, tr("חדש"), theme = theme, modifier = Modifier.weight(1f), primary = false) { regenerate() }
+                    PwActionButton(FutureIcons.ContentCopy, tr("העתק"), theme = theme, modifier = Modifier.weight(1f)) {
                         val clipboard = context.getSystemService(ClipboardManager::class.java)
                         // מסומן כרגיש: לא נשמר בהיסטוריית הלוח של המקלדת ולא מוצג בתצוגה המקדימה של המערכת.
                         clipboard.setPrimaryClip(ClipData.newPlainText("password", password).apply {
@@ -123,7 +125,7 @@ fun PasswordGeneratorScreen(theme: FutureTheme, onBack: () -> Unit) {
                                 clipboard.setPrimaryClip(ClipData.newPlainText("", ""))
                             }
                         }, 60_000L)
-                        Toast.makeText(context, "הסיסמה הועתקה", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, tr("הסיסמה הועתקה"), Toast.LENGTH_SHORT).show()
                     }
                 }
 
@@ -134,7 +136,7 @@ fun PasswordGeneratorScreen(theme: FutureTheme, onBack: () -> Unit) {
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Text("אורך", color = theme.mutedTextColor, fontSize = FutureTypography.summary, modifier = Modifier.weight(1f))
+                    Text(tr("אורך"), color = theme.mutedTextColor, fontSize = FutureTypography.summary, modifier = Modifier.weight(1f))
                     ToolsStepperButton("-", theme = theme) { length = (length - 1).coerceAtLeast(4); regenerate() }
                     Text("$length", color = theme.textColor, fontSize = FutureTypography.title, fontWeight = FontWeight.Medium)
                     ToolsStepperButton("+", theme = theme) { length = (length + 1).coerceAtMost(32); regenerate() }
@@ -142,8 +144,8 @@ fun PasswordGeneratorScreen(theme: FutureTheme, onBack: () -> Unit) {
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                PwToggleRow("אותיות גדולות (A-Z)", useUpper, theme = theme) { useUpper = it; regenerate() }
-                PwToggleRow("ספרות (0-9)", useDigits, theme = theme) { useDigits = it; regenerate() }
+                PwToggleRow(tr("אותיות גדולות (A-Z)"), useUpper, theme = theme) { useUpper = it; regenerate() }
+                PwToggleRow(tr("ספרות (0-9)"), useDigits, theme = theme) { useDigits = it; regenerate() }
                 PwToggleRow("סימנים מיוחדים !@#\$", useSymbols, theme = theme) { useSymbols = it; regenerate() }
             }
         }

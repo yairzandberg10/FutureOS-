@@ -1,5 +1,7 @@
 package com.future.navigation.ui.routes
 
+import com.future.sharednav.i18n.tr
+
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -76,7 +78,7 @@ class RouteOptionsViewModel(
         val origin = LocationHelper.lastKnownLatLon(appContext)?.let { LatLng(it.first, it.second) }
         if (origin == null) {
             _loading.value = false
-            _error.value = "לא ניתן לאתר את המיקום הנוכחי"
+            _error.value = tr("לא ניתן לאתר את המיקום הנוכחי")
             return
         }
 
@@ -96,7 +98,7 @@ class RouteOptionsViewModel(
                 when (mode) {
                     TravelMode.DRIVE -> when (val lookup = routingRepository.getDrivingRoute(origin, destination.location)) {
                         is RouteLookup.Found -> _drivingRoute.value = lookup.route
-                        RouteLookup.NoRoute -> _error.value = "לא נמצא מסלול נסיעה"
+                        RouteLookup.NoRoute -> _error.value = tr("לא נמצא מסלול נסיעה")
                         RouteLookup.ServerError -> {
                             _error.value = "שגיאת שרת – נסה שוב"
                             _serverError.value = true
@@ -109,13 +111,13 @@ class RouteOptionsViewModel(
                         // שכבת זמן אמת (SIRI) - "best effort" בעיצוב (ר' TransitRealtimeEnricher),
                         // אף פעם לא זורקת ולא יכולה להפוך תוצאה תקינה לריקה.
                         _itineraries.value = transitRealtimeEnricher.enrich(results)
-                        if (results.isEmpty()) _error.value = "לא נמצא מסלול תחבורה ציבורית ליעד הזה"
+                        if (results.isEmpty()) _error.value = tr("לא נמצא מסלול תחבורה ציבורית ליעד הזה")
                     }
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _error.value = "אירעה שגיאה בחישוב המסלול"
+                _error.value = tr("אירעה שגיאה בחישוב המסלול")
             } finally {
                 if (id == searchId) _loading.value = false
             }

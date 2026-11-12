@@ -1,5 +1,7 @@
 package com.future.settings.ui
 
+import com.future.sharednav.i18n.tr
+
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
 import androidx.compose.animation.core.LinearEasing
@@ -140,10 +142,10 @@ fun FutureOsRevealScreen(navController: NavController) {
                 )
                 Spacer(modifier = Modifier.height(28.dp))
                 Text("FutureOS", fontSize = FutureTypography.display, fontWeight = FontWeight.Black, color = Color.White)
-                Text("תמיד קדימה", fontSize = FutureTypography.body, color = Color.White.copy(alpha = 0.6f))
+                Text(tr("תמיד קדימה"), fontSize = FutureTypography.body, color = Color.White.copy(alpha = 0.6f))
                 Spacer(modifier = Modifier.height(40.dp))
                 Text(
-                    "החזק OK למשחק חבוי",
+                    tr("החזק OK למשחק חבוי"),
                     fontSize = FutureTypography.label,
                     color = Color.White.copy(alpha = 0.4f)
                 )
@@ -271,7 +273,7 @@ fun T9GameScreen(navController: NavController, viewModel: SettingsViewModel) {
 
         if (gameState == T9GameState.Playing) {
             Text(
-                "4 / 6 או ←→ לתזוזה",
+                tr("4 / 6 או ←→ לתזוזה"),
                 color = Color.White.copy(alpha = 0.4f),
                 fontSize = FutureTypography.label,
                 modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 12.dp)
@@ -281,18 +283,18 @@ fun T9GameScreen(navController: NavController, viewModel: SettingsViewModel) {
         if (gameState == T9GameState.GameOver) {
             Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.65f)), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("המשחק נגמר", color = Color.White, fontSize = FutureTypography.headline, fontWeight = FontWeight.Bold)
+                    Text(tr("המשחק נגמר"), color = Color.White, fontSize = FutureTypography.headline, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(8.dp))
                     Text("ניקוד: $score", color = Color.White, fontSize = FutureTypography.bodyLarge)
                     Text(
-                        if (score >= highScore && score > 0) "שיא חדש! 🎉" else "שיא: ${viewModel.t9HighScore.value}",
+                        if (score >= highScore && score > 0) tr("שיא חדש! 🎉") else tr("שיא: {0}", viewModel.t9HighScore.value),
                         color = EggAmber, fontSize = FutureTypography.body
                     )
                     Spacer(modifier = Modifier.height(24.dp))
                     Button(
                         onClick = { restartTrigger++ },
                         colors = ButtonDefaults.buttonColors(containerColor = EggTeal)
-                    ) { Text("שחק שוב", color = Color.Black, fontWeight = FontWeight.Bold) }
+                    ) { Text(tr("שחק שוב"), color = Color.Black, fontWeight = FontWeight.Bold) }
                 }
             }
         }
@@ -397,16 +399,16 @@ fun PartyModeScreen(navController: NavController, theme: ThemeConfig, viewModel:
 
     Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
         Column {
-            SmallHeader("🎉 מצב חגיגה", theme) { navController.popBackStack() }
+            SmallHeader(tr("🎉 מצב חגיגה"), theme) { navController.popBackStack() }
             Column(modifier = Modifier.fillMaxWidth().padding(24.dp)) {
                 Text(
-                    "מצאת קוד סודי! זו תודה קטנה על שאתה חוקר את המכשיר שלך לעומק.",
+                    tr("מצאת קוד סודי! זו תודה קטנה על שאתה חוקר את המכשיר שלך לעומק."),
                     color = theme.textColor.copy(alpha = 0.7f),
                     fontSize = FutureTypography.body
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    "נגמר בעוד %d:%02d".format(minutes, seconds),
+                    tr("נגמר בעוד %d:%02d").format(minutes, seconds),
                     color = theme.primaryColor,
                     fontSize = FutureTypography.summary,
                     fontWeight = FontWeight.Bold
@@ -416,12 +418,12 @@ fun PartyModeScreen(navController: NavController, theme: ThemeConfig, viewModel:
                     onClick = { burstTrigger++ },
                     colors = ButtonDefaults.buttonColors(containerColor = theme.primaryColor),
                     modifier = Modifier.fillMaxWidth()
-                ) { Text("עוד קונפטי!", color = theme.backgroundColor, fontWeight = FontWeight.Bold) }
+                ) { Text(tr("עוד קונפטי!"), color = theme.backgroundColor, fontWeight = FontWeight.Bold) }
                 Spacer(modifier = Modifier.height(16.dp))
                 SettingsCard(theme) {
                     SettingSwitch(
-                        "צבע הדגשה מתחלף",
-                        "צבע הדגשה של FutureOS ירקוד לבד עד שהזמן נגמר",
+                        tr("צבע הדגשה מתחלף"),
+                        tr("צבע הדגשה של FutureOS ירקוד לבד עד שהזמן נגמר"),
                         viewModel.cyclingAccentEnabled.value,
                         { viewModel.toggleCyclingAccent() },
                         theme
@@ -496,7 +498,7 @@ fun AsciiFlexScreen(navController: NavController, viewModel: SettingsViewModel) 
             }
             Spacer(modifier = Modifier.height(20.dp))
             Text(
-                "← Back לחזרה",
+                tr("← Back לחזרה"),
                 color = Color(0xFF39FF6A).copy(alpha = 0.5f),
                 fontFamily = FontFamily.Monospace,
                 fontSize = FutureTypography.label
@@ -510,15 +512,15 @@ fun AsciiFlexScreen(navController: NavController, viewModel: SettingsViewModel) 
 // ============================================================================
 
 private val GEEKY_FORTUNES = listOf(
-    "יש רק 10 סוגי אנשים בעולם: אלה שמבינים בינארי, ואלה שלא.",
-    "המכשיר שלך רץ על Android, אבל הלב שלו רץ על T9.",
-    "root אמיתי פירושו כוח אמיתי - השתמש בו בחוכמה.",
-    "כל הגדרה כאן היא אמיתית. אף מתג לא מתחזה.",
-    "יום אחד גם למחשבון יהיה זיכרון היסטוריה. היום הוא רק מחשב.",
-    "FutureOS: כי גם בלי מסך מגע, אפשר להרגיש מתקדם.",
-    "יש לך 8 ליבות מעבד ושתי ידיים. תשתמש בכולן.",
-    "מפתחים אמיתיים קוראים לוגים באור נר.",
-    "אם זה עובד, אל תיגע בו. אם זה לא עובד, בטח יש כאן Easter Egg."
+    tr("יש רק 10 סוגי אנשים בעולם: אלה שמבינים בינארי, ואלה שלא."),
+    tr("המכשיר שלך רץ על Android, אבל הלב שלו רץ על T9."),
+    tr("root אמיתי פירושו כוח אמיתי - השתמש בו בחוכמה."),
+    tr("כל הגדרה כאן היא אמיתית. אף מתג לא מתחזה."),
+    tr("יום אחד גם למחשבון יהיה זיכרון היסטוריה. היום הוא רק מחשב."),
+    tr("FutureOS: כי גם בלי מסך מגע, אפשר להרגיש מתקדם."),
+    tr("יש לך 8 ליבות מעבד ושתי ידיים. תשתמש בכולן."),
+    tr("מפתחים אמיתיים קוראים לוגים באור נר."),
+    tr("אם זה עובד, אל תיגע בו. אם זה לא עובד, בטח יש כאן Easter Egg.")
 )
 
 /**
@@ -556,6 +558,6 @@ fun EasterEggMessage(icon: String, title: String, message: String, onDismiss: ()
 
 @Composable
 fun FortuneToast(fortune: String, onDismiss: () -> Unit) =
-    EasterEggMessage("🥠", "פתק מזל", fortune, onDismiss)
+    EasterEggMessage("🥠", tr("פתק מזל"), fortune, onDismiss)
 
 fun randomFortune(): String = GEEKY_FORTUNES.random()

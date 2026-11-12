@@ -1,4 +1,6 @@
 package com.future.tools.ui
+
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.theme.textAlpha
 import com.future.sharednav.theme.subtleTextColor
 import com.future.sharednav.theme.mutedTextColor
@@ -36,7 +38,7 @@ import com.future.sharednav.theme.FutureTheme
 import kotlin.math.roundToInt
 
 private fun cardinalFor(degrees: Float): String {
-    val dirs = listOf("צפון", "צפון-מזרח", "מזרח", "דרום-מזרח", "דרום", "דרום-מערב", "מערב", "צפון-מערב")
+    val dirs = listOf(tr("צפון"), tr("צפון-מזרח"), tr("מזרח"), tr("דרום-מזרח"), tr("דרום"), tr("דרום-מערב"), tr("מערב"), tr("צפון-מערב"))
     val index = (((degrees + 22.5f) / 45f).toInt()) % 8
     return dirs[if (index < 0) index + 8 else index]
 }
@@ -260,15 +262,15 @@ fun CompassScreen(theme: FutureTheme, onBack: () -> Unit) {
     val jerusalemBearing = fix?.let { bearingTo(it.latitude, it.longitude, JERUSALEM_LAT, JERUSALEM_LON) }
     val altitudeState = rememberAltitudeState()
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize()) {
-                ToolsHeader(title = "מצפן", theme = theme, onBack = onBack)
+                ToolsHeader(title = tr("מצפן"), theme = theme, onBack = onBack)
 
                 Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                     if (!compassState.hasSensors) {
                         Text(
-                            "לא נמצא חיישן מצפן (תאוצה/מגנטומטר) במכשיר הזה",
+                            tr("לא נמצא חיישן מצפן (תאוצה/מגנטומטר) במכשיר הזה"),
                             color = theme.mutedTextColor,
                             fontSize = FutureTypography.body,
                             modifier = Modifier.padding(horizontal = 32.dp)
@@ -282,10 +284,10 @@ fun CompassScreen(theme: FutureTheme, onBack: () -> Unit) {
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 when {
-                                    fix?.course != null -> "כיוון תנועה לפי GPS"
+                                    fix?.course != null -> tr("כיוון תנועה לפי GPS")
                                     fix != null -> "צפון אמיתי · סטייה מגנטית ${"%.1f".format(fix.declination)}°"
-                                    !hasLocationPermission -> "צפון מגנטי · אין הרשאת מיקום"
-                                    else -> "צפון מגנטי · מחפש מיקום"
+                                    !hasLocationPermission -> tr("צפון מגנטי · אין הרשאת מיקום")
+                                    else -> tr("צפון מגנטי · מחפש מיקום")
                                 },
                                 color = theme.subtleTextColor,
                                 fontSize = FutureTypography.caption
@@ -301,7 +303,7 @@ fun CompassScreen(theme: FutureTheme, onBack: () -> Unit) {
                                     )
                                 }
                                 Text(
-                                    "דיוק ±${fix.accuracy.roundToInt()} מ'" + (jerusalemBearing?.let { " · ירושלים ${it.roundToInt()}°" } ?: ""),
+                                    tr("דיוק ±{0} מ'", fix.accuracy.roundToInt()) + (jerusalemBearing?.let { tr(" · ירושלים {0}°", it.roundToInt()) } ?: ""),
                                     color = theme.subtleTextColor,
                                     fontSize = FutureTypography.caption
                                 )
@@ -324,7 +326,7 @@ private fun AltitudeRow(altitudeState: AltitudeState, gpsAltitude: Double?, them
     }
     if (!altitudeState.hasSensor) {
         Text(
-            "אין חיישן לחץ ברומטרי - לא ניתן למדוד גובה",
+            tr("אין חיישן לחץ ברומטרי - לא ניתן למדוד גובה"),
             color = theme.subtleTextColor,
             fontSize = FutureTypography.label
         )
@@ -333,13 +335,13 @@ private fun AltitudeRow(altitudeState: AltitudeState, gpsAltitude: Double?, them
     val meters = altitudeState.meters
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
-            if (meters != null) "${meters.roundToInt()} מ' מעל פני הים" else "מודד גובה",
+            if (meters != null) tr("{0} מ' מעל פני הים", meters.roundToInt()) else tr("מודד גובה"),
             color = theme.textColor,
             fontSize = FutureTypography.title,
             fontWeight = FontWeight.Medium
         )
         Spacer(modifier = Modifier.height(2.dp))
-        Text("גובה משוער לפי לחץ אטמוספרי", color = theme.subtleTextColor, fontSize = FutureTypography.caption)
+        Text(tr("גובה משוער לפי לחץ אטמוספרי"), color = theme.subtleTextColor, fontSize = FutureTypography.caption)
     }
 }
 

@@ -1,4 +1,6 @@
 package com.future.sfarim.ui.screens
+
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.components.FutureButton
 
 import com.future.sharednav.theme.FutureTypography
@@ -35,7 +37,7 @@ fun LibraryNotInstalledScreen(expectedPath: String, theme: FutureTheme, onRetry:
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(FutureIcons.AutoMirrored.MenuBook, contentDescription = null, tint = theme.accentColor, modifier = Modifier.padding(bottom = 16.dp))
             Text(
-                "ספריית הטקסטים לא הותקנה",
+                tr("ספריית הטקסטים לא הותקנה"),
                 color = theme.textColor,
                 fontWeight = FontWeight.Bold,
                 fontSize = FutureTypography.title,
@@ -43,7 +45,7 @@ fun LibraryNotInstalledScreen(expectedPath: String, theme: FutureTheme, onRetry:
             )
             androidx.compose.foundation.layout.Spacer(modifier = Modifier.padding(6.dp))
             Text(
-                "יש להעביר את הקובץ sefaria.db למכשיר:",
+                tr("יש להעביר את הקובץ sefaria.db למכשיר:"),
                 color = theme.textColor.copy(alpha = 0.6f),
                 fontSize = FutureTypography.summary,
                 textAlign = TextAlign.Center,
@@ -61,7 +63,7 @@ fun LibraryNotInstalledScreen(expectedPath: String, theme: FutureTheme, onRetry:
             // בלי כפתור ניסיון-חוזר, אחרי adb push של הקובץ תוך כדי שהמסך הזה כבר
             // מוצג המשתמש היה חייב לצאת ולפתוח את האפליקציה מחדש כדי שהבדיקה תרוץ שוב.
             FutureButton(
-                text = "נסה שוב",
+                text = tr("נסה שוב"),
                 theme = theme,
                 onClick = onRetry,
                 focusRequester = focusRequester,

@@ -1,5 +1,7 @@
 package com.future.dialer.data.model
 
+import com.future.sharednav.i18n.tr
+
 data class CallRecord(
     val id: String,
     val name: String?,
@@ -17,12 +19,12 @@ enum class CallType {
 
 /** הסינון של היומן - מהצ'יפים שמעל הרשימה או מתפריט האפשרויות. */
 enum class CallFilter(val label: String) {
-    ALL("הכל"),
-    MISSED("לא נענו"),
-    INCOMING("התקבלו"),
-    OUTGOING("חויגו"),
-    REJECTED("נדחו"),
-    BLOCKED("חסומות");
+    ALL(tr("הכל")),
+    MISSED(tr("לא נענו")),
+    INCOMING(tr("התקבלו")),
+    OUTGOING(tr("חויגו")),
+    REJECTED(tr("נדחו")),
+    BLOCKED(tr("חסומות"));
 
     fun matches(type: CallType): Boolean = when (this) {
         ALL -> true

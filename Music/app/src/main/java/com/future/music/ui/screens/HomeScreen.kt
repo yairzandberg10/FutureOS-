@@ -1,5 +1,7 @@
 package com.future.music.ui.screens
 
+import com.future.sharednav.i18n.tr
+
 import androidx.compose.material.icons.rounded.LibraryMusic
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureListItem
@@ -70,15 +72,15 @@ fun HomeScreen(
 ) {
     val type = rememberFutureType()
     val items = listOf(
-        HomeItem("1", Icons.Rounded.LibraryMusic, "כל השירים", "כל המוזיקה שבטלפון", onOpenAllSongs),
-        HomeItem("2", FutureIcons.Person, "אמנים", "לפי זמר/זמרת", onOpenArtists),
-        HomeItem("3", FutureIcons.Album, "אלבומים", "לפי אלבום", onOpenAlbums),
-        HomeItem("4", FutureIcons.AutoMirrored.QueueMusic, "פלייליסטים", "הרשימות שלי", onOpenPlaylists),
-        HomeItem("5", FutureIcons.Favorite, "מועדפים", "השירים שאהבת", onOpenFavorites),
-        HomeItem("6", FutureIcons.Search, "חיפוש", "שיר, אמן או אלבום", onOpenSearch),
-        HomeItem("7", FutureIcons.Equalizer, "אקולייזר", "אקולייזר מלא ואפקטים", onOpenEqualizer),
-        HomeItem("8", FutureIcons.Headphones, "התקני שמע", "Bluetooth, אוזניות ורמקולים", onOpenDevices),
-        HomeItem("9", FutureIcons.ViewList, "תור הניגון", "מה מתנגן הבא", onOpenQueue),
+        HomeItem("1", Icons.Rounded.LibraryMusic, tr("כל השירים"), tr("כל המוזיקה שבטלפון"), onOpenAllSongs),
+        HomeItem("2", FutureIcons.Person, tr("אמנים"), tr("לפי זמר/זמרת"), onOpenArtists),
+        HomeItem("3", FutureIcons.Album, tr("אלבומים"), tr("לפי אלבום"), onOpenAlbums),
+        HomeItem("4", FutureIcons.AutoMirrored.QueueMusic, tr("פלייליסטים"), tr("הרשימות שלי"), onOpenPlaylists),
+        HomeItem("5", FutureIcons.Favorite, tr("מועדפים"), tr("השירים שאהבת"), onOpenFavorites),
+        HomeItem("6", FutureIcons.Search, tr("חיפוש"), tr("שיר, אמן או אלבום"), onOpenSearch),
+        HomeItem("7", FutureIcons.Equalizer, tr("אקולייזר"), tr("אקולייזר מלא ואפקטים"), onOpenEqualizer),
+        HomeItem("8", FutureIcons.Headphones, tr("התקני שמע"), tr("Bluetooth, אוזניות ורמקולים"), onOpenDevices),
+        HomeItem("9", FutureIcons.ViewList, tr("תור הניגון"), tr("מה מתנגן הבא"), onOpenQueue),
     )
 
     // פוקוס אוטומטי ומלא על הפריט הראשון בתפריט מיד כשהוא נפתח - בלי צורך
@@ -101,7 +103,7 @@ fun HomeScreen(
             }
     ) {
         Text(
-            "מוזיקה",
+            tr("מוזיקה"),
             color = theme.textColor,
             fontSize = FutureTypography.headline,
             fontWeight = FontWeight.Bold,

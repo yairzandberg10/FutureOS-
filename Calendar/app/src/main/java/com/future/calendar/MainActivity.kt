@@ -1,5 +1,7 @@
 package com.future.calendar
 
+import com.future.sharednav.i18n.tr
+
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -213,7 +215,7 @@ class MainActivity : ComponentActivity() {
             fun saveEvent(date: LocalDate, editing: CalendarEvent?, title: String, description: String, location: String, startHour: Int, startMinute: Int, endHour: Int, endMinute: Int, allDay: Boolean, repeat: com.future.calendar.data.EventRepeat) {
                 if (title.isBlank()) {
                     // קודם הדיאלוג נסגר בשקט וכל מה שהוקלד (מיקום, תיאור) אבד
-                    android.widget.Toast.makeText(this@MainActivity, "צריך כותרת לאירוע", android.widget.Toast.LENGTH_SHORT).show()
+                    android.widget.Toast.makeText(this@MainActivity, tr("צריך כותרת לאירוע"), android.widget.Toast.LENGTH_SHORT).show()
                     return
                 }
                 val startMillis: Long
@@ -236,12 +238,12 @@ class MainActivity : ComponentActivity() {
                         val error: String? = withContext(Dispatchers.IO) {
                             if (editing != null) {
                                 if (repository.updateEvent(editing.id, title, description, location, startMillis, endMillis, allDay, editing.isRecurring, repeat)) null
-                                else "השינויים לא נשמרו"
+                                else tr("השינויים לא נשמרו")
                             } else {
                                 val calendarId = repository.getDefaultWritableCalendarId()
                                 when {
-                                    calendarId == null -> "לא נמצא לוח שנה זמין לשמירה - האירוע לא נשמר"
-                                    repository.addEvent(calendarId, title, description, location, startMillis, endMillis, allDay, repeat) == null -> "האירוע לא נשמר"
+                                    calendarId == null -> tr("לא נמצא לוח שנה זמין לשמירה - האירוע לא נשמר")
+                                    repository.addEvent(calendarId, title, description, location, startMillis, endMillis, allDay, repeat) == null -> tr("האירוע לא נשמר")
                                     else -> null
                                 }
                             }
@@ -359,7 +361,7 @@ class MainActivity : ComponentActivity() {
                         dataScope.launch {
                             val deleted = withContext(Dispatchers.IO) { repository.deleteEvent(event.id) }
                             if (!deleted) {
-                                android.widget.Toast.makeText(this@MainActivity, "האירוע לא נמחק", android.widget.Toast.LENGTH_SHORT).show()
+                                android.widget.Toast.makeText(this@MainActivity, tr("האירוע לא נמחק"), android.widget.Toast.LENGTH_SHORT).show()
                             }
                             pendingDelete = null
                             editorState = null

@@ -1,4 +1,6 @@
 package com.future.frixa
+
+import com.future.sharednav.i18n.tr
 import com.future.frixa.ui.ToolScreen
 
 import com.future.sharednav.icons.FutureIcons
@@ -74,10 +76,10 @@ class MainActivity : ComponentActivity() {
             val theme = rememberFutureTheme()
 
             val tabs = listOf(
-                Triple(FrixaRoute.Home, "ראשי", FutureIcons.Home),
-                Triple(FrixaRoute.Recipes, "מתכונים", FutureIcons.Restaurant),
-                Triple(FrixaRoute.Tool, "הכנה", FutureIcons.Calculate),
-                Triple(FrixaRoute.Stores, "חנויות", FutureIcons.Storefront),
+                Triple(FrixaRoute.Home, tr("ראשי"), FutureIcons.Home),
+                Triple(FrixaRoute.Recipes, tr("מתכונים"), FutureIcons.Restaurant),
+                Triple(FrixaRoute.Tool, tr("הכנה"), FutureIcons.Calculate),
+                Triple(FrixaRoute.Stores, tr("חנויות"), FutureIcons.Storefront),
             )
             val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
             val currentTabRoute = if (route is FrixaRoute.RecipeDetail) FrixaRoute.Recipes else route

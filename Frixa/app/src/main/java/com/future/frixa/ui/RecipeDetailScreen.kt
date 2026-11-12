@@ -1,5 +1,7 @@
 package com.future.frixa.ui
 
+import com.future.sharednav.i18n.tr
+
 import com.future.sharednav.theme.FutureTypography
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
@@ -73,7 +75,7 @@ fun RecipeDetailScreen(recipe: Recipe, theme: FutureTheme, onBack: () -> Unit) {
                     Text(recipe.category, color = theme.accentColor, fontSize = FutureTypography.summary, fontWeight = FontWeight.SemiBold)
                     Text(" · ${recipe.minutes} דקות", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.summary)
                 }
-                Text("מצרכים", color = theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Bold)
+                Text(tr("מצרכים"), color = theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
             }
             items(recipe.ingredients) { ingredient ->
@@ -84,7 +86,7 @@ fun RecipeDetailScreen(recipe: Recipe, theme: FutureTheme, onBack: () -> Unit) {
             }
             item {
                 Spacer(modifier = Modifier.height(20.dp))
-                Text("הוראות הכנה", color = theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Bold)
+                Text(tr("הוראות הכנה"), color = theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
             }
             itemsIndexed(recipe.steps) { index, step ->

@@ -1,4 +1,6 @@
 package com.future.clock.ui
+
+import com.future.sharednav.i18n.tr
 import androidx.compose.material.icons.rounded.AccessTime
 
 import com.future.sharednav.icons.FutureIcons
@@ -181,14 +183,14 @@ fun AlarmScreen(
         FutureOptionsMenu(
             theme = theme,
             onDismissRequest = { menuOpen = false; restoreFocusTo = focusedAlarmId ?: RESTORE_TO_ADD },
-            header = focused?.let { "%02d:%02d".format(it.hour, it.minute) } ?: "שעונים מעוררים",
+            header = focused?.let { "%02d:%02d".format(it.hour, it.minute) } ?: tr("שעונים מעוררים"),
         ) {
             if (focused != null) {
                 FutureMenuRow(if (focused.isEnabled) "כבה" else "הפעל", FutureIcons.Schedule, theme, {
                     menuOpen = false
                     setEnabled(focused, !focused.isEnabled)
                 })
-                FutureMenuRow("ערוך שעה", FutureIcons.Edit, theme, {
+                FutureMenuRow(tr("ערוך שעה"), FutureIcons.Edit, theme, {
                     menuOpen = false
                     editingAlarm = focused
                 })
@@ -212,7 +214,7 @@ fun AlarmScreen(
                 editingAlarm = Alarm(newId, 7, 0, emptySet())
             })
             if (focused != null) {
-                FutureMenuRow("מחק", FutureIcons.Delete, theme, {
+                FutureMenuRow(tr("מחק"), FutureIcons.Delete, theme, {
                     menuOpen = false
                     pendingDelete = focused
                 }, destructive = true)
@@ -244,7 +246,7 @@ fun AlarmScreen(
 
     pendingDelete?.let { alarm ->
         ConfirmDialog(
-            message = "למחוק את השעון %02d:%02d?".format(alarm.hour, alarm.minute),
+            message = tr("למחוק את השעון %02d:%02d?").format(alarm.hour, alarm.minute),
             surfaceColor = theme.surfaceColor,
             textColor = theme.textColor,
             dangerColor = theme.dangerColor,
@@ -259,7 +261,7 @@ fun AlarmScreen(
         )
     }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -292,13 +294,13 @@ fun AlarmScreen(
                     )
                 }
                 if (!overlayOpen) ToolsHeader(
-                    title = "שעונים מעוררים",
+                    title = tr("שעונים מעוררים"),
                     theme = theme,
                     onBack = onBack,
                     trailing = {
                         if (editingAlarm == null) {
                             Box(modifier = Modifier.onFocusChanged { if (it.hasFocus) focusedAlarmId = null }) {
-                                ToolsIconButton(FutureIcons.Add, "הוסף שעון", theme, focusRequester = addFocus) {
+                                ToolsIconButton(FutureIcons.Add, tr("הוסף שעון"), theme, focusRequester = addFocus) {
                                     val newId = AlarmLogic.newAlarmId(context)
                                     // CK7: מעורר חדש נכנס לרשימה רק ב"שמור". קודם הוא נשמר ותוזמן עוד
                                     // לפני שהבורר נפתח, ו"ביטול" השאיר מעורר 07:00 מופעל.
@@ -333,8 +335,8 @@ fun AlarmScreen(
                     if (alarms.isEmpty()) {
                         com.future.sharednav.components.EmptyState(
                             icon = FutureIcons.Schedule,
-                            title = "אין שעונים מעוררים",
-                            subtitle = "נווטו לכפתור ההוספה למעלה ולחצו OK כדי להוסיף אחד",
+                            title = tr("אין שעונים מעוררים"),
+                            subtitle = tr("נווטו לכפתור ההוספה למעלה ולחצו OK כדי להוסיף אחד"),
                             textColor = theme.textColor,
                             modifier = Modifier.weight(1f).fillMaxWidth(),
                         )
@@ -375,8 +377,8 @@ fun AlarmScreen(
 }
 
 private fun recurrenceSummary(alarm: Alarm): String {
-    val state = if (alarm.isEnabled) "מופעל" else "כבוי"
-    if (alarm.days.isEmpty()) return "$state · חד-פעמית"
+    val state = if (alarm.isEnabled) tr("מופעל") else tr("כבוי")
+    if (alarm.days.isEmpty()) return tr("{0} · חד-פעמית", state)
     val days = alarm.days.sorted().joinToString(",") { day ->
         DAY_LABELS.firstOrNull { it.first == day }?.second ?: "?"
     }
@@ -406,7 +408,7 @@ fun AlarmRow(alarm: Alarm, theme: FutureTheme, onClick: () -> Unit, modifier: Mo
 // Calendar.DAY_OF_WEEK: 1=ראשון...7=שבת. בלי בורר הימים הזה, alarm.days היה
 // תמיד ריק בפועל - אף מסך בעולם לא איפשר להגדיר אזעקה חוזרת, למרות שהשדה
 // עצמו קיים ב-data class ומטופל נכון עכשיו ב-AlarmLogic.nextTriggerMillis.
-private val DAY_LABELS = listOf(1 to "א", 2 to "ב", 3 to "ג", 4 to "ד", 5 to "ה", 6 to "ו", 7 to "ש")
+private val DAY_LABELS = listOf(1 to tr("א"), 2 to tr("ב"), 3 to tr("ג"), 4 to tr("ד"), 5 to tr("ה"), 6 to tr("ו"), 7 to tr("ש"))
 
 /**
  * בורר השעה (components/forms/TimePicker.jsx, הגרסה המעודכנת): שני "גלגלים" -
@@ -449,14 +451,14 @@ fun TimePickerOverlay(alarm: Alarm, theme: FutureTheme, isNew: Boolean = false, 
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text(if (isNew) "מעורר חדש" else "ערוך שעה", color = theme.textColor, fontSize = FutureTypography.screenTitle, fontWeight = FutureTypography.weightBold)
+        Text(if (isNew) "מעורר חדש" else tr("ערוך שעה"), color = theme.textColor, fontSize = FutureTypography.screenTitle, fontWeight = FutureTypography.weightBold)
         Spacer(modifier = Modifier.height(FutureDimens.spacingLg))
 
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm)) {
             TimeWheel(
                 value = hour,
                 range = 0..23,
-                label = "שעות",
+                label = tr("שעות"),
                 theme = theme,
                 focusRequester = hourFocus,
                 onChange = { hour = it },
@@ -467,7 +469,7 @@ fun TimePickerOverlay(alarm: Alarm, theme: FutureTheme, isNew: Boolean = false, 
             TimeWheel(
                 value = minute,
                 range = 0..59,
-                label = "דקות",
+                label = tr("דקות"),
                 theme = theme,
                 focusRequester = minuteFocus,
                 onChange = { minute = it },
@@ -480,7 +482,7 @@ fun TimePickerOverlay(alarm: Alarm, theme: FutureTheme, isNew: Boolean = false, 
 
         Spacer(modifier = Modifier.height(FutureDimens.spacingLg))
         Text(
-            if (days.isEmpty()) "חד-פעמית" else "חוזרת",
+            if (days.isEmpty()) tr("חד-פעמית") else tr("חוזרת"),
             color = theme.textAlpha(60),
             fontSize = FutureTypography.summary
         )
@@ -503,8 +505,8 @@ fun TimePickerOverlay(alarm: Alarm, theme: FutureTheme, isNew: Boolean = false, 
 
         // TimePicker.jsx: הביטול כאן הוא הכפתור השקט - זה המקום היחיד במערכת שבו הוא מופיע.
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingLg)) {
-            FutureButton("ביטול", theme, onCancel, modifier = Modifier.weight(1f), variant = FutureButtonVariant.Quiet)
-            FutureButton("שמור", theme, { onSave(alarm.copy(hour = hour, minute = minute, days = days)) }, modifier = Modifier.weight(1f))
+            FutureButton(tr("ביטול"), theme, onCancel, modifier = Modifier.weight(1f), variant = FutureButtonVariant.Quiet)
+            FutureButton(tr("שמור"), theme, { onSave(alarm.copy(hour = hour, minute = minute, days = days)) }, modifier = Modifier.weight(1f))
         }
     }
 }

@@ -125,7 +125,7 @@ fun KeyboardSetupScreen(onOpenInputMethodSettings: () -> Unit) {
         onDispose { resumeOwner.lifecycle.removeObserver(observer) }
     }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Surface(modifier = Modifier.fillMaxSize()) {
             Column(
                 modifier = Modifier.fillMaxSize().padding(32.dp),

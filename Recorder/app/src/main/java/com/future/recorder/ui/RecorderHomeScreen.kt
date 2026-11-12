@@ -1,5 +1,7 @@
 package com.future.recorder.ui
 
+import com.future.sharednav.i18n.tr
+
 import android.Manifest
 import android.app.Activity
 import android.content.Context
@@ -154,7 +156,7 @@ fun RecorderHomeScreen(theme: FutureTheme, focusPath: String?, onPlay: (File) ->
             micPermanentlyDenied = activity != null && !activity.shouldShowRequestPermissionRationale(Manifest.permission.RECORD_AUDIO)
             Toast.makeText(
                 context,
-                if (micPermanentlyDenied) "הרשאת מיקרופון חסומה. לחיצה נוספת על ההקלטה תפתח את הגדרות האפליקציה" else "נדרשת הרשאת מיקרופון כדי להקליט",
+                if (micPermanentlyDenied) "הרשאת מיקרופון חסומה. לחיצה נוספת על ההקלטה תפתח את הגדרות האפליקציה" else tr("נדרשת הרשאת מיקרופון כדי להקליט"),
                 Toast.LENGTH_LONG,
             ).show()
         }
@@ -194,9 +196,9 @@ fun RecorderHomeScreen(theme: FutureTheme, focusPath: String?, onPlay: (File) ->
 
     val listState = rememberLazyListState()
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Column(modifier = Modifier.fillMaxSize()) {
-            ScreenTopBar(title = "רשמקול", textColor = theme.textColor, accentColor = theme.accentColor)
+            ScreenTopBar(title = tr("רשמקול"), textColor = theme.textColor, accentColor = theme.accentColor)
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
@@ -222,8 +224,8 @@ fun RecorderHomeScreen(theme: FutureTheme, focusPath: String?, onPlay: (File) ->
                     item(key = "empty") {
                         EmptyState(
                             icon = FutureIcons.Mic,
-                            title = "אין הקלטות עדיין",
-                            subtitle = "OK על \"הקלטה\" כדי להתחיל",
+                            title = tr("אין הקלטות עדיין"),
+                            subtitle = tr("OK על \"הקלטה\" כדי להתחיל"),
                             textColor = theme.textColor,
                             modifier = Modifier.padding(top = FutureDimens.spacingLg),
                         )
@@ -232,7 +234,7 @@ fun RecorderHomeScreen(theme: FutureTheme, focusPath: String?, onPlay: (File) ->
                 if (!list.isNullOrEmpty()) {
                     item(key = "header") {
                         Text(
-                            "הקלטות (${list.size})",
+                            tr("הקלטות ({0})", list.size),
                             color = theme.mutedTextColor,
                             fontSize = FutureTypography.label,
                             fontWeight = FutureTypography.weightMedium,
@@ -251,7 +253,7 @@ fun RecorderHomeScreen(theme: FutureTheme, focusPath: String?, onPlay: (File) ->
                     }
                     item(key = "hint") {
                         Text(
-                            "OK השמעה · אפשרויות: שינוי שם, שיתוף, מחיקה",
+                            tr("OK השמעה · אפשרויות: שינוי שם, שיתוף, מחיקה"),
                             color = theme.subtleTextColor,
                             fontSize = FutureTypography.caption,
                             textAlign = TextAlign.Center,
@@ -265,15 +267,15 @@ fun RecorderHomeScreen(theme: FutureTheme, focusPath: String?, onPlay: (File) ->
 
     menuFor?.let { rec ->
         FutureOptionsMenu(theme = theme, onDismissRequest = { menuFor = null }, header = com.future.recorder.data.isolated(rec.name)) {
-            FutureMenuRow("השמע", FutureIcons.PlayArrow, theme, { menuFor = null; onPlay(rec.file) })
-            FutureMenuRow("שנה שם", FutureIcons.DriveFileRenameOutline, theme, { menuFor = null; renaming = rec })
-            FutureMenuRow("שתף", FutureIcons.Share, theme, { menuFor = null; shareRecording(context, rec.file) })
-            FutureMenuRow("מחק", FutureIcons.Delete, theme, { menuFor = null; deleting = rec }, destructive = true)
+            FutureMenuRow(tr("השמע"), FutureIcons.PlayArrow, theme, { menuFor = null; onPlay(rec.file) })
+            FutureMenuRow(tr("שנה שם"), FutureIcons.DriveFileRenameOutline, theme, { menuFor = null; renaming = rec })
+            FutureMenuRow(tr("שתף"), FutureIcons.Share, theme, { menuFor = null; shareRecording(context, rec.file) })
+            FutureMenuRow(tr("מחק"), FutureIcons.Delete, theme, { menuFor = null; deleting = rec }, destructive = true)
         }
     }
     renaming?.let { rec ->
         RenameRecordingDialog(
-            title = "שינוי שם",
+            title = tr("שינוי שם"),
             theme = theme,
             initialValue = rec.name,
             onDismiss = { renaming = null },
@@ -281,7 +283,7 @@ fun RecorderHomeScreen(theme: FutureTheme, focusPath: String?, onPlay: (File) ->
                 renaming = null
                 val renamed = Recordings.rename(rec.file, name)
                 if (renamed == null) {
-                    Toast.makeText(context, "השם לא חוקי או כבר קיים", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, tr("השם לא חוקי או כבר קיים"), Toast.LENGTH_SHORT).show()
                 }
                 // הפוקוס חוזר לאותה שורה (בנתיב החדש אם השינוי הצליח).
                 restorePath = (renamed ?: rec.file).path
@@ -292,7 +294,7 @@ fun RecorderHomeScreen(theme: FutureTheme, focusPath: String?, onPlay: (File) ->
     }
     deleting?.let { rec ->
         ConfirmDialog(
-            message = "למחוק את \"${com.future.recorder.data.isolated(rec.name)}\"?",
+            message = tr("למחוק את \"{0}\"?", com.future.recorder.data.isolated(rec.name)),
             theme = theme,
             onCancel = { deleting = null },
             onConfirm = {
@@ -329,9 +331,9 @@ private fun RecorderPanel(
     Column(modifier = modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             when (status) {
-                RecorderStatus.Idle -> "מוכן להקלטה"
-                RecorderStatus.Recording -> "מקליט"
-                RecorderStatus.Paused -> "מושהה"
+                RecorderStatus.Idle -> tr("מוכן להקלטה")
+                RecorderStatus.Recording -> tr("מקליט")
+                RecorderStatus.Paused -> tr("מושהה")
             },
             color = if (status == RecorderStatus.Recording) theme.dangerColor else theme.mutedTextColor,
             fontSize = FutureTypography.label,
@@ -351,14 +353,14 @@ private fun RecorderPanel(
             horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm),
         ) {
             when (status) {
-                RecorderStatus.Idle -> FutureButton("הקלטה", theme, onStart, fillMaxWidth = true, focusRequester = mainButton)
+                RecorderStatus.Idle -> FutureButton(tr("הקלטה"), theme, onStart, fillMaxWidth = true, focusRequester = mainButton)
                 RecorderStatus.Recording, RecorderStatus.Paused -> {
                     FutureButton(
-                        "עצור ושמור", theme, onStop,
+                        tr("עצור ושמור"), theme, onStop,
                         modifier = Modifier.weight(1f), fillMaxWidth = true, focusRequester = mainButton,
                     )
                     FutureButton(
-                        if (status == RecorderStatus.Recording) "השהה" else "המשך", theme,
+                        if (status == RecorderStatus.Recording) tr("השהה") else tr("המשך"), theme,
                         if (status == RecorderStatus.Recording) onPause else onResume,
                         modifier = Modifier.weight(1f), variant = FutureButtonVariant.Secondary, fillMaxWidth = true,
                     )
@@ -453,7 +455,7 @@ private fun formatDate(context: Context, millis: Long): String {
     val today = DateFormat.format("yyyyMMdd", System.currentTimeMillis())
     val day = DateFormat.format("yyyyMMdd", millis)
     val time = DateFormat.getTimeFormat(context).format(java.util.Date(millis))
-    return if (today == day) "היום $time" else "${DateFormat.format("dd.MM.yy", millis)} $time"
+    return if (today == day) tr("היום {0}", time) else "${DateFormat.format("dd.MM.yy", millis)} $time"
 }
 
 internal fun shareRecording(context: Context, file: File) {
@@ -463,7 +465,7 @@ internal fun shareRecording(context: Context, file: File) {
         .putExtra(Intent.EXTRA_STREAM, uri)
         .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     send.clipData = android.content.ClipData.newRawUri(file.nameWithoutExtension, uri)
-    FutureShare.open(context, send, "שיתוף הקלטה")
+    FutureShare.open(context, send, tr("שיתוף הקלטה"))
 }
 
 

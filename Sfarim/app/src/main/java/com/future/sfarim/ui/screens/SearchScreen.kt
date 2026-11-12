@@ -1,4 +1,6 @@
 package com.future.sfarim.ui.screens
+
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.components.FutureListItem
 import com.future.sharednav.components.FutureAvatar
 import com.future.sharednav.components.FutureSectionHeader
@@ -103,10 +105,10 @@ fun SearchScreen(
         searching = false
     }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize()) {
-                ScreenTopBar(title = "חיפוש", theme = theme, onBack = onBack)
+                ScreenTopBar(title = tr("חיפוש"), theme = theme, onBack = onBack)
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -115,7 +117,7 @@ fun SearchScreen(
                         .padding(horizontal = 14.dp, vertical = 12.dp),
                 ) {
                     if (query.isEmpty()) {
-                        Text("הקלד טקסט לחיפוש", color = theme.textColor.copy(alpha = 0.4f), fontSize = FutureTypography.bodyLarge)
+                        Text(tr("הקלד טקסט לחיפוש"), color = theme.textColor.copy(alpha = 0.4f), fontSize = FutureTypography.bodyLarge)
                     }
                     BasicTextField(
                         value = query,
@@ -135,9 +137,9 @@ fun SearchScreen(
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text(
                             when {
-                                failed -> "החיפוש נכשל"
-                                searching -> "מחפש"
-                                else -> "לא נמצאו תוצאות"
+                                failed -> tr("החיפוש נכשל")
+                                searching -> tr("מחפש")
+                                else -> tr("לא נמצאו תוצאות")
                             },
                             color = theme.textColor.copy(alpha = 0.5f),
                             fontSize = FutureTypography.bodyLarge,
@@ -150,7 +152,7 @@ fun SearchScreen(
                     ) {
                         if (bookResults.isNotEmpty()) {
                             item {
-                                FutureSectionHeader("ספרים", theme, inset = false)
+                                FutureSectionHeader(tr("ספרים"), theme, inset = false)
                             }
                             items(bookResults, key = { "book${it.id}" }) { entry ->
                                 FutureListItem(
@@ -162,7 +164,7 @@ fun SearchScreen(
                         }
                         if (segmentResults.isNotEmpty()) {
                             item {
-                                FutureSectionHeader("פסוקים", theme, inset = false)
+                                FutureSectionHeader(tr("פסוקים"), theme, inset = false)
                             }
                             items(segmentResults, key = { "seg${it.segmentId}" }) { result ->
                                 FutureListItem(

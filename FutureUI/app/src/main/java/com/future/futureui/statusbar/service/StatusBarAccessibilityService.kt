@@ -1,5 +1,7 @@
 package com.future.futureui.statusbar.service
 
+import com.future.sharednav.i18n.tr
+
 import android.accessibilityservice.AccessibilityService
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -659,12 +661,12 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
                         com.future.futureui.controlcenter.ui.PowerMenuScreen(
                             onPowerOff = {
                                 hidePowerMenu()
-                                android.widget.Toast.makeText(this@StatusBarAccessibilityService, "מכבה את המכשיר...", android.widget.Toast.LENGTH_SHORT).show()
+                                android.widget.Toast.makeText(this@StatusBarAccessibilityService, tr("מכבה את המכשיר..."), android.widget.Toast.LENGTH_SHORT).show()
                                 controlManager?.runRootCommandAsync("reboot -p")
                             },
                             onRestart = {
                                 hidePowerMenu()
-                                android.widget.Toast.makeText(this@StatusBarAccessibilityService, "מפעיל מחדש...", android.widget.Toast.LENGTH_SHORT).show()
+                                android.widget.Toast.makeText(this@StatusBarAccessibilityService, tr("מפעיל מחדש..."), android.widget.Toast.LENGTH_SHORT).show()
                                 controlManager?.runRootCommandAsync("reboot")
                             },
                             onCancel = { hidePowerMenu() },
@@ -912,7 +914,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
         const val ACTION_LOCK_NOW = "com.future.futureui.ACTION_LOCK_NOW"
         private val POWER_MENU_CLASS_HINTS = listOf("globalactions", "ActionsDialog", "PowerMenu", "ShutdownDialog")
         /** השורות של תפריט הכיבוי של אנדרואיד, עברית ואנגלית. */
-        private val POWER_OFF_LABELS = listOf("כיבוי", "כבה", "Power off", "Shut down", "Shutdown")
-        private val POWER_MENU_LABELS = POWER_OFF_LABELS + listOf("הפעלה מחדש", "אתחול", "Restart", "Reboot", "מצב טיסה", "Airplane mode")
+        private val POWER_OFF_LABELS = listOf(tr("כיבוי"), tr("כבה"), "Power off", "Shut down", "Shutdown")
+        private val POWER_MENU_LABELS = POWER_OFF_LABELS + listOf(tr("הפעלה מחדש"), tr("אתחול"), "Restart", "Reboot", tr("מצב טיסה"), "Airplane mode")
     }
 }

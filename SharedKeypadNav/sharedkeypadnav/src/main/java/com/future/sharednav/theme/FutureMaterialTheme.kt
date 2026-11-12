@@ -73,7 +73,7 @@ fun FutureAppTheme(
     theme: FutureTheme = rememberFutureTheme(),
     content: @Composable () -> Unit,
 ) {
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         FutureMaterialTheme(theme = theme, content = content)
     }
 }

@@ -1,5 +1,7 @@
 package com.future.tasks.ui.screens
 
+import com.future.sharednav.i18n.tr
+
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
@@ -68,7 +70,7 @@ fun TaskListScreen(
         com.future.sharednav.components.FutureOptionsMenu(
             theme = theme,
             onDismissRequest = { menuOpen = false },
-            header = focusedTask?.title?.ifEmpty { "משימה ללא שם" } ?: "משימות",
+            header = focusedTask?.title?.ifEmpty { tr("משימה ללא שם") } ?: tr("משימות"),
         ) {
             if (focusedTask != null) {
                 com.future.sharednav.components.FutureMenuRow(
@@ -78,7 +80,7 @@ fun TaskListScreen(
                     { menuOpen = false; onToggleDone(focusedTask) },
                 )
             }
-            com.future.sharednav.components.FutureMenuRow("משימה חדשה", FutureIcons.Add, theme, { menuOpen = false; onAddTask() })
+            com.future.sharednav.components.FutureMenuRow(tr("משימה חדשה"), FutureIcons.Add, theme, { menuOpen = false; onAddTask() })
             if (focusedTask != null) {
                 com.future.sharednav.components.FutureMenuRow("מחק", FutureIcons.Delete, theme, {
                     menuOpen = false
@@ -124,11 +126,11 @@ fun TaskListScreen(
     ScreenScaffold(
         modifier = Modifier.escapeTextFieldFocusTrap(),
         backgroundColor = theme.backgroundColor,
-        title = "משימות",
+        title = tr("משימות"),
         textColor = theme.textColor,
         accentColor = theme.accentColor,
         trailingIcon = FutureIcons.Add,
-        trailingContentDescription = "משימה חדשה",
+        trailingContentDescription = tr("משימה חדשה"),
         onTrailingClick = onAddTask,
         trailingFocusRequester = addFocusRequester,
     ) {
@@ -139,7 +141,7 @@ fun TaskListScreen(
                 // TK7: בחיפוש ההודעה מיד מתחת לשדה, ולא באמצע המסך - שם היא הוסתרה
                 // מתחת לפס המקלדת.
                 Text(
-                    "לא נמצאו משימות",
+                    tr("לא נמצאו משימות"),
                     color = theme.mutedTextColor,
                     fontSize = com.future.sharednav.theme.FutureTypography.summary,
                     modifier = Modifier.padding(horizontal = FutureDimens.screenPadding, vertical = FutureDimens.spacingSm),
@@ -147,8 +149,8 @@ fun TaskListScreen(
             } else if (tasks.isEmpty()) {
                 EmptyState(
                     icon = FutureIcons.Checklist,
-                    title = if (searchQuery.isBlank()) "אין משימות" else "לא נמצאו משימות",
-                    subtitle = if (searchQuery.isBlank()) "נווט לכפתור ההוספה שלמעלה ולחץ OK" else null,
+                    title = if (searchQuery.isBlank()) tr("אין משימות") else tr("לא נמצאו משימות"),
+                    subtitle = if (searchQuery.isBlank()) tr("נווט לכפתור ההוספה שלמעלה ולחץ OK") else null,
                     textColor = theme.textColor,
                     modifier = Modifier.weight(1f),
                 )
@@ -179,7 +181,7 @@ private fun SearchField(query: String, onQueryChanged: (String) -> Unit, theme: 
         value = query,
         onValueChange = onQueryChanged,
         theme = theme,
-        placeholder = "חיפוש משימות",
+        placeholder = tr("חיפוש משימות"),
         leading = {
             Icon(FutureIcons.Search, contentDescription = null, tint = theme.mutedTextColor, modifier = Modifier.size(FutureDimens.iconTopBar))
         },
@@ -196,7 +198,7 @@ private fun TaskRow(task: Task, theme: FutureTheme, focusRequester: FocusRequest
     val reminder = task.reminderAt?.takeIf { !task.isDone && it > System.currentTimeMillis() }
         ?.let { "תזכורת: " + com.future.tasks.data.TaskReminders.label(it) }
     FutureListItem(
-        title = task.title.ifEmpty { "משימה ללא שם" },
+        title = task.title.ifEmpty { tr("משימה ללא שם") },
         summary = listOfNotNull(reminder, task.notes.ifBlank { null }?.let { "\u2068$it\u2069" }).joinToString(" · ").ifEmpty { null },
         modifier = modifier,
         theme = theme,

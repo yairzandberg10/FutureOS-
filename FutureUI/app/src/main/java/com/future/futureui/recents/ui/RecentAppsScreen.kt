@@ -1,5 +1,7 @@
 package com.future.futureui.recents.ui
 
+import com.future.sharednav.i18n.tr
+
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
 import androidx.compose.animation.AnimatedVisibility
@@ -141,7 +143,7 @@ fun RecentAppsScreen(
         }
     }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -189,7 +191,7 @@ fun RecentAppsScreen(
                         .padding(top = com.future.futureui.statusbar.logic.StatusBarLayoutManager.HEIGHT_DP.dp + 10.dp, bottom = 6.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Text("אפליקציות אחרונות", color = Color.White, fontSize = FutureTypography.title, fontWeight = FontWeight.Bold)
+                    Text(tr("אפליקציות אחרונות"), color = Color.White, fontSize = FutureTypography.title, fontWeight = FontWeight.Bold)
                     if (memorySummary != null) {
                         Text(memorySummary, color = Color.White.copy(alpha = 0.5f), fontSize = FutureTypography.caption, modifier = Modifier.padding(top = 2.dp))
                     }
@@ -198,7 +200,7 @@ fun RecentAppsScreen(
                 Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 if (apps.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("אין אפליקציות אחרונות", color = Color.White.copy(alpha = 0.5f), fontSize = FutureTypography.body)
+                        Text(tr("אין אפליקציות אחרונות"), color = Color.White.copy(alpha = 0.5f), fontSize = FutureTypography.body)
                     }
                 } else {
                     LazyVerticalGrid(
@@ -249,7 +251,7 @@ fun RecentAppsScreen(
                             .border(animateFocusDp(clearFocused, 2.dp, 1.dp).value, animateFocusColor(clearFocused, Color.LightGray, Color.White.copy(alpha = 0.18f)).value, CircleShape),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Icon(Icons.Rounded.Close, contentDescription = "סגור הכל", tint = Color.White, modifier = Modifier.size(28.dp))
+                        Icon(Icons.Rounded.Close, contentDescription = tr("סגור הכל"), tint = Color.White, modifier = Modifier.size(28.dp))
                     }
                 }
                 }

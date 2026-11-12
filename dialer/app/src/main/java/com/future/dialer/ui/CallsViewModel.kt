@@ -1,5 +1,7 @@
 package com.future.dialer.ui
 
+import com.future.sharednav.i18n.tr
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.future.dialer.data.model.CallRecord
@@ -69,7 +71,7 @@ class CallsViewModel(
             call.name
                 ?: matchKey(call.phoneNumber)?.let(byKey::get)
                 ?: call.phoneNumber.takeIf { it.isNotBlank() && !call.isPrivate }?.let(CallFormat::isolate)
-                ?: "מספר חסוי"
+                ?: tr("מספר חסוי")
         }
     }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 

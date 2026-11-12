@@ -1,4 +1,6 @@
 package com.future.messages.ui.screens
+
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.systemui.StatusBarInset
 
 import android.Manifest
@@ -107,7 +109,7 @@ fun ComposeScreen(
 
     fun startWith(contact: Contact) = onStart(contact, attachedImageUri)
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -118,12 +120,12 @@ fun ComposeScreen(
                 .padding(top = StatusBarInset.TITLE_GAP_DP.dp),
         ) {
             ScreenTopBar(
-                title = "הודעה חדשה",
+                title = tr("הודעה חדשה"),
                 textColor = theme.textColor,
                 accentColor = theme.accentColor,
                 onBack = onCancel,
                 trailingIcon = FutureIcons.AttachFile,
-                trailingContentDescription = "צרף תמונה",
+                trailingContentDescription = tr("צרף תמונה"),
                 onTrailingClick = imagePicker,
             )
 
@@ -134,7 +136,7 @@ fun ComposeScreen(
                     .padding(top = FutureDimens.spacingMd),
             ) {
                 Text(
-                    "למי לשלוח?",
+                    tr("למי לשלוח?"),
                     color = theme.textColor,
                     fontSize = FutureTypography.title,
                     fontWeight = FutureTypography.weightMedium,
@@ -147,7 +149,7 @@ fun ComposeScreen(
                     value = query,
                     onValueChange = { query = it },
                     theme = theme,
-                    placeholder = "הקלידו שם או מספר",
+                    placeholder = tr("הקלידו שם או מספר"),
                     focusRequester = focusRequester,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                     leading = { FutureAvatar(theme = theme, icon = FutureIcons.Search, size = 28.dp) },
@@ -191,7 +193,7 @@ fun ComposeScreen(
                                 Image(bitmap = bitmap, contentDescription = null, modifier = Modifier.fillMaxSize())
                             }
                         }
-                        TopBarIconButton(FutureIcons.Close, "הסר צירוף", theme.textColor, theme.accentColor, { attachedImageUri = null })
+                        TopBarIconButton(FutureIcons.Close, tr("הסר צירוף"), theme.textColor, theme.accentColor, { attachedImageUri = null })
                     }
                 }
             }
@@ -201,14 +203,14 @@ fun ComposeScreen(
             when {
                 query.isBlank() -> EmptyState(
                     icon = FutureIcons.Contacts,
-                    title = "חיפוש נמען",
-                    subtitle = "התחילו להקליד שם של איש קשר או מספר טלפון",
+                    title = tr("חיפוש נמען"),
+                    subtitle = tr("התחילו להקליד שם של איש קשר או מספר טלפון"),
                     textColor = theme.textColor,
                 )
                 typedNumber == null && suggestions.isEmpty() -> EmptyState(
                     icon = FutureIcons.SearchOff,
-                    title = "לא נמצאו אנשי קשר",
-                    subtitle = "אפשר להקליד מספר טלפון במקום",
+                    title = tr("לא נמצאו אנשי קשר"),
+                    subtitle = tr("אפשר להקליד מספר טלפון במקום"),
                     textColor = theme.textColor,
                 )
                 else -> LazyColumn(
@@ -232,7 +234,7 @@ fun ComposeScreen(
                         }
                     }
                     if (suggestions.isNotEmpty()) {
-                        item(key = "header") { FutureSectionHeader("אנשי קשר", theme, inset = false) }
+                        item(key = "header") { FutureSectionHeader(tr("אנשי קשר"), theme, inset = false) }
                     }
                     items(suggestions, key = { it.phoneNumber }) { contact ->
                         FutureListItem(
@@ -258,7 +260,7 @@ fun ComposeScreen(
         if (granted && number != null) {
             scope.launch { addFavorite(context, number) }
         } else if (!granted) {
-            Toast.makeText(context, "צריך הרשאה לאנשי הקשר", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, tr("צריך הרשאה לאנשי הקשר"), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -290,7 +292,7 @@ fun ComposeScreen(
                     putExtra(android.provider.ContactsContract.Intents.Insert.PHONE, number)
                 }
                 runCatching { context.startActivity(intent) }
-                    .onFailure { Toast.makeText(context, "אפליקציית אנשי הקשר לא זמינה", Toast.LENGTH_SHORT).show() }
+                    .onFailure { Toast.makeText(context, tr("אפליקציית אנשי הקשר לא זמינה"), Toast.LENGTH_SHORT).show() }
             },
             onFavorite = {
                 menuNumber = null
@@ -311,17 +313,17 @@ fun ComposeScreen(
     // שורה הרסנית בתפריט עוברת דרך אישור (DS).
     pendingBlock?.let { number ->
         com.future.sharednav.components.ConfirmDialog(
-            message = "לחסום את ${NumberActions.isolateLtr(number)}?",
+            message = tr("לחסום את {0}?", NumberActions.isolateLtr(number)),
             surfaceColor = theme.surfaceColor,
             textColor = theme.textColor,
             dangerColor = theme.dangerColor,
             onCancel = { pendingBlock = null },
-            confirmLabel = "חסום",
+            confirmLabel = tr("חסום"),
             onConfirm = {
                 pendingBlock = null
                 scope.launch {
                     val ok = withContext(Dispatchers.IO) { NumberActions.block(context, number) }
-                    Toast.makeText(context, if (ok) "המספר נחסם" else "החסימה נכשלה", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, if (ok) tr("המספר נחסם") else tr("החסימה נכשלה"), Toast.LENGTH_SHORT).show()
                 }
             },
         )
@@ -330,7 +332,7 @@ fun ComposeScreen(
 
 private suspend fun addFavorite(context: android.content.Context, number: String) {
     val ok = withContext(Dispatchers.IO) { NumberActions.addToFavorites(context, number) }
-    Toast.makeText(context, if (ok) "נוסף למועדפים" else "ההוספה למועדפים נכשלה", Toast.LENGTH_SHORT).show()
+    Toast.makeText(context, if (ok) tr("נוסף למועדפים") else tr("ההוספה למועדפים נכשלה"), Toast.LENGTH_SHORT).show()
 }
 
 @Composable
@@ -345,10 +347,10 @@ private fun NumberActionsMenu(
     onBlock: () -> Unit,
 ) {
     FutureOptionsMenu(theme = theme, onDismissRequest = onDismiss, header = NumberActions.isolateLtr(number)) {
-        FutureMenuRow("שליחת הודעה", FutureIcons.Send, theme, onMessage)
-        FutureMenuRow("חיוג", FutureIcons.Call, theme, onCall)
-        FutureMenuRow("הוספה לאנשי קשר", FutureIcons.PersonAdd, theme, onAddContact)
-        FutureMenuRow("הוספה למועדפים", FutureIcons.Star, theme, onFavorite)
-        FutureMenuRow("חסימה", FutureIcons.Lock, theme, onBlock, destructive = true)
+        FutureMenuRow(tr("שליחת הודעה"), FutureIcons.Send, theme, onMessage)
+        FutureMenuRow(tr("חיוג"), FutureIcons.Call, theme, onCall)
+        FutureMenuRow(tr("הוספה לאנשי קשר"), FutureIcons.PersonAdd, theme, onAddContact)
+        FutureMenuRow(tr("הוספה למועדפים"), FutureIcons.Star, theme, onFavorite)
+        FutureMenuRow(tr("חסימה"), FutureIcons.Lock, theme, onBlock, destructive = true)
     }
 }

@@ -1,5 +1,7 @@
 package com.future.recorder.data
 
+import com.future.sharednav.i18n.tr
+
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -138,7 +140,7 @@ class RecorderService : Service() {
             recorder?.release()
             recorder = null
             file.delete()
-            failStart("לא ניתן להתחיל הקלטה - המיקרופון תפוס?")
+            failStart(tr("לא ניתן להתחיל הקלטה - המיקרופון תפוס?"))
             return
         }
         wakeLock = (getSystemService(Context.POWER_SERVICE) as PowerManager)
@@ -228,7 +230,7 @@ class RecorderService : Service() {
     private fun buildNotification(paused: Boolean): Notification {
         val nm = getSystemService(NotificationManager::class.java)
         if (nm.getNotificationChannel(CHANNEL_ID) == null) {
-            nm.createNotificationChannel(NotificationChannel(CHANNEL_ID, "הקלטה פעילה", NotificationManager.IMPORTANCE_LOW))
+            nm.createNotificationChannel(NotificationChannel(CHANNEL_ID, tr("הקלטה פעילה"), NotificationManager.IMPORTANCE_LOW))
         }
         val open = PendingIntent.getActivity(
             this, 0, Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
@@ -240,17 +242,17 @@ class RecorderService : Service() {
         )
         // משך ההקלטה בהתראה: שעון חי (chronometer) בזמן הקלטה, וזמן קבוע בהשהיה.
         val elapsed = _state.value.elapsedMs()
-        val name = _state.value.file?.let { File(it.path.removeSuffix(PART_SUFFIX)).nameWithoutExtension } ?: "רשמקול"
+        val name = _state.value.file?.let { File(it.path.removeSuffix(PART_SUFFIX)).nameWithoutExtension } ?: tr("רשמקול")
         return Notification.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setContentTitle(if (paused) "ההקלטה מושהית" else "מקליט")
+            .setContentTitle(if (paused) tr("ההקלטה מושהית") else tr("מקליט"))
             .setContentText(if (paused) "$name · ${formatDuration(elapsed)}" else name)
             .setUsesChronometer(!paused)
             .setWhen(System.currentTimeMillis() - elapsed)
             .setShowWhen(true)
             .setContentIntent(open)
             .setOngoing(true)
-            .addAction(Notification.Action.Builder(null, "עצור ושמור", stop).build())
+            .addAction(Notification.Action.Builder(null, tr("עצור ושמור"), stop).build())
             .build()
     }
 

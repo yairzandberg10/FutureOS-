@@ -1,5 +1,7 @@
 package com.future.messages.ui.components
 
+import com.future.sharednav.i18n.tr
+
 import android.app.Activity
 import android.content.Intent
 import android.net.Uri
@@ -39,7 +41,7 @@ fun rememberGalleryImagePicker(onPicked: (Uri) -> Unit): () -> Unit {
             if (intent.resolveActivity(context.packageManager) != null) {
                 launcher.launch(intent)
             } else {
-                Toast.makeText(context, "אפליקציית הגלריה לא מותקנת", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, tr("אפליקציית הגלריה לא מותקנת"), Toast.LENGTH_SHORT).show()
             }
         }
     }

@@ -1,5 +1,7 @@
 package com.future.remote.ui
 
+import com.future.sharednav.i18n.tr
+
 import android.content.Context
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -111,8 +113,8 @@ fun AcRemoteScreen(theme: FutureTheme, device: RemoteDevice, onBack: () -> Unit)
                     repository.updateDevice(device.id) { it.copy(acState = next, acProtocol = protocol) }
                     buzz(context)
                 }
-                !hasEmitter -> Toast.makeText(context, "אין משדר אינפרא-אדום", Toast.LENGTH_SHORT).show()
-                else -> Toast.makeText(context, "השליחה נכשלה", Toast.LENGTH_SHORT).show()
+                !hasEmitter -> Toast.makeText(context, tr("אין משדר אינפרא-אדום"), Toast.LENGTH_SHORT).show()
+                else -> Toast.makeText(context, tr("השליחה נכשלה"), Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -134,7 +136,7 @@ fun AcRemoteScreen(theme: FutureTheme, device: RemoteDevice, onBack: () -> Unit)
     val displayFocus = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { displayFocus.requestFocus() } }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -177,7 +179,7 @@ fun AcRemoteScreen(theme: FutureTheme, device: RemoteDevice, onBack: () -> Unit)
                 // מקש ההפעלה - רחב, באדום כשהמזגן דלוק (כמו בשלט).
                 FutureActionCell(
                     icon = FutureIcons.PowerSettingsNew,
-                    label = if (state.power) "כיבוי (5)" else "הפעלה (5)",
+                    label = if (state.power) tr("כיבוי (5)") else tr("הפעלה (5)"),
                     theme = theme,
                     onClick = ::power,
                     active = state.power,
@@ -187,20 +189,20 @@ fun AcRemoteScreen(theme: FutureTheme, device: RemoteDevice, onBack: () -> Unit)
                 )
                 Spacer(Modifier.height(FutureDimens.spacingSm))
                 Row(horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm)) {
-                    FutureActionCell(FutureIcons.KeyboardArrowUp, "חם יותר (2)", theme, { temp(+1) }, height = 72.dp, modifier = Modifier.weight(1f))
-                    FutureActionCell(FutureIcons.KeyboardArrowDown, "קר יותר (8)", theme, { temp(-1) }, height = 72.dp, modifier = Modifier.weight(1f))
+                    FutureActionCell(FutureIcons.KeyboardArrowUp, tr("חם יותר (2)"), theme, { temp(+1) }, height = 72.dp, modifier = Modifier.weight(1f))
+                    FutureActionCell(FutureIcons.KeyboardArrowDown, tr("קר יותר (8)"), theme, { temp(-1) }, height = 72.dp, modifier = Modifier.weight(1f))
                 }
                 Spacer(Modifier.height(FutureDimens.spacingSm))
                 Row(horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm)) {
-                    FutureActionCell(modeIcon(state.mode), "מצב (1)", theme, ::mode, height = 72.dp, modifier = Modifier.weight(1f))
-                    FutureActionCell(FutureIcons.Air, "מאוורר (3)", theme, ::fan, height = 72.dp, modifier = Modifier.weight(1f))
-                    FutureActionCell(FutureIcons.SwapVert, "תנודה (7)", theme, ::swing, active = state.swing, height = 72.dp, modifier = Modifier.weight(1f))
+                    FutureActionCell(modeIcon(state.mode), tr("מצב (1)"), theme, ::mode, height = 72.dp, modifier = Modifier.weight(1f))
+                    FutureActionCell(FutureIcons.Air, tr("מאוורר (3)"), theme, ::fan, height = 72.dp, modifier = Modifier.weight(1f))
+                    FutureActionCell(FutureIcons.SwapVert, tr("תנודה (7)"), theme, ::swing, active = state.swing, height = 72.dp, modifier = Modifier.weight(1f))
                 }
                 Spacer(Modifier.height(FutureDimens.spacingMd))
                 Text(
                     // "דגם שלט אחר" מופיע בתפריט רק כשלחברה יש יותר מדגם אחד - אחרת ההנחיה
                     // שלחה לאפשרות שלא קיימת.
-                    if ((company?.protocols?.size ?: 0) > 1) "כוונו את הטלפון אל המזגן. לא מגיב? Options ← דגם שלט אחר"
+                    if ((company?.protocols?.size ?: 0) > 1) tr("כוונו את הטלפון אל המזגן. לא מגיב? Options ← דגם שלט אחר")
                     else "כוונו את הטלפון אל המזגן.",
                     color = theme.subtleTextColor,
                     fontSize = FutureTypography.caption,
@@ -221,11 +223,11 @@ fun AcRemoteScreen(theme: FutureTheme, device: RemoteDevice, onBack: () -> Unit)
                     // R08: הטמפרטורה מותאמת לטווח של הדגם החדש, כדי שהמסך והשידור יסכימו.
                     state = state.copy(temp = state.temp.coerceIn(AcProtocols.tempRange(other)))
                     repository.updateDevice(device.id) { it.copy(acProtocol = other, acState = state) }
-                    Toast.makeText(context, "עכשיו: ${other.label}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, tr("עכשיו: {0}", other.label), Toast.LENGTH_SHORT).show()
                 })
             }
             // R11: איפוס השלט מבקש אישור.
-            FutureMenuRow("איפוס השלט", FutureIcons.Delete, theme, {
+            FutureMenuRow(tr("איפוס השלט"), FutureIcons.Delete, theme, {
                 showMenu = false
                 confirmReset = true
             }, destructive = true)
@@ -265,7 +267,7 @@ private fun AcDisplay(theme: FutureTheme, state: AcState, subtitle: String) {
             Icon(modeIcon(state.mode), contentDescription = null, tint = lit, modifier = Modifier.size(28.dp))
             Spacer(Modifier.width(FutureDimens.spacingMd))
             Text(
-                if (state.power) tempLabel(state.temp) else "כבוי",
+                if (state.power) tempLabel(state.temp) else tr("כבוי"),
                 color = if (state.power) theme.textColor else theme.subtleTextColor,
                 fontSize = 64.sp,
                 fontWeight = FontWeight.Light,
@@ -278,7 +280,7 @@ private fun AcDisplay(theme: FutureTheme, state: AcState, subtitle: String) {
         ) {
             Text(state.mode.label, color = theme.textColor, fontSize = FutureTypography.body)
             FanBars(state.fan, lit, theme)
-            Text(if (state.swing) "תנודה" else "קבוע", color = theme.textColor, fontSize = FutureTypography.body)
+            Text(if (state.swing) tr("תנודה") else tr("קבוע"), color = theme.textColor, fontSize = FutureTypography.body)
         }
     }
 }
@@ -287,7 +289,7 @@ private fun AcDisplay(theme: FutureTheme, state: AcState, subtitle: String) {
 @Composable
 private fun FanBars(fan: AcFan, color: Color, theme: FutureTheme) {
     if (fan == AcFan.AUTO) {
-        Text("מאוורר אוטו'", color = theme.textColor, fontSize = FutureTypography.body)
+        Text(tr("מאוורר אוטו'"), color = theme.textColor, fontSize = FutureTypography.body)
         return
     }
     Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(3.dp)) {

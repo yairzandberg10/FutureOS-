@@ -1,5 +1,7 @@
 package com.future.futureui.lockscreen
 
+import com.future.sharednav.i18n.tr
+
 import com.future.futureui.utils.safeText
 import android.app.AlarmManager
 import android.content.BroadcastReceiver
@@ -418,8 +420,8 @@ class LockScreenController(
     }
 
     private fun strongAuthReason(): String =
-        if (settings.prefs.getInt("face_failures", 0) >= LockSettings.MAX_FACE_FAILURES) "יותר מדי ניסיונות זיהוי - הזן קוד"
-        else "נדרש קוד כדי להפעיל את זיהוי הפנים"
+        if (settings.prefs.getInt("face_failures", 0) >= LockSettings.MAX_FACE_FAILURES) tr("יותר מדי ניסיונות זיהוי - הזן קוד")
+        else tr("נדרש קוד כדי להפעיל את זיהוי הפנים")
 
     // --------------------------------------------------------------- מקשים
 

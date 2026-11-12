@@ -1,4 +1,6 @@
 package com.future.gallery.ui
+
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.theme.readableAccentColor
 import com.future.sharednav.theme.idleChipColor
 import com.future.sharednav.theme.mutedTextColor
@@ -58,7 +60,7 @@ fun AlbumsScreen(
     if (albums.isEmpty()) {
         com.future.sharednav.components.EmptyState(
             icon = Icons.Rounded.PhotoAlbum,
-            title = "אין אלבומים עדיין",
+            title = tr("אין אלבומים עדיין"),
             textColor = theme.textColor,
         )
         return

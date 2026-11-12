@@ -1,5 +1,7 @@
 package com.future.futureui.notificationcenter.ui
 
+import com.future.sharednav.i18n.tr
+
 import com.future.futureui.utils.safeText
 import com.future.sharednav.theme.FutureMotion
 import com.future.sharednav.theme.FutureTypography
@@ -119,7 +121,7 @@ fun HeadsUpNotificationScreen(
     // One UI: הבאנר לבן (טקסט שחור) או שחור (טקסט לבן) לפי מצב הבהיר/כהה של המערכת.
     val palette = rememberOneUiPalette()
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         // בלי Modifier.fillMaxSize() כאן בכוונה: החלון של השירות מוגדר WRAP_CONTENT
         // בגובה (HeadsUpNotificationService). fillMaxSize() בתוך שורש שכזה גורם ל-
         // Compose "למלא" את מלוא גובה המסך בפועל, ואז הבאנר "חוסם" חלק מהמסך.
@@ -231,7 +233,7 @@ private fun HeadsUpContent(sbn: StatusBarNotification) {
         if (n.category == Notification.CATEGORY_CALL) {
             Column {
                 Text(
-                    text = title.ifBlank { "שיחה נכנסת" },
+                    text = title.ifBlank { tr("שיחה נכנסת") },
                     fontSize = FutureTypography.label,
                     color = textColor.copy(alpha = 0.65f),
                     maxLines = 1,
@@ -246,7 +248,7 @@ private fun HeadsUpContent(sbn: StatusBarNotification) {
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = "טלפון = מענה · ניתוק = דחייה",
+                    text = tr("טלפון = מענה · ניתוק = דחייה"),
                     fontSize = FutureTypography.caption,
                     color = textColor.copy(alpha = 0.55f),
                     maxLines = 1,

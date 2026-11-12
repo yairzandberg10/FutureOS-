@@ -1,5 +1,7 @@
 package com.future.dialer.ui.contact
 
+import com.future.sharednav.i18n.tr
+
 import com.future.sharednav.icons.FutureIcons
 
 import androidx.compose.foundation.layout.Arrangement
@@ -72,7 +74,7 @@ fun ContactScreen(
 
     Column(modifier = Modifier.fillMaxSize()) {
         ScreenTopBar(
-            title = "איש קשר",
+            title = tr("איש קשר"),
             textColor = theme.textColor,
             accentColor = theme.accentColor,
             onBack = onBack,
@@ -119,7 +121,7 @@ fun ContactScreen(
 
             FutureCard(theme = theme) {
                 FutureSettingItem(
-                    title = "התקשר",
+                    title = tr("התקשר"),
                     icon = FutureIcons.Call,
                     theme = theme,
                     showChevron = false,
@@ -128,7 +130,7 @@ fun ContactScreen(
                 )
                 FutureDivider(theme = theme)
                 FutureSettingItem(
-                    title = "שלח הודעה",
+                    title = tr("שלח הודעה"),
                     icon = FutureIcons.AutoMirrored.Chat,
                     theme = theme,
                     showChevron = false,
@@ -137,7 +139,7 @@ fun ContactScreen(
                 FutureDivider(theme = theme)
                 if (contact != null) {
                     FutureSettingItem(
-                        title = if (contact.isFavorite) "הסר ממועדפים" else "הוסף למועדפים",
+                        title = if (contact.isFavorite) tr("הסר ממועדפים") else tr("הוסף למועדפים"),
                         icon = if (contact.isFavorite) FutureIcons.Star else FutureIcons.StarBorder,
                         theme = theme,
                         showChevron = false,
@@ -145,7 +147,7 @@ fun ContactScreen(
                     )
                 } else {
                     FutureSettingItem(
-                        title = "הוסף לאנשי קשר",
+                        title = tr("הוסף לאנשי קשר"),
                         icon = FutureIcons.PersonAdd,
                         theme = theme,
                         showChevron = false,
@@ -155,7 +157,7 @@ fun ContactScreen(
             }
 
             if (history.isNotEmpty()) {
-                FutureSectionHeader("היסטוריה", theme = theme)
+                FutureSectionHeader(tr("היסטוריה"), theme = theme)
                 FutureCard(theme = theme) {
                     history.forEachIndexed { index, call ->
                         if (index > 0) FutureDivider(theme = theme)

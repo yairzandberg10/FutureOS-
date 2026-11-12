@@ -1,5 +1,7 @@
 package com.future.messages.chat
 
+import com.future.sharednav.i18n.tr
+
 import android.app.Activity
 import android.content.ContentUris
 import android.content.ContentValues
@@ -104,7 +106,7 @@ object FutureChat {
      * נקרא בלי שהמשתמש מקליד כלום. */
     fun startVerification(activity: Activity, rawPhone: String, listener: VerificationListener) {
         init(activity)
-        val phone = e164(activity, rawPhone) ?: return listener.onError("מספר לא תקין")
+        val phone = e164(activity, rawPhone) ?: return listener.onError(tr("מספר לא תקין"))
         val options = PhoneAuthOptions.newBuilder(FirebaseAuth.getInstance())
             .setPhoneNumber(phone)
             .setTimeout(60L, TimeUnit.SECONDS)
@@ -113,7 +115,7 @@ object FutureChat {
                 override fun onVerificationCompleted(credential: PhoneAuthCredential) = signIn(credential, listener)
                 override fun onVerificationFailed(e: FirebaseException) {
                     Log.w(TAG, "Verification failed", e)
-                    listener.onError(e.localizedMessage ?: "האימות נכשל")
+                    listener.onError(e.localizedMessage ?: tr("האימות נכשל"))
                 }
                 override fun onCodeSent(id: String, token: PhoneAuthProvider.ForceResendingToken) {
                     verificationId = id
@@ -125,7 +127,7 @@ object FutureChat {
     }
 
     fun submitCode(code: String, listener: VerificationListener) {
-        val id = verificationId ?: return listener.onError("צריך לשלוח קוד קודם")
+        val id = verificationId ?: return listener.onError(tr("צריך לשלוח קוד קודם"))
         signIn(PhoneAuthProvider.getCredential(id, code.trim()), listener)
     }
 
@@ -137,7 +139,7 @@ object FutureChat {
                 launch(Dispatchers.Main) { listener.onVerified() }
             } catch (e: Exception) {
                 Log.w(TAG, "Sign-in failed", e)
-                launch(Dispatchers.Main) { listener.onError(e.localizedMessage ?: "ההתחברות נכשלה") }
+                launch(Dispatchers.Main) { listener.onError(e.localizedMessage ?: tr("ההתחברות נכשלה")) }
             }
         }
     }

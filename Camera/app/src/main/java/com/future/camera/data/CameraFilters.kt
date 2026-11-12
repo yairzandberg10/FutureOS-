@@ -1,5 +1,7 @@
 package com.future.camera.data
 
+import com.future.sharednav.i18n.tr
+
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.ColorMatrix
@@ -11,14 +13,14 @@ import android.graphics.Paint
  * ה-PreviewView) ועל התמונה שנשמרת, כך שמה שרואים הוא מה שמקבלים.
  */
 enum class CameraFilter(val label: String) {
-    NONE("ללא"),
-    VIVID("חי"),
-    WARM("חם"),
-    COOL("קר"),
-    FADE("דהוי"),
-    SEPIA("ספיה"),
-    MONO("שחור לבן"),
-    NOIR("נואר");
+    NONE(tr("ללא")),
+    VIVID(tr("חי")),
+    WARM(tr("חם")),
+    COOL(tr("קר")),
+    FADE(tr("דהוי")),
+    SEPIA(tr("ספיה")),
+    MONO(tr("שחור לבן")),
+    NOIR(tr("נואר"));
 
     fun matrix(): ColorMatrix? = when (this) {
         NONE -> null

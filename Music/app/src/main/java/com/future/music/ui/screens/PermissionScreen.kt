@@ -1,4 +1,6 @@
 package com.future.music.ui.screens
+
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.components.FutureAvatar
 import com.future.sharednav.components.FutureButton
 
@@ -46,7 +48,7 @@ fun PermissionScreen(theme: FutureTheme, onRequestPermission: () -> Unit) {
             FutureAvatar(theme = theme, icon = Icons.Rounded.LibraryMusic, size = 88.dp)
             androidx.compose.foundation.layout.Spacer(modifier = Modifier.padding(top = 20.dp))
             Text(
-                "גישה לספריית המוזיקה",
+                tr("גישה לספריית המוזיקה"),
                 color = theme.textColor,
                 fontSize = FutureTypography.screenTitle,
                 fontWeight = FontWeight.Bold,
@@ -54,13 +56,13 @@ fun PermissionScreen(theme: FutureTheme, onRequestPermission: () -> Unit) {
             )
             androidx.compose.foundation.layout.Spacer(modifier = Modifier.padding(top = 8.dp))
             Text(
-                "כדי להציג ולנגן את השירים שכבר נמצאים בטלפון, האפליקציה צריכה הרשאת גישה למוזיקה.",
+                tr("כדי להציג ולנגן את השירים שכבר נמצאים בטלפון, האפליקציה צריכה הרשאת גישה למוזיקה."),
                 color = theme.textColor.copy(alpha = 0.6f),
                 fontSize = FutureTypography.body,
                 textAlign = TextAlign.Center,
             )
             androidx.compose.foundation.layout.Spacer(modifier = Modifier.padding(top = 24.dp))
-            FutureButton("אפשר גישה", theme, onRequestPermission, focusRequester = buttonFocusRequester)
+            FutureButton(tr("אפשר גישה"), theme, onRequestPermission, focusRequester = buttonFocusRequester)
         }
     }
 }

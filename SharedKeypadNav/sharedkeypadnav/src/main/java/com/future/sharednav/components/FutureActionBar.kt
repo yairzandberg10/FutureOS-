@@ -76,7 +76,7 @@ fun FutureActionBar(
 ) {
     val type = rememberFutureType()
     val shape = RoundedCornerShape(topStart = FutureShapes.radiusXl, topEnd = FutureShapes.radiusXl)
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Column(
             modifier = modifier
                 .fillMaxWidth()

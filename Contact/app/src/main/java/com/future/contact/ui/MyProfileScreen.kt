@@ -1,5 +1,7 @@
 package com.future.contact.ui
 
+import com.future.sharednav.i18n.tr
+
 import android.Manifest
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -94,7 +96,7 @@ fun MyProfileScreen(theme: FutureTheme) {
             ?: return@rememberLauncherForActivityResult
         scope.launch {
             val ok = withContext(Dispatchers.IO) { store.setPhoto(uri) }
-            if (!ok) android.widget.Toast.makeText(context, "לא ניתן לשמור את התמונה", android.widget.Toast.LENGTH_SHORT).show()
+            if (!ok) android.widget.Toast.makeText(context, tr("לא ניתן לשמור את התמונה"), android.widget.Toast.LENGTH_SHORT).show()
             reload()
         }
     }
@@ -108,19 +110,19 @@ fun MyProfileScreen(theme: FutureTheme) {
     fun shareMe() {
         val text = listOfNotNull(profile.name.ifBlank { null }, myNumber, profile.description.ifBlank { null }).joinToString("\n")
         if (text.isBlank()) return
-        FutureShare.open(context, Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text), "שיתוף הפרטים שלי")
+        FutureShare.open(context, Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text), tr("שיתוף הפרטים שלי"))
     }
 
     val first = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { first.requestFocus() } }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Column(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = FutureDimens.spacingLg, vertical = FutureDimens.spacingMd),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("אני", fontSize = type.screenTitle, fontWeight = FutureTypography.weightBold, color = theme.textColor)
+                Text(tr("אני"), fontSize = type.screenTitle, fontWeight = FutureTypography.weightBold, color = theme.textColor)
             }
             Column(modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(bottom = FutureDimens.spacingXl)) {
                 Column(
@@ -136,7 +138,7 @@ fun MyProfileScreen(theme: FutureTheme) {
                         photoUri = profile.photoUri,
                     )
                     Text(
-                        profile.name.ifBlank { "השם שלי" },
+                        profile.name.ifBlank { tr("השם שלי") },
                         color = if (profile.name.isBlank()) theme.mutedTextColor else theme.textColor,
                         fontSize = type.screenTitle,
                         fontWeight = FutureTypography.weightBold,
@@ -161,7 +163,7 @@ fun MyProfileScreen(theme: FutureTheme) {
 
                 FutureCard(theme = theme) {
                     FutureSettingItem(
-                        title = if (profile.name.isBlank()) "הוסף שם" else "ערוך שם",
+                        title = if (profile.name.isBlank()) tr("הוסף שם") else tr("ערוך שם"),
                         icon = FutureIcons.Edit,
                         theme = theme,
                         focusRequester = first,
@@ -169,7 +171,7 @@ fun MyProfileScreen(theme: FutureTheme) {
                     )
                     FutureDivider(theme = theme)
                     FutureSettingItem(
-                        title = if (profile.description.isBlank()) "הוסף תיאור" else "ערוך תיאור",
+                        title = if (profile.description.isBlank()) tr("הוסף תיאור") else tr("ערוך תיאור"),
                         summary = profile.description.ifBlank { null },
                         icon = FutureIcons.Description,
                         theme = theme,
@@ -177,7 +179,7 @@ fun MyProfileScreen(theme: FutureTheme) {
                     )
                     FutureDivider(theme = theme)
                     FutureSettingItem(
-                        title = if (profile.photoUri == null) "הגדר תמונת פרופיל" else "החלף תמונת פרופיל",
+                        title = if (profile.photoUri == null) tr("הגדר תמונת פרופיל") else tr("החלף תמונת פרופיל"),
                         icon = FutureIcons.AddAPhoto,
                         theme = theme,
                         onClick = ::pickPhoto,
@@ -185,7 +187,7 @@ fun MyProfileScreen(theme: FutureTheme) {
                     if (profile.photoUri != null) {
                         FutureDivider(theme = theme)
                         FutureSettingItem(
-                            title = "הסר תמונה",
+                            title = tr("הסר תמונה"),
                             icon = FutureIcons.NoPhotography,
                             theme = theme,
                             showChevron = false,
@@ -193,10 +195,10 @@ fun MyProfileScreen(theme: FutureTheme) {
                         )
                     }
                     FutureDivider(theme = theme)
-                    FutureSettingItem(title = "שתף את הפרטים שלי", icon = FutureIcons.Share, theme = theme, showChevron = false, onClick = ::shareMe)
+                    FutureSettingItem(title = tr("שתף את הפרטים שלי"), icon = FutureIcons.Share, theme = theme, showChevron = false, onClick = ::shareMe)
                 }
 
-                FutureSectionHeader("כרטיס SIM", theme)
+                FutureSectionHeader(tr("כרטיס SIM"), theme)
                 FutureCard(theme = theme) {
                     // השורות לחיצות (מרעננות) - שורה בלי פוקוס לא נגללת לתצוגה במכשיר מקשים.
                     sims.forEachIndexed { index, sim ->
@@ -205,9 +207,9 @@ fun MyProfileScreen(theme: FutureTheme) {
                             title = "${sim.slotLabel} · ${sim.state}",
                             summary = listOfNotNull(
                                 sim.carrier,
-                                sim.network?.takeIf { it != sim.carrier }?.let { "רשת: $it" },
-                                sim.signalBars?.let { "קליטה ${it}/4" },
-                                if (sim.roaming) "נדידה" else null,
+                                sim.network?.takeIf { it != sim.carrier }?.let { tr("רשת: {0}", it) },
+                                sim.signalBars?.let { tr("קליטה {0}/4", it) },
+                                if (sim.roaming) tr("נדידה") else null,
                                 sim.number?.let(::displayNumber),
                             ).joinToString(" · ").ifBlank { null },
                             icon = FutureIcons.SimCard,
@@ -219,8 +221,8 @@ fun MyProfileScreen(theme: FutureTheme) {
                     if (!hasPhoneState) {
                         if (sims.isNotEmpty()) FutureDivider(theme = theme)
                         FutureSettingItem(
-                            title = "הצג מספר ופרטי כל כרטיס",
-                            summary = "דורש הרשאת טלפון",
+                            title = tr("הצג מספר ופרטי כל כרטיס"),
+                            summary = tr("דורש הרשאת טלפון"),
                             icon = FutureIcons.Info,
                             theme = theme,
                             onClick = {
@@ -245,7 +247,7 @@ fun MyProfileScreen(theme: FutureTheme) {
     }
     if (editingName) {
         InputDialog(
-            title = "השם שלי",
+            title = tr("השם שלי"),
             theme = theme,
             initialValue = profile.name,
             allowBlank = true,
@@ -255,10 +257,10 @@ fun MyProfileScreen(theme: FutureTheme) {
     }
     if (editingDescription) {
         InputDialog(
-            title = "תיאור",
+            title = tr("תיאור"),
             theme = theme,
             initialValue = profile.description,
-            placeholder = "למשל: זמין אחרי 18:00",
+            placeholder = tr("למשל: זמין אחרי 18:00"),
             allowBlank = true,
             onDismiss = { editingDescription = false },
             onConfirm = { store.setDescription(it); editingDescription = false; reload() },

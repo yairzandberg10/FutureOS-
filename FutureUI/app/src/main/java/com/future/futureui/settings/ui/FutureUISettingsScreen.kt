@@ -1,5 +1,7 @@
 package com.future.futureui.settings.ui
 
+import com.future.sharednav.i18n.tr
+
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
 import androidx.compose.foundation.background
@@ -47,7 +49,7 @@ fun FutureUISettingsScreen(
     var use24Hour by remember { mutableStateOf(statusBarLayout.getUse24HourClock()) }
     var suppressSystemBars by remember { mutableStateOf(statusBarLayout.getSuppressSystemBars()) }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Column(
             modifier = modifier
                 .fillMaxSize()
@@ -57,24 +59,24 @@ fun FutureUISettingsScreen(
                 .padding(start = 20.dp, end = 20.dp, top = StatusBarLayoutManager.HEIGHT_DP.dp + 12.dp, bottom = 24.dp)
         ) {
             Text(
-                text = "התאמה אישית",
+                text = tr("התאמה אישית"),
                 color = theme.textColor,
                 fontSize = FutureTypography.headline,
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(24.dp))
 
-            SettingsSection(title = "שורת מצב") {
-                SettingsToggleRow("הצג סוללה", showBattery) {
+            SettingsSection(title = tr("שורת מצב")) {
+                SettingsToggleRow(tr("הצג סוללה"), showBattery) {
                     showBattery = it; statusBarLayout.saveShowBattery(it)
                 }
-                SettingsToggleRow("הצג Bluetooth", showBluetooth) {
+                SettingsToggleRow(tr("הצג Bluetooth"), showBluetooth) {
                     showBluetooth = it; statusBarLayout.saveShowBluetooth(it)
                 }
-                SettingsToggleRow("שעון 24 שעות", use24Hour) {
+                SettingsToggleRow(tr("שעון 24 שעות"), use24Hour) {
                     use24Hour = it; statusBarLayout.saveUse24HourClock(it)
                 }
-                SettingsToggleRow("הסתר שורת מצב מקורית של אנדרואיד (דורש root)", suppressSystemBars) {
+                SettingsToggleRow(tr("הסתר שורת מצב מקורית של אנדרואיד (דורש root)"), suppressSystemBars) {
                     suppressSystemBars = it; statusBarLayout.saveSuppressSystemBars(it)
                 }
             }
@@ -82,7 +84,7 @@ fun FutureUISettingsScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
             Text(
-                text = "מרכז הבקרה ניתן לעריכה ישירות בתוכו - לחיצה ארוכה על כפתור העריכה מאפשרת להוסיף, להסיר ולסדר מחדש כפתורים.",
+                text = tr("מרכז הבקרה ניתן לעריכה ישירות בתוכו - לחיצה ארוכה על כפתור העריכה מאפשרת להוסיף, להסיר ולסדר מחדש כפתורים."),
                 color = theme.textColor.copy(alpha = 0.6f),
                 fontSize = FutureTypography.label
             )

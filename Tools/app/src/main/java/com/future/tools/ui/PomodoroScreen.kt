@@ -1,4 +1,6 @@
 package com.future.tools.ui
+
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.components.FutureButton
 import com.future.sharednav.components.FutureButtonVariant
 import com.future.sharednav.theme.FutureDimens
@@ -31,9 +33,9 @@ import com.future.sharednav.theme.FutureTheme
 import kotlinx.coroutines.delay
 
 private enum class PomodoroPhase(val label: String, val minutes: Int) {
-    FOCUS("מיקוד", 25),
-    SHORT_BREAK("הפסקה קצרה", 5),
-    LONG_BREAK("הפסקה ארוכה", 15)
+    FOCUS(tr("מיקוד"), 25),
+    SHORT_BREAK(tr("הפסקה קצרה"), 5),
+    LONG_BREAK(tr("הפסקה ארוכה"), 15)
 }
 
 /**
@@ -105,10 +107,10 @@ fun PomodoroScreen(theme: FutureTheme, onBack: () -> Unit) {
     val minutesText = (totalSeconds / 60).coerceAtLeast(0)
     val secondsText = (totalSeconds % 60).coerceAtLeast(0)
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize()) {
-                ToolsHeader(title = "פומודורו", theme = theme, onBack = onBack)
+                ToolsHeader(title = tr("פומודורו"), theme = theme, onBack = onBack)
 
                 Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -133,7 +135,7 @@ fun PomodoroScreen(theme: FutureTheme, onBack: () -> Unit) {
                     verticalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm)
                 ) {
                     FutureButton(
-                        if (isRunning) "השהה" else "התחל", theme, { isRunning = !isRunning },
+                        if (isRunning) tr("השהה") else tr("התחל"), theme, { isRunning = !isRunning },
                         fillMaxWidth = true,
                         focusRequester = startFocus,
                     )
@@ -141,8 +143,8 @@ fun PomodoroScreen(theme: FutureTheme, onBack: () -> Unit) {
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm)
                     ) {
-                        FutureButton("דלג", theme, { startNextPhase(completed = false) }, modifier = Modifier.weight(1f), variant = FutureButtonVariant.Secondary)
-                        FutureButton("איפוס", theme, { resetAll() }, modifier = Modifier.weight(1f), variant = FutureButtonVariant.Secondary)
+                        FutureButton(tr("דלג"), theme, { startNextPhase(completed = false) }, modifier = Modifier.weight(1f), variant = FutureButtonVariant.Secondary)
+                        FutureButton(tr("איפוס"), theme, { resetAll() }, modifier = Modifier.weight(1f), variant = FutureButtonVariant.Secondary)
                     }
                 }
             }

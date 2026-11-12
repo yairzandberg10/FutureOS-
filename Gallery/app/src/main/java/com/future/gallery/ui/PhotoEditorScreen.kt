@@ -1,4 +1,6 @@
 package com.future.gallery.ui
+
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.systemui.StatusBarInset
 
 import android.graphics.Bitmap
@@ -74,16 +76,16 @@ import kotlinx.coroutines.withContext
 import com.future.sharednav.focus.animateFocusColor
 
 private enum class EditorTool(val label: String, val icon: ImageVector) {
-    ROTATE("סיבוב", FutureIcons.RotateLeft),
-    FLIP("היפוך", FutureIcons.Flip),
-    CROP("חיתוך", FutureIcons.Crop),
-    ADJUST("כוונון", FutureIcons.Tune),
-    FILTER("מסנן", FutureIcons.FilterVintage),
-    EFFECTS("אפקטים", FutureIcons.AutoAwesome),
+    ROTATE(tr("סיבוב"), FutureIcons.RotateLeft),
+    FLIP(tr("היפוך"), FutureIcons.Flip),
+    CROP(tr("חיתוך"), FutureIcons.Crop),
+    ADJUST(tr("כוונון"), FutureIcons.Tune),
+    FILTER(tr("מסנן"), FutureIcons.FilterVintage),
+    EFFECTS(tr("אפקטים"), FutureIcons.AutoAwesome),
 }
 
 private enum class AdjustParam(val label: String) {
-    BRIGHTNESS("בהירות"), CONTRAST("ניגודיות"), SATURATION("רוויה"), WARMTH("חום"), VIGNETTE("וינייטה")
+    BRIGHTNESS(tr("בהירות")), CONTRAST(tr("ניגודיות")), SATURATION(tr("רוויה")), WARMTH(tr("חום")), VIGNETTE(tr("וינייטה"))
 }
 
 private fun EditState.valueOf(p: AdjustParam) = when (p) {
@@ -211,11 +213,11 @@ fun PhotoEditorScreen(item: MediaItem, theme: FutureTheme, onBack: () -> Unit, o
         }
         isSaving = false
         if (uri != null) {
-            val message = if (reducedResolution) "נשמר כעותק חדש בגודל מופחת (אין מספיק זיכרון)" else "נשמר כעותק חדש"
+            val message = if (reducedResolution) "נשמר כעותק חדש בגודל מופחת (אין מספיק זיכרון)" else tr("נשמר כעותק חדש")
             android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show()
             onSaved(uri)
         } else {
-            android.widget.Toast.makeText(context, "לא ניתן לשמור את התמונה", android.widget.Toast.LENGTH_SHORT).show()
+            android.widget.Toast.makeText(context, tr("לא ניתן לשמור את התמונה"), android.widget.Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -237,7 +239,7 @@ fun PhotoEditorScreen(item: MediaItem, theme: FutureTheme, onBack: () -> Unit, o
             // GAL-N03: בלי פנים לא מוסיפים מדבקה במרכז בשקט - מודיעים למשתמש
             if (found) {
                 state = state.copy(stickers = state.stickers + placed)
-                hint = "זוהו ${placed.size} פנים"
+                hint = tr("זוהו {0} פנים", placed.size)
             } else {
                 hint = "לא זוהו פנים בתמונה"
             }
@@ -280,7 +282,7 @@ fun PhotoEditorScreen(item: MediaItem, theme: FutureTheme, onBack: () -> Unit, o
         }
     }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -295,7 +297,7 @@ fun PhotoEditorScreen(item: MediaItem, theme: FutureTheme, onBack: () -> Unit, o
                     modifier = Modifier.fillMaxWidth().padding(top = StatusBarInset.TITLE_GAP_DP.dp).padding(horizontal = FutureDimens.spacingLg, vertical = FutureDimens.spacingSm),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("עריכת תמונה", color = theme.textColor, fontWeight = FontWeight.Bold, fontSize = FutureTypography.screenTitle, modifier = Modifier.weight(1f))
+                    Text(tr("עריכת תמונה"), color = theme.textColor, fontWeight = FontWeight.Bold, fontSize = FutureTypography.screenTitle, modifier = Modifier.weight(1f))
                     if (isSaving) {
                         FutureSpinner(theme = theme, size = 24.dp)
                     } else if (state.hasEdits) {
@@ -325,7 +327,7 @@ fun PhotoEditorScreen(item: MediaItem, theme: FutureTheme, onBack: () -> Unit, o
                         if (loadFailed) {
                             Text("לא ניתן לפתוח את התמונה לעריכה", color = theme.textColor, fontSize = FutureTypography.summary)
                         } else {
-                            FutureSpinner(theme = theme, label = "טוען תמונה")
+                            FutureSpinner(theme = theme, label = tr("טוען תמונה"))
                         }
                     }
                     hint?.let {
@@ -372,8 +374,8 @@ fun PhotoEditorScreen(item: MediaItem, theme: FutureTheme, onBack: () -> Unit, o
             }
 
             if (showMenu) {
-                FutureOptionsMenu(theme = theme, onDismissRequest = { showMenu = false }, header = "עריכה") {
-                    FutureMenuRow("שמור כעותק חדש", FutureIcons.Check, theme, onClick = {
+                FutureOptionsMenu(theme = theme, onDismissRequest = { showMenu = false }, header = tr("עריכה")) {
+                    FutureMenuRow(tr("שמור כעותק חדש"), FutureIcons.Check, theme, onClick = {
                         showMenu = false
                         // GAL-31: בלי שינויים מודיעים במקום לשמור בשקט
                         if (!state.hasEdits) {
@@ -382,17 +384,17 @@ fun PhotoEditorScreen(item: MediaItem, theme: FutureTheme, onBack: () -> Unit, o
                             isSaving = true
                         }
                     })
-                    FutureMenuRow("איפוס כל השינויים", FutureIcons.RestartAlt, theme, onClick = {
+                    FutureMenuRow(tr("איפוס כל השינויים"), FutureIcons.RestartAlt, theme, onClick = {
                         showMenu = false
                         if (state.hasEdits) confirmAction = "reset" else state = EditState()
                     })
                     if (state.stickers.isNotEmpty()) {
-                        FutureMenuRow("הסר את כל המדבקות", FutureIcons.Delete, theme, onClick = {
+                        FutureMenuRow(tr("הסר את כל המדבקות"), FutureIcons.Delete, theme, onClick = {
                             showMenu = false
                             confirmAction = "stickers"
                         })
                     }
-                    FutureMenuRow("יציאה בלי לשמור", FutureIcons.Close, theme, destructive = true, onClick = {
+                    FutureMenuRow(tr("יציאה בלי לשמור"), FutureIcons.Close, theme, destructive = true, onClick = {
                         showMenu = false
                         requestExit()
                     })
@@ -444,13 +446,13 @@ private fun EditorToolPanel(
     Column(modifier = Modifier.fillMaxWidth().heightIn(min = 88.dp), verticalArrangement = Arrangement.Center) {
         when (tool) {
             EditorTool.ROTATE -> ChipRow {
-                item { FutureChip("סובב שמאלה", theme, onClick = { onStateChange(state.copy(rotationDegrees = ((state.rotationDegrees - 90) % 360 + 360) % 360)) }) }
-                item { FutureChip("סובב ימינה", theme, onClick = { onStateChange(state.copy(rotationDegrees = (state.rotationDegrees + 90) % 360)) }) }
+                item { FutureChip(tr("סובב שמאלה"), theme, onClick = { onStateChange(state.copy(rotationDegrees = ((state.rotationDegrees - 90) % 360 + 360) % 360)) }) }
+                item { FutureChip(tr("סובב ימינה"), theme, onClick = { onStateChange(state.copy(rotationDegrees = (state.rotationDegrees + 90) % 360)) }) }
                 item { FutureChip("180°", theme, onClick = { onStateChange(state.copy(rotationDegrees = (state.rotationDegrees + 180) % 360)) }) }
             }
             EditorTool.FLIP -> ChipRow {
-                item { FutureChip("הפוך אופקית", theme, selected = state.flipHorizontal, onClick = { onStateChange(state.copy(flipHorizontal = !state.flipHorizontal)) }) }
-                item { FutureChip("הפוך אנכית", theme, selected = state.flipVertical, onClick = { onStateChange(state.copy(flipVertical = !state.flipVertical)) }) }
+                item { FutureChip(tr("הפוך אופקית"), theme, selected = state.flipHorizontal, onClick = { onStateChange(state.copy(flipHorizontal = !state.flipHorizontal)) }) }
+                item { FutureChip(tr("הפוך אנכית"), theme, selected = state.flipVertical, onClick = { onStateChange(state.copy(flipVertical = !state.flipVertical)) }) }
             }
             EditorTool.CROP -> {
                 ChipRow {
@@ -480,8 +482,8 @@ private fun EditorToolPanel(
                     }
                 }
                 PanelHint(
-                    if (state.stickers.isEmpty()) "OK מוסיף על הפנים שבתמונה"
-                    else "2/4/6/8 הזזה · 1/3 גודל · 0 מחיקה",
+                    if (state.stickers.isEmpty()) tr("OK מוסיף על הפנים שבתמונה")
+                    else tr("2/4/6/8 הזזה · 1/3 גודל · 0 מחיקה"),
                     theme
                 )
             }

@@ -1,4 +1,6 @@
 package com.future.fitness.ui.screens
+
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.theme.elevatedSurfaceColor
 import com.future.sharednav.theme.idleFieldColor
@@ -50,7 +52,7 @@ fun ActivityTypesScreen(
     val firstRowFocus = rememberInitialFocus()
     val firstType = WorkoutActivityTypes.byCategory.values.firstOrNull()?.firstOrNull()
     Column(modifier = Modifier.fillMaxSize()) {
-        ScreenTopBar(title = "כל סוגי האימון", theme = theme, onBack = onBack)
+        ScreenTopBar(title = tr("כל סוגי האימון"), theme = theme, onBack = onBack)
 
         LazyColumn(
             modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp),
@@ -70,7 +72,7 @@ fun ActivityTypesScreen(
                     IconListRow(
                         icon = type.icon,
                         title = type.displayName,
-                        subtitle = "~$caloriesPerHour קלוריות לשעה",
+                        subtitle = tr("~{0} קלוריות לשעה", caloriesPerHour),
                         theme = theme,
                         onClick = { onSelect(type) },
                         focusRequester = if (type == firstType) firstRowFocus else null,
