@@ -4,6 +4,54 @@ This repo has no carried-over git history (see root [README](README.md)), so thi
 
 ## Unreleased
 
+### security-center: protection against cyber attacks (2026-11-12)
+
+Same branch. Detects the takeover steps Android malware actually uses. It is
+not an antivirus and has no malware signatures: it flags dangerous
+capabilities held by a foreign app, meaning one that is neither a system app
+nor signed with the FutureOS key. Trust is by signature, not by package name.
+
+1. **Threat scanner** (`FutureUI/.../security/ThreatScanner.kt`). It runs in
+   FutureUI because only FutureUI holds `QUERY_ALL_PACKAGES`; a scan from
+   Settings would see a filtered app list and report "clean". Severity:
+   - Critical: a foreign accessibility service is enabled. It reads the
+     screen and the keys, including the PIN.
+   - High: a foreign notification listener (reads OTP codes) or device admin,
+     a user-installed CA certificate (HTTPS interception), a global HTTP
+     proxy, ADB over Wi-Fi.
+   - Needs review: an app granted SMS read, draw-over-apps (fake login
+     screens), install-other-apps, or an active VPN.
+
+   Android blocks reading another app's app-ops, so those two checks fall
+   back to one root session per scan. Package names go through `isSafeToken`
+   and `RootShell.quote`. Without root the scan says the checks were skipped.
+2. **Real-time protection** (`ThreatWatcher`). It starts with the status-bar
+   service and rescans on the triggers below. A new high or critical finding
+   posts a notification and a toast; the notification opens Settings >
+   Security. Each finding is reported once and again if it comes back. The
+   watcher never changes anything itself. Triggers:
+   - accessibility, notification-listener, proxy and adb-wifi setting changes;
+   - app installs;
+   - trust-store changes;
+   - screen on, which catches device admins and VPNs, since they have no event.
+3. **Security center.** New "Protection against attacks" section with the
+   findings. Each finding opens the screen that fixes it (accessibility,
+   notification access, device admins, trusted credentials, VPN, per-app
+   overlay or unknown-sources), with app info as the fallback. A global
+   proxy is cleared with a fixed root command. Rules:
+   - A high finding forces the level to "low"; a needs-review finding blocks
+     "high".
+   - The scan runs off the main thread on every return to the screen.
+   - An older FutureUI without the `threats` path shows "scan unavailable"
+     and does not affect the lock checks.
+
+   The limits card now also shows the Android security patch date, with a
+   warning when it is over a year old, and whether the suite is signed with
+   the debug key (no `keystore.properties`).
+4. Read-only `content://com.future.futureui.systemui/threats` path, behind the
+   existing signature permission. FutureUI gains `ACCESS_NETWORK_STATE` for
+   VPN detection.
+
 ### security-center: upgraded security system (2026-11-12)
 
 Branch `security-center`, on top of `os-updates-feedback`. FutureUI and

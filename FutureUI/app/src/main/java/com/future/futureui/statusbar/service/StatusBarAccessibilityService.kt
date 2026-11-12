@@ -56,6 +56,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
     private var volumeOverlayView: ComposeView? = null
     private var controlManager: ControlManager? = null
     private var layoutManager: StatusBarLayoutManager? = null
+    private var threatWatcher: com.future.futureui.security.ThreatWatcher? = null
     private val mainHandler = Handler(Looper.getMainLooper())
     private val volumeLevelState = mutableFloatStateOf(0.5f)
     private var hideVolumeRunnable: Runnable? = null
@@ -198,6 +199,11 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
             ContextCompat.registerReceiver(
                 this, callReceiver, callFilter, SharedActions.PERMISSION_SYSTEM, null, ContextCompat.RECEIVER_EXPORTED
             )
+
+            // הגנה בזמן אמת מפני השתלטות של אפליקציות זרות (שירות נגישות, מנהל מכשיר וכו')
+            threatWatcher = runCatching {
+                com.future.futureui.security.ThreatWatcher(this).also { it.start() }
+            }.onFailure { Log.w("FutureUI", "threat watcher failed", it) }.getOrNull()
         } catch (e: Exception) {
             Log.e("FutureUI", "Error in StatusBar onCreate", e)
         }
@@ -801,6 +807,8 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
         }
         restoreSystemBars()
         controlManager?.dispose()
+        runCatching { threatWatcher?.stop() }
+        threatWatcher = null
         try {
             unregisterReceiver(bringToFrontReceiver)
             unregisterReceiver(callReceiver)
