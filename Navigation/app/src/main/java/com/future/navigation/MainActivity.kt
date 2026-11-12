@@ -149,8 +149,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // שכבת השרת. בלי app/google-services.json שתי השורות האלה לא עושות
-        // כלום, וכל הריפוזיטוריז ממשיכים לדבר ישירות מול השירותים החיצוניים
+        // שכבת השרת (REST, בלי Google Play Services). בלי פרויקט Firebase
+        // בבנייה שתי השורות האלה לא עושות כלום, וכל הריפוזיטוריז ממשיכים לדבר ישירות מול השירותים החיצוניים
         // בדיוק כמו קודם (ר' data/backend/FirebaseBackend).
         FirebaseBackend.init(this)
         RemoteKeys.refresh()
