@@ -1693,7 +1693,8 @@ fun SecurityScreen(navController: NavController, theme: ThemeConfig) {
                         val level = when {
                             !status.linked -> "לא ידועה"
                             worst >= 2 -> "נמוכה"
-                            passed == checks.size && worst == 0 -> "גבוהה"
+                            // "גבוהה" רק אחרי סריקה שהסתיימה - בלי תוצאה אין על מה להסתמך
+                            passed == checks.size && threats != null && worst == 0 -> "גבוהה"
                             checks.first().ok && passed >= checks.size - 2 -> "בינונית"
                             else -> "נמוכה"
                         }
