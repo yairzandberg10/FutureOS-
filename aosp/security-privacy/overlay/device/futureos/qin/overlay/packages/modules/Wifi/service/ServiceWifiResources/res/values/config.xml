@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- FutureOS overlay for the Wi-Fi mainline resources. Applies only if the Wi-Fi module is
+     built from source; with a prebuilt APEX ship this as an RRO instead.
+     The MediaTek Wi-Fi driver must support changing the MAC address - verify on device. -->
+<resources>
+    <!-- 499: per-network randomized MAC (client, hotspot, Wi-Fi Direct). -->
+    <bool name="config_wifi_connected_mac_randomization_supported">true</bool>
+    <bool name="config_wifi_ap_mac_randomization_supported">true</bool>
+    <bool name="config_wifi_p2p_mac_randomization_supported">true</bool>
+</resources>

@@ -1,0 +1,43 @@
+# FutureOS privacy service domain. UNTESTED: expect to iterate with audit2allow on the device.
+
+type futureos_privacy, domain, coredomain;
+type futureos_privacy_exec, system_file_type, exec_type, file_type;
+init_daemon_domain(futureos_privacy)
+
+type futureos_data_file, file_type, data_file_type, core_data_file_type;
+system_internal_prop(futureos_prop)
+
+# Run a shell script, toolbox/cmd/logcat binaries.
+allow futureos_privacy shell_exec:file rx_file_perms;
+allow futureos_privacy toolbox_exec:file rx_file_perms;
+allow futureos_privacy system_file:file rx_file_perms;
+allow futureos_privacy logcat_exec:file rx_file_perms;
+
+# `cmd settings` / `cmd device_config` / `cmd location` talk to system_server over binder.
+binder_use(futureos_privacy)
+binder_call(futureos_privacy, system_server)
+allow futureos_privacy settings_service:service_manager find;
+allow futureos_privacy device_config_service:service_manager find;
+allow futureos_privacy location_service:service_manager find;
+
+# logcat -c
+unix_socket_connect(futureos_privacy, logd, logd)
+
+# State dir and marker file.
+allow futureos_privacy futureos_data_file:dir create_dir_perms;
+allow futureos_privacy futureos_data_file:file create_file_perms;
+
+# 489/512: remove ANR traces and tombstones.
+allow futureos_privacy anr_data_file:dir rw_dir_perms;
+allow futureos_privacy anr_data_file:file { getattr unlink };
+allow futureos_privacy tombstone_data_file:dir rw_dir_perms;
+allow futureos_privacy tombstone_data_file:file { getattr unlink };
+
+# Properties: own the trigger property, read the contract properties.
+set_prop(futureos_privacy, futureos_prop)
+get_prop(futureos_privacy, futureos_prop)
+
+# System apps (Settings, FutureOS apps) toggle and read the contract properties.
+set_prop(system_app, futureos_prop)
+get_prop(system_app, futureos_prop)
+get_prop(platform_app, futureos_prop)

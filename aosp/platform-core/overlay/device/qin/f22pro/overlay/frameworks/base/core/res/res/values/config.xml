@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- FutureOS platform-core: framework-res overlay. משאב שאינו קיים ב-AOSP נוסף בשקט ואינו מזיק. -->
+<resources>
+    <!-- סוללה (576, 577, 586, 587, 565) -->
+    <integer name="config_lowBatteryWarningLevel">15</integer>
+    <integer name="config_criticalBatteryWarningLevel">5</integer>
+    <integer name="config_lowBatteryCloseWarningBump">5</integer>
+    <!-- כיבוי חירום בטמפרטורת סוללה (עשיריות מעלה): 68.0C -->
+    <integer name="config_shutdownBatteryTemperature">680</integer>
+
+    <!-- מצב חיסכון (567, 572): מפתחות KeyValueListParser של BatterySaverPolicy -->
+    <string name="config_batterySaverDeviceSpecificConfig" translatable="false">animation_disabled=true,aod_disabled=true,fullbackup_deferred=true,keyvaluebackup_deferred=true,force_background_check=true,adjust_brightness_factor=0.7,launch_boost_disabled=true,optional_sensors_disabled=true,location_mode=3</string>
+    <integer name="config_dynamicPowerSavingsDefaultDisableThreshold">80</integer>
+
+    <!-- כפתור הפעלה (592): 1 = כיבוי מסך / תפריט כיבוי -->
+    <integer name="config_shortPressOnPowerBehavior">1</integer>
+    <integer name="config_longPressOnPowerBehavior">1</integer>
+    <integer name="config_veryLongPressOnPowerBehavior">0</integer>
+
+    <!-- Tethering ו-Wi-Fi ברמת framework (344, 345) -->
+    <bool name="config_wifi_tether_enable">true</bool>
+    <bool name="config_wifi_dual_band_support">true</bool>
+    <bool name="config_wifi_background_scan_support">true</bool>
+
+    <!-- בהירות אוטומטית (305): מוגדר רק אם נמדד חיישן אור תקין. להפעיל אחרי כיול -->
+    <bool name="config_automatic_brightness_available">false</bool>
+</resources>

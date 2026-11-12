@@ -1,0 +1,20 @@
+FutureOS - הערות גרסה
+=====================
+גרסה: (תמולא אוטומטית מ-ro.futureos.version)
+ערוץ: (dev / beta / stable)
+
+מה חדש
+- (דוגמה) ...
+
+תיקונים
+- (דוגמה) ...
+
+בעיות ידועות
+- ר' docs/public/KNOWN_ISSUES.md
+
+הערות להתקנה
+- העדכון נשמר במקום הפנוי ב-slot השני ולא מוחק נתונים. אם האתחול נכשל, המערכת חוזרת לגרסה הקודמת (במצב A/B).
+- לפני עדכון: מומלץ לגבות (הגדרות > גיבוי).
+
+(הקובץ הזה נטען במכשיר מ-/product/etc/futureos/release_notes_he.txt ומוצג ב-FutureUpdater לפני התקנה.
+ תבנית מלאה: docs/public/RELEASE_NOTES_TEMPLATE.md)

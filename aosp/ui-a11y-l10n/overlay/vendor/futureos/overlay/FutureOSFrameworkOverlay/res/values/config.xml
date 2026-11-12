@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- FutureOS: ערכי framework לקטגוריות 16-20 (תצוגה, ממשק, נגישות, עברית, שמע).
+     שמות המשאבים לפי AOSP 12 (frameworks/base/core/res/res/values/config.xml).
+     ערכים המסומנים "לכייל" הם נקודת פתיחה ולא ערך מדוד. -->
+<resources>
+
+    <!-- 619 סינון אור כחול (Night Light): הפעלת הרכיב ומצב אוטומטי לפי שעות קבועות.
+         0=כבוי, 1=שעות מותאמות, 2=שקיעה/זריחה (דורש מיקום, לכן לא). -->
+    <bool name="config_nightDisplayAvailable">true</bool>
+    <integer name="config_defaultNightDisplayAutoMode">1</integer>
+    <!-- דקות מחצות: 22:00 עד 06:00 -->
+    <integer name="config_defaultNightDisplayCustomStartTime">1320</integer>
+    <integer name="config_defaultNightDisplayCustomEndTime">360</integer>
+
+    <!-- 639 בהירות אוטומטית. רק אם יש חיישן אור (לאמת: dumpsys sensorservice).
+         N רמות lux ו-N+1 ערכי רקע. לכייל על המכשיר. -->
+    <bool name="config_automatic_brightness_available">true</bool>
+    <integer-array name="config_autoBrightnessLevels">
+        <item>12</item>
+        <item>30</item>
+        <item>100</item>
+        <item>300</item>
+        <item>1000</item>
+        <item>3000</item>
+    </integer-array>
+    <integer-array name="config_autoBrightnessLcdBacklightValues">
+        <item>20</item>
+        <item>40</item>
+        <item>70</item>
+        <item>110</item>
+        <item>160</item>
+        <item>210</item>
+        <item>255</item>
+    </integer-array>
+
+    <!-- 799 הגבלת עוצמה להגנה על השמיעה: אזהרה בעוצמה גבוהה באוזניות. -->
+    <bool name="config_safe_media_volume_enabled">true</bool>
+
+</resources>

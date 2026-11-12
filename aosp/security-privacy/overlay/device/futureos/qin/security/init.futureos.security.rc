@@ -1,0 +1,31 @@
+# FutureOS security & privacy init rc. Installed to /system_ext/etc/init/.
+
+on post-fs-data
+    # 484/489: private dir for privacy state and the telemetry outbox.
+    mkdir /data/misc/futureos 0700 root root
+    mkdir /data/misc/futureos/outbox 0700 root root
+    restorecon_recursive /data/misc/futureos
+
+on property:sys.boot_completed=1
+    # 418: re-assert kernel info-leak sysctls in case the vendor init relaxed them.
+    # (perf_event_paranoid is managed by AOSP via security.perf_harden - verify only.)
+    write /proc/sys/kernel/kptr_restrict 2
+    write /proc/sys/kernel/dmesg_restrict 1
+    # 520/375/376/494/497/513: one-time privacy defaults (marker file inside the script).
+    start futureos_privacy_defaults
+
+# 489/512: Settings sets sys.futureos.clear_activity=1 to wipe logs/crash artifacts.
+on property:sys.futureos.clear_activity=1
+    start futureos_privacy_clear
+
+service futureos_privacy_defaults /system_ext/bin/futureos-privacy.sh defaults
+    user root
+    group root
+    oneshot
+    disabled
+
+service futureos_privacy_clear /system_ext/bin/futureos-privacy.sh clear-activity
+    user root
+    group root
+    oneshot
+    disabled

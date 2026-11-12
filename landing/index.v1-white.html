@@ -1,0 +1,587 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FutureOS טלפון מקשים</title>
+<meta name="description" content="FutureOS: טלפון מקשים בלי דפדפן, עם ספרייה תורנית בלי אינטרנט, עוזר קולי בעברית ו-29 אפליקציות שנבנו למקשים.">
+<meta name="theme-color" content="#000000">
+<link rel="preload" href="fonts/heebo-hebrew.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+@font-face{font-family:Heebo;font-weight:100 900;font-display:swap;src:url(fonts/heebo-hebrew.woff2) format("woff2");unicode-range:U+0307-0308,U+0590-05FF,U+200C-2010,U+20AA,U+25CC,U+FB1D-FB4F}
+@font-face{font-family:Heebo;font-weight:100 900;font-display:swap;src:url(fonts/heebo-latin.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+:root{
+  --bg:#000;
+  --surface:#1C1C1E;
+  --raised:#2C2C2E;
+  --ink:#fff;
+  --accent:#fff;
+  --on-accent:#000;
+  --a70:rgba(255,255,255,.72);
+  --a60:rgba(255,255,255,.62);
+  --a40:rgba(255,255,255,.42);
+  --a12:rgba(255,255,255,.12);
+  --a08:rgba(255,255,255,.08);
+  --ease:cubic-bezier(.16,1,.3,1);
+  --ease-std:cubic-bezier(.4,0,.2,1);
+  --gutter:20px;
+}
+*{box-sizing:border-box;margin:0}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;scrollbar-color:var(--raised) var(--bg)}
+body{background:var(--bg);color:var(--ink);font-family:Heebo,system-ui,sans-serif;font-size:17px;line-height:1.5;overflow-x:hidden}
+::selection{background:var(--accent);color:var(--on-accent)}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.wrap{width:100%;max-width:1120px;margin-inline:auto;padding-inline:var(--gutter)}
+.num{direction:ltr;unicode-bidi:isolate;display:inline-block}
+
+/* header */
+header{position:sticky;top:0;z-index:20;background:rgba(0,0,0,.92);border-bottom:1px solid var(--a08)}
+header .wrap{display:flex;align-items:center;justify-content:space-between;height:64px}
+.mark{font-weight:900;font-size:22px;letter-spacing:-.01em}
+.picker{border:0;padding:0;display:flex;align-items:center;gap:2px}
+.picker legend{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+.picker .lbl{white-space:nowrap;font-size:13px;color:var(--a60);margin-inline-end:8px}
+.sw{position:relative;width:36px;height:44px;display:grid;place-items:center;cursor:pointer}
+.sw input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.sw i{width:22px;height:22px;border-radius:50%;background:var(--c);transition:transform .35s var(--ease),box-shadow .35s var(--ease)}
+.sw input:checked + i{transform:scale(1.35);box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--c)}
+.sw input:focus-visible + i{outline:2px solid var(--ink);outline-offset:5px}
+
+/* hero */
+.hero{padding-block:48px 72px}
+.hero .wrap{display:grid;gap:48px}
+h1{font-weight:900;font-size:clamp(3.4rem,17vw,6rem);line-height:.98;letter-spacing:-.025em;text-wrap:balance}
+h1 .ln{display:block;overflow:hidden;padding-bottom:.08em}
+h1 .w{display:inline-block}
+.js-ready h1 .w{transform:translateY(105%);animation:rise 1s var(--ease) forwards;animation-delay:calc(var(--i)*110ms + 150ms)}
+@keyframes rise{to{transform:none}}
+h1 .acc{color:var(--accent)}
+.lede{margin-top:28px;font-size:clamp(1.1rem,4.6vw,1.35rem);color:var(--a70);max-width:30ch;text-wrap:pretty}
+.cta-row{margin-top:36px;display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:12px;min-height:60px;padding:0 34px;border-radius:999px;background:var(--accent);color:var(--on-accent);font-weight:700;font-size:19px;text-decoration:none;transition:transform .4s var(--ease),background .3s}
+.btn:hover{transform:translateY(-3px)}
+.btn:active{transform:scale(.96)}
+.btn svg{width:22px;height:22px;transition:transform .4s var(--ease)}
+.btn:hover svg{transform:translateX(-6px)}
+.link{color:var(--a70);font-weight:500;text-underline-offset:6px;text-decoration-thickness:1.5px;min-height:44px;display:inline-flex;align-items:center}
+.link:hover{color:var(--ink)}
+.note{margin-top:14px;font-size:14px;color:var(--a60);min-height:1.5em}
+
+/* device */
+.stage{display:grid;justify-items:center;gap:20px}
+.device{width:min(100%,344px);background:var(--surface);border-radius:46px;padding:14px 14px 22px;box-shadow:0 0 0 1px var(--a08)}
+.js-ready .device{opacity:0;transform:translateY(60px) rotate(2.5deg);animation:boot 1.2s var(--ease) .5s forwards}
+@keyframes boot{to{opacity:1;transform:none}}
+.screen{container-type:inline-size;position:relative;aspect-ratio:2/3;background:#000;border-radius:26px;overflow:hidden;--px:calc(100cqw/640);outline:none}
+.device:focus-within .screen{box-shadow:0 0 0 calc(3*var(--px)) var(--accent)}
+.sbar{display:flex;justify-content:space-between;align-items:center;padding:calc(14*var(--px)) calc(28*var(--px)) 0;font-size:calc(24*var(--px));font-weight:500;color:var(--a70)}
+.batt{width:calc(40*var(--px));height:calc(20*var(--px));border:calc(2*var(--px)) solid currentColor;border-radius:calc(6*var(--px));position:relative}
+.batt::after{content:"";position:absolute;inset:calc(3*var(--px));inline-size:70%;background:currentColor;border-radius:calc(2*var(--px))}
+.widget{margin:calc(18*var(--px)) calc(32*var(--px)) 0;background:rgba(28,28,30,.9);border-radius:calc(44*var(--px));padding:calc(26*var(--px)) calc(34*var(--px));box-shadow:inset 0 0 0 calc(1*var(--px)) rgba(255,255,255,.15)}
+.widget b{display:block;font-size:calc(56*var(--px));font-weight:700;line-height:1.1;direction:ltr;text-align:right}
+.widget span{font-size:calc(26*var(--px));color:var(--a60)}
+.grid{position:relative;display:grid;grid-template-columns:repeat(4,1fr);gap:calc(8*var(--px));margin:calc(26*var(--px)) calc(22*var(--px)) 0}
+.cell{position:relative;z-index:1;display:grid;justify-items:center;align-content:center;gap:calc(10*var(--px));aspect-ratio:1/1.3;border-radius:calc(28*var(--px));color:var(--ink)}
+.cell svg{width:calc(60*var(--px));height:calc(60*var(--px));fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.cell span{font-size:calc(25*var(--px));font-weight:500}
+.ring{position:absolute;z-index:0;top:0;left:0;border-radius:calc(28*var(--px));background:color-mix(in srgb,var(--accent) 16%,transparent);box-shadow:inset 0 0 0 calc(3*var(--px)) var(--accent);transition:transform .32s var(--ease),width .32s var(--ease),height .32s var(--ease);pointer-events:none}
+.app{position:absolute;inset:0;background:#000;transform:translateX(-105%);transition:transform .45s var(--ease);display:flex;flex-direction:column}
+.app.open{transform:none}
+.atop{display:flex;align-items:center;gap:calc(18*var(--px));padding:calc(60*var(--px)) calc(32*var(--px)) calc(24*var(--px))}
+.atop .bk{width:calc(72*var(--px));height:calc(72*var(--px));border-radius:50%;background:var(--a08);display:grid;place-items:center}
+.atop svg{width:calc(36*var(--px));height:calc(36*var(--px));fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.atop h3{font-size:calc(40*var(--px));font-weight:700}
+.rows{margin:0 calc(32*var(--px));background:var(--surface);border-radius:calc(44*var(--px));padding:calc(8*var(--px)) 0;display:grid}
+.row{position:relative;padding:calc(26*var(--px)) calc(32*var(--px));display:flex;justify-content:space-between;align-items:center;gap:12px;border-radius:calc(34*var(--px));margin-inline:calc(8*var(--px));transition:background .2s,box-shadow .2s}
+.row + .row::before{content:"";position:absolute;inset-inline:calc(24*var(--px));inset-block-start:0;height:calc(1.6*var(--px));background:var(--a12)}
+.row.on{background:color-mix(in srgb,var(--accent) 14%,transparent);box-shadow:inset 0 0 0 calc(3*var(--px)) var(--accent)}
+.row.on::before,.row.on + .row::before{opacity:0}
+.row strong{display:block;font-size:calc(34*var(--px));font-weight:500;line-height:1.3}
+.row small{display:block;font-size:calc(26*var(--px));color:var(--a60);line-height:1.3}
+.row svg{width:calc(36*var(--px));height:calc(36*var(--px));flex:none;fill:none;stroke:var(--a40);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.big{margin:calc(30*var(--px)) calc(40*var(--px)) 0;font-size:calc(34*var(--px));color:var(--a70)}
+.big b{display:block;margin-top:calc(14*var(--px));font-size:calc(150*var(--px));font-weight:800;color:var(--ink);line-height:1;direction:ltr;text-align:right}
+
+/* keypad */
+.keys{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;padding:18px 6px 0}
+.soft{height:48px;border-radius:999px;background:var(--raised);font-size:15px;font-weight:500;display:grid;place-items:center;min-width:0}
+.dpad{position:relative;width:132px;height:132px;border-radius:50%;background:var(--raised)}
+.dpad button{position:absolute;display:grid;place-items:center;width:44px;height:44px;border-radius:50%}
+.dpad .u{inset-block-start:2px;inset-inline-start:44px}
+.dpad .d{inset-block-end:2px;inset-inline-start:44px}
+.dpad .l{top:44px;left:2px}
+.dpad .r{top:44px;right:2px}
+.dpad .ok{inset:42px;width:48px;height:48px;background:var(--surface);font-weight:700;font-size:15px}
+.dpad svg,.soft svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.keys button:focus-visible{outline-offset:1px}
+.nums{direction:ltr;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:14px 6px 0}
+.nums button{height:46px;border-radius:16px;background:var(--raised);font-weight:700;font-size:19px;display:grid;place-items:center;line-height:1}
+.nums button small{display:none}
+.nums button:focus-visible{outline-offset:1px}
+@media (max-width:480px){.picker .lbl{display:none}}
+#cap{max-width:344px;text-align:center;min-height:5.2em;color:var(--a70);font-size:16px}
+#cap b{display:block;color:var(--ink);font-size:20px;font-weight:700}
+.hint{font-size:13.5px;color:var(--a60);text-align:center;max-width:34ch}
+
+/* statement band */
+.band{background:var(--accent);color:var(--on-accent);padding-block:88px 96px;transition:background .5s var(--ease-std)}
+.band p.s{font-weight:900;font-size:clamp(2.5rem,12.5vw,5.8rem);line-height:1.02;letter-spacing:-.025em;text-wrap:balance}
+.band p.s + p.s{margin-top:.12em}
+.band .sub{margin-top:44px;font-size:clamp(1.2rem,5vw,1.6rem);font-weight:700;max-width:22ch;line-height:1.3}
+.js-ready .wipe{clip-path:inset(0 0 0 100%)}
+.js-ready .wipe.in{animation:wipe 1s var(--ease) forwards;animation-delay:var(--d,0s)}
+@keyframes wipe{from{clip-path:inset(0 0 0 100%);transform:translateX(40px)}to{clip-path:inset(0 0 0 0);transform:none}}
+html:not(.js-ready) .wipe{clip-path:none}
+
+/* stories */
+.stories{padding-block:40px 24px}
+.story{display:grid;gap:36px;padding-block:72px;align-items:center}
+.story + .story{border-top:1px solid var(--a08)}
+h2{font-weight:800;font-size:clamp(2.1rem,8.6vw,3.6rem);line-height:1.05;letter-spacing:-.02em;text-wrap:balance}
+.story p{margin-top:20px;font-size:clamp(1.1rem,4.4vw,1.3rem);color:var(--a70);max-width:32ch;text-wrap:pretty}
+.mini{justify-self:center;width:min(100%,360px);background:var(--surface);border-radius:40px;padding:12px;box-shadow:0 0 0 1px var(--a08)}
+.mini .screen{aspect-ratio:640/620;border-radius:28px;padding-top:calc(34*var(--px))}
+.mini .atop{padding-top:calc(24*var(--px))}
+.mini .rows{margin-top:0}
+.stories article:nth-of-type(2) .mini .screen{aspect-ratio:640/430}
+.stories article:nth-of-type(3) .mini .screen{aspect-ratio:640/500}
+.field{margin:calc(24*var(--px)) calc(32*var(--px)) 0;background:var(--a08);border-radius:calc(30*var(--px));padding:calc(26*var(--px)) calc(34*var(--px));font-size:calc(40*var(--px));font-weight:700;min-height:calc(110*var(--px));display:flex;align-items:center}
+.caret{display:inline-block;width:calc(4*var(--px));height:calc(44*var(--px));background:var(--accent);margin-inline-start:calc(6*var(--px));animation:blink 1.1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.sug{display:flex;gap:calc(14*var(--px));margin:calc(20*var(--px)) calc(32*var(--px)) 0;flex-wrap:wrap}
+.chip{padding:calc(16*var(--px)) calc(32*var(--px));border-radius:999px;background:var(--a08);font-size:calc(30*var(--px));font-weight:500}
+.chip.sel{background:var(--accent);color:var(--on-accent);font-weight:700}
+.t9{direction:ltr;display:grid;grid-template-columns:repeat(3,1fr);gap:calc(12*var(--px));margin:calc(22*var(--px)) calc(32*var(--px)) 0}
+.t9 i{font-style:normal;text-align:center;padding:calc(18*var(--px)) 0;border-radius:calc(24*var(--px));background:var(--a08);font-size:calc(34*var(--px));font-weight:500}
+.t9 i.p{animation:tap 3.6s var(--ease) infinite;animation-delay:calc(var(--k)*1.2s)}
+@keyframes tap{0%,8%{background:var(--accent);color:var(--on-accent);transform:scale(.9)}26%,100%{background:var(--a08);color:var(--ink);transform:none}}
+
+/* toolbox */
+.tools{padding-block:88px;border-top:1px solid var(--a08)}
+.tools h2{max-width:14ch}
+.tools ul{list-style:none;padding:0;margin-top:44px;display:flex;flex-wrap:wrap;gap:6px 26px}
+.tools li{font-size:clamp(1.7rem,7.4vw,3rem);font-weight:700;letter-spacing:-.015em;line-height:1.3;color:var(--a60);transition:color .4s var(--ease-std)}
+.tools li.lit{color:var(--ink)}
+.tools li:nth-child(3n+1){color:var(--a70)}
+.tools li.lit:nth-child(n){color:var(--accent)}
+
+/* specs */
+.specs{padding-block:24px 88px}
+dl{margin-top:36px;display:grid;max-width:640px}
+dl div{display:flex;justify-content:space-between;gap:24px;padding-block:22px;border-top:1px solid var(--a12)}
+dl div:last-child{border-bottom:1px solid var(--a12)}
+dt{color:var(--a60);font-size:16px}
+dd{font-weight:700;font-size:19px;text-align:left}
+
+/* faq */
+.faq{padding-block:24px 96px}
+details{max-width:720px;border-radius:26px;background:var(--surface);margin-top:12px;transition:background .3s}
+details[open]{background:var(--raised)}
+summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:16px;padding:22px 26px;min-height:68px;font-weight:700;font-size:18px;border-radius:26px}
+summary::-webkit-details-marker{display:none}
+summary svg{width:22px;height:22px;flex:none;fill:none;stroke:var(--a40);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;transition:transform .4s var(--ease)}
+details[open] summary svg{transform:rotate(-90deg);stroke:var(--accent)}
+details p{padding:0 26px 26px;color:var(--a70);max-width:52ch;text-wrap:pretty}
+
+/* close */
+.close{padding-block:96px 120px;text-align:center;border-top:1px solid var(--a08)}
+.close h2{font-size:clamp(2.6rem,11vw,5rem);max-width:12ch;margin-inline:auto}
+.close .cta-row{justify-content:center}
+.close .note{text-align:center}
+footer{padding-block:32px 48px;color:var(--a60);font-size:14px;border-top:1px solid var(--a08)}
+footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+
+/* reveal */
+.js-ready .rv{opacity:0;transform:translateY(46px);transition:opacity .9s var(--ease),transform .9s var(--ease);transition-delay:var(--d,0s)}
+.js-ready .rv.in{opacity:1;transform:none}
+
+@media (min-width:860px){
+  :root{--gutter:40px}
+  .hero{padding-block:72px 112px}
+  .hero .wrap{grid-template-columns:1.1fr 1fr;align-items:center;gap:72px}
+  .story{grid-template-columns:1fr 1fr;gap:96px;padding-block:112px}
+  .story.flip .mini{order:-1}
+  .story:not(.flip) .mini{order:2}
+  .band{padding-block:140px 150px}
+  .tools{padding-block:128px}
+}
+@media (prefers-reduced-motion:reduce){
+  .caret,.t9 i.p{animation:none}
+  html{scroll-behavior:auto}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="mark">FutureOS</div>
+    <fieldset class="picker" id="picker">
+      <legend>צבע מבליט</legend>
+      <span class="lbl" aria-hidden="true">צבע מבליט</span>
+    </fieldset>
+  </div>
+</header>
+
+<main>
+<section class="hero">
+  <div class="wrap">
+    <div>
+      <h1 aria-label="טלפון מקשים. בלי דפדפן.">
+        <span class="ln" aria-hidden="true"><span class="w" style="--i:0">טלפון</span> <span class="w" style="--i:1">מקשים.</span></span>
+        <span class="ln" aria-hidden="true"><span class="w acc" style="--i:2">בלי</span> <span class="w acc" style="--i:3">דפדפן.</span></span>
+      </h1>
+      <p class="lede rv">FutureOS על Qin F22 Pro. מערכת שנבנתה למקשים, עם ספרייה תורנית בלי אינטרנט ועוזר קולי בעברית.</p>
+      <div class="cta-row rv" style="--d:.12s">
+        <a class="btn" href="#contact" data-order>
+          שלחו לי עדכון
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+        </a>
+        <a class="link" href="#demo-device">נסו את המקשים</a>
+      </div>
+    </div>
+
+    <div class="stage" id="demo">
+      <div class="device" id="demo-device">
+        <div class="screen" id="screen" tabindex="0" role="application" aria-label="הדגמה של מסך הבית של FutureOS. חצים לתזוזה, Enter לפתיחה, Escape לחזרה">
+          <div class="sbar"><span class="num" id="clock">09:41</span><span class="batt" aria-hidden="true"></span></div>
+          <div class="widget"><b id="wclock">09:41</b><span id="wdate">&nbsp;</span></div>
+          <div class="grid" id="grid"><div class="ring" id="ring"></div></div>
+          <div class="app" id="app" aria-hidden="true">
+            <div class="atop"><span class="bk"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></span><h3 id="atitle"></h3></div>
+            <div id="abody"></div>
+          </div>
+        </div>
+        <div class="keys">
+          <button class="soft" data-key="Escape" aria-label="חזרה"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+          <div class="dpad">
+            <button class="u" data-key="ArrowUp" aria-label="למעלה"><svg viewBox="0 0 24 24"><path d="M5 15l7-7 7 7"/></svg></button>
+            <button class="l" data-key="ArrowLeft" aria-label="שמאלה"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+            <button class="r" data-key="ArrowRight" aria-label="ימינה"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+            <button class="d" data-key="ArrowDown" aria-label="למטה"><svg viewBox="0 0 24 24"><path d="M5 9l7 7 7-7"/></svg></button>
+            <button class="ok" data-key="Enter" aria-label="אישור">OK</button>
+          </div>
+          <button class="soft" data-key="Home" aria-label="בית"><svg viewBox="0 0 24 24"><path d="M4 11l8-7 8 7M6 10v9h12v-9"/></svg></button>
+        </div>
+        <div class="nums" role="group" aria-label="מקשי מספרים">
+          <button data-key="1">1</button><button data-key="2">2</button><button data-key="3">3</button>
+          <button data-key="4">4</button><button data-key="5">5</button><button data-key="6">6</button>
+          <button data-key="7">7</button><button data-key="8">8</button><button data-key="9">9</button>
+          <button data-key="*">*</button><button data-key="0">0</button><button data-key="#">#</button>
+        </div>
+      </div>
+      <div id="cap" aria-live="polite"></div>
+      <p class="hint">במקלדת: חצים, <bdi>Enter</bdi>, <bdi>Esc</bdi> והמספרים <bdi>1-9</bdi>. בטלפון: לחצו על המקשים.</p>
+    </div>
+  </div>
+</section>
+
+<section class="band" aria-label="מה אין בטלפון">
+  <div class="wrap">
+    <p class="s wipe" style="--d:0s">אין דפדפן.</p>
+    <p class="s wipe" style="--d:.18s">אין חנות אפליקציות.</p>
+    <p class="s wipe" style="--d:.36s">אין וואטסאפ.</p>
+    <p class="sub rv" style="--d:.5s">זה בכוונה. יש 29 אפליקציות, וכולן נבנו למקשים.</p>
+  </div>
+</section>
+
+<section class="stories">
+  <div class="wrap">
+
+    <article class="story">
+      <div class="rv">
+        <h2>ספרייה תורנית בלי אינטרנט</h2>
+        <p>אלפי ספרים: תנ"ך, משנה, הלכה, מחשבה וסידורים. חיפוש בכל הטקסט, וקפיצה לסימן או לדף לפי מספר.</p>
+      </div>
+      <div class="mini rv" style="--d:.1s" aria-hidden="true">
+        <div class="screen">
+          <div class="atop"><span class="bk"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></span><h3>ספרים</h3></div>
+          <div class="rows">
+            <div class="row"><div><strong>תנ"ך</strong></div><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></div>
+            <div class="row on"><div><strong>משנה</strong><small>קפיצה לפרק לפי מספר</small></div><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></div>
+            <div class="row"><div><strong>הלכה</strong></div><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></div>
+            <div class="row"><div><strong>מחשבה</strong></div><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></div>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <article class="story flip">
+      <div class="rv">
+        <h2>עוזר קולי בעברית</h2>
+        <p>לוחצים פעמיים על OK ואומרים מה צריך. הוא מקשיב רק אחרי הלחיצה, והדיבור הופך לטקסט בתוך הטלפון.</p>
+      </div>
+      <div class="mini rv" style="--d:.1s" aria-hidden="true">
+        <div class="screen">
+          <div class="atop"><span class="bk"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></span><h3>עוזר</h3></div>
+          <div class="big">כמה זה 15 אחוז מ-240<b>36</b></div>
+        </div>
+      </div>
+    </article>
+
+    <article class="story">
+      <div class="rv">
+        <h2>לוח שנה עברי וזמני היום</h2>
+        <p>דף יומי, פרשת השבוע וזמני היום לפי המיקום שלך.</p>
+      </div>
+      <div class="mini rv" style="--d:.1s" aria-hidden="true">
+        <div class="screen">
+          <div class="atop"><span class="bk"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></span><h3>לוח שנה</h3></div>
+          <div class="rows">
+            <div class="row"><div><strong>פרשת השבוע</strong></div><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></div>
+            <div class="row"><div><strong>דף יומי</strong></div><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></div>
+            <div class="row on"><div><strong>זמני היום</strong><small>לפי המיקום שלך</small></div><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></div>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <article class="story flip">
+      <div class="rv">
+        <h2>מקלדת עברית שמנחשת</h2>
+        <p>T9 עברי בכל מקום בטלפון. אתם לוחצים על המקשים, והוא משלים את המילה.</p>
+      </div>
+      <div class="mini rv" style="--d:.1s" aria-hidden="true">
+        <div class="screen">
+          <div class="atop"><span class="bk"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></span><h3>הודעה חדשה</h3></div>
+          <div class="field">אני בדר<span class="caret"></span></div>
+          <div class="sug"><span class="chip sel">בדרך</span><span class="chip">בדר"ך</span></div>
+          <div class="t9"><i class="p" style="--k:0">1</i><i class="p" style="--k:1">2</i><i class="p" style="--k:2">3</i><i>4</i><i>5</i><i>6</i></div>
+        </div>
+      </div>
+    </article>
+
+  </div>
+</section>
+
+<section class="tools">
+  <div class="wrap">
+    <h2 class="rv">ועוד כל מה שצריך ביום רגיל</h2>
+    <ul id="toolist" aria-label="אפליקציות נוספות">
+      <li>מצלמה</li><li>מוזיקה</li><li>ניווט ותחבורה</li><li>רשמקול</li><li>שלט למזגן</li><li>פנס</li><li>מחשבון</li><li>שעון מעורר</li><li>משימות</li><li>פתקים</li><li>תרגום</li><li>קבצים</li><li>גלריה</li><li>בלוטוס</li><li>כושר</li><li>מתכונים</li>
+    </ul>
+  </div>
+</section>
+
+<section class="specs">
+  <div class="wrap">
+    <h2 class="rv">בקצרה</h2>
+    <dl class="rv">
+      <div><dt>מכשיר</dt><dd>Qin F22 Pro</dd></div>
+      <div><dt>מסך</dt><dd><span class="num">3.54"</span> · <span class="num">640×960</span></dd></div>
+      <div><dt>מערכת</dt><dd>FutureOS, על בסיס Android 12</dd></div>
+      <div><dt>קלט</dt><dd>מקשים פיזיים, T9 עברי</dd></div>
+      <div><dt>אפליקציות</dt><dd>29, כולן למקשים</dd></div>
+    </dl>
+  </div>
+</section>
+
+<section class="faq">
+  <div class="wrap">
+    <h2 class="rv">שאלות נפוצות</h2>
+    <div class="rv">
+      <details><summary>יש לו אישור של ועדה? <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></summary><p>לא. אין בו דפדפן ואין חנות אפליקציות פתוחה, אבל אין לו אישור של אף ועדה. אם חשוב לך אישור כזה, הוא לא מתאים לך.</p></details>
+      <details><summary>אפשר להתקין וואטסאפ? <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></summary><p>לא, וזה בכוונה. כל האפליקציות בטלפון נבנו למקשים, ואין חנות אפליקציות.</p></details>
+      <details><summary>העוזר הקולי מקליט אותי? <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></summary><p>הוא מקשיב רק כשלוחצים פעמיים על OK. הדיבור הופך לטקסט בתוך הטלפון.</p></details>
+      <details><summary>כמה זה עולה? <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></summary><p>המחיר עדיין לא נקבע. נעדכן אותך לפני שמזמינים.</p></details>
+    </div>
+  </div>
+</section>
+
+<section class="close" id="contact">
+  <div class="wrap">
+    <h2 class="rv">רוצים לשמוע ראשונים?</h2>
+    <div class="cta-row rv" style="--d:.1s">
+      <a class="btn" href="#contact" data-order>
+        שלחו לי עדכון
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+      </a>
+    </div>
+    <p class="note" id="note" aria-live="polite"></p>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap"><span>FutureOS</span><span>על בסיס Qin F22 Pro</span></div>
+</footer>
+
+<script>
+/* הגדרה: ערוץ יצירת קשר. מספיק למלא אחד. ריק = הכפתור יציג הודעה.
+   WHATSAPP: מספר בינלאומי בלי פלוס, לדוגמה 972501234567 */
+var ORDER_EMAIL = "";
+var ORDER_WHATSAPP = "";
+
+document.documentElement.classList.add("js-ready");
+
+/* ---------- accent picker ---------- */
+(function(){
+  var accents=[["#FFFFFF","לבן"],["#64D2FF","תכלת"],["#FF9F0A","כתום"],["#30D158","ירוק"],["#BF5AF2","סגול"]];
+  var box=document.getElementById("picker"),root=document.documentElement;
+  var saved="#FFFFFF";
+  try{saved=localStorage.getItem("fos-accent")||saved}catch(e){}
+  accents.forEach(function(a,i){
+    var l=document.createElement("label");l.className="sw";l.title=a[1];
+    l.innerHTML='<input type="radio" name="accent" value="'+a[0]+'" aria-label="'+a[1]+'"'+(a[0]===saved?" checked":"")+'><i style="--c:'+a[0]+'"></i>';
+    box.appendChild(l);
+  });
+  function set(c){
+    root.style.setProperty("--accent",c);
+    try{localStorage.setItem("fos-accent",c)}catch(e){}
+  }
+  set(saved);
+  box.addEventListener("change",function(e){set(e.target.value)});
+})();
+
+/* ---------- reveal ---------- */
+(function(){
+  var els=document.querySelectorAll(".rv,.wipe");
+  if(!("IntersectionObserver" in window)){els.forEach(function(e){e.classList.add("in")});return}
+  var io=new IntersectionObserver(function(es){
+    es.forEach(function(x){if(x.isIntersecting){x.target.classList.add("in");io.unobserve(x.target)}});
+  },{threshold:.15,rootMargin:"0px 0px -6% 0px"});
+  els.forEach(function(e){io.observe(e)});
+  /* story lists: focus walks down the rows while in view */
+  document.querySelectorAll(".stories article:nth-of-type(1) .mini, .stories article:nth-of-type(3) .mini").forEach(function(m){
+    var rs=[].slice.call(m.querySelectorAll(".row")),j=0,tm=null;
+    new IntersectionObserver(function(es){
+      if(es[0].isIntersecting){if(!tm)tm=setInterval(function(){
+        rs.forEach(function(r){r.classList.remove("on")});j=(j+1)%rs.length;rs[j].classList.add("on");
+      },1600)}else{clearInterval(tm);tm=null}
+    },{threshold:.4}).observe(m);
+  });
+  /* toolbox: light up one name at a time while in view */
+  var lis=[].slice.call(document.querySelectorAll("#toolist li")),k=0,t=null;
+  new IntersectionObserver(function(es){
+    if(es[0].isIntersecting){if(!t)t=setInterval(function(){
+      lis.forEach(function(l){l.classList.remove("lit")});
+      lis[k%lis.length].classList.add("lit");k++;
+    },900)}else{clearInterval(t);t=null}
+  },{threshold:.2}).observe(document.getElementById("toolist"));
+})();
+
+/* ---------- order button ---------- */
+(function(){
+  var note=document.getElementById("note");
+  document.querySelectorAll("[data-order]").forEach(function(a){
+    var msg="היי, אשמח לעדכון על טלפון FutureOS";
+    if(ORDER_WHATSAPP){a.href="https://wa.me/"+ORDER_WHATSAPP+"?text="+encodeURIComponent(msg);a.target="_blank";a.rel="noopener";return}
+    if(ORDER_EMAIL){a.href="mailto:"+ORDER_EMAIL+"?subject="+encodeURIComponent("עדכון על FutureOS");return}
+    a.addEventListener("click",function(e){
+      e.preventDefault();
+      document.getElementById("contact").scrollIntoView({behavior:"smooth"});
+      note.textContent="ההרשמה לעדכונים תיפתח בקרוב.";
+    });
+  });
+})();
+
+/* ---------- launcher demo ---------- */
+(function(){
+  var ic={
+    books:'<path d="M5 4h10a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3V4z"/><path d="M8 17h10"/>',
+    mic:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>',
+    cal:'<rect x="4" y="5" width="16" height="15" rx="3"/><path d="M4 10h16M9 3v4M15 3v4"/>',
+    msg:'<path d="M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H10l-4 3v-3a2 2 0 0 1-2-2V6z"/>',
+    tel:'<path d="M6 4h3l1.5 4-2 1.5a11 11 0 0 0 6 6l1.5-2 4 1.5v3a2 2 0 0 1-2 2A15 15 0 0 1 4 6a2 2 0 0 1 2-2z"/>',
+    cam:'<rect x="3" y="7" width="18" height="13" rx="3"/><circle cx="12" cy="13.5" r="3.5"/><path d="M9 7l1.5-3h3L15 7"/>',
+    mus:'<path d="M9 18V6l10-2v12"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="16" r="2"/>',
+    rem:'<rect x="8" y="3" width="8" height="18" rx="3"/><circle cx="12" cy="8" r="1.5"/><path d="M10 13h4M10 17h4"/>',
+    clk:'<circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/>',
+    calc:'<rect x="5" y="3" width="14" height="18" rx="3"/><path d="M8 7h8M8 12h2M14 12h2M8 16h2M14 16h2"/>',
+    fl:'<path d="M8 3h8v5l-2 3v10h-4V11L8 8V3z"/>',
+    set:'<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>'
+  };
+  var apps=[
+    {n:"ספרים",i:"books",l:"ספרייה תורנית שעובדת בלי אינטרנט",r:[["תנ\"ך"],["משנה"],["הלכה"],["מחשבה"],["סידורים"]]},
+    {n:"עוזר",i:"mic",l:"עוזר קולי בעברית. נפתח בלחיצה כפולה על OK",big:["כמה זה 15 אחוז מ-240","36"]},
+    {n:"לוח שנה",i:"cal",l:"לוח שנה עברי, דף יומי וזמני היום",r:[["פרשת השבוע"],["דף יומי"],["זמני היום","לפי המיקום שלך"]]},
+    {n:"הודעות",i:"msg",l:"הודעות SMS",r:[["הודעות","SMS"]]},
+    {n:"טלפון",i:"tel",l:"חיוג במקשים",r:[["טלפון","חיוג במקשים"]]},
+    {n:"מצלמה",i:"cam",l:"תצוגה חיה, פלאש, מצלמה קדמית ואחורית",r:[["צילום"],["פלאש"],["החלפת מצלמה"]]},
+    {n:"מוזיקה",i:"mus",l:"נגן מוזיקה מקומי",r:[["מוזיקה","נגן מקומי"]]},
+    {n:"שלט",i:"rem",l:"שלט אינפרא-אדום",r:[["מזגן"],["מאוורר"],["מערכת שמע"],["שלט מותאם"]]},
+    {n:"שעון",i:"clk",l:"התראות, שעון עולמי, סטופר וטיימר",r:[["התראות"],["שעון עולמי"],["סטופר"],["טיימר"]]},
+    {n:"מחשבון",i:"calc",l:"מחשבון",r:[["מחשבון"]]},
+    {n:"פנס",i:"fl",l:"פנס",r:[["פנס"]]},
+    {n:"הגדרות",i:"set",l:"הגדרות המערכת",r:[["תצוגה"],["צליל"],["צבע מבליט"],["גודל טקסט"]]}
+  ];
+  var chev='<svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>';
+  var grid=document.getElementById("grid"),ring=document.getElementById("ring"),
+      cap=document.getElementById("cap"),app=document.getElementById("app"),
+      atitle=document.getElementById("atitle"),abody=document.getElementById("abody"),
+      screen=document.getElementById("screen");
+  var cells=[],cur=0,open=false,rowi=0;
+
+  apps.forEach(function(a,i){
+    var b=document.createElement("button");b.className="cell";b.tabIndex=-1;b.type="button";
+    b.innerHTML='<svg viewBox="0 0 24 24">'+ic[a.i]+'</svg><span>'+a.n+'</span>';
+    b.addEventListener("click",function(){screen.focus({preventScroll:true});if(cur===i)press("Enter");else{cur=i;paint()}});
+    grid.appendChild(b);cells.push(b);
+  });
+
+  function paint(){
+    var c=cells[cur];
+    ring.style.width=c.offsetWidth+"px";ring.style.height=c.offsetHeight+"px";
+    ring.style.transform="translate("+(c.offsetLeft)+"px,"+(c.offsetTop)+"px)";
+    cap.innerHTML="<b>"+apps[cur].n+"</b>"+apps[cur].l;
+  }
+  function openApp(){
+    var a=apps[cur];open=true;rowi=0;atitle.textContent=a.n;
+    if(a.big){abody.innerHTML='<div class="big">'+a.big[0]+'<b>'+a.big[1]+'</b></div>'}
+    else{abody.innerHTML='<div class="rows">'+a.r.map(function(r,i){
+      return '<div class="row'+(i===0?' on':'')+'"><div><strong>'+r[0]+'</strong>'+(r[1]?'<small>'+r[1]+'</small>':'')+'</div>'+chev+'</div>'}).join("")+'</div>'}
+    app.classList.add("open");app.setAttribute("aria-hidden","false");
+  }
+  function closeApp(){open=false;app.classList.remove("open");app.setAttribute("aria-hidden","true")}
+  function moveRow(d){
+    var rs=abody.querySelectorAll(".row");if(!rs.length)return;
+    rs[rowi].classList.remove("on");rowi=Math.max(0,Math.min(rs.length-1,rowi+d));rs[rowi].classList.add("on");
+  }
+  function press(k){
+    var cols=4,n=apps.length;
+    if(open){
+      if(k==="Escape"||k==="Backspace"||k==="Home")closeApp();
+      else if(k==="ArrowDown")moveRow(1);
+      else if(k==="ArrowUp")moveRow(-1);
+      return;
+    }
+    /* RTL: שמאלה = קדימה */
+    if(k==="ArrowLeft")cur=Math.min(n-1,cur+1);
+    else if(k==="ArrowRight")cur=Math.max(0,cur-1);
+    else if(k==="ArrowDown")cur=Math.min(n-1,cur+cols);
+    else if(k==="ArrowUp")cur=Math.max(0,cur-cols);
+    else if(k==="Enter"||k===" ")openApp();
+    else if(/^[1-9]$/.test(k))cur=Math.min(n-1,+k-1);
+    paint();
+  }
+  function flash(k){
+    var el=document.querySelector('[data-key="'+k+'"]');if(!el)return;
+    el.animate([{transform:"scale(1)"},{transform:"scale(.8)",background:"var(--accent)",color:"var(--on-accent)"},{transform:"scale(1)"}],{duration:300,easing:"cubic-bezier(.16,1,.3,1)"});
+  }
+  screen.addEventListener("keydown",function(e){
+    var k=e.key;
+    if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown","Enter"," ","Escape","Backspace","Home","*","#","0"].indexOf(k)>-1||/^[1-9]$/.test(k)){
+      e.preventDefault();press(k);flash(k===" "?"Enter":k==="Backspace"?"Escape":k);
+    }
+  });
+  document.querySelectorAll(".device [data-key]").forEach(function(b){
+    b.addEventListener("click",function(){press(b.dataset.key);flash(b.dataset.key)});
+  });
+
+  function tick(){
+    var d=new Date(),t=("0"+d.getHours()).slice(-2)+":"+("0"+d.getMinutes()).slice(-2);
+    document.getElementById("clock").textContent=t;document.getElementById("wclock").textContent=t;
+    try{document.getElementById("wdate").textContent=new Intl.DateTimeFormat("he-IL",{weekday:"long",day:"numeric",month:"long"}).format(d)}catch(e){}
+  }
+  tick();setInterval(tick,20000);
+  paint();
+  window.addEventListener("resize",paint);
+  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(paint);
+  /* the ring arrives after the device boots */
+  ring.style.opacity=0;
+  setTimeout(function(){ring.style.transition="transform .32s cubic-bezier(.16,1,.3,1),width .32s,height .32s,opacity .6s";ring.style.opacity=1;paint()},1500);
+})();
+</script>
+</body>
+</html>

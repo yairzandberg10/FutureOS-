@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- תבנית ל-android:fullBackupContent (Android 11 ומטה) - לשימוש בכל אפליקציית com.future.*
+     Manifest: <application android:allowBackup="true" android:fullBackupContent="@xml/futureos_backup_rules" ...>
+     כלל: מגבים נתוני משתמש (DB, העדפות), לא מגבים מטמון, לוגים, מפתחות Keystore-bound, ולא קבצים גדולים שניתן לשחזר. -->
+<full-backup-content>
+    <include domain="sharedpref" path="."/>
+    <include domain="database" path="."/>
+    <include domain="file" path="user/"/>
+    <exclude domain="sharedpref" path="device_state.xml"/>
+    <exclude domain="file" path="cache/"/>
+    <exclude domain="file" path="logs/"/>
+    <!-- קבצים שקשורים למפתח Keystore (לדוגמה: PIN HMAC, תבניות פנים של FutureUI) אסור לגבות:
+         אחרי שחזור למכשיר אחר המפתח לא קיים, והקובץ חסר ערך ויוצר מצב שבור. -->
+    <exclude domain="sharedpref" path="lock_pin.xml"/>
+    <exclude domain="file" path="face_templates/"/>
+</full-backup-content>
