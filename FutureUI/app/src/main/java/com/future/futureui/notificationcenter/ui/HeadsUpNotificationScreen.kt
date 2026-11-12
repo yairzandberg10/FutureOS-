@@ -65,6 +65,8 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
+import com.future.futureui.ui.LocalOneUiPalette
+import com.future.futureui.ui.rememberOneUiPalette
 import com.future.futureui.utils.FrostedBackdrop
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -114,6 +116,8 @@ fun HeadsUpNotificationScreen(
 
     // מיקום הכרטיס בחלון - כדי שהזכוכית תצויר בדיוק מעל מה שמתחתיה.
     val cardPos = remember { FloatArray(2) }
+    // One UI: הבאנר לבן (טקסט שחור) או שחור (טקסט לבן) לפי מצב הבהיר/כהה של המערכת.
+    val palette = rememberOneUiPalette()
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         // בלי Modifier.fillMaxSize() כאן בכוונה: החלון של השירות מוגדר WRAP_CONTENT
@@ -122,8 +126,9 @@ fun HeadsUpNotificationScreen(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .statusBarsPadding()
-                .padding(top = 8.dp, start = 12.dp, end = 12.dp)
+                // שורת המצב שלנו (28dp) מצוירת מעל החלון הזה - בלי הרווח הראשון החלק העליון
+                // של הבאנר היה נחבא מתחתיה.
+                .padding(top = (com.future.futureui.statusbar.logic.StatusBarLayoutManager.HEIGHT_DP + 4).dp, start = 12.dp, end = 12.dp)
         ) {
             Box(
                 modifier = Modifier
@@ -140,7 +145,15 @@ fun HeadsUpNotificationScreen(
                         transformOrigin = TransformOrigin(0.5f, 0f)
                         translationY = (1f - reveal.value.coerceIn(0f, 1f)) * -10.dp.toPx()
                     }
-                    .islandSurface(reveal = { reveal.value }, frost = frost, cardPos = cardPos, radius = CardRadius)
+                    .islandSurface(
+                        reveal = { reveal.value },
+                        frost = frost,
+                        cardPos = cardPos,
+                        radius = CardRadius,
+                        tint = if (palette.isDark) FrostTintDark else FrostTintLight,
+                        opaqueTint = if (palette.isDark) OpaqueTintDark else OpaqueTintLight,
+                        borderColor = palette.text.copy(alpha = 0.14f)
+                    )
             ) {
                 AnimatedContent(
                     targetState = sbn,
@@ -155,7 +168,7 @@ fun HeadsUpNotificationScreen(
                     },
                     label = "headsUpContent",
                 ) { current ->
-                    HeadsUpContent(current)
+                    CompositionLocalProvider(LocalOneUiPalette provides palette) { HeadsUpContent(current) }
                 }
             }
         }
@@ -188,7 +201,8 @@ private fun HeadsUpContent(sbn: StatusBarNotification) {
         }
     }
 
-    val textColor = Color.White
+    val palette = LocalOneUiPalette.current
+    val textColor = palette.text
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -200,7 +214,7 @@ private fun HeadsUpContent(sbn: StatusBarNotification) {
             modifier = Modifier
                 .size(40.dp)
                 .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.12f)),
+                .background(palette.chipOff),
             contentAlignment = Alignment.Center
         ) {
             val icon = appIcon
@@ -273,6 +287,9 @@ private fun Modifier.islandSurface(
     frost: FrostedBackdrop.Frost?,
     cardPos: FloatArray,
     radius: Dp,
+    tint: Color,
+    opaqueTint: Color,
+    borderColor: Color,
 ): Modifier = drawWithCache {
     val path = Path()
     val r = radius.toPx()
@@ -306,21 +323,26 @@ private fun Modifier.islandSurface(
                     alpha = a,
                     filterQuality = FilterQuality.Low,
                 )
-                drawRect(FrostTint, alpha = a)
+                drawRect(tint, alpha = a)
             } else {
-                drawRect(OpaqueTint, alpha = a)
+                drawRect(opaqueTint, alpha = a)
             }
             this@onDrawWithContent.drawContent()
         }
-        drawPath(path, Color.White.copy(alpha = 0.15f * a), style = stroke)
+        drawPath(path, borderColor.copy(alpha = borderColor.alpha * a), style = stroke)
     }
 }
 
 /** הרדיוס של המשטח (FutureShapes.xxl, 28dp). */
 private val CardRadius = 28.dp
 
-/** הגוון מעל הזכוכית - שקוף מספיק כדי לראות את הטשטוש, כהה מספיק לטקסט לבן. */
-private val FrostTint = Color(0x9E1C1C1E)
+/**
+ * הגוון מעל הזכוכית: כמעט אטום (96%) - לבן או שחור נקי כמו ב-One UI, כך שהטקסט
+ * קריא על כל רקע, והטשטוש רק מרכך את הקצוות.
+ */
+private val FrostTintDark = Color(0xF5121214)
+private val FrostTintLight = Color(0xF5FFFFFF)
 
-/** בלי זכוכית - הרקע של קודם. */
-private val OpaqueTint = Color(0xE61C1C1E)
+/** בלי זכוכית - אותו משטח, אטום לגמרי. */
+private val OpaqueTintDark = Color(0xFF1C1C1E)
+private val OpaqueTintLight = Color(0xFFFFFFFF)

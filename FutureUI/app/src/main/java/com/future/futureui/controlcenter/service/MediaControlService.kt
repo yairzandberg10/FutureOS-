@@ -43,16 +43,24 @@ class MediaControlService : NotificationListenerService() {
     override fun onListenerConnected() {
         super.onListenerConnected()
         instance = this
+        bumpTick()
     }
 
     override fun onListenerDisconnected() {
         super.onListenerDisconnected()
         instance = null
+        bumpTick()
+    }
+
+    private fun bumpTick() {
+        // ה-callbacks של ה-listener רצים על ה-main thread, שם גם נכתב מצב ה-Compose.
+        com.future.futureui.utils.FutureUIState.notificationTick.intValue++
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification) {
         super.onNotificationPosted(sbn)
         changeTick.intValue++
+        bumpTick()
         if (!shouldShowHeadsUp(sbn)) return
         bannerShown.add(sbn.key)
         try {
@@ -66,6 +74,7 @@ class MediaControlService : NotificationListenerService() {
     override fun onNotificationRemoved(sbn: StatusBarNotification) {
         super.onNotificationRemoved(sbn)
         changeTick.intValue++
+        bumpTick()
         bannerShown.remove(sbn.key)
         HeadsUpNotificationService.dismiss(this, sbn.key)
     }
