@@ -27,8 +27,10 @@ object LocationHelper {
             val manager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
             val providers = manager.getProviders(true)
             for (provider in providers) {
-                val loc = manager.getLastKnownLocation(provider)
-                if (loc != null) return loc.latitude to loc.longitude
+                val loc = manager.getLastKnownLocation(provider) ?: continue
+                // מיקום ישן (מכמה שעות אחורה) לא מתאים כנקודת מוצא של מסלול - מדלגים עליו.
+                val ageMs = (android.os.SystemClock.elapsedRealtimeNanos() - loc.elapsedRealtimeNanos) / 1_000_000L
+                if (ageMs <= MAX_LAST_KNOWN_AGE_MS) return loc.latitude to loc.longitude
             }
             null
         } catch (e: Exception) {
@@ -88,4 +90,5 @@ object LocationHelper {
     }
 
     private const val GPS_STALE_MS = 10_000L
+    private const val MAX_LAST_KNOWN_AGE_MS = 30 * 60 * 1000L
 }

@@ -18,6 +18,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,7 +30,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import com.future.navigation.R
 import com.future.navigation.data.gtfs.SavedPlaceEntity
 import com.future.navigation.ui.home.RowIcon
+import com.future.sharednav.components.ConfirmDialog
 import com.future.sharednav.components.FutureListItem
+import com.future.sharednav.components.FutureMenuRow
+import com.future.sharednav.components.FutureOptionsMenu
 import com.future.sharednav.components.FutureSectionHeader
 import com.future.sharednav.components.FutureTextField
 import com.future.sharednav.components.ScreenTopBar
@@ -58,11 +63,67 @@ fun SavedPlacesScreen(viewModel: SavedPlacesViewModel, onBack: () -> Unit, onNav
     val workPlace by viewModel.workPlace.collectAsState(initial = null)
     val allPlaces by viewModel.allPlaces.collectAsState(initial = emptyList())
     val favorites = allPlaces.filter { it.isFavorite }
+    // מחיקת מועדף מבקשת אישור קודם (F28), והברירה הבטוחה היא "ביטול".
+    var pendingDelete by remember { mutableStateOf<SavedPlaceEntity?>(null) }
+    pendingDelete?.let { place ->
+        ConfirmDialog(
+            message = "למחוק את ${place.label.ifBlank { place.address }} מהמועדפים?",
+            surfaceColor = theme.surfaceColor,
+            textColor = theme.textColor,
+            dangerColor = theme.dangerColor,
+            onCancel = { pendingDelete = null },
+            onConfirm = {
+                viewModel.delete(place)
+                pendingDelete = null
+            },
+            cancelLabel = "ביטול",
+            confirmLabel = "מחק",
+        )
+    }
+    // F27: OK על אריח בית/עבודה שכבר יש בו כתובת פותח תפריט "שנה כתובת" / "הסר".
+    // אריח ריק נפתח ישר לחיפוש, כמו קודם.
+    var slotMenu by remember { mutableStateOf<EditingSlot?>(null) }
+    var pendingClear by remember { mutableStateOf<EditingSlot?>(null) }
+    slotMenu?.let { slot ->
+        FutureOptionsMenu(
+            theme = theme,
+            onDismissRequest = { slotMenu = null },
+            header = if (slot == EditingSlot.HOME) stringResource(R.string.quick_home) else stringResource(R.string.quick_work),
+        ) {
+            FutureMenuRow("שנה כתובת", FutureIcons.Edit, theme, {
+                slotMenu = null
+                viewModel.startEditing(slot)
+            })
+            FutureMenuRow("הסר", FutureIcons.Delete, theme, {
+                slotMenu = null
+                pendingClear = slot
+            }, destructive = true)
+        }
+    }
+    pendingClear?.let { slot ->
+        ConfirmDialog(
+            message = if (slot == EditingSlot.HOME) "להסיר את כתובת הבית?" else "להסיר את כתובת העבודה?",
+            surfaceColor = theme.surfaceColor,
+            textColor = theme.textColor,
+            dangerColor = theme.dangerColor,
+            onCancel = { pendingClear = null },
+            onConfirm = {
+                viewModel.clearSlot(slot)
+                pendingClear = null
+            },
+            cancelLabel = "ביטול",
+            confirmLabel = "הסר",
+        )
+    }
     val homeCardFocusRequester = remember { FocusRequester() }
+    val workCardFocusRequester = remember { FocusRequester() }
 
     // פוקוס D-pad התחלתי על כרטיס "בית" - בלי זה נחיתה על המסך משאירה אותו
-    // בלי שום פריט מודגש.
-    LaunchedEffect(Unit) { runCatching { homeCardFocusRequester.requestFocus() } }
+    // בלי שום פריט מודגש. חזרה מעריכה של "עבודה" מחזירה את הפוקוס לכרטיס הזה.
+    LaunchedEffect(Unit) {
+        val target = if (viewModel.takeLastEditedSlot() == EditingSlot.WORK) workCardFocusRequester else homeCardFocusRequester
+        runCatching { target.requestFocus() }
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         ScreenTopBar(
@@ -83,10 +144,10 @@ fun SavedPlacesScreen(viewModel: SavedPlacesViewModel, onBack: () -> Unit, onNav
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(FutureDimens.itemSpacing)) {
                     PinTile(FutureIcons.Home, stringResource(R.string.quick_home), homePlace, stringResource(R.string.add_home_address), theme, modifier = Modifier.weight(1f), focusRequester = homeCardFocusRequester) {
-                        viewModel.startEditing(EditingSlot.HOME)
+                        if (homePlace != null) slotMenu = EditingSlot.HOME else viewModel.startEditing(EditingSlot.HOME)
                     }
-                    PinTile(FutureIcons.Work, stringResource(R.string.quick_work), workPlace, stringResource(R.string.add_work_address), theme, modifier = Modifier.weight(1f)) {
-                        viewModel.startEditing(EditingSlot.WORK)
+                    PinTile(FutureIcons.Work, stringResource(R.string.quick_work), workPlace, stringResource(R.string.add_work_address), theme, modifier = Modifier.weight(1f), focusRequester = workCardFocusRequester) {
+                        if (workPlace != null) slotMenu = EditingSlot.WORK else viewModel.startEditing(EditingSlot.WORK)
                     }
                 }
             }
@@ -99,6 +160,16 @@ fun SavedPlacesScreen(viewModel: SavedPlacesViewModel, onBack: () -> Unit, onNav
                         textColor = theme.textColor,
                         accentColor = theme.accentColor,
                         onClick = { viewModel.startEditing(EditingSlot.FAVORITE) },
+                    )
+                }
+            }
+            // מצב ריק (F30): בלי מועדפים מסבירים איך מוסיפים.
+            if (favorites.isEmpty()) {
+                item {
+                    Text(
+                        "אין מועדפים עדיין. לחצו על + כדי להוסיף מקום.",
+                        color = theme.textColor.copy(alpha = 0.6f),
+                        modifier = Modifier.padding(horizontal = FutureDimens.spacingSm),
                     )
                 }
             }
@@ -130,7 +201,7 @@ fun SavedPlacesScreen(viewModel: SavedPlacesViewModel, onBack: () -> Unit, onNav
                         contentDescription = "מחק",
                         textColor = theme.textColor,
                         accentColor = theme.accentColor,
-                        onClick = { viewModel.delete(place) },
+                        onClick = { pendingDelete = place },
                     )
                 }
             }
@@ -180,6 +251,8 @@ private fun AddressSearchScreen(viewModel: SavedPlacesViewModel, onBack: () -> U
     val theme = LocalFutureTheme.current
     val query by viewModel.searchQuery.collectAsState()
     val results by viewModel.searchResults.collectAsState()
+    val searching by viewModel.searching.collectAsState()
+    val searchFailed by viewModel.searchFailed.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize().escapeTextFieldFocusTrap()) {
         ScreenTopBar(
@@ -217,6 +290,20 @@ private fun AddressSearchScreen(viewModel: SavedPlacesViewModel, onBack: () -> U
                     onClick = { viewModel.pickResult(result) },
                     leading = { RowIcon(FutureIcons.LocationOn, theme) },
                 )
+            }
+            // מצב המתנה/ריק/כשל (F30): "מחפש", "אין חיבור לאינטרנט" או "לא נמצאו תוצאות".
+            if (query.isNotBlank() && results.isEmpty()) {
+                item {
+                    Text(
+                        when {
+                            searching -> "מחפש..."
+                            searchFailed -> "אין חיבור לאינטרנט. נסו שוב כשיש רשת."
+                            else -> "לא נמצאו תוצאות לחיפוש הזה."
+                        },
+                        color = theme.textColor.copy(alpha = 0.6f),
+                        modifier = Modifier.padding(horizontal = FutureDimens.spacingSm),
+                    )
+                }
             }
         }
     }

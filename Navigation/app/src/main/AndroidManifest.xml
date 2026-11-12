@@ -7,9 +7,13 @@
          את העיצוב המשותף (כהה/בהיר, צבע הדגשה) מ-FutureUI. -->
     <queries>
         <package android:name="com.future.futureui" />
+        <!-- שרת FutureOS: הטוקן והמזהה נקראים מ-com.future.settings (ר' FutureServer) -->
+        <package android:name="com.future.settings" />
     </queries>
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- הרשאת signature לספק הטוקן של FutureOS; בלעדיה הקריאה נכשלת ונופלים לנתיב הישיר -->
+    <uses-permission android:name="com.future.settings.permission.FUTURE_SERVER" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />

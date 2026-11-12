@@ -5,6 +5,7 @@ import com.future.navigation.data.gtfs.TransitItinerary
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.math.abs
 
 /**
@@ -32,8 +33,10 @@ class TransitRealtimeEnricher(private val siriRepository: SiriRealtimeRepository
         val stopId = leg.fromStopId ?: return itinerary
         val scheduledDeparture = leg.departureSeconds ?: return itinerary
 
-        val live = runCatching { siriRepository.stopMonitoring(stopId, leg.routeShortName) }
-            .getOrDefault(emptyList())
+        // בלי הגבלת זמן, שרת SIRI איטי היה מעכב את כל תוצאות התחבורה הציבורית.
+        val live = (withTimeoutOrNull(SIRI_TIMEOUT_MS) {
+            runCatching { siriRepository.stopMonitoring(stopId, leg.routeShortName) }.getOrDefault(emptyList())
+        } ?: emptyList())
             .filter { it.aimedDepartureSeconds != null && it.expectedDepartureSeconds != null }
             .minByOrNull { abs(it.aimedDepartureSeconds!! - scheduledDeparture) }
             ?.takeIf { abs(it.aimedDepartureSeconds!! - scheduledDeparture) <= MATCH_WINDOW_SECONDS }
@@ -56,6 +59,9 @@ class TransitRealtimeEnricher(private val siriRepository: SiriRealtimeRepository
     }
 
     companion object {
+        /** תקרת זמן לשאילתת SIRI לתחנה אחת - אחריה התוצאה נשארת לפי הלו"ז הסטטי. */
+        private const val SIRI_TIMEOUT_MS = 4_000L
+
         /** חלון התאמה בין הנסיעה שהפלאנר בחר לבין ה-MonitoredStopVisit הקרוב אליה - נסיעות אחרות של אותו קו באותה תחנה לא יתאימו בטעות. */
         private const val MATCH_WINDOW_SECONDS = 15 * 60
     }

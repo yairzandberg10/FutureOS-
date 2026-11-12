@@ -59,12 +59,28 @@ class TransitJourneyPlanner(private val dao: GtfsDao) {
         val destStopIds = destStops.map { it.stop.stopId }.toSet()
         val results = mutableListOf<TransitItinerary>()
 
+        // מטמון לחיפוש הנוכחי: כל שירות נבדק פעם אחת מול הלוח שנה
+        val activeServices = HashMap<String, Boolean>()
+        suspend fun isActive(serviceId: String): Boolean =
+            activeServices.getOrPut(serviceId) { isServiceActive(serviceId, dateInt, dayOfWeek) }
+
+        // סינון לפי יום פועל לפני החיתוך ל-limit: אחרת בלילה/בשבת ה-LIMIT מתמלא
+        // בנסיעות של שירותים לא פעילים והחיפוש מחזיר "לא נמצא".
+        suspend fun activeDepartures(stopId: String, afterSeconds: Int, limit: Int, excludeTripId: String? = null): List<DepartureRow> {
+            val out = ArrayList<DepartureRow>()
+            for (row in dao.departuresFromStop(stopId, afterSeconds, limit = Int.MAX_VALUE)) {
+                if (row.tripId == excludeTripId || !isActive(row.serviceId)) continue
+                out += row
+                if (out.size >= limit) break
+            }
+            return out
+        }
+
         for (origin in originStops) {
             // רק אוטובוסים שאפשר להספיק ברגל: קודם חיפשנו יציאות מ"עכשיו", והוצע
             // קו שיוצא עוד דקה מתחנה במרחק 10 דקות הליכה ("צא לפני 9 דקות").
             val earliest = secondsSinceMidnight + walkDurationSeconds(origin.distanceMeters)
-            val departures = dao.departuresFromStop(origin.stop.stopId, earliest, limit = MAX_DIRECT_CANDIDATES)
-                .filter { isServiceActive(it.serviceId, dateInt, dayOfWeek) }
+            val departures = activeDepartures(origin.stop.stopId, earliest, limit = MAX_DIRECT_CANDIDATES)
 
             for (dep in departures) {
                 val tripStops = dao.stopTimesForTrip(dep.tripId)
@@ -83,11 +99,12 @@ class TransitJourneyPlanner(private val dao: GtfsDao) {
                 val transferCandidates = tripStops.drop(originIndex + 1).take(MAX_TRANSFER_STOPS_PER_TRIP)
                 for (transfer in transferCandidates) {
                     val transferBuffer = 120 // שניות מינימום למעבר בין נסיעות באותה תחנה
-                    val onwardDepartures = dao.departuresFromStop(
+                    val onwardDepartures = activeDepartures(
                         transfer.stopId,
                         transfer.arrivalSeconds + transferBuffer,
-                        limit = MAX_TRANSFER_CANDIDATES
-                    ).filter { it.tripId != dep.tripId && isServiceActive(it.serviceId, dateInt, dayOfWeek) }
+                        limit = MAX_TRANSFER_CANDIDATES,
+                        excludeTripId = dep.tripId
+                    )
 
                     for (onward in onwardDepartures) {
                         val onwardTripStops = dao.stopTimesForTrip(onward.tripId)

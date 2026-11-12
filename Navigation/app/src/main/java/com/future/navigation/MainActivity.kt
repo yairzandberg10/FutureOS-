@@ -38,6 +38,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.future.navigation.data.backend.FirebaseBackend
+import com.future.navigation.data.backend.FutureServer
 import com.future.navigation.data.backend.RemoteKeys
 import com.future.navigation.data.common.LatLng
 import com.future.navigation.data.geocoding.GeocodingRepository
@@ -129,11 +130,18 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    // true אחרי דחייה "לא לשאול שוב": המערכת כבר לא תציג את דיאלוג ההרשאה
+    private val locationDeniedForever = androidx.compose.runtime.mutableStateOf(false)
+
     private val locationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
         if (permissions.values.any { it }) {
+            locationDeniedForever.value = false
             homeViewModel.refreshLocation()
+        } else {
+            locationDeniedForever.value =
+                !shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION)
         }
     }
 
@@ -146,6 +154,8 @@ class MainActivity : ComponentActivity() {
         // בדיוק כמו קודם (ר' data/backend/FirebaseBackend).
         FirebaseBackend.init(this)
         RemoteKeys.refresh()
+        // שרת FutureOS: הטוקן נקרא מ-com.future.settings. בלי הספק הוא פשוט לא זמין.
+        FutureServer.init(this)
 
         setContent {
             var sharedTheme by remember { mutableStateOf(ThemeClient.getTheme(this)) }
@@ -198,7 +208,18 @@ class MainActivity : ComponentActivity() {
                   // ריווח קטן - הכותרות ושורת החיפוש ישבו מתחת לשורת המצב.
                   androidx.compose.foundation.layout.Box(modifier = Modifier.fillMaxSize().padding(top = StatusBarInset.TITLE_GAP_DP.dp)) {
                     if (!hasLocationPermission) {
-                        MissingLocationPermissionScreen { locationPermissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)) }
+                        MissingLocationPermissionScreen(
+                            deniedForever = locationDeniedForever.value,
+                            onRequest = { locationPermissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)) },
+                            onOpenSettings = {
+                                startActivity(
+                                    android.content.Intent(
+                                        android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                        android.net.Uri.fromParts("package", packageName, null)
+                                    )
+                                )
+                            }
+                        )
                     } else {
                         AppNavHost(
                             navSessionViewModel = navSessionViewModel,
@@ -221,6 +242,8 @@ class MainActivity : ComponentActivity() {
     }
 
     private var transitPrefetchStarted = false
+    /** זמן הכשלון האחרון של הורדה ברקע - בלי השהיה כל שינוי מיקום היה מנסה שוב מיד. */
+    private var transitPrefetchFailedAtMs = 0L
 
     /**
      * מריץ ברקע (בלי לחסום שום מסך) הורדה/ייבוא של נתוני GTFS סביב המיקום
@@ -231,6 +254,9 @@ class MainActivity : ComponentActivity() {
      */
     private fun prefetchTransitDataInBackground(location: LatLng) {
         if (transitPrefetchStarted) return
+        // ברשת סלולרית לא מורידים 130MB בלי לשאול - ההורדה תשאל כשמבקשים מסלול תחבורה (F09).
+        if (com.future.navigation.data.network.NetworkPolicy.isMetered(applicationContext)) return
+        if (System.currentTimeMillis() - transitPrefetchFailedAtMs < PREFETCH_RETRY_DELAY_MS) return
         val neededBbox = GtfsConfig.boundingBoxCovering(location, location, paddingDegrees = PREFETCH_PADDING_DEGREES)
         val alreadyImported = GtfsImportState.lastImportedBoundingBox(applicationContext)
         if (alreadyImported != null && alreadyImported.covers(neededBbox)) return
@@ -244,23 +270,30 @@ class MainActivity : ComponentActivity() {
                         GtfsImportState.recordImportedBoundingBox(applicationContext, neededBbox)
                     } else if (progress.phase == ImportPhase.ERROR) {
                         transitPrefetchStarted = false
+                        transitPrefetchFailedAtMs = System.currentTimeMillis()
                     }
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Exception) {
                 transitPrefetchStarted = false
+                transitPrefetchFailedAtMs = System.currentTimeMillis()
             }
         }
     }
 
     companion object {
         private const val PREFETCH_PADDING_DEGREES = 0.3
+        private const val PREFETCH_RETRY_DELAY_MS = 10 * 60 * 1000L
     }
 }
 
 @Composable
-private fun MissingLocationPermissionScreen(onRequest: () -> Unit) {
+private fun MissingLocationPermissionScreen(
+    deniedForever: Boolean,
+    onRequest: () -> Unit,
+    onOpenSettings: () -> Unit
+) {
     // מכשיר היעד חסר מסך מגע לחלוטין - כפתור בודד חייב לקבל פוקוס באופן
     // יזום כדי שאפשר יהיה בכלל להפעיל אותו דרך ה-D-pad (ר' התבנית הזהה
     // ב-Music/ui/screens/PermissionScreen.kt).
@@ -275,11 +308,21 @@ private fun MissingLocationPermissionScreen(onRequest: () -> Unit) {
                 color = MaterialTheme.colorScheme.onBackground,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
+            if (deniedForever) {
+                androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = androidx.compose.ui.res.stringResource(R.string.location_permission_denied_forever),
+                    color = MaterialTheme.colorScheme.onBackground,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+            }
             androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(16.dp))
             com.future.sharednav.components.FutureButton(
-                text = androidx.compose.ui.res.stringResource(R.string.grant_permission),
+                text = androidx.compose.ui.res.stringResource(
+                    if (deniedForever) R.string.open_app_settings else R.string.grant_permission
+                ),
                 theme = com.future.sharednav.theme.LocalFutureTheme.current,
-                onClick = onRequest,
+                onClick = if (deniedForever) onOpenSettings else onRequest,
                 focusRequester = buttonFocusRequester,
             )
         }

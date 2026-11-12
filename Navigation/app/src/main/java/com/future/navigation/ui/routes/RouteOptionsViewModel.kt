@@ -6,12 +6,14 @@ import androidx.lifecycle.viewModelScope
 import com.future.navigation.data.common.LatLng
 import com.future.navigation.data.gtfs.GtfsConfig
 import com.future.navigation.data.gtfs.GtfsImportState
+import com.future.navigation.data.network.NetworkPolicy
 import com.future.navigation.data.gtfs.GtfsImporter
 import com.future.navigation.data.gtfs.ImportPhase
 import com.future.navigation.data.gtfs.TransitItinerary
 import com.future.navigation.data.gtfs.TransitJourneyPlanner
 import com.future.navigation.data.location.LocationHelper
 import com.future.navigation.data.routing.DrivingRoute
+import com.future.navigation.data.routing.RouteLookup
 import com.future.navigation.data.routing.RoutingRepository
 import com.future.navigation.data.siri.TransitRealtimeEnricher
 import com.future.navigation.ui.navigation.Destination
@@ -39,6 +41,17 @@ class RouteOptionsViewModel(
     private val _error = MutableStateFlow<String?>(null)
     val error = _error.asStateFlow()
 
+    /** true כשההודעה בשגיאה היא שגיאת שרת/רשת - אז מוצג כפתור "נסה שוב". */
+    private val _serverError = MutableStateFlow(false)
+    val serverError = _serverError.asStateFlow()
+
+    private var lastSearch: Triple<TravelMode, Destination, Boolean>? = null
+
+    /** הורדה של נתוני התחבורה (~130MB) ברשת סלולרית מחכה לאישור המשתמש (F09). */
+    private val _askCellularDownload = MutableStateFlow(false)
+    val askCellularDownload = _askCellularDownload.asStateFlow()
+    private var pendingSearch: Pair<TravelMode, Destination>? = null
+
     private val _drivingRoute = MutableStateFlow<DrivingRoute?>(null)
     val drivingRoute = _drivingRoute.asStateFlow()
 
@@ -48,27 +61,46 @@ class RouteOptionsViewModel(
     /** עבודת החיפוש הפעילה - מבוטלת אם מתבקש חיפוש חדש לפני שהקודם הסתיים,
      * כדי שתשובה איטית/ישנה לא תדרוס תוצאה טרייה יותר. */
     private var searchJob: Job? = null
+    /** מזהה החיפוש האחרון - רק החיפוש האחרון מכבה את מצב הטעינה (ביטול של קודם לא מכבה חדש). */
+    private var searchId = 0
 
-    fun search(mode: TravelMode, destination: Destination) {
+    fun search(mode: TravelMode, destination: Destination, allowCellularDownload: Boolean = false) {
+        val id = ++searchId
+        lastSearch = Triple(mode, destination, allowCellularDownload)
+        _serverError.value = false
+        searchJob?.cancel()
+        // תוצאות של יעד קודם לא נשארות על המסך - גם כשאין מיקום (אחרת מסלול ישן נפתח על יעד חדש)
+        _drivingRoute.value = null
+        _itineraries.value = emptyList()
+        _error.value = null
         val origin = LocationHelper.lastKnownLatLon(appContext)?.let { LatLng(it.first, it.second) }
         if (origin == null) {
+            _loading.value = false
             _error.value = "לא ניתן לאתר את המיקום הנוכחי"
             return
         }
 
-        searchJob?.cancel()
+        // הורדה גדולה ברשת סלולרית - קודם שואלים (ברירת המחדל: לא להוריד).
+        if (mode == TravelMode.TRANSIT && !allowCellularDownload &&
+            transitDownloadNeeded(origin, destination.location) && NetworkPolicy.isMetered(appContext)
+        ) {
+            pendingSearch = mode to destination
+            _loading.value = false
+            _askCellularDownload.value = true
+            return
+        }
+
         _loading.value = true
-        _error.value = null
-        // תוצאות של יעד קודם לא נשארות על המסך מתחת להודעת שגיאה של היעד החדש
-        _drivingRoute.value = null
-        _itineraries.value = emptyList()
         searchJob = viewModelScope.launch {
             try {
                 when (mode) {
-                    TravelMode.DRIVE -> {
-                        val route = routingRepository.getDrivingRoute(origin, destination.location)
-                        _drivingRoute.value = route
-                        if (route == null) _error.value = "לא נמצא מסלול נסיעה"
+                    TravelMode.DRIVE -> when (val lookup = routingRepository.getDrivingRoute(origin, destination.location)) {
+                        is RouteLookup.Found -> _drivingRoute.value = lookup.route
+                        RouteLookup.NoRoute -> _error.value = "לא נמצא מסלול נסיעה"
+                        RouteLookup.ServerError -> {
+                            _error.value = "שגיאת שרת – נסה שוב"
+                            _serverError.value = true
+                        }
                     }
                     TravelMode.TRANSIT -> {
                         ensureTransitDataFor(origin, destination.location)
@@ -85,9 +117,33 @@ class RouteOptionsViewModel(
             } catch (e: Exception) {
                 _error.value = "אירעה שגיאה בחישוב המסלול"
             } finally {
-                _loading.value = false
+                if (id == searchId) _loading.value = false
             }
         }
+    }
+
+    /** מנסה שוב את החיפוש האחרון (אחרי שגיאת שרת). */
+    fun retry() {
+        val (mode, destination, allow) = lastSearch ?: return
+        search(mode, destination, allowCellularDownload = allow)
+    }
+
+    fun confirmCellularDownload() {
+        _askCellularDownload.value = false
+        val (mode, destination) = pendingSearch ?: return
+        pendingSearch = null
+        search(mode, destination, allowCellularDownload = true)
+    }
+
+    fun cancelCellularDownload() {
+        _askCellularDownload.value = false
+        pendingSearch = null
+    }
+
+    private fun transitDownloadNeeded(origin: LatLng, destination: LatLng): Boolean {
+        val neededBbox = GtfsConfig.boundingBoxCovering(origin, destination)
+        val alreadyImported = GtfsImportState.lastImportedBoundingBox(appContext)
+        return !(alreadyImported != null && alreadyImported.covers(neededBbox))
     }
 
     /**

@@ -6,6 +6,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import okhttp3.Request
 import java.io.File
 import java.util.zip.ZipEntry
@@ -37,6 +39,17 @@ class GtfsImporter(private val database: GtfsDatabase) {
     private val bundleSource by lazy { TransitBundleSource(database) }
 
     fun importFeed(context: Context, bbox: BoundingBox = GtfsConfig.TEL_AVIV_BBOX): Flow<ImportProgress> = flow {
+        // כל הייבואים (שרת/מקומי, מהפרפטץ' ומהמסלולים) רצים אחד-אחד: כולם מוחקים
+        // את אותן טבלאות וכותבים לאותו קובץ זמני.
+        importLock.withLock {
+            // מסמנים מיד שאין אזור מיובא: ייבוא שייכשל באמצע משאיר טבלאות חלקיות,
+            // ואסור שהאזור הישן ייחשב כמכוסה.
+            GtfsImportState.clear(context)
+            runImport(context, bbox).collect { emit(it) }
+        }
+    }
+
+    private fun runImport(context: Context, bbox: BoundingBox): Flow<ImportProgress> = flow {
         // נתיב ראשי: חבילה מסוננת ומוכנה מראש מהשרת (ר' TransitBundleSource).
         // רק אם אין שרת/אין חבילה לאזור הזה/ההורדה נכשלה, ממשיכים לייבוא
         // המקומי של קובץ ה-GTFS הארצי - כך האפליקציה לא תלויה בשרת כדי לעבוד.
@@ -63,7 +76,10 @@ class GtfsImporter(private val database: GtfsDatabase) {
                 emit(ImportProgress(ImportPhase.DOWNLOADING, fraction))
             }
         } catch (e: Exception) {
-            emit(ImportProgress(ImportPhase.ERROR, 0f, error = e.message ?: "שגיאת הורדה"))
+            // קובץ חלקי מהורדה שנכשלה לא נשאר ב-cache (עד 130MB)
+            File(context.cacheDir, "israel-public-transportation.zip").delete()
+            // בלי e.message: הוא לרוב טקסט טכני באנגלית (למשל שגיאת רשת של OkHttp)
+            emit(ImportProgress(ImportPhase.ERROR, 0f, error = "לא ניתן להוריד את נתוני התחבורה"))
             return@flow
         }
 
@@ -206,7 +222,8 @@ class GtfsImporter(private val database: GtfsDatabase) {
             zipFile.delete()
             emit(ImportProgress(ImportPhase.DONE, 1f))
         } catch (e: Exception) {
-            emit(ImportProgress(ImportPhase.ERROR, 0f, error = e.message ?: "שגיאת ייבוא"))
+            zipFile.delete()
+            emit(ImportProgress(ImportPhase.ERROR, 0f, error = "לא ניתן לייבא את נתוני התחבורה"))
         }
     }.flowOn(Dispatchers.IO)
 
@@ -252,5 +269,8 @@ class GtfsImporter(private val database: GtfsDatabase) {
 
     companion object {
         private const val CHUNK_SIZE = 800
+
+        // ברמת המחלקה (לא לפי instance) כדי שכל ה-GtfsImporter באפליקציה ישתפו אותו נעול
+        private val importLock = Mutex()
     }
 }

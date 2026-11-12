@@ -145,4 +145,10 @@ interface SavedPlaceDao {
 
     @Query("UPDATE saved_places SET isWork = 0 WHERE isWork = 1")
     suspend fun clearWork()
+
+    @Query("DELETE FROM saved_places WHERE isHome = 0 AND isWork = 0 AND isFavorite = 0")
+    suspend fun deleteOrphans()
+
+    @Query("SELECT * FROM saved_places WHERE isFavorite = 1 AND address = :address LIMIT 1")
+    suspend fun favoriteByAddress(address: String): SavedPlaceEntity?
 }

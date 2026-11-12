@@ -55,11 +55,32 @@ fun RouteOptionsScreen(
     val error by viewModel.error.collectAsState()
     val drivingRoute by viewModel.drivingRoute.collectAsState()
     val itineraries by viewModel.itineraries.collectAsState()
+    val askCellularDownload by viewModel.askCellularDownload.collectAsState()
     val actionFocusRequester = remember { FocusRequester() }
+    val retryFocusRequester = remember { FocusRequester() }
+    val serverError by viewModel.serverError.collectAsState()
+    // שגיאת שרת: הפוקוס ההתחלתי על "נסה שוב", כדי שאפשר לנסות ב-OK מיד
+    LaunchedEffect(serverError) {
+        if (serverError) runCatching { retryFocusRequester.requestFocus() }
+    }
     val theme = LocalFutureTheme.current
 
     LaunchedEffect(destination, mode) {
         viewModel.search(mode, destination)
+    }
+
+    // הורדה של ~130MB ברשת סלולרית - שואלים לפני (F09). הברירה הבטוחה היא "לא עכשיו".
+    if (askCellularDownload) {
+        com.future.sharednav.components.ConfirmDialog(
+            message = "נדרשת הורדה של כ-130MB לנתוני התחבורה, ברשת סלולרית. להוריד עכשיו?",
+            surfaceColor = theme.surfaceColor,
+            textColor = theme.textColor,
+            dangerColor = theme.dangerColor,
+            onCancel = viewModel::cancelCellularDownload,
+            onConfirm = viewModel::confirmCellularDownload,
+            cancelLabel = "לא עכשיו",
+            confirmLabel = "הורד",
+        )
     }
 
     // פוקוס D-pad התחלתי על תוצאת המסלול ברגע שהיא מוכנה - בלי זה נחיתה על
@@ -112,11 +133,19 @@ fun RouteOptionsScreen(
                         FutureSpinner(theme = theme, label = stringResource(R.string.calculating_route))
                     }
                 }
-                error != null -> Text(
-                    text = error ?: "",
+                error != null -> Column(
                     modifier = Modifier.align(Alignment.Center).padding(24.dp),
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                )
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    Text(
+                        text = error ?: "",
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+                    if (serverError) {
+                        PrimaryButton("נסה שוב", focusRequester = retryFocusRequester) { viewModel.retry() }
+                    }
+                }
                 mode == TravelMode.DRIVE && drivingRoute != null -> DrivingRouteCard(drivingRoute!!)
                 mode == TravelMode.TRANSIT -> {
                     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
