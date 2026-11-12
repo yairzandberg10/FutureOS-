@@ -27,6 +27,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.future.settings.feedback.CrashStore
 import com.future.settings.feedback.FeedbackPayload
 import com.future.settings.feedback.FeedbackRepository
 import com.future.settings.feedback.FeedbackRepository.AppChoice
@@ -37,6 +38,7 @@ import com.future.settings.ui.components.SettingHeader
 import com.future.settings.ui.components.SettingItem
 import com.future.settings.ui.components.SettingSwitch
 import com.future.settings.ui.components.SettingsCard
+import com.future.settings.futureserver.FutureNotifications
 import com.future.settings.ui.theme.ThemeConfig
 import com.future.sharednav.components.FutureButton
 import com.future.sharednav.components.FutureButtonVariant
@@ -56,17 +58,29 @@ private enum class FeedbackStep { Compose, PickApp, Preview, Done, History }
 
 /**
  * "שלח משוב": בחירת סוג ואפליקציה, תיאור, האם לצרף לוג, ואז תצוגה מקדימה של בדיוק מה שנשלח.
- * initialPkg - כשנפתח מתפריט Options של אפליקציה אחרת (EXTRA_FEEDBACK_PKG), האפליקציה כבר נבחרה.
+ * initialPkg - כשנפתח מתפריט Options של אפליקציה אחרת או ממרכז הבקרה (EXTRA_FEEDBACK_PKG), האפליקציה כבר נבחרה.
+ * crashId - כשנפתח מהתראת קריסה: דוח הקריסה (מ-CrashStore של Settings, לא מה-Intent) מצורף, ואפשר להסיר אותו.
+ * openHistory - כשנפתח מהתראה על תשובה למשוב.
  */
 @Composable
-fun FeedbackScreen(navController: NavController, theme: ThemeConfig, initialPkg: String? = null) {
+fun FeedbackScreen(
+    navController: NavController,
+    theme: ThemeConfig,
+    initialPkg: String? = null,
+    crashId: String? = null,
+    openHistory: Boolean = false,
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val initialCrash = remember { crashId?.let { CrashStore.get(context, it) } }
 
-    var step by rememberSaveable { mutableStateOf(FeedbackStep.Compose) }
+    var step by rememberSaveable { mutableStateOf(if (openHistory) FeedbackStep.History else FeedbackStep.Compose) }
     var type by rememberSaveable { mutableStateOf(FeedbackType.Bug) }
-    var appPkg by rememberSaveable { mutableStateOf(initialPkg ?: FeedbackRepository.SYSTEM_PKG) }
-    var text by rememberSaveable { mutableStateOf("") }
+    var appPkg by rememberSaveable { mutableStateOf(initialCrash?.pkg ?: initialPkg ?: FeedbackRepository.SYSTEM_PKG) }
+    var text by rememberSaveable { mutableStateOf(if (initialCrash != null) CRASH_TEXT else "") }
+    var crashAttached by rememberSaveable { mutableStateOf(initialCrash?.id) }
+    val crash = remember(crashAttached) { crashAttached?.let { CrashStore.get(context, it) } }
+    val pendingCrashes = remember(refreshKey(step)) { CrashStore.all(context) }
     var includeLog by rememberSaveable { mutableStateOf(FeedbackRepository.lastIncludeLog(context)) }
     var prepared by remember { mutableStateOf<FeedbackPayload?>(null) }
     var busy by remember { mutableStateOf(false) }
@@ -115,13 +129,22 @@ fun FeedbackScreen(navController: NavController, theme: ThemeConfig, initialPkg:
                     logAvailable = logAvailable,
                     onIncludeLog = { includeLog = it },
                     busy = busy,
+                    crash = crash,
+                    onRemoveCrash = { crashAttached = null },
+                    pendingCrashes = if (crash == null) pendingCrashes else emptyList(),
+                    onPickCrash = { c ->
+                        crashAttached = c.id
+                        appPkg = c.pkg
+                        type = FeedbackType.Bug
+                        if (text.isBlank()) text = CRASH_TEXT
+                    },
                     historyCount = remember(refresh) { FeedbackRepository.history(context).size },
                     onHistory = { step = FeedbackStep.History },
                     onNext = {
                         if (text.isNotBlank() && !busy) {
                             busy = true
                             scope.launch {
-                                prepared = FeedbackRepository.prepare(context, type, app, text, includeLog && logAvailable)
+                                prepared = FeedbackRepository.prepare(context, type, app, text, includeLog && logAvailable, crash)
                                 busy = false
                                 step = FeedbackStep.Preview
                             }
@@ -147,6 +170,12 @@ fun FeedbackScreen(navController: NavController, theme: ThemeConfig, initialPkg:
                                 scope.launch {
                                     result = FeedbackRepository.submit(context, payload)
                                     busy = false
+                                    // הדוח עבר למשוב (נשלח או בתור): לא מציעים אותו שוב
+                                    crash?.let {
+                                        CrashStore.remove(context, it.id)
+                                        FutureNotifications.cancelCrash(context, it.pkg)
+                                    }
+                                    crashAttached = null
                                     text = ""
                                     refresh++
                                     step = FeedbackStep.Done
@@ -177,14 +206,39 @@ private fun ComposeStep(
     logAvailable: Boolean,
     onIncludeLog: (Boolean) -> Unit,
     busy: Boolean,
+    crash: CrashStore.Crash?,
+    onRemoveCrash: () -> Unit,
+    pendingCrashes: List<CrashStore.Crash>,
+    onPickCrash: (CrashStore.Crash) -> Unit,
     historyCount: Int,
     onHistory: () -> Unit,
     onNext: () -> Unit,
 ) {
+    val context = LocalContext.current
     val firstFocus = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { firstFocus.requestFocus() } }
 
     LazyColumn {
+        if (crash != null) {
+            item { SettingHeader("דוח קריסה מצורף", theme) }
+            item {
+                SettingsCard(theme) {
+                    SettingItem(crash.headline.ifBlank { "קריסה" }, "תראה אותו בתצוגה המקדימה. לחץ כדי להסיר", FutureIcons.Error, theme, showChevron = false, onClick = onRemoveCrash)
+                }
+            }
+        } else if (pendingCrashes.isNotEmpty()) {
+            item { SettingHeader("קריסות שלא דווחו", theme) }
+            item {
+                SettingsCard(theme) {
+                    val shown = pendingCrashes.take(3)
+                    shown.forEachIndexed { index, c ->
+                        val label = remember(c.pkg) { FeedbackRepository.appChoice(context, c.pkg)?.label ?: c.pkg }
+                        SettingItem("$label נסגרה", c.headline, FutureIcons.Error, theme, onClick = { onPickCrash(c) })
+                        if (index < shown.lastIndex) SettingDivider(theme)
+                    }
+                }
+            }
+        }
         item { SettingHeader("סוג", theme) }
         item {
             SettingsCard(theme) {
@@ -380,7 +434,7 @@ private fun DoneStep(theme: ThemeConfig, result: SubmitResult?, onHistory: () ->
     val (headline, detail) = when (result) {
         SubmitResult.Sent -> "המשוב נשלח, תודה" to "כשהמשוב ייכנס לטיפול או יתוקן, תראה את זה ב\"המשובים שלי\"."
         SubmitResult.Rejected -> "המשוב לא נשלח" to "השרת לא קיבל את המשוב. נסה לקצר את התיאור או להסיר את הלוג."
-        else -> "המשוב נשמר" to "אין כרגע חיבור לשרת. המשוב יישלח אוטומטית בפעם הבאה שתיכנס למסך הזה."
+        else -> "המשוב נשמר" to "אין כרגע חיבור לשרת. המשוב יישלח אוטומטית כשיהיה חיבור."
     }
     LazyColumn {
         item {
@@ -435,3 +489,9 @@ private fun HistoryStep(theme: ThemeConfig, history: List<FeedbackRepository.His
         }
     }
 }
+
+/** הטקסט ההתחלתי של דיווח מהתראת קריסה. השרת דוחה משוב בלי טקסט, והמשתמש יכול להוסיף מה עשה. */
+private const val CRASH_TEXT = "האפליקציה נסגרה בפתאומיות. "
+
+/** מפתח רענון: רשימת הקריסות נקראת מחדש כשחוזרים למסך הכתיבה. */
+private fun refreshKey(step: FeedbackStep) = step == FeedbackStep.Compose

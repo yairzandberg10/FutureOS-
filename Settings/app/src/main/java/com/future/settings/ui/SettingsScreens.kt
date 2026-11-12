@@ -107,6 +107,7 @@ sealed class Screen(val route: String) {
     object General : Screen("general")
     object About : Screen("about")
     object Feedback : Screen("feedback")
+    object Updates : Screen("updates")
     object Ringtone : Screen("ringtone")
     object NotificationSound : Screen("notification_sound")
     object AlarmSound : Screen("alarm_sound")
@@ -205,7 +206,13 @@ private fun shareFileViaBluetooth(context: android.content.Context, uri: android
 }
 
 @Composable
-fun SettingsApp(viewModel: SettingsViewModel, startRoute: String = Screen.Main.route, feedbackPkg: String? = null) {
+fun SettingsApp(
+    viewModel: SettingsViewModel,
+    startRoute: String = Screen.Main.route,
+    feedbackPkg: String? = null,
+    crashId: String? = null,
+    openFeedbackHistory: Boolean = false,
+) {
     val navController = rememberNavController()
     val theme by viewModel.themeConfig
 
@@ -233,7 +240,8 @@ fun SettingsApp(viewModel: SettingsViewModel, startRoute: String = Screen.Main.r
             composable(Screen.Storage.route) { StorageScreen(navController, theme, viewModel) }
             composable(Screen.General.route) { GeneralScreen(navController, theme, viewModel) }
             composable(Screen.About.route) { AboutScreen(navController, theme, viewModel) }
-            composable(Screen.Feedback.route) { FeedbackScreen(navController, theme, feedbackPkg) }
+            composable(Screen.Feedback.route) { FeedbackScreen(navController, theme, feedbackPkg, crashId, openFeedbackHistory) }
+            composable(Screen.Updates.route) { UpdateScreen(navController, theme) }
             composable(Screen.Ringtone.route) {
                 SoundPickerScreen(navController, theme, "רינגטון", RingtoneManager.TYPE_RINGTONE, viewModel)
             }
@@ -296,7 +304,8 @@ private val SEARCHABLE_SETTINGS = listOf(
     SearchableSetting("אפליקציות", "apps אפליקציה", FutureIcons.Apps, Screen.Apps.route),
     SearchableSetting("ברירות מחדל", "default ברירת מחדל חייגן הודעות sms מסך בית launcher", FutureIcons.Tune, Screen.DefaultApps.route),
     SearchableSetting("אודות הטלפון", "about imei גרסה מספר טלפון version", FutureIcons.Info, Screen.About.route),
-    SearchableSetting("שלח משוב", "feedback משוב באג דיווח הצעה bug report", FutureIcons.Chat, Screen.Feedback.route)
+    SearchableSetting("שלח משוב", "feedback משוב באג דיווח הצעה bug report קריסה crash", FutureIcons.Chat, Screen.Feedback.route),
+    SearchableSetting("עדכוני תוכנה", "update עדכון עדכונים גרסה תוכנה software ota", FutureIcons.Download, Screen.Updates.route)
 ) + com.future.settings.utils.ExtraSystemSettings.ALL_SCREENS.flatMap { screen ->
     // המסך עצמו, ואז כל הגדרה שבו בנפרד - חיפוש "תאורת לילה" מוביל ישר למסך שלה.
     listOf(SearchableSetting(screen.title, screen.keywords, FutureIcons.Tune, screen.route)) +
@@ -454,6 +463,8 @@ fun MainMenu(navController: NavController, theme: ThemeConfig, viewModel: Settin
                         SettingItem("אפליקציות", "פתיחה, עצירה, הרשאות ונתונים", FutureIcons.Apps, theme, modifier = menuFocus(Screen.Apps.route)) { navController.navigate(Screen.Apps.route) }
                         SettingDivider(theme)
                         SettingItem("אודות הטלפון", "גרסה, דגם ומספר טלפון", FutureIcons.Info, theme, modifier = menuFocus(Screen.About.route)) { navController.navigate(Screen.About.route) }
+                        SettingDivider(theme)
+                        SettingItem("עדכוני תוכנה", "בדיקה והתקנה של עדכונים", FutureIcons.Download, theme, modifier = menuFocus(Screen.Updates.route)) { navController.navigate(Screen.Updates.route) }
                         SettingDivider(theme)
                         SettingItem("שלח משוב", "דיווח על באג או הצעה לשיפור", FutureIcons.Chat, theme, modifier = menuFocus(Screen.Feedback.route)) { navController.navigate(Screen.Feedback.route) }
                     }

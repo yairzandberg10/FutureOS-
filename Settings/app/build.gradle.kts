@@ -38,6 +38,10 @@ android {
 
         // כתובת בסיס השרת (גיבוי לערך ב-ro.futureos.api_base). ריקה = אין רישום.
         buildConfigField("String", "FUTURE_API_BASE", "\"${localProperty("future.api.base")}\"")
+        // המפתח הציבורי (SPKI, base64) שבודק את חתימת ה-manifest של העדכונים. ריק = מנוע העדכונים כבוי.
+        // יוצרים זוג מפתחות ב-server/feedback/scripts/update-keys.mjs.
+        val updatePubkey = localProperty("future.update.pubkey").filter { it.isLetterOrDigit() || it in "+/=" }
+        buildConfigField("String", "FUTURE_UPDATE_PUBKEY", "\"$updatePubkey\"")
     }
 
     signingConfigs {

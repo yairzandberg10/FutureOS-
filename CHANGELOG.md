@@ -4,6 +4,48 @@ This repo has no carried-over git history (see root [README](README.md)), so thi
 
 ## Unreleased
 
+### os-updates-feedback: update engine and feedback / bug-report engine (2026-11-12)
+
+Branch `os-updates-feedback`, on top of `v2-improvements`. Not installed, not
+pushed, no server deployed and no accounts opened. Design:
+[docs/update-feedback-design.md](docs/update-feedback-design.md).
+
+1. **Feedback engine brought in from `feedback-server`** (October): the local
+   Cloudflare Worker (`server/feedback`), Gemini triage with a mock, GitHub
+   issue opening, and the "Send feedback" screen in Settings with a preview of
+   exactly what is sent and an offline queue.
+2. **Update engine, server.** Per-app APK releases (design 2.5, approved
+   2026-10-16): signed manifest (ECDSA P-256, bound to the device, valid one
+   hour), channels dev/beta/stable, stable per-device bucket for rollout %,
+   download only of a release offered to that device, install events,
+   automatic pause on failures, and "fixed in version X" sent automatically
+   when a device reports the fixing version installed. Admin API for
+   create / upload / rollout / pause. `kind: ota` is reserved for the future
+   FutureUpdater.
+3. **Update engine, Settings.** New "Software updates" screen (main menu and
+   search): check now, list of updates with notes and size, install per app,
+   installed versions, automatic check toggle. Every APK is checked for
+   SHA-256, size, package, versionCode and signing certificate (must equal the
+   installed app and Settings) before `PackageInstaller`, which always shows
+   Android's confirmation screen.
+4. **Background sync.** `FutureServerSyncJob` (JobScheduler, every 6 hours,
+   with network): registration, queued feedback, replies to feedback with a
+   notification, update check with a notification. It never downloads or
+   installs on its own. Not scheduled when the build has no server address.
+5. **Crash capture in every app.** `SharedKeypadNav` installs an uncaught
+   exception handler through a library provider, so no app code changed. The
+   report goes to Settings over a signature-protected broadcast, is redacted,
+   stored on the phone, and shown as a notification "X closed because of a
+   fault". Tapping it opens "Send feedback" with the report attached. Nothing
+   leaves the phone without the preview and "Send".
+6. **"Report a bug" tile in the FutureUI control center** opens feedback about
+   the app that was in front. `FeedbackMenuRow` in SharedKeypadNav lets an app
+   add "Send feedback" to its main options menu.
+
+Not built: full-system OTA. There is no AOSP tree yet and the A/B decision
+(M0 in `aosp-port-plan.md`) is open, so an `update_engine` client could not be
+compiled or tested.
+
 ### v2-improvements: a separate version line (2026-11-11)
 
 Branch `v2-improvements`, worktree `FutureOS-v2`. Base: `qa-install` (8d1cc60,

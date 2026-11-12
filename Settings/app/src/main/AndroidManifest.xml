@@ -22,6 +22,20 @@
         <package android:name="com.future.music" />
         <package android:name="com.future.sfarim" />
         <package android:name="com.future.assistant" />
+        <!-- מנוע העדכונים בודק את הגרסה של כל אפליקציות com.future.* (update/UpdateRepository.kt) -->
+        <package android:name="com.future.calculator" />
+        <package android:name="com.future.calendar" />
+        <package android:name="com.future.camera" />
+        <package android:name="com.future.clock" />
+        <package android:name="com.future.fitness" />
+        <package android:name="com.future.flashlight" />
+        <package android:name="com.future.guide" />
+        <package android:name="com.future.navigation" />
+        <package android:name="com.future.recorder" />
+        <package android:name="com.future.remote" />
+        <package android:name="com.future.tasks" />
+        <package android:name="com.future.translate" />
+        <package android:name="com.future.wallpapers" />
         <!-- Find My Device של גוגל - להעברה (pass-through) ממסך האבטחה, כמו שכבר
              נעשה עם FutureUI; אם האפליקציה לא מותקנת, safeStartActivity תופס את זה. -->
         <package android:name="com.google.android.apps.adm" />
@@ -54,6 +68,10 @@
     <uses-permission android:name="android.permission.SET_WALLPAPER_HINTS" />
     <!-- הורדת הטפטים המובנים (אותו קטלוג צילומים של אפליקציית הטפטים) -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- מנוע העדכונים: התקנת עדכונים לאפליקציות FutureOS דרך PackageInstaller, תמיד עם מסך אישור.
+         בדיקה ברקע פעם ב-6 שעות (JobScheduler, נשמר אחרי אתחול). -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <!-- רק אפליקציות חתומות באותו מפתח (com.future.*) יכולות לקרוא את טוקן השרת -->
     <permission
@@ -122,6 +140,27 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/app_widget_info" />
         </receiver>
+
+        <!-- תוצאת התקנת עדכון מ-PackageInstaller (PendingIntent מפורש). לא חשוף -->
+        <receiver
+            android:name=".update.UpdateInstallReceiver"
+            android:exported="false" />
+
+        <!-- דוחות קריסה מ-CrashCapture של SharedKeypadNav. רק שולח עם הרשאת החתימה של FutureOS -->
+        <receiver
+            android:name=".feedback.CrashReportReceiver"
+            android:exported="true"
+            android:permission="com.future.settings.permission.FUTURE_SERVER">
+            <intent-filter>
+                <action android:name="com.future.settings.action.CRASH_REPORT" />
+            </intent-filter>
+        </receiver>
+
+        <!-- סנכרון רקע: משוב בתור, תשובות, בדיקת עדכונים (futureserver/FutureServerSyncJob.kt) -->
+        <service
+            android:name=".futureserver.FutureServerSyncJob"
+            android:exported="false"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
 
         <!-- קריאה בלבד של device_id ו-token לאפליקציות com.future.* (signature) -->
         <provider

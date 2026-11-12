@@ -91,9 +91,17 @@ object FeedbackRepository {
         app: AppChoice,
         text: String,
         includeLog: Boolean,
+        crash: CrashStore.Crash? = null,
     ): FeedbackPayload = withContext(Dispatchers.IO) {
         prefs(context).edit().putBoolean(KEY_LAST_INCLUDE_LOG, includeLog).apply()
-        val log = if (includeLog && canAttachLog(context, app.pkg)) collectLog(context, app.pkg) else null
+        val logcat = if (includeLog && canAttachLog(context, app.pkg)) collectLog(context, app.pkg) else null
+        // דוח קריסה (אם המשוב נפתח מהתראת קריסה) קודם, ואחריו סוף ה-logcat במקום שנשאר
+        val crashPart = crash?.let { "--- קריסה ${FeedbackPayload.cleanVersion(it.versionName) ?: ""} ---\n${it.trace}" }
+        val log = if (crashPart == null) logcat else {
+            val room = FeedbackPayload.MAX_LOG - crashPart.length - 32
+            listOfNotNull(crashPart, logcat?.takeIf { room > 1024 }?.let { "--- logcat ---\n" + FeedbackPayload.tailLog(it, room) })
+                .joinToString("\n\n")
+        }
         FeedbackPayload(
             clientId = UUID.randomUUID().toString(),
             type = type,
@@ -196,21 +204,23 @@ object FeedbackRepository {
 
     /**
      * מושך הודעות חדשות מהשרת ומעדכן את ההיסטוריה. ההודעות מאושרות (ack) רק אחרי שנשמרו מקומית,
-     * כדי שהודעה לא תאבד אם הבקשה נקטעה באמצע.
+     * כדי שהודעה לא תאבד אם הבקשה נקטעה באמצע. מחזיר את טקסט ההודעות החדשות (להתראה).
      */
-    suspend fun pollInbox(context: Context): Int = withContext(Dispatchers.IO) {
-        val base = FutureServerRegistration.resolvedBaseUrl() ?: return@withContext 0
-        val (deviceId, token) = FutureServerRegistration.loadCredentials(context) ?: return@withContext 0
-        val messages = getJson("$base/inbox", deviceId, token)?.optJSONArray("messages") ?: return@withContext 0
-        if (messages.length() == 0) return@withContext 0
+    suspend fun pollInbox(context: Context): List<String> = withContext(Dispatchers.IO) {
+        val base = FutureServerRegistration.resolvedBaseUrl() ?: return@withContext emptyList()
+        val (deviceId, token) = FutureServerRegistration.loadCredentials(context) ?: return@withContext emptyList()
+        val messages = getJson("$base/inbox", deviceId, token)?.optJSONArray("messages") ?: return@withContext emptyList()
+        if (messages.length() == 0) return@withContext emptyList()
 
         val serverIdToClient = getJson("$base/feedback", deviceId, token)?.optJSONArray("feedback")?.let { list ->
             (0 until list.length()).associate { list.getJSONObject(it).let { f -> f.getString("id") to f.optString("client_id") } }
         } ?: emptyMap()
 
         val ackIds = mutableListOf<String>()
+        val texts = mutableListOf<String>()
         for (i in 0 until messages.length()) {
             val m = messages.getJSONObject(i)
+            m.optString("text_he").take(300).takeIf { it.isNotBlank() }?.let { texts += it }
             val clientId = serverIdToClient[m.optString("feedback_id")]
             if (clientId != null) {
                 val status = when (m.optString("kind")) {
@@ -224,7 +234,7 @@ object FeedbackRepository {
             ackIds += m.getString("id")
         }
         getJson("$base/inbox?ack=${ackIds.joinToString(",")}", deviceId, token)
-        ackIds.size
+        texts
     }
 
     private fun getJson(url: String, deviceId: String, token: String): JSONObject? = try {

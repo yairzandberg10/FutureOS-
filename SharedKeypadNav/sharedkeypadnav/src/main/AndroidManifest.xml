@@ -15,10 +15,18 @@
     <permission
         android:name="com.future.keyboard.permission.SETTINGS"
         android:protectionLevel="signature" />
+    <!-- שרת FutureOS ב-Settings: קריאת טוקן המכשיר, ושליחת דוחות קריסה ל-CrashReportReceiver.
+         מוגדרת גם כאן מאותה סיבה שלמעלה. -->
+    <permission
+        android:name="com.future.settings.permission.FUTURE_SERVER"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="com.future.settings.permission.FUTURE_SERVER" />
 
     <queries>
         <package android:name="com.future.futureui" />
         <package android:name="com.future.keyboard" />
+        <!-- "שלח משוב" ודוחות קריסה (crash/CrashCapture.kt, feedback/FeedbackShortcut.kt) -->
+        <package android:name="com.future.settings" />
     </queries>
 
     <application>
@@ -30,5 +38,12 @@
             android:authorities="${applicationId}.sharednav.statusbarinset"
             android:exported="false"
             android:initOrder="1000" />
+        <!-- תפיסת קריסות (crash/CrashCapture.kt). initOrder גבוה יותר: מותקן ראשון,
+             כדי לתפוס גם קריסה בספקים אחרים של האפליקציה. -->
+        <provider
+            android:name="com.future.sharednav.crash.CrashCaptureInstaller"
+            android:authorities="${applicationId}.sharednav.crashcapture"
+            android:exported="false"
+            android:initOrder="2000" />
     </application>
 </manifest>

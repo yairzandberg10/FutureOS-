@@ -41,9 +41,17 @@ class MainActivity : ComponentActivity() {
             SystemInteractor(applicationContext).initSystemPermissions()
         }
 
-        // נפתח מ"שלח משוב" של אפליקציה אחרת: מתחילים ישר במסך המשוב, עם האפליקציה שלה מסומנת
+        // סנכרון רקע מול שרת FutureOS (משוב, תשובות, בדיקת עדכונים). לא עושה כלום בלי כתובת שרת
+        com.future.settings.futureserver.FutureServerSyncJob.schedule(applicationContext)
+
+        // נפתח מ"שלח משוב" של אפליקציה אחרת, ממרכז הבקרה או מהתראה: מתחילים ישר במסך המשוב.
+        // ה-extras לא אמינים (ה-Activity חשופה): החבילה נבדקת מול תבנית, ו-crashId רק בוחר דוח
+        // שכבר שמור אצלנו ב-CrashStore. שום דבר לא נשלח בלי תצוגה מקדימה ולחיצה על "שלח".
         val openFeedback = intent?.action == ACTION_SEND_FEEDBACK
+        val openUpdates = intent?.action == ACTION_OPEN_UPDATES
         val feedbackPkg = intent?.getStringExtra(EXTRA_FEEDBACK_PKG)?.takeIf { openFeedback && PKG_RE.matches(it) }
+        val crashId = intent?.getStringExtra(EXTRA_CRASH_ID)?.takeIf { openFeedback && CRASH_ID_RE.matches(it) }
+        val openHistory = openFeedback && intent?.getBooleanExtra(EXTRA_OPEN_HISTORY, false) == true
 
         setContent {
             val viewModel: SettingsViewModel = viewModel()
@@ -72,8 +80,14 @@ class MainActivity : ComponentActivity() {
                     if (isReady) {
                         SettingsApp(
                             viewModel,
-                            startRoute = if (openFeedback) com.future.settings.ui.Screen.Feedback.route else com.future.settings.ui.Screen.Main.route,
+                            startRoute = when {
+                                openFeedback -> com.future.settings.ui.Screen.Feedback.route
+                                openUpdates -> com.future.settings.ui.Screen.Updates.route
+                                else -> com.future.settings.ui.Screen.Main.route
+                            },
                             feedbackPkg = feedbackPkg,
+                            crashId = crashId,
+                            openFeedbackHistory = openHistory,
                         )
                     } else {
                         Box(
@@ -91,6 +105,11 @@ class MainActivity : ComponentActivity() {
     companion object {
         const val ACTION_SEND_FEEDBACK = "com.future.settings.action.SEND_FEEDBACK"
         const val EXTRA_FEEDBACK_PKG = "com.future.settings.extra.FEEDBACK_PKG"
+        const val EXTRA_CRASH_ID = "com.future.settings.extra.CRASH_ID"
+        const val EXTRA_OPEN_HISTORY = "com.future.settings.extra.OPEN_HISTORY"
+        /** פנימי: התראת "יש עדכונים" פותחת ישר את מסך העדכונים (Intent מפורש, בלי intent-filter). */
+        const val ACTION_OPEN_UPDATES = "com.future.settings.action.OPEN_UPDATES"
         private val PKG_RE = Regex("""^com\.future\.[a-z0-9_.]{1,64}$""")
+        private val CRASH_ID_RE = Regex("""^[0-9a-f-]{36}$""")
     }
 }
