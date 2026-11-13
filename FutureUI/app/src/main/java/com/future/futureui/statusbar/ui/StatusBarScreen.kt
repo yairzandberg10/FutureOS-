@@ -82,7 +82,9 @@ fun StatusBarScreen(
     controlManager: ControlManager? = null,
     layoutManager: StatusBarLayoutManager? = null,
     accentColor: Color = StatusBarAccent,
-    lightTone: Boolean = false
+    lightTone: Boolean = false,
+    /** הצבע השולט מתחת לשורה, אם יש (השירות דוגם אותו יחד עם [lightTone]). */
+    sampledColor: Color? = null,
 ) {
     val context = LocalContext.current
     val manager = controlManager ?: remember { ControlManager(context) }
@@ -304,12 +306,16 @@ fun StatusBarScreen(
         hasAlarm = hasAlarm
     )
 
-    // אוטומטי/שקוף: הטקסט נגזר מהתוכן שמתחת; כהה: תמיד רקע שחור וטקסט לבן.
-    val inkLight = lightTone && barTone != StatusBarLayoutManager.TONE_DARK
-    val clearBar = barTone == StatusBarLayoutManager.TONE_TRANSPARENT ||
-        (barTone == StatusBarLayoutManager.TONE_AUTO && lightTone)
-    // המעבר בין לבן לשחור מונפש (300ms), כך שהוא נראה ולא נקרא כהבהוב.
-    val colors = remember(inkLight) { FutureTheme(isDarkMode = !inkLight) }
+    // אוטומטי/שקוף: השורה נראית כהמשך של מה שמתחתיה - מעל אפליקציה היא מקבלת
+    // את הצבע שנדגם מתחתיה (לבן, שחור או צבע הכותרת של האפליקציה), ומעל שכבות
+    // המערכת שמכסות את כל המסך (נעילה, מרכז בקרה...) היא שקופה. הטקסט נגזר
+    // מהצבע הזה. כהה: תמיד רקע שחור וטקסט לבן.
+    //
+    // קודם "אוטומטי" מעל תוכן כהה היה תמיד שחור ומעל תוכן בהיר תמיד לבן-תמה,
+    // כך שמעל אפליקציה צבעונית (או אפורה, או בצבע ההדגשה) השורה הייתה פס
+    // בצבע אחר משל האפליקציה, ומעל מסך הנעילה הכהה - פס שחור במקום שקוף.
+    val darkBar = barTone == StatusBarLayoutManager.TONE_DARK
+    val inkLight = lightTone && !darkBar
     // N-01: מעל אפליקציה רגילה (גם מסך הבית) שורת המערכת של אנדרואיד עדיין מצוירת
     // מתחת לשלנו (policy_control לא עובד ב-Android 12), ורקע שקוף חושף אותה - שעה
     // ואייקונים כפולים. לכן שם "שקוף" הופך לרקע אטום בגוון הבהיר. נעילה, מרכז בקרה,
@@ -319,14 +325,17 @@ fun StatusBarScreen(
         !FutureUIState.notificationCenterOpen.value &&
         !FutureUIState.recentsOpen.value &&
         !FutureUIState.powerMenuOpen.value
+    val colors = remember(inkLight) { FutureTheme(isDarkMode = !inkLight) }
     val bgTarget = when {
-        !clearBar -> Color.Black
-        opaque -> if (inkLight) colors.backgroundColor else Color.Black
+        darkBar -> Color.Black
+        opaque -> sampledColor ?: if (inkLight) colors.backgroundColor else Color.Black
         else -> Color.Transparent
     }
-    val bg by animateColorAsState(bgTarget, tween(300), label = "barBg")
-    val ink by animateColorAsState(if (inkLight) Color(0xFF111113) else Color.White, tween(300), label = "barInk")
-    val glass by animateColorAsState(if (inkLight) Color(0xFFE5E5EA) else Color(0xFF2C2C2E), tween(300), label = "barGlass")
+    // המעבר מונפש כדי שלא ייקרא כהבהוב - 200ms, מעבר מסך של המערכת, כך שהשורה
+    // מחליפה צבע יחד עם האפליקציה ולא אחריה.
+    val bg by animateColorAsState(bgTarget, tween(com.future.sharednav.theme.FutureMotion.DurationStandard), label = "barBg")
+    val ink by animateColorAsState(if (inkLight) Color(0xFF111113) else Color.White, tween(com.future.sharednav.theme.FutureMotion.DurationStandard), label = "barInk")
+    val glass by animateColorAsState(if (inkLight) Color(0xFFE5E5EA) else Color(0xFF2C2C2E), tween(com.future.sharednav.theme.FutureMotion.DurationStandard), label = "barGlass")
     val palette = BarPalette(
         background = bg,
         text = ink,
@@ -412,7 +421,7 @@ private data class BarStatus(
 )
 
 /** סמל פשוט בקו אחד לכל אפליקציה מוכרת. null - משתמשים באייקון ההתראה שהאפליקציה שולחת. */
-private fun appGlyph(pkg: String): ImageVector? = when (pkg) {
+internal fun appGlyph(pkg: String): ImageVector? = when (pkg) {
     "com.future.messages", "com.google.android.apps.messaging", "com.whatsapp", "org.telegram.messenger" -> FutureIcons.Chat
     "com.future.dialer", "com.android.server.telecom", "com.google.android.dialer" -> FutureIcons.CallMissed
     "com.future.calendar" -> FutureIcons.CalendarToday

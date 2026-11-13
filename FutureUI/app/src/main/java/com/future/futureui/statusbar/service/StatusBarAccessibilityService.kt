@@ -84,6 +84,10 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
 
     // גוון שורת המצב: true = לבנה (תוכן שחור), false = שחורה (תוכן לבן). נדגם מהתוכן שמתחתיה.
     private val barLight = mutableStateOf(false)
+    // הצבע השולט ברצועה שמתחת לשורה (ARGB), או null כשהיא מעורבת (טפט, תמונה).
+    // השורה נצבעת בו מעל אפליקציה, כך שהיא נראית כהמשך של האפליקציה - לבנה מעל
+    // לבן, שחורה מעל שחור, ובצבע של האפליקציה מעל כותרת צבעונית.
+    private val barColor = mutableStateOf<Int?>(null)
     private val toneExecutor by lazy { java.util.concurrent.Executors.newSingleThreadExecutor() }
     private var lastToneShotAt = 0L
     private val toneRunnable = Runnable { sampleBarTone() }
@@ -107,16 +111,20 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
         try {
             takeScreenshot(android.view.Display.DEFAULT_DISPLAY, toneExecutor, object : TakeScreenshotCallback {
                 override fun onSuccess(result: ScreenshotResult) {
-                    val luma = runCatching {
+                    val sample = runCatching {
                         val buffer = result.hardwareBuffer
                         val hw = android.graphics.Bitmap.wrapHardwareBuffer(buffer, result.colorSpace)
                         buffer.close()
-                        hw?.let { measureStripLuma(it) }
+                        hw?.let { measureStrip(it) }
                     }.onFailure { Log.w("FutureUI", "tone sample failed", it) }.getOrNull()
-                    if (luma != null) {
+                    if (sample != null) {
                         mainHandler.post {
+                            // הגוון של הטקסט נגזר מהצבע שהשורה תקבל בפועל (אם יש צבע שולט),
+                            // אחרת מהבהירות הממוצעת - עם אותו טווח היסטרזיס נגד הבהוב.
+                            val luma = sample.dominant?.let { relativeLuma(it) } ?: sample.luma
                             if (luma > 0.58f) barLight.value = true
                             else if (luma < 0.42f) barLight.value = false
+                            barColor.value = sample.dominant
                         }
                     }
                 }
@@ -131,7 +139,23 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
         }
     }
 
-    private fun measureStripLuma(hardware: android.graphics.Bitmap): Float {
+    /** מה נמדד ברצועה: הבהירות הממוצעת, והצבע השולט אם יש כזה. */
+    private class StripSample(val luma: Float, val dominant: Int?)
+
+    private fun relativeLuma(c: Int): Float {
+        val r = (c shr 16) and 0xFF
+        val g = (c shr 8) and 0xFF
+        val b = c and 0xFF
+        return ((0.2126 * r + 0.7152 * g + 0.0722 * b) / 255.0).toFloat()
+    }
+
+    /**
+     * רצועה ברוחב המסך ובגובה 24dp שמיד מתחת לשורה: הבהירות הממוצעת, ובנוסף הצבע
+     * השולט - הפיקסלים מקובצים לפי 4 ביטים לערוץ, ואם קבוצה אחת מכסה לפחות 55%
+     * מהרצועה (רקע של אפליקציה, כותרת צבעונית) מוחזר הממוצע שלה. כך טקסט קטן
+     * בתוך הרצועה לא צובע את השורה. רצועה מעורבת (טפט, תמונה) - null.
+     */
+    private fun measureStrip(hardware: android.graphics.Bitmap): StripSample {
         val density = resources.displayMetrics.density
         val top = (StatusBarLayoutManager.HEIGHT_DP * density).toInt()
         val stripHeight = (24 * density).toInt().coerceAtLeast(1)
@@ -142,6 +166,10 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
             val y1 = (y0 + stripHeight).coerceAtMost(soft.height)
             var sum = 0.0
             var count = 0
+            val hits = IntArray(4096)
+            val sumR = LongArray(4096)
+            val sumG = LongArray(4096)
+            val sumB = LongArray(4096)
             var y = y0
             while (y < y1) {
                 var x = 0
@@ -152,11 +180,26 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
                     val b = c and 0xFF
                     sum += (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255.0
                     count++
+                    val bucket = ((r shr 4) shl 8) or ((g shr 4) shl 4) or (b shr 4)
+                    hits[bucket]++
+                    sumR[bucket] += r.toLong()
+                    sumG[bucket] += g.toLong()
+                    sumB[bucket] += b.toLong()
                     x += 8
                 }
                 y += 4
             }
-            return if (count == 0) 0f else (sum / count).toFloat()
+            if (count == 0) return StripSample(0f, null)
+            var best = 0
+            for (i in 1 until hits.size) if (hits[i] > hits[best]) best = i
+            val n = hits[best]
+            val dominant = if (n >= count * 0.55f) {
+                val r = (sumR[best] / n).toInt()
+                val g = (sumG[best] / n).toInt()
+                val b = (sumB[best] / n).toInt()
+                (0xFF shl 24) or (r shl 16) or (g shl 8) or b
+            } else null
+            return StripSample((sum / count).toFloat(), dominant)
         } finally {
             soft.recycle()
         }
@@ -507,7 +550,8 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
                             controlManager = controlManager,
                             layoutManager = layoutManager,
                             accentColor = recentsAccentColor.value,
-                            lightTone = barLight.value
+                            lightTone = barLight.value,
+                            sampledColor = barColor.value?.let { androidx.compose.ui.graphics.Color(it) },
                         )
                     }
                 }

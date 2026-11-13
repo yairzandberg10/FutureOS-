@@ -1111,7 +1111,7 @@ fun SystemUiScreen(navController: NavController, theme: ThemeConfig, viewModel: 
 private data class StatusBarStyle(val id: String, val title: String, val summary: String, val preview: Int)
 
 private val StatusBarTones = listOf(
-    StatusBarStyle("auto", "אוטומטי", "שקוף מעל תוכן בהיר, כהה מעל תוכן כהה - לפי האפליקציה", 0),
+    StatusBarStyle("auto", "אוטומטי", "בצבע של האפליקציה שמתחת - לבן, שחור או צבע הכותרת שלה", 0),
     StatusBarStyle("transparent", "שקוף", "תמיד שקוף, הטקסט כהה או בהיר לפי הרקע", 0),
     StatusBarStyle("dark", "כהה", "תמיד שחור עם טקסט לבן", 0),
 )
