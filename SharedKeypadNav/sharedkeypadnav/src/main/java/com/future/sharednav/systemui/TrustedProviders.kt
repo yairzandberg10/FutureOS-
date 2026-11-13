@@ -1,7 +1,6 @@
 package com.future.sharednav.systemui
 
 import android.content.Context
-import android.content.pm.PackageManager
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -20,7 +19,8 @@ object TrustedProviders {
         val owner = runCatching { pm.resolveContentProvider(authority, 0)?.packageName }.getOrNull() ?: return false
         cache[authority]?.let { (pkg, ok) -> if (pkg == owner) return ok }
         val ok = owner == context.packageName ||
-            runCatching { pm.checkSignatures(context.packageName, owner) == PackageManager.SIGNATURE_MATCH }.getOrDefault(false)
+            // לא checkSignatures: ב-ROM של הטלפון הוא מחזיר התאמה לכל אפליקציה (ראו SameSigner)
+            com.future.sharednav.security.SameSigner.matches(context, owner)
         cache[authority] = owner to ok
         return ok
     }

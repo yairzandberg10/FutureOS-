@@ -1745,7 +1745,7 @@ class KeyboardService : InputMethodService() {
         return try {
             // כל מה שמוכתב עובר לשירות הזה - רק אם הוא באמת העוזר של FutureOS (אותה
             // חתימה), ולא אפליקציה זרה שהותקנה בשם החבילה שלו.
-            if (packageManager.checkSignatures(packageName, ASSISTANT_PACKAGE) != PackageManager.SIGNATURE_MATCH) return null
+            if (!com.future.sharednav.security.SameSigner.matches(this, ASSISTANT_PACKAGE)) return null
             val intent = Intent("android.speech.RecognitionService").setPackage(ASSISTANT_PACKAGE)
             val resolved = packageManager.queryIntentServices(intent, 0).firstOrNull() ?: return null
             android.content.ComponentName(resolved.serviceInfo.packageName, resolved.serviceInfo.name)

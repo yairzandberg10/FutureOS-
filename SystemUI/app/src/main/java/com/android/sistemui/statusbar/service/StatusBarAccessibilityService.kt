@@ -146,8 +146,14 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
     override val savedStateRegistry: SavedStateRegistry get() = savedStateRegistryController.savedStateRegistry
     override val viewModelStore: ViewModelStore get() = store
 
+    private var threatWatcher: com.android.sistemui.security.ThreatWatcher? = null
+
     override fun onCreate() {
         super.onCreate()
+        // הגנה בזמן אמת (ThreatWatcher) - רק כש-FutureUI לא פעילה, כדי שלא יהיו שתי התראות
+        threatWatcher = runCatching {
+            com.android.sistemui.security.ThreatWatcher(this).also { it.start() }
+        }.onFailure { Log.w("FutureUI", "threat watcher", it) }.getOrNull()
         try {
             savedStateRegistryController.performRestore(null)
             lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
@@ -706,6 +712,8 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
     }
 
     override fun onDestroy() {
+        runCatching { threatWatcher?.stop() }
+        threatWatcher = null
         try {
             hideVolumeOverlay()
             hideRecentApps()

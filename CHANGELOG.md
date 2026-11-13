@@ -4,6 +4,69 @@ This repo has no carried-over git history (see root [README](README.md)), so thi
 
 ## Unreleased
 
+### security-center: auto-blocking, known-malware list, real signature checks (2026-11-13)
+
+Same branch. Closes the gaps listed at the end of the previous entry.
+
+1. **The previous scan was wrong on this phone.** On this ROM,
+   `PackageManager.checkSignatures` returns `SIGNATURE_MATCH` for any pair of
+   apps. A Play app checked against FutureUI matched even though the
+   certificates differ. So every app counted as "ours", and the scan
+   reported "no threats". The phone actually had a foreign accessibility
+   service (Swipe to Back) and three foreign notification listeners (Niagara
+   Launcher, Mi Fitness, Link to Windows).
+   - New `SharedKeypadNav/.../security/SameSigner.kt` compares the SHA-256 of
+     the actual signing certificates (`signingInfo.apkContentsSigners`). It
+     answers "no" when the certificates can't be read.
+   - Every `checkSignatures` call is replaced: `TrustedProviders`,
+     `FutureShare`, Keyboard, Messages (dictation, send to Notes), Translate
+     and `ThreatScanner`.
+   - The system's signature-permission check uses the same broken comparison.
+     So the FutureUI and SystemUI settings providers now check the caller
+     themselves on query, update and call. They allow only a FutureOS-signed
+     app, the provider's own process, or root.
+2. **The scan fails closed.** A source that can't be read is reported as "not
+   checked" in the `_unchecked` rows and in Settings. It is not reported as
+   clean. The sources are accessibility, notification access, device admins,
+   the app list, our own signatures, certificates and the malware list.
+3. **Known malware.** `FutureUI/app/src/main/assets/stalkerware.tsv` is a
+   snapshot of Echap's public stalkerware-indicators `ioc.yaml` (commit
+   4261561, 2026-10-20, CC BY 4.0).
+   - It covers 149 families: 615 package names and 473 signing-certificate
+     SHA-1s.
+   - Matching runs entirely on the phone. A match is a new critical finding,
+     `KNOWN_MALWARE`.
+   - Settings shows the date of the list.
+4. **Auto-block** (`ThreatGuard`, `ThreatBlocker`). It is on by default and
+   can be switched off in Settings > Security.
+   - It blocks the capability, never the app. It doesn't uninstall or
+     disable anything:
+     - accessibility: removes only that app's components from the setting,
+       never ours;
+     - notification access: `cmd notification disallow_listener`;
+     - SMS: `pm revoke`;
+     - overlay and install-apps: `appops ... ignore`;
+     - a global proxy is reset to `:0`.
+   - Each block stores what it needs to be undone exactly.
+   - Not auto-blockable, alert only: device admin, user CA, VPN, ADB over
+     Wi-Fi and USB debugging.
+   - Baseline: whatever was already active the first time the new version ran
+     is not blocked. Here that was 13 findings. They wait for the user to
+     decide. A known-malware app is blocked even if it was in the baseline.
+   - In Settings, clicking a finding blocks it. Clicking a blocked finding
+     restores it and marks it trusted. Trusted findings don't lower the
+     security level.
+5. **Alerts for every new finding,** at any severity, in one grouped
+   notification. The first run posts one "waiting for your decision"
+   notification for the baseline. Installs and updates now rescan with the
+   app-ops (root) check, so new overlay and install-apps grants are caught
+   too.
+6. **SystemUI** gets the security package, the asset, the watcher hook and
+   the provider caller check. A full sync wasn't done, because SystemUI has
+   its own QA fixes (d008b7b9) that `sync-from-futureui.sh` would overwrite.
+   The watcher runs only in the active system UI: FutureUI, or SystemUI when
+   FutureUI's services are off.
+
 ### security-center: protection against cyber attacks (2026-11-12)
 
 Same branch. Detects the takeover steps Android malware actually uses. It is

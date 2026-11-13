@@ -292,10 +292,7 @@ fun MessageThreadScreen(
                         .setPackage("com.future.notes")
                         .putExtra(android.content.Intent.EXTRA_TEXT, message.text)
                     // תוכן ההודעה נשלח רק לאפליקציית הפתקים האמיתית (אותה חתימה)
-                    val genuine = runCatching {
-                        context.packageManager.checkSignatures(context.packageName, "com.future.notes") ==
-                            android.content.pm.PackageManager.SIGNATURE_MATCH
-                    }.getOrDefault(false)
+                    val genuine = com.future.sharednav.security.SameSigner.matches(context, "com.future.notes")
                     runCatching { check(genuine); context.startActivity(intent) }.onFailure {
                         android.widget.Toast.makeText(context, "אפליקציית הפתקים לא מותקנת", android.widget.Toast.LENGTH_SHORT).show()
                     }

@@ -38,10 +38,19 @@ class SystemUiSettingsProvider : ContentProvider() {
             "auto_lock_ms", "failed_week", "last_failed_at", "lockout_ms",
         )
 
-        // content://…/threats - סריקת איומים (ThreatScanner). שורה ראשונה kind="_meta":
-        // target = מספר האפליקציות שנסרקו, label = 1 אם נבדקו הרשאות חלון צף/התקנה.
+        // content://…/threats - סריקת איומים (ThreatScanner) ומצב ההגנה (ThreatGuard). שורות מיוחדות:
+        //   kind="_meta": target = מספר האפליקציות שנסרקו, label = 1 אם נבדקו הרשאות חלון צף/התקנה
+        //   kind="_policy": label = 1 אם חסימה אוטומטית פועלת
+        //   kind="_db": target = תאריך מאגר הנוזקות, label = מספר הסימנים בו
+        //   kind="_unchecked": target = מקור שלא נקרא (לא "נקי" - "לא נבדק")
+        // status: open / allowed / blocked. detail: לנוזקה ידועה - שם המשפחה.
         const val PATH_THREATS = "threats"
-        val THREAT_COLUMNS = arrayOf("kind", "target", "label", "severity")
+        val THREAT_COLUMNS = arrayOf("kind", "target", "label", "severity", "status", "detail")
+
+        // call(): פעולות של מרכז האבטחה. arg = מפתח הממצא (KIND:target) או "1"/"0".
+        const val METHOD_THREAT_BLOCK = "threat_block"
+        const val METHOD_THREAT_ALLOW = "threat_allow"
+        const val METHOD_THREAT_AUTOBLOCK = "threat_autoblock"
     }
 
     private lateinit var statusBarPrefs: android.content.SharedPreferences
@@ -51,7 +60,23 @@ class SystemUiSettingsProvider : ContentProvider() {
         return true
     }
 
+    /**
+     * הרשאת החתימה של הספק נאכפת על ידי המערכת - אבל ב-ROM של הטלפון השוואת החתימות
+     * מחזירה "תואם" לכל אפליקציה (ראו SameSigner). אז בודקים כאן בעצמנו: רק אפליקציה
+     * בחתימה של FutureOS, FutureUI עצמה או root (adb עם su).
+     */
+    private fun enforceCaller() {
+        val uid = android.os.Binder.getCallingUid()
+        if (uid == android.os.Process.myUid() || uid == 0) return
+        val ok = android.os.Binder.clearCallingIdentity().let { token ->
+            try { com.future.sharednav.security.SameSigner.matchesUid(context!!, uid) }
+            finally { android.os.Binder.restoreCallingIdentity(token) }
+        }
+        if (!ok) throw SecurityException("not a FutureOS app")
+    }
+
     override fun query(uri: Uri, projection: Array<out String>?, selection: String?, selectionArgs: Array<out String>?, sortOrder: String?): Cursor {
+        enforceCaller()
         if (uri.lastPathSegment == PATH_SECURITY) return securityStatus()
         if (uri.lastPathSegment == PATH_THREATS) return threats()
         val cursor = MatrixCursor(arrayOf(COL_SHOW_BATTERY, COL_SHOW_BLUETOOTH, COL_USE_24_HOUR_CLOCK, COL_SUPPRESS_SYSTEM_BARS, COL_BAR_STYLE, COL_DEVICE_SECURED))
@@ -71,6 +96,7 @@ class SystemUiSettingsProvider : ContentProvider() {
     }
 
     override fun update(uri: Uri, values: ContentValues?, selection: String?, selectionArgs: Array<out String>?): Int {
+        enforceCaller()
         if (values == null) return 0
         statusBarPrefs.edit().apply {
             if (values.containsKey(COL_SHOW_BATTERY)) putBoolean(COL_SHOW_BATTERY, values.getAsInteger(COL_SHOW_BATTERY) == 1)
@@ -103,11 +129,37 @@ class SystemUiSettingsProvider : ContentProvider() {
     }
 
     private fun threats(): Cursor {
-        val result = com.future.futureui.security.ThreatScanner.scan(context!!, withAppOps = true)
+        val ctx = context!!
+        val guard = com.future.futureui.security.ThreatGuard
+        val result = com.future.futureui.security.ThreatScanner.scan(ctx, withAppOps = true)
+        val allowed = guard.allowed(ctx)
+        val keys = result.findings.map { it.key }.toSet()
         return MatrixCursor(THREAT_COLUMNS).apply {
-            addRow(arrayOf<Any>("_meta", result.scannedApps.toString(), if (result.appOpsChecked) "1" else "0", 0))
-            result.findings.forEach { f -> addRow(arrayOf<Any>(f.kind.name, f.target, f.label, f.kind.severity)) }
+            addRow(arrayOf<Any>("_meta", result.scannedApps.toString(), if (result.appOpsChecked) "1" else "0", 0, "", ""))
+            addRow(arrayOf<Any>("_policy", "", if (guard.autoBlock(ctx)) "1" else "0", 0, "", ""))
+            addRow(arrayOf<Any>("_db", result.dbDate, result.dbSize.toString(), 0, "", ""))
+            result.unchecked.forEach { addRow(arrayOf<Any>("_unchecked", it, "", 0, "", "")) }
+            result.findings.forEach { f ->
+                addRow(arrayOf<Any>(f.kind.name, f.target, f.label, f.kind.severity, guard.status(allowed, f), f.detail))
+            }
+            // מה שנחסם כבר לא מופיע בסריקה (היכולת בוטלה) - מוצג כדי שאפשר יהיה להחזיר
+            guard.blocked(ctx).values.filter { it.key !in keys }.forEach { e ->
+                addRow(arrayOf<Any>(e.kind.name, e.target, e.label, e.kind.severity, guard.STATUS_BLOCKED, ""))
+            }
         }
+    }
+
+    override fun call(method: String, arg: String?, extras: android.os.Bundle?): android.os.Bundle? {
+        enforceCaller()
+        val ctx = context!!
+        val guard = com.future.futureui.security.ThreatGuard
+        val ok = when (method) {
+            METHOD_THREAT_BLOCK -> arg != null && guard.block(ctx, arg)
+            METHOD_THREAT_ALLOW -> arg != null && guard.allow(ctx, arg)
+            METHOD_THREAT_AUTOBLOCK -> guard.setAutoBlock(ctx, arg == "1")
+            else -> return null
+        }
+        return android.os.Bundle().apply { putBoolean("ok", ok) }
     }
 
     private fun systemLocked(): Boolean = runCatching {

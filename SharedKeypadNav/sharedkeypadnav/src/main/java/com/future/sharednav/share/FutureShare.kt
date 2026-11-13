@@ -53,10 +53,7 @@ object FutureShare {
     }
 
     private fun isTrusted(context: Context): Boolean =
-        runCatching {
-            context.packageManager.checkSignatures(context.packageName, SystemUiTarget.PACKAGE) ==
-                android.content.pm.PackageManager.SIGNATURE_MATCH
-        }.getOrDefault(false)
+        com.future.sharednav.security.SameSigner.matches(context, SystemUiTarget.PACKAGE)
 
     /** שיתוף טקסט בלבד. */
     fun text(context: Context, text: String, title: String = "שיתוף") {

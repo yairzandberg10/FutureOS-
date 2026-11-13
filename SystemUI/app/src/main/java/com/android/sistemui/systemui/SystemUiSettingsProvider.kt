@@ -33,7 +33,18 @@ class SystemUiSettingsProvider : ContentProvider() {
         return true
     }
 
+    /** כמו ב-FutureUI: הרשאת החתימה לא נאכפת נכון ב-ROM (ראו SameSigner), אז בודקים כאן. */
+    private fun enforceCaller() {
+        val uid = android.os.Binder.getCallingUid()
+        if (uid == android.os.Process.myUid() || uid == 0) return
+        val token = android.os.Binder.clearCallingIdentity()
+        val ok = try { com.future.sharednav.security.SameSigner.matchesUid(context!!, uid) }
+        finally { android.os.Binder.restoreCallingIdentity(token) }
+        if (!ok) throw SecurityException("not a FutureOS app")
+    }
+
     override fun query(uri: Uri, projection: Array<out String>?, selection: String?, selectionArgs: Array<out String>?, sortOrder: String?): Cursor {
+        enforceCaller()
         val cursor = MatrixCursor(arrayOf(COL_SHOW_BATTERY, COL_SHOW_BLUETOOTH, COL_USE_24_HOUR_CLOCK, COL_SUPPRESS_SYSTEM_BARS))
         cursor.addRow(
             arrayOf(
@@ -47,6 +58,7 @@ class SystemUiSettingsProvider : ContentProvider() {
     }
 
     override fun update(uri: Uri, values: ContentValues?, selection: String?, selectionArgs: Array<out String>?): Int {
+        enforceCaller()
         if (values == null) return 0
         statusBarPrefs.edit().apply {
             if (values.containsKey(COL_SHOW_BATTERY)) putBoolean(COL_SHOW_BATTERY, values.getAsInteger(COL_SHOW_BATTERY) == 1)

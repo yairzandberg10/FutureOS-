@@ -48,8 +48,7 @@ private val AssistantRecognizer = ComponentName(
 
 // רק העוזר האמיתי של FutureOS (אותה חתימה): מה שמוכתב עובר אליו, והטקסט שחוזר נכנס להודעה
 private fun assistantRecognizerInstalled(context: Context): Boolean =
-    context.packageManager.checkSignatures(context.packageName, AssistantRecognizer.packageName) ==
-        android.content.pm.PackageManager.SIGNATURE_MATCH &&
+    com.future.sharednav.security.SameSigner.matches(context, AssistantRecognizer.packageName) &&
     context.packageManager.queryIntentServices(
         Intent("android.speech.RecognitionService").setPackage(AssistantRecognizer.packageName), 0,
     ).isNotEmpty()

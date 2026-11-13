@@ -12,22 +12,27 @@ import android.net.NetworkCapabilities
 import android.provider.Settings
 import android.util.Log
 import com.future.sharednav.root.RootShell
+import com.future.sharednav.security.SameSigner
 import java.security.KeyStore
 import java.security.cert.X509Certificate
 
 /**
  * סורק איומים: מחפש את הדרכים שבהן נוזקות לאנדרואיד משתלטות על טלפון בפועל.
  *
- * זה לא אנטי-וירוס ואין כאן חתימות של נוזקות. הסורק בודק יכולות מסוכנות שהופעלו
- * לאפליקציה זרה - כל אחת מהן היא הצעד שנוזקות בנקאיות וריגול עושות כדי לפעול:
- *  - שירות נגישות: קורא את כל המסך ומקשים, כולל הקוד של מסך הנעילה.
- *  - מאזין התראות: קורא הודעות וקודי אימות שמגיעים ב-SMS.
- *  - מנהל מכשיר: נועל, מוחק ומונע את הסרת האפליקציה.
- *  - קריאת SMS, חלון מעל אפליקציות (מסכי כניסה מזויפים), התקנת אפליקציות.
- *  - רשת: תעודת CA שהותקנה ידנית, שרת מתווך גלובלי, VPN, ניפוי באגים דרך Wi-Fi.
+ * שתי שכבות:
+ *  1. נוזקות ידועות: שם החבילה או תעודת החתימה מופיעים במאגר הנוזקות (MalwareIndicators).
+ *  2. יכולות מסוכנות שהופעלו לאפליקציה זרה - הצעד שכל נוזקה בנקאית או ריגול עושה כדי לפעול,
+ *     גם כזו שעוד לא מופיעה באף מאגר:
+ *     - שירות נגישות: קורא את כל המסך ומקשים, כולל הקוד של מסך הנעילה.
+ *     - מאזין התראות: קורא הודעות וקודי אימות שמגיעים ב-SMS.
+ *     - מנהל מכשיר: נועל, מוחק ומונע את הסרת האפליקציה.
+ *     - קריאת SMS, חלון מעל אפליקציות (מסכי כניסה מזויפים), התקנת אפליקציות.
+ *     - רשת: תעודת CA שהותקנה ידנית, שרת מתווך גלובלי, VPN, ניפוי באגים דרך Wi-Fi.
  *
- * "זרה" = לא אפליקציית מערכת ולא חתומה במפתח של FutureOS. האמון לפי חתימה ולא לפי
- * שם: כל אחד יכול לקרוא לחבילה com.future.something.
+ * "זרה" = לא אפליקציית מערכת ולא חתומה במפתח של FutureOS. האמון לפי התעודות עצמן
+ * (SameSigner), לא לפי checkSignatures - שב-ROM של הטלפון מחזיר "תואם" לכל אפליקציה.
+ *
+ * כשל בקריאה של אחד המקורות לא נספר כ"נקי": שם המקור נכנס ל-unchecked ומוצג כ"לא נבדק".
  *
  * רץ ב-FutureUI כי רק לה יש QUERY_ALL_PACKAGES - בלי זה רשימת האפליקציות מסוננת
  * והסריקה הייתה מדווחת "נקי" בטעות.
@@ -35,21 +40,36 @@ import java.security.cert.X509Certificate
 object ThreatScanner {
     private const val TAG = "ThreatScanner"
 
-    /** חומרה: 3 קריטי, 2 גבוה, 1 דורש בדיקה. */
-    enum class Kind(val severity: Int) {
-        ACCESSIBILITY(3),
-        DEVICE_ADMIN(2),
-        NOTIFICATION_LISTENER(2),
-        USER_CA(2),
-        PROXY(2),
-        ADB_WIFI(2),
-        SMS_READER(1),
-        OVERLAY(1),
-        INSTALLER(1),
-        VPN(1),
+    /**
+     * חומרה: 3 קריטי, 2 גבוה, 1 דורש בדיקה.
+     * blockable: אפשר לחסום את היכולת עצמה (בלי למחוק את האפליקציה) ולהחזיר אותה אחר כך.
+     */
+    enum class Kind(val severity: Int, val blockable: Boolean) {
+        KNOWN_MALWARE(3, false),
+        ACCESSIBILITY(3, true),
+        DEVICE_ADMIN(2, false),
+        NOTIFICATION_LISTENER(2, true),
+        USER_CA(2, false),
+        PROXY(2, true),
+        ADB_WIFI(2, false),
+        SMS_READER(1, true),
+        OVERLAY(1, true),
+        INSTALLER(1, true),
+        VPN(1, false),
     }
 
-    data class Finding(val kind: Kind, val target: String, val label: String) {
+    /**
+     * @param components לשירות נגישות / מאזין התראות: הרכיבים המדויקים (package/class),
+     *   כדי שחסימה תסיר רק אותם ושחרור יחזיר בדיוק אותם.
+     * @param detail לנוזקה ידועה: שם המשפחה במאגר.
+     */
+    data class Finding(
+        val kind: Kind,
+        val target: String,
+        val label: String,
+        val components: List<String> = emptyList(),
+        val detail: String = "",
+    ) {
         val key: String get() = "${kind.name}:$target"
     }
 
@@ -58,6 +78,10 @@ object ThreatScanner {
         val scannedApps: Int,
         /** false = לא היה אפשר לבדוק הרשאות חלון צף והתקנה (אין root). */
         val appOpsChecked: Boolean,
+        /** מקורות שלא נקראו (accessibility, notifications, device_admin, apps, signatures, certificates, malware_db). */
+        val unchecked: List<String>,
+        val dbDate: String,
+        val dbSize: Int,
     )
 
     private const val OP_OVERLAY = "android:system_alert_window"
@@ -67,55 +91,82 @@ object ThreatScanner {
     /**
      * @param withAppOps בדיקת חלון צף/התקנה. אנדרואיד לא נותן לאפליקציה לקרוא את
      *   ההרשאות האלה של אפליקציה אחרת, אז כשהבדיקה הרגילה נחסמת עוברים ל-root
-     *   (סשן su אחד לכל הסריקה). השומר ברקע לא מבקש את זה, כדי לא להריץ su שוב ושוב.
+     *   (סשן su אחד לכל הסריקה).
      */
     fun scan(context: Context, withAppOps: Boolean): Result {
         val pm = context.packageManager
         val self = context.packageName
         val cr = context.contentResolver
         val findings = ArrayList<Finding>()
-        val trustCache = HashMap<String, Boolean?>()
+        val unchecked = ArrayList<String>()
 
+        val selfDigests = SameSigner.self(context)
+        if (selfDigests.isEmpty()) unchecked += "signatures"
+
+        val packages: List<PackageInfo> = runCatching {
+            pm.getInstalledPackages(PackageManager.GET_PERMISSIONS or PackageManager.GET_SIGNING_CERTIFICATES)
+        }.getOrElse { Log.w(TAG, "installed packages", it); emptyList() }
+        if (packages.isEmpty()) unchecked += "apps"
+        val byPkg = packages.associateBy { it.packageName }
+
+        val trustCache = HashMap<String, Boolean>()
         // null = לא מותקנת (רשומה ישנה בהגדרות), true = מהימנה, false = זרה
-        fun trust(pkg: String): Boolean? = trustCache.getOrPut(pkg) {
-            val ai = runCatching { pm.getApplicationInfo(pkg, 0) }.getOrNull() ?: return@getOrPut null
-            pkg == self ||
+        fun trust(pkg: String): Boolean? {
+            trustCache[pkg]?.let { return it }
+            val info = byPkg[pkg] ?: runCatching {
+                pm.getPackageInfo(pkg, PackageManager.GET_SIGNING_CERTIFICATES)
+            }.getOrNull() ?: return null
+            val ai = info.applicationInfo ?: return null
+            val ok = pkg == self ||
                 ai.flags and ApplicationInfo.FLAG_SYSTEM != 0 ||
-                runCatching { pm.checkSignatures(self, pkg) == PackageManager.SIGNATURE_MATCH }.getOrDefault(false)
+                (selfDigests.isNotEmpty() && SameSigner.digests(info) == selfDigests)
+            trustCache[pkg] = ok
+            return ok
         }
 
         fun label(pkg: String): String = runCatching {
             pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString()
         }.getOrDefault(pkg)
 
-        fun components(setting: String): Set<String> =
-            (runCatching { Settings.Secure.getString(cr, setting) }.getOrNull() ?: "")
-                .split(':')
-                .mapNotNull { ComponentName.unflattenFromString(it)?.packageName }
-                .toSet()
+        /** רכיבים מופעלים לפי חבילה. null = לא היה אפשר לקרוא את ההגדרה. */
+        fun components(setting: String): Map<String, List<String>>? =
+            runCatching { Settings.Secure.getString(cr, setting) ?: "" }
+                .onFailure { Log.w(TAG, "read $setting", it) }
+                .getOrNull()
+                ?.split(':')
+                ?.mapNotNull { flat -> ComponentName.unflattenFromString(flat)?.let { it.packageName to it.flattenToString() } }
+                ?.groupBy({ it.first }, { it.second })
 
-        for (pkg in components(Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)) {
-            if (trust(pkg) == false) findings += Finding(Kind.ACCESSIBILITY, pkg, label(pkg))
+        val a11y = components(Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
+        if (a11y == null) unchecked += "accessibility"
+        a11y.orEmpty().forEach { (pkg, comps) ->
+            if (trust(pkg) == false) findings += Finding(Kind.ACCESSIBILITY, pkg, label(pkg), comps)
         }
-        for (pkg in components("enabled_notification_listeners")) {
-            if (trust(pkg) == false) findings += Finding(Kind.NOTIFICATION_LISTENER, pkg, label(pkg))
+        val listeners = components("enabled_notification_listeners")
+        if (listeners == null) unchecked += "notifications"
+        listeners.orEmpty().forEach { (pkg, comps) ->
+            if (trust(pkg) == false) findings += Finding(Kind.NOTIFICATION_LISTENER, pkg, label(pkg), comps)
         }
         runCatching {
-            val dpm = context.getSystemService(DevicePolicyManager::class.java)
-            dpm?.activeAdmins.orEmpty().map { it.packageName }.toSet().forEach { pkg ->
+            val dpm = context.getSystemService(DevicePolicyManager::class.java) ?: error("no DevicePolicyManager")
+            dpm.activeAdmins.orEmpty().map { it.packageName }.toSet().forEach { pkg ->
                 if (trust(pkg) == false) findings += Finding(Kind.DEVICE_ADMIN, pkg, label(pkg))
             }
-        }.onFailure { Log.w(TAG, "device admins", it) }
+        }.onFailure { Log.w(TAG, "device admins", it); unchecked += "device_admin" }
 
-        // אפליקציות: קריאת SMS, ומועמדות לבדיקת חלון צף/התקנה
-        val packages: List<PackageInfo> = runCatching {
-            pm.getInstalledPackages(PackageManager.GET_PERMISSIONS)
-        }.getOrElse { Log.w(TAG, "installed packages", it); emptyList() }
+        // אפליקציות: נוזקות ידועות, קריאת SMS, ומועמדות לבדיקת חלון צף/התקנה
+        val db = MalwareIndicators.load(context)
+        if (db == null) unchecked += "malware_db"
         val opCandidates = ArrayList<PackageInfo>()
         for (info in packages) {
             val pkg = info.packageName
-            val requested = info.requestedPermissions ?: continue
             if (trust(pkg) != false) continue
+            if (db != null) {
+                MalwareIndicators.match(db, pkg, SameSigner.sha1(info))?.let { family ->
+                    findings += Finding(Kind.KNOWN_MALWARE, pkg, label(pkg), detail = family)
+                }
+            }
+            val requested = info.requestedPermissions ?: continue
             val flags = info.requestedPermissionsFlags
             val readsSms = requested.indices.any { i ->
                 requested[i] in SMS_PERMISSIONS &&
@@ -137,7 +188,9 @@ object ThreatScanner {
         }
 
         // רשת
-        userCertificates().forEach { (alias, name) -> findings += Finding(Kind.USER_CA, alias, name) }
+        val certs = userCertificates()
+        if (certs == null) unchecked += "certificates"
+        certs.orEmpty().forEach { (alias, name) -> findings += Finding(Kind.USER_CA, alias, name) }
         val proxy = runCatching { Settings.Global.getString(cr, Settings.Global.HTTP_PROXY) }.getOrNull()
         if (!proxy.isNullOrBlank() && proxy != ":0") findings += Finding(Kind.PROXY, proxy, proxy)
         if (runCatching { Settings.Global.getInt(cr, "adb_wifi_enabled", 0) }.getOrDefault(0) == 1) {
@@ -149,6 +202,9 @@ object ThreatScanner {
             findings.distinctBy { it.key }.sortedByDescending { it.kind.severity },
             packages.size,
             appOpsChecked,
+            unchecked,
+            db?.date.orEmpty(),
+            db?.size ?: 0,
         )
     }
 
@@ -196,8 +252,8 @@ object ThreatScanner {
         return safe.size == blocked.size
     }
 
-    /** תעודות CA שהמשתמש (או מישהו אחר) התקין ידנית - מה שמאפשר לפענח תעבורת HTTPS. */
-    private fun userCertificates(): List<Pair<String, String>> = runCatching {
+    /** תעודות CA שהמשתמש (או מישהו אחר) התקין ידנית - מה שמאפשר לפענח תעבורת HTTPS. null = לא נקרא. */
+    private fun userCertificates(): List<Pair<String, String>>? = runCatching {
         val store = KeyStore.getInstance("AndroidCAStore").apply { load(null) }
         store.aliases().toList().filter { it.startsWith("user:") }.map { alias ->
             val cert = store.getCertificate(alias) as? X509Certificate
@@ -208,7 +264,7 @@ object ThreatScanner {
                 ?: alias
             alias to name
         }
-    }.getOrElse { Log.w(TAG, "CA store", it); emptyList() }
+    }.getOrElse { Log.w(TAG, "CA store", it); null }
 
     private fun vpnActive(context: Context): Boolean = runCatching {
         val cm = context.getSystemService(ConnectivityManager::class.java) ?: return false
