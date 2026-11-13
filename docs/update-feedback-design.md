@@ -85,7 +85,7 @@ Cron ב-Worker כל שעה:
 ## 5. טיפול ע"י Claude
 
 - issue נפתח ב**ריפו פרטי נפרד** (`FutureOS-feedback`), כי המשוב מכיל לוגים של משתמשים והריפו הראשי עשוי להיות ציבורי. ה-issue כולל סיכום, צעדי שחזור, גרסאות ולוג מסונן.
-- label `triage:accepted` מפעיל GitHub Action עם `anthropics/claude-code-action`. Claude מתקן בריפו הקוד ופותח PR שמקשר ל-issue.
+- label `triage:accepted` מפעיל GitHub Action עם `anthropics/claude-code-action`. Claude מתקן בריפו הקוד ופותח PR שמקשר ל-issue. השרת מוסיף את ה-label רק אחרי אישור ידני בדשבורד, לעולם לא אוטומטית מהמיון (עודכן 2026-11-13: הרישום פתוח, ולכן טקסט משוב הוא קלט של כל אחד).
 - חלופה: Claude Code routine (טריגר מתוזמן) שקורא issues פתוחים. פחות מיידי, אבל רץ על המנוי ולא על API.
 - ל-Claude **אין** הרשאת merge. branch protection על main דורש review של המשתמש.
 

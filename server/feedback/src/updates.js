@@ -172,6 +172,13 @@ export async function download(env, device, releaseId) {
   }
   const obj = await env.BLOBS.get(release.blob_key);
   if (!obj) throw new HttpError(404, "not_found");
+  // 'served' נרשם רק כאן, בצד השרת, ולא דרך /update/event. כך העצירה האוטומטית סופרת רק מכשירים
+  // שבאמת הורידו את הקובץ, ולא דיווחים שמכשיר מזויף שולח בלי להוריד כלום.
+  await env.DB.prepare(
+    "INSERT OR IGNORE INTO update_events (device_id, release_id, event, at) VALUES (?1, ?2, 'served', ?3)",
+  )
+    .bind(device.id, releaseId, now())
+    .run();
   return new Response(obj.body, {
     headers: {
       "content-type": "application/vnd.android.package-archive",
@@ -206,7 +213,9 @@ export async function reportEvent(request, env, device) {
     .run();
 
   let notified = 0;
-  if (body.event === "installed") notified = await notifyFixedOnDevice(env, device, release);
+  if (body.event === "installed" && (await wasServed(env, device.id, release.id))) {
+    notified = await notifyFixedOnDevice(env, device, release);
+  }
   if (body.event === "failed") await maybeAutoPause(env, release);
   return json({ ok: true, notified });
 }
@@ -225,7 +234,7 @@ async function notifyFixedOnDevice(env, device, release) {
   if (!clusters.length) return 0;
   const ph = clusters.map((_, i) => `?${i + 2}`).join(",");
   const { results } = await env.DB.prepare(
-    `SELECT id, device_id FROM feedback
+    `SELECT id, device_id, cluster_id FROM feedback
       WHERE device_id = ?1 AND cluster_id IN (${ph}) AND status NOT IN ('fixed', 'wontfix')`,
   )
     .bind(device.id, ...clusters)
@@ -234,26 +243,48 @@ async function notifyFixedOnDevice(env, device, release) {
     await addInbox(env, f, "fixed", msgFixed(release.version_name));
     await env.DB.prepare("UPDATE feedback SET status = 'fixed' WHERE id = ?1").bind(f.id).run();
   }
-  await env.DB.prepare(
-    `UPDATE clusters SET state = 'fixed', fixed_in = COALESCE(fixed_in, ?1), updated_at = ?2
-      WHERE id IN (${clusters.map((_, i) => `?${i + 3}`).join(",")}) AND state != 'fixed'`,
-  )
-    .bind(release.version_name, now(), ...clusters)
-    .run();
+  // האשכול כולו מסומן "תוקן" רק כשמכשיר שדיווח עליו התקין את התיקון: מכשיר שלא שלח משוב
+  // באשכול לא יכול לסגור אותו לכולם בדיווח "installed" אחד
+  const own = [...new Set(results.map((f) => f.cluster_id))];
+  if (own.length) {
+    await env.DB.prepare(
+      `UPDATE clusters SET state = 'fixed', fixed_in = COALESCE(fixed_in, ?1), updated_at = ?2
+        WHERE id IN (${own.map((_, i) => `?${i + 3}`).join(",")}) AND state != 'fixed'`,
+    )
+      .bind(release.version_name, now(), ...own)
+      .run();
+  }
   return results.length;
+}
+
+async function wasServed(env, deviceId, releaseId) {
+  const row = await env.DB.prepare(
+    "SELECT 1 FROM update_events WHERE device_id = ?1 AND release_id = ?2 AND event = 'served'",
+  )
+    .bind(deviceId, releaseId)
+    .first();
+  return Boolean(row);
 }
 
 /**
  * עצירה אוטומטית: אם לפחות UPDATE_PAUSE_MIN_FAILS מכשירים נכשלו, ושיעור הכשלים מעל UPDATE_PAUSE_FAIL_RATE,
  * הפריסה נעצרת. חידוש רק ידני מהדשבורד.
+ *
+ * נספרים רק מכשירים שהשרת עצמו הגיש להם את הקובץ ('served'), ושנרשמו לפני שהגרסה נוצרה. הרישום פתוח,
+ * ובלי זה שלושה "מכשירים" שנרשמו עכשיו ודיווחו failed בלי להוריד כלום היו עוצרים כל עדכון, גם עדכון אבטחה.
  */
 export async function maybeAutoPause(env, release) {
   if (release.state !== "active") return false;
   const counts = await env.DB.prepare(
-    `SELECT SUM(event = 'failed') AS failed, SUM(event = 'installed') AS installed
-       FROM update_events WHERE release_id = ?1`,
+    `SELECT SUM(e.event = 'failed') AS failed, SUM(e.event = 'installed') AS installed
+       FROM update_events e
+       JOIN devices d ON d.id = e.device_id
+      WHERE e.release_id = ?1 AND e.event IN ('failed', 'installed')
+        AND d.created_at <= ?2
+        AND EXISTS (SELECT 1 FROM update_events s
+                     WHERE s.device_id = e.device_id AND s.release_id = e.release_id AND s.event = 'served')`,
   )
-    .bind(release.id)
+    .bind(release.id, release.created_at)
     .first();
   const failed = Number(counts?.failed || 0);
   const installed = Number(counts?.installed || 0);

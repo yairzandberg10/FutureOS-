@@ -101,7 +101,8 @@ export async function handleAdmin(request, env, path) {
     return new Response(await obj.text(), { headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" } });
   }
 
-  // החלטה ידנית: deep (פותח issue ושולח "בטיפול") או wontfix
+  // החלטה ידנית: deep (אישור: פותח issue או מוסיף ל-issue הקיים את ה-label שמפעיל את Claude,
+  // ושולח "בטיפול") או wontfix. זו הדרך היחידה שבה Claude מתחיל לעבוד על משוב.
   m = /^\/admin\/clusters\/([0-9a-f-]{36})\/decision$/.exec(path);
   if (method === "POST" && m) {
     const body = await readJson(request, 256);
@@ -109,8 +110,8 @@ export async function handleAdmin(request, env, path) {
     if (!cluster) throw new HttpError(404, "not_found");
     if (body.state === "deep") {
       const summary = {};
-      await promote(env, cluster, console, summary);
-      return json({ ok: true, issue_opened: Boolean(summary.issues) });
+      await promote(env, cluster, console, summary, { approved: true });
+      return json({ ok: true, issue_opened: Boolean(summary.issues), claude_triggered: Boolean(summary.triggered) });
     }
     if (body.state === "wontfix") {
       await env.DB.prepare("UPDATE clusters SET state = 'wontfix' WHERE id = ?1").bind(m[1]).run();

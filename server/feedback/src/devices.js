@@ -1,7 +1,7 @@
 // רישום מכשיר, אימות, משוב, תיבת הודעות ומחיקת מידע.
 // כל הנתיבים כאן יחסיים ל-/v1 (המכשיר שומר את /v1 בתוך כתובת הבסיס).
 
-import { HttpError, json, readJson, now, newId, newToken, sha256Hex, timingSafeEqual, takeQuota, HOUR, DAY } from "./util.js";
+import { HttpError, json, readJson, now, newId, newToken, sha256Hex, timingSafeEqual, takeQuota, clientNet, HOUR, DAY } from "./util.js";
 import { redact } from "./redact.js";
 
 const MAX_TEXT = 4000;
@@ -18,8 +18,15 @@ function shortField(value, name) {
 
 /** POST /register  {model, build} -> {device_id, token} */
 export async function register(request, env) {
-  const ip = request.headers.get("cf-connecting-ip") || "unknown";
-  if (!(await takeQuota(env.DB, "register", ip, 20, HOUR))) throw new HttpError(429, "rate_limited");
+  // הרישום פתוח בלי אימות, ולכן כל "מכשיר" חדש הוא גם מכסה חדשה של משוב וניווט.
+  // מגבילים לפי רשת (IPv6: /64) גם בשעה וגם ביום, כדי שמחשב אחד לא ייצר צי של מכשירים מזויפים
+  const net = clientNet(request);
+  if (!(await takeQuota(env.DB, "register", net, Number(env.REGISTER_PER_HOUR || 20), HOUR))) {
+    throw new HttpError(429, "rate_limited");
+  }
+  if (!(await takeQuota(env.DB, "register_day", net, Number(env.REGISTER_PER_DAY || 40), DAY))) {
+    throw new HttpError(429, "rate_limited");
+  }
 
   const body = await readJson(request, 2048);
   const model = shortField(body.model, "model");
