@@ -47,7 +47,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.future.clock.logic.AlarmLogic
 import com.future.clock.logic.EXTRA_ALARM_ID
-import com.future.clock.logic.SNOOZE_MINUTES
 import com.future.sharednav.components.FutureButton
 import com.future.sharednav.components.FutureButtonVariant
 import com.future.sharednav.icons.FutureIcons
@@ -174,7 +173,7 @@ class AlarmRingActivity : ComponentActivity() {
                             Spacer(modifier = Modifier.height(FutureDimens.spacingMd))
                             val snoozeAllowed = AlarmLogic.canSnooze(this@AlarmRingActivity, alarmId)
                             FutureButton(
-                                text = if (snoozeAllowed) tr("נודניק · {0} דקות", SNOOZE_MINUTES) else "סיום",
+                                text = if (snoozeAllowed) tr("נודניק · {0} דקות", AlarmLogic.snoozeMinutesFor(this@AlarmRingActivity, alarmId)) else "סיום",
                                 theme = theme,
                                 onClick = ::snooze,
                                 variant = FutureButtonVariant.Secondary,
