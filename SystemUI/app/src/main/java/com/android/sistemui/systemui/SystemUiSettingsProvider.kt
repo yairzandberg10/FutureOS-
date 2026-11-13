@@ -30,19 +30,8 @@ class SystemUiSettingsProvider : ContentProvider() {
         // קריאה בלבד: המכשיר נעול (גם כשמסך הנעילה פינה מקום לשיחה). החייגן בודק
         // את זה כדי לא לחשוף יומן/אנשי קשר מתוך שיחה במכשיר נעול.
         const val COL_DEVICE_SECURED = "device_secured"
-
-        // content://…/security - מצב האבטחה למרכז האבטחה בהגדרות. קריאה בלבד, ורק
-        // דגלים ומונים: לא הקוד, לא ה-HMAC שלו ולא אורכו.
-        const val PATH_SECURITY = "security"
-        val SECURITY_COLUMNS = arrayOf(
-            "lock_enabled", "has_pin", "face_enabled", "notif_privacy",
-            "auto_lock_ms", "failed_week", "last_failed_at", "lockout_ms",
-        )
-
-        // content://…/threats - סריקת איומים (ThreatScanner). שורה ראשונה kind="_meta":
-        // target = מספר האפליקציות שנסרקו, label = 1 אם נבדקו הרשאות חלון צף/התקנה.
-        const val PATH_THREATS = "threats"
-        val THREAT_COLUMNS = arrayOf("kind", "target", "label", "severity")
+        // ה-API של מרכז האבטחה (security / threats / threat_log) נמצא רק ב-FutureUI.
+        // SystemUI מריץ רק את ThreatWatcher.
     }
 
     private lateinit var statusBarPrefs: android.content.SharedPreferences
@@ -87,33 +76,6 @@ class SystemUiSettingsProvider : ContentProvider() {
         }.apply()
         context?.contentResolver?.notifyChange(CONTENT_URI, null)
         return 1
-    }
-
-    private fun securityStatus(): Cursor {
-        val lock = com.android.sistemui.lockscreen.logic.LockSettings(context!!)
-        val log = com.android.sistemui.lockscreen.logic.SecurityLog(context!!)
-        return MatrixCursor(SECURITY_COLUMNS).apply {
-            addRow(
-                arrayOf<Any>(
-                    if (lock.enabled) 1 else 0,
-                    if (lock.pin.hasPin()) 1 else 0,
-                    if (lock.faceEnabled) 1 else 0,
-                    lock.notificationPrivacy,
-                    lock.autoLockDelayMs,
-                    log.failuresLastWeek(),
-                    log.lastFailureAt(),
-                    lock.pin.remainingLockoutMs(),
-                )
-            )
-        }
-    }
-
-    private fun threats(): Cursor {
-        val result = com.android.sistemui.security.ThreatScanner.scan(context!!, withAppOps = true)
-        return MatrixCursor(THREAT_COLUMNS).apply {
-            addRow(arrayOf<Any>("_meta", result.scannedApps.toString(), if (result.appOpsChecked) "1" else "0", 0))
-            result.findings.forEach { f -> addRow(arrayOf<Any>(f.kind.name, f.target, f.label, f.kind.severity)) }
-        }
     }
 
     private fun systemLocked(): Boolean = runCatching {
