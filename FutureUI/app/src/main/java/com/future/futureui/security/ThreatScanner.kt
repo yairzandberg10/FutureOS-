@@ -46,6 +46,8 @@ object ThreatScanner {
      */
     enum class Kind(val severity: Int, val blockable: Boolean) {
         KNOWN_MALWARE(3, false),
+        /** שילוב יכולות שאופייני לנוזקה (detail: הסיבות, מופרדות בפסיק). */
+        SUSPICIOUS(2, false),
         ACCESSIBILITY(3, true),
         DEVICE_ADMIN(2, false),
         NOTIFICATION_LISTENER(2, true),
@@ -56,7 +58,21 @@ object ThreatScanner {
         OVERLAY(1, true),
         INSTALLER(1, true),
         VPN(1, false),
+        /** הותקנה מחוץ לחנות מוכרת (detail: מי התקין). */
+        SIDELOADED(1, false),
     }
+
+    /** חנויות שמהן התקנה לא נחשבת "ממקור לא מוכר". */
+    val KNOWN_STORES = setOf(
+        "com.android.vending",            // Google Play
+        "com.google.android.feedback",
+        "com.amazon.venezia",             // Amazon
+        "com.sec.android.app.samsungapps",
+        "com.huawei.appmarket",
+        "com.xiaomi.market", "com.xiaomi.mipicks",
+        "org.fdroid.fdroid",
+        "com.future.settings",            // מנוע העדכונים של FutureOS
+    )
 
     /**
      * @param components לשירות נגישות / מאזין התראות: הרכיבים המדויקים (package/class),
@@ -158,9 +174,23 @@ object ThreatScanner {
         val db = MalwareIndicators.load(context)
         if (db == null) unchecked += "malware_db"
         val opCandidates = ArrayList<PackageInfo>()
+        // אפליקציות עם אייקון במסך הבית. בלי אייקון = מוסתרת מהמשתמש
+        val launchable: Set<String>? = runCatching {
+            pm.queryIntentActivities(
+                android.content.Intent(android.content.Intent.ACTION_MAIN).addCategory(android.content.Intent.CATEGORY_LAUNCHER), 0
+            ).map { it.activityInfo.packageName }.toSet()
+        }.getOrNull()
+        val smsByPkg = HashSet<String>()
+        val sideloadedBy = HashMap<String, String>()
         for (info in packages) {
             val pkg = info.packageName
             if (trust(pkg) != false) continue
+            installSource(pm, pkg)?.let { src ->
+                if (src !in KNOWN_STORES) {
+                    sideloadedBy[pkg] = src
+                    findings += Finding(Kind.SIDELOADED, pkg, label(pkg), detail = src)
+                }
+            }
             if (db != null) {
                 MalwareIndicators.match(db, pkg, SameSigner.sha1(info))?.let { family ->
                     findings += Finding(Kind.KNOWN_MALWARE, pkg, label(pkg), detail = family)
@@ -172,7 +202,7 @@ object ThreatScanner {
                 requested[i] in SMS_PERMISSIONS &&
                     flags != null && flags[i] and PackageInfo.REQUESTED_PERMISSION_GRANTED != 0
             }
-            if (readsSms) findings += Finding(Kind.SMS_READER, pkg, label(pkg))
+            if (readsSms) { findings += Finding(Kind.SMS_READER, pkg, label(pkg)); smsByPkg += pkg }
             if (android.Manifest.permission.SYSTEM_ALERT_WINDOW in requested ||
                 android.Manifest.permission.REQUEST_INSTALL_PACKAGES in requested
             ) opCandidates += info
@@ -185,6 +215,29 @@ object ThreatScanner {
             }
         } else if (!withAppOps) {
             appOpsChecked = false
+        }
+
+        // שילובים חשודים: כל יכולת לבד יכולה להיות לגיטימית (שעון חכם קורא התראות), אבל
+        // נוזקה צריכה כמה יחד. זה תופס גם נוזקה ששינתה שם חבילה ותעודה ולא מופיעה במאגר.
+        val admins = findings.filter { it.kind == Kind.DEVICE_ADMIN }.map { it.target }.toSet()
+        val overlays = findings.filter { it.kind == Kind.OVERLAY }.map { it.target }.toSet()
+        val installers = findings.filter { it.kind == Kind.INSTALLER }.map { it.target }.toSet()
+        for (info in packages) {
+            val pkg = info.packageName
+            if (trust(pkg) != false) continue
+            val reasons = suspicion(
+                pkg = pkg,
+                internet = info.requestedPermissions?.contains(android.Manifest.permission.INTERNET) == true,
+                accessibility = a11y.orEmpty().containsKey(pkg),
+                listener = listeners.orEmpty().containsKey(pkg),
+                sms = pkg in smsByPkg,
+                admin = pkg in admins,
+                overlay = pkg in overlays,
+                installer = pkg in installers,
+                hidden = launchable != null && pkg !in launchable,
+                sideloaded = pkg in sideloadedBy,
+            )
+            if (reasons != null) findings += Finding(Kind.SUSPICIOUS, pkg, label(pkg), detail = reasons.joinToString(","))
         }
 
         // רשת
@@ -207,6 +260,40 @@ object ThreatScanner {
             db?.size ?: 0,
         )
     }
+
+    /**
+     * ניקוד של שילובי יכולות. מחזיר את הסיבות כשהשילוב חשוד, אחרת null.
+     *
+     * "השתלטות" = שליטה במסך, קריאת התראות, קריאת SMS, ניהול מכשיר. חשוד כש:
+     *  - יש אינטרנט, לפחות שתי יכולות השתלטות, וניקוד 5 ומעלה; או
+     *  - האפליקציה הותקנה ממקור לא מוכר, מוסתרת מהמסך הראשי, ויש לה יכולת השתלטות.
+     * דוגמה שלא מסומנת: שעון חכם מ-Play שקורא התראות ו-SMS (4 נקודות, בלי שליטה במסך).
+     */
+    internal fun suspicion(
+        pkg: String, internet: Boolean, accessibility: Boolean, listener: Boolean, sms: Boolean,
+        admin: Boolean, overlay: Boolean, installer: Boolean, hidden: Boolean, sideloaded: Boolean,
+    ): List<String>? {
+        val reasons = ArrayList<String>()
+        var score = 0
+        if (accessibility) { score += 3; reasons += "accessibility" }
+        if (listener) { score += 2; reasons += "notifications" }
+        if (sms) { score += 2; reasons += "sms" }
+        if (admin) { score += 2; reasons += "admin" }
+        if (overlay) { score += 1; reasons += "overlay" }
+        if (installer) { score += 1; reasons += "installer" }
+        if (hidden) { score += 2; reasons += "hidden" }
+        if (sideloaded) { score += 2; reasons += "sideloaded" }
+        val takeover = listOf(accessibility, listener, sms, admin).count { it }
+        val combo = internet && takeover >= 2 && score >= 5
+        val hiddenSideload = sideloaded && hidden && takeover >= 1
+        return if (combo || hiddenSideload) reasons else null
+    }
+
+    /** מי התקין את האפליקציה. null = לא ידוע (לא נחשב "ממקור לא מוכר"). */
+    private fun installSource(pm: PackageManager, pkg: String): String? = runCatching {
+        val info = pm.getInstallSourceInfo(pkg)
+        info.initiatingPackageName ?: info.installingPackageName ?: "unknown"
+    }.getOrNull()
 
     /** מחזיר false אם חלק מהאפליקציות לא נבדקו. */
     private fun checkAppOps(context: Context, candidates: List<PackageInfo>, add: (Kind, String) -> Unit): Boolean {

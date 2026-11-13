@@ -4,6 +4,47 @@ This repo has no carried-over git history (see root [README](README.md)), so thi
 
 ## Unreleased
 
+### security-center: sideload checks, heuristics, signed list updates, tamper-evident state, audit log (2026-11-13)
+
+Same branch. Root and network updates are QA-only for now; the path to
+AOSP system APIs is in [docs/security-protection.md](docs/security-protection.md).
+
+1. **Sideloaded installs.** An app installed by anything other than a known
+   store is a `SIDELOADED` finding with an alert. If it also matches the
+   malware list, or is a new suspicious combination, it is suspended
+   (`pm suspend`) right after install, before its first launch, until the
+   user approves it. Checking *before* the install finishes needs a package
+   verification agent on AOSP; not built yet.
+2. **Suspicious combinations** (`SUSPICIOUS`). Scored in
+   `ThreatScanner.suspicion`: accessibility 3, notification listener / SMS /
+   device admin / no launcher icon / sideloaded 2, overlay / install apps 1.
+   Flagged with INTERNET + two takeover capabilities + score 5, or sideloaded
+   + hidden + one takeover capability. Blocking one means suspending the app.
+3. **Signed malware-list updates.** `security/malware-db/update.sh` rebuilds
+   `stalkerware.tsv` from Echap's `ioc.yaml` and signs it with ECDSA P-256 /
+   SHA-256 (Android 12 has no platform Ed25519). The private key stays at
+   `~/.futureos/malware-db-signing-key.pem`, outside the repo. Settings
+   downloads the list from `main` once a day (and on demand); FutureUI checks
+   the signature, that the date is newer, and the size, and re-verifies on
+   every load.
+4. **Tamper-evident guard state.** The seen / baseline / allowed / blocked
+   sets and the auto-block switch are HMAC-SHA256 signed with a Keystore key.
+   A mismatch wipes allowed and baseline (fail closed), logs `TAMPER` and
+   alerts. `/data/system` was not used: FutureUI is not a system app here.
+5. **Encrypted audit log** (`SecurityAudit`, AES-256-GCM Keystore key):
+   blocks, holds, restores, approvals, new findings, sideloads, list updates
+   and rejections, with the previous state. Shown in Settings > Security >
+   Security history. A file that fails authentication starts a new log
+   (`LOG_RESET`).
+6. **Caller checks everywhere.** New `SharedKeypadNav/.../CallerCheck.kt`.
+   `threats`, `threat_log`, `security` and every `call()` accept only
+   `com.future.settings` (FutureOS-signed), the provider's own process or
+   root. The status-bar settings, `ThemeProvider` and the keyboard provider
+   accept any FutureOS-signed app. Apps not rebuilt since `SameSigner` keep
+   their old checks until their next build; they do not get the security API.
+7. SystemUI gets the same security package, the audit log and `CallerCheck`
+   (it hosts only the watcher, not the threats API).
+
 ### security-center: auto-blocking, known-malware list, real signature checks (2026-11-13)
 
 Same branch. Closes the gaps listed at the end of the previous entry.

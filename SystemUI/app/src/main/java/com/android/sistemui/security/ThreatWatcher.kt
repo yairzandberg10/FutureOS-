@@ -112,8 +112,9 @@ class ThreatWatcher(context: Context) {
     private fun check(withAppOps: Boolean) {
         val result = runCatching { ThreatScanner.scan(app, withAppOps) }
             .getOrElse { Log.w(TAG, "scan failed", it); return }
-        val outcome = runCatching { ThreatGuard.evaluate(app, result, withAppOps) }
+        val outcome = runCatching { ThreatGuard.evaluate(app, result) }
             .getOrElse { Log.w(TAG, "evaluate failed", it); return }
+        if (outcome.tampered) alertTamper()
         when {
             outcome.baseline.isNotEmpty() -> alertBaseline(outcome.baseline)
             outcome.fresh.isNotEmpty() || outcome.blocked.isNotEmpty() -> alert(outcome)
@@ -133,12 +134,28 @@ class ThreatWatcher(context: Context) {
             all.size == 1 -> "התראת אבטחה"
             else -> "${all.size} התראות אבטחה"
         }
-        val text = describe(first) + if (first.key in blockedKeys) " · נחסם" else ""
-        val more = all.drop(1).take(4).joinToString("\n") { describe(it) + if (it.key in blockedKeys) " · נחסם" else "" }
+        fun mark(f: ThreatScanner.Finding) = when {
+            f.key !in blockedKeys -> ""
+            f.kind in ThreatBlocker.HOLD_KINDS -> " · הושהתה עד שתאשר"
+            else -> " · נחסם"
+        }
+        val text = describe(first) + mark(first)
+        val more = all.drop(1).take(4).joinToString("\n") { describe(it) + mark(it) }
         val footer = if (blockedCount > 0) "אם זה היה אתה, אפשר לבטל את החסימה במרכז האבטחה." else "פתח את מרכז האבטחה כדי לבדוק."
         notify(title, text, listOf(text, more, footer).filter { it.isNotBlank() }.joinToString("\n"))
         // FutureUI לא מקפיצה באנר להתראות של עצמה - אז על חסימה או ממצא חמור גם הודעה קצרה על המסך
         if (blockedCount > 0 || first.kind.severity >= 2) toast("$title: $text")
+    }
+
+    private fun alertTamper() {
+        val title = "זוהה שינוי בהגדרות ההגנה"
+        notify(
+            title,
+            "מישהו שינה את רשימת המהימנים מחוץ למערכת",
+            "רשימת המהימנים ונקודת הפתיחה נמחקו, וההגנה בנתה אותן מחדש. מה שהיה מאושר יופיע שוב כממצא. פרטים ביומן האבטחה.",
+            TAMPER_NOTIFICATION_ID,
+        )
+        toast(title)
     }
 
     private fun alertBaseline(pending: List<ThreatScanner.Finding>) {
@@ -152,7 +169,7 @@ class ThreatWatcher(context: Context) {
         toast(title)
     }
 
-    private fun notify(title: String, text: String, big: String) {
+    private fun notify(title: String, text: String, big: String, id: Int = NOTIFICATION_ID) {
         runCatching {
             val nm = app.getSystemService(NotificationManager::class.java) ?: return@runCatching
             nm.createNotificationChannel(
@@ -165,7 +182,7 @@ class ThreatWatcher(context: Context) {
                 app, NOTIFICATION_ID, open, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
             )
             nm.notify(
-                NOTIFICATION_ID,
+                id,
                 Notification.Builder(app, CHANNEL)
                     .setSmallIcon(android.R.drawable.stat_sys_warning)
                     .setContentTitle(title)
@@ -197,12 +214,15 @@ class ThreatWatcher(context: Context) {
         ThreatScanner.Kind.OVERLAY -> "${f.label} מציגה חלונות מעל אפליקציות"
         ThreatScanner.Kind.INSTALLER -> "${f.label} יכולה להתקין אפליקציות"
         ThreatScanner.Kind.VPN -> "VPN הופעל"
+        ThreatScanner.Kind.SIDELOADED -> "${f.label} הותקנה ממקור לא מוכר"
+        ThreatScanner.Kind.SUSPICIOUS -> "${f.label} משלבת יכולות שאופייניות לנוזקה"
     }
 
     companion object {
         private const val TAG = "ThreatWatcher"
         private const val CHANNEL = "futureos_security_alerts"
         private const val NOTIFICATION_ID = 7301
+        private const val TAMPER_NOTIFICATION_ID = 7302
         private const val DEBOUNCE_MS = 2_000L
         private const val STARTUP_DELAY_MS = 15_000L
         const val SETTINGS_PACKAGE = "com.future.settings"

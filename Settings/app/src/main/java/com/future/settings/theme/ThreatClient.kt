@@ -16,6 +16,8 @@ data class ThreatReport(
     val autoBlock: Boolean,
     val dbDate: String,
     val dbSize: Int,
+    /** true = המאגר עודכן מהרשת (חתום), false = העותק שארוז בממשק המערכת. */
+    val dbFromUpdate: Boolean,
     /** מקורות שלא נקראו בסריקה - "לא נבדק", לא "נקי". */
     val unchecked: List<String>,
 ) {
@@ -44,13 +46,15 @@ data class Threat(
         const val OPEN = "open"
         const val ALLOWED = "allowed"
         const val BLOCKED = "blocked"
-        private val BLOCKABLE = setOf("ACCESSIBILITY", "NOTIFICATION_LISTENER", "PROXY", "SMS_READER", "OVERLAY", "INSTALLER")
+        // SUSPICIOUS: "חסימה" = השהיית האפליקציה עד שמאשרים
+        private val BLOCKABLE = setOf("ACCESSIBILITY", "NOTIFICATION_LISTENER", "PROXY", "SMS_READER", "OVERLAY", "INSTALLER", "SUSPICIOUS")
     }
 }
 
 object ThreatClient {
     private val BASE = Uri.parse("content://${SystemUiTarget.SETTINGS_AUTHORITY}")
     private val URI = Uri.parse("content://${SystemUiTarget.SETTINGS_AUTHORITY}/threats")
+    private val LOG_URI = Uri.parse("content://${SystemUiTarget.SETTINGS_AUTHORITY}/threat_log")
 
     private fun trusted(context: Context) =
         com.future.sharednav.systemui.TrustedProviders.isTrusted(context, SystemUiTarget.SETTINGS_AUTHORITY)
@@ -74,6 +78,7 @@ object ThreatClient {
                 var autoBlock = false
                 var dbDate = ""
                 var dbSize = 0
+                var dbFromUpdate = false
                 val unchecked = ArrayList<String>()
                 val list = ArrayList<Threat>()
                 while (c.moveToNext()) {
@@ -87,7 +92,11 @@ object ThreatClient {
                             appOps = label == "1"
                         }
                         "_policy" -> autoBlock = label == "1"
-                        "_db" -> { dbDate = target; dbSize = label.toIntOrNull() ?: 0 }
+                        "_db" -> {
+                            dbDate = target
+                            dbSize = label.toIntOrNull() ?: 0
+                            dbFromUpdate = detailCol >= 0 && c.getString(detailCol) == "update"
+                        }
                         "_unchecked" -> unchecked += target
                         else -> list += Threat(
                             kind, target, label, c.getInt(sevCol),
@@ -98,7 +107,7 @@ object ThreatClient {
                 }
                 // FutureUI ישנה (בלי עמודת status) לא יודעת על מאגר נוזקות - זה "לא נבדק"
                 if (statusCol < 0) unchecked += "malware_db"
-                if (sawMeta) ThreatReport(list, scanned, appOps, autoBlock, dbDate, dbSize, unchecked) else null
+                if (sawMeta) ThreatReport(list, scanned, appOps, autoBlock, dbDate, dbSize, dbFromUpdate, unchecked) else null
             }
         } catch (e: Exception) {
             android.util.Log.w("ThreatClient", "threat scan failed", e)
@@ -110,6 +119,40 @@ object ThreatClient {
     fun allow(context: Context, key: String): Boolean = call(context, "threat_allow", key)
     fun setAutoBlock(context: Context, on: Boolean): Boolean = call(context, "threat_autoblock", if (on) "1" else "0")
 
+    /** מעביר מאגר שהורד ל-FutureUI, שבודקת חתימה ותאריך בעצמה. */
+    fun updateDb(context: Context, tsv: ByteArray, sig: String): MalwareDbUpdateJob.Result {
+        if (!trusted(context)) return MalwareDbUpdateJob.Result(false, "unavailable")
+        return try {
+            val extras = android.os.Bundle().apply { putByteArray("tsv", tsv); putString("sig", sig) }
+            val out = context.contentResolver.call(BASE, "threat_db_update", null, extras)
+                ?: return MalwareDbUpdateJob.Result(false, "unavailable")
+            MalwareDbUpdateJob.Result(out.getBoolean("ok"), out.getString("reason") ?: "", out.getString("date") ?: "")
+        } catch (e: Exception) {
+            android.util.Log.w("ThreatClient", "db update failed", e)
+            MalwareDbUpdateJob.Result(false, "unavailable")
+        }
+    }
+
+    /** יומן האבטחה, החדש קודם. null = לא זמין. */
+    fun log(context: Context): List<SecurityEvent>? {
+        if (!trusted(context)) return null
+        return try {
+            context.contentResolver.query(LOG_URI, null, null, null, null)?.use { c ->
+                val t = c.getColumnIndex("time"); val y = c.getColumnIndex("type"); val k = c.getColumnIndex("kind")
+                val g = c.getColumnIndex("target"); val l = c.getColumnIndex("label"); val d = c.getColumnIndex("detail")
+                if (minOf(t, y, k, g, l, d) < 0) return@use null
+                val list = ArrayList<SecurityEvent>()
+                while (c.moveToNext()) {
+                    list += SecurityEvent(c.getLong(t), c.getString(y) ?: "", c.getString(k) ?: "", c.getString(g) ?: "", c.getString(l) ?: "", c.getString(d) ?: "")
+                }
+                list
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("ThreatClient", "log failed", e)
+            null
+        }
+    }
+
     private fun call(context: Context, method: String, arg: String): Boolean {
         if (!trusted(context)) return false
         return try {
@@ -120,3 +163,13 @@ object ThreatClient {
         }
     }
 }
+
+/** רשומה ביומן האבטחה. type: ראו SecurityAudit.Type ב-FutureUI. */
+data class SecurityEvent(
+    val time: Long,
+    val type: String,
+    val kind: String,
+    val target: String,
+    val label: String,
+    val detail: String,
+)

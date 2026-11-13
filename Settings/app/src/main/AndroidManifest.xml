@@ -156,6 +156,12 @@
             </intent-filter>
         </receiver>
 
+        <!-- עדכון יומי של מאגר הנוזקות החתום (theme/MalwareDbUpdateJob.kt). הבדיקה עצמה ב-FutureUI -->
+        <service
+            android:name=".theme.MalwareDbUpdateJob"
+            android:exported="false"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
+
         <!-- סנכרון רקע: משוב בתור, תשובות, בדיקת עדכונים (futureserver/FutureServerSyncJob.kt) -->
         <service
             android:name=".futureserver.FutureServerSyncJob"

@@ -41,6 +41,7 @@ class ThemeProvider : ContentProvider() {
         uri: Uri, projection: Array<out String>?, selection: String?,
         selectionArgs: Array<out String>?, sortOrder: String?
     ): Cursor {
+        com.future.sharednav.security.CallerCheck.enforce(context!!)
         val cursor = MatrixCursor(arrayOf(COL_IS_DARK_MODE, COL_PRIMARY_COLOR, COL_FONT_SIZE_MULTIPLIER))
         val isDark = if (prefs.getBoolean(COL_IS_DARK_MODE, true)) 1 else 0
         val color = prefs.getInt(COL_PRIMARY_COLOR, android.graphics.Color.WHITE)
@@ -50,6 +51,7 @@ class ThemeProvider : ContentProvider() {
     }
 
     override fun update(uri: Uri, values: ContentValues?, selection: String?, selectionArgs: Array<out String>?): Int {
+        com.future.sharednav.security.CallerCheck.enforce(context!!)
         if (values == null) return 0
         val editor = prefs.edit()
         if (values.containsKey(COL_IS_DARK_MODE)) {

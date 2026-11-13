@@ -43,6 +43,8 @@ class MainActivity : ComponentActivity() {
 
         // סנכרון רקע מול שרת FutureOS (משוב, תשובות, בדיקת עדכונים). לא עושה כלום בלי כתובת שרת
         com.future.settings.futureserver.FutureServerSyncJob.schedule(applicationContext)
+        // מאגר הנוזקות: הורדה יומית של הגרסה החתומה מהריפו (לא תלוי בשרת FutureOS)
+        com.future.settings.theme.MalwareDbUpdateJob.schedule(applicationContext)
 
         // נפתח מ"שלח משוב" של אפליקציה אחרת, ממרכז הבקרה או מהתראה: מתחילים ישר במסך המשוב.
         // ה-extras לא אמינים (ה-Activity חשופה): החבילה נבדקת מול תבנית, ו-crashId רק בוחר דוח

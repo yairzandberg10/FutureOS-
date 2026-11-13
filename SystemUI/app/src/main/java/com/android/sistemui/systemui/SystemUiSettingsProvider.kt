@@ -33,15 +33,8 @@ class SystemUiSettingsProvider : ContentProvider() {
         return true
     }
 
-    /** כמו ב-FutureUI: הרשאת החתימה לא נאכפת נכון ב-ROM (ראו SameSigner), אז בודקים כאן. */
-    private fun enforceCaller() {
-        val uid = android.os.Binder.getCallingUid()
-        if (uid == android.os.Process.myUid() || uid == 0) return
-        val token = android.os.Binder.clearCallingIdentity()
-        val ok = try { com.future.sharednav.security.SameSigner.matchesUid(context!!, uid) }
-        finally { android.os.Binder.restoreCallingIdentity(token) }
-        if (!ok) throw SecurityException("not a FutureOS app")
-    }
+    /** כמו ב-FutureUI: הרשאת החתימה לא נאכפת נכון ב-ROM (ראו SameSigner), אז בודקים כאן (CallerCheck). */
+    private fun enforceCaller() = com.future.sharednav.security.CallerCheck.enforce(context!!)
 
     override fun query(uri: Uri, projection: Array<out String>?, selection: String?, selectionArgs: Array<out String>?, sortOrder: String?): Cursor {
         enforceCaller()

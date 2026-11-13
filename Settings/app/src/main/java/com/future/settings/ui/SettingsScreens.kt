@@ -115,6 +115,7 @@ sealed class Screen(val route: String) {
     object Language : Screen("language")
     object KeyboardLanguages : Screen("keyboard_languages")
     object Security : Screen("security")
+    object SecurityHistory : Screen("security_history")
     object Apps : Screen("apps")
     object AppDetail : Screen("app_detail/{pkg}") {
         fun route(pkg: String) = "app_detail/$pkg"
@@ -255,6 +256,7 @@ fun SettingsApp(
             composable(Screen.Language.route) { LanguageScreen(navController, theme, viewModel) }
             composable(Screen.KeyboardLanguages.route) { KeyboardLanguagesScreen(navController, theme) }
             composable(Screen.Security.route) { SecurityScreen(navController, theme) }
+            composable(Screen.SecurityHistory.route) { SecurityHistoryScreen(navController, theme) }
             composable(Screen.Apps.route) { AppsScreen(navController, theme) }
             composable(Screen.AppDetail.route) { backStackEntry ->
                 val pkg = backStackEntry.arguments?.getString("pkg") ?: ""
@@ -1646,6 +1648,7 @@ fun SecurityScreen(navController: NavController, theme: ThemeConfig) {
     var scanTick by remember { mutableIntStateOf(0) }
     // פעולת חסימה/שחרור רצה (root דרך FutureUI) - לא מתחילים עוד אחת במקביל
     var acting by remember { mutableStateOf(false) }
+    var dbUpdating by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
     DisposableEffect(lifecycle) {
@@ -1774,7 +1777,10 @@ fun SecurityScreen(navController: NavController, theme: ThemeConfig) {
                                 }
                                 val parts = buildList {
                                     add("נסרקו ${report.scannedApps} אפליקציות")
-                                    if (report.dbSize > 0) add("מאגר נוזקות מ-${formatPatch(report.dbDate)} (${report.dbSize} סימנים)")
+                                    if (report.dbSize > 0) add(
+                                        "מאגר נוזקות מ-${formatPatch(report.dbDate)} (${report.dbSize} סימנים" +
+                                            (if (report.dbFromUpdate) ", עודכן מהרשת)" else ")")
+                                    )
                                     if (report.unchecked.isNotEmpty()) add("לא נבדק: " + report.unchecked.joinToString(", ") { uncheckedName(it) })
                                     if (!report.appOpsChecked) add("הרשאות חלון צף והתקנה לא נבדקו (אין root)")
                                 }
@@ -1790,10 +1796,13 @@ fun SecurityScreen(navController: NavController, theme: ThemeConfig) {
                                     SettingDivider(theme)
                                     val (baseTitle, baseSummary, icon) = describeThreat(threat)
                                     val (rowTitle, rowSummary) = when {
+                                        threat.status == com.future.settings.theme.Threat.BLOCKED && (threat.kind == "KNOWN_MALWARE" || threat.kind == "SUSPICIOUS") ->
+                                            "הושהתה: $baseTitle" to "אי אפשר לפתוח אותה עד שתחליט. אם אתה מכיר אותה ובטוח בה, לחץ כדי לבטל את ההשהיה ולסמן כמהימנה"
                                         threat.status == com.future.settings.theme.Threat.BLOCKED ->
                                             "נחסם: $baseTitle" to "היכולת בוטלה, האפליקציה עצמה לא נמחקה. אם זה היית אתה, לחץ כדי להחזיר ולסמן כמהימן"
                                         threat.status == com.future.settings.theme.Threat.ALLOWED ->
                                             "אושר: $baseTitle" to "סימנת את זה כמהימן, ולכן זה לא מוריד את רמת האבטחה. לחץ כדי לחסום"
+                                        threat.kind == "SUSPICIOUS" -> baseTitle to "$baseSummary. לחץ כדי להשהות אותה"
                                         threat.blockable -> baseTitle to "$baseSummary. לחץ כדי לחסום"
                                         else -> baseTitle to baseSummary
                                     }
@@ -1804,7 +1813,8 @@ fun SecurityScreen(navController: NavController, theme: ThemeConfig) {
                                         theme,
                                         onClick = {
                                             if (acting) return@SettingItem
-                                            if (!threat.blockable) {
+                                            // מה שנחסם או הושהה תמיד אפשר להחזיר; השאר פותח את המסך המתאים
+                                            if (!threat.blockable && threat.status != com.future.settings.theme.Threat.BLOCKED) {
                                                 fixThreat(context, threat)
                                                 return@SettingItem
                                             }
@@ -1870,6 +1880,43 @@ fun SecurityScreen(navController: NavController, theme: ThemeConfig) {
                             theme,
                             showChevron = false
                         ) { if (!scanning) scanTick++ }
+                        SettingDivider(theme)
+                        SettingItem(
+                            if (dbUpdating) "מעדכן את מאגר הנוזקות…" else "עדכן את מאגר הנוזקות",
+                            "מוריד את הגרסה החתומה של FutureOS. ממשק המערכת בודק את החתימה לפני שהוא טוען אותה",
+                            FutureIcons.Download,
+                            theme,
+                            showChevron = false
+                        ) {
+                            if (!dbUpdating) {
+                                dbUpdating = true
+                                scope.launch {
+                                    val r = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                                        com.future.settings.theme.MalwareDbUpdateJob.update(context)
+                                    }
+                                    android.widget.Toast.makeText(
+                                        context,
+                                        when {
+                                            r.ok -> "המאגר עודכן (${formatPatch(r.date)})"
+                                            r.reason == "not_newer" -> "המאגר כבר מעודכן"
+                                            r.reason == "download" -> "אין חיבור לשרת העדכונים"
+                                            r.reason == "signature" -> "העדכון נדחה: החתימה לא תקינה"
+                                            else -> "לא ניתן לעדכן את המאגר כרגע"
+                                        },
+                                        android.widget.Toast.LENGTH_SHORT
+                                    ).show()
+                                    dbUpdating = false
+                                    if (r.ok) scanTick++
+                                }
+                            }
+                        }
+                        SettingDivider(theme)
+                        SettingItem(
+                            "היסטוריית אבטחה",
+                            "מה נחסם, מתי, ומה היה המצב לפני כן",
+                            FutureIcons.History,
+                            theme
+                        ) { navController.navigate(Screen.SecurityHistory.route) }
                     }
                 }
 
@@ -1992,8 +2039,19 @@ private fun describeThreat(t: com.future.settings.theme.Threat): Triple<String, 
         "KNOWN_MALWARE" -> Triple(
             "$name היא נוזקת ריגול ידועה",
             "חמור: מופיעה במאגר הנוזקות" + (if (t.detail.isNotBlank()) " (${t.detail})" else "") +
-                ". היכולות המסוכנות שלה נחסמות. לחץ כדי לפתוח את האפליקציה ולהסיר אותה",
+                ". לחץ כדי לפתוח את האפליקציה ולהסיר אותה",
             FutureIcons.Error
+        )
+        "SUSPICIOUS" -> Triple(
+            "$name משלבת יכולות של נוזקה",
+            prefix + t.detail.split(',').filter { it.isNotBlank() }.joinToString(", ") { reasonName(it) },
+            FutureIcons.PrivacyTip
+        )
+        "SIDELOADED" -> Triple(
+            "$name הותקנה ממקור לא מוכר",
+            prefix + "לא מחנות אפליקציות מוכרת" + (if (t.detail.isNotBlank() && t.detail != "unknown") " (הותקנה דרך ${t.detail})" else "") +
+                ". אם לא אתה התקנת אותה, הסר אותה",
+            FutureIcons.Download
         )
         "ACCESSIBILITY" -> Triple(
             "$name שולטת במסך",
@@ -2081,6 +2139,18 @@ private fun fixThreat(context: android.content.Context, t: com.future.settings.t
 }
 
 /** האם האפליקציה חתומה במפתח ה-debug של Android Studio (אין keystore.properties). */
+private fun reasonName(reason: String): String = when (reason) {
+    "accessibility" -> "שולטת במסך"
+    "notifications" -> "קוראת התראות"
+    "sms" -> "קוראת SMS"
+    "admin" -> "מנהלת מכשיר"
+    "overlay" -> "חלון מעל אפליקציות"
+    "installer" -> "מתקינה אפליקציות"
+    "hidden" -> "בלי אייקון במסך הבית"
+    "sideloaded" -> "ממקור לא מוכר"
+    else -> reason
+}
+
 private fun uncheckedName(source: String): String = when (source) {
     "accessibility" -> "שירותי נגישות"
     "notifications" -> "גישה להתראות"

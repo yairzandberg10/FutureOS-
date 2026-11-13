@@ -14,7 +14,12 @@ import org.json.JSONObject
 /**
  * חוסם יכולת מסוכנת אחת של אפליקציה זרה, ויודע להחזיר אותה בדיוק כמו שהייתה.
  *
- * חוסמים את היכולת ולא את האפליקציה: לא מסירים, לא משביתים ולא נוגעים בנתונים שלה.
+ * חוסמים את היכולת ולא את האפליקציה: לא מסירים ולא נוגעים בנתונים שלה. היוצא מן הכלל:
+ * נוזקה ידועה או שילוב חשוד - האפליקציה מושהית (pm suspend) עד שהמשתמש מאשר; גם זה הפיך.
+ *
+ * הפקודות רצות דרך root רק במכשיר ה-QA. ב-AOSP אותן פעולות עוברות ל-API של המערכת
+ * (WRITE_SECURE_SETTINGS, MANAGE_APP_OPS_MODES, REVOKE_RUNTIME_PERMISSIONS, SUSPEND_APPS),
+ * ראו docs/security-protection.md.
  * כל חסימה נשמרת עם מה שצריך כדי לבטל אותה (הרכיבים המדויקים, ההרשאות שהיו, הערך הקודם).
  *
  * גבולות קשיחים, גם אם מישהו יבקש אחרת:
@@ -61,8 +66,16 @@ object ThreatBlocker {
         }
     }
 
+    /** סוגים שבהם "חסימה" = השהיית האפליקציה כולה (pm suspend): אי אפשר לפתוח אותה עד שמאשרים. */
+    val HOLD_KINDS = setOf(ThreatScanner.Kind.KNOWN_MALWARE, ThreatScanner.Kind.SUSPICIOUS)
+
     /** null = לא נחסם (לא ניתן לחסום, אפליקציה מוגנת, אין root, או שהפקודה נכשלה). */
     fun block(context: Context, f: ThreatScanner.Finding): Entry? {
+        if (f.kind in HOLD_KINDS) {
+            if (!foreignPackage(context, f.target)) return null
+            if (!root(listOf("pm suspend --user 0 ${RootShell.quote(f.target)}"))) return null
+            return Entry(f.kind, f.target, f.label, emptyList(), emptyList(), System.currentTimeMillis())
+        }
         if (!f.kind.blockable) return null
         val cr = context.contentResolver
         val now = System.currentTimeMillis()
@@ -114,6 +127,10 @@ object ThreatBlocker {
     /** מחזיר את מה שנחסם. false = לא הצליח (אין root, או שהאפליקציה כבר לא מותקנת). */
     fun restore(context: Context, e: Entry): Boolean {
         val installed = runCatching { context.packageManager.getApplicationInfo(e.target, 0) }.isSuccess
+        if (e.kind in HOLD_KINDS) {
+            if (!installed || !foreignPackage(context, e.target)) return false
+            return root(listOf("pm unsuspend --user 0 ${RootShell.quote(e.target)}"))
+        }
         return when (e.kind) {
             ThreatScanner.Kind.ACCESSIBILITY -> {
                 if (!installed || !foreignPackage(context, e.target)) return false

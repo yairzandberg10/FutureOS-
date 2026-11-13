@@ -42,6 +42,8 @@ class KeyboardSettingsProvider : ContentProvider() {
         uri: Uri, projection: Array<out String>?, selection: String?,
         selectionArgs: Array<out String>?, sortOrder: String?,
     ): Cursor {
+        // בנוסף להרשאת החתימה: רק אפליקציה בחתימה של FutureOS (ראו CallerCheck)
+        com.future.sharednav.security.CallerCheck.enforce(context!!)
         if (uri.lastPathSegment == "languages") {
             val enabled = KeyboardLanguages.enabled(prefs)
             val predict = KeyboardLanguages.predicted(prefs)
@@ -57,6 +59,8 @@ class KeyboardSettingsProvider : ContentProvider() {
     }
 
     override fun update(uri: Uri, values: ContentValues?, selection: String?, selectionArgs: Array<out String>?): Int {
+        // בנוסף להרשאת החתימה: רק אפליקציה בחתימה של FutureOS (ראו CallerCheck)
+        com.future.sharednav.security.CallerCheck.enforce(context!!)
         if (values == null) return 0
         if (uri.lastPathSegment == "languages") {
             val lang = values.getAsString(COL_CODE)?.let { code -> T9Engine.Language.entries.firstOrNull { it.name == code } } ?: return 0
