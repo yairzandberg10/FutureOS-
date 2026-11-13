@@ -23,6 +23,7 @@ object ThreatGuard {
     private const val KEY_AUTO = "auto_block"
     private const val KEY_BASELINE_READY = "baseline_ready_v2"
     private const val KEY_BASELINE = "baseline"
+    private const val KEY_BASELINE_APPOPS = "baseline_appops_v2"
     private const val KEY_ALLOWED = "allowed"
     private const val KEY_BLOCKED = "blocked_json"
 
@@ -60,11 +61,14 @@ object ThreatGuard {
     /** השומר ברקע: מחליט מה לחסום אחרי כל סריקה. */
     fun evaluate(context: Context, result: ThreatScanner.Result, withAppOps: Boolean): Outcome = synchronized(lock) {
         val p = prefs(context)
+        // סריקה חלקית (מקור שלא נקרא) לא משנה כלום: אחרת ממצא שלא נקרא "נעלם", יוצא מנקודת
+        // הפתיחה, ובסריקה המלאה הבאה נחסם כאילו הוא חדש - למשל SMS של אפליקציית ההודעות
+        if (result.unchecked.isNotEmpty()) return@synchronized Outcome(emptyList(), emptyList(), emptyList())
         val allowed = allowed(context)
         val current = result.findings.map { it.key }.toSet()
         val prevSeen = p.getStringSet(KEY_SEEN, emptySet()).orEmpty().toSet()
-        // בסריקה בלי root חלון צף/התקנה לא נבדקים - הם לא "נעלמו"
-        val carry = if (withAppOps) emptySet() else prevSeen.filter { kindOf(it) in APP_OPS_KINDS }.toSet()
+        // כשחלון צף/התקנה לא נבדקו בפועל (סריקה בלי root, או ש-su נכשל) - הם לא "נעלמו"
+        val carry = if (result.appOpsChecked) emptySet() else prevSeen.filter { kindOf(it) in APP_OPS_KINDS }.toSet()
         val seen = current + carry
 
         if (!p.getBoolean(KEY_BASELINE_READY, false)) {
@@ -72,13 +76,24 @@ object ThreatGuard {
                 .putStringSet(KEY_BASELINE, current)
                 .putStringSet(KEY_SEEN, seen)
                 .putBoolean(KEY_BASELINE_READY, true)
+                .putBoolean(KEY_BASELINE_APPOPS, result.appOpsChecked)
                 .commit()
             return@synchronized Outcome(emptyList(), emptyList(), result.findings.filter { it.key !in allowed })
         }
 
+        var baselineAll = p.getStringSet(KEY_BASELINE, emptySet()).orEmpty().toSet()
+        var prevSeenAll = prevSeen
+        // נקודת הפתיחה נקבעה בלי בדיקת חלון צף/התקנה: הבדיקה המלאה הראשונה משלימה אותה ולא חוסמת
+        if (!p.getBoolean(KEY_BASELINE_APPOPS, false) && result.appOpsChecked) {
+            val appOps = current.filter { kindOf(it) in APP_OPS_KINDS }
+            baselineAll = baselineAll + appOps
+            prevSeenAll = prevSeenAll + appOps
+            p.edit().putBoolean(KEY_BASELINE_APPOPS, true).commit()
+        }
+
         // ממצא מנקודת הפתיחה שנעלם וחזר - נחשב חדש
-        val baseline = p.getStringSet(KEY_BASELINE, emptySet()).orEmpty().filter { it in seen }.toSet()
-        val fresh = result.findings.filter { it.key !in prevSeen && it.key !in allowed }
+        val baseline = baselineAll.filter { it in seen }.toSet()
+        val fresh = result.findings.filter { it.key !in prevSeenAll && it.key !in allowed }
         val malware = result.findings.filter { it.kind == ThreatScanner.Kind.KNOWN_MALWARE }.map { it.target }.toSet()
         val blockedMap = readBlocked(context).toMutableMap()
         val blockedNow = ArrayList<ThreatScanner.Finding>()

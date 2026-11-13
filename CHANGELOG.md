@@ -21,10 +21,14 @@ Same branch. Closes the gaps listed at the end of the previous entry.
    - Every `checkSignatures` call is replaced: `TrustedProviders`,
      `FutureShare`, Keyboard, Messages (dictation, send to Notes), Translate
      and `ThreatScanner`.
-   - The system's signature-permission check uses the same broken comparison.
-     So the FutureUI and SystemUI settings providers now check the caller
+   - It is not verified whether the system's signature-permission check uses
+     the same broken comparison; the cause of the always-match is unknown. So
+     the FutureUI and SystemUI settings providers now also check the caller
      themselves on query, update and call. They allow only a FutureOS-signed
-     app, the provider's own process, or root.
+     app, the provider's own process, or root. `ThemeProvider` and the
+     keyboard's provider don't have this guard yet.
+   - Only FutureUI, Settings, SystemUI, Keyboard, Messages and Translate were
+     rebuilt. The other apps keep the old check until their next build.
 2. **The scan fails closed.** A source that can't be read is reported as "not
    checked" in the `_unchecked` rows and in Settings. It is not reported as
    clean. The sources are accessibility, notification access, device admins,
@@ -51,7 +55,9 @@ Same branch. Closes the gaps listed at the end of the previous entry.
    - Not auto-blockable, alert only: device admin, user CA, VPN, ADB over
      Wi-Fi and USB debugging.
    - Baseline: whatever was already active the first time the new version ran
-     is not blocked. Here that was 13 findings. They wait for the user to
+     is not blocked. Here that was 13 findings. A scan with a source it could not
+     read changes nothing (no pruning, no blocking), so a failed read can't
+     turn an existing grant into a "new" one. They wait for the user to
      decide. A known-malware app is blocked even if it was in the baseline.
    - In Settings, clicking a finding blocks it. Clicking a blocked finding
      restores it and marks it trusted. Trusted findings don't lower the
