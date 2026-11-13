@@ -47,6 +47,13 @@ class HomeViewModel(
     private val _searching = MutableStateFlow(false)
     val searching = _searching.asStateFlow()
 
+    /** true כשהחיפוש האחרון נכשל (אין רשת), כדי להבדיל מ"לא נמצאו תוצאות" (F31). */
+    private val _searchFailed = MutableStateFlow(false)
+    val searchFailed = _searchFailed.asStateFlow()
+
+    /** מיקום חי - רץ רק כשמסך הבית בחזית (ר' HomeScreen), כדי לא לצרוך סוללה ברקע (F32). */
+    private var liveLocationJob: Job? = null
+
     val homePlace = savedPlaceRepository.homePlace
     val workPlace = savedPlaceRepository.workPlace
 
@@ -83,6 +90,21 @@ class HomeViewModel(
         _currentLocation.value = LocationHelper.lastKnownLatLon(appContext)?.let { LatLng(it.first, it.second) }
     }
 
+    fun startLiveLocation() {
+        if (liveLocationJob?.isActive == true) return
+        liveLocationJob = viewModelScope.launch {
+            // דגימה מדוללת (כ-30 שניות או 20 מ'), מספיקה לסמן על המפה המקדימה.
+            LocationHelper.observeLocation(appContext, minIntervalMs = 30_000L, minDistanceMeters = 20f).collect { loc ->
+                _currentLocation.value = LatLng(loc.latitude, loc.longitude)
+            }
+        }
+    }
+
+    fun stopLiveLocation() {
+        liveLocationJob?.cancel()
+        liveLocationJob = null
+    }
+
     fun setMode(mode: TravelMode) {
         _mode.value = mode
     }
@@ -92,6 +114,7 @@ class HomeViewModel(
         searchJob?.cancel()
         if (query.isBlank()) {
             _searchResults.value = emptyList()
+            _searchFailed.value = false
             _searching.value = false
             return
         }
@@ -100,8 +123,15 @@ class HomeViewModel(
             try {
                 delay(SEARCH_DEBOUNCE_MS)
                 // שגיאת רשת זרקה קודם מתוך ה-coroutine והפילה את האפליקציה
-                _searchResults.value = runCatching { geocodingRepository.search(query) }
-                    .getOrElse { if (it is kotlinx.coroutines.CancellationException) throw it else emptyList() }
+                val outcome = try {
+                    geocodingRepository.search(query) to false
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    emptyList<GeocodeResult>() to true
+                }
+                _searchResults.value = outcome.first
+                _searchFailed.value = outcome.second
             } finally {
                 if (_searchQuery.value == query) _searching.value = false
             }

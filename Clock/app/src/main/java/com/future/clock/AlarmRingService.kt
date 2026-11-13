@@ -17,9 +17,10 @@ import android.os.Looper
 import android.os.VibrationEffect
 import android.os.VibratorManager
 import android.util.Log
+import com.future.clock.logic.Alarm
 import com.future.clock.logic.AlarmLogic
 import com.future.clock.logic.EXTRA_ALARM_ID
-import com.future.clock.logic.SNOOZE_MINUTES
+import com.future.clock.logic.GRADUAL_VOLUME_SECONDS
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -47,6 +48,16 @@ class AlarmRingService : Service() {
     private var alarmId = -1
     private val handler = Handler(Looper.getMainLooper())
     private val autoSnooze = Runnable { finishRinging(snooze = true) }
+    // הגברה הדרגתית: צעד בכל שנייה, מ-1/N ועד העוצמה המלאה.
+    private var rampStep = 0
+    private val volumeRamp = object : Runnable {
+        override fun run() {
+            rampStep++
+            val volume = (rampStep.toFloat() / GRADUAL_VOLUME_SECONDS).coerceIn(0.05f, 1f)
+            runCatching { ringtone?.volume = volume }
+            if (volume < 1f) handler.postDelayed(this, 1000L)
+        }
+    }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -70,9 +81,11 @@ class AlarmRingService : Service() {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             putExtras(intent)
         }
-        startForeground(NOTIFICATION_ID, buildNotification(intent, ringIntent))
+        // ההגדרות של המעורר הזה (צליל, רטט, הגברה הדרגתית, משך נודניק). לטיימר - ברירות המחדל.
+        val alarm = AlarmLogic.alarmById(this, alarmId)
+        startForeground(NOTIFICATION_ID, buildNotification(intent, ringIntent, alarm))
         _ringing.value = true
-        startSound()
+        startSound(alarm)
         handler.removeCallbacks(autoSnooze)
         handler.postDelayed(autoSnooze, AUTO_SNOOZE_MILLIS)
         // כשהאפליקציה בחזית (או כשהמערכת מתירה) המסך נפתח מיד; אחרת ההתראה
@@ -92,7 +105,7 @@ class AlarmRingService : Service() {
         stopSelf()
     }
 
-    private fun buildNotification(intent: Intent, ringIntent: Intent): Notification {
+    private fun buildNotification(intent: Intent, ringIntent: Intent, alarm: Alarm?): Notification {
         val manager = getSystemService(NotificationManager::class.java)
         if (manager.getNotificationChannel(CHANNEL_ID) == null) {
             manager.createNotificationChannel(
@@ -122,7 +135,8 @@ class AlarmRingService : Service() {
             .addAction(Notification.Action.Builder(null, "עצור", serviceIntent(ACTION_DISMISS, 1)).build())
         // לטיימר (בלי מזהה אזעקה) אין נודניק - כמו במסך הצלצול.
         if (alarmId != -1) {
-            builder.addAction(Notification.Action.Builder(null, "נודניק · $SNOOZE_MINUTES דקות", serviceIntent(ACTION_SNOOZE, 2)).build())
+            val minutes = alarm?.effectiveSnoozeMinutes ?: com.future.clock.logic.SNOOZE_MINUTES
+            builder.addAction(Notification.Action.Builder(null, "נודניק · $minutes דקות", serviceIntent(ACTION_SNOOZE, 2)).build())
         }
         return builder.build()
     }
@@ -132,21 +146,35 @@ class AlarmRingService : Service() {
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
     )
 
-    private fun startSound() {
+    private fun startSound(alarm: Alarm?) {
         try {
-            val uri = RingtoneManager.getActualDefaultRingtoneUri(this, RingtoneManager.TYPE_ALARM)
+            val systemDefault = RingtoneManager.getActualDefaultRingtoneUri(this, RingtoneManager.TYPE_ALARM)
                 ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-            ringtone = RingtoneManager.getRingtone(this, uri)?.apply {
+            // הצליל שנבחר למעורר; אם הקובץ נמחק מאז (או שאין הרשאה לקרוא אותו) - צליל
+            // המעורר של המערכת, ולא שקט. getRingtone מחזיר אובייקט גם ל-uri מת, ולכן
+            // בודקים שהקובץ נפתח בפועל לפני שבוחרים בו.
+            val chosen = alarm?.ringtoneUri
+                ?.let { runCatching { android.net.Uri.parse(it) }.getOrNull() }
+                ?.takeIf { uri -> runCatching { contentResolver.openAssetFileDescriptor(uri, "r")?.use { true } ?: false }.getOrDefault(false) }
+            val tone = chosen?.let { RingtoneManager.getRingtone(this, it) } ?: RingtoneManager.getRingtone(this, systemDefault)
+            ringtone = tone?.apply {
                 audioAttributes = AudioAttributes.Builder()
                     .setUsage(AudioAttributes.USAGE_ALARM)
                     .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                     .build()
                 isLooping = true
+                if (alarm?.gradualVolume == true) volume = 1f / GRADUAL_VOLUME_SECONDS
                 play()
+            }
+            if (alarm?.gradualVolume == true) {
+                rampStep = 1
+                handler.removeCallbacks(volumeRamp)
+                handler.postDelayed(volumeRamp, 1000L)
             }
         } catch (e: Exception) {
             // בלי צליל ברירת מחדל - רטט והתראה בלבד.
         }
+        if (alarm?.vibrate == false) return
         try {
             val manager = getSystemService(VIBRATOR_MANAGER_SERVICE) as VibratorManager
             vibratorManager = manager
@@ -158,6 +186,7 @@ class AlarmRingService : Service() {
 
     private fun stopSound() {
         handler.removeCallbacks(autoSnooze)
+        handler.removeCallbacks(volumeRamp)
         runCatching { ringtone?.stop() }
         ringtone = null
         runCatching { vibratorManager?.cancel() }

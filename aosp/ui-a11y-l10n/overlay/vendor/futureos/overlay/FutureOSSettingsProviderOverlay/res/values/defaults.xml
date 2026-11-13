@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- FutureOS: ברירות מחדל של SettingsProvider (frameworks/base/packages/SettingsProvider).
+     שמות def_* נכתבו מהזיכרון של AOSP 12. לאמת כל שם מול העץ לפני הבנייה
+     (grep ב-res/values/defaults.xml). שם שלא קיים נכשל ב-aapt, ואז מוחקים אותו. -->
+<resources>
+
+    <!-- 709/730: המקלדת של FutureOS היא ה-IME ברירת המחדל והיחיד המופעל. -->
+    <string name="def_input_method" translatable="false">com.future.keyboard/.KeyboardService</string>
+    <string name="def_enabled_input_methods" translatable="false">com.future.keyboard/.KeyboardService</string>
+
+    <!-- 713 קיצור נגישות (לחיצה ארוכה על שני מקשי הווליום), גם במסך הנעילה.
+         היעד נשאר ריק עד ש-TalkBack בבילד. כשיהיה:
+         com.google.android.marvin.talkback/com.google.android.marvin.talkback.TalkBackService -->
+    <bool name="def_accessibility_shortcut_enabled">true</bool>
+    <bool name="def_accessibility_shortcut_on_lock_screen">true</bool>
+    <bool name="def_accessibility_shortcut_dialog_shown">false</bool>
+    <!-- <string name="def_accessibility_shortcut_target_service" translatable="false">...TalkBackService</string> -->
+
+    <!-- 685 טקסט בניגודיות גבוהה: כבוי כברירת מחדל, זמין בהגדרות. -->
+    <bool name="def_high_text_contrast_enabled">false</bool>
+
+    <!-- 668/704 אנימציות מלאות כברירת מחדל. כיבוי בהגדרות (נגישות, הסר אנימציות). -->
+    <fraction name="def_window_animation_scale">100%</fraction>
+    <fraction name="def_window_transition_scale">100%</fraction>
+
+    <!-- 639 בהירות אוטומטית כבויה עד כיול החיישן. -->
+    <bool name="def_screen_brightness_automatic_mode">false</bool>
+
+    <!-- 798 צלילי מערכת פעילים, וניתנים לכיבוי בהגדרות. -->
+    <bool name="def_sound_effects_enabled">true</bool>
+</resources>

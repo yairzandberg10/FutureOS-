@@ -1,4 +1,6 @@
 package com.future.sfarim.ui.screens
+
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.components.FutureListItem
 import com.future.sharednav.components.FutureAvatar
 import com.future.sharednav.components.FutureSectionHeader
@@ -120,7 +122,7 @@ fun BookChaptersScreen(
         }
     }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -170,7 +172,7 @@ fun BookChaptersScreen(
                 if (entries.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text(
-                            if (isLoading) "טוען" else "אין תוכן זמין",
+                            if (isLoading) tr("טוען") else tr("אין תוכן זמין"),
                             color = theme.textColor.copy(alpha = 0.5f),
                             fontSize = FutureTypography.bodyLarge,
                         )

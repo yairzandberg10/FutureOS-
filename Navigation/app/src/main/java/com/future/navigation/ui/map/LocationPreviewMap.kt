@@ -66,6 +66,10 @@ fun LocationPreviewMap(location: LatLng?, modifier: Modifier = Modifier) {
 
     AndroidView(
         factory = {
+            // NT-D03: התצוגה המקדימה לא ממוקדת בחצים (אין לה טבעת פוקוס), כך שהפוקוס לא "נעלם" עליה.
+            mapView.isFocusable = false
+            mapView.isFocusableInTouchMode = false
+            mapView.descendantFocusability = android.view.ViewGroup.FOCUS_BLOCK_DESCENDANTS
             mapView.getMapAsync { map ->
                 map.uiSettings.setAllGesturesEnabled(false)
                 map.setStyle(MapConfig.STYLE_URL)

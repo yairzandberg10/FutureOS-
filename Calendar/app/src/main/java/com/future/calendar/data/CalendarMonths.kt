@@ -1,5 +1,7 @@
 package com.future.calendar.data
 
+import com.future.sharednav.i18n.tr
+
 import android.icu.util.Calendar
 import android.icu.util.ULocale
 import java.time.LocalDate
@@ -12,13 +14,13 @@ import java.util.Locale
 /** איזה לוח הוא הבסיס לתצוגה - נבחר בהגדרות. */
 enum class CalendarKind(val label: String) {
     /** חודשים עבריים (תשרי-אלול), ימים באותיות. */
-    HEBREW("עברי"),
+    HEBREW(tr("עברי")),
 
     /** חודשים לועזיים, ימים במספרים. */
-    GREGORIAN("לועזי"),
+    GREGORIAN(tr("לועזי")),
 
     /** חודשים לועזיים, ובכל יום גם התאריך העברי שלו. */
-    COMBINED("משולב"),
+    COMBINED(tr("משולב")),
 }
 
 /**

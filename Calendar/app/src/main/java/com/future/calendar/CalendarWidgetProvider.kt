@@ -1,5 +1,7 @@
 package com.future.calendar
 
+import com.future.sharednav.i18n.tr
+
 import android.content.pm.PackageManager
 import android.icu.text.DateFormat
 import android.icu.util.ULocale
@@ -17,7 +19,7 @@ class CalendarWidgetProvider : FutureContentWidget() {
     override fun content(context: Context): WidgetContent {
         val now = Date()
         val hebrew = DateFormat.getDateInstance(DateFormat.LONG, ULocale.forLanguageTag("he-IL-u-ca-hebrew-nu-hebr")).format(now)
-        val gregorian = SimpleDateFormat("EEEE, d בMMMM", Locale("iw", "IL")).format(now)
+        val gregorian = SimpleDateFormat(tr("EEEE, d בMMMM"), Locale("iw", "IL")).format(now)
         return WidgetContent(value = hebrew, subtitle = listOfNotNull(gregorian, nextEventToday(context)).joinToString(" · "))
     }
 

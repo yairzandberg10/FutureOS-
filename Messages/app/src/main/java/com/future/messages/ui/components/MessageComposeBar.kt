@@ -1,5 +1,7 @@
 package com.future.messages.ui.components
 
+import com.future.sharednav.i18n.tr
+
 import com.future.sharednav.icons.FutureIcons
 import androidx.compose.ui.graphics.drawscope.Stroke
 
@@ -102,7 +104,7 @@ fun MessageComposeBar(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Text("אל", color = theme.subtleTextColor, fontSize = type.label)
+            Text(tr("אל"), color = theme.subtleTextColor, fontSize = type.label)
             if (recipient != null) {
                 Text(
                     recipient,
@@ -113,7 +115,7 @@ fun MessageComposeBar(
                     overflow = TextOverflow.Ellipsis,
                 )
             } else {
-                Text("בחר נמען", color = theme.subtleTextColor, fontSize = type.label)
+                Text(tr("בחר נמען"), color = theme.subtleTextColor, fontSize = type.label)
             }
         }
 
@@ -154,7 +156,7 @@ fun MessageComposeBar(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                ComposeIconButton(FutureIcons.Add, "צרף תמונה", theme, onAttach)
+                ComposeIconButton(FutureIcons.Add, tr("צרף תמונה"), theme, onAttach)
                 BasicTextField(
                     value = text,
                     onValueChange = onTextChange,
@@ -171,9 +173,9 @@ fun MessageComposeBar(
                         Box {
                             if (text.isEmpty()) {
                                 val hint = when {
-                                    dictationListening -> "מקשיב… לחצו שוב על המיקרופון לסיום"
-                                    dictationProcessing -> "מתמלל…"
-                                    else -> "הודעה"
+                                    dictationListening -> tr("מקשיב… לחצו שוב על המיקרופון לסיום")
+                                    dictationProcessing -> tr("מתמלל…")
+                                    else -> tr("הודעה")
                                 }
                                 Text(hint, color = theme.subtleTextColor, fontSize = type.dialog, maxLines = 1)
                             }
@@ -184,7 +186,7 @@ fun MessageComposeBar(
                 if (onDictate != null) {
                     ComposeIconButton(
                         FutureIcons.Mic,
-                        if (dictationListening) "סיום הכתבה" else "הכתבה",
+                        if (dictationListening) tr("סיום הכתבה") else tr("הכתבה"),
                         theme,
                         onDictate,
                         active = dictationListening || dictationProcessing,
@@ -263,7 +265,7 @@ private fun ComposeSendButton(theme: FutureTheme, accent: Color, enabled: Boolea
     ) {
         Icon(
             FutureIcons.AutoMirrored.Send,
-            contentDescription = "שלח",
+            contentDescription = tr("שלח"),
             tint = FutureContrast.onColor(accent),
             modifier = Modifier.size(23.dp),
         )

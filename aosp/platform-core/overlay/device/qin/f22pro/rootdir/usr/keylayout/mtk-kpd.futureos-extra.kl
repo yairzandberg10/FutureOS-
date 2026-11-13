@@ -1,0 +1,13 @@
+# FutureOS platform-core (312, 790): מקשי מדיה, בהירות והשתקה.
+# SNIPPET למיזוג ל-/vendor/usr/keylayout/mtk-kpd.kl של היצרן, לא קובץ להחלפה.
+# במקלדת ה-F22 Pro אין מקשי מדיה ייעודיים (HARDWARE_SPEC.md). קודי הסריקה מתגלים עם:
+#   adb shell getevent -lp /dev/input/event1
+# ואז מחליפים כל SCANCODE_TBD בקוד האמיתי של המקש שיועד (קומבינציית Fn או מקש צד).
+# key SCANCODE_TBD  MEDIA_PLAY_PAUSE
+# key SCANCODE_TBD  MEDIA_NEXT
+# key SCANCODE_TBD  MEDIA_PREVIOUS
+# key SCANCODE_TBD  VOLUME_MUTE
+# key SCANCODE_TBD  BRIGHTNESS_UP
+# key SCANCODE_TBD  BRIGHTNESS_DOWN
+# מקלדת חיצונית (USB/BT) מכוסה כבר על ידי Generic.kl: 164 PLAY_PAUSE, 163 NEXT, 165 PREVIOUS,
+# 113 VOLUME_MUTE, 225 BRIGHTNESS_UP, 224 BRIGHTNESS_DOWN.

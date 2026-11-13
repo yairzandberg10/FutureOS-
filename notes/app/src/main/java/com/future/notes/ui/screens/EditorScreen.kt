@@ -1,5 +1,7 @@
 package com.future.notes.ui.screens
 
+import com.future.sharednav.i18n.tr
+
 import android.Manifest
 import android.content.pm.PackageManager
 import android.widget.Toast
@@ -136,7 +138,7 @@ fun EditorScreen(
         if (voice.startRecording()) {
             recordStart = System.currentTimeMillis(); elapsed = 0; recording = true
         } else {
-            Toast.makeText(context, "ההקלטה נכשלה", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, tr("ההקלטה נכשלה"), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -159,7 +161,7 @@ fun EditorScreen(
     }
 
     val micPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (granted) startRecording() else Toast.makeText(context, "צריך הרשאת מיקרופון להקלטה", Toast.LENGTH_SHORT).show()
+        if (granted) startRecording() else Toast.makeText(context, tr("צריך הרשאת מיקרופון להקלטה"), Toast.LENGTH_SHORT).show()
     }
 
     fun requestRecording() {
@@ -241,8 +243,8 @@ fun EditorScreen(
                     recording = recording,
                     playing = playing,
                     label = when {
-                        recording -> "מקליט… ${VoiceNote.format(elapsed)} · OK לעצירה"
-                        playing -> "מתנגן · OK לעצירה"
+                        recording -> tr("מקליט… {0} · OK לעצירה", VoiceNote.format(elapsed))
+                        playing -> tr("מתנגן · OK לעצירה")
                         else -> "הקלטה קולית · ${VoiceNote.format(remember(audioPath) { audioPath?.let(VoiceNote::durationMs) ?: 0L })}"
                     },
                     onClick = {
@@ -282,7 +284,7 @@ fun EditorScreen(
                             value = newItemText,
                             onValueChange = { newItemText = it },
                             theme = theme,
-                            placeholder = "פריט חדש",
+                            placeholder = tr("פריט חדש"),
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                             keyboardActions = KeyboardActions(onDone = {
                                 if (newItemText.isNotBlank()) {
@@ -320,11 +322,11 @@ fun EditorScreen(
             header = title.ifBlank { stringResource(R.string.untitled) },
         ) {
             if (itemIndex != null) {
-                FutureMenuRow("עריכת פריט", FutureIcons.Edit, theme, {
+                FutureMenuRow(tr("עריכת פריט"), FutureIcons.Edit, theme, {
                     showMenu = false
                     editingItem = itemIndex
                 })
-                FutureMenuRow("מחיקת פריט", FutureIcons.Close, theme, {
+                FutureMenuRow(tr("מחיקת פריט"), FutureIcons.Close, theme, {
                     showMenu = false
                     setItems(items.filterIndexed { i, _ -> i != itemIndex })
                 })
@@ -333,7 +335,7 @@ fun EditorScreen(
                 showMenu = false
                 isPinned = !isPinned
             })
-            FutureMenuRow(if (isChecklist) "הפוך לפתק טקסט" else "הפוך לרשימה", FutureIcons.Checklist, theme, {
+            FutureMenuRow(if (isChecklist) tr("הפוך לפתק טקסט") else tr("הפוך לרשימה"), FutureIcons.Checklist, theme, {
                 showMenu = false
                 if (isChecklist) {
                     content = Checklist.parse(content).joinToString("\n") { it.text }
@@ -344,19 +346,19 @@ fun EditorScreen(
                 }
             })
             if (recording) {
-                FutureMenuRow("עצירת הקלטה", FutureIcons.MicOff, theme, {
+                FutureMenuRow(tr("עצירת הקלטה"), FutureIcons.MicOff, theme, {
                     showMenu = false
                     stopRecording()
                 })
             } else {
-                FutureMenuRow(if (audioPath == null) "הקלטה קולית" else "הקלטה חדשה", FutureIcons.Mic, theme, {
+                FutureMenuRow(if (audioPath == null) tr("הקלטה קולית") else tr("הקלטה חדשה"), FutureIcons.Mic, theme, {
                     showMenu = false
                     voice.stopPlayback(); playing = false
                     requestRecording()
                 })
             }
             if (audioPath != null && !recording) {
-                FutureMenuRow("מחיקת ההקלטה", FutureIcons.VolumeOff, theme, {
+                FutureMenuRow(tr("מחיקת ההקלטה"), FutureIcons.VolumeOff, theme, {
                     showMenu = false
                     voice.stopPlayback(); playing = false
                     audioPath?.let { runCatching { java.io.File(it).delete() } }
@@ -364,9 +366,9 @@ fun EditorScreen(
                 })
             }
             if (!isEmpty()) {
-                FutureMenuRow("שיתוף ל-FuturePhone", FutureIcons.Share, theme, {
+                FutureMenuRow(tr("שיתוף ל-FuturePhone"), FutureIcons.Share, theme, {
                     showMenu = false
-                    FutureShare.text(context, NoteShare.format(current()), "שיתוף פתק")
+                    FutureShare.text(context, NoteShare.format(current()), tr("שיתוף פתק"))
                 })
             }
             if (id != 0) {
@@ -380,7 +382,7 @@ fun EditorScreen(
 
     editingItem?.let { index ->
         InputDialog(
-            title = "עריכת פריט",
+            title = tr("עריכת פריט"),
             theme = theme,
             initialValue = items.getOrNull(index)?.text.orEmpty(),
             onDismiss = { editingItem = null },

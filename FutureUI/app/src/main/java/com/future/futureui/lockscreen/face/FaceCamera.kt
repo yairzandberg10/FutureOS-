@@ -1,5 +1,7 @@
 package com.future.futureui.lockscreen.face
 
+import com.future.sharednav.i18n.tr
+
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.ImageFormat
@@ -50,7 +52,7 @@ class FaceCamera(private val context: Context) {
                 val id = manager.cameraIdList.firstOrNull {
                     manager.getCameraCharacteristics(it).get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_FRONT
                 }
-                if (id == null) { onError("אין מצלמה קדמית"); stop(); return@post }
+                if (id == null) { onError(tr("אין מצלמה קדמית")); stop(); return@post }
                 val chars = manager.getCameraCharacteristics(id)
                 val sensorOrientation = chars.get(CameraCharacteristics.SENSOR_ORIENTATION) ?: 270
                 val map = chars.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
@@ -97,16 +99,16 @@ class FaceCamera(private val context: Context) {
                                         set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
                                     }.build()
                                     runCatching { s.setRepeatingRequest(req, null, h) }
-                                        .onFailure { onError("המצלמה לא זמינה"); stop() }
+                                        .onFailure { onError(tr("המצלמה לא זמינה")); stop() }
                                 }
 
                                 override fun onConfigureFailed(s: CameraCaptureSession) {
-                                    onError("המצלמה לא זמינה"); stop()
+                                    onError(tr("המצלמה לא זמינה")); stop()
                                 }
                             }, h)
                         } catch (e: Exception) {
                             Log.w(TAG, "session failed", e)
-                            onError("המצלמה לא זמינה"); stop()
+                            onError(tr("המצלמה לא זמינה")); stop()
                         }
                     }
 
@@ -114,15 +116,15 @@ class FaceCamera(private val context: Context) {
                     override fun onError(camera: CameraDevice, error: Int) {
                         Log.w(TAG, "camera error $error")
                         camera.close(); device = null
-                        onError(if (error == ERROR_CAMERA_IN_USE || error == ERROR_MAX_CAMERAS_IN_USE) "המצלמה בשימוש" else "המצלמה חסומה")
+                        onError(if (error == ERROR_CAMERA_IN_USE || error == ERROR_MAX_CAMERAS_IN_USE) tr("המצלמה בשימוש") else tr("המצלמה חסומה"))
                         stop()
                     }
                 }, h)
             } catch (e: SecurityException) {
-                onError("אין הרשאת מצלמה"); stop()
+                onError(tr("אין הרשאת מצלמה")); stop()
             } catch (e: Exception) {
                 Log.w(TAG, "open failed", e)
-                onError("המצלמה לא זמינה"); stop()
+                onError(tr("המצלמה לא זמינה")); stop()
             }
         }
     }

@@ -1,5 +1,7 @@
 package com.future.tools.ui
 
+import com.future.sharednav.i18n.tr
+
 import com.future.sharednav.components.FutureChip
 import com.future.sharednav.theme.FutureDimens
 import com.future.sharednav.theme.FutureTypography
@@ -210,7 +212,7 @@ fun GuitarTunerScreen(theme: FutureTheme, onBack: () -> Unit) {
     }
     val centsOff = if (pitch != null && target != null) cents(pitch, target.frequency).coerceIn(-50f, 50f) else null
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -234,7 +236,7 @@ fun GuitarTunerScreen(theme: FutureTheme, onBack: () -> Unit) {
                 }
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                ToolsHeader(title = "מכוון גיטרה", theme = theme, onBack = onBack)
+                ToolsHeader(title = tr("מכוון גיטרה"), theme = theme, onBack = onBack)
 
                 Text(
                     "${tuning.name} · ⁦A4 = ${a4}Hz⁩" + if (selected == -1) " · זיהוי אוטומטי" else "",
@@ -259,7 +261,7 @@ fun GuitarTunerScreen(theme: FutureTheme, onBack: () -> Unit) {
                 Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                     if (!hasPermission) {
                         Text(
-                            "נדרשת הרשאת מיקרופון כדי לכוון",
+                            tr("נדרשת הרשאת מיקרופון כדי לכוון"),
                             color = theme.mutedTextColor,
                             fontSize = FutureTypography.body,
                             modifier = Modifier.padding(horizontal = 32.dp)
@@ -278,7 +280,7 @@ fun GuitarTunerScreen(theme: FutureTheme, onBack: () -> Unit) {
                                 fontWeight = FontWeight.Light,
                             )
                             Text(
-                                if (pitch != null) "⁦%.1f Hz⁩".format(pitch) else "נגן מיתר אחד",
+                                if (pitch != null) "⁦%.1f Hz⁩".format(pitch) else tr("נגן מיתר אחד"),
                                 color = theme.mutedTextColor,
                                 fontSize = FutureTypography.bodyLarge,
                             )
@@ -288,7 +290,7 @@ fun GuitarTunerScreen(theme: FutureTheme, onBack: () -> Unit) {
                             Text(
                                 when {
                                     centsOff == null -> " "
-                                    inTune -> "מכוון"
+                                    inTune -> tr("מכוון")
                                     centsOff < 0 -> "נמוך - הדק את המיתר (⁦${centsOff.roundToInt()}⁩)"
                                     else -> "גבוה - שחרר את המיתר (⁦+${centsOff.roundToInt()}⁩)"
                                 },

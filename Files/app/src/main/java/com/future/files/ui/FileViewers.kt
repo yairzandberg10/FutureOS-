@@ -1,5 +1,7 @@
 package com.future.files.ui
 
+import com.future.sharednav.i18n.tr
+
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.theme.FutureDimens
 import com.future.sharednav.theme.FutureMotion
@@ -181,7 +183,7 @@ fun TextViewerScreen(file: File, theme: FutureTheme, onBack: () -> Unit, onMessa
     LaunchedEffect(editing) { if (!editing) runCatching { focusRequester.requestFocus() } }
 
     fun startEditing() {
-        val text = content ?: return onMessage("לא ניתן לקרוא את הקובץ")
+        val text = content ?: return onMessage(tr("לא ניתן לקרוא את הקובץ"))
         if (truncated) return onMessage("הקובץ גדול מדי לעריכה")
         if (readOnly) return onMessage("הקובץ לא בקידוד UTF-8 - לקריאה בלבד")
         draft = androidx.compose.ui.text.input.TextFieldValue(text)
@@ -208,7 +210,7 @@ fun TextViewerScreen(file: File, theme: FutureTheme, onBack: () -> Unit, onMessa
     }
 
     val contentDirection = if (code) LayoutDirection.Ltr else LayoutDirection.Rtl
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Column(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
             ViewerHeader(if (dirty) "${file.name} *" else file.name, theme, onBack = { if (!editing) onBack() })
             if (readOnly && !editing) {
@@ -273,8 +275,8 @@ fun TextViewerScreen(file: File, theme: FutureTheme, onBack: () -> Unit, onMessa
                     ) {
                         val text = content
                         when {
-                            loadFailed -> Text("לא ניתן לקרוא את הקובץ", color = theme.mutedTextColor, fontSize = FutureTypography.summary)
-                            text == null -> Text("טוען", color = theme.mutedTextColor, fontSize = FutureTypography.summary)
+                            loadFailed -> Text(tr("לא ניתן לקרוא את הקובץ"), color = theme.mutedTextColor, fontSize = FutureTypography.summary)
+                            text == null -> Text(tr("טוען"), color = theme.mutedTextColor, fontSize = FutureTypography.summary)
                             code -> Row {
                                 val lines = text.lines()
                                 Text(
@@ -338,7 +340,7 @@ fun ImageFileViewerScreen(file: File, theme: FutureTheme, onBack: () -> Unit, on
         loadFailed = decoded == null
     }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -422,7 +424,7 @@ private fun ViewerBackChip(theme: FutureTheme, onBack: () -> Unit) {
     ) {
         Icon(
             FutureIcons.AutoMirrored.ArrowBack,
-            contentDescription = "חזור",
+            contentDescription = tr("חזור"),
             tint = animateFocusColor(isFocused, FutureContrast.onColor(theme.accentColor), Color.White).value,
             modifier = Modifier.size(FutureDimens.iconTopBar),
         )
@@ -484,13 +486,13 @@ fun AudioPlayerScreen(file: File, theme: FutureTheme, onBack: () -> Unit) {
             player.setOnCompletionListener { isPlaying = false }
             player.setOnErrorListener { _, _, _ ->
                 loadFailed = true
-                android.widget.Toast.makeText(context, "לא ניתן לנגן קובץ זה", android.widget.Toast.LENGTH_SHORT).show()
+                android.widget.Toast.makeText(context, tr("לא ניתן לנגן קובץ זה"), android.widget.Toast.LENGTH_SHORT).show()
                 true
             }
             player.prepareAsync()
         } catch (e: Exception) {
             loadFailed = true
-            android.widget.Toast.makeText(context, "לא ניתן לנגן קובץ זה", android.widget.Toast.LENGTH_SHORT).show()
+            android.widget.Toast.makeText(context, tr("לא ניתן לנגן קובץ זה"), android.widget.Toast.LENGTH_SHORT).show()
         }
         onDispose {
             audioManager.abandonAudioFocusRequest(focusRequest)
@@ -505,7 +507,7 @@ fun AudioPlayerScreen(file: File, theme: FutureTheme, onBack: () -> Unit) {
         }
     }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Column(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
             ViewerHeader(file.name, theme, onBack)
             Column(
@@ -547,7 +549,7 @@ fun AudioPlayerScreen(file: File, theme: FutureTheme, onBack: () -> Unit) {
                     ) {
                         Icon(
                             if (isPlaying) FutureIcons.Pause else FutureIcons.PlayArrow,
-                            contentDescription = if (isPlaying) "השהה" else "נגן",
+                            contentDescription = if (isPlaying) tr("השהה") else tr("נגן"),
                             tint = theme.onReadableAccentColor,
                             modifier = Modifier.size(32.dp)
                         )
@@ -557,7 +559,7 @@ fun AudioPlayerScreen(file: File, theme: FutureTheme, onBack: () -> Unit) {
                 Text(file.name, color = theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.SemiBold, maxLines = 2)
                 Spacer(modifier = Modifier.height(12.dp))
                 if (loadFailed) {
-                    Text("לא ניתן לנגן קובץ זה", color = theme.dangerColor, fontSize = FutureTypography.summary)
+                    Text(tr("לא ניתן לנגן קובץ זה"), color = theme.dangerColor, fontSize = FutureTypography.summary)
                 }
                 if (durationMs > 0) {
                     val progress = (positionMs.toFloat() / durationMs).coerceIn(0f, 1f)
@@ -653,15 +655,15 @@ fun PdfViewerScreen(file: File, theme: FutureTheme, onBack: () -> Unit) {
     // מחכים לסיום הטעינה: לפני כן הרשימה עדיין לא קיימת ולבקשת הפוקוס אין יעד.
     LaunchedEffect(isLoading) { if (!isLoading) runCatching { focusRequester.requestFocus() } }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Column(modifier = Modifier.fillMaxSize().background(theme.raisedSurfaceColor)) {
             ViewerHeader(file.name, theme, onBack)
             when {
                 isLoading -> Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    FutureSpinner(theme = theme, label = "טוען PDF")
+                    FutureSpinner(theme = theme, label = tr("טוען PDF"))
                 }
                 loadFailed || pageCount == 0 -> Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    Text("לא ניתן להציג את הקובץ", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.summary)
+                    Text(tr("לא ניתן להציג את הקובץ"), color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.summary)
                 }
                 else -> LazyColumn(
                     state = listState,

@@ -15,8 +15,14 @@ import java.util.Calendar
 
 private const val TAG = "Clock/AlarmLogic"
 
-/** דקות הנודניק כשלוחצים על מקש כלשהו (לא OK) במסך הצלצול. */
+/** דקות הנודניק כברירת מחדל (מעורר שלא נבחר לו משך אחר). */
 const val SNOOZE_MINUTES = 5
+
+/** משכי הנודניק שאפשר לבחור למעורר. */
+val SNOOZE_MINUTE_OPTIONS = listOf(5, 10, 15, 20, 30)
+
+/** כמה שניות עולה העוצמה בהגברה הדרגתית, משקט כמעט מלא ועד העוצמה המלאה. */
+const val GRADUAL_VOLUME_SECONDS = 30
 
 /** מגבלת נודניקים: 0 = ללא הגבלה (ברירת מחדל). אחרת - כמה פעמים אפשר לנדנד באותה אזעקה. */
 const val SNOOZE_LIMIT_UNLIMITED = 0
@@ -70,14 +76,31 @@ const val EXTRA_ALARM_ID = "ALARM_ID"
 /** האזעקה היא נודניק (ולא ההופעה המתוזמנת של המעורר). */
 const val EXTRA_IS_SNOOZE = "IS_SNOOZE"
 
+/**
+ * מעורר שמור. השדות שנוספו אחרי הגרסה הראשונה בנויים כך שהערך ש-Gson נותן
+ * כשהשדה חסר ב-JSON הישן (false / 0 / null - Gson לא מריץ את ברירות המחדל של
+ * Kotlin) הוא גם ברירת המחדל הנכונה: לכן "בלי רטט" ולא "רטט", ומשך נודניק 0
+ * פירושו ברירת המחדל. מעוררים שנשמרו לפני ההגדרות האלה ממשיכים לצלצל בדיוק כמו קודם.
+ */
 data class Alarm(
     val id: Int,
     val hour: Int,
     val minute: Int,
     val days: Set<Int>, // 1 (Sunday) עד 7 (Saturday), כמו Calendar.DAY_OF_WEEK. ריק = חד-פעמי.
     val isEnabled: Boolean = true,
-    val label: String = ""
-)
+    val label: String = "",
+    /** הצליל (content:// של RingtoneManager), או null - צליל המעורר של המערכת. */
+    val ringtoneUri: String? = null,
+    /** true = בלי רטט. */
+    val noVibrate: Boolean = false,
+    /** משך הנודניק בדקות; 0 = [SNOOZE_MINUTES]. */
+    val snoozeMinutes: Int = 0,
+    /** העוצמה עולה בהדרגה במשך [GRADUAL_VOLUME_SECONDS] שניות במקום להתחיל במלואה. */
+    val gradualVolume: Boolean = false,
+) {
+    val vibrate: Boolean get() = !noVibrate
+    val effectiveSnoozeMinutes: Int get() = if (snoozeMinutes > 0) snoozeMinutes else SNOOZE_MINUTES
+}
 
 object AlarmLogic {
     private const val PREFS_NAME = "alarms_prefs"
@@ -99,7 +122,7 @@ object AlarmLogic {
         val json = prefs.getString(ALARMS_KEY, null) ?: return emptyList()
         return try {
             val type = object : TypeToken<List<Alarm>>() {}.type
-            gson.fromJson<List<Alarm>?>(json, type) ?: emptyList()
+            (gson.fromJson<List<Alarm>?>(json, type) ?: emptyList())
         } catch (e: JsonSyntaxException) {
             Log.w(TAG, "alarms_list פגום, מתעלם ומחזיר רשימה ריקה", e)
             prefs.edit().putString(ALARMS_CORRUPT_KEY, json).apply()
@@ -117,6 +140,14 @@ object AlarmLogic {
         if (unique != stored) saveAlarms(context, unique)
         return unique
     }
+
+    /** המעורר לפי מזהה, או null (טיימר, או מעורר שנמחק). */
+    fun alarmById(context: Context, alarmId: Int): Alarm? =
+        if (alarmId == -1) null else getAlarms(context).firstOrNull { it.id == alarmId }
+
+    /** משך הנודניק של המעורר הזה בדקות. */
+    fun snoozeMinutesFor(context: Context, alarmId: Int): Int =
+        alarmById(context, alarmId)?.effectiveSnoozeMinutes ?: SNOOZE_MINUTES
 
     /** מזהה חדש למעורר, לפי מה ששמור בפועל ולא לפי מה שמוצג במסך. */
     fun newAlarmId(context: Context): Int = (getAlarms(context).maxOfOrNull { it.id } ?: 0) + 1
@@ -226,7 +257,7 @@ object AlarmLogic {
 
     private fun snoozeCountKey(alarmId: Int) = "$SNOOZE_COUNT_PREFIX$alarmId"
 
-    /** מתזמן אזעקה חד-פעמית נוספת בעוד SNOOZE_MINUTES דקות, בלי לגעת באזעקה המקורית. */
+    /** מתזמן אזעקה חד-פעמית נוספת בעוד משך הנודניק של המעורר, בלי לגעת באזעקה המקורית. */
     fun scheduleSnooze(context: Context, originalAlarmId: Int) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val countKey = snoozeCountKey(originalAlarmId)
@@ -240,7 +271,8 @@ object AlarmLogic {
         val pendingIntent = PendingIntent.getBroadcast(
             context, snoozeId, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        val triggerAt = Calendar.getInstance().apply { add(Calendar.MINUTE, SNOOZE_MINUTES) }.timeInMillis
+        val minutes = snoozeMinutesFor(context, originalAlarmId)
+        val triggerAt = Calendar.getInstance().apply { add(Calendar.MINUTE, minutes) }.timeInMillis
         setExactSafely(context, alarmManager, triggerAt, pendingIntent)
     }
 

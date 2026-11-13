@@ -1,5 +1,7 @@
 package com.future.music.ui.screens
 
+import com.future.sharednav.i18n.tr
+
 import kotlin.math.roundToInt
 
 import androidx.compose.foundation.layout.Arrangement
@@ -49,7 +51,7 @@ fun EqualizerScreen(theme: FutureTheme, onBack: () -> Unit) {
     val levels = if (settings.bandLevels.size == AudioFx.bands.size) settings.bandLevels else List(AudioFx.bands.size) { 0 }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        ScreenTopBar(title = "אקולייזר", theme = theme, onBack = onBack)
+        ScreenTopBar(title = tr("אקולייזר"), theme = theme, onBack = onBack)
         LazyColumn(
             modifier = Modifier.weight(1f).fillMaxWidth(),
             contentPadding = PaddingValues(horizontal = FutureDimens.screenPadding, vertical = FutureDimens.spacingSm),
@@ -57,8 +59,8 @@ fun EqualizerScreen(theme: FutureTheme, onBack: () -> Unit) {
         ) {
             item {
                 FutureSettingItem(
-                    title = "אקולייזר ואפקטים",
-                    summary = "פרופיל: $deviceName",
+                    title = tr("אקולייזר ואפקטים"),
+                    summary = tr("פרופיל: {0}", deviceName),
                     theme = theme,
                     icon = FutureIcons.Equalizer,
                     showChevron = false,
@@ -69,7 +71,7 @@ fun EqualizerScreen(theme: FutureTheme, onBack: () -> Unit) {
             }
             item {
                 FutureSettingItem(
-                    title = "פריסט",
+                    title = tr("פריסט"),
                     summary = settings.presetName,
                     theme = theme,
                     icon = FutureIcons.GraphicEq,
@@ -78,11 +80,11 @@ fun EqualizerScreen(theme: FutureTheme, onBack: () -> Unit) {
             }
             if (!AudioFx.hasEqualizer) {
                 item {
-                    FutureSettingItem(title = "האקולייזר עוד לא מוכן", summary = "נגנו שיר כדי להפעיל אותו", theme = theme, onClick = null)
+                    FutureSettingItem(title = tr("האקולייזר עוד לא מוכן"), summary = tr("נגנו שיר כדי להפעיל אותו"), theme = theme, onClick = null)
                 }
             }
             if (AudioFx.bands.isNotEmpty()) {
-                item { FutureSectionHeader("תדרים", theme, inset = false) }
+                item { FutureSectionHeader(tr("תדרים"), theme, inset = false) }
                 items(AudioFx.bands, key = { it.index }) { band ->
                     val level = levels.getOrElse(band.index) { 0 }
                     FxSlider(
@@ -95,10 +97,10 @@ fun EqualizerScreen(theme: FutureTheme, onBack: () -> Unit) {
                     )
                 }
             }
-            item { FutureSectionHeader("אפקטים", theme, inset = false) }
+            item { FutureSectionHeader(tr("אפקטים"), theme, inset = false) }
             item {
                 FxSlider(
-                    label = "הגברת באס",
+                    label = tr("הגברת באס"),
                     valueText = ltr("${settings.bass / 10}%"),
                     value = settings.bass / 1000f,
                     theme = theme,
@@ -107,7 +109,7 @@ fun EqualizerScreen(theme: FutureTheme, onBack: () -> Unit) {
             }
             item {
                 FxSlider(
-                    label = "סאונד 3D",
+                    label = tr("סאונד 3D"),
                     valueText = ltr("${settings.virtualizer / 10}%"),
                     value = settings.virtualizer / 1000f,
                     theme = theme,
@@ -116,7 +118,7 @@ fun EqualizerScreen(theme: FutureTheme, onBack: () -> Unit) {
             }
             item {
                 FxSlider(
-                    label = "הגברת עוצמה",
+                    label = tr("הגברת עוצמה"),
                     valueText = ltr("+%.1f dB".format(settings.loudness / 100f)),
                     value = settings.loudness / 1500f,
                     theme = theme,
@@ -125,8 +127,8 @@ fun EqualizerScreen(theme: FutureTheme, onBack: () -> Unit) {
             }
             item {
                 FutureSettingItem(
-                    title = "איפוס",
-                    summary = "כל הפסים והאפקטים חוזרים לאפס",
+                    title = tr("איפוס"),
+                    summary = tr("כל הפסים והאפקטים חוזרים לאפס"),
                     theme = theme,
                     icon = FutureIcons.RestartAlt,
                     showChevron = false,
@@ -152,7 +154,7 @@ fun EqualizerScreen(theme: FutureTheme, onBack: () -> Unit) {
     }
 
     if (showPresets) {
-        FutureOptionsMenu(theme = theme, onDismissRequest = { showPresets = false }, header = "פריסט") {
+        FutureOptionsMenu(theme = theme, onDismissRequest = { showPresets = false }, header = tr("פריסט")) {
             AudioFx.Effect.entries.forEach { effect ->
                 FutureMenuRow(effect.label, FutureIcons.GraphicEq, theme, {
                     showPresets = false

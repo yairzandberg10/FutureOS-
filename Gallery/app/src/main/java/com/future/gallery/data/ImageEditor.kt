@@ -1,5 +1,7 @@
 package com.future.gallery.data
 
+import com.future.sharednav.i18n.tr
+
 import android.content.ContentValues
 import android.content.Context
 import android.graphics.Bitmap
@@ -17,21 +19,21 @@ import android.os.Environment
 import android.provider.MediaStore
 
 enum class PhotoFilter(val label: String) {
-    NONE("רגיל"),
-    VIVID("חי"),
-    GRAYSCALE("שחור-לבן"),
-    NOIR("נואר"),
-    SEPIA("ספיה"),
-    VINTAGE("וינטג'"),
-    FADE("דהוי"),
-    COOL("קריר"),
-    WARM("חמים"),
-    POP("פופ"),
-    INVERT("היפוך"),
+    NONE(tr("רגיל")),
+    VIVID(tr("חי")),
+    GRAYSCALE(tr("שחור-לבן")),
+    NOIR(tr("נואר")),
+    SEPIA(tr("ספיה")),
+    VINTAGE(tr("וינטג'")),
+    FADE(tr("דהוי")),
+    COOL(tr("קריר")),
+    WARM(tr("חמים")),
+    POP(tr("פופ")),
+    INVERT(tr("היפוך")),
 }
 
 enum class CropAspect(val label: String, val ratio: Float?) {
-    FREE("מקורי", null),
+    FREE(tr("מקורי"), null),
     SQUARE("1:1", 1f),
     FOUR_THREE("4:3", 4f / 3f),
     SIXTEEN_NINE("16:9", 16f / 9f)
@@ -39,12 +41,12 @@ enum class CropAspect(val label: String, val ratio: Float?) {
 
 /** מדבקות "אפקט" שמונחות על הפנים שבתמונה (אוזניים, משקפיים, כתר...). */
 enum class StickerKind(val label: String) {
-    CAT_EARS("אוזני חתול"),
-    BUNNY_EARS("אוזני ארנב"),
-    BEAR_EARS("אוזני דובי"),
-    GLASSES("משקפיים"),
-    CROWN("כתר"),
-    HEARTS("לבבות"),
+    CAT_EARS(tr("אוזני חתול")),
+    BUNNY_EARS(tr("אוזני ארנב")),
+    BEAR_EARS(tr("אוזני דובי")),
+    GLASSES(tr("משקפיים")),
+    CROWN(tr("כתר")),
+    HEARTS(tr("לבבות")),
 }
 
 /**

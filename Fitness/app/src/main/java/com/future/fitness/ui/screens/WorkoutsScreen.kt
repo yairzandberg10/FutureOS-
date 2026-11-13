@@ -1,5 +1,7 @@
 package com.future.fitness.ui.screens
 
+import com.future.sharednav.i18n.tr
+
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.AvatarListSize
 import com.future.sharednav.components.FutureAvatar
@@ -60,7 +62,7 @@ import com.future.sharednav.components.ConfirmDialog
 import com.future.sharednav.theme.FutureTheme
 import com.future.sharednav.focus.animateFocusColor
 
-private val DIFFICULTIES = listOf("הכל", "קל", "בינוני", "קשה")
+private val DIFFICULTIES = listOf(tr("הכל"), tr("קל"), tr("בינוני"), tr("קשה"))
 
 @Composable
 fun WorkoutsScreen(
@@ -73,7 +75,7 @@ fun WorkoutsScreen(
     onOpenRun: () -> Unit,
     onOpenActivityTypes: () -> Unit,
 ) {
-    var selectedDifficulty by remember { mutableStateOf("הכל") }
+    var selectedDifficulty by remember { mutableStateOf(tr("הכל")) }
     val filteredWorkouts = remember(workouts, selectedDifficulty) {
         if (selectedDifficulty == "הכל") workouts else workouts.filter { it.difficulty == selectedDifficulty }
     }
@@ -86,7 +88,7 @@ fun WorkoutsScreen(
     var pendingDelete by remember { mutableStateOf<Workout?>(null) }
     pendingDelete?.let { workout ->
         ConfirmDialog(
-            message = "למחוק את האימון \"${workout.name}\"?",
+            message = tr("למחוק את האימון \"{0}\"?", workout.name),
             surfaceColor = theme.surfaceColor,
             textColor = theme.textColor,
             dangerColor = theme.dangerColor,
@@ -100,8 +102,8 @@ fun WorkoutsScreen(
 
     Column(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 20.dp)) {
-            Text("ספריית התוכן שלך", color = theme.sectionHeaderColor, fontSize = FutureTypography.label, fontWeight = FontWeight.Bold)
-            Text("אימונים", color = theme.textColor, fontSize = FutureTypography.headline, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 2.dp))
+            Text(tr("ספריית התוכן שלך"), color = theme.sectionHeaderColor, fontSize = FutureTypography.label, fontWeight = FontWeight.Bold)
+            Text(tr("אימונים"), color = theme.textColor, fontSize = FutureTypography.headline, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 2.dp))
         }
 
         LazyRow(
@@ -156,7 +158,7 @@ fun WorkoutsScreen(
                     ) {
                         Icon(FutureIcons.Add, contentDescription = null, tint = theme.textColor, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("אימון חדש", color = theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Bold)
+                        Text(tr("אימון חדש"), color = theme.textColor, fontSize = FutureTypography.bodyLarge, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -164,8 +166,8 @@ fun WorkoutsScreen(
             item {
                 QuickActionCard(
                     icon = FutureIcons.AutoMirrored.DirectionsRun,
-                    title = "ריצה חופשית",
-                    subtitle = "מעקב GPS חי - מרחק וקצב",
+                    title = tr("ריצה חופשית"),
+                    subtitle = tr("מעקב GPS חי - מרחק וקצב"),
                     theme = theme,
                     onClick = onOpenRun,
                 )
@@ -174,8 +176,8 @@ fun WorkoutsScreen(
             item {
                 QuickActionCard(
                     icon = FutureIcons.GridView,
-                    title = "כל סוגי הפעילות",
-                    subtitle = "כל סוגי הפעילות, כמו בשעון חכם",
+                    title = tr("כל סוגי הפעילות"),
+                    subtitle = tr("כל סוגי הפעילות, כמו בשעון חכם"),
                     theme = theme,
                     onClick = onOpenActivityTypes,
                 )
@@ -243,7 +245,7 @@ private fun WorkoutCard(workout: Workout, weightKg: Int, theme: FutureTheme, onC
                         Text(" $calories קק״ל", color = theme.textColor.copy(alpha = 0.6f), fontSize = FutureTypography.label)
                     }
                     if (workout.isCustom) {
-                        Text("מותאם אישית", color = theme.textColor.copy(alpha = 0.4f), fontSize = FutureTypography.caption, modifier = Modifier.padding(top = 2.dp))
+                        Text(tr("מותאם אישית"), color = theme.textColor.copy(alpha = 0.4f), fontSize = FutureTypography.caption, modifier = Modifier.padding(top = 2.dp))
                     }
                 }
                 Box(
@@ -263,7 +265,7 @@ private fun WorkoutCard(workout: Workout, weightKg: Int, theme: FutureTheme, onC
                         .background(animateFocusColor(isFocused, theme.textColor.copy(alpha = 0.16f), theme.textColor.copy(alpha = 0.06f)).value, FutureShapes.md),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(FutureIcons.Close, contentDescription = "מחק אימון", tint = theme.textColor.copy(alpha = 0.7f), modifier = Modifier.size(18.dp))
+                    Icon(FutureIcons.Close, contentDescription = tr("מחק אימון"), tint = theme.textColor.copy(alpha = 0.7f), modifier = Modifier.size(18.dp))
                 }
             }
         }

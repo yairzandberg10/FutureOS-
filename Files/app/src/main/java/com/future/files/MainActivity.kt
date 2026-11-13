@@ -1,4 +1,6 @@
 package com.future.files
+
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.systemui.StatusBarInset
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.padding
@@ -44,6 +46,12 @@ private val FileSaver = Saver<File, String>(save = { it.absolutePath }, restore 
 private val FileEntrySaver = Saver<FileEntry?, String>(
     save = { it?.file?.absolutePath },
     restore = { FileEntry(File(it), false, 0L) },
+)
+
+/** הלוח (העתק/העבר) - כמה פריטים. סוג הפריט נקרא מהדיסק בשחזור, כדי שתיקייה תישאר תיקייה. */
+private val FileListSaver = Saver<List<FileEntry>, ArrayList<String>>(
+    save = { list -> ArrayList(list.map { it.file.absolutePath }) },
+    restore = { paths -> paths.map { path -> File(path).let { FileEntry(it, it.isDirectory, 0L) } } },
 )
 
 /**
@@ -96,7 +104,7 @@ class MainActivity : ComponentActivity() {
             // שכשחוזרים "אחורה" מקובץ שנפתח או מתת-תיקייה, הפוקוס חוזר בדיוק
             // לפריט שממנו יצאנו, לא תמיד לפריט הראשון ברשימה.
             var lastSelectedPathByDir by rememberSaveable { mutableStateOf<Map<String, String>>(emptyMap()) }
-            var clipboardEntry by rememberSaveable(stateSaver = FileEntrySaver) { mutableStateOf<FileEntry?>(null) }
+            var clipboardEntries by rememberSaveable(stateSaver = FileListSaver) { mutableStateOf<List<FileEntry>>(emptyList()) }
             var clipboardIsMove by rememberSaveable { mutableStateOf(false) }
             // מציין שפעולת קבצים כבדה (מחיקה/העתקה/העברה) רצה כרגע ברקע כדי
             // שהתור העליון של ה-UI thread לא ייחסם בתיקיות גדולות.
@@ -203,7 +211,7 @@ class MainActivity : ComponentActivity() {
                     isRoot = currentDir.absolutePath == root.absolutePath,
                     currentDirIsTopLevelFolder = isCurrentDirTopLevel,
                     theme = theme,
-                    hasClipboard = clipboardEntry != null,
+                    hasClipboard = clipboardEntries.isNotEmpty(),
                     onRequestAccess = {
                         if (Build.VERSION.SDK_INT >= 30) {
                             try {
@@ -220,7 +228,7 @@ class MainActivity : ComponentActivity() {
                         if (entry.isDirectory) {
                             // תיקיות מערכת ונתוני אפליקציות לא נפתחים, גם דרך קישור.
                             if (isInsideUserStorage(entry.file, root)) currentDir = entry.file
-                            else message("אין גישה לתיקייה הזו")
+                            else message(tr("אין גישה לתיקייה הזו"))
                         } else if (pickRequest != null) {
                             // במצב בחירה קובץ שנבחר מוחזר לאפליקציה הקוראת, בלי לפתוח אותו.
                             if (pickRequest.accepts(entry.file)) returnPickedFile(entry.file)
@@ -229,10 +237,10 @@ class MainActivity : ComponentActivity() {
                             when (categorize(entry.file)) {
                                 // הקבצים לא מתקינים אפליקציות. וידאו נפתח באפליקציה חיצונית שמתאימה לו.
                                 FileCategory.APK -> message("התקנת אפליקציות לא נתמכת")
-                                FileCategory.VIDEO -> if (!openFile(entry.file)) message("אין אפליקציה שפותחת את הקובץ")
+                                FileCategory.VIDEO -> if (!openFile(entry.file)) message(tr("אין אפליקציה שפותחת את הקובץ"))
                                 // שירים וקבצי שמע נפתחים במוזיקה; בלעדיה - בנגן הפנימי.
                                 FileCategory.AUDIO -> if (!openInMusic(entry.file)) viewingFile = entry
-                                FileCategory.OTHER -> if (!openFile(entry.file)) message("אין אפליקציה שפותחת את הקובץ")
+                                FileCategory.OTHER -> if (!openFile(entry.file)) message(tr("אין אפליקציה שפותחת את הקובץ"))
                                 else -> viewingFile = entry
                             }
                         }
@@ -258,7 +266,7 @@ class MainActivity : ComponentActivity() {
                             if (withContext(Dispatchers.IO) { repository.createFolder(currentDir, name) }) {
                                 reloadEntries()
                             } else {
-                                message("לא ניתן ליצור את התיקייה")
+                                message(tr("לא ניתן ליצור את התיקייה"))
                             }
                         }
                     },
@@ -267,7 +275,7 @@ class MainActivity : ComponentActivity() {
                             if (withContext(Dispatchers.IO) { repository.renameEntry(entry.file, newName) }) {
                                 reloadEntries()
                             } else {
-                                message("לא ניתן לשנות את השם")
+                                message(tr("לא ניתן לשנות את השם"))
                             }
                         }
                     },
@@ -280,7 +288,7 @@ class MainActivity : ComponentActivity() {
                                 if (ok) {
                                     reloadEntries()
                                 } else {
-                                    message("לא ניתן למחוק")
+                                    message(tr("לא ניתן למחוק"))
                                 }
                                 isBusy = false
                             }
@@ -296,40 +304,60 @@ class MainActivity : ComponentActivity() {
                                 clipData = android.content.ClipData.newRawUri(entry.file.name, uri)
                                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                             }
-                            com.future.sharednav.share.FutureShare.open(this@MainActivity, shareIntent, "שיתוף קובץ")
+                            com.future.sharednav.share.FutureShare.open(this@MainActivity, shareIntent, tr("שיתוף קובץ"))
                         } catch (e: Exception) {
-                            message("לא ניתן לשתף")
+                            message(tr("לא ניתן לשתף"))
                         }
                     },
-                    onOpenExternally = { entry -> if (!openFile(entry.file)) message("אין אפליקציה שפותחת את הקובץ") },
-                    onCopy = { entry -> clipboardEntry = entry; clipboardIsMove = false },
-                    onMove = { entry -> clipboardEntry = entry; clipboardIsMove = true },
+                    onOpenExternally = { entry -> if (!openFile(entry.file)) message(tr("אין אפליקציה שפותחת את הקובץ")) },
+                    onCopy = { entry -> clipboardEntries = listOf(entry); clipboardIsMove = false },
+                    onMove = { entry -> clipboardEntries = listOf(entry); clipboardIsMove = true },
+                    // בחירה מרובה: כל הפריטים שנבחרו נכנסים ללוח, וההדבקה מעבירה את כולם.
+                    onCopyMultiple = { selected ->
+                        clipboardEntries = selected
+                        clipboardIsMove = false
+                        message(tr("{0} פריטים מוכנים להדבקה - נווטו לתיקייה ובחרו \"הדבק כאן\"", selected.size))
+                    },
+                    onMoveMultiple = { selected ->
+                        clipboardEntries = selected
+                        clipboardIsMove = true
+                        message(tr("{0} פריטים מוכנים להעברה - נווטו לתיקייה ובחרו \"הדבק כאן\"", selected.size))
+                    },
                     onPaste = {
-                        val toPaste = clipboardEntry
-                        val movingIntoSameFolder = clipboardIsMove && toPaste?.file?.parentFile?.absolutePath == currentDir.absolutePath
-                        if (movingIntoSameFolder) {
-                            message("הפריט כבר נמצא כאן")
-                        } else if (toPaste != null && !isBusy) {
+                        // העברה לתיקייה שהפריט כבר בה לא עושה כלום - מדלגים עליו.
+                        val toPaste = clipboardEntries.filterNot {
+                            clipboardIsMove && it.file.parentFile?.absolutePath == currentDir.absolutePath
+                        }
+                        if (clipboardEntries.isNotEmpty() && toPaste.isEmpty()) {
+                            message(if (clipboardEntries.size == 1) "הפריט כבר נמצא כאן" else tr("הפריטים כבר נמצאים כאן"))
+                        } else if (toPaste.isNotEmpty() && !isBusy) {
                             isBusy = true
                             val progress = com.future.files.data.CopyProgress()
                             progressValue = 0f
                             copyProgress = progress
                             // התיקייה נקבעת לפני ההעתקה - חזרה "אחורה" באמצע לא משנה את היעד.
                             val destDir = currentDir
+                            val moving = clipboardIsMove
                             coroutineScope.launch {
-                                // שם תפוס לא עוצר את ההדבקה: הפריט נשמר כ"שם (2)".
-                                val targetName = withContext(Dispatchers.IO) { repository.availableName(destDir, toPaste.file.name, toPaste.isDirectory) }
-                                val ok = withContext(Dispatchers.IO) {
-                                    if (clipboardIsMove) repository.moveEntry(toPaste.file, destDir, progress, targetName)
-                                    else repository.copyEntry(toPaste.file, destDir, progress, targetName)
+                                val failed = ArrayList<FileEntry>()
+                                for (item in toPaste) {
+                                    if (progress.cancelled) { failed += item; continue }
+                                    // שם תפוס לא עוצר את ההדבקה: הפריט נשמר כ"שם (2)".
+                                    val targetName = withContext(Dispatchers.IO) { repository.availableName(destDir, item.file.name, item.isDirectory) }
+                                    val ok = withContext(Dispatchers.IO) {
+                                        if (moving) repository.moveEntry(item.file, destDir, progress, targetName)
+                                        else repository.copyEntry(item.file, destDir, progress, targetName)
+                                    }
+                                    if (!ok) failed += item
                                 }
                                 reloadEntries()
                                 when {
-                                    progress.cancelled -> message("הפעולה בוטלה")
-                                    !ok -> message("לא ניתן להדביק כאן")
+                                    progress.cancelled -> message(tr("הפעולה בוטלה"))
+                                    failed.size == toPaste.size -> message(tr("לא ניתן להדביק כאן"))
+                                    failed.isNotEmpty() -> message(tr("לא הודבקו {0} מתוך {1} פריטים", failed.size, toPaste.size))
                                 }
-                                // ביטול או כשלון משאירים את הפריט בלוח - אפשר לנסות שוב
-                                if (ok) clipboardEntry = null
+                                // ביטול או כשלון משאירים בלוח רק את מה שלא הודבק - אפשר לנסות שוב.
+                                clipboardEntries = failed
                                 copyProgress = null
                                 isBusy = false
                             }
@@ -360,7 +388,7 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
                             if (uris.isEmpty()) {
-                                message("אין קבצים לשתף")
+                                message(tr("אין קבצים לשתף"))
                                 return@FilesScreen
                             }
                             val shareIntent = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
@@ -371,9 +399,9 @@ class MainActivity : ComponentActivity() {
                                 }
                                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                             }
-                            com.future.sharednav.share.FutureShare.open(this@MainActivity, shareIntent, "שיתוף קבצים")
+                            com.future.sharednav.share.FutureShare.open(this@MainActivity, shareIntent, tr("שיתוף קבצים"))
                         } catch (e: Exception) {
-                            message("לא ניתן לשתף")
+                            message(tr("לא ניתן לשתף"))
                         }
                     }
                 )

@@ -1,5 +1,7 @@
 package com.future.futureui.controlcenter.ui
 
+import com.future.sharednav.i18n.tr
+
 import com.future.sharednav.theme.FutureMotion
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
@@ -151,7 +153,10 @@ fun ControlCenterScreen(
     val clockColor = if (isDarkBackground) Color.White else Color.Black
     val dateColor = if (isDarkBackground) Color.LightGray else Color.Gray
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(
+        LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection,
+        com.future.futureui.controlcenter.ui.components.LocalOverlayIsDark provides isDarkBackground,
+    ) {
         // השכבה נופלת מהקצה העליון בקפיץ (או נכנסת מהצד, במעבר ממרכז
         // ההתראות), והקבוצות שבה נכנסות בגל (cascadeIn). העיצוב לא השתנה.
         val overlay = motion ?: remember { com.future.futureui.utils.OverlayMotion().also { it.enter() } }
@@ -346,7 +351,7 @@ fun ControlCenterScreen(
                                             }
                                             if (availableControls.isNotEmpty()) {
                                                 Text(
-                                                    text = "הוספת כפתורים",
+                                                    text = tr("הוספת כפתורים"),
                                                     color = clockColor.copy(alpha = 0.7f),
                                                     fontSize = FutureTypography.label,
                                                     fontWeight = FontWeight.Bold,
@@ -409,7 +414,7 @@ fun ControlCenterScreen(
 
                                         if (gridControls.isEmpty() && !isGridEditing) {
                                             Text(
-                                                text = "אין פקדים - היכנס לעריכה ולחץ Options על הרשת כדי להוסיף (עד ${GridCatalog.MAX_CONTROLS})",
+                                                text = tr("אין פקדים - היכנס לעריכה ולחץ Options על הרשת כדי להוסיף (עד {0})", GridCatalog.MAX_CONTROLS),
                                                 color = clockColor.copy(alpha = 0.7f),
                                                 fontSize = FutureTypography.label,
                                                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -417,6 +422,8 @@ fun ControlCenterScreen(
                                             )
                                         }
 
+                                        // UI1: שם הפקד הממוקד, כשהשמות מוסתרים (מצב מקופל)
+                                        var focusedGridLabel by remember { mutableStateOf<String?>(null) }
                                         val totalRows = (gridControls.size + 4) / 5
                                         val maxRows = if (isExpanded || isEditMode) totalRows else minOf(2, totalRows)
                                         repeat(maxRows) { rowIndex ->
@@ -448,13 +455,36 @@ fun ControlCenterScreen(
                                                                 isEditMode = isGridEditing,
                                                                 isRemove = true,
                                                                 onMenuClick = { if (isGridEditing) isGridEditing = false },
-                                                                labelColor = clockColor
+                                                                labelColor = clockColor,
+                                                                onFocusChanged = { focused ->
+                                                                    if (focused) focusedGridLabel = item.label
+                                                                    else if (focusedGridLabel == item.label) focusedGridLabel = null
+                                                                },
                                                             )
                                                         } else {
                                                             Spacer(modifier = Modifier.width(54.dp))
                                                         }
                                                     }
                                                 }
+                                            }
+                                        }
+
+                                        if (!isExpanded && !isEditMode && gridControls.isNotEmpty()) {
+                                            // שורה בגובה קבוע: השם מתחלף ב-crossfade ולא מזיז את הרשת
+                                            AnimatedContent(
+                                                targetState = focusedGridLabel.orEmpty(),
+                                                transitionSpec = { fadeIn(tween(FutureMotion.DurationStandard)) togetherWith fadeOut(tween(FutureMotion.DurationFast)) },
+                                                label = "ccGridLabel",
+                                                modifier = Modifier.fillMaxWidth().height(20.dp),
+                                                contentAlignment = Alignment.Center,
+                                            ) { label ->
+                                                Text(
+                                                    text = label,
+                                                    fontSize = FutureTypography.caption,
+                                                    color = clockColor,
+                                                    maxLines = 1,
+                                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                                )
                                             }
                                         }
 

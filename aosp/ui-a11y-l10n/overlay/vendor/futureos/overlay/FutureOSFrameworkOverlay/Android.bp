@@ -1,0 +1,9 @@
+// RRO סטטי מעל framework-res (חבילת "android").
+// נכלל דרך PRODUCT_PACKAGES ב-config/ui_a11y_l10n.mk.
+runtime_resource_overlay {
+    name: "FutureOSFrameworkOverlay",
+    resource_dirs: ["res"],
+    certificate: "platform",
+    sdk_version: "current",
+    product_specific: true,
+}

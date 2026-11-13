@@ -1,5 +1,7 @@
 package com.future.bluetooth.data
 
+import com.future.sharednav.i18n.tr
+
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothA2dp
 import android.bluetooth.BluetoothAdapter
@@ -382,7 +384,7 @@ class BluetoothController(private val context: Context) {
                     BluetoothAdapter.ACTION_DISCOVERY_FINISHED -> {
                         if (isScanning) {
                             val n = discoveredDevices.size
-                            onEvent?.invoke(if (n == 0) "לא נמצאו מכשירים" else "החיפוש הסתיים · נמצאו $n")
+                            onEvent?.invoke(if (n == 0) tr("לא נמצאו מכשירים") else tr("החיפוש הסתיים · נמצאו {0}", n))
                         }
                         isScanning = false
                     }
@@ -390,14 +392,14 @@ class BluetoothController(private val context: Context) {
                         val state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR)
                         isEnabled = state == BluetoothAdapter.STATE_ON || state == BluetoothAdapter.STATE_TURNING_ON
                         if (state == BluetoothAdapter.STATE_ON) {
-                            onEvent?.invoke("הבלוטות' הופעל")
+                            onEvent?.invoke(tr("הבלוטות' הופעל"))
                             isTurningOn = false
                             adapterName = readAdapterName()
                             connectProfiles()
                             refreshPairedDevices()
                             startDiscovery()
                         } else if (state == BluetoothAdapter.STATE_OFF) {
-                            onEvent?.invoke("הבלוטות' כובה")
+                            onEvent?.invoke(tr("הבלוטות' כובה"))
                             userConnecting.clear()
                             isTurningOn = false
                             isScanning = false
@@ -412,7 +414,7 @@ class BluetoothController(private val context: Context) {
                         val address = device?.address
                         if (address != null && state != BluetoothDevice.BOND_BONDING && pairing.remove(address)) {
                             val name = device.toInfo().name
-                            onEvent?.invoke(if (state == BluetoothDevice.BOND_BONDED) "הותאם · $name" else "ההתאמה נכשלה · $name")
+                            onEvent?.invoke(if (state == BluetoothDevice.BOND_BONDED) tr("הותאם · {0}", name) else tr("ההתאמה נכשלה · {0}", name))
                             // התאמה שנכשלה/בוטלה מחזירה את המכשיר לרשימת הזמינים.
                             if (state == BluetoothDevice.BOND_NONE && discoveredDevices.none { it.address == address }) {
                                 discoveredDevices.add(device.toInfo())

@@ -16,7 +16,7 @@ import com.future.sharednav.theme.FutureTransitions
 /**
  * מחליף `when (route) { ... }` בניווט ידני (backStack/route) - עם מעבר
  * מונפש בכיוון הנכון. לפני זה, בכל האפליקציות עם ניווט ידני (Music,
- * Sfarim, Fitness, Tools, Clock, Frixa, Gallery, Files, Contact...) מסך
+ * Sfarim, Fitness, Tools, Clock, Gallery, Files, Contact...) מסך
  * פשוט הוחלף במסך אחר באותו פריים, בלי שום סימן לאן הלכנו.
  *
  * הכיוון נגזר מ-[depthOf]: מסך עמוק יותר נכנס קדימה, רדוד יותר חוזר
@@ -83,7 +83,9 @@ fun <S> AnimatedScreenHost(
                 LocalFocusMemory provides focusMemory,
                 com.future.sharednav.focus.LocalFocusGlide provides glide,
             ) {
-                Box(modifier = Modifier.fillMaxSize().focusGlideHost(glide)) { content(state) }
+                com.future.sharednav.focus.ProvideFocusScrollContext {
+                    Box(modifier = Modifier.fillMaxSize().focusGlideHost(glide)) { content(state) }
+                }
             }
         }
     }

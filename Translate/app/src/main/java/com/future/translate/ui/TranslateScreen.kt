@@ -1,4 +1,6 @@
 package com.future.translate.ui
+
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.systemui.StatusBarInset
 
 import com.future.sharednav.icons.FutureIcons
@@ -98,7 +100,7 @@ fun TranslateScreen(
     ScreenScaffold(
         modifier = Modifier.padding(top = StatusBarInset.TITLE_GAP_DP.dp),
         backgroundColor = theme.backgroundColor,
-        title = "תרגום",
+        title = tr("תרגום"),
         textColor = theme.textColor,
         accentColor = theme.accentColor,
     ) {
@@ -118,7 +120,7 @@ fun TranslateScreen(
                 horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm),
             ) {
                 FutureCapsule(
-                    label = "מ",
+                    label = tr("מ"),
                     value = Languages.of(from).name,
                     theme = theme,
                     onClick = { viewModel.lastPickWasSource = true; onPick(true) },
@@ -127,16 +129,16 @@ fun TranslateScreen(
                 )
                 TopBarIconButton(
                     icon = FutureIcons.SwapHoriz,
-                    contentDescription = "החלף שפות",
+                    contentDescription = tr("החלף שפות"),
                     textColor = theme.textColor,
                     accentColor = theme.accentColor,
                     onClick = {
                         viewModel.swap()
-                        snackbar.show("השפות הוחלפו")
+                        snackbar.show(tr("השפות הוחלפו"))
                     },
                 )
                 FutureCapsule(
-                    label = "אל",
+                    label = tr("אל"),
                     value = Languages.of(to).name,
                     theme = theme,
                     onClick = { viewModel.lastPickWasSource = false; onPick(false) },
@@ -156,7 +158,7 @@ fun TranslateScreen(
                         Text(
                             when {
                                 from != Languages.AUTO -> Languages.of(from).name
-                                inputLanguage != null -> "זוהתה ${inputLanguage.name}"
+                                inputLanguage != null -> tr("זוהתה {0}", inputLanguage.name)
                                 else -> Languages.auto.name
                             },
                             color = theme.sectionHeaderColor,
@@ -172,7 +174,7 @@ fun TranslateScreen(
                         value = text,
                         onValueChange = viewModel::setText,
                         theme = theme,
-                        placeholder = "הקלד טקסט לתרגום",
+                        placeholder = tr("הקלד טקסט לתרגום"),
                         singleLine = false,
                         minLines = 3,
                         maxLines = 8,
@@ -191,8 +193,8 @@ fun TranslateScreen(
             if (text.isBlank()) {
                 EmptyState(
                     icon = FutureIcons.Translate,
-                    title = "אין מה לתרגם",
-                    subtitle = "לחץ על אישור בשדה כדי להקליד",
+                    title = tr("אין מה לתרגם"),
+                    subtitle = tr("לחץ על אישור בשדה כדי להקליד"),
                     textColor = theme.textColor,
                 )
             } else {
@@ -212,7 +214,7 @@ fun TranslateScreen(
                     onCopy = { done ->
                         viewModel.commit()
                         actions.copy(done)
-                        snackbar.show("הועתק")
+                        snackbar.show(tr("הועתק"))
                     },
                     onShare = { done ->
                         viewModel.commit()
@@ -220,8 +222,8 @@ fun TranslateScreen(
                     },
                     onSave = {
                         when (viewModel.toggleSaved()) {
-                            true -> snackbar.show("נשמר")
-                            false -> snackbar.show("הוסר מהשמורים")
+                            true -> snackbar.show(tr("נשמר"))
+                            false -> snackbar.show(tr("הוסר מהשמורים"))
                             null -> Unit
                         }
                     },
@@ -233,7 +235,7 @@ fun TranslateScreen(
             // ---- אחרונות
             val recent = entries.take(2)
             if (recent.isNotEmpty()) {
-                FutureSectionHeader("אחרונות", theme)
+                FutureSectionHeader(tr("אחרונות"), theme)
                 FutureCard(theme = theme) {
                     recent.forEachIndexed { index, entry ->
                         if (index > 0) FutureDivider(theme = theme)
@@ -291,7 +293,7 @@ private fun ResultCard(
                     if (speaking) FutureIndeterminateProgressBar(theme = theme)
                 }
                 Result.Translating, Result.Empty -> {
-                    Text("מתרגם", color = theme.mutedTextColor, fontSize = type.title)
+                    Text(tr("מתרגם"), color = theme.mutedTextColor, fontSize = type.title)
                     FutureIndeterminateProgressBar(theme = theme)
                 }
                 Result.Downloading -> {
@@ -319,7 +321,7 @@ private fun ResultCard(
             ) {
                 FutureActionCell(
                     icon = FutureIcons.AutoMirrored.VolumeUp,
-                    label = "השמע",
+                    label = tr("השמע"),
                     theme = theme,
                     active = speaking,
                     height = ActionHeight,
@@ -329,7 +331,7 @@ private fun ResultCard(
                 )
                 FutureActionCell(
                     icon = FutureIcons.ContentCopy,
-                    label = "העתק",
+                    label = tr("העתק"),
                     theme = theme,
                     height = ActionHeight,
                     onClick = { onCopy(result.text) },
@@ -337,7 +339,7 @@ private fun ResultCard(
                 )
                 FutureActionCell(
                     icon = FutureIcons.Share,
-                    label = "שתף",
+                    label = tr("שתף"),
                     theme = theme,
                     height = ActionHeight,
                     onClick = { onShare(result.text) },
@@ -345,7 +347,7 @@ private fun ResultCard(
                 )
                 FutureActionCell(
                     icon = if (saved) FutureIcons.Star else FutureIcons.StarBorder,
-                    label = "שמור",
+                    label = tr("שמור"),
                     theme = theme,
                     iconColor = if (saved) theme.favoriteColor else null,
                     height = ActionHeight,
@@ -380,7 +382,7 @@ internal fun HistoryRow(
         focusRequester = focusRequester,
         trailing = {
             if (entry.saved) {
-                Icon(FutureIcons.Star, contentDescription = "שמור", tint = theme.favoriteColor, modifier = Modifier.size(16.dp))
+                Icon(FutureIcons.Star, contentDescription = tr("שמור"), tint = theme.favoriteColor, modifier = Modifier.size(16.dp))
             } else {
                 Icon(
                     FutureIcons.KeyboardArrowLeft,

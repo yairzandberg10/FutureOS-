@@ -1,9 +1,12 @@
 package com.future.clock.ui
+
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.components.FutureSnackbarHost
 import com.future.sharednav.theme.readableAccentColor
 import com.future.sharednav.components.FutureProgressBar
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.focus.bringIntoViewOnFocus
+import com.future.sharednav.focus.focusScale
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
@@ -64,7 +67,9 @@ private fun LapRow(lapLabel: String, time: String, theme: FutureTheme) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(if (isFocused) theme.accentColor.copy(alpha = 0.15f) else Color.Transparent)
+            .focusScale(isFocused, focusedScale = com.future.sharednav.theme.FutureDimens.focusScale)
+            .clip(com.future.sharednav.theme.FutureShapes.row)
+            .background(com.future.sharednav.focus.animateFocusColor(isFocused, theme.readableAccentColor.copy(alpha = 0.14f), Color.Transparent).value)
             .focusable(interactionSource = interactionSource)
             .bringIntoViewOnFocus()
             .padding(vertical = FutureDimens.spacingSm),
@@ -106,10 +111,10 @@ fun StopwatchScreen(theme: FutureTheme, onBack: () -> Unit) {
         }
     }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize()) {
-                ToolsHeader(title = "שעון עצר", theme = theme, onBack = onBack)
+                ToolsHeader(title = tr("שעון עצר"), theme = theme, onBack = onBack)
 
                 Box(modifier = Modifier.fillMaxWidth().padding(vertical = FutureDimens.spacingXl), contentAlignment = Alignment.Center) {
                     Text(
@@ -135,7 +140,7 @@ fun StopwatchScreen(theme: FutureTheme, onBack: () -> Unit) {
                 // השקופים של 84dp שהיו כאן: אלה לא היו בדיזיין סיסטם ולקחו
                 // חצי מגובה המסך, כך שכמעט לא נשאר מקום לרשימת ההקפות.
                 ClockActionRow(
-                    primaryLabel = if (StopwatchState.isRunning) "עצור" else "התחל",
+                    primaryLabel = if (StopwatchState.isRunning) tr("עצור") else tr("התחל"),
                     primaryVariant = if (StopwatchState.isRunning) FutureButtonVariant.Destructive else FutureButtonVariant.Primary,
                     onPrimary = {
                         if (StopwatchState.isRunning) {
@@ -147,7 +152,7 @@ fun StopwatchScreen(theme: FutureTheme, onBack: () -> Unit) {
                             focusAfterFrame(secondaryFocus)
                         }
                     },
-                    secondaryLabel = if (StopwatchState.isRunning) "הקפה" else "איפוס",
+                    secondaryLabel = if (StopwatchState.isRunning) tr("הקפה") else tr("איפוס"),
                     onSecondary = {
                         if (StopwatchState.isRunning) {
                             laps.add(0, StopwatchState.displayedElapsed)
@@ -169,7 +174,7 @@ fun StopwatchScreen(theme: FutureTheme, onBack: () -> Unit) {
                         contentPadding = PaddingValues(horizontal = FutureDimens.spacingXl, vertical = FutureDimens.spacingXs),
                     ) {
                         itemsIndexed(laps) { index, lap ->
-                            LapRow(lapLabel = "הקפה ${laps.size - index}", time = formatElapsed(lap), theme = theme)
+                            LapRow(lapLabel = tr("הקפה {0}", laps.size - index), time = formatElapsed(lap), theme = theme)
                         }
                     }
                 }
@@ -177,5 +182,5 @@ fun StopwatchScreen(theme: FutureTheme, onBack: () -> Unit) {
             FutureSnackbarHost(snackbar, theme)
         }
     }
-    ClockShortcutMenu(route = ClockRoute.Stopwatch, title = "שעון עצר", theme = theme, onMessage = snackbar::show)
+    ClockShortcutMenu(route = ClockRoute.Stopwatch, title = tr("שעון עצר"), theme = theme, onMessage = snackbar::show)
 }

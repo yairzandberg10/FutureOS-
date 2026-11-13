@@ -1,5 +1,7 @@
 package com.future.tools.ui
 
+import com.future.sharednav.i18n.tr
+
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureButton
 import com.future.sharednav.theme.FutureDimens
@@ -44,7 +46,7 @@ import kotlin.random.Random
 
 @Composable
 fun RandomPickerScreen(theme: FutureTheme, onBack: () -> Unit) {
-    val options = remember { mutableStateListOf("פיצה", "סושי", "המבורגר") }
+    val options = remember { mutableStateListOf(tr("פיצה"), tr("סושי"), tr("המבורגר")) }
     var draft by remember { mutableStateOf("") }
     var chosenIndex by remember { mutableStateOf<Int?>(null) }
     // X מוחק רק אחרי אישור - קודם אפשרות נמחקה מיד, גם בלחיצה מקרית.
@@ -54,10 +56,10 @@ fun RandomPickerScreen(theme: FutureTheme, onBack: () -> Unit) {
         if (options.isNotEmpty()) chosenIndex = Random.nextInt(options.size)
     }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Box(modifier = Modifier.escapeTextFieldFocusTrap().fillMaxSize().background(theme.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize()) {
-                ToolsHeader(title = "בורר אקראי", theme = theme, onBack = onBack)
+                ToolsHeader(title = tr("בורר אקראי"), theme = theme, onBack = onBack)
 
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
@@ -68,7 +70,7 @@ fun RandomPickerScreen(theme: FutureTheme, onBack: () -> Unit) {
                         value = draft,
                         onValueChange = { draft = it },
                         theme = theme,
-                        placeholder = "הוסף אפשרות",
+                        placeholder = tr("הוסף אפשרות"),
                         modifier = Modifier.weight(1f),
                     )
                     RpAddButton(theme = theme) {
@@ -82,7 +84,7 @@ fun RandomPickerScreen(theme: FutureTheme, onBack: () -> Unit) {
 
                 if (options.isEmpty()) {
                     Box(modifier = Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
-                        Text("הוסף לפחות אפשרות אחת", color = theme.subtleTextColor, fontSize = FutureTypography.summary)
+                        Text(tr("הוסף לפחות אפשרות אחת"), color = theme.subtleTextColor, fontSize = FutureTypography.summary)
                     }
                 } else {
                     LazyColumn(
@@ -124,7 +126,7 @@ fun RandomPickerScreen(theme: FutureTheme, onBack: () -> Unit) {
 
 @Composable
 private fun RpAddButton(theme: FutureTheme, onClick: () -> Unit) {
-    ToolsIconButton(FutureIcons.Add, "הוסף", theme, onClick = onClick)
+    ToolsIconButton(FutureIcons.Add, tr("הוסף"), theme, onClick = onClick)
 }
 
 /**
@@ -151,11 +153,11 @@ private fun RpOptionRow(text: String, isChosen: Boolean, theme: FutureTheme, onD
             fontWeight = if (isChosen) FutureTypography.weightBold else FutureTypography.weightMedium,
             modifier = Modifier.weight(1f)
         )
-        ToolsIconButton(FutureIcons.Close, "מחק", theme, tint = if (isChosen) theme.onReadableAccentColor else theme.textColor, onClick = onDelete)
+        ToolsIconButton(FutureIcons.Close, tr("מחק"), theme, tint = if (isChosen) theme.onReadableAccentColor else theme.textColor, onClick = onDelete)
     }
 }
 
 @Composable
 private fun RpPickButton(theme: FutureTheme, enabled: Boolean, onClick: () -> Unit) {
-    FutureButton("בחר אקראית", theme, onClick, fillMaxWidth = true, enabled = enabled)
+    FutureButton(tr("בחר אקראית"), theme, onClick, fillMaxWidth = true, enabled = enabled)
 }

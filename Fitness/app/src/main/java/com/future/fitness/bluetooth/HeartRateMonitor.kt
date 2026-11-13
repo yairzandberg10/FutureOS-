@@ -1,5 +1,7 @@
 package com.future.fitness.bluetooth
 
+import com.future.sharednav.i18n.tr
+
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
@@ -116,7 +118,7 @@ class HeartRateMonitor(private val context: Context) {
         // F09: כל יציאה מוקדמת מסבירה למה הסריקה לא התחילה.
         val a = adapter ?: run { lastError = "אין מתאם בלוטות' במכשיר"; return }
         if (!a.isEnabled) {
-            lastError = "הבלוטות' כבוי"
+            lastError = tr("הבלוטות' כבוי")
             return
         }
         val scanner = a.bluetoothLeScanner ?: run { lastError = "לא ניתן לסרוק כרגע - נסה שוב"; return }
@@ -137,7 +139,7 @@ class HeartRateMonitor(private val context: Context) {
             mainHandler.postDelayed(stopScanRunnable, SCAN_TIMEOUT_MS)
         } catch (e: SecurityException) {
             state = HrConnectionState.DISCONNECTED
-            lastError = "אין הרשאת בלוטות'"
+            lastError = tr("אין הרשאת בלוטות'")
         }
     }
 
@@ -208,7 +210,7 @@ class HeartRateMonitor(private val context: Context) {
             device.connectGatt(context, false, gattCallback, BluetoothDevice.TRANSPORT_LE)
         } catch (e: SecurityException) {
             state = HrConnectionState.DISCONNECTED
-            lastError = "אין הרשאת בלוטות'"
+            lastError = tr("אין הרשאת בלוטות'")
             null
         }
     }
@@ -275,7 +277,7 @@ class HeartRateMonitor(private val context: Context) {
                     mainHandler.postDelayed({ if (connectingAddress == address) connect(address) }, 600)
                 } else {
                     state = HrConnectionState.DISCONNECTED
-                    lastError = "החיבור נכשל - ודא שהשעון קרוב ושהבלוטות' שלו פעיל"
+                    lastError = tr("החיבור נכשל - ודא שהשעון קרוב ושהבלוטות' שלו פעיל")
                 }
                 return
             }
@@ -321,7 +323,7 @@ class HeartRateMonitor(private val context: Context) {
                 // צריך להפעיל בו "שידור דופק" (HR broadcast) - אחרת הדופק עובר
                 // רק לאפליקציית היצרן, שאין לה ממשק ציבורי.
                 state = HrConnectionState.DISCONNECTED
-                lastError = "השעון לא משדר דופק. הפעל בו \"שידור דופק\" ונסה שוב"
+                lastError = tr("השעון לא משדר דופק. הפעל בו \"שידור דופק\" ונסה שוב")
                 g.disconnect()
                 g.close()
                 if (gatt === g) gatt = null

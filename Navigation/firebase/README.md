@@ -1,7 +1,15 @@
 # שכבת השרת (Firebase) של אפליקציית הניווט
 
-כל עוד `Navigation/app/google-services.json` **לא** קיים, כל מה שכתוב כאן לא
-משפיע על כלום: תוסף `google-services` לא מוחל בכלל (ר' `app/build.gradle.kts`),
+**המכשיר לא מריץ Google Play Services, ולכן אין באפליקציה את ה-SDK של
+Firebase בכלל.** כל הדיבור עם השרת הוא REST רגיל על OkHttp
+(`data/backend/FirebaseBackend.kt`): כניסה אנונימית דרך Identity Toolkit,
+קריאה לפונקציות ה-callable ב-HTTPS, וקריאת Firestore ו-Storage דרך ה-REST
+API שלהם. מ-`google-services.json` הבנייה לוקחת רק שלושה ערכים (מזהה
+הפרויקט, מפתח ה-Web API וה-bucket), בלי תוסף `google-services`; אפשר גם
+לתת אותם ב-`local.properties` (`FIREBASE_PROJECT_ID`, `FIREBASE_API_KEY`,
+`FIREBASE_STORAGE_BUCKET`).
+
+כל עוד אין פרויקט בבנייה, כל מה שכתוב כאן לא משפיע על כלום:
 `BuildConfig.FIREBASE_CONFIGURED` הוא `false`, ו‑`FirebaseBackend.init()` יוצא
 מיד. האפליקציה ממשיכה לדבר ישירות מול Nominatim/HERE/SIRI ולייבא את קובץ
 ה‑GTFS בעצמה, בדיוק כמו קודם. ברגע שהקובץ מתווסף והאפליקציה נבנית מחדש —
@@ -21,9 +29,10 @@
 * **אין שבירה כשהשרת נופל.** כל קריאה דרך ה‑proxy שנכשלת חוזרת לנתיב הישיר
   שהיה קודם, וייבוא חבילה שנכשל חוזר לייבוא ה‑GTFS המקומי. השרת הוא שיפור,
   לא תלות קשיחה.
-* **המפתחות ב‑Remote Config הם נתיב הגיבוי בלבד.** בנתיב הראשי המכשיר לא
-  מקבל מפתחות כלל. `RemoteKeys` קיים כדי שגם בנתיב הישיר אפשר יהיה להחליף
-  מפתח מרחוק בלי לבנות ולהתקין גרסה חדשה.
+* **המפתחות ב‑`app_config/navigation` הם נתיב הגיבוי בלבד.** בנתיב הראשי המכשיר לא
+  מקבל מפתחות כלל. `RemoteKeys` קורא את המסמך הזה ב-Firestore (במקום Remote Config,
+  שה-SDK שלו דורש Google Play Services) כדי שגם בנתיב הישיר אפשר יהיה
+  להחליף מפתח מרחוק בלי לבנות ולהתקין גרסה חדשה.
 
 ## הקמה — מה צריך לעשות בקונסולה
 
@@ -34,7 +43,8 @@
    מסגרת חינמית נדיבה; אפשר וכדאי להגדיר התראת תקציב.
 3. **אפליקציית אנדרואיד:** Project settings → "Add app" → Android, עם
    package name **`com.future.navigation`** בדיוק. מורידים את
-   `google-services.json` ושמים אותו ב‑`Navigation/app/google-services.json`.
+   `google-services.json` ושמים אותו ב‑`Navigation/app/google-services.json`
+   (הבנייה קוראת ממנו רק את מזהה הפרויקט, המפתח וה-bucket).
    (הקובץ ב‑`.gitignore` — הוא לא אמור להגיע לגיט.)
 4. **Authentication** → Sign‑in method → מפעילים **Anonymous**. בלי זה כל
    הקריאות יחזרו `unauthenticated` (והאפליקציה תיפול חזרה לנתיב הישיר).
@@ -93,9 +103,10 @@ curl "https://europe-west1-<PROJECT-ID>.cloudfunctions.net/refreshTransitBundleN
 | `transit_bundles/{regionId}` | `storagePath`, `version`, `minLat/maxLat/minLon/maxLon`, ספירות, `updatedAt` |
 | `geocode_cache/{queryId}` | תוצאות חיפוש כתובת, 30 יום |
 | `service_state/nominatim` | חותמת "מתי מותר לפנות שוב" — אכיפת הקצב של Nominatim |
+| `app_config/navigation` | מתגים מרחוק ומפתחות לנתיב הישיר (ר' "כיבוי מרחוק") |
 
 חוקי הגישה (`firestore.rules`, `storage.rules`): הלקוח **קורא בלבד**, ורק את
-שני האוספים שהוא באמת צריך. כל הכתיבות הן של הפונקציות דרך ה‑Admin SDK,
+`transit_bundles` ואת `app_config/navigation`. כל הכתיבות הן של הפונקציות דרך ה‑Admin SDK,
 שעוקף את החוקים.
 
 ## להוסיף אזור נוסף
@@ -106,9 +117,13 @@ curl "https://europe-west1-<PROJECT-ID>.cloudfunctions.net/refreshTransitBundleN
 
 ## כיבוי מרחוק
 
-ב‑Remote Config אפשר להגדיר:
+במסמך Firestore בשם `app_config/navigation` (יוצרים אותו ידנית בקונסולה)
+אפשר להגדיר שדות בוליאניים:
 
 * `use_functions_proxy = false` — כל הקריאות חוזרות לנתיב הישיר.
 * `transit_data_from_server = false` — חזרה לייבוא GTFS מקומי.
+
+ובאותו מסמך, כמחרוזות, מפתחות לנתיב הישיר: `here_api_key`, `siri_base_url`,
+`siri_api_key`. המכשיר קורא את המסמך לכל היותר פעם בשעה ושומר את הערכים.
 
 שימושי אם נגמרת המכסה או אם משהו בשרת נשבר, בלי להתקין גרסה חדשה במכשיר.

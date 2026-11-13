@@ -1,5 +1,7 @@
 package com.future.messages.ui.screens
 
+import com.future.sharednav.i18n.tr
+
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureButton
 import com.future.sharednav.components.FutureButtonVariant
@@ -171,7 +173,7 @@ fun ConversationListScreen(
     }
 
     if (listMenuOpen) {
-        FutureOptionsMenu(theme = theme, onDismissRequest = { listMenuOpen = false }, header = if (showingArchive) "ארכיון" else "הודעות") {
+        FutureOptionsMenu(theme = theme, onDismissRequest = { listMenuOpen = false }, header = if (showingArchive) tr("ארכיון") else tr("הודעות")) {
             ListMenuRows(
                 theme = theme,
                 unreadCount = unreadCount,
@@ -215,7 +217,7 @@ fun ConversationListScreen(
 
     pendingDelete?.let { conversation ->
         ConfirmDialog(
-            message = "למחוק את השיחה עם \"${NumberActions.displayName(conversation.contact.name)}\"?",
+            message = tr("למחוק את השיחה עם \"{0}\"?", NumberActions.displayName(conversation.contact.name)),
             surfaceColor = theme.surfaceColor,
             textColor = theme.textColor,
             dangerColor = theme.dangerColor,
@@ -227,7 +229,7 @@ fun ConversationListScreen(
         )
     }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize().padding(top = com.future.sharednav.systemui.StatusBarInset.HEIGHT_DP.dp)) {
                 // השורה העליונה של הדיזיין סיסטם (TopBar: 16/12dp, כותרת 20sp). מתחתיה
@@ -243,7 +245,7 @@ fun ConversationListScreen(
                             value = searchText,
                             onValueChange = { searchText = it },
                             theme = theme,
-                            placeholder = if (showingArchive) "חיפוש בארכיון" else "חיפוש בהודעות",
+                            placeholder = if (showingArchive) tr("חיפוש בארכיון") else tr("חיפוש בהודעות"),
                             autoFocus = true,
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -256,13 +258,13 @@ fun ConversationListScreen(
                             modifier = Modifier.fillMaxWidth().padding(horizontal = FutureDimens.spacingLg, vertical = FutureDimens.spacingMd),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(if (showingArchive) "ארכיון" else "הודעות", fontSize = FutureTypography.screenTitle, fontWeight = FontWeight.Bold, color = theme.textColor, modifier = Modifier.weight(1f))
+                            Text(if (showingArchive) tr("ארכיון") else tr("הודעות"), fontSize = FutureTypography.screenTitle, fontWeight = FontWeight.Bold, color = theme.textColor, modifier = Modifier.weight(1f))
                             Row(horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm)) {
-                                TopBarIconButton(FutureIcons.Search, "חיפוש", theme.textColor, theme.accentColor, { searchOpen = true })
+                                TopBarIconButton(FutureIcons.Search, tr("חיפוש"), theme.textColor, theme.accentColor, { searchOpen = true })
                                 if (!showingArchive) {
-                                    TopBarIconButton(FutureIcons.Archive, "ארכיון", theme.textColor, theme.accentColor, { onShowArchive(true) })
-                                    TopBarIconButton(FutureIcons.Lock, "צ'אט FutureOS", theme.textColor, theme.accentColor, onChatSetupClick)
-                                    TopBarIconButton(FutureIcons.Groups, "הודעה קבוצתית", theme.textColor, theme.accentColor, onGroupComposeClick)
+                                    TopBarIconButton(FutureIcons.Archive, tr("ארכיון"), theme.textColor, theme.accentColor, { onShowArchive(true) })
+                                    TopBarIconButton(FutureIcons.Lock, tr("צ'אט FutureOS"), theme.textColor, theme.accentColor, onChatSetupClick)
+                                    TopBarIconButton(FutureIcons.Groups, tr("הודעה קבוצתית"), theme.textColor, theme.accentColor, onGroupComposeClick)
                                 }
                             }
                         }
@@ -270,7 +272,7 @@ fun ConversationListScreen(
                 }
                 if (!showingArchive) {
                     com.future.sharednav.components.FutureButton(
-                        text = "הודעה חדשה",
+                        text = tr("הודעה חדשה"),
                         theme = theme,
                         onClick = onComposeClick,
                         fillMaxWidth = true,
@@ -305,14 +307,14 @@ fun ConversationListScreen(
                             else -> FutureIcons.AutoMirrored.Chat
                         },
                         title = when {
-                            searchText.isNotBlank() -> "לא נמצאו הודעות"
-                            showingArchive -> "הארכיון ריק"
-                            else -> "אין הודעות"
+                            searchText.isNotBlank() -> tr("לא נמצאו הודעות")
+                            showingArchive -> tr("הארכיון ריק")
+                            else -> tr("אין הודעות")
                         },
                         subtitle = when {
                             searchText.isNotBlank() -> null
-                            showingArchive -> "Options על שיחה - \"העבר לארכיון\""
-                            else -> "\"הודעה חדשה\" למעלה מתחיל שיחה"
+                            showingArchive -> tr("Options על שיחה - \"העבר לארכיון\"")
+                            else -> tr("\"הודעה חדשה\" למעלה מתחיל שיחה")
                         },
                         textColor = theme.textColor,
                     )
@@ -359,13 +361,13 @@ private fun ListMenuRows(
     onMarkAllRead: () -> Unit,
     onShowArchive: (Boolean) -> Unit,
 ) {
-    if (!showingArchive) FutureMenuRow("הודעה חדשה", FutureIcons.Edit, theme, { onPick(); onCompose() })
-    FutureMenuRow("חיפוש", FutureIcons.Search, theme, { onPick(); onSearch() })
+    if (!showingArchive) FutureMenuRow(tr("הודעה חדשה"), FutureIcons.Edit, theme, { onPick(); onCompose() })
+    FutureMenuRow(tr("חיפוש"), FutureIcons.Search, theme, { onPick(); onSearch() })
     if (unreadCount > 0) FutureMenuRow("סמן הכל כנקרא ($unreadCount)", FutureIcons.MarkEmailRead, theme, { onPick(); onMarkAllRead() })
     if (showingArchive) {
-        FutureMenuRow("חזרה להודעות", FutureIcons.AutoMirrored.Chat, theme, { onPick(); onShowArchive(false) })
+        FutureMenuRow(tr("חזרה להודעות"), FutureIcons.AutoMirrored.Chat, theme, { onPick(); onShowArchive(false) })
     } else {
-        FutureMenuRow(if (archivedCount > 0) "ארכיון ($archivedCount)" else "ארכיון", FutureIcons.Archive, theme, { onPick(); onShowArchive(true) })
+        FutureMenuRow(if (archivedCount > 0) tr("ארכיון ({0})", archivedCount) else tr("ארכיון"), FutureIcons.Archive, theme, { onPick(); onShowArchive(true) })
     }
 }
 
@@ -462,12 +464,12 @@ private fun ConversationOptionsMenu(
     listRows: @Composable () -> Unit,
 ) {
     FutureOptionsMenu(theme = theme, onDismissRequest = onDismiss, header = NumberActions.displayName(conversation.contact.name)) {
-        FutureMenuRow("התקשר", FutureIcons.Call, theme, onCall)
+        FutureMenuRow(tr("התקשר"), FutureIcons.Call, theme, onCall)
         if (onAddToContacts != null) {
-            FutureMenuRow("הוסף לאנשי קשר", FutureIcons.PersonAdd, theme, onAddToContacts)
+            FutureMenuRow(tr("הוסף לאנשי קשר"), FutureIcons.PersonAdd, theme, onAddToContacts)
         }
-        FutureMenuRow(if (isArchived) "הוצא מהארכיון" else "העבר לארכיון", if (isArchived) FutureIcons.Unarchive else FutureIcons.Archive, theme, onToggleArchive)
-        FutureMenuRow("מחק שיחה", FutureIcons.Delete, theme, onDelete, destructive = true)
+        FutureMenuRow(if (isArchived) tr("הוצא מהארכיון") else tr("העבר לארכיון"), if (isArchived) FutureIcons.Unarchive else FutureIcons.Archive, theme, onToggleArchive)
+        FutureMenuRow(tr("מחק שיחה"), FutureIcons.Delete, theme, onDelete, destructive = true)
         listRows()
     }
 }

@@ -1,5 +1,7 @@
 package com.future.futureui
 
+import com.future.sharednav.i18n.tr
+
 import com.future.sharednav.theme.FutureTypography
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
@@ -99,38 +101,30 @@ class MainActivity : ComponentActivity() {
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        Text(text = "ניהול FutureUI", fontSize = FutureTypography.headline, fontWeight = FontWeight.Bold)
+                        Text(text = tr("ניהול FutureUI"), fontSize = FutureTypography.headline, fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.height(24.dp))
                         
-                        ServiceStatusRow("שורת מצב", isStatusBarEnabled)
-                        ServiceStatusRow("מרכז בקרה", isControlEnabled)
-                        ServiceStatusRow("מרכז התראות", isNotificationEnabled)
+                        ServiceStatusRow(tr("שורת מצב"), isStatusBarEnabled)
+                        ServiceStatusRow(tr("מרכז בקרה"), isControlEnabled)
+                        ServiceStatusRow(tr("מרכז התראות"), isNotificationEnabled)
                         
                         Spacer(modifier = Modifier.height(24.dp))
                         
                         // כפתורי מערכת העיצוב: טבעת פוקוס ברורה. ↑ בראשון ו-↓ באחרון לא
                         // עוטפים לצד השני (N-04).
                         FutureButton(
-                            text = "הפעל שירותי נגישות",
+                            text = tr("הפעל שירותי נגישות"),
                             theme = theme,
                             onClick = { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) },
-                            modifier = Modifier.focusProperties { up = FocusRequester.Cancel },
+                            modifier = Modifier.focusProperties { up = FocusRequester.Cancel; down = FocusRequester.Cancel },
                             focusRequester = firstButton,
                         )
 
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        FutureButton(
-                            text = "התאמה אישית",
-                            theme = theme,
-                            onClick = { startActivity(Intent(this@MainActivity, SettingsActivity::class.java)) },
-                            modifier = Modifier.focusProperties { down = FocusRequester.Cancel },
-                        )
 
                         Spacer(modifier = Modifier.height(24.dp))
                         
                         Text(
-                            text = "הנחיות:\n1. הפעל את השירותים הרצויים.\n2. במסך הנעילה: לחיצה ארוכה על מקש ההגדרות לעריכה.\n3. לחץ OK לביטול נעילה.",
+                            text = tr("הנחיות:\n1. הפעל את השירותים הרצויים.\n2. במסך הנעילה: לחיצה ארוכה על מקש ההגדרות לעריכה.\n3. לחץ OK לביטול נעילה."),
                             textAlign = TextAlign.Center
                         )
                     }
@@ -148,7 +142,7 @@ class MainActivity : ComponentActivity() {
         ) {
             Text(text = label)
             Text(
-                text = if (isEnabled) "✅ פעיל" else "❌ כבוי",
+                text = if (isEnabled) tr("✅ פעיל") else tr("❌ כבוי"),
                 color = if (isEnabled) androidx.compose.material3.MaterialTheme.colorScheme.primary else androidx.compose.material3.MaterialTheme.colorScheme.error
             )
         }

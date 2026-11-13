@@ -1,5 +1,7 @@
 package com.android.sistemui.controlcenter.ui
 
+import com.future.sharednav.i18n.tr
+
 import com.future.sharednav.theme.FutureMotion
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
@@ -43,9 +45,11 @@ import com.android.sistemui.controlcenter.logic.ControlManager
 import com.android.sistemui.controlcenter.logic.GridCatalog
 import com.android.sistemui.controlcenter.logic.GridControlManager
 import com.android.sistemui.controlcenter.ui.components.*
+import com.android.sistemui.utils.cascadeIn
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.*
+import com.future.sharednav.focus.animateFocusColor
 
 @Composable
 fun ControlCenterScreen(
@@ -57,7 +61,10 @@ fun ControlCenterScreen(
     onPowerClick: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
     onSwitchToNotificationCenter: () -> Unit = {},
-    onRequestClose: () -> Unit = {}
+    onRequestClose: () -> Unit = {},
+    /** פתיחה/סגירה בשליטת השירות - כך היציאה רצה לפני שהחלון מוסר. */
+    motion: com.android.sistemui.utils.OverlayMotion? = null,
+    onExitFinished: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val manager = controlManager ?: remember { ControlManager(context) }
@@ -121,12 +128,14 @@ fun ControlCenterScreen(
         )
     }
 
-    LaunchedEffect(Unit) {
+    // פורמט השעה לפי הגדרת 12/24 של המערכת, והעדכון בגבול הדקה (F18)
+    val timePattern = if (android.text.format.DateFormat.is24HourFormat(LocalContext.current)) "HH:mm" else "h:mm"
+    LaunchedEffect(timePattern) {
         while (true) {
             val now = Calendar.getInstance().time
-            currentTime = SimpleDateFormat("HH:mm", Locale.getDefault()).format(now)
+            currentTime = SimpleDateFormat(timePattern, Locale.getDefault()).format(now)
             currentDate = hebrewDateFormat.format(now)
-            delay(1000 * 60)
+            delay(60_000L - System.currentTimeMillis() % 60_000L + 50L)
         }
     }
 
@@ -144,17 +153,15 @@ fun ControlCenterScreen(
     val clockColor = if (isDarkBackground) Color.White else Color.Black
     val dateColor = if (isDarkBackground) Color.LightGray else Color.Gray
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
+        // השכבה נופלת מהקצה העליון בקפיץ (או נכנסת מהצד, במעבר ממרכז
+        // ההתראות), והקבוצות שבה נכנסות בגל (cascadeIn). העיצוב לא השתנה.
+        val overlay = motion ?: remember { com.android.sistemui.utils.OverlayMotion().also { it.enter() } }
+        if (motion != null) com.android.sistemui.utils.OverlayExitWatcher(motion, onExitFinished)
         AnimatedVisibility(
-            visible = isVisible,
-            enter = slideInVertically(
-                initialOffsetY = { -it },
-                animationSpec = tween(FutureMotion.DurationSlow, easing = FutureMotion.EasingDecelerate)
-            ) + fadeIn(animationSpec = tween(FutureMotion.DurationSlow)),
-            exit = slideOutVertically(
-                targetOffsetY = { -it },
-                animationSpec = tween(FutureMotion.DurationSlow, easing = FutureMotion.EasingAccelerate)
-            ) + fadeOut(animationSpec = tween(FutureMotion.DurationSlow))
+            visibleState = overlay.visible,
+            enter = overlay.enterTransition(),
+            exit = overlay.exitTransition(),
         ) {
             Box(
                 modifier = modifier
@@ -199,7 +206,7 @@ fun ControlCenterScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().cascadeIn(0),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.Top
                     ) {
@@ -249,11 +256,14 @@ fun ControlCenterScreen(
 
                     Spacer(modifier = Modifier.height(4.dp))
 
-                    sectionOrder.forEach { sectionId ->
-                        if (sectionId == "available") return@forEach
+                    sectionOrder.forEachIndexed { sectionIndex, sectionId ->
+                        if (sectionId == "available") return@forEachIndexed
                         
                         val isMoving = movingSectionId == sectionId
                         
+                        // key: כשמזיזים קבוצות במצב עריכה, הגל לא יורץ מחדש על הקבוצה שזזה.
+                        androidx.compose.runtime.key(sectionId) {
+                        Box(modifier = Modifier.cascadeIn(sectionIndex + 1)) {
                         FocusableSection(
                             id = sectionId,
                             isEditMode = isEditMode,
@@ -301,7 +311,8 @@ fun ControlCenterScreen(
                                                     topToggleIds = newList
                                                 },
                                                 focusRequester = if (index == 0) initialFocusRequester else null,
-                                                labelColor = clockColor
+                                                // SY3: הכיתוב על אריח הזכוכית הבהיר תמיד כהה, בלי קשר לטפט.
+                                                labelColor = Color(0xFF111114)
                                             )
                                         }
                                     }
@@ -337,7 +348,7 @@ fun ControlCenterScreen(
                                             }
                                             if (availableControls.isNotEmpty()) {
                                                 Text(
-                                                    text = "הוספת כפתורים",
+                                                    text = tr("הוספת כפתורים"),
                                                     color = clockColor.copy(alpha = 0.7f),
                                                     fontSize = FutureTypography.label,
                                                     fontWeight = FontWeight.Bold,
@@ -400,7 +411,7 @@ fun ControlCenterScreen(
 
                                         if (gridControls.isEmpty() && !isGridEditing) {
                                             Text(
-                                                text = "אין פקדים - היכנס לעריכה ולחץ Options על הרשת כדי להוסיף (עד ${GridCatalog.MAX_CONTROLS})",
+                                                text = tr("אין פקדים - היכנס לעריכה ולחץ Options על הרשת כדי להוסיף (עד {0})", GridCatalog.MAX_CONTROLS),
                                                 color = clockColor.copy(alpha = 0.7f),
                                                 fontSize = FutureTypography.label,
                                                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -408,6 +419,8 @@ fun ControlCenterScreen(
                                             )
                                         }
 
+                                        // UI1: שם הפקד הממוקד, כשהשמות מוסתרים (מצב מקופל)
+                                        var focusedGridLabel by remember { mutableStateOf<String?>(null) }
                                         val totalRows = (gridControls.size + 4) / 5
                                         val maxRows = if (isExpanded || isEditMode) totalRows else minOf(2, totalRows)
                                         repeat(maxRows) { rowIndex ->
@@ -439,13 +452,36 @@ fun ControlCenterScreen(
                                                                 isEditMode = isGridEditing,
                                                                 isRemove = true,
                                                                 onMenuClick = { if (isGridEditing) isGridEditing = false },
-                                                                labelColor = clockColor
+                                                                labelColor = clockColor,
+                                                                onFocusChanged = { focused ->
+                                                                    if (focused) focusedGridLabel = item.label
+                                                                    else if (focusedGridLabel == item.label) focusedGridLabel = null
+                                                                },
                                                             )
                                                         } else {
                                                             Spacer(modifier = Modifier.width(54.dp))
                                                         }
                                                     }
                                                 }
+                                            }
+                                        }
+
+                                        if (!isExpanded && !isEditMode && gridControls.isNotEmpty()) {
+                                            // שורה בגובה קבוע: השם מתחלף ב-crossfade ולא מזיז את הרשת
+                                            AnimatedContent(
+                                                targetState = focusedGridLabel.orEmpty(),
+                                                transitionSpec = { fadeIn(tween(FutureMotion.DurationStandard)) togetherWith fadeOut(tween(FutureMotion.DurationFast)) },
+                                                label = "ccGridLabel",
+                                                modifier = Modifier.fillMaxWidth().height(20.dp),
+                                                contentAlignment = Alignment.Center,
+                                            ) { label ->
+                                                Text(
+                                                    text = label,
+                                                    fontSize = FutureTypography.caption,
+                                                    color = clockColor,
+                                                    maxLines = 1,
+                                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                                )
                                             }
                                         }
 
@@ -461,7 +497,7 @@ fun ControlCenterScreen(
                                                 contentAlignment = Alignment.Center
                                             ) {
                                                 Box(modifier = Modifier.width(36.dp).height(4.dp).clip(CircleShape)
-                                                    .background(if (isIndicatorFocused) Color(0xFF525252) else Color(0xFFBDBDBD)))
+                                                    .background(animateFocusColor(isIndicatorFocused, Color(0xFF525252), Color(0xFFBDBDBD)).value))
                                             }
                                         }
                                     }
@@ -505,6 +541,8 @@ fun ControlCenterScreen(
                                     }
                                 }
                             }
+                        }
+                        }
                         }
                         Spacer(modifier = Modifier.height(8.dp))
                     }

@@ -45,5 +45,11 @@
             android:authorities="${applicationId}.sharednav.crashcapture"
             android:exported="false"
             android:initOrder="2000" />
+        <!-- טוען את שכבת התרגום (i18n/Tr.kt) לפני ספקי האפליקציה, כדי ש-tr() יעבוד גם בקוד שרץ מוקדם. -->
+        <provider
+            android:name="com.future.sharednav.i18n.TrInstaller"
+            android:authorities="${applicationId}.sharednav.tr"
+            android:exported="false"
+            android:initOrder="1001" />
     </application>
 </manifest>

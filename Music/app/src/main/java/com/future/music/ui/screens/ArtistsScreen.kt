@@ -1,5 +1,7 @@
 package com.future.music.ui.screens
 
+import com.future.sharednav.i18n.tr
+
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureListItem
 import com.future.sharednav.components.FutureAvatar
@@ -45,10 +47,10 @@ fun ArtistsScreen(artists: List<ArtistGroup>, theme: FutureTheme, onBack: () -> 
     LaunchedEffect(Unit) { runCatching { firstItemFocusRequester.requestFocus() } }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        ScreenTopBar(title = "אמנים", theme = theme, onBack = onBack)
+        ScreenTopBar(title = tr("אמנים"), theme = theme, onBack = onBack)
         if (artists.isEmpty()) {
             Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Text("לא נמצאו אמנים", color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.body)
+                Text(tr("לא נמצאו אמנים"), color = theme.textColor.copy(alpha = 0.5f), fontSize = FutureTypography.body)
             }
         } else {
             LazyColumn(

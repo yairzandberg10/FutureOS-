@@ -1,4 +1,6 @@
 package com.future.messages.ui.screens
+
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.systemui.StatusBarInset
 import androidx.compose.material.icons.rounded.ErrorOutline
 
@@ -124,7 +126,7 @@ fun MessageThreadScreen(
         textFieldFocusRequester.requestFocus()
     }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         // enableEdgeToEdge() מבטל את decorFitsSystemWindows, ואז
         // windowSoftInputMode="adjustResize" כבר לא מקטין את החלון כשהמקלדת עולה -
         // בלי imePadding שורת כתיבת ההודעה נשארת מתחת למקלדת ולא רואים מה מקלידים.
@@ -139,7 +141,7 @@ fun MessageThreadScreen(
                 accentColor = theme.accentColor,
                 onBack = onBack,
                 trailingIcon = FutureIcons.Call,
-                trailingContentDescription = "התקשר",
+                trailingContentDescription = tr("התקשר"),
                 onTrailingClick = onCall,
             )
             // "מקליד..." - מגיע רק מצ'אט FutureOS, כשהצד השני כותב עכשיו.
@@ -149,7 +151,7 @@ fun MessageThreadScreen(
             }
             if (peerTyping) {
                 Text(
-                    "מקליד…",
+                    tr("מקליד…"),
                     color = theme.readableAccentColor,
                     fontSize = FutureTypography.caption,
                     fontWeight = FutureTypography.weightMedium,
@@ -294,7 +296,7 @@ fun MessageThreadScreen(
                     // תוכן ההודעה נשלח רק לאפליקציית הפתקים האמיתית (אותה חתימה)
                     val genuine = com.future.sharednav.security.SameSigner.matches(context, "com.future.notes")
                     runCatching { check(genuine); context.startActivity(intent) }.onFailure {
-                        android.widget.Toast.makeText(context, "אפליקציית הפתקים לא מותקנת", android.widget.Toast.LENGTH_SHORT).show()
+                        android.widget.Toast.makeText(context, tr("אפליקציית הפתקים לא מותקנת"), android.widget.Toast.LENGTH_SHORT).show()
                     }
                 }
             } else null,
@@ -304,7 +306,7 @@ fun MessageThreadScreen(
 
     pendingDelete?.let { message ->
         ConfirmDialog(
-            message = "למחוק את ההודעה?",
+            message = tr("למחוק את ההודעה?"),
             surfaceColor = theme.surfaceColor,
             textColor = theme.textColor,
             dangerColor = theme.dangerColor,
@@ -333,11 +335,11 @@ private fun AttachmentPreview(uri: Uri, theme: FutureTheme, onRemove: () -> Unit
             modifier = Modifier.size(56.dp).clip(FutureShapes.sm).background(theme.idleFieldColor)
         ) {
             if (bitmap != null) {
-                Image(bitmap = bitmap, contentDescription = "תמונה מצורפת", modifier = Modifier.fillMaxSize())
+                Image(bitmap = bitmap, contentDescription = tr("תמונה מצורפת"), modifier = Modifier.fillMaxSize())
             }
         }
-        Text("תמונה מצורפת MMS", color = theme.secondaryTextColor, fontSize = FutureTypography.summary, modifier = Modifier.weight(1f))
-        TopBarIconButton(FutureIcons.Close, "הסר תמונה", theme.textColor, theme.accentColor, onRemove)
+        Text(tr("תמונה מצורפת MMS"), color = theme.secondaryTextColor, fontSize = FutureTypography.summary, modifier = Modifier.weight(1f))
+        TopBarIconButton(FutureIcons.Close, tr("הסר תמונה"), theme.textColor, theme.accentColor, onRemove)
     }
 }
 
@@ -401,7 +403,7 @@ private fun MessageBubble(message: Message, theme: FutureTheme, onClick: () -> U
                 if (bitmap != null) {
                     Image(
                         bitmap = bitmap,
-                        contentDescription = "תמונה",
+                        contentDescription = tr("תמונה"),
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(FutureShapes.md)
@@ -431,17 +433,17 @@ private fun MessageMeta(message: Message, time: String, theme: FutureTheme) {
     val status = message.status
     // הודעה שעברה בצ'אט (FutureOS או RCS) מסומנת בסיומת - כדי שיהיה ברור מתי זה לא SMS.
     val via = when {
-        message.isChat -> " · צ'אט"
+        message.isChat -> tr(" · צ'אט")
         message.isRcs -> " · RCS"
         else -> ""
     }
     val (icon, label, color) = when (status) {
         null -> Triple(null, "$time$via", theme.subtleTextColor)
-        com.future.messages.data.MessageStatus.SENDING -> Triple(FutureIcons.Schedule, "שולח", theme.mutedTextColor)
-        com.future.messages.data.MessageStatus.SENT -> Triple(FutureIcons.Check, "נשלח · $time$via", theme.readableAccentColor)
-        com.future.messages.data.MessageStatus.DELIVERED -> Triple(FutureIcons.Check, "נמסר · $time$via", theme.readableAccentColor)
-        com.future.messages.data.MessageStatus.READ -> Triple(FutureIcons.Visibility, "נקרא · $time$via", theme.readableAccentColor)
-        com.future.messages.data.MessageStatus.FAILED -> Triple(FutureIcons.Error, "לא נשלח", theme.dangerColor)
+        com.future.messages.data.MessageStatus.SENDING -> Triple(FutureIcons.Schedule, tr("שולח"), theme.mutedTextColor)
+        com.future.messages.data.MessageStatus.SENT -> Triple(FutureIcons.Check, tr("נשלח · {0}{1}", time, via), theme.readableAccentColor)
+        com.future.messages.data.MessageStatus.DELIVERED -> Triple(FutureIcons.Check, tr("נמסר · {0}{1}", time, via), theme.readableAccentColor)
+        com.future.messages.data.MessageStatus.READ -> Triple(FutureIcons.Visibility, tr("נקרא · {0}{1}", time, via), theme.readableAccentColor)
+        com.future.messages.data.MessageStatus.FAILED -> Triple(FutureIcons.Error, tr("לא נשלח"), theme.dangerColor)
     }
     Row(
         modifier = Modifier.padding(horizontal = 3.dp, vertical = FutureDimens.spacingXs),
@@ -470,11 +472,11 @@ private fun MessageActionDialog(
     onDismiss: () -> Unit,
     onSaveToNotes: (() -> Unit)? = null,
 ) {
-    FutureOptionsMenu(theme = theme, onDismissRequest = onDismiss, header = "הודעה") {
+    FutureOptionsMenu(theme = theme, onDismissRequest = onDismiss, header = tr("הודעה")) {
         if (onResend != null) FutureMenuRow("שלח שוב", FutureIcons.RestartAlt, theme, onResend)
-        FutureMenuRow("העבר הודעה", FutureIcons.AutoMirrored.Send, theme, onForward)
-        if (onSaveToNotes != null) FutureMenuRow("שמירה בפתקים", FutureIcons.Description, theme, onSaveToNotes)
-        FutureMenuRow("מחק הודעה", FutureIcons.Delete, theme, onDelete, destructive = true)
+        FutureMenuRow(tr("העבר הודעה"), FutureIcons.AutoMirrored.Send, theme, onForward)
+        if (onSaveToNotes != null) FutureMenuRow(tr("שמירה בפתקים"), FutureIcons.Description, theme, onSaveToNotes)
+        FutureMenuRow(tr("מחק הודעה"), FutureIcons.Delete, theme, onDelete, destructive = true)
     }
 }
 

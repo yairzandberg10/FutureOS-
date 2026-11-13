@@ -1,5 +1,7 @@
 package com.future.futureui.statusbar.service
 
+import com.future.sharednav.i18n.tr
+
 import android.accessibilityservice.AccessibilityService
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -78,6 +80,129 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
     }
     private val recentSnapshots by lazy {
         RecentSnapshots(this, StatusBarLayoutManager.heightPx(this))
+    }
+
+    // גוון שורת המצב: true = לבנה (תוכן שחור), false = שחורה (תוכן לבן). נדגם מהתוכן שמתחתיה.
+    private val barLight = mutableStateOf(false)
+    // הצבע השולט ברצועה שמתחת לשורה (ARGB), או null כשהיא מעורבת (טפט, תמונה).
+    // השורה נצבעת בו מעל אפליקציה, כך שהיא נראית כהמשך של האפליקציה - לבנה מעל
+    // לבן, שחורה מעל שחור, ובצבע של האפליקציה מעל כותרת צבעונית.
+    private val barColor = mutableStateOf<Int?>(null)
+    private val toneExecutor by lazy { java.util.concurrent.Executors.newSingleThreadExecutor() }
+    private var lastToneShotAt = 0L
+    private val toneRunnable = Runnable { sampleBarTone() }
+
+    private fun scheduleToneSample(delayMs: Long) {
+        mainHandler.removeCallbacks(toneRunnable)
+        mainHandler.postDelayed(toneRunnable, delayMs)
+    }
+
+    /**
+     * מצלם את המסך ומודד את הבהירות של רצועה בגובה 24dp שמיד מתחת לשורת המצב (השורה
+     * עצמה לא נכללת במדידה, כדי שהיא לא תשפיע על עצמה). תוכן בהיר -> שורה לבנה,
+     * כהה -> שחורה; בין 0.42 ל-0.58 נשארים בגוון הקיים כדי שלא יהבהב. נשמרת רק
+     * הבהירות הממוצעת - הצילום עצמו לא נשמר ולא יוצא מהפונקציה.
+     */
+    private fun sampleBarTone() {
+        val now = SystemClock.uptimeMillis()
+        // המערכת מגבילה takeScreenshot (גם צילומי האחרונות והזכוכית משתמשים בו) - מנסים שוב מאוחר יותר.
+        if (now - lastToneShotAt < 500) { scheduleToneSample(550); return }
+        lastToneShotAt = now
+        try {
+            takeScreenshot(android.view.Display.DEFAULT_DISPLAY, toneExecutor, object : TakeScreenshotCallback {
+                override fun onSuccess(result: ScreenshotResult) {
+                    val sample = runCatching {
+                        val buffer = result.hardwareBuffer
+                        val hw = android.graphics.Bitmap.wrapHardwareBuffer(buffer, result.colorSpace)
+                        buffer.close()
+                        hw?.let { measureStrip(it) }
+                    }.onFailure { Log.w("FutureUI", "tone sample failed", it) }.getOrNull()
+                    if (sample != null) {
+                        mainHandler.post {
+                            // הגוון של הטקסט נגזר מהצבע שהשורה תקבל בפועל (אם יש צבע שולט),
+                            // אחרת מהבהירות הממוצעת - עם אותו טווח היסטרזיס נגד הבהוב.
+                            val luma = sample.dominant?.let { relativeLuma(it) } ?: sample.luma
+                            if (luma > 0.58f) barLight.value = true
+                            else if (luma < 0.42f) barLight.value = false
+                            barColor.value = sample.dominant
+                        }
+                    }
+                }
+
+                override fun onFailure(errorCode: Int) {
+                    // חלון מאובטח או הגבלת קצב - נשארים בגוון הקיים ומנסים שוב בקרוב.
+                    mainHandler.post { scheduleToneSample(900) }
+                }
+            })
+        } catch (e: Exception) {
+            Log.w("FutureUI", "takeScreenshot for tone failed", e)
+        }
+    }
+
+    /** מה נמדד ברצועה: הבהירות הממוצעת, והצבע השולט אם יש כזה. */
+    private class StripSample(val luma: Float, val dominant: Int?)
+
+    private fun relativeLuma(c: Int): Float {
+        val r = (c shr 16) and 0xFF
+        val g = (c shr 8) and 0xFF
+        val b = c and 0xFF
+        return ((0.2126 * r + 0.7152 * g + 0.0722 * b) / 255.0).toFloat()
+    }
+
+    /**
+     * רצועה ברוחב המסך ובגובה 24dp שמיד מתחת לשורה: הבהירות הממוצעת, ובנוסף הצבע
+     * השולט - הפיקסלים מקובצים לפי 4 ביטים לערוץ, ואם קבוצה אחת מכסה לפחות 55%
+     * מהרצועה (רקע של אפליקציה, כותרת צבעונית) מוחזר הממוצע שלה. כך טקסט קטן
+     * בתוך הרצועה לא צובע את השורה. רצועה מעורבת (טפט, תמונה) - null.
+     */
+    private fun measureStrip(hardware: android.graphics.Bitmap): StripSample {
+        val density = resources.displayMetrics.density
+        val top = (StatusBarLayoutManager.HEIGHT_DP * density).toInt()
+        val stripHeight = (24 * density).toInt().coerceAtLeast(1)
+        val soft = hardware.copy(android.graphics.Bitmap.Config.ARGB_8888, false)
+        hardware.recycle()
+        try {
+            val y0 = top.coerceIn(0, soft.height - 1)
+            val y1 = (y0 + stripHeight).coerceAtMost(soft.height)
+            var sum = 0.0
+            var count = 0
+            val hits = IntArray(4096)
+            val sumR = LongArray(4096)
+            val sumG = LongArray(4096)
+            val sumB = LongArray(4096)
+            var y = y0
+            while (y < y1) {
+                var x = 0
+                while (x < soft.width) {
+                    val c = soft.getPixel(x, y)
+                    val r = (c shr 16) and 0xFF
+                    val g = (c shr 8) and 0xFF
+                    val b = c and 0xFF
+                    sum += (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255.0
+                    count++
+                    val bucket = ((r shr 4) shl 8) or ((g shr 4) shl 4) or (b shr 4)
+                    hits[bucket]++
+                    sumR[bucket] += r.toLong()
+                    sumG[bucket] += g.toLong()
+                    sumB[bucket] += b.toLong()
+                    x += 8
+                }
+                y += 4
+            }
+            if (count == 0) return StripSample(0f, null)
+            var best = 0
+            for (i in 1 until hits.size) if (hits[i] > hits[best]) best = i
+            val n = hits[best]
+            val dominant = if (n >= count * 0.55f) {
+                val r = (sumR[best] / n).toInt()
+                val g = (sumG[best] / n).toInt()
+                val b = (sumB[best] / n).toInt()
+                (0xFF shl 24) or (r shl 16) or (g shl 8) or b
+            } else null
+            return StripSample((sum / count).toFloat(), dominant)
+        } finally {
+            soft.recycle()
+        }
     }
 
     /** האם אפשר לצלם עכשיו את [pkg]: היא בחזית, רשומה באחרונות, ואין מעליה חלון שלנו. */
@@ -218,6 +343,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
         }
         layoutManager?.registerListener(suppressListener)
         showStatusBar()
+        scheduleToneSample(400)
         exemptCallAppsFromBackgroundRestriction()
         if (lockController == null) {
             lockController = com.future.futureui.lockscreen.LockScreenController(
@@ -254,12 +380,15 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
             if (pkg != null && recentAppsManager.isTop(pkg)) recentSnapshots.schedule(pkg, 900, ::isSnapshotTarget)
             maybeReplaceSystemPowerMenu(pkg, event.className?.toString(), event)
             lockController?.onForegroundChanged(pkg, event.className?.toString())
+            // הגוון נדגם אחרי שהחלון החדש סיים להצטייר
+            scheduleToneSample(350)
         }
     }
     override fun onInterrupt() {}
 
     override fun onKeyEvent(event: KeyEvent): Boolean {
         val keyCode = event.keyCode
+        if (event.action == KeyEvent.ACTION_UP) scheduleToneSample(450)
         // כשהמשתמש מפסיק ללחוץ - מצלמים שוב, כדי שכרטיס האחרונות יראה איפה עזבנו
         if (event.action == KeyEvent.ACTION_UP && !recentsVisible) {
             val fg = FutureUIState.foregroundPackage
@@ -421,7 +550,8 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
                             controlManager = controlManager,
                             layoutManager = layoutManager,
                             accentColor = recentsAccentColor.value,
-                            darkMode = barDarkMode.value
+                            lightTone = barLight.value,
+                            sampledColor = barColor.value?.let { androidx.compose.ui.graphics.Color(it) },
                         )
                     }
                 }
@@ -581,12 +711,12 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
                         com.future.futureui.controlcenter.ui.PowerMenuScreen(
                             onPowerOff = {
                                 hidePowerMenu()
-                                android.widget.Toast.makeText(this@StatusBarAccessibilityService, "מכבה את המכשיר...", android.widget.Toast.LENGTH_SHORT).show()
+                                android.widget.Toast.makeText(this@StatusBarAccessibilityService, tr("מכבה את המכשיר..."), android.widget.Toast.LENGTH_SHORT).show()
                                 controlManager?.runRootCommandAsync("reboot -p")
                             },
                             onRestart = {
                                 hidePowerMenu()
-                                android.widget.Toast.makeText(this@StatusBarAccessibilityService, "מפעיל מחדש...", android.widget.Toast.LENGTH_SHORT).show()
+                                android.widget.Toast.makeText(this@StatusBarAccessibilityService, tr("מפעיל מחדש..."), android.widget.Toast.LENGTH_SHORT).show()
                                 controlManager?.runRootCommandAsync("reboot")
                             },
                             onCancel = { hidePowerMenu() },
@@ -792,6 +922,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
     }
 
     override fun onDestroy() {
+        mainHandler.removeCallbacks(toneRunnable)
         if (com.future.futureui.utils.FrostedBackdrop.service === this) com.future.futureui.utils.FrostedBackdrop.service = null
         try {
             removeVolumeOverlayNow()
@@ -835,7 +966,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
         const val ACTION_LOCK_NOW = "com.future.futureui.ACTION_LOCK_NOW"
         private val POWER_MENU_CLASS_HINTS = listOf("globalactions", "ActionsDialog", "PowerMenu", "ShutdownDialog")
         /** השורות של תפריט הכיבוי של אנדרואיד, עברית ואנגלית. */
-        private val POWER_OFF_LABELS = listOf("כיבוי", "כבה", "Power off", "Shut down", "Shutdown")
-        private val POWER_MENU_LABELS = POWER_OFF_LABELS + listOf("הפעלה מחדש", "אתחול", "Restart", "Reboot", "מצב טיסה", "Airplane mode")
+        private val POWER_OFF_LABELS = listOf(tr("כיבוי"), tr("כבה"), "Power off", "Shut down", "Shutdown")
+        private val POWER_MENU_LABELS = POWER_OFF_LABELS + listOf(tr("הפעלה מחדש"), tr("אתחול"), "Restart", "Reboot", tr("מצב טיסה"), "Airplane mode")
     }
 }

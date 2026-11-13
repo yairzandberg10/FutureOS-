@@ -1,5 +1,7 @@
 package com.future.guide.ui
 
+import com.future.sharednav.i18n.tr
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -43,10 +45,10 @@ fun GuideHomeScreen(theme: FutureTheme, focusedAppId: String? = null, onOpen: (S
         }
     }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize()) {
-                GuideHeader(title = "מדריך למשתמש", theme = theme)
+                GuideHeader(title = tr("מדריך למשתמש"), theme = theme)
                 LazyColumn(
                     state = listState,
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),

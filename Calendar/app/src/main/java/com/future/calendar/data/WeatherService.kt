@@ -1,5 +1,7 @@
 package com.future.calendar.data
 
+import com.future.sharednav.i18n.tr
+
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
@@ -24,17 +26,17 @@ private fun weatherIcon(code: Int): androidx.compose.ui.graphics.vector.ImageVec
 }
 
 private fun weatherDescription(code: Int): String = when (code) {
-    0 -> "בהיר"
-    1, 2 -> "מעונן חלקית"
-    3 -> "מעונן"
-    45, 48 -> "ערפל"
-    51, 53, 55, 56, 57 -> "טפטוף"
-    61, 63, 65, 66, 67 -> "גשם"
-    71, 73, 75, 77 -> "שלג"
-    80, 81, 82 -> "ממטרים"
-    85, 86 -> "ממטרי שלג"
-    95, 96, 99 -> "סופת רעמים"
-    else -> "לא ידוע"
+    0 -> tr("בהיר")
+    1, 2 -> tr("מעונן חלקית")
+    3 -> tr("מעונן")
+    45, 48 -> tr("ערפל")
+    51, 53, 55, 56, 57 -> tr("טפטוף")
+    61, 63, 65, 66, 67 -> tr("גשם")
+    71, 73, 75, 77 -> tr("שלג")
+    80, 81, 82 -> tr("ממטרים")
+    85, 86 -> tr("ממטרי שלג")
+    95, 96, 99 -> tr("סופת רעמים")
+    else -> tr("לא ידוע")
 }
 
 /** תחזית מזג אוויר אמיתית ל-16 יום קדימה, דרך Open-Meteo - שירות ציבורי ללא צורך במפתח API. */

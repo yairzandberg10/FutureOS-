@@ -1,0 +1,2 @@
+/system_ext/bin/futureos-privacy\.sh    u:object_r:futureos_privacy_exec:s0
+/data/misc/futureos(/.*)?               u:object_r:futureos_data_file:s0

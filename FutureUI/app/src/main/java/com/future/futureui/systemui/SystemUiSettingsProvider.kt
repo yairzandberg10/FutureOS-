@@ -26,6 +26,7 @@ class SystemUiSettingsProvider : ContentProvider() {
         const val COL_USE_24_HOUR_CLOCK = "use_24_hour_clock"
         const val COL_SUPPRESS_SYSTEM_BARS = "suppress_system_bars"
         const val COL_BAR_STYLE = StatusBarLayoutManager.KEY_BAR_STYLE
+        const val COL_BAR_TONE = StatusBarLayoutManager.KEY_BAR_TONE
         // קריאה בלבד: המכשיר נעול (גם כשמסך הנעילה פינה מקום לשיחה). החייגן בודק
         // את זה כדי לא לחשוף יומן/אנשי קשר מתוך שיחה במכשיר נעול.
         const val COL_DEVICE_SECURED = "device_secured"
@@ -85,7 +86,7 @@ class SystemUiSettingsProvider : ContentProvider() {
             PATH_THREATS -> { enforceSecurityCaller(); return threats() }
             PATH_THREAT_LOG -> { enforceSecurityCaller(); return threatLog() }
         }
-        val cursor = MatrixCursor(arrayOf(COL_SHOW_BATTERY, COL_SHOW_BLUETOOTH, COL_USE_24_HOUR_CLOCK, COL_SUPPRESS_SYSTEM_BARS, COL_BAR_STYLE, COL_DEVICE_SECURED))
+        val cursor = MatrixCursor(arrayOf(COL_SHOW_BATTERY, COL_SHOW_BLUETOOTH, COL_USE_24_HOUR_CLOCK, COL_SUPPRESS_SYSTEM_BARS, COL_BAR_STYLE, COL_DEVICE_SECURED, COL_BAR_TONE))
         cursor.addRow(
             arrayOf(
                 if (statusBarPrefs.getBoolean(COL_SHOW_BATTERY, true)) 1 else 0,
@@ -96,6 +97,7 @@ class SystemUiSettingsProvider : ContentProvider() {
                 statusBarPrefs.getString(COL_BAR_STYLE, StatusBarLayoutManager.STYLE_CLASSIC),
                 // גם נעילת המערכת עצמה (KeyguardManager), לא רק הדגל בזיכרון שמתאפס עם התהליך (F14)
                 if (com.future.futureui.utils.FutureUIState.isSecured || systemLocked()) 1 else 0,
+                statusBarPrefs.getString(COL_BAR_TONE, StatusBarLayoutManager.TONE_AUTO),
             )
         )
         return cursor
@@ -110,6 +112,7 @@ class SystemUiSettingsProvider : ContentProvider() {
             if (values.containsKey(COL_USE_24_HOUR_CLOCK)) putBoolean(COL_USE_24_HOUR_CLOCK, values.getAsInteger(COL_USE_24_HOUR_CLOCK) == 1)
             if (values.containsKey(COL_SUPPRESS_SYSTEM_BARS)) putBoolean(COL_SUPPRESS_SYSTEM_BARS, values.getAsInteger(COL_SUPPRESS_SYSTEM_BARS) == 1)
             values.getAsString(COL_BAR_STYLE)?.takeIf { it in StatusBarLayoutManager.STYLES }?.let { putString(COL_BAR_STYLE, it) }
+            values.getAsString(COL_BAR_TONE)?.takeIf { it in StatusBarLayoutManager.TONES }?.let { putString(COL_BAR_TONE, it) }
         }.apply()
         context?.contentResolver?.notifyChange(CONTENT_URI, null)
         return 1

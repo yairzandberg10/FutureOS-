@@ -1,5 +1,7 @@
 package com.future.dialer.ui.calllog
 
+import com.future.sharednav.i18n.tr
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -70,7 +72,7 @@ fun CallLogScreen(
     val context = androidx.compose.ui.platform.LocalContext.current
 
     Column(modifier = Modifier.fillMaxSize()) {
-        ScreenTopBar(title = "שיחות", textColor = theme.textColor, accentColor = theme.accentColor)
+        ScreenTopBar(title = tr("שיחות"), textColor = theme.textColor, accentColor = theme.accentColor)
         LazyRow(
             modifier = Modifier.fillMaxWidth(),
             contentPadding = PaddingValues(horizontal = FutureDimens.spacingLg),
@@ -93,7 +95,7 @@ fun CallLogScreen(
             EmptyState(
                 icon = if (filter == CallFilter.MISSED) FutureIcons.CallMissed else FutureIcons.Call,
                 title = emptyTitleOf(filter),
-                subtitle = if (filter == CallFilter.ALL) "הקלד מספר כדי להתקשר" else "בחר הכל כדי לראות את כל השיחות",
+                subtitle = if (filter == CallFilter.ALL) tr("הקלד מספר כדי להתקשר") else tr("בחר הכל כדי לראות את כל השיחות"),
                 textColor = theme.textColor,
                 modifier = Modifier.weight(1f).fillMaxWidth(),
             )
@@ -144,7 +146,7 @@ fun CallLogScreen(
 
 /** כותרת המסך הריק לכל פילטר - משפט שלם בעברית (לא "אין שיחות" + שם הפילטר). */
 private fun emptyTitleOf(filter: CallFilter): String = when (filter) {
-    CallFilter.ALL -> "אין שיחות"
+    CallFilter.ALL -> tr("אין שיחות")
     CallFilter.MISSED -> "אין שיחות שלא נענו"
     CallFilter.INCOMING -> "אין שיחות שהתקבלו"
     CallFilter.OUTGOING -> "אין שיחות שחויגו"

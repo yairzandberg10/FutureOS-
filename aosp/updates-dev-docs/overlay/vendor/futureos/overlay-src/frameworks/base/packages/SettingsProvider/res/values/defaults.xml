@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- FutureOS overlay: ברירות מחדל של SettingsProvider (955, 923).
+     שומרים רק את המפתחות שאנחנו משנים. לאמת מול העץ ששמות המשאבים קיימים:
+       grep -n "def_backup" frameworks/base/packages/SettingsProvider/res/values/defaults.xml -->
+<resources>
+    <!-- גיבוי מופעל; בלי transport הוא לא עושה כלום עד ש-FutureBackup מותקן. -->
+    <bool name="def_backup_enabled">true</bool>
+    <!-- ריק במכוון: אין ענן ואין GMS. FutureBackup ירשום את עצמו כ-transport. -->
+    <string name="def_backup_transport"></string>
+</resources>

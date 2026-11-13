@@ -1,5 +1,7 @@
 package com.future.translate.ui
 
+import com.future.sharednav.i18n.tr
+
 import com.future.sharednav.icons.FutureIcons
 
 import androidx.activity.compose.BackHandler
@@ -125,26 +127,26 @@ fun TranslateApp(viewModel: TranslateViewModel, theme: FutureTheme, actions: Tra
     }
 
     if (menuOpen) {
-        FutureOptionsMenu(theme = theme, onDismissRequest = { menuOpen = false }, header = "תרגום") {
+        FutureOptionsMenu(theme = theme, onDismissRequest = { menuOpen = false }, header = tr("תרגום")) {
             fun pick(action: () -> Unit): () -> Unit = { menuOpen = false; action() }
-            if (top != Route.Talk) FutureMenuRow("שיחה", FutureIcons.Forum, theme, pick { push(Route.Talk) })
-            if (top != Route.History) FutureMenuRow("היסטוריה", FutureIcons.History, theme, pick { push(Route.History) })
-            FutureMenuRow("הורדת שפה", FutureIcons.Download, theme, pick { push(Route.Downloads) })
-            FutureMenuRow("הגדרות", FutureIcons.Settings, theme, pick { push(Route.Settings) })
-            FutureMenuRow("נקה היסטוריה", FutureIcons.Delete, theme, pick { confirmClear = true }, destructive = true)
+            if (top != Route.Talk) FutureMenuRow(tr("שיחה"), FutureIcons.Forum, theme, pick { push(Route.Talk) })
+            if (top != Route.History) FutureMenuRow(tr("היסטוריה"), FutureIcons.History, theme, pick { push(Route.History) })
+            FutureMenuRow(tr("הורדת שפה"), FutureIcons.Download, theme, pick { push(Route.Downloads) })
+            FutureMenuRow(tr("הגדרות"), FutureIcons.Settings, theme, pick { push(Route.Settings) })
+            FutureMenuRow(tr("נקה היסטוריה"), FutureIcons.Delete, theme, pick { confirmClear = true }, destructive = true)
         }
     }
 
     if (confirmClear) {
         ConfirmDialog(
-            message = "לנקות את היסטוריית התרגומים?",
+            message = tr("לנקות את היסטוריית התרגומים?"),
             theme = theme,
-            confirmLabel = "נקה",
+            confirmLabel = tr("נקה"),
             onCancel = { confirmClear = false },
             onConfirm = {
                 confirmClear = false
                 viewModel.clearHistory()
-                snackbar.show("ההיסטוריה נוקתה")
+                snackbar.show(tr("ההיסטוריה נוקתה"))
             },
         )
     }

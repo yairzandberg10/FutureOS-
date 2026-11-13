@@ -1,0 +1,40 @@
+// FutureOS security & privacy modules. Place in device/futureos/qin/security/.
+
+prebuilt_etc {
+    name: "init.futureos.security.rc",
+    src: "init.futureos.security.rc",
+    filename: "init.futureos.security.rc",
+    sub_dir: "init",
+    system_ext_specific: true,
+}
+
+sh_binary {
+    name: "futureos-privacy.sh",
+    src: "futureos-privacy.sh",
+    filename: "futureos-privacy.sh",
+    system_ext_specific: true,
+}
+
+prebuilt_etc {
+    name: "futureos_privacy_policy_he",
+    src: "privacy-policy.he.md",
+    filename: "privacy-policy.he.md",
+    sub_dir: "futureos",
+    system_ext_specific: true,
+}
+
+prebuilt_etc {
+    name: "futureos_data_collection_he",
+    src: "data-collection.he.md",
+    filename: "data-collection.he.md",
+    sub_dir: "futureos",
+    system_ext_specific: true,
+}
+
+prebuilt_etc {
+    name: "futureos_crypto_policy_he",
+    src: "crypto-policy.he.md",
+    filename: "crypto-policy.he.md",
+    sub_dir: "futureos",
+    system_ext_specific: true,
+}

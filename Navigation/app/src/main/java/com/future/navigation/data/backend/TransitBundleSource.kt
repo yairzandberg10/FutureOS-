@@ -1,5 +1,7 @@
 package com.future.navigation.data.backend
 
+import com.future.sharednav.i18n.tr
+
 import android.util.Log
 import com.future.navigation.data.gtfs.BoundingBox
 import com.future.navigation.data.gtfs.CalendarEntity
@@ -14,7 +16,6 @@ import com.future.navigation.data.network.NetworkModule
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import okhttp3.Request
 import java.util.zip.GZIPInputStream
 
 /**
@@ -49,26 +50,23 @@ class TransitBundleSource(private val database: GtfsDatabase) {
      */
     suspend fun findBundle(bbox: BoundingBox): BundleRef? {
         if (!RemoteKeys.transitDataFromServer) return null
-        val firestore = FirebaseBackend.firestore ?: return null
-        return try {
-            val snapshot = firestore.collection(COLLECTION_BUNDLES).get().awaitResult()
-            snapshot.documents.mapNotNull { document ->
-                val path = document.getString("storagePath") ?: return@mapNotNull null
-                val minLat = document.getDouble("minLat") ?: return@mapNotNull null
-                val maxLat = document.getDouble("maxLat") ?: return@mapNotNull null
-                val minLon = document.getDouble("minLon") ?: return@mapNotNull null
-                val maxLon = document.getDouble("maxLon") ?: return@mapNotNull null
-                BundleRef(
-                    regionId = document.id,
-                    storagePath = path,
-                    version = document.getString("version") ?: "",
-                    bbox = BoundingBox(minLat, maxLat, minLon, maxLon),
-                )
-            }.firstOrNull { it.bbox.covers(bbox) }
-        } catch (e: Exception) {
-            Log.w(TAG, "could not read the transit bundle index", e)
-            null
+        val documents = FirebaseBackend.firestoreCollection(COLLECTION_BUNDLES) ?: run {
+            Log.w(TAG, "could not read the transit bundle index")
+            return null
         }
+        return documents.mapNotNull { document ->
+            val path = document.string("storagePath") ?: return@mapNotNull null
+            val minLat = document.double("minLat") ?: return@mapNotNull null
+            val maxLat = document.double("maxLat") ?: return@mapNotNull null
+            val minLon = document.double("minLon") ?: return@mapNotNull null
+            val maxLon = document.double("maxLon") ?: return@mapNotNull null
+            BundleRef(
+                regionId = document.id,
+                storagePath = path,
+                version = document.string("version") ?: "",
+                bbox = BoundingBox(minLat, maxLat, minLon, maxLon),
+            )
+        }.firstOrNull { it.bbox.covers(bbox) }
     }
 
     /**
@@ -76,18 +74,15 @@ class TransitBundleSource(private val database: GtfsDatabase) {
      * מציג, כדי שמסך ההתקנה לא ידע להבדיל בין שני המקורות.
      */
     suspend fun import(bundle: BundleRef, collector: FlowCollector<ImportProgress>) {
-        val storage = FirebaseBackend.storage
-            ?: throw IllegalStateException("אחסון Firebase לא זמין")
+        collector.emit(ImportProgress(ImportPhase.DOWNLOADING, 0f, message = tr("מוריד נתוני תחבורה")))
+        val request = FirebaseBackend.storageDownloadRequest(bundle.storagePath)
+            ?: throw IllegalStateException(tr("אחסון Firebase לא זמין"))
 
-        collector.emit(ImportProgress(ImportPhase.DOWNLOADING, 0f, message = "מוריד נתוני תחבורה"))
-        val downloadUrl = storage.reference.child(bundle.storagePath).downloadUrl.awaitResult()
-
-        val request = Request.Builder().url(downloadUrl.toString()).build()
         NetworkModule.okHttpClient.newCall(request).execute().use { response ->
             if (!response.isSuccessful) {
                 throw IllegalStateException("הורדת חבילת התחבורה נכשלה: ${response.code}")
             }
-            val body = response.body ?: throw IllegalStateException("תשובה ריקה מהשרת")
+            val body = response.body ?: throw IllegalStateException(tr("תשובה ריקה מהשרת"))
             val dao = database.gtfsDao()
 
             dao.clearStops()
@@ -213,7 +208,7 @@ class TransitBundleSource(private val database: GtfsDatabase) {
                         if (percent != lastReportedPercent) {
                             lastReportedPercent = percent
                             collector.emit(
-                                ImportProgress(ImportPhase.PARSING_STOP_TIMES, fraction, message = "מייבא נתוני תחבורה")
+                                ImportProgress(ImportPhase.PARSING_STOP_TIMES, fraction, message = tr("מייבא נתוני תחבורה"))
                             )
                         }
                     }

@@ -1,5 +1,7 @@
 package com.android.sistemui.share
 
+import com.future.sharednav.i18n.tr
+
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.ComponentName
@@ -78,7 +80,7 @@ import com.future.sharednav.focus.focusScale
 
 /**
  * חלון השיתוף של המערכת. כל אפליקציה ב-FutureOS משתפת דרכו
- * (SharedKeypadNav: FutureShare.open -> com.android.sistemui.ACTION_SHARE),
+ * (SharedKeypadNav: FutureShare.open -> com.future.futureui.ACTION_SHARE),
  * כך שיש חלון שיתוף אחד בכל המערכת במקום הבורר של אנדרואיד - ואם FutureUI
  * לא מותקן, FutureShare נופל לבורר של המערכת.
  *
@@ -124,7 +126,7 @@ class ShareActivity : ComponentActivity() {
         }
         // הכותרת קבועה: EXTRA_TITLE הוא טקסט חופשי של השולח והיה נראה כהודעת מערכת
         // (SU-13 / F21). במקומה מוצג מי שולח, בתת-הכותרת.
-        val title = "שיתוף"
+        val title = tr("שיתוף")
         val quick = buildQuickActions(send)
         val summaryState = mutableStateOf<String?>(null)
         val appsState = mutableStateOf<List<Target>?>(null)
@@ -170,7 +172,7 @@ class ShareActivity : ComponentActivity() {
         }
         @Suppress("DEPRECATION")
         val many: ArrayList<Uri>? = send.getParcelableArrayListExtra(Intent.EXTRA_STREAM)
-        if (!many.isNullOrEmpty()) return "${many.size} פריטים"
+        if (!many.isNullOrEmpty()) return tr("{0} פריטים", many.size)
         @Suppress("DEPRECATION")
         val one: Uri? = send.getParcelableExtra(Intent.EXTRA_STREAM)
         if (one != null) {
@@ -180,9 +182,9 @@ class ShareActivity : ComponentActivity() {
                 }
             }.getOrNull()
             return name ?: when {
-                send.type?.startsWith("image/") == true -> "תמונה"
-                send.type?.startsWith("audio/") == true -> "קובץ שמע"
-                else -> "קובץ"
+                send.type?.startsWith("image/") == true -> tr("תמונה")
+                send.type?.startsWith("audio/") == true -> tr("קובץ שמע")
+                else -> tr("קובץ")
             }
         }
         return null
@@ -192,10 +194,10 @@ class ShareActivity : ComponentActivity() {
         val text = send.getCharSequenceExtra(Intent.EXTRA_TEXT)
         if (text.isNullOrBlank()) return emptyList()
         return listOf(
-            Target("copy", "העתקה", null, FutureIcons.ContentCopy) {
+            Target("copy", tr("העתקה"), null, FutureIcons.ContentCopy) {
                 (getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
                     .setPrimaryClip(ClipData.newPlainText("text", text))
-                Toast.makeText(this, "הועתק", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, tr("הועתק"), Toast.LENGTH_SHORT).show()
                 finish()
             }
         )
@@ -227,7 +229,7 @@ class ShareActivity : ComponentActivity() {
                         startActivity(out)
                     } catch (e: Exception) {
                         android.util.Log.w("ShareActivity", "share to $key failed", e)
-                        Toast.makeText(this, "לא ניתן לשתף אל $label", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, tr("לא ניתן לשתף אל {0}", label), Toast.LENGTH_SHORT).show()
                     }
                     finish()
                 },
@@ -274,7 +276,7 @@ class ShareActivity : ComponentActivity() {
             }
         }
 
-        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+        CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -361,7 +363,7 @@ class ShareActivity : ComponentActivity() {
                             )
                         } else if (apps.isEmpty()) {
                             Text(
-                                "אין אפליקציות שיכולות לקבל את התוכן הזה",
+                                tr("אין אפליקציות שיכולות לקבל את התוכן הזה"),
                                 color = Color.White.copy(alpha = 0.55f),
                                 fontSize = FutureTypography.body,
                                 modifier = Modifier.padding(20.dp),

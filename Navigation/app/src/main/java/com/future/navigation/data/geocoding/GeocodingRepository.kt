@@ -61,6 +61,8 @@ class GeocodingRepository {
                 .distinct()
             synchronized(cache) { cache[key] = results }
             results
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
         } catch (e: Exception) {
             android.util.Log.w("GeocodingRepository", "search failed" /* בלי החיפוש עצמו: כתובת/מקום של המשתמש */, e)
             emptyList()

@@ -7,8 +7,6 @@ import com.future.sharednav.components.ScreenTopBar
 import com.future.sharednav.components.FutureOptionsMenu
 import com.future.sharednav.components.FutureMenuRow
 import com.future.sharednav.components.FutureActionCell
-import com.future.sharednav.components.FutureBottomNav
-import com.future.sharednav.components.FutureNavItem
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import com.future.sharednav.focus.FocusableItem
@@ -65,7 +63,7 @@ import com.future.calculator.logic.CalcState
 import com.future.calculator.logic.CalculatorEngine
 
 /** שני "סוגי מחשבון" זמינים - הקיים (רגיל, 4 פעולות) ומדעי חדש (טריגונומטריה/
- * לוגריתמים/חזקות) - נבחר בסרגל פלחים מתחת לכותרת. אותו state machine
+ * לוגריתמים/חזקות) - נבחר בתפריט Options. אותו state machine
  * (display/pendingValue/pendingOp) משרת את שניהם: פונקציות מדעיות חד-איבריות
  * (sin/cos/... ) מוחלות ישירות על הערך המוצג, בדיוק כמו במחשבון מדעי כיס אמיתי. */
 private enum class CalculatorMode { STANDARD, SCIENTIFIC }
@@ -108,7 +106,7 @@ fun CalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
     // * ו-# נצרכים ברמת המערכת (החזקה ארוכה = מרכז בקרה / מרכז התראות) ולחיצה
     // קצרה מגיעה רק כשידור - אין "* ארוך" או "# ארוך" באפליקציה. לכן * = נקודה
     // עשרונית (אין לה שום מקש אחר) ו-# = אחוז; C בתפריט Options, ו-BACK אחרי
-    // תוצאה מנקה. המעבר למדעי - בתפריט ובסרגל התחתון. (המאזינים - אחרי inputDot/onPercent.)
+    // תוצאה מנקה. המעבר למדעי - בתפריט Options. (המאזינים - אחרי inputDot/onPercent.)
     // מקש Options הפיזי נחסם ברמת המערכת ולעולם לא מגיע כ-Key.Menu לאפליקציה -
     // התפריט נפתח באמת רק דרך השידור הגלובלי (ר' onOptionsKeyPress).
     com.future.sharednav.nav.onOptionsKeyPress { showMenu = true }
@@ -170,7 +168,7 @@ fun CalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
             listOf("÷" to { onOperator(CalcOp.DIV) }, "×" to { onOperator(CalcOp.MUL) }, "−" to { onOperator(CalcOp.SUB) }, "+" to { onOperator(CalcOp.ADD) }),
         ) }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
     // הפוקוס ההתחלתי צריך לנחות על כפתור אמיתי (למשל "C"), לא על ה-Box החיצוני
     // עצמו: Box עם .focusable() משלו "בולע" את הפוקוס לצמיתות ומונע ניווט D-pad
     // אל כפתורי הפעולה (+, -, ×, ÷, נקה) שמתחתיו - זה בדיוק מה שגרם ל"אין פוקוס
@@ -216,7 +214,7 @@ fun CalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
                     } else {
                         // במצב מדעי OK מפעיל את המקש הממוקד (הוא מגיע לכאן רק אם אף
                         // מקש לא טיפל בו), ו-Enter של מקלדת חיצונית הוא "=".
-                        // ימינה בקצה הרשת חוזר ללשונית "רגיל" (הסרגל התחתון, RTL).
+                        // ימינה בקצה הרשת חוזר למצב "רגיל" (RTL).
                         when (event.key) {
                             Key.Enter, Key.NumPadEnter -> { onEquals(); true }
                             Key.DirectionRight -> {
@@ -332,16 +330,8 @@ fun CalculatorScreen(theme: FutureTheme, onBack: () -> Unit) {
                 }
             }
 
-            // סרגל תחתון בין רגיל למדעי. כמו בכל המערכת הוא לא מקבל פוקוס:
-            // מחליפים לשונית בתפריט Options, או ימינה מקצה הרשת המדעית.
-            FutureBottomNav(
-                items = listOf(
-                    FutureNavItem(stringResource(R.string.calc_mode_standard), FutureIcons.Calculate),
-                    FutureNavItem(stringResource(R.string.calc_mode_scientific), FutureIcons.Functions),
-                ),
-                selectedIndex = if (calcMode == CalculatorMode.SCIENTIFIC) 1 else 0,
-                theme = theme,
-            )
+            // בלי סרגל תחתון: המעבר בין רגיל למדעי בתפריט Options, או ימינה מקצה
+            // הרשת המדעית. הסרגל לא קיבל פוקוס ותפס שורה שלמה מגובה המקשים.
         }
 
         if (showHistory) {

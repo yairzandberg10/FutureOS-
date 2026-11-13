@@ -1,5 +1,7 @@
 package com.future.clock
 
+import com.future.sharednav.i18n.tr
+
 import com.future.sharednav.icons.FutureIcons
 
 import android.os.Bundle
@@ -71,12 +73,12 @@ class MainActivity : ComponentActivity() {
             // הבית הישן שהיה רשימה גוללת בלבד - ניווט בין שעונים מעוררים/עולמי/
             // עצר/טיימר לא דרש בעבר יותר מלחיצה אחת חזרה להום ואז שוב פנימה.
             val tabs = listOf(
-                Triple(ClockRoute.Alarms, "מעוררים", FutureIcons.Alarm),
-                Triple(ClockRoute.WorldClock, "עולמי", FutureIcons.Public),
-                Triple(ClockRoute.Stopwatch, "עצר", FutureIcons.Timer),
+                Triple(ClockRoute.Alarms, tr("מעוררים"), FutureIcons.Alarm),
+                Triple(ClockRoute.WorldClock, tr("עולמי"), FutureIcons.Public),
+                Triple(ClockRoute.Stopwatch, tr("עצר"), FutureIcons.Timer),
                 // כמו ב-ui_kits/clock: הגליף "timer" מצויר כשעון עצר (חוגה עם
                 // כפתור למעלה) ושייך לעצר; לטיימר - שעון החול (hourglass_empty).
-                Triple(ClockRoute.Timer, "טיימר", FutureIcons.HourglassEmpty),
+                Triple(ClockRoute.Timer, tr("טיימר"), FutureIcons.HourglassEmpty),
             )
             val currentTabIndex = tabs.indexOfFirst { it.first == route }.coerceAtLeast(0)
 

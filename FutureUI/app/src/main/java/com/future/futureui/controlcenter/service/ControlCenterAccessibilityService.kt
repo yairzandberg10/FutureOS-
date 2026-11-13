@@ -1,5 +1,7 @@
 package com.future.futureui.controlcenter.service
 
+import com.future.sharednav.i18n.tr
+
 import android.accessibilityservice.AccessibilityService
 import android.app.WallpaperManager
 import android.content.BroadcastReceiver
@@ -95,7 +97,7 @@ class ControlCenterAccessibilityService : AccessibilityService(), LifecycleOwner
 
     override fun onServiceConnected() {
         super.onServiceConnected()
-        Toast.makeText(this, "FutureUI מוכן: לחיצה ארוכה על כוכבית", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, tr("FutureUI מוכן: לחיצה ארוכה על כוכבית"), Toast.LENGTH_SHORT).show()
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {

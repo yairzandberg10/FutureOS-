@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- FutureOS overlay for SettingsProvider defaults. Run tools/check-overlay-names.sh. -->
+<resources>
+    <!-- 509: generic device name (Settings.Global.device_name) instead of manufacturer + model. -->
+    <string name="def_device_name">FutureOS</string>
+    <string name="def_device_name_simple">FutureOS</string>
+    <!-- 491 / 520: no background Wi-Fi scanning for location while Wi-Fi is off. -->
+    <bool name="def_wifi_scan_always_available">false</bool>
+</resources>

@@ -1,5 +1,7 @@
 package com.future.navigation.data.gtfs
 
+import com.future.sharednav.i18n.tr
+
 import com.future.navigation.data.common.LatLng
 import com.future.navigation.data.common.distanceMetersTo
 import java.time.Instant
@@ -59,12 +61,28 @@ class TransitJourneyPlanner(private val dao: GtfsDao) {
         val destStopIds = destStops.map { it.stop.stopId }.toSet()
         val results = mutableListOf<TransitItinerary>()
 
+        // מטמון לחיפוש הנוכחי: כל שירות נבדק פעם אחת מול הלוח שנה
+        val activeServices = HashMap<String, Boolean>()
+        suspend fun isActive(serviceId: String): Boolean =
+            activeServices.getOrPut(serviceId) { isServiceActive(serviceId, dateInt, dayOfWeek) }
+
+        // סינון לפי יום פועל לפני החיתוך ל-limit: אחרת בלילה/בשבת ה-LIMIT מתמלא
+        // בנסיעות של שירותים לא פעילים והחיפוש מחזיר "לא נמצא".
+        suspend fun activeDepartures(stopId: String, afterSeconds: Int, limit: Int, excludeTripId: String? = null): List<DepartureRow> {
+            val out = ArrayList<DepartureRow>()
+            for (row in dao.departuresFromStop(stopId, afterSeconds, limit = Int.MAX_VALUE)) {
+                if (row.tripId == excludeTripId || !isActive(row.serviceId)) continue
+                out += row
+                if (out.size >= limit) break
+            }
+            return out
+        }
+
         for (origin in originStops) {
             // רק אוטובוסים שאפשר להספיק ברגל: קודם חיפשנו יציאות מ"עכשיו", והוצע
             // קו שיוצא עוד דקה מתחנה במרחק 10 דקות הליכה ("צא לפני 9 דקות").
             val earliest = secondsSinceMidnight + walkDurationSeconds(origin.distanceMeters)
-            val departures = dao.departuresFromStop(origin.stop.stopId, earliest, limit = MAX_DIRECT_CANDIDATES)
-                .filter { isServiceActive(it.serviceId, dateInt, dayOfWeek) }
+            val departures = activeDepartures(origin.stop.stopId, earliest, limit = MAX_DIRECT_CANDIDATES)
 
             for (dep in departures) {
                 val tripStops = dao.stopTimesForTrip(dep.tripId)
@@ -83,11 +101,12 @@ class TransitJourneyPlanner(private val dao: GtfsDao) {
                 val transferCandidates = tripStops.drop(originIndex + 1).take(MAX_TRANSFER_STOPS_PER_TRIP)
                 for (transfer in transferCandidates) {
                     val transferBuffer = 120 // שניות מינימום למעבר בין נסיעות באותה תחנה
-                    val onwardDepartures = dao.departuresFromStop(
+                    val onwardDepartures = activeDepartures(
                         transfer.stopId,
                         transfer.arrivalSeconds + transferBuffer,
-                        limit = MAX_TRANSFER_CANDIDATES
-                    ).filter { it.tripId != dep.tripId && isServiceActive(it.serviceId, dateInt, dayOfWeek) }
+                        limit = MAX_TRANSFER_CANDIDATES,
+                        excludeTripId = dep.tripId
+                    )
 
                     for (onward in onwardDepartures) {
                         val onwardTripStops = dao.stopTimesForTrip(onward.tripId)
@@ -162,7 +181,7 @@ class TransitJourneyPlanner(private val dao: GtfsDao) {
         )
 
         val legs = mutableListOf<TransitLeg>()
-        legs += walkLeg("המיקום שלך", origin.stop.name, origin.distanceMeters)
+        legs += walkLeg(tr("המיקום שלך"), origin.stop.name, origin.distanceMeters)
         legs += TransitLeg(
             type = LegType.RIDE,
             routeShortName = dep.routeShortName,
@@ -174,7 +193,7 @@ class TransitJourneyPlanner(private val dao: GtfsDao) {
             intermediateStopNames = intermediate,
             fromStopId = origin.stop.stopId
         )
-        legs += walkLeg(dest.stop.name, "היעד שלך", dest.distanceMeters)
+        legs += walkLeg(dest.stop.name, tr("היעד שלך"), dest.distanceMeters)
 
         return TransitItinerary(
             legs = legs,
@@ -207,7 +226,7 @@ class TransitJourneyPlanner(private val dao: GtfsDao) {
         )
 
         val legs = mutableListOf<TransitLeg>()
-        legs += walkLeg("המיקום שלך", origin.stop.name, origin.distanceMeters)
+        legs += walkLeg(tr("המיקום שלך"), origin.stop.name, origin.distanceMeters)
         legs += TransitLeg(
             type = LegType.RIDE,
             routeShortName = firstLegDep.routeShortName,
@@ -230,7 +249,7 @@ class TransitJourneyPlanner(private val dao: GtfsDao) {
             intermediateStopNames = secondIntermediate,
             fromStopId = transferStop.stopId
         )
-        legs += walkLeg(dest.stop.name, "היעד שלך", dest.distanceMeters)
+        legs += walkLeg(dest.stop.name, tr("היעד שלך"), dest.distanceMeters)
 
         return TransitItinerary(
             legs = legs,

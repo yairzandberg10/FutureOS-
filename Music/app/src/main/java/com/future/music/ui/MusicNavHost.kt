@@ -1,5 +1,7 @@
 package com.future.music.ui
 
+import com.future.sharednav.i18n.tr
+
 import com.future.sharednav.icons.FutureIcons
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
@@ -225,7 +227,7 @@ fun MusicNavHost(
         )
 
         is Route.AllSongs -> SongListScreen(
-            title = "כל השירים",
+            title = tr("כל השירים"),
             songs = allSongs,
             theme = theme,
             playerState = playerState,
@@ -233,7 +235,7 @@ fun MusicNavHost(
             onPlaySong = { index -> playerController.playQueue(allSongs, index) },
             onOpenNowPlaying = { push(Route.NowPlaying) },
             onTogglePlay = playerController::togglePlayPause,
-            emptyMessage = "לא נמצאה מוזיקה בטלפון",
+            emptyMessage = tr("לא נמצאה מוזיקה בטלפון"),
             // M-40: ברשימה ריקה - שורה בפוקוס לסריקה מחדש
             headerActionLabel = if (allSongs.isEmpty()) "סרוק מחדש" else null,
             onHeaderAction = if (allSongs.isEmpty()) {
@@ -263,15 +265,15 @@ fun MusicNavHost(
                 onOpenNowPlaying = { push(Route.NowPlaying) },
                 onTogglePlay = playerController::togglePlayPause,
                 topBarTrailingIcon = FutureIcons.Edit,
-                topBarTrailingDescription = "שינוי שם האמן",
+                topBarTrailingDescription = tr("שינוי שם האמן"),
                 onTopBarTrailingClick = { renamingArtist = route.artist },
             )
             renamingArtist?.let { artist ->
                 NameInputDialog(
-                    title = "שינוי שם האמן",
+                    title = tr("שינוי שם האמן"),
                     theme = theme,
                     initialValue = artist,
-                    confirmLabel = "שמור",
+                    confirmLabel = tr("שמור"),
                     onDismiss = { renamingArtist = null },
                     onConfirm = { newName ->
                         renamingArtist = null
@@ -332,17 +334,17 @@ fun MusicNavHost(
                 onPlaySong = { index -> playerController.playQueue(songs, index) },
                 onOpenNowPlaying = { push(Route.NowPlaying) },
                 onTogglePlay = playerController::togglePlayPause,
-                emptyMessage = "אין שירים בפלייליסט הזה עדיין",
-                headerActionLabel = "הוספת שירים",
+                emptyMessage = tr("אין שירים בפלייליסט הזה עדיין"),
+                headerActionLabel = tr("הוספת שירים"),
                 onHeaderAction = { push(Route.PlaylistAdd(route.playlistId, route.name)) },
                 topBarTrailingIcon = FutureIcons.Delete,
-                topBarTrailingDescription = "מחק פלייליסט",
+                topBarTrailingDescription = tr("מחק פלייליסט"),
                 onTopBarTrailingClick = { showDeleteConfirm = true },
             )
             if (showDeleteConfirm) {
                 ConfirmDialog(
-                    title = "מחיקת פלייליסט",
-                    message = "למחוק את \"${route.name}\"? הפעולה לא ניתנת לביטול.",
+                    title = tr("מחיקת פלייליסט"),
+                    message = tr("למחוק את \"{0}\"? הפעולה לא ניתנת לביטול.", route.name),
                     theme = theme,
                     onDismiss = { showDeleteConfirm = false },
                     onConfirm = {
@@ -368,7 +370,7 @@ fun MusicNavHost(
         }
 
         is Route.Favorites -> SongListScreen(
-            title = "מועדפים",
+            title = tr("מועדפים"),
             songs = favorites,
             theme = theme,
             playerState = playerState,
@@ -376,7 +378,7 @@ fun MusicNavHost(
             onPlaySong = { index -> playerController.playQueue(favorites, index) },
             onOpenNowPlaying = { push(Route.NowPlaying) },
             onTogglePlay = playerController::togglePlayPause,
-            emptyMessage = "אין עדיין שירים מועדפים",
+            emptyMessage = tr("אין עדיין שירים מועדפים"),
             // M-51: במסך ריק - שורה בפוקוס שמובילה לכל השירים
             headerActionLabel = if (favorites.isEmpty()) "לכל השירים" else null,
             onHeaderAction = if (favorites.isEmpty()) ({ backStack[backStack.lastIndex] = Route.AllSongs }) else null,

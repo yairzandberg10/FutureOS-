@@ -55,7 +55,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         // רק בהפעלה ראשונה: אחרי סיבוב/שחזור תהליך ה-intent נשאר, והקובץ היה מתנגן מחדש
         openUri.value = if (savedInstanceState == null) viewUriOf(intent) else null
-        setContent { MusicApp(openUri = openUri.value, onOpened = { openUri.value = null }) }
+        setContent { com.future.sharednav.focus.ProvideFocusScrollContext { MusicApp(openUri = openUri.value, onOpened = { openUri.value = null }) } }
     }
 
     override fun onNewIntent(intent: android.content.Intent) {

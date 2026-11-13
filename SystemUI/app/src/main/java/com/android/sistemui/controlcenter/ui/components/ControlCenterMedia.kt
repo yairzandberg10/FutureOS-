@@ -1,5 +1,7 @@
 package com.android.sistemui.controlcenter.ui.components
 
+import com.future.sharednav.i18n.tr
+
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
 import androidx.compose.foundation.Image
@@ -30,6 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.android.sistemui.controlcenter.logic.ControlManager
+import com.future.sharednav.focus.animateFocusColor
 
 @Composable
 fun MusicPlayerCard(manager: ControlManager, labelColor: Color = Color.Black) {
@@ -46,16 +49,13 @@ fun MusicPlayerCard(manager: ControlManager, labelColor: Color = Color.Black) {
                 .clip(shape)
                 .focusEffect(isFocused, shape)
                 .background(Color(0x80E0E0E0))
-                .then(
-                    if (isFocused) Modifier.border(2.dp, Color.LightGray, shape) else Modifier
-                )
                 .clickable(interactionSource = interactionSource, indication = null) { manager.openNotificationAccessSettings() }
                 .focusable(interactionSource = interactionSource)
                 .padding(16.dp),
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = "לחצו OK לאישור גישה למוזיקה",
+                text = tr("לחצו OK לאישור גישה למוזיקה"),
                 color = labelColor,
                 fontSize = FutureTypography.body,
                 fontWeight = FontWeight.Bold,
@@ -70,9 +70,6 @@ fun MusicPlayerCard(manager: ControlManager, labelColor: Color = Color.Black) {
                 .clip(shape)
                 .focusEffect(isFocused, shape)
                 .background(Color(0x80E0E0E0))
-                .then(
-                    if (isFocused) Modifier.border(2.dp, Color.LightGray, shape) else Modifier
-                )
                 .clickable(
                     interactionSource = interactionSource,
                     indication = null,
@@ -101,7 +98,7 @@ fun MusicPlayerCard(manager: ControlManager, labelColor: Color = Color.Black) {
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
-                    text = "אין מוזיקה מתנגנת",
+                    text = tr("אין מוזיקה מתנגנת"),
                     fontSize = FutureTypography.summary,
                     color = labelColor,
                     fontWeight = FontWeight.Bold,
@@ -233,13 +230,9 @@ fun MediaControlButton(icon: ImageVector, onClick: () -> Unit, isLarge: Boolean 
     Box(
         modifier = Modifier
             .size(if (isLarge) 50.dp else 40.dp)
-            .graphicsLayer {
-                scaleX = if (isFocused) 1.2f else 1f
-                scaleY = if (isFocused) 1.2f else 1f
-            }
-            .then(if (isFocused) Modifier.border(2.dp, Color.LightGray, shape) else Modifier)
+            .focusEffect(isFocused, shape, focusedScale = 1.08f)
             .clip(shape)
-            .background(if (isFocused) Color.White.copy(alpha = 0.3f) else Color.Transparent)
+            .background(animateFocusColor(isFocused, tint.copy(alpha = 0.14f), Color.Transparent).value)
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
@@ -251,7 +244,8 @@ fun MediaControlButton(icon: ImageVector, onClick: () -> Unit, isLarge: Boolean 
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = if (isFocused) Color.White else tint,
+            // האייקון שומר על הצבע שלו: קודם הוא הפך ללבן בפוקוס ונעלם על הזכוכית הבהירה.
+            tint = tint,
             modifier = Modifier.size(if (isLarge) 32.dp else 24.dp)
         )
     }

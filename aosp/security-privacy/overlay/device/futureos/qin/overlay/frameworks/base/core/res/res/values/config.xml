@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- FutureOS overlay for frameworks/base/core/res. Run tools/check-overlay-names.sh
+     before building: every name must exist in the synced tree. -->
+<resources>
+    <!-- 398 / 500: show a toast when an app reads the clipboard. -->
+    <bool name="config_clipboardAccessNotificationsEnabledByDefault">true</bool>
+</resources>

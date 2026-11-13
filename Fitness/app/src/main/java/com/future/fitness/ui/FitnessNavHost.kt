@@ -1,5 +1,7 @@
 package com.future.fitness.ui
 
+import com.future.sharednav.i18n.tr
+
 import androidx.activity.compose.BackHandler
 import java.util.Locale
 import androidx.compose.material.icons.automirrored.rounded.DirectionsRun
@@ -89,7 +91,7 @@ fun FitnessNavHost(store: WorkoutStore, heartRateMonitor: HeartRateMonitor, them
     val currentTabIndex = currentTab?.let { TAB_ORDER.indexOf(it) } ?: -1
 
     // עוגן פוקוס בסיסי בתוך אזור התוכן (לא על ה-Scaffold עצמו - זה שבר את
-    // מקש ה-Back הפיזי, ר' Frixa/MainActivity.kt לתיעוד מלא) - נותן למשהו
+    // מקש ה-Back הפיזי: ה-Scaffold לוקח את הפוקוס ו-BackHandler לא מקבל אותו) - נותן למשהו
     // אמיתי להחזיק פוקוס עם הכניסה לכל מסך, כדי שחיצי ימינה/שמאלה תמיד
     // יגיעו ל-onKeyEvent של ה-Scaffold. כל מסך עם רשימה/תוכן פוקוסבילי משלו
     // (בית/אימונים/התקדמות) גוזל את הפוקוס בחזרה מיד עם LaunchedEffect(Unit)
@@ -215,10 +217,10 @@ fun FitnessNavHost(store: WorkoutStore, heartRateMonitor: HeartRateMonitor, them
             }
 
             is Route.Summary -> {
-                val stats2 = mutableListOf(route.minutes.toString() to "דקות", route.calories.toString() to "קלוריות", route.totalSets.toString() to "סטים")
-                route.avgHr?.let { stats2.add(it.toString() to "דופק ממוצע") }
+                val stats2 = mutableListOf(route.minutes.toString() to tr("דקות"), route.calories.toString() to tr("קלוריות"), route.totalSets.toString() to tr("סטים"))
+                route.avgHr?.let { stats2.add(it.toString() to tr("דופק ממוצע")) }
                 SummaryScreen(
-                    title = "אימון הושלם!",
+                    title = tr("אימון הושלם!"),
                     subtitle = route.workoutName,
                     stats = stats2,
                     theme = theme,
@@ -233,7 +235,7 @@ fun FitnessNavHost(store: WorkoutStore, heartRateMonitor: HeartRateMonitor, them
                 val freeRunType = remember {
                     com.future.fitness.data.WorkoutActivityType(
                         id = "free_run",
-                        displayName = "ריצה חופשית",
+                        displayName = tr("ריצה חופשית"),
                         category = com.future.fitness.data.ActivityCategory.RUNNING,
                         met = 9.0,
                         icon = com.future.sharednav.icons.FutureIcons.AutoMirrored.DirectionsRun,
@@ -246,10 +248,10 @@ fun FitnessNavHost(store: WorkoutStore, heartRateMonitor: HeartRateMonitor, them
                     weightKg = weightKg,
                     age = profile.age,
                     heartRateMonitor = heartRateMonitor,
-                    finishLabel = "סיום ריצה",
+                    finishLabel = tr("סיום ריצה"),
                     onBack = ::pop,
                     onFinish = { minutes, distanceKm, calories, avgHr, maxHr ->
-                        store.recordCompletedWorkout("ריצה חופשית", minutes, calories, avgHr, maxHr, distanceKm)
+                        store.recordCompletedWorkout(tr("ריצה חופשית"), minutes, calories, avgHr, maxHr, distanceKm)
                         statsVersion++
                         backStack.removeAt(backStack.lastIndex)
                         push(Route.RunSummary(minutes, distanceKm ?: 0.0, calories))
@@ -258,12 +260,12 @@ fun FitnessNavHost(store: WorkoutStore, heartRateMonitor: HeartRateMonitor, them
             }
 
             is Route.RunSummary -> SummaryScreen(
-                title = "ריצה הושלמה!",
-                subtitle = "ריצה חופשית",
+                title = tr("ריצה הושלמה!"),
+                subtitle = tr("ריצה חופשית"),
                 stats = listOf(
-                    route.minutes.toString() to "דקות",
-                    "%.2f".format(Locale.US, route.distanceKm) to "ק״מ",
-                    route.calories.toString() to "קלוריות",
+                    route.minutes.toString() to tr("דקות"),
+                    "%.2f".format(Locale.US, route.distanceKm) to tr("ק״מ"),
+                    route.calories.toString() to tr("קלוריות"),
                 ),
                 theme = theme,
                 onDone = {
@@ -308,7 +310,7 @@ fun FitnessNavHost(store: WorkoutStore, heartRateMonitor: HeartRateMonitor, them
                     weightKg = weightKg,
                     age = profile.age,
                     heartRateMonitor = heartRateMonitor,
-                    finishLabel = "סיום",
+                    finishLabel = tr("סיום"),
                     onBack = ::pop,
                     onFinish = { minutes, distanceKm, calories, avgHr, maxHr ->
                         store.recordCompletedWorkout(type.displayName, minutes, calories, avgHr, maxHr, distanceKm)
@@ -338,10 +340,10 @@ fun FitnessNavHost(store: WorkoutStore, heartRateMonitor: HeartRateMonitor, them
             }
 
             is Route.QuickStartSummary -> {
-                val stats3 = mutableListOf(route.minutes.toString() to "דקות", route.calories.toString() to "קלוריות")
-                route.avgHr?.let { stats3.add(it.toString() to "דופק ממוצע") }
+                val stats3 = mutableListOf(route.minutes.toString() to tr("דקות"), route.calories.toString() to tr("קלוריות"))
+                route.avgHr?.let { stats3.add(it.toString() to tr("דופק ממוצע")) }
                 SummaryScreen(
-                    title = "הפעילות הושלמה!",
+                    title = tr("הפעילות הושלמה!"),
                     subtitle = route.activityName,
                     stats = stats3,
                     theme = theme,

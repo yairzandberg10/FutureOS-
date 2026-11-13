@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- FutureOS platform-core (344, 345): Hotspot ושיתוף חיבור. ממשקי MediaTek: ap0 ל-SoftAP, rndis0 ל-USB. -->
+<resources>
+    <string-array name="config_tether_wifi_regexs" translatable="false">
+        <item>ap\d</item>
+        <item>wlan\d</item>
+    </string-array>
+    <string-array name="config_tether_usb_regexs" translatable="false">
+        <item>rndis\d</item>
+        <item>usb\d</item>
+    </string-array>
+    <string-array name="config_tether_bluetooth_regexs" translatable="false">
+        <item>bt-pan</item>
+    </string-array>
+    <integer-array name="config_tether_upstream_types" translatable="false">
+        <item>1</item>
+        <item>0</item>
+        <item>7</item>
+        <item>9</item>
+    </integer-array>
+</resources>

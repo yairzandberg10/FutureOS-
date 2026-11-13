@@ -1,4 +1,6 @@
 package com.future.dialer
+
+import com.future.sharednav.i18n.tr
 import androidx.compose.material.icons.rounded.StarBorder
 
 import com.future.sharednav.icons.FutureIcons
@@ -604,8 +606,8 @@ fun MainScreen(
     // מימין לשמאל: יומן, אנשי קשר, מקלדת.
     val tabs = listOf(
         Triple(Screen.CallLog.route, "חיוג", FutureIcons.Call),
-        Triple(Screen.Contacts.route, "אנשי קשר", FutureIcons.Contacts),
-        Triple(Screen.Dialpad.route, "מקלדת", FutureIcons.Dialpad),
+        Triple(Screen.Contacts.route, tr("אנשי קשר"), FutureIcons.Contacts),
+        Triple(Screen.Dialpad.route, tr("מקלדת"), FutureIcons.Dialpad),
     )
     val tabIndex = tabs.indexOfFirst { it.first == currentRoute }
     val isOnTab = tabIndex >= 0
@@ -775,18 +777,18 @@ fun MainScreen(
     }
 
     if (menuOpen) {
-        FutureOptionsMenu(theme = theme, onDismissRequest = { menuOpen = false }, header = "שיחות") {
+        FutureOptionsMenu(theme = theme, onDismissRequest = { menuOpen = false }, header = tr("שיחות")) {
             fun pick(action: () -> Unit): () -> Unit = { menuOpen = false; action() }
-            FutureMenuRow("חיפוש", FutureIcons.Search, theme, pick { navController.navigate(Screen.Search.route) })
+            FutureMenuRow(tr("חיפוש"), FutureIcons.Search, theme, pick { navController.navigate(Screen.Search.route) })
             if (currentRoute == Screen.CallLog.route) {
                 val filter = callsViewModel.filter.value
                 val next = CallFilter.entries[(filter.ordinal + 1) % CallFilter.entries.size]
                 FutureMenuRow("סינון · ${filter.label}", FutureIcons.Call, theme, pick { callsViewModel.setFilter(next) })
-                FutureMenuRow("סטטיסטיקות", FutureIcons.TrendingUp, theme, pick { showStats = true })
+                FutureMenuRow(tr("סטטיסטיקות"), FutureIcons.TrendingUp, theme, pick { showStats = true })
             }
-            FutureMenuRow("פתח את אנשי קשר", FutureIcons.Contacts, theme, pick(actions.openContactsApp))
-            FutureMenuRow("הגדרות", FutureIcons.Settings, theme, pick(actions.openCallSettings))
-            FutureMenuRow("נקה יומן", FutureIcons.Delete, theme, pick { confirmClear = true }, destructive = true)
+            FutureMenuRow(tr("פתח את אנשי קשר"), FutureIcons.Contacts, theme, pick(actions.openContactsApp))
+            FutureMenuRow(tr("הגדרות"), FutureIcons.Settings, theme, pick(actions.openCallSettings))
+            FutureMenuRow(tr("נקה יומן"), FutureIcons.Delete, theme, pick { confirmClear = true }, destructive = true)
         }
     }
 
@@ -795,12 +797,12 @@ fun MainScreen(
         com.future.sharednav.components.FutureDialog(
             theme = theme,
             onDismissRequest = { showStats = false },
-            title = "סטטיסטיקות",
-            buttons = { FutureButton("סגור", theme, { showStats = false }, fillMaxWidth = true) },
+            title = tr("סטטיסטיקות"),
+            buttons = { FutureButton(tr("סגור"), theme, { showStats = false }, fillMaxWidth = true) },
         ) {
-            fun minutes(seconds: Long): String = "${(seconds + 59) / 60} דק׳"
+            fun minutes(seconds: Long): String = tr("{0} דק׳", (seconds + 59) / 60)
             com.future.sharednav.components.FutureSettingItem(
-                title = "התקבלו",
+                title = tr("התקבלו"),
                 summary = callCountText(stats.incomingCount),
                 icon = FutureIcons.CallReceived,
                 iconTint = CallFormat.colorOf(com.future.dialer.data.model.CallType.INCOMING, theme),
@@ -809,7 +811,7 @@ fun MainScreen(
                 trailing = { Text(minutes(stats.incomingSeconds), color = theme.textColor, fontWeight = FontWeight.SemiBold) },
             )
             com.future.sharednav.components.FutureSettingItem(
-                title = "חויגו",
+                title = tr("חויגו"),
                 summary = callCountText(stats.outgoingCount),
                 icon = FutureIcons.CallMade,
                 iconTint = CallFormat.colorOf(com.future.dialer.data.model.CallType.OUTGOING, theme),
@@ -818,7 +820,7 @@ fun MainScreen(
                 trailing = { Text(minutes(stats.outgoingSeconds), color = theme.textColor, fontWeight = FontWeight.SemiBold) },
             )
             com.future.sharednav.components.FutureSettingItem(
-                title = "סה״כ דקות שיחה",
+                title = tr("סה״כ דקות שיחה"),
                 summary = callCountText(stats.incomingCount + stats.outgoingCount),
                 icon = FutureIcons.Call,
                 theme = theme,
@@ -830,16 +832,16 @@ fun MainScreen(
 
     if (confirmClear) {
         ConfirmDialog(
-            message = "לנקות את יומן השיחות?",
+            message = tr("לנקות את יומן השיחות?"),
             theme = theme,
-            confirmLabel = "נקה",
+            confirmLabel = tr("נקה"),
             onCancel = { confirmClear = false },
             onConfirm = {
                 confirmClear = false
                 if (actions.ensureCallLogWrite()) {
-                    callsViewModel.clearCallLog { ok -> snackbar.show(if (ok) "היומן נוקה" else "היומן לא נוקה") }
+                    callsViewModel.clearCallLog { ok -> snackbar.show(if (ok) tr("היומן נוקה") else tr("היומן לא נוקה")) }
                 } else {
-                    snackbar.show("אשר את ההרשאה ונסה שוב")
+                    snackbar.show(tr("אשר את ההרשאה ונסה שוב"))
                 }
             },
         )
@@ -900,7 +902,7 @@ private fun OngoingCallBanner(name: String, onReturn: () -> Unit) {
 }
 
 /** מספר שיחות בניסוח נכון לרבים וליחיד ("1 שיחות" היה שבור). */
-private fun callCountText(count: Int): String = if (count == 1) "שיחה אחת" else "$count שיחות"
+private fun callCountText(count: Int): String = if (count == 1) "שיחה אחת" else tr("{0} שיחות", count)
 
 /** מסך "הפוך לאפליקציית הטלפון הראשית": לחצן ההגדרה מקבל פוקוס מיד, כדי שמקש OK יעבוד בלי ניווט. */
 @Composable

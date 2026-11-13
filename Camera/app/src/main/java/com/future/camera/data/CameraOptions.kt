@@ -1,12 +1,14 @@
 package com.future.camera.data
 
+import com.future.sharednav.i18n.tr
+
 import android.content.Context
 import androidx.camera.core.ImageCapture
 import androidx.camera.extensions.ExtensionMode
 
 enum class AspectOption(val label: String) { RATIO_4_3("4:3"), RATIO_16_9("16:9") }
 
-enum class PhotoQualityOption(val label: String) { QUALITY("איכות מרבית"), SPEED("צילום מהיר") }
+enum class PhotoQualityOption(val label: String) { QUALITY(tr("איכות מרבית")), SPEED(tr("צילום מהיר")) }
 
 enum class VideoQualityOption(val label: String) { SD("480p"), HD("720p"), FHD("1080p") }
 
@@ -16,12 +18,12 @@ enum class VideoQualityOption(val label: String) { SD("480p"), HD("720p"), FHD("
  * תומך באף אחד מהם.
  */
 enum class SceneOption(val mode: Int, val label: String) {
-    NONE(ExtensionMode.NONE, "רגיל"),
-    AUTO(ExtensionMode.AUTO, "אוטומטי"),
+    NONE(ExtensionMode.NONE, tr("רגיל")),
+    AUTO(ExtensionMode.AUTO, tr("אוטומטי")),
     HDR(ExtensionMode.HDR, "HDR"),
-    NIGHT(ExtensionMode.NIGHT, "לילה"),
-    BOKEH(ExtensionMode.BOKEH, "פורטרט"),
-    FACE_RETOUCH(ExtensionMode.FACE_RETOUCH, "ריכוך פנים"),
+    NIGHT(ExtensionMode.NIGHT, tr("לילה")),
+    BOKEH(ExtensionMode.BOKEH, tr("פורטרט")),
+    FACE_RETOUCH(ExtensionMode.FACE_RETOUCH, tr("ריכוך פנים")),
 }
 
 /** ההגדרות של המצלמה, נשמרות בין הפעלות. */

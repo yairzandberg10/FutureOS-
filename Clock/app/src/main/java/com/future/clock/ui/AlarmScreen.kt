@@ -1,4 +1,6 @@
 package com.future.clock.ui
+
+import com.future.sharednav.i18n.tr
 import androidx.compose.material.icons.rounded.AccessTime
 
 import com.future.sharednav.icons.FutureIcons
@@ -69,6 +71,9 @@ import com.future.sharednav.theme.FutureShapes
 import com.future.clock.logic.Alarm
 import com.future.clock.logic.AlarmLogic
 import com.future.clock.logic.SNOOZE_LIMIT_UNLIMITED
+import com.future.clock.logic.SNOOZE_MINUTE_OPTIONS
+import com.future.clock.logic.GRADUAL_VOLUME_SECONDS
+import com.future.sharednav.components.InputDialog
 import com.future.clock.logic.typeDigit
 import android.content.Intent
 import android.net.Uri
@@ -181,14 +186,14 @@ fun AlarmScreen(
         FutureOptionsMenu(
             theme = theme,
             onDismissRequest = { menuOpen = false; restoreFocusTo = focusedAlarmId ?: RESTORE_TO_ADD },
-            header = focused?.let { "%02d:%02d".format(it.hour, it.minute) } ?: "שעונים מעוררים",
+            header = focused?.let { "%02d:%02d".format(it.hour, it.minute) } ?: tr("שעונים מעוררים"),
         ) {
             if (focused != null) {
                 FutureMenuRow(if (focused.isEnabled) "כבה" else "הפעל", FutureIcons.Schedule, theme, {
                     menuOpen = false
                     setEnabled(focused, !focused.isEnabled)
                 })
-                FutureMenuRow("ערוך שעה", FutureIcons.Edit, theme, {
+                FutureMenuRow(tr("ערוך שעה"), FutureIcons.Edit, theme, {
                     menuOpen = false
                     editingAlarm = focused
                 })
@@ -212,7 +217,7 @@ fun AlarmScreen(
                 editingAlarm = Alarm(newId, 7, 0, emptySet())
             })
             if (focused != null) {
-                FutureMenuRow("מחק", FutureIcons.Delete, theme, {
+                FutureMenuRow(tr("מחק"), FutureIcons.Delete, theme, {
                     menuOpen = false
                     pendingDelete = focused
                 }, destructive = true)
@@ -244,7 +249,7 @@ fun AlarmScreen(
 
     pendingDelete?.let { alarm ->
         ConfirmDialog(
-            message = "למחוק את השעון %02d:%02d?".format(alarm.hour, alarm.minute),
+            message = tr("למחוק את השעון %02d:%02d?").format(alarm.hour, alarm.minute),
             surfaceColor = theme.surfaceColor,
             textColor = theme.textColor,
             dangerColor = theme.dangerColor,
@@ -259,7 +264,7 @@ fun AlarmScreen(
         )
     }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -292,13 +297,13 @@ fun AlarmScreen(
                     )
                 }
                 if (!overlayOpen) ToolsHeader(
-                    title = "שעונים מעוררים",
+                    title = tr("שעונים מעוררים"),
                     theme = theme,
                     onBack = onBack,
                     trailing = {
                         if (editingAlarm == null) {
                             Box(modifier = Modifier.onFocusChanged { if (it.hasFocus) focusedAlarmId = null }) {
-                                ToolsIconButton(FutureIcons.Add, "הוסף שעון", theme, focusRequester = addFocus) {
+                                ToolsIconButton(FutureIcons.Add, tr("הוסף שעון"), theme, focusRequester = addFocus) {
                                     val newId = AlarmLogic.newAlarmId(context)
                                     // CK7: מעורר חדש נכנס לרשימה רק ב"שמור". קודם הוא נשמר ותוזמן עוד
                                     // לפני שהבורר נפתח, ו"ביטול" השאיר מעורר 07:00 מופעל.
@@ -333,8 +338,8 @@ fun AlarmScreen(
                     if (alarms.isEmpty()) {
                         com.future.sharednav.components.EmptyState(
                             icon = FutureIcons.Schedule,
-                            title = "אין שעונים מעוררים",
-                            subtitle = "נווטו לכפתור ההוספה למעלה ולחצו OK כדי להוסיף אחד",
+                            title = tr("אין שעונים מעוררים"),
+                            subtitle = tr("נווטו לכפתור ההוספה למעלה ולחצו OK כדי להוסיף אחד"),
                             textColor = theme.textColor,
                             modifier = Modifier.weight(1f).fillMaxWidth(),
                         )
@@ -375,12 +380,15 @@ fun AlarmScreen(
 }
 
 private fun recurrenceSummary(alarm: Alarm): String {
-    val state = if (alarm.isEnabled) "מופעל" else "כבוי"
-    if (alarm.days.isEmpty()) return "$state · חד-פעמית"
-    val days = alarm.days.sorted().joinToString(",") { day ->
-        DAY_LABELS.firstOrNull { it.first == day }?.second ?: "?"
+    val state = if (alarm.isEnabled) tr("מופעל") else tr("כבוי")
+    val recurrence = if (alarm.days.isEmpty()) tr("{0} · חד-פעמית", state) else {
+        val days = alarm.days.sorted().joinToString(",") { day ->
+            DAY_LABELS.firstOrNull { it.first == day }?.second ?: "?"
+        }
+        "$state · $days"
     }
-    return "$state · $days"
+    // התווית (אם יש) לפני המצב - כך מזהים מעורר ברשימה בלי לפתוח אותו.
+    return if (alarm.label.isBlank()) recurrence else "${alarm.label} · $recurrence"
 }
 
 /**
@@ -406,7 +414,7 @@ fun AlarmRow(alarm: Alarm, theme: FutureTheme, onClick: () -> Unit, modifier: Mo
 // Calendar.DAY_OF_WEEK: 1=ראשון...7=שבת. בלי בורר הימים הזה, alarm.days היה
 // תמיד ריק בפועל - אף מסך בעולם לא איפשר להגדיר אזעקה חוזרת, למרות שהשדה
 // עצמו קיים ב-data class ומטופל נכון עכשיו ב-AlarmLogic.nextTriggerMillis.
-private val DAY_LABELS = listOf(1 to "א", 2 to "ב", 3 to "ג", 4 to "ד", 5 to "ה", 6 to "ו", 7 to "ש")
+private val DAY_LABELS = listOf(1 to tr("א"), 2 to tr("ב"), 3 to tr("ג"), 4 to tr("ד"), 5 to tr("ה"), 6 to tr("ו"), 7 to tr("ש"))
 
 /**
  * בורר השעה (components/forms/TimePicker.jsx, הגרסה המעודכנת): שני "גלגלים" -
@@ -422,9 +430,34 @@ private val DAY_LABELS = listOf(1 to "א", 2 to "ב", 3 to "ג", 4 to "ד", 5 to
  */
 @Composable
 fun TimePickerOverlay(alarm: Alarm, theme: FutureTheme, isNew: Boolean = false, onSave: (Alarm) -> Unit, onCancel: () -> Unit) {
+    val context = LocalContext.current
     var hour by remember { mutableIntStateOf(alarm.hour) }
     var minute by remember { mutableIntStateOf(alarm.minute) }
     var days by remember { mutableStateOf(alarm.days) }
+    // ההגדרות של המעורר עצמו - נשמרות יחד עם השעה ב"שמור".
+    var label by remember { mutableStateOf(alarm.label) }
+    var ringtoneUri by remember { mutableStateOf(alarm.ringtoneUri) }
+    var vibrate by remember { mutableStateOf(alarm.vibrate) }
+    var snoozeMinutes by remember { mutableIntStateOf(alarm.effectiveSnoozeMinutes) }
+    var gradualVolume by remember { mutableStateOf(alarm.gradualVolume) }
+    var labelDialogOpen by remember { mutableStateOf(false) }
+    var ringtoneMenuOpen by remember { mutableStateOf(false) }
+    var snoozeMenuOpen by remember { mutableStateOf(false) }
+    val labelFocus = remember { FocusRequester() }
+    val ringtoneFocus = remember { FocusRequester() }
+    val snoozeFocus = remember { FocusRequester() }
+    // אחרי סגירת חלון או תפריט הפוקוס חוזר לשורה שפתחה אותו.
+    var restoreRow by remember { mutableStateOf<FocusRequester?>(null) }
+    LaunchedEffect(restoreRow, labelDialogOpen, ringtoneMenuOpen, snoozeMenuOpen) {
+        val target = restoreRow ?: return@LaunchedEffect
+        if (labelDialogOpen || ringtoneMenuOpen || snoozeMenuOpen) return@LaunchedEffect
+        repeat(6) {
+            androidx.compose.runtime.withFrameNanos { }
+            if (runCatching { target.requestFocus() }.isSuccess) { restoreRow = null; return@LaunchedEffect }
+        }
+        restoreRow = null
+    }
+    val ringtoneTitle = remember(ringtoneUri) { ringtoneTitle(context, ringtoneUri) }
     val hourFocus = remember { FocusRequester() }
     val minuteFocus = remember { FocusRequester() }
     // OK בגלגל עובר ליום הראשון (א׳). קודם moveFocus(Down) בחר את היום הקרוב
@@ -449,14 +482,14 @@ fun TimePickerOverlay(alarm: Alarm, theme: FutureTheme, isNew: Boolean = false, 
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text(if (isNew) "מעורר חדש" else "ערוך שעה", color = theme.textColor, fontSize = FutureTypography.screenTitle, fontWeight = FutureTypography.weightBold)
+        Text(if (isNew) "מעורר חדש" else tr("ערוך שעה"), color = theme.textColor, fontSize = FutureTypography.screenTitle, fontWeight = FutureTypography.weightBold)
         Spacer(modifier = Modifier.height(FutureDimens.spacingLg))
 
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm)) {
             TimeWheel(
                 value = hour,
                 range = 0..23,
-                label = "שעות",
+                label = tr("שעות"),
                 theme = theme,
                 focusRequester = hourFocus,
                 onChange = { hour = it },
@@ -467,7 +500,7 @@ fun TimePickerOverlay(alarm: Alarm, theme: FutureTheme, isNew: Boolean = false, 
             TimeWheel(
                 value = minute,
                 range = 0..59,
-                label = "דקות",
+                label = tr("דקות"),
                 theme = theme,
                 focusRequester = minuteFocus,
                 onChange = { minute = it },
@@ -480,7 +513,7 @@ fun TimePickerOverlay(alarm: Alarm, theme: FutureTheme, isNew: Boolean = false, 
 
         Spacer(modifier = Modifier.height(FutureDimens.spacingLg))
         Text(
-            if (days.isEmpty()) "חד-פעמית" else "חוזרת",
+            if (days.isEmpty()) tr("חד-פעמית") else tr("חוזרת"),
             color = theme.textAlpha(60),
             fontSize = FutureTypography.summary
         )
@@ -499,13 +532,175 @@ fun TimePickerOverlay(alarm: Alarm, theme: FutureTheme, isNew: Boolean = false, 
             }
         }
 
+        Spacer(modifier = Modifier.height(FutureDimens.spacingLg))
+
+        // הגדרות המעורר: כרטיס של שורות הגדרה (FutureSettingItem), כמו בהגדרות
+        // המערכת. ↓ מהימים מגיע לכאן, ומכאן לכפתורים.
+        FutureCard(theme = theme) {
+            FutureSettingItem(
+                title = tr("תווית"),
+                summary = label.ifBlank { tr("ללא תווית") },
+                icon = FutureIcons.Edit,
+                theme = theme,
+                onClick = { labelDialogOpen = true },
+                focusRequester = labelFocus,
+            )
+            FutureDivider(theme = theme)
+            FutureSettingItem(
+                title = tr("צליל"),
+                summary = ringtoneTitle,
+                icon = FutureIcons.MusicNote,
+                theme = theme,
+                onClick = { ringtoneMenuOpen = true },
+                focusRequester = ringtoneFocus,
+            )
+            FutureDivider(theme = theme)
+            FutureSettingItem(
+                title = tr("רטט"),
+                summary = if (vibrate) tr("מופעל") else tr("כבוי"),
+                icon = FutureIcons.Vibration,
+                theme = theme,
+                onClick = { vibrate = !vibrate },
+                showChevron = false,
+                trailing = { FutureSwitch(checked = vibrate, theme = theme) },
+            )
+            FutureDivider(theme = theme)
+            FutureSettingItem(
+                title = tr("נודניק"),
+                summary = tr("{0} דקות", snoozeMinutes),
+                icon = FutureIcons.Alarm,
+                theme = theme,
+                onClick = { snoozeMenuOpen = true },
+                focusRequester = snoozeFocus,
+            )
+            FutureDivider(theme = theme)
+            FutureSettingItem(
+                title = tr("הגברה הדרגתית"),
+                summary = tr("העוצמה עולה במשך {0} שניות", GRADUAL_VOLUME_SECONDS),
+                icon = FutureIcons.VolumeUp,
+                theme = theme,
+                onClick = { gradualVolume = !gradualVolume },
+                showChevron = false,
+                trailing = { FutureSwitch(checked = gradualVolume, theme = theme) },
+            )
+        }
+
         Spacer(modifier = Modifier.height(FutureDimens.spacingXl))
 
         // TimePicker.jsx: הביטול כאן הוא הכפתור השקט - זה המקום היחיד במערכת שבו הוא מופיע.
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingLg)) {
-            FutureButton("ביטול", theme, onCancel, modifier = Modifier.weight(1f), variant = FutureButtonVariant.Quiet)
-            FutureButton("שמור", theme, { onSave(alarm.copy(hour = hour, minute = minute, days = days)) }, modifier = Modifier.weight(1f))
+            FutureButton(tr("ביטול"), theme, onCancel, modifier = Modifier.weight(1f), variant = FutureButtonVariant.Quiet)
+            FutureButton(tr("שמור"), theme, {
+                onSave(
+                    alarm.copy(
+                        hour = hour,
+                        minute = minute,
+                        days = days,
+                        label = label.trim(),
+                        ringtoneUri = ringtoneUri,
+                        noVibrate = !vibrate,
+                        snoozeMinutes = snoozeMinutes,
+                        gradualVolume = gradualVolume,
+                    )
+                )
+            }, modifier = Modifier.weight(1f))
         }
+    }
+
+    if (labelDialogOpen) {
+        InputDialog(
+            title = tr("תווית"),
+            theme = theme,
+            initialValue = label,
+            placeholder = tr("למשל: עבודה"),
+            allowBlank = true,
+            onDismiss = { labelDialogOpen = false; restoreRow = labelFocus },
+            onConfirm = { label = it; labelDialogOpen = false; restoreRow = labelFocus },
+        )
+    }
+
+    if (ringtoneMenuOpen) {
+        // הצלילים של המערכת לשעון מעורר. נטענים כשהתפריט נפתח (Cursor של
+        // RingtoneManager), ו-OK על צליל משמיע אותו לשנייה כדי שיידעו מה בחרו.
+        val tones by produceState<List<Pair<String, String>>?>(null) {
+            value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { alarmTones(context) }
+        }
+        FutureOptionsMenu(
+            theme = theme,
+            onDismissRequest = { ringtoneMenuOpen = false; restoreRow = ringtoneFocus },
+            header = tr("צליל"),
+        ) {
+            FutureMenuRow(
+                tr("ברירת המחדל של המערכת"),
+                if (ringtoneUri == null) FutureIcons.Check else null,
+                theme,
+                { ringtoneUri = null; ringtoneMenuOpen = false; restoreRow = ringtoneFocus },
+            )
+            tones?.forEach { (title, uri) ->
+                FutureMenuRow(
+                    title,
+                    if (uri == ringtoneUri) FutureIcons.Check else null,
+                    theme,
+                    {
+                        ringtoneUri = uri
+                        previewTone(context, uri)
+                        ringtoneMenuOpen = false
+                        restoreRow = ringtoneFocus
+                    },
+                )
+            }
+        }
+    }
+
+    if (snoozeMenuOpen) {
+        FutureOptionsMenu(
+            theme = theme,
+            onDismissRequest = { snoozeMenuOpen = false; restoreRow = snoozeFocus },
+            header = tr("נודניק"),
+        ) {
+            SNOOZE_MINUTE_OPTIONS.forEach { option ->
+                FutureMenuRow(
+                    tr("{0} דקות", option),
+                    if (option == snoozeMinutes) FutureIcons.Check else null,
+                    theme,
+                    { snoozeMinutes = option; snoozeMenuOpen = false; restoreRow = snoozeFocus },
+                )
+            }
+        }
+    }
+}
+
+/** שם הצליל לשורה בבורר: הצליל שנבחר, או "ברירת המחדל של המערכת". */
+private fun ringtoneTitle(context: android.content.Context, uri: String?): String {
+    if (uri == null) return tr("ברירת המחדל של המערכת")
+    return runCatching {
+        android.media.RingtoneManager.getRingtone(context, Uri.parse(uri))?.getTitle(context)
+    }.getOrNull() ?: tr("ברירת המחדל של המערכת")
+}
+
+/** הצלילים של המערכת לשעון מעורר: (שם, uri). */
+private fun alarmTones(context: android.content.Context): List<Pair<String, String>> = runCatching {
+    val manager = android.media.RingtoneManager(context).apply { setType(android.media.RingtoneManager.TYPE_ALARM) }
+    val cursor = manager.cursor
+    val result = ArrayList<Pair<String, String>>()
+    while (cursor.moveToNext()) {
+        val title = cursor.getString(android.media.RingtoneManager.TITLE_COLUMN_INDEX) ?: continue
+        val uri = manager.getRingtoneUri(cursor.position)?.toString() ?: continue
+        result += title to uri
+    }
+    result
+}.getOrDefault(emptyList())
+
+/** השמעה קצרה (2 שניות) של הצליל שנבחר, בעוצמת השעון המעורר. */
+private fun previewTone(context: android.content.Context, uri: String) {
+    val tone = runCatching { android.media.RingtoneManager.getRingtone(context, Uri.parse(uri)) }.getOrNull() ?: return
+    runCatching {
+        tone.audioAttributes = android.media.AudioAttributes.Builder()
+            .setUsage(android.media.AudioAttributes.USAGE_ALARM)
+            .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+            .build()
+        tone.play()
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ runCatching { tone.stop() } }, 2000L)
     }
 }
 

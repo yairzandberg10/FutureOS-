@@ -1,4 +1,6 @@
 package com.future.dialer.ui.incall
+
+import com.future.sharednav.i18n.tr
 import androidx.compose.material.icons.rounded.Sms
 
 import com.future.sharednav.icons.FutureIcons
@@ -101,7 +103,7 @@ fun InCallScreen(
         }
     }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         // מסך השיחה בולע את כל המקשים שלא הגיעו לכפתור בפוקוס: כך מסך איש הקשר
         // שמתחתיו (עם כפתור "התקשר") לא מקבל OK ולא מחייג שיחה נוספת.
         Box(
@@ -134,7 +136,7 @@ fun InCallScreen(
                     viewModel = viewModel,
                     theme = theme,
                     onHoldUnsupported = {
-                        Toast.makeText(context, "השיחה לא תומכת בהמתנה", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, tr("השיחה לא תומכת בהמתנה"), Toast.LENGTH_SHORT).show()
                     },
                 )
             }
@@ -142,7 +144,7 @@ fun InCallScreen(
     }
 
     if (quickMessage && !ended) {
-        FutureOptionsMenu(theme = theme, onDismissRequest = viewModel::closeQuickMessage, header = "הודעה מהירה") {
+        FutureOptionsMenu(theme = theme, onDismissRequest = viewModel::closeQuickMessage, header = tr("הודעה מהירה")) {
             InCallViewModel.quickMessages.forEach { message ->
                 FutureMenuRow(message, null, theme, onClick = {
                     // בשיחה מצלצלת ההודעה היא התשובה - שולחים ודוחים.
@@ -262,7 +264,7 @@ private fun ActiveCall(
             val connected = callState == Call.STATE_ACTIVE || duration > 0
             val dialing = !connected && (callState == Call.STATE_DIALING || callState == Call.STATE_CONNECTING)
             val status = when {
-                isOnHold -> "בהמתנה"
+                isOnHold -> tr("בהמתנה")
                 connected -> "בשיחה"
                 dialing -> stringResource(R.string.dialing)
                 else -> null
@@ -300,7 +302,7 @@ private fun ActiveCall(
                 if (isMuted) "מושתק" else stringResource(R.string.mute), isMuted) { viewModel.toggleMute() },
             Control(FutureIcons.AutoMirrored.VolumeUp, stringResource(R.string.speaker), isSpeakerOn) { viewModel.toggleSpeaker() },
             Control(if (isOnHold) FutureIcons.PlayArrow else FutureIcons.Pause,
-                if (isOnHold) "המשך" else "המתנה", isOnHold) { if (!viewModel.toggleHold()) onHoldUnsupported() },
+                if (isOnHold) tr("המשך") else tr("המתנה"), isOnHold) { if (!viewModel.toggleHold()) onHoldUnsupported() },
             Control(FutureIcons.Dialpad, stringResource(R.string.keypad), isDialpadVisible) { viewModel.toggleDialpad() },
             Control(FutureIcons.FiberManualRecord,
                 stringResource(if (isRecording) R.string.stop_recording else R.string.record), isRecording,
@@ -396,8 +398,8 @@ private fun EndedCall(
             modifier = Modifier.fillMaxWidth().padding(top = FutureDimens.spacingMd),
             verticalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm),
         ) {
-            FutureButton("התקשר שוב", theme, onCallAgain, fillMaxWidth = true)
-            FutureButton("חזור ליומן", theme, onBackToLog, variant = FutureButtonVariant.Quiet, fillMaxWidth = true, focusRequester = back)
+            FutureButton(tr("התקשר שוב"), theme, onCallAgain, fillMaxWidth = true)
+            FutureButton(tr("חזור ליומן"), theme, onBackToLog, variant = FutureButtonVariant.Quiet, fillMaxWidth = true, focusRequester = back)
         }
     }
 }

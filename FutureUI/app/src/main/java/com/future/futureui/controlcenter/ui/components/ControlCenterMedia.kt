@@ -1,5 +1,7 @@
 package com.future.futureui.controlcenter.ui.components
 
+import com.future.sharednav.i18n.tr
+
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
 import androidx.compose.foundation.Image
@@ -53,7 +55,7 @@ fun MusicPlayerCard(manager: ControlManager, labelColor: Color = Color.Black) {
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = "לחצו OK לאישור גישה למוזיקה",
+                text = tr("לחצו OK לאישור גישה למוזיקה"),
                 color = labelColor,
                 fontSize = FutureTypography.body,
                 fontWeight = FontWeight.Bold,
@@ -96,7 +98,7 @@ fun MusicPlayerCard(manager: ControlManager, labelColor: Color = Color.Black) {
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
-                    text = "אין מוזיקה מתנגנת",
+                    text = tr("אין מוזיקה מתנגנת"),
                     fontSize = FutureTypography.summary,
                     color = labelColor,
                     fontWeight = FontWeight.Bold,
@@ -228,9 +230,9 @@ fun MediaControlButton(icon: ImageVector, onClick: () -> Unit, isLarge: Boolean 
     Box(
         modifier = Modifier
             .size(if (isLarge) 50.dp else 40.dp)
-            .focusEffect(isFocused, shape, focusedScale = 1.2f)
+            .focusEffect(isFocused, shape, focusedScale = 1.08f)
             .clip(shape)
-            .background(animateFocusColor(isFocused, Color.White.copy(alpha = 0.3f), Color.Transparent).value)
+            .background(animateFocusColor(isFocused, tint.copy(alpha = 0.14f), Color.Transparent).value)
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
@@ -242,7 +244,8 @@ fun MediaControlButton(icon: ImageVector, onClick: () -> Unit, isLarge: Boolean 
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = animateFocusColor(isFocused, Color.White, tint).value,
+            // האייקון שומר על הצבע שלו: קודם הוא הפך ללבן בפוקוס ונעלם על הזכוכית הבהירה.
+            tint = tint,
             modifier = Modifier.size(if (isLarge) 32.dp else 24.dp)
         )
     }

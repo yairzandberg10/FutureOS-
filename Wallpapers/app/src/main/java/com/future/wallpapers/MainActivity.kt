@@ -1,4 +1,6 @@
 package com.future.wallpapers
+
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.components.ConfirmDialog
 import com.future.sharednav.systemui.StatusBarInset
 
@@ -143,12 +145,12 @@ private fun WallpapersApp(theme: FutureTheme) {
             PreviewScreen(open, theme, openMenu = previewMenu)
         } else {
             Column(modifier = Modifier.fillMaxSize().background(theme.backgroundColor).padding(top = StatusBarInset.TITLE_GAP_DP.dp)) {
-                ScreenTopBar(title = "רקעים", textColor = theme.textColor, accentColor = theme.accentColor)
+                ScreenTopBar(title = tr("רקעים"), textColor = theme.textColor, accentColor = theme.accentColor)
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = FutureDimens.spacingLg),
                     horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm),
                 ) {
-                    item { FutureChip("הכל", theme = theme, selected = category == null, onClick = { category = null; chipPicked = true }) }
+                    item { FutureChip(tr("הכל"), theme = theme, selected = category == null, onClick = { category = null; chipPicked = true }) }
                     items(categories) { c -> FutureChip(c, theme = theme, selected = category == c, onClick = { category = c; chipPicked = true }) }
                 }
                 val first = remember { FocusRequester() }
@@ -246,9 +248,9 @@ private fun Thumbnail(
 }
 
 private enum class Target(val label: String, val flags: Int) {
-    HOME("מסך הבית", WallpaperManager.FLAG_SYSTEM),
-    LOCK("מסך הנעילה", WallpaperManager.FLAG_LOCK),
-    BOTH("שניהם", WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK),
+    HOME(tr("מסך הבית"), WallpaperManager.FLAG_SYSTEM),
+    LOCK(tr("מסך הנעילה"), WallpaperManager.FLAG_LOCK),
+    BOTH(tr("שניהם"), WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK),
 }
 
 /**
@@ -294,9 +296,9 @@ private fun PreviewScreen(wallpaper: Wallpaper, theme: FutureTheme, openMenu: Bo
             applying = false
             snackbar.show(
                 when {
-                    result.isSuccess -> "הרקע הוגדר ל${target.label}"
+                    result.isSuccess -> tr("הרקע הוגדר ל{0}", target.label)
                     result.exceptionOrNull() is SecurityException -> "אין הרשאה להגדיר רקע"
-                    else -> "לא ניתן להגדיר את הרקע"
+                    else -> tr("לא ניתן להגדיר את הרקע")
                 },
             )
         }
@@ -323,13 +325,13 @@ private fun PreviewScreen(wallpaper: Wallpaper, theme: FutureTheme, openMenu: Bo
         val b = bitmap
         when {
             b != null -> Image(b.asImageBitmap(), contentDescription = wallpaper.title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-            failed -> Text("לא ניתן לטעון את התמונה", color = darkTheme.mutedTextColor, fontSize = FutureTypography.body)
+            failed -> Text(tr("לא ניתן לטעון את התמונה"), color = darkTheme.mutedTextColor, fontSize = FutureTypography.body)
             else -> FutureSpinner(theme = darkTheme)
         }
-        if (applying) FutureSpinner(theme = darkTheme, label = "מגדיר רקע")
+        if (applying) FutureSpinner(theme = darkTheme, label = tr("מגדיר רקע"))
         // W04: הכתובית מוצגת רק כשיש לה תוכן (בלי פיל שקוף ריק)
         val hint = when {
-            b != null -> "OK - מסך הבית · Options - עוד"
+            b != null -> tr("OK - מסך הבית · Options - עוד")
             failed -> "OK - נסה שוב"
             else -> null
         }

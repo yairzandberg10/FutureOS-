@@ -1,5 +1,7 @@
 package com.future.music.ui.screens
 
+import com.future.sharednav.i18n.tr
+
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureListItem
 import com.future.sharednav.components.FutureAvatar
@@ -58,18 +60,18 @@ fun PlaylistsScreen(
 
     Column(modifier = Modifier.fillMaxSize()) {
         ScreenTopBar(
-            title = "פלייליסטים",
+            title = tr("פלייליסטים"),
             theme = theme,
             onBack = onBack,
             trailingIcon = FutureIcons.Add,
-            trailingContentDescription = "פלייליסט חדש",
+            trailingContentDescription = tr("פלייליסט חדש"),
             onTrailingClick = { showCreateDialog = true },
         )
 
         if (playlists.isEmpty()) {
             // M-34: במכשיר מקשים אין "+" - שורה בפוקוס ליצירת פלייליסט
             FutureListItem(
-                title = "פלייליסט חדש",
+                title = tr("פלייליסט חדש"),
                 summary = "אין עדיין פלייליסטים",
                 theme = theme,
                 onClick = { showCreateDialog = true },
@@ -98,9 +100,9 @@ fun PlaylistsScreen(
 
     if (showCreateDialog) {
         NameInputDialog(
-            title = "פלייליסט חדש",
+            title = tr("פלייליסט חדש"),
             theme = theme,
-            confirmLabel = "צור",
+            confirmLabel = tr("צור"),
             onDismiss = { showCreateDialog = false },
             onConfirm = { name ->
                 onCreatePlaylist(name)

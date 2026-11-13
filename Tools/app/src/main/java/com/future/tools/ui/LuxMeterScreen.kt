@@ -1,4 +1,6 @@
 package com.future.tools.ui
+
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.theme.subtleTextColor
 import com.future.sharednav.theme.mutedTextColor
 
@@ -61,27 +63,27 @@ private fun rememberLux(): LuxState {
 }
 
 private fun lightingLabel(lux: Float): String = when {
-    lux < 1f -> "חושך מוחלט"
-    lux < 50f -> "תאורה עמומה"
-    lux < 200f -> "תאורת חדר רגילה"
-    lux < 1000f -> "תאורה בהירה"
-    lux < 10000f -> "אור יום מקורה"
-    else -> "אור שמש ישיר"
+    lux < 1f -> tr("חושך מוחלט")
+    lux < 50f -> tr("תאורה עמומה")
+    lux < 200f -> tr("תאורת חדר רגילה")
+    lux < 1000f -> tr("תאורה בהירה")
+    lux < 10000f -> tr("אור יום מקורה")
+    else -> tr("אור שמש ישיר")
 }
 
 @Composable
 fun LuxMeterScreen(theme: FutureTheme, onBack: () -> Unit) {
     val state = rememberLux()
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize()) {
-                ToolsHeader(title = "מד אור", theme = theme, onBack = onBack)
+                ToolsHeader(title = tr("מד אור"), theme = theme, onBack = onBack)
 
                 Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                     if (!state.hasSensor) {
                         Text(
-                            "לא נמצא חיישן אור במכשיר הזה",
+                            tr("לא נמצא חיישן אור במכשיר הזה"),
                             color = theme.mutedTextColor,
                             fontSize = FutureTypography.body,
                             modifier = Modifier.padding(horizontal = 32.dp)

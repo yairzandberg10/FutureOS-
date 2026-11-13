@@ -10,6 +10,8 @@
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <!-- סורק האיומים: זיהוי VPN פעיל -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
     <uses-permission android:name="android.permission.WRITE_SETTINGS" tools:ignore="ProtectedPermissions" />
     <uses-permission android:name="android.permission.CAMERA" />
@@ -31,12 +33,10 @@
     <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
 
     <permission
-        android:name="com.android.sistemui.permission.SYSTEM_SETTINGS"
+        android:name="com.future.futureui.permission.SYSTEM_SETTINGS"
         android:protectionLevel="signature" />
 
     <uses-permission android:name="com.future.keyboard.permission.SETTINGS" />
-    <!-- מקשי CALL/ENDCALL נשלחים ל-dialer (CallActionReceiver), שדורש את ההרשאה הזו מהשולח. -->
-    <uses-permission android:name="com.future.futureui.permission.SYSTEM_SETTINGS" />
     <!-- שידורי המערכת ל-dialer (מקשי CALL/ENDCALL, שיחה) דורשים את ההרשאה הזו
          מהשולח. SystemUI (עותק) שומר את השם הזה כמו שהוא - ר' sync-from-futureui.sh. -->
     <uses-permission android:name="com.future.futureui.permission.SYSTEM_SETTINGS" />
@@ -54,8 +54,6 @@
     </queries>
     <application
         android:allowBackup="false"
-        android:dataExtractionRules="@xml/data_extraction_rules"
-        android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
@@ -71,19 +69,19 @@
         <provider
             android:name=".theme.ThemeProvider"
             android:authorities="com.android.sistemui.theme"
-            android:permission="com.android.sistemui.permission.SYSTEM_SETTINGS"
+            android:permission="com.future.futureui.permission.SYSTEM_SETTINGS"
             android:exported="true" />
 
         <provider
             android:name=".systemui.SystemUiSettingsProvider"
             android:authorities="com.android.sistemui.systemui"
-            android:permission="com.android.sistemui.permission.SYSTEM_SETTINGS"
+            android:permission="com.future.futureui.permission.SYSTEM_SETTINGS"
             android:exported="true" />
 
         <service
             android:name=".statusbar.service.StatusBarAccessibilityService"
             android:exported="true"
-            android:label="SystemUI - שורת מצב"
+            android:label="@string/service_label_status_bar"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>
                 <action android:name="android.accessibilityservice.AccessibilityService" />
@@ -96,7 +94,7 @@
         <service
             android:name=".controlcenter.service.ControlCenterAccessibilityService"
             android:exported="true"
-            android:label="SystemUI - מרכז בקרה"
+            android:label="@string/service_label_control_center"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>
                 <action android:name="android.accessibilityservice.AccessibilityService" />
@@ -109,7 +107,7 @@
         <service
             android:name=".notificationcenter.service.NotificationCenterAccessibilityService"
             android:exported="true"
-            android:label="SystemUI - מרכז התראות"
+            android:label="@string/service_label_notification_center"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>
                 <action android:name="android.accessibilityservice.AccessibilityService" />
@@ -125,7 +123,7 @@
 
         <service
             android:name=".controlcenter.service.MediaControlService"
-            android:label="SystemUI - שליטה במדיה"
+            android:label="@string/service_label_media"
             android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
             android:exported="true">
             <intent-filter>
@@ -148,10 +146,25 @@
             </intent-filter>
         </activity>
 
+        <!-- הגדרות מסך הנעילה - נפתח רק מאפליקציית ההגדרות (אבטחה) ב-ACTION_LOCK_SETTINGS.
+             דורש את הקוד הנוכחי לפני כל שינוי. -->
+        <activity
+            android:name=".lockscreen.settings.LockSettingsActivity"
+            android:exported="true"
+            android:permission="com.future.futureui.permission.SYSTEM_SETTINGS"
+            android:excludeFromRecents="true"
+            android:label="מסך נעילה"
+            android:theme="@style/Theme.FutureUI">
+            <intent-filter>
+                <action android:name="com.future.futureui.ACTION_LOCK_SETTINGS" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
         <activity
             android:name=".SettingsActivity"
             android:exported="true"
-            android:permission="com.android.sistemui.permission.SYSTEM_SETTINGS"
+            android:permission="com.future.futureui.permission.SYSTEM_SETTINGS"
             android:label="התאמה אישית"
             android:theme="@style/Theme.FutureUI" />
 

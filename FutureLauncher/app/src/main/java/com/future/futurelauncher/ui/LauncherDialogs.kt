@@ -1,5 +1,7 @@
 package com.future.futurelauncher.ui
 
+import com.future.sharednav.i18n.tr
+
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.AppDialog
 import com.future.sharednav.components.FutureButton
@@ -93,7 +95,7 @@ private fun GlassDialog(
     content: @Composable ColumnScope.() -> Unit
 ) {
     AppDialog(onDismissRequest = onDismissRequest, widthFraction = widthFraction) {
-        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+        CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -295,15 +297,15 @@ fun AppOptionsDialog(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(stringResource(R.string.width, item.spanX), color = theme.textColor, fontSize = FutureTypography.label)
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            TopBarIconButton(FutureIcons.Remove, "הקטן", theme.textColor, theme.accentColor, { if (item.spanX > 1) onResize(item.spanX - 1, item.spanY) })
-                            TopBarIconButton(FutureIcons.Add, "הגדל", theme.textColor, theme.accentColor, { if (item.spanX < 4) onResize(item.spanX + 1, item.spanY) })
+                            TopBarIconButton(FutureIcons.Remove, tr("הקטן"), theme.textColor, theme.accentColor, { if (item.spanX > 1) onResize(item.spanX - 1, item.spanY) })
+                            TopBarIconButton(FutureIcons.Add, tr("הגדל"), theme.textColor, theme.accentColor, { if (item.spanX < 4) onResize(item.spanX + 1, item.spanY) })
                         }
                     }
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(stringResource(R.string.height, item.spanY), color = theme.textColor, fontSize = FutureTypography.label)
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            TopBarIconButton(FutureIcons.Remove, "הקטן", theme.textColor, theme.accentColor, { if (item.spanY > 1) onResize(item.spanX, item.spanY - 1) })
-                            TopBarIconButton(FutureIcons.Add, "הגדל", theme.textColor, theme.accentColor, { if (item.spanY < 4) onResize(item.spanX, item.spanY + 1) })
+                            TopBarIconButton(FutureIcons.Remove, tr("הקטן"), theme.textColor, theme.accentColor, { if (item.spanY > 1) onResize(item.spanX, item.spanY - 1) })
+                            TopBarIconButton(FutureIcons.Add, tr("הגדל"), theme.textColor, theme.accentColor, { if (item.spanY < 4) onResize(item.spanX, item.spanY + 1) })
                         }
                     }
                 }

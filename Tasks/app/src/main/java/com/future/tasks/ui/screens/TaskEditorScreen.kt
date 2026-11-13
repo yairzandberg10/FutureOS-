@@ -1,5 +1,7 @@
 package com.future.tasks.ui.screens
 
+import com.future.sharednav.i18n.tr
+
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
@@ -81,7 +83,7 @@ fun TaskEditorScreen(
     // מקש Back פיזי שומר (אלא אם המשימה ריקה לגמרי) במקום לזרוק שינויים בשקט.
     BackHandler { saveIfNeeded() }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Box(modifier = Modifier.escapeTextFieldFocusTrap().fillMaxSize().background(theme.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize()) {
                 Row(
@@ -89,7 +91,7 @@ fun TaskEditorScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        if (task == null) "משימה חדשה" else "עריכת משימה",
+                        if (task == null) tr("משימה חדשה") else tr("עריכת משימה"),
                         fontSize = FutureTypography.title,
                         fontWeight = FontWeight.Bold,
                         color = theme.textColor,
@@ -98,18 +100,18 @@ fun TaskEditorScreen(
                     )
                     TopBarIconButton(
                         if (isDone) Icons.Rounded.CheckCircle else FutureIcons.RadioButtonUnchecked,
-                        "בוצע",
+                        tr("בוצע"),
                         theme.textColor,
                         theme.successColor,
                         { isDone = !isDone },
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     if (task != null) {
-                        TopBarIconButton(FutureIcons.Delete, "מחק", theme.textColor, theme.dangerColor) { showDeleteConfirm = true }
+                        TopBarIconButton(FutureIcons.Delete, tr("מחק"), theme.textColor, theme.dangerColor) { showDeleteConfirm = true }
                         Spacer(modifier = Modifier.width(8.dp))
                     }
                     // אותו כלל כמו BACK: משימה ריקה לא נשמרת (ר' saveIfNeeded).
-                    TopBarIconButton(FutureIcons.Save, "שמור", theme.textColor, theme.accentColor) {
+                    TopBarIconButton(FutureIcons.Save, tr("שמור"), theme.textColor, theme.accentColor) {
                         saveIfNeeded()
                     }
                 }
@@ -124,7 +126,7 @@ fun TaskEditorScreen(
                     EditorField(
                         value = title,
                         onValueChange = { title = it },
-                        placeholder = "כותרת המשימה",
+                        placeholder = tr("כותרת המשימה"),
                         theme = theme,
                         singleLine = true,
                         focusRequester = titleFocus,
@@ -132,7 +134,7 @@ fun TaskEditorScreen(
                     EditorField(
                         value = notes,
                         onValueChange = { notes = it },
-                        placeholder = "פרטים נוספים",
+                        placeholder = tr("פרטים נוספים"),
                         theme = theme,
                         singleLine = false,
                         modifier = Modifier.heightIn(min = 112.dp),
@@ -172,11 +174,11 @@ fun TaskEditorScreen(
                     }
 
                     Column(modifier = Modifier.padding(bottom = 20.dp)) {
-                        FutureSectionHeader("עדיפות", theme, inset = false)
+                        FutureSectionHeader(tr("עדיפות"), theme, inset = false)
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            PriorityChip("נמוכה", TaskPriority.LOW, priority, theme.textColor.copy(alpha = 0.4f), theme) { priority = it }
-                            PriorityChip("רגילה", TaskPriority.NORMAL, priority, theme.warningColor, theme) { priority = it }
-                            PriorityChip("גבוהה", TaskPriority.HIGH, priority, theme.dangerColor, theme) { priority = it }
+                            PriorityChip(tr("נמוכה"), TaskPriority.LOW, priority, theme.textColor.copy(alpha = 0.4f), theme) { priority = it }
+                            PriorityChip(tr("רגילה"), TaskPriority.NORMAL, priority, theme.warningColor, theme) { priority = it }
+                            PriorityChip(tr("גבוהה"), TaskPriority.HIGH, priority, theme.dangerColor, theme) { priority = it }
                         }
                     }
                 }

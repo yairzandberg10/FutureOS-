@@ -58,3 +58,8 @@ replay_pid*.log
 
 # APK-ים מוכנים להתקנה (נבנים מקומית, גדולים מדי ל-git)
 ready-apks/*.apk
+
+# Local-only: Blender renders/exports and the landing zip (large, regenerated)
+hardware/blender/out/
+FutureOS-landing.zip
+__pycache__/

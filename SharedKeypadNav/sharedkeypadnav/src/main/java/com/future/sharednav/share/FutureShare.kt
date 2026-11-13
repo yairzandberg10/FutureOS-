@@ -1,5 +1,7 @@
 package com.future.sharednav.share
 
+import com.future.sharednav.i18n.tr
+
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
@@ -16,7 +18,7 @@ import com.future.sharednav.systemui.SystemUiTarget
 object FutureShare {
     const val ACTION_SHARE = "com.future.futureui.ACTION_SHARE"
 
-    fun open(context: Context, send: Intent, title: String = "שיתוף") {
+    fun open(context: Context, send: Intent, title: String = tr("שיתוף")) {
         val window = Intent(ACTION_SHARE)
             .setPackage(SystemUiTarget.PACKAGE)
             .putExtra(Intent.EXTRA_INTENT, send)
@@ -56,7 +58,7 @@ object FutureShare {
         com.future.sharednav.security.SameSigner.matches(context, SystemUiTarget.PACKAGE)
 
     /** שיתוף טקסט בלבד. */
-    fun text(context: Context, text: String, title: String = "שיתוף") {
+    fun text(context: Context, text: String, title: String = tr("שיתוף")) {
         open(context, Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text), title)
     }
 }

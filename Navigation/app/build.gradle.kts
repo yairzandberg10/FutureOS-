@@ -30,16 +30,28 @@ if (keystorePropertiesFile.exists()) {
 }
 
 /**
- * תוסף google-services מוחל רק אם app/google-services.json קיים בפועל. התוסף
- * נכשל בבנייה כשהקובץ חסר, והקובץ הזה הוא פרטי לפרויקט Firebase של המשתמש
- * (לא נכנס ל-git). כך האפליקציה ממשיכה להיבנות ולרוץ בדיוק כמו קודם עד
- * שהקובץ מתווסף - ומהרגע שהוא נמצא, שכבת ה-Firebase (ראו data/backend)
- * מתעוררת לבד. ר' firebase/README.md להוראות ההקמה.
+ * פרטי פרויקט ה-Firebase נקראים מ-app/google-services.json (שהקונסולה נותנת,
+ * ושלא נכנס ל-git) - אבל בלי תוסף google-services ובלי שום ספריית Google:
+ * המכשיר לא מריץ Google Play Services, אז האפליקציה מדברת עם Firebase ב-REST
+ * רגיל (ר' data/backend/FirebaseBackend). מכאן נלקחים רק שלושה ערכים - מזהה
+ * הפרויקט, מפתח ה-Web API וה-bucket - וכל אחד מהם אפשר גם לדרוס
+ * ב-local.properties. בלי הקובץ הם ריקים, FIREBASE_CONFIGURED הוא false,
+ * והאפליקציה עובדת ישירות מול השירותים החיצוניים בדיוק כמו קודם.
  */
 val googleServicesJson = file("google-services.json")
-if (googleServicesJson.exists()) {
-    apply(plugin = "com.google.gms.google-services")
-}
+@Suppress("UNCHECKED_CAST")
+val googleServices: Map<String, Any?> = if (googleServicesJson.exists()) {
+    groovy.json.JsonSlurper().parse(googleServicesJson) as Map<String, Any?>
+} else emptyMap()
+val googleProjectInfo = googleServices["project_info"] as? Map<*, *> ?: emptyMap<String, Any?>()
+val googleApiKey = ((googleServices["client"] as? List<*>)?.firstOrNull() as? Map<*, *>)
+    ?.let { (it["api_key"] as? List<*>)?.firstOrNull() as? Map<*, *> }
+    ?.get("current_key") as? String ?: ""
+fun firebaseValue(localName: String, fromJson: String): String =
+    localProperty(localName).ifBlank { fromJson }
+val firebaseProjectId = firebaseValue("FIREBASE_PROJECT_ID", googleProjectInfo["project_id"] as? String ?: "")
+val firebaseApiKey = firebaseValue("FIREBASE_API_KEY", googleApiKey)
+val firebaseStorageBucket = firebaseValue("FIREBASE_STORAGE_BUCKET", googleProjectInfo["storage_bucket"] as? String ?: "")
 
 android {
     namespace = "com.future.navigation"
@@ -57,9 +69,19 @@ android {
         buildConfigField("String", "HERE_API_KEY", "\"${localProperty("HERE_API_KEY")}\"")
         buildConfigField("String", "SIRI_API_KEY", "\"${localProperty("SIRI_API_KEY")}\"")
         buildConfigField("String", "SIRI_BASE_URL", "\"${localProperty("SIRI_BASE_URL")}\"")
-        // נקרא ב-FirebaseBackend כדי לדעת בזמן ריצה אם בכלל יש קונפיגורציית
-        // Firebase בבנייה הזו, בלי לנחש מקיום מחלקות ב-classpath.
-        buildConfigField("boolean", "FIREBASE_CONFIGURED", googleServicesJson.exists().toString())
+        // כתובת שרת FutureOS (ר' FutureServer). נדרסת ב-ro.futureos.api_base במכשיר; ריקה = אין שרת.
+        buildConfigField("String", "FUTURE_API_BASE", "\"${localProperty("future.api.base")}\"")
+        // נקרא ב-FirebaseBackend כדי לדעת בזמן ריצה אם בכלל יש פרויקט Firebase
+        // בבנייה הזו. מפתח ה-Web API של Firebase אינו סוד (הוא מזהה את הפרויקט
+        // בלבד); ההרשאות נאכפות בחוקי הגישה ובדרישת משתמש מזוהה בפונקציות.
+        buildConfigField("String", "FIREBASE_PROJECT_ID", "\"$firebaseProjectId\"")
+        buildConfigField("String", "FIREBASE_API_KEY", "\"$firebaseApiKey\"")
+        buildConfigField("String", "FIREBASE_STORAGE_BUCKET", "\"$firebaseStorageBucket\"")
+        buildConfigField(
+            "boolean",
+            "FIREBASE_CONFIGURED",
+            (firebaseProjectId.isNotBlank() && firebaseApiKey.isNotBlank()).toString(),
+        )
         // אזור ה-Cloud Functions - חייב להיות זהה לאזור שבו נפרסו הפונקציות
         // (ר' firebase/functions/src/index.ts), אחרת כל קריאה מחזירה NOT_FOUND.
         buildConfigField("String", "FIREBASE_FUNCTIONS_REGION", "\"${localProperties.getProperty("FIREBASE_FUNCTIONS_REGION") ?: "europe-west1"}\"")
@@ -149,18 +171,9 @@ dependencies {
     implementation(libs.okhttp.logging.interceptor)
     implementation(libs.kotlinx.serialization.json)
 
-    // Firebase - שכבת השרת: Cloud Functions כ-proxy לשירותים החיצוניים (HERE,
-    // Nominatim, SIRI) כך שהמפתחות לא יושבים על המכשיר, Remote Config למפתחות
-    // בנתיב הישיר (fallback), Firestore/Storage לנתוני התחבורה הציבורית
-    // המעובדים מראש, ו-Auth אנונימי כדי שאפשר יהיה לדרוש משתמש מזוהה בחוקי
-    // הגישה במקום לפתוח את הפרויקט לכולם. כל אלה לא עושים כלום בלי
-    // google-services.json (ראו FirebaseBackend).
-    implementation(platform(libs.firebase.bom))
-    implementation(libs.firebase.auth)
-    implementation(libs.firebase.config)
-    implementation(libs.firebase.firestore)
-    implementation(libs.firebase.functions)
-    implementation(libs.firebase.storage)
+    // Firebase (Auth אנונימי, Cloud Functions, Firestore, Storage) עובר ב-REST
+    // על OkHttp שכבר כאן - בכוונה בלי ה-SDK, שתלוי ב-Google Play Services
+    // שאין במכשיר. ר' data/backend.
 
     // מסד נתונים מקומי (מטמון GTFS + מקומות שמורים)
     implementation(libs.androidx.room.runtime)

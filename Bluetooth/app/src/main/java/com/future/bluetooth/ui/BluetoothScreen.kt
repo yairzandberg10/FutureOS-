@@ -1,5 +1,7 @@
 package com.future.bluetooth.ui
 
+import com.future.sharednav.i18n.tr
+
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.systemui.StatusBarInset
 
@@ -135,26 +137,26 @@ fun BluetoothApp(
     fun toggleRadio() {
         val on = !controller.isEnabled
         when {
-            controller.setEnabled(on) -> snackbar.show(if (on) "מפעיל בלוטות'" else "מכבה בלוטות'")
+            controller.setEnabled(on) -> snackbar.show(if (on) tr("מפעיל בלוטות'") else tr("מכבה בלוטות'"))
             on -> actions.requestEnable()
-            else -> snackbar.show("לא ניתן לכבות את הבלוטות'")
+            else -> snackbar.show(tr("לא ניתן לכבות את הבלוטות'"))
         }
     }
 
     /** סריקה - כשהרדיו כבוי startDiscovery לא עושה כלום, וההודעה "מחפש" הטעתה. */
     fun scan() {
         if (!controller.isEnabled) {
-            snackbar.show("הבלוטות' כבוי")
+            snackbar.show(tr("הבלוטות' כבוי"))
             return
         }
-        snackbar.show(if (controller.startDiscovery()) "מחפש מכשירים" else "הסריקה לא התחילה")
+        snackbar.show(if (controller.startDiscovery()) tr("מחפש מכשירים") else "הסריקה לא התחילה")
     }
 
     /** פעולה שהמכשיר לא מאפשר מכאן נפתחת במסך של המערכת, עם הסבר קצר. */
     fun orSystem(ok: Boolean) {
         if (!ok) {
             // BT-11: ההודעה מתאימה למה שקרה בפועל - לא "פותח" כשהפתיחה נכשלה.
-            if (actions.openSystemSettings()) snackbar.show("פותח את הגדרות הבלוטות' של המערכת")
+            if (actions.openSystemSettings()) snackbar.show(tr("פותח את הגדרות הבלוטות' של המערכת"))
             else snackbar.show("אין מסך הגדרות בלוטות' במכשיר")
         }
     }
@@ -220,7 +222,7 @@ fun BluetoothApp(
                         val on = !device.callsConnected
                         if (!waitForProfiles(controller.profileReady(calls = true))) {
                             val ok = controller.setProfile(device.address, calls = true, enabled = on)
-                            if (ok) snackbar.show(if (on) "מחבר שיחות · ${device.name}" else "שיחות נותקו · ${device.name}")
+                            if (ok) snackbar.show(if (on) tr("מחבר שיחות · {0}", device.name) else tr("שיחות נותקו · {0}", device.name))
                             orSystem(ok)
                         }
                     },
@@ -228,7 +230,7 @@ fun BluetoothApp(
                         val on = !device.mediaConnected
                         if (!waitForProfiles(controller.profileReady(calls = false))) {
                             val ok = controller.setProfile(device.address, calls = false, enabled = on)
-                            if (ok) snackbar.show(if (on) "מחבר מדיה · ${device.name}" else "מדיה נותקה · ${device.name}")
+                            if (ok) snackbar.show(if (on) tr("מחבר מדיה · {0}", device.name) else tr("מדיה נותקה · {0}", device.name))
                             orSystem(ok)
                         }
                     },
@@ -277,59 +279,59 @@ fun BluetoothApp(
         Dialog.DisconnectAll -> ConfirmDialog(
             message = "לנתק את כל המכשירים המחוברים?",
             theme = theme,
-            confirmLabel = "נתק הכל",
+            confirmLabel = tr("נתק הכל"),
             onCancel = { dialog = null },
             onConfirm = {
                 dialog = null
                 when (controller.disconnectAll()) {
                     null -> snackbar.show("אין מכשירים מחוברים")
                     0 -> orSystem(false)
-                    else -> snackbar.show("כל המכשירים נותקו")
+                    else -> snackbar.show(tr("כל המכשירים נותקו"))
                 }
             },
         )
         is Dialog.Pair -> ConfirmDialog(
-            message = "להתאים את ${d.device.name}?",
+            message = tr("להתאים את {0}?", d.device.name),
             theme = theme,
-            confirmLabel = "התאם",
+            confirmLabel = tr("התאם"),
             destructive = false,
             onCancel = { dialog = null },
             onConfirm = {
                 dialog = null
                 if (controller.pair(d.device.address)) snackbar.show("מתאים · ${d.device.name}")
-                else snackbar.show("ההתאמה לא התחילה")
+                else snackbar.show(tr("ההתאמה לא התחילה"))
             },
         )
         is Dialog.Forget -> ConfirmDialog(
-            message = "לשכוח את ${d.device.name}?",
+            message = tr("לשכוח את {0}?", d.device.name),
             theme = theme,
-            confirmLabel = "שכח",
+            confirmLabel = tr("שכח"),
             onCancel = { dialog = null },
             onConfirm = {
                 dialog = null
                 if (controller.forget(d.device.address)) {
                     openAddress = null
-                    snackbar.show("המכשיר נשכח")
+                    snackbar.show(tr("המכשיר נשכח"))
                 } else {
                     orSystem(false)
                 }
             },
         )
         Dialog.RenamePhone -> InputDialog(
-            title = "שם המכשיר",
+            title = tr("שם המכשיר"),
             theme = theme,
             initialValue = controller.adapterName,
             onDismiss = { dialog = null },
             onConfirm = { name ->
                 dialog = null
                 // שם ריק היה נשלח כמו שהוא, והטלפון הופיע בלי שם אצל מכשירים אחרים
-                if (name.isBlank()) snackbar.show("השם לא יכול להיות ריק")
-                else if (controller.renameAdapter(name.trim())) snackbar.show("שם המכשיר עודכן")
-                else snackbar.show("השם לא עודכן")
+                if (name.isBlank()) snackbar.show(tr("השם לא יכול להיות ריק"))
+                else if (controller.renameAdapter(name.trim())) snackbar.show(tr("שם המכשיר עודכן"))
+                else snackbar.show(tr("השם לא עודכן"))
             },
         )
         is Dialog.RenameDevice -> InputDialog(
-            title = "שנה שם",
+            title = tr("שנה שם"),
             theme = theme,
             // בלי שם מהמערכת לא מציעים "מכשיר לא מזוהה" כשם לעריכה
             initialValue = if (d.device.nameKnown) d.device.name else "",
@@ -337,10 +339,10 @@ fun BluetoothApp(
             onConfirm = { name ->
                 dialog = null
                 if (name.isBlank()) {
-                    snackbar.show("השם לא יכול להיות ריק")
+                    snackbar.show(tr("השם לא יכול להיות ריק"))
                 } else {
                     controller.renameDevice(d.device.address, name.trim())
-                    snackbar.show("השם עודכן")
+                    snackbar.show(tr("השם עודכן"))
                 }
             },
         )
@@ -369,14 +371,14 @@ private fun RootScreen(
     ScreenScaffold(
         modifier = Modifier.padding(top = StatusBarInset.TITLE_GAP_DP.dp),
         backgroundColor = theme.backgroundColor,
-        title = "בלוטות'",
+        title = tr("בלוטות'"),
         textColor = theme.textColor,
         accentColor = theme.accentColor,
     ) {
         when {
             !controller.isSupported() -> EmptyState(
                 icon = FutureIcons.BluetoothDisabled,
-                title = "אין בלוטות' במכשיר הזה",
+                title = tr("אין בלוטות' במכשיר הזה"),
                 textColor = theme.textColor,
             )
             !hasPermission -> PermissionPrompt(theme, onRequestPermission, onOpenAppSettings)
@@ -428,12 +430,12 @@ private fun DeviceLists(
     ) {
         FutureCard(theme = theme) {
             FutureSettingItem(
-                title = "בלוטות'",
+                title = tr("בלוטות'"),
                 // BT-25: בזמן ההדלקה (שנייה-שתיים) מראים שהבלוטות' בדרך.
                 summary = when {
                     controller.isTurningOn -> "מופעל..."
-                    on -> "מופעל"
-                    else -> "כבוי"
+                    on -> tr("מופעל")
+                    else -> tr("כבוי")
                 },
                 icon = FutureIcons.Bluetooth,
                 theme = theme,
@@ -444,7 +446,7 @@ private fun DeviceLists(
             )
             FutureDivider(theme = theme)
             FutureSettingItem(
-                title = "שם המכשיר",
+                title = tr("שם המכשיר"),
                 summary = controller.adapterName.ifEmpty { null },
                 icon = FutureIcons.Badge,
                 theme = theme,
@@ -455,19 +457,19 @@ private fun DeviceLists(
         if (!on) {
             EmptyState(
                 icon = FutureIcons.BluetoothDisabled,
-                title = "בלוטות' כבוי",
-                subtitle = "לחץ על אישור כדי להפעיל ולחפש מכשירים",
+                title = tr("בלוטות' כבוי"),
+                subtitle = tr("לחץ על אישור כדי להפעיל ולחפש מכשירים"),
                 textColor = theme.textColor,
             )
             return@Column
         }
 
-        FutureSectionHeader("מכשירים מותאמים", theme)
+        FutureSectionHeader(tr("מכשירים מותאמים"), theme)
         if (paired.isEmpty()) {
             EmptyState(
                 icon = FutureIcons.Devices,
-                title = "אין מכשירים מותאמים",
-                subtitle = "בחר מכשיר מהרשימה שלמטה כדי להתאים",
+                title = tr("אין מכשירים מותאמים"),
+                subtitle = tr("בחר מכשיר מהרשימה שלמטה כדי להתאים"),
                 textColor = theme.textColor,
             )
         } else {
@@ -491,7 +493,7 @@ private fun DeviceLists(
             }
         }
 
-        FutureSectionHeader("מכשירים זמינים", theme)
+        FutureSectionHeader(tr("מכשירים זמינים"), theme)
         CardStack {
             // כרטיס החיפוש הוא תמיד יעד פוקוס. קודם, כשלא נמצאו מכשירים, לא היה
             // בחלק הזה אף פריט שאפשר להגיע אליו בחצים - והגלילה לא ירדה אליו בכלל.
@@ -503,8 +505,8 @@ private fun DeviceLists(
         if (nearby.isEmpty() && !controller.isScanning) {
             EmptyState(
                 icon = FutureIcons.Bluetooth,
-                title = "לא נמצאו מכשירים",
-                subtitle = "לחץ על חפש מכשירים כדי לחפש שוב",
+                title = tr("לא נמצאו מכשירים"),
+                subtitle = tr("לחץ על חפש מכשירים כדי לחפש שוב"),
                 textColor = theme.textColor,
             )
         }
@@ -529,7 +531,7 @@ private fun AllPairedScreen(
     ScreenScaffold(
         modifier = Modifier.padding(top = StatusBarInset.TITLE_GAP_DP.dp),
         backgroundColor = theme.backgroundColor,
-        title = "מכשירים מותאמים",
+        title = tr("מכשירים מותאמים"),
         textColor = theme.textColor,
         accentColor = theme.accentColor,
     ) {
@@ -605,7 +607,7 @@ private fun DeviceCard(
                 when {
                     !device.nameKnown -> device.address
                     device.isBonded || device.connection != Connection.Disconnected -> statusOf(device)
-                    else -> "זמין להתאמה"
+                    else -> tr("זמין להתאמה")
                 },
                 color = if (connected) accentOf(theme) else theme.mutedTextColor,
                 fontSize = type.summary,
@@ -630,7 +632,7 @@ private fun ShowMoreCard(hidden: Int, theme: FutureTheme, focusRequester: FocusR
     val type = rememberFutureType()
     FutureFocusCard(theme = theme, onClick = onClick, focusRequester = focusRequester, minHeight = FutureDimens.rowHeightSetting) {
         Text(
-            "הצג עוד",
+            tr("הצג עוד"),
             color = theme.textColor,
             fontSize = type.title,
             fontWeight = FutureTypography.weightMedium,
@@ -659,7 +661,7 @@ private fun ScanCard(scanning: Boolean, found: Int, theme: FutureTheme, onClick:
         )
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                if (scanning) "מחפש" else "חפש מכשירים",
+                if (scanning) tr("מחפש") else tr("חפש מכשירים"),
                 color = theme.textColor,
                 fontSize = type.title,
                 fontWeight = FutureTypography.weightMedium,
@@ -683,13 +685,13 @@ private fun PermissionPrompt(theme: FutureTheme, onRequest: () -> Unit, onOpenAp
     ) {
         EmptyState(
             icon = FutureIcons.Bluetooth,
-            title = "אין הרשאה לבלוטות'",
+            title = tr("אין הרשאה לבלוטות'"),
             subtitle = "לחץ על אישור כדי לאשר. אם ההרשאה נדחתה לצמיתות - פתח את הגדרות האפליקציה",
             textColor = theme.textColor,
             modifier = Modifier.weight(1f),
         )
         // "הגדרות" תמיד זמין כאן: אחרי דחייה לצמיתות אישור לא מציג דיאלוג, והמשתמש צריך דרך לתקן.
-        FutureButton("אשר", theme, onRequest, focusRequester = focus)
+        FutureButton(tr("אשר"), theme, onRequest, focusRequester = focus)
         Spacer(modifier = Modifier.height(FutureDimens.spacingSm))
         FutureButton("הגדרות האפליקציה", theme, onOpenAppSettings, variant = FutureButtonVariant.Secondary)
     }
@@ -717,7 +719,7 @@ private fun DeviceScreen(
     ScreenScaffold(
         modifier = Modifier.padding(top = StatusBarInset.TITLE_GAP_DP.dp),
         backgroundColor = theme.backgroundColor,
-        title = "מכשיר",
+        title = tr("מכשיר"),
         textColor = theme.textColor,
         accentColor = theme.accentColor,
         onBack = onBack,
@@ -769,14 +771,14 @@ private fun DeviceScreen(
             }
 
             if (device.supportsCalls || device.supportsMedia) {
-                FutureSectionHeader("שימוש", theme)
+                FutureSectionHeader(tr("שימוש"), theme)
             }
             FutureCard(theme = theme) {
                 var rows = 0
                 if (device.supportsCalls) {
                     FutureSettingItem(
-                        title = "שיחות ואודיו",
-                        summary = if (device.callsConnected) "מופעל" else "כבוי",
+                        title = tr("שיחות ואודיו"),
+                        summary = if (device.callsConnected) tr("מופעל") else tr("כבוי"),
                         icon = FutureIcons.Call,
                         theme = theme,
                         showChevron = false,
@@ -789,8 +791,8 @@ private fun DeviceScreen(
                 if (device.supportsMedia) {
                     if (rows > 0) FutureDivider(theme = theme)
                     FutureSettingItem(
-                        title = "מדיה",
-                        summary = if (device.mediaConnected) "מופעל" else "כבוי",
+                        title = tr("מדיה"),
+                        summary = if (device.mediaConnected) tr("מופעל") else tr("כבוי"),
                         icon = FutureIcons.MusicNote,
                         theme = theme,
                         showChevron = false,
@@ -802,7 +804,7 @@ private fun DeviceScreen(
                 }
                 if (rows > 0) FutureDivider(theme = theme)
                 FutureSettingItem(
-                    title = "שנה שם",
+                    title = tr("שנה שם"),
                     summary = device.name,
                     icon = FutureIcons.Edit,
                     theme = theme,
@@ -818,7 +820,7 @@ private fun DeviceScreen(
                 verticalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm),
             ) {
                 FutureButton(
-                    text = if (device.connection == Connection.Disconnected) "התחבר" else "נתק",
+                    text = if (device.connection == Connection.Disconnected) tr("התחבר") else tr("נתק"),
                     theme = theme,
                     onClick = onConnect,
                     variant = FutureButtonVariant.Secondary,
@@ -826,7 +828,7 @@ private fun DeviceScreen(
                 )
                 // BT-39: פעולה הרסנית באותו סגנון כמו "נתק הכל" בתפריט.
                 FutureButton(
-                    text = "שכח מכשיר",
+                    text = tr("שכח מכשיר"),
                     theme = theme,
                     onClick = onForget,
                     variant = FutureButtonVariant.Destructive,
@@ -850,12 +852,12 @@ private fun BluetoothMenu(
     onDisconnectAll: () -> Unit,
 ) {
     fun pick(action: () -> Unit): () -> Unit = { onDismiss(); action() }
-    FutureOptionsMenu(theme = theme, onDismissRequest = onDismiss, header = "בלוטות'") {
-        FutureMenuRow("רענן", FutureIcons.Refresh, theme, pick(onRefresh))
-        FutureMenuRow("שם המכשיר", FutureIcons.Edit, theme, pick(onRenamePhone))
-        FutureMenuRow("קבצים שהתקבלו", FutureIcons.Folder, theme, pick(onReceivedFiles))
-        FutureMenuRow("הגדרות", FutureIcons.Settings, theme, pick(onSettings))
-        FutureMenuRow("נתק הכל", FutureIcons.LinkOff, theme, pick(onDisconnectAll), destructive = true)
+    FutureOptionsMenu(theme = theme, onDismissRequest = onDismiss, header = tr("בלוטות'")) {
+        FutureMenuRow(tr("רענן"), FutureIcons.Refresh, theme, pick(onRefresh))
+        FutureMenuRow(tr("שם המכשיר"), FutureIcons.Edit, theme, pick(onRenamePhone))
+        FutureMenuRow(tr("קבצים שהתקבלו"), FutureIcons.Folder, theme, pick(onReceivedFiles))
+        FutureMenuRow(tr("הגדרות"), FutureIcons.Settings, theme, pick(onSettings))
+        FutureMenuRow(tr("נתק הכל"), FutureIcons.LinkOff, theme, pick(onDisconnectAll), destructive = true)
     }
 }
 
@@ -893,7 +895,7 @@ private fun iconOf(kind: DeviceKind): ImageVector = when (kind) {
 
 /** שורת המצב מתחת לשם: "מחובר · 80%", "מחובר", "מתחבר", "מותאם". */
 private fun statusOf(device: BluetoothDeviceInfo): String = when (device.connection) {
-    Connection.Connecting -> "מתחבר"
-    Connection.Connected -> device.battery?.let { "מחובר · $it%" } ?: "מחובר"
-    Connection.Disconnected -> "מותאם"
+    Connection.Connecting -> tr("מתחבר")
+    Connection.Connected -> device.battery?.let { tr("מחובר · {0}%", it) } ?: tr("מחובר")
+    Connection.Disconnected -> tr("מותאם")
 }

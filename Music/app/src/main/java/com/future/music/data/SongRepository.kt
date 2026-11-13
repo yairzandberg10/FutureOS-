@@ -1,5 +1,7 @@
 package com.future.music.data
 
+import com.future.sharednav.i18n.tr
+
 import android.content.ContentUris
 import android.content.Context
 import android.os.Build
@@ -83,9 +85,9 @@ class SongRepository(private val context: Context) {
                         Song(
                             id = id,
                             uri = uri,
-                            title = cursor.getString(titleCol) ?: "לא ידוע",
-                            artist = displayArtist(cursor.getString(artistCol)?.takeIf { it.isNotBlank() && it != "<unknown>" } ?: "אמן לא ידוע"),
-                            album = cursor.getString(albumCol)?.takeIf { it.isNotBlank() } ?: "אלבום לא ידוע",
+                            title = cursor.getString(titleCol) ?: tr("לא ידוע"),
+                            artist = displayArtist(cursor.getString(artistCol)?.takeIf { it.isNotBlank() && it != "<unknown>" } ?: tr("אמן לא ידוע")),
+                            album = cursor.getString(albumCol)?.takeIf { it.isNotBlank() } ?: tr("אלבום לא ידוע"),
                             albumId = cursor.getLong(albumIdCol),
                             durationMs = cursor.getLong(durationCol),
                         )

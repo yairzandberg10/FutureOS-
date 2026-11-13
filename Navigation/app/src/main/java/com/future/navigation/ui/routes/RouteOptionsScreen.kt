@@ -1,4 +1,6 @@
 package com.future.navigation.ui.routes
+
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.components.FutureButton
 import com.future.sharednav.components.FutureProgressBar
 import com.future.sharednav.components.FutureSpinner
@@ -55,11 +57,32 @@ fun RouteOptionsScreen(
     val error by viewModel.error.collectAsState()
     val drivingRoute by viewModel.drivingRoute.collectAsState()
     val itineraries by viewModel.itineraries.collectAsState()
+    val askCellularDownload by viewModel.askCellularDownload.collectAsState()
     val actionFocusRequester = remember { FocusRequester() }
+    val retryFocusRequester = remember { FocusRequester() }
+    val serverError by viewModel.serverError.collectAsState()
+    // שגיאת שרת: הפוקוס ההתחלתי על "נסה שוב", כדי שאפשר לנסות ב-OK מיד
+    LaunchedEffect(serverError) {
+        if (serverError) runCatching { retryFocusRequester.requestFocus() }
+    }
     val theme = LocalFutureTheme.current
 
     LaunchedEffect(destination, mode) {
         viewModel.search(mode, destination)
+    }
+
+    // הורדה של ~130MB ברשת סלולרית - שואלים לפני (F09). הברירה הבטוחה היא "לא עכשיו".
+    if (askCellularDownload) {
+        com.future.sharednav.components.ConfirmDialog(
+            message = "נדרשת הורדה של כ-130MB לנתוני התחבורה, ברשת סלולרית. להוריד עכשיו?",
+            surfaceColor = theme.surfaceColor,
+            textColor = theme.textColor,
+            dangerColor = theme.dangerColor,
+            onCancel = viewModel::cancelCellularDownload,
+            onConfirm = viewModel::confirmCellularDownload,
+            cancelLabel = "לא עכשיו",
+            confirmLabel = "הורד",
+        )
     }
 
     // פוקוס D-pad התחלתי על תוצאת המסלול ברגע שהיא מוכנה - בלי זה נחיתה על
@@ -103,7 +126,7 @@ fun RouteOptionsScreen(
                     // אורך ידוע (הורדה) = פס התקדמות; אורך לא ידוע (חישוב) = ספינר.
                     if (downloadFraction != null) {
                         Text(
-                            text = "מוריד נתוני תחבורה ציבורית לאזור הזה %d%%".format((downloadFraction!! * 100).toInt()),
+                            text = tr("מוריד נתוני תחבורה ציבורית לאזור הזה %d%%").format((downloadFraction!! * 100).toInt()),
                             color = theme.mutedTextColor
                         )
                         Spacer(modifier = Modifier.height(FutureDimens.spacingMd))
@@ -112,11 +135,19 @@ fun RouteOptionsScreen(
                         FutureSpinner(theme = theme, label = stringResource(R.string.calculating_route))
                     }
                 }
-                error != null -> Text(
-                    text = error ?: "",
+                error != null -> Column(
                     modifier = Modifier.align(Alignment.Center).padding(24.dp),
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                )
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    Text(
+                        text = error ?: "",
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+                    if (serverError) {
+                        PrimaryButton("נסה שוב", focusRequester = retryFocusRequester) { viewModel.retry() }
+                    }
+                }
                 mode == TravelMode.DRIVE && drivingRoute != null -> DrivingRouteCard(drivingRoute!!)
                 mode == TravelMode.TRANSIT -> {
                     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -147,12 +178,12 @@ private fun DrivingRouteCard(route: DrivingRoute) {
             Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "%d דק׳".format((route.durationSeconds / 60).toInt()),
+                        text = tr("%d דק׳").format((route.durationSeconds / 60).toInt()),
                         fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.headlineSmall
                     )
                     Text(
-                        text = "%.1f ק״מ".format(route.distanceMeters / 1000.0),
+                        text = tr("%.1f ק״מ").format(route.distanceMeters / 1000.0),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                     )
@@ -172,13 +203,13 @@ private fun ItineraryCard(itinerary: TransitItinerary, onClick: () -> Unit, focu
         Column(modifier = Modifier.fillMaxWidth().padding(FutureDimens.spacingSm)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = "%d דק׳".format((itinerary.totalDurationSeconds / 60)),
+                    text = tr("%d דק׳").format((itinerary.totalDurationSeconds / 60)),
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.weight(1f)
                 )
                 Text(
-                    text = "הגעה " + secondsToClock(itinerary.arrivalSeconds),
+                    text = tr("הגעה ") + secondsToClock(itinerary.arrivalSeconds),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

@@ -1,0 +1,16 @@
+# Reference only - NOT a drop-in. Merge into the device's fstab.<hw> /data line.
+# Items 455, 459. Verify against the stock Qin fstab extracted by aosp/tools (03_extract_blobs.sh).
+#
+# Android 12 requires FBE on devices launching with it. Typical /data entry:
+#
+#   /dev/block/by-name/userdata /data f2fs noatime,nosuid,nodev,discard,inlinecrypt \
+#     latemount,wait,check,quota,reservedsize=128M,checkpoint=fs,\
+#     fileencryption=aes-256-xts:aes-256-cts:v2+inlinecrypt_optimized,\
+#     metadata_encryption=aes-256-xts:wrappedkey_v0,keydirectory=/metadata/vold/metadata_encryption
+#
+# Keep inlinecrypt* only if the SoC and storage driver support inline encryption.
+# If the CPU has no AES instructions (check "aes" in /proc/cpuinfo Features, item 442):
+#   fileencryption=adiantum:adiantum     (no inlinecrypt)
+#
+# Crypto-erase on factory reset (459) relies on /metadata existing and
+# keydirectory being under it.

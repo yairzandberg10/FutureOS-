@@ -1,10 +1,11 @@
 package com.android.sistemui.settings.ui
 
+import com.future.sharednav.i18n.tr
+
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.*
@@ -26,6 +27,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.android.sistemui.controlcenter.ui.components.focusEffect
+import com.future.sharednav.theme.rememberFutureTheme
 import com.android.sistemui.statusbar.logic.StatusBarLayoutManager
 
 /**
@@ -39,47 +41,51 @@ fun FutureUISettingsScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    // צבעים מערכת הנושא המשותפת (כהה/בהיר) - כמו מסך הניהול, לא שחור קבוע (N-09)
+    val theme = rememberFutureTheme()
     val statusBarLayout = remember { StatusBarLayoutManager(context) }
     var showBattery by remember { mutableStateOf(statusBarLayout.getShowBattery()) }
     var showBluetooth by remember { mutableStateOf(statusBarLayout.getShowBluetooth()) }
     var use24Hour by remember { mutableStateOf(statusBarLayout.getUse24HourClock()) }
     var suppressSystemBars by remember { mutableStateOf(statusBarLayout.getSuppressSystemBars()) }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Column(
             modifier = modifier
                 .fillMaxSize()
-                .background(Color.Black)
+                .background(theme.backgroundColor)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 24.dp)
+                // למעלה: גובה שורת המצב + ריווח, כדי שהכותרת לא תיצמד אליה (SU-40)
+                .padding(start = 20.dp, end = 20.dp, top = StatusBarLayoutManager.HEIGHT_DP.dp + 12.dp, bottom = 24.dp)
         ) {
             Text(
-                text = "התאמה אישית",
-                color = Color.White,
+                text = tr("התאמה אישית"),
+                color = theme.textColor,
                 fontSize = FutureTypography.headline,
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(24.dp))
 
-            SettingsSection(title = "שורת מצב") {
-                SettingsToggleRow("הצג סוללה", showBattery) {
+            SettingsSection(title = tr("שורת מצב")) {
+                SettingsToggleRow(tr("הצג סוללה"), showBattery) {
                     showBattery = it; statusBarLayout.saveShowBattery(it)
                 }
-                SettingsToggleRow("הצג Bluetooth", showBluetooth) {
+                SettingsToggleRow(tr("הצג Bluetooth"), showBluetooth) {
                     showBluetooth = it; statusBarLayout.saveShowBluetooth(it)
                 }
-                SettingsToggleRow("שעון 24 שעות", use24Hour) {
+                SettingsToggleRow(tr("שעון 24 שעות"), use24Hour) {
                     use24Hour = it; statusBarLayout.saveUse24HourClock(it)
                 }
-                SettingsToggleRow("הסתר שורת מצב מקורית של אנדרואיד (דורש root)", suppressSystemBars) {
+                SettingsToggleRow(tr("הסתר שורת מצב מקורית של אנדרואיד (דורש root)"), suppressSystemBars) {
                     suppressSystemBars = it; statusBarLayout.saveSuppressSystemBars(it)
                 }
             }
 
+
             Spacer(modifier = Modifier.height(24.dp))
             Text(
-                text = "מרכז הבקרה ניתן לעריכה ישירות בתוכו - לחיצה ארוכה על כפתור העריכה מאפשרת להוסיף, להסיר ולסדר מחדש כפתורים.",
-                color = Color.White.copy(alpha = 0.6f),
+                text = tr("מרכז הבקרה ניתן לעריכה ישירות בתוכו - לחיצה ארוכה על כפתור העריכה מאפשרת להוסיף, להסיר ולסדר מחדש כפתורים."),
+                color = theme.textColor.copy(alpha = 0.6f),
                 fontSize = FutureTypography.label
             )
         }
@@ -88,9 +94,10 @@ fun FutureUISettingsScreen(
 
 @Composable
 private fun SettingsSection(title: String, content: @Composable ColumnScope.() -> Unit) {
+    val theme = rememberFutureTheme()
     Text(
         text = title,
-        color = Color.White.copy(alpha = 0.6f),
+        color = theme.textColor.copy(alpha = 0.6f),
         fontSize = FutureTypography.summary,
         fontWeight = FontWeight.Bold
     )
@@ -99,7 +106,7 @@ private fun SettingsSection(title: String, content: @Composable ColumnScope.() -
         modifier = Modifier
             .fillMaxWidth()
             .clip(FutureShapes.xl)
-            .background(Color.White.copy(alpha = 0.08f))
+            .background(theme.textColor.copy(alpha = 0.08f))
     ) {
         content()
     }
@@ -107,6 +114,7 @@ private fun SettingsSection(title: String, content: @Composable ColumnScope.() -
 
 @Composable
 private fun SettingsToggleRow(label: String, value: Boolean, onChange: (Boolean) -> Unit) {
+    val theme = rememberFutureTheme()
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
     val shape = FutureShapes.lg
@@ -114,23 +122,30 @@ private fun SettingsToggleRow(label: String, value: Boolean, onChange: (Boolean)
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .focusEffect(isFocused, shape)
+            .focusEffect(isFocused, shape, focusedScale = 1.02f)
             .clip(shape)
+            // clickable הוא יעד הפוקוס היחיד: focusable אחריו יצר שני יעדים מקוננים (SU-09)
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
                 onClick = { onChange(!value) }
             )
-            .focusable(interactionSource = interactionSource)
             .padding(horizontal = 16.dp, vertical = 14.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(text = label, color = Color.White, fontSize = FutureTypography.body, modifier = Modifier.weight(1f))
+        Text(text = label, color = theme.textColor, fontSize = FutureTypography.body, modifier = Modifier.weight(1f))
         Switch(
             checked = value,
             onCheckedChange = onChange,
-            colors = SwitchDefaults.colors(checkedTrackColor = Color.White, checkedThumbColor = Color.Black)
+            // מצב כבוי ברור (מסלול שקוף ונוב אפור) כדי שמתג דלוק ייראה שונה ממתג כבוי
+            colors = SwitchDefaults.colors(
+                checkedTrackColor = theme.textColor,
+                checkedThumbColor = theme.backgroundColor,
+                uncheckedTrackColor = theme.textColor.copy(alpha = 0.12f),
+                uncheckedThumbColor = theme.textColor.copy(alpha = 0.6f),
+                uncheckedBorderColor = theme.textColor.copy(alpha = 0.4f)
+            )
         )
     }
 }

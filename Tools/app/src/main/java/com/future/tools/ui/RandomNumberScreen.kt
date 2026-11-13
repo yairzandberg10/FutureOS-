@@ -1,4 +1,6 @@
 package com.future.tools.ui
+
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.nav.onPoundKeyPress
 import com.future.sharednav.components.FutureButton
 import com.future.sharednav.theme.FutureDimens
@@ -72,7 +74,7 @@ fun RandomNumberScreen(theme: FutureTheme, onBack: () -> Unit) {
     // # נצרך ב-FutureUI ומגיע רק כשידור - בלי זה אי אפשר היה להגיע לשדה המקסימום.
     onPoundKeyPress { switchField() }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -102,7 +104,7 @@ fun RandomNumberScreen(theme: FutureTheme, onBack: () -> Unit) {
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
                 // אין במכשיר מקש מחיקה: BACK מוחק ספרה, ויוצא רק כשהשדה הפעיל ריק.
-                ToolsHeader(title = "מספר אקראי", theme = theme, onBack = {
+                ToolsHeader(title = tr("מספר אקראי"), theme = theme, onBack = {
                     if ((if (activeField == 0) minText else maxText) != "0") deleteDigit() else onBack()
                 })
 
@@ -110,8 +112,8 @@ fun RandomNumberScreen(theme: FutureTheme, onBack: () -> Unit) {
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    RangeField(label = "מינימום", value = minText, isActive = activeField == 0, theme = theme, modifier = Modifier.weight(1f))
-                    RangeField(label = "מקסימום", value = maxText, isActive = activeField == 1, theme = theme, modifier = Modifier.weight(1f))
+                    RangeField(label = tr("מינימום"), value = minText, isActive = activeField == 0, theme = theme, modifier = Modifier.weight(1f))
+                    RangeField(label = tr("מקסימום"), value = maxText, isActive = activeField == 1, theme = theme, modifier = Modifier.weight(1f))
                 }
 
                 Text(
@@ -124,7 +126,7 @@ fun RandomNumberScreen(theme: FutureTheme, onBack: () -> Unit) {
 
                 Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                     if (!isValidRange) {
-                        Text("המינימום חייב להיות קטן או שווה למקסימום", color = theme.dangerColor, fontSize = FutureTypography.summary, modifier = Modifier.padding(horizontal = 32.dp), textAlign = TextAlign.Center)
+                        Text(tr("המינימום חייב להיות קטן או שווה למקסימום"), color = theme.dangerColor, fontSize = FutureTypography.summary, modifier = Modifier.padding(horizontal = 32.dp), textAlign = TextAlign.Center)
                     } else {
                         Text(result?.toString() ?: "?", color = theme.textColor, fontSize = FutureTypography.hero, fontWeight = FutureTypography.weightLight, fontFamily = FutureTypography.monoFamily)
                     }
@@ -165,5 +167,5 @@ private fun RangeField(label: String, value: String, isActive: Boolean, theme: F
 
 @Composable
 private fun RollNumberButton(theme: FutureTheme, enabled: Boolean, focusRequester: FocusRequester, onClick: () -> Unit) {
-    FutureButton("הגרל", theme, onClick, fillMaxWidth = true, focusRequester = focusRequester, enabled = enabled)
+    FutureButton(tr("הגרל"), theme, onClick, fillMaxWidth = true, focusRequester = focusRequester, enabled = enabled)
 }

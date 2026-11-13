@@ -1,0 +1,21 @@
+# FutureOS platform-core (system_ext): ברירות מחדל ראשונות וניקוי tmp. יעד: /system_ext/etc/init/
+
+service futureos_firstboot /system_ext/bin/futureos_core_job.sh firstboot
+    class late_start
+    user shell
+    group shell
+    seclabel u:r:futureos_core_job:s0
+    oneshot
+    disabled
+
+service futureos_tmpclean /system_ext/bin/futureos_core_job.sh tmpclean
+    class late_start
+    user shell
+    group shell
+    seclabel u:r:futureos_core_job:s0
+    oneshot
+    disabled
+
+on property:sys.boot_completed=1
+    start futureos_firstboot
+    start futureos_tmpclean

@@ -1,5 +1,7 @@
 package com.future.sharednav.keyboard
 
+import com.future.sharednav.i18n.tr
+
 import android.content.ContentValues
 import android.content.Context
 import android.net.Uri
@@ -92,8 +94,8 @@ object KeyboardSettingsClient {
 
     /** תיאור קצר של מצב השפה לתצוגה. */
     fun stateLabel(lang: KeyboardLanguage): String = when {
-        !lang.enabled -> "כבויה"
-        lang.predict -> "הקלדה וניבוי"
-        else -> "הקלדה בלבד"
+        !lang.enabled -> tr("כבויה")
+        lang.predict -> tr("הקלדה וניבוי")
+        else -> tr("הקלדה בלבד")
     }
 }

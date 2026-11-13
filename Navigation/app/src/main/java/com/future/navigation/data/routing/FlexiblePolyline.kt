@@ -1,5 +1,7 @@
 package com.future.navigation.data.routing
 
+import com.future.sharednav.i18n.tr
+
 import com.future.navigation.data.common.LatLng
 
 /**
@@ -77,12 +79,12 @@ object FlexiblePolyline {
         while (cursor.hasNext()) {
             val char = cursor.next()
             val value = decodeChar(char)
-            require(value >= 0) { "תו לא חוקי ב-flexible polyline: '$char'" }
+            require(value >= 0) { tr("תו לא חוקי ב-flexible polyline: '{0}'", char) }
             result = result or ((value.toLong() and 0x1F) shl shift)
             if ((value and 0x20) == 0) return result
             shift += 5
         }
-        throw IllegalArgumentException("סוף מחרוזת לא צפוי ב-flexible polyline")
+        throw IllegalArgumentException(tr("סוף מחרוזת לא צפוי ב-flexible polyline"))
     }
 
     private fun decodeChar(char: Char): Int {

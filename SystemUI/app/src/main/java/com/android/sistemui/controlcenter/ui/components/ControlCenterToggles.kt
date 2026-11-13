@@ -60,12 +60,11 @@ fun TogglePill(
     Box(
         modifier = modifier
             .height(55.dp)
-            .clip(shape)
+            // הטבעת והגדילה לפני החיתוך - אחרת הגלולה גדלה בתוך מסגרת קבועה
+            // והטבעת נחתכת (נראה כמו פוקוס "שבור").
             .focusEffect(isFocused, shape)
+            .clip(shape)
             .background(Color(0x80E0E0E0))
-            .then(
-                if (isFocused) Modifier.border(2.dp, Color.LightGray, shape) else Modifier
-            )
             .padding(6.dp)
             .onKeyEvent { event ->
                 if (isEditMode && event.type == KeyEventType.KeyDown && event.key == Key.Menu) {
@@ -122,10 +121,14 @@ fun FocusableIcon(
     isEditMode: Boolean = false,
     isRemove: Boolean = false,
     onMenuClick: () -> Unit = {},
-    labelColor: Color = Color.Black
+    labelColor: Color = Color.Black,
+    /** הפקד קיבל/איבד פוקוס - הרשת מציגה את שמו בשורה קבועה מתחתיה. */
+    onFocusChanged: (Boolean) -> Unit = {},
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
+    val focusCallback by androidx.compose.runtime.rememberUpdatedState(onFocusChanged)
+    LaunchedEffect(isFocused) { focusCallback(isFocused) }
 
     // מקש Options הפיזי נחסם ברמת המערכת ולעולם לא מגיע כ-Key.Menu לכאן - זו הדרך
     // האמיתית שהוא מפעיל את onMenuClick כשהאייקון הזה ממוקד.
@@ -185,6 +188,8 @@ fun FocusableIcon(
             }
         }
         AnimatedVisibility(
+            // במצב מקופל השם של הפקד הממוקד מוצג בשורה אחת מתחת לרשת (onFocusChanged):
+            // קודם הוא נפתח כאן, מתחת לאייקון, והרשת כולה קפצה בגובה בכל לחיצת חץ.
             visible = showLabel,
             enter = fadeIn() + expandVertically(),
             exit = fadeOut() + shrinkVertically()
@@ -242,11 +247,15 @@ fun FocusableSection(
                     Modifier
                         .border(
                             width = 2.dp,
-                            color = when {
-                                isMoving -> Color.Red
-                                isFocused -> Color.LightGray
-                                else -> Color.Transparent
-                            },
+                            color = androidx.compose.animation.animateColorAsState(
+                                when {
+                                    isMoving -> Color.Red
+                                    isFocused -> Color(0xFF111114)
+                                    else -> Color.Transparent
+                                },
+                                com.future.sharednav.theme.FutureMotion.focusColorSpec,
+                                label = "ccEditBorder",
+                            ).value,
                             shape = shape
                         )
                         .onKeyEvent { event ->

@@ -1,5 +1,7 @@
 package com.future.tools.ui
 
+import com.future.sharednav.i18n.tr
+
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.components.FutureButton
 import com.future.sharednav.theme.subtleTextColor
@@ -51,17 +53,17 @@ fun TextScannerScreen(theme: FutureTheme, onBack: () -> Unit) {
 
     DisposableEffect(Unit) { onDispose { recognizer.close() } }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize()) {
                 ToolsHeader(
-                    title = "סורק טקסט", theme = theme, onBack = onBack,
+                    title = tr("סורק טקסט"), theme = theme, onBack = onBack,
                     trailing = {
                         if (liveText.isNotBlank()) {
-                            ToolsIconButton(FutureIcons.ContentCopy, "העתק", theme = theme) {
+                            ToolsIconButton(FutureIcons.ContentCopy, tr("העתק"), theme = theme) {
                                 val clipboard = context.getSystemService(ClipboardManager::class.java)
                                 clipboard.setPrimaryClip(ClipData.newPlainText("scanned_text", liveText))
-                                Toast.makeText(context, "הטקסט הועתק", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, tr("הטקסט הועתק"), Toast.LENGTH_SHORT).show()
                             }
                         }
                     }
@@ -69,7 +71,7 @@ fun TextScannerScreen(theme: FutureTheme, onBack: () -> Unit) {
 
                 if (!hasPermission) {
                     Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        Text("נדרשת הרשאת מצלמה כדי לסרוק טקסט", color = theme.mutedTextColor, fontSize = FutureTypography.body, modifier = Modifier.padding(horizontal = 32.dp))
+                        Text(tr("נדרשת הרשאת מצלמה כדי לסרוק טקסט"), color = theme.mutedTextColor, fontSize = FutureTypography.body, modifier = Modifier.padding(horizontal = 32.dp))
                     }
                 } else {
                     Box(
@@ -101,7 +103,7 @@ fun TextScannerScreen(theme: FutureTheme, onBack: () -> Unit) {
                             Box(modifier = Modifier.fillMaxSize().background(theme.textColor.copy(alpha = 0.06f))) {
                                 LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp)) {
                                     item {
-                                        Text(liveText.ifBlank { "לא זוהה טקסט" }, color = theme.textColor, fontSize = FutureTypography.bodyLarge)
+                                        Text(liveText.ifBlank { tr("לא זוהה טקסט") }, color = theme.textColor, fontSize = FutureTypography.bodyLarge)
                                     }
                                 }
                             }
@@ -127,5 +129,5 @@ fun TextScannerScreen(theme: FutureTheme, onBack: () -> Unit) {
 
 @Composable
 private fun FreezeButton(isFrozen: Boolean, theme: FutureTheme, onClick: () -> Unit) {
-    FutureButton(if (isFrozen) "חזור לסריקה חיה" else "הקפא ועיין בטקסט", theme, onClick, fillMaxWidth = true)
+    FutureButton(if (isFrozen) tr("חזור לסריקה חיה") else tr("הקפא ועיין בטקסט"), theme, onClick, fillMaxWidth = true)
 }

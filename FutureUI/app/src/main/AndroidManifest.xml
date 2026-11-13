@@ -160,13 +160,6 @@
             </intent-filter>
         </activity>
 
-        <activity
-            android:name=".SettingsActivity"
-            android:exported="true"
-            android:permission="com.future.futureui.permission.SYSTEM_SETTINGS"
-            android:label="התאמה אישית"
-            android:theme="@style/Theme.FutureUI" />
-
         <!-- בכוונה בלי CATEGORY_LAUNCHER: FutureUI הוא SystemUI, לא אפליקציה שהמשתמש
              פותח ישירות - אין לו אייקון ברשימת האפליקציות. ACTION_MAIN נשאר כדי
              שאפשר עדיין להפעיל אותו במפורש (adb / debugging) בלי חשיפה בלאנצ'ר. -->

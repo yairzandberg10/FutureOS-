@@ -1,5 +1,7 @@
 package com.future.futureui.lockscreen
 
+import com.future.sharednav.i18n.tr
+
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -87,7 +89,7 @@ class LockUiState {
 
     /** הקטגוריות של רשת הרקעים: "הכל" ואז לפי הסדר בקטלוג. */
     val wallpaperCategories: List<String>
-        get() = listOf("הכל") + wallpaperCatalog.map { it.category }.distinct()
+        get() = listOf(tr("הכל")) + wallpaperCatalog.map { it.category }.distinct()
 
     /** המשבצות ברשת הרקעים: "" (הטפט של המכשיר) ואז הקטלוג המסונן. */
     val wallpaperTiles: List<String>

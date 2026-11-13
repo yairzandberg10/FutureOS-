@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- FutureOS platform-core: ברירות מחדל של SettingsProvider -->
+<resources>
+    <!-- 574: כיבוי מסך אחרי 30 שניות -->
+    <integer name="def_screen_off_timeout">30000</integer>
+    <!-- 360: מצב טיסה. בלי NFC ובלי wimax בחומרה -->
+    <string name="def_airplane_mode_radios" translatable="false">cell,bluetooth,wifi</string>
+    <string name="airplane_mode_toggleable_radios" translatable="false">bluetooth,wifi</string>
+    <!-- 567: חיסכון אוטומטי ב-15% (משלים את futureos_core_job.sh) -->
+    <integer name="def_low_power_trigger_level">15</integer>
+</resources>

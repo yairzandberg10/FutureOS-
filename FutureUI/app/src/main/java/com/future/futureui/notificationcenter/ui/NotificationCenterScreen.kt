@@ -1,4 +1,6 @@
 package com.future.futureui.notificationcenter.ui
+
+import com.future.sharednav.i18n.tr
 import com.future.futureui.utils.safeText
 import com.future.sharednav.theme.FutureMotion
 import com.future.sharednav.theme.FutureTypography
@@ -151,7 +153,10 @@ fun NotificationCenterScreen(
         }
     }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(
+        LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection,
+        com.future.futureui.controlcenter.ui.components.LocalOverlayIsDark provides isDarkBackground,
+    ) {
         // אותה שכבה כמו מרכז הבקרה: נופלת מהקצה העליון בקפיץ layer, או נכנסת
         // מהצד כשעוברים אליה ממרכז הבקרה. קודם זה היה קפיץ LowBouncy איטי
         // שלא מהטוקנים, והיציאה לא רצה בכלל (החלון הוסר מיד).
@@ -233,7 +238,7 @@ fun NotificationCenterScreen(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
-                                        text = "אין התראות חדשות",
+                                        text = tr("אין התראות חדשות"),
                                         color = subTextColor,
                                         fontSize = FutureTypography.bodyLarge
                                     )
@@ -302,7 +307,7 @@ fun NotificationCenterScreen(
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         NotificationCenterButton(
-                            text = if (clearArmed) "לחצו OK שוב" else "נקה הכל",
+                            text = if (clearArmed) "לחצו OK שוב" else tr("נקה הכל"),
                             icon = Icons.Rounded.DeleteSweep,
                             // OK ראשון רק מזהיר, שני (תוך 4 שניות) מנקה - כמו בתפריט הכיבוי (F29)
                             onClick = {
@@ -318,7 +323,7 @@ fun NotificationCenterScreen(
                             focusRequester = clearAllFocusRequester
                         )
                         NotificationCenterButton(
-                            text = "השתק",
+                            text = tr("השתק"),
                             icon = if (ncManager.controlManager.isDndOn) Icons.Rounded.NotificationsOff else Icons.Rounded.NotificationsActive,
                             onClick = { ncManager.toggleDnd() },
                             modifier = Modifier.weight(1f),
@@ -374,7 +379,7 @@ fun NotificationItem(
             }
             // פותח את הגדרות ההתראות של האפליקציה (לא משתיק בעצמו) - התווית תואמת (SU-35)
             add(NotificationOption(label = "הגדרות התראות", isDestructive = true) { onMuteApp() })
-            add(NotificationOption(label = "חזור") { })
+            add(NotificationOption(label = tr("חזור")) { })
         }
     }
     LaunchedEffect(showOptions) { if (showOptions) selectedOptionIndex = 0 }
@@ -423,8 +428,9 @@ fun NotificationItem(
             .animateContentSize(animationSpec = tween(FutureMotion.DurationStandard))
             .focusEffect(isFocused, shape, focusedScale = 1.02f)
             .clip(shape)
+            // סימון אחד בלבד: הטבעת של focusEffect. קודם נוספה עליה עוד מסגרת אפורה
+            // של 2dp, כך שכרטיס ממוקד קיבל שתי טבעות זו בתוך זו.
             .background(cardBackground)
-            .border(2.dp, animateFocusColor(isFocused, Color.LightGray, Color.Transparent).value, shape)
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .onKeyEvent { event ->
                 if (!isFocused) return@onKeyEvent false
@@ -616,10 +622,9 @@ fun NotificationCenterButton(
     Box(
         modifier = modifier
             .height(38.dp)
-            .focusEffect(isFocused, shape, focusedScale = 1.08f)
+            .focusEffect(isFocused, shape)
             .clip(shape)
             .background(animateFocusColor(isFocused, Color.White.copy(alpha = 0.25f), color).value)
-            .border(2.dp, animateFocusColor(isFocused, Color.White, Color.Transparent).value, shape)
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
             .focusable(interactionSource = interactionSource).bringIntoViewOnFocus(),

@@ -1,0 +1,17 @@
+# FutureOS platform-core: שורות fstab למיזוג ידני ל-/vendor/etc/fstab.mt6768 של היצרן (לא להעתיק כקובץ).
+# לפני המיזוג לאמת נתיבים במכשיר:  ls /sys/class/mmc_host/ ; ls /sys/bus/usb/devices/ ; cat /vendor/etc/fstab.mt6768
+# <src>  <mnt_point>  <type>  <mnt_flags>  <fs_mgr_flags>
+
+# zram swap (127, 128): חצי מה-RAM (2GB), 4 זרמי דחיסה
+/dev/block/zram0   none   swap   defaults   zramsize=50%,max_comp_streams=4
+
+# כרטיס SD (234, 245): mount אוטומטי על ידי vold. נתיב ה-controller לאמת (mmc1 ב-MT6768 בדרך כלל)
+/devices/platform/externdevice*   auto   auto   defaults   voldmanaged=sdcard1:auto,encryptable=userdata
+
+# USB OTG (234, 243): התקן אחסון נשלף. נתיב ה-controller לאמת
+/devices/platform/soc/*.usb*/*   auto   auto   defaults   voldmanaged=usb:auto
+
+# userdata (202, 217, 219): להשוות לשורה הקיימת של היצרן ולהוסיף רק את מה שחסר:
+#   fileencryption=aes-256-xts:aes-256-cts:v2   (217, FBE; metadata_encryption למי שנתמך)
+#   f2fs flags: nosuid,nodev,noatime,discard,inlinecrypt  (219, TRIM רציף)
+#   fs_mgr flags: latemount,wait,check,quota,reservedsize=128M,checkpoint=fs  (202, checkpoint=fs נותן שלמות אחרי הפסקת חשמל)

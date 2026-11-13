@@ -1,4 +1,6 @@
 package com.future.messages
+
+import com.future.sharednav.i18n.tr
 import com.future.sharednav.components.FutureButton
 
 import android.content.Intent
@@ -341,7 +343,7 @@ fun MessagesApp(theme: FutureTheme) {
                     ioScope.launch {
                         val deleted = withContext(Dispatchers.IO) { repository.deleteThread(conversation.threadId) }
                         if (!deleted) {
-                            android.widget.Toast.makeText(context, "מחיקת השיחה נכשלה", android.widget.Toast.LENGTH_SHORT).show()
+                            android.widget.Toast.makeText(context, tr("מחיקת השיחה נכשלה"), android.widget.Toast.LENGTH_SHORT).show()
                         } else if (conversation.threadId in archivedThreadIds) {
                             // שיחה שנמחקה לא נשארת ברשימת הארכיון
                             archivedThreadIds = archiveStore.setArchived(conversation.threadId, false)
@@ -359,7 +361,7 @@ fun MessagesApp(theme: FutureTheme) {
                     archivedThreadIds = archiveStore.setArchived(conversation.threadId, archive)
                     android.widget.Toast.makeText(
                         context,
-                        if (archive) "השיחה הועברה לארכיון" else "השיחה הוצאה מהארכיון",
+                        if (archive) tr("השיחה הועברה לארכיון") else tr("השיחה הוצאה מהארכיון"),
                         android.widget.Toast.LENGTH_SHORT,
                     ).show()
                 },
@@ -422,7 +424,7 @@ fun MessagesApp(theme: FutureTheme) {
                         if (sent == null) {
                             android.widget.Toast.makeText(context, "מחיקת ההודעה הנכשלת נכשלה", android.widget.Toast.LENGTH_SHORT).show()
                         } else if (!sent) {
-                            android.widget.Toast.makeText(context, "שליחת ההודעה נכשלה", android.widget.Toast.LENGTH_SHORT).show()
+                            android.widget.Toast.makeText(context, tr("שליחת ההודעה נכשלה"), android.widget.Toast.LENGTH_SHORT).show()
                         }
                         messages = withContext(Dispatchers.IO) { repository.getMessages(current.conversation.threadId) }
                     }
@@ -450,7 +452,7 @@ fun MessagesApp(theme: FutureTheme) {
                         }
                     }
                     if (!dispatchedOk) {
-                        val message = if (imageUri != null) "שליחת ה-MMS נכשלה" else "שליחת ההודעה נכשלה"
+                        val message = if (imageUri != null) tr("שליחת ה-MMS נכשלה") else tr("שליחת ההודעה נכשלה")
                         android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show()
                     }
                     onDone(dispatchedOk)
@@ -464,7 +466,7 @@ fun MessagesApp(theme: FutureTheme) {
                     ioScope.launch {
                         val deleted = withContext(Dispatchers.IO) { repository.deleteMessage(message) }
                         if (!deleted) {
-                            android.widget.Toast.makeText(context, "מחיקת ההודעה נכשלה", android.widget.Toast.LENGTH_SHORT).show()
+                            android.widget.Toast.makeText(context, tr("מחיקת ההודעה נכשלה"), android.widget.Toast.LENGTH_SHORT).show()
                         }
                         messages = withContext(Dispatchers.IO) { repository.getMessages(current.conversation.threadId) }
                     }
@@ -516,9 +518,9 @@ fun MessagesApp(theme: FutureTheme) {
                         contacts.count { repository.sendMessage(it.phoneNumber, text) == null }
                     }
                     val summary = if (failures == 0) {
-                        "ההודעה נשלחה ל-${contacts.size} אנשי קשר"
+                        tr("ההודעה נשלחה ל-{0} אנשי קשר", contacts.size)
                     } else {
-                        "נכשלה שליחה ל-$failures מתוך ${contacts.size} אנשי קשר"
+                        tr("נכשלה שליחה ל-{0} מתוך {1} אנשי קשר", failures, contacts.size)
                     }
                     android.widget.Toast.makeText(context, summary, android.widget.Toast.LENGTH_SHORT).show()
                     groupSending = false
@@ -539,10 +541,10 @@ private fun PermissionRequiredScreen(
 ) {
     val focusRequester = remember { FocusRequester() }
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
-                Text("כדי להשתמש בהודעות, יש לאשר הרשאות SMS ואנשי קשר", color = theme.textColor, textAlign = TextAlign.Center)
+                Text(tr("כדי להשתמש בהודעות, יש לאשר הרשאות SMS ואנשי קשר"), color = theme.textColor, textAlign = TextAlign.Center)
                 if (deniedForever) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text("ההרשאה נדחתה. אפשר לאשר אותה בהגדרות האפליקציה", color = theme.mutedTextColor, textAlign = TextAlign.Center)
@@ -551,7 +553,7 @@ private fun PermissionRequiredScreen(
                 if (deniedForever) {
                     FutureButton("פתח הגדרות", theme, onOpenSettings, focusRequester = focusRequester)
                 } else {
-                    FutureButton("אשר הרשאות", theme, onRequest, focusRequester = focusRequester)
+                    FutureButton(tr("אשר הרשאות"), theme, onRequest, focusRequester = focusRequester)
                 }
             }
         }
@@ -562,12 +564,12 @@ private fun PermissionRequiredScreen(
 private fun DefaultAppRequiredScreen(theme: FutureTheme, onRequest: () -> Unit) {
     val focusRequester = remember { FocusRequester() }
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
                 Text("צריך להגדיר את \"הודעות\" כאפליקציית ברירת המחדל למסרונים", color = theme.textColor, textAlign = TextAlign.Center)
                 Spacer(modifier = Modifier.height(16.dp))
-                FutureButton("הגדר כברירת מחדל", theme, onRequest, focusRequester = focusRequester)
+                FutureButton(tr("הגדר כברירת מחדל"), theme, onRequest, focusRequester = focusRequester)
             }
         }
     }
