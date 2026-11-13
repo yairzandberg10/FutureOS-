@@ -48,6 +48,12 @@ private val FileEntrySaver = Saver<FileEntry?, String>(
     restore = { FileEntry(File(it), false, 0L) },
 )
 
+/** הלוח (העתק/העבר) - כמה פריטים. סוג הפריט נקרא מהדיסק בשחזור, כדי שתיקייה תישאר תיקייה. */
+private val FileListSaver = Saver<List<FileEntry>, ArrayList<String>>(
+    save = { list -> ArrayList(list.map { it.file.absolutePath }) },
+    restore = { paths -> paths.map { path -> File(path).let { FileEntry(it, it.isDirectory, 0L) } } },
+)
+
 /**
  * בקשת בחירת קובץ מאפליקציה אחרת (GET_CONTENT / OPEN_DOCUMENT, #33). הקובץ שנבחר
  * מוחזר כ-content URI דרך FileProvider עם הרשאת קריאה, ולא כנתיב.
@@ -98,7 +104,7 @@ class MainActivity : ComponentActivity() {
             // שכשחוזרים "אחורה" מקובץ שנפתח או מתת-תיקייה, הפוקוס חוזר בדיוק
             // לפריט שממנו יצאנו, לא תמיד לפריט הראשון ברשימה.
             var lastSelectedPathByDir by rememberSaveable { mutableStateOf<Map<String, String>>(emptyMap()) }
-            var clipboardEntry by rememberSaveable(stateSaver = FileEntrySaver) { mutableStateOf<FileEntry?>(null) }
+            var clipboardEntries by rememberSaveable(stateSaver = FileListSaver) { mutableStateOf<List<FileEntry>>(emptyList()) }
             var clipboardIsMove by rememberSaveable { mutableStateOf(false) }
             // מציין שפעולת קבצים כבדה (מחיקה/העתקה/העברה) רצה כרגע ברקע כדי
             // שהתור העליון של ה-UI thread לא ייחסם בתיקיות גדולות.
@@ -205,7 +211,7 @@ class MainActivity : ComponentActivity() {
                     isRoot = currentDir.absolutePath == root.absolutePath,
                     currentDirIsTopLevelFolder = isCurrentDirTopLevel,
                     theme = theme,
-                    hasClipboard = clipboardEntry != null,
+                    hasClipboard = clipboardEntries.isNotEmpty(),
                     onRequestAccess = {
                         if (Build.VERSION.SDK_INT >= 30) {
                             try {
@@ -304,34 +310,54 @@ class MainActivity : ComponentActivity() {
                         }
                     },
                     onOpenExternally = { entry -> if (!openFile(entry.file)) message(tr("אין אפליקציה שפותחת את הקובץ")) },
-                    onCopy = { entry -> clipboardEntry = entry; clipboardIsMove = false },
-                    onMove = { entry -> clipboardEntry = entry; clipboardIsMove = true },
+                    onCopy = { entry -> clipboardEntries = listOf(entry); clipboardIsMove = false },
+                    onMove = { entry -> clipboardEntries = listOf(entry); clipboardIsMove = true },
+                    // בחירה מרובה: כל הפריטים שנבחרו נכנסים ללוח, וההדבקה מעבירה את כולם.
+                    onCopyMultiple = { selected ->
+                        clipboardEntries = selected
+                        clipboardIsMove = false
+                        message(tr("{0} פריטים מוכנים להדבקה - נווטו לתיקייה ובחרו \"הדבק כאן\"", selected.size))
+                    },
+                    onMoveMultiple = { selected ->
+                        clipboardEntries = selected
+                        clipboardIsMove = true
+                        message(tr("{0} פריטים מוכנים להעברה - נווטו לתיקייה ובחרו \"הדבק כאן\"", selected.size))
+                    },
                     onPaste = {
-                        val toPaste = clipboardEntry
-                        val movingIntoSameFolder = clipboardIsMove && toPaste?.file?.parentFile?.absolutePath == currentDir.absolutePath
-                        if (movingIntoSameFolder) {
-                            message("הפריט כבר נמצא כאן")
-                        } else if (toPaste != null && !isBusy) {
+                        // העברה לתיקייה שהפריט כבר בה לא עושה כלום - מדלגים עליו.
+                        val toPaste = clipboardEntries.filterNot {
+                            clipboardIsMove && it.file.parentFile?.absolutePath == currentDir.absolutePath
+                        }
+                        if (clipboardEntries.isNotEmpty() && toPaste.isEmpty()) {
+                            message(if (clipboardEntries.size == 1) "הפריט כבר נמצא כאן" else tr("הפריטים כבר נמצאים כאן"))
+                        } else if (toPaste.isNotEmpty() && !isBusy) {
                             isBusy = true
                             val progress = com.future.files.data.CopyProgress()
                             progressValue = 0f
                             copyProgress = progress
                             // התיקייה נקבעת לפני ההעתקה - חזרה "אחורה" באמצע לא משנה את היעד.
                             val destDir = currentDir
+                            val moving = clipboardIsMove
                             coroutineScope.launch {
-                                // שם תפוס לא עוצר את ההדבקה: הפריט נשמר כ"שם (2)".
-                                val targetName = withContext(Dispatchers.IO) { repository.availableName(destDir, toPaste.file.name, toPaste.isDirectory) }
-                                val ok = withContext(Dispatchers.IO) {
-                                    if (clipboardIsMove) repository.moveEntry(toPaste.file, destDir, progress, targetName)
-                                    else repository.copyEntry(toPaste.file, destDir, progress, targetName)
+                                val failed = ArrayList<FileEntry>()
+                                for (item in toPaste) {
+                                    if (progress.cancelled) { failed += item; continue }
+                                    // שם תפוס לא עוצר את ההדבקה: הפריט נשמר כ"שם (2)".
+                                    val targetName = withContext(Dispatchers.IO) { repository.availableName(destDir, item.file.name, item.isDirectory) }
+                                    val ok = withContext(Dispatchers.IO) {
+                                        if (moving) repository.moveEntry(item.file, destDir, progress, targetName)
+                                        else repository.copyEntry(item.file, destDir, progress, targetName)
+                                    }
+                                    if (!ok) failed += item
                                 }
                                 reloadEntries()
                                 when {
                                     progress.cancelled -> message(tr("הפעולה בוטלה"))
-                                    !ok -> message(tr("לא ניתן להדביק כאן"))
+                                    failed.size == toPaste.size -> message(tr("לא ניתן להדביק כאן"))
+                                    failed.isNotEmpty() -> message(tr("לא הודבקו {0} מתוך {1} פריטים", failed.size, toPaste.size))
                                 }
-                                // ביטול או כשלון משאירים את הפריט בלוח - אפשר לנסות שוב
-                                if (ok) clipboardEntry = null
+                                // ביטול או כשלון משאירים בלוח רק את מה שלא הודבק - אפשר לנסות שוב.
+                                clipboardEntries = failed
                                 copyProgress = null
                                 isBusy = false
                             }

@@ -1,5 +1,6 @@
 package com.future.files.ui
 
+import com.future.sharednav.focus.focusGlideHost
 import com.future.sharednav.i18n.tr
 import com.future.sharednav.theme.idleChipColor
 import com.future.sharednav.theme.readableAccentColor
@@ -107,6 +108,8 @@ fun FilesScreen(
     onPaste: () -> Unit = {},
     onDeleteMultiple: (List<FileEntry>) -> Unit = {},
     onShareMultiple: (List<FileEntry>) -> Unit = {},
+    onCopyMultiple: (List<FileEntry>) -> Unit = {},
+    onMoveMultiple: (List<FileEntry>) -> Unit = {},
     /** תצוגת רשת (ריבועים) או רשימה - מתחלפת מתפריט האפשרויות. */
     gridView: Boolean = false,
     onToggleGridView: () -> Unit = {},
@@ -140,8 +143,12 @@ fun FilesScreen(
     // תפריט Options נפתח תמיד: פעולות על הפריט הממוקד (אם יש), ופעולות על
     // התיקייה - תיקייה חדשה, הדבקה, רשת/רשימה. אין להן כפתורים על המסך.
     var generalMenu by remember { mutableStateOf(false) }
+    // במצב בחירה Options פותח את הפעולות על כל הנבחרים (העתק, העבר, שתף, מחק),
+    // ולא את התפריט של הפריט הממוקד.
+    var selectionMenu by remember { mutableStateOf(false) }
     com.future.sharednav.nav.onOptionsKeyPress {
         if (!hasAccess) return@onOptionsKeyPress
+        if (selectedEntries.isNotEmpty()) { selectionMenu = true; return@onOptionsKeyPress }
         val focused = focusedEntry?.takeIf { f -> entries.any { it.file == f.file } }
         if (focused != null) menuEntry = focused else generalMenu = true
     }
@@ -198,6 +205,10 @@ fun FilesScreen(
         selectedEntries = emptySet()
     }
 
+    fun selectAll() {
+        selectedEntries = entries.toSet()
+    }
+
     // BACK במצב בחירה מבטל את הבחירה קודם, ולא יוצא מהתיקייה.
     androidx.activity.compose.BackHandler(enabled = selectedEntries.isNotEmpty()) { clearSelection() }
     // בזמן פעולה ברקע BACK לא משנה תיקייה: בהעתקה הוא מבטל אותה, ובמחיקה הוא לא עושה דבר.
@@ -206,7 +217,7 @@ fun FilesScreen(
     // # נצרך ברמת המערכת ומגיע רק כשידור (ר' onPoundKeyPress) - ה-Key.Pound בשורות
     // נשאר רק למקלדת בלי FutureUI. בוחר או מבטל את הפריט הממוקד.
     com.future.sharednav.nav.onPoundKeyPress {
-        if (!hasAccess || menuEntry != null || generalMenu || renameEntry != null || detailsEntry != null || showNewFolder) return@onPoundKeyPress
+        if (!hasAccess || menuEntry != null || generalMenu || selectionMenu || renameEntry != null || detailsEntry != null || showNewFolder) return@onPoundKeyPress
         focusedEntry?.let { f -> entries.firstOrNull { it.file == f.file } }?.let { toggleSelection(it) }
     }
 
@@ -217,12 +228,21 @@ fun FilesScreen(
 
     fun displayNameOf(entry: FileEntry): String = entry.file.displayName(isRoot && entry.isDirectory)
 
-    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
+    // סמן הפוקוס המשותף (Elastic Focus): המילוי של השורה הממוקדת גולש לשורה הבאה
+    // במקום להיעלם ולהופיע - כמו בשאר הרשימות במערכת. המסך הזה לא בנוי על
+    // ScreenScaffold, ולכן מארח את הסמן בעצמו.
+    val glide = com.future.sharednav.focus.rememberFocusGlideState()
+
+    CompositionLocalProvider(
+        LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection,
+        com.future.sharednav.focus.LocalFocusGlide provides glide,
+    ) {
         Box(
             modifier = Modifier
                 .escapeTextFieldFocusTrap()
                 .fillMaxSize()
                 .background(theme.backgroundColor)
+                .focusGlideHost(glide)
                 .onPreviewKeyEvent { event ->
                     val passThrough = !isBusy || overlayFocused || event.key == Key.Back
                     !passThrough
@@ -356,6 +376,7 @@ fun FilesScreen(
                     isImage = categorize(entry.file) == FileCategory.IMAGE,
                     onOpenInGallery = { menuEntry = null; onOpenInGallery(entry) },
                     onDelete = { menuEntry = null; deleteEntryState = entry },
+                    onSelect = { menuEntry = null; toggleSelection(entry) },
                     folderRows = {
                         FolderMenuRows(theme, hasClipboard, gridView, onDone = { menuEntry = null }, onNewFolder = { showNewFolder = true }, onPaste = onPaste, onToggleGridView = onToggleGridView)
                     },
@@ -364,7 +385,27 @@ fun FilesScreen(
 
             if (generalMenu) {
                 FutureOptionsMenu(theme = theme, onDismissRequest = { generalMenu = false }, header = if (isRoot) tr("קבצים") else currentDir.name) {
+                    if (entries.isNotEmpty()) {
+                        FutureMenuRow(tr("בחר הכול"), FutureIcons.Checklist, theme, { generalMenu = false; selectAll() })
+                    }
                     FolderMenuRows(theme, hasClipboard, gridView, onDone = { generalMenu = false }, onNewFolder = { showNewFolder = true }, onPaste = onPaste, onToggleGridView = onToggleGridView)
+                }
+            }
+
+            if (selectionMenu) {
+                val selected = selectedEntries.toList()
+                fun pick(action: () -> Unit): () -> Unit = { selectionMenu = false; action() }
+                FutureOptionsMenu(theme = theme, onDismissRequest = { selectionMenu = false }, header = tr("{0} נבחרו", selected.size)) {
+                    if (selected.size < entries.size) {
+                        FutureMenuRow(tr("בחר הכול"), FutureIcons.Checklist, theme, pick { selectAll() })
+                    }
+                    FutureMenuRow(tr("העתק"), FutureIcons.ContentCopy, theme, pick { onCopyMultiple(selected); clearSelection() })
+                    FutureMenuRow(tr("העבר"), FutureIcons.DriveFileMove, theme, pick { onMoveMultiple(selected); clearSelection() })
+                    if (selected.any { !it.isDirectory }) {
+                        FutureMenuRow(tr("שתף"), FutureIcons.Share, theme, pick { onShareMultiple(selected); clearSelection() })
+                    }
+                    FutureMenuRow(tr("בטל בחירה"), FutureIcons.Close, theme, pick { clearSelection() })
+                    FutureMenuRow(tr("מחק"), FutureIcons.Delete, theme, pick { deleteMultipleState = selected }, destructive = true)
                 }
             }
 
@@ -642,6 +683,7 @@ private fun FileOptionsMenu(
     onDelete: () -> Unit,
     isImage: Boolean = false,
     onOpenInGallery: () -> Unit = {},
+    onSelect: () -> Unit = {},
     folderRows: @Composable () -> Unit = {},
 ) {
     FutureOptionsMenu(theme = theme, onDismissRequest = onDismiss, header = entryName) {
@@ -654,6 +696,9 @@ private fun FileOptionsMenu(
         FutureMenuRow(tr("העתק"), FutureIcons.ContentCopy, theme, onCopy)
         FutureMenuRow(tr("העבר"), FutureIcons.DriveFileMove, theme, onMove)
         FutureMenuRow(tr("פרטים"), FutureIcons.Info, theme, onDetails)
+        // בחירה מרובה: מכאן (או במקש #) מתחילים לסמן, ואז OK מסמן עוד פריטים
+        // ו-Options פותח את הפעולות על כל הנבחרים.
+        FutureMenuRow(tr("בחר"), FutureIcons.Checklist, theme, onSelect)
         // FL-D14: "מחק" האדום תמיד אחרון - פעולות התיקייה (הדבק כאן...) לפניו.
         folderRows()
         FutureMenuRow(tr("מחק"), FutureIcons.Delete, theme, onDelete, destructive = true)
