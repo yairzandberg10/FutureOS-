@@ -230,9 +230,9 @@ fun MediaControlButton(icon: ImageVector, onClick: () -> Unit, isLarge: Boolean 
     Box(
         modifier = Modifier
             .size(if (isLarge) 50.dp else 40.dp)
-            .focusEffect(isFocused, shape, focusedScale = 1.2f)
+            .focusEffect(isFocused, shape, focusedScale = 1.08f)
             .clip(shape)
-            .background(animateFocusColor(isFocused, Color.White.copy(alpha = 0.3f), Color.Transparent).value)
+            .background(animateFocusColor(isFocused, tint.copy(alpha = 0.14f), Color.Transparent).value)
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
@@ -244,7 +244,8 @@ fun MediaControlButton(icon: ImageVector, onClick: () -> Unit, isLarge: Boolean 
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = animateFocusColor(isFocused, Color.White, tint).value,
+            // האייקון שומר על הצבע שלו: קודם הוא הפך ללבן בפוקוס ונעלם על הזכוכית הבהירה.
+            tint = tint,
             modifier = Modifier.size(if (isLarge) 32.dp else 24.dp)
         )
     }

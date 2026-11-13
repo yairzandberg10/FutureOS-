@@ -419,6 +419,8 @@ fun ControlCenterScreen(
                                             )
                                         }
 
+                                        // UI1: שם הפקד הממוקד, כשהשמות מוסתרים (מצב מקופל)
+                                        var focusedGridLabel by remember { mutableStateOf<String?>(null) }
                                         val totalRows = (gridControls.size + 4) / 5
                                         val maxRows = if (isExpanded || isEditMode) totalRows else minOf(2, totalRows)
                                         repeat(maxRows) { rowIndex ->
@@ -450,13 +452,36 @@ fun ControlCenterScreen(
                                                                 isEditMode = isGridEditing,
                                                                 isRemove = true,
                                                                 onMenuClick = { if (isGridEditing) isGridEditing = false },
-                                                                labelColor = clockColor
+                                                                labelColor = clockColor,
+                                                                onFocusChanged = { focused ->
+                                                                    if (focused) focusedGridLabel = item.label
+                                                                    else if (focusedGridLabel == item.label) focusedGridLabel = null
+                                                                },
                                                             )
                                                         } else {
                                                             Spacer(modifier = Modifier.width(54.dp))
                                                         }
                                                     }
                                                 }
+                                            }
+                                        }
+
+                                        if (!isExpanded && !isEditMode && gridControls.isNotEmpty()) {
+                                            // שורה בגובה קבוע: השם מתחלף ב-crossfade ולא מזיז את הרשת
+                                            AnimatedContent(
+                                                targetState = focusedGridLabel.orEmpty(),
+                                                transitionSpec = { fadeIn(tween(FutureMotion.DurationStandard)) togetherWith fadeOut(tween(FutureMotion.DurationFast)) },
+                                                label = "ccGridLabel",
+                                                modifier = Modifier.fillMaxWidth().height(20.dp),
+                                                contentAlignment = Alignment.Center,
+                                            ) { label ->
+                                                Text(
+                                                    text = label,
+                                                    fontSize = FutureTypography.caption,
+                                                    color = clockColor,
+                                                    maxLines = 1,
+                                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                                )
                                             }
                                         }
 

@@ -425,8 +425,9 @@ fun NotificationItem(
             .animateContentSize(animationSpec = tween(FutureMotion.DurationStandard))
             .focusEffect(isFocused, shape, focusedScale = 1.02f)
             .clip(shape)
+            // סימון אחד בלבד: הטבעת של focusEffect. קודם נוספה עליה עוד מסגרת אפורה
+            // של 2dp, כך שכרטיס ממוקד קיבל שתי טבעות זו בתוך זו.
             .background(cardBackground)
-            .border(2.dp, animateFocusColor(isFocused, Color.LightGray, Color.Transparent).value, shape)
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .onKeyEvent { event ->
                 if (!isFocused) return@onKeyEvent false
@@ -618,10 +619,9 @@ fun NotificationCenterButton(
     Box(
         modifier = modifier
             .height(38.dp)
-            .focusEffect(isFocused, shape, focusedScale = 1.08f)
+            .focusEffect(isFocused, shape)
             .clip(shape)
             .background(animateFocusColor(isFocused, Color.White.copy(alpha = 0.25f), color).value)
-            .border(2.dp, animateFocusColor(isFocused, Color.White, Color.Transparent).value, shape)
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
             .focusable(interactionSource = interactionSource).bringIntoViewOnFocus(),
