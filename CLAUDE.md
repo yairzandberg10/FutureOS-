@@ -17,3 +17,10 @@
 - אחרי כל התקנה, קומפילציה מראש של ART: `adb shell cmd package compile -m speed -f <PACKAGE_NAME>` - בלי זה האפליקציה רצה בלי קומפילציה בכלל (run-from-apk) עד ה-dexopt של הלילה.
 - פקודת הרצה (מבוססת ADB): `adb shell am start -n <YOUR_PACKAGE_NAME>/<YOUR_ACTIVITY_NAME>`
 - בסיום כל שינוי קוד, העלה את הגרסה החדשה לגיט עם הסבר על הגרסה החדשה מה חדש  ותעלה לריפו בלינק:   https://github.com/yairzandberg10/FutureOS-.git
+
+## ענף אחד בלבד: main (Git)
+- בריפו יש ענף אחד בלבד: `main`. כל commit וכל push הולכים אליו (`git push origin main`).
+- אסור לפתוח ענפים חדשים (feature, fix, wip, qa וכו') ואסור לדחוף ענפים אחרים ל-GitHub.
+- התיקייה לעבודה היא `FutureOS--main` (שם `main` פתוח). לפני שמתחילים: `git pull --rebase origin main`, כדי לא לדרוס עבודה של צ'אט אחר.
+- אם הסשן נפתח בכל זאת על ענף אחר או ב-worktree, בסוף המשימה ממזגים אותו ל-`main`, דוחפים, ומוחקים את הענף, גם מקומית וגם ב-GitHub.
+- צריך לשמור משהו בצד? commit זמני על `main` שאחר כך מתקנים, לא ענף ולא stash.
