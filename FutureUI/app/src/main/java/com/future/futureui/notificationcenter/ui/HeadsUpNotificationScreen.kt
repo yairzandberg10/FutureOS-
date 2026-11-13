@@ -9,7 +9,6 @@ import android.app.Notification
 import android.service.notification.StatusBarNotification
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -17,6 +16,10 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import com.future.sharednav.theme.FutureShapes
+import androidx.compose.ui.draw.shadow
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -44,16 +47,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
@@ -61,34 +59,35 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
-import com.future.futureui.ui.LocalOneUiPalette
-import com.future.futureui.ui.rememberOneUiPalette
 import com.future.futureui.utils.FrostedBackdrop
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * באנר קופץ (heads-up) שמופיע לזמן קצר כשמגיעה התראה חדשה, באותו סגנון עיצוב
- * (זכוכית, פינות מעוגלות) כמו מרכז ההתראות - כדי שהמערכת תיראה עקבית.
- * המסך הזה בלבד אינו אינטראקטיבי (המכשיר ללא מסך מגע ובלי לגזול פוקוס מקשים
- * מהאפליקציה שבחזית) - האינטראקציה (מענה/דחייה/פתיחה) קיימת במרכז ההתראות.
+ * באנר קופץ (heads-up) שמופיע לזמן קצר כשמגיעה התראה חדשה - רכיב
+ * HeadsUpNotification של הדיזיין סיסטם (components/feedback/HeadsUpNotification.jsx):
+ * 12dp מהצדדים ו-8dp מתחת לשורת המצב, פינות 28dp, #1C1C1E ב-90% עם קו שיער
+ * לבן 15%, וטקסט לבן תמיד - גם כשהמערכת במצב בהיר. שלוש שורות לכל היותר:
+ * שם האפליקציה (12sp, 65%), הכותרת (15sp מודגש) ושורת תוכן אחת (13sp, 55%).
  *
- * תנועה - "האי": ההתראה לא נשלפת מלמעלה כמו popup, אלא גדלה מגלולה קטנה
- * במרכז שורת המצב - קודם לרוחב, אחר כך לגובה, בקפיץ island עם overshoot
- * קטן - והתוכן מופיע רק כשיש לו מקום. ביציאה היא נאספת חזרה לאותה נקודה.
- * התראה נוספת בזמן שזו מוצגת לא בונה באנר חדש: רק התוכן מתחלף (הישן עולה
- * החוצה, החדש נכנס מלמטה) והבאנר "נושם" ([generation]).
+ * קודם הבאנר הלך לפי פלטת One UI (לבן במצב בהיר), חיבר את שם האפליקציה
+ * והכותרת לשורה אחת ופתח את התוכן לשתי שורות - ונראה שונה מכל שאר
+ * ההתראות במערכת.
  *
- * רקע: זכוכית מטושטשת אמיתית של מה שמתחת ([frost], ר' FrostedBackdrop),
- * עם אותו גוון כהה מעליה. בלי צילום (שירות שורת המצב כבוי, הגבלת קצב) -
- * הרקע האטום של קודם. הכול נקרא בשלב הציור: הקפיץ מצייר מחדש בלי
- * recomposition.
+ * המסך אינו אינטראקטיבי (אין מגע, והוא לא גוזל פוקוס מהאפליקציה שבחזית) -
+ * מענה/דחייה/פתיחה במרכז ההתראות.
+ *
+ * תנועה: הכרטיס נופל משורת המצב בקפיץ dialog (גדל מ-90% ונכנס מלמעלה),
+ * ויוצא באותה דרך למעלה. התראה נוספת בזמן שזו מוצגת לא בונה באנר חדש: רק
+ * התוכן מתחלף (הישן עולה החוצה, החדש נכנס מלמטה) והבאנר "נושם" ([generation]).
+ *
+ * רקע: זכוכית מטושטשת אמיתית של מה שמתחת ([frost], ר' FrostedBackdrop) מתחת
+ * לגוון של 90%. בלי צילום - הגוון לבדו. הכול נקרא בשלב הציור.
  */
 @Composable
 fun HeadsUpNotificationScreen(
@@ -110,16 +109,15 @@ fun HeadsUpNotificationScreen(
             breath.snapTo(1.05f)
             breath.animateTo(1f, FutureMotion.Springs.press())
         }
-        reveal.animateTo(1f, FutureMotion.Springs.island())
+        reveal.animateTo(1f, FutureMotion.Springs.dialog())
         delay(dismissAfter)
-        reveal.animateTo(0f, spring(dampingRatio = 1f, stiffness = 700f))
+        reveal.animateTo(0f, FutureMotion.Springs.settle())
         dismissed()
     }
 
     // מיקום הכרטיס בחלון - כדי שהזכוכית תצויר בדיוק מעל מה שמתחתיה.
     val cardPos = remember { FloatArray(2) }
-    // One UI: הבאנר לבן (טקסט שחור) או שחור (טקסט לבן) לפי מצב הבהיר/כהה של המערכת.
-    val palette = rememberOneUiPalette()
+    val shape = FutureShapes.xxl
 
     CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
         // בלי Modifier.fillMaxSize() כאן בכוונה: החלון של השירות מוגדר WRAP_CONTENT
@@ -128,9 +126,14 @@ fun HeadsUpNotificationScreen(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                // שורת המצב שלנו (28dp) מצוירת מעל החלון הזה - בלי הרווח הראשון החלק העליון
-                // של הבאנר היה נחבא מתחתיה.
-                .padding(top = (com.future.futureui.statusbar.logic.StatusBarLayoutManager.HEIGHT_DP + 4).dp, start = 12.dp, end = 12.dp)
+                // שורת המצב שלנו מצוירת מעל החלון הזה - הכרטיס מתחיל 8dp מתחתיה.
+                // הריווח התחתון משאיר מקום לצל, שאחרת היה נחתך בגבול החלון.
+                .padding(
+                    top = (com.future.futureui.statusbar.logic.StatusBarLayoutManager.HEIGHT_DP + 8).dp,
+                    start = 12.dp,
+                    end = 12.dp,
+                    bottom = 16.dp,
+                )
         ) {
             Box(
                 modifier = Modifier
@@ -141,21 +144,19 @@ fun HeadsUpNotificationScreen(
                         cardPos[1] = p.y
                     }
                     .graphicsLayer {
-                        val s = breath.value
+                        val p = reveal.value
+                        val s = breath.value * (0.9f + 0.1f * p)
                         scaleX = s
                         scaleY = s
                         transformOrigin = TransformOrigin(0.5f, 0f)
-                        translationY = (1f - reveal.value.coerceIn(0f, 1f)) * -10.dp.toPx()
+                        alpha = p.coerceIn(0f, 1f)
+                        translationY = (1f - p) * -(size.height + 12.dp.toPx())
                     }
-                    .islandSurface(
-                        reveal = { reveal.value },
-                        frost = frost,
-                        cardPos = cardPos,
-                        radius = CardRadius,
-                        tint = if (palette.isDark) FrostTintDark else FrostTintLight,
-                        opaqueTint = if (palette.isDark) OpaqueTintDark else OpaqueTintLight,
-                        borderColor = palette.text.copy(alpha = 0.14f)
-                    )
+                    // --fos-shadow-headsup: 0 8px 32px rgba(0,0,0,.45)
+                    .shadow(16.dp, shape, ambientColor = Color.Black.copy(alpha = 0.45f), spotColor = Color.Black.copy(alpha = 0.45f))
+                    .clip(shape)
+                    .headsUpGlass(frost, cardPos)
+                    .border(0.5.dp, HeadsUpBorder, shape)
             ) {
                 AnimatedContent(
                     targetState = sbn,
@@ -164,13 +165,9 @@ fun HeadsUpNotificationScreen(
                         (slideInVertically(FutureMotion.Springs.dialogOffset) { it / 2 } + fadeIn(FutureMotion.enter())) togetherWith
                             (slideOutVertically(FutureMotion.exit()) { -it / 2 } + fadeOut(FutureMotion.exit()))
                     },
-                    modifier = Modifier.graphicsLayer {
-                        // התוכן מופיע רק כשיש לו מקום - לא נמעך בתוך הגלולה
-                        alpha = ((reveal.value - 0.5f) / 0.4f).coerceIn(0f, 1f)
-                    },
                     label = "headsUpContent",
                 ) { current ->
-                    CompositionLocalProvider(LocalOneUiPalette provides palette) { HeadsUpContent(current) }
+                    HeadsUpContent(current)
                 }
             }
         }
@@ -193,158 +190,107 @@ private fun HeadsUpContent(sbn: StatusBarNotification) {
         }
     }
 
+    // הסמל: אייקון קו לבן של המערכת לאפליקציה מוכרת (כמו בשורת המצב), אחרת
+    // האייקון של האפליקציה עצמה.
+    val glyph = remember(sbn.packageName) { com.future.futureui.statusbar.ui.appGlyph(sbn.packageName) }
     var appIcon by remember(sbn.packageName) { mutableStateOf<ImageBitmap?>(null) }
-    LaunchedEffect(sbn.packageName) {
-        try {
-            val icon = context.packageManager.getApplicationIcon(sbn.packageName)
-            appIcon = icon.toBitmap(width = 64, height = 64).asImageBitmap()
-        } catch (e: Exception) {
-            android.util.Log.w("HeadsUpNotificationScre", "HeadsUpNotificationScreen failed", e)
+    if (glyph == null) {
+        LaunchedEffect(sbn.packageName) {
+            try {
+                val icon = context.packageManager.getApplicationIcon(sbn.packageName)
+                appIcon = icon.toBitmap(width = 68, height = 68).asImageBitmap()
+            } catch (e: Exception) {
+                android.util.Log.w("HeadsUpNotificationScre", "app icon failed", e)
+            }
         }
     }
 
-    val palette = LocalOneUiPalette.current
-    val textColor = palette.text
+    val isCall = n.category == Notification.CATEGORY_CALL
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            // מעט "שמנה" יותר מבעבר (10dp -> 15dp, אייקון 34 -> 40, טקסט בשתי שורות).
-            .padding(horizontal = 16.dp, vertical = 15.dp),
-        verticalAlignment = Alignment.CenterVertically
+            // --fos-space-4 / --fos-space-6, ורווח --fos-space-5 בין הסמל לטקסט
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Box(
             modifier = Modifier
-                .size(40.dp)
+                .size(34.dp)
                 .clip(CircleShape)
-                .background(palette.chipOff),
+                .background(Color.White.copy(alpha = 0.12f)),
             contentAlignment = Alignment.Center
         ) {
             val icon = appIcon
-            if (icon != null) {
-                Image(bitmap = icon, contentDescription = null, modifier = Modifier.fillMaxSize())
-            } else {
-                Icon(Icons.Rounded.Notifications, contentDescription = null, tint = textColor, modifier = Modifier.size(20.dp))
+            when {
+                isCall -> Icon(com.future.sharednav.icons.FutureIcons.Call, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                glyph != null -> Icon(glyph, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                icon != null -> Image(bitmap = icon, contentDescription = null, modifier = Modifier.fillMaxSize())
+                else -> Icon(Icons.Rounded.Notifications, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
             }
         }
-        Spacer(modifier = Modifier.width(14.dp))
-        // שיחה נכנסת (CATEGORY_CALL) היא ההתראה הכי דחופה שיכולה להופיע - במקום
-        // כותרת/טקסט קטנים כמו כל התראה אחרת, שם/מספר המתקשר גדול וברור, עם רמז
-        // מקשים מפורש (טלפון = מענה, ניתוק = דחייה), כי אין כאן זמן לקרוא פרטים.
-        if (n.category == Notification.CATEGORY_CALL) {
-            Column {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = appName,
+                fontSize = FutureTypography.label,
+                color = Color.White.copy(alpha = 0.65f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            // שיחה נכנסת: שם/מספר המתקשר הוא הכותרת, ושורת התוכן היא רמז המקשים -
+            // אין כאן זמן לקרוא פרטים (טלפון = מענה, ניתוק = דחייה).
+            val headline = if (isCall) text.ifBlank { title.ifBlank { tr("שיחה נכנסת") } } else title.ifBlank { text }
+            val bodyLine = if (isCall) tr("טלפון = מענה · ניתוק = דחייה") else if (title.isNotBlank()) text else ""
+            if (headline.isNotBlank()) {
                 Text(
-                    text = title.ifBlank { tr("שיחה נכנסת") },
-                    fontSize = FutureTypography.label,
-                    color = textColor.copy(alpha = 0.65f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = text.ifBlank { appName },
-                    fontSize = FutureTypography.screenTitle,
+                    text = headline,
+                    fontSize = FutureTypography.dialog,
                     fontWeight = FontWeight.Bold,
-                    color = textColor,
+                    color = Color.White,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = tr("טלפון = מענה · ניתוק = דחייה"),
-                    fontSize = FutureTypography.caption,
-                    color = textColor.copy(alpha = 0.55f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 1.dp),
                 )
             }
-        } else {
-            Column {
+            if (bodyLine.isNotBlank()) {
                 Text(
-                    text = if (title.isNotBlank()) "$appName: $title" else appName,
-                    fontSize = FutureTypography.body,
-                    fontWeight = FontWeight.Bold,
-                    color = textColor,
+                    text = bodyLine,
+                    fontSize = FutureTypography.summary,
+                    color = Color.White.copy(alpha = 0.55f),
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 2.dp),
                 )
-                if (text.isNotBlank()) {
-                    Text(
-                        text = text,
-                        fontSize = FutureTypography.summary,
-                        color = textColor.copy(alpha = 0.72f),
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
             }
         }
     }
 }
 
 /**
- * המשטח של האי: גלולה שגדלה לכרטיס לפי [reveal] (0 = גלולה במרכז העליון,
- * 1 = הכרטיס המלא), עם הזכוכית המטושטשת והגוון בפנים ומסגרת דקה סביב.
- * ה-Path אחד ונבנה מחדש בכל פריים בלי הקצאה חדשה (rewind).
+ * המשטח: הזכוכית המטושטשת (אם יש) ומעליה הגוון של 90%. התמונה הקטנה מוגדלת
+ * לגודל הרצועה שצולמה ומוזזת כך שהנקודה שמתחת לכרטיס תצויר בתוכו.
  */
-private fun Modifier.islandSurface(
-    reveal: () -> Float,
-    frost: FrostedBackdrop.Frost?,
-    cardPos: FloatArray,
-    radius: Dp,
-    tint: Color,
-    opaqueTint: Color,
-    borderColor: Color,
-): Modifier = drawWithCache {
-    val path = Path()
-    val r = radius.toPx()
-    val seedW = 84.dp.toPx()
-    val seedH = 24.dp.toPx()
-    val stroke = Stroke(width = 0.5.dp.toPx())
-    // הזכוכית: התמונה הקטנה מוגדלת לגודל הרצועה שצולמה, ומוזזת כך שהנקודה
-    // שמתחת לכרטיס תצויר בתוכו.
+private fun Modifier.headsUpGlass(frost: FrostedBackdrop.Frost?, cardPos: FloatArray): Modifier = drawWithCache {
     val frostDstSize = frost?.let { IntSize(it.sourceWidth, it.sourceHeight) }
     val frostSrcSize = frost?.let { IntSize(it.image.width, it.image.height) }
     onDrawWithContent {
-        val p = reveal()
-        if (p <= 0.001f) return@onDrawWithContent
-        val pw = (p / 0.55f).coerceIn(0f, 1.06f)
-        val ph = ((p - 0.22f) / 0.78f).coerceIn(0f, 1.06f)
-        val w = seedW + (size.width - seedW) * pw
-        val h = seedH + (size.height - seedH) * ph
-        val left = (size.width - w) / 2f
-        val cr = minOf(r, h / 2f)
-        path.rewind()
-        path.addRoundRect(RoundRect(left, 0f, left + w, h, CornerRadius(cr, cr)))
-        val a = (p * 8f).coerceIn(0f, 1f)
-        clipPath(path) {
-            if (frost != null && frostDstSize != null && frostSrcSize != null) {
-                drawImage(
-                    image = frost.image,
-                    srcOffset = IntOffset.Zero,
-                    srcSize = frostSrcSize,
-                    dstOffset = IntOffset(-cardPos[0].toInt(), -cardPos[1].toInt()),
-                    dstSize = frostDstSize,
-                    alpha = a,
-                    filterQuality = FilterQuality.Low,
-                )
-                drawRect(tint, alpha = a)
-            } else {
-                drawRect(opaqueTint, alpha = a)
-            }
-            this@onDrawWithContent.drawContent()
+        if (frost != null && frostDstSize != null && frostSrcSize != null) {
+            drawImage(
+                image = frost.image,
+                srcOffset = IntOffset.Zero,
+                srcSize = frostSrcSize,
+                dstOffset = IntOffset(-cardPos[0].toInt(), -cardPos[1].toInt()),
+                dstSize = frostDstSize,
+                filterQuality = FilterQuality.Low,
+            )
         }
-        drawPath(path, borderColor.copy(alpha = borderColor.alpha * a), style = stroke)
+        drawRect(HeadsUpSurface)
+        drawContent()
     }
 }
 
-/** הרדיוס של המשטח (FutureShapes.xxl, 28dp). */
-private val CardRadius = 28.dp
+/** --fos-headsup-bg: #1C1C1E ב-90% (headsUpSurfaceColor). */
+private val HeadsUpSurface = Color(0xE61C1C1E)
 
-/**
- * הגוון מעל הזכוכית: כמעט אטום (96%) - לבן או שחור נקי כמו ב-One UI, כך שהטקסט
- * קריא על כל רקע, והטשטוש רק מרכך את הקצוות.
- */
-private val FrostTintDark = Color(0xF5121214)
-private val FrostTintLight = Color(0xF5FFFFFF)
-
-/** בלי זכוכית - אותו משטח, אטום לגמרי. */
-private val OpaqueTintDark = Color(0xFF1C1C1E)
-private val OpaqueTintLight = Color(0xFFFFFFFF)
+/** --fos-border-headsup: 0.5dp, לבן 15% (headsUpBorderColor). */
+private val HeadsUpBorder = Color.White.copy(alpha = 0.15f)
