@@ -125,10 +125,12 @@ fun FlashlightScreen(theme: FutureTheme) {
                         textAlign = TextAlign.Center,
                     )
                     // כפתור הדלקה/כיבוי עגול - FutureRoundCapsule של הדיזיין סיסטם (Capsule.jsx,
-                    // round): 8% מילוי כשכבוי, 20% הדגשה ואייקון בהדגשה כשדולק, טבעת 2dp בפוקוס.
+                    // round): 168px (ברירת המחדל), 8% מילוי כשכבוי, 20% הדגשה ואייקון בהדגשה
+                    // כשדולק, טבעת 2dp בפוקוס. האייקון הוא הפנס של FosIcon (flashlight_on /
+                    // flashlight_off) לפי המצב - לא סמל הפעלה כללי, ובגודל של הרכיב ולא 80dp.
                     // הדלקה דרך שירות קדמי - כך הפנס נשאר דלוק גם כשהמסך נכבה/ננעל.
                     FutureRoundCapsule(
-                        icon = FutureIcons.PowerSettingsNew,
+                        icon = if (isOn) FutureIcons.FlashlightOn else FutureIcons.FlashlightOff,
                         theme = dark,
                         onClick = {
                             val now = android.os.SystemClock.elapsedRealtime()
@@ -143,7 +145,6 @@ fun FlashlightScreen(theme: FutureTheme) {
                             }
                         },
                         active = isOn,
-                        size = PowerButtonSize,
                         contentDescription = if (isOn) stringResource(R.string.torch_turn_off_cd) else stringResource(R.string.torch_turn_on_cd),
                         focusRequester = focusRequester,
                     )
@@ -152,9 +153,6 @@ fun FlashlightScreen(theme: FutureTheme) {
         }
     }
 }
-
-/** 80dp - כפתור ההדלקה העגול (160px על המסך). */
-private val PowerButtonSize = 80.dp
 
 @Composable
 private fun DesignLayer(modifier: Modifier, draw: DrawScope.() -> Unit) {
