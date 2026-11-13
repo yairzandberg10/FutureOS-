@@ -102,29 +102,40 @@ async function attachToCluster(env, item, cls, embedding, threshold, summary) {
   return cluster;
 }
 
-/** עובר לטיפול עמוק אם: המודל החליט deep, או חומרה 1, או 3 מכשירים שונים ומעלה דיווחו. */
-async function shouldPromote(env, cluster, cls) {
-  if (cls.decision === "deep" || cluster.severity === 1) return true;
+/**
+ * מעבר אוטומטי לטיפול עמוק: רק כשמספיק מכשירים שונים דיווחו (PROMOTE_DEVICES, ברירת מחדל 3).
+ * ההחלטה והחומרה של המודל לא מספיקות לבד: הרישום פתוח, וטקסט של תוקף (prompt injection, או מילה
+ * כמו "קרס" ב-mock) קובע אותן. אשכול חמור שעוד לא הגיע לסף מחכה לאישור ידני בדשבורד.
+ */
+async function shouldPromote(env, cluster, _cls) {
   const row = await env.DB.prepare("SELECT COUNT(DISTINCT device_id) AS n FROM feedback WHERE cluster_id = ?1")
     .bind(cluster.id)
     .first();
   return row.n >= Number(env.PROMOTE_DEVICES || 3);
 }
 
-export async function promote(env, cluster, log = console, summary = {}) {
+/**
+ * מעביר אשכול לטיפול עמוק ופותח issue. approved = המשתמש אישר בדשבורד: רק אז ה-issue מקבל את
+ * ה-label שמפעיל את Claude (גם issue שכבר נפתח אוטומטית מקבל אותו עכשיו). קידום אוטומטי מהמיון
+ * פותח issue בלי ה-label, כך שטקסט ממכשיר אנונימי לעולם לא מגיע ל-Claude בלי עין אנושית.
+ */
+export async function promote(env, cluster, log = console, summary = {}, { approved = false } = {}) {
   await env.DB.prepare("UPDATE clusters SET state = 'deep', updated_at = ?1 WHERE id = ?2").bind(now(), cluster.id).run();
   summary.promoted = (summary.promoted || 0) + 1;
-  if (!cluster.gh_issue) {
-    try {
-      const issue = await openIssue(env, cluster);
+  try {
+    if (!cluster.gh_issue) {
+      const issue = await openIssue(env, cluster, { approved });
       if (issue) {
         await env.DB.prepare("UPDATE clusters SET gh_issue = ?1 WHERE id = ?2").bind(issue, cluster.id).run();
         summary.issues = (summary.issues || 0) + 1;
+        if (approved) summary.triggered = (summary.triggered || 0) + 1;
       }
-    } catch (err) {
-      // ה-issue ייפתח בפעם הבאה שמישהו יקרא ל-/admin/clusters/:id/decision; ההודעות למשתמשים לא תלויות בו
-      log.warn("issue failed", String(err && err.message));
+    } else if (approved && (await addTriggerLabel(env, cluster.gh_issue))) {
+      summary.triggered = (summary.triggered || 0) + 1;
     }
+  } catch (err) {
+    // ה-issue ייפתח (או יקבל label) בפעם הבאה שמישהו יקרא ל-/admin/clusters/:id/decision
+    log.warn("issue failed", String(err && err.message));
   }
   await markInProgress(env, cluster.id);
 }
@@ -172,7 +183,7 @@ function quoteUntrusted(text) {
   return text.replace(/`{3,}/g, "'''").replace(/@/g, "@​").replace(/#(\d)/g, "#​$1");
 }
 
-export async function buildIssue(env, cluster) {
+export async function buildIssue(env, cluster, { approved = false } = {}) {
   const { results: members } = await env.DB.prepare(
     `SELECT text, app_version, build, log_key, created_at FROM feedback
       WHERE cluster_id = ?1 ORDER BY severity, created_at DESC LIMIT 3`,
@@ -212,24 +223,42 @@ export async function buildIssue(env, cluster) {
   lines.push("", "---", "תיקון: לפתוח PR בריפו FutureOS עם `Fixes` ל-issue הזה. שום PR לא ממוזג ולא נבנה בלי אישור המשתמש.");
 
   const labels = ["feedback", `app:${cluster.app_pkg.split(".").pop()}`, `severity:${cluster.severity}`];
-  // רק ה-label הזה מפעיל את Claude. issue בחומרה 4 מחכה לאישור ידני בדשבורד
-  if (cluster.severity <= 3) labels.push(env.GITHUB_TRIGGER_LABEL || "triage:accepted");
+  // רק ה-label הזה מפעיל את Claude, ורק אחרי אישור ידני בדשבורד
+  if (approved) labels.push(triggerLabel(env));
   return { title: `[משוב] ${cluster.title_he}`, body: lines.join("\n"), labels };
 }
 
-async function openIssue(env, cluster) {
+const triggerLabel = (env) => env.GITHUB_TRIGGER_LABEL || "triage:accepted";
+
+function githubHeaders(env) {
+  return {
+    authorization: `Bearer ${env.GITHUB_TOKEN}`,
+    accept: "application/vnd.github+json",
+    "user-agent": "futureos-feedback",
+    "x-github-api-version": "2022-11-28",
+  };
+}
+
+async function openIssue(env, cluster, { approved = false } = {}) {
   if (!env.GITHUB_TOKEN || !env.GITHUB_REPO) return null; // בלי GitHub: האשכול מסומן deep ומחכה בדשבורד
-  const issue = await buildIssue(env, cluster);
+  const issue = await buildIssue(env, cluster, { approved });
   const res = await fetch(`https://api.github.com/repos/${env.GITHUB_REPO}/issues`, {
     method: "POST",
-    headers: {
-      authorization: `Bearer ${env.GITHUB_TOKEN}`,
-      accept: "application/vnd.github+json",
-      "user-agent": "futureos-feedback",
-      "x-github-api-version": "2022-11-28",
-    },
+    headers: githubHeaders(env),
     body: JSON.stringify(issue),
   });
   if (!res.ok) throw new Error(`github ${res.status}`);
   return (await res.json()).number;
+}
+
+/** אישור ידני של issue שכבר נפתח אוטומטית: מוסיף לו את ה-label שמפעיל את Claude. */
+async function addTriggerLabel(env, issueNumber) {
+  if (!env.GITHUB_TOKEN || !env.GITHUB_REPO || !Number.isInteger(issueNumber)) return false;
+  const res = await fetch(`https://api.github.com/repos/${env.GITHUB_REPO}/issues/${issueNumber}/labels`, {
+    method: "POST",
+    headers: githubHeaders(env),
+    body: JSON.stringify({ labels: [triggerLabel(env)] }),
+  });
+  if (!res.ok) throw new Error(`github ${res.status}`);
+  return true;
 }

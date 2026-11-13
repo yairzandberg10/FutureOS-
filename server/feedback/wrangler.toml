@@ -9,6 +9,14 @@ compatibility_date = "2026-09-01"
 ENVIRONMENT = "production"
 FEEDBACK_PER_DAY = "10"
 ROUTE_PER_HOUR = "60"
+# הגבלות נגד מכשירים מזויפים (הרישום פתוח). "רשת" = IPv4 מלא או /64 ב-IPv6.
+# ספקים סלולריים מאחורי CGNAT חולקים IP, אז אם רואים 429 אצל משתמשים אמיתיים - להעלות את ה-NET
+REGISTER_PER_HOUR = "20"
+REGISTER_PER_DAY = "40"
+ROUTE_PER_DAY = "200"
+ROUTE_PER_NET_HOUR = "240"
+SIRI_PER_DAY = "1500"
+SIRI_PER_NET_HOUR = "960"
 DAILY_LIMIT_HERE = "5000"
 DAILY_LIMIT_SIRI = "20000"
 # עדכונים: עצירה אוטומטית של פריסה אחרי 3 כשלי התקנה ומעל 20% כשלים. המפתח: wrangler secret put UPDATE_SIGNING_KEY

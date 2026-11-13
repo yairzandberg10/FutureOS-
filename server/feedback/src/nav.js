@@ -2,7 +2,7 @@
 // מפתחות HERE ו-SIRI נשמרים כסודות של ה-Worker ולא יוצאים למכשיר.
 // התשובות חוזרות כמו שהן: האפליקציה כבר מפענחת בדיוק את הצורות האלה (HereModels.kt, SiriXml).
 
-import { HttpError, readJson, takeQuota, HOUR, DAY } from "./util.js";
+import { HttpError, readJson, takeQuota, clientNet, HOUR, DAY } from "./util.js";
 
 const HERE_ROUTES_URL = "https://router.hereapi.com/v8/routes";
 const ID_RE = /^[0-9A-Za-z_-]{1,32}$/;
@@ -16,6 +16,15 @@ function validLat(v) {
 }
 function validLng(v) {
   return typeof v === "number" && Number.isFinite(v) && v >= -180 && v <= 180;
+}
+
+/**
+ * מגבלות לפני המכסה של הצי: לכל מכשיר ביום, ולכל רשת בשעה. בלעדיהן מכשירים מזויפים
+ * (הרישום פתוח) מכלים את המכסה היומית של כולם תוך כמה שעות.
+ */
+async function abuseLimits(env, request, device, service, perDeviceDay, perNetHour) {
+  if (!(await takeQuota(env.DB, `${service}_day`, device.id, perDeviceDay, DAY))) throw new HttpError(429, "rate_limited");
+  if (!(await takeQuota(env.DB, `${service}_net`, clientNet(request), perNetHour, HOUR))) throw new HttpError(429, "rate_limited");
 }
 
 async function fleetQuota(env, service) {
@@ -45,6 +54,7 @@ export async function route(request, env, device) {
   if (!(await takeQuota(env.DB, "route", device.id, Number(env.ROUTE_PER_HOUR || 60), HOUR))) {
     throw new HttpError(429, "rate_limited");
   }
+  await abuseLimits(env, request, device, "route", Number(env.ROUTE_PER_DAY || 200), Number(env.ROUTE_PER_NET_HOUR || 240));
   await fleetQuota(env, "here");
 
   const url = new URL(HERE_ROUTES_URL);
@@ -87,6 +97,7 @@ export async function siriStop(request, env, device, cache = globalThis.caches?.
   if (!(await takeQuota(env.DB, "siri", device.id, Number(env.SIRI_PER_HOUR || 240), HOUR))) {
     throw new HttpError(429, "rate_limited");
   }
+  await abuseLimits(env, request, device, "siri", Number(env.SIRI_PER_DAY || 1500), Number(env.SIRI_PER_NET_HOUR || 960));
   await fleetQuota(env, "siri");
 
   const timestamp = new Date().toISOString();

@@ -213,6 +213,7 @@ test("installed event sends 'fixed in X' only to this device's feedback in the f
   }
   const id = await publish({ fixed_clusters: [clusterId] });
   await check(a);
+  assert.equal((await call(`/v1/update/download/${id}`, { headers: a.headers })).status, 200);
   const res = await call("/v1/update/event", { method: "POST", headers: a.headers, body: { release_id: id, event: "installed" } });
   assert.equal((await res.json()).notified, 1);
 
@@ -245,21 +246,93 @@ test("a device that just failed is not offered the same release again for a day"
   assert.equal(JSON.parse((await check(dev)).manifest).updates.length, 0);
 });
 
+async function download(dev, id) {
+  const res = await call(`/v1/update/download/${id}`, { headers: dev.headers });
+  assert.equal(res.status, 200);
+  await res.arrayBuffer();
+}
+
+const report = (dev, id, event) =>
+  call("/v1/update/event", {
+    method: "POST",
+    headers: dev.headers,
+    body: { release_id: id, event, ...(event === "failed" ? { error: "STATUS_FAILURE" } : {}) },
+  });
+
+async function releaseRow(id) {
+  const list = await (await call("/admin/releases", { headers: ADMIN })).json();
+  return list.releases.find((x) => x.id === id);
+}
+
 test("rollout pauses automatically when installs fail", async () => {
-  const id = await publish();
   const devices = [];
   for (let i = 0; i < 4; i++) devices.push(await registerDevice());
-  for (const d of devices) await check(d);
-  await call("/v1/update/event", { method: "POST", headers: devices[0].headers, body: { release_id: id, event: "installed" } });
-  for (const d of devices.slice(1)) {
-    await call("/v1/update/event", { method: "POST", headers: d.headers, body: { release_id: id, event: "failed", error: "STATUS_FAILURE" } });
+  const id = await publish();
+  for (const d of devices) {
+    await check(d);
+    await download(d, id);
   }
-  const list = await (await call("/admin/releases", { headers: ADMIN })).json();
-  const r = list.releases.find((x) => x.id === id);
+  await report(devices[0], id, "installed");
+  for (const d of devices.slice(1)) await report(d, id, "failed");
+  const r = await releaseRow(id);
   assert.equal(r.state, "paused");
   assert.match(r.pause_reason, /^auto/);
   assert.equal(r.failed, 3);
   assert.equal(r.installed, 1);
+});
+
+test("failures from devices that never downloaded, or registered after the release, do not pause it", async () => {
+  const early = [];
+  for (let i = 0; i < 3; i++) early.push(await registerDevice());
+  const id = await publish();
+  // מכשירים ותיקים שמדווחים failed בלי להוריד (כך תוקף היה עוצר כל עדכון)
+  for (const d of early) {
+    await check(d, [{ pkg: "com.future.camera", version_code: 0 }]);
+    await report(d, id, "failed");
+  }
+  // מכשירים שנרשמו אחרי הגרסה, הורידו ודיווחו failed
+  await new Promise((r) => setTimeout(r, 5));
+  for (let i = 0; i < 3; i++) {
+    const d = await registerDevice();
+    await check(d);
+    await download(d, id);
+    await report(d, id, "failed");
+  }
+  const r = await releaseRow(id);
+  assert.equal(r.state, "active");
+  assert.equal(r.failed, 6, "the events are still recorded for the dashboard");
+});
+
+test("an installed report from a device that never downloaded, or has no feedback there, does not close the cluster", async () => {
+  const reporter = await registerDevice();
+  const stranger = await registerDevice();
+  const clusterId = crypto.randomUUID();
+  const t = Date.now();
+  await env.DB.prepare(
+    "INSERT INTO clusters (id, app_pkg, title_he, embedding, created_at, updated_at, state) VALUES (?1, 'com.future.camera', 'קריסה', '[]', ?2, ?2, 'deep')",
+  )
+    .bind(clusterId, t)
+    .run();
+  await env.DB.prepare(
+    "INSERT INTO feedback (id, device_id, client_id, type, text, app_pkg, status, cluster_id, created_at) VALUES (?1, ?2, ?3, 'bug', 'x', 'com.future.camera', 'in_progress', ?4, ?5)",
+  )
+    .bind(crypto.randomUUID(), reporter.device_id, crypto.randomUUID(), clusterId, t)
+    .run();
+  const id = await publish({ fixed_clusters: [clusterId] });
+  const state = async () => (await env.DB.prepare("SELECT state FROM clusters WHERE id = ?1").bind(clusterId).first()).state;
+
+  await check(stranger);
+  await download(stranger, id);
+  await report(stranger, id, "installed");
+  assert.equal(await state(), "deep", "a device without feedback in the cluster");
+
+  await check(reporter);
+  assert.equal((await (await report(reporter, id, "installed")).json()).notified, 0, "not downloaded");
+  assert.equal(await state(), "deep");
+
+  await download(reporter, id);
+  assert.equal((await (await report(reporter, id, "installed")).json()).notified, 1);
+  assert.equal(await state(), "fixed");
 });
 
 test("update check is 503 without a signing key, and validates the app list", async () => {

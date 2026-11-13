@@ -178,7 +178,9 @@ def check_sources(problems):
 def check_workflows(problems):
     """CI supply chain (OWASP A03): a tag can be moved to other code, a SHA
     cannot, and GITHUB_TOKEN must not default to write access."""
-    for wf in (ROOT / ".github" / "workflows").glob("*.y*ml"):
+    # The feedback server's workflow template is copied verbatim into another repo, so check it too
+    templates = list((ROOT / "server" / "feedback" / "github").glob("*.y*ml"))
+    for wf in list((ROOT / ".github" / "workflows").glob("*.y*ml")) + templates:
         rel = wf.relative_to(ROOT).as_posix()
         text = wf.read_text(encoding="utf-8", errors="ignore")
         if not re.search(r"^permissions:", text, re.M):

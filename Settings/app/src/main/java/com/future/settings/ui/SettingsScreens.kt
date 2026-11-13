@@ -1642,16 +1642,30 @@ fun SecurityScreen(navController: NavController, theme: ThemeConfig) {
     val context = LocalContext.current
     // מרכז האבטחה: המצב נקרא מחדש בכל חזרה למסך - למשל אחרי הגדרת קוד ב-FutureUI
     var status by remember { mutableStateOf(com.future.settings.theme.SecurityStatusClient.get(context)) }
+    var threats by remember { mutableStateOf<com.future.settings.theme.ThreatReport?>(null) }
+    var scanning by remember { mutableStateOf(true) }
+    var scanTick by remember { mutableIntStateOf(0) }
     val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
     DisposableEffect(lifecycle) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
             if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
                 status = com.future.settings.theme.SecurityStatusClient.get(context)
+                scanTick++
             }
         }
         lifecycle.addObserver(observer)
         onDispose { lifecycle.removeObserver(observer) }
     }
+    // סריקת האיומים רצה ב-FutureUI ועלולה לפתוח סשן root - תמיד ברקע, ושוב בכל חזרה למסך
+    LaunchedEffect(scanTick) {
+        if (scanTick == 0) return@LaunchedEffect
+        scanning = true
+        threats = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            com.future.settings.theme.ThreatClient.scan(context)
+        }
+        scanning = false
+    }
+    val debugSigned = remember { isDebugSigned(context) }
     val openLockSettings: () -> Unit = {
         safeStartActivity(
             context,
@@ -1675,16 +1689,27 @@ fun SecurityScreen(navController: NavController, theme: ThemeConfig) {
             LazyColumn {
                 item {
                     SettingsCard(theme) {
+                        // ממצא חמור (שליטה במסך, מנהל מכשיר, תעודה...) מוריד ל"נמוכה" בלי קשר לבדיקות;
+                        // ממצא "לבדיקה" מונע "גבוהה". הממצאים לא נספרים בתוך הבדיקות.
+                        val worst = threats?.worst ?: 0
                         val level = when {
                             !status.linked -> "לא ידועה"
-                            passed == checks.size -> "גבוהה"
+                            worst >= 2 -> "נמוכה"
+                            // "גבוהה" רק אחרי סריקה שהסתיימה - בלי תוצאה אין על מה להסתמך
+                            passed == checks.size && threats != null && worst == 0 -> "גבוהה"
                             checks.first().ok && passed >= checks.size - 2 -> "בינונית"
                             else -> "נמוכה"
                         }
+                        val findings = threats?.findings?.size ?: 0
                         SettingItem(
                             "רמת האבטחה: $level",
-                            if (status.linked) "$passed מתוך ${checks.size} בדיקות עברו" else "אין חיבור לממשק המערכת (FutureUI)",
-                            if (passed == checks.size) FutureIcons.Security else FutureIcons.PrivacyTip,
+                            if (!status.linked) "אין חיבור לממשק המערכת (FutureUI)"
+                            else "$passed מתוך ${checks.size} בדיקות עברו" + when (findings) {
+                                0 -> ""
+                                1 -> ", ממצא אחד בסריקה"
+                                else -> ", $findings ממצאים בסריקה"
+                            },
+                            if (level == "גבוהה") FutureIcons.Security else FutureIcons.PrivacyTip,
                             theme,
                             showChevron = false,
                             infoFocusable = true
@@ -1710,6 +1735,75 @@ fun SecurityScreen(navController: NavController, theme: ThemeConfig) {
                             )
                             if (index < checks.lastIndex) SettingDivider(theme)
                         }
+                    }
+                }
+
+                // הגנה מפני תקיפות: סריקת אפליקציות והגדרות רשת (ThreatScanner ב-FutureUI)
+                item { SettingHeader("הגנה מפני תקיפות", theme) }
+                item {
+                    SettingsCard(theme) {
+                        val report = threats
+                        when {
+                            report == null && scanning -> SettingItem(
+                                "סורק את הטלפון…",
+                                "בודק אפליקציות, הרשאות והגדרות רשת",
+                                FutureIcons.Search,
+                                theme,
+                                showChevron = false,
+                                infoFocusable = true
+                            )
+                            report == null -> SettingItem(
+                                "סריקת איומים לא זמינה",
+                                "צריך את הגרסה החדשה של ממשק המערכת (FutureUI)",
+                                FutureIcons.Error,
+                                theme,
+                                showChevron = false,
+                                infoFocusable = true
+                            )
+                            else -> {
+                                SettingItem(
+                                    when (report.findings.size) {
+                                        0 -> "לא נמצאו איומים"
+                                        1 -> "נמצא ממצא אחד"
+                                        else -> "נמצאו ${report.findings.size} ממצאים"
+                                    },
+                                    "נסרקו ${report.scannedApps} אפליקציות" +
+                                        if (report.appOpsChecked) "" else ". הרשאות חלון צף והתקנה לא נבדקו (אין root)",
+                                    if (report.findings.isEmpty()) FutureIcons.Check else FutureIcons.Error,
+                                    theme,
+                                    showChevron = false,
+                                    infoFocusable = true
+                                )
+                                report.findings.forEach { threat ->
+                                    SettingDivider(theme)
+                                    val (title, summary, icon) = describeThreat(threat)
+                                    SettingItem(
+                                        title,
+                                        summary,
+                                        icon,
+                                        theme,
+                                        onClick = { fixThreat(context, threat) { scanTick++ } }
+                                    )
+                                }
+                                SettingDivider(theme)
+                                SettingItem(
+                                    "הגנה בזמן אמת: פועלת",
+                                    "ממשק המערכת מתריע מיד כשאפליקציה מקבלת שליטה במסך, בהתראות או בניהול המכשיר",
+                                    FutureIcons.Security,
+                                    theme,
+                                    showChevron = false,
+                                    infoFocusable = true
+                                )
+                            }
+                        }
+                        SettingDivider(theme)
+                        SettingItem(
+                            if (scanning && report != null) "סורק…" else "סרוק שוב",
+                            "סריקה מלאה של האפליקציות והרשת",
+                            FutureIcons.Refresh,
+                            theme,
+                            showChevron = false
+                        ) { if (!scanning) scanTick++ }
                     }
                 }
 
@@ -1794,11 +1888,158 @@ fun SecurityScreen(navController: NavController, theme: ThemeConfig) {
                             showChevron = false,
                             infoFocusable = true
                         )
+                        SettingDivider(theme)
+                        val patch = android.os.Build.VERSION.SECURITY_PATCH
+                        val patchOld = patchAgeDays(patch)?.let { it > 365 } ?: false
+                        SettingItem(
+                            "עדכון האבטחה של אנדרואיד: ${formatPatch(patch)}",
+                            if (patchOld) "עברה יותר משנה. פרצות שהתגלו מאז לא תוקנו במכשיר, אז כדאי להתקין רק אפליקציות שאתה מכיר"
+                            else "מתעדכן דרך יצרן המכשיר, לא דרך FutureOS",
+                            FutureIcons.Security,
+                            theme,
+                            showChevron = false,
+                            infoFocusable = true
+                        )
+                        if (debugSigned) {
+                            SettingDivider(theme)
+                            SettingItem(
+                                "מפתח החתימה: מפתח פיתוח",
+                                "אפליקציות FutureOS חתומות במפתח ה-debug של המחשב שבנה אותן. ההגנות שמבוססות על חתימה בטוחות כל עוד הקובץ הזה לא דולף מהמחשב",
+                                FutureIcons.Code,
+                                theme,
+                                showChevron = false,
+                                infoFocusable = true
+                            )
+                        }
                     }
                 }
             }
         }
     }
+}
+
+/** כותרת, תיאור ואייקון לממצא של סורק האיומים. */
+private fun describeThreat(t: com.future.settings.theme.Threat): Triple<String, String, androidx.compose.ui.graphics.vector.ImageVector> {
+    val name = t.label.ifBlank { t.target }
+    val prefix = if (t.severity >= 2) "חמור: " else "לבדיקה: "
+    return when (t.kind) {
+        "ACCESSIBILITY" -> Triple(
+            "$name שולטת במסך",
+            prefix + "שירות נגישות פעיל. הוא קורא כל מה שעל המסך וכל מקש, כולל הקוד. אם לא הפעלת אותו, כבה אותו והסר את האפליקציה",
+            FutureIcons.Accessibility
+        )
+        "NOTIFICATION_LISTENER" -> Triple(
+            "$name קוראת את ההתראות",
+            prefix + "רואה תוכן הודעות וקודי אימות שמגיעים ב-SMS. אם לא אישרת את זה, בטל את הגישה",
+            FutureIcons.Notifications
+        )
+        "DEVICE_ADMIN" -> Triple(
+            "$name היא מנהלת המכשיר",
+            prefix + "יכולה לנעול ולמחוק את הטלפון ולמנוע את הסרתה. אם אתה לא מכיר אותה, בטל את ההרשאה ואז הסר אותה",
+            FutureIcons.Lock
+        )
+        "USER_CA" -> Triple(
+            "תעודת אבטחה שהותקנה ידנית",
+            prefix + "\"$name\" מאפשרת למי שהתקין אותה לקרוא תעבורה מוצפנת. אם לא התקנת אותה, הסר אותה",
+            FutureIcons.Badge
+        )
+        "PROXY" -> Triple(
+            "כל התעבורה עוברת דרך שרת מתווך",
+            prefix + "$name. הוגדר מחוץ להגדרות הרשת. לחץ כדי להסיר",
+            FutureIcons.Public
+        )
+        "ADB_WIFI" -> Triple(
+            "ניפוי באגים דרך Wi-Fi פועל",
+            prefix + "מחשב באותה רשת יכול לנסות להתחבר לטלפון. כבה אותו באפשרויות המפתחים",
+            FutureIcons.Wifi
+        )
+        "SMS_READER" -> Triple(
+            "$name קוראת הודעות SMS",
+            prefix + "יש לה הרשאה לקרוא הודעות, כולל קודי אימות. אם היא לא צריכה את זה, בטל את ההרשאה",
+            FutureIcons.Chat
+        )
+        "OVERLAY" -> Triple(
+            "$name מציגה חלונות מעל אפליקציות",
+            prefix + "כך מזייפים מסכי כניסה. אם היא לא צריכה את זה, בטל את ההרשאה",
+            FutureIcons.Visibility
+        )
+        "INSTALLER" -> Triple(
+            "$name יכולה להתקין אפליקציות",
+            prefix + "אפליקציה כזו יכולה להוריד ולהתקין אפליקציות נוספות. אם לא ביקשת את זה, בטל את ההרשאה",
+            FutureIcons.Download
+        )
+        "VPN" -> Triple(
+            "VPN פעיל",
+            prefix + "כל התעבורה עוברת דרך שירות ה-VPN. ודא שאתה מכיר אותו",
+            FutureIcons.VpnKey
+        )
+        else -> Triple(name, prefix + "ממצא לא מוכר", FutureIcons.Error)
+    }
+}
+
+private val THREAT_PKG_RE = Regex("""^[A-Za-z0-9_.]{1,255}$""")
+
+/** פותח את המסך שבו מתקנים את הממצא. שום דבר לא משתנה בלי שהמשתמש מאשר שם. */
+private fun fixThreat(context: android.content.Context, t: com.future.settings.theme.Threat, onChanged: () -> Unit) {
+    val pkgUri = if (THREAT_PKG_RE.matches(t.target)) android.net.Uri.fromParts("package", t.target, null) else null
+    if (t.kind == "PROXY") {
+        // שרת מתווך גלובלי מוגדר רק דרך adb/root ואין לו מסך הגדרות - מסירים אותו בפקודה קבועה
+        Thread {
+            val ok = com.future.settings.utils.SystemInteractor(context.applicationContext)
+                .runRootCommand("settings put global http_proxy :0").success
+            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                android.widget.Toast.makeText(
+                    context,
+                    if (ok) "השרת המתווך הוסר" else "לא ניתן להסיר את השרת המתווך (אין root)",
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
+                onChanged()
+            }
+        }.start()
+        return
+    }
+    val intents = when (t.kind) {
+        "ACCESSIBILITY" -> listOf(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+        "NOTIFICATION_LISTENER" -> listOf(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+        "DEVICE_ADMIN" -> listOf(
+            Intent().setClassName("com.android.settings", "com.android.settings.Settings\$DeviceAdminSettingsActivity"),
+            Intent(Settings.ACTION_SECURITY_SETTINGS)
+        )
+        "USER_CA" -> listOf(Intent("com.android.settings.TRUSTED_CREDENTIALS_USER"), Intent(Settings.ACTION_SECURITY_SETTINGS))
+        "ADB_WIFI" -> listOf(Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS))
+        "VPN" -> listOf(Intent(Settings.ACTION_VPN_SETTINGS))
+        "OVERLAY" -> listOfNotNull(pkgUri?.let { Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, it) })
+        "INSTALLER" -> listOfNotNull(pkgUri?.let { Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, it) })
+        else -> emptyList()
+    } + listOfNotNull(pkgUri?.let { Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, it) })
+    for (intent in intents) {
+        val started = runCatching {
+            context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        }.isSuccess
+        if (started) return
+    }
+    android.widget.Toast.makeText(context, "לא ניתן לפתוח את המסך המתאים", android.widget.Toast.LENGTH_SHORT).show()
+}
+
+/** האם האפליקציה חתומה במפתח ה-debug של Android Studio (אין keystore.properties). */
+private fun isDebugSigned(context: android.content.Context): Boolean = runCatching {
+    val info = context.packageManager.getPackageInfo(
+        context.packageName, android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES
+    )
+    val signer = info.signingInfo?.apkContentsSigners?.firstOrNull() ?: return@runCatching false
+    val cert = java.security.cert.CertificateFactory.getInstance("X.509")
+        .generateCertificate(signer.toByteArray().inputStream()) as java.security.cert.X509Certificate
+    cert.subjectX500Principal.name.contains("CN=Android Debug")
+}.getOrDefault(false)
+
+private fun patchAgeDays(patch: String?): Long? = runCatching {
+    val date = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).parse(patch ?: return null) ?: return null
+    (System.currentTimeMillis() - date.time) / (24L * 60 * 60 * 1000)
+}.getOrNull()
+
+private fun formatPatch(patch: String?): String {
+    val parts = patch?.split('-') ?: return "לא ידוע"
+    return if (parts.size >= 2) "${parts[1].trimStart('0')}.${parts[0]}" else patch
 }
 
 private enum class SecurityFix { LOCK_SETTINGS, DEVELOPER }

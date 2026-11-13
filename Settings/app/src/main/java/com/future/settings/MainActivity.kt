@@ -49,6 +49,8 @@ class MainActivity : ComponentActivity() {
         // שכבר שמור אצלנו ב-CrashStore. שום דבר לא נשלח בלי תצוגה מקדימה ולחיצה על "שלח".
         val openFeedback = intent?.action == ACTION_SEND_FEEDBACK
         val openUpdates = intent?.action == ACTION_OPEN_UPDATES
+        // התראת אבטחה מ-FutureUI (ThreatWatcher) פותחת ישר את מרכז האבטחה. בלי extras - רק ניווט
+        val openSecurity = intent?.action == ACTION_OPEN_SECURITY
         val feedbackPkg = intent?.getStringExtra(EXTRA_FEEDBACK_PKG)?.takeIf { openFeedback && PKG_RE.matches(it) }
         val crashId = intent?.getStringExtra(EXTRA_CRASH_ID)?.takeIf { openFeedback && CRASH_ID_RE.matches(it) }
         val openHistory = openFeedback && intent?.getBooleanExtra(EXTRA_OPEN_HISTORY, false) == true
@@ -83,6 +85,7 @@ class MainActivity : ComponentActivity() {
                             startRoute = when {
                                 openFeedback -> com.future.settings.ui.Screen.Feedback.route
                                 openUpdates -> com.future.settings.ui.Screen.Updates.route
+                                openSecurity -> com.future.settings.ui.Screen.Security.route
                                 else -> com.future.settings.ui.Screen.Main.route
                             },
                             feedbackPkg = feedbackPkg,
@@ -109,6 +112,8 @@ class MainActivity : ComponentActivity() {
         const val EXTRA_OPEN_HISTORY = "com.future.settings.extra.OPEN_HISTORY"
         /** פנימי: התראת "יש עדכונים" פותחת ישר את מסך העדכונים (Intent מפורש, בלי intent-filter). */
         const val ACTION_OPEN_UPDATES = "com.future.settings.action.OPEN_UPDATES"
+        /** התראת אבטחה של FutureUI. חייב להיות זהה ל-ThreatWatcher.ACTION_OPEN_SECURITY. */
+        const val ACTION_OPEN_SECURITY = "com.future.settings.action.OPEN_SECURITY"
         private val PKG_RE = Regex("""^com\.future\.[a-z0-9_.]{1,64}$""")
         private val CRASH_ID_RE = Regex("""^[0-9a-f-]{36}$""")
     }

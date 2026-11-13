@@ -90,5 +90,20 @@ export async function takeQuota(db, kind, subject, limit, windowMs) {
   return row.count <= limit;
 }
 
+/**
+ * מפתח הרשת של הלקוח להגבלת קצב: כתובת IPv4 מלאה, או קידומת /64 ב-IPv6.
+ * ב-IPv6 כל מנוי מקבל /64 שלם, כך שמגבלה לפי כתובת בודדת אפשר לעקוף בהחלפת כתובת.
+ */
+export function clientNet(request) {
+  const ip = (request.headers.get("cf-connecting-ip") || "").trim().toLowerCase();
+  if (!ip) return "unknown";
+  if (!ip.includes(":")) return ip;
+  const [head, tail = ""] = ip.split("::");
+  const left = head ? head.split(":") : [];
+  const right = tail ? tail.split(":") : [];
+  const groups = ip.includes("::") ? [...left, ...Array(Math.max(0, 8 - left.length - right.length)).fill("0"), ...right] : left;
+  return groups.slice(0, 4).map((g) => g.replace(/^0+(?=.)/, "")).join(":") + "::/64";
+}
+
 export const HOUR = 60 * 60 * 1000;
 export const DAY = 24 * HOUR;

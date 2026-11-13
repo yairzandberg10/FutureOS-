@@ -38,6 +38,11 @@ class SystemUiSettingsProvider : ContentProvider() {
             "lock_enabled", "has_pin", "face_enabled", "notif_privacy",
             "auto_lock_ms", "failed_week", "last_failed_at", "lockout_ms",
         )
+
+        // content://…/threats - סריקת איומים (ThreatScanner). שורה ראשונה kind="_meta":
+        // target = מספר האפליקציות שנסרקו, label = 1 אם נבדקו הרשאות חלון צף/התקנה.
+        const val PATH_THREATS = "threats"
+        val THREAT_COLUMNS = arrayOf("kind", "target", "label", "severity")
     }
 
     private lateinit var statusBarPrefs: android.content.SharedPreferences
@@ -49,6 +54,7 @@ class SystemUiSettingsProvider : ContentProvider() {
 
     override fun query(uri: Uri, projection: Array<out String>?, selection: String?, selectionArgs: Array<out String>?, sortOrder: String?): Cursor {
         if (uri.lastPathSegment == PATH_SECURITY) return securityStatus()
+        if (uri.lastPathSegment == PATH_THREATS) return threats()
         val cursor = MatrixCursor(arrayOf(COL_SHOW_BATTERY, COL_SHOW_BLUETOOTH, COL_USE_24_HOUR_CLOCK, COL_SUPPRESS_SYSTEM_BARS, COL_BAR_STYLE, COL_DEVICE_SECURED, COL_BAR_TONE))
         cursor.addRow(
             arrayOf(
@@ -96,6 +102,14 @@ class SystemUiSettingsProvider : ContentProvider() {
                     lock.pin.remainingLockoutMs(),
                 )
             )
+        }
+    }
+
+    private fun threats(): Cursor {
+        val result = com.future.futureui.security.ThreatScanner.scan(context!!, withAppOps = true)
+        return MatrixCursor(THREAT_COLUMNS).apply {
+            addRow(arrayOf<Any>("_meta", result.scannedApps.toString(), if (result.appOpsChecked) "1" else "0", 0))
+            result.findings.forEach { f -> addRow(arrayOf<Any>(f.kind.name, f.target, f.label, f.kind.severity)) }
         }
     }
 

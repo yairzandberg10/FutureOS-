@@ -93,7 +93,7 @@ CREATE INDEX IF NOT EXISTS releases_active ON releases(state, kind, pkg);
 CREATE TABLE IF NOT EXISTS update_events (
   device_id   TEXT NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
   release_id  TEXT NOT NULL REFERENCES releases(id) ON DELETE CASCADE,
-  event       TEXT NOT NULL,                   -- offered | downloaded | installed | failed
+  event       TEXT NOT NULL,                   -- offered | served (השרת הגיש את הקובץ) | downloaded | installed | failed
   error       TEXT,
   at          INTEGER NOT NULL,
   PRIMARY KEY (device_id, release_id, event)
