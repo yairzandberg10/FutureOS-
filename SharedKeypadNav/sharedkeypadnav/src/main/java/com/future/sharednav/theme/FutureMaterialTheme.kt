@@ -54,12 +54,16 @@ fun FutureMaterialTheme(
         LocalFutureType provides type,
         LocalFutureAccent provides accent,
     ) {
-        MaterialTheme(
-            colorScheme = colorScheme,
-            typography = futureTypography(type),
-            shapes = FutureMaterialShapes,
-            content = content,
-        )
+        // מרווח הקשר בגלילה-אל-פוקוס: כך הכותרת שמעל הפריט הראשון נחשפת
+        // כשחוזרים למעלה (ר' FocusScrollContext).
+        com.future.sharednav.focus.ProvideFocusScrollContext {
+            MaterialTheme(
+                colorScheme = colorScheme,
+                typography = futureTypography(type),
+                shapes = FutureMaterialShapes,
+                content = content,
+            )
+        }
     }
 }
 

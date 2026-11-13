@@ -62,6 +62,7 @@ fun ScreenScaffold(
         LocalFutureAccent provides accent,
         com.future.sharednav.focus.LocalFocusGlide provides glide,
     ) {
+        com.future.sharednav.focus.ProvideFocusScrollContext {
         Box(modifier = modifier.fillMaxSize().background(backgroundColor).then(Modifier.focusGlideHost(glide))) {
             if (title != null) {
                 Column(modifier = Modifier.fillMaxSize()) {
@@ -80,6 +81,7 @@ fun ScreenScaffold(
             } else {
                 content()
             }
+        }
         }
     }
 }

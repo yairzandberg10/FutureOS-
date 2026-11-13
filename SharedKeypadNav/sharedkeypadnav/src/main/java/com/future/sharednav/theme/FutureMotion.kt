@@ -60,8 +60,16 @@ object FutureMotion {
 
     fun <T> exit(): FiniteAnimationSpec<T> = tween(DurationFast, easing = EasingAccelerate)
 
+    /**
+     * מעבר הפוקוס (צבע רקע/מסגרת, שקיפות טבעת) - --fos-transition-focus של
+     * הדיזיין סיסטם (tokens/motion.css + focus.css): 200ms בעקומה הסטנדרטית.
+     * קודם כאן היו 90ms, מתחת לסף שבו העין רואה מעבר - בפועל הסימון "קפץ"
+     * בין שורות ברשימה, וזה נראה כמו פוקוס בלי שום אנימציה.
+     */
+    const val DurationFocus: Int = 200
+
     /** צבע רקע/מסגרת של פוקוס. */
-    val focusColorSpec: AnimationSpec<Color> = tween(DurationInstant, easing = EasingStandard)
+    val focusColorSpec: AnimationSpec<Color> = tween(DurationFocus, easing = EasingStandard)
 
     /**
      * הגדלת פריט ממוקד. קפיץ ולא tween: כשמחזיקים חץ והפוקוס עובר בין

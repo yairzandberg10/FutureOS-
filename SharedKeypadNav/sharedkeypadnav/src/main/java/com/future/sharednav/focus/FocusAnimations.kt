@@ -3,6 +3,7 @@ package com.future.sharednav.focus
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
@@ -28,12 +29,12 @@ fun animateFocusColor(focused: Boolean, focusedColor: Color, idleColor: Color): 
 /** עובי מסגרת שמשתנה עם הפוקוס (למשל 1dp במנוחה, 2dp בפוקוס) - בלי קפיצה. */
 @Composable
 fun animateFocusDp(focused: Boolean, focusedValue: Dp, idleValue: Dp): State<Dp> =
-    animateDpAsState(if (focused) focusedValue else idleValue, FutureMotion.instant(), label = "focusDp")
+    animateDpAsState(if (focused) focusedValue else idleValue, tween(FutureMotion.DurationFocus, easing = FutureMotion.EasingStandard), label = "focusDp")
 
 /** שקיפות שמשתנה עם הפוקוס. */
 @Composable
 fun animateFocusFloat(focused: Boolean, focusedValue: Float, idleValue: Float): State<Float> =
-    animateFloatAsState(if (focused) focusedValue else idleValue, FutureMotion.instant(), label = "focusFloat")
+    animateFloatAsState(if (focused) focusedValue else idleValue, tween(FutureMotion.DurationFocus, easing = FutureMotion.EasingStandard), label = "focusFloat")
 
 /**
  * גדילה בפוקוס לרכיב שמחזיק isFocused משלו (onFocusChanged) ואין לו

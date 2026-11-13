@@ -37,7 +37,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContent { FitnessApp() }
+        setContent { com.future.sharednav.focus.ProvideFocusScrollContext { FitnessApp() } }
     }
 }
 

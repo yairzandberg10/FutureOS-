@@ -6,6 +6,7 @@ import com.future.sharednav.theme.readableAccentColor
 import com.future.sharednav.components.FutureProgressBar
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.focus.bringIntoViewOnFocus
+import com.future.sharednav.focus.focusScale
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
@@ -66,7 +67,9 @@ private fun LapRow(lapLabel: String, time: String, theme: FutureTheme) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(if (isFocused) theme.accentColor.copy(alpha = 0.15f) else Color.Transparent)
+            .focusScale(isFocused, focusedScale = com.future.sharednav.theme.FutureDimens.focusScale)
+            .clip(com.future.sharednav.theme.FutureShapes.row)
+            .background(com.future.sharednav.focus.animateFocusColor(isFocused, theme.readableAccentColor.copy(alpha = 0.14f), Color.Transparent).value)
             .focusable(interactionSource = interactionSource)
             .bringIntoViewOnFocus()
             .padding(vertical = FutureDimens.spacingSm),
