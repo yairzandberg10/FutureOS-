@@ -83,6 +83,8 @@ object GridCatalog {
         GridControl("next_track", tr("שיר הבא"), Icons.Rounded.SkipNext, false, closesPanel = false),
         GridControl("prev_track", tr("שיר קודם"), Icons.Rounded.SkipPrevious, false, closesPanel = false),
         GridControl("kill_background", tr("ניקוי זיכרון"), Icons.Rounded.CleaningServices, false, closesPanel = false),
+        // פותח "שלח משוב" ב-Settings על האפליקציה שהייתה בחזית. שום דבר לא נשלח בלי תצוגה מקדימה
+        GridControl("report_bug", "דווח על באג", Icons.Rounded.BugReport, false),
         // אפליקציות FutureOS
         GridControl("app_calculator", tr("מחשבון"), Icons.Rounded.Calculate, false),
         GridControl("app_clock", tr("שעון"), Icons.Rounded.Alarm, false),
@@ -287,6 +289,7 @@ class GridControlManager(private val context: Context) {
             "next_track" -> mediaKey(KeyEvent.KEYCODE_MEDIA_NEXT)
             "prev_track" -> mediaKey(KeyEvent.KEYCODE_MEDIA_PREVIOUS)
             "kill_background" -> root("am kill-all")
+            "report_bug" -> reportBug()
 
             "app_calculator" -> openApp("com.future.calculator")
             "app_clock" -> openApp("com.future.clock")
@@ -353,6 +356,13 @@ class GridControlManager(private val context: Context) {
     }
 
     private fun openSettings(action: String) = startActivity(Intent(action))
+
+    /** האפליקציה שבחזית (לפני שמרכז הבקרה נפתח). מסך הבית ו-FutureUI עצמה = "מערכת כללית". */
+    private fun reportBug() {
+        val fg = com.android.sistemui.utils.FutureUIState.foregroundPackage
+        val about = fg?.takeIf { it.startsWith("com.future.") && it != context.packageName && it != "com.future.futurelauncher" }
+        startActivity(com.future.sharednav.feedback.FeedbackShortcut.intent(about))
+    }
 
     private fun startActivity(intent: Intent) {
         try {

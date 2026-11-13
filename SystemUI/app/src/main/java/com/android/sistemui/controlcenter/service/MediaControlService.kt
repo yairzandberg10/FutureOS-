@@ -1,5 +1,6 @@
 package com.android.sistemui.controlcenter.service
 
+import com.android.sistemui.utils.safeText
 import android.app.NotificationManager
 import android.content.Intent
 import android.service.notification.NotificationListenerService
@@ -16,7 +17,7 @@ class MediaControlService : NotificationListenerService() {
         var instance: MediaControlService? = null
             private set
 
-        /** עולה בכל התראה שנוספה/הוסרה - מרכז ההתראות מתרענן לפיו מיד (SU-08). */
+        /** עולה בכל התראה שנוספה/הוסרה - מרכז ההתראות מתרענן לפיו מיד (F30). */
         val changeTick = androidx.compose.runtime.mutableIntStateOf(0)
 
         // מפתחות שכבר הוצג להם באנר - עדכון שקט של אותה התראה (FLAG_ONLY_ALERT_ONCE) לא יקפיץ שוב
@@ -42,16 +43,24 @@ class MediaControlService : NotificationListenerService() {
     override fun onListenerConnected() {
         super.onListenerConnected()
         instance = this
+        bumpTick()
     }
 
     override fun onListenerDisconnected() {
         super.onListenerDisconnected()
         instance = null
+        bumpTick()
+    }
+
+    private fun bumpTick() {
+        // ה-callbacks של ה-listener רצים על ה-main thread, שם גם נכתב מצב ה-Compose.
+        com.android.sistemui.utils.FutureUIState.notificationTick.intValue++
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification) {
         super.onNotificationPosted(sbn)
         changeTick.intValue++
+        bumpTick()
         if (!shouldShowHeadsUp(sbn)) return
         bannerShown.add(sbn.key)
         try {
@@ -61,10 +70,13 @@ class MediaControlService : NotificationListenerService() {
         }
     }
 
+    /** שיחה שנענתה/נדחתה מוחקת את התראת הצלצול - הבאנר שלה נסגר מיד במקום להישאר 30 שניות. */
     override fun onNotificationRemoved(sbn: StatusBarNotification) {
         super.onNotificationRemoved(sbn)
         changeTick.intValue++
+        bumpTick()
         bannerShown.remove(sbn.key)
+        HeadsUpNotificationService.dismiss(this, sbn.key)
     }
 
     /** מסנן התראות שלא צריכות להציג באנר קופץ: ההתראות של האפליקציה עצמה,
@@ -73,13 +85,21 @@ class MediaControlService : NotificationListenerService() {
         if (sbn.packageName == packageName) return false
         // עדכון של התראה שכבר הוצגה, שהאפליקציה סימנה "להתריע פעם אחת" (SU-17)
         if (sbn.notification.flags and android.app.Notification.FLAG_ONLY_ALERT_ONCE != 0 && sbn.key in bannerShown) return false
+        // במסך הנעילה ההתראה מופיעה ברשימה שלו (עם הגדרת הפרטיות) - לא כבאנר
+        if (com.android.sistemui.utils.FutureUIState.isLocked) return false
         val n = sbn.notification
+        // נעול ומסך הנעילה פינה מקום לשיחה/מעורר: רק שיחות מקבלות באנר, לא תוכן הודעות
+        if (com.android.sistemui.utils.FutureUIState.isSecured && n.category != android.app.Notification.CATEGORY_CALL) return false
         // שיחה נכנסת היא "מתמשכת" (isOngoing) לכל אורך הצלצול, אבל היא בדיוק ההפך
         // מהתראות מתמשכות רגילות (התקדמות נגן וכו') שהמסנן הזה נועד לחסום - היא
         // חייבת להופיע כבאנר, אחרת אין שום אינדיקציה לשיחה נכנסת מעל אפליקציה אחרת.
-        if (sbn.isOngoing && n.category != android.app.Notification.CATEGORY_CALL) return false
-        val title = n.extras.getCharSequence(android.app.Notification.EXTRA_TITLE)
-        val text = n.extras.getCharSequence(android.app.Notification.EXTRA_TEXT)
+        // רק שיחה *מצלצלת* (עם fullScreenIntent): גם התראת "מחייג…"/"שיחה פעילה" של
+        // החייגן היא CATEGORY_CALL ומתמשכת, והיא קפצה כבאנר של 30 שניות עם "טלפון = מענה"
+        // בכל שיחה יוצאת ובכל שינוי מצב.
+        val isRingingCall = n.category == android.app.Notification.CATEGORY_CALL && n.fullScreenIntent != null
+        if (sbn.isOngoing && !isRingingCall) return false
+        val title = n.safeText(android.app.Notification.EXTRA_TITLE)
+        val text = n.safeText(android.app.Notification.EXTRA_TEXT)
         if (title.isNullOrBlank() && text.isNullOrBlank()) return false
         val nm = getSystemService(NotificationManager::class.java)
         if (nm != null && nm.currentInterruptionFilter != NotificationManager.INTERRUPTION_FILTER_ALL) return false

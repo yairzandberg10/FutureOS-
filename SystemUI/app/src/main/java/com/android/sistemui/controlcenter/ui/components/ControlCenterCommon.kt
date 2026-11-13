@@ -16,10 +16,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.drawOutline
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import com.future.sharednav.focus.animateFocusFloat
+import com.future.sharednav.focus.focusScale
 
 @Composable
 fun HeaderActionButton(icon: ImageVector, color: Color, onClick: () -> Unit, isPower: Boolean = false) {
@@ -34,10 +39,49 @@ fun HeaderActionButton(icon: ImageVector, color: Color, onClick: () -> Unit, isP
     )
 }
 
-fun Modifier.focusEffect(isFocused: Boolean, shape: androidx.compose.ui.graphics.Shape = FutureShapes.lg): Modifier = this
-    .zIndex(if (isFocused) 1f else 0f)
-    .then(
-        if (isFocused) {
-            Modifier.border(2.dp, Color.LightGray, shape)
-        } else Modifier
+/**
+ * פוקוס של פקד במרכז הבקרה ובשאר חלונות המערכת: הטבעת נצבעת פנימה (ולא
+ * קופצת בבת אחת), והפקד גדל בקפיץ press - אותה תנועה כמו בשאר המערכת
+ * (ר' focusMotion ב-SharedKeypadNav). zIndex נשאר מורם עד שהטבעת דועכת,
+ * כדי שהפקד שיוצא מפוקוס לא ייחתך מתחת לשכן בזמן שהוא מתכווץ.
+ */
+@Composable
+fun Modifier.focusEffect(
+    isFocused: Boolean,
+    shape: androidx.compose.ui.graphics.Shape = FutureShapes.lg,
+    focusedScale: Float = 1.04f,
+): Modifier {
+    val ring = animateFocusFloat(isFocused, 1f, 0f)
+    return this
+        .zIndex(if (isFocused || ring.value > 0f) 1f else 0f)
+        .focusScale(isFocused, focusedScale)
+        .controlFocusRing(shape) { ring.value }
+}
+
+/**
+ * טבעת הפוקוס של מרכז הבקרה: פס כהה של 3dp ובתוכו קו לבן דק. הטבעת הקודמת
+ * (2dp אפור-בהיר) לא נראתה על הזכוכית הבהירה (UI1, ‏SY3), ואחת כהה בלבד הייתה
+ * נעלמת על עיגולי האייקונים הכהים - שני הצבעים יחד נראים על שניהם.
+ *
+ * הטבעת מצוירת כולה בתוך גבולות הפקד (כמו animatedFocusSurface של המערכת):
+ * קודם חצי ממנה יצא החוצה, ובכל פקד שנחתך (clip) לפני הטבעת - הגלולות
+ * העליונות, כרטיסי ההתראות - נראה רק חצי טבעת, עבה בפינות ונעלמת בצדדים.
+ */
+fun Modifier.controlFocusRing(shape: androidx.compose.ui.graphics.Shape, alpha: () -> Float = { 1f }): Modifier = this.drawWithContent {
+    drawContent()
+    val a = alpha()
+    if (a <= 0f) return@drawWithContent
+    val band = 3.dp.toPx()
+    val inner = 1.5.dp.toPx()
+    val half = band / 2f
+    if (size.width <= band || size.height <= band) return@drawWithContent
+    val outline = shape.createOutline(
+        androidx.compose.ui.geometry.Size(size.width - band, size.height - band),
+        layoutDirection,
+        this,
     )
+    translate(half, half) {
+        drawOutline(outline, Color(0xFF111114), alpha = a, style = androidx.compose.ui.graphics.drawscope.Stroke(width = band))
+        drawOutline(outline, Color.White, alpha = a, style = androidx.compose.ui.graphics.drawscope.Stroke(width = inner))
+    }
+}

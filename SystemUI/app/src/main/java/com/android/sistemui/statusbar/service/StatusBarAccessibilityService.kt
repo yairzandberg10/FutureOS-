@@ -58,9 +58,13 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
     private var volumeOverlayView: ComposeView? = null
     private var controlManager: ControlManager? = null
     private var layoutManager: StatusBarLayoutManager? = null
+    private var threatWatcher: com.android.sistemui.security.ThreatWatcher? = null
     private val mainHandler = Handler(Looper.getMainLooper())
     private val volumeLevelState = mutableFloatStateOf(0.5f)
     private var hideVolumeRunnable: Runnable? = null
+    // מצב הכניסה/יציאה של חלון הווליום - היציאה רצה ורק אחריה החלון מוסר
+    private val volumeVisible = androidx.compose.animation.core.MutableTransitionState(false)
+    private val removeVolumeRunnable = Runnable { removeVolumeOverlayNow() }
     private var statusBarParams: WindowManager.LayoutParams? = null
     private var recentsView: ComposeView? = null
     private var powerMenuView: ComposeView? = null
@@ -69,26 +73,162 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
     private val recentAppsManager by lazy { RecentAppsManager(this) }
     private val recentsMemory = mutableStateOf<String?>(null)
     private var recentAppsTriggered = false
+    private var lockController: com.android.sistemui.lockscreen.LockScreenController? = null
     private val recentAppsRunnable = Runnable {
         recentAppsTriggered = true
         showRecentAppsWithFreshSnapshot()
     }
     private val recentSnapshots by lazy {
-        RecentSnapshots(this, (com.android.sistemui.statusbar.logic.StatusBarLayoutManager.HEIGHT_DP * resources.displayMetrics.density).toInt())
+        RecentSnapshots(this, StatusBarLayoutManager.heightPx(this))
+    }
+
+    // גוון שורת המצב: true = לבנה (תוכן שחור), false = שחורה (תוכן לבן). נדגם מהתוכן שמתחתיה.
+    private val barLight = mutableStateOf(false)
+    // הצבע השולט ברצועה שמתחת לשורה (ARGB), או null כשהיא מעורבת (טפט, תמונה).
+    // השורה נצבעת בו מעל אפליקציה, כך שהיא נראית כהמשך של האפליקציה - לבנה מעל
+    // לבן, שחורה מעל שחור, ובצבע של האפליקציה מעל כותרת צבעונית.
+    private val barColor = mutableStateOf<Int?>(null)
+    private val toneExecutor by lazy { java.util.concurrent.Executors.newSingleThreadExecutor() }
+    private var lastToneShotAt = 0L
+    private val toneRunnable = Runnable { sampleBarTone() }
+
+    private fun scheduleToneSample(delayMs: Long) {
+        mainHandler.removeCallbacks(toneRunnable)
+        mainHandler.postDelayed(toneRunnable, delayMs)
+    }
+
+    /**
+     * מצלם את המסך ומודד את הבהירות של רצועה בגובה 24dp שמיד מתחת לשורת המצב (השורה
+     * עצמה לא נכללת במדידה, כדי שהיא לא תשפיע על עצמה). תוכן בהיר -> שורה לבנה,
+     * כהה -> שחורה; בין 0.42 ל-0.58 נשארים בגוון הקיים כדי שלא יהבהב. נשמרת רק
+     * הבהירות הממוצעת - הצילום עצמו לא נשמר ולא יוצא מהפונקציה.
+     */
+    private fun sampleBarTone() {
+        val now = SystemClock.uptimeMillis()
+        // המערכת מגבילה takeScreenshot (גם צילומי האחרונות והזכוכית משתמשים בו) - מנסים שוב מאוחר יותר.
+        if (now - lastToneShotAt < 500) { scheduleToneSample(550); return }
+        lastToneShotAt = now
+        try {
+            takeScreenshot(android.view.Display.DEFAULT_DISPLAY, toneExecutor, object : TakeScreenshotCallback {
+                override fun onSuccess(result: ScreenshotResult) {
+                    val sample = runCatching {
+                        val buffer = result.hardwareBuffer
+                        val hw = android.graphics.Bitmap.wrapHardwareBuffer(buffer, result.colorSpace)
+                        buffer.close()
+                        hw?.let { measureStrip(it) }
+                    }.onFailure { Log.w("FutureUI", "tone sample failed", it) }.getOrNull()
+                    if (sample != null) {
+                        mainHandler.post {
+                            // הגוון של הטקסט נגזר מהצבע שהשורה תקבל בפועל (אם יש צבע שולט),
+                            // אחרת מהבהירות הממוצעת - עם אותו טווח היסטרזיס נגד הבהוב.
+                            val luma = sample.dominant?.let { relativeLuma(it) } ?: sample.luma
+                            if (luma > 0.58f) barLight.value = true
+                            else if (luma < 0.42f) barLight.value = false
+                            barColor.value = sample.dominant
+                        }
+                    }
+                }
+
+                override fun onFailure(errorCode: Int) {
+                    // חלון מאובטח או הגבלת קצב - נשארים בגוון הקיים ומנסים שוב בקרוב.
+                    mainHandler.post { scheduleToneSample(900) }
+                }
+            })
+        } catch (e: Exception) {
+            Log.w("FutureUI", "takeScreenshot for tone failed", e)
+        }
+    }
+
+    /** מה נמדד ברצועה: הבהירות הממוצעת, והצבע השולט אם יש כזה. */
+    private class StripSample(val luma: Float, val dominant: Int?)
+
+    private fun relativeLuma(c: Int): Float {
+        val r = (c shr 16) and 0xFF
+        val g = (c shr 8) and 0xFF
+        val b = c and 0xFF
+        return ((0.2126 * r + 0.7152 * g + 0.0722 * b) / 255.0).toFloat()
+    }
+
+    /**
+     * רצועה ברוחב המסך ובגובה 24dp שמיד מתחת לשורה: הבהירות הממוצעת, ובנוסף הצבע
+     * השולט - הפיקסלים מקובצים לפי 4 ביטים לערוץ, ואם קבוצה אחת מכסה לפחות 55%
+     * מהרצועה (רקע של אפליקציה, כותרת צבעונית) מוחזר הממוצע שלה. כך טקסט קטן
+     * בתוך הרצועה לא צובע את השורה. רצועה מעורבת (טפט, תמונה) - null.
+     */
+    private fun measureStrip(hardware: android.graphics.Bitmap): StripSample {
+        val density = resources.displayMetrics.density
+        val top = (StatusBarLayoutManager.HEIGHT_DP * density).toInt()
+        val stripHeight = (24 * density).toInt().coerceAtLeast(1)
+        val soft = hardware.copy(android.graphics.Bitmap.Config.ARGB_8888, false)
+        hardware.recycle()
+        try {
+            val y0 = top.coerceIn(0, soft.height - 1)
+            val y1 = (y0 + stripHeight).coerceAtMost(soft.height)
+            var sum = 0.0
+            var count = 0
+            val hits = IntArray(4096)
+            val sumR = LongArray(4096)
+            val sumG = LongArray(4096)
+            val sumB = LongArray(4096)
+            var y = y0
+            while (y < y1) {
+                var x = 0
+                while (x < soft.width) {
+                    val c = soft.getPixel(x, y)
+                    val r = (c shr 16) and 0xFF
+                    val g = (c shr 8) and 0xFF
+                    val b = c and 0xFF
+                    sum += (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255.0
+                    count++
+                    val bucket = ((r shr 4) shl 8) or ((g shr 4) shl 4) or (b shr 4)
+                    hits[bucket]++
+                    sumR[bucket] += r.toLong()
+                    sumG[bucket] += g.toLong()
+                    sumB[bucket] += b.toLong()
+                    x += 8
+                }
+                y += 4
+            }
+            if (count == 0) return StripSample(0f, null)
+            var best = 0
+            for (i in 1 until hits.size) if (hits[i] > hits[best]) best = i
+            val n = hits[best]
+            val dominant = if (n >= count * 0.55f) {
+                val r = (sumR[best] / n).toInt()
+                val g = (sumG[best] / n).toInt()
+                val b = (sumB[best] / n).toInt()
+                (0xFF shl 24) or (r shl 16) or (g shl 8) or b
+            } else null
+            return StripSample((sum / count).toFloat(), dominant)
+        } finally {
+            soft.recycle()
+        }
     }
 
     /** האם אפשר לצלם עכשיו את [pkg]: היא בחזית, רשומה באחרונות, ואין מעליה חלון שלנו. */
     private fun isSnapshotTarget(pkg: String): Boolean =
-        FutureUIState.foregroundPackage == pkg && !recentsVisible && powerMenuView == null && recentAppsManager.isTop(pkg)
+        FutureUIState.foregroundPackage == pkg && !recentsVisible && powerMenuView == null && recentAppsManager.isTop(pkg) &&
+            // צילום נשמר לדיסק ומוצג באחרונות: לא כשהמכשיר נעול, ולא כשהמקלדת
+            // פתוחה - סיסמה או קוד שמוקלדים עכשיו היו נכנסים לתמונה.
+            !FutureUIState.isLocked && !FutureUIState.isSecured && !isKeyboardShowing()
+
+    private fun isKeyboardShowing(): Boolean = runCatching {
+        windows.any { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD }
+    }.getOrDefault(true)
 
     // צבע ההדגשה/פוקוס המשותף בין כל אפליקציות FutureOS (ThemeProvider). כאן
     // ניגשים ל-SharedPreferences ישירות במקום דרך ContentResolver כי השירות
     // רץ באותו תהליך/UID בדיוק כמו ה-ContentProvider עצמו (שניהם בתוך FutureUI).
     private val themePrefs by lazy { getSharedPreferences("shared_theme_prefs", Context.MODE_PRIVATE) }
     private val recentsAccentColor = mutableStateOf(Color.White)
+    // ערכת הנושא (כהה/בהיר) של המערכת - צבע הרקע האטום של שורת המצב (N-01)
+    private val barDarkMode = mutableStateOf(true)
     private val themePrefsListener = SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
         if (key == ThemeProvider.COL_PRIMARY_COLOR) {
             recentsAccentColor.value = Color(prefs.getInt(ThemeProvider.COL_PRIMARY_COLOR, android.graphics.Color.WHITE))
+        }
+        if (key == ThemeProvider.COL_IS_DARK_MODE) {
+            barDarkMode.value = prefs.getBoolean(ThemeProvider.COL_IS_DARK_MODE, true)
         }
     }
 
@@ -107,6 +247,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
                 FutureUIActions.ACTION_BRING_STATUS_BAR_FRONT -> bringStatusBarToFront()
                 // כפתור הכיבוי במרכז הבקרה פותח את אותו תפריט כיבוי אחד.
                 ACTION_SHOW_POWER_MENU -> mainHandler.post { showPowerMenu() }
+                ACTION_LOCK_NOW -> mainHandler.post { lockController?.lock() }
             }
         }
     }
@@ -122,6 +263,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
             when (intent?.action) {
                 FutureUIActions.ACTION_CALL_RINGING -> {
                     suppressForActiveCall = true
+                    lockController?.onCallRinging()
                     // ה-fullScreenIntent הרגיל של ההתראה מופעל אוטומטית ע"י המערכת רק
                     // כשהמסך כבוי - כשמסך הבית עצמו הוא האפליקציה בחזית צריך לפתוח את
                     // מסך השיחה במפורש כדי שגם שם השיחה תתקבל במסך מלא, לא רק כהתראה.
@@ -129,7 +271,10 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
                         sendBroadcast(Intent(FutureUIActions.ACTION_LAUNCH_CALL_UI).setPackage(DIALER_PACKAGE))
                     }
                 }
-                FutureUIActions.ACTION_CALL_ENDED -> suppressForActiveCall = false
+                FutureUIActions.ACTION_CALL_ENDED -> {
+                    suppressForActiveCall = false
+                    lockController?.onCallEnded()
+                }
             }
         }
     }
@@ -158,10 +303,12 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
             layoutManager = StatusBarLayoutManager(this)
 
             recentsAccentColor.value = Color(themePrefs.getInt(ThemeProvider.COL_PRIMARY_COLOR, android.graphics.Color.WHITE))
+            barDarkMode.value = themePrefs.getBoolean(ThemeProvider.COL_IS_DARK_MODE, true)
             themePrefs.registerOnSharedPreferenceChangeListener(themePrefsListener)
 
             val filter = IntentFilter(FutureUIActions.ACTION_BRING_STATUS_BAR_FRONT).apply {
                 addAction(ACTION_SHOW_POWER_MENU)
+                addAction(ACTION_LOCK_NOW)
             }
             // שני השידורים נשלחים רק מתוך FutureUI עצמו (מסכי overlay, מרכז הבקרה) -
             // NOT_EXPORTED כדי שאפליקציה זרה לא תוכל להקפיץ את תפריט הכיבוי.
@@ -177,6 +324,11 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
             ContextCompat.registerReceiver(
                 this, callReceiver, callFilter, SharedActions.PERMISSION_SYSTEM, null, ContextCompat.RECEIVER_EXPORTED
             )
+
+            // הגנה בזמן אמת מפני השתלטות של אפליקציות זרות (שירות נגישות, מנהל מכשיר וכו')
+            threatWatcher = runCatching {
+                com.android.sistemui.security.ThreatWatcher(this).also { it.start() }
+            }.onFailure { Log.w("FutureUI", "threat watcher failed", it) }.getOrNull()
         } catch (e: Exception) {
             Log.e("FutureUI", "Error in StatusBar onCreate", e)
         }
@@ -184,11 +336,38 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
 
     override fun onServiceConnected() {
         super.onServiceConnected()
-        layoutManager?.registerListener(suppressListener)
+        // השירות הזה מורשה לצלם מסך - ההתראה הצפה משתמשת בו לרקע הזכוכית
+        com.android.sistemui.utils.FrostedBackdrop.service = this
         if (layoutManager?.getSuppressSystemBars() == true) {
             suppressSystemBars()
         }
+        layoutManager?.registerListener(suppressListener)
         showStatusBar()
+        scheduleToneSample(400)
+        exemptCallAppsFromBackgroundRestriction()
+        if (lockController == null) {
+            lockController = com.android.sistemui.lockscreen.LockScreenController(
+                service = this,
+                owner = this,
+                windowManager = windowManager,
+                controlManager = { controlManager },
+                accentColor = { recentsAccentColor.value },
+                bringStatusBarFront = { bringStatusBarToFront() },
+            ).also { it.start() }
+        }
+    }
+
+    /**
+     * מנהל הסוללה של היצרן מסמן כמעט כל אפליקציה כ"מוגבלת ברקע" (RUN_ANY_IN_BACKGROUND
+     * ignore). על החייגן זה קטלני: כשהתהליך שלו לא רץ, Telecom לא מצליח להעיר את
+     * ה-InCallService בשיחה נכנסת - אין מסך, אין באנר, והשיחה נראית רק מתוך החייגן.
+     * כאן (שרץ תמיד) מחזירים את ההיתר בכל הפעלה, כי היצרן עלול להחיל את ההגבלה מחדש.
+     */
+    private fun exemptCallAppsFromBackgroundRestriction() {
+        val packages = listOf("com.future.dialer", "com.future.messages", "com.future.clock", packageName)
+        controlManager?.runRootCommandAsync(
+            packages.joinToString("; ") { "cmd appops set $it RUN_ANY_IN_BACKGROUND allow; dumpsys deviceidle whitelist +$it" }
+        )
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
@@ -200,12 +379,16 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
             // צילום המסך לכרטיס שלה באחרונות - אחרי שהחלון סיים להיפתח
             if (pkg != null && recentAppsManager.isTop(pkg)) recentSnapshots.schedule(pkg, 900, ::isSnapshotTarget)
             maybeReplaceSystemPowerMenu(pkg, event.className?.toString(), event)
+            lockController?.onForegroundChanged(pkg, event.className?.toString())
+            // הגוון נדגם אחרי שהחלון החדש סיים להצטייר
+            scheduleToneSample(350)
         }
     }
     override fun onInterrupt() {}
 
     override fun onKeyEvent(event: KeyEvent): Boolean {
         val keyCode = event.keyCode
+        if (event.action == KeyEvent.ACTION_UP) scheduleToneSample(450)
         // כשהמשתמש מפסיק ללחוץ - מצלמים שוב, כדי שכרטיס האחרונות יראה איפה עזבנו
         if (event.action == KeyEvent.ACTION_UP && !recentsVisible) {
             val fg = FutureUIState.foregroundPackage
@@ -227,6 +410,9 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
             }
             return false
         }
+
+        // מסך הנעילה תופס את כל שאר המקשים (ר' LockScreenController.onKey)
+        if (lockController?.onKey(event) == true) return true
 
         // כשמסך "אפליקציות אחרונות" שלנו גלוי, BACK סוגר אותו וכל שאר המקשים
         // (חצים, אישור, Menu לסגירת פריט) עוברים ישירות לחלון שלו כדי שהניווט
@@ -291,6 +477,8 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
     }
 
     private fun launchVoiceAssistant() {
+        // נעול (גם כשמסך הנעילה פינה מקום לשיחה/מעורר): לא פותחים אפליקציה מעליו
+        if (FutureUIState.isSecured) return
         try {
             val intent = packageManager.getLaunchIntentForPackage(VOICE_ASSISTANT_PACKAGE) ?: return
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -335,8 +523,8 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
     private fun showStatusBar() {
         if (statusBarView != null) return
         try {
-            val density = resources.displayMetrics.density
-            val heightPx = (StatusBarLayoutManager.HEIGHT_DP * density).toInt()
+            // גובה החלון מכסה לפחות את שורת המערכת (48px במכשיר) ולא רק 28dp
+            val heightPx = StatusBarLayoutManager.heightPx(this)
 
             val params = WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT,
@@ -361,7 +549,9 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
                             modifier = Modifier.fillMaxSize(),
                             controlManager = controlManager,
                             layoutManager = layoutManager,
-                            accentColor = recentsAccentColor.value
+                            accentColor = recentsAccentColor.value,
+                            lightTone = barLight.value,
+                            sampledColor = barColor.value?.let { androidx.compose.ui.graphics.Color(it) },
                         )
                     }
                 }
@@ -393,6 +583,8 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
 
     private fun showVolumeOverlay() {
         hideVolumeRunnable?.let { mainHandler.removeCallbacks(it) }
+        mainHandler.removeCallbacks(removeVolumeRunnable)
+        volumeVisible.targetState = true
 
         if (volumeOverlayView == null) {
             try {
@@ -416,7 +608,8 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
                         FutureUITheme {
                             VolumeOverlay(
                                 level = volumeLevelState.floatValue,
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth(),
+                                visibleState = volumeVisible,
                             )
                         }
                     }
@@ -433,7 +626,16 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
         mainHandler.postDelayed(hideVolumeRunnable!!, 1500)
     }
 
+    /** מתחיל את היציאה; החלון מוסר אחריה. */
     private fun hideVolumeOverlay() {
+        if (volumeOverlayView == null) return
+        volumeVisible.targetState = false
+        mainHandler.removeCallbacks(removeVolumeRunnable)
+        mainHandler.postDelayed(removeVolumeRunnable, 260)
+    }
+
+    private fun removeVolumeOverlayNow() {
+        mainHandler.removeCallbacks(removeVolumeRunnable)
         try {
             volumeOverlayView?.let { windowManager.removeView(it) }
         } catch (e: Exception) {
@@ -519,7 +721,13 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
                             },
                             onCancel = { hidePowerMenu() },
                             airplaneOn = powerAirplaneState.value,
-                            onAirplane = {
+                            onAirplane = onAirplane@{
+                                // מצב טיסה מהמכשיר נעול = גנב מנתק אותו מהרשת ומאיתור. כמו
+                                // "נעילת רשת ואבטחה" בסמסונג: רק אחרי פתיחה.
+                                if (FutureUIState.isSecured) {
+                                    android.widget.Toast.makeText(this@StatusBarAccessibilityService, "צריך לפתוח את הנעילה קודם", android.widget.Toast.LENGTH_SHORT).show()
+                                    return@onAirplane
+                                }
                                 val next = !powerAirplaneState.value
                                 powerAirplaneState.value = next
                                 controlManager?.let { cm ->
@@ -554,6 +762,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
                 }
             }
             windowManager.addView(powerMenuView, params)
+            FutureUIState.powerMenuOpen.value = true
         } catch (e: Exception) {
             Log.e("FutureUI", "Error showing power menu", e)
             powerMenuView = null
@@ -567,6 +776,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
             Log.e("FutureUI", "Error hiding power menu", e)
         }
         powerMenuView = null
+        FutureUIState.powerMenuOpen.value = false
     }
 
     /**
@@ -586,6 +796,8 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
     /** מסך "אפליקציות אחרונות" עצמאי מבוסס UsageStatsManager, במקום GLOBAL_ACTION_RECENTS המכוער. */
     private fun showRecentApps() {
         if (recentsVisible) return
+        // נעול (גם כשמסך הנעילה פינה מקום לשיחה): האחרונות מציגות צילומים של כל האפליקציות
+        if (FutureUIState.isSecured) return
         try {
             if (!recentAppsManager.hasUsageAccess()) {
                 controlManager?.runRootCommandAsync("appops set $packageName GET_USAGE_STATS allow")
@@ -653,6 +865,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
 
             windowManager.addView(recentsView, params)
             recentsVisible = true
+            FutureUIState.recentsOpen.value = true
 
             val bringFrontIntent = Intent(FutureUIActions.ACTION_BRING_STATUS_BAR_FRONT)
             bringFrontIntent.setPackage(packageName)
@@ -670,6 +883,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
         }
         recentsView = null
         recentsVisible = false
+        FutureUIState.recentsOpen.value = false
     }
 
     /**
@@ -708,10 +922,15 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
     }
 
     override fun onDestroy() {
+        mainHandler.removeCallbacks(toneRunnable)
+        if (com.android.sistemui.utils.FrostedBackdrop.service === this) com.android.sistemui.utils.FrostedBackdrop.service = null
         try {
-            hideVolumeOverlay()
+            removeVolumeOverlayNow()
             hideRecentApps()
             hidePowerMenu()
+            lockController?.dispose()
+            lockController = null
+            recentSnapshots.dispose()
             statusBarView?.let { windowManager.removeView(it) }
             statusBarView = null
         } catch (e: Exception) {
@@ -719,6 +938,8 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
         }
         restoreSystemBars()
         controlManager?.dispose()
+        runCatching { threatWatcher?.stop() }
+        threatWatcher = null
         try {
             unregisterReceiver(bringToFrontReceiver)
             unregisterReceiver(callReceiver)
@@ -742,6 +963,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
         private const val HOME_PACKAGE = "com.future.futurelauncher"
         private const val DOUBLE_CLICK_WINDOW_MS = 300L
         const val ACTION_SHOW_POWER_MENU = "com.future.futureui.ACTION_SHOW_POWER_MENU"
+        const val ACTION_LOCK_NOW = "com.future.futureui.ACTION_LOCK_NOW"
         private val POWER_MENU_CLASS_HINTS = listOf("globalactions", "ActionsDialog", "PowerMenu", "ShutdownDialog")
         /** השורות של תפריט הכיבוי של אנדרואיד, עברית ואנגלית. */
         private val POWER_OFF_LABELS = listOf(tr("כיבוי"), tr("כבה"), "Power off", "Shut down", "Shutdown")

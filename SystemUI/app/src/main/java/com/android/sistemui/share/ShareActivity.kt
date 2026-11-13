@@ -80,7 +80,7 @@ import com.future.sharednav.focus.focusScale
 
 /**
  * חלון השיתוף של המערכת. כל אפליקציה ב-FutureOS משתפת דרכו
- * (SharedKeypadNav: FutureShare.open -> com.android.sistemui.ACTION_SHARE),
+ * (SharedKeypadNav: FutureShare.open -> com.future.futureui.ACTION_SHARE),
  * כך שיש חלון שיתוף אחד בכל המערכת במקום הבורר של אנדרואיד - ואם FutureUI
  * לא מותקן, FutureShare נופל לבורר של המערכת.
  *

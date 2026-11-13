@@ -1,6 +1,7 @@
 package com.android.sistemui.notificationcenter.ui
 
 import com.future.sharednav.i18n.tr
+import com.android.sistemui.utils.safeText
 import com.future.sharednav.theme.FutureMotion
 import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.FutureShapes
@@ -51,12 +52,15 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
+import com.android.sistemui.controlcenter.service.MediaControlService
 import com.android.sistemui.controlcenter.ui.components.focusEffect
 import com.android.sistemui.notificationcenter.logic.NotificationCenterManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
+import com.future.sharednav.focus.animateFocusColor
+import androidx.compose.runtime.getValue
 
 /**
  * מסך מרכז ההתראות הראשי - מציג רשימת התראות, שעון, תאריך וכפתורי פעולה בתחתית.
@@ -66,7 +70,10 @@ fun NotificationCenterScreen(
     modifier: Modifier = Modifier,
     wallpaper: ImageBitmap? = null,
     manager: NotificationCenterManager? = null,
-    onSwitchToControlCenter: () -> Unit = {}
+    onSwitchToControlCenter: () -> Unit = {},
+    /** פתיחה/סגירה בשליטת השירות - כך היציאה רצה לפני שהחלון מוסר. */
+    motion: com.android.sistemui.utils.OverlayMotion? = null,
+    onExitFinished: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val ncManager = manager ?: remember { NotificationCenterManager(context) }
@@ -82,19 +89,20 @@ fun NotificationCenterScreen(
     }
 
     // עדכון זמן ותאריך ורענון התראות כל 30 שניות
-    // פורמט השעה לפי הגדרת 12/24 של המערכת, והעדכון בגבול הדקה
+    // פורמט השעה לפי הגדרת 12/24 של המערכת (F18)
     val timePattern = if (android.text.format.DateFormat.is24HourFormat(context)) "HH:mm" else "h:mm"
     LaunchedEffect(timePattern) {
         while (true) {
             val now = Calendar.getInstance().time
             currentTime = SimpleDateFormat(timePattern, Locale.getDefault()).format(now)
             currentDate = hebrewDateFormat.format(now)
+            // השעון מתעדכן בגבול הדקה ולא עם פיגור של עד חצי דקה
             delay(60_000L - System.currentTimeMillis() % 60_000L + 50L)
         }
     }
 
-    // התראה שנוספה/הוסרה מרעננת את הרשימה מיד (SU-08); בנוסף רענון כל 30 שניות כגיבוי
-    LaunchedEffect(com.android.sistemui.controlcenter.service.MediaControlService.changeTick.intValue) {
+    // התראה שנוספה/הוסרה מרעננת את הרשימה מיד (F30 / SU-08); בנוסף רענון כל 30 שניות כגיבוי
+    LaunchedEffect(MediaControlService.changeTick.intValue) {
         ncManager.updateNotifications()
     }
     LaunchedEffect(Unit) {
@@ -146,18 +154,15 @@ fun NotificationCenterScreen(
     }
 
     CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
+        // אותה שכבה כמו מרכז הבקרה: נופלת מהקצה העליון בקפיץ layer, או נכנסת
+        // מהצד כשעוברים אליה ממרכז הבקרה. קודם זה היה קפיץ LowBouncy איטי
+        // שלא מהטוקנים, והיציאה לא רצה בכלל (החלון הוסר מיד).
+        val overlay = motion ?: remember { com.android.sistemui.utils.OverlayMotion().also { it.enter() } }
+        if (motion != null) com.android.sistemui.utils.OverlayExitWatcher(motion, onExitFinished)
         AnimatedVisibility(
-            visible = isVisible,
-            // כניסה עם spring קליל (overshoot עדין) במקום tween ליניארי - מרגישה
-            // "חיה" יותר, כמו וילון התראות אמיתי, ולא כמו View שקופץ למקומו.
-            enter = slideInVertically(
-                initialOffsetY = { -it },
-                animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
-            ) + fadeIn(animationSpec = tween(FutureMotion.DurationStandard)),
-            exit = slideOutVertically(
-                targetOffsetY = { -it },
-                animationSpec = tween(FutureMotion.DurationStandard, easing = FutureMotion.EasingAccelerate)
-            ) + fadeOut(animationSpec = tween(FutureMotion.DurationStandard))
+            visibleState = overlay.visible,
+            enter = overlay.enterTransition(),
+            exit = overlay.exitTransition(),
         ) {
             Box(modifier = modifier.fillMaxSize()) {
                 // רקע עם טשטוש (Blur) אם קיימת תמונת רקע
@@ -240,34 +245,39 @@ fun NotificationCenterScreen(
                             // הצגת כל התראה ברשימה - כניסה מדורגת (stagger לפי אינדקס) כדי
                             // שההתראות "יזרמו" פנימה אחת אחרי השנייה במקום לקפוץ כולן ביחד.
                         itemsIndexed(ncManager.notifications, key = { _, sbn -> sbn.key }) { index, sbn ->
+                            // גל רק ב-4 ההתראות הראשונות ורק בפתיחה. התראה שגוללים אליה
+                            // מופיעה מיד - אחרת כל גלילה הייתה מריצה את הגל מחדש.
                             val visibleState = remember {
-                                MutableTransitionState(false)
+                                MutableTransitionState(index >= 4)
                             }
                             var isDismissing by remember { mutableStateOf(false) }
 
                             LaunchedEffect(Unit) {
-                                delay((index * 45L).coerceAtMost(360L))
-                                visibleState.targetState = true
+                                if (!visibleState.targetState) {
+                                    delay(60L + index * 30L)
+                                    visibleState.targetState = true
+                                }
                             }
                             LaunchedEffect(isDismissing) {
                                 if (isDismissing) {
                                     visibleState.targetState = false
-                                    delay(220)
+                                    delay(260)
                                     ncManager.dismissNotification(sbn)
                                 }
                             }
 
                             AnimatedVisibility(
                                 visibleState = visibleState,
-                                enter = fadeIn(animationSpec = tween(FutureMotion.DurationStandard)) +
-                                    slideInVertically(
-                                        initialOffsetY = { -it / 3 },
-                                        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow)
-                                    ) +
-                                    expandVertically(animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow)),
-                                exit = fadeOut(animationSpec = tween(FutureMotion.DurationStandard)) +
-                                    slideOutHorizontally(targetOffsetX = { it / 4 }, animationSpec = tween(FutureMotion.DurationStandard)) +
-                                    shrinkVertically(animationSpec = tween(FutureMotion.DurationStandard))
+                                // כניסה: נופלת ומתנפחת בקפיץ dialog - transform בלבד, בלי
+                                // expandVertically שמדד מחדש את כל הרשימה בכל פריים.
+                                // מחיקה: ההתראה עפה הצידה עד הסוף, והמקום שלה נסגר, כך
+                                // שההתראות שמתחת עולות אליו.
+                                enter = fadeIn(animationSpec = FutureMotion.enter()) +
+                                    slideInVertically(FutureMotion.Springs.dialogOffset) { -it / 2 } +
+                                    scaleIn(FutureMotion.Springs.dialog(), initialScale = 0.85f),
+                                exit = fadeOut(animationSpec = FutureMotion.exit()) +
+                                    slideOutHorizontally(FutureMotion.Springs.layerOffset) { it } +
+                                    shrinkVertically(animationSpec = tween(FutureMotion.DurationStandard, delayMillis = 60, easing = FutureMotion.EasingStandard))
                             ) {
                                 NotificationItem(
                                     sbn = sbn,
@@ -294,9 +304,9 @@ fun NotificationCenterScreen(
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         NotificationCenterButton(
-                            text = tr("נקה הכל"),
+                            text = if (clearArmed) "לחצו OK שוב" else tr("נקה הכל"),
                             icon = Icons.Rounded.DeleteSweep,
-                            // OK ראשון רק מזהיר, שני (תוך 4 שניות) מנקה - כמו בתפריט הכיבוי
+                            // OK ראשון רק מזהיר, שני (תוך 4 שניות) מנקה - כמו בתפריט הכיבוי (F29)
                             onClick = {
                                 if (clearArmed || !hasNotifications) {
                                     clearArmed = false
@@ -346,8 +356,8 @@ fun NotificationItem(
     var selectedOptionIndex by remember { mutableStateOf(0) }
 
     val n = sbn.notification
-    val title = n.extras.getCharSequence(Notification.EXTRA_TITLE)?.toString() ?: ""
-    val text = n.extras.getCharSequence(Notification.EXTRA_TEXT)?.toString() ?: ""
+    val title = n.safeText(Notification.EXTRA_TITLE)?.toString() ?: ""
+    val text = n.safeText(Notification.EXTRA_TEXT)?.toString() ?: ""
 
     // הפעולות האמיתיות שההתראה הביאה איתה מהאפליקציה המקורית (למשל "ענה"/"דחה"
     // בהתראת שיחה, או "סמן כנקרא") - בלי RemoteInput כי אין מקלדת מגע להקליד תשובה.
@@ -402,10 +412,10 @@ fun NotificationItem(
     val shape = FutureShapes.xxl
     // הרקע של הכרטיס נגזר מכיוון הטקסט (isDarkBackground) ולא מהטפט עצמו, כדי
     // שהניגודיות טקסט-מול-כרטיס תישמר גם כשהטפט שמתחת בהיר או כהה באופן בלתי צפוי.
-    val cardBackground = if (isDarkBackground) {
-        if (isFocused) Color.Black.copy(alpha = 0.45f) else Color.Black.copy(alpha = 0.38f)
+    val cardBackground by if (isDarkBackground) {
+        animateFocusColor(isFocused, Color.Black.copy(alpha = 0.45f), Color.Black.copy(alpha = 0.38f))
     } else {
-        if (isFocused) Color.White.copy(alpha = 0.55f) else Color.White.copy(alpha = 0.42f)
+        animateFocusColor(isFocused, Color.White.copy(alpha = 0.55f), Color.White.copy(alpha = 0.42f))
     }
     val legibilityShadow = androidx.compose.ui.graphics.Shadow(color = Color.Black.copy(alpha = 0.35f), blurRadius = 6f)
 
@@ -413,12 +423,11 @@ fun NotificationItem(
         modifier = Modifier
             .fillMaxWidth()
             .animateContentSize(animationSpec = tween(FutureMotion.DurationStandard))
-            .focusEffect(isFocused, shape)
+            .focusEffect(isFocused, shape, focusedScale = 1.02f)
             .clip(shape)
+            // סימון אחד בלבד: הטבעת של focusEffect. קודם נוספה עליה עוד מסגרת אפורה
+            // של 2dp, כך שכרטיס ממוקד קיבל שתי טבעות זו בתוך זו.
             .background(cardBackground)
-            .then(
-                if (isFocused) Modifier.border(2.dp, Color.LightGray, shape) else Modifier
-            )
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .onKeyEvent { event ->
                 if (!isFocused) return@onKeyEvent false
@@ -562,7 +571,7 @@ fun NotificationItem(
                     // תוכן ההתראה: שם אפליקציה ותקציר הודעה
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            // שם האפליקציה פעם אחת: כותרת זהה לשם (או שמתחילה בו) לא מוכפלת
+                            // שם האפליקציה פעם אחת: כותרת זהה לשם (או שמתחילה בו) לא מוכפלת (N-03)
                             text = when {
                                 title.isBlank() -> appName
                                 title.equals(appName, ignoreCase = true) -> appName
@@ -612,10 +621,7 @@ fun NotificationCenterButton(
             .height(38.dp)
             .focusEffect(isFocused, shape)
             .clip(shape)
-            .background(if (isFocused) Color.White.copy(alpha = 0.25f) else color)
-            .then(
-                if (isFocused) Modifier.border(2.dp, Color.White, shape) else Modifier
-            )
+            .background(animateFocusColor(isFocused, Color.White.copy(alpha = 0.25f), color).value)
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
             .focusable(interactionSource = interactionSource).bringIntoViewOnFocus(),

@@ -32,6 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.android.sistemui.controlcenter.logic.ControlManager
+import com.future.sharednav.focus.animateFocusColor
 
 @Composable
 fun MusicPlayerCard(manager: ControlManager, labelColor: Color = Color.Black) {
@@ -48,9 +49,6 @@ fun MusicPlayerCard(manager: ControlManager, labelColor: Color = Color.Black) {
                 .clip(shape)
                 .focusEffect(isFocused, shape)
                 .background(Color(0x80E0E0E0))
-                .then(
-                    if (isFocused) Modifier.border(2.dp, Color.LightGray, shape) else Modifier
-                )
                 .clickable(interactionSource = interactionSource, indication = null) { manager.openNotificationAccessSettings() }
                 .focusable(interactionSource = interactionSource)
                 .padding(16.dp),
@@ -72,9 +70,6 @@ fun MusicPlayerCard(manager: ControlManager, labelColor: Color = Color.Black) {
                 .clip(shape)
                 .focusEffect(isFocused, shape)
                 .background(Color(0x80E0E0E0))
-                .then(
-                    if (isFocused) Modifier.border(2.dp, Color.LightGray, shape) else Modifier
-                )
                 .clickable(
                     interactionSource = interactionSource,
                     indication = null,
@@ -235,13 +230,9 @@ fun MediaControlButton(icon: ImageVector, onClick: () -> Unit, isLarge: Boolean 
     Box(
         modifier = Modifier
             .size(if (isLarge) 50.dp else 40.dp)
-            .graphicsLayer {
-                scaleX = if (isFocused) 1.2f else 1f
-                scaleY = if (isFocused) 1.2f else 1f
-            }
-            .then(if (isFocused) Modifier.border(2.dp, Color.LightGray, shape) else Modifier)
+            .focusEffect(isFocused, shape, focusedScale = 1.08f)
             .clip(shape)
-            .background(if (isFocused) Color.White.copy(alpha = 0.3f) else Color.Transparent)
+            .background(animateFocusColor(isFocused, tint.copy(alpha = 0.14f), Color.Transparent).value)
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
@@ -253,7 +244,8 @@ fun MediaControlButton(icon: ImageVector, onClick: () -> Unit, isLarge: Boolean 
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = if (isFocused) Color.White else tint,
+            // האייקון שומר על הצבע שלו: קודם הוא הפך ללבן בפוקוס ונעלם על הזכוכית הבהירה.
+            tint = tint,
             modifier = Modifier.size(if (isLarge) 32.dp else 24.dp)
         )
     }

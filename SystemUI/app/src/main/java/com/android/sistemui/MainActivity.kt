@@ -76,8 +76,8 @@ class MainActivity : ComponentActivity() {
                 LaunchedEffect(Unit) {
                     val missing = listOf(
                         android.Manifest.permission.READ_PHONE_STATE,
-                        // חיבור Bluetooth (מצב 'מחובר' בשורת המצב) דורש הרשאת זמן ריצה (SU-02).
-                        // CAMERA לא נשאלת כאן יותר: מסך הניהול לא מצלם (SU-38).
+                        android.Manifest.permission.CAMERA,
+                        // חיבור Bluetooth (מצב 'מחובר' בשורת המצב) דורש הרשאת זמן ריצה (SU-02)
                         android.Manifest.permission.BLUETOOTH_CONNECT
                     ).filter {
                         ContextCompat.checkSelfPermission(this@MainActivity, it) != PackageManager.PERMISSION_GRANTED
@@ -132,7 +132,7 @@ class MainActivity : ComponentActivity() {
                         Spacer(modifier = Modifier.height(24.dp))
                         
                         Text(
-                            text = "הנחיות:\n1. הפעל את השירותים הרצויים.\n2. לחיצה ארוכה על * פותחת את מרכז הבקרה, ועל # את מרכז ההתראות.\n3. לחיצה ארוכה על Menu פותחת את האפליקציות האחרונות.",
+                            text = tr("הנחיות:\n1. הפעל את השירותים הרצויים.\n2. במסך הנעילה: לחיצה ארוכה על מקש ההגדרות לעריכה.\n3. לחץ OK לביטול נעילה."),
                             textAlign = TextAlign.Center
                         )
                     }
