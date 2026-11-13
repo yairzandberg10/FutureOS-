@@ -91,7 +91,7 @@ fun FitnessNavHost(store: WorkoutStore, heartRateMonitor: HeartRateMonitor, them
     val currentTabIndex = currentTab?.let { TAB_ORDER.indexOf(it) } ?: -1
 
     // עוגן פוקוס בסיסי בתוך אזור התוכן (לא על ה-Scaffold עצמו - זה שבר את
-    // מקש ה-Back הפיזי, ר' Frixa/MainActivity.kt לתיעוד מלא) - נותן למשהו
+    // מקש ה-Back הפיזי: ה-Scaffold לוקח את הפוקוס ו-BackHandler לא מקבל אותו) - נותן למשהו
     // אמיתי להחזיק פוקוס עם הכניסה לכל מסך, כדי שחיצי ימינה/שמאלה תמיד
     // יגיעו ל-onKeyEvent של ה-Scaffold. כל מסך עם רשימה/תוכן פוקוסבילי משלו
     // (בית/אימונים/התקדמות) גוזל את הפוקוס בחזרה מיד עם LaunchedEffect(Unit)

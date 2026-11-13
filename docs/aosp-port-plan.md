@@ -165,7 +165,7 @@ vendor/futureos/
 - **A/B:** תלוי ב-dump (`ro.boot.slot_suffix`). אם A/B, משתמשים ב-`update_engine` דרך `UpdateEngine` API. אם non-A/B, משתמשים ב-`RecoverySystem.installPackage`, ואז **אין rollback אוטומטי**. אם המחיצות מאפשרות (dynamic partitions + snapshot), מומלץ **Virtual A/B**.
 - **אישור אתחול:** המכשיר מדווח `boot_ok` לשרת רק אחרי ש-`update_verifier` סימן את ה-slot כמוצלח. כך ה-rollback index ב-AVB מתעדכן רק על בילד תקין.
 - **APK בודד מחוץ ל-OTA: מאושר** (החלטת המשתמש ב-16.10, נמסרה מהצ'אט "מנוע עדכונים ומשוב"). כלל חובה: שה-`versionCode` ב-OTA הבא יהיה גבוה או שווה לכל APK שהופץ בנפרד. אחרת העותק ב-`/data` מסתיר את הגרסה שבמערכת, ו-OTA של חזרה אחורה לא ישפיע עליו.
-- **צמצום השימוש ב-platform key:** אפליקציות שלא צריכות הרשאות signature של המערכת (למשל Calculator, Sfarim, Frixa, Music) נחתמות במפתח נפרד (`futureos_apps`) ולא ב-`platform`. רק FutureUI, FutureLauncher, Settings, Dialer, Messages וכו' מקבלים platform.
+- **צמצום השימוש ב-platform key:** אפליקציות שלא צריכות הרשאות signature של המערכת (למשל Calculator, Sfarim, Music) נחתמות במפתח נפרד (`futureos_apps`) ולא ב-`platform`. רק FutureUI, FutureLauncher, Settings, Dialer, Messages וכו' מקבלים platform.
 
 ---
 

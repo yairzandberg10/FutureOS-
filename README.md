@@ -39,8 +39,6 @@ Since there's no custom ROM, "System UI" (status bar, lock screen, control cente
 |[Translate](Translate/)|תרגום|`com.future.translate`|On-device translation (ML Kit), language download for offline use, conversation mode|
 |[Wallpapers](Wallpapers/)|רקעים|`com.future.wallpapers`|Wallpaper picker (online catalog). No launcher icon: opens from "Wallpaper" in the launcher's edit mode|
 
-[Frixa](Frixa/) (`com.future.frixa`, recipe catalog and nearby grocery stores) also lives in this repo but is **not part of the system**: it is not in the launcher's built-in app list (`FutureLauncher/DefaultApps.kt`), has no page in the Guide, and holds none of the FutureOS signature permissions.
-
 Two more top-level folders are not standalone apps: [SharedKeypadNav](SharedKeypadNav/) is a shared Gradle library module (`com.future.sharednav`) that **all 30** apps above depend on for D-pad focus handling, T9 digit mapping, and the cross-app design system (colors, spacing, type scale) — see [`SharedKeypadNav/README.md`](SharedKeypadNav/README.md), which is also the canonical design-system reference for this project. [hardware](hardware/) holds CAD files (Onshape motherboard keep-out volumes, an OpenSCAD case/keycap model) for the target device, a Qin F22 Pro.
 
 Each app is a standalone Android Studio project (its own `build.gradle.kts`/`settings.gradle.kts`) living in its own top-level folder here.

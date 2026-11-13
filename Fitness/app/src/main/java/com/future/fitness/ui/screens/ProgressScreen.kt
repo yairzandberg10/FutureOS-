@@ -113,8 +113,7 @@ fun ProgressScreen(
 
     // המסך הזה תצוגה בלבד (אין כרטיס לחיץ), אז בלי טיפול מפורש ב-D-pad
     // למעלה/למטה, DOWN היה פשוט מזיז את הפוקוס האמיתי לכפתור "אימון חי"
-    // בסרגל התחתון במקום לגלול - אותו דפוס בדיוק כמו RecipeDetailScreen
-    // בפריקסה עבור מסך גלילה-בלבד.
+    // בסרגל התחתון במקום לגלול - הדפוס הרגיל למסך גלילה-בלבד.
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     // ר' rememberInitialFocus - מבקשים שוב בכמה פריימים, כי העוגן של ה-NavHost דורס בקשה מוקדמת.

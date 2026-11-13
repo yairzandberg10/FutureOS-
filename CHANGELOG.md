@@ -4,6 +4,19 @@ This repo has no carried-over git history (see root [README](README.md)), so thi
 
 ## Unreleased
 
+### Round of UI fixes from the user's notes (2026-11-13)
+
+- **Focus scroll context** (`SharedKeypadNav/.../focus/FocusScrollContext.kt`): every scrolling list keeps a quarter of the viewport above the focused item (an eighth below), so moving up to the first item also brings the screen title back into view. Provided by `FutureMaterialTheme`, `ScreenScaffold` and `AnimatedScreenHost`.
+- **Focus motion**: focus color/size transitions use the design-system `--fos-transition-focus` (200ms) instead of 90ms; Files hosts the shared focus glide.
+- **Control Center / Notification Center**: the focus ring is drawn inside the control (it was clipped), no double rings on cards and buttons, a fixed label line under the grid instead of a label that pushed the grid, softer media focus.
+- **Heads-up notification** rebuilt to the design-system `HeadsUpNotification` spec (#1C1C1E at 90%, 28dp radius, hairline border, three lines, drop-in spring).
+- **Status bar**: in auto/transparent mode the bar takes the dominant color sampled under it (white, black or the app's header color); dark mode is always black.
+- **Clock alarms**: each alarm now has a label, ringtone, vibration on/off, snooze length (5-30 minutes) and gradual volume. Old saved alarms keep ringing exactly as before.
+- **Calculator**: bottom nav bar removed; standard/scientific stays in the Options menu.
+- **Flashlight**: the power button uses the design-system flashlight icons and the default round capsule size.
+- **Files**: multi-select from the item menu ("Select") or `#`, "Select all", and copy/move/share/delete for all selected items.
+- **Frixa removed** from the repo, with its translation strings and code/doc references. Older entries below that mention it are kept as history.
+
 ### security-center: protection against cyber attacks (2026-11-12)
 
 Same branch. Detects the takeover steps Android malware actually uses. It is
