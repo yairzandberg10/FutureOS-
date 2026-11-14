@@ -275,7 +275,7 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
     LaunchedEffect(Unit) { shown = true }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-        Box(modifier = Modifier.fillMaxSize().background(theme.scrimColor)) {
+        Box(modifier = Modifier.fillMaxSize()) {
             BottomGlow(
                 active = state != AssistantState.IDLE,
                 level = level,
@@ -291,12 +291,12 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(FutureDimens.spacingMd)
-                        .background(CardColor, FutureShapes.xxl)
-                        .border(1.dp, Color(0x17FFFFFF), FutureShapes.xxl)
+                        .background(theme.surfaceColor, FutureShapes.xxl)
+                        .border(1.dp, theme.textColor.copy(alpha = 0.09f), FutureShapes.xxl)
                         .padding(horizontal = FutureDimens.spacingXl, vertical = FutureDimens.spacingLg),
                 ) {
-                    val dim = Color(0x99FFFFFF)
-                    Column(modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp)) {
+                    val dim = theme.mutedTextColor
+                    Column(modifier = Modifier.fillMaxWidth().heightIn(min = 40.dp)) {
                         when (state) {
                             AssistantState.LISTENING -> Text(
                                 "מקשיב",
@@ -361,7 +361,7 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
                                         color = when {
                                             noSpeech || !hasPermission || modelFailed -> theme.dangerColor
                                             idlePrompt -> dim
-                                            else -> Color.White
+                                            else -> theme.textColor
                                         },
                                         fontSize = type.title,
                                         fontWeight = FutureTypography.weightMedium,
@@ -372,7 +372,7 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
                     }
 
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(top = FutureDimens.spacingLg),
+                        modifier = Modifier.fillMaxWidth().padding(top = FutureDimens.spacingMd),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingMd),
                     ) {
@@ -382,7 +382,7 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
                                 level = level,
                                 active = true,
                                 thinking = false,
-                                color = Color.White,
+                                color = theme.textColor,
                                 modifier = Modifier.weight(1f).height(WaveHeight),
                             )
                             AssistantState.THINKING -> Text(
@@ -423,7 +423,7 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
                         text = "כשהחיבור זמין, קטע אודיו עשוי להישלח לשירות חיצוני לצורך תמלול.",
                         color = theme.mutedTextColor,
                         fontSize = type.summary,
-                        modifier = Modifier.padding(top = FutureDimens.spacingSm),
+                        modifier = Modifier.padding(top = FutureDimens.spacingMd),
                     )
                 }
             }
@@ -491,7 +491,7 @@ private fun MicButton(state: AssistantState, noSpeech: Boolean, theme: FutureThe
     var autoFocused by remember { mutableStateOf(false) }
     val isFocused by interactionSource.collectIsFocusedAsState()
     val live = state == AssistantState.LISTENING
-    val fill = if (live) Color.White else Color(0x14FFFFFF)
+    val fill = if (live) theme.textColor else theme.textColor.copy(alpha = 0.08f)
     val ringColor = theme.readableAccentColor
     val ring by animateFloatAsState(if (isFocused) 1f else 0f, FutureMotion.fast(), label = "micRing")
     val scale by animateFloatAsState(if (isFocused) FutureDimens.focusScale else 1f, FutureMotion.focusScaleSpec, label = "micScale")
@@ -521,11 +521,10 @@ private fun MicButton(state: AssistantState, noSpeech: Boolean, theme: FutureThe
         Icon(
             when { live -> FutureIcons.Stop; noSpeech -> FutureIcons.MicOff; else -> FutureIcons.Mic },
             contentDescription = "מיקרופון",
-            tint = if (live) Color.Black else Color.White, modifier = Modifier.size(FutureDimens.spacingXl))
+            tint = if (live) theme.surfaceColor else theme.textColor, modifier = Modifier.size(FutureDimens.spacingXl))
     }
 }
 
-private val CardColor = Color(0xFF1B1C1F)
 private const val IdlePrompt = "שאל כל דבר"
 private val WaveHeight = 56.dp
 private val MicSize = 56.dp
