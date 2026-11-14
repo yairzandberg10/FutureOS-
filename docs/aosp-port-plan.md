@@ -89,7 +89,7 @@ vendor/futureos/
 - `privapp-permissions-futureos.xml` מגדיר במפורש כל הרשאה signature|privileged לכל חבילה, אחרת האפליקציה לא עולה (`ro.control_privapp_permissions=enforce`).
 
 ### 3ב. FutureUI ← SystemUI אמיתי
-היום: `StatusBarAccessibilityService` + `SYSTEM_ALERT_WINDOW` מציירים שכבה מעל SystemUI של היצרן. (`SystemUI/` בריפו הוא עותק של FutureUI עם החבילה `com.android.sistemui` ולא SystemUI אמיתי.)
+היום: `StatusBarAccessibilityService` + `SYSTEM_ALERT_WINDOW` מציירים שכבה מעל SystemUI של היצרן. (`apps/SystemUI/` בריפו הוא עותק של FutureUI עם החבילה `com.android.sistemui` ולא SystemUI אמיתי.)
 
 **שתי דרכים, וממליץ על (1):**
 1. **FutureUI כ-SystemUI עצמאי:** מוחקים את `SystemUI` מ-`PRODUCT_PACKAGES`, ומשנים ב-overlay של framework את `config_systemUIServiceComponent` ל-`com.future.futureui/.SystemUIService`. FutureUI מקבל `STATUS_BAR_SERVICE`, `STATUS_BAR`, `BIND_NOTIFICATION_LISTENER` (במקום accessibility), ו-`INTERNAL_SYSTEM_WINDOW` כדי להוסיף חלונות `TYPE_STATUS_BAR` / `TYPE_NOTIFICATION_SHADE`, ונרשם דרך `IStatusBarService.registerStatusBar()`.
@@ -105,7 +105,7 @@ vendor/futureos/
 - מגדירים ב-overlay את `config_recentsComponentName` לרכיב שלנו, או מבטלים recents.
 
 ### 3ד. מה משתנה ב-root / Terminal / Settings
-`SharedKeypadNav/.../root/RootShell.kt` מריץ היום `su`. **במערכת סגורה אין `su`** (user build). כל קריאה מוחלפת ב-API של המערכת:
+`apps/SharedKeypadNav/.../root/RootShell.kt` מריץ היום `su`. **במערכת סגורה אין `su`** (user build). כל קריאה מוחלפת ב-API של המערכת:
 
 | איפה | היום (root) | במערכת |
 |---|---|---|
@@ -119,7 +119,7 @@ vendor/futureos/
 | Terminal `ShellSession` | `su -c` | **מצב משתמש:** `sh` רגיל עם UID של האפליקציה. **מצב מפתח:** מבוטל ב-user build. אפשר להשאיר אותו רק ב-userdebug, מאחורי דגל `ro.debuggable` |
 
 - `RootShell` נשאר רק ל-fallback בבניית `eng`/`userdebug`, וב-user build מחזיר כישלון במקום לנסות `su`.
-- מוסיפים כלל ל-`security-check.py`: אין `"su"` ואין `Runtime.exec` ב-user build.
+- מוסיפים כלל ל-`security/security-check.py`: אין `"su"` ואין `Runtime.exec` ב-user build.
 - **SELinux:** האפליקציות רצות ב-`platform_app` / `priv_app`. גישה לקבצי sysfs (תאורת מקלדת, פלאש, IR) דורשת כללי `sepolicy` ב-`vendor/futureos/sepolicy`. שום דבר לא רץ ב-permissive.
 
 ### 3ה. ניקוי

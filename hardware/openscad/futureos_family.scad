@@ -294,7 +294,7 @@ FLANGE_T   = 0.6;
 USB_Z    = -(FRONT_T + FLANGE_T + 0.4 + 0.6) - 3.2 / 2;
 
 LATIN  = ["", "ABC", "DEF", "GHI", "JKL", "MNO", "PQRS", "TUV", "WXYZ"];
-// התקן הישראלי, זהה ל-T9 של המערכת (SharedKeypadNav/t9/T9DigitMap.kt). אותיות סופיות לא מודפסות
+// התקן הישראלי, זהה ל-T9 של המערכת (apps/SharedKeypadNav/t9/T9DigitMap.kt). אותיות סופיות לא מודפסות
 HEBREW = ["", "דהו", "אבג", "מנ", "יכל", "זחט", "רשת", "צק", "סעפ"];
 
 function kp_x0(ks) = min([for (k = ks) k[0] - k[2] / 2]);

@@ -1,9 +1,9 @@
 *.db filter=lfs diff=lfs merge=lfs -text
-Assistant/app/src/main/assets/*.bin filter=lfs diff=lfs merge=lfs -text
+apps/Assistant/app/src/main/assets/*.bin filter=lfs diff=lfs merge=lfs -text
 # סקריפטי shell תמיד עם LF: עם CRLF (ש-Git ממיר ב-Windows) bash נכשל על תו ה-CR.
 *.sh text eol=lf
 
 # מאגר הנוזקות החתום: הבתים חייבים להישאר זהים לחתימה (בלי המרת CRLF)
 security/malware-db/*.tsv -text
 security/malware-db/*.sig -text
-*/app/src/main/assets/stalkerware.tsv -text
+apps/*/app/src/main/assets/stalkerware.tsv -text

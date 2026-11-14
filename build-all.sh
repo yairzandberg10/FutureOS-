@@ -7,7 +7,7 @@
 # החזיקה רשימה של 25 שמות, ובזמן שהריפו גדל ל-28 אפליקציות היא פספסה את
 # Flashlight, SystemUI ואפליקציה נוספת בשקט - בדיוק אותה תקלה שההערה כאן התלוננה
 # עליה קודם לגבי DEVICE_SETUP.md §5/§6 (שתי לולאות שכל אחת פספסה 4
-# אפליקציות). כל תיקייה ברמה העליונה שיש בה settings.gradle.kts היא
+# אפליקציות). כל תיקייה תחת apps/ שיש בה settings.gradle.kts היא
 # פרויקט Gradle עצמאי, וזה הקריטריון - כך שהוספת אפליקציה חדשה לריפו
 # מכניסה אותה לכאן אוטומטית ואי אפשר שהרשימה תתיישן שוב.
 #
@@ -27,13 +27,13 @@ fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# גילוי האפליקציות: כל תיקייה ברמה העליונה שהיא פרויקט Gradle עצמאי.
+# גילוי האפליקציות: כל תיקייה תחת apps/ שהיא פרויקט Gradle עצמאי.
 # SharedKeypadNav אינו נכלל כי הוא ספריית com.android.library ללא
 # settings.gradle.kts משלו - הוא נבנה כתלות של כל אפליקציה.
 APPS=()
 while IFS= read -r settings; do
     APPS+=("$(basename "$(dirname "$settings")")")
-done < <(find "$SCRIPT_DIR" -maxdepth 2 -mindepth 2 -name settings.gradle.kts | sort)
+done < <(find "$SCRIPT_DIR/apps" -maxdepth 2 -mindepth 2 -name settings.gradle.kts | sort)
 
 if [[ ${#APPS[@]} -eq 0 ]]; then
     echo "!! לא נמצאה אף אפליקציה - האם הסקריפט רץ מתוך הריפו?" >&2
@@ -71,7 +71,7 @@ for app in "${APPS[@]}"; do
     # זו הגרסה שרצה על המכשיר (R8, לא debuggable, חתומה במפתח ה-debug כשאין
     # keystore.properties - ר' app/build.gradle.kts).
     if [[ "$INSTALL" == true ]]; then TASK=assembleRelease; VARIANT=release; else TASK=assembleDebug; VARIANT=debug; fi
-    (cd "$SCRIPT_DIR/$app" && ./gradlew "$TASK")
+    (cd "$SCRIPT_DIR/apps/$app" && ./gradlew "$TASK")
     if [[ $? -ne 0 ]]; then
         echo "!! $app נכשל ב-$TASK"
         FAILED+=("$app")
@@ -80,12 +80,12 @@ for app in "${APPS[@]}"; do
     SUCCEEDED+=("$app")
 
     if [[ "$INSTALL" == true ]]; then
-        apk="$SCRIPT_DIR/$app/app/build/outputs/apk/$VARIANT/app-$VARIANT.apk"
+        apk="$SCRIPT_DIR/apps/$app/app/build/outputs/apk/$VARIANT/app-$VARIANT.apk"
         if [[ -f "$apk" ]]; then
             if "$ADB" install -r "$apk"; then
                 # קומפילציה מראש: אחרי adb install ה-APK רץ בלי קומפילציה בכלל
                 # (run-from-apk) עד ה-dexopt של הלילה.
-                pkg=$(sed -n 's/.*applicationId *= *"\([^"]*\)".*/\1/p' "$SCRIPT_DIR/$app/app/build.gradle.kts" | head -1)
+                pkg=$(sed -n 's/.*applicationId *= *"\([^"]*\)".*/\1/p' "$SCRIPT_DIR/apps/$app/app/build.gradle.kts" | head -1)
                 [[ -n "$pkg" ]] && "$ADB" shell cmd package compile -m speed -f "$pkg"
             else
                 FAILED+=("$app (install)")

@@ -130,11 +130,11 @@
 
 | אפליקציה | קובץ | מה לא עובד |
 |-|-|-|
-| מחשבון | `Calculator/.../ui/CalculatorScreen.kt` | `*` = C, `*` ארוך = נקודה עשרונית, `#` = אחוז, `#` ארוך = מצב מדעי. **אומת במכשיר:** `*` ארוך פותח את מרכז הבקרה, ו-`#` ארוך פותח את מרכז ההתראות |
-| טלפון | `dialer/.../MainActivity.kt` | כנראה אי אפשר להקליד `*` ו-`#` במספר. זה קריטי לקודי USSD (`*100#`) ולתפריטים קוליים. לא אומת עדיין במכשיר |
-| מצלמה | `Camera/.../ui/CameraScreen.kt` | קיצורי `*`/`#` |
-| קבצים | `Files/.../ui/FilesScreen.kt` | קיצורי `*`/`#` |
-| ניווט | `Navigation/.../ui/map/NavMapView.kt` | קיצורי `*`/`#` במפה |
+| מחשבון | `apps/Calculator/.../ui/CalculatorScreen.kt` | `*` = C, `*` ארוך = נקודה עשרונית, `#` = אחוז, `#` ארוך = מצב מדעי. **אומת במכשיר:** `*` ארוך פותח את מרכז הבקרה, ו-`#` ארוך פותח את מרכז ההתראות |
+| טלפון | `apps/Dialer/.../MainActivity.kt` | כנראה אי אפשר להקליד `*` ו-`#` במספר. זה קריטי לקודי USSD (`*100#`) ולתפריטים קוליים. לא אומת עדיין במכשיר |
+| מצלמה | `apps/Camera/.../ui/CameraScreen.kt` | קיצורי `*`/`#` |
+| קבצים | `apps/Files/.../ui/FilesScreen.kt` | קיצורי `*`/`#` |
+| ניווט | `apps/Navigation/.../ui/map/NavMapView.kt` | קיצורי `*`/`#` במפה |
 | כלים | `QuickFinanceCalculatorScreen`, `RandomNumberScreen`, `TipSplitCalculatorScreen`, `UnitConverterScreen` | קיצורי `*`/`#` |
 
 **סטטוס (עדכון מסשן "FutureOS apps fixes", ענף `fixes-oct1`, עדיין לא אומת במכשיר):**
@@ -158,7 +158,7 @@ maximum -13.0 is less than minimum 0.0.
 - **אפליקציית הבית של ברירת המחדל היא `bitpit.launcher`**, לא FutureLauncher. כשהתהליך של FutureLauncher מת (למשל בהתקנה מחדש), המשתמש נוחת בלאנצ'ר צד שלישי.
 
 ### 2.4 לאנצ'ר: האייקון לא מתאים לשם (אייקון "תקוע" במשבצת)
-**הסיבה** ב-`FutureLauncher/.../ui/LauncherComponents.kt`, בפונקציה `rememberAppIcon`:
+**הסיבה** ב-`apps/FutureLauncher/.../ui/LauncherComponents.kt`, בפונקציה `rememberAppIcon`:
 - היא משתמשת ב-`produceState(initialValue = AppIconCache.peek(packageName), packageName)`.
 - ב-`produceState` רק ה-producer מתחיל מחדש כשהמפתח משתנה. ה-state עצמו נשמר ב-`remember` בלי מפתח, ולכן הוא שומר את הערך הקודם.
 - ה-producer טוען אייקון רק `if (value == null)`. כשמשבצת שהציגה אפליקציה A מציגה עכשיו אפליקציה B, הערך הוא עדיין האייקון של A, הוא לא null, ולכן האייקון של B לא נטען אף פעם.

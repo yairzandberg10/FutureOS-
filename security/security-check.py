@@ -31,7 +31,7 @@ import re
 import sys
 import xml.etree.ElementTree as ET
 
-ROOT = pathlib.Path(__file__).resolve().parent
+ROOT = pathlib.Path(__file__).resolve().parent.parent  # repo root; this file lives in security/
 ANDROID = "{http://schemas.android.com/apk/res/android}"
 SKIP_DIRS = {"build", ".gradle", "node_modules", ".git", "lib", "output"}
 

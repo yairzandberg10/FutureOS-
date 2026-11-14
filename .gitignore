@@ -5,7 +5,7 @@
 .gradle/
 .kotlin/
 **/build/
-/*/captures/
+/apps/*/captures/
 .externalNativeBuild/
 .cxx/
 local.properties
@@ -24,13 +24,13 @@ local.properties
 # and that file grows to hundreds of MB mid-write during a
 # build_library.py run - so a `git add -A` while the DB was being built
 # would have staged it.
-Sfarim/tools/output/sefaria.db*
-Sfarim/tools/output/sefaria_db_parts/
+apps/Sfarim/tools/output/sefaria.db*
+apps/Sfarim/tools/output/sefaria_db_parts/
 
 # מטמון ההורדות של build_library.py (תוכן עניינים, books.json ורשומות
 # אינדקס של ספריא - כ-900 קבצים, עשרות MB). נטען מחדש מהרשת בכל מכונה,
 # ובלי השורה הזו `git add -A` של סשן אחר גורף אותו לתוך המאגר.
-Sfarim/tools/output/_cache/
+apps/Sfarim/tools/output/_cache/
 
 # קבצי crash dump של JVM (hs_err_pid*.log) - נוצרים אוטומטית כשתהליך
 # Gradle/Kotlin daemon קורס, לא חלק מהפרויקט ולא אמורים להיכנס ל-git.
@@ -41,7 +41,7 @@ keystore.properties
 *.jks
 *.keystore
 
-# קונפיגורציית Firebase לפרויקט הפרטי (ר' Navigation/firebase/README.md) -
+# קונפיגורציית Firebase לפרויקט הפרטי (ר' apps/Navigation/firebase/README.md) -
 # מזהי פרויקט ומפתחות לקוח, לא נכנסים למאגר. בלי הקובץ הזה האפליקציה
 # עובדת בדיוק כמו קודם, ישירות מול השירותים החיצוניים.
 google-services.json
@@ -50,10 +50,10 @@ firebase-debug.log
 .firebase/
 
 # תלויות Node של ה-Cloud Functions ותוצרי הקומפילציה שלהן
-Navigation/firebase/functions/node_modules/
-Navigation/firebase/functions/lib/
-Messages/firebase/functions/node_modules/
-Messages/firebase/functions/lib/
+apps/Navigation/firebase/functions/node_modules/
+apps/Navigation/firebase/functions/lib/
+apps/Messages/firebase/functions/node_modules/
+apps/Messages/firebase/functions/lib/
 replay_pid*.log
 
 # APK-ים מוכנים להתקנה (נבנים מקומית, גדולים מדי ל-git)

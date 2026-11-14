@@ -1,14 +1,14 @@
 # הנחיות לעבודת AI על FutureOS
 
 מסמך לכל עוזר AI (Claude, Codex, Cursor, Copilot וכו') שעובד על הפרויקט. לקרוא לפני כל שינוי.
-המקורות המפורטים: `CLAUDE.md`, `README.md`, `SharedKeypadNav/README.md`, `.claude/coordination/FIXES-LESSONS.md`.
+המקורות המפורטים: `CLAUDE.md`, `README.md`, `apps/SharedKeypadNav/README.md`, `.claude/coordination/FIXES-LESSONS.md`.
 
 ---
 
 ## 1. מה זה הפרויקט
 - FutureOS היא מערכת מבוססת Android 12 (SDK 31, minSdk 31) לטלפון **מקשים בלבד**: Qin F22 Pro.
 - מסך **640×960 פיקסלים**, צפיפות 2.0, עברית ו-RTL.
-- כ-30 אפליקציות, כל אחת פרויקט Android Studio עצמאי בתיקייה משלה (`Clock/`, `dialer/`, `Messages/`...). הטבלה המלאה ב-`README.md`.
+- כ-30 אפליקציות, כל אחת פרויקט Android Studio עצמאי בתיקייה משלה (`apps/Clock/`, `apps/Dialer/`, `apps/Messages/`...). הטבלה המלאה ב-`README.md`.
 - `FutureUI` הוא ה-System UI (שורת מצב, מרכז בקרה, התראות) כ-`AccessibilityService` overlays. `SystemUI` הוא מימוש מקביל שלא מותקן במכשיר - לא להפעיל את שניהם יחד.
 - `SharedKeypadNav` היא הספרייה המשותפת שכל האפליקציות תלויות בה: ניווט D-pad, מיפוי T9 וה-design system.
 
@@ -32,8 +32,8 @@
 - minSdk=31 ו-lint לא תופס APIs חדשים יותר (למשל `readNBytes(int)` הוא API 33 והפיל את Files). לבדוק API level לכל קריאה חדשה.
 - שינוי ב-`SharedKeypadNav` משפיע על **כל** האפליקציות - לא לשנות בלי אישור המשתמש.
 - לא להעביר תיקיית אפליקציה או את `SharedKeypadNav` ממקומם (ה-`settings.gradle.kts` מפנה אליהם בנתיב יחסי).
-- לא להכניס לגיט: `keystore.properties`, `local.properties`, `google-services.json`, `Sfarim/tools/output/sefaria.db`.
-- אחרי שינוי ב-Manifest, receivers, services, root או הצפנה - להריץ `python security-check.py`.
+- לא להכניס לגיט: `keystore.properties`, `local.properties`, `google-services.json`, `apps/Sfarim/tools/output/sefaria.db`.
+- אחרי שינוי ב-Manifest, receivers, services, root או הצפנה - להריץ `python security/security-check.py`.
 
 ## 5. בנייה והתקנה
 - **לא לבנות ולא להתקין על הטלפון בלי בקשה מפורשת של המשתמש.** (גובר על ההוראה הישנה ב-`CLAUDE.md` להתקין אוטומטית.)

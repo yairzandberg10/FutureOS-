@@ -174,7 +174,7 @@ npx wrangler deploy
 ```bash
 node scripts/update-keys.mjs
 ```
-הפרטי: `npx wrangler secret put UPDATE_SIGNING_KEY` (ולפיתוח: `.dev.vars`). הציבורי: `future.update.pubkey=...` ב-`Settings/local.properties`. בלי שניהם מסך העדכונים מציג "שרת העדכונים לא מוגדר".
+הפרטי: `npx wrangler secret put UPDATE_SIGNING_KEY` (ולפיתוח: `.dev.vars`). הציבורי: `future.update.pubkey=...` ב-`apps/Settings/local.properties`. בלי שניהם מסך העדכונים מציג "שרת העדכונים לא מוגדר".
 
 ## דוחות קריסה
 

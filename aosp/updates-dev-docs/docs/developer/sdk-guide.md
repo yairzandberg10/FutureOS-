@@ -1,9 +1,9 @@
 # מדריך למפתח: לבנות אפליקציה ל-FutureOS (סעיפים 841, 945, 946, 952, 953, 954, 998)
 
-סטטוס: טיוטה. מבוסס על `CLAUDE.md`, `SharedKeypadNav/README.md` ו-`docs/aosp-port-plan.md`. אין "SDK" נפרד: FutureOS הוא Android 12 (SDK 31), ו"ה-SDK" הוא Android SDK רגיל + ספריית `SharedKeypadNav`.
+סטטוס: טיוטה. מבוסס על `CLAUDE.md`, `apps/SharedKeypadNav/README.md` ו-`docs/aosp-port-plan.md`. אין "SDK" נפרד: FutureOS הוא Android 12 (SDK 31), ו"ה-SDK" הוא Android SDK רגיל + ספריית `SharedKeypadNav`.
 
 ## 1. מה צריך
-- Android SDK 31 (compile/target), JDK 17. אפליקציות Fitness, Music, Navigation, notes ו-Tasks דורשות JDK 21 (ר' `DEVICE_SETUP.md`).
+- Android SDK 31 (compile/target), JDK 17. אפליקציות Fitness, Music, Navigation, notes ו-Tasks דורשות JDK 21 (ר' `docs/DEVICE_SETUP.md`).
 - הספרייה `SharedKeypadNav` (`com.future.sharednav`): טוקנים, רכיבים וניווט במקשים. כל האפליקציות תלויות בה, ואסור להמציא צבע, רדיוס, גודל גופן או התנהגות פוקוס שכבר קיימים בה.
 - מסך 640x960 בלבד, מקשים בלבד (`KeyEvent.KEYCODE_DPAD_*`, `KEYCODE_0..9`, `*`, `#`). בלי מגע.
 - אייקוני אפליקציות לא משתנים.

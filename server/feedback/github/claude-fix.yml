@@ -3,7 +3,7 @@
 # השרת מוסיף את ה-label רק אחרי אישור ידני בדשבורד (POST /admin/clusters/:id/decision {"state":"deep"}),
 # לעולם לא אוטומטית מהמיון: טקסט ה-issue מגיע ממכשירים אנונימיים.
 # Claude לא ממזג: branch protection על main בריפו הקוד דורש review של המשתמש.
-# ה-actions נעוצים ל-SHA של commit (תג אפשר להזיז בשקט). security-check.py בודק גם את הקובץ הזה.
+# ה-actions נעוצים ל-SHA של commit (תג אפשר להזיז בשקט). security/security-check.py בודק גם את הקובץ הזה.
 name: claude-fix
 on:
   issues:

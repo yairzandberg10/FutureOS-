@@ -15,7 +15,7 @@ The physical device has no touchscreen, so this isn't an on-screen keyboard — 
 
 The IME's input view is not a keyboard — the keys are physical — it is a status/feedback panel, built in code in `KeyboardService.onCreateInputView`. It has four states, one per mode the user can be in: typing and prediction, the punctuation grid, the language list, and voice transcription. Each one is a title rail, a content area, and a key legend along the bottom; the legend is the only place the key bindings above are ever shown, since there is no on-screen keyboard to read them off.
 
-The panel is drawn from the design in [`design/keyboard-panel`](../design/keyboard-panel) — `Panel.dc.html` is the four states and `Tokens.dc.html` is the measurement and color table. Those values are in device pixels for the 640×960 screen at density 2.0, so every `dp` in the code is half the value in the design.
+The panel is drawn from the design in [`design/keyboard-panel`](../../design/keyboard-panel) — `Panel.dc.html` is the four states and `Tokens.dc.html` is the measurement and color table. Those values are in device pixels for the 640×960 screen at density 2.0, so every `dp` in the code is half the value in the design.
 
 Colors follow the system theme (`ThemeClient`), including the user's accent color. Because the accent defaults to white, the text on a selected item is derived from the accent's luminance rather than fixed (see `KeyboardPalette`), and a near-invisible accent (white on the light theme) falls back to the theme's ink color — otherwise the selected candidate would be white on white.
 

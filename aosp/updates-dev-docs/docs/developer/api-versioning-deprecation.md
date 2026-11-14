@@ -7,7 +7,7 @@ FutureOS הוא Android 12, כך ש-API של פריימוורק הוא של Andr
 
 | ממשק | מי מספק | מי צורך |
 |---|---|---|
-| ספריית SharedKeypadNav (מחלקות, טוקנים, רכיבים) | `SharedKeypadNav/` | כל האפליקציות |
+| ספריית SharedKeypadNav (מחלקות, טוקנים, רכיבים) | `apps/SharedKeypadNav/` | כל האפליקציות |
 | ContentProvider ו-Intents בין אפליקציות, כולל ההרשאה `com.future.futureui.permission.SYSTEM_SETTINGS` | FutureUI | Settings, Launcher |
 | מאפייני `ro.futureos.*` | ה-overlay | Settings (מסך מידע), FutureUpdater |
 | פורמט manifest של ה-OTA | שרת עדכונים | FutureUpdater (update-feedback-design סעיף 2) |

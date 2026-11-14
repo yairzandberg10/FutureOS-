@@ -34,9 +34,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      # ר' security-check.py: רכיבים מיוצאים בלי הרשאה, סודות, cleartext, פקודות root
-      - name: Run security-check.py
-        run: python3 security-check.py
+      # ר' security/security-check.py: רכיבים מיוצאים בלי הרשאה, סודות, cleartext, פקודות root
+      - name: Run security/security-check.py
+        run: python3 security/security-check.py
 
   discover-apps:
     name: Discover apps
@@ -45,15 +45,15 @@ jobs:
       apps: ${{ steps.find.outputs.apps }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      # כל תיקייה ברמה העליונה שיש בה settings.gradle.kts היא פרויקט
+      # כל תיקייה תחת apps/ שיש בה settings.gradle.kts היא פרויקט
       # Gradle עצמאי, כלומר אפליקציה. SharedKeypadNav נופל מהרשימה
       # בצדק לפי אותו קריטריון - הוא com.android.library בלי
       # settings.gradle.kts משלו, ויש לו job נפרד למטה.
       - id: find
         name: Find every standalone Gradle project
         run: |
-          apps=$(find . -mindepth 2 -maxdepth 2 -name settings.gradle.kts -printf '%h\n' \
-                 | sed 's|^\./||' | sort | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          apps=$(find apps -mindepth 2 -maxdepth 2 -name settings.gradle.kts -printf '%h\n' \
+                 | sed 's|^apps/||' | sort | jq -R -s -c 'split("\n") | map(select(length > 0))')
           echo "apps=$apps" >> "$GITHUB_OUTPUT"
           echo "Discovered: $apps"
       - name: Fail if nothing was discovered
@@ -75,10 +75,10 @@ jobs:
           distribution: temurin
           java-version: "21"
       - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
-      # אין gradlew משלו (ר' SharedKeypadNav/README.md) - נבנה/נבדק דרך
+      # אין gradlew משלו (ר' apps/SharedKeypadNav/README.md) - נבנה/נבדק דרך
       # אחד הצרכנים שלו (Terminal, הקטן ביותר).
       - name: Run SharedKeypadNav unit tests via Terminal
-        working-directory: Terminal
+        working-directory: apps/Terminal
         run: ./gradlew :sharedkeypadnav:testDebugUnitTest --console=plain
 
   build-app:
@@ -97,8 +97,8 @@ jobs:
           java-version: "21"
       - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
       - name: Assemble debug
-        working-directory: ${{ matrix.app }}
+        working-directory: apps/${{ matrix.app }}
         run: ./gradlew assembleDebug --console=plain
       - name: Run unit tests (if any)
-        working-directory: ${{ matrix.app }}
+        working-directory: apps/${{ matrix.app }}
         run: ./gradlew testDebugUnitTest --console=plain

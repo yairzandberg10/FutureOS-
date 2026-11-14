@@ -24,3 +24,8 @@
 - התיקייה לעבודה היא `FutureOS--main` (שם `main` פתוח). לפני שמתחילים: `git pull --rebase origin main`, כדי לא לדרוס עבודה של צ'אט אחר.
 - אם הסשן נפתח בכל זאת על ענף אחר או ב-worktree, בסוף המשימה ממזגים אותו ל-`main`, דוחפים, ומוחקים את הענף, גם מקומית וגם ב-GitHub.
 - צריך לשמור משהו בצד? commit זמני על `main` שאחר כך מתקנים, לא ענף ולא stash.
+
+## מבנה הריפו
+- כל האפליקציות (וגם המודול המשותף `SharedKeypadNav`) נמצאות ב-`apps/<App>/`, למשל `apps/Settings`, `apps/Notes`, `apps/Dialer`. בונים מתוך התיקייה של האפליקציה: `cd apps/<App> && ./gradlew installRelease`.
+- תיעוד ב-`docs/` (DEVICE_SETUP, AI-GUIDELINES, QA-REPORT), שיווק ב-`marketing/`, בדיקת האבטחה ב-`security/security-check.py` (מריצים מהשורש: `python security/security-check.py`).
+- בשורש נשארים רק README, CLAUDE, DESIGN, PRODUCT, CHANGELOG ו-build-all.sh. לא ליצור תיקיות אפליקציה חדשות בשורש, ולא שמות בעברית בתוך הריפו (Gradle נכשל בנתיב לא-ASCII ב-Windows).

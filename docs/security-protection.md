@@ -1,7 +1,7 @@
 # FutureOS protection against attacks: design and the AOSP move
 
 Status: running on the QA device, a rooted Android 12 phone, since 2026-11-13.
-Code lives in `FutureUI/.../security/`. The UI is in Settings › Security.
+Code lives in `apps/FutureUI/.../security/`. The UI is in Settings › Security.
 
 ## What runs where
 

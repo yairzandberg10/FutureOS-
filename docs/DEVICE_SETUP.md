@@ -46,7 +46,7 @@ adb devices
 
 ## 5. בניית כל האפליקציות
 
-כל אפליקציה היא פרויקט Gradle עצמאי בתיקייה משלה. **כל 30 האפליקציות** תלויות במודול המשותף `SharedKeypadNav/` דרך נתיב יחסי (D-pad focus, T9, ומאז איחוד מערכת העיצוב — גם `FutureTheme`/`ThemeClient` המשותפים) — **אל תעביר תיקיית אפליקציה בודדת החוצה מהריפו בלי שאר התיקיות ובלי `SharedKeypadNav/`**, הבנייה תיכשל.
+כל אפליקציה היא פרויקט Gradle עצמאי בתיקייה משלה. **כל 30 האפליקציות** תלויות במודול המשותף `apps/SharedKeypadNav/` דרך נתיב יחסי (D-pad focus, T9, ומאז איחוד מערכת העיצוב — גם `FutureTheme`/`ThemeClient` המשותפים) — **אל תעביר תיקיית אפליקציה בודדת החוצה מהריפו בלי שאר התיקיות ובלי `apps/SharedKeypadNav/`**, הבנייה תיכשל.
 
 מה-root של הריפו, יש סקריפט אחד (`build-all.sh`) שמכסה את כל 30 האפליקציות. הוא מגלה אותן מהדיסק - כל תיקייה ברמה העליונה שיש בה `settings.gradle.kts` - ולא מחזיק רשימת שמות קשיחה, כך שאפליקציה חדשה נכנסת אליו אוטומטית ואי אפשר שהרשימה תתיישן (מה שקרה בעבר: רשימה קשיחה של 25 שמות פספסה בשקט את `Flashlight`, `SystemUI` ואפליקציה נוספת):
 
@@ -54,7 +54,7 @@ adb devices
 ./build-all.sh              # assembleDebug בכל 30 האפליקציות, אחת אחרי השנייה
 ```
 
-כל APK יימצא ב-`<App>/app/build/outputs/apk/debug/app-debug.apk`. הסקריפט בונה אפליקציה-אחר-אפליקציה בכוונה (לא במקביל) - בנייה מקבילית של כמה אפליקציות שכולן תלויות ב-`SharedKeypadNav/` עלולה להיתקל בנעילת קובץ על ה-`build/` המשותף שלו (ר' `CHANGELOG.md`).
+כל APK יימצא ב-`apps/<App>/app/build/outputs/apk/debug/app-debug.apk`. הסקריפט בונה אפליקציה-אחר-אפליקציה בכוונה (לא במקביל) - בנייה מקבילית של כמה אפליקציות שכולן תלויות ב-`apps/SharedKeypadNav/` עלולה להיתקל בנעילת קובץ על ה-`build/` המשותף שלו (ר' `CHANGELOG.md`).
 
 ## 6. התקנת כל ה-APK-ים
 
@@ -66,14 +66,14 @@ adb devices
 
 ## 7. מאגר הטקסטים של Sfarim (sefaria.db, ~1.55GB)
 
-הקובץ לא נכנס ל-git (מעל 100MB, ונבנה מחדש מהמקור דרך `Sfarim/tools/build_library.py` — ר' `Sfarim/README.md`), אבל אם כבר בנית אותו הוא קיים ב-`Sfarim/tools/output/sefaria.db`. יש לדחוף אותו למכשיר בנפרד (USB, לא Wi-Fi — כאמור אין Wi-Fi ביעד):
+הקובץ לא נכנס ל-git (מעל 100MB, ונבנה מחדש מהמקור דרך `apps/Sfarim/tools/build_library.py` — ר' `apps/Sfarim/README.md`), אבל אם כבר בנית אותו הוא קיים ב-`apps/Sfarim/tools/output/sefaria.db`. יש לדחוף אותו למכשיר בנפרד (USB, לא Wi-Fi — כאמור אין Wi-Fi ביעד):
 
 ```bash
 adb shell mkdir -p /sdcard/Android/data/com.future.sfarim/files
-adb push "Sfarim/tools/output/sefaria.db" /sdcard/Android/data/com.future.sfarim/files/sefaria.db
+adb push "apps/Sfarim/tools/output/sefaria.db" /sdcard/Android/data/com.future.sfarim/files/sefaria.db
 ```
 
-> ודאי מול הקוד (`Sfarim/app/src/main/java/.../LibraryDatabase.kt` או שקול) מה בדיוק הנתיב שהאפליקציה מצפה לו על המכשיר — אם הוא שונה מהדוגמה לעיל, דחפי לשם. הפעלה ראשונה ללא ה-DB תיכשל/תיפול לספרייה ריקה.
+> ודאי מול הקוד (`apps/Sfarim/app/src/main/java/.../LibraryDatabase.kt` או שקול) מה בדיוק הנתיב שהאפליקציה מצפה לו על המכשיר — אם הוא שונה מהדוגמה לעיל, דחפי לשם. הפעלה ראשונה ללא ה-DB תיכשל/תיפול לספרייה ריקה.
 
 ## 8. הגדרות ברירת-מחדל והרשאות אחרי ההתקנה
 
