@@ -2,6 +2,8 @@ package com.future.assistant.ui
 
 import com.future.sharednav.theme.FutureAccents
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.toArgb
@@ -124,7 +126,8 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
 
     var state by remember { mutableStateOf(AssistantState.IDLE) }
     var heardText by remember { mutableStateOf("") }
-    var responseText by remember { mutableStateOf("במה אפשר לעזור?") }
+    var responseText by remember { mutableStateOf(IdlePrompt) }
+    var noSpeech by remember { mutableStateOf(false) }
     // גלילת התשובה (כשהיא ארוכה מהכרטיס) בחיצים, ומצב הפוקוס שלה
     val answerScroll = rememberScrollState()
     var answerFocused by remember { mutableStateOf(false) }
@@ -147,6 +150,7 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
 
     fun speak(text: String, spoken: String = text, action: AssistantAction? = null) {
         state = AssistantState.SPEAKING
+        noSpeech = false
         responseText = text
         scope.launch(Dispatchers.IO) {
             piperTts.init()
@@ -169,7 +173,8 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
         heardText = text
         if (text.isBlank()) {
             state = AssistantState.IDLE
-            responseText = "לא זיהיתי דיבור, נסה שוב"
+            noSpeech = true
+            responseText = "לא זוהה דיבור"
         } else {
             // עיבוד הפקודה כולל IO כבד (רשימת אפליקציות, אנשי קשר, מאגר הידע) - לא על ה-main thread
             scope.launch {
@@ -222,6 +227,7 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
         when (state) {
             AssistantState.IDLE -> {
                 heardText = ""
+                noSpeech = false
                 state = AssistantState.LISTENING
                 // ההקלטה מתחילה מיד, גם אם מודל Whisper עוד נטען - התמלול יחכה לו.
                 speech.start(
@@ -270,7 +276,7 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Box(modifier = Modifier.fillMaxSize().background(theme.scrimColor)) {
-            EdgeGlow(
+            BottomGlow(
                 active = state != AssistantState.IDLE,
                 level = level,
                 thinking = state == AssistantState.THINKING,
@@ -285,68 +291,84 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(FutureDimens.spacingMd)
-                        .background(theme.surfaceColor, FutureShapes.xxl)
+                        .background(CardColor, FutureShapes.xxl)
+                        .border(1.dp, Color(0x17FFFFFF), FutureShapes.xxl)
                         .padding(horizontal = FutureDimens.spacingXl, vertical = FutureDimens.spacingLg),
                 ) {
-                    Text(
-                        CommandProcessor.NAME,
-                        color = theme.sectionHeaderColor,
-                        fontSize = type.summary,
-                        fontWeight = FutureTypography.weightMedium,
-                    )
-                    if (heardText.isNotBlank()) {
-                        Text(
-                            heardText,
-                            color = theme.mutedTextColor,
-                            fontSize = type.body,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.padding(top = FutureDimens.spacingSm),
-                        )
-                    }
-                    // תשובה ארוכה נגללת בחיצים במקום להיחתך אחרי ארבע שורות
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = FutureDimens.spacingSm)
-                            .heightIn(max = AnswerMaxHeight)
-                            .verticalScroll(answerScroll)
-                            .then(
-                                if (answerScrollable) {
-                                    Modifier
-                                        .focusable()
-                                        .onFocusChanged { answerFocused = it.isFocused }
-                                        .onKeyEvent { event ->
-                                            if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
-                                            val step = with(density) { AnswerScrollStep.toPx() }
-                                            when (event.key) {
-                                                // בקצה הגלילה החיצים עוברים לפוקוס הבא (כמו בשאר המסך)
-                                                Key.DirectionDown -> if (answerScroll.value < answerScroll.maxValue) {
-                                                    scope.launch { answerScroll.animateScrollBy(step) }
-                                                    true
-                                                } else false
-                                                Key.DirectionUp -> if (answerScroll.value > 0) {
-                                                    scope.launch { answerScroll.animateScrollBy(-step) }
-                                                    true
-                                                } else false
-                                                else -> false
-                                            }
-                                        }
+                    val dim = Color(0x99FFFFFF)
+                    Column(modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp)) {
+                        when (state) {
+                            AssistantState.LISTENING -> Text(
+                                "מקשיב",
+                                color = dim,
+                                fontSize = type.summary,
+                                fontWeight = FutureTypography.weightBold,
+                            )
+                            AssistantState.THINKING -> Column(verticalArrangement = Arrangement.spacedBy(FutureDimens.spacingMd)) {
+                                ShimmerLine(1f)
+                                ShimmerLine(0.72f)
+                            }
+                            else -> {
+                                if (heardText.isNotBlank()) {
+                                    Text(
+                                        heardText,
+                                        color = dim,
+                                        fontSize = type.summary,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.padding(bottom = FutureDimens.spacingSm),
+                                    )
+                                }
+                                // תשובה ארוכה נגללת בחיצים במקום להיחתך אחרי ארבע שורות
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .heightIn(max = AnswerMaxHeight)
+                                        .verticalScroll(answerScroll)
                                         .then(
-                                            if (answerFocused) Modifier.border(FutureDimens.focusBorderControl, theme.readableAccentColor, FutureShapes.md)
-                                            else Modifier,
-                                        )
-                                } else {
-                                    Modifier
-                                },
-                            ),
-                    ) {
-                        Text(
-                            answerText,
-                            color = theme.textColor,
-                            fontSize = type.title,
-                            fontWeight = FutureTypography.weightMedium,
-                        )
+                                            if (answerScrollable) {
+                                                Modifier
+                                                    .focusable()
+                                                    .onFocusChanged { answerFocused = it.isFocused }
+                                                    .onKeyEvent { event ->
+                                                        if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
+                                                        val step = with(density) { AnswerScrollStep.toPx() }
+                                                        when (event.key) {
+                                                            // בקצה הגלילה החיצים עוברים לפוקוס הבא (כמו בשאר המסך)
+                                                            Key.DirectionDown -> if (answerScroll.value < answerScroll.maxValue) {
+                                                                scope.launch { answerScroll.animateScrollBy(step) }
+                                                                true
+                                                            } else false
+                                                            Key.DirectionUp -> if (answerScroll.value > 0) {
+                                                                scope.launch { answerScroll.animateScrollBy(-step) }
+                                                                true
+                                                            } else false
+                                                            else -> false
+                                                        }
+                                                    }
+                                                    .then(
+                                                        if (answerFocused) Modifier.border(FutureDimens.focusBorderControl, theme.readableAccentColor, FutureShapes.md)
+                                                        else Modifier,
+                                                    )
+                                            } else {
+                                                Modifier
+                                            },
+                                        ),
+                                ) {
+                                    val idlePrompt = state == AssistantState.IDLE && !noSpeech && responseText == IdlePrompt && hasPermission && !modelFailed
+                                    Text(
+                                        answerText,
+                                        color = when {
+                                            noSpeech || !hasPermission || modelFailed -> theme.dangerColor
+                                            idlePrompt -> dim
+                                            else -> Color.White
+                                        },
+                                        fontSize = type.title,
+                                        fontWeight = FutureTypography.weightMedium,
+                                    )
+                                }
+                            }
+                        }
                     }
 
                     Row(
@@ -354,16 +376,40 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingMd),
                     ) {
-                        SiriWave(
-                            theme = theme,
-                            level = level,
-                            active = state != AssistantState.IDLE,
-                            thinking = state == AssistantState.THINKING,
-                            modifier = Modifier.weight(1f).height(WaveHeight),
-                        )
+                        when (state) {
+                            AssistantState.LISTENING -> SiriWave(
+                                theme = theme,
+                                level = level,
+                                active = true,
+                                thinking = false,
+                                color = Color.White,
+                                modifier = Modifier.weight(1f).height(WaveHeight),
+                            )
+                            AssistantState.THINKING -> Text(
+                                "מעבד",
+                                fontSize = type.summary,
+                                fontWeight = FutureTypography.weightBold,
+                                style = androidx.compose.ui.text.TextStyle(
+                                    brush = Brush.horizontalGradient(listOf(Color(0xFF4F8CFF), Color(0xFFB59CFF), Color(0xFF3FD0FF))),
+                                ),
+                                modifier = Modifier.weight(1f),
+                            )
+                            else -> Text(
+                                when {
+                                    !hasPermission -> "OK לבקשת הרשאה"
+                                    state == AssistantState.SPEAKING -> "OK להפסקה"
+                                    noSpeech -> "לחץ על מקש האישור כדי לנסות שוב"
+                                    else -> "לחץ על מקש האישור כדי לדבר"
+                                },
+                                color = dim,
+                                fontSize = type.summary,
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
                         // תמיד על המסך (גם בלי הרשאה) - בלעדיו אין פוקוס לתקן את ההרשאה
                         MicButton(
                             state = state,
+                            noSpeech = noSpeech,
                             theme = theme,
                             focusRequester = micFocus,
                             autoFocus = true,
@@ -375,16 +421,6 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
                     }
                     Text(
                         text = "כשהחיבור זמין, קטע אודיו עשוי להישלח לשירות חיצוני לצורך תמלול.",
-                        color = theme.mutedTextColor,
-                        fontSize = type.summary,
-                        modifier = Modifier.padding(top = FutureDimens.spacingSm),
-                    )
-                    Text(
-                        when (state) {
-                            AssistantState.LISTENING -> "OK לסיום"
-                            AssistantState.SPEAKING -> "OK להפסקה"
-                            else -> if (hasPermission) "OK לדיבור" else "OK לבקשת הרשאה"
-                        },
                         color = theme.mutedTextColor,
                         fontSize = type.summary,
                         modifier = Modifier.padding(top = FutureDimens.spacingSm),
@@ -402,7 +438,7 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
  * במנוחה - קו כמעט ישר; בתמלול - נשימה איטית קבועה.
  */
 @Composable
-private fun SiriWave(theme: FutureTheme, level: Float, active: Boolean, thinking: Boolean, modifier: Modifier) {
+private fun SiriWave(theme: FutureTheme, level: Float, active: Boolean, thinking: Boolean, modifier: Modifier, color: Color? = null) {
     var phase by remember { mutableFloatStateOf(0f) }
     // הלולאה רצה מ-LaunchedEffect(Unit), לכן קוראים את הערך העדכני דרך rememberUpdatedState
     val currentActive by rememberUpdatedState(active)
@@ -422,7 +458,7 @@ private fun SiriWave(theme: FutureTheme, level: Float, active: Boolean, thinking
         else -> 0.05f
     }
     val amp by animateFloatAsState(target, FutureMotion.fast(), label = "waveAmp")
-    val accent = theme.readableAccentColor
+    val accent = color ?: theme.readableAccentColor
     Canvas(modifier) {
         val mid = size.height / 2f
         val layers = listOf(Triple(1f, 1f, 2.dp.toPx()), Triple(0.7f, 0.55f, 1.5.dp.toPx()), Triple(0.45f, 0.3f, 1.dp.toPx()))
@@ -448,13 +484,15 @@ private fun SiriWave(theme: FutureTheme, level: Float, active: Boolean, thinking
  * הסכנה בזמן הקלטה), טבעת פוקוס 2dp בצבע הכפתור במרחק 2dp, והגדלה ל-1.02.
  */
 @Composable
-private fun MicButton(state: AssistantState, theme: FutureTheme, focusRequester: FocusRequester, autoFocus: Boolean = false, onClick: () -> Unit) {
+private fun MicButton(state: AssistantState, noSpeech: Boolean, theme: FutureTheme, focusRequester: FocusRequester, autoFocus: Boolean = false, onClick: () -> Unit) {
     val interactionSource = remember { MutableInteractionSource() }
     // הפוקוס על המיקרופון ברגע שהכפתור באמת על המסך. קודם הבקשה נשלחה לפני
     // שהכרטיס (AnimatedVisibility) הופיע, נבלעה, ולא היה פוקוס בכלל.
     var autoFocused by remember { mutableStateOf(false) }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    val fill = if (state == AssistantState.LISTENING) theme.dangerColor else theme.readableAccentColor
+    val live = state == AssistantState.LISTENING
+    val fill = if (live) Color.White else Color(0x14FFFFFF)
+    val ringColor = theme.readableAccentColor
     val ring by animateFloatAsState(if (isFocused) 1f else 0f, FutureMotion.fast(), label = "micRing")
     val scale by animateFloatAsState(if (isFocused) FutureDimens.focusScale else 1f, FutureMotion.focusScaleSpec, label = "micScale")
     Box(
@@ -467,7 +505,7 @@ private fun MicButton(state: AssistantState, theme: FutureTheme, focusRequester:
                 onDrawWithContent {
                     drawOutline(CircleShape.createOutline(size, layoutDirection, this), fill)
                     drawContent()
-                    if (ring > 0f) drawCircle(fill.copy(alpha = ring), radius = size.minDimension / 2f + outset, style = Stroke(stroke))
+                    if (ring > 0f) drawCircle(ringColor.copy(alpha = ring), radius = size.minDimension / 2f + outset, style = Stroke(stroke))
                 }
             }
             .focusRequester(focusRequester)
@@ -480,10 +518,15 @@ private fun MicButton(state: AssistantState, theme: FutureTheme, focusRequester:
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(FutureIcons.Mic, contentDescription = "מיקרופון", tint = FutureContrast.onColor(fill), modifier = Modifier.size(FutureDimens.spacingXl))
+        Icon(
+            when { live -> FutureIcons.Stop; noSpeech -> FutureIcons.MicOff; else -> FutureIcons.Mic },
+            contentDescription = "מיקרופון",
+            tint = if (live) Color.Black else Color.White, modifier = Modifier.size(FutureDimens.spacingXl))
     }
 }
 
+private val CardColor = Color(0xFF1B1C1F)
+private const val IdlePrompt = "שאל כל דבר"
 private val WaveHeight = 56.dp
 private val MicSize = 56.dp
 /** גובה מקסימלי לאזור התשובה - מעבר לו התשובה נגללת. */
@@ -491,68 +534,69 @@ private val AnswerMaxHeight = 160.dp
 /** כמה גוללים בלחיצת חץ אחת. */
 private val AnswerScrollStep = 48.dp
 
+@Composable
+private fun ShimmerLine(widthFraction: Float) {
+    var shift by remember { mutableFloatStateOf(0f) }
+    LaunchedEffect(Unit) {
+        var last = 0L
+        while (true) withFrameNanos { now ->
+            if (last != 0L) shift = (shift + (now - last) / 1_000_000_000f * 0.6f) % 1f
+            last = now
+        }
+    }
+    Canvas(Modifier.fillMaxWidth(widthFraction).height(22.dp)) {
+        val w = size.width
+        val x0 = -w + shift * 2f * w
+        drawRoundRect(
+            brush = Brush.horizontalGradient(
+                listOf(Color(0x264F8CFF), Color(0xB38E6CFF), Color(0x263FD0FF), Color(0x264F8CFF)),
+                startX = x0, endX = x0 + 2f * w,
+            ),
+            cornerRadius = CornerRadius(11.dp.toPx()),
+        )
+    }
+}
+
 /**
- * זוהר צבעוני סביב שולי המסך בזמן הקשבה, תמלול ודיבור: מסגרת של גרדיאנט
- * מעגלי בארבע ההדגשות של הדיזיין סיסטם (ציאן, סגול, כתום, ירוק) שמסתובבת
- * סביב המסך, ועובייה פועם עם עוצמת הקול.
- *
- * התנועה מונעת ידנית מ-withFrameNanos ולא מ-animate*AsState: במכשיר מופעל
- * reduced-motion (קנה מידה 0 לאנימציות), שמבטל אנימציות רגילות - והזוהר
- * חייב להישאר גלוי ובולט גם אז.
+ * זוהר קשת בתחתית המסך (מאחורי הכרטיס): שמונה כתמי צבע שמרחפים לצדדים,
+ * חזקים בזמן הקשבה/עיבוד/דיבור וחלשים במנוחה. התנועה מונעת ידנית מ-withFrameNanos
+ * (reduced-motion מבטל אנימציות רגילות והזוהר חייב להישאר גלוי).
  */
 @Composable
-private fun EdgeGlow(active: Boolean, level: Float, thinking: Boolean, modifier: Modifier) {
-    var rotation by remember { mutableFloatStateOf(0f) }
-    var presence by remember { mutableFloatStateOf(0f) }
-    var pulse by remember { mutableFloatStateOf(0f) }
+private fun BottomGlow(active: Boolean, level: Float, thinking: Boolean, modifier: Modifier) {
+    var time by remember { mutableFloatStateOf(0f) }
+    var presence by remember { mutableFloatStateOf(0.55f) }
     val currentActive by rememberUpdatedState(active)
     val currentLevel by rememberUpdatedState(level)
-    val currentThinking by rememberUpdatedState(thinking)
     LaunchedEffect(Unit) {
         var last = 0L
         while (true) {
             withFrameNanos { now ->
                 val dt = if (last == 0L) 0f else ((now - last) / 1_000_000_000f).coerceAtMost(0.1f)
                 last = now
-                // סיבוב מלא בכ-2.5 שניות בהקשבה, איטי יותר בתמלול.
-                rotation = (rotation + dt * if (currentThinking) 80f else 150f) % 360f
-                // כניסה ויציאה מהירות (~0.25 שנייה) אבל ברורות.
-                val targetPresence = if (currentActive) 1f else 0f
-                presence += (targetPresence - presence) * (dt * 8f).coerceAtMost(1f)
-                // אחרי שהזוהר נעלם - לא כותבים state בכל פריים (אין מה לצייר)
-                if (!currentActive && presence < 0.01f) {
-                    presence = 0f
-                    return@withFrameNanos
-                }
-                // הפעימה עוקבת אחרי עוצמת הקול; בתמלול - נשימה קבועה.
-                val targetPulse = if (currentThinking) 0.35f + 0.25f * sin(rotation / 180f * PI.toFloat() * 2f) else currentLevel
-                pulse += (targetPulse - pulse) * (dt * 14f).coerceAtMost(1f)
+                time += dt * if (currentActive) 1.8f else 0.7f
+                val target = if (currentActive) 1f else 0.55f
+                presence += (target - presence) * (dt * 8f).coerceAtMost(1f)
             }
         }
     }
-    if (presence < 0.01f) return
     val colors = remember {
-        intArrayOf(
-            FutureAccents.Cyan.toArgb(), FutureAccents.Purple.toArgb(),
-            FutureAccents.Orange.toArgb(), FutureAccents.Green.toArgb(), FutureAccents.Cyan.toArgb(),
-        )
+        listOf(0xFFFF3B30, 0xFFFF9500, 0xFFFFD60A, 0xFF30D158, 0xFF00C8FF, 0xFF2F7BFF, 0xFFC04BFF, 0xFFFF3D8B).map { Color(it) }
     }
     Canvas(modifier) {
-        val shader = android.graphics.SweepGradient(size.width / 2f, size.height / 2f, colors, null)
-        shader.setLocalMatrix(android.graphics.Matrix().apply { setRotate(rotation, size.width / 2f, size.height / 2f) })
-        val brush = ShaderBrush(shader)
-        val base = 5.dp.toPx() + pulse * 7.dp.toPx()
-        val corner = CornerRadius(18.dp.toPx())
-        // שלוש שכבות מהדקה והחזקה לרחבה והשקופה - "זוהר" בלי blur, שלא זמין לפני API 31 בכל מקום.
-        listOf(1f to 1f, 2.4f to 0.45f, 4.2f to 0.2f).forEach { (widthMul, alpha) ->
-            val w = base * widthMul
-            drawRoundRect(
-                brush = brush,
-                topLeft = Offset(w / 2f, w / 2f),
-                size = Size(size.width - w, size.height - w),
-                cornerRadius = corner,
-                style = Stroke(width = w),
-                alpha = alpha * presence,
+        val n = colors.size
+        val boost = 1f + currentLevel * 0.35f
+        colors.forEachIndexed { i, c ->
+            val ph = time * (0.5f + 0.07f * i) + i * 1.3f
+            val cx = size.width * (i + 0.5f) / n + sin(ph) * size.width * 0.07f
+            val cy = size.height - 20.dp.toPx() - (sin(ph * 1.3f) * 0.5f + 0.5f) * 40.dp.toPx() * boost
+            val r = size.width * 0.28f * boost
+            drawCircle(
+                brush = Brush.radialGradient(
+                    listOf(c.copy(alpha = 0.55f * presence), Color.Transparent),
+                    center = Offset(cx, cy), radius = r,
+                ),
+                radius = r, center = Offset(cx, cy),
             )
         }
     }
