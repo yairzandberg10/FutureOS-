@@ -276,12 +276,6 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Box(modifier = Modifier.fillMaxSize()) {
-            BottomGlow(
-                active = state != AssistantState.IDLE,
-                level = level,
-                thinking = state == AssistantState.THINKING,
-                modifier = Modifier.fillMaxSize(),
-            )
             AnimatedVisibility(
                 visible = shown,
                 modifier = Modifier.align(Alignment.BottomCenter),
