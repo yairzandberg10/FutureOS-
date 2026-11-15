@@ -503,7 +503,7 @@ private fun MicButton(state: AssistantState, noSpeech: Boolean, theme: FutureThe
     var autoFocused by remember { mutableStateOf(false) }
     val isFocused by interactionSource.collectIsFocusedAsState()
     val live = state == AssistantState.LISTENING
-    val fill = if (live) theme.textColor else theme.textColor.copy(alpha = 0.08f)
+    val fill = if (live) theme.readableAccentColor else theme.textColor.copy(alpha = 0.08f)
     val ringColor = theme.readableAccentColor
     val ring by animateFloatAsState(if (isFocused) 1f else 0f, FutureMotion.fast(), label = "micRing")
     val scale by animateFloatAsState(if (isFocused) FutureDimens.focusScale else 1f, FutureMotion.focusScaleSpec, label = "micScale")
@@ -533,7 +533,7 @@ private fun MicButton(state: AssistantState, noSpeech: Boolean, theme: FutureThe
         Icon(
             when { live -> FutureIcons.Stop; noSpeech -> FutureIcons.MicOff; else -> FutureIcons.Mic },
             contentDescription = "מיקרופון",
-            tint = if (live) theme.surfaceColor else theme.textColor, modifier = Modifier.size(FutureDimens.spacingXl))
+            tint = if (live) Color.White else theme.textColor, modifier = Modifier.size(FutureDimens.spacingXl))
     }
 }
 
