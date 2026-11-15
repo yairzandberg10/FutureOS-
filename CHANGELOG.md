@@ -4,6 +4,10 @@ This repo has no carried-over git history (see root [README](README.md)), so thi
 
 ## Unreleased
 
+### Assistant: ~11,100 more offline commands (2026-11-15)
+
+- Added by Haiku agents, data only (no code change): ~7,000 trivia Q&A (`trivia.tsv`, 26 topics: Israel, Judaism, science, geography, history, tech, sports, arts, food, vehicles, civics and more), ~1,580 Hebrew-English dictionary words, ~240 opposite pairs, ~430 people. Rows were validated and de-duplicated against existing data. Facts were written from model memory and not independently verified.
+
 ### Round of UI fixes from the user's notes (2026-11-13)
 
 - **Focus scroll context** (`SharedKeypadNav/.../focus/FocusScrollContext.kt`): every scrolling list keeps a quarter of the viewport above the focused item (an eighth below), so moving up to the first item also brings the screen title back into view. Provided by `FutureMaterialTheme`, `ScreenScaffold` and `AnimatedScreenHost`.
