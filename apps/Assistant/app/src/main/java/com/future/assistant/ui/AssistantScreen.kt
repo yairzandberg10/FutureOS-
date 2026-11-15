@@ -298,13 +298,19 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
                     val dim = theme.mutedTextColor
                     Column(modifier = Modifier.fillMaxWidth().heightIn(min = 40.dp)) {
                         when (state) {
-                            AssistantState.LISTENING -> Text(
-                                "מקשיב",
-                                color = dim,
-                                fontSize = type.summary,
-                                fontWeight = FutureTypography.weightBold,
-                            )
+                            AssistantState.LISTENING -> Column(verticalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm)) {
+                                Text(
+                                    "מקשיב",
+                                    color = dim,
+                                    fontSize = type.summary,
+                                    fontWeight = FutureTypography.weightBold,
+                                )
+                                BlinkingCaret(theme.textColor)
+                            }
                             AssistantState.THINKING -> Column(verticalArrangement = Arrangement.spacedBy(FutureDimens.spacingMd)) {
+                                if (heardText.isNotBlank()) {
+                                    Text(heardText, color = dim, fontSize = type.summary, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                }
                                 ShimmerLine(1f)
                                 ShimmerLine(0.72f)
                             }
@@ -367,6 +373,14 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
                                         fontWeight = FutureTypography.weightMedium,
                                     )
                                 }
+                                if (noSpeech) {
+                                    Text(
+                                        "לחץ על מקש האישור כדי לנסות שוב",
+                                        color = dim,
+                                        fontSize = type.summary,
+                                        modifier = Modifier.padding(top = FutureDimens.spacingSm),
+                                    )
+                                }
                             }
                         }
                     }
@@ -394,11 +408,12 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
                                 ),
                                 modifier = Modifier.weight(1f),
                             )
-                            else -> Text(
+                            else -> if (noSpeech && hasPermission && !modelFailed) {
+                                Spacer(Modifier.weight(1f))
+                            } else Text(
                                 when {
                                     !hasPermission -> "OK לבקשת הרשאה"
                                     state == AssistantState.SPEAKING -> "OK להפסקה"
-                                    noSpeech -> "לחץ על מקש האישור כדי לנסות שוב"
                                     else -> "לחץ על מקש האישור כדי לדבר"
                                 },
                                 color = dim,
@@ -523,6 +538,24 @@ private fun MicButton(state: AssistantState, noSpeech: Boolean, theme: FutureThe
             contentDescription = "מיקרופון",
             tint = if (live) theme.surfaceColor else theme.textColor, modifier = Modifier.size(FutureDimens.spacingXl))
     }
+}
+
+/** סמן מהבהב בזמן הקשבה, בצבע הטקסט של הערכה (בהיר/כהה). */
+@Composable
+private fun BlinkingCaret(color: Color) {
+    var on by remember { mutableStateOf(true) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(500)
+            on = !on
+        }
+    }
+    Box(
+        Modifier
+            .width(2.dp)
+            .height(24.dp)
+            .background(if (on) color else Color.Transparent, CircleShape),
+    )
 }
 
 private const val IdlePrompt = "שאל כל דבר"
