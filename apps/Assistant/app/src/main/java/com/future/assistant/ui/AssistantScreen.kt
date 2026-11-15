@@ -276,6 +276,12 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Box(modifier = Modifier.fillMaxSize()) {
+            BottomGlow(
+                active = state != AssistantState.IDLE,
+                level = level,
+                thinking = state == AssistantState.THINKING,
+                modifier = Modifier.fillMaxSize(),
+            )
             AnimatedVisibility(
                 visible = shown,
                 modifier = Modifier.align(Alignment.BottomCenter),
@@ -376,7 +382,7 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
                                 level = level,
                                 active = true,
                                 thinking = false,
-                                color = theme.textColor,
+                                color = null,
                                 modifier = Modifier.weight(1f).height(WaveHeight),
                             )
                             AssistantState.THINKING -> Text(
@@ -468,7 +474,7 @@ private fun SiriWave(theme: FutureTheme, level: Float, active: Boolean, thinking
                     atten * amp * scale * (size.height / 2f - stroke)
                 if (i == 0) path.moveTo(x * size.width, y) else path.lineTo(x * size.width, y)
             }
-            drawPath(path, accent.copy(alpha = alpha), style = Stroke(width = stroke, cap = StrokeCap.Round))
+            drawPath(path, brush = Brush.horizontalGradient(listOf(Color(0xFF3FD0FF), Color(0xFF8E6CFF), Color(0xFFFF3D8B))), alpha = alpha, style = Stroke(width = stroke, cap = StrokeCap.Round))
         }
     }
 }
