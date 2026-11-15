@@ -75,6 +75,18 @@ object FutureServer {
     }
 
     /**
+     * POST {baseUrl}/nav/transit עם {from:{lat,lng}, to:{lat,lng}}. מחזיר את JSON
+     * של HERE Public Transit כמו שהוא, לפירוק ב-TransitServerPlanner.
+     */
+    suspend fun transitJson(from: LatLng, to: LatLng): String? {
+        val body = buildJsonObject {
+            put("from", buildJsonObject { put("lat", from.lat); put("lng", from.lon) })
+            put("to", buildJsonObject { put("lat", to.lat); put("lng", to.lon) })
+        }.toString()
+        return post("/nav/transit", body)
+    }
+
+    /**
      * POST {baseUrl}/nav/siri/stop עם {stopId, lineRef?}. מחזיר את גוף ה-XML של
      * SIRI SM כמו שהוא, לפירוק ב-SiriXml.
      */

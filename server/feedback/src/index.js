@@ -4,7 +4,7 @@
 
 import { HttpError, json, errorResponse } from "./util.js";
 import { register, authenticate, submitFeedback, listFeedback, inbox, deleteMe } from "./devices.js";
-import { route, siriStop } from "./nav.js";
+import { route, transit, siriStop } from "./nav.js";
 import { handleAdmin } from "./admin.js";
 import { runTriage } from "./triage.js";
 import { checkUpdates, download, reportEvent } from "./updates.js";
@@ -32,6 +32,8 @@ export async function handle(request, env) {
         return deleteMe(env, device);
       case "POST /v1/nav/route":
         return route(request, env, device);
+      case "POST /v1/nav/transit":
+        return transit(request, env, device);
       case "POST /v1/nav/siri/stop":
         return siriStop(request, env, device);
       case "POST /v1/update/check":

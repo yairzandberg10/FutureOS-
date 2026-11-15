@@ -5,6 +5,7 @@
 import { HttpError, readJson, takeQuota, clientNet, HOUR, DAY } from "./util.js";
 
 const HERE_ROUTES_URL = "https://router.hereapi.com/v8/routes";
+const HERE_TRANSIT_URL = "https://transit.router.hereapi.com/v8/routes";
 const ID_RE = /^[0-9A-Za-z_-]{1,32}$/;
 const SIRI_CACHE_SECONDS = 20;
 
@@ -78,7 +79,41 @@ export async function route(request, env, device) {
   return new Response(text, { headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
 }
 
-/** POST /nav/siri/stop  {stopId, lineRef?} -> XML של SIRI StopMonitoring */
+/**
+ * POST /nav/transit  {from:{lat,lng}, to:{lat,lng}} -> JSON של HERE Public Transit v8.
+ * החישוב קורה כאן, והמכשיר מקבל רק את המסלולים (כמה KB) במקום להוריד את כל נתוני ה-GTFS (~130MB).
+ */
+export async function transit(request, env, device) {
+  if (!env.HERE_API_KEY) throw new HttpError(503, "nav_disabled");
+  const body = await readJson(request, 1024);
+  const { from, to } = body;
+  if (!from || !to || !validLat(from.lat) || !validLng(from.lng) || !validLat(to.lat) || !validLng(to.lng)) {
+    throw new HttpError(400, "bad_coordinates");
+  }
+  if (!(await takeQuota(env.DB, "transit", device.id, Number(env.ROUTE_PER_HOUR || 60), HOUR))) {
+    throw new HttpError(429, "rate_limited");
+  }
+  await abuseLimits(env, request, device, "transit", Number(env.ROUTE_PER_DAY || 200), Number(env.ROUTE_PER_NET_HOUR || 240));
+  await fleetQuota(env, "here");
+
+  const url = new URL(HERE_TRANSIT_URL);
+  url.searchParams.set("origin", `${from.lat},${from.lng}`);
+  url.searchParams.set("destination", `${to.lat},${to.lng}`);
+  url.searchParams.set("return", "intermediate,travelSummary");
+  url.searchParams.set("alternatives", "3");
+  url.searchParams.set("lang", "he");
+  url.searchParams.set("apikey", env.HERE_API_KEY);
+
+  const upstream = await fetch(url.toString());
+  const text = await upstream.text();
+  if (!upstream.ok) {
+    console.warn("here transit failed", upstream.status);
+    throw new HttpError(502, "upstream_failed");
+  }
+  return new Response(text, { headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
+}
+
+/** POST /nav/siri/stop {stopId, lineRef?} -> XML של SIRI StopMonitoring */
 export async function siriStop(request, env, device, cache = globalThis.caches?.default) {
   if (!env.SIRI_BASE_URL || !env.SIRI_API_KEY) throw new HttpError(503, "transit_disabled");
   const body = await readJson(request, 512);

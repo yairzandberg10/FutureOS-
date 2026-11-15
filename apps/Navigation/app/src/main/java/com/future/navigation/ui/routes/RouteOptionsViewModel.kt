@@ -13,6 +13,7 @@ import com.future.navigation.data.gtfs.GtfsImporter
 import com.future.navigation.data.gtfs.ImportPhase
 import com.future.navigation.data.gtfs.TransitItinerary
 import com.future.navigation.data.gtfs.TransitJourneyPlanner
+import com.future.navigation.data.gtfs.TransitServerPlanner
 import com.future.navigation.data.location.LocationHelper
 import com.future.navigation.data.routing.DrivingRoute
 import com.future.navigation.data.routing.RouteLookup
@@ -30,7 +31,8 @@ class RouteOptionsViewModel(
     private val routingRepository: RoutingRepository,
     private val transitJourneyPlanner: TransitJourneyPlanner,
     private val gtfsImporter: GtfsImporter,
-    private val transitRealtimeEnricher: TransitRealtimeEnricher
+    private val transitRealtimeEnricher: TransitRealtimeEnricher,
+    private val transitServerPlanner: TransitServerPlanner = TransitServerPlanner()
 ) : ViewModel() {
 
     private val _loading = MutableStateFlow(false)
@@ -82,16 +84,6 @@ class RouteOptionsViewModel(
             return
         }
 
-        // הורדה גדולה ברשת סלולרית - קודם שואלים (ברירת המחדל: לא להוריד).
-        if (mode == TravelMode.TRANSIT && !allowCellularDownload &&
-            transitDownloadNeeded(origin, destination.location) && NetworkPolicy.isMetered(appContext)
-        ) {
-            pendingSearch = mode to destination
-            _loading.value = false
-            _askCellularDownload.value = true
-            return
-        }
-
         _loading.value = true
         searchJob = viewModelScope.launch {
             try {
@@ -105,9 +97,23 @@ class RouteOptionsViewModel(
                         }
                     }
                     TravelMode.TRANSIT -> {
-                        ensureTransitDataFor(origin, destination.location)
-                        val now = System.currentTimeMillis() / 1000
-                        val results = transitJourneyPlanner.findJourneys(origin, destination.location, now)
+                        // קודם השרת מחשב את המסלול (בלי להוריד נתונים למכשיר). רק אם הוא לא
+                        // זמין חוזרים לייבוא GTFS מקומי, ובו שואלים לפני הורדה ברשת סלולרית.
+                        val serverResults = transitServerPlanner.findJourneys(origin, destination.location)
+                        val results = if (serverResults != null) {
+                            serverResults
+                        } else {
+                            if (!allowCellularDownload && transitDownloadNeeded(origin, destination.location) &&
+                                NetworkPolicy.isMetered(appContext)
+                            ) {
+                                pendingSearch = mode to destination
+                                _askCellularDownload.value = true
+                                return@launch
+                            }
+                            ensureTransitDataFor(origin, destination.location)
+                            val now = System.currentTimeMillis() / 1000
+                            transitJourneyPlanner.findJourneys(origin, destination.location, now)
+                        }
                         // שכבת זמן אמת (SIRI) - "best effort" בעיצוב (ר' TransitRealtimeEnricher),
                         // אף פעם לא זורקת ולא יכולה להפוך תוצאה תקינה לריקה.
                         _itineraries.value = transitRealtimeEnricher.enrich(results)
