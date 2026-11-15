@@ -1,0 +1,564 @@
+## Lcom/android/internal/statusbar/IStatusBar$Default; flags=0x1 super=Ljava/lang/Object;  (classes4.dex)
+   <init>() -> V
+   abortTransient(I, [I) -> V
+   addQsTile(Landroid/content/ComponentName;) -> V
+   animateCollapsePanels() -> V
+   animateExpandNotificationsPanel() -> V
+   animateExpandSettingsPanel(Ljava/lang/String;) -> V
+   appTransitionCancelled(I) -> V
+   appTransitionFinished(I) -> V
+   appTransitionPending(I) -> V
+   appTransitionStarting(I, J, J) -> V
+   asBinder() -> Landroid/os/IBinder;
+   cancelPreloadRecentApps() -> V
+   clickQsTile(Landroid/content/ComponentName;) -> V
+   disable(I, I, I) -> V
+   dismissInattentiveSleepWarning(Z) -> V
+   dismissKeyboardShortcutsMenu() -> V
+   handleSystemKey(I) -> V
+   handleWindowManagerLoggingCommand([Ljava/lang/String;, Landroid/os/ParcelFileDescriptor;) -> V
+   hideAuthenticationDialog() -> V
+   hideRecentApps(Z, Z) -> V
+   hideToast(Ljava/lang/String;, Landroid/os/IBinder;) -> V
+   onBiometricAuthenticated() -> V
+   onBiometricError(I, I, I) -> V
+   onBiometricHelp(I, Ljava/lang/String;) -> V
+   onCameraLaunchGestureDetected(I) -> V
+   onDisplayReady(I) -> V
+   onEmergencyActionLaunchGestureDetected() -> V
+   onProposedRotationChanged(I, Z) -> V
+   onRecentsAnimationStateChanged(Z) -> V
+   onSystemBarAttributesChanged(I, I, [Lcom/android/internal/view/AppearanceRegion;, Z, I, Z) -> V
+   passThroughShellCommand([Ljava/lang/String;, Landroid/os/ParcelFileDescriptor;) -> V
+   preloadRecentApps() -> V
+   remQsTile(Landroid/content/ComponentName;) -> V
+   removeIcon(Ljava/lang/String;) -> V
+   requestWindowMagnificationConnection(Z) -> V
+   runGcForTest() -> V
+   setIcon(Ljava/lang/String;, Lcom/android/internal/statusbar/StatusBarIcon;) -> V
+   setImeWindowStatus(I, Landroid/os/IBinder;, I, I, Z, Z) -> V
+   setNavigationBarLumaSamplingEnabled(I, Z) -> V
+   setTopAppHidesStatusBar(Z) -> V
+   setUdfpsHbmListener(Landroid/hardware/fingerprint/IUdfpsHbmListener;) -> V
+   setWindowState(I, I, I) -> V
+   showAssistDisclosure() -> V
+   showAuthenticationDialog(Landroid/hardware/biometrics/PromptInfo;, Landroid/hardware/biometrics/IBiometricSysuiReceiver;, [I, Z, Z, I, Ljava/lang/String;, J, I) -> V
+   showGlobalActionsMenu() -> V
+   showInattentiveSleepWarning() -> V
+   showPictureInPictureMenu() -> V
+   showPinningEnterExitToast(Z) -> V
+   showPinningEscapeToast() -> V
+   showRecentApps(Z) -> V
+   showScreenPinningRequest(I) -> V
+   showShutdownUi(Z, Ljava/lang/String;) -> V
+   showToast(I, Ljava/lang/String;, Landroid/os/IBinder;, Ljava/lang/CharSequence;, Landroid/os/IBinder;, I, Landroid/app/ITransientNotificationCallback;) -> V
+   showTransient(I, [I) -> V
+   showWirelessChargingAnimation(I) -> V
+   startAssist(Landroid/os/Bundle;) -> V
+   startTracing() -> V
+   stopTracing() -> V
+   suppressAmbientDisplay(Z) -> V
+   toggleKeyboardShortcutsMenu(I) -> V
+   togglePanel() -> V
+   toggleRecentApps() -> V
+   toggleSplitScreen() -> V
+## Lcom/android/internal/statusbar/IStatusBar$Stub$Proxy; flags=0x0 super=Ljava/lang/Object;  (classes4.dex)
+   <init>(Landroid/os/IBinder;) -> V
+   abortTransient(I, [I) -> V
+   addQsTile(Landroid/content/ComponentName;) -> V
+   animateCollapsePanels() -> V
+   animateExpandNotificationsPanel() -> V
+   animateExpandSettingsPanel(Ljava/lang/String;) -> V
+   appTransitionCancelled(I) -> V
+   appTransitionFinished(I) -> V
+   appTransitionPending(I) -> V
+   appTransitionStarting(I, J, J) -> V
+   asBinder() -> Landroid/os/IBinder;
+   cancelPreloadRecentApps() -> V
+   clickQsTile(Landroid/content/ComponentName;) -> V
+   disable(I, I, I) -> V
+   dismissInattentiveSleepWarning(Z) -> V
+   dismissKeyboardShortcutsMenu() -> V
+   getInterfaceDescriptor() -> Ljava/lang/String;
+   handleSystemKey(I) -> V
+   handleWindowManagerLoggingCommand([Ljava/lang/String;, Landroid/os/ParcelFileDescriptor;) -> V
+   hideAuthenticationDialog() -> V
+   hideRecentApps(Z, Z) -> V
+   hideToast(Ljava/lang/String;, Landroid/os/IBinder;) -> V
+   onBiometricAuthenticated() -> V
+   onBiometricError(I, I, I) -> V
+   onBiometricHelp(I, Ljava/lang/String;) -> V
+   onCameraLaunchGestureDetected(I) -> V
+   onDisplayReady(I) -> V
+   onEmergencyActionLaunchGestureDetected() -> V
+   onProposedRotationChanged(I, Z) -> V
+   onRecentsAnimationStateChanged(Z) -> V
+   onSystemBarAttributesChanged(I, I, [Lcom/android/internal/view/AppearanceRegion;, Z, I, Z) -> V
+   passThroughShellCommand([Ljava/lang/String;, Landroid/os/ParcelFileDescriptor;) -> V
+   preloadRecentApps() -> V
+   remQsTile(Landroid/content/ComponentName;) -> V
+   removeIcon(Ljava/lang/String;) -> V
+   requestWindowMagnificationConnection(Z) -> V
+   runGcForTest() -> V
+   setIcon(Ljava/lang/String;, Lcom/android/internal/statusbar/StatusBarIcon;) -> V
+   setImeWindowStatus(I, Landroid/os/IBinder;, I, I, Z, Z) -> V
+   setNavigationBarLumaSamplingEnabled(I, Z) -> V
+   setTopAppHidesStatusBar(Z) -> V
+   setUdfpsHbmListener(Landroid/hardware/fingerprint/IUdfpsHbmListener;) -> V
+   setWindowState(I, I, I) -> V
+   showAssistDisclosure() -> V
+   showAuthenticationDialog(Landroid/hardware/biometrics/PromptInfo;, Landroid/hardware/biometrics/IBiometricSysuiReceiver;, [I, Z, Z, I, Ljava/lang/String;, J, I) -> V
+   showGlobalActionsMenu() -> V
+   showInattentiveSleepWarning() -> V
+   showPictureInPictureMenu() -> V
+   showPinningEnterExitToast(Z) -> V
+   showPinningEscapeToast() -> V
+   showRecentApps(Z) -> V
+   showScreenPinningRequest(I) -> V
+   showShutdownUi(Z, Ljava/lang/String;) -> V
+   showToast(I, Ljava/lang/String;, Landroid/os/IBinder;, Ljava/lang/CharSequence;, Landroid/os/IBinder;, I, Landroid/app/ITransientNotificationCallback;) -> V
+   showTransient(I, [I) -> V
+   showWirelessChargingAnimation(I) -> V
+   startAssist(Landroid/os/Bundle;) -> V
+   startTracing() -> V
+   stopTracing() -> V
+   suppressAmbientDisplay(Z) -> V
+   toggleKeyboardShortcutsMenu(I) -> V
+   togglePanel() -> V
+   toggleRecentApps() -> V
+   toggleSplitScreen() -> V
+## Lcom/android/internal/statusbar/IStatusBar$Stub; flags=0x401 super=Landroid/os/Binder;  (classes4.dex)
+   <init>() -> V
+   abortTransient(I, [I) -> V
+   addQsTile(Landroid/content/ComponentName;) -> V
+   animateCollapsePanels() -> V
+   animateExpandNotificationsPanel() -> V
+   animateExpandSettingsPanel(Ljava/lang/String;) -> V
+   appTransitionCancelled(I) -> V
+   appTransitionFinished(I) -> V
+   appTransitionPending(I) -> V
+   appTransitionStarting(I, J, J) -> V
+   asBinder() -> Landroid/os/IBinder;
+   asInterface(Landroid/os/IBinder;) -> Lcom/android/internal/statusbar/IStatusBar;
+   attachInterface(Landroid/os/IInterface;, Ljava/lang/String;) -> V
+   cancelPreloadRecentApps() -> V
+   clickQsTile(Landroid/content/ComponentName;) -> V
+   disable(I, I, I) -> V
+   dismissInattentiveSleepWarning(Z) -> V
+   dismissKeyboardShortcutsMenu() -> V
+   getDefaultImpl() -> Lcom/android/internal/statusbar/IStatusBar;
+   getDefaultTransactionName(I) -> Ljava/lang/String;
+   getTransactionName(I) -> Ljava/lang/String;
+   handleSystemKey(I) -> V
+   handleWindowManagerLoggingCommand([Ljava/lang/String;, Landroid/os/ParcelFileDescriptor;) -> V
+   hideAuthenticationDialog() -> V
+   hideRecentApps(Z, Z) -> V
+   hideToast(Ljava/lang/String;, Landroid/os/IBinder;) -> V
+   onBiometricAuthenticated() -> V
+   onBiometricError(I, I, I) -> V
+   onBiometricHelp(I, Ljava/lang/String;) -> V
+   onCameraLaunchGestureDetected(I) -> V
+   onDisplayReady(I) -> V
+   onEmergencyActionLaunchGestureDetected() -> V
+   onProposedRotationChanged(I, Z) -> V
+   onRecentsAnimationStateChanged(Z) -> V
+   onSystemBarAttributesChanged(I, I, [Lcom/android/internal/view/AppearanceRegion;, Z, I, Z) -> V
+   onTransact(I, Landroid/os/Parcel;, Landroid/os/Parcel;, I) -> Z
+   passThroughShellCommand([Ljava/lang/String;, Landroid/os/ParcelFileDescriptor;) -> V
+   preloadRecentApps() -> V
+   remQsTile(Landroid/content/ComponentName;) -> V
+   removeIcon(Ljava/lang/String;) -> V
+   requestWindowMagnificationConnection(Z) -> V
+   runGcForTest() -> V
+   setDefaultImpl(Lcom/android/internal/statusbar/IStatusBar;) -> Z
+   setIcon(Ljava/lang/String;, Lcom/android/internal/statusbar/StatusBarIcon;) -> V
+   setImeWindowStatus(I, Landroid/os/IBinder;, I, I, Z, Z) -> V
+   setNavigationBarLumaSamplingEnabled(I, Z) -> V
+   setTopAppHidesStatusBar(Z) -> V
+   setUdfpsHbmListener(Landroid/hardware/fingerprint/IUdfpsHbmListener;) -> V
+   setWindowState(I, I, I) -> V
+   showAssistDisclosure() -> V
+   showAuthenticationDialog(Landroid/hardware/biometrics/PromptInfo;, Landroid/hardware/biometrics/IBiometricSysuiReceiver;, [I, Z, Z, I, Ljava/lang/String;, J, I) -> V
+   showGlobalActionsMenu() -> V
+   showInattentiveSleepWarning() -> V
+   showPictureInPictureMenu() -> V
+   showPinningEnterExitToast(Z) -> V
+   showPinningEscapeToast() -> V
+   showRecentApps(Z) -> V
+   showScreenPinningRequest(I) -> V
+   showShutdownUi(Z, Ljava/lang/String;) -> V
+   showToast(I, Ljava/lang/String;, Landroid/os/IBinder;, Ljava/lang/CharSequence;, Landroid/os/IBinder;, I, Landroid/app/ITransientNotificationCallback;) -> V
+   showTransient(I, [I) -> V
+   showWirelessChargingAnimation(I) -> V
+   startAssist(Landroid/os/Bundle;) -> V
+   startTracing() -> V
+   stopTracing() -> V
+   suppressAmbientDisplay(Z) -> V
+   toggleKeyboardShortcutsMenu(I) -> V
+   togglePanel() -> V
+   toggleRecentApps() -> V
+   toggleSplitScreen() -> V
+## Lcom/android/internal/statusbar/IStatusBar; flags=0x601 super=Ljava/lang/Object;  (classes4.dex)
+   abortTransient(I, [I) -> V
+   addQsTile(Landroid/content/ComponentName;) -> V
+   animateCollapsePanels() -> V
+   animateExpandNotificationsPanel() -> V
+   animateExpandSettingsPanel(Ljava/lang/String;) -> V
+   appTransitionCancelled(I) -> V
+   appTransitionFinished(I) -> V
+   appTransitionPending(I) -> V
+   appTransitionStarting(I, J, J) -> V
+   asBinder() -> Landroid/os/IBinder;
+   cancelPreloadRecentApps() -> V
+   clickQsTile(Landroid/content/ComponentName;) -> V
+   disable(I, I, I) -> V
+   dismissInattentiveSleepWarning(Z) -> V
+   dismissKeyboardShortcutsMenu() -> V
+   handleSystemKey(I) -> V
+   handleWindowManagerLoggingCommand([Ljava/lang/String;, Landroid/os/ParcelFileDescriptor;) -> V
+   hideAuthenticationDialog() -> V
+   hideRecentApps(Z, Z) -> V
+   hideToast(Ljava/lang/String;, Landroid/os/IBinder;) -> V
+   onBiometricAuthenticated() -> V
+   onBiometricError(I, I, I) -> V
+   onBiometricHelp(I, Ljava/lang/String;) -> V
+   onCameraLaunchGestureDetected(I) -> V
+   onDisplayReady(I) -> V
+   onEmergencyActionLaunchGestureDetected() -> V
+   onProposedRotationChanged(I, Z) -> V
+   onRecentsAnimationStateChanged(Z) -> V
+   onSystemBarAttributesChanged(I, I, [Lcom/android/internal/view/AppearanceRegion;, Z, I, Z) -> V
+   passThroughShellCommand([Ljava/lang/String;, Landroid/os/ParcelFileDescriptor;) -> V
+   preloadRecentApps() -> V
+   remQsTile(Landroid/content/ComponentName;) -> V
+   removeIcon(Ljava/lang/String;) -> V
+   requestWindowMagnificationConnection(Z) -> V
+   runGcForTest() -> V
+   setIcon(Ljava/lang/String;, Lcom/android/internal/statusbar/StatusBarIcon;) -> V
+   setImeWindowStatus(I, Landroid/os/IBinder;, I, I, Z, Z) -> V
+   setNavigationBarLumaSamplingEnabled(I, Z) -> V
+   setTopAppHidesStatusBar(Z) -> V
+   setUdfpsHbmListener(Landroid/hardware/fingerprint/IUdfpsHbmListener;) -> V
+   setWindowState(I, I, I) -> V
+   showAssistDisclosure() -> V
+   showAuthenticationDialog(Landroid/hardware/biometrics/PromptInfo;, Landroid/hardware/biometrics/IBiometricSysuiReceiver;, [I, Z, Z, I, Ljava/lang/String;, J, I) -> V
+   showGlobalActionsMenu() -> V
+   showInattentiveSleepWarning() -> V
+   showPictureInPictureMenu() -> V
+   showPinningEnterExitToast(Z) -> V
+   showPinningEscapeToast() -> V
+   showRecentApps(Z) -> V
+   showScreenPinningRequest(I) -> V
+   showShutdownUi(Z, Ljava/lang/String;) -> V
+   showToast(I, Ljava/lang/String;, Landroid/os/IBinder;, Ljava/lang/CharSequence;, Landroid/os/IBinder;, I, Landroid/app/ITransientNotificationCallback;) -> V
+   showTransient(I, [I) -> V
+   showWirelessChargingAnimation(I) -> V
+   startAssist(Landroid/os/Bundle;) -> V
+   startTracing() -> V
+   stopTracing() -> V
+   suppressAmbientDisplay(Z) -> V
+   toggleKeyboardShortcutsMenu(I) -> V
+   togglePanel() -> V
+   toggleRecentApps() -> V
+   toggleSplitScreen() -> V
+## Lcom/android/internal/statusbar/IStatusBarService$Default; flags=0x1 super=Ljava/lang/Object;  (classes4.dex)
+   <init>() -> V
+   addTile(Landroid/content/ComponentName;) -> V
+   asBinder() -> Landroid/os/IBinder;
+   clearInlineReplyUriPermissions(Ljava/lang/String;) -> V
+   clearNotificationEffects() -> V
+   clickTile(Landroid/content/ComponentName;) -> V
+   collapsePanels() -> V
+   disable(I, Landroid/os/IBinder;, Ljava/lang/String;) -> V
+   disable2(I, Landroid/os/IBinder;, Ljava/lang/String;) -> V
+   disable2ForUser(I, Landroid/os/IBinder;, Ljava/lang/String;, I) -> V
+   disableForUser(I, Landroid/os/IBinder;, Ljava/lang/String;, I) -> V
+   dismissInattentiveSleepWarning(Z) -> V
+   expandNotificationsPanel() -> V
+   expandSettingsPanel(Ljava/lang/String;) -> V
+   getDisableFlags(Landroid/os/IBinder;, I) -> [I
+   grantInlineReplyUriPermission(Ljava/lang/String;, Landroid/net/Uri;, Landroid/os/UserHandle;, Ljava/lang/String;) -> V
+   handleSystemKey(I) -> V
+   hideAuthenticationDialog() -> V
+   hideCurrentInputMethodForBubbles() -> V
+   isTracing() -> Z
+   onBiometricAuthenticated() -> V
+   onBiometricError(I, I, I) -> V
+   onBiometricHelp(I, Ljava/lang/String;) -> V
+   onBubbleNotificationSuppressionChanged(Ljava/lang/String;, Z, Z) -> V
+   onClearAllNotifications(I) -> V
+   onGlobalActionsHidden() -> V
+   onGlobalActionsShown() -> V
+   onNotificationActionClick(Ljava/lang/String;, I, Landroid/app/Notification$Action;, Lcom/android/internal/statusbar/NotificationVisibility;, Z) -> V
+   onNotificationBubbleChanged(Ljava/lang/String;, Z, I) -> V
+   onNotificationClear(Ljava/lang/String;, I, Ljava/lang/String;, I, I, Lcom/android/internal/statusbar/NotificationVisibility;) -> V
+   onNotificationClick(Ljava/lang/String;, Lcom/android/internal/statusbar/NotificationVisibility;) -> V
+   onNotificationDirectReplied(Ljava/lang/String;) -> V
+   onNotificationError(Ljava/lang/String;, Ljava/lang/String;, I, I, I, Ljava/lang/String;, I) -> V
+   onNotificationExpansionChanged(Ljava/lang/String;, Z, Z, I) -> V
+   onNotificationFeedbackReceived(Ljava/lang/String;, Landroid/os/Bundle;) -> V
+   onNotificationSettingsViewed(Ljava/lang/String;) -> V
+   onNotificationSmartReplySent(Ljava/lang/String;, I, Ljava/lang/CharSequence;, I, Z) -> V
+   onNotificationSmartSuggestionsAdded(Ljava/lang/String;, I, I, Z, Z) -> V
+   onNotificationVisibilityChanged([Lcom/android/internal/statusbar/NotificationVisibility;, [Lcom/android/internal/statusbar/NotificationVisibility;) -> V
+   onPanelHidden() -> V
+   onPanelRevealed(Z, I) -> V
+   reboot(Z) -> V
+   registerStatusBar(Lcom/android/internal/statusbar/IStatusBar;) -> Lcom/android/internal/statusbar/RegisterStatusBarResult;
+   remTile(Landroid/content/ComponentName;) -> V
+   removeIcon(Ljava/lang/String;) -> V
+   setIcon(Ljava/lang/String;, Ljava/lang/String;, I, I, Ljava/lang/String;) -> V
+   setIconVisibility(Ljava/lang/String;, Z) -> V
+   setImeWindowStatus(I, Landroid/os/IBinder;, I, I, Z, Z) -> V
+   setUdfpsHbmListener(Landroid/hardware/fingerprint/IUdfpsHbmListener;) -> V
+   showAuthenticationDialog(Landroid/hardware/biometrics/PromptInfo;, Landroid/hardware/biometrics/IBiometricSysuiReceiver;, [I, Z, Z, I, Ljava/lang/String;, J, I) -> V
+   showInattentiveSleepWarning() -> V
+   showPinningEnterExitToast(Z) -> V
+   showPinningEscapeToast() -> V
+   shutdown() -> V
+   startTracing() -> V
+   stopTracing() -> V
+   suppressAmbientDisplay(Z) -> V
+   togglePanel() -> V
+## Lcom/android/internal/statusbar/IStatusBarService$Stub$Proxy; flags=0x0 super=Ljava/lang/Object;  (classes4.dex)
+   <init>(Landroid/os/IBinder;) -> V
+   addTile(Landroid/content/ComponentName;) -> V
+   asBinder() -> Landroid/os/IBinder;
+   clearInlineReplyUriPermissions(Ljava/lang/String;) -> V
+   clearNotificationEffects() -> V
+   clickTile(Landroid/content/ComponentName;) -> V
+   collapsePanels() -> V
+   disable(I, Landroid/os/IBinder;, Ljava/lang/String;) -> V
+   disable2(I, Landroid/os/IBinder;, Ljava/lang/String;) -> V
+   disable2ForUser(I, Landroid/os/IBinder;, Ljava/lang/String;, I) -> V
+   disableForUser(I, Landroid/os/IBinder;, Ljava/lang/String;, I) -> V
+   dismissInattentiveSleepWarning(Z) -> V
+   expandNotificationsPanel() -> V
+   expandSettingsPanel(Ljava/lang/String;) -> V
+   getDisableFlags(Landroid/os/IBinder;, I) -> [I
+   getInterfaceDescriptor() -> Ljava/lang/String;
+   grantInlineReplyUriPermission(Ljava/lang/String;, Landroid/net/Uri;, Landroid/os/UserHandle;, Ljava/lang/String;) -> V
+   handleSystemKey(I) -> V
+   hideAuthenticationDialog() -> V
+   hideCurrentInputMethodForBubbles() -> V
+   isTracing() -> Z
+   onBiometricAuthenticated() -> V
+   onBiometricError(I, I, I) -> V
+   onBiometricHelp(I, Ljava/lang/String;) -> V
+   onBubbleNotificationSuppressionChanged(Ljava/lang/String;, Z, Z) -> V
+   onClearAllNotifications(I) -> V
+   onGlobalActionsHidden() -> V
+   onGlobalActionsShown() -> V
+   onNotificationActionClick(Ljava/lang/String;, I, Landroid/app/Notification$Action;, Lcom/android/internal/statusbar/NotificationVisibility;, Z) -> V
+   onNotificationBubbleChanged(Ljava/lang/String;, Z, I) -> V
+   onNotificationClear(Ljava/lang/String;, I, Ljava/lang/String;, I, I, Lcom/android/internal/statusbar/NotificationVisibility;) -> V
+   onNotificationClick(Ljava/lang/String;, Lcom/android/internal/statusbar/NotificationVisibility;) -> V
+   onNotificationDirectReplied(Ljava/lang/String;) -> V
+   onNotificationError(Ljava/lang/String;, Ljava/lang/String;, I, I, I, Ljava/lang/String;, I) -> V
+   onNotificationExpansionChanged(Ljava/lang/String;, Z, Z, I) -> V
+   onNotificationFeedbackReceived(Ljava/lang/String;, Landroid/os/Bundle;) -> V
+   onNotificationSettingsViewed(Ljava/lang/String;) -> V
+   onNotificationSmartReplySent(Ljava/lang/String;, I, Ljava/lang/CharSequence;, I, Z) -> V
+   onNotificationSmartSuggestionsAdded(Ljava/lang/String;, I, I, Z, Z) -> V
+   onNotificationVisibilityChanged([Lcom/android/internal/statusbar/NotificationVisibility;, [Lcom/android/internal/statusbar/NotificationVisibility;) -> V
+   onPanelHidden() -> V
+   onPanelRevealed(Z, I) -> V
+   reboot(Z) -> V
+   registerStatusBar(Lcom/android/internal/statusbar/IStatusBar;) -> Lcom/android/internal/statusbar/RegisterStatusBarResult;
+   remTile(Landroid/content/ComponentName;) -> V
+   removeIcon(Ljava/lang/String;) -> V
+   setIcon(Ljava/lang/String;, Ljava/lang/String;, I, I, Ljava/lang/String;) -> V
+   setIconVisibility(Ljava/lang/String;, Z) -> V
+   setImeWindowStatus(I, Landroid/os/IBinder;, I, I, Z, Z) -> V
+   setUdfpsHbmListener(Landroid/hardware/fingerprint/IUdfpsHbmListener;) -> V
+   showAuthenticationDialog(Landroid/hardware/biometrics/PromptInfo;, Landroid/hardware/biometrics/IBiometricSysuiReceiver;, [I, Z, Z, I, Ljava/lang/String;, J, I) -> V
+   showInattentiveSleepWarning() -> V
+   showPinningEnterExitToast(Z) -> V
+   showPinningEscapeToast() -> V
+   shutdown() -> V
+   startTracing() -> V
+   stopTracing() -> V
+   suppressAmbientDisplay(Z) -> V
+   togglePanel() -> V
+## Lcom/android/internal/statusbar/IStatusBarService$Stub; flags=0x401 super=Landroid/os/Binder;  (classes4.dex)
+   <init>() -> V
+   addTile(Landroid/content/ComponentName;) -> V
+   asBinder() -> Landroid/os/IBinder;
+   asInterface(Landroid/os/IBinder;) -> Lcom/android/internal/statusbar/IStatusBarService;
+   attachInterface(Landroid/os/IInterface;, Ljava/lang/String;) -> V
+   clearInlineReplyUriPermissions(Ljava/lang/String;) -> V
+   clearNotificationEffects() -> V
+   clickTile(Landroid/content/ComponentName;) -> V
+   collapsePanels() -> V
+   disable(I, Landroid/os/IBinder;, Ljava/lang/String;) -> V
+   disable2(I, Landroid/os/IBinder;, Ljava/lang/String;) -> V
+   disable2ForUser(I, Landroid/os/IBinder;, Ljava/lang/String;, I) -> V
+   disableForUser(I, Landroid/os/IBinder;, Ljava/lang/String;, I) -> V
+   dismissInattentiveSleepWarning(Z) -> V
+   expandNotificationsPanel() -> V
+   expandSettingsPanel(Ljava/lang/String;) -> V
+   getDefaultImpl() -> Lcom/android/internal/statusbar/IStatusBarService;
+   getDefaultTransactionName(I) -> Ljava/lang/String;
+   getDisableFlags(Landroid/os/IBinder;, I) -> [I
+   getTransactionName(I) -> Ljava/lang/String;
+   grantInlineReplyUriPermission(Ljava/lang/String;, Landroid/net/Uri;, Landroid/os/UserHandle;, Ljava/lang/String;) -> V
+   handleSystemKey(I) -> V
+   hideAuthenticationDialog() -> V
+   hideCurrentInputMethodForBubbles() -> V
+   isTracing() -> Z
+   onBiometricAuthenticated() -> V
+   onBiometricError(I, I, I) -> V
+   onBiometricHelp(I, Ljava/lang/String;) -> V
+   onBubbleNotificationSuppressionChanged(Ljava/lang/String;, Z, Z) -> V
+   onClearAllNotifications(I) -> V
+   onGlobalActionsHidden() -> V
+   onGlobalActionsShown() -> V
+   onNotificationActionClick(Ljava/lang/String;, I, Landroid/app/Notification$Action;, Lcom/android/internal/statusbar/NotificationVisibility;, Z) -> V
+   onNotificationBubbleChanged(Ljava/lang/String;, Z, I) -> V
+   onNotificationClear(Ljava/lang/String;, I, Ljava/lang/String;, I, I, Lcom/android/internal/statusbar/NotificationVisibility;) -> V
+   onNotificationClick(Ljava/lang/String;, Lcom/android/internal/statusbar/NotificationVisibility;) -> V
+   onNotificationDirectReplied(Ljava/lang/String;) -> V
+   onNotificationError(Ljava/lang/String;, Ljava/lang/String;, I, I, I, Ljava/lang/String;, I) -> V
+   onNotificationExpansionChanged(Ljava/lang/String;, Z, Z, I) -> V
+   onNotificationFeedbackReceived(Ljava/lang/String;, Landroid/os/Bundle;) -> V
+   onNotificationSettingsViewed(Ljava/lang/String;) -> V
+   onNotificationSmartReplySent(Ljava/lang/String;, I, Ljava/lang/CharSequence;, I, Z) -> V
+   onNotificationSmartSuggestionsAdded(Ljava/lang/String;, I, I, Z, Z) -> V
+   onNotificationVisibilityChanged([Lcom/android/internal/statusbar/NotificationVisibility;, [Lcom/android/internal/statusbar/NotificationVisibility;) -> V
+   onPanelHidden() -> V
+   onPanelRevealed(Z, I) -> V
+   onTransact(I, Landroid/os/Parcel;, Landroid/os/Parcel;, I) -> Z
+   reboot(Z) -> V
+   registerStatusBar(Lcom/android/internal/statusbar/IStatusBar;) -> Lcom/android/internal/statusbar/RegisterStatusBarResult;
+   remTile(Landroid/content/ComponentName;) -> V
+   removeIcon(Ljava/lang/String;) -> V
+   setDefaultImpl(Lcom/android/internal/statusbar/IStatusBarService;) -> Z
+   setIcon(Ljava/lang/String;, Ljava/lang/String;, I, I, Ljava/lang/String;) -> V
+   setIconVisibility(Ljava/lang/String;, Z) -> V
+   setImeWindowStatus(I, Landroid/os/IBinder;, I, I, Z, Z) -> V
+   setUdfpsHbmListener(Landroid/hardware/fingerprint/IUdfpsHbmListener;) -> V
+   showAuthenticationDialog(Landroid/hardware/biometrics/PromptInfo;, Landroid/hardware/biometrics/IBiometricSysuiReceiver;, [I, Z, Z, I, Ljava/lang/String;, J, I) -> V
+   showInattentiveSleepWarning() -> V
+   showPinningEnterExitToast(Z) -> V
+   showPinningEscapeToast() -> V
+   shutdown() -> V
+   startTracing() -> V
+   stopTracing() -> V
+   suppressAmbientDisplay(Z) -> V
+   togglePanel() -> V
+## Lcom/android/internal/statusbar/IStatusBarService; flags=0x601 super=Ljava/lang/Object;  (classes4.dex)
+   addTile(Landroid/content/ComponentName;) -> V
+   clearInlineReplyUriPermissions(Ljava/lang/String;) -> V
+   clearNotificationEffects() -> V
+   clickTile(Landroid/content/ComponentName;) -> V
+   collapsePanels() -> V
+   disable(I, Landroid/os/IBinder;, Ljava/lang/String;) -> V
+   disable2(I, Landroid/os/IBinder;, Ljava/lang/String;) -> V
+   disable2ForUser(I, Landroid/os/IBinder;, Ljava/lang/String;, I) -> V
+   disableForUser(I, Landroid/os/IBinder;, Ljava/lang/String;, I) -> V
+   dismissInattentiveSleepWarning(Z) -> V
+   expandNotificationsPanel() -> V
+   expandSettingsPanel(Ljava/lang/String;) -> V
+   getDisableFlags(Landroid/os/IBinder;, I) -> [I
+   grantInlineReplyUriPermission(Ljava/lang/String;, Landroid/net/Uri;, Landroid/os/UserHandle;, Ljava/lang/String;) -> V
+   handleSystemKey(I) -> V
+   hideAuthenticationDialog() -> V
+   hideCurrentInputMethodForBubbles() -> V
+   isTracing() -> Z
+   onBiometricAuthenticated() -> V
+   onBiometricError(I, I, I) -> V
+   onBiometricHelp(I, Ljava/lang/String;) -> V
+   onBubbleNotificationSuppressionChanged(Ljava/lang/String;, Z, Z) -> V
+   onClearAllNotifications(I) -> V
+   onGlobalActionsHidden() -> V
+   onGlobalActionsShown() -> V
+   onNotificationActionClick(Ljava/lang/String;, I, Landroid/app/Notification$Action;, Lcom/android/internal/statusbar/NotificationVisibility;, Z) -> V
+   onNotificationBubbleChanged(Ljava/lang/String;, Z, I) -> V
+   onNotificationClear(Ljava/lang/String;, I, Ljava/lang/String;, I, I, Lcom/android/internal/statusbar/NotificationVisibility;) -> V
+   onNotificationClick(Ljava/lang/String;, Lcom/android/internal/statusbar/NotificationVisibility;) -> V
+   onNotificationDirectReplied(Ljava/lang/String;) -> V
+   onNotificationError(Ljava/lang/String;, Ljava/lang/String;, I, I, I, Ljava/lang/String;, I) -> V
+   onNotificationExpansionChanged(Ljava/lang/String;, Z, Z, I) -> V
+   onNotificationFeedbackReceived(Ljava/lang/String;, Landroid/os/Bundle;) -> V
+   onNotificationSettingsViewed(Ljava/lang/String;) -> V
+   onNotificationSmartReplySent(Ljava/lang/String;, I, Ljava/lang/CharSequence;, I, Z) -> V
+   onNotificationSmartSuggestionsAdded(Ljava/lang/String;, I, I, Z, Z) -> V
+   onNotificationVisibilityChanged([Lcom/android/internal/statusbar/NotificationVisibility;, [Lcom/android/internal/statusbar/NotificationVisibility;) -> V
+   onPanelHidden() -> V
+   onPanelRevealed(Z, I) -> V
+   reboot(Z) -> V
+   registerStatusBar(Lcom/android/internal/statusbar/IStatusBar;) -> Lcom/android/internal/statusbar/RegisterStatusBarResult;
+   remTile(Landroid/content/ComponentName;) -> V
+   removeIcon(Ljava/lang/String;) -> V
+   setIcon(Ljava/lang/String;, Ljava/lang/String;, I, I, Ljava/lang/String;) -> V
+   setIconVisibility(Ljava/lang/String;, Z) -> V
+   setImeWindowStatus(I, Landroid/os/IBinder;, I, I, Z, Z) -> V
+   setUdfpsHbmListener(Landroid/hardware/fingerprint/IUdfpsHbmListener;) -> V
+   showAuthenticationDialog(Landroid/hardware/biometrics/PromptInfo;, Landroid/hardware/biometrics/IBiometricSysuiReceiver;, [I, Z, Z, I, Ljava/lang/String;, J, I) -> V
+   showInattentiveSleepWarning() -> V
+   showPinningEnterExitToast(Z) -> V
+   showPinningEscapeToast() -> V
+   shutdown() -> V
+   startTracing() -> V
+   stopTracing() -> V
+   suppressAmbientDisplay(Z) -> V
+   togglePanel() -> V
+## Lcom/android/internal/statusbar/RegisterStatusBarResult$1; flags=0x0 super=Ljava/lang/Object;  (classes4.dex)
+   <init>() -> V
+   createFromParcel(Landroid/os/Parcel;) -> Lcom/android/internal/statusbar/RegisterStatusBarResult;
+   createFromParcel(Landroid/os/Parcel;) -> Ljava/lang/Object;
+   newArray(I) -> [Lcom/android/internal/statusbar/RegisterStatusBarResult;
+   newArray(I) -> [Ljava/lang/Object;
+## Lcom/android/internal/statusbar/RegisterStatusBarResult; flags=0x11 super=Ljava/lang/Object;  (classes4.dex)
+   <clinit>() -> V
+   <init>(Landroid/util/ArrayMap;, I, I, [Lcom/android/internal/view/AppearanceRegion;, I, I, Z, I, Landroid/os/IBinder;, Z, I, Z, [I) -> V
+   describeContents() -> I
+   writeToParcel(Landroid/os/Parcel;, I) -> V
+## Lcom/android/internal/statusbar/StatusBarIcon$1; flags=0x0 super=Ljava/lang/Object;  (classes4.dex)
+   <init>() -> V
+   createFromParcel(Landroid/os/Parcel;) -> Lcom/android/internal/statusbar/StatusBarIcon;
+   createFromParcel(Landroid/os/Parcel;) -> Ljava/lang/Object;
+   newArray(I) -> [Lcom/android/internal/statusbar/StatusBarIcon;
+   newArray(I) -> [Ljava/lang/Object;
+## Lcom/android/internal/statusbar/StatusBarIcon; flags=0x1 super=Ljava/lang/Object;  (classes4.dex)
+   <clinit>() -> V
+   <init>(Landroid/os/Parcel;) -> V
+   <init>(Landroid/os/UserHandle;, Ljava/lang/String;, Landroid/graphics/drawable/Icon;, I, I, Ljava/lang/CharSequence;) -> V
+   <init>(Ljava/lang/String;, Landroid/os/UserHandle;, I, I, I, Ljava/lang/CharSequence;) -> V
+   clone() -> Lcom/android/internal/statusbar/StatusBarIcon;
+   clone() -> Ljava/lang/Object;
+   describeContents() -> I
+   readFromParcel(Landroid/os/Parcel;) -> V
+   toString() -> Ljava/lang/String;
+   writeToParcel(Landroid/os/Parcel;, I) -> V
+## Lcom/android/internal/statusbar/NotificationVisibility$1; flags=0x0 super=Ljava/lang/Object;  (classes4.dex)
+   <init>() -> V
+   createFromParcel(Landroid/os/Parcel;) -> Lcom/android/internal/statusbar/NotificationVisibility;
+   createFromParcel(Landroid/os/Parcel;) -> Ljava/lang/Object;
+   newArray(I) -> [Lcom/android/internal/statusbar/NotificationVisibility;
+   newArray(I) -> [Ljava/lang/Object;
+## Lcom/android/internal/statusbar/NotificationVisibility$NotificationLocation; flags=0x4011 super=Ljava/lang/Enum;  (classes4.dex)
+   <clinit>() -> V
+   <init>(Ljava/lang/String;, I, I) -> V
+   name() -> Ljava/lang/String;
+   toMetricsEventEnum() -> I
+   valueOf(Ljava/lang/String;) -> Lcom/android/internal/statusbar/NotificationVisibility$NotificationLocation;
+   values() -> [Lcom/android/internal/statusbar/NotificationVisibility$NotificationLocation;
+## Lcom/android/internal/statusbar/NotificationVisibility; flags=0x1 super=Ljava/lang/Object;  (classes4.dex)
+   <clinit>() -> V
+   <init>() -> V
+   <init>(Ljava/lang/String;, I, I, Z, Lcom/android/internal/statusbar/NotificationVisibility$NotificationLocation;) -> V
+   access$000(Landroid/os/Parcel;) -> Lcom/android/internal/statusbar/NotificationVisibility;
+   clone() -> Lcom/android/internal/statusbar/NotificationVisibility;
+   clone() -> Ljava/lang/Object;
+   describeContents() -> I
+   equals(Ljava/lang/Object;) -> Z
+   hashCode() -> I
+   obtain() -> Lcom/android/internal/statusbar/NotificationVisibility;
+   obtain(Landroid/os/Parcel;) -> Lcom/android/internal/statusbar/NotificationVisibility;
+   obtain(Ljava/lang/String;, I, I, Z) -> Lcom/android/internal/statusbar/NotificationVisibility;
+   obtain(Ljava/lang/String;, I, I, Z, Lcom/android/internal/statusbar/NotificationVisibility$NotificationLocation;) -> Lcom/android/internal/statusbar/NotificationVisibility;
+   readFromParcel(Landroid/os/Parcel;) -> V
+   recycle() -> V
+   toString() -> Ljava/lang/String;
+   writeToParcel(Landroid/os/Parcel;, I) -> V
