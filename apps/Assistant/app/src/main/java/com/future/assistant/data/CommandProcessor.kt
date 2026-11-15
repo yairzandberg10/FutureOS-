@@ -12,6 +12,10 @@ import android.os.Environment
 import android.os.StatFs
 import android.os.SystemClock
 import android.provider.CalendarContract
+import android.provider.ContactsContract
+import android.provider.MediaStore
+import android.provider.Settings
+import android.view.KeyEvent
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -24,6 +28,8 @@ data class CommandResult(
     val shouldClose: Boolean = false,
     val speech: String = responseText,
     val action: AssistantAction? = null,
+    /** שיחה: אחרי שהעוזר מסיים לדבר הוא מקשיב שוב לבד, בלי לחיצה על OK. */
+    val listenAgain: Boolean = false,
 )
 
 /** פעולה שהעוזר מבצע אחרי שהוא מסיים לדבר. */
@@ -60,6 +66,15 @@ object CommandProcessor {
         // רק השם, בלי בקשה ("עוזרי?", "היי עוזרי").
         if (text.isBlank()) return CommandResult("כן, אני $NAME. במה אפשר לעזור?")
 
+        // מצוקה - לפני הכל, גם לפני קללות: לא עונים על זה בבדיחה.
+        if (CRISIS_PHRASES.any { KnowledgeBase.normalize(text).contains(it) }) {
+            return CommandResult(
+                "אני כאן איתך, ואתה לא לבד בזה. אפשר לדבר עכשיו עם מישהו שיקשיב: ער\"ן בטלפון 1201, או במצב חירום מד\"א 101.",
+                speech = "אני כאן איתך, ואתה לא לבד בזה. אפשר לדבר עכשיו עם מישהו שיקשיב: ערן, בטלפון אחת שתיים אפס אחת, או במצב חירום מגן דוד אדום, מאה ואחת.",
+                listenAgain = true,
+            )
+        }
+
         // קללות - לפני כל פקודה אחרת, כדי ש"תפתח ת'מצלמה יא ..." לא יבוצע.
         if (Profanity.contains(text)) return CommandResult("לא לנבל את הפה!")
 
@@ -82,7 +97,9 @@ object CommandProcessor {
         var openAppMiss: String? = null
         val matchedOpenPrefix = openAppPrefixes.firstOrNull { text.startsWith(it) }
         if (matchedOpenPrefix != null) {
+            // "תפתח את הגדרות הוויפיי" - יעד שהוא פקודת מכשיר מבוצע ישירות
             val appQuery = text.removePrefix(matchedOpenPrefix).trim()
+            deviceIntentForOpen(text, appQuery)?.let { return it.respond(context) }
             val apps = AppLauncher.listApps(context)
             val match = AppLauncher.findBestMatch(apps, appQuery)
             if (match != null && AppLauncher.launch(context, match.packageName)) {
@@ -93,6 +110,8 @@ object CommandProcessor {
 
         // חיוג מספר - דורש חילוץ ספרות מהמשפט.
         tryDial(context, text)?.let { return it }
+        // הודעה לאיש קשר ("תשלח הודעה לאמא שאני מאחרת")
+        trySms(context, text)?.let { return it }
 
         // המרת יחידות (מייל/ק"מ, פאונד/קילו, צלזיוס/פרנהייט) ואחוזים -
         // נבדקים לפני חשבון כללי כי גם הם מזהים שני מספרים במשפט.
@@ -110,7 +129,18 @@ object CommandProcessor {
         KnowledgeBase.answer(context, text)?.let { return it }
 
         // כל שאר הפקודות - התאמה לפי מילות מפתח מתוך הרשימה הגדולה למטה.
-        firstMatchingIntent(text)?.let { return it.respond(context) }
+        val intent = firstMatchingIntent(text)
+        if (intent != null && !intent.social) return intent.respond(context)
+
+        // שיחה חופשית (assets/knowledge/chat.tsv). פקודת שיחה קצרה ("שלום") מפנה מקום
+        // לניסוח שיחה ארוך יותר שמתאים למשפט ("שלום אני עצוב היום").
+        val chat = ChatBase.match(context, text)
+        if (intent != null) {
+            val triggerLength = intent.triggers.filter { containsWord(text, it) }.maxOfOrNull { it.length } ?: 0
+            if (chat != null && chat.exact && chat.phrasing.length > triggerLength) return chatResult(chat)
+            return intent.respond(context).copy(listenAgain = true)
+        }
+        chat?.let { return chatResult(it) }
 
         return CommandResult(openAppMiss ?: "לא הבנתי את הבקשה, אפשר לנסות שוב")
     }
@@ -153,10 +183,41 @@ object CommandProcessor {
     // תשתית: פקודה = רשימת ניסוחים + מה לענות/לעשות.
     // ---------------------------------------------------------------------
 
-    private class VoiceIntent(val triggers: List<String>, val respond: (Context) -> CommandResult)
+    /** social - שיחת חולין: התשובה ממשיכה להקשיב, ומשפט שיחה ארוך יותר גובר עליה.
+     *  device - פעולה במכשיר: נבדקת גם כשהמשפט מתחיל ב"פתח"/"תעבור ל". */
+    private class VoiceIntent(
+        val triggers: List<String>,
+        val social: Boolean = false,
+        val device: Boolean = false,
+        val respond: (Context) -> CommandResult,
+    )
 
-    private fun voiceIntent(triggers: List<String>, respond: (Context) -> String): VoiceIntent =
-        VoiceIntent(triggers) { context -> CommandResult(respond(context)) }
+    private fun voiceIntent(triggers: List<String>, social: Boolean = false, respond: (Context) -> String): VoiceIntent =
+        VoiceIntent(triggers, social = social) { context -> CommandResult(respond(context)) }
+
+    private fun chatResult(match: ChatBase.Match) = CommandResult(match.reply, listenAgain = true)
+
+    /** ביטויי מצוקה (מנורמלים). */
+    private val CRISIS_PHRASES = listOf(
+        "רוצה למות", "בא לי למות", "להתאבד", "אתאבד", "מתאבד", "לפגוע בעצמי", "לא רוצה לחיות",
+        "נמאס לי לחיות", "אין לי בשביל מה לחיות", "לשים סוף לחיים", "לגמור עם החיים", "לסיים את החיים",
+    )
+
+    /** "תעבור להגדרות המיקום": היעד אחרי הקידומת, גם בלי ה-ל שנדבקה אליו. */
+    private fun deviceIntentForOpen(text: String, target: String): VoiceIntent? =
+        listOf(text, target, target.removePrefix("ל"), target.removePrefix("ל").removePrefix("ה"))
+            .firstNotNullOfOrNull { candidate -> firstMatchingIntent(candidate)?.takeIf { it.device } }
+
+    internal fun deviceForOpenTest(text: String): Boolean {
+        val prefix = openAppPrefixes.firstOrNull { text.startsWith(it) } ?: return false
+        return deviceIntentForOpen(text, text.removePrefix(prefix).trim()) != null
+    }
+
+    internal fun crisisForTest(text: String) = CRISIS_PHRASES.any { KnowledgeBase.normalize(text).contains(it) }
+
+    /** האם המשפט יגיע לפקודת מכשיר (לבדיקות). */
+    internal fun matchedDeviceTriggersForTest(text: String): List<String>? =
+        firstMatchingIntent(text)?.takeIf { it.device }?.triggers
 
     // התאמה במילים שלמות: "שעה" לא נתפס בתוך "בשעה" (קבע פגישה בשעה חמש)
     private fun firstMatchingIntent(text: String): VoiceIntent? =
@@ -406,25 +467,25 @@ object CommandProcessor {
             "שלום מה בא לך לעשות", "היי מה יש היום", "שלום מה קורה איתך"
         )
         val responses = listOf("היי! במה אפשר לעזור?", "שלום, אני כאן בשבילך", "היי, מה תרצה שאעשה?")
-        return listOf(voiceIntent(withExtra(cores + massiveCores, ExtraPhrasings.GREETING)) { responses.random() })
+        return listOf(voiceIntent(withExtra(cores + massiveCores, ExtraPhrasings.GREETING), social = true) { responses.random() })
     }
 
     private fun howAreYouIntents(): List<VoiceIntent> {
         val cores = listOf("מה שלומך", "איך אתה", "אתה בסדר", "הכל טוב אצלך")
         // מתוך MASSIVE dataset (Amazon Science, CC BY 4.0) - general_greet
         val massiveCores = listOf("מה איתך", "הי מה איתך", "מה שלומך היום", "אחר צהריים טובים מה שלומך", "איך הכל איתך")
-        return listOf(voiceIntent(withExtra(cores + massiveCores, ExtraPhrasings.HOW_ARE_YOU)) { "הכל מצוין, תודה ששאלת! ואצלך?" })
+        return listOf(voiceIntent(withExtra(cores + massiveCores, ExtraPhrasings.HOW_ARE_YOU), social = true) { "הכל מצוין, תודה ששאלת! ואצלך?" })
     }
 
     private fun thanksIntents(): List<VoiceIntent> {
         val cores = listOf("תודה", "תודה רבה", "מעריך את זה", "אתה מגניב", "כל הכבוד")
         val responses = listOf("בשמחה!", "תמיד לשירותך", "אין בעד מה")
-        return listOf(voiceIntent(withExtra(cores, ExtraPhrasings.THANKS)) { responses.random() })
+        return listOf(voiceIntent(withExtra(cores, ExtraPhrasings.THANKS), social = true) { responses.random() })
     }
 
     private fun whoAreYouIntents(): List<VoiceIntent> {
         val cores = listOf("מי אתה", "מה אתה", "אתה מי", "איך קוראים לך", "מה השם שלך")
-        return listOf(voiceIntent(withExtra(cores, ExtraPhrasings.WHO_ARE_YOU)) { "קוראים לי $NAME, העוזר הקולי של FutureOS" })
+        return listOf(voiceIntent(withExtra(cores, ExtraPhrasings.WHO_ARE_YOU), social = true) { "קוראים לי $NAME, העוזר הקולי של FutureOS" })
     }
 
     private fun helpIntents(): List<VoiceIntent> {
@@ -663,7 +724,7 @@ object CommandProcessor {
             "אתה עושה עבודה נהדרת",
             "יש לך חיוך שמאיר את החדר"
         )
-        return listOf(voiceIntent(withExtra(cores, ExtraPhrasings.COMPLIMENT)) { compliments.random() })
+        return listOf(voiceIntent(withExtra(cores, ExtraPhrasings.COMPLIMENT), social = true) { compliments.random() })
     }
 
     private fun motivationIntents(): List<VoiceIntent> {
@@ -674,7 +735,7 @@ object CommandProcessor {
             "אתה מסוגל ליותר ממה שאתה חושב",
             "מה שחשוב זה האומץ להמשיך, לא רק להצליח בפעם הראשונה"
         )
-        return listOf(voiceIntent(withExtra(cores, ExtraPhrasings.MOTIVATION)) { quotes.random() })
+        return listOf(voiceIntent(withExtra(cores, ExtraPhrasings.MOTIVATION), social = true) { quotes.random() })
     }
 
     // ---------------------------------------------------------------------
@@ -683,7 +744,7 @@ object CommandProcessor {
     // ---------------------------------------------------------------------
 
     private fun chatIntent(extra: List<String>, responses: List<String>): VoiceIntent =
-        voiceIntent(withExtra(emptyList(), extra)) { responses.random() }
+        voiceIntent(withExtra(emptyList(), extra), social = true) { responses.random() }
 
     private fun chatIntents(): List<VoiceIntent> = listOf(
         chatIntent(ExtraPhrasings.NAME_MEANING, listOf(
@@ -893,6 +954,170 @@ object CommandProcessor {
     }
 
     // ---------------------------------------------------------------------
+    // פעולות במכשיר - הגדרות, מצלמה, מדיה, אנשי קשר והודעות (DevicePhrasings)
+    // ---------------------------------------------------------------------
+
+    private fun deviceIntent(triggers: List<String>, respond: (Context) -> CommandResult) =
+        VoiceIntent(triggers, device = true, respond = respond)
+
+    /** מנסה כמה Intents לפי הסדר (חבילה ייעודית של FutureOS ואז ברירת המחדל של המערכת). */
+    private fun startFirst(context: Context, vararg intents: Intent): Boolean = intents.any { intent ->
+        try {
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(intent)
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    private fun settingsIntent(context: Context, message: String, vararg actions: String): CommandResult =
+        if (startFirst(context, *(actions.map { Intent(it) } + Intent(Settings.ACTION_SETTINGS)).toTypedArray())) {
+            CommandResult(message, shouldClose = true)
+        } else {
+            CommandResult("לא הצלחתי לפתוח את ההגדרות")
+        }
+
+    private fun launchPackage(context: Context, packageName: String, fallbackName: String, message: String): CommandResult =
+        if (AppLauncher.launch(context, packageName)) CommandResult(message, shouldClose = true)
+        else redirectToApp(context, fallbackName, "")
+
+    private fun mediaKey(context: Context, keyCode: Int, message: String): CommandResult {
+        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        audioManager.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, keyCode))
+        audioManager.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_UP, keyCode))
+        return CommandResult(message)
+    }
+
+    private fun ringerMode(context: Context, mode: Int, message: String): CommandResult = try {
+        (context.getSystemService(Context.AUDIO_SERVICE) as AudioManager).ringerMode = mode
+        CommandResult(message)
+    } catch (e: SecurityException) {
+        // יציאה ממצב "נא לא להפריע" דורשת הרשאה מיוחדת - פותחים את הגדרות הצליל במקום
+        settingsIntent(context, "אין לי הרשאה לשנות את זה, פותח את הגדרות הצליל", Settings.ACTION_SOUND_SETTINGS)
+    }
+
+    private fun ringVolume(context: Context, direction: Int): CommandResult {
+        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        val current = audioManager.getStreamVolume(AudioManager.STREAM_RING)
+        val max = audioManager.getStreamMaxVolume(AudioManager.STREAM_RING)
+        if (direction > 0 && current >= max) return CommandResult("הצלצול כבר בשיא")
+        if (direction < 0 && current <= 0) return CommandResult("הצלצול כבר בשקט")
+        return try {
+            audioManager.adjustStreamVolume(AudioManager.STREAM_RING, direction, AudioManager.FLAG_SHOW_UI)
+            CommandResult(if (direction > 0) "הגברתי את הצלצול" else "הנמכתי את הצלצול")
+        } catch (e: SecurityException) {
+            CommandResult("אי אפשר לשנות את הצלצול במצב נא לא להפריע")
+        }
+    }
+
+    private fun cameraIntent(context: Context, action: String, message: String): CommandResult =
+        if (startFirst(context, Intent(action).setPackage("com.future.camera"), Intent(action))) {
+            CommandResult(message, shouldClose = true)
+        } else {
+            launchPackage(context, "com.future.camera", "מצלמה", "פותח את המצלמה")
+        }
+
+    private fun deviceIntents(): List<VoiceIntent> = with(DevicePhrasings) {
+        listOf(
+            // ספציפיים לפני כלליים: וידאו לפני מצלמה, הוספת איש קשר לפני אנשי קשר,
+            // עוצמת צלצול לפני הגדרות צליל, וההגדרות הכלליות בסוף.
+            deviceIntent(MEDIA_NEXT) { mediaKey(it, KeyEvent.KEYCODE_MEDIA_NEXT, "עובר לשיר הבא") },
+            deviceIntent(MEDIA_PREVIOUS) { mediaKey(it, KeyEvent.KEYCODE_MEDIA_PREVIOUS, "חוזר לשיר הקודם") },
+            deviceIntent(MEDIA_PAUSE) { mediaKey(it, KeyEvent.KEYCODE_MEDIA_PAUSE, "עצרתי את הניגון") },
+            deviceIntent(MEDIA_PLAY) { mediaKey(it, KeyEvent.KEYCODE_MEDIA_PLAY, "ממשיך לנגן") },
+            deviceIntent(VOLUME_LEVEL) { context ->
+                val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+                val max = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC).coerceAtLeast(1)
+                val percent = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC) * 100 / max
+                CommandResult(if (percent == 0) "הקול מושתק" else "עוצמת הקול $percent אחוז")
+            },
+            deviceIntent(RING_UP) { ringVolume(it, AudioManager.ADJUST_RAISE) },
+            deviceIntent(RING_DOWN) { ringVolume(it, AudioManager.ADJUST_LOWER) },
+            deviceIntent(VIBRATE) { ringerMode(it, AudioManager.RINGER_MODE_VIBRATE, "עברתי למצב רטט") },
+            deviceIntent(RINGER_NORMAL) { ringerMode(it, AudioManager.RINGER_MODE_NORMAL, "הצלצול חזר למצב רגיל") },
+            deviceIntent(ANDROID_VERSION) { CommandResult("המכשיר מריץ אנדרואיד ${ltr(Build.VERSION.RELEASE)}") },
+            deviceIntent(CAMERA_VIDEO) { cameraIntent(it, MediaStore.INTENT_ACTION_VIDEO_CAMERA, "פותח את המצלמה לווידאו") },
+            deviceIntent(CAMERA_PHOTO) { cameraIntent(it, MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA, "פותח את המצלמה") },
+            deviceIntent(RECORDER) { launchPackage(it, "com.future.recorder", "מקליט", "פותח את המקליט") },
+            deviceIntent(NOTES) { launchPackage(it, "com.future.notes", "פתקים", "פותח את הפתקים") },
+            deviceIntent(CONTACT_ADD) { context ->
+                val insert = Intent(Intent.ACTION_INSERT, ContactsContract.Contacts.CONTENT_URI)
+                if (startFirst(context, Intent(insert).setPackage("com.future.contact"), insert)) {
+                    CommandResult("פותח הוספת איש קשר", shouldClose = true)
+                } else {
+                    launchPackage(context, "com.future.contact", "אנשי קשר", "פותח את אנשי הקשר")
+                }
+            },
+            deviceIntent(CONTACTS) { launchPackage(it, "com.future.contact", "אנשי קשר", "פותח את אנשי הקשר") },
+            deviceIntent(CALL_LOG) { launchPackage(it, "com.future.dialer", "טלפון", "פותח את השיחות האחרונות") },
+            deviceIntent(MESSAGES) { launchPackage(it, "com.future.messages", "הודעות", "פותח את ההודעות") },
+            deviceIntent(WIFI) { settingsIntent(it, "פותח את הגדרות הוויפיי", Settings.ACTION_WIFI_SETTINGS) },
+            deviceIntent(BLUETOOTH) { context ->
+                if (AppLauncher.launch(context, "com.future.bluetooth")) CommandResult("פותח את הבלוטוס", shouldClose = true)
+                else settingsIntent(context, "פותח את הגדרות הבלוטוס", Settings.ACTION_BLUETOOTH_SETTINGS)
+            },
+            deviceIntent(LOCATION) { settingsIntent(it, "פותח את הגדרות המיקום", Settings.ACTION_LOCATION_SOURCE_SETTINGS) },
+            deviceIntent(AIRPLANE) { settingsIntent(it, "פותח את הגדרות מצב טיסה", Settings.ACTION_AIRPLANE_MODE_SETTINGS) },
+            deviceIntent(MOBILE_NETWORK) { settingsIntent(it, "פותח את הגדרות הרשת", Settings.ACTION_WIRELESS_SETTINGS, Settings.ACTION_AIRPLANE_MODE_SETTINGS) },
+            deviceIntent(DND) { settingsIntent(it, "פותח את הגדרות נא לא להפריע", "android.settings.ZEN_MODE_SETTINGS", Settings.ACTION_SOUND_SETTINGS) },
+            deviceIntent(DATE_SETTINGS) { settingsIntent(it, "פותח את הגדרות התאריך והשעה", Settings.ACTION_DATE_SETTINGS) },
+            deviceIntent(DEVICE_INFO) { settingsIntent(it, "פותח את פרטי המכשיר", Settings.ACTION_DEVICE_INFO_SETTINGS) },
+            deviceIntent(BATTERY_SAVER) { settingsIntent(it, "פותח את הגדרות הסוללה", Settings.ACTION_BATTERY_SAVER_SETTINGS) },
+            deviceIntent(STORAGE_SETTINGS) { settingsIntent(it, "פותח את הגדרות האחסון", Settings.ACTION_INTERNAL_STORAGE_SETTINGS) },
+            deviceIntent(ACCESSIBILITY) { settingsIntent(it, "פותח את הגדרות הנגישות", Settings.ACTION_ACCESSIBILITY_SETTINGS) },
+            deviceIntent(LANGUAGE) { settingsIntent(it, "פותח את הגדרות השפה", Settings.ACTION_LOCALE_SETTINGS) },
+            deviceIntent(APPS_SETTINGS) { settingsIntent(it, "פותח את ניהול האפליקציות", Settings.ACTION_APPLICATION_SETTINGS) },
+            deviceIntent(SOUND) { settingsIntent(it, "פותח את הגדרות הצליל", Settings.ACTION_SOUND_SETTINGS) },
+            deviceIntent(DISPLAY) { settingsIntent(it, "פותח את הגדרות התצוגה", Settings.ACTION_DISPLAY_SETTINGS) },
+            deviceIntent(SETTINGS) { settingsIntent(it, "פותח את ההגדרות", Settings.ACTION_SETTINGS) },
+        )
+    }
+
+    private val smsPrefixes = DevicePhrasings.SMS_PREFIXES.sortedByDescending { it.length }
+
+    internal fun smsStageForTest(text: String) = smsPrefixes.any { text.startsWith(it) }
+
+    /** "תשלח הודעה לאמא שאני מאחרת": השם הוא המילים הראשונות שמתאימות לאיש קשר
+     *  (מהארוך לקצר), ומה שאחריו - בלי "ש" בהתחלה - הוא תוכן ההודעה. */
+    private fun trySms(context: Context, text: String): CommandResult? {
+        val prefix = smsPrefixes.firstOrNull { text.startsWith(it) } ?: return null
+        val rest = text.removePrefix(prefix).trim()
+        if (rest.isBlank()) return CommandResult("למי לשלוח את ההודעה?")
+        val isNumberChar = { c: Char -> c.isDigit() || c == ' ' || c == '-' }
+        val digits = rest.takeWhile(isNumberChar).filter { it.isDigit() }
+        val number: String
+        val name: String
+        var body: String
+        if (digits.length >= 3) {
+            number = digits
+            name = digits
+            body = rest.dropWhile(isNumberChar)
+        } else {
+            val words = rest.split(" ").filter { it.isNotBlank() }
+            var found: Triple<String, String, String>? = null
+            for (n in minOf(words.size, 3) downTo 1) {
+                val candidate = words.take(n).joinToString(" ")
+                val contact = ContactFinder.findByName(context, candidate)
+                if (!contact.hasPermission) return CommandResult("אין לי הרשאה לגשת לאנשי הקשר")
+                if (contact.number != null) {
+                    found = Triple(contact.number, contact.name ?: candidate, words.drop(n).joinToString(" "))
+                    break
+                }
+            }
+            if (found == null) return CommandResult("לא מצאתי איש קשר בשם ${words.first()}")
+            number = found.first
+            name = found.second
+            body = found.third
+        }
+        body = body.trim().removePrefix("להגיד ש").removePrefix("לומר ש").removePrefix("ש").trim()
+        val intent = Intent(Intent.ACTION_SENDTO, Uri.fromParts("smsto", number, null))
+        if (body.isNotBlank()) intent.putExtra("sms_body", body)
+        val ok = startFirst(context, Intent(intent).setPackage("com.future.messages"), intent)
+        return if (ok) CommandResult("פותח הודעה ל$name", shouldClose = true) else CommandResult("לא הצלחתי לפתוח את ההודעות")
+    }
+
+    // ---------------------------------------------------------------------
     // כל הפקודות ביחד
     // ---------------------------------------------------------------------
 
@@ -901,6 +1126,8 @@ object CommandProcessor {
     // לעשות" (עזרה) לפני "מה אתה" (מי אתה), ושיחת חולין ("שלום", "תודה")
     // בסוף, כדי ש"שלום, מה השעה" יענה על השעה.
     private val ALL_INTENTS: List<VoiceIntent> = buildList {
+        // פעולות במכשיר ראשונות: "לשנות את השעה" הוא הגדרות ולא "מה השעה"
+        addAll(deviceIntents())
         addAll(timeIntents())
         addAll(dateIntents())
         addAll(weekdayIntents())

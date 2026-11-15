@@ -148,7 +148,10 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
     // גוגל בעברית כשאפשר, Whisper המקומי כגיבוי (ר' HybridSpeech).
     val speech = remember { com.future.assistant.asr.HybridSpeech(context, speechEngine) }
 
-    fun speak(text: String, spoken: String = text, action: AssistantAction? = null) {
+    // הקשבה אוטומטית אחרי תשובה בשיחה (CommandResult.listenAgain) - נקבע אחרי onMicClick
+    var startListening: (() -> Unit)? = null
+
+    fun speak(text: String, spoken: String = text, action: AssistantAction? = null, listenAgain: Boolean = false) {
         state = AssistantState.SPEAKING
         noSpeech = false
         responseText = text
@@ -164,6 +167,11 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
                     onExit()
                 } else {
                     runCatching { micFocus.requestFocus() }
+                    // שיחה: ממשיכים להקשיב בלי ללחוץ שוב על OK
+                    if (listenAgain && micGranted.value && !modelFailed) {
+                        delay(250)
+                        if (state == AssistantState.IDLE) startListening?.invoke()
+                    }
                 }
             }
         }
@@ -181,7 +189,7 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
                 val result = withContext(Dispatchers.IO) { runCatching { CommandProcessor.process(context, text) } }
                 result.onSuccess {
                     pendingClose = it.shouldClose
-                    speak(it.responseText, it.speech, it.action)
+                    speak(it.responseText, it.speech, it.action, it.listenAgain)
                 }.onFailure {
                     pendingClose = false
                     speak("משהו השתבש בביצוע הפקודה, נסה שוב")
@@ -196,6 +204,7 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
         LocalSpeechEngine.preloadAsync(context) { ok -> if (!ok) modelFailed = true }
         withContext(Dispatchers.IO) {
             launch { KnowledgeBase.preload(context) }
+            launch { com.future.assistant.data.ChatBase.preload(context) }
             launch { piperTts.init() }
         }
     }
@@ -256,6 +265,8 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
             else -> {}
         }
     }
+
+    startListening = { if (state == AssistantState.IDLE) onMicClick() }
 
     // הטקסט שמוצג באזור התשובה - נקבע לפי המצב
     val answerText = when {

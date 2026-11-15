@@ -4,6 +4,15 @@ This repo has no carried-over git history (see root [README](README.md)), so thi
 
 ## Unreleased
 
+### Assistant: conversation, device actions, ~80,000 more phrasings (2026-11-15)
+
+- Conversation: new `ChatBase` + `assets/knowledge/chat.tsv` (~1,780 topics, ~4,700 phrasings, several replies each). Matching is exact (longest phrase) first, then word overlap. After a conversation reply the assistant listens again on its own, with no OK press. Short small-talk intents ("שלום") give way to a longer conversation match.
+- Distress phrases ("אני רוצה למות" and similar) are checked before anything else. The reply is calm and points to ERAN 1201 and MDA 101.
+- Device actions (~2,000 phrasings, `DevicePhrasings.kt`): Wi-Fi, Bluetooth, location, display/brightness, sound, ringtone volume, vibrate/normal ringer, Do Not Disturb, airplane mode, mobile network/hotspot, date/time, device info, Android version, battery saver, storage, accessibility, language, app management and settings pages. Also camera photo/video, recorder, notes, add contact, contacts, call log, messages, media next/previous/pause/play, and current volume. "תפתח את הגדרות הוויפיי" / "תעבור למצב טיסה" reach the action too. "השיר הבא" now skips the track instead of opening the music app.
+- SMS by voice: "תשלח הודעה לאמא שאני מאחרת" finds the contact and opens a message with the text filled in.
+- Trivia: ~80,000 new phrasings added to existing questions (most questions now have 11+ ways to ask). Phrasings were de-duplicated and kept only if they mention the question's subject.
+- New `DevicePhrasingsTest` checks that every device phrasing reaches its own action and that no existing phrasing is stolen.
+
 ### Assistant: ~11,100 more offline commands (2026-11-15)
 
 - Added by Haiku agents, data only (no code change): ~7,000 trivia Q&A (`trivia.tsv`, 26 topics: Israel, Judaism, science, geography, history, tech, sports, arts, food, vehicles, civics and more), ~1,580 Hebrew-English dictionary words, ~240 opposite pairs, ~430 people. Rows were validated and de-duplicated against existing data. Facts were written from model memory and not independently verified.
