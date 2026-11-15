@@ -270,6 +270,8 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
     // גלילה אפשרית רק כשהתשובה ארוכה מהאזור - אז בלבד היא מקבלת פוקוס
     val answerScrollable = answerScroll.maxValue > 0
 
+    // מצב מנוחה: בועה קומפקטית בשורה אחת (כמו העוזר של גמיני) - הנחיה + מיקרופון
+    val compact = state == AssistantState.IDLE && !noSpeech && responseText == IdlePrompt && hasPermission && !modelFailed
     // הכרטיס עולה מלמטה כשהחלונית נפתחת.
     var shown by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { shown = true }
@@ -291,13 +293,13 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(FutureDimens.spacingMd)
-                        .background(theme.surfaceColor, FutureShapes.xxl)
-                        .border(1.dp, theme.textColor.copy(alpha = 0.09f), FutureShapes.xxl)
-                        .padding(horizontal = FutureDimens.spacingXl, vertical = FutureDimens.spacingLg),
+                        .background(theme.surfaceColor, BubbleShape)
+                        .border(1.dp, theme.textColor.copy(alpha = 0.09f), BubbleShape)
+                        .padding(horizontal = FutureDimens.spacingLg, vertical = FutureDimens.spacingMd),
                 ) {
                     val dim = theme.mutedTextColor
-                    Column(modifier = Modifier.fillMaxWidth().heightIn(min = 40.dp)) {
-                        when (state) {
+                    Column(modifier = Modifier.fillMaxWidth().then(if (compact) Modifier else Modifier.heightIn(min = 40.dp))) {
+                        if (!compact) when (state) {
                             AssistantState.LISTENING -> Column(verticalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm)) {
                                 Text(
                                     "מקשיב",
@@ -386,7 +388,7 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
                     }
 
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(top = FutureDimens.spacingMd),
+                        modifier = Modifier.fillMaxWidth().padding(top = if (compact) 0.dp else FutureDimens.spacingMd),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingMd),
                     ) {
@@ -414,10 +416,11 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
                                 when {
                                     !hasPermission -> "OK לבקשת הרשאה"
                                     state == AssistantState.SPEAKING -> "OK להפסקה"
+                                    compact -> IdlePrompt
                                     else -> "לחץ על מקש האישור כדי לדבר"
                                 },
                                 color = dim,
-                                fontSize = type.summary,
+                                fontSize = if (compact) type.title else type.summary,
                                 modifier = Modifier.weight(1f),
                             )
                         }
@@ -434,12 +437,6 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
                             },
                         )
                     }
-                    Text(
-                        text = "כשהחיבור זמין, קטע אודיו עשוי להישלח לשירות חיצוני לצורך תמלול.",
-                        color = theme.mutedTextColor,
-                        fontSize = type.summary,
-                        modifier = Modifier.padding(top = FutureDimens.spacingMd),
-                    )
                 }
             }
         }
@@ -560,7 +557,8 @@ private fun BlinkingCaret(color: Color) {
 
 private const val IdlePrompt = "שאל כל דבר"
 private val WaveHeight = 56.dp
-private val MicSize = 56.dp
+private val MicSize = 48.dp
+private val BubbleShape = androidx.compose.foundation.shape.RoundedCornerShape(36.dp)
 /** גובה מקסימלי לאזור התשובה - מעבר לו התשובה נגללת. */
 private val AnswerMaxHeight = 160.dp
 /** כמה גוללים בלחיצת חץ אחת. */
@@ -615,7 +613,23 @@ private fun BottomGlow(active: Boolean, level: Float, thinking: Boolean, modifie
     val colors = remember {
         listOf(0xFFFF3B30, 0xFFFF9500, 0xFFFFD60A, 0xFF30D158, 0xFF00C8FF, 0xFF2F7BFF, 0xFFC04BFF, 0xFFFF3D8B).map { Color(it) }
     }
-    Canvas(modifier) {
+    Canvas(modifier.graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }) {
+        val edgeH = 150.dp.toPx()
+        val shift = (time * 0.08f % 1f) * size.width * 2f
+        val rainbow = colors + colors.first()
+        drawRect(
+            brush = Brush.horizontalGradient(
+                rainbow.map { it.copy(alpha = 0.85f * presence) },
+                startX = -shift, endX = size.width * 2f - shift,
+                tileMode = androidx.compose.ui.graphics.TileMode.Repeated,
+            ),
+            topLeft = Offset(0f, size.height - edgeH), size = Size(size.width, edgeH),
+        )
+        drawRect(
+            brush = Brush.verticalGradient(listOf(Color.Transparent, Color.Black), startY = size.height - edgeH, endY = size.height),
+            topLeft = Offset(0f, size.height - edgeH), size = Size(size.width, edgeH),
+            blendMode = androidx.compose.ui.graphics.BlendMode.DstIn,
+        )
         val n = colors.size
         val boost = 1f + currentLevel * 0.35f
         colors.forEachIndexed { i, c ->
