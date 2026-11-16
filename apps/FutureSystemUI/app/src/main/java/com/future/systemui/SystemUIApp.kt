@@ -6,6 +6,10 @@ class SystemUIApp : Application() {
     val commandQueue by lazy { CommandQueue() }
     var started = false
 
+    /** What IStatusBarService.registerStatusBar() returned (a hidden RegisterStatusBarResult), read reflectively. */
+    @Volatile
+    var registerResult: Any? = null
+
     /** Every feature, in start order. Agents add their feature here (one line each). */
     val features: List<Feature> by lazy {
         listOf<Feature>(

@@ -16,6 +16,7 @@ import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowInsets
+import android.view.WindowInsetsController
 import androidx.compose.ui.graphics.toArgb
 import com.future.sharednav.theme.FutureTheme
 import com.future.sharednav.theme.ThemeClient
@@ -134,6 +135,18 @@ object StatusBarInset {
     private fun paint(activity: Activity, content: View) {
         val shared = ThemeClient.getTheme(activity)
         content.setBackgroundColor(FutureTheme(isDarkMode = shared.isDarkMode).backgroundColor.toArgb())
+        // FutureSystemUI (the real SystemUI) takes the bar's tone from the app's appearance, not from
+        // a screenshot: a light FutureOS theme must ask for dark icons, or the bar stays black above
+        // a light app. Set from the FutureOS theme and not the system night mode, which
+        // enableEdgeToEdge() would otherwise follow. Harmless under the FutureUI overlay.
+        try {
+            activity.window.insetsController?.setSystemBarsAppearance(
+                if (shared.isDarkMode) 0 else WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS,
+                WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS,
+            )
+        } catch (e: Exception) {
+            Log.w(TAG, "status bar appearance failed", e)
+        }
     }
 }
 

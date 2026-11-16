@@ -20,7 +20,9 @@ class SystemUIService : Service() {
         app.started = true
         try {
             val bar = IStatusBarService.Stub.asInterface(ServiceManager.getService("statusbar"))
-            bar.registerStatusBar(app.commandQueue)
+            // The result holds the state the framework already has (icons, disable flags,
+            // appearance); StatusBarFeature applies it when it starts.
+            app.registerResult = bar.registerStatusBar(app.commandQueue)
             Log.i(TAG, "registered as the status bar")
         } catch (t: Throwable) {
             Log.e(TAG, "registerStatusBar failed", t)

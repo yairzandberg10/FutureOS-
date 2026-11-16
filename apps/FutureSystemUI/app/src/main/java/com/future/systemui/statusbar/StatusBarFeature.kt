@@ -2,6 +2,10 @@ package com.future.systemui.statusbar
 
 import android.content.Context
 import android.graphics.PixelFormat
+import android.graphics.Rect
+import android.os.Handler
+import android.os.Looper
+import android.service.notification.StatusBarNotification
 import android.util.Log
 import android.view.Gravity
 import android.view.View
@@ -21,6 +25,14 @@ import com.android.internal.statusbar.StatusBarIcon
 import com.future.sharednav.i18n.Tr
 import com.future.systemui.CommandQueue
 import com.future.systemui.Feature
+import com.future.systemui.SystemUIApp
+import com.future.systemui.notifications.NotificationRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * The real status bar window (TYPE_STATUS_BAR), driven by the IStatusBar callbacks of [CommandQueue].
@@ -32,6 +44,12 @@ class StatusBarFeature : Feature, CommandQueue.Callbacks {
     private var windowManager: WindowManager? = null
     private var barView: ComposeView? = null
     private var monitor: DeviceStatusMonitor? = null
+    private var privacy: PrivacyMonitor? = null
+    private val main = Handler(Looper.getMainLooper())
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private val hideTransient = Runnable { hideTransientBars() }
+    /** Small notification icons by "package/resPackage/resId" - decoded once, not on every update. */
+    private val notificationIconCache = HashMap<String, androidx.compose.ui.graphics.ImageBitmap?>()
 
     // Lifecycle owners for Compose (a window added from a Service has none of its own).
     private val owner = BarOwner()
@@ -50,7 +68,10 @@ class StatusBarFeature : Feature, CommandQueue.Callbacks {
             windowManager = app.getSystemService(WindowManager::class.java)
             commandQueue.addCallback(this)
             monitor = DeviceStatusMonitor(app).also { it.start() }
+            privacy = PrivacyMonitor(app).also { it.start() }
             addBarWindow(app)
+            applyRegisterResult((app as? SystemUIApp)?.registerResult)
+            watchNotifications(app)
         } catch (t: Throwable) {
             Log.e(TAG, "StatusBarFeature.start failed", t)
         }
@@ -69,11 +90,12 @@ class StatusBarFeature : Feature, CommandQueue.Callbacks {
     private fun addBarWindow(context: Context) {
         val wm = windowManager ?: return
         val mon = monitor ?: return
+        val priv = privacy ?: return
         owner.create()
         val view = ComposeView(context).apply {
             setViewTreeLifecycleOwner(owner)
             setViewTreeSavedStateRegistryOwner(owner)
-            setContent { StatusBarContent(mon) }
+            setContent { StatusBarContent(mon, priv) }
         }
         barView = view
         owner.resume()
@@ -157,6 +179,10 @@ class StatusBarFeature : Feature, CommandQueue.Callbacks {
             if (p0 != DEFAULT_DISPLAY || p1 == null || !p1.contains(ITYPE_STATUS_BAR)) return
             transientShown = true
             applyVisibility()
+            // Stock SystemUI's AutoHideController hides a revealed bar again; without it the bar of
+            // an immersive app stayed on screen until the app changed.
+            main.removeCallbacks(hideTransient)
+            main.postDelayed(hideTransient, AUTO_HIDE_MS)
         } catch (t: Throwable) {
             Log.e(TAG, "showTransient failed", t)
         }
@@ -166,10 +192,115 @@ class StatusBarFeature : Feature, CommandQueue.Callbacks {
         try {
             if (p0 != DEFAULT_DISPLAY || p1 == null || !p1.contains(ITYPE_STATUS_BAR)) return
             transientShown = false
+            main.removeCallbacks(hideTransient)
             applyVisibility()
         } catch (t: Throwable) {
             Log.e(TAG, "abortTransient failed", t)
         }
+    }
+
+    override fun onSystemBarAttributesChanged(
+        p0: Int,
+        p1: Int,
+        p2: Array<com.android.internal.view.AppearanceRegion>?,
+        p3: Boolean,
+        p4: Int,
+        p5: Boolean,
+    ) {
+        try {
+            if (p0 != DEFAULT_DISPLAY) return
+            applyAppearance(p1, p2)
+        } catch (t: Throwable) {
+            Log.e(TAG, "onSystemBarAttributesChanged failed", t)
+        }
+    }
+
+    /**
+     * The ink follows the app under the bar: APPEARANCE_LIGHT_STATUS_BARS = dark icons. With several
+     * regions (split screen) the one under the bar's start wins; without regions, the merged value.
+     */
+    private fun applyAppearance(appearance: Int, regions: Array<*>?) {
+        val barPx = appContext?.let { barHeightPx(it) } ?: 0
+        val regionAppearance = regions?.firstNotNullOfOrNull { region ->
+            if (region == null) return@firstNotNullOfOrNull null
+            val bounds = callMethod(region, "getBounds") as? Rect
+            if (bounds != null && bounds.top >= barPx) null else callMethod(region, "getAppearance") as? Int
+        }
+        val value = regionAppearance ?: appearance
+        StatusBarState.lightBackground.value = value and APPEARANCE_LIGHT_STATUS_BARS != 0
+        StatusBarState.lowProfile.value = value and APPEARANCE_LOW_PROFILE_BARS != 0
+    }
+
+    /**
+     * registerStatusBar() returns the state the framework already holds (icons set before we were
+     * up, disable flags from the keyguard, the current appearance, a transient bar). Dropping it
+     * left the bar wrong until each of those happened to change again - e.g. after a SystemUI crash.
+     */
+    private fun applyRegisterResult(result: Any?) {
+        if (result == null) return
+        try {
+            (readField(result, "mIcons") as? Map<*, *>)?.forEach { (slot, icon) ->
+                if (slot is String && icon is StatusBarIcon) setIcon(slot, icon)
+            }
+            val flags1 = readField(result, "mDisabledFlags1") as? Int
+            val flags2 = readField(result, "mDisabledFlags2") as? Int ?: 0
+            if (flags1 != null) disable(DEFAULT_DISPLAY, flags1, flags2)
+            val appearance = readField(result, "mAppearance") as? Int
+            if (appearance != null) applyAppearance(appearance, readField(result, "mAppearanceRegions") as? Array<*>)
+            (readField(result, "mAppFullscreen") as? Boolean)?.let { setTopAppHidesStatusBar(it) }
+            (readField(result, "mTransientBarTypes") as? IntArray)?.let { showTransient(DEFAULT_DISPLAY, it) }
+        } catch (t: Throwable) {
+            Log.e(TAG, "applying RegisterStatusBarResult failed", t)
+        }
+    }
+
+    /** IWindowManager.hideTransientBars(displayId) - what stock SystemUI calls after the reveal timeout. */
+    private fun hideTransientBars() {
+        try {
+            val global = Class.forName("android.view.WindowManagerGlobal")
+            val wms = global.getMethod("getWindowManagerService").invoke(null) ?: return
+            wms.javaClass.getMethod("hideTransientBars", Int::class.javaPrimitiveType).invoke(wms, DEFAULT_DISPLAY)
+        } catch (t: Throwable) {
+            Log.w(TAG, "hideTransientBars failed", t)
+        }
+    }
+
+    // ---------------------------------------------------------------- notifications
+
+    /**
+     * The notification icons next to the clock. Nothing fed the bar before - the count stayed 0
+     * forever. Ongoing notifications (music, a running service) are state, not something waiting
+     * for the user, so they are left out, like on stock Android's "dot".
+     */
+    private fun watchNotifications(context: Context) {
+        scope.launch {
+            NotificationRepository.notifications.collectLatest { list ->
+                val waiting = list.filter { !it.isOngoing && it.packageName != context.packageName }
+                val apps = withContext(Dispatchers.Default) {
+                    waiting.sortedByDescending { it.postTime }
+                        .distinctBy { it.packageName }
+                        .map { NotificationAppIcon(it.packageName, smallIcon(context, it)) }
+                }
+                StatusBarState.setNotificationCount(waiting.size)
+                StatusBarState.notificationApps.value = apps
+            }
+        }
+    }
+
+    private fun smallIcon(context: Context, sbn: StatusBarNotification): androidx.compose.ui.graphics.ImageBitmap? {
+        val icon = sbn.notification.smallIcon ?: return null
+        val key = try {
+            if (icon.type == android.graphics.drawable.Icon.TYPE_RESOURCE) "${sbn.packageName}/${icon.resPackage}/${icon.resId}" else null
+        } catch (_: Throwable) { null }
+        if (key != null) synchronized(notificationIconCache) { if (notificationIconCache.containsKey(key)) return notificationIconCache[key] }
+        val bmp = try {
+            icon.loadDrawable(context)?.toBitmap(ICON_PX, ICON_PX)?.asImageBitmap()
+        } catch (t: Throwable) {
+            Log.w(TAG, "small icon failed for ${sbn.packageName}", t)
+            null
+        }
+        if (key != null) synchronized(notificationIconCache) { notificationIconCache[key] = bmp }
+        return bmp
     }
 
     override fun setIcon(p0: String?, p1: StatusBarIcon?) {
@@ -212,6 +343,13 @@ class StatusBarFeature : Feature, CommandQueue.Callbacks {
 
     private fun publishIcons() {
         StatusBarState.icons.value = slotIcons.values.toList()
+    }
+
+    private fun callMethod(target: Any, name: String): Any? = try {
+        target.javaClass.getMethod(name).invoke(target)
+    } catch (t: Throwable) {
+        Log.w(TAG, "${target.javaClass.simpleName}.$name() not callable", t)
+        null
     }
 
     /** StatusBarIcon is a hidden class (empty compile-time stub); its fields are read reflectively. */
@@ -259,6 +397,13 @@ class StatusBarFeature : Feature, CommandQueue.Callbacks {
         const val DISABLE_CLOCK = 0x00800000
 
         const val DEFAULT_DISPLAY = 0
+
+        // WindowInsetsController.APPEARANCE_* (public, but the AppearanceRegion values are raw ints).
+        const val APPEARANCE_LOW_PROFILE_BARS = 1 shl 2
+        const val APPEARANCE_LIGHT_STATUS_BARS = 1 shl 3
+
+        /** AutoHideController.AUTO_HIDE_TIMEOUT_MS in stock SystemUI. */
+        const val AUTO_HIDE_MS = 2250L
         const val ITYPE_STATUS_BAR = 0 // InsetsState.ITYPE_STATUS_BAR on Android 12
 
         /** Same as FutureUI's StatusBarLayoutManager.HEIGHT_DP. */

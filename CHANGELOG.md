@@ -4,6 +4,18 @@ This repo has no carried-over git history (see root [README](README.md)), so thi
 
 ## Unreleased
 
+### FutureSystemUI: a status bar with the real device state (2026-11-16)
+
+Not compiled here (the session has no Android SDK) and not tested on the device.
+
+- **Cellular**: signal bars by level (`TelephonyCallback`, 0-4), network type (5G / 4G+ / 4G / H+ / H / 3G / E / G) only while mobile data is up and Wi-Fi isn't, a no-SIM icon, and empty bars when there is no service. Before: one icon whenever a cellular network existed.
+- **Wi-Fi**: shown only while connected, with its level from the RSSI (`NetworkCallback`). Before: shown whenever Wi-Fi was switched on.
+- **Notifications**: nothing ever set the notification count, so the bell never appeared. The bar now shows the small icon of each app with a waiting notification (newest first, 3 + "+N"). Ongoing notifications aren't counted.
+- **Indicators that no longer exist without stock SystemUI**: camera / microphone / location in use (AppOps active ops, new `WATCH_APPOPS` permission; camera/audio callbacks as a fallback), airplane mode, silent/vibrate, Do Not Disturb, alarm, Bluetooth on/connected, wired headset, battery saver (warning-coloured battery frame), and a call pill with the running time from off-hook.
+- **Tone from the app, not from screenshots**: `onSystemBarAttributesChanged` (APPEARANCE_LIGHT_STATUS_BARS) gives a light bar with dark ink or a black bar with white ink; low profile dims the bar. `SharedKeypadNav` `StatusBarInset` now declares that appearance from the FutureOS theme in every app (apps must be rebuilt to pick it up).
+- **State at startup**: the `RegisterStatusBarResult` from `registerStatusBar()` (icons, disable flags, appearance, transient bars) was dropped. It is now applied.
+- **Immersive reveal**: a revealed bar is hidden again after 2.25s (`hideTransientBars`), as stock SystemUI does.
+- No AM/PM next to the clock; optional status glyphs capped at 5 so the clock is never pushed out; content descriptions on every indicator.
 ### Control Center: icon grid cleanup and new controls (2026-11-16)
 
 - The grid catalog went from 51 controls to 26, and the grid holds up to 15 (3 rows of 5, down from 50). Removed: controls that duplicate a pill or the media card (battery saver, night light, play/next/previous), "Clear memory" (`am kill-all` hurt more than it helped), set-once settings (auto time/sync, heads-up, haptics, key/dial tones, ring vibration, accessibility toggles, animations, stay awake), regular apps already on the home screen and most settings pages. Saved grids drop removed ids by themselves, and only the first 15 are kept.
