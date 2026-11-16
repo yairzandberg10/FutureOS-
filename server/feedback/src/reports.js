@@ -1,7 +1,15 @@
 // דיווחי דרך של הקהילה (בסגנון Waze): משטרה, תאונה, מפגע, פקק, חסימה, מצלמה.
 // דיווח חדש קרוב לקיים מאותו סוג מאשר אותו; "לא שם" חוזרים מפחיתים אותו עד שהוא נעלם.
 
-import { HttpError, readJson, takeQuota, newId, now, json, HOUR, DAY } from "./util.js";
+import { HttpError, readJson, takeQuota, clientNet, newId, now, json, HOUR, DAY } from "./util.js";
+
+/**
+ * מגבלה לכל רשת בשעה, מעבר למגבלה לכל מכשיר: הרישום פתוח, ובלי זה כמה מכשירים
+ * מזויפים מאותה רשת יכולים להציף דיווחים או להצביע "לא שם" על כל דיווח אמיתי.
+ */
+async function perNetwork(env, request, kind, limit) {
+  if (!(await takeQuota(env.DB, kind, clientNet(request), limit, HOUR))) throw new HttpError(429, "rate_limited");
+}
 
 // כמה זמן דיווח חי בלי אישור נוסף (דקות), ובאיזה רדיוס (מטרים) דיווח חדש נחשב לאותו אירוע
 export const TYPES = {
@@ -63,6 +71,7 @@ export async function submitReport(request, env, device) {
   if (!(await takeQuota(env.DB, "report_day", device.id, Number(env.REPORT_PER_DAY || 100), DAY))) {
     throw new HttpError(429, "rate_limited");
   }
+  await perNetwork(env, request, "report_net", Number(env.REPORT_PER_NET_HOUR || 60));
 
   const t = now();
   const close = (await nearby(env.DB, body.lat, body.lng, spec.mergeM, body.type)).sort(byDistance(body.lat, body.lng))[0];
@@ -124,6 +133,7 @@ export async function voteReport(request, env, device) {
   if (!(await takeQuota(env.DB, "report_vote", device.id, Number(env.VOTE_PER_HOUR || 120), HOUR))) {
     throw new HttpError(429, "rate_limited");
   }
+  await perNetwork(env, request, "vote_net", Number(env.VOTE_PER_NET_HOUR || 240));
   const t = now();
   const report = await env.DB.prepare("SELECT id, type, expires_at FROM road_reports WHERE id = ?1").bind(body.id).first();
   if (!report || report.expires_at <= t) throw new HttpError(404, "not_found");

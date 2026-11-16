@@ -31,6 +31,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -94,7 +98,20 @@ fun RouteOptionsScreen(
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    val avoidTolls by viewModel.avoidTolls.collectAsState()
+    val departInMinutes by viewModel.departInMinutes.collectAsState()
+
+    Column(
+        modifier = Modifier.fillMaxSize().onPreviewKeyEvent { event ->
+            // אפשרויות נהיגה בסגנון Waze, במקשים: 1 הימנעות מאגרה, 3 שעת יציאה
+            if (mode != TravelMode.DRIVE || event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+            when (com.future.sharednav.nav.digitForKey(event.key)) {
+                "1" -> { viewModel.toggleAvoidTolls(); true }
+                "3" -> { viewModel.cycleDepartureTime(); true }
+                else -> false
+            }
+        }
+    ) {
         ScreenTopBar(
             title = stringResource(R.string.route_options_title),
             textColor = MaterialTheme.colorScheme.onBackground,
@@ -112,6 +129,16 @@ fun RouteOptionsScreen(
                 modifier = Modifier.padding(FutureDimens.spacingMd),
                 style = MaterialTheme.typography.bodyMedium,
                 maxLines = 2
+            )
+        }
+
+        if (mode == TravelMode.DRIVE) {
+            Text(
+                text = "1 " + (if (avoidTolls) "בלי כבישי אגרה ✓" else "כולל כבישי אגרה") +
+                    " · 3 " + (if (departInMinutes == 0) "יציאה עכשיו" else "יציאה בעוד $departInMinutes דק׳"),
+                color = theme.mutedTextColor,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(horizontal = FutureDimens.screenPadding, vertical = FutureDimens.spacingSm),
             )
         }
 

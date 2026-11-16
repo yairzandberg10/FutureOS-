@@ -6,6 +6,9 @@ import { HttpError, readJson, takeQuota, clientNet, HOUR, DAY } from "./util.js"
 
 const HERE_ROUTES_URL = "https://router.hereapi.com/v8/routes";
 const HERE_TRANSIT_URL = "https://transit.router.hereapi.com/v8/routes";
+const HERE_DEPARTURES_URL = "https://transit.hereapi.com/v8/departures";
+// זמן ISO עם הפרש אזור, למשל 2026-11-16T08:30:00+02:00
+const ISO_TIME_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?(Z|[+-]\d{2}:\d{2})$/;
 const ID_RE = /^[0-9A-Za-z_-]{1,32}$/;
 const SIRI_CACHE_SECONDS = 20;
 
@@ -51,6 +54,12 @@ export async function route(request, env, device) {
     throw new HttpError(400, "bad_coordinates");
   }
   if (body.mode != null && body.mode !== "car") throw new HttpError(400, "bad_mode");
+  // אפשרויות בסגנון Waze: הימנעות מכבישי אגרה (כביש 6), ושעת יציאה עתידית ("מתי לצאת")
+  if (body.avoidTolls != null && typeof body.avoidTolls !== "boolean") throw new HttpError(400, "bad_options");
+  const departAt = body.departAt ?? null;
+  if (departAt !== null && (typeof departAt !== "string" || !ISO_TIME_RE.test(departAt) || Number.isNaN(Date.parse(departAt)))) {
+    throw new HttpError(400, "bad_options");
+  }
 
   if (!(await takeQuota(env.DB, "route", device.id, Number(env.ROUTE_PER_HOUR || 60), HOUR))) {
     throw new HttpError(429, "rate_limited");
@@ -67,6 +76,8 @@ export async function route(request, env, device) {
   url.searchParams.set("return", "polyline,summary,travelSummary,turnByTurnActions");
   url.searchParams.set("lang", "he");
   url.searchParams.set("traffic[mode]", "default");
+  if (body.avoidTolls === true) url.searchParams.set("avoid[features]", "tollRoad");
+  if (departAt !== null) url.searchParams.set("departureTime", departAt);
   url.searchParams.set("apikey", env.HERE_API_KEY);
 
   const upstream = await fetch(url.toString());
@@ -113,7 +124,34 @@ export async function transit(request, env, device) {
   return new Response(text, { headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
 }
 
-/** POST /nav/siri/stop {stopId, lineRef?} -> XML של SIRI StopMonitoring */
+/**
+ * POST /nav/departures  {lat, lng} -> JSON של HERE Public Transit "Next Departures" (boards[]).
+ * תחנות קרובות וזמני היציאה הבאים מכל אחת (בסגנון Moovit), בלי שהמכשיר יחזיק נתוני GTFS.
+ */
+export async function departures(request, env, device) {
+  if (!env.HERE_API_KEY) throw new HttpError(503, "nav_disabled");
+  const body = await readJson(request, 256);
+  if (!validLat(body.lat) || !validLng(body.lng)) throw new HttpError(400, "bad_coordinates");
+  if (!(await takeQuota(env.DB, "departures", device.id, Number(env.DEPARTURES_PER_HOUR || 120), HOUR))) {
+    throw new HttpError(429, "rate_limited");
+  }
+  await abuseLimits(env, request, device, "departures", Number(env.DEPARTURES_PER_DAY || 600), Number(env.DEPARTURES_PER_NET_HOUR || 480));
+  await fleetQuota(env, "here");
+
+  const url = new URL(HERE_DEPARTURES_URL);
+  // ";" חייב להישאר לא מקודד: HERE מפרש in={lat},{lng};r={radius}
+  url.search = `in=${body.lat},${body.lng};r=600&maxPlaces=6&maxPerBoard=4&lang=he&apiKey=${encodeURIComponent(env.HERE_API_KEY)}`;
+
+  const upstream = await fetch(url.toString());
+  const text = await upstream.text();
+  if (!upstream.ok) {
+    console.warn("here departures failed", upstream.status);
+    throw new HttpError(502, "upstream_failed");
+  }
+  return new Response(text, { headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
+}
+
+/** POST /nav/siri/stop{stopId, lineRef?} -> XML של SIRI StopMonitoring */
 export async function siriStop(request, env, device, cache = globalThis.caches?.default) {
   if (!env.SIRI_BASE_URL || !env.SIRI_API_KEY) throw new HttpError(503, "transit_disabled");
   const body = await readJson(request, 512);

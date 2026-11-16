@@ -65,11 +65,13 @@ object FutureServer {
      * POST {baseUrl}/nav/route עם {from:{lat,lng}, to:{lat,lng}, mode:"car"}.
      * מחזיר את גוף ה-JSON של HERE כמו שהוא, לפירוק ב-HereRouteResponse.
      */
-    suspend fun routeJson(from: LatLng, to: LatLng): String? {
+    suspend fun routeJson(from: LatLng, to: LatLng, avoidTolls: Boolean = false, departAt: String? = null): String? {
         val body = buildJsonObject {
             put("from", buildJsonObject { put("lat", from.lat); put("lng", from.lon) })
             put("to", buildJsonObject { put("lat", to.lat); put("lng", to.lon) })
             put("mode", "car")
+            if (avoidTolls) put("avoidTolls", true)
+            if (departAt != null) put("departAt", departAt)
         }.toString()
         return post("/nav/route", body)
     }
@@ -86,7 +88,16 @@ object FutureServer {
         return post("/nav/transit", body)
     }
 
-    /** POST {baseUrl}/nav/report - דיווח דרך חדש מהמשתמש (משטרה, תאונה, מפגע...). */
+    /** POST {baseUrl}/nav/departures - תחנות קרובות וזמני היציאה הבאים (HERE Next Departures, boards[]). */
+    suspend fun departuresJson(at: LatLng): String? {
+        val body = buildJsonObject {
+            put("lat", at.lat)
+            put("lng", at.lon)
+        }.toString()
+        return post("/nav/departures", body)
+    }
+
+    /** POST {baseUrl}/nav/report -דיווח דרך חדש מהמשתמש (משטרה, תאונה, מפגע...). */
     suspend fun submitReport(type: String, at: LatLng): String? {
         val body = buildJsonObject {
             put("type", type)

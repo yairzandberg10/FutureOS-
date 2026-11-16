@@ -506,3 +506,38 @@ test("road reports reject bad type and coordinates", async () => {
   const badCoord = await call("/v1/nav/report", { method: "POST", headers: a.headers, body: { type: "police", lat: 999, lng: 34 } });
   assert.equal(badCoord.status, 400);
 });
+
+test("nav transit and departures pass HERE JSON through with the key server side", async () => {
+  const d = await registerDevice();
+  env.HERE_API_KEY = "HERE-SECRET";
+  const seen = [];
+  globalThis.fetch = async (url) => {
+    seen.push(String(url));
+    return new Response('{"ok":1}', { status: 200 });
+  };
+  const t = await call("/v1/nav/transit", { method: "POST", headers: d.headers, body: { from: { lat: 32.1, lng: 34.8 }, to: { lat: 32.0, lng: 34.7 } } });
+  assert.equal(t.status, 200);
+  const dep = await call("/v1/nav/departures", { method: "POST", headers: d.headers, body: { lat: 32.08, lng: 34.78 } });
+  assert.equal(dep.status, 200);
+  assert.equal(await dep.text(), '{"ok":1}');
+  assert.ok(seen[0].startsWith("https://transit.router.hereapi.com/v8/routes"));
+  assert.ok(seen[1].startsWith("https://transit.hereapi.com/v8/departures?in=32.08,34.78;r=600"));
+  assert.equal((await call("/v1/nav/departures", { method: "POST", headers: d.headers, body: { lat: 300, lng: 1 } })).status, 400);
+});
+
+test("nav route forwards avoidTolls and departAt, and validates them", async () => {
+  const d = await registerDevice();
+  env.HERE_API_KEY = "k";
+  let upstream;
+  globalThis.fetch = async (url) => {
+    upstream = new URL(String(url));
+    return new Response("{}");
+  };
+  const base = { from: { lat: 32.1, lng: 34.8 }, to: { lat: 31.7, lng: 35.2 } };
+  const ok = await call("/v1/nav/route", { method: "POST", headers: d.headers, body: { ...base, avoidTolls: true, departAt: "2026-11-16T08:30:00+02:00" } });
+  assert.equal(ok.status, 200);
+  assert.equal(upstream.searchParams.get("avoid[features]"), "tollRoad");
+  assert.equal(upstream.searchParams.get("departureTime"), "2026-11-16T08:30:00+02:00");
+  assert.equal((await call("/v1/nav/route", { method: "POST", headers: d.headers, body: { ...base, departAt: "tomorrow" } })).status, 400);
+  assert.equal((await call("/v1/nav/route", { method: "POST", headers: d.headers, body: { ...base, avoidTolls: "yes" } })).status, 400);
+});

@@ -21,6 +21,10 @@ interface HereApi {
         @Query("return") returnFields: String = "polyline,summary,travelSummary,turnByTurnActions",
         @Query("lang") lang: String = "he",
         @Query("traffic[mode]") trafficMode: String = "default",
+        /** "tollRoad" להימנעות מכבישי אגרה; null = בלי הגבלה (Retrofit משמיט פרמטר null). */
+        @Query("avoid[features]") avoidFeatures: String? = null,
+        /** שעת יציאה עתידית בפורמט ISO; null = עכשיו, עם פקקים בזמן אמת. */
+        @Query("departureTime") departureTime: String? = null,
         @Query("apikey") apiKey: String
     ): HereRouteResponse
 }

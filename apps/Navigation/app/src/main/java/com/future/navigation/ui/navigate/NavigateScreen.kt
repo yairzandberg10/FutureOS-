@@ -62,6 +62,8 @@ fun NavigateScreen(viewModel: NavigateViewModel, onClose: () -> Unit = {}) {
     var followMode by remember { mutableStateOf(true) }
     // סיום ניווט מבקש אישור (F18), ולכן הכפתור רק פותח את הדיאלוג.
     var confirmEnd by remember { mutableStateOf(false) }
+    // תפריט הדיווח (מקש 0) - בזמן שהוא פתוח, הספרות מדווחות במקום להזיז את המפה
+    var reportMenu by remember { mutableStateOf(false) }
     // GPS כבוי - מציגים הודעה במקום מפה שאינה מתעדכנת (F19). נבדק מחדש בכל חזרה למסך.
     val gpsContext = androidx.compose.ui.platform.LocalContext.current
     var gpsOff by remember { mutableStateOf(!isGpsEnabled(gpsContext)) }
@@ -107,23 +109,19 @@ fun NavigateScreen(viewModel: NavigateViewModel, onClose: () -> Unit = {}) {
 
     Column(
         modifier = Modifier.fillMaxSize().onPreviewKeyEvent { event ->
-            // מקשי ספרות מדווחים/מצביעים בלי לגעת במסך: 1-5 דיווח, 6 "עדיין שם", 7 "לא שם".
+            // המפה כבר משתמשת ב-2/4/5/6/8 להזזה, ולכן הדיווח הוא תפריט: 0 פותח/סוגר,
+            // ובתוכו 1-6 סוג דיווח, 7 "עדיין שם", 9 "לא שם", חזרה סוגרת.
             if (event.type != KeyEventType.KeyDown || state.ended) return@onPreviewKeyEvent false
-            val digit = when (event.key) {
-                Key.One -> 1
-                Key.Two -> 2
-                Key.Three -> 3
-                Key.Four -> 4
-                Key.Five -> 5
-                Key.Six -> 6
-                Key.Seven -> 7
-                else -> return@onPreviewKeyEvent false
+            if (reportMenu && event.key == Key.Back) { reportMenu = false; return@onPreviewKeyEvent true }
+            val digit = com.future.sharednav.nav.digitForKey(event.key) ?: return@onPreviewKeyEvent false
+            if (digit == "0") { reportMenu = !reportMenu; return@onPreviewKeyEvent true }
+            if (!reportMenu) return@onPreviewKeyEvent false
+            when (digit) {
+                "7" -> viewModel.voteNearestReport(true)
+                "9" -> viewModel.voteNearestReport(false)
+                else -> ReportType.fromDigit(digit.toInt())?.let(viewModel::report) ?: return@onPreviewKeyEvent true
             }
-            when {
-                digit <= 5 -> ReportType.fromDigit(digit)?.let(viewModel::report)
-                digit == 6 -> viewModel.voteNearestReport(true)
-                else -> viewModel.voteNearestReport(false)
-            }
+            reportMenu = false
             true
         }
     ) {
@@ -188,12 +186,18 @@ fun NavigateScreen(viewModel: NavigateViewModel, onClose: () -> Unit = {}) {
                 // דיווח קרוב על המסלול, או אישור אחרי דיווח; בלי שניהם - תזכורת למקשים
                 val report = state.nearestReport
                 Text(
-                    text = state.reportMessage
-                        ?: report?.let {
-                            "${it.type.label} בעוד ${it.let { _ -> state.nearestReportMeters.toInt() }} מ׳ · 6 עדיין שם · 7 לא שם"
-                        }
-                        ?: ReportType.entries.joinToString(" · ") { "${it.digit} ${it.label}" },
-                    color = if (report != null && state.reportMessage == null) theme.dangerColor else theme.mutedTextColor,
+                    text = when {
+                        reportMenu -> ReportType.entries.joinToString(" · ") { "${it.digit} ${it.label}" } +
+                            (if (report != null) " · 7 עדיין שם · 9 לא שם" else "")
+                        state.reportMessage != null -> state.reportMessage!!
+                        report != null -> "${report.type.label} בעוד ${state.nearestReportMeters.toInt()} מ׳ · 0 לעדכן"
+                        else -> "0 לדיווח (משטרה, תאונה, פקק...)"
+                    },
+                    color = when {
+                        reportMenu -> theme.textColor
+                        report != null && state.reportMessage == null -> theme.dangerColor
+                        else -> theme.mutedTextColor
+                    },
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(bottom = 8.dp),
                 )
@@ -206,6 +210,10 @@ fun NavigateScreen(viewModel: NavigateViewModel, onClose: () -> Unit = {}) {
                             Text(tr("%d דק׳").format(kotlin.math.ceil(state.remainingDurationSeconds / 60).toInt()), fontWeight = FontWeight.Bold)
                             Text("·", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f))
                             Text(tr("%.1f ק״מ").format(state.remainingDistanceMeters / 1000.0))
+                            state.speedKmh?.let { speed ->
+                                Text("·", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f))
+                                Text("$speed קמ״ש")
+                            }
                         }
                         TopBarIconButton(FutureIcons.Close, tr("סיים ניווט"), theme.dangerColor, theme.accentColor, onClick = {
                             // הכפתור הזה משמעו "בטל/צא מהניווט" - לא רק לסמן ended=true (זה

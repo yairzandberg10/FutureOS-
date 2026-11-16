@@ -156,6 +156,7 @@ class MainActivity : ComponentActivity() {
         RemoteKeys.refresh()
         // שרת FutureOS: הטוקן נקרא מ-com.future.settings. בלי הספק הוא פשוט לא זמין.
         FutureServer.init(this)
+        com.future.navigation.data.routing.DrivingPrefs.init(this)
 
         setContent {
             var sharedTheme by remember { mutableStateOf(ThemeClient.getTheme(this)) }
@@ -254,6 +255,9 @@ class MainActivity : ComponentActivity() {
      */
     private fun prefetchTransitDataInBackground(location: LatLng) {
         if (transitPrefetchStarted) return
+        // כשיש שרת FutureOS, מסלולים, תחנות קרובות וזמני הגעה מגיעים ממנו - לא מורידים
+        // את קובץ ה-GTFS הארצי (~130MB) ברקע "ליתר ביטחון".
+        if (com.future.navigation.data.backend.FutureServer.isAvailable) return
         // ברשת סלולרית לא מורידים 130MB בלי לשאול - ההורדה תשאל כשמבקשים מסלול תחבורה (F09).
         if (com.future.navigation.data.network.NetworkPolicy.isMetered(applicationContext)) return
         if (System.currentTimeMillis() - transitPrefetchFailedAtMs < PREFETCH_RETRY_DELAY_MS) return

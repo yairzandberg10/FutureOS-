@@ -33,7 +33,9 @@ data class NavigateUiState(
     val nearestReport: RoadReport? = null,
     val nearestReportMeters: Double = 0.0,
     /** הודעה קצרה אחרי דיווח/הצבעה ("דווח: משטרה"), נמחקת אחרי כמה שניות. */
-    val reportMessage: String? = null
+    val reportMessage: String? = null,
+    /** מהירות נוכחית מה-GPS בקמ"ש, או null כשהמיקום לא כולל מהירות. */
+    val speedKmh: Int? = null
 ) {
     val currentStep: Maneuver get() = route.steps.getOrElse(currentStepIndex) { route.steps.last() }
     val nextStep: Maneuver? get() = route.steps.getOrNull(currentStepIndex + 1)
@@ -88,6 +90,9 @@ class NavigateViewModel(
 
         LocationHelper.observeLocation(appContext)
             .onEach { location ->
+                _uiState.value = _uiState.value.copy(
+                    speedKmh = if (location.hasSpeed()) (location.speed * 3.6f).toInt() else null
+                )
                 onLocationUpdate(
                     LatLng(location.latitude, location.longitude),
                     if (location.hasAccuracy()) location.accuracy.toDouble() else null

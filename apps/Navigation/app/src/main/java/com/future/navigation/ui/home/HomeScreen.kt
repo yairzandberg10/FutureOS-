@@ -255,7 +255,7 @@ fun HomeScreen(
                     items(nearbyStops) { nearby ->
                         FutureListItem(
                             title = nearby.stop.name,
-                            summary = tr("%.0f מ׳").format(nearby.distanceMeters),
+                            summary = tr("%.0f מ׳").format(nearby.distanceMeters) + (nearby.departures?.let { " · $it" } ?: ""),
                             theme = theme,
                             onClick = {
                                 onDestinationPicked(GeocodeResult(nearby.stop.name, LatLng(nearby.stop.lat, nearby.stop.lon)))

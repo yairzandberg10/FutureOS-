@@ -35,7 +35,8 @@ sealed class RouteLookup {
 }
 
 interface RoutingRepository {
-    suspend fun getDrivingRoute(from: LatLng, to: LatLng): RouteLookup
+    /** departAt: שעת יציאה עתידית (ISO עם הפרש אזור) לתכנון "מתי לצאת"; null = עכשיו. */
+    suspend fun getDrivingRoute(from: LatLng, to: LatLng, departAt: String? = null): RouteLookup
 }
 
 /**
@@ -52,13 +53,16 @@ class HereRoutingRepository : RoutingRepository {
         .retrofit(HereConfig.BASE_URL)
         .create(HereApi::class.java)
 
-    override suspend fun getDrivingRoute(from: LatLng, to: LatLng): RouteLookup {
+    override suspend fun getDrivingRoute(from: LatLng, to: LatLng, departAt: String?): RouteLookup {
+        val avoidTolls = DrivingPrefs.avoidTolls
         // הנתיב הראשון: שרת FutureOS (בלי מפתח HERE על המכשיר). אם הוא לא זמין -
         // ממשיכים לנתיב הקיים בדיוק כמו קודם. כשלון בכל השרשרת = שגיאת שרת.
-        val response = fetchViaFutureServer(from, to)
+        val response = fetchViaFutureServer(from, to, avoidTolls, departAt)
             ?: run {
                 if (!HereConfig.isConfigured) return RouteLookup.ServerError
-                fetchViaProxy(from, to) ?: fetchDirectly(from, to)
+                // ה-proxy הישן של Firebase לא מכיר את האפשרויות - כשיש כאלה מדלגים ישר ל-HERE
+                (if (!avoidTolls && departAt == null) fetchViaProxy(from, to) else null)
+                    ?: fetchDirectly(from, to, avoidTolls, departAt)
             }
             ?: return RouteLookup.ServerError
 
@@ -100,8 +104,8 @@ class HereRoutingRepository : RoutingRepository {
      * שרת FutureOS: POST /nav/route, והתשובה היא JSON של HERE כמו שהוא - אותו
      * פירוק בדיוק (HereRouteResponse). כל כשל (503, 429, רשת, פירוק) = null.
      */
-    private suspend fun fetchViaFutureServer(from: LatLng, to: LatLng): HereRouteResponse? {
-        val body = FutureServer.routeJson(from, to) ?: return null
+    private suspend fun fetchViaFutureServer(from: LatLng, to: LatLng, avoidTolls: Boolean, departAt: String?): HereRouteResponse? {
+        val body = FutureServer.routeJson(from, to, avoidTolls, departAt) ?: return null
         return try {
             NetworkModule.json.decodeFromString(HereRouteResponse.serializer(), body)
         } catch (e: Exception) {
@@ -124,12 +128,14 @@ class HereRoutingRepository : RoutingRepository {
     }
 
     /** נתיב הנפילה לאחור: קריאה ישירה ל-HERE עם המפתח שעל המכשיר. */
-    private suspend fun fetchDirectly(from: LatLng, to: LatLng): HereRouteResponse? {
+    private suspend fun fetchDirectly(from: LatLng, to: LatLng, avoidTolls: Boolean, departAt: String?): HereRouteResponse? {
         if (HereConfig.apiKey.isBlank()) return null
         return try {
             api.routes(
                 origin = formatCoordinate(from),
                 destination = formatCoordinate(to),
+                avoidFeatures = if (avoidTolls) "tollRoad" else null,
+                departureTime = departAt,
                 apiKey = HereConfig.apiKey
             )
         } catch (e: Exception) {

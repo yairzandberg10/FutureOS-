@@ -56,6 +56,36 @@ class RouteOptionsViewModel(
     val askCellularDownload = _askCellularDownload.asStateFlow()
     private var pendingSearch: Pair<TravelMode, Destination>? = null
 
+    /** הימנעות מכבישי אגרה (נשמר בין נסיעות) - מקש 1 במסך האפשרויות. */
+    private val _avoidTolls = MutableStateFlow(com.future.navigation.data.routing.DrivingPrefs.avoidTolls)
+    val avoidTolls = _avoidTolls.asStateFlow()
+
+    /** "מתי לצאת": בעוד כמה דקות (0 = עכשיו) - מקש 3 עובר בין 0/15/30/60/120. */
+    private val _departInMinutes = MutableStateFlow(0)
+    val departInMinutes = _departInMinutes.asStateFlow()
+
+    fun toggleAvoidTolls() {
+        val next = !_avoidTolls.value
+        _avoidTolls.value = next
+        com.future.navigation.data.routing.DrivingPrefs.avoidTolls = next
+        retry()
+    }
+
+    fun cycleDepartureTime() {
+        val options = listOf(0, 15, 30, 60, 120)
+        _departInMinutes.value = options[(options.indexOf(_departInMinutes.value) + 1) % options.size]
+        retry()
+    }
+
+    private fun departAtIso(): String? {
+        val minutes = _departInMinutes.value
+        if (minutes == 0) return null
+        return java.time.OffsetDateTime.now(java.time.ZoneId.of("Asia/Jerusalem"))
+            .plusMinutes(minutes.toLong())
+            .withNano(0)
+            .format(java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+    }
+
     private val _drivingRoute = MutableStateFlow<DrivingRoute?>(null)
     val drivingRoute = _drivingRoute.asStateFlow()
 
@@ -88,7 +118,7 @@ class RouteOptionsViewModel(
         searchJob = viewModelScope.launch {
             try {
                 when (mode) {
-                    TravelMode.DRIVE -> when (val lookup = routingRepository.getDrivingRoute(origin, destination.location)) {
+                    TravelMode.DRIVE -> when (val lookup = routingRepository.getDrivingRoute(origin, destination.location, departAtIso())) {
                         is RouteLookup.Found -> _drivingRoute.value = lookup.route
                         RouteLookup.NoRoute -> _error.value = tr("לא נמצא מסלול נסיעה")
                         RouteLookup.ServerError -> {
@@ -101,7 +131,13 @@ class RouteOptionsViewModel(
                         // זמין חוזרים לייבוא GTFS מקומי, ובו שואלים לפני הורדה ברשת סלולרית.
                         val serverResults = transitServerPlanner.findJourneys(origin, destination.location)
                         val results = if (serverResults != null) {
-                            serverResults
+                            // השרת ענה ריק: אם כבר יש נתונים מקומיים שמכסים את המסלול, מנסים
+                            // גם אותם (בלי להוריד כלום) - כיסוי HERE לא בהכרח זהה לנתוני משרד התחבורה.
+                            if (serverResults.isEmpty() && !transitDownloadNeeded(origin, destination.location)) {
+                                transitJourneyPlanner.findJourneys(origin, destination.location, System.currentTimeMillis() / 1000)
+                            } else {
+                                serverResults
+                            }
                         } else {
                             if (!allowCellularDownload && transitDownloadNeeded(origin, destination.location) &&
                                 NetworkPolicy.isMetered(appContext)

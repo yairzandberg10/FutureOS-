@@ -13,7 +13,8 @@ enum class ReportType(val key: String, val digit: Int, val label: String, val sp
     ACCIDENT("accident", 2, "תאונה", "תאונה"),
     HAZARD("hazard", 3, "מפגע בדרך", "מפגע בדרך"),
     TRAFFIC("traffic", 4, "פקק", "פקק"),
-    CLOSURE("closure", 5, "חסימה", "חסימת כביש");
+    CLOSURE("closure", 5, "חסימה", "חסימת כביש"),
+    CAMERA("camera", 6, "מצלמה", "מצלמת מהירות");
 
     companion object {
         fun fromKey(key: String): ReportType? = entries.firstOrNull { it.key == key }
