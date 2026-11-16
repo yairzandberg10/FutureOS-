@@ -7,6 +7,9 @@ import com.future.navigation.data.common.LatLng
 import com.future.navigation.data.common.distanceMetersTo
 import com.future.navigation.data.common.nearestDistanceMetersToPolyline
 import com.future.navigation.data.location.LocationHelper
+import com.future.navigation.data.reports.ReportType
+import com.future.navigation.data.reports.RoadReport
+import com.future.navigation.data.reports.RoadReportsRepository
 import com.future.navigation.data.routing.DrivingRoute
 import com.future.navigation.data.routing.Maneuver
 import com.future.navigation.data.routing.RoutingRepository
@@ -25,7 +28,12 @@ data class NavigateUiState(
     val remainingDistanceMeters: Double,
     val remainingDurationSeconds: Double,
     val ended: Boolean = false,
-    val muted: Boolean = false
+    val muted: Boolean = false,
+    /** דיווח הדרך הקרוב ביותר שעל המסלול לפנינו (עד ~1.5 ק"מ), או null. */
+    val nearestReport: RoadReport? = null,
+    val nearestReportMeters: Double = 0.0,
+    /** הודעה קצרה אחרי דיווח/הצבעה ("דווח: משטרה"), נמחקת אחרי כמה שניות. */
+    val reportMessage: String? = null
 ) {
     val currentStep: Maneuver get() = route.steps.getOrElse(currentStepIndex) { route.steps.last() }
     val nextStep: Maneuver? get() = route.steps.getOrNull(currentStepIndex + 1)
@@ -35,8 +43,13 @@ class NavigateViewModel(
     private val appContext: Context,
     private val routingRepository: RoutingRepository,
     initialRoute: DrivingRoute,
-    private val destination: LatLng
+    private val destination: LatLng,
+    private val reportsRepository: RoadReportsRepository = RoadReportsRepository()
 ) : ViewModel() {
+
+    private var reports: List<RoadReport> = emptyList()
+    private val announcedReports = HashSet<String>()
+    private var reportMessageJob: kotlinx.coroutines.Job? = null
 
     private val _uiState = MutableStateFlow(
         NavigateUiState(
@@ -82,6 +95,8 @@ class NavigateViewModel(
             }
             .launchIn(viewModelScope)
 
+        startReportsPolling()
+
         // בדיקה תקופתית של עומס פתאומי בכביש שכבר עליו המשתמש (Dynamic Rerouting) -
         // בנוסף לסטייה פיזית מהמסלול שכבר מטופלת ב-onLocationUpdate/triggerReroute.
         // HERE כבר מחשב כל מסלול עם פקקים בזמן אמת (ר' HereApi.kt), אז די לבקש
@@ -95,6 +110,67 @@ class NavigateViewModel(
                 if (location != null && !_uiState.value.ended) {
                     failures = if (checkForFasterRouteDueToTraffic(location)) 0 else failures + 1
                 }
+            }
+        }
+    }
+
+    /** מרענן את דיווחי הדרך מסביב כל חצי דקה; כשל ברשת פשוט משאיר את הרשימה הקודמת. */
+    private fun startReportsPolling() {
+        viewModelScope.launch {
+            while (!_uiState.value.ended) {
+                val here = _uiState.value.currentLocation
+                if (here != null) {
+                    reportsRepository.nearby(here)?.let { reports = it }
+                    updateNearestReport(here)
+                }
+                delay(REPORTS_REFRESH_MS)
+            }
+        }
+    }
+
+    /** הדיווח הקרוב ביותר שנמצא על המסלול (עד 60 מ' ממנו) ובטווח התראה; מקריא פעם אחת לכל דיווח. */
+    private fun updateNearestReport(here: LatLng) {
+        val route = _uiState.value.route
+        val candidate = reports
+            .filter { nearestDistanceMetersToPolyline(it.location, route.polyline) <= REPORT_ON_ROUTE_METERS }
+            .map { it to here.distanceMetersTo(it.location) }
+            .filter { it.second <= REPORT_LOOKAHEAD_METERS }
+            .minByOrNull { it.second }
+        _uiState.value = _uiState.value.copy(nearestReport = candidate?.first, nearestReportMeters = candidate?.second ?: 0.0)
+        if (candidate != null && candidate.second <= REPORT_ANNOUNCE_METERS && announcedReports.add(candidate.first.id)) {
+            speak("${candidate.first.type.spoken} בעוד ${spokenDistance(candidate.second)}")
+        }
+    }
+
+    private fun flashReportMessage(text: String) {
+        reportMessageJob?.cancel()
+        _uiState.value = _uiState.value.copy(reportMessage = text)
+        reportMessageJob = viewModelScope.launch {
+            delay(REPORT_MESSAGE_MS)
+            _uiState.value = _uiState.value.copy(reportMessage = null)
+        }
+    }
+
+    /** דיווח על המיקום הנוכחי (מקשים 1-5 במסך). */
+    fun report(type: ReportType) {
+        val here = _uiState.value.currentLocation ?: return flashReportMessage("אין מיקום - לא ניתן לדווח")
+        viewModelScope.launch {
+            val ok = reportsRepository.submit(type, here)
+            flashReportMessage(if (ok) "תודה! דווח: ${type.label}" else "הדיווח נכשל - נסו שוב")
+            if (ok) reportsRepository.nearby(here)?.let { reports = it }
+            updateNearestReport(here)
+        }
+    }
+
+    /** הצבעה על הדיווח שמוצג כרגע: "עדיין שם" (6) או "לא שם" (7). */
+    fun voteNearestReport(stillThere: Boolean) {
+        val report = _uiState.value.nearestReport ?: return
+        viewModelScope.launch {
+            val ok = reportsRepository.vote(report.id, stillThere)
+            flashReportMessage(if (ok) "תודה על העדכון" else "העדכון נכשל - נסו שוב")
+            if (ok && !stillThere) {
+                reports = reports.filter { it.id != report.id }
+                _uiState.value.currentLocation?.let(::updateNearestReport)
             }
         }
     }
@@ -247,6 +323,11 @@ class NavigateViewModel(
         private const val TRAFFIC_REROUTE_IMPROVEMENT_FACTOR = 0.9
         private const val REROUTE_COOLDOWN_MS = 10_000L
         private const val NEAR_MANEUVER_METERS = 120.0
+        private const val REPORTS_REFRESH_MS = 30_000L
+        private const val REPORT_ON_ROUTE_METERS = 60.0
+        private const val REPORT_LOOKAHEAD_METERS = 1500.0
+        private const val REPORT_ANNOUNCE_METERS = 600.0
+        private const val REPORT_MESSAGE_MS = 3_000L
     }
 }
 

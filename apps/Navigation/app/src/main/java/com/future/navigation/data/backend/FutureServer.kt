@@ -86,6 +86,35 @@ object FutureServer {
         return post("/nav/transit", body)
     }
 
+    /** POST {baseUrl}/nav/report - דיווח דרך חדש מהמשתמש (משטרה, תאונה, מפגע...). */
+    suspend fun submitReport(type: String, at: LatLng): String? {
+        val body = buildJsonObject {
+            put("type", type)
+            put("lat", at.lat)
+            put("lng", at.lon)
+        }.toString()
+        return post("/nav/report", body)
+    }
+
+    /** POST {baseUrl}/nav/reports/nearby - דיווחי דרך פעילים ברדיוס סביב נקודה. */
+    suspend fun nearbyReportsJson(at: LatLng, radiusMeters: Int): String? {
+        val body = buildJsonObject {
+            put("lat", at.lat)
+            put("lng", at.lon)
+            put("radius", radiusMeters)
+        }.toString()
+        return post("/nav/reports/nearby", body)
+    }
+
+    /** POST {baseUrl}/nav/report/vote - "עדיין שם" (up) או "לא שם". */
+    suspend fun voteReport(id: String, up: Boolean): String? {
+        val body = buildJsonObject {
+            put("id", id)
+            put("up", up)
+        }.toString()
+        return post("/nav/report/vote", body)
+    }
+
     /**
      * POST {baseUrl}/nav/siri/stop עם {stopId, lineRef?}. מחזיר את גוף ה-XML של
      * SIRI SM כמו שהוא, לפירוק ב-SiriXml.

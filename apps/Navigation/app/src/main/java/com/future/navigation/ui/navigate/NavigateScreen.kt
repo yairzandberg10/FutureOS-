@@ -43,6 +43,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.future.navigation.R
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import com.future.navigation.data.reports.ReportType
 import com.future.navigation.data.routing.Maneuver
 import com.future.navigation.ui.map.MapCameraController
 import com.future.navigation.ui.map.NavMapView
@@ -99,7 +105,28 @@ fun NavigateScreen(viewModel: NavigateViewModel, onClose: () -> Unit = {}) {
         )
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(
+        modifier = Modifier.fillMaxSize().onPreviewKeyEvent { event ->
+            // מקשי ספרות מדווחים/מצביעים בלי לגעת במסך: 1-5 דיווח, 6 "עדיין שם", 7 "לא שם".
+            if (event.type != KeyEventType.KeyDown || state.ended) return@onPreviewKeyEvent false
+            val digit = when (event.key) {
+                Key.One -> 1
+                Key.Two -> 2
+                Key.Three -> 3
+                Key.Four -> 4
+                Key.Five -> 5
+                Key.Six -> 6
+                Key.Seven -> 7
+                else -> return@onPreviewKeyEvent false
+            }
+            when {
+                digit <= 5 -> ReportType.fromDigit(digit)?.let(viewModel::report)
+                digit == 6 -> viewModel.voteNearestReport(true)
+                else -> viewModel.voteNearestReport(false)
+            }
+            true
+        }
+    ) {
         Box(modifier = Modifier.fillMaxWidth().height(420.dp)) {
             NavMapView(
                 cameraController = cameraController,
@@ -158,6 +185,18 @@ fun NavigateScreen(viewModel: NavigateViewModel, onClose: () -> Unit = {}) {
                 )
             }
             if (!state.ended) {
+                // דיווח קרוב על המסלול, או אישור אחרי דיווח; בלי שניהם - תזכורת למקשים
+                val report = state.nearestReport
+                Text(
+                    text = state.reportMessage
+                        ?: report?.let {
+                            "${it.type.label} בעוד ${it.let { _ -> state.nearestReportMeters.toInt() }} מ׳ · 6 עדיין שם · 7 לא שם"
+                        }
+                        ?: ReportType.entries.joinToString(" · ") { "${it.digit} ${it.label}" },
+                    color = if (report != null && state.reportMessage == null) theme.dangerColor else theme.mutedTextColor,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(bottom = 8.dp),
+                )
                 Surface(shape = FutureShapes.lg, color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxWidth()) {
                     Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                         TopBarIconButton(if (state.muted) FutureIcons.AutoMirrored.VolumeOff else FutureIcons.AutoMirrored.VolumeUp, tr("השתק"), theme.textColor, theme.accentColor, viewModel::toggleMute)

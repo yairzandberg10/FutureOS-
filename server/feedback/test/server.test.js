@@ -468,3 +468,41 @@ test("mock gemini is deterministic", async () => {
 });
 
 void handle;
+
+// ---------- דיווחי דרך (Waze) ----------
+
+test("road reports: submit, merge nearby duplicates, list nearby, vote away", async () => {
+  const a = await registerDevice();
+  const b = await registerDevice();
+  const c = await registerDevice();
+  const d = await registerDevice();
+  const e = await registerDevice();
+  const post = (path, who, body) => call(path, { method: "POST", headers: who.headers, body });
+
+  const first = await post("/v1/nav/report", a, { type: "police", lat: 32.08, lng: 34.78 });
+  assert.equal(first.status, 201);
+  const { id } = await first.json();
+
+  const dup = await post("/v1/nav/report", b, { type: "police", lat: 32.0801, lng: 34.7801 });
+  assert.equal((await dup.json()).merged, true);
+
+  const list = await (await post("/v1/nav/reports/nearby", c, { lat: 32.081, lng: 34.781 })).json();
+  assert.equal(list.reports.length, 1);
+  assert.equal(list.reports[0].id, id);
+  assert.equal(list.reports[0].confirms, 2);
+
+  const far = await (await post("/v1/nav/reports/nearby", c, { lat: 31.0, lng: 35.0 })).json();
+  assert.equal(far.reports.length, 0);
+
+  for (const who of [a, c, d, e]) await post("/v1/nav/report/vote", who, { id, up: false });
+  const after = await (await post("/v1/nav/reports/nearby", c, { lat: 32.08, lng: 34.78 })).json();
+  assert.equal(after.reports.length, 0);
+});
+
+test("road reports reject bad type and coordinates", async () => {
+  const a = await registerDevice();
+  const bad = await call("/v1/nav/report", { method: "POST", headers: a.headers, body: { type: "ufo", lat: 32, lng: 34 } });
+  assert.equal(bad.status, 400);
+  const badCoord = await call("/v1/nav/report", { method: "POST", headers: a.headers, body: { type: "police", lat: 999, lng: 34 } });
+  assert.equal(badCoord.status, 400);
+});

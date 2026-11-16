@@ -99,3 +99,28 @@ CREATE TABLE IF NOT EXISTS update_events (
   PRIMARY KEY (device_id, release_id, event)
 );
 CREATE INDEX IF NOT EXISTS update_events_release ON update_events(release_id, event);
+
+-- ---------- דיווחי דרך של הקהילה (בסגנון Waze) ----------
+-- דיווח חדש קרוב לקיים מאותו סוג מאשר אותו במקום ליצור כפילות.
+CREATE TABLE IF NOT EXISTS road_reports (
+  id          TEXT PRIMARY KEY,
+  type        TEXT NOT NULL,                -- police | accident | hazard | traffic | closure | camera
+  lat         REAL NOT NULL,
+  lng         REAL NOT NULL,
+  device_id   TEXT NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
+  confirms    INTEGER NOT NULL DEFAULT 1,
+  denies      INTEGER NOT NULL DEFAULT 0,
+  created_at  INTEGER NOT NULL,
+  updated_at  INTEGER NOT NULL,
+  expires_at  INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS road_reports_area ON road_reports(lat, lng);
+CREATE INDEX IF NOT EXISTS road_reports_expiry ON road_reports(expires_at);
+
+-- הצבעה אחת למכשיר על דיווח
+CREATE TABLE IF NOT EXISTS road_report_votes (
+  report_id   TEXT NOT NULL REFERENCES road_reports(id) ON DELETE CASCADE,
+  device_id   TEXT NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
+  up          INTEGER NOT NULL,
+  PRIMARY KEY (report_id, device_id)
+);
