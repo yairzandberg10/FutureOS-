@@ -4,6 +4,14 @@ This repo has no carried-over git history (see root [README](README.md)), so thi
 
 ## Unreleased
 
+### Control Center: icon grid cleanup and new controls (2026-11-16)
+
+- The grid catalog went from 51 controls to 26, and the grid holds up to 15 (3 rows of 5, down from 50). Removed: controls that duplicate a pill or the media card (battery saver, night light, play/next/previous), "Clear memory" (`am kill-all` hurt more than it helped), set-once settings (auto time/sync, heads-up, haptics, key/dial tones, ring vibration, accessibility toggles, animations, stay awake), regular apps already on the home screen and most settings pages. Saved grids drop removed ids by themselves, and only the first 15 are kept.
+- New controls: ringer mode (one button cycles ring/vibrate/silent, replacing "silent" and "vibrate"), hotspot (shows the state, opens the tethering screen), keypad lock (FutureUI lock screen, or screen off when the lock screen is disabled), 5-minute timer, quick record, new note, screen record (root `screenrecord`, up to 3 minutes, saved to `Movies/ScreenRecords`), next alarm (shows the time, opens Clock), sleep mode (DND + extra dim + dark theme; turning it off restores the previous state) and text size (cycles 1.0/1.15/1.3).
+- Controls can now change their label and icon by state (`GridControlManager.labelOf/iconOf`).
+- In edit mode, the "Add buttons" list is grouped by category (Sound, Display, Quick tools, Actions, Apps, System) and shows how many are used (x/15).
+- Clock accepts `com.future.clock.START_TIMER_SECONDS`, Recorder accepts `com.future.recorder.AUTO_START`, Notes accepts the `com.future.notes.NEW_NOTE` action.
+
 ### Assistant: conversation, device actions, ~80,000 more phrasings (2026-11-15)
 
 - Conversation: new `ChatBase` + `assets/knowledge/chat.tsv` (~1,780 topics, ~4,700 phrasings, several replies each). Matching is exact (longest phrase) first, then word overlap. After a conversation reply the assistant listens again on its own, with no OK press. Short small-talk intents ("שלום") give way to a longer conversation match.

@@ -351,39 +351,48 @@ fun ControlCenterScreen(
                                             }
                                             if (availableControls.isNotEmpty()) {
                                                 Text(
-                                                    text = tr("הוספת כפתורים"),
+                                                    text = tr("הוספת כפתורים ({0}/{1})", activeControlIds.size, GridCatalog.MAX_CONTROLS),
                                                     color = clockColor.copy(alpha = 0.7f),
                                                     fontSize = FutureTypography.label,
                                                     fontWeight = FontWeight.Bold,
                                                     modifier = Modifier.padding(bottom = 8.dp)
                                                 )
-                                                val rows = (availableControls.size + 4) / 5
-                                                repeat(rows) { rowIndex ->
-                                                    Row(
-                                                        modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
-                                                        horizontalArrangement = Arrangement.SpaceEvenly
-                                                    ) {
-                                                        repeat(5) { iconIndex ->
-                                                            val index = rowIndex * 5 + iconIndex
-                                                            if (index < availableControls.size) {
-                                                                val control = availableControls[index]
-                                                                FocusableIcon(
-                                                                    icon = control.icon,
-                                                                    label = control.label,
-                                                                    isOn = false,
-                                                                    onToggle = {
-                                                                        if (activeControlIds.size < GridCatalog.MAX_CONTROLS) {
-                                                                            activeControlIds = activeControlIds + control.id
-                                                                        }
-                                                                    },
-                                                                    showLabel = true,
-                                                                    isEditMode = true,
-                                                                    isRemove = false,
-                                                                    onMenuClick = { isGridEditing = false },
-                                                                    labelColor = clockColor
-                                                                )
-                                                            } else {
-                                                                Spacer(modifier = Modifier.width(54.dp))
+                                                // קבוצה לכל קטגוריה (קול, מסך, כלים...) - במקום רשימה אחת ארוכה
+                                                availableControls.groupBy { it.category }.toSortedMap().forEach { (category, controls) ->
+                                                    Text(
+                                                        text = category.title,
+                                                        color = clockColor.copy(alpha = 0.6f),
+                                                        fontSize = FutureTypography.caption,
+                                                        modifier = Modifier.fillMaxWidth().padding(top = 6.dp, start = 8.dp, end = 8.dp)
+                                                    )
+                                                    val rows = (controls.size + 4) / 5
+                                                    repeat(rows) { rowIndex ->
+                                                        Row(
+                                                            modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
+                                                            horizontalArrangement = Arrangement.SpaceEvenly
+                                                        ) {
+                                                            repeat(5) { iconIndex ->
+                                                                val index = rowIndex * 5 + iconIndex
+                                                                if (index < controls.size) {
+                                                                    val control = controls[index]
+                                                                    FocusableIcon(
+                                                                        icon = control.icon,
+                                                                        label = control.label,
+                                                                        isOn = false,
+                                                                        onToggle = {
+                                                                            if (activeControlIds.size < GridCatalog.MAX_CONTROLS) {
+                                                                                activeControlIds = activeControlIds + control.id
+                                                                            }
+                                                                        },
+                                                                        showLabel = true,
+                                                                        isEditMode = true,
+                                                                        isRemove = false,
+                                                                        onMenuClick = { isGridEditing = false },
+                                                                        labelColor = clockColor
+                                                                    )
+                                                                } else {
+                                                                    Spacer(modifier = Modifier.width(54.dp))
+                                                                }
                                                             }
                                                         }
                                                     }
@@ -402,8 +411,8 @@ fun ControlCenterScreen(
                                             val info = GridCatalog.get(id) ?: return@mapNotNull null
                                             object {
                                                 val id = id
-                                                val label = info.label
-                                                val icon = info.icon
+                                                val label = gridManager.labelOf(info)
+                                                val icon = gridManager.iconOf(info)
                                                 val isOn = info.isToggle && gridManager.isOn(id)
                                                 val onToggle = {
                                                     gridManager.activate(id)

@@ -44,6 +44,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (savedInstanceState == null && intent?.action == Intent.ACTION_SEND) pendingShare = intent
+        // פקד "פתק חדש" במרכז הבקרה - נכנסים ישר לעורך ריק (רק ביצירה הראשונה)
+        val openNewNote = savedInstanceState == null && intent?.action == ACTION_NEW_NOTE
 
         val prefs = getSharedPreferences("notes_ui", MODE_PRIVATE)
 
@@ -80,6 +82,10 @@ class MainActivity : ComponentActivity() {
                         viewModel.importShared(parsed.title, parsed.content, parsed.isChecklist)
                         Toast.makeText(this@MainActivity, tr("הפתק נשמר"), Toast.LENGTH_SHORT).show()
                     }
+                }
+
+                LaunchedEffect(Unit) {
+                    if (openNewNote) navController.navigate("editor/0")
                 }
 
                 NavHost(
@@ -137,5 +143,10 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    companion object {
+        /** פותח ישר עורך של פתק חדש (פקד "פתק חדש" במרכז הבקרה). */
+        const val ACTION_NEW_NOTE = "com.future.notes.NEW_NOTE"
     }
 }

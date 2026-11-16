@@ -2,6 +2,7 @@ package com.future.futureui.controlcenter.logic
 
 import com.future.sharednav.i18n.tr
 
+import android.app.AlarmManager
 import android.app.NotificationManager
 import android.app.UiModeManager
 import android.content.ContentResolver
@@ -9,14 +10,16 @@ import android.content.Context
 import android.content.Intent
 import android.media.AudioManager
 import android.net.ConnectivityManager
-import android.os.PowerManager
 import android.os.SystemClock
 import android.provider.Settings
 import android.util.Log
 import android.view.KeyEvent
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.NoteAdd
+import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.ui.graphics.vector.ImageVector
 import com.future.sharednav.root.RootShell
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -27,86 +30,76 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+/** קבוצות ברשימת "הוספת כפתורים" במצב עריכה - כל קבוצה מוצגת עם כותרת משלה. */
+enum class GridCategory(val title: String) {
+    SOUND(tr("קול")),
+    DISPLAY(tr("מסך")),
+    QUICK(tr("כלים מהירים")),
+    ACTIONS(tr("פעולות")),
+    APPS(tr("אפליקציות")),
+    SYSTEM(tr("מערכת")),
+}
+
 /**
  * הקטלוג של רשת האייקונים במרכז הבקרה - עד [GridCatalog.MAX_CONTROLS] פקדים
  * שהמשתמש מוסיף בעצמו במצב עריכה (הרשת ריקה כברירת מחדל). שורות הגלולות
- * הקבועות ממשיכות להשתמש ב-ControlLayoutManager.allAvailableControls.
+ * הקבועות ממשיכות להשתמש ב-ControlLayoutManager.allAvailableControls, ולכן
+ * פקד שכבר יש לו גלולה (סוללה, לילה, נא לא להפריע) לא נמצא כאן שוב.
  *
  * [isToggle] - פקד עם מצב פועל/כבוי אמיתי שנקרא מהמערכת. השאר הם פעולות:
  * פתיחת אפליקציה או מסך הגדרות, או פקודה חד-פעמית. פעולה שפותחת משהו
  * מעל מרכז הבקרה מסומנת ב-[closesPanel] כדי שהפאנל ייסגר ולא יסתיר אותה.
+ * [optimistic] - הופכים את המצב מיד בלחיצה, לפני שהמערכת מאשרת. כבוי לפקד
+ * שמציג מצב אבל רק פותח מסך (נקודה חמה), או שמחליף בין כמה מצבים.
  */
 data class GridControl(
     val id: String,
     val label: String,
     val icon: androidx.compose.ui.graphics.vector.ImageVector,
     val isToggle: Boolean,
-    val closesPanel: Boolean = !isToggle
+    val category: GridCategory,
+    val closesPanel: Boolean = !isToggle,
+    val optimistic: Boolean = isToggle,
 )
 
 object GridCatalog {
-    const val MAX_CONTROLS = 50
+    /** 3 שורות של 5. במצב מקופל רואים 2 שורות, ויותר מזה דורש הרבה לחיצות חץ. */
+    const val MAX_CONTROLS = 15
 
     val all: List<GridControl> = listOf(
-        // מצבי מערכת
-        GridControl("dark_theme", tr("ערכת נושא כהה"), Icons.Rounded.DarkMode, true),
-        GridControl("power_saver", tr("חיסכון בסוללה"), Icons.Rounded.EnergySavingsLeaf, true),
-        GridControl("data_saver", tr("חוסך נתונים"), Icons.Rounded.DataSaverOn, true),
-        GridControl("auto_sync", tr("סנכרון אוטומטי"), Icons.Rounded.Sync, true),
-        GridControl("auto_time", tr("שעה אוטומטית"), Icons.Rounded.AccessTime, true),
-        GridControl("heads_up", tr("התראות קופצות"), Icons.Rounded.NotificationsActive, true),
-        // קול ורטט
-        GridControl("silent", tr("מצב שקט"), Icons.Rounded.NotificationsOff, true),
-        GridControl("vibrate", tr("מצב רטט"), Icons.Rounded.Vibration, true),
-        GridControl("mute_media", tr("השתקת מדיה"), Icons.Rounded.MusicOff, true),
-        GridControl("vibrate_ring", tr("רטט בצלצול"), Icons.Rounded.RingVolume, true),
-        GridControl("haptic", tr("משוב רטט"), Icons.Rounded.TouchApp, true),
-        GridControl("touch_sounds", tr("צלילי מקשים"), Icons.Rounded.SurroundSound, true),
-        GridControl("dial_tones", tr("צלילי חייגן"), Icons.Rounded.Dialpad, true),
-        GridControl("mono_audio", tr("שמע מונו"), Icons.Rounded.Hearing, true),
+        // קול
+        GridControl("ringer_mode", tr("צלצול"), Icons.AutoMirrored.Rounded.VolumeUp, true, GridCategory.SOUND, optimistic = false),
+        GridControl("mute_media", tr("השתקת מדיה"), Icons.Rounded.MusicOff, true, GridCategory.SOUND),
         // מסך
-        GridControl("auto_brightness", tr("בהירות אוטומטית"), Icons.Rounded.BrightnessAuto, true),
-        GridControl("night_light", tr("תאורת לילה"), Icons.Rounded.Bedtime, true),
-        GridControl("extra_dim", tr("עמעום נוסף"), Icons.Rounded.BrightnessLow, true),
-        GridControl("long_timeout", tr("מסך דלוק 10 דק'"), Icons.Rounded.Timer, true),
-        GridControl("stay_awake", tr("דלוק בטעינה"), Icons.Rounded.Coffee, true),
-        GridControl("animations_off", tr("ללא אנימציות"), Icons.Rounded.Animation, true),
-        // נגישות
-        GridControl("large_text", tr("טקסט גדול"), Icons.Rounded.FormatSize, true),
-        GridControl("high_contrast", tr("ניגודיות גבוהה"), Icons.Rounded.Contrast, true),
-        GridControl("invert_colors", tr("היפוך צבעים"), Icons.Rounded.InvertColors, true),
-        GridControl("grayscale", tr("גווני אפור"), Icons.Rounded.Tonality, true),
+        GridControl("auto_brightness", tr("בהירות אוטומטית"), Icons.Rounded.BrightnessAuto, true, GridCategory.DISPLAY),
+        GridControl("extra_dim", tr("עמעום נוסף"), Icons.Rounded.BrightnessLow, true, GridCategory.DISPLAY),
+        GridControl("long_timeout", tr("מסך דלוק 10 דק'"), Icons.Rounded.Timer, true, GridCategory.DISPLAY),
+        GridControl("dark_theme", tr("ערכת נושא כהה"), Icons.Rounded.DarkMode, true, GridCategory.DISPLAY),
+        GridControl("text_size", tr("גודל טקסט"), Icons.Rounded.FormatSize, true, GridCategory.DISPLAY, optimistic = false),
+        GridControl("sleep_mode", tr("מצב שינה"), Icons.Rounded.Bedtime, true, GridCategory.DISPLAY),
+        // כלים מהירים - פותחים אפליקציה ישר על הפעולה
+        GridControl("quick_timer", tr("טיימר 5 דק'"), Icons.Rounded.HourglassTop, false, GridCategory.QUICK),
+        GridControl("quick_record", tr("הקלטה מהירה"), Icons.Rounded.FiberManualRecord, false, GridCategory.QUICK),
+        GridControl("new_note", tr("פתק חדש"), Icons.AutoMirrored.Rounded.NoteAdd, false, GridCategory.QUICK),
+        GridControl("next_alarm", tr("אין מעורר"), Icons.Rounded.AlarmOff, true, GridCategory.QUICK, closesPanel = true, optimistic = false),
         // פעולות
-        GridControl("screenshot", tr("צילום מסך"), Icons.Rounded.Screenshot, false),
-        GridControl("screen_off", tr("כיבוי מסך"), Icons.Rounded.MobileOff, false),
-        GridControl("play_pause", tr("נגן / השהה"), Icons.Rounded.PlayArrow, true, closesPanel = false),
-        GridControl("next_track", tr("שיר הבא"), Icons.Rounded.SkipNext, false, closesPanel = false),
-        GridControl("prev_track", tr("שיר קודם"), Icons.Rounded.SkipPrevious, false, closesPanel = false),
-        GridControl("kill_background", tr("ניקוי זיכרון"), Icons.Rounded.CleaningServices, false, closesPanel = false),
+        GridControl("keypad_lock", tr("נעילת מקשים"), Icons.Rounded.Lock, false, GridCategory.ACTIONS),
+        GridControl("screenshot", tr("צילום מסך"), Icons.Rounded.Screenshot, false, GridCategory.ACTIONS),
+        GridControl("screen_record", tr("הקלטת מסך"), Icons.Rounded.Videocam, true, GridCategory.ACTIONS, closesPanel = true),
+        GridControl("screen_off", tr("כיבוי מסך"), Icons.Rounded.MobileOff, false, GridCategory.ACTIONS),
         // פותח "שלח משוב" ב-Settings על האפליקציה שהייתה בחזית. שום דבר לא נשלח בלי תצוגה מקדימה
-        GridControl("report_bug", "דווח על באג", Icons.Rounded.BugReport, false),
-        // אפליקציות FutureOS
-        GridControl("app_calculator", tr("מחשבון"), Icons.Rounded.Calculate, false),
-        GridControl("app_clock", tr("שעון"), Icons.Rounded.Alarm, false),
-        GridControl("app_notes", tr("פתקים"), Icons.Rounded.StickyNote2, false),
-        GridControl("app_messages", tr("הודעות"), Icons.Rounded.Sms, false),
-        GridControl("app_dialer", tr("טלפון"), Icons.Rounded.Call, false),
-        GridControl("app_contacts", tr("אנשי קשר"), Icons.Rounded.Contacts, false),
-        GridControl("app_gallery", tr("גלריה"), Icons.Rounded.PhotoLibrary, false),
-        GridControl("app_files", tr("קבצים"), Icons.Rounded.Folder, false),
-        GridControl("app_navigation", tr("ניווט"), Icons.Rounded.Navigation, false),
-        GridControl("app_translate", tr("תרגום"), Icons.Rounded.Translate, false),
-        GridControl("app_assistant", tr("עוזרי"), Icons.Rounded.Mic, false),
-        GridControl("app_remote", tr("שלט"), Icons.Rounded.SettingsRemote, false),
-        GridControl("app_tasks", tr("משימות"), Icons.Rounded.Checklist, false),
-        // מסכי הגדרות
-        GridControl("set_wifi", tr("רשתות Wi-Fi"), Icons.Rounded.NetworkWifi, false),
-        GridControl("set_sound", tr("הגדרות צליל"), Icons.Rounded.Tune, false),
-        GridControl("set_display", tr("הגדרות תצוגה"), Icons.Rounded.DisplaySettings, false),
-        GridControl("set_storage", tr("אחסון"), Icons.Rounded.Storage, false),
-        GridControl("set_apps", tr("ניהול אפליקציות"), Icons.Rounded.Apps, false),
-        GridControl("set_accessibility", tr("נגישות"), Icons.Rounded.Accessibility, false),
-        GridControl("set_date_time", tr("תאריך ושעה"), Icons.Rounded.Schedule, false),
+        GridControl("report_bug", tr("דווח על באג"), Icons.Rounded.BugReport, false, GridCategory.ACTIONS),
+        // אפליקציות - רק כלים שפותחים "על הדרך"; השאר כבר במסך הבית
+        GridControl("app_calculator", tr("מחשבון"), Icons.Rounded.Calculate, false, GridCategory.APPS),
+        GridControl("app_clock", tr("שעון"), Icons.Rounded.Alarm, false, GridCategory.APPS),
+        GridControl("app_notes", tr("פתקים"), Icons.Rounded.StickyNote2, false, GridCategory.APPS),
+        GridControl("app_assistant", tr("עוזרי"), Icons.Rounded.Mic, false, GridCategory.APPS),
+        GridControl("app_remote", tr("שלט"), Icons.Rounded.SettingsRemote, false, GridCategory.APPS),
+        // מערכת
+        GridControl("hotspot", tr("נקודה חמה"), Icons.Rounded.WifiTethering, true, GridCategory.SYSTEM, closesPanel = true, optimistic = false),
+        GridControl("data_saver", tr("חוסך נתונים"), Icons.Rounded.DataSaverOn, true, GridCategory.SYSTEM),
+        GridControl("set_wifi", tr("רשתות Wi-Fi"), Icons.Rounded.NetworkWifi, false, GridCategory.SYSTEM),
+        GridControl("set_accessibility", tr("נגישות"), Icons.Rounded.Accessibility, false, GridCategory.SYSTEM),
     )
 
     private val byId = all.associateBy { it.id }
@@ -122,30 +115,44 @@ object GridCatalog {
  * קריאת המצב רצה ברקע: מפתחות Settings מוסתרים זורקים SecurityException על
  * targetSdk 31, ואז הקריאה נופלת ל-`settings get` דרך root - לכן הרענון
  * נעשה רק על הפקדים שברשת, ולא בקצב של לולאת 500ms של מרכז הבקרה.
+ *
+ * חלק מהפקדים מחליפים שם ואייקון לפי המצב (מצב צלצול, גודל טקסט, המעורר
+ * הבא) - ה-UI קורא אותם דרך [labelOf] ו-[iconOf].
  */
 class GridControlManager(private val context: Context) {
 
     private val resolver: ContentResolver = context.contentResolver
     private val audio by lazy { context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager }
-    private val power by lazy { context.getSystemService(Context.POWER_SERVICE) as? PowerManager }
     private val uiMode by lazy { context.getSystemService(Context.UI_MODE_SERVICE) as? UiModeManager }
     private val connectivity by lazy { context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager }
     private val notifications by lazy { context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager }
+    private val alarms by lazy { context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager }
+    private val prefs by lazy { context.getSharedPreferences("grid_controls", Context.MODE_PRIVATE) }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var refreshJob: Job? = null
 
     /** מצב פועל/כבוי לפי מזהה - נקרא מה-UI, מתעדכן ב-[refresh]. */
     val states = mutableStateMapOf<String, Boolean>()
+    private val labels = mutableStateMapOf<String, String>()
+    private val icons = mutableStateMapOf<String, ImageVector>()
 
     fun isOn(id: String): Boolean = states[id] ?: false
+    fun labelOf(control: GridControl): String = labels[control.id] ?: control.label
+    fun iconOf(control: GridControl): ImageVector = icons[control.id] ?: control.icon
+
+    private data class Reading(val on: Boolean, val label: String? = null, val icon: ImageVector? = null)
 
     fun refresh(ids: List<String>) {
         val toggles = ids.filter { GridCatalog.get(it)?.isToggle == true }
         if (toggles.isEmpty() || refreshJob?.isActive == true) return
         refreshJob = scope.launch {
             val read = withContext(Dispatchers.IO) { toggles.associateWith { readState(it) } }
-            states.putAll(read)
+            read.forEach { (id, r) ->
+                states[id] = r.on
+                if (r.label != null) labels[id] = r.label else labels.remove(id)
+                if (r.icon != null) icons[id] = r.icon else icons.remove(id)
+            }
         }
     }
 
@@ -153,8 +160,8 @@ class GridControlManager(private val context: Context) {
 
     fun activate(id: String) {
         val control = GridCatalog.get(id) ?: return
-        if (control.isToggle) states[id] = !isOn(id)
-        val target = isOn(id)
+        if (control.optimistic) states[id] = !isOn(id)
+        val target = if (control.optimistic) isOn(id) else !isOn(id)
         scope.launch {
             withContext(Dispatchers.IO) {
                 try {
@@ -174,39 +181,69 @@ class GridControlManager(private val context: Context) {
 
     // ---- קריאת מצב ----
 
-    private fun readState(id: String): Boolean = try {
+    private fun readState(id: String): Reading = try {
         when (id) {
+            "ringer_mode" -> when (audio?.ringerMode) {
+                AudioManager.RINGER_MODE_VIBRATE -> Reading(true, tr("רטט"), Icons.Rounded.Vibration)
+                AudioManager.RINGER_MODE_SILENT -> Reading(true, tr("שקט"), Icons.Rounded.NotificationsOff)
+                else -> Reading(false)
+            }
+            "text_size" -> {
+                val scale = readFloat(NS_SYSTEM, Settings.System.FONT_SCALE, 1f)
+                when {
+                    scale < 1.07f -> Reading(false, tr("טקסט רגיל"))
+                    scale < 1.22f -> Reading(true, tr("טקסט גדול"))
+                    else -> Reading(true, tr("טקסט ענק"))
+                }
+            }
+            "next_alarm" -> {
+                val at = alarms?.nextAlarmClock?.triggerTime
+                if (at == null) Reading(false) else Reading(true, tr("מעורר {0}", formatAlarm(at)), Icons.Rounded.AlarmOn)
+            }
+            "sleep_mode" -> prefs.getBoolean(KEY_SLEEP_ON, false) &&
+                readInt(NS_SECURE, "reduce_bright_colors_activated", 0) == 1
+            "hotspot" -> isHotspotOn()
+            "screen_record" -> root("pidof screenrecord")
             "dark_theme" -> uiMode?.nightMode == UiModeManager.MODE_NIGHT_YES
-            "power_saver" -> power?.isPowerSaveMode == true
             "data_saver" -> connectivity?.restrictBackgroundStatus != ConnectivityManager.RESTRICT_BACKGROUND_STATUS_DISABLED
-            "auto_sync" -> ContentResolver.getMasterSyncAutomatically()
-            "auto_time" -> readInt(NS_GLOBAL, Settings.Global.AUTO_TIME, 1) == 1
-            "heads_up" -> readInt(NS_GLOBAL, "heads_up_notifications_enabled", 1) == 1
-            "silent" -> audio?.ringerMode == AudioManager.RINGER_MODE_SILENT
-            "vibrate" -> audio?.ringerMode == AudioManager.RINGER_MODE_VIBRATE
             "mute_media" -> audio?.isStreamMute(AudioManager.STREAM_MUSIC) == true
-            "vibrate_ring" -> readInt(NS_SYSTEM, "vibrate_when_ringing", 0) == 1
-            "haptic" -> readInt(NS_SYSTEM, Settings.System.HAPTIC_FEEDBACK_ENABLED, 1) == 1
-            "touch_sounds" -> readInt(NS_SYSTEM, Settings.System.SOUND_EFFECTS_ENABLED, 1) == 1
-            "dial_tones" -> readInt(NS_SYSTEM, Settings.System.DTMF_TONE_WHEN_DIALING, 1) == 1
-            "mono_audio" -> readInt(NS_SYSTEM, "master_mono", 0) == 1
             "auto_brightness" -> readInt(NS_SYSTEM, Settings.System.SCREEN_BRIGHTNESS_MODE, 0) == Settings.System.SCREEN_BRIGHTNESS_MODE_AUTOMATIC
-            "night_light" -> readInt(NS_SECURE, "night_display_activated", 0) == 1
             "extra_dim" -> readInt(NS_SECURE, "reduce_bright_colors_activated", 0) == 1
             "long_timeout" -> readInt(NS_SYSTEM, Settings.System.SCREEN_OFF_TIMEOUT, 30_000) >= LONG_TIMEOUT_MS
-            "stay_awake" -> readInt(NS_GLOBAL, Settings.Global.STAY_ON_WHILE_PLUGGED_IN, 0) != 0
-            "animations_off" -> readFloat(NS_GLOBAL, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
-            "large_text" -> readFloat(NS_SYSTEM, Settings.System.FONT_SCALE, 1f) > 1.05f
-            "high_contrast" -> readInt(NS_SECURE, "high_text_contrast_enabled", 0) == 1
-            "invert_colors" -> readInt(NS_SECURE, "accessibility_display_inversion_enabled", 0) == 1
-            "grayscale" -> readInt(NS_SECURE, "accessibility_display_daltonizer_enabled", 0) == 1 &&
-                readInt(NS_SECURE, "accessibility_display_daltonizer", -1) == 0
-            "play_pause" -> audio?.isMusicActive == true
             else -> false
-        }
+        }.let { if (it is Reading) it else Reading(it as Boolean) }
     } catch (t: Throwable) {
         Log.w(TAG, "read $id failed", t)
-        false
+        Reading(false)
+    }
+
+    /** היום - רק השעה; אחרת גם היום בשבוע ("ב' 07:30"). */
+    private fun formatAlarm(at: Long): String {
+        val time = android.text.format.DateFormat.getTimeFormat(context).format(java.util.Date(at))
+        val now = java.util.Calendar.getInstance()
+        val then = java.util.Calendar.getInstance().apply { timeInMillis = at }
+        val sameDay = now.get(java.util.Calendar.YEAR) == then.get(java.util.Calendar.YEAR) &&
+            now.get(java.util.Calendar.DAY_OF_YEAR) == then.get(java.util.Calendar.DAY_OF_YEAR)
+        if (sameDay) return time
+        val day = java.text.SimpleDateFormat("EEE", java.util.Locale.getDefault()).format(java.util.Date(at))
+        return "$day $time"
+    }
+
+    /** WifiManager.isWifiApEnabled מוסתר אבל נגיש ב-reflection; אם נחסם - בודקים אם ממשק ה-AP למעלה. */
+    private fun isHotspotOn(): Boolean {
+        try {
+            val wifi = context.applicationContext.getSystemService(Context.WIFI_SERVICE)
+            if (wifi != null) return wifi.javaClass.getMethod("isWifiApEnabled").invoke(wifi) as Boolean
+        } catch (t: Throwable) {
+            Log.d(TAG, "isWifiApEnabled unavailable", t)
+        }
+        return try {
+            java.net.NetworkInterface.getNetworkInterfaces()?.toList().orEmpty().any {
+                it.isUp && (it.name.startsWith("swlan") || it.name.startsWith("ap") || it.name.startsWith("softap"))
+            }
+        } catch (t: Throwable) {
+            false
+        }
     }
 
     private fun readRaw(ns: String, key: String): String? {
@@ -235,87 +272,151 @@ class GridControlManager(private val context: Context) {
     private fun perform(id: String, on: Boolean) {
         val v = if (on) 1 else 0
         when (id) {
-            "dark_theme" -> if (!root("cmd uimode night ${if (on) "yes" else "no"}")) openSettings(Settings.ACTION_DISPLAY_SETTINGS)
-            "power_saver" -> if (!root("cmd power set-mode $v") && !root("settings put global low_power $v")) {
-                openSettings(Settings.ACTION_BATTERY_SAVER_SETTINGS)
-            }
-            "data_saver" -> if (!root("cmd netpolicy set restrict-background $on")) openSettings(Settings.ACTION_DATA_USAGE_SETTINGS)
-            "auto_sync" -> ContentResolver.setMasterSyncAutomatically(on)
-            "auto_time" -> root("settings put global ${Settings.Global.AUTO_TIME} $v")
-            "heads_up" -> root("settings put global heads_up_notifications_enabled $v")
-            "silent" -> setRinger(if (on) AudioManager.RINGER_MODE_SILENT else AudioManager.RINGER_MODE_NORMAL)
-            "vibrate" -> setRinger(if (on) AudioManager.RINGER_MODE_VIBRATE else AudioManager.RINGER_MODE_NORMAL)
+            // צלצול -> רטט -> שקט -> צלצול
+            "ringer_mode" -> setRinger(
+                when (audio?.ringerMode) {
+                    AudioManager.RINGER_MODE_NORMAL -> AudioManager.RINGER_MODE_VIBRATE
+                    AudioManager.RINGER_MODE_VIBRATE -> AudioManager.RINGER_MODE_SILENT
+                    else -> AudioManager.RINGER_MODE_NORMAL
+                }
+            )
             "mute_media" -> audio?.adjustStreamVolume(
                 AudioManager.STREAM_MUSIC,
                 if (on) AudioManager.ADJUST_MUTE else AudioManager.ADJUST_UNMUTE,
                 0
             )
-            "vibrate_ring" -> putSystem("vibrate_when_ringing", v)
-            "haptic" -> putSystem(Settings.System.HAPTIC_FEEDBACK_ENABLED, v)
-            "touch_sounds" -> {
-                putSystem(Settings.System.SOUND_EFFECTS_ENABLED, v)
-                if (on) audio?.loadSoundEffects() else audio?.unloadSoundEffects()
-            }
-            "dial_tones" -> putSystem(Settings.System.DTMF_TONE_WHEN_DIALING, v)
-            "mono_audio" -> root("settings put system master_mono $v")
+
             "auto_brightness" -> putSystem(
                 Settings.System.SCREEN_BRIGHTNESS_MODE,
                 if (on) Settings.System.SCREEN_BRIGHTNESS_MODE_AUTOMATIC else Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL
             )
-            "night_light" -> root("settings put secure night_display_activated $v")
             "extra_dim" -> root("settings put secure reduce_bright_colors_activated $v")
             "long_timeout" -> putSystem(Settings.System.SCREEN_OFF_TIMEOUT, if (on) LONG_TIMEOUT_MS else DEFAULT_TIMEOUT_MS)
-            "stay_awake" -> root("settings put global ${Settings.Global.STAY_ON_WHILE_PLUGGED_IN} ${if (on) 7 else 0}")
-            "animations_off" -> {
-                val scale = if (on) "0" else "1"
-                root(
-                    "settings put global window_animation_scale $scale; " +
-                        "settings put global transition_animation_scale $scale; " +
-                        "settings put global animator_duration_scale $scale"
-                )
+            "dark_theme" -> setDarkTheme(on)
+            // 1.0 -> 1.15 -> 1.3 -> 1.0
+            "text_size" -> {
+                val scale = readFloat(NS_SYSTEM, Settings.System.FONT_SCALE, 1f)
+                val next = when {
+                    scale < 1.07f -> "1.15"
+                    scale < 1.22f -> "1.3"
+                    else -> "1.0"
+                }
+                root("settings put system font_scale ${RootShell.quote(next)}")
             }
-            "large_text" -> root("settings put system font_scale ${if (on) "1.3" else "1.0"}")
-            "high_contrast" -> root("settings put secure high_text_contrast_enabled $v")
-            "invert_colors" -> root("settings put secure accessibility_display_inversion_enabled $v")
-            "grayscale" -> root(
-                if (on) "settings put secure accessibility_display_daltonizer 0; settings put secure accessibility_display_daltonizer_enabled 1"
-                else "settings put secure accessibility_display_daltonizer_enabled 0"
+            "sleep_mode" -> setSleepMode(on)
+
+            "quick_timer" -> startActivity(
+                Intent().setClassName("com.future.clock", "com.future.clock.MainActivity")
+                    .putExtra("com.future.clock.START_TIMER_SECONDS", QUICK_TIMER_SECONDS)
+                    .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
             )
+            "quick_record" -> startActivity(
+                Intent().setClassName("com.future.recorder", "com.future.recorder.MainActivity")
+                    .putExtra("com.future.recorder.AUTO_START", true)
+                    .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            )
+            "new_note" -> startActivity(
+                Intent("com.future.notes.NEW_NOTE").setClassName("com.future.notes", "com.future.notes.MainActivity")
+                    .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            )
+            // בלי מעורר - פותחים את השעון כדי להוסיף; עם מעורר - כדי לכבות או לשנות אותו
+            "next_alarm" -> openApp("com.future.clock")
 
             // הפאנל נסגר קודם ([GridControl.closesPanel]) - מחכים שייעלם מהמסך
+            "keypad_lock" -> {
+                SystemClock.sleep(300)
+                if (com.future.futureui.lockscreen.logic.LockSettings(context).enabled) {
+                    context.sendBroadcast(
+                        Intent(com.future.futureui.statusbar.service.StatusBarAccessibilityService.ACTION_LOCK_NOW)
+                            .setPackage(context.packageName)
+                    )
+                } else {
+                    // מסך הנעילה כבוי בהגדרות - כיבוי המסך הוא הנעילה היחידה שיש
+                    root("input keyevent ${KeyEvent.KEYCODE_SLEEP}")
+                }
+            }
             "screenshot" -> { SystemClock.sleep(700); root("input keyevent ${KeyEvent.KEYCODE_SYSRQ}") }
+            "screen_record" -> if (on) startScreenRecord() else root("pkill -INT screenrecord")
             "screen_off" -> { SystemClock.sleep(300); root("input keyevent ${KeyEvent.KEYCODE_SLEEP}") }
-            "play_pause" -> mediaKey(KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE)
-            "next_track" -> mediaKey(KeyEvent.KEYCODE_MEDIA_NEXT)
-            "prev_track" -> mediaKey(KeyEvent.KEYCODE_MEDIA_PREVIOUS)
-            "kill_background" -> root("am kill-all")
             "report_bug" -> reportBug()
 
             "app_calculator" -> openApp("com.future.calculator")
             "app_clock" -> openApp("com.future.clock")
             "app_notes" -> openApp("com.future.notes")
-            "app_messages" -> openApp("com.future.messages")
-            "app_dialer" -> openApp("com.future.dialer")
-            "app_contacts" -> openApp("com.future.contact")
-            "app_gallery" -> openApp("com.future.gallery")
-            "app_files" -> openApp("com.future.files")
-            "app_navigation" -> openApp("com.future.navigation")
-            "app_translate" -> openApp("com.future.translate")
             "app_assistant" -> openApp("com.future.assistant")
             "app_remote" -> openApp("com.future.remote")
-            "app_tasks" -> openApp("com.future.tasks")
 
+            // אין דרך ציבורית (או פקודת shell) להדליק נקודה חמה עם ההגדרות של המשתמש - פותחים את המסך שלה
+            "hotspot" -> {
+                val tether = Intent().setClassName("com.android.settings", "com.android.settings.TetherSettings")
+                if (tether.resolveActivity(context.packageManager) != null) startActivity(tether)
+                else openSettings(Settings.ACTION_WIRELESS_SETTINGS)
+            }
+            "data_saver" -> if (!root("cmd netpolicy set restrict-background $on")) openSettings(Settings.ACTION_DATA_USAGE_SETTINGS)
             "set_wifi" -> openSettings(Settings.ACTION_WIFI_SETTINGS)
-            "set_sound" -> openSettings(Settings.ACTION_SOUND_SETTINGS)
-            "set_display" -> openSettings(Settings.ACTION_DISPLAY_SETTINGS)
-            "set_storage" -> openSettings(Settings.ACTION_INTERNAL_STORAGE_SETTINGS)
-            "set_apps" -> openSettings(Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS)
             "set_accessibility" -> openSettings(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-            "set_date_time" -> openSettings(Settings.ACTION_DATE_SETTINGS)
         }
     }
 
     private fun root(command: String): Boolean = RootShell.run(command).success
+
+    private fun setDarkTheme(on: Boolean) {
+        if (!root("cmd uimode night ${if (on) "yes" else "no"}")) openSettings(Settings.ACTION_DISPLAY_SETTINGS)
+    }
+
+    /**
+     * מצב שינה = נא לא להפריע + עמעום נוסף + ערכת נושא כהה, בלחיצה אחת. המצב
+     * הקודם של שלושתם נשמר, וכיבוי מחזיר בדיוק אותו (ולא מכבה ערכה כהה שהייתה
+     * דלוקה עוד לפני כן).
+     */
+    private fun setSleepMode(on: Boolean) {
+        val nm = notifications
+        if (on) {
+            prefs.edit()
+                .putBoolean(KEY_SLEEP_ON, true)
+                .putBoolean(KEY_PREV_DARK, uiMode?.nightMode == UiModeManager.MODE_NIGHT_YES)
+                .putBoolean(KEY_PREV_DIM, readInt(NS_SECURE, "reduce_bright_colors_activated", 0) == 1)
+                .putInt(KEY_PREV_DND, nm?.currentInterruptionFilter ?: NotificationManager.INTERRUPTION_FILTER_ALL)
+                .apply()
+            setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_PRIORITY)
+            root("settings put secure reduce_bright_colors_activated 1")
+            setDarkTheme(true)
+        } else {
+            val prevDnd = prefs.getInt(KEY_PREV_DND, NotificationManager.INTERRUPTION_FILTER_ALL)
+            setInterruptionFilter(
+                if (prevDnd == NotificationManager.INTERRUPTION_FILTER_UNKNOWN) NotificationManager.INTERRUPTION_FILTER_ALL else prevDnd
+            )
+            root("settings put secure reduce_bright_colors_activated ${if (prefs.getBoolean(KEY_PREV_DIM, false)) 1 else 0}")
+            setDarkTheme(prefs.getBoolean(KEY_PREV_DARK, false))
+            prefs.edit().putBoolean(KEY_SLEEP_ON, false).apply()
+        }
+    }
+
+    private fun setInterruptionFilter(filter: Int) {
+        val nm = notifications ?: return
+        if (!nm.isNotificationPolicyAccessGranted) root("cmd notification allow_dnd ${context.packageName}")
+        try {
+            nm.setInterruptionFilter(filter)
+        } catch (e: SecurityException) {
+            Log.w(TAG, "no DND access", e)
+        }
+    }
+
+    /**
+     * `screenrecord` רץ כ-root ברקע (עד 3 דקות - המגבלה של Android 12). אחרי
+     * שהוא נגמר - בעצירה מהפקד (SIGINT סוגר את הקובץ תקין) או במגבלת הזמן -
+     * אותו shell מודיע ל-MediaStore כדי שההקלטה תופיע בגלריה.
+     */
+    private fun startScreenRecord() {
+        SystemClock.sleep(700)
+        val stamp = java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US).format(java.util.Date())
+        val path = "$SCREEN_RECORD_DIR/screen_$stamp.mp4"
+        root(
+            "mkdir -p $SCREEN_RECORD_DIR; nohup sh -c 'screenrecord $path; " +
+                "am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file://$path' " +
+                "</dev/null >/dev/null 2>&1 &"
+        )
+    }
 
     /** מפתחות System ציבוריים: root קודם, ואם אין - WRITE_SETTINGS. */
     private fun putSystem(key: String, value: Int) {
@@ -338,12 +439,6 @@ class GridControlManager(private val context: Context) {
         } catch (e: SecurityException) {
             startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))
         }
-    }
-
-    private fun mediaKey(keyCode: Int) {
-        val a = audio ?: return
-        a.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, keyCode))
-        a.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_UP, keyCode))
     }
 
     private fun openApp(pkg: String) {
@@ -379,5 +474,11 @@ class GridControlManager(private val context: Context) {
         private const val NS_GLOBAL = "global"
         private const val LONG_TIMEOUT_MS = 600_000
         private const val DEFAULT_TIMEOUT_MS = 30_000
+        private const val QUICK_TIMER_SECONDS = 5 * 60
+        private const val SCREEN_RECORD_DIR = "/sdcard/Movies/ScreenRecords"
+        private const val KEY_SLEEP_ON = "sleep_on"
+        private const val KEY_PREV_DARK = "sleep_prev_dark"
+        private const val KEY_PREV_DIM = "sleep_prev_dim"
+        private const val KEY_PREV_DND = "sleep_prev_dnd"
     }
 }

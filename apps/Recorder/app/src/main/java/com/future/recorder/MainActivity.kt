@@ -32,6 +32,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+        // ממרכז הבקרה ("הקלטה מהירה") - רק ביצירה הראשונה, לא אחרי סיבוב/שחזור
+        val autoStart = savedInstanceState == null && intent?.getBooleanExtra(EXTRA_AUTO_START, false) == true
+
         setContent {
             // null = המסך הראשי; נתיב = נגן ההקלטה הזו. נשמר כמחרוזת כדי לשרוד יצירה מחדש.
             var playingPath by rememberSaveable { mutableStateOf<String?>(null) }
@@ -53,6 +56,7 @@ class MainActivity : ComponentActivity() {
                                 theme = theme,
                                 focusPath = lastPlayedPath,
                                 onPlay = { lastPlayedPath = it.path; playingPath = it.path },
+                                autoStart = autoStart,
                             )
                         } else {
                             PlayerScreen(theme = theme, file = file, onBack = { playingPath = null })
@@ -61,5 +65,10 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    companion object {
+        /** מתחיל הקלטה מיד עם הפתיחה (פקד "הקלטה מהירה" במרכז הבקרה). */
+        const val EXTRA_AUTO_START = "com.future.recorder.AUTO_START"
     }
 }

@@ -29,6 +29,7 @@ import com.future.sharednav.components.FutureBottomNav
 import com.future.sharednav.components.FutureNavItem
 import com.future.clock.ui.AlarmScreen
 import com.future.clock.ui.ClockRoute
+import com.future.clock.logic.AlarmLogic
 import com.future.clock.ui.StopwatchScreen
 import com.future.clock.ui.TimerScreen
 import com.future.clock.ui.WorldClockScreen
@@ -52,7 +53,16 @@ class MainActivity : ComponentActivity() {
         // אם ההפעלה הגיעה דרך activity-alias של שעון עצר/טיימר (קיצור דרך
         // שהתווסף למסך הבית, ראו ClockShortcuts) - נכנסים ישר לאותו מסך במקום
         // לרשימה הראשית, וה"חוויה" היא של אפליקציה עצמאית ולא של מסך בתוך "שעון".
+        // פקד "טיימר מהיר" במרכז הבקרה: מתחיל טיימר (אם אין כבר אחד רץ) ופותח את מסך
+        // הטיימר, שממשיך להציג את הספירה מתוך AlarmLogic.runningTimer.
+        val quickTimerSeconds = if (savedInstanceState == null) intent?.getIntExtra(EXTRA_START_TIMER_SECONDS, 0) ?: 0 else 0
+        if (quickTimerSeconds > 0 && AlarmLogic.runningTimer(this) == null) {
+            val totalMs = quickTimerSeconds * 1000L
+            AlarmLogic.clearPausedTimer(this)
+            AlarmLogic.scheduleTimer(this, System.currentTimeMillis() + totalMs, totalMs)
+        }
         val launchedClockRoute = ClockShortcuts.ROUTE_BY_ALIAS[intent.component?.className]
+            ?: if (quickTimerSeconds > 0) ClockRoute.Timer else null
         val launchedAsShortcut = launchedClockRoute != null
 
         setContent {
@@ -151,5 +161,10 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    companion object {
+        /** מתחיל טיימר באורך הזה (בשניות) ופותח את מסך הטיימר - מרכז הבקרה. */
+        const val EXTRA_START_TIMER_SECONDS = "com.future.clock.START_TIMER_SECONDS"
     }
 }

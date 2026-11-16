@@ -99,7 +99,7 @@ import com.future.sharednav.theme.rememberFutureType
 import androidx.compose.ui.draw.clip
 
 @Composable
-fun RecorderHomeScreen(theme: FutureTheme, focusPath: String?, onPlay: (File) -> Unit) {
+fun RecorderHomeScreen(theme: FutureTheme, focusPath: String?, onPlay: (File) -> Unit, autoStart: Boolean = false) {
     val context = LocalContext.current
     // בלי רמות הקול (מתעדכנות כל 80ms) - אחרת כל המסך מורכב מחדש בכל דגימה.
     val state by remember { RecorderService.state.map { it.copy(levels = emptyList()) }.distinctUntilChanged() }
@@ -177,6 +177,14 @@ fun RecorderHomeScreen(theme: FutureTheme, focusPath: String?, onPlay: (File) ->
 
     val mainButton = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { mainButton.requestFocus() } }
+    // "הקלטה מהירה" ממרכז הבקרה (EXTRA_AUTO_START) - מתחילים להקליט מיד, פעם אחת בלבד
+    var autoStartDone by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(autoStart) {
+        if (autoStart && !autoStartDone) {
+            autoStartDone = true
+            if (RecorderService.state.value.status == RecorderStatus.Idle) startRecording()
+        }
+    }
 
     // פוקוס חוזר לשורה שנערכה או הושמעה אחרונה (אחרי שינוי שם או BACK מהנגן), ולא לכפתור הראשי.
     val rowFocus = remember { mutableMapOf<String, FocusRequester>() }
