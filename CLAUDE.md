@@ -15,7 +15,7 @@
 - אסור להריץ במחשב המקומי בנייה, בדיקות או כל דבר כבד: לא `./gradlew` (שום משימה), לא `npm test`, לא שרת פיתוח, לא אמולטור.
 - כל הבנייה והבדיקות רצות רק ב-GitHub Actions (`.github/workflows/build.yml`), אוטומטית על כל push ל-`main`: בדיקת האבטחה, בנייה ובדיקות יחידה של כל אפליקציה, ובדיקות השרת (`server/feedback`).
 - בסיום כל שינוי קוד: commit עם הסבר מה חדש, ו-push ל-`main` בריפו https://github.com/yairzandberg10/FutureOS-.git. התוצאה נבדקת ב-Actions, ואם נכשל - מתקנים ודוחפים שוב.
-- ה-APK של כל אפליקציה נשמר כ-artifact בריצת ה-Actions. התקנה על המכשיר (`adb install`, ואחריה `adb shell cmd package compile -m speed -f <PACKAGE_NAME>`) רק כשהמשתמש מבקש במפורש.
+- התקנה בטלפון (רק כשהמשתמש מבקש): ה-workflow `release-apks.yml` בונה release לכל אפליקציה שהשתנתה, חותם במפתח של המחשב (סוד `DEBUG_KEYSTORE_BASE64`) ומעלה ל-GitHub Release בשם `apks`. מורידים את `https://github.com/yairzandberg10/FutureOS-/releases/download/apks/<App>-release.apk`, ואז `adb install -r <קובץ>` ו-`adb shell cmd package compile -m speed -f <PACKAGE_NAME>`. ההתקנה היא מעל הגרסה הקיימת, בלי למחוק נתונים.
 - מותר במחשב רק פעולות קלות: קריאה ועריכה של קבצים, git, וחיפוש.
 
 ## ענף אחד בלבד: main (Git)
