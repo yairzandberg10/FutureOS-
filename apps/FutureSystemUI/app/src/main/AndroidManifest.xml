@@ -22,7 +22,12 @@
         android:persistent="true"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
-        <service android:name=".SystemUIService" android:exported="true" />
+        <!-- system_server מפעיל את השירות בעלייה (config_systemUIServiceComponent) ומחזיק בהרשאה
+             הזו; אפליקציה רגילה לא יכולה להפעיל או לקשור אותו. -->
+        <service
+            android:name=".SystemUIService"
+            android:exported="true"
+            android:permission="android.permission.STATUS_BAR_SERVICE" />
         <service
             android:name=".notifications.FutureNotificationListener"
             android:exported="true"
