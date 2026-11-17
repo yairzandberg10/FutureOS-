@@ -74,8 +74,11 @@ fun HomeScreen(
     viewModel: HomeViewModel,
     onDestinationPicked: (GeocodeResult) -> Unit,
     onOpenSavedPlaces: () -> Unit,
-    onOpenGtfsSetup: () -> Unit
+    onOpenGtfsSetup: () -> Unit,
+    /** פתיחת לוח היציאות של תחנה (שם, מיקום). */
+    onOpenStation: (String, LatLng) -> Unit = { _, _ -> }
 ) {
+    val stationResults by viewModel.stationResults.collectAsState()
     val theme = LocalFutureTheme.current
     val type = rememberFutureType()
     val mode by viewModel.mode.collectAsState()
@@ -191,6 +194,18 @@ fun HomeScreen(
             contentPadding = PaddingValues(horizontal = FutureDimens.screenPadding, vertical = FutureDimens.spacingSm),
             verticalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm)
         ) {
+            if (query.isNotBlank() && stationResults.isNotEmpty()) {
+                item { FutureSectionHeader(text = tr("תחנות"), theme = theme, inset = false) }
+                items(stationResults, key = { "station|${it.location.lat},${it.location.lon}|${it.name}" }) { station ->
+                    FutureListItem(
+                        title = station.name,
+                        summary = station.lines.takeIf { it.isNotEmpty() }?.take(8)?.joinToString(" · ", prefix = tr("קווים: ")),
+                        theme = theme,
+                        onClick = { onOpenStation(station.name, station.location) },
+                        leading = { RowIcon(FutureIcons.LocationOn, theme) },
+                    )
+                }
+            }
             if (query.isNotBlank()) {
                 item {
                     FutureSectionHeader(
@@ -258,7 +273,7 @@ fun HomeScreen(
                             summary = tr("%.0f מ׳").format(nearby.distanceMeters) + (nearby.departures?.let { " · $it" } ?: ""),
                             theme = theme,
                             onClick = {
-                                onDestinationPicked(GeocodeResult(nearby.stop.name, LatLng(nearby.stop.lat, nearby.stop.lon)))
+                                onOpenStation(nearby.stop.name, LatLng(nearby.stop.lat, nearby.stop.lon))
                             },
                             leading = { RowIcon(FutureIcons.LocationOn, theme) },
                         )

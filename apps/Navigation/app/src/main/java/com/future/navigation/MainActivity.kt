@@ -363,7 +363,11 @@ private fun AppNavHost(
                     navController.navigate(Screen.RouteOptions.route)
                 },
                 onOpenSavedPlaces = { navController.navigate(Screen.SavedPlaces.route) },
-                onOpenGtfsSetup = { navController.navigate(Screen.GtfsSetup.route) }
+                onOpenGtfsSetup = { navController.navigate(Screen.GtfsSetup.route) },
+                onOpenStation = { name, location ->
+                    navSessionViewModel.setSelectedStation(Destination(name = name, address = name, location = location))
+                    navController.navigate(Screen.Station.route)
+                }
             )
         }
 
@@ -402,11 +406,28 @@ private fun AppNavHost(
                     factory = object : ViewModelProvider.Factory {
                         override fun <T : ViewModel> create(modelClass: Class<T>): T {
                             @Suppress("UNCHECKED_CAST")
-                            return NavigateViewModel(context.applicationContext, routingRepository, route, destination.location) as T
+                            return NavigateViewModel(context.applicationContext, routingRepository, route, destination.location, destinationLabel = destination.name.ifBlank { destination.address }) as T
                         }
                     }
                 )
                 NavigateScreen(viewModel, onClose = { navController.popBackStack(Screen.Home.route, inclusive = false) })
+            }
+        }
+
+        composable(Screen.Station.route) {
+            val station = navSessionViewModel.selectedStation.collectAsState().value
+            if (station == null) {
+                LaunchedEffect(Unit) { navController.popBackStack() }
+            } else {
+                com.future.navigation.ui.transit.StationScreen(
+                    station = station,
+                    onBack = { navController.popBackStack() },
+                    onRouteHere = {
+                        navSessionViewModel.setMode(com.future.navigation.ui.navigation.TravelMode.TRANSIT)
+                        navSessionViewModel.setDestination(station)
+                        navController.navigate(Screen.RouteOptions.route)
+                    },
+                )
             }
         }
 

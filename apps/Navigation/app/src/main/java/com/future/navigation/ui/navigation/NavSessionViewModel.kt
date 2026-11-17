@@ -27,6 +27,14 @@ class NavSessionViewModel : ViewModel() {
     private val _selectedDrivingRoute = MutableStateFlow<DrivingRoute?>(null)
     val selectedDrivingRoute = _selectedDrivingRoute.asStateFlow()
 
+    /** התחנה שנפתחה במסך לוח היציאות (מחיפוש או מ"תחנות קרובות"). */
+    private val _selectedStation = MutableStateFlow<Destination?>(null)
+    val selectedStation = _selectedStation.asStateFlow()
+
+    fun setSelectedStation(station: Destination) {
+        _selectedStation.value = station
+    }
+
     private val _selectedItinerary = MutableStateFlow<TransitItinerary?>(null)
     val selectedItinerary = _selectedItinerary.asStateFlow()
 

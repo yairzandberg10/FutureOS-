@@ -7,4 +7,5 @@ sealed class Screen(val route: String) {
     object Transit : Screen("transit")
     object SavedPlaces : Screen("saved_places")
     object GtfsSetup : Screen("gtfs_setup")
+    object Station : Screen("station")
 }

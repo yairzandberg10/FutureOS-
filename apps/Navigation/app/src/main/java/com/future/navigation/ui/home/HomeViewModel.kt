@@ -54,6 +54,10 @@ class HomeViewModel(
     private val _searchResults = MutableStateFlow<List<GeocodeResult>>(emptyList())
     val searchResults = _searchResults.asStateFlow()
 
+    /** תחנות שנמצאו בחיפוש לפי שם (במצב תחבורה ציבורית, מהשרת). */
+    private val _stationResults = MutableStateFlow<List<com.future.navigation.data.gtfs.StationHit>>(emptyList())
+    val stationResults = _stationResults.asStateFlow()
+
     private val _searching = MutableStateFlow(false)
     val searching = _searching.asStateFlow()
 
@@ -156,6 +160,7 @@ class HomeViewModel(
         searchJob?.cancel()
         if (query.isBlank()) {
             _searchResults.value = emptyList()
+            _stationResults.value = emptyList()
             _searchFailed.value = false
             _searching.value = false
             return
@@ -174,6 +179,13 @@ class HomeViewModel(
                 }
                 _searchResults.value = outcome.first
                 _searchFailed.value = outcome.second
+                // במצב תחבורה ציבורית מחפשים גם תחנה בשם הזה (כמו באגד/Moovit)
+                val around = _currentLocation.value
+                _stationResults.value = if (_mode.value == TravelMode.TRANSIT && around != null && query.trim().length >= 2) {
+                    serverDepartures.searchStations(around, query.trim()).orEmpty()
+                } else {
+                    emptyList()
+                }
             } finally {
                 if (_searchQuery.value == query) _searching.value = false
             }

@@ -83,6 +83,17 @@ fun NavigateScreen(viewModel: NavigateViewModel, onClose: () -> Unit = {}) {
         onDispose { view.keepScreenOn = false }
     }
 
+    // קישור שיתוף חדש: פותחים הודעה, והמשתמש בוחר למי לשלוח באפליקציית ההודעות
+    val shareLink by viewModel.shareLink.collectAsStateWithLifecycle()
+    androidx.compose.runtime.LaunchedEffect(shareLink) {
+        val link = shareLink ?: return@LaunchedEffect
+        viewModel.consumeShareLink()
+        val intent = android.content.Intent(android.content.Intent.ACTION_SENDTO, android.net.Uri.parse("smsto:"))
+            .putExtra("sms_body", "אני בדרך, אפשר לעקוב כאן: $link")
+            .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+        runCatching { gpsContext.startActivity(intent) }
+    }
+
     androidx.compose.runtime.LaunchedEffect(state.currentLocation, followMode) {
         val loc = state.currentLocation
         if (loc != null && followMode) {
@@ -115,6 +126,8 @@ fun NavigateScreen(viewModel: NavigateViewModel, onClose: () -> Unit = {}) {
             if (reportMenu && event.key == Key.Back) { reportMenu = false; return@onPreviewKeyEvent true }
             val digit = com.future.sharednav.nav.digitForKey(event.key) ?: return@onPreviewKeyEvent false
             if (digit == "0") { reportMenu = !reportMenu; return@onPreviewKeyEvent true }
+            // 3 מחוץ לתפריט: שיתוף הנסיעה (המפה לא משתמשת ב-3)
+            if (!reportMenu && digit == "3") { viewModel.shareTrip(); return@onPreviewKeyEvent true }
             if (!reportMenu) return@onPreviewKeyEvent false
             when (digit) {
                 "7" -> viewModel.voteNearestReport(true)
@@ -191,7 +204,7 @@ fun NavigateScreen(viewModel: NavigateViewModel, onClose: () -> Unit = {}) {
                             (if (report != null) " · 7 עדיין שם · 9 לא שם" else "")
                         state.reportMessage != null -> state.reportMessage!!
                         report != null -> "${report.type.label} בעוד ${state.nearestReportMeters.toInt()} מ׳ · 0 לעדכן"
-                        else -> "0 לדיווח (משטרה, תאונה, פקק...)"
+                        else -> "0 לדיווח · 3 לשיתוף הנסיעה"
                     },
                     color = when {
                         reportMenu -> theme.textColor

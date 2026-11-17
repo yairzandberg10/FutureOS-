@@ -61,6 +61,7 @@ class TransitServerPlanner {
                     departureSeconds = dep,
                     arrivalSeconds = arr,
                     intermediateStopNames = stops,
+                    toLocation = arrival.placeLocation(),
                 )
             }
             "pedestrian" -> TransitLeg(
@@ -81,6 +82,11 @@ class TransitServerPlanner {
         if (iso == null) return null
         val t = try { OffsetDateTime.parse(iso) } catch (e: Exception) { return null }
         return t.atZoneSameInstant(ZoneId.of("Asia/Jerusalem")).toLocalTime().toSecondOfDay()
+    }
+
+    private fun JsonObject?.placeLocation(): LatLng? {
+        val location = (this?.get("place") as? JsonObject)?.get("location") as? JsonObject ?: return null
+        return LatLng(location.number("lat") ?: return null, location.number("lng") ?: return null)
     }
 
     private fun JsonObject?.placeName(): String =

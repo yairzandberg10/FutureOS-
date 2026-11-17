@@ -541,3 +541,43 @@ test("nav route forwards avoidTolls and departAt, and validates them", async () 
   assert.equal((await call("/v1/nav/route", { method: "POST", headers: d.headers, body: { ...base, departAt: "tomorrow" } })).status, 400);
   assert.equal((await call("/v1/nav/route", { method: "POST", headers: d.headers, body: { ...base, avoidTolls: "yes" } })).status, 400);
 });
+
+test("trip share: create, update, public page, end, owner only", async () => {
+  const a = await registerDevice();
+  const b = await registerDevice();
+  const eta = Date.now() + 20 * 60000;
+  const created = await call("/v1/nav/share", { method: "POST", headers: a.headers, body: { lat: 32.08, lng: 34.78, etaMs: eta, label: "<b>הבית</b>" } });
+  assert.equal(created.status, 201);
+  const { id, url } = await created.json();
+  assert.ok(url.endsWith(`/s/${id}`));
+
+  const page = await (await call(`/s/${id}`)).text();
+  assert.ok(page.includes("&lt;b&gt;הבית&lt;/b&gt;"));
+  assert.ok(!page.includes(a.device_id));
+
+  // מכשיר אחר לא יכול לעדכן
+  const foreign = await call("/v1/nav/share/update", { method: "POST", headers: b.headers, body: { id, lat: 1, lng: 1, etaMs: eta } });
+  assert.equal(foreign.status, 404);
+  const upd = await call("/v1/nav/share/update", { method: "POST", headers: a.headers, body: { id, lat: 32.0, lng: 34.7, etaMs: eta } });
+  assert.equal(upd.status, 200);
+
+  await call("/v1/nav/share/update", { method: "POST", headers: a.headers, body: { id, ended: true } });
+  assert.ok((await (await call(`/s/${id}`)).text()).includes("הסתיימה"));
+  assert.ok((await (await call("/s/nonexistent-id-123")).text()).includes("הסתיים"));
+  assert.equal((await call("/v1/nav/share", { method: "POST", headers: a.headers, body: { lat: 32, lng: 34, etaMs: 5 } })).status, 400);
+});
+
+test("nav stations searches by name around the user and validates the name", async () => {
+  const d = await registerDevice();
+  env.HERE_API_KEY = "k";
+  let seen;
+  globalThis.fetch = async (url) => {
+    seen = String(url);
+    return new Response('{"stations":[]}');
+  };
+  const r = await call("/v1/nav/stations", { method: "POST", headers: d.headers, body: { lat: 32.08, lng: 34.78, name: "ארלוזורוב" } });
+  assert.equal(r.status, 200);
+  assert.ok(seen.startsWith("https://transit.hereapi.com/v8/stations?in=32.08,34.78;r=20000&name="));
+  assert.ok(seen.includes(encodeURIComponent("ארלוזורוב")));
+  assert.equal((await call("/v1/nav/stations", { method: "POST", headers: d.headers, body: { lat: 32, lng: 34, name: "a" } })).status, 400);
+});

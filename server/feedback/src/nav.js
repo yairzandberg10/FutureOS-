@@ -6,7 +6,8 @@ import { HttpError, readJson, takeQuota, clientNet, HOUR, DAY } from "./util.js"
 
 const HERE_ROUTES_URL = "https://router.hereapi.com/v8/routes";
 const HERE_TRANSIT_URL = "https://transit.router.hereapi.com/v8/routes";
-const HERE_DEPARTURES_URL = "https://transit.hereapi.com/v8/departures";
+const HERE_STATIONS_URL = "https://transit.hereapi.com/v8/stations";
+const HERE_DEPARTURES_URL ="https://transit.hereapi.com/v8/departures";
 // זמן ISO עם הפרש אזור, למשל 2026-11-16T08:30:00+02:00
 const ISO_TIME_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?(Z|[+-]\d{2}:\d{2})$/;
 const ID_RE = /^[0-9A-Za-z_-]{1,32}$/;
@@ -151,7 +152,37 @@ export async function departures(request, env, device) {
   return new Response(text, { headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
 }
 
-/** POST /nav/siri/stop{stopId, lineRef?} -> XML של SIRI StopMonitoring */
+/**
+ * POST /nav/stations  {lat, lng, name} -> JSON של HERE Station Search (stations[]).
+ * חיפוש תחנה לפי שם סביב המשתמש (בסגנון אגד/Moovit), עם הקווים שעוברים בה.
+ */
+export async function stations(request, env, device) {
+  if (!env.HERE_API_KEY) throw new HttpError(503, "nav_disabled");
+  const body = await readJson(request, 512);
+  if (!validLat(body.lat) || !validLng(body.lng)) throw new HttpError(400, "bad_coordinates");
+  const name = typeof body.name === "string" ? body.name.trim() : "";
+  if (name.length < 2 || name.length > 60) throw new HttpError(400, "bad_name");
+  if (!(await takeQuota(env.DB, "stations", device.id, Number(env.STATIONS_PER_HOUR || 120), HOUR))) {
+    throw new HttpError(429, "rate_limited");
+  }
+  await abuseLimits(env, request, device, "stations", Number(env.STATIONS_PER_DAY || 600), Number(env.STATIONS_PER_NET_HOUR || 480));
+  await fleetQuota(env, "here");
+
+  const url = new URL(HERE_STATIONS_URL);
+  url.search =
+    `in=${body.lat},${body.lng};r=20000&name=${encodeURIComponent(name)}&maxPlaces=10&return=transport&lang=he` +
+    `&apiKey=${encodeURIComponent(env.HERE_API_KEY)}`;
+
+  const upstream = await fetch(url.toString());
+  const text = await upstream.text();
+  if (!upstream.ok) {
+    console.warn("here stations failed", upstream.status);
+    throw new HttpError(502, "upstream_failed");
+  }
+  return new Response(text, { headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
+}
+
+/** POST /nav/siri/stop  {stopId, lineRef?} -> XML של SIRI StopMonitoring */
 export async function siriStop(request, env, device, cache = globalThis.caches?.default) {
   if (!env.SIRI_BASE_URL || !env.SIRI_API_KEY) throw new HttpError(503, "transit_disabled");
   const body = await readJson(request, 512);

@@ -4,8 +4,9 @@
 
 import { HttpError, json, errorResponse } from "./util.js";
 import { register, authenticate, submitFeedback, listFeedback, inbox, deleteMe } from "./devices.js";
-import { route, transit, departures, siriStop } from "./nav.js";
+import { route, transit, departures, stations, siriStop } from "./nav.js";
 import { submitReport, nearbyReports, voteReport } from "./reports.js";
+import { createShare, updateShare, viewShare } from "./share.js";
 import { handleAdmin } from "./admin.js";
 import { runTriage } from "./triage.js";
 import { checkUpdates, download, reportEvent } from "./updates.js";
@@ -16,6 +17,8 @@ export async function handle(request, env) {
   const method = request.method;
 
   if (path === "/v1/health" && method === "GET") return json({ ok: true });
+  const shareView = /^\/s\/([^/]+)$/.exec(path);
+  if (shareView && method === "GET") return viewShare(env, shareView[1]);
   if (path === "/v1/register" && method === "POST") return register(request, env);
 
   if (path.startsWith("/admin/")) return handleAdmin(request, env, path);
@@ -37,6 +40,12 @@ export async function handle(request, env) {
         return transit(request, env, device);
       case "POST /v1/nav/departures":
         return departures(request, env, device);
+      case "POST /v1/nav/stations":
+        return stations(request, env, device);
+      case "POST /v1/nav/share":
+        return createShare(request, env, device);
+      case "POST /v1/nav/share/update":
+        return updateShare(request, env, device);
       case "POST /v1/nav/report":
         return submitReport(request, env, device);
       case "POST /v1/nav/reports/nearby":

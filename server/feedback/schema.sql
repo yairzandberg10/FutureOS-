@@ -124,3 +124,18 @@ CREATE TABLE IF NOT EXISTS road_report_votes (
   up          INTEGER NOT NULL,
   PRIMARY KEY (report_id, device_id)
 );
+
+-- ---------- שיתוף נסיעה (בסגנון Waze) ----------
+-- המזהה הוא הסוד שבקישור; הדף הציבורי לא מציג את מזהה המכשיר.
+CREATE TABLE IF NOT EXISTS trip_shares (
+  id          TEXT PRIMARY KEY,
+  device_id   TEXT NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
+  label       TEXT NOT NULL DEFAULT '',
+  lat         REAL NOT NULL,
+  lng         REAL NOT NULL,
+  eta_ms      INTEGER NOT NULL,
+  ended       INTEGER NOT NULL DEFAULT 0,
+  updated_at  INTEGER NOT NULL,
+  expires_at  INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS trip_shares_expiry ON trip_shares(expires_at);

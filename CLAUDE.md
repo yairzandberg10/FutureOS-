@@ -11,12 +11,12 @@
 - ממשק המשתמש מבוסס על מקשים בלבד (Keypad / Buttons). השתמש ב-Key Events (כמו `KeyEvent.KEYCODE_DPAD_CENTER`, `KEYCODE_1` וכו'). אין להשתמש בנגיעה במסך (Touch).
 אל תעשה בדיקות ממשק תגיד לי מה לבדוק ואני יכתוב לך את התוצאות
 
-## פקודות אוטומטיות ובנייה (ADB Workflow Commands)
-- בסיום כל שינוי קוד, בצע בנייה והתקנה אוטומטית של האפליקציה על המכשיר באמצעות ADB.
-- פקודת בנייה והתקנה: `./gradlew installRelease` (לא installDebug - על המכשיר רצה גרסת release: R8 פעיל ולא debuggable, חתומה במפתח ה-debug כשאין keystore.properties, ולכן מתקינה מעל התקנת debug בלי לאבד נתונים).
-- אחרי כל התקנה, קומפילציה מראש של ART: `adb shell cmd package compile -m speed -f <PACKAGE_NAME>` - בלי זה האפליקציה רצה בלי קומפילציה בכלל (run-from-apk) עד ה-dexopt של הלילה.
-- פקודת הרצה (מבוססת ADB): `adb shell am start -n <YOUR_PACKAGE_NAME>/<YOUR_ACTIVITY_NAME>`
-- בסיום כל שינוי קוד, העלה את הגרסה החדשה לגיט עם הסבר על הגרסה החדשה מה חדש  ותעלה לריפו בלינק:   https://github.com/yairzandberg10/FutureOS-.git
+## בנייה ובדיקות: רק בגיט (GitHub Actions), לא במחשב
+- אסור להריץ במחשב המקומי בנייה, בדיקות או כל דבר כבד: לא `./gradlew` (שום משימה), לא `npm test`, לא שרת פיתוח, לא אמולטור.
+- כל הבנייה והבדיקות רצות רק ב-GitHub Actions (`.github/workflows/build.yml`), אוטומטית על כל push ל-`main`: בדיקת האבטחה, בנייה ובדיקות יחידה של כל אפליקציה, ובדיקות השרת (`server/feedback`).
+- בסיום כל שינוי קוד: commit עם הסבר מה חדש, ו-push ל-`main` בריפו https://github.com/yairzandberg10/FutureOS-.git. התוצאה נבדקת ב-Actions, ואם נכשל - מתקנים ודוחפים שוב.
+- ה-APK של כל אפליקציה נשמר כ-artifact בריצת ה-Actions. התקנה על המכשיר (`adb install`, ואחריה `adb shell cmd package compile -m speed -f <PACKAGE_NAME>`) רק כשהמשתמש מבקש במפורש.
+- מותר במחשב רק פעולות קלות: קריאה ועריכה של קבצים, git, וחיפוש.
 
 ## ענף אחד בלבד: main (Git)
 - בריפו יש ענף אחד בלבד: `main`. כל commit וכל push הולכים אליו (`git push origin main`).

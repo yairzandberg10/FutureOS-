@@ -46,7 +46,9 @@ class NavigateViewModel(
     private val routingRepository: RoutingRepository,
     initialRoute: DrivingRoute,
     private val destination: LatLng,
-    private val reportsRepository: RoadReportsRepository = RoadReportsRepository()
+    private val reportsRepository: RoadReportsRepository = RoadReportsRepository(),
+    /** שם היעד לדף השיתוף ("בדרך לבית"). */
+    private val destinationLabel: String = ""
 ) : ViewModel() {
 
     private var reports: List<RoadReport> = emptyList()
@@ -230,7 +232,13 @@ class NavigateViewModel(
             ended = state.ended || arrivedAtDestination
         )
         _uiState.value = newState
-        if (arrivedAtDestination && !state.ended) speak("הגעת ליעד") else announce(newState)
+        if (arrivedAtDestination && !state.ended) {
+            speak("הגעת ליעד")
+            endShare()
+        } else {
+            announce(newState)
+            maybeUpdateShare(location)
+        }
 
         // קיבוע לא מדויק (בין בניינים גבוהים, במנהרה) "סוטה" עשרות מטרים מהכביש
         // בלי שהרכב זז ממנו - לא מחשבים מסלול חדש לפיו.
@@ -319,6 +327,61 @@ class NavigateViewModel(
 
     fun endNavigation() {
         _uiState.value = _uiState.value.copy(ended = true)
+        endShare()
+    }
+
+    // ---------- שיתוף נסיעה (מקש 3) ----------
+
+    private var shareId: String? = null
+    private var lastShareUpdateMs = 0L
+
+    /** קישור השיתוף, לפתיחת הודעה למי שהמשתמש יבחר. null עד שנוצר. נצרך פעם אחת. */
+    private val _shareLink = MutableStateFlow<String?>(null)
+    val shareLink = _shareLink.asStateFlow()
+
+    fun consumeShareLink() {
+        _shareLink.value = null
+    }
+
+    private fun etaMs(): Long = System.currentTimeMillis() + (_uiState.value.remainingDurationSeconds * 1000).toLong()
+
+    fun shareTrip() {
+        val here = _uiState.value.currentLocation ?: return flashReportMessage("אין מיקום - לא ניתן לשתף")
+        viewModelScope.launch {
+            val body = com.future.navigation.data.backend.FutureServer.createShareJson(here, etaMs(), destinationLabel)
+            val root = body?.let { runCatching { com.future.navigation.data.network.NetworkModule.json.parseToJsonElement(it) }.getOrNull() }
+                as? kotlinx.serialization.json.JsonObject
+            val id = (root?.get("id") as? kotlinx.serialization.json.JsonPrimitive)?.content
+            val url = (root?.get("url") as? kotlinx.serialization.json.JsonPrimitive)?.content
+            if (id == null || url == null) {
+                flashReportMessage("השיתוף נכשל - נסו שוב")
+                return@launch
+            }
+            shareId = id
+            lastShareUpdateMs = System.currentTimeMillis()
+            _shareLink.value = url
+            flashReportMessage("השיתוף פעיל - שעת ההגעה מתעדכנת")
+        }
+    }
+
+    /** עדכון מיקום ושעת הגעה לשיתוף הפעיל, לכל היותר פעם בדקה. */
+    private fun maybeUpdateShare(location: LatLng) {
+        val id = shareId ?: return
+        val now = System.currentTimeMillis()
+        if (now - lastShareUpdateMs < SHARE_UPDATE_MS) return
+        lastShareUpdateMs = now
+        viewModelScope.launch {
+            com.future.navigation.data.backend.FutureServer.updateShare(id, location, etaMs())
+        }
+    }
+
+    private fun endShare() {
+        val id = shareId ?: return
+        shareId = null
+        // לא תלוי ב-viewModelScope: הוא מבוטל כשיוצאים מהמסך
+        com.future.navigation.data.backend.FirebaseBackend.scope.launch {
+            com.future.navigation.data.backend.FutureServer.updateShare(id, null, null, ended = true)
+        }
     }
 
     companion object {
@@ -333,6 +396,7 @@ class NavigateViewModel(
         private const val REPORT_LOOKAHEAD_METERS = 1500.0
         private const val REPORT_ANNOUNCE_METERS = 600.0
         private const val REPORT_MESSAGE_MS = 3_000L
+        private const val SHARE_UPDATE_MS = 60_000L
     }
 }
 

@@ -36,6 +36,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.future.navigation.R
+import com.future.navigation.data.common.distanceMetersTo
 import com.future.navigation.data.gtfs.LegType
 import com.future.navigation.data.gtfs.TransitItinerary
 import com.future.navigation.data.gtfs.TransitLeg
@@ -51,6 +52,46 @@ fun TransitScreen(itinerary: TransitItinerary, onBack: () -> Unit) {
     // פוקוס D-pad התחלתי על קטע הנסיעה הראשון (WALK אינו לחיץ) - בלי זה נחיתה
     // על המסך משאירה אותו בלי שום פריט מודגש.
     LaunchedEffect(Unit) { if (firstRideIndex >= 0) firstRideFocusRequester.requestFocus() }
+
+    // התראת "רדו בתחנה הבאה" (בסגנון Moovit): כל עוד המסך פתוח עוקבים אחרי המיקום,
+    // ומתריעים בקול וברטט כשמתקרבים לתחנת הירידה של כל קטע נסיעה.
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var getOffAlert by remember { mutableStateOf<String?>(null) }
+    val tts = remember { arrayOfNulls<android.speech.tts.TextToSpeech>(1) }
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        tts[0] = android.speech.tts.TextToSpeech(context) { status ->
+            if (status == android.speech.tts.TextToSpeech.SUCCESS) tts[0]?.setLanguage(java.util.Locale.forLanguageTag("he-IL"))
+        }
+        onDispose {
+            tts[0]?.shutdown()
+            tts[0] = null
+        }
+    }
+    val view = androidx.compose.ui.platform.LocalView.current
+    androidx.compose.runtime.DisposableEffect(view) {
+        view.keepScreenOn = true
+        onDispose { view.keepScreenOn = false }
+    }
+    LaunchedEffect(itinerary) {
+        val targets = itinerary.legs.filter { it.type == LegType.RIDE && it.toLocation != null }
+        if (targets.isEmpty()) return@LaunchedEffect
+        val alerted = HashSet<Int>()
+        runCatching {
+            com.future.navigation.data.location.LocationHelper.observeLocation(context, minIntervalMs = 5_000L, minDistanceMeters = 20f)
+                .collect { location ->
+                    val here = com.future.navigation.data.common.LatLng(location.latitude, location.longitude)
+                    targets.forEachIndexed { index, leg ->
+                        val distance = here.distanceMetersTo(leg.toLocation!!)
+                        if (distance <= GET_OFF_ALERT_METERS && alerted.add(index)) {
+                            val text = tr("רדו בתחנה הבאה: {0}", leg.toStopName)
+                            getOffAlert = text
+                            tts[0]?.speak(text, android.speech.tts.TextToSpeech.QUEUE_FLUSH, null, "getoff")
+                            vibrate(context)
+                        }
+                    }
+                }
+        }
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         ScreenTopBar(
@@ -80,6 +121,16 @@ fun TransitScreen(itinerary: TransitItinerary, onBack: () -> Unit) {
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
             modifier = Modifier.padding(horizontal = 16.dp)
         )
+
+        getOffAlert?.let { alert ->
+            Text(
+                text = alert,
+                color = LocalFutureTheme.current.dangerColor,
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+        }
 
         LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth(), contentPadding = PaddingValues(16.dp)) {
             itemsIndexed(itinerary.legs) { index, leg ->
@@ -196,4 +247,15 @@ private fun secondsToClock(seconds: Int): String {
     val h = (seconds / 3600) % 24
     val m = (seconds % 3600) / 60
     return "%02d:%02d".format(h, m)
+}
+
+/** כמה מטרים לפני תחנת הירידה מתריעים - בערך תחנה אחת קודם בעיר. */
+private const val GET_OFF_ALERT_METERS = 500.0
+
+private fun vibrate(context: android.content.Context) {
+    runCatching {
+        @Suppress("DEPRECATION")
+        val vibrator = context.getSystemService(android.content.Context.VIBRATOR_SERVICE) as android.os.Vibrator
+        vibrator.vibrate(android.os.VibrationEffect.createWaveform(longArrayOf(0, 400, 200, 400), -1))
+    }
 }

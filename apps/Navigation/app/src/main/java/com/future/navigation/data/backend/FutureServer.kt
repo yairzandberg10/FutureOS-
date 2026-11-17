@@ -97,7 +97,39 @@ object FutureServer {
         return post("/nav/departures", body)
     }
 
-    /** POST {baseUrl}/nav/report -דיווח דרך חדש מהמשתמש (משטרה, תאונה, מפגע...). */
+    /** POST {baseUrl}/nav/stations - חיפוש תחנה לפי שם סביב נקודה (HERE Station Search, stations[]). */
+    suspend fun stationsJson(at: LatLng, name: String): String? {
+        val body = buildJsonObject {
+            put("lat", at.lat)
+            put("lng", at.lon)
+            put("name", name)
+        }.toString()
+        return post("/nav/stations", body)
+    }
+
+    /** POST {baseUrl}/nav/share - פותח שיתוף נסיעה. מחזיר JSON עם id ו-url, או null. */
+    suspend fun createShareJson(at: LatLng, etaMs: Long, label: String): String? {
+        val body = buildJsonObject {
+            put("lat", at.lat)
+            put("lng", at.lon)
+            put("etaMs", etaMs)
+            put("label", label)
+        }.toString()
+        return post("/nav/share", body)
+    }
+
+    /** POST {baseUrl}/nav/share/update - מיקום ושעת הגעה עדכניים, או סיום (ended). */
+    suspend fun updateShare(id: String, at: LatLng?, etaMs: Long?, ended: Boolean = false): Boolean {
+        val body = buildJsonObject {
+            put("id", id)
+            if (ended) put("ended", true)
+            if (at != null) { put("lat", at.lat); put("lng", at.lon) }
+            if (etaMs != null) put("etaMs", etaMs)
+        }.toString()
+        return post("/nav/share/update", body) != null
+    }
+
+    /** POST {baseUrl}/nav/report - דיווח דרך חדש מהמשתמש (משטרה, תאונה, מפגע...). */
     suspend fun submitReport(type: String, at: LatLng): String? {
         val body = buildJsonObject {
             put("type", type)

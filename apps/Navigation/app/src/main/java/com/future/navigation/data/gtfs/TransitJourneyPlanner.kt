@@ -27,7 +27,9 @@ data class TransitLeg(
     /** true אם departureSeconds/arrivalSeconds עודכנו מנתון SIRI חי, לא רק מהלו"ז הסטטי. */
     val isRealtime: Boolean = false,
     /** שניות איחור לעומת הלו"ז המתוכנן (שלילי = מוקדם) - תקף רק כש-isRealtime. */
-    val delaySeconds: Int? = null
+    val delaySeconds: Int? = null,
+    /** מיקום תחנת הירידה - להתראת "רדו בתחנה הבאה" (ר' TransitScreen). */
+    val toLocation: LatLng? = null
 )
 
 data class TransitItinerary(
@@ -191,7 +193,8 @@ class TransitJourneyPlanner(private val dao: GtfsDao) {
             departureSeconds = dep.departureSeconds,
             arrivalSeconds = arrival.arrivalSeconds,
             intermediateStopNames = intermediate,
-            fromStopId = origin.stop.stopId
+            fromStopId = origin.stop.stopId,
+            toLocation = LatLng(dest.stop.lat, dest.stop.lon)
         )
         legs += walkLeg(dest.stop.name, tr("היעד שלך"), dest.distanceMeters)
 
@@ -247,7 +250,8 @@ class TransitJourneyPlanner(private val dao: GtfsDao) {
             departureSeconds = secondLegDep.departureSeconds,
             arrivalSeconds = secondLegArrival.arrivalSeconds,
             intermediateStopNames = secondIntermediate,
-            fromStopId = transferStop.stopId
+            fromStopId = transferStop.stopId,
+            toLocation = LatLng(dest.stop.lat, dest.stop.lon)
         )
         legs += walkLeg(dest.stop.name, tr("היעד שלך"), dest.distanceMeters)
 
