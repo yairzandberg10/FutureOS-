@@ -1,0 +1,12 @@
+{
+  "mode": "arc",
+  "web": 1.2,
+  "left_inset": 0,
+  "height": 7.2,
+  "corner_r": 3.6,
+  "legend": "#",
+  "legend_size": 5.2,
+  "legend_dx": -0.9,
+  "legend_dy": 0,
+  "hole_d": 7.1
+}
