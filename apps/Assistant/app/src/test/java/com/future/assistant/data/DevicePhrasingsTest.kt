@@ -61,5 +61,10 @@ class DevicePhrasingsTest {
         assertNotNull(exact)
         assertTrue(exact!!.exact)
         assertEquals(null, ChatBase.match(chat, "קשקש בלבל"))
+        assertTrue(ChatBase.isFollowUp("למה?"))
+        assertTrue(ChatBase.isFollowUp("ספר לי עוד"))
+        assertFalse(ChatBase.isFollowUp("מה השעה"))
+        // נטיות: "בעבודה" נתפס גם כשהניסוח הוא "העבודה"
+        assertNotNull(ChatBase.match(chat, "היה לי יום ממש קשה בעבודה היום"))
     }
 }

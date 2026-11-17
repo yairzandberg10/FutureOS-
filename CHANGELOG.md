@@ -4,6 +4,12 @@ This repo has no carried-over git history (see root [README](README.md)), so thi
 
 ## Unreleased
 
+### Assistant: real back-and-forth conversation (2026-11-17)
+
+- Auto-listen fixed: after a conversation reply the mic reopens by itself once TTS ends (state tick + `LaunchedEffect`, logged under `Assistant/Chat`).
+- Conversation mode (3 minutes after the last chat reply): "למה" / "ספר לי עוד" / "באמת" continue the same topic from a new follow-up column in `chat.tsv`. An unrecognized sentence mid-conversation gets a keep-going reply instead of "לא הבנתי". Closing words or a device action end the conversation.
+- `chat.tsv` grew from ~1,780 to ~5,570 topics (~30,000 new phrasings): feelings, daily routine, school, work and money, family, friends and love, hobbies, food, books and music, travel, weather, the assistant itself, deep questions, humor, advice, health, Jewish life and holidays, kids and games.
+- Loose matching strips Hebrew prefix letters (ו/ה/ב/ל/ש/מ/כ), so "היה לי יום ממש קשה בעבודה" matches the "יום קשה בעבודה" topic.
 ### FutureSystemUI: a status bar with the real device state (2026-11-16)
 
 Not compiled here (the session has no Android SDK) and not tested on the device.

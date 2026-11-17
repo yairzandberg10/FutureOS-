@@ -56,6 +56,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.DisposableEffect
@@ -148,8 +149,9 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
     // גוגל בעברית כשאפשר, Whisper המקומי כגיבוי (ר' HybridSpeech).
     val speech = remember { com.future.assistant.asr.HybridSpeech(context, speechEngine) }
 
-    // הקשבה אוטומטית אחרי תשובה בשיחה (CommandResult.listenAgain) - נקבע אחרי onMicClick
-    var startListening: (() -> Unit)? = null
+    // הקשבה אוטומטית אחרי תשובה בשיחה (CommandResult.listenAgain): speak מעלה את המונה,
+    // ו-LaunchedEffect שלמטה (אחרי onMicClick) פותח את המיקרופון מחדש.
+    var autoListenTick by remember { mutableIntStateOf(0) }
 
     fun speak(text: String, spoken: String = text, action: AssistantAction? = null, listenAgain: Boolean = false) {
         state = AssistantState.SPEAKING
@@ -168,10 +170,8 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
                 } else {
                     runCatching { micFocus.requestFocus() }
                     // שיחה: ממשיכים להקשיב בלי ללחוץ שוב על OK
-                    if (listenAgain && micGranted.value && !modelFailed) {
-                        delay(250)
-                        if (state == AssistantState.IDLE) startListening?.invoke()
-                    }
+                    android.util.Log.d("Assistant/Chat", "spoke, listenAgain=$listenAgain")
+                    if (listenAgain && micGranted.value && !modelFailed) autoListenTick++
                 }
             }
         }
@@ -266,7 +266,13 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
         }
     }
 
-    startListening = { if (state == AssistantState.IDLE) onMicClick() }
+    LaunchedEffect(autoListenTick) {
+        if (autoListenTick == 0) return@LaunchedEffect
+        // רגע של שקט אחרי ההקראה, שהמיקרופון לא יקלוט את סוף המשפט של העוזר
+        delay(400)
+        android.util.Log.d("Assistant/Chat", "auto-listen, state=$state")
+        if (state == AssistantState.IDLE) onMicClick()
+    }
 
     // הטקסט שמוצג באזור התשובה - נקבע לפי המצב
     val answerText = when {

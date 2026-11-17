@@ -87,7 +87,14 @@ object CommandProcessor {
         // שמופיעות כתת-מחרוזת בתוך מילים לגמרי לא קשורות (למשל "בדיחה",
         // "קובייה", "תגדירי" - כולן היו נבלעות בטעות כ"סגור" לפני התיקון).
         if (matchesCloseTrigger(text)) {
+            endConversation()
             return CommandResult("ביי", shouldClose = true)
+        }
+
+        // "למה" / "ספר לי עוד" אחרי תשובת שיחה - ממשיכים באותו נושא
+        if (inConversation() && ChatBase.isFollowUp(text)) {
+            val more = lastChatEntry?.followUps.orEmpty().ifEmpty { lastChatEntry?.replies.orEmpty() }
+            return conversationReply(more.randomOrNull() ?: ChatBase.keepGoingReply(), lastChatEntry)
         }
 
         // פתיחת אפליקציה - דורש חילוץ שם האפליקציה מתוך המשפט, לכן מטופל
@@ -130,7 +137,10 @@ object CommandProcessor {
 
         // כל שאר הפקודות - התאמה לפי מילות מפתח מתוך הרשימה הגדולה למטה.
         val intent = firstMatchingIntent(text)
-        if (intent != null && !intent.social) return intent.respond(context)
+        if (intent != null && !intent.social) {
+            endConversation()
+            return intent.respond(context)
+        }
 
         // שיחה חופשית (assets/knowledge/chat.tsv). פקודת שיחה קצרה ("שלום") מפנה מקום
         // לניסוח שיחה ארוך יותר שמתאים למשפט ("שלום אני עצוב היום").
@@ -138,10 +148,13 @@ object CommandProcessor {
         if (intent != null) {
             val triggerLength = intent.triggers.filter { containsWord(text, it) }.maxOfOrNull { it.length } ?: 0
             if (chat != null && chat.exact && chat.phrasing.length > triggerLength) return chatResult(chat)
-            return intent.respond(context).copy(listenAgain = true)
+            return conversationReply(intent.respond(context).responseText, null)
         }
         chat?.let { return chatResult(it) }
 
+        // באמצע שיחה לא עונים "לא הבנתי" - ממשיכים לדבר
+        if (openAppMiss == null && inConversation()) return conversationReply(ChatBase.keepGoingReply(), null)
+        endConversation()
         return CommandResult(openAppMiss ?: "לא הבנתי את הבקשה, אפשר לנסות שוב")
     }
 
@@ -195,7 +208,27 @@ object CommandProcessor {
     private fun voiceIntent(triggers: List<String>, social: Boolean = false, respond: (Context) -> String): VoiceIntent =
         VoiceIntent(triggers, social = social) { context -> CommandResult(respond(context)) }
 
-    private fun chatResult(match: ChatBase.Match) = CommandResult(match.reply, listenAgain = true)
+    private fun chatResult(match: ChatBase.Match) = conversationReply(match.reply, match.entry)
+
+    // --- מצב שיחה: אחרי תשובת שיחה, בשלוש הדקות הבאות "למה" ממשיך את הנושא ומשפט לא מוכר לא נענה ב"לא הבנתי" ---
+    @Volatile private var lastChatAt = 0L
+    @Volatile private var lastChatEntry: ChatBase.Entry? = null
+    private const val CONVERSATION_WINDOW_MS = 3 * 60_000L
+
+    private fun inConversation() = System.currentTimeMillis() - lastChatAt < CONVERSATION_WINDOW_MS
+
+    private fun endConversation() {
+        lastChatAt = 0L
+        lastChatEntry = null
+    }
+
+    private fun conversationReply(reply: String, entry: ChatBase.Entry?): CommandResult {
+        lastChatAt = System.currentTimeMillis()
+        if (entry != null) lastChatEntry = entry
+        return CommandResult(reply, listenAgain = true)
+    }
+
+    internal fun resetConversationForTest() = endConversation()
 
     /** ביטויי מצוקה (מנורמלים). */
     private val CRISIS_PHRASES = listOf(
