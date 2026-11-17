@@ -1,0 +1,74 @@
+name: Deploy server
+
+# פורס את שרת FutureOS (server/feedback) ל-Cloudflare Workers, ומעדכן את טבלאות D1.
+# רץ ב-GitHub בלבד (ר' CLAUDE.md), אוטומטית על כל push ל-main שמשנה את השרת, או ידנית.
+#
+# סודות בריפו (Settings > Secrets and variables > Actions):
+#   CLOUDFLARE_API_TOKEN  - חובה. טוקן מהתבנית "Edit Cloudflare Workers" + הרשאת D1 Edit.
+#   CLOUDFLARE_ACCOUNT_ID - רק אם לטוקן יש גישה ליותר מחשבון אחד.
+#   HERE_API_KEY, SIRI_API_KEY, SIRI_BASE_URL, GEMINI_API_KEY - לא חובה. מה שמוגדר
+#   מועתק לסודות של ה-Worker בכל פריסה, ומה שחסר נשאר כמו שהוא בשרת.
+
+on:
+  push:
+    branches: [main]
+    paths: ["server/feedback/**", ".github/workflows/deploy-server.yml"]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-server
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to Cloudflare
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      WRANGLER: npx --yes wrangler@4.20.0
+    defaults:
+      run:
+        working-directory: server/feedback
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+      - name: Check for the Cloudflare token
+        id: token
+        run: |
+          if [ -n "$CLOUDFLARE_API_TOKEN" ]; then echo "ok=yes" >> "$GITHUB_OUTPUT"; else
+            echo "ok=no" >> "$GITHUB_OUTPUT"
+            echo "::warning::CLOUDFLARE_API_TOKEN is not set - the server was not deployed."
+          fi
+      - name: Run server tests
+        if: steps.token.outputs.ok == 'yes'
+        run: npm test
+      - name: Update the D1 tables
+        if: steps.token.outputs.ok == 'yes'
+        # כל הטבלאות ב-CREATE ... IF NOT EXISTS, כך שהרצה חוזרת לא מוחקת נתונים
+        run: $WRANGLER d1 execute futureos --remote --file=schema.sql --yes
+      - name: Deploy the Worker
+        if: steps.token.outputs.ok == 'yes'
+        run: $WRANGLER deploy
+      - name: Copy secrets to the Worker
+        if: steps.token.outputs.ok == 'yes'
+        env:
+          HERE_API_KEY: ${{ secrets.HERE_API_KEY }}
+          SIRI_API_KEY: ${{ secrets.SIRI_API_KEY }}
+          SIRI_BASE_URL: ${{ secrets.SIRI_BASE_URL }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          for name in HERE_API_KEY SIRI_API_KEY SIRI_BASE_URL GEMINI_API_KEY; do
+            value="${!name}"
+            if [ -n "$value" ]; then
+              printf '%s' "$value" | $WRANGLER secret put "$name" >/dev/null
+              echo "$name: updated"
+            else
+              echo "$name: not set in GitHub, left unchanged"
+            fi
+          done

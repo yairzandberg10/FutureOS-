@@ -4,7 +4,7 @@ Cloudflare Worker אחד שמפיץ עדכוני אפליקציות לטלפונ
 
 מסמך העיצוב המלא: [`docs/update-feedback-design.md`](../../docs/update-feedback-design.md).
 
-**מצב נוכחי:** הקוד רץ מקומית ונבדק. שום דבר לא פרוס, לא נפתח שום חשבון ולא הוצא כסף.
+**מצב נוכחי:** נפרס ל-Cloudflare דרך GitHub Actions (`.github/workflows/deploy-server.yml`) בכל push ל-`main` שמשנה את השרת. מסד D1 בשם `futureos` קיים. R2 עוד לא מופעל בחשבון, ולכן לוגים במשוב והפצת עדכונים לא זמינים. כתובת השרת נכנסת לאפליקציות מהמשתנה `FUTURE_API_BASE` בריפו.
 
 ## מה יש כאן
 

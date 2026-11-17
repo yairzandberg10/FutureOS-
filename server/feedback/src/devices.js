@@ -94,7 +94,8 @@ export async function submitFeedback(request, env, device) {
 
   const id = newId();
   let logKey = null;
-  if (body.log && body.log.trim()) {
+  // בלי R2 (BLOBS) המשוב נשמר בלי הלוג
+  if (env.BLOBS && body.log && body.log.trim()) {
     logKey = `logs/${id}.txt`;
     await env.BLOBS.put(logKey, redact(body.log), { httpMetadata: { contentType: "text/plain; charset=utf-8" } });
   }
@@ -146,7 +147,7 @@ export async function deleteMe(env, device) {
   const { results } = await env.DB.prepare("SELECT log_key FROM feedback WHERE device_id = ?1 AND log_key IS NOT NULL")
     .bind(device.id)
     .all();
-  for (const row of results) await env.BLOBS.delete(row.log_key);
+  if (env.BLOBS) for (const row of results) await env.BLOBS.delete(row.log_key);
   await env.DB.batch([
     env.DB.prepare("DELETE FROM inbox WHERE device_id = ?1").bind(device.id),
     env.DB.prepare("DELETE FROM update_events WHERE device_id = ?1").bind(device.id),

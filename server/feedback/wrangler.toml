@@ -32,11 +32,13 @@ ADMIN_EMAIL = ""
 [[d1_databases]]
 binding = "DB"
 database_name = "futureos"
-database_id = "REPLACE_AFTER_wrangler_d1_create"
+database_id = "22e6be22-f19c-4265-96fe-a9d9511c5adb"
 
-[[r2_buckets]]
-binding = "BLOBS"
-bucket_name = "futureos-feedback"
+# R2 עוד לא מופעל בחשבון. בלעדיו המשוב נשמר בלי לוג, והפצת עדכונים לא זמינה.
+# אחרי הפעלה ב-Dashboard: להחזיר את שלוש השורות.
+# [[r2_buckets]]
+# binding = "BLOBS"
+# bucket_name = "futureos-feedback"
 
 # מיון Gemini פעם בשעה
 [triggers]

@@ -96,6 +96,12 @@ jobs:
           distribution: temurin
           java-version: "21"
       - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
+      # כתובת שרת FutureOS (משתנה הריפו FUTURE_API_BASE) נכנסת ל-BuildConfig של האפליקציה
+      - name: Point the app at the FutureOS server
+        env:
+          API_BASE: ${{ vars.FUTURE_API_BASE }}
+          APP: ${{ matrix.app }}
+        run: if [ -n "$API_BASE" ]; then echo "future.api.base=$API_BASE" >> "apps/$APP/local.properties"; fi
       - name: Assemble debug
         working-directory: apps/${{ matrix.app }}
         run: ./gradlew assembleDebug --console=plain

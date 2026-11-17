@@ -95,6 +95,12 @@ jobs:
         run: |
           mkdir -p ~/.android
           echo "$KEY" | base64 -d > ~/.android/debug.keystore
+      # כתובת שרת FutureOS (משתנה הריפו FUTURE_API_BASE) נכנסת ל-BuildConfig של האפליקציה
+      - name: Point the app at the FutureOS server
+        env:
+          API_BASE: ${{ vars.FUTURE_API_BASE }}
+          APP: ${{ matrix.app }}
+        run: if [ -n "$API_BASE" ]; then echo "future.api.base=$API_BASE" >> "apps/$APP/local.properties"; fi
       - name: Assemble release
         working-directory: apps/${{ matrix.app }}
         run: ./gradlew assembleRelease --console=plain
