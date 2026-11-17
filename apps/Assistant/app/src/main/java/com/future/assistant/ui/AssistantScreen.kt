@@ -56,7 +56,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.DisposableEffect
@@ -149,17 +148,25 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
     // גוגל בעברית כשאפשר, Whisper המקומי כגיבוי (ר' HybridSpeech).
     val speech = remember { com.future.assistant.asr.HybridSpeech(context, speechEngine) }
 
-    // הקשבה אוטומטית אחרי תשובה בשיחה (CommandResult.listenAgain): speak מעלה את המונה,
-    // ו-LaunchedEffect שלמטה (אחרי onMicClick) פותח את המיקרופון מחדש.
-    var autoListenTick by remember { mutableIntStateOf(0) }
+    // מילת ההפעלה ("היי פיוטר", "עוזר") - מקשיבה כל עוד החלון פתוח ובמנוחה.
+    val wake = remember { com.future.assistant.asr.WakeWordListener(context) }
+    var resumed by remember { mutableStateOf(true) }
 
-    fun speak(text: String, spoken: String = text, action: AssistantAction? = null, listenAgain: Boolean = false) {
+    fun speak(text: String, spoken: String = text, action: AssistantAction? = null) {
         state = AssistantState.SPEAKING
         noSpeech = false
         responseText = text
         scope.launch(Dispatchers.IO) {
             piperTts.init()
-            piperTts.speak(spoken) { level = it }
+            val t0 = System.currentTimeMillis()
+            var first = true
+            piperTts.speak(spoken) {
+                if (first) {
+                    first = false
+                    android.util.Log.i("Assistant/Timing", "first audio after ${System.currentTimeMillis() - t0}ms")
+                }
+                level = it
+            }
             if (action == AssistantAction.BEATBOX) Beatbox.play { level = it }
             withContext(Dispatchers.Main) {
                 level = 0f
@@ -169,9 +176,6 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
                     onExit()
                 } else {
                     runCatching { micFocus.requestFocus() }
-                    // שיחה: ממשיכים להקשיב בלי ללחוץ שוב על OK
-                    android.util.Log.d("Assistant/Chat", "spoke, listenAgain=$listenAgain")
-                    if (listenAgain && micGranted.value && !modelFailed) autoListenTick++
                 }
             }
         }
@@ -186,10 +190,12 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
         } else {
             // עיבוד הפקודה כולל IO כבד (רשימת אפליקציות, אנשי קשר, מאגר הידע) - לא על ה-main thread
             scope.launch {
+                val t0 = System.currentTimeMillis()
                 val result = withContext(Dispatchers.IO) { runCatching { CommandProcessor.process(context, text) } }
+                android.util.Log.i("Assistant/Timing", "process ${System.currentTimeMillis() - t0}ms")
                 result.onSuccess {
                     pendingClose = it.shouldClose
-                    speak(it.responseText, it.speech, it.action, it.listenAgain)
+                    speak(it.responseText, it.speech, it.action)
                 }.onFailure {
                     pendingClose = false
                     speak("משהו השתבש בביצוע הפקודה, נסה שוב")
@@ -218,10 +224,15 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
-            if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP && state == AssistantState.LISTENING) {
-                state = AssistantState.IDLE
-                speech.cancel()
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP) {
+                resumed = false
+                wake.stop()
+                if (state == AssistantState.LISTENING) {
+                    state = AssistantState.IDLE
+                    speech.cancel()
+                }
             }
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_START) resumed = true
             // חזרה מהגדרות ההרשאות - מעדכנים את המצב (אחרת נשאר "נדרשת הרשאה" אחרי שאושרה)
             if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
                 micGranted.value = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
@@ -229,22 +240,36 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            wake.stop()
+        }
     }
 
     fun onMicClick() {
         when (state) {
             AssistantState.IDLE -> {
+                // מיקרופון אחד בכל פעם: מילת ההפעלה משחררת אותו לפני ההאזנה לפקודה
+                wake.stop()
                 heardText = ""
                 noSpeech = false
                 state = AssistantState.LISTENING
                 // ההקלטה מתחילה מיד, גם אם מודל Whisper עוד נטען - התמלול יחכה לו.
                 speech.start(
                     onLevel = { level = it },
+                    // Whisper זיהה שסיימת לדבר - מציגים "מתמלל" עד שהטקסט מוכן
+                    onSpeechEnd = {
+                        scope.launch(Dispatchers.Main) {
+                            if (state == AssistantState.LISTENING) {
+                                state = AssistantState.THINKING
+                                level = 0f
+                            }
+                        }
+                    },
                     // גוגל מסיים לבד אחרי שקט - בלי לחכות ל-OK.
                     onAutoResult = { text ->
                         scope.launch(Dispatchers.Main) {
-                            if (state == AssistantState.LISTENING) {
+                            if (state == AssistantState.LISTENING || state == AssistantState.THINKING) {
                                 level = 0f
                                 handleRecognizedText(text)
                             }
@@ -253,6 +278,7 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
                 )
             }
             AssistantState.LISTENING -> {
+                wake.stop()
                 state = AssistantState.THINKING
                 level = 0f
                 scope.launch {
@@ -266,12 +292,27 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
         }
     }
 
-    LaunchedEffect(autoListenTick) {
-        if (autoListenTick == 0) return@LaunchedEffect
-        // רגע של שקט אחרי ההקראה, שהמיקרופון לא יקלוט את סוף המשפט של העוזר
-        delay(400)
-        android.util.Log.d("Assistant/Chat", "auto-listen, state=$state")
-        if (state == AssistantState.IDLE) onMicClick()
+    // מילת ההפעלה: רק במנוחה (לא בזמן האזנה לפקודה, תמלול או הקראה - אחרת העוזר
+    // היה שומע את עצמו). "היי פיוטר" לבד פותח האזנה; "היי פיוטר מה השעה" מבוצע מיד.
+    LaunchedEffect(state, hasPermission, resumed, modelFailed) {
+        if (state != AssistantState.IDLE || !hasPermission || !resumed || modelFailed) {
+            wake.stop()
+            return@LaunchedEffect
+        }
+        // רגע אחרי ההקראה, שהמיקרופון לא יקלוט את סוף המשפט של העוזר
+        delay(300)
+        wake.start { rest ->
+            scope.launch(Dispatchers.Main) {
+                if (state != AssistantState.IDLE) return@launch
+                vibrateShort(context)
+                if (rest.isBlank()) {
+                    onMicClick()
+                } else {
+                    state = AssistantState.THINKING
+                    handleRecognizedText(rest)
+                }
+            }
+        }
     }
 
     // הטקסט שמוצג באזור התשובה - נקבע לפי המצב
@@ -434,7 +475,7 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
                                     !hasPermission -> "OK לבקשת הרשאה"
                                     state == AssistantState.SPEAKING -> "OK להפסקה"
                                     compact -> IdlePrompt
-                                    else -> "לחץ על מקש האישור כדי לדבר"
+                                    else -> "OK או \"היי פיוטר\" כדי לדבר"
                                 },
                                 color = dim,
                                 fontSize = if (compact) type.title else type.summary,
@@ -662,5 +703,18 @@ private fun BottomGlow(active: Boolean, level: Float, thinking: Boolean, modifie
                 radius = r, center = Offset(cx, cy),
             )
         }
+    }
+}
+
+/** רטט קצר: מילת ההפעלה נשמעה והעוזר מקשיב. */
+private fun vibrateShort(context: android.content.Context) {
+    runCatching {
+        val vibrator = if (android.os.Build.VERSION.SDK_INT >= 31) {
+            context.getSystemService(android.os.VibratorManager::class.java)?.defaultVibrator
+        } else {
+            @Suppress("DEPRECATION")
+            context.getSystemService(android.os.Vibrator::class.java)
+        }
+        vibrator?.vibrate(android.os.VibrationEffect.createOneShot(40, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
     }
 }

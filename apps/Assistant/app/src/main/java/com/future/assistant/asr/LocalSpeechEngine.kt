@@ -61,7 +61,10 @@ class LocalSpeechEngine(private val context: Context) {
      * שמסיימים. הקלטה שכולה שקט מחזירה מערך ריק - בלי לבזבז זמן (ובלי
      * ש-Whisper "ימציא" טקסט על שקט).
      */
-    private fun trimSilence(samples: FloatArray): FloatArray {
+    private fun trimSilence(samples: FloatArray): FloatArray = Companion.trimSilence(samples)
+
+    companion object {
+    internal fun trimSilence(samples: FloatArray): FloatArray {
         if (samples.isEmpty()) return samples
         val window = SAMPLE_RATE / 50 // 20ms
         val count = samples.size / window
@@ -93,7 +96,6 @@ class LocalSpeechEngine(private val context: Context) {
         return if (trimmed.size >= minLen) trimmed else trimmed.copyOf(minLen)
     }
 
-    companion object {
         /**
          * Whisper small (רב-לשוני, מכומת 8 ביט, 264MB). tiny, שהיה כאן קודם,
          * חלש מדי בעברית. small-q8_0 ולא q5_1 הקטן יותר: עם dotprod, ‏q8_0 מהיר
@@ -111,6 +113,18 @@ class LocalSpeechEngine(private val context: Context) {
         @Volatile private var sharedWhisper: WhisperCpp? = null
 
         val isLoaded: Boolean get() = sharedWhisper != null
+
+        /**
+         * מתמלל דגימות שכבר הוקלטו (16kHz, -1..1) - בשביל זיהוי מילת ההפעלה
+         * (WakeWordListener), שמקליט בעצמו. חוסם, מ-thread ברקע.
+         */
+        fun transcribeSamples(context: Context, raw: FloatArray, prompt: String? = null): String {
+            val samples = trimSilence(raw)
+            if (samples.isEmpty()) return ""
+            val whisper = sharedWhisper ?: runCatching { preload(context); sharedWhisper }.getOrNull() ?: return ""
+            val text = synchronized(lock) { whisper.transcribe(samples, "he", prompt) }
+            return RepetitionFilter.collapse(text)
+        }
 
         /**
          * מתחיל לטעון את המודל ברקע ולא מחכה. נקרא ב-onCreate של העוזר, לפני

@@ -32,9 +32,11 @@ class HybridSpeech(private val context: Context, private val whisper: LocalSpeec
     private var usingGoogle = false
     private var result: CompletableDeferred<String>? = null
     private var lastPartial = ""
+    private var endOfSpeechAt = 0L
     @Volatile private var stopRequested = false
     private var onLevel: ((Float) -> Unit)? = null
     private var onAutoResult: ((String) -> Unit)? = null
+    private var onSpeechEnd: (() -> Unit)? = null
     /** נועל את ההתחלה וההפסקה של הקלטת Whisper - מונע מרוץ בין thread ההקלטה ל-cancel. */
     private val lock = Any()
 
@@ -42,9 +44,10 @@ class HybridSpeech(private val context: Context, private val whisper: LocalSpeec
      * מתחיל להאזין. [onLevel] - עוצמה 0..1 לגלים. [onAutoResult] - כשגוגל מסיים
      * לבד (שקט אחרי משפט) לפני שהמשתמש לחץ OK.
      */
-    fun start(onLevel: (Float) -> Unit, onAutoResult: (String) -> Unit) {
+    fun start(onLevel: (Float) -> Unit, onSpeechEnd: () -> Unit = {}, onAutoResult: (String) -> Unit) {
         this.onLevel = onLevel
         this.onAutoResult = onAutoResult
+        this.onSpeechEnd = onSpeechEnd
         stopRequested = false
         lastPartial = ""
         val component = if (!googleBroken && isOnline()) googleComponent(context) else null
@@ -80,14 +83,58 @@ class HybridSpeech(private val context: Context, private val whisper: LocalSpeec
     private fun startWhisper() {
         usingGoogle = false
         val levelCb = onLevel
+        val vad = EndOfSpeech()
         Thread {
             // OK/BACK שהגיעו לפני שה-thread התחיל - לא פותחים הקלטה שאף אחד לא יעצור
             synchronized(lock) {
                 if (!stopRequested) {
-                    whisper.startRecording { db -> levelCb?.invoke(((db + 2f) / 12f).coerceIn(0f, 1f)) }
+                    whisper.startRecording { db ->
+                        val level = ((db + 2f) / 12f).coerceIn(0f, 1f)
+                        levelCb?.invoke(level)
+                        if (vad.update(level)) Thread { finishWhisperAuto() }.start()
+                    }
                 }
             }
         }.start()
+    }
+
+    /** Whisper: המשתמש סיים לדבר (שקט אחרי דיבור, או שתיקה ארוכה) - מתמללים בלי OK. */
+    private fun finishWhisperAuto() {
+        synchronized(lock) {
+            if (stopRequested) return
+            stopRequested = true
+        }
+        onSpeechEnd?.invoke()
+        val t0 = System.currentTimeMillis()
+        val text = runCatching { whisper.stopRecordingAndTranscribe() }.getOrDefault("")
+        Log.i(TAG, "whisper auto-end: transcribed in ${System.currentTimeMillis() - t0}ms")
+        onAutoResult?.invoke(text)
+    }
+
+    /**
+     * זיהוי סוף דיבור לפי עוצמה (0..1, בערך 25 פעמים בשנייה): רצפת רעש מהרגעים
+     * הראשונים, דיבור = מעליה בבירור, וסוף = 800ms שקט אחרי דיבור. בלי דיבור
+     * בכלל - 6 שניות. מחזיר true פעם אחת, כשצריך לעצור.
+     */
+    private class EndOfSpeech {
+        private val startedAt = System.currentTimeMillis()
+        private var floor = -1f
+        private var speechSeen = false
+        private var lastLoudAt = 0L
+        private var fired = false
+
+        fun update(level: Float): Boolean {
+            if (fired) return false
+            val now = System.currentTimeMillis()
+            floor = if (floor < 0f) level else if (level < floor) level else floor + (level - floor) * 0.01f
+            if (level > maxOf(floor + 0.22f, 0.3f)) {
+                speechSeen = true
+                lastLoudAt = now
+            }
+            val done = if (speechSeen) now - lastLoudAt > 800 else now - startedAt > 6_000
+            if (done) fired = true
+            return done
+        }
     }
 
     private fun startGoogle(component: ComponentName): Boolean = try {
@@ -99,13 +146,14 @@ class HybridSpeech(private val context: Context, private val whisper: LocalSpeec
             override fun onBeginningOfSpeech() {}
             override fun onRmsChanged(rmsdB: Float) { onLevel?.invoke(((rmsdB + 2f) / 12f).coerceIn(0f, 1f)) }
             override fun onBufferReceived(buffer: ByteArray?) {}
-            override fun onEndOfSpeech() {}
+            override fun onEndOfSpeech() { endOfSpeechAt = System.currentTimeMillis() }
             override fun onPartialResults(partialResults: Bundle?) {
                 firstResult(partialResults)?.let { if (it.isNotBlank()) lastPartial = it }
             }
             override fun onEvent(eventType: Int, params: Bundle?) {}
             override fun onResults(results: Bundle?) {
                 val text = firstResult(results).orEmpty().ifBlank { lastPartial }
+                Log.i(TAG, "google result ${System.currentTimeMillis() - endOfSpeechAt}ms after end of speech")
                 deferred.complete(text)
                 // סיים לבד (שקט אחרי משפט) לפני שהמשתמש לחץ OK.
                 if (!stopRequested) {
@@ -141,8 +189,8 @@ class HybridSpeech(private val context: Context, private val whisper: LocalSpeec
                 putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
                 putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
                 // משפט פקודה עם הפסקה קצרה באמצע לא נחתך באמצע.
-                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1_500L)
-                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1_500L)
+                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1_000L)
+                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1_000L)
             },
         )
         true

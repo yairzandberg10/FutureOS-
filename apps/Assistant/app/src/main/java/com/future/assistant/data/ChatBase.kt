@@ -23,6 +23,17 @@ object ChatBase {
         internal val byPhrasing: List<Pair<String, Entry>> =
             entries.flatMap { e -> e.phrasings.map { it to e } }.sortedByDescending { it.first.length }
         val phrasingCount get() = byPhrasing.size
+
+        /** לחפיפה החופשית: המילים של כל ניסוח רב-מילי, מחושבות פעם אחת. */
+        internal val multi: List<Pair<String, Entry>> = byPhrasing.filter { ' ' in it.first }
+        internal val multiWords: List<List<String>> = multi.map { words(it.first) }
+        internal val multiForms: List<List<Set<String>>> = multiWords.map { ws -> ws.map { forms(it) } }
+        /** צורת מילה -> הניסוחים שמכילים אותה, כדי לא לעבור על כל ~35 אלף הניסוחים בכל שאלה. */
+        internal val byForm: Map<String, IntArray> = run {
+            val m = HashMap<String, MutableList<Int>>()
+            multiForms.forEachIndexed { i, fs -> fs.flatten().toSet().forEach { m.getOrPut(it) { ArrayList() }.add(i) } }
+            m.mapValues { it.value.toIntArray() }
+        }
     }
 
     class Match(val phrasing: String, val reply: String, val exact: Boolean, val entry: Entry? = null)
@@ -63,10 +74,10 @@ object ChatBase {
         "תגיד", "תגידי", "אותי", "אותך", "היה", "יהיה", "להיות", "ככה", "כזה", "כזאת", "עצמי", "די",
     )
 
-    private fun words(s: String) = s.split(" ").filter { it.isNotBlank() }
+    internal fun words(s: String) = s.split(" ").filter { it.isNotBlank() }
 
     /** "והחתול" / "בבית" / "שהלכתי" -> גם בלי אותיות השימוש בהתחלה, כדי שהחפיפה תתפוס נטיות. */
-    private fun forms(w: String): Set<String> {
+    internal fun forms(w: String): Set<String> {
         val out = mutableSetOf(w)
         var x = w
         while (x.length > 3 && x[0] in "והבלשמכ") {
@@ -86,16 +97,19 @@ object ChatBase {
         }
         // 2. חופשית - חפיפת מילים
         val textWords = words(text).flatMap { forms(it) }.toSet()
+        val candidates = java.util.TreeSet<Int>()
+        for (w in textWords) data.byForm[w]?.forEach { candidates.add(it) }
         var best: Pair<String, Entry>? = null
         var bestScore = 0.0
-        for ((p, e) in data.byPhrasing) {
-            val pw = words(p)
-            if (pw.size < 2) continue
-            val shared = pw.filter { w -> forms(w).any { it in textWords } }
+        // לפי הסדר של byPhrasing (מהארוך לקצר), כמו קודם - בתיקו הניסוח הארוך מנצח
+        for (i in candidates) {
+            val pw = data.multiWords[i]
+            val pf = data.multiForms[i]
+            val shared = pw.filterIndexed { k, _ -> pf[k].any { it in textWords } }
             if (shared.size < 2 || shared.all { it in STOP_WORDS }) continue
             val score = shared.size.toDouble() / pw.size
             if (score >= 0.6 && score > bestScore) {
-                best = p to e
+                best = data.multi[i]
                 bestScore = score
             }
         }

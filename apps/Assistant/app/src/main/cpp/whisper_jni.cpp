@@ -26,13 +26,16 @@ static jbyteArray toBytes(JNIEnv *env, const std::string &s) {
 
 extern "C" JNIEXPORT jbyteArray JNICALL
 Java_com_future_assistant_asr_WhisperCpp_nativeTranscribe(JNIEnv *env, jobject /*thiz*/, jlong ctxPtr,
-                                                           jfloatArray samples, jstring language) {
+                                                           jfloatArray samples, jstring language,
+                                                           jstring prompt) {
     auto *ctx = reinterpret_cast<struct whisper_context *>(ctxPtr);
     if (ctx == nullptr) return toBytes(env, "");
 
     jsize n = env->GetArrayLength(samples);
     jfloat *data = env->GetFloatArrayElements(samples, nullptr);
     const char *lang = env->GetStringUTFChars(language, nullptr);
+    // הקשר חלופי (למשל מילת ההפעלה "היי פיוטר"); ריק = ההקשר של פקודות.
+    const char *customPrompt = prompt != nullptr ? env->GetStringUTFChars(prompt, nullptr) : nullptr;
 
     struct whisper_full_params wparams = whisper_full_default_params(WHISPER_SAMPLING_GREEDY);
     wparams.language = lang;
@@ -69,7 +72,9 @@ Java_com_future_assistant_asr_WhisperCpp_nativeTranscribe(JNIEnv *env, jobject /
     wparams.audio_ctx = std::min(1500, std::max(768, static_cast<int>(static_cast<long long>(n) * 50 / 16000) + 256));
     // הקשר עברי קצר: מכוון את המודל לכתיב עברי ולמילים של פקודות, במקום
     // לתעתיק או לאנגלית. רק כשהשפה היא עברית.
-    if (std::string(lang) == "he") {
+    if (customPrompt != nullptr && customPrompt[0] != '\0') {
+        wparams.initial_prompt = customPrompt;
+    } else if (std::string(lang) == "he") {
         wparams.initial_prompt = "פקודה לעוזר הקולי בעברית: מה השעה, תתקשר לאמא, תפתח את המצלמה, מה מזג האוויר היום.";
     }
 
@@ -77,6 +82,7 @@ Java_com_future_assistant_asr_WhisperCpp_nativeTranscribe(JNIEnv *env, jobject /
 
     env->ReleaseFloatArrayElements(samples, data, JNI_ABORT);
     env->ReleaseStringUTFChars(language, lang);
+    if (customPrompt != nullptr) env->ReleaseStringUTFChars(prompt, customPrompt);
 
     if (result != 0) return toBytes(env, "");
 

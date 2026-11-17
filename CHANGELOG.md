@@ -4,9 +4,15 @@ This repo has no carried-over git history (see root [README](README.md)), so thi
 
 ## Unreleased
 
+### Assistant: wake word, end-of-speech detection, faster chat matching (2026-11-17)
+
+- No more listening again on its own after a reply. Instead, while the assistant window is open and idle it waits for a wake word: "היי פיוטר", "פיוטר", "עוזר", "היי עוזר" (`WakeWordListener` + `WakeWord`). Detection is on the device: an energy VAD cuts short speech segments (up to 4 s) and the shared Whisper model transcribes them; only the start of the sentence is checked, so "זה עוזר לי" does not wake it. "היי פיוטר מה השעה" runs the command right away; the wake word alone opens listening, with a short vibration. The mic is released before listening to a command, while speaking, and when the window closes. Raw wake transcripts are logged under `Assistant/Wake` so the spelling list can be tuned.
+- End of speech: the Whisper path now stops by itself after ~0.8 s of quiet following speech (6 s with no speech at all), no OK needed. Google's silence window went from 1.5 s to 1.0 s.
+- Chat matching no longer scans all ~35,000 phrasings twice per sentence: word lists and prefix forms are precomputed and indexed by word.
+- Timing logs (`Assistant/Timing`, `Assistant/HybridSpeech`): end of speech to text, `process()` duration, and time to first TTS audio.
+
 ### Assistant: real back-and-forth conversation (2026-11-17)
 
-- Auto-listen fixed: after a conversation reply the mic reopens by itself once TTS ends (state tick + `LaunchedEffect`, logged under `Assistant/Chat`).
 - Conversation mode (3 minutes after the last chat reply): "למה" / "ספר לי עוד" / "באמת" continue the same topic from a new follow-up column in `chat.tsv`. An unrecognized sentence mid-conversation gets a keep-going reply instead of "לא הבנתי". Closing words or a device action end the conversation.
 - `chat.tsv` grew from ~1,780 to ~5,570 topics (~30,000 new phrasings): feelings, daily routine, school, work and money, family, friends and love, hobbies, food, books and music, travel, weather, the assistant itself, deep questions, humor, advice, health, Jewish life and holidays, kids and games.
 - Loose matching strips Hebrew prefix letters (ו/ה/ב/ל/ש/מ/כ), so "היה לי יום ממש קשה בעבודה" matches the "יום קשה בעבודה" topic.

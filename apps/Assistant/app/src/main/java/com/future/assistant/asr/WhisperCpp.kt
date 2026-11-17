@@ -9,10 +9,10 @@ class WhisperCpp {
         return ctx != 0L
     }
 
-    fun transcribe(samples: FloatArray, language: String): String {
+    fun transcribe(samples: FloatArray, language: String, prompt: String? = null): String {
         if (ctx == 0L) return ""
         // UTF-8 קטוע בסוף (תקרת הטוקנים) מתפענח לתו החלפה - מוסרים אותו.
-        return String(nativeTranscribe(ctx, samples, language), Charsets.UTF_8).replace("�", "")
+        return String(nativeTranscribe(ctx, samples, language, prompt), Charsets.UTF_8).replace("�", "")
     }
 
     fun release() {
@@ -23,7 +23,7 @@ class WhisperCpp {
     }
 
     private external fun nativeInit(modelPath: String): Long
-    private external fun nativeTranscribe(ctx: Long, samples: FloatArray, language: String): ByteArray
+    private external fun nativeTranscribe(ctx: Long, samples: FloatArray, language: String, prompt: String?): ByteArray
     private external fun nativeFree(ctx: Long)
 
     companion object {
