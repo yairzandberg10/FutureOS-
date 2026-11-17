@@ -110,8 +110,11 @@ class TransitServerPlanner {
         return t.atZoneSameInstant(ISRAEL).toLocalTime().toSecondOfDay()
     }
 
-    private fun JsonObject.location(): LatLng? =
-        LatLng(number("lat") ?: return null, number("lon") ?: return null)
+    private fun JsonObject.location(): LatLng? {
+        val lat = number("lat") ?: return null
+        val lon = number("lon") ?: return null
+        return LatLng(lat, lon)
+    }
 
     private fun JsonObject.text(key: String): String? =
         (this[key] as? JsonPrimitive)?.takeIf { it.isString }?.content
