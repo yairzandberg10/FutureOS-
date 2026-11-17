@@ -3,60 +3,46 @@ package com.future.navigation.data.gtfs
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** פירוק תשובת HERE Public Transit v8 (הצורה המתועדת: routes[].sections[] עם type/departure/arrival/transport). */
+/** פירוק תשובה אמיתית של Transitous (MOTIS plan): תל אביב - ירושלים, אוטובוס, רכבת ואוטובוס. */
 class TransitServerPlannerTest {
 
-    private val sample = """
-        {"routes":[{"id":"r1","sections":[
-          {"id":"s1","type":"pedestrian",
-           "departure":{"time":"2026-11-16T08:00:00+02:00","place":{"name":"","type":"place","location":{"lat":32.08,"lng":34.78}}},
-           "arrival":{"time":"2026-11-16T08:05:00+02:00","place":{"name":"דיזנגוף סנטר","type":"station","location":{"lat":32.07,"lng":34.77}}},
-           "travelSummary":{"duration":300,"length":350}},
-          {"id":"s2","type":"transit",
-           "departure":{"time":"2026-11-16T08:07:00+02:00","place":{"name":"דיזנגוף סנטר","type":"station"}},
-           "arrival":{"time":"2026-11-16T08:25:00+02:00","place":{"name":"תחנה מרכזית","type":"station"}},
-           "transport":{"mode":"bus","name":"5","shortName":"5","headsign":"תחנה מרכזית"},
-           "intermediateStops":[{"departure":{"place":{"name":"כיכר רבין"}}},{"departure":{"place":{"name":"אבן גבירול"}}}]}
-        ]},
-        {"id":"r2","sections":[{"id":"w","type":"pedestrian",
-           "departure":{"time":"2026-11-16T08:00:00+02:00","place":{"name":"a"}},
-           "arrival":{"time":"2026-11-16T09:00:00+02:00","place":{"name":"b"}}}]}
-        ]}
-    """.trimIndent()
+    private fun resource(name: String): String =
+        javaClass.classLoader!!.getResource("online/$name")!!.readText(Charsets.UTF_8)
 
     @Test
-    fun parsesWalkAndRideLegs() {
-        val root = Json.parseToJsonElement(sample) as JsonObject
+    fun parsesRealItinerary() {
+        val root = Json.parseToJsonElement(resource("motis_plan.json")) as JsonObject
         val itineraries = TransitServerPlanner().parse(root)
-
-        // מסלול של הליכה בלבד לא נחשב מסלול תחבורה ציבורית
         assertEquals(1, itineraries.size)
-        val itinerary = itineraries[0]
-        assertEquals(2, itinerary.legs.size)
+        val it = itineraries[0]
+        assertEquals(listOf(LegType.WALK, LegType.RIDE, LegType.WALK, LegType.RIDE, LegType.WALK, LegType.RIDE, LegType.WALK), it.legs.map { l -> l.type })
 
-        val walk = itinerary.legs[0]
-        assertEquals(LegType.WALK, walk.type)
-        assertEquals(300, walk.walkDurationSeconds)
-        assertEquals(350.0, walk.walkDistanceMeters!!, 0.1)
+        val rides = it.legs.filter { l -> l.type == LegType.RIDE }
+        assertEquals(listOf("56", "רכבת", "15"), rides.map { r -> r.routeShortName })
+        // 21:09Z = 23:09 שעון ישראל; ההגעה 00:18 אחרי חצות
+        assertEquals(23 * 3600 + 9 * 60, it.departureSeconds)
+        assertEquals(24 * 3600 + 18 * 60, it.arrivalSeconds)
+        assertEquals(69 * 60, it.totalDurationSeconds)
 
-        val ride = itinerary.legs[1]
-        assertEquals(LegType.RIDE, ride.type)
-        assertEquals("5", ride.routeShortName)
-        assertEquals("דיזנגוף סנטר", ride.fromStopName)
-        assertEquals("תחנה מרכזית", ride.toStopName)
-        assertEquals(listOf("כיכר רבין", "אבן גבירול"), ride.intermediateStopNames)
-
-        // 08:00 שעון ישראל = 28800 שניות מחצות; 08:25 = 30300
-        assertEquals(8 * 3600, itinerary.departureSeconds)
-        assertEquals(8 * 3600 + 25 * 60, itinerary.arrivalSeconds)
+        assertEquals(5, rides[0].intermediateStopNames.size)
+        assertNotNull(rides[0].toLocation)
+        assertEquals("20699", rides[0].fromStopId)
+        // ברכבת headsign הוא מספר רכבת, ומוצג שם המסלול במקומו
+        assertFalse(rides[1].routeLongName.orEmpty().all { c -> c.isDigit() })
+        assertTrue(rides[1].routeLongName.orEmpty().contains(" - "))
+        assertEquals("המיקום שלך", it.legs.first().fromStopName)
+        assertEquals("היעד", it.legs.last().toStopName)
+        assertEquals(75.0, it.legs.first().walkDistanceMeters!!, 0.01)
     }
 
     @Test
-    fun emptyOrBrokenResponseGivesNoItineraries() {
+    fun emptyOrBrokenAnswerGivesNoItineraries() {
         assertTrue(TransitServerPlanner().parse(Json.parseToJsonElement("{}") as JsonObject).isEmpty())
-        assertTrue(TransitServerPlanner().parse(Json.parseToJsonElement("""{"routes":[{"sections":"x"}]}""") as JsonObject).isEmpty())
+        assertTrue(TransitServerPlanner().parse(Json.parseToJsonElement("""{"itineraries":[{"legs":[{"mode":"WALK"}]}]}""") as JsonObject).isEmpty())
     }
 }

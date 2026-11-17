@@ -159,6 +159,11 @@ class NavigateViewModel(
     }
 
     /** דיווח על המיקום הנוכחי (מקשים 1-5 במסך). */
+    /** דיווחים ושיתוף נסיעה צריכים את שרת FutureOS. בלעדיו - הודעה ברורה במקום כשל שקט. */
+    val serverFeatures: Boolean get() = com.future.navigation.data.backend.FutureServer.isAvailable
+
+    fun explainNoServer() = flashReportMessage("דיווחים ושיתוף נסיעה יעבדו כשהשרת יחובר")
+
     fun report(type: ReportType) {
         val here = _uiState.value.currentLocation ?: return flashReportMessage("אין מיקום - לא ניתן לדווח")
         viewModelScope.launch {

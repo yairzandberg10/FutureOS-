@@ -127,29 +127,21 @@ class RouteOptionsViewModel(
                         }
                     }
                     TravelMode.TRANSIT -> {
-                        // קודם השרת מחשב את המסלול (בלי להוריד נתונים למכשיר). רק אם הוא לא
-                        // זמין חוזרים לייבוא GTFS מקומי, ובו שואלים לפני הורדה ברשת סלולרית.
-                        val serverResults = transitServerPlanner.findJourneys(origin, destination.location)
-                        val results = if (serverResults != null) {
-                            // השרת ענה ריק: אם כבר יש נתונים מקומיים שמכסים את המסלול, מנסים
-                            // גם אותם (בלי להוריד כלום) - כיסוי HERE לא בהכרח זהה לנתוני משרד התחבורה.
-                            if (serverResults.isEmpty() && !transitDownloadNeeded(origin, destination.location)) {
-                                transitJourneyPlanner.findJourneys(origin, destination.location, System.currentTimeMillis() / 1000)
-                            } else {
-                                serverResults
-                            }
-                        } else {
-                            if (!allowCellularDownload && transitDownloadNeeded(origin, destination.location) &&
-                                NetworkPolicy.isMetered(appContext)
-                            ) {
-                                pendingSearch = mode to destination
-                                _askCellularDownload.value = true
+                        // המסלול מחושב ברשת (Transitous), בלי להוריד את קובץ ה-GTFS הארצי.
+                        // נתונים מקומיים משמשים רק אם כבר יובאו בעבר ומכסים את האזור.
+                        val online = transitServerPlanner.findJourneys(origin, destination.location, departAtIso())
+                        val localCovers = !transitDownloadNeeded(origin, destination.location)
+                        val results = when {
+                            !online.isNullOrEmpty() -> online
+                            localCovers -> transitJourneyPlanner.findJourneys(origin, destination.location, System.currentTimeMillis() / 1000)
+                            online == null -> {
+                                _error.value = "אין חיבור לשירות התחבורה הציבורית – נסה שוב"
+                                _serverError.value = true
                                 return@launch
                             }
-                            ensureTransitDataFor(origin, destination.location)
-                            val now = System.currentTimeMillis() / 1000
-                            transitJourneyPlanner.findJourneys(origin, destination.location, now)
+                            else -> online
                         }
+                        android.util.Log.i("RouteOptions", "transit: online=${online?.size} localCovers=$localCovers -> ${results.size}")
                         // שכבת זמן אמת (SIRI) - "best effort" בעיצוב (ר' TransitRealtimeEnricher),
                         // אף פעם לא זורקת ולא יכולה להפוך תוצאה תקינה לריקה.
                         _itineraries.value = transitRealtimeEnricher.enrich(results)

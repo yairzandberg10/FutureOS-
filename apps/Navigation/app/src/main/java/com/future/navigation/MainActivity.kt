@@ -255,9 +255,10 @@ class MainActivity : ComponentActivity() {
      */
     private fun prefetchTransitDataInBackground(location: LatLng) {
         if (transitPrefetchStarted) return
-        // כשיש שרת FutureOS, מסלולים, תחנות קרובות וזמני הגעה מגיעים ממנו - לא מורידים
-        // את קובץ ה-GTFS הארצי (~130MB) ברקע "ליתר ביטחון".
-        if (com.future.navigation.data.backend.FutureServer.isAvailable) return
+        // מסלולים, תחנות קרובות וזמני יציאה מגיעים מהרשת (Transitous, ר' OpenApis) -
+        // לא מורידים את קובץ ה-GTFS הארצי (~130MB) ברקע. ההורדה נשארה רק כפעולה
+        // ידנית במסך ההגדרות של נתוני התחבורה.
+        if (!BACKGROUND_GTFS_PREFETCH) return
         // ברשת סלולרית לא מורידים 130MB בלי לשאול - ההורדה תשאל כשמבקשים מסלול תחבורה (F09).
         if (com.future.navigation.data.network.NetworkPolicy.isMetered(applicationContext)) return
         if (System.currentTimeMillis() - transitPrefetchFailedAtMs < PREFETCH_RETRY_DELAY_MS) return
@@ -287,6 +288,7 @@ class MainActivity : ComponentActivity() {
     }
 
     companion object {
+        private const val BACKGROUND_GTFS_PREFETCH = false
         private const val PREFETCH_PADDING_DEGREES = 0.3
         private const val PREFETCH_RETRY_DELAY_MS = 10 * 60 * 1000L
     }

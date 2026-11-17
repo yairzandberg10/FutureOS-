@@ -1,47 +1,49 @@
 package com.future.navigation.data.gtfs
 
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.OffsetDateTime
 
-/** פירוק תשובות HERE Next Departures (boards[]) ו-Station Search (stations[]), לפי הצורה המתועדת. */
+/** פירוק תשובות אמיתיות של Transitous (MOTIS stoptimes ו-geocode), שנשמרו כקבצים. */
 class ServerDeparturesTest {
 
-    private val now = OffsetDateTime.parse("2026-11-16T08:00:00+02:00").toInstant().toEpochMilli()
+    private fun resource(name: String): String =
+        javaClass.classLoader!!.getResource("online/$name")!!.readText(Charsets.UTF_8)
+
+    private val now = OffsetDateTime.parse("2026-11-17T20:39:00Z").toInstant().toEpochMilli()
 
     @Test
-    fun parsesBoardsAndMinutesAway() {
-        val json = """
-            {"boards":[{"place":{"name":"ארלוזורוב","type":"station","location":{"lat":32.08,"lng":34.78},"id":"s1"},
-              "departures":[
-                {"time":"2026-11-16T08:12:00+02:00","transport":{"mode":"bus","name":"18","headsign":"בת ים"}},
-                {"time":"2026-11-16T08:03:00+02:00","delay":120,"transport":{"mode":"bus","name":"5","shortName":"5","headsign":"דיזנגוף"}},
-                {"time":"2026-11-16T07:50:00+02:00","transport":{"name":"past"}}
-              ]}]}
-        """.trimIndent()
-        val boards = ServerDepartures().parse(Json.parseToJsonElement(json) as JsonObject, now)
-        assertEquals(1, boards.size)
-        val departures = boards[0].departures
-        // יציאה שכבר עברה לא מוצגת, והרשימה ממוינת לפי זמן כולל עיכוב
-        assertEquals(listOf("5", "18"), departures.map { it.line })
-        assertEquals(5, departures[0].minutesAway)
-        assertEquals(12, departures[1].minutesAway)
-        assertEquals("דיזנגוף", departures[0].headsign)
+    fun groupsStopTimesIntoBoards() {
+        val root = Json.parseToJsonElement(resource("motis_stoptimes.json")) as JsonObject
+        val boards = ServerDepartures().parse(root, now)
+        assertEquals(4, boards.size)
+        assertEquals(listOf("21", "56", "126"), boards[0].departures.map { it.line })
+        assertEquals(listOf(1, 2, 2), boards[0].departures.map { it.minutesAway })
+        assertEquals(listOf("125", "79", "55", "3"), boards[1].departures.map { it.line })
+        // כיוון הנסיעה בלי הקו התחתון של משרד התחבורה
+        assertTrue(boards.flatMap { it.departures }.none { it.headsign.contains('_') })
     }
 
     @Test
-    fun parsesStationSearch() {
-        val json = """
-            {"stations":[{"place":{"name":"תחנה מרכזית","location":{"lat":32.05,"lng":34.77}},
-              "transports":[{"name":"1"},{"name":"4","shortName":"4"},{"name":"1"}]}]}
-        """.trimIndent()
-        val hits = ServerDepartures().parseStations(Json.parseToJsonElement(json) as JsonObject)
-        assertEquals(1, hits.size)
-        assertEquals("תחנה מרכזית", hits[0].name)
-        assertEquals(listOf("1", "4"), hits[0].lines)
-        assertTrue(ServerDepartures().parseStations(Json.parseToJsonElement("{}") as JsonObject).isEmpty())
+    fun pastDeparturesAreDropped() {
+        val root = Json.parseToJsonElement(resource("motis_stoptimes.json")) as JsonObject
+        val later = OffsetDateTime.parse("2026-11-17T20:40:30Z").toInstant().toEpochMilli()
+        val lines = ServerDepartures().parse(root, later).flatMap { it.departures }.map { it.line }
+        assertEquals(listOf("56", "126", "3", "21"), lines)
+    }
+
+    @Test
+    fun parsesStopSearch() {
+        val matches = Json.parseToJsonElement(resource("motis_geocode.json")) as JsonArray
+        val hits = ServerDepartures().parseStations(matches)
+        assertEquals(3, hits.size)
+        assertEquals(31.790768, hits[0].location.lat, 1e-6)
+        // שם העיר מצורף, כדי להבדיל בין תחנות באותו שם
+        assertTrue(hits.all { it.name.contains(", ") })
+        assertTrue(ServerDepartures().parseStations(JsonArray(emptyList())).isEmpty())
     }
 }

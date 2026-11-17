@@ -12,7 +12,9 @@ data class Maneuver(
     val streetName: String,
     val location: LatLng,
     val distanceMeters: Double,
-    val durationSeconds: Double
+    val durationSeconds: Double,
+    /** מספר היציאה בכיכר (OSRM), אם ידוע. */
+    val exit: Int? = null
 )
 
 data class DrivingRoute(
@@ -59,12 +61,13 @@ class HereRoutingRepository : RoutingRepository {
         // ממשיכים לנתיב הקיים בדיוק כמו קודם. כשלון בכל השרשרת = שגיאת שרת.
         val response = fetchViaFutureServer(from, to, avoidTolls, departAt)
             ?: run {
-                if (!HereConfig.isConfigured) return RouteLookup.ServerError
+                if (!HereConfig.isConfigured) return osrm(from, to)
                 // ה-proxy הישן של Firebase לא מכיר את האפשרויות - כשיש כאלה מדלגים ישר ל-HERE
                 (if (!avoidTolls && departAt == null) fetchViaProxy(from, to) else null)
                     ?: fetchDirectly(from, to, avoidTolls, departAt)
             }
-            ?: return RouteLookup.ServerError
+            // בלי שרת ובלי מפתח HERE (או כשהם נכשלו) - OSRM הפתוח, בלי מפתח
+            ?: return osrm(from, to)
 
         // תשובה שהתקבלה אבל בלי מסלול = באמת לא נמצא מסלול
         val route = response.routes.firstOrNull() ?: return RouteLookup.NoRoute
@@ -98,6 +101,15 @@ class HereRoutingRepository : RoutingRepository {
                 durationSeconds = summary?.duration ?: 0.0
             )
         )
+    }
+
+    private suspend fun osrm(from: LatLng, to: LatLng): RouteLookup {
+        val body = com.future.navigation.data.online.OpenApis.drivingRouteJson(from, to) ?: return RouteLookup.ServerError
+        return try {
+            OsrmParser.parse(NetworkModule.json.parseToJsonElement(body) as? kotlinx.serialization.json.JsonObject ?: return RouteLookup.ServerError)
+        } catch (e: Exception) {
+            RouteLookup.ServerError
+        }
     }
 
     /**

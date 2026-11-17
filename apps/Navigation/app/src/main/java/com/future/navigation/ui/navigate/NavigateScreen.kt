@@ -125,6 +125,9 @@ fun NavigateScreen(viewModel: NavigateViewModel, onClose: () -> Unit = {}) {
             if (event.type != KeyEventType.KeyDown || state.ended) return@onPreviewKeyEvent false
             if (reportMenu && event.key == Key.Back) { reportMenu = false; return@onPreviewKeyEvent true }
             val digit = com.future.sharednav.nav.digitForKey(event.key) ?: return@onPreviewKeyEvent false
+            if ((digit == "0" || (!reportMenu && digit == "3")) && !viewModel.serverFeatures) {
+                viewModel.explainNoServer(); return@onPreviewKeyEvent true
+            }
             if (digit == "0") { reportMenu = !reportMenu; return@onPreviewKeyEvent true }
             // 3 מחוץ לתפריט: שיתוף הנסיעה (המפה לא משתמשת ב-3)
             if (!reportMenu && digit == "3") { viewModel.shareTrip(); return@onPreviewKeyEvent true }
@@ -285,7 +288,12 @@ private fun ManeuverIcon(step: Maneuver) {
 internal fun maneuverText(step: Maneuver): String = when (step.type) {
     "depart" -> "יציאה לדרך"
     "arrive" -> "הגעה ליעד"
-    "roundabout", "rotary" -> "כיכר - המשך לפי השילוט"
+    "roundabout", "rotary" -> step.exit?.let { "בכיכר צא ביציאה ה-$it" } ?: "כיכר - המשך לפי השילוט"
+    "exit roundabout", "exit rotary" -> "צא מהכיכר"
+    "fork" -> if (step.modifier?.contains("left") == true) "בפיצול הישאר שמאלה" else "בפיצול הישאר ימינה"
+    "off ramp" -> if (step.modifier?.contains("left") == true) "צא מהכביש שמאלה" else "צא מהכביש ימינה"
+    "on ramp" -> "עלה על הכביש"
+    "merge" -> "השתלב בתנועה"
     else -> when (step.modifier) {
         "left" -> "פנה שמאלה"
         "slight left" -> "פנה מעט שמאלה"

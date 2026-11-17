@@ -139,14 +139,8 @@ fun HomeScreen(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f)
             )
-            TopBarIconButton(
-                // F33 / NT-D05: אייקון הורדה, שונה מאייקון המיקום שבשורה לידו.
-                icon = FutureIcons.Download,
-                contentDescription = stringResource(R.string.gtfs_setup_title),
-                textColor = theme.textColor,
-                accentColor = theme.accentColor,
-                onClick = onOpenGtfsSetup,
-            )
+            // אין כאן יותר כפתור הורדת נתוני תחבורה: המסלולים והתחנות מגיעים מהרשת
+            // (ר' OpenApis), ואין צורך להוריד את קובץ ה-GTFS הארצי.
         }
 
         Surface(
