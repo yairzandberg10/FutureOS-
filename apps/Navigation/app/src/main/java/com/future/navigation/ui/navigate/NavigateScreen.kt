@@ -220,7 +220,8 @@ fun NavigateScreen(viewModel: NavigateViewModel, onClose: () -> Unit = {}) {
                             (if (report != null) " · 7 עדיין שם · 9 לא שם" else "")
                         state.reportMessage != null -> state.reportMessage!!
                         report != null -> "${report.type.label} בעוד ${state.nearestReportMeters.toInt()} מ׳ · 0 לעדכן"
-                        else -> "0 לדיווח · 3 לשיתוף הנסיעה"
+                        viewModel.serverFeatures -> "0 לדיווח · 3 לשיתוף הנסיעה"
+                        else -> ""
                     },
                     color = when {
                         reportMenu -> theme.textColor
@@ -234,14 +235,16 @@ fun NavigateScreen(viewModel: NavigateViewModel, onClose: () -> Unit = {}) {
                     Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                         TopBarIconButton(if (state.muted) FutureIcons.AutoMirrored.VolumeOff else FutureIcons.AutoMirrored.VolumeUp, tr("השתק"), theme.textColor, theme.accentColor, viewModel::toggleMute)
                         Spacer(modifier = Modifier.width(12.dp))
-                        Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            // עיגול למעלה - בדקה האחרונה הוצג "0 דק׳"
-                            Text(tr("%d דק׳").format(kotlin.math.ceil(state.remainingDurationSeconds / 60).toInt()), fontWeight = FontWeight.Bold)
-                            Text("·", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f))
-                            Text(tr("%.1f ק״מ").format(state.remainingDistanceMeters / 1000.0))
-                            state.speedKmh?.let { speed ->
+                        // שורה אחת בלי שבירה: ב-320dp רוחב המהירות נשברה לאות-אות לאורך השורה
+                        Column(modifier = Modifier.weight(1f)) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                // עיגול למעלה - בדקה האחרונה הוצג "0 דק׳"
+                                Text(tr("%d דק׳").format(kotlin.math.ceil(state.remainingDurationSeconds / 60).toInt()), fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
                                 Text("·", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f))
-                                Text("$speed קמ״ש")
+                                Text(tr("%.1f ק״מ").format(state.remainingDistanceMeters / 1000.0), maxLines = 1, softWrap = false)
+                            }
+                            state.speedKmh?.takeIf { it > 0 }?.let { speed ->
+                                Text("$speed קמ״ש", color = theme.mutedTextColor, style = MaterialTheme.typography.bodyMedium, maxLines = 1)
                             }
                         }
                         TopBarIconButton(FutureIcons.Close, tr("סיים ניווט"), theme.dangerColor, theme.accentColor, onClick = {

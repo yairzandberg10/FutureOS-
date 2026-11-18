@@ -243,7 +243,8 @@ private fun ItineraryCard(itinerary: TransitItinerary, onClick: () -> Unit, focu
                     modifier = Modifier.weight(1f)
                 )
                 Text(
-                    text = tr("הגעה ") + secondsToClock(itinerary.arrivalSeconds),
+                    // שעת היציאה חשובה כמו משך הנסיעה: האוטובוס הבא יכול לצאת רק בעוד שעה
+                    text = secondsToClock(itinerary.departureSeconds) + " ← " + secondsToClock(itinerary.arrivalSeconds),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
