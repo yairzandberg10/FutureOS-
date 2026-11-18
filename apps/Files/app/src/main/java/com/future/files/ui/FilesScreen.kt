@@ -676,7 +676,7 @@ private fun PathBar(segments: List<String>, theme: FutureTheme, horizontalInset:
                     fontWeight = if (current) FutureTypography.weightMedium else null,
                 )
             )
-            append("⁨").append(name).append("⁩")
+            append("⁨$name⁩")
             pop()
         }
     }
