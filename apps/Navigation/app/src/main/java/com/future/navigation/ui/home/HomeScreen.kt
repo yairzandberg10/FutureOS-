@@ -261,7 +261,9 @@ fun HomeScreen(
                     item {
                         FutureSectionHeader(stringResource(R.string.nearby_stops), theme, inset = false)
                     }
-                    items(nearbyStops) { nearby ->
+                    // מפתח לפי שם: כשהרשימה מתרעננת (מקומית -> שרת, או כל דקה) הפוקוס
+                    // נשאר על אותה תחנה ולא קופץ לתחנה אחרת שתפסה את אותו מקום ברשימה
+                    items(nearbyStops, key = { "stop:" + it.stop.name }) { nearby ->
                         FutureListItem(
                             title = nearby.stop.name,
                             summary = tr("%.0f מ׳").format(nearby.distanceMeters) + (nearby.departures?.let { " · $it" } ?: ""),

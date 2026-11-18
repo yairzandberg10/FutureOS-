@@ -88,6 +88,8 @@ class HomeViewModel(
                         .map { NearbyStopUi(it, location.distanceMetersTo(LatLng(it.lat, it.lon))) }
                         .filter { it.distanceMeters <= NEARBY_STOP_RADIUS_METERS }
                         .sortedBy { it.distanceMeters }
+                        // שני צדי הרחוב באותו שם = תחנה אחת (כמו ברשימה מהשרת), והשם הוא מפתח הרשימה
+                        .distinctBy { it.stop.name }
                         .take(6)
                 }
             }
@@ -119,7 +121,7 @@ class HomeViewModel(
                         if (d.minutesAway == 0) "${d.line} עכשיו" else "${d.line} בעוד ${d.minutesAway} דק׳"
                     }.ifBlank { null },
                 )
-            }.sortedBy { it.distanceMeters }
+            }.sortedBy { it.distanceMeters }.distinctBy { it.stop.name }
         }
     }
 
