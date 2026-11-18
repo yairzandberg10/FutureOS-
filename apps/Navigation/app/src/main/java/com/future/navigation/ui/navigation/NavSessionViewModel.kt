@@ -7,7 +7,8 @@ import com.future.navigation.data.routing.DrivingRoute
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-enum class TravelMode { DRIVE, TRANSIT }
+/** WALK/BIKE נוספו בסוף כדי שהאינדקסים של מסך הבית (TravelMode.entries[i]) לא יזוזו. */
+enum class TravelMode { DRIVE, TRANSIT, WALK, BIKE }
 
 data class Destination(val name: String, val address: String, val location: LatLng)
 
@@ -23,6 +24,27 @@ class NavSessionViewModel : ViewModel() {
 
     private val _destination = MutableStateFlow<Destination?>(null)
     val destination = _destination.asStateFlow()
+
+    /** נקודת המוצא של המסלול. null = המיקום הנוכחי (ברירת המחדל, כמו "יציאה ממיקומך הנוכחי" באגד). */
+    private val _origin = MutableStateFlow<Destination?>(null)
+    val origin = _origin.asStateFlow()
+
+    fun setOrigin(origin: Destination?) {
+        _origin.value = origin
+    }
+
+    /**
+     * החלפת כיוון: היעד נהיה המוצא והמוצא נהיה היעד. כשהמוצא הוא המיקום הנוכחי,
+     * היעד החדש הוא המיקום הנוכחי (current), כמו כפתור ההחלפה באגד.
+     */
+    fun swapOriginAndDestination(current: LatLng?) {
+        val dest = _destination.value ?: return
+        val newDestination = _origin.value
+            ?: current?.let { Destination(name = "המיקום שלי", address = "המיקום שלי", location = it) }
+            ?: return
+        _origin.value = dest
+        _destination.value = newDestination
+    }
 
     private val _selectedDrivingRoute = MutableStateFlow<DrivingRoute?>(null)
     val selectedDrivingRoute = _selectedDrivingRoute.asStateFlow()
@@ -42,8 +64,10 @@ class NavSessionViewModel : ViewModel() {
         _mode.value = mode
     }
 
+    /** יעד חדש מתחיל תמיד מהמיקום הנוכחי - מוצא שנבחר לנסיעה קודמת לא "נדבק" לנסיעה הבאה. */
     fun setDestination(destination: Destination) {
         _destination.value = destination
+        _origin.value = null
     }
 
     fun setSelectedDrivingRoute(route: DrivingRoute) {

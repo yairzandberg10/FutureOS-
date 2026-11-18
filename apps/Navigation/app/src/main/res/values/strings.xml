@@ -5,6 +5,9 @@
     <string name="search_placeholder">לאן נוסעים?</string>
     <string name="mode_drive">נהיגה</string>
     <string name="mode_transit">תחבורה ציבורית</string>
+    <string name="mode_transit_short">תחבורה</string>
+    <string name="mode_walk">הליכה</string>
+    <string name="mode_bike">אופניים</string>
     <string name="quick_home">בית</string>
     <string name="quick_work">עבודה</string>
     <string name="recent_destinations">יעדים אחרונים</string>

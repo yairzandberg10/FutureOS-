@@ -3,20 +3,31 @@ package com.future.navigation.ui.home
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.future.sharednav.i18n.tr
 import com.future.navigation.data.common.LatLng
 import com.future.navigation.data.common.distanceMetersTo
 import com.future.navigation.data.geocoding.GeocodeResult
 import com.future.navigation.data.geocoding.GeocodingRepository
 import com.future.navigation.data.gtfs.GtfsDao
+import com.future.navigation.data.gtfs.SavedPlaceEntity
 import com.future.navigation.data.gtfs.ServerDepartures
 import com.future.navigation.data.gtfs.StopEntity
 import com.future.navigation.data.location.LocationHelper
+import com.future.navigation.data.places.RecentPlace
+import com.future.navigation.data.places.RecentPlaceRepository
 import com.future.navigation.data.places.SavedPlaceRepository
+import com.future.navigation.data.poi.IsraelBounds
+import com.future.navigation.data.poi.PlaceSorting
+import com.future.navigation.data.poi.PoiCategory
+import com.future.navigation.data.poi.PoiRepository
+import com.future.navigation.data.poi.PoiResult
 import com.future.navigation.ui.navigation.TravelMode
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
@@ -28,12 +39,28 @@ import kotlinx.coroutines.launch
 /** departures: "5 בעוד 3 דק׳ · 18 בעוד 7 דק׳" כשהתחנה הגיעה מהשרת עם זמני יציאה חיים. */
 data class NearbyStopUi(val stop: StopEntity, val distanceMeters: Double, val departures: String? = null)
 
+/** תוצאת חיפוש עם המרחק מהמשתמש (null = המיקום עדיין לא ידוע). */
+data class SearchHit(val result: GeocodeResult, val distanceMeters: Double?)
+
+/** מצב חיפוש בקרבת מקום לקטגוריה שנבחרה. */
+data class PoiUiState(
+    val category: PoiCategory? = null,
+    val loading: Boolean = false,
+    val results: List<PoiResult> = emptyList(),
+    val failed: Boolean = false,
+    val noLocation: Boolean = false,
+    val outsideIsrael: Boolean = false,
+)
+
 class HomeViewModel(
     private val appContext: Context,
     private val savedPlaceRepository: SavedPlaceRepository,
     private val gtfsDao: GtfsDao,
     private val geocodingRepository: GeocodingRepository,
-    private val serverDepartures: ServerDepartures = ServerDepartures()
+    private val serverDepartures: ServerDepartures = ServerDepartures(),
+    // ברירות מחדל: MainActivity לא צריך לשנות כדי שזה יעבוד
+    private val recentPlaces: RecentPlaceRepository = RecentPlaceRepository(appContext),
+    private val poiRepository: PoiRepository = PoiRepository(),
 ) : ViewModel() {
 
     /** תחנות וזמני יציאה מהשרת; null = עדיין לא נטען או שאין שרת, ואז מוצגות התחנות המקומיות. */
@@ -52,7 +79,13 @@ class HomeViewModel(
     val searchQuery = _searchQuery.asStateFlow()
 
     private val _searchResults = MutableStateFlow<List<GeocodeResult>>(emptyList())
-    val searchResults = _searchResults.asStateFlow()
+
+    /** תוצאות החיפוש: בלי כפילויות, עם המרחק מהמשתמש, והקרובות ראשונות. */
+    val searchHits: StateFlow<List<SearchHit>> = combine(_searchResults, _currentLocation) { results, origin ->
+        val unique = PlaceSorting.dedupeNearby(results, nameOf = { it.label }, locationOf = { it.location })
+        PlaceSorting.sortNearest(unique, origin) { it.location }
+            .map { SearchHit(it, origin?.distanceMetersTo(it.location)) }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     /** תחנות שנמצאו בחיפוש לפי שם (במצב תחבורה ציבורית, מהשרת). */
     private val _stationResults = MutableStateFlow<List<com.future.navigation.data.gtfs.StationHit>>(emptyList())
@@ -70,6 +103,18 @@ class HomeViewModel(
 
     val homePlace = savedPlaceRepository.homePlace
     val workPlace = savedPlaceRepository.workPlace
+
+    /** היעדים האחרונים (החדש ראשון). */
+    val recents: StateFlow<List<RecentPlace>> = recentPlaces.recents
+
+    /** המועדפים - מסומנים ב-isFavorite בטבלת המקומות השמורים. */
+    val favorites: StateFlow<List<SavedPlaceEntity>> = savedPlaceRepository.allPlaces
+        .map { list -> list.filter { it.isFavorite } }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    private val _poi = MutableStateFlow(PoiUiState())
+    val poi: StateFlow<PoiUiState> = _poi.asStateFlow()
+    private var poiJob: Job? = null
 
     private val localNearbyStops = _currentLocation
         .flatMapLatest { location ->
@@ -171,10 +216,10 @@ class HomeViewModel(
             _searching.value = true
             try {
                 delay(SEARCH_DEBOUNCE_MS)
-                // שגיאת רשת זרקה קודם מתוך ה-coroutine והפילה את האפליקציה
+                // שגיאת רשת נזרקת מהריפוזיטורי ונתפסת כאן - לא מפילה את האפליקציה
                 val outcome = try {
                     geocodingRepository.search(query) to false
-                } catch (e: kotlinx.coroutines.CancellationException) {
+                } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
                     emptyList<GeocodeResult>() to true
@@ -191,6 +236,92 @@ class HomeViewModel(
             } finally {
                 if (_searchQuery.value == query) _searching.value = false
             }
+        }
+    }
+
+    // ---- קטגוריות: מקומות בקרבת מקום ----
+
+    /** בחירת קטגוריה; לחיצה שנייה על אותה קטגוריה מבטלת את הבחירה. */
+    fun toggleCategory(category: PoiCategory) {
+        if (_poi.value.category == category) {
+            clearCategory()
+            return
+        }
+        poiJob?.cancel()
+        val origin = _currentLocation.value
+        if (origin == null) {
+            _poi.value = PoiUiState(category = category, noLocation = true)
+            return
+        }
+        if (!IsraelBounds.contains(origin)) {
+            _poi.value = PoiUiState(category = category, outsideIsrael = true)
+            return
+        }
+        _poi.value = PoiUiState(category = category, loading = true)
+        poiJob = viewModelScope.launch {
+            val state = try {
+                PoiUiState(category = category, results = poiRepository.nearby(category, origin))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                PoiUiState(category = category, failed = true)
+            }
+            // תוצאה של קטגוריה שכבר הוחלפה לא נכתבת מעל הבחירה החדשה
+            if (_poi.value.category == category) _poi.value = state
+        }
+    }
+
+    fun clearCategory() {
+        poiJob?.cancel()
+        _poi.value = PoiUiState()
+    }
+
+    // ---- יעדים אחרונים, מועדפים, בית ועבודה ----
+
+    /** נקרא בכל בחירת יעד מהמסך, כך שהאחרונים נשמרים בלי לגעת במסלול הניווט. */
+    fun rememberRecent(result: GeocodeResult) {
+        recentPlaces.add(
+            RecentPlace(
+                title = result.label.substringBefore(","),
+                address = result.label,
+                lat = result.location.lat,
+                lon = result.location.lon,
+            )
+        )
+    }
+
+    fun removeRecent(target: PlaceTarget) {
+        recentPlaces.remove(
+            RecentPlace(target.title, target.address, target.location.lat, target.location.lon)
+        )
+    }
+
+    /** מוסיף למועדפים, או מסיר אם המקום כבר שם. */
+    fun toggleFavorite(target: PlaceTarget) {
+        viewModelScope.launch {
+            val existing = favorites.value.firstOrNull { it.address == target.address }
+            if (existing != null) {
+                savedPlaceRepository.toggleFavorite(existing)
+            } else {
+                savedPlaceRepository.addFavorite(
+                    label = target.title,
+                    address = target.address,
+                    lat = target.location.lat,
+                    lon = target.location.lon,
+                )
+            }
+        }
+    }
+
+    fun saveAsHome(target: PlaceTarget) {
+        viewModelScope.launch {
+            savedPlaceRepository.setHome(tr("בית"), target.address, target.location.lat, target.location.lon)
+        }
+    }
+
+    fun saveAsWork(target: PlaceTarget) {
+        viewModelScope.launch {
+            savedPlaceRepository.setWork(tr("עבודה"), target.address, target.location.lat, target.location.lon)
         }
     }
 

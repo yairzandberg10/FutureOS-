@@ -11,14 +11,27 @@ import kotlinx.serialization.json.JsonPrimitive
  */
 object OsrmParser {
 
+    /** המסלול הראשון בתשובה (לנהיגה רגילה, בלי חלופות). */
     fun parse(root: JsonObject): RouteLookup {
         if ((root["code"] as? JsonPrimitive)?.content != "Ok") {
             return if ((root["code"] as? JsonPrimitive)?.content == "NoRoute") RouteLookup.NoRoute else RouteLookup.ServerError
         }
         val route = (root["routes"] as? JsonArray)?.firstOrNull() as? JsonObject ?: return RouteLookup.NoRoute
+        val parsed = parseRoute(route) ?: return RouteLookup.NoRoute
+        return RouteLookup.Found(parsed)
+    }
+
+    /** כל המסלולים בתשובה (עם alternatives=true יש עד 3). ריק = אין מסלול או תשובה לא תקינה. */
+    fun parseAll(root: JsonObject): List<DrivingRoute> {
+        if ((root["code"] as? JsonPrimitive)?.content != "Ok") return emptyList()
+        return (root["routes"] as? JsonArray).orEmpty()
+            .mapNotNull { (it as? JsonObject)?.let(::parseRoute) }
+    }
+
+    private fun parseRoute(route: JsonObject): DrivingRoute? {
         val polyline = ((route["geometry"] as? JsonObject)?.get("coordinates") as? JsonArray).orEmpty()
             .mapNotNull { point -> (point as? JsonArray)?.toLatLng() }
-        if (polyline.size < 2) return RouteLookup.NoRoute
+        if (polyline.size < 2) return null
 
         val steps = (route["legs"] as? JsonArray).orEmpty()
             .flatMap { leg -> ((leg as? JsonObject)?.get("steps") as? JsonArray).orEmpty() }
@@ -42,13 +55,11 @@ object OsrmParser {
                 )
             }
 
-        return RouteLookup.Found(
-            DrivingRoute(
-                polyline = polyline,
-                steps = steps,
-                distanceMeters = route.number("distance") ?: 0.0,
-                durationSeconds = route.number("duration") ?: 0.0,
-            )
+        return DrivingRoute(
+            polyline = polyline,
+            steps = steps,
+            distanceMeters = route.number("distance") ?: 0.0,
+            durationSeconds = route.number("duration") ?: 0.0,
         )
     }
 

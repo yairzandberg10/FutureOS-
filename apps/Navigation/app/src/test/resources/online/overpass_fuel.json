@@ -1,0 +1,46 @@
+{
+  "version": 0.6,
+  "generator": "Overpass API 0.7.62 (fixture, written in the Overpass output shape)",
+  "osm3s": {
+    "timestamp_osm_base": "2026-11-01T00:00:00Z",
+    "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL."
+  },
+  "elements": [
+    {
+      "type": "node",
+      "id": 1001,
+      "lat": 32.0853,
+      "lon": 34.7818,
+      "tags": { "amenity": "fuel", "name": "Paz", "name:he": "פז" }
+    },
+    {
+      "type": "way",
+      "id": 2002,
+      "center": { "lat": 32.0861, "lon": 34.7830 },
+      "bounds": { "minlat": 32.0858, "minlon": 34.7826, "maxlat": 32.0864, "maxlon": 34.7834 },
+      "nodes": [ 3001, 3002, 3003, 3004, 3001 ],
+      "tags": { "amenity": "fuel", "brand": "Delek" }
+    },
+    {
+      "type": "node",
+      "id": 1003,
+      "lat": 32.0900,
+      "lon": 34.7900,
+      "tags": { "amenity": "fuel" }
+    },
+    {
+      "type": "node",
+      "id": 1004,
+      "lat": 32.0853,
+      "lon": 34.7818,
+      "tags": { "amenity": "fuel", "name:he": "פז" }
+    },
+    {
+      "type": "node",
+      "id": 1005,
+      "lat": 40.7128,
+      "lon": -74.0060,
+      "tags": { "amenity": "fuel", "name": "Mobil" }
+    }
+  ]
+}

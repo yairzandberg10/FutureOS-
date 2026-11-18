@@ -12,6 +12,8 @@ import com.future.navigation.data.reports.RoadReport
 import com.future.navigation.data.reports.RoadReportsRepository
 import com.future.navigation.data.routing.DrivingRoute
 import com.future.navigation.data.routing.Maneuver
+import com.future.navigation.data.routing.OsrmRouting
+import com.future.navigation.data.routing.RoutingProfile
 import com.future.navigation.data.routing.RoutingRepository
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,7 +37,9 @@ data class NavigateUiState(
     /** הודעה קצרה אחרי דיווח/הצבעה ("דווח: משטרה"), נמחקת אחרי כמה שניות. */
     val reportMessage: String? = null,
     /** מהירות נוכחית מה-GPS בקמ"ש, או null כשהמיקום לא כולל מהירות. */
-    val speedKmh: Int? = null
+    val speedKmh: Int? = null,
+    /** כיוון הנסיעה במעלות (מצפון, בכיוון השעון) לתצוגת "הכיוון שלי למעלה", או null. */
+    val bearing: Float? = null
 ) {
     val currentStep: Maneuver get() = route.steps.getOrElse(currentStepIndex) { route.steps.last() }
     val nextStep: Maneuver? get() = route.steps.getOrNull(currentStepIndex + 1)
@@ -48,7 +52,9 @@ class NavigateViewModel(
     private val destination: LatLng,
     private val reportsRepository: RoadReportsRepository = RoadReportsRepository(),
     /** שם היעד לדף השיתוף ("בדרך לבית"). */
-    private val destinationLabel: String = ""
+    private val destinationLabel: String = "",
+    /** פרופיל המסלול: נהיגה (ברירת מחדל), הליכה או רכיבה - קובע באיזה שרת מחשבים מסלול מחדש. */
+    val profile: RoutingProfile = RoutingProfile.DRIVING
 ) : ViewModel() {
 
     private var reports: List<RoadReport> = emptyList()
@@ -68,6 +74,8 @@ class NavigateViewModel(
     val uiState = _uiState.asStateFlow()
 
     private var rerouting = false
+    /** האם כבר בדקנו את נקודת ההתחלה מול מיקום חי מדויק (רק פעם אחת בנסיעה). */
+    private var startChecked = false
     // אחרי חישוב מסלול שנכשל (אין רשת) לא מנסים שוב בכל עדכון מיקום - קודם
     // נשלחה בקשה כל שתי שניות לאורך כל הנסיעה בלי קליטה.
     private var lastRerouteAttemptMs = 0L
@@ -92,12 +100,17 @@ class NavigateViewModel(
 
         LocationHelper.observeLocation(appContext)
             .onEach { location ->
+                // מיקום "חי" = נקלט בעשר השניות האחרונות. המיקום הידוע האחרון (שנשלח ראשון) ישן יותר.
+                val ageMs = (android.os.SystemClock.elapsedRealtimeNanos() - location.elapsedRealtimeNanos) / 1_000_000L
+                val moving = location.hasSpeed() && location.speed > MIN_HEADING_SPEED_MPS
                 _uiState.value = _uiState.value.copy(
-                    speedKmh = if (location.hasSpeed()) (location.speed * 3.6f).toInt() else null
+                    speedKmh = if (location.hasSpeed()) (location.speed * 3.6f).toInt() else null,
+                    bearing = if (moving && location.hasBearing()) location.bearing else _uiState.value.bearing
                 )
                 onLocationUpdate(
                     LatLng(location.latitude, location.longitude),
-                    if (location.hasAccuracy()) location.accuracy.toDouble() else null
+                    if (location.hasAccuracy()) location.accuracy.toDouble() else null,
+                    live = ageMs < LIVE_FIX_MAX_AGE_MS
                 )
             }
             .launchIn(viewModelScope)
@@ -114,7 +127,8 @@ class NavigateViewModel(
             while (!_uiState.value.ended) {
                 delay(TRAFFIC_RECHECK_INTERVAL_MS * (1L shl minOf(failures, 3)))
                 val location = _uiState.value.currentLocation
-                if (location != null && !_uiState.value.ended) {
+                // בדיקת עומס רק לנהיגה (ל-OSRM של הליכה/רכיבה אין פקקים)
+                if (location != null && !_uiState.value.ended && profile == RoutingProfile.DRIVING) {
                     failures = if (checkForFasterRouteDueToTraffic(location)) 0 else failures + 1
                 }
             }
@@ -205,7 +219,7 @@ class NavigateViewModel(
         }
     }
 
-    private fun onLocationUpdate(location: LatLng, accuracyMeters: Double? = null) {
+    private fun onLocationUpdate(location: LatLng, accuracyMeters: Double? = null, live: Boolean = false) {
         val state = _uiState.value
         if (state.ended) return
 
@@ -247,6 +261,16 @@ class NavigateViewModel(
 
         // קיבוע לא מדויק (בין בניינים גבוהים, במנהרה) "סוטה" עשרות מטרים מהכביש
         // בלי שהרכב זז ממנו - לא מחשבים מסלול חדש לפיו.
+        // נקודת ההתחלה של המסלול נבחרה ממיקום ידוע (אולי ישן). ברגע שמגיע מיקום חי מדויק
+        // ורחוק יותר מ-100 מ' מנקודת ההתחלה - מחשבים מסלול מחדש מהמיקום האמיתי.
+        if (!startChecked && live && accuracyMeters != null && accuracyMeters <= START_ACCURACY_METERS) {
+            startChecked = true
+            val origin = route.polyline.firstOrNull()
+            if (origin != null && !rerouting && location.distanceMetersTo(origin) > START_OFF_METERS && !arrivedAtDestination) {
+                triggerReroute(location)
+            }
+        }
+
         val reliable = accuracyMeters == null || accuracyMeters <= REROUTE_THRESHOLD_METERS
         val cooledDown = System.currentTimeMillis() - lastRerouteAttemptMs > REROUTE_COOLDOWN_MS
         if (!rerouting && reliable && cooledDown && deviation > REROUTE_THRESHOLD_METERS && !arrivedAtDestination) {
@@ -263,7 +287,7 @@ class NavigateViewModel(
             try {
                 // runCatching היה בולע CancellationException - ביטול ה-ViewModel לא נעצר
                 val newRoute = try {
-                    routingRepository.getDrivingRoute(from, destination).routeOrNull
+                    fetchRoute(from)
                 } catch (e: kotlinx.coroutines.CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -278,6 +302,14 @@ class NavigateViewModel(
             }
         }
     }
+
+    /** מסלול מ-from ליעד לפי הפרופיל: נהיגה דרך RoutingRepository (עם פקקים), הליכה/רכיבה דרך OSRM. */
+    private suspend fun fetchRoute(from: LatLng): DrivingRoute? =
+        if (profile == RoutingProfile.DRIVING) {
+            routingRepository.getDrivingRoute(from, destination).routeOrNull
+        } else {
+            OsrmRouting.route(from, destination, profile).routeOrNull
+        }
 
     private fun applyNewRoute(newRoute: DrivingRoute) {
         announcedStep = -1
@@ -302,7 +334,7 @@ class NavigateViewModel(
         rerouting = true
         try {
             val candidate = (try {
-                routingRepository.getDrivingRoute(from, destination).routeOrNull
+                fetchRoute(from)
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -410,6 +442,13 @@ class NavigateViewModel(
         private const val REPORT_ANNOUNCE_METERS = 600.0
         private const val REPORT_MESSAGE_MS = 3_000L
         private const val SHARE_UPDATE_MS = 60_000L
+        /** מיקום חי נחשב טרי אם הוא נקלט בעשר השניות האחרונות. */
+        private const val LIVE_FIX_MAX_AGE_MS = 10_000L
+        /** דיוק מספיק לבדיקת נקודת ההתחלה, וסטייה ממנה שמצדיקה חישוב מחדש. */
+        private const val START_ACCURACY_METERS = 30.0
+        private const val START_OFF_METERS = 100.0
+        /** מעל מהירות הליכה איטית (בערך 1.5 מ"ש) משתמשים בכיוון ה-GPS לסיבוב המפה. */
+        private const val MIN_HEADING_SPEED_MPS = 1.5f
     }
 }
 

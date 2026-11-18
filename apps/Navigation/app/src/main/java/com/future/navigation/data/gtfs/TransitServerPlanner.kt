@@ -56,6 +56,9 @@ class TransitServerPlanner {
                 arrivalSeconds = arr,
                 walkDistanceMeters = leg.number("distance"),
                 walkDurationSeconds = leg.number("duration")?.toInt(),
+                // מיקומי ההתחלה והסיום: ניווט ברגל לתחנת העלייה, בין תחנות, וליעד
+                fromLocation = from.location(),
+                toLocation = to.location(),
             )
             "" -> null
             else -> {
@@ -78,6 +81,7 @@ class TransitServerPlanner {
                     isRealtime = realtime,
                     delaySeconds = delay,
                     toLocation = to.location(),
+                    tripId = leg.text("tripId")?.takeIf { it.isNotBlank() },
                 )
             }
         }

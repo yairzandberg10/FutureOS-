@@ -29,7 +29,11 @@ data class TransitLeg(
     /** שניות איחור לעומת הלו"ז המתוכנן (שלילי = מוקדם) - תקף רק כש-isRealtime. */
     val delaySeconds: Int? = null,
     /** מיקום תחנת הירידה - להתראת "רדו בתחנה הבאה" (ר' TransitScreen). */
-    val toLocation: LatLng? = null
+    val toLocation: LatLng? = null,
+    /** מיקום נקודת ההתחלה של הרגל - לניווט ברגל (WALK) מכל נקודה במסלול. */
+    val fromLocation: LatLng? = null,
+    /** מזהה הנסיעה (רק ל-RIDE) - לפתיחת לוח הנסיעה המלא של הקו. */
+    val tripId: String? = null
 )
 
 data class TransitItinerary(

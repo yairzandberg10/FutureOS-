@@ -67,6 +67,14 @@ object OpenApis {
         return get(url, "geocode")
     }
 
+    /** MOTIS trip: כל התחנות של נסיעה אחת (לפי tripId מ-stoptimes או מהתכנון). */
+    suspend fun tripJson(tripId: String): String? {
+        val url = "$TRANSITOUS/api/v5/trip".toHttpUrl().newBuilder()
+            .addQueryParameter("tripId", tripId)
+            .build()
+        return get(url, "trip")
+    }
+
     /** OSRM: מסלול נהיגה עם צעדים וקו המסלול (GeoJSON). */
     suspend fun drivingRouteJson(from: LatLng, to: LatLng): String? {
         // ב-OSRM הסדר הוא אורך,רוחב

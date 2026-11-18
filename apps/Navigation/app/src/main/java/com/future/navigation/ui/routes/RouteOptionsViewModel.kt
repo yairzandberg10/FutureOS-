@@ -17,14 +17,20 @@ import com.future.navigation.data.gtfs.TransitServerPlanner
 import com.future.navigation.data.location.LocationHelper
 import com.future.navigation.data.routing.DrivingRoute
 import com.future.navigation.data.routing.RouteLookup
+import com.future.navigation.data.routing.OsrmRouting
+import com.future.navigation.data.routing.RoutingProfile
 import com.future.navigation.data.routing.RoutingRepository
 import com.future.navigation.data.siri.TransitRealtimeEnricher
+import kotlin.math.abs
 import com.future.navigation.ui.navigation.Destination
 import com.future.navigation.ui.navigation.TravelMode
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+
+/** מספר המסלולים המקסימלי שמוצגים (המסלול הראשי + חלופות). */
+private const val MAX_ALTERNATIVES = 3
 
 class RouteOptionsViewModel(
     private val appContext: Context,
@@ -89,6 +95,27 @@ class RouteOptionsViewModel(
     private val _drivingRoute = MutableStateFlow<DrivingRoute?>(null)
     val drivingRoute = _drivingRoute.asStateFlow()
 
+    /** כל החלופות למסלול (עד 3). הראשונה היא ברירת המחדל. */
+    private val _alternatives = MutableStateFlow<List<DrivingRoute>>(emptyList())
+    val alternatives = _alternatives.asStateFlow()
+
+    /** האינדקס של המסלול שנבחר ברשימה (D-pad, לחיצה על חלופה). */
+    private val _selectedIndex = MutableStateFlow(0)
+    val selectedIndex = _selectedIndex.asStateFlow()
+
+    fun selectRoute(index: Int) {
+        val list = _alternatives.value
+        if (index !in list.indices) return
+        _selectedIndex.value = index
+        _drivingRoute.value = list[index]
+    }
+
+    private fun showRoutes(routes: List<DrivingRoute>) {
+        _alternatives.value = routes
+        _selectedIndex.value = 0
+        _drivingRoute.value = routes.firstOrNull()
+    }
+
     private val _itineraries = MutableStateFlow<List<TransitItinerary>>(emptyList())
     val itineraries = _itineraries.asStateFlow()
 
@@ -98,8 +125,12 @@ class RouteOptionsViewModel(
     /** מזהה החיפוש האחרון - רק החיפוש האחרון מכבה את מצב הטעינה (ביטול של קודם לא מכבה חדש). */
     private var searchId = 0
 
-    fun search(mode: TravelMode, destination: Destination, allowCellularDownload: Boolean = false) {
+    /** נקודת מוצא שנבחרה ידנית (null = המיקום הנוכחי). נשמרת לחיפוש חוזר (retry). */
+    private var chosenOrigin: LatLng? = null
+
+    fun search(mode: TravelMode, destination: Destination, allowCellularDownload: Boolean = false, from: LatLng? = chosenOrigin) {
         val id = ++searchId
+        chosenOrigin = from
         lastSearch = Triple(mode, destination, allowCellularDownload)
         _serverError.value = false
         searchJob?.cancel()
@@ -107,7 +138,10 @@ class RouteOptionsViewModel(
         _drivingRoute.value = null
         _itineraries.value = emptyList()
         _error.value = null
-        val origin = LocationHelper.lastKnownLatLon(appContext)?.let { LatLng(it.first, it.second) }
+        _alternatives.value = emptyList()
+        _selectedIndex.value = 0
+        // המיקום הכי מדויק שיש (ר' LocationHelper.bestLastKnown) - נקודת המוצא של המסלול
+        val origin = from ?: LocationHelper.lastKnownLatLon(appContext)?.let { LatLng(it.first, it.second) }
         if (origin == null) {
             _loading.value = false
             _error.value = tr("לא ניתן לאתר את המיקום הנוכחי")
@@ -119,11 +153,35 @@ class RouteOptionsViewModel(
             try {
                 when (mode) {
                     TravelMode.DRIVE -> when (val lookup = routingRepository.getDrivingRoute(origin, destination.location, departAtIso())) {
-                        is RouteLookup.Found -> _drivingRoute.value = lookup.route
+                        is RouteLookup.Found -> {
+                            // חלופות מ-OSRM (נהיגה בלי שעת יציאה בלבד - הן לא מתחשבות בזמן עתידי).
+                            // מסלול שכמעט זהה למסלול הראשי (באורך) לא נכנס לרשימה.
+                            val extra = if (departAtIso() == null) {
+                                OsrmRouting.fetchAll(origin, destination.location, RoutingProfile.DRIVING, alternatives = true).orEmpty()
+                            } else {
+                                emptyList()
+                            }
+                            val distinct = extra.filter { abs(it.distanceMeters - lookup.route.distanceMeters) > 100.0 }
+                            showRoutes(listOf(lookup.route) + distinct.take(MAX_ALTERNATIVES - 1))
+                        }
                         RouteLookup.NoRoute -> _error.value = tr("לא נמצא מסלול נסיעה")
                         RouteLookup.ServerError -> {
                             _error.value = "שגיאת שרת – נסה שוב"
                             _serverError.value = true
+                        }
+                    }
+                    TravelMode.WALK, TravelMode.BIKE -> {
+                        // הליכה/רכיבה: OSRM של openstreetmap.de, עם חלופות
+                        when (val routes = OsrmRouting.fetchAll(origin, destination.location, RoutingProfile.forMode(mode), alternatives = true)) {
+                            null -> {
+                                _error.value = "שגיאת שרת – נסה שוב"
+                                _serverError.value = true
+                            }
+                            else -> if (routes.isEmpty()) {
+                                _error.value = tr("לא נמצא מסלול")
+                            } else {
+                                showRoutes(routes.take(MAX_ALTERNATIVES))
+                            }
                         }
                     }
                     TravelMode.TRANSIT -> {

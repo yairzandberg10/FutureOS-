@@ -38,6 +38,11 @@ class TransitServerPlannerTest {
         assertEquals("המיקום שלך", it.legs.first().fromStopName)
         assertEquals("היעד", it.legs.last().toStopName)
         assertEquals(75.0, it.legs.first().walkDistanceMeters!!, 0.01)
+        // רגלי הליכה מכירות את נקודת ההתחלה והסיום שלהן (ניווט ברגל)
+        assertNotNull(it.legs.first().fromLocation)
+        assertNotNull(it.legs.first().toLocation)
+        assertEquals("20699", rides[0].fromStopId)
+        assertNotNull(rides[0].tripId)
     }
 
     @Test

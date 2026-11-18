@@ -32,8 +32,8 @@ import org.maplibre.android.maps.MapView
  *
  * מיפוי מקשים (זהה בכל מקום שבו המפה הזו מוצגת):
  * - חצי שמאל/ימין: הזזת המפה (pan). חצי למעלה/למטה: מעבר פוקוס לשורת הכפתורים
- * - מקשים 2/8/4/6: הזזת המפה למעלה/למטה/שמאלה/ימינה. 5: חזרה למיקום שלי
- * - מרכז/Enter: חזרה למיקום שלי (recenter) וחידוש מצב מעקב
+ * - מקשים 2/8/4/6: הזזת המפה למעלה/למטה/שמאלה/ימינה
+ * - מרכז/Enter: חזרה למיקום שלי (recenter) וחידוש מצב מעקב. 5 (מסך הניווט): תצוגת מסלול מלא
  * - *: התרחקות (zoom out); #: התקרבות (zoom in). במכשיר שני המקשים מגיעים
  *   כשידור מ-FutureUI (onStarKeyPress/onPoundKeyPress) ולא כאירוע מקש.
  */
@@ -97,7 +97,6 @@ fun NavMapView(
                     "8" -> { cameraController.pan(-1.0, 0.0); onManualPan(); return@onKeyEvent true }
                     "4" -> { cameraController.pan(0.0, -1.0); onManualPan(); return@onKeyEvent true }
                     "6" -> { cameraController.pan(0.0, 1.0); onManualPan(); return@onKeyEvent true }
-                    "5" -> { onRecenterRequested(); return@onKeyEvent true }
                 }
                 when (event.key) {
                     Key.DirectionLeft -> { cameraController.pan(0.0, -1.0); onManualPan(); true }
@@ -115,7 +114,7 @@ fun NavMapView(
             factory = {
                 mapView.getMapAsync { map ->
                     cameraController.attach(map)
-                    map.setStyle(MapConfig.STYLE_URL) { style -> cameraController.onStyleLoaded(style) }
+                    map.setStyle(MapConfig.styleUrl()) { style -> cameraController.onStyleLoaded(style) }
                     if (initialCenter != null) {
                         cameraController.animateTo(initialCenter, durationMs = 0)
                     }

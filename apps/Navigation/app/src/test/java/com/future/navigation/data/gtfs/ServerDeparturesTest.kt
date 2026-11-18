@@ -37,6 +37,16 @@ class ServerDeparturesTest {
     }
 
     @Test
+    fun departureKeepsTripIdAndClockTime() {
+        val root = Json.parseToJsonElement(resource("motis_stoptimes.json")) as JsonObject
+        val first = ServerDepartures().parse(root, now).first().departures.first()
+        assertEquals("20261117_22:25_il-Israel-MOT_585532076_171126", first.tripId)
+        // 20:40 UTC = 22:40 בשעון ישראל
+        assertEquals(22 * 3600 + 40 * 60, first.departsAtSeconds)
+        assertEquals(false, first.realtime)
+    }
+
+    @Test
     fun parsesStopSearch() {
         val matches = Json.parseToJsonElement(resource("motis_geocode.json")) as JsonArray
         val hits = ServerDepartures().parseStations(matches)

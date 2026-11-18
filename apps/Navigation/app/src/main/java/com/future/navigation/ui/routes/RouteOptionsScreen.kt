@@ -46,6 +46,8 @@ import com.future.navigation.ui.navigation.Destination
 import com.future.navigation.ui.navigation.TravelMode
 import com.future.sharednav.components.ScreenTopBar
 import com.future.sharednav.focus.FocusableItem
+import com.future.sharednav.icons.FutureIcons
+import androidx.compose.foundation.layout.width
 
 @Composable
 fun RouteOptionsScreen(
@@ -54,7 +56,13 @@ fun RouteOptionsScreen(
     destination: Destination,
     onBack: () -> Unit,
     onStartDriving: (DrivingRoute) -> Unit,
-    onStartTransit: (TransitItinerary) -> Unit
+    onStartTransit: (TransitItinerary) -> Unit,
+    /** נקודת המוצא שנבחרה, null = המיקום הנוכחי. */
+    origin: Destination? = null,
+    /** פותח את בחירת נקודת המוצא (OK על שורת מ/אל). */
+    onPickOrigin: () -> Unit = {},
+    /** מקש 7: החלפת כיוון בין המוצא ליעד. */
+    onSwap: () -> Unit = {},
 ) {
     val loading by viewModel.loading.collectAsState()
     val downloadFraction by viewModel.downloadFraction.collectAsState()
@@ -71,8 +79,8 @@ fun RouteOptionsScreen(
     }
     val theme = LocalFutureTheme.current
 
-    LaunchedEffect(destination, mode) {
-        viewModel.search(mode, destination)
+    LaunchedEffect(destination, mode, origin) {
+        viewModel.search(mode, destination, from = origin?.location)
     }
 
     // הורדה של ~130MB ברשת סלולרית - שואלים לפני (F09). הברירה הבטוחה היא "לא עכשיו".
@@ -93,13 +101,15 @@ fun RouteOptionsScreen(
     // המסך משאירה אותו בלי שום פריט מודגש (כמו בשאר מסכי האפליקציה).
     LaunchedEffect(loading, error, mode, drivingRoute, itineraries) {
         if (!loading && error == null) {
-            if (mode == TravelMode.DRIVE && drivingRoute != null) actionFocusRequester.requestFocus()
+            if (mode != TravelMode.TRANSIT && drivingRoute != null) actionFocusRequester.requestFocus()
             else if (mode == TravelMode.TRANSIT && itineraries.isNotEmpty()) actionFocusRequester.requestFocus()
         }
     }
 
     val avoidTolls by viewModel.avoidTolls.collectAsState()
     val departInMinutes by viewModel.departInMinutes.collectAsState()
+    val alternatives by viewModel.alternatives.collectAsState()
+    val selectedIndex by viewModel.selectedIndex.collectAsState()
     val drivingOptions = androidx.compose.runtime.remember { com.future.navigation.data.backend.FutureServer.isAvailable }
 
     Column(
@@ -108,8 +118,9 @@ fun RouteOptionsScreen(
             // בלי שרת הנהיגה היא OSRM, שלא יודע להימנע מאגרה ולא מכיר שעת יציאה.
             if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
             when (com.future.sharednav.nav.digitForKey(event.key)) {
+                "7" -> { onSwap(); true }
                 "1" -> if (mode == TravelMode.DRIVE && drivingOptions) { viewModel.toggleAvoidTolls(); true } else false
-                "3" -> if (mode == TravelMode.TRANSIT || drivingOptions) { viewModel.cycleDepartureTime(); true } else false
+                "3" -> if (mode == TravelMode.TRANSIT || (mode == TravelMode.DRIVE && drivingOptions)) { viewModel.cycleDepartureTime(); true } else false
                 else -> false
             }
         }
@@ -121,23 +132,39 @@ fun RouteOptionsScreen(
             onBack = onBack
         )
 
-        Surface(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = FutureDimens.screenPadding),
-            shape = FutureShapes.lg,
-            color = MaterialTheme.colorScheme.surface
-        ) {
-            Text(
-                text = destination.address.ifBlank { destination.name },
-                modifier = Modifier.padding(FutureDimens.spacingMd),
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 2
-            )
+        // מ / אל, כמו באגד: OK בוחר נקודת מוצא אחרת, 7 מחליף כיוון
+        Box(modifier = Modifier.padding(horizontal = FutureDimens.screenPadding)) {
+            FocusableItem(
+                onClick = onPickOrigin,
+                accentColor = MaterialTheme.colorScheme.primary,
+            ) {
+                Column(modifier = Modifier.fillMaxWidth().padding(FutureDimens.spacingSm)) {
+                    Text(
+                        text = "מ: " + (origin?.let { it.name.ifBlank { it.address } } ?: "המיקום שלך"),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = theme.mutedTextColor,
+                        maxLines = 1,
+                    )
+                    Text(
+                        text = "אל: " + destination.address.ifBlank { destination.name },
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 2,
+                    )
+                    Text(
+                        text = "OK שינוי נקודת מוצא · 7 החלפת כיוון",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = theme.mutedTextColor,
+                        maxLines = 1,
+                    )
+                }
+            }
         }
 
         val departLabel = "3 " + (if (departInMinutes == 0) "יציאה עכשיו" else "יציאה בעוד $departInMinutes דק׳")
         val optionsHint = when {
             mode == TravelMode.TRANSIT -> departLabel
-            drivingOptions -> "1 " + (if (avoidTolls) "בלי כבישי אגרה ✓" else "כולל כבישי אגרה") + " · " + departLabel
+            mode == TravelMode.DRIVE && drivingOptions -> "1 " + (if (avoidTolls) "בלי כבישי אגרה ✓" else "כולל כבישי אגרה") + " · " + departLabel
             else -> null
         }
         if (optionsHint != null) {
@@ -182,7 +209,11 @@ fun RouteOptionsScreen(
                         PrimaryButton("נסה שוב", focusRequester = retryFocusRequester) { viewModel.retry() }
                     }
                 }
-                mode == TravelMode.DRIVE && drivingRoute != null -> DrivingRouteCard(drivingRoute!!)
+                mode != TravelMode.TRANSIT && drivingRoute != null -> RouteAlternatives(
+                    routes = alternatives,
+                    selectedIndex = selectedIndex,
+                    onSelect = viewModel::selectRoute
+                )
                 mode == TravelMode.TRANSIT -> {
                     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         itemsIndexed(itineraries) { index, itinerary ->
@@ -197,30 +228,61 @@ fun RouteOptionsScreen(
             }
         }
 
-        if (mode == TravelMode.DRIVE && drivingRoute != null) {
+        if (mode != TravelMode.TRANSIT && drivingRoute != null) {
             Box(modifier = Modifier.fillMaxWidth().padding(FutureDimens.screenPadding)) {
-                PrimaryButton(stringResource(R.string.start_navigation), focusRequester = actionFocusRequester) { onStartDriving(drivingRoute!!) }
+                PrimaryButton(stringResource(R.string.start_navigation), focusRequester = actionFocusRequester) {
+                    // ההתחלה במסלול שנבחר ברשימה (ברירת המחדל - הראשון)
+                    onStartDriving(alternatives.getOrNull(selectedIndex) ?: drivingRoute!!)
+                }
             }
         }
     }
 }
 
+/**
+ * רשימת המסלולים (המסלול הראשי + חלופות). כל שורה: זמן, מרחק והכבישים העיקריים
+ * של המסלול. לחיצה (OK) בוחרת מסלול - ההתחלה בכפתור "התחל ניווט" למטה.
+ */
 @Composable
-private fun DrivingRouteCard(route: DrivingRoute) {
-    Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-        Surface(shape = FutureShapes.lg, color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxWidth()) {
-            Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = tr("%d דק׳").format((route.durationSeconds / 60).toInt()),
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.headlineSmall
-                    )
-                    Text(
-                        text = tr("%.1f ק״מ").format(route.distanceMeters / 1000.0),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                    )
+private fun RouteAlternatives(routes: List<DrivingRoute>, selectedIndex: Int, onSelect: (Int) -> Unit) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(horizontal = FutureDimens.screenPadding, vertical = FutureDimens.spacingSm),
+        verticalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm),
+    ) {
+        itemsIndexed(routes) { index, route ->
+            val selected = index == selectedIndex
+            FocusableItem(
+                onClick = { onSelect(index) },
+                accentColor = MaterialTheme.colorScheme.primary,
+            ) {
+                Column(modifier = Modifier.fillMaxWidth().padding(FutureDimens.spacingSm)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = tr("%d דק׳").format((route.durationSeconds / 60).toInt()),
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Text(
+                            text = tr("%.1f ק״מ").format(route.distanceMeters / 1000.0),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        )
+                        if (selected) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Icon(FutureIcons.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                    val roads = route.steps.map { it.streetName }.filter { it.isNotBlank() }.distinct().take(3)
+                    if (roads.isNotEmpty()) {
+                        Text(
+                            text = roads.joinToString(" · "),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                            maxLines = 1
+                        )
+                    }
                 }
             }
         }

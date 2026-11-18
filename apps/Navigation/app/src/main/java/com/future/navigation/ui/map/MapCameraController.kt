@@ -1,8 +1,10 @@
 package com.future.navigation.ui.map
 
 import com.future.navigation.data.common.LatLng as AppLatLng
+import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng as MapLibreLatLng
+import org.maplibre.android.geometry.LatLngBounds
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.Style
 import org.maplibre.android.style.layers.CircleLayer
@@ -145,6 +147,32 @@ class MapCameraController {
         animateTo(on, currentZoom, durationMs = 600)
     }
 
+    /**
+     * מעקב במצב "הכיוון שלי למעלה" (כמו Waze): המפה מסתובבת לכיוון הנסיעה ומוטה
+     * מעט. bearing=null (עומדים/אין כיוון) - נשמר הכיוון הקודם של המפה.
+     */
+    fun followHeading(on: AppLatLng, bearing: Float?) {
+        val m = map ?: return
+        val position = CameraPosition.Builder()
+            .target(MapLibreLatLng(on.lat, on.lon))
+            .zoom(currentZoom)
+            .bearing(bearing?.toDouble() ?: m.cameraPosition.bearing)
+            .tilt(HEADING_TILT)
+            .build()
+        m.easeCamera(CameraUpdateFactory.newCameraPosition(position), 600)
+    }
+
+    /** תצוגת מסלול מלא: המצלמה מתאימה את גבולות המסלול כולו (צפון למעלה, בלי הטיה). */
+    fun fitRoute(points: List<AppLatLng>) {
+        val m = map ?: return
+        if (points.size < 2) return
+        val reset = CameraPosition.Builder(m.cameraPosition).bearing(0.0).tilt(0.0).build()
+        m.moveCamera(CameraUpdateFactory.newCameraPosition(reset))
+        val bounds = LatLngBounds.Builder()
+        points.forEach { bounds.include(MapLibreLatLng(it.lat, it.lon)) }
+        m.easeCamera(CameraUpdateFactory.newLatLngBounds(bounds.build(), OVERVIEW_PADDING_PX), 600)
+    }
+
     companion object {
         private const val ROUTE_SOURCE = "future-route"
         private const val ROUTE_LAYER = "future-route-line"
@@ -156,5 +184,9 @@ class MapCameraController {
         private const val MIN_ZOOM = 3.0
         private const val MAX_ZOOM = 19.0
         private const val PAN_STEP_DEGREES_AT_ZOOM0 = 40.0
+        /** הטיית המפה במצב כיוון הנסיעה (מעט, בלי לפגוע בקריאות). */
+        private const val HEADING_TILT = 45.0
+        /** שוליים (פיקסלים) סביב המסלול בתצוגת מסלול מלא, כדי שההתחלה והסוף לא ייחתכו. */
+        private const val OVERVIEW_PADDING_PX = 40
     }
 }

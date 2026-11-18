@@ -376,6 +376,8 @@ private fun AppNavHost(
         composable(Screen.RouteOptions.route) {
             val mode by navSessionViewModel.mode.collectAsState()
             val destination by navSessionViewModel.destination.collectAsState()
+            val origin by navSessionViewModel.origin.collectAsState()
+            val routeContext = androidx.compose.ui.platform.LocalContext.current
             val dest = destination
             if (dest == null) {
                 LaunchedEffect(Unit) { navController.popBackStack() }
@@ -392,7 +394,14 @@ private fun AppNavHost(
                     onStartTransit = { itinerary ->
                         navSessionViewModel.setSelectedItinerary(itinerary)
                         navController.navigate(Screen.Transit.route)
-                    }
+                    },
+                    origin = origin,
+                    onPickOrigin = { navController.navigate(Screen.OriginPicker.route) },
+                    onSwap = {
+                        val here = com.future.navigation.data.location.LocationHelper.lastKnownLatLon(routeContext)
+                            ?.let { LatLng(it.first, it.second) }
+                        navSessionViewModel.swapOriginAndDestination(here)
+                    },
                 )
             }
         }
@@ -403,12 +412,17 @@ private fun AppNavHost(
             if (route == null || destination == null) {
                 LaunchedEffect(Unit) { navController.popBackStack() }
             } else {
+                val travelMode = navSessionViewModel.mode.collectAsState().value
                 val context = androidx.compose.ui.platform.LocalContext.current
                 val viewModel = androidx.lifecycle.viewmodel.compose.viewModel<NavigateViewModel>(
                     factory = object : ViewModelProvider.Factory {
                         override fun <T : ViewModel> create(modelClass: Class<T>): T {
                             @Suppress("UNCHECKED_CAST")
-                            return NavigateViewModel(context.applicationContext, routingRepository, route, destination.location, destinationLabel = destination.name.ifBlank { destination.address }) as T
+                            return NavigateViewModel(
+                                context.applicationContext, routingRepository, route, destination.location,
+                                destinationLabel = destination.name.ifBlank { destination.address },
+                                profile = com.future.navigation.data.routing.RoutingProfile.forMode(travelMode),
+                            ) as T
                         }
                     }
                 )
@@ -429,6 +443,7 @@ private fun AppNavHost(
                         navSessionViewModel.setDestination(station)
                         navController.navigate(Screen.RouteOptions.route)
                     },
+                    onOpenTrip = { tripId, line, stop -> navController.navigate(Screen.Trip.path(tripId, line, stop)) },
                 )
             }
         }
@@ -438,8 +453,38 @@ private fun AppNavHost(
             if (itinerary == null) {
                 LaunchedEffect(Unit) { navController.popBackStack() }
             } else {
-                TransitScreen(itinerary = itinerary, onBack = { navController.popBackStack() })
+                TransitScreen(
+                    itinerary = itinerary,
+                    onBack = { navController.popBackStack() },
+                    // ניווט ברגל לתחנה / בין תחנות / מהתחנה ליעד: מסלול הליכה מהמיקום הנוכחי
+                    onWalkTo = { name, location ->
+                        navSessionViewModel.setMode(com.future.navigation.ui.navigation.TravelMode.WALK)
+                        navSessionViewModel.setDestination(Destination(name = name, address = name, location = location))
+                        navController.navigate(Screen.RouteOptions.route)
+                    },
+                    onOpenTrip = { tripId, line, stop -> navController.navigate(Screen.Trip.path(tripId, line, stop)) },
+                )
             }
+        }
+
+        composable(Screen.Trip.route) { entry ->
+            com.future.navigation.ui.transit.TripScreen(
+                tripId = android.net.Uri.decode(entry.arguments?.getString("tripId").orEmpty()),
+                line = android.net.Uri.decode(entry.arguments?.getString("line").orEmpty()).takeIf { it != "-" }.orEmpty(),
+                boardingStop = entry.arguments?.getString("stop")?.let { android.net.Uri.decode(it) }?.takeIf { it.isNotBlank() && it != "-" },
+                onBack = { navController.popBackStack() },
+            )
+        }
+
+        composable(Screen.OriginPicker.route) {
+            com.future.navigation.ui.routes.OriginPickerScreen(
+                onBack = { navController.popBackStack() },
+                onPicked = { picked ->
+                    navSessionViewModel.setOrigin(picked)
+                    navController.popBackStack()
+                },
+                savedPlaces = savedPlacesViewModel.allPlaces,
+            )
         }
 
         composable(Screen.SavedPlaces.route) {

@@ -1,0 +1,1959 @@
+{
+  "version": 0.6,
+  "generator": "Overpass API 0.7.62.11 87bfad18",
+  "osm3s": {
+    "timestamp_osm_base": "2026-11-18T22:33:18Z",
+    "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL."
+  },
+  "elements": [
+
+{
+  "type": "node",
+  "id": 450524210,
+  "lat": 32.0816185,
+  "lon": 34.7708627,
+  "tags": {
+    "amenity": "restaurant",
+    "cuisine": "italian",
+    "name": "Ernesto",
+    "name:en": "Ernesto",
+    "opening_hours": "Mo-Su 12:30-23:30",
+    "outdoor_seating": "yes",
+    "wheelchair": "yes"
+  }
+},
+{
+  "type": "node",
+  "id": 454907312,
+  "lat": 32.0847177,
+  "lon": 34.7725130,
+  "tags": {
+    "addr:city:en": "Tel Aviv",
+    "addr:housenumber": "128",
+    "addr:street": "בן יהודה",
+    "amenity": "restaurant",
+    "cuisine": "coffee_shop",
+    "delivery": "yes",
+    "internet_access:fee": "no",
+    "name": "לחם ושות",
+    "name:he": "לחם ושות",
+    "opening_hours": "Mo-Th,Sa-Su 09:00-21:30; Fr 09:00-17:30",
+    "outdoor_seating": "yes",
+    "self_service": "yes",
+    "stars": "5",
+    "takeaway": "yes",
+    "toilets": "yes"
+  }
+},
+{
+  "type": "node",
+  "id": 639265226,
+  "lat": 32.0795431,
+  "lon": 34.7770975,
+  "tags": {
+    "addr:housenumber": "38",
+    "addr:street": "שלמה המלך",
+    "amenity": "cafe",
+    "check_date": "2023-09-17",
+    "name": "שיין 38",
+    "name:en": "Shine 38",
+    "name:he": "שיין 38"
+  }
+},
+{
+  "type": "node",
+  "id": 681317089,
+  "lat": 32.0743704,
+  "lon": 34.7749665,
+  "tags": {
+    "addr:city": "תל אביב-יפו",
+    "addr:housenumber": "87",
+    "addr:street": "בוגרשוב",
+    "amenity": "restaurant",
+    "contact:facebook": "matteo.tlv",
+    "contact:instagram": "matteo.tlv",
+    "cuisine": "italian",
+    "delivery": "yes",
+    "diet:gluten_free": "yes",
+    "diet:kosher": "no",
+    "diet:vegan": "yes",
+    "diet:vegetarian": "yes",
+    "email": "matteo.tlv@gmail.com",
+    "name": "Matteo",
+    "name:en": "Matteo",
+    "name:he": "מתאו",
+    "opening_hours": "Su-Th 12:00-23:00; Th-Sa 10:00-00:00",
+    "phone": "+972 3 938 3433",
+    "reservation": "yes",
+    "reservation:website": "https://ontopo.com/en/il/page/83133618",
+    "website": "https://matteo.co.il/en/matteo/",
+    "wheelchair": "limited"
+  }
+},
+{
+  "type": "node",
+  "id": 720955813,
+  "lat": 32.0805999,
+  "lon": 34.7815429,
+  "tags": {
+    "addr:city": "Tel Aviv-Yafo",
+    "addr:housenumber": "70",
+    "addr:street": "אבן גבירול",
+    "amenity": "restaurant",
+    "cuisine": "french",
+    "delivery": "yes",
+    "internet_access": "wlan",
+    "name": "דליקטסן בראסרי",
+    "name:en": "Delicatessen Brassery",
+    "name:he": "דליקטסן בראסרי",
+    "opening_hours": "24/7",
+    "phone": "03-696-7111",
+    "smoking": "outside",
+    "takeaway": "yes",
+    "website": "https://www.delitlv.co.il/the-brasserie",
+    "wheelchair": "no"
+  }
+},
+{
+  "type": "node",
+  "id": 777399534,
+  "lat": 32.0793810,
+  "lon": 34.7802019,
+  "tags": {
+    "amenity": "cafe"
+  }
+},
+{
+  "type": "node",
+  "id": 777400974,
+  "lat": 32.0791936,
+  "lon": 34.7801891,
+  "tags": {
+    "addr:city": "תל אביב-יפו",
+    "addr:housenumber": "52",
+    "addr:street": "שדרות ח\"ן",
+    "amenity": "restaurant",
+    "contact:facebook": "TheMeatBar",
+    "contact:instagram": "meatbar",
+    "diet:kosher": "no",
+    "name": "Meat Bar",
+    "name:en": "Meat Bar",
+    "opening_hours": "Fr-We 12:00-23:30; Th 12:00-00:00",
+    "operator": "Meat Bar",
+    "phone": "+972 3 695 6276",
+    "reservation": "yes",
+    "reservation:website": "https://tabitisrael.co.il/online-reservations/create-reservation?step=search&orgId=599ac32e5eb82a2200ba84e9&locale=he-IL",
+    "website": "https://meatbar.co.il/מיטבר-תל-אביב/"
+  }
+},
+{
+  "type": "node",
+  "id": 777400975,
+  "lat": 32.0793622,
+  "lon": 34.7797523,
+  "tags": {
+    "addr:housenumber": "90",
+    "addr:street": "פרישמן",
+    "amenity": "restaurant",
+    "cuisine": "italian",
+    "name": "גוסטו",
+    "name:en": "Gusto",
+    "name:he": "גוסטו"
+  }
+},
+{
+  "type": "node",
+  "id": 777401729,
+  "lat": 32.0788443,
+  "lon": 34.7791079,
+  "tags": {
+    "amenity": "cafe",
+    "name": "תוצרת הארץ",
+    "name:en": "Totzeret Ha'aretz",
+    "name:he": "תוצרת הארץ"
+  }
+},
+{
+  "type": "node",
+  "id": 1077311494,
+  "lat": 32.0818943,
+  "lon": 34.7739489,
+  "tags": {
+    "addr:housenumber": "123",
+    "addr:street": "דיזנגוף",
+    "amenity": "cafe",
+    "brand": "ארומה",
+    "brand:en": "Aroma Espresso Bar",
+    "brand:he": "ארומה",
+    "brand:wikidata": "Q2909872",
+    "cuisine": "coffee_shop",
+    "name": "ארומה",
+    "name:en": "Aroma Espresso Bar",
+    "name:he": "ארומה",
+    "opening_hours": "Su-Th 06:30-20:00; Fr 06:30-17:00; Sa 08:00-20:00",
+    "phone": "+972547996800",
+    "takeaway": "yes",
+    "website": "https://www.aroma.co.il/en/store/dizengoff-gordon-tel-aviv/"
+  }
+},
+{
+  "type": "node",
+  "id": 1207157419,
+  "lat": 32.0774800,
+  "lon": 34.7890760,
+  "tags": {
+    "amenity": "cafe",
+    "name": "Uno",
+    "name:en": "Uno"
+  }
+},
+{
+  "type": "node",
+  "id": 1207157736,
+  "lat": 32.0774314,
+  "lon": 34.7894711,
+  "tags": {
+    "addr:city": "תל אביב-יפו",
+    "amenity": "restaurant",
+    "contact:facebook": "https://www.facebook.com/people/%D7%A4%D7%99%D7%A9-%D7%9E%D7%A8%D7%A7%D7%98-Fish-Market-By-Meatos/100054427723170/",
+    "contact:instagram": "fishmarket_tlv",
+    "cuisine": "seafood;greek",
+    "name": "Fish Market by Meatos",
+    "name:en": "Fish Market by Meatos",
+    "name:he": "פיש מרקט מבית מיטוס",
+    "phone": "+97236932002",
+    "website": "https://fishmarket-tlv.co.il/"
+  }
+},
+{
+  "type": "node",
+  "id": 1207157824,
+  "lat": 32.0776754,
+  "lon": 34.7888727,
+  "tags": {
+    "amenity": "restaurant",
+    "name": "Greg",
+    "name:en": "Greg"
+  }
+},
+{
+  "type": "node",
+  "id": 1438109988,
+  "lat": 32.0744453,
+  "lon": 34.7820029,
+  "tags": {
+    "amenity": "restaurant",
+    "name": "האחים",
+    "name:en": "HaAchim",
+    "name:he": "האחים",
+    "wikidata": "Q123477404"
+  }
+},
+{
+  "type": "node",
+  "id": 1438109990,
+  "lat": 32.0742049,
+  "lon": 34.7820009,
+  "tags": {
+    "amenity": "cafe",
+    "brand": "רולדין",
+    "brand:en": "Roladin",
+    "brand:he": "רולדין",
+    "brand:wikidata": "Q18390972",
+    "brand:wikipedia": "he:רולדין",
+    "check_date": "2023-06-01",
+    "cuisine": "coffee_shop",
+    "name": "רולדין",
+    "name:en": "Roladin",
+    "name:he": "רולדין",
+    "takeaway": "yes"
+  }
+},
+{
+  "type": "node",
+  "id": 1626825015,
+  "lat": 32.0856483,
+  "lon": 34.7748002,
+  "tags": {
+    "addr:housenumber": "190",
+    "addr:street": "דיזנגוף",
+    "amenity": "cafe",
+    "building": "yes",
+    "name": "אתנחתה",
+    "name:en": "Atnachta",
+    "name:he": "אתנחתה"
+  }
+},
+{
+  "type": "node",
+  "id": 1643304613,
+  "lat": 32.0761065,
+  "lon": 34.7769321,
+  "tags": {
+    "addr:city": "תל אביב-יפו",
+    "addr:housenumber": "70",
+    "addr:street": "המלך ג'ורג'",
+    "amenity": "cafe",
+    "contact:facebook": "TheStreets.co.il",
+    "contact:instagram": "thestreetscafe",
+    "delivery": "yes",
+    "diet:gluten_free": "yes",
+    "diet:kosher": "no",
+    "diet:vegan": "yes",
+    "diet:vegetarian": "yes",
+    "email": "contactus@thestreets.co.il",
+    "indoor_seating": "yes",
+    "internet_access": "wlan",
+    "internet_access:fee": "customers",
+    "name": "The Streets",
+    "name:en": "The Streets",
+    "opening_hours": "Su-Sa 07:00-23:00",
+    "outdoor_seating": "yes",
+    "phone": "+972 3 620 1070",
+    "toilets": "yes",
+    "website": "http://thestreets.co.il",
+    "wheelchair": "yes"
+  }
+},
+{
+  "type": "node",
+  "id": 1643304646,
+  "lat": 32.0788830,
+  "lon": 34.7790224,
+  "tags": {
+    "amenity": "cafe",
+    "name": "קפה מסריק",
+    "name:en": "Cafe Masaryk",
+    "name:he": "קפה מסריק"
+  }
+},
+{
+  "type": "node",
+  "id": 2078991187,
+  "lat": 32.0859900,
+  "lon": 34.7729410,
+  "tags": {
+    "addr:housenumber": "148",
+    "addr:street": "בן יהודה",
+    "amenity": "restaurant",
+    "bar": "yes",
+    "cuisine": "regional;czech",
+    "description": "Czech cuisine restaurant and bar.",
+    "name": "Little Prague Restaurant",
+    "opening_hours": "Mo-Su 12:00-23:00",
+    "source": "local knowledge"
+  }
+},
+{
+  "type": "node",
+  "id": 2078991188,
+  "lat": 32.0829130,
+  "lon": 34.7741390,
+  "tags": {
+    "addr:housenumber": "148",
+    "addr:street": "דיזנגוף",
+    "amenity": "restaurant",
+    "cuisine": "thai",
+    "name": "Thai 148",
+    "opening_hours": "Mo-Su 12:00-23:30",
+    "smoking": "outside"
+  }
+},
+{
+  "type": "node",
+  "id": 2079006787,
+  "lat": 32.0782900,
+  "lon": 34.7889540,
+  "tags": {
+    "addr:city": "תל אביב-יפו",
+    "addr:housenumber": "2",
+    "addr:street": "דפנה",
+    "amenity": "restaurant",
+    "diet:kosher": "only",
+    "name": "מלכה",
+    "name:en": "Malka",
+    "name:he": "מלכה",
+    "opening_hours": "Su-Th 12:00-16:00,18:00-00:00",
+    "phone": "+97236091331",
+    "source": "Tel Aviv municipality",
+    "website": "https://ontopo.co.il/malka"
+  }
+},
+{
+  "type": "node",
+  "id": 2079006815,
+  "lat": 32.0721873,
+  "lon": 34.7785488,
+  "tags": {
+    "addr:city": "Tel Aviv",
+    "addr:housenumber": "2",
+    "addr:street": "הבימה",
+    "alt_name": "בורגר 300",
+    "alt_name:en": "Burger 300",
+    "alt_name:he": "בורגר 300",
+    "amenity": "cafe",
+    "contact:facebook": "nechamavahetzi",
+    "contact:instagram": "nechamavahetzi",
+    "cuisine": "coffee_shop",
+    "delivery": "yes",
+    "diet:gluten_free": "yes",
+    "diet:kosher": "no",
+    "diet:vegan": "yes",
+    "diet:vegetarian": "yes",
+    "internet_access": "wlan",
+    "name": "נחמה וחצי",
+    "name:en": "Nehama VaHetsi",
+    "name:he": "נחמה וחצי",
+    "outdoor_seating": "yes",
+    "phone": "+972 3 685 2326",
+    "source": "Tel Aviv municipality"
+  }
+},
+{
+  "type": "node",
+  "id": 2079069904,
+  "lat": 32.0784825,
+  "lon": 34.7870000,
+  "tags": {
+    "addr:city": "תל אביב-יפו",
+    "addr:housenumber": "4",
+    "addr:street": "ברקוביץ",
+    "amenity": "restaurant",
+    "name:en": "Toto",
+    "name:ru": "Тото",
+    "source": "Tel Aviv municipality"
+  }
+},
+{
+  "type": "node",
+  "id": 2142642602,
+  "lat": 32.0717361,
+  "lon": 34.7794644,
+  "tags": {
+    "amenity": "cafe",
+    "cuisine": "coffee_shop",
+    "name": "קפה אסקוט",
+    "name:he": "קפה אסקוט"
+  }
+},
+{
+  "type": "node",
+  "id": 2142643229,
+  "lat": 32.0724667,
+  "lon": 34.7784024,
+  "tags": {
+    "addr:street": "שדרות בן ציון",
+    "amenity": "cafe",
+    "cuisine": "coffee_shop",
+    "name": "קפה בר הבימה",
+    "name:en": "Cafe Bar HaBima",
+    "name:he": "קפה בר הבימה"
+  }
+},
+{
+  "type": "node",
+  "id": 2333406706,
+  "lat": 32.0765476,
+  "lon": 34.7769073,
+  "tags": {
+    "amenity": "cafe"
+  }
+},
+{
+  "type": "node",
+  "id": 2468151850,
+  "lat": 32.0774643,
+  "lon": 34.7745049,
+  "tags": {
+    "amenity": "restaurant",
+    "check_date": "2025-11-30",
+    "contact:phone": "+97236033117",
+    "name": "לה-שוק",
+    "name:en": "La Shuk",
+    "name:he": "לה-שוק",
+    "opening_hours": "Mo-Su 12:00-23:30"
+  }
+},
+{
+  "type": "node",
+  "id": 2488604194,
+  "lat": 32.0861604,
+  "lon": 34.7788166,
+  "tags": {
+    "amenity": "cafe",
+    "name": "Cafe Arlosorov",
+    "name:en": "Cafe Arlosorov"
+  }
+},
+{
+  "type": "node",
+  "id": 2488604195,
+  "lat": 32.0857652,
+  "lon": 34.7790670,
+  "tags": {
+    "addr:housenumber": "76",
+    "addr:street": "ארלוזורוב",
+    "amenity": "cafe",
+    "name": "Eazy Cafe",
+    "name:en": "Eazy Cafe",
+    "outdoor_seating": "yes",
+    "website": "https://www.eazycafe.co.il/"
+  }
+},
+{
+  "type": "node",
+  "id": 2488604312,
+  "lat": 32.0783684,
+  "lon": 34.7832534,
+  "tags": {
+    "amenity": "cafe",
+    "name": "Safsal",
+    "name:he": "ספסל",
+    "outdoor_seating": "yes",
+    "phone": "+972545666677",
+    "website": "https://www.facebook.com/safsalbg"
+  }
+},
+{
+  "type": "node",
+  "id": 2500253394,
+  "lat": 32.0768965,
+  "lon": 34.7865659,
+  "tags": {
+    "amenity": "restaurant",
+    "name": "Cafe Ariela",
+    "opening_hours": "08:00 - 21:00",
+    "outdoor_seating": "yes"
+  }
+},
+{
+  "type": "node",
+  "id": 2500253405,
+  "lat": 32.0850198,
+  "lon": 34.7723079,
+  "tags": {
+    "addr:city:en": "Tel Aviv",
+    "amenity": "cafe"
+  }
+},
+{
+  "type": "node",
+  "id": 2587900912,
+  "lat": 32.0846796,
+  "lon": 34.7724986,
+  "tags": {
+    "amenity": "restaurant",
+    "cuisine": "japanese",
+    "name": "אצה",
+    "name:en": "Atza",
+    "name:he": "אצה"
+  }
+},
+{
+  "type": "node",
+  "id": 2837962901,
+  "lat": 32.0793910,
+  "lon": 34.7815197,
+  "tags": {
+    "amenity": "restaurant",
+    "cuisine": "hawaiian",
+    "diet:kosher": "only",
+    "name": "PokeShop",
+    "name:en": "PokeShop",
+    "outdoor_seating": "yes",
+    "takeaway": "yes"
+  }
+},
+{
+  "type": "node",
+  "id": 3465151092,
+  "lat": 32.0730337,
+  "lon": 34.7862995,
+  "tags": {
+    "addr:city": "תל אביב-יפו",
+    "addr:housenumber": "22",
+    "addr:street": "קפלן אליעזר",
+    "amenity": "restaurant",
+    "cuisine": "italian",
+    "delivery": "yes",
+    "diet:kosher": "no",
+    "name": "Piazza Rustico",
+    "name:en": "Piazza Rustico",
+    "opening_hours": "Su-Sa 12:00-22:00",
+    "phone": "+972 03-5588654",
+    "takeaway": "yes",
+    "website": "https://www.rustico.co.il/",
+    "wheelchair": "yes"
+  }
+},
+{
+  "type": "node",
+  "id": 4033655490,
+  "lat": 32.0817447,
+  "lon": 34.7815183,
+  "tags": {
+    "amenity": "restaurant",
+    "internet_access": "wlan",
+    "internet_access:fee": "no",
+    "name": "בר גוריון",
+    "name:en": "Bar Gurion",
+    "name:he": "בר גוריון",
+    "toilets": "yes"
+  }
+},
+{
+  "type": "node",
+  "id": 4065946136,
+  "lat": 32.0731765,
+  "lon": 34.7796105,
+  "tags": {
+    "amenity": "cafe",
+    "brand": "קפה לנדוור",
+    "brand:en": "Landwer Coffee",
+    "brand:he": "קפה לנדוור",
+    "brand:wikidata": "Q6485288",
+    "cuisine": "coffee_shop",
+    "name": "לנדוור",
+    "name:en": "Landwer",
+    "name:he": "לנדוור",
+    "outdoor_seating": "yes",
+    "takeaway": "yes",
+    "toilets:wheelchair": "yes",
+    "wheelchair": "yes"
+  }
+},
+{
+  "type": "node",
+  "id": 4112079600,
+  "lat": 32.0744388,
+  "lon": 34.7815117,
+  "tags": {
+    "addr:city": "תל אביב-יפו",
+    "addr:housenumber": "27",
+    "addr:street": "אבן גבירול",
+    "amenity": "restaurant",
+    "cuisine": "regional",
+    "internet_access": "wlan",
+    "name": "DOK",
+    "name:en": "DOK",
+    "name:he": "דוֹק"
+  }
+},
+{
+  "type": "node",
+  "id": 4377141791,
+  "lat": 32.0792187,
+  "lon": 34.7737492,
+  "tags": {
+    "addr:housenumber": "99",
+    "addr:street": "דיזנגוף",
+    "amenity": "restaurant",
+    "name": "פיאצה",
+    "name:en": "Piazza",
+    "name:he": "פיאצה",
+    "opening_hours": "Mo-Su 12:00-00:00",
+    "phone": "+97235274488"
+  }
+},
+{
+  "type": "node",
+  "id": 4486515206,
+  "lat": 32.0850605,
+  "lon": 34.7819181,
+  "tags": {
+    "amenity": "restaurant",
+    "capacity": "50",
+    "cuisine": "breakfast",
+    "delivery": "yes",
+    "name": "The Streets",
+    "name:en": "The Streets",
+    "phone": "+972 3 5281616",
+    "smoking": "outside",
+    "takeaway": "yes",
+    "website": "http://thestreets.co.il/streets-ibn-gbirol/"
+  }
+},
+{
+  "type": "node",
+  "id": 4587267164,
+  "lat": 32.0732871,
+  "lon": 34.7824773,
+  "tags": {
+    "addr:housenumber": "4",
+    "addr:street": "אליעזר קפלן",
+    "amenity": "cafe",
+    "name": "Stampa",
+    "name:en": "Stampa",
+    "name:ru": "Стампа"
+  }
+},
+{
+  "type": "node",
+  "id": 4587267189,
+  "lat": 32.0721291,
+  "lon": 34.7816700,
+  "tags": {
+    "addr:housenumber": "9",
+    "addr:street": "אבן גבירול",
+    "amenity": "cafe",
+    "internet_access": "wlan",
+    "name": "Knaffex",
+    "website": "https://m.facebook.com/Knaffex/"
+  }
+},
+{
+  "type": "node",
+  "id": 4922283576,
+  "lat": 32.0823134,
+  "lon": 34.7715047,
+  "tags": {
+    "amenity": "cafe",
+    "name": "Xo Ho",
+    "name:en": "Xo Ho"
+  }
+},
+{
+  "type": "node",
+  "id": 4922283687,
+  "lat": 32.0838402,
+  "lon": 34.7720398,
+  "tags": {
+    "amenity": "cafe",
+    "name": "Rochale",
+    "name:en": "Rochale"
+  }
+},
+{
+  "type": "node",
+  "id": 4988213724,
+  "lat": 32.0795681,
+  "lon": 34.7749563,
+  "tags": {
+    "addr:city": "תל אביב-יפו",
+    "addr:housenumber": "54",
+    "addr:postcode": "6439505",
+    "addr:street": "פרישמן",
+    "amenity": "restaurant",
+    "contact:email": "cafe.anastasia@gmail.com",
+    "diet:vegan": "only",
+    "name": "אנסטסיה",
+    "name:en": "Anastasia",
+    "opening_hours": "Mo-Th, Su 08:30-22:00; Fr 08:30-16:30; Sa 09:30-16:00",
+    "phone": "+972 35290095",
+    "website": "https://www.anastasiatlv.co.il"
+  }
+},
+{
+  "type": "node",
+  "id": 5018171922,
+  "lat": 32.0739289,
+  "lon": 34.7815711,
+  "tags": {
+    "amenity": "restaurant",
+    "name": "מיזנון",
+    "name:en": "Beer Cafe",
+    "name:he": "מיזנון"
+  }
+},
+{
+  "type": "node",
+  "id": 5229027068,
+  "lat": 32.0745972,
+  "lon": 34.7839602,
+  "tags": {
+    "amenity": "restaurant",
+    "name": "דובנוב",
+    "name:en": "Dubnov",
+    "name:he": "דובנוב"
+  }
+},
+{
+  "type": "node",
+  "id": 5286203543,
+  "lat": 32.0819521,
+  "lon": 34.7710008,
+  "tags": {
+    "addr:housenumber": "94",
+    "addr:street": "בן יהודה",
+    "amenity": "restaurant",
+    "name:en": "Shakshukia"
+  }
+},
+{
+  "type": "node",
+  "id": 5288387321,
+  "lat": 32.0753443,
+  "lon": 34.7826070,
+  "tags": {
+    "amenity": "restaurant",
+    "cuisine": "indian",
+    "indoor_seating": "yes",
+    "level": "0",
+    "name": "אינדירה",
+    "name:en": "Indira",
+    "name:he": "אינדירה"
+  }
+},
+{
+  "type": "node",
+  "id": 5288387421,
+  "lat": 32.0753396,
+  "lon": 34.7825448,
+  "tags": {
+    "addr:housenumber": "4",
+    "addr:street": "שאול המלך",
+    "amenity": "restaurant",
+    "contact:email": "admin@wok-republic.com",
+    "cuisine": "asian",
+    "diet:vegan": "limited",
+    "diet:vegetarian": "yes",
+    "indoor_seating": "yes",
+    "level": "0",
+    "name:en": "Wok Republic",
+    "opening_hours": "Mo-We, Su 11:00-00:00; Th-Sa 11:00-02:00",
+    "outdoor_seating": "yes",
+    "payment:credit_cards": "yes",
+    "phone": "+972 3 6969629",
+    "website": "https://wok-republic.com"
+  }
+},
+{
+  "type": "node",
+  "id": 5291178728,
+  "lat": 32.0789883,
+  "lon": 34.7743682,
+  "tags": {
+    "amenity": "cafe",
+    "brand": "Cofix",
+    "brand:en": "Cofix",
+    "brand:he": "קפויקס",
+    "brand:wikidata": "Q16132717",
+    "cuisine": "coffee_shop",
+    "name": "Cofix",
+    "name:en": "Cofix",
+    "name:he": "קופיקס",
+    "name:ru": "Кофикс",
+    "takeaway": "yes"
+  }
+},
+{
+  "type": "node",
+  "id": 5327394821,
+  "lat": 32.0837600,
+  "lon": 34.7720109,
+  "tags": {
+    "amenity": "restaurant",
+    "internet_access": "wlan",
+    "name:en": "Agadir Burger"
+  }
+},
+{
+  "type": "node",
+  "id": 6150200748,
+  "lat": 32.0845692,
+  "lon": 34.7744622,
+  "tags": {
+    "addr:city": "Tel Aviv",
+    "addr:housenumber": "166",
+    "addr:street": "דיזנגוף",
+    "alt_name": "סוזו אנד סונס;סוסו אנד סונס;סוזו ובניו",
+    "alt_name:en": "SUSU and Sons",
+    "amenity": "restaurant",
+    "contact:instagram": "https://www.instagram.com/susuandsons/",
+    "cuisine": "burger",
+    "email": "info@susu.co.il",
+    "name": "סוסו ובניו",
+    "name:en": "SUSU & Sons",
+    "name:he": "סוסו ובניו",
+    "opening_hours": "Su-Sa 12:00+",
+    "website": "https://susu.co.il/"
+  }
+},
+{
+  "type": "node",
+  "id": 6259224987,
+  "lat": 32.0801811,
+  "lon": 34.7797302,
+  "tags": {
+    "amenity": "restaurant",
+    "name:en": "Pizzeria"
+  }
+},
+{
+  "type": "node",
+  "id": 6406434987,
+  "lat": 32.0846943,
+  "lon": 34.7742589,
+  "tags": {
+    "addr:housenumber": "171",
+    "addr:street": "דיזנגוף",
+    "amenity": "restaurant",
+    "cuisine": "fish",
+    "name": "גוציה",
+    "name:en": "Goocha",
+    "name:he": "גוציה",
+    "opening_hours": "Sa-We 12:00-23:00; Th,Fr 12:00-00:00",
+    "phone": "+972 3-522-2886",
+    "website": "http://goocha.co.il"
+  }
+},
+{
+  "type": "node",
+  "id": 6653255086,
+  "lat": 32.0760106,
+  "lon": 34.7765096,
+  "tags": {
+    "amenity": "restaurant",
+    "name:en": "EatMeat"
+  }
+},
+{
+  "type": "node",
+  "id": 6771850686,
+  "lat": 32.0775739,
+  "lon": 34.7738632,
+  "tags": {
+    "addr:housenumber": "72",
+    "addr:street": "Pinsker Street",
+    "amenity": "cafe",
+    "name": "Jekyll and Hyde",
+    "name:en": "Jekyll and Hyde",
+    "opening_hours": "Mo-Th 08:00-00:00; Fr 09:00-22:00; Sa 10:30-00:30; Su 09:00-00:00",
+    "phone": "+972-3-550-0508",
+    "website": "https://www.facebook.com/Hydetlv/"
+  }
+},
+{
+  "type": "node",
+  "id": 6814321296,
+  "lat": 32.0827736,
+  "lon": 34.7738308,
+  "tags": {
+    "addr:housenumber": "145",
+    "addr:street": "דיזנגוף",
+    "amenity": "cafe",
+    "cuisine": "pizza",
+    "name:en": "GaliRoma Pizza",
+    "phone": "+972 72-338-6908",
+    "website": "http://galiromapizza.co.il"
+  }
+},
+{
+  "type": "node",
+  "id": 6932290785,
+  "lat": 32.0717295,
+  "lon": 34.7794290,
+  "tags": {
+    "amenity": "restaurant",
+    "name": "Milgo Milbar",
+    "name:en": "Milgo Milbar"
+  }
+},
+{
+  "type": "node",
+  "id": 6994403485,
+  "lat": 32.0774155,
+  "lon": 34.7766313,
+  "tags": {
+    "addr:housenumber": "12",
+    "addr:postcode": "6437712",
+    "addr:street": "שלמה המלך",
+    "amenity": "cafe",
+    "cuisine": "coffee_shop",
+    "internet_access": "wlan",
+    "name:en": "Cafelix",
+    "opening_hours": "Mo-Su 07:00-19:00",
+    "phone": "+97235250388",
+    "website": "https://cafelix.de/"
+  }
+},
+{
+  "type": "node",
+  "id": 7107309806,
+  "lat": 32.0855122,
+  "lon": 34.7724841,
+  "tags": {
+    "addr:city:en": "Tel Aviv",
+    "amenity": "restaurant",
+    "cuisine": "arab",
+    "name": "Abu Zaki",
+    "name:en": "Abu Zaki"
+  }
+},
+{
+  "type": "node",
+  "id": 7194886836,
+  "lat": 32.0750294,
+  "lon": 34.7838325,
+  "tags": {
+    "addr:city": "תל אביב-יפו",
+    "addr:housenumber": "10",
+    "addr:street": "דובנוב",
+    "alt_name": "אלתר נתיב",
+    "amenity": "restaurant",
+    "name": "אלתרנתיב",
+    "name:en": "Alternative",
+    "name:he": "אלתרנתיב",
+    "opening_hours": "Su-Th 07:30-24:00; Fr 07:00-15:30; Sa 20:00-24:00",
+    "phone": "+972 3-695-0567",
+    "website": "http://alter-native.co.il"
+  }
+},
+{
+  "type": "node",
+  "id": 7524489151,
+  "lat": 32.0744425,
+  "lon": 34.7839340,
+  "tags": {
+    "amenity": "cafe",
+    "name": "דובנוב 8",
+    "name:he": "דובנוב 8"
+  }
+},
+{
+  "type": "node",
+  "id": 7677654260,
+  "lat": 32.0798781,
+  "lon": 34.7752713,
+  "tags": {
+    "addr:city": "תל אביב-יפו",
+    "addr:housenumber": "20",
+    "addr:street": "ריינס",
+    "addr:street:en": "Reines",
+    "alt_name:en": "Nahat Coffee",
+    "amenity": "cafe",
+    "internet_access": "yes",
+    "name": "Nahat",
+    "name:en": "Nahat",
+    "outdoor_seating": "yes",
+    "website": "https://www.nahatcoffee.com/"
+  }
+},
+{
+  "type": "node",
+  "id": 8834814717,
+  "lat": 32.0789941,
+  "lon": 34.7737962,
+  "tags": {
+    "amenity": "restaurant",
+    "name:en": "Concierge",
+    "phone": "035223340"
+  }
+},
+{
+  "type": "node",
+  "id": 9113990169,
+  "lat": 32.0724639,
+  "lon": 34.7743158,
+  "tags": {
+    "addr:city": "תל אביב-יפו",
+    "addr:housenumber": "32",
+    "amenity": "restaurant",
+    "check_date": "2026-02-07",
+    "diet:vegan": "only",
+    "drinking_water": "yes",
+    "internet_access": "yes",
+    "internet_access:fee": "no",
+    "internet_access:type": "wifi",
+    "name": "Goodness",
+    "vending": "drinks"
+  }
+},
+{
+  "type": "node",
+  "id": 9159258217,
+  "lat": 32.0760169,
+  "lon": 34.7751876,
+  "tags": {
+    "amenity": "restaurant",
+    "cuisine": "japanese",
+    "name:en": "Kitto Katto",
+    "phone": "97237781101",
+    "website": "https://www.kittokattotlv.com/"
+  }
+},
+{
+  "type": "node",
+  "id": 9350046743,
+  "lat": 32.0849534,
+  "lon": 34.7853555,
+  "tags": {
+    "addr:city": "תל אביב-יפו",
+    "addr:housenumber": "97",
+    "addr:street": "ארלוזורוב",
+    "amenity": "cafe",
+    "cuisine": "coffee_shop",
+    "name": "מתוקה",
+    "name:en": "Metuka",
+    "name:he": "מתוקה",
+    "outdoor_seating": "yes",
+    "phone": "+972 3 503-2603",
+    "website": "https://www.metuka.co.il/branches/מתוקה-רמת-גן-בקרוב/"
+  }
+},
+{
+  "type": "node",
+  "id": 9597836918,
+  "lat": 32.0765597,
+  "lon": 34.7856456,
+  "tags": {
+    "amenity": "restaurant",
+    "cuisine": "italian;pasta;pizza;seafood;spanish",
+    "name": "אוליברי",
+    "name:en": "Olivery",
+    "name:he": "אוליברי",
+    "outdoor_seating": "yes",
+    "reservation": "recommended",
+    "smoking": "outside",
+    "toilets": "yes",
+    "toilets:access": "customers",
+    "website": "https://www.olivery.co.il"
+  }
+},
+{
+  "type": "node",
+  "id": 9865541170,
+  "lat": 32.0798913,
+  "lon": 34.7744058,
+  "tags": {
+    "addr:city": "תל אביב-יפו",
+    "addr:housenumber": "43",
+    "addr:street": "פרישמן",
+    "amenity": "cafe",
+    "internet_access": "yes",
+    "internet_access:fee": "no",
+    "name": "העוגן",
+    "name:en": "HaOgen",
+    "name:he": "העוגן",
+    "opening_hours": "Su-To 07:00-19:00; Fr 07:00-13:00",
+    "outdoor_seating": "patio",
+    "phone": "03-6212103",
+    "website": "https://haogentlv.com/עברית",
+    "wheelchair": "limited"
+  }
+},
+{
+  "type": "node",
+  "id": 9996938457,
+  "lat": 32.0796317,
+  "lon": 34.7735102,
+  "tags": {
+    "amenity": "restaurant",
+    "name": "Frischman"
+  }
+},
+{
+  "type": "node",
+  "id": 9996989783,
+  "lat": 32.0794556,
+  "lon": 34.7736994,
+  "tags": {
+    "amenity": "restaurant",
+    "name": "Jusa"
+  }
+},
+{
+  "type": "node",
+  "id": 10034263918,
+  "lat": 32.0783465,
+  "lon": 34.7736270,
+  "tags": {
+    "addr:city": "תל אביב-יפו",
+    "addr:housenumber": "13",
+    "addr:street": "בן עמי",
+    "amenity": "restaurant",
+    "cuisine": "burger",
+    "delivery": "yes",
+    "diet:gluten_free": "yes",
+    "diet:kosher": "no",
+    "diet:vegan": "yes",
+    "diet:vegetarian": "yes",
+    "name": "Meat Bar Burger - Dizengoff",
+    "name:en": "Meet Bar Burger - Dizengoff",
+    "name:he": "מיט בר בורגר - דיזינגוף",
+    "opening_hours": "Mo-Su 12:00-00:00",
+    "outdoor_seating": "yes",
+    "takeaway": "yes",
+    "toilets": "yes",
+    "website": "https://www.mbburgers.com"
+  }
+},
+{
+  "type": "node",
+  "id": 10279205412,
+  "lat": 32.0776228,
+  "lon": 34.7814909,
+  "tags": {
+    "amenity": "cafe",
+    "name:en": "Bretonne"
+  }
+},
+{
+  "type": "node",
+  "id": 10759261454,
+  "lat": 32.0772320,
+  "lon": 34.7861023,
+  "tags": {
+    "amenity": "restaurant",
+    "name": "Pastell"
+  }
+},
+{
+  "type": "node",
+  "id": 10784964980,
+  "lat": 32.0782902,
+  "lon": 34.7886358,
+  "tags": {
+    "amenity": "cafe",
+    "brand": "Arcaffe",
+    "brand:en": "Arcaffe",
+    "brand:he": "ארקפה",
+    "brand:wikidata": "Q2897147",
+    "cuisine": "coffee_shop",
+    "name": "Arcaffe",
+    "name:en": "Arcaffe",
+    "name:he": "ארקפה",
+    "takeaway": "yes"
+  }
+},
+{
+  "type": "node",
+  "id": 10795083145,
+  "lat": 32.0773689,
+  "lon": 34.7889942,
+  "tags": {
+    "amenity": "restaurant",
+    "diet:kosher": "yes",
+    "name": "Meatos Grill & Bar",
+    "outdoor_seating": "yes"
+  }
+},
+{
+  "type": "node",
+  "id": 10825033512,
+  "lat": 32.0830325,
+  "lon": 34.7892753,
+  "tags": {
+    "amenity": "cafe",
+    "name": "לוצ'ה",
+    "name:en": "Lucha",
+    "name:he": "לוצ'ה"
+  }
+},
+{
+  "type": "node",
+  "id": 10932046652,
+  "lat": 32.0778393,
+  "lon": 34.7779888,
+  "tags": {
+    "addr:housenumber": "105",
+    "addr:street": "המלך ג'ורג'",
+    "amenity": "restaurant",
+    "contact:facebook": "https://www.facebook.com/kaparamio/",
+    "cuisine": "italian;pasta;salad",
+    "delivery": "yes",
+    "name": "Kapara Mio",
+    "name:en": "Kapara Mio",
+    "opening_hours": "Su-Th 12:30-16:30, 17:00-23:30; Sa 18:00-23:30; ",
+    "phone": "+972586614940",
+    "website": "https://www.instagram.com/kaparamio/"
+  }
+},
+{
+  "type": "node",
+  "id": 10968175320,
+  "lat": 32.0750657,
+  "lon": 34.7819489,
+  "tags": {
+    "amenity": "cafe",
+    "check_date": "2023-06-10",
+    "diet:kosher": "only",
+    "name": "Bread Station"
+  }
+},
+{
+  "type": "node",
+  "id": 10968175321,
+  "lat": 32.0753218,
+  "lon": 34.7821617,
+  "tags": {
+    "amenity": "cafe",
+    "brand": "ארומה",
+    "brand:en": "Aroma Espresso Bar",
+    "brand:he": "ארומה",
+    "brand:wikidata": "Q2909872",
+    "check_date": "2023-06-10",
+    "cuisine": "coffee_shop",
+    "diet:kosher": "no",
+    "name": "ארומה",
+    "name:en": "Aroma Espresso Bar",
+    "name:he": "ארומה",
+    "outdoor_seating": "yes",
+    "takeaway": "yes"
+  }
+},
+{
+  "type": "node",
+  "id": 10969248308,
+  "lat": 32.0827708,
+  "lon": 34.7712232,
+  "tags": {
+    "addr:housenumber": "89",
+    "addr:street": "בן יהודה",
+    "amenity": "cafe",
+    "contact:facebook": "https://www.facebook.com/Mochikva/",
+    "contact:instagram": "https://www.instagram.com/mochikva/",
+    "cuisine": "bubble_tea",
+    "delivery": "yes",
+    "name": "Mochikva",
+    "name:en": "Mochikva",
+    "opening_hours": "Su-Th 12:00-21:00; Fr 11:00-15:30",
+    "phone": "+972539314321",
+    "website": "https://www.mochikva.com"
+  }
+},
+{
+  "type": "node",
+  "id": 11032180205,
+  "lat": 32.0767097,
+  "lon": 34.7704277,
+  "tags": {
+    "addr:housenumber": "31",
+    "addr:street": "בוגרשוב",
+    "amenity": "restaurant",
+    "cuisine": "japanese",
+    "name": "ליי פו",
+    "name:en": "Lai Fu",
+    "name:he": "ליי פו",
+    "website": "https://laifu.co.il/"
+  }
+},
+{
+  "type": "node",
+  "id": 11063336012,
+  "lat": 32.0819252,
+  "lon": 34.7725650,
+  "tags": {
+    "amenity": "cafe",
+    "name": "Fika",
+    "name:en": "Fika",
+    "name:he": "פיקה",
+    "phone": "+972 3 522 9505",
+    "website": "https://www.fika.co.il/"
+  }
+},
+{
+  "type": "node",
+  "id": 11085880105,
+  "lat": 32.0827711,
+  "lon": 34.7738190,
+  "tags": {
+    "amenity": "restaurant",
+    "cuisine": "jewish",
+    "indoor_seating": "yes",
+    "name": "Keton",
+    "name:ru": "Китон",
+    "outdoor_seating": "yes"
+  }
+},
+{
+  "type": "node",
+  "id": 11085914106,
+  "lat": 32.0828112,
+  "lon": 34.7738384,
+  "tags": {
+    "amenity": "restaurant",
+    "name:ru": "Китон",
+    "phone": "03-523-3679"
+  }
+},
+{
+  "type": "node",
+  "id": 11088954278,
+  "lat": 32.0834192,
+  "lon": 34.7893331,
+  "tags": {
+    "addr:city": "תל אביב-יפו",
+    "addr:housenumber": "20",
+    "addr:street": "ויצמן",
+    "amenity": "cafe",
+    "contact:facebook": "betlehem.tlv",
+    "name": "בית לחם",
+    "name:en": "Bethlehem",
+    "name:he": "בית לחם",
+    "outdoor_seating": "yes"
+  }
+},
+{
+  "type": "node",
+  "id": 11163232373,
+  "lat": 32.0839689,
+  "lon": 34.7894083,
+  "tags": {
+    "amenity": "cafe",
+    "diet:kosher": "only",
+    "name": "מיצלי",
+    "name:he": "מיצלי"
+  }
+},
+{
+  "type": "node",
+  "id": 11169880831,
+  "lat": 32.0816593,
+  "lon": 34.7897501,
+  "tags": {
+    "amenity": "cafe",
+    "brand": "רולדין",
+    "brand:en": "Roladin",
+    "brand:he": "רולדין",
+    "brand:wikidata": "Q18390972",
+    "cuisine": "coffee_shop",
+    "diet:kosher": "only",
+    "internet_access": "yes",
+    "level": "0",
+    "name": "רולדין",
+    "name:en": "Roladin",
+    "name:he": "רולדין",
+    "opening_hours": "Su-Th 06:30-21:00; Fr 06:30-15:00",
+    "outdoor_seating": "no",
+    "phone": "+972 3 647 4692",
+    "shop": "bakery",
+    "takeaway": "yes",
+    "website": "https://www.roladin.co.il/סניפים/איכילוב-וייצמן-סיטי/",
+    "wheelchair": "yes"
+  }
+},
+{
+  "type": "node",
+  "id": 11169886012,
+  "lat": 32.0816034,
+  "lon": 34.7892930,
+  "tags": {
+    "addr:city": "תל אביב-יפו",
+    "addr:housenumber": "14",
+    "addr:street": "ויצמן",
+    "amenity": "cafe",
+    "brand": "ארומה",
+    "brand:en": "Aroma Espresso Bar",
+    "brand:he": "ארומה",
+    "brand:wikidata": "Q2909872",
+    "cuisine": "coffee_shop",
+    "diet:kosher": "only",
+    "level": "0",
+    "name": "ארומה",
+    "name:en": "Aroma Espresso Bar",
+    "name:he": "ארומה",
+    "opening_hours": "Su-Th 06:30-22:00; Fr 06:30-16:30",
+    "outdoor_seating": "yes",
+    "phone": "+972 54 803 5009",
+    "takeaway": "yes",
+    "website": "https://www.aroma.co.il/store/ויצמן-סיטי-איכילוב/"
+  }
+},
+{
+  "type": "node",
+  "id": 11197441049,
+  "lat": 32.0750316,
+  "lon": 34.7753555,
+  "tags": {
+    "amenity": "cafe",
+    "brand": "רולדין",
+    "brand:en": "Roladin",
+    "brand:he": "רולדין",
+    "brand:wikidata": "Q18390972",
+    "cuisine": "coffee_shop",
+    "name": "רולדין",
+    "name:en": "Roladin",
+    "name:he": "רולדין",
+    "takeaway": "yes"
+  }
+},
+{
+  "type": "node",
+  "id": 11217646701,
+  "lat": 32.0791866,
+  "lon": 34.7811218,
+  "tags": {
+    "amenity": "restaurant",
+    "cuisine": "italian",
+    "name": "Olio"
+  }
+},
+{
+  "type": "node",
+  "id": 11228802046,
+  "lat": 32.0793630,
+  "lon": 34.7809386,
+  "tags": {
+    "amenity": "restaurant",
+    "name": "Joseph 'N' Sons"
+  }
+},
+{
+  "type": "node",
+  "id": 11513852130,
+  "lat": 32.0773739,
+  "lon": 34.7815216,
+  "tags": {
+    "amenity": "cafe",
+    "diet:kosher": "no",
+    "name": "Cafe Chablis",
+    "outdoor_seating": "yes",
+    "takeaway": "yes"
+  }
+},
+{
+  "type": "node",
+  "id": 12154646406,
+  "lat": 32.0717508,
+  "lon": 34.7794397,
+  "tags": {
+    "addr:housenumber": "4",
+    "addr:street": "מרמורק",
+    "amenity": "cafe",
+    "name": "לחמנינה",
+    "name:en": "Lachmanina",
+    "opening_hours": "Mo-Th, Su 07:30-20:30; Fr 07:00-17:00",
+    "website": "https://lachmanina.co.il/"
+  }
+},
+{
+  "type": "node",
+  "id": 12190019847,
+  "lat": 32.0871766,
+  "lon": 34.7747817,
+  "tags": {
+    "addr:city": "תל אביב",
+    "addr:housenumber": "197",
+    "addr:street": "דיזנגוף",
+    "amenity": "cafe",
+    "contact:facebook": "NolaAmericanBakery",
+    "contact:instagram": "nola_american_bakery",
+    "cuisine": "bagel;pancake;salad",
+    "delivery": "yes",
+    "diet:gluten_free": "yes",
+    "diet:kosher": "no",
+    "diet:vegetarian": "yes",
+    "email": "nola.american.bakery@gmail.com",
+    "name": "NOLA American Bakery",
+    "name:en": "NOLA American Bakery",
+    "opening_hours": "Su-Sa 07:00-16:00",
+    "outdoor_seating": "yes",
+    "phone": "+972 3 523 0527",
+    "reservation": "no",
+    "website": "https://www.nola-b.co.il/",
+    "website:menu": "https://www.nola-b.co.il/%D7%AA%D7%A4%D7%A8%D7%99%D7%98%D7%99%D7%9D.html"
+  }
+},
+{
+  "type": "node",
+  "id": 12473122363,
+  "lat": 32.0797745,
+  "lon": 34.7695000,
+  "tags": {
+    "amenity": "restaurant",
+    "diet:kosher": "only",
+    "indoor_seating": "yes",
+    "outdoor_seating": "no"
+  }
+},
+{
+  "type": "node",
+  "id": 12593349659,
+  "lat": 32.0844056,
+  "lon": 34.7736355,
+  "tags": {
+    "addr:city": "Tel Aviv",
+    "addr:housenumber": "34",
+    "addr:street": "שדרות דוד בן גוריון",
+    "amenity": "restaurant",
+    "contact:instagram": "guido_rest",
+    "cuisine": "italian",
+    "delivery": "yes",
+    "diet:kosher": "no",
+    "name": "גווידו",
+    "name:en": "Guido",
+    "name:he": "גווידו",
+    "opening_hours": "Su-Sa 12:00-23:00",
+    "reservation": "yes",
+    "reservation:website": "https://tabitisrael.co.il/%D7%94%D7%96%D7%9E%D7%A0%D7%AA-%D7%9E%D7%A7%D7%95%D7%9D/create-reservation",
+    "takeaway": "yes",
+    "toilets": "yes"
+  }
+},
+{
+  "type": "node",
+  "id": 12593361312,
+  "lat": 32.0843086,
+  "lon": 34.7740535,
+  "tags": {
+    "addr:city": "Tel Aviv",
+    "addr:housenumber": "40",
+    "addr:street": "שדרות דוד בן גוריון",
+    "amenity": "restaurant",
+    "contact:facebook": "Yansushihouse",
+    "contact:instagram": "yan_tlv",
+    "cuisine": "sushi",
+    "delivery": "yes",
+    "diet:kosher": "no",
+    "name": "Yan",
+    "opening_hours": "Su-Fr 12:00-00:00; Sa 13:00-00:00",
+    "phone": "+972 3 794 3529",
+    "reservation": "yes",
+    "reservation:website": "https://ontopo.com/he/il/page/20214686",
+    "website": "https://www.yansushi.co.il/",
+    "wheelchair": "limited"
+  }
+},
+{
+  "type": "node",
+  "id": 12647212009,
+  "lat": 32.0825019,
+  "lon": 34.7740492,
+  "tags": {
+    "addr:housenumber": "140",
+    "addr:street": "דיזנגוף",
+    "amenity": "restaurant",
+    "contact:facebook": "https://www.facebook.com/marketdizingof/",
+    "cuisine": "indian;thai;moroccan;persian;french",
+    "diet:vegan": "yes",
+    "name": "Market Vegan",
+    "opening_hours": "Su-Th 09:00-21:00",
+    "phone": "+97235525808"
+  }
+},
+{
+  "type": "node",
+  "id": 12647744238,
+  "lat": 32.0721091,
+  "lon": 34.7820335,
+  "tags": {
+    "amenity": "restaurant",
+    "contact:facebook": "https://www.facebook.com/HameshorerHummus/",
+    "cuisine": "humus",
+    "delivery": "yes",
+    "diet:vegetarian": "yes",
+    "name": "Hummus HaMeshorer",
+    "phone": "03-687-8635"
+  }
+},
+{
+  "type": "node",
+  "id": 12722235801,
+  "lat": 32.0887442,
+  "lon": 34.7822777,
+  "tags": {
+    "addr:housenumber": "131",
+    "addr:street": "אבן גבירול",
+    "amenity": "cafe",
+    "cuisine": "coffee_shop",
+    "diet:vegan": "yes",
+    "diet:vegetarian": "yes",
+    "name": "קפה אווה",
+    "name:en": "Café Eva"
+  }
+},
+{
+  "type": "node",
+  "id": 12729335013,
+  "lat": 32.0763088,
+  "lon": 34.7712812,
+  "tags": {
+    "amenity": "cafe",
+    "name": "La Pane Bakery"
+  }
+},
+{
+  "type": "node",
+  "id": 12809524285,
+  "lat": 32.0857649,
+  "lon": 34.7747866,
+  "tags": {
+    "addr:city": "תל אביב",
+    "addr:housenumber": "190",
+    "addr:street": "דיזנגוף",
+    "amenity": "cafe",
+    "contact:facebook": "dizengoffcafe",
+    "contact:instagram": "dizengoff_cafe",
+    "name": "קפה דיזנגוף",
+    "name:en": "Cafe Dizengoff",
+    "name:he": "קפה דיזנגוף",
+    "opening_hours": "Su-Sa 08:00-00:00",
+    "phone": "+972 3 629 2408",
+    "reservation": "yes",
+    "reservation:website": "https://ontopo.com/he/il/page/73991020",
+    "website": "https://www.cafe-dizengoff.com/"
+  }
+},
+{
+  "type": "node",
+  "id": 12809538406,
+  "lat": 32.0862449,
+  "lon": 34.7745975,
+  "tags": {
+    "addr:city": "תל אביב",
+    "addr:housenumber": "189",
+    "addr:street": "דיזנגוף",
+    "amenity": "cafe",
+    "contact:instagram": "kirshcafe",
+    "cuisine": "breakfast",
+    "diet:kosher": "only",
+    "name": "Kirsh Cafe",
+    "name:en": "Kirsh Cafe",
+    "name:he": "קירש קפה",
+    "opening_hours": "Su-Th 07:00-23:00; Fr 07:00+",
+    "outdoor_seating": "yes",
+    "reservation": "no",
+    "toilets": "yes"
+  }
+},
+{
+  "type": "node",
+  "id": 12944761385,
+  "lat": 32.0732873,
+  "lon": 34.7833333,
+  "tags": {
+    "amenity": "restaurant",
+    "cuisine": "italian",
+    "name": "Taverna Romana",
+    "name:en": "Taverna Romana",
+    "name:he": "טברנה רומנה",
+    "website:menu": "https://taverrna-romana.web.delivery/en/menu/"
+  }
+},
+{
+  "type": "node",
+  "id": 12977855392,
+  "lat": 32.0843280,
+  "lon": 34.7744503,
+  "tags": {
+    "addr:city": "תל אביב-יפו",
+    "addr:housenumber": "42",
+    "addr:street": "שדרות דוד בן גוריון",
+    "amenity": "cafe",
+    "contact:instagram": "welikeyou_too",
+    "name": "We Like You Too",
+    "opening_hours": "Su-Th 07:30-19:00; Fr 07:30-17:00; Sa 08:00-19:00",
+    "outdoor_seating": "yes",
+    "takeaway": "yes",
+    "website": "https://wlyt.co.il/"
+  }
+},
+{
+  "type": "node",
+  "id": 13201707102,
+  "lat": 32.0816342,
+  "lon": 34.7739638,
+  "tags": {
+    "addr:housenumber": "130",
+    "addr:street": "דיזנגוף",
+    "amenity": "cafe",
+    "contact:instagram": "https://www.instagram.com/aniccatlv",
+    "email": "cafe.anicca@gmail.com",
+    "internet_access": "wlan",
+    "internet_access:fee": "no",
+    "name": "אניצ'ה",
+    "name:en": "Anicca",
+    "opening_hours": "Su-Th 08:30-23:00; Fr 8:30-16:30",
+    "outdoor_seating": "yes",
+    "phone": "+97277-3034144",
+    "toilets": "yes",
+    "website": "https://www.anicca.co.il/",
+    "website:menu": "https://www.anicca.co.il/english-menu"
+  }
+},
+{
+  "type": "node",
+  "id": 13301622273,
+  "lat": 32.0837848,
+  "lon": 34.7763077,
+  "tags": {
+    "addr:city": "תל אביב-יפו",
+    "addr:housenumber": "75",
+    "addr:street": "שדרות דוד בן גוריון",
+    "amenity": "cafe",
+    "contact:instagram": "eats_tlv",
+    "name": "Eats Cafeteria",
+    "name:en": "Eats Cafeteria",
+    "name:he": "איטס",
+    "outdoor_seating": "yes",
+    "phone": "+972 3 602 7888",
+    "start_date": "2017",
+    "website": "https://www.eatscafeteria.com/ben-gurion"
+  }
+},
+{
+  "type": "node",
+  "id": 13516609157,
+  "lat": 32.0775717,
+  "lon": 34.7739451,
+  "tags": {
+    "amenity": "cafe",
+    "name": "Plaza Café"
+  }
+},
+{
+  "type": "node",
+  "id": 13527184493,
+  "lat": 32.0775018,
+  "lon": 34.7741567,
+  "tags": {
+    "amenity": "cafe",
+    "indoor_seating": "yes",
+    "name": "Ilan's",
+    "outdoor_seating": "yes",
+    "wheelchair": "yes"
+  }
+},
+{
+  "type": "node",
+  "id": 13527207357,
+  "lat": 32.0798500,
+  "lon": 34.7741051,
+  "tags": {
+    "addr:housenumber": "41",
+    "amenity": "restaurant",
+    "indoor_seating": "yes",
+    "name": "Alibi",
+    "outdoor_seating": "yes"
+  }
+},
+{
+  "type": "node",
+  "id": 13530063787,
+  "lat": 32.0783081,
+  "lon": 34.7736773,
+  "tags": {
+    "addr:housenumber": "13",
+    "addr:street": "Ben Ami Street",
+    "amenity": "cafe",
+    "description": "Website menu with outdated prices. Avoid.",
+    "diet:vegan": "yes",
+    "diet:vegetarian": "yes",
+    "name": "May 6",
+    "opening_hours": "Fr 08:00-18:00; Mo-Th, Sa, Su 08:00-23:00",
+    "phone": "+972 722410551",
+    "website": "https://www.6inmay.co.il",
+    "website:menu": "https://www.6inmay.co.il/menu"
+  }
+},
+{
+  "type": "node",
+  "id": 13530068022,
+  "lat": 32.0788126,
+  "lon": 34.7741205,
+  "tags": {
+    "addr:housenumber": "98",
+    "addr:street": "דיזנגוף",
+    "amenity": "restaurant",
+    "cuisine": "sushi;noodles",
+    "diet:vegan": "yes",
+    "indoor_seating": "yes",
+    "name": "Sachi Ramen & Sushi",
+    "outdoor_seating": "sidewalk"
+  }
+},
+{
+  "type": "node",
+  "id": 13530087821,
+  "lat": 32.0789661,
+  "lon": 34.7740972,
+  "tags": {
+    "addr:housenumber": "98",
+    "amenity": "restaurant",
+    "indoor_seating": "yes",
+    "name": "Mayer Café",
+    "outdoor_seating": "limited",
+    "smoking": "outside"
+  }
+},
+{
+  "type": "node",
+  "id": 13532671475,
+  "lat": 32.0776295,
+  "lon": 34.7745744,
+  "tags": {
+    "amenity": "cafe",
+    "diet:vegan": "yes",
+    "diet:vegetarian": "yes",
+    "indoor_seating": "yes",
+    "name": "Buti",
+    "outdoor_seating": "yes",
+    "payment:credit_cards": "yes",
+    "wheelchair": "yes"
+  }
+},
+{
+  "type": "node",
+  "id": 13532692938,
+  "lat": 32.0776850,
+  "lon": 34.7729791,
+  "tags": {
+    "amenity": "cafe",
+    "name": "Goodboy"
+  }
+},
+{
+  "type": "node",
+  "id": 13899276701,
+  "lat": 32.0781152,
+  "lon": 34.7814926,
+  "tags": {
+    "addr:housenumber": "54א",
+    "addr:street": "אבן גבירול",
+    "amenity": "cafe",
+    "name": "Jera",
+    "opening_hours": "Sa-Th 07:00-20:00; Fr 07:00-15:00",
+    "website": "https://www.jera-coffee.co.il"
+  }
+},
+{
+  "type": "node",
+  "id": 14132970082,
+  "lat": 32.0784265,
+  "lon": 34.7744723,
+  "tags": {
+    "addr:city": "תל אביב-יפו",
+    "addr:housenumber": "1",
+    "addr:street": "ריינס",
+    "amenity": "cafe",
+    "cuisine": "coffee_shop",
+    "internet_access": "wlan",
+    "name": "Maison Kayser",
+    "opening_hours": "Su-Th 07:30-20:00; Fr 07:30-17:00; Sa 08:00-20:00",
+    "outdoor_seating": "yes",
+    "website": "https://www.kayser.co.il"
+  }
+},
+{
+  "type": "way",
+  "id": 149384937,
+  "center": {
+    "lat": 32.0834690,
+    "lon": 34.7816794
+  },
+  "nodes": [
+    1623712695,
+    1623712698,
+    1623712789,
+    9457846169,
+    9457846170,
+    1623712786,
+    9457846167,
+    9457846168,
+    1623712695
+  ],
+  "tags": {
+    "addr:city:en": "Tel Aviv",
+    "addr:housenumber": "100",
+    "addr:street": "אבן גבירול",
+    "amenity": "restaurant",
+    "building": "yes",
+    "name": "אמורה מיו",
+    "name:en": "Amora Mio",
+    "name:he": "אמורה מיו"
+  }
+}
+
+  ]
+}

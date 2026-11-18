@@ -7,10 +7,24 @@ import com.future.navigation.data.online.OpenApis
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import java.time.Instant
 import java.time.OffsetDateTime
+import java.time.ZoneId
 
 /** יציאה אחת מתחנה: מספר הקו, היעד, ובעוד כמה דקות (כולל זמן אמת כשיש). */
-data class StationDeparture(val line: String, val headsign: String, val minutesAway: Int)
+data class StationDeparture(
+    val line: String,
+    val headsign: String,
+    val minutesAway: Int,
+    /** מזהה הנסיעה (ל"לוח נסיעה מלא" של הקו), null אם לא ידוע. */
+    val tripId: String? = null,
+    /** שעת היציאה בשניות מחצות (שעון ישראל). */
+    val departsAtSeconds: Int? = null,
+    /** true כשהשעה מגיעה מזמן אמת ולא מהלו"ז. */
+    val realtime: Boolean = false,
+    /** רציף/מסלול, כשמשרד התחבורה מספק אותו. */
+    val platform: String? = null,
+)
 
 /** תחנה שנמצאה בחיפוש לפי שם, עם הקווים שעוברים בה (אם ידועים). */
 data class StationHit(val name: String, val location: LatLng, val lines: List<String>)
@@ -121,10 +135,16 @@ class ServerDepartures {
                 ?: "רכבת",
             headsign = row.text("headsign")?.replace('_', ' ')?.trim().orEmpty(),
             minutesAway = minutes,
+            tripId = row.text("tripId")?.takeIf { it.isNotBlank() },
+            departsAtSeconds = Instant.ofEpochMilli(departsAt).atZone(ISRAEL).toLocalTime().toSecondOfDay(),
+            realtime = row.bool("realTime"),
+            platform = place.text("platformCode")?.takeIf { it.isNotBlank() }
+                ?: place.text("track")?.takeIf { it.isNotBlank() },
         )
     }
 
     private companion object {
+        val ISRAEL: ZoneId = ZoneId.of("Asia/Jerusalem")
         const val NEAR_RADIUS_METERS = 500
         const val NEAR_COUNT = 60
         const val SAME_STATION_METERS = 150

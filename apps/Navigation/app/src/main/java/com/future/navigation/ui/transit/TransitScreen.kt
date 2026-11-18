@@ -32,6 +32,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -43,8 +47,17 @@ import com.future.navigation.data.gtfs.TransitLeg
 import com.future.sharednav.components.ScreenTopBar
 import com.future.sharednav.focus.FocusableItem
 
+/**
+ * onWalkTo: OK על רגל הליכה פותח ניווט ברגל אל נקודת הסיום שלה (תחנת העלייה,
+ * מעבר בין תחנות, או היעד). ברירת המחדל לא עושה כלום, כדי שהקריאה הקיימת תעבוד.
+ */
 @Composable
-fun TransitScreen(itinerary: TransitItinerary, onBack: () -> Unit) {
+fun TransitScreen(
+    itinerary: TransitItinerary,
+    onBack: () -> Unit,
+    onWalkTo: (name: String, location: com.future.navigation.data.common.LatLng) -> Unit = { _, _ -> },
+    onOpenTrip: (tripId: String, line: String, boardingStop: String) -> Unit = { _, _, _ -> },
+) {
     var expandedLeg by remember { mutableStateOf(-1) }
     val firstRideFocusRequester = remember { FocusRequester() }
     val firstRideIndex = remember(itinerary) { itinerary.legs.indexOfFirst { it.type == LegType.RIDE } }
@@ -139,7 +152,13 @@ fun TransitScreen(itinerary: TransitItinerary, onBack: () -> Unit) {
                     isLast = index == itinerary.legs.size - 1,
                     expanded = expandedLeg == index,
                     onToggleExpand = { expandedLeg = if (expandedLeg == index) -1 else index },
-                    focusRequester = if (index == firstRideIndex) firstRideFocusRequester else null
+                    focusRequester = if (index == firstRideIndex) firstRideFocusRequester else null,
+                    onWalk = leg.toLocation?.let { target ->
+                        { onWalkTo(leg.toStopName, target) }
+                    },
+                    onTrip = leg.tripId?.let { id ->
+                        { onOpenTrip(id, leg.routeShortName.orEmpty(), leg.fromStopName) }
+                    },
                 )
             }
         }
@@ -155,7 +174,15 @@ private fun Stat(label: String, value: String) {
 }
 
 @Composable
-private fun LegRow(leg: TransitLeg, isLast: Boolean, expanded: Boolean, onToggleExpand: () -> Unit, focusRequester: FocusRequester? = null) {
+private fun LegRow(
+    leg: TransitLeg,
+    isLast: Boolean,
+    expanded: Boolean,
+    onToggleExpand: () -> Unit,
+    focusRequester: FocusRequester? = null,
+    onWalk: (() -> Unit)? = null,
+    onTrip: (() -> Unit)? = null,
+) {
     Row(modifier = Modifier.fillMaxWidth()) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(38.dp)) {
             val badgeColor = when (leg.type) {
@@ -181,18 +208,48 @@ private fun LegRow(leg: TransitLeg, isLast: Boolean, expanded: Boolean, onToggle
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f).padding(bottom = 20.dp)) {
             if (leg.type == LegType.WALK) {
-                Text(tr("הליכה"), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
-                Text(
-                    tr("%d דק׳ · %d מ׳").format((leg.walkDurationSeconds ?: 0) / 60, (leg.walkDistanceMeters ?: 0.0).toInt()),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                )
+                val walkText: @Composable () -> Unit = {
+                    Column(modifier = Modifier.fillMaxWidth().padding(4.dp)) {
+                        Text(tr("הליכה"), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            tr("%d דק׳ · %d מ׳").format((leg.walkDurationSeconds ?: 0) / 60, (leg.walkDistanceMeters ?: 0.0).toInt()),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                        )
+                        if (onWalk != null) {
+                            Text(
+                                tr("ניווט ברגל אל {0} (OK)", leg.toStopName),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    }
+                }
+                if (onWalk != null) {
+                    // רגל הליכה שיש לה יעד: לחיצה (OK) פותחת ניווט ברגל אליו
+                    FocusableItem(
+                        onClick = onWalk,
+                        accentColor = MaterialTheme.colorScheme.primary,
+                        contentPadding = 0.dp,
+                    ) { walkText() }
+                } else {
+                    walkText()
+                }
             } else {
                 FocusableItem(
                     onClick = onToggleExpand,
                     accentColor = MaterialTheme.colorScheme.primary,
                     contentPadding = 0.dp,
-                    focusRequester = focusRequester
+                    focusRequester = focusRequester,
+                    // מקש 5 על קטע נסיעה פותח את לוח הנסיעה המלא של הקו (OK מרחיב תחנות)
+                    modifier = Modifier.onPreviewKeyEvent { event ->
+                        if (onTrip != null && event.type == KeyEventType.KeyDown && event.key == Key.Five) {
+                            onTrip()
+                            true
+                        } else {
+                            false
+                        }
+                    }
                 ) {
                     Column(modifier = Modifier.fillMaxWidth().padding(4.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -211,6 +268,7 @@ private fun LegRow(leg: TransitLeg, isLast: Boolean, expanded: Boolean, onToggle
                         val times = listOfNotNull(
                             leg.departureSeconds?.let { "עולים " + secondsToClock(it) },
                             leg.arrivalSeconds?.let { "יורדים " + secondsToClock(it) },
+                            tr("%d תחנות").format(leg.intermediateStopNames.size + 2),
                         )
                         if (times.isNotEmpty()) {
                             Text(
@@ -220,6 +278,13 @@ private fun LegRow(leg: TransitLeg, isLast: Boolean, expanded: Boolean, onToggle
                             )
                         }
                     }
+                }
+                if (onTrip != null) {
+                    Text(
+                        tr("5: לוח הנסיעה המלא של הקו"),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                    )
                 }
                 if (expanded && leg.intermediateStopNames.isNotEmpty()) {
                     Column(modifier = Modifier.padding(top = 8.dp, start = 4.dp)) {

@@ -4,18 +4,25 @@ import com.future.navigation.data.backend.NavigationFunctions
 import com.future.navigation.data.common.LatLng
 import com.future.navigation.data.network.NetworkModule
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 data class GeocodeResult(val label: String, val location: LatLng)
 
 /**
  * עוטף את Nominatim ואוכף את מדיניות השימוש שלו (בקשה אחת לכל היותר בשנייה,
  * User-Agent מזהה) - לא רק תלוי בכך שהמסך לא יקרא לזה בקצב גבוה יותר.
+ *
+ * שגיאת רשת נזרקת החוצה (ולא הופכת לרשימה ריקה), כדי שהמסך יוכל להבדיל בין
+ * "אין חיבור" לבין "לא נמצאו תוצאות". שגיאה לא נשמרת במטמון.
  */
 class GeocodingRepository {
     private val api: NominatimApi = NetworkModule
         .retrofit("https://nominatim.openstreetmap.org/")
         .create(NominatimApi::class.java)
 
+    // Mutex: שני חיפושים במקביל לא יעקפו את ההמתנה של בקשה אחת לשנייה
+    private val gate = Mutex()
     private var lastRequestAtMs = 0L
 
     // מטמון תוצאות: בהקלדה במקלדת T9 אותו שאילתה חוזרת שוב ושוב (תיקון
@@ -27,6 +34,7 @@ class GeocodingRepository {
             size > MAX_CACHED_QUERIES
     }
 
+    /** זורק את שגיאת הרשת כמו שהיא (למעט ביטול), והקורא מחליט מה להציג. */
     suspend fun search(query: String): List<GeocodeResult> {
         if (query.isBlank()) return emptyList()
 
@@ -44,11 +52,11 @@ class GeocodingRepository {
             return results
         }
 
-        val elapsed = System.currentTimeMillis() - lastRequestAtMs
-        if (elapsed < MIN_INTERVAL_MS) delay(MIN_INTERVAL_MS - elapsed)
-        lastRequestAtMs = System.currentTimeMillis()
+        return gate.withLock {
+            val elapsed = System.currentTimeMillis() - lastRequestAtMs
+            if (elapsed < MIN_INTERVAL_MS) delay(MIN_INTERVAL_MS - elapsed)
+            lastRequestAtMs = System.currentTimeMillis()
 
-        return try {
             val results = api.search(userAgent = USER_AGENT, query = query)
                 .mapNotNull { result ->
                     val lat = result.lat.toDoubleOrNull() ?: return@mapNotNull null
@@ -61,11 +69,6 @@ class GeocodingRepository {
                 .distinct()
             synchronized(cache) { cache[key] = results }
             results
-        } catch (e: kotlinx.coroutines.CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            android.util.Log.w("GeocodingRepository", "search failed" /* בלי החיפוש עצמו: כתובת/מקום של המשתמש */, e)
-            emptyList()
         }
     }
 
