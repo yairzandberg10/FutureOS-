@@ -50,7 +50,7 @@ fun StationScreen(
     LaunchedEffect(station) {
         runCatching { routeFocus.requestFocus() }
         while (true) {
-            val result = source.boardAt(station.location)
+            val result = source.boardAt(station.location, station.name)
             failed = result == null && board == null
             if (result != null) board = result
             loading = false

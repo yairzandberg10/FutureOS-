@@ -38,12 +38,19 @@ class ServerDepartures {
     }
 
     /** לוח היציאות של תחנה מסוימת: התחנה הקרובה ביותר למיקום שלה. */
-    suspend fun boardAt(station: LatLng, nowMillis: Long = System.currentTimeMillis()): StationBoard? {
+    suspend fun boardAt(station: LatLng, name: String? = null, nowMillis: Long = System.currentTimeMillis()): StationBoard? {
         val body = OpenApis.stopTimesNearJson(station, SAME_STATION_METERS, BOARD_COUNT) ?: return null
         val boards = try {
             parse(NetworkModule.json.parseToJsonElement(body) as? JsonObject ?: return null, nowMillis)
         } catch (e: Exception) {
             return null
+        }
+        // קודם התחנה באותו שם: תחנה סמוכה עם יציאות מוקדמות יותר "גנבה" קודם את הלוח
+        if (name != null) {
+            // אין יציאות קרובות מהתחנה הזו - לוח ריק שלה, לא לוח של תחנה אחרת
+            // בחיפוש השם כולל את העיר ("תחנה מרכזית, אשקלון")
+            return boards.firstOrNull { it.name == name || name.startsWith(it.name + ", ") }
+                ?: StationBoard(name, station, emptyList())
         }
         return boards.minByOrNull { it.location.distanceMetersTo(station) }
     }
@@ -121,7 +128,7 @@ class ServerDepartures {
         const val NEAR_RADIUS_METERS = 500
         const val NEAR_COUNT = 60
         const val SAME_STATION_METERS = 150
-        const val BOARD_COUNT = 30
+        const val BOARD_COUNT = 80
     }
 
     private fun JsonObject.text(key: String): String? =

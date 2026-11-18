@@ -207,6 +207,18 @@ private fun LegRow(leg: TransitLeg, isLast: Boolean, expanded: Boolean, onToggle
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                         )
+                        // מתי האוטובוס יוצא מתחנת העלייה ומתי מגיעים לתחנת הירידה
+                        val times = listOfNotNull(
+                            leg.departureSeconds?.let { "עולים " + secondsToClock(it) },
+                            leg.arrivalSeconds?.let { "יורדים " + secondsToClock(it) },
+                        )
+                        if (times.isNotEmpty()) {
+                            Text(
+                                times.joinToString(" · "),
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
                     }
                 }
                 if (expanded && leg.intermediateStopNames.isNotEmpty()) {
