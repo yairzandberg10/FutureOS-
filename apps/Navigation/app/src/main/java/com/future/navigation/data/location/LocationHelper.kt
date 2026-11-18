@@ -25,14 +25,7 @@ object LocationHelper {
         if (!hasPermission(context)) return null
         return try {
             val manager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-            val providers = manager.getProviders(true)
-            for (provider in providers) {
-                val loc = manager.getLastKnownLocation(provider) ?: continue
-                // מיקום ישן (מכמה שעות אחורה) לא מתאים כנקודת מוצא של מסלול - מדלגים עליו.
-                val ageMs = (android.os.SystemClock.elapsedRealtimeNanos() - loc.elapsedRealtimeNanos) / 1_000_000L
-                if (ageMs <= MAX_LAST_KNOWN_AGE_MS) return loc.latitude to loc.longitude
-            }
-            null
+            bestLastKnown(manager, manager.getProviders(true))?.let { it.latitude to it.longitude }
         } catch (e: Exception) {
             null
         }
@@ -60,15 +53,17 @@ object LocationHelper {
         // נסיעה בלי קליטת לוויין לא הגיע שום מיקום. מיקום רשת מתקבל רק כשאין
         // קיבוע GPS טרי, כדי שלא "יקפיץ" את הסמן אחורה.
         var lastGpsFixAt = 0L
+        var lastSent: Location? = null
         val merging = object : LocationListener by listener {
             override fun onLocationChanged(location: Location) {
                 val now = android.os.SystemClock.elapsedRealtime()
                 if (location.provider == LocationManager.GPS_PROVIDER) {
                     lastGpsFixAt = now
-                    trySend(location)
-                } else if (now - lastGpsFixAt > GPS_STALE_MS) {
-                    trySend(location)
+                } else if (now - lastGpsFixAt <= GPS_STALE_MS || addsNothing(location, lastSent)) {
+                    return
                 }
+                lastSent = location
+                trySend(location)
             }
         }
         val providers = listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)
@@ -81,7 +76,7 @@ object LocationHelper {
 
         try {
             providers.forEach { manager.requestLocationUpdates(it, minIntervalMs, minDistanceMeters, merging, android.os.Looper.getMainLooper()) }
-            providers.firstNotNullOfOrNull { manager.getLastKnownLocation(it) }?.let { trySend(it) }
+            bestLastKnown(manager, providers)?.let { lastSent = it; trySend(it) }
         } catch (e: SecurityException) {
             close(e)
         }
@@ -89,6 +84,33 @@ object LocationHelper {
         awaitClose { manager.removeUpdates(merging) }
     }
 
+    /**
+     * המיקום האחרון הכי מדויק מבין הספקים (ולא פשוט של הספק הראשון ברשימה): מיקום
+     * רשת יכול לסטות בקילומטרים, ובחירה לפי סדר הספקים הקפיצה את המיקום בין שתי נקודות.
+     */
+    private fun bestLastKnown(manager: LocationManager, providers: List<String>): Location? =
+        providers
+            .mapNotNull { runCatching { manager.getLastKnownLocation(it) }.getOrNull() }
+            // מיקום ישן (מכמה שעות אחורה) לא מתאים כנקודת מוצא של מסלול - מדלגים עליו.
+            .filter { ageMs(it) <= MAX_LAST_KNOWN_AGE_MS }
+            .minByOrNull { if (it.hasAccuracy()) it.accuracy else Float.MAX_VALUE }
+
+    /**
+     * מיקום רשת גס שהמיקום המדויק הקודם נמצא בתוך עיגול הדיוק שלו לא מוסיף מידע -
+     * רק "מקפיץ" את הסמן ואת התחנות הקרובות קילומטרים הצידה. מתעלמים ממנו כל עוד
+     * המיקום הקודם טרי (חצי שעה, כמו מיקום אחרון שמותר להשתמש בו).
+     */
+    private fun addsNothing(coarse: Location, previous: Location?): Boolean {
+        if (previous == null || !coarse.hasAccuracy() || !previous.hasAccuracy()) return false
+        if (coarse.accuracy <= previous.accuracy) return false
+        if (ageMs(previous) > COARSE_IGNORE_MS) return false
+        return coarse.distanceTo(previous) <= coarse.accuracy
+    }
+
+    private fun ageMs(loc: Location): Long =
+        (android.os.SystemClock.elapsedRealtimeNanos() - loc.elapsedRealtimeNanos) / 1_000_000L
+
+    private const val COARSE_IGNORE_MS = MAX_LAST_KNOWN_AGE_MS
     private const val GPS_STALE_MS = 10_000L
     private const val MAX_LAST_KNOWN_AGE_MS = 30 * 60 * 1000L
 }
