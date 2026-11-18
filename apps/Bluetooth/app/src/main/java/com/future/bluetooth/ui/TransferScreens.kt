@@ -105,26 +105,7 @@ internal fun TransfersScreen(
             if (transfer != null) {
                 FutureSectionHeader(if (transfer.running) tr("שליחה פעילה") else tr("שליחה אחרונה"), theme)
                 CardStack {
-                    FutureFocusCard(theme = theme, onClick = onOpenProgress, focusRequester = first) { focused ->
-                        FileGlyph(statusIcon(transfer.status), theme, highlighted = transfer.running)
-                        Column(modifier = Modifier.weight(1f)) {
-                            MarqueeText(
-                                text = transfer.current.name,
-                                color = theme.textColor,
-                                isFocused = focused,
-                                style = TextStyle(fontSize = type.title, fontWeight = FutureTypography.weightMedium),
-                            )
-                            Text(
-                                tr("אל {0}", transfer.deviceName) + " · " + statusLabel(transfer),
-                                color = theme.mutedTextColor,
-                                fontSize = type.summary,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                            TransferBar(transfer, theme, Modifier.padding(top = 6.dp))
-                        }
-                        Chevron(theme)
-                    }
+                    ActiveTransferCard(transfer, theme, onOpenProgress, focusRequester = first)
                 }
             }
 
@@ -179,6 +160,40 @@ internal fun TransfersScreen(
                 }
             }
         }
+    }
+}
+
+/**
+ * השליחה הפעילה (או האחרונה, עד שסוגרים אותה) ככרטיס: שם הקובץ, היעד, המצב
+ * ופס ההתקדמות. אישור פותח את מסך השליחה - כך חוזרים אליו אחרי "הסתר".
+ */
+@Composable
+internal fun ActiveTransferCard(
+    transfer: Transfer,
+    theme: FutureTheme,
+    onClick: () -> Unit,
+    focusRequester: FocusRequester? = null,
+) {
+    val type = rememberFutureType()
+    FutureFocusCard(theme = theme, onClick = onClick, focusRequester = focusRequester) { focused ->
+        FileGlyph(statusIcon(transfer.status), theme, highlighted = transfer.running)
+        Column(modifier = Modifier.weight(1f)) {
+            MarqueeText(
+                text = transfer.current.name,
+                color = theme.textColor,
+                isFocused = focused,
+                style = TextStyle(fontSize = type.title, fontWeight = FutureTypography.weightMedium),
+            )
+            Text(
+                tr("אל {0}", transfer.deviceName) + " · " + statusLabel(transfer),
+                color = theme.mutedTextColor,
+                fontSize = type.summary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            TransferBar(transfer, theme, Modifier.padding(top = 6.dp))
+        }
+        Chevron(theme)
     }
 }
 
@@ -283,6 +298,8 @@ internal fun TransferProgressScreen(
     theme: FutureTheme,
     transfer: Transfer?,
     onBack: () -> Unit,
+    /** יציאה מהמסך בלי לעצור את השליחה - חוזרים מכרטיס "שליחה פעילה". */
+    onHide: () -> Unit,
     onCancel: () -> Unit,
     onRetry: () -> Unit,
     onSendMore: () -> Unit,
@@ -401,14 +418,24 @@ internal fun TransferProgressScreen(
                 verticalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm),
             ) {
                 when {
-                    running -> FutureButton(
-                        text = tr("בטל שליחה"),
-                        theme = theme,
-                        onClick = onCancel,
-                        variant = FutureButtonVariant.Destructive,
-                        fillMaxWidth = true,
-                        focusRequester = primary,
-                    )
+                    running -> {
+                        // "הסתר" ראשון וממוקד: לחיצה בטעות על אישור לא מבטלת את השליחה.
+                        FutureButton(tr("הסתר"), theme, onHide, fillMaxWidth = true, focusRequester = primary)
+                        FutureButton(
+                            text = tr("בטל שליחה"),
+                            theme = theme,
+                            onClick = onCancel,
+                            variant = FutureButtonVariant.Destructive,
+                            fillMaxWidth = true,
+                        )
+                        Text(
+                            tr("השליחה תמשיך גם אחרי הסתרה. חוזרים אליה מהמסך הראשי של הבלוטות'."),
+                            color = theme.mutedTextColor,
+                            fontSize = type.summary,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
                     transfer.status == TransferStatus.Done -> {
                         FutureButton(tr("סגור"), theme, onBack, fillMaxWidth = true, focusRequester = primary)
                         FutureButton(tr("שלח קובץ נוסף"), theme, onSendMore, variant = FutureButtonVariant.Secondary, fillMaxWidth = true)

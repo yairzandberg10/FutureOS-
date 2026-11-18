@@ -202,6 +202,25 @@ fun BluetoothApp(
         }
     }
 
+    /** פותח את מסך השליחה (מכרטיס "שליחה פעילה" / התפריט), בלי לפתוח אותו פעמיים. */
+    fun showTransfer() {
+        if (TransferManager.transfer == null) return
+        if (current().lastOrNull() != ROUTE_PROGRESS) push(ROUTE_PROGRESS)
+    }
+
+    // שליחה שהסתיימה כשמסך השליחה מוסתר - הודעה קצרה, כדי שלא תעבור בשקט.
+    val liveTransfer = TransferManager.transfer
+    var watchedRunning by remember { mutableStateOf(false) }
+    LaunchedEffect(liveTransfer?.status) {
+        val t = liveTransfer ?: return@LaunchedEffect
+        if (t.running) {
+            watchedRunning = true
+        } else if (watchedRunning) {
+            watchedRunning = false
+            if (current().lastOrNull() != ROUTE_PROGRESS) snackbar.show(t.current.name + " · " + statusLabel(t))
+        }
+    }
+
     fun openReceived(file: ReceivedFile) {
         actions.openFile(file.file)?.let { snackbar.show(it) }
     }
@@ -336,6 +355,10 @@ fun BluetoothApp(
                         TransferManager.dismissFinished()
                         pop()
                     },
+                    onHide = {
+                        pop()
+                        snackbar.show(tr("השליחה ממשיכה ברקע"))
+                    },
                     onCancel = { TransferManager.cancel() },
                     onRetry = { if (!TransferManager.retry(context)) snackbar.show(tr("לא ניתן לנסות שוב")) },
                     onSendMore = {
@@ -365,6 +388,7 @@ fun BluetoothApp(
                     onRenamePhone = { dialog = Dialog.RenamePhone },
                     onVisibility = ::toggleVisibility,
                     onTransfers = { push(ROUTE_TRANSFERS) },
+                    onOpenProgress = ::showTransfer,
                     onOpenDevice = openFromList,
                     onShowAll = { lastOpened = SHOW_ALL_ROW; showAllPaired = true },
                     onScan = ::scan,
@@ -419,8 +443,11 @@ fun BluetoothApp(
     }
 
     if (menuOpen) {
+        fun showTransferItem(): List<MenuItem> = TransferManager.transfer?.let { t ->
+            listOf(MenuItem(if (t.running) tr("הצג שליחה פעילה") else tr("הצג שליחה אחרונה"), FutureIcons.Send) { showTransfer() })
+        } ?: emptyList()
         val items = when (topRoute) {
-            ROUTE_TRANSFERS -> listOf(
+            ROUTE_TRANSFERS -> showTransferItem() + listOf(
                 MenuItem(tr("שלח קובץ"), FutureIcons.Send) { sendFile() },
                 MenuItem(tr("קבצים שהתקבלו"), FutureIcons.Download) { push(ROUTE_RECEIVED) },
                 MenuItem(tr("גלוי למכשירים אחרים"), FutureIcons.Visibility) { toggleVisibility() },
@@ -442,9 +469,15 @@ fun BluetoothApp(
                 MenuItem(tr("חפש מכשירים"), FutureIcons.Refresh) { scan() },
             )
             ROUTE_PROGRESS -> if (TransferManager.transfer?.running == true) {
-                listOf(MenuItem(tr("בטל שליחה"), FutureIcons.Close, destructive = true) { TransferManager.cancel() })
+                listOf(
+                    MenuItem(tr("הסתר"), FutureIcons.VisibilityOff) {
+                        pop()
+                        snackbar.show(tr("השליחה ממשיכה ברקע"))
+                    },
+                    MenuItem(tr("בטל שליחה"), FutureIcons.Close, destructive = true) { TransferManager.cancel() },
+                )
             } else listOf(MenuItem(tr("שלח קובץ"), FutureIcons.Send) { sendFile() })
-            else -> listOf(
+            else -> showTransferItem() + listOf(
                 MenuItem(tr("רענן"), FutureIcons.Refresh) {
                     controller.refreshState()
                     scan()
@@ -589,6 +622,7 @@ private fun RootScreen(
     onRenamePhone: () -> Unit,
     onVisibility: () -> Unit,
     onTransfers: () -> Unit,
+    onOpenProgress: () -> Unit,
     onOpenDevice: (BluetoothDeviceInfo) -> Unit,
     onShowAll: () -> Unit,
     onScan: () -> Unit,
@@ -608,7 +642,7 @@ private fun RootScreen(
                 textColor = theme.textColor,
             )
             !hasPermission -> PermissionPrompt(theme, onRequestPermission, onOpenAppSettings)
-            else -> DeviceLists(controller, theme, focusAddress, onToggleRadio, onRenamePhone, onVisibility, onTransfers, onOpenDevice, onShowAll, onScan, onPair)
+            else -> DeviceLists(controller, theme, focusAddress, onToggleRadio, onRenamePhone, onVisibility, onTransfers, onOpenProgress, onOpenDevice, onShowAll, onScan, onPair)
         }
     }
 }
@@ -622,6 +656,7 @@ private fun DeviceLists(
     onRenamePhone: () -> Unit,
     onVisibility: () -> Unit,
     onTransfers: () -> Unit,
+    onOpenProgress: () -> Unit,
     onOpenDevice: (BluetoothDeviceInfo) -> Unit,
     onShowAll: () -> Unit,
     onScan: () -> Unit,
@@ -656,6 +691,11 @@ private fun DeviceLists(
             .verticalScroll(rememberScrollState())
             .padding(bottom = FutureDimens.spacingXl),
     ) {
+        // שליחה שהוסתרה (או שהסתיימה ועוד לא נסגרה) - כרטיס בראש המסך שפותח אותה שוב.
+        TransferManager.transfer?.let { t ->
+            FutureSectionHeader(if (t.running) tr("שליחה פעילה") else tr("שליחה אחרונה"), theme)
+            CardStack { ActiveTransferCard(t, theme, onOpenProgress) }
+        }
         FutureCard(theme = theme) {
             FutureSettingItem(
                 title = tr("בלוטות'"),
