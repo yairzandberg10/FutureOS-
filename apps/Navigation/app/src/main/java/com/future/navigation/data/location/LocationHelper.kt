@@ -110,7 +110,7 @@ object LocationHelper {
     private fun ageMs(loc: Location): Long =
         (android.os.SystemClock.elapsedRealtimeNanos() - loc.elapsedRealtimeNanos) / 1_000_000L
 
-    private const val COARSE_IGNORE_MS = MAX_LAST_KNOWN_AGE_MS
+    private const val COARSE_IGNORE_MS = 30 * 60 * 1000L
     private const val GPS_STALE_MS = 10_000L
     private const val MAX_LAST_KNOWN_AGE_MS = 30 * 60 * 1000L
 }
