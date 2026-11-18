@@ -101,8 +101,9 @@ class ServerDepartures {
     private fun departure(row: JsonObject, place: JsonObject, nowMillis: Long): StationDeparture? {
         val time = place.text("departure") ?: return null
         val departsAt = try { OffsetDateTime.parse(time).toInstant().toEpochMilli() } catch (e: Exception) { return null }
+        // בדיקה במילישניות: חלוקה שלמה הייתה מעגלת "לפני חצי דקה" ל-0 ומציגה אוטובוס שכבר יצא
+        if (departsAt < nowMillis) return null
         val minutes = ((departsAt - nowMillis) / 60_000).toInt()
-        if (minutes < 0) return null
         return StationDeparture(
             line = row.text("routeShortName")?.takeIf { it.isNotBlank() }
                 ?: row.text("displayName")?.takeIf { it.isNotBlank() && it.length <= 6 }

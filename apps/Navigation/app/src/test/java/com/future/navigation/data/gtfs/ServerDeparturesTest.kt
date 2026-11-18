@@ -33,7 +33,7 @@ class ServerDeparturesTest {
         val root = Json.parseToJsonElement(resource("motis_stoptimes.json")) as JsonObject
         val later = OffsetDateTime.parse("2026-11-17T20:40:30Z").toInstant().toEpochMilli()
         val lines = ServerDepartures().parse(root, later).flatMap { it.departures }.map { it.line }
-        assertEquals(listOf("56", "126", "3", "21"), lines)
+        assertEquals(listOf("21", "3", "56", "126"), lines)
     }
 
     @Test
