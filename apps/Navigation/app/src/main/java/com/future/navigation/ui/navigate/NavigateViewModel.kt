@@ -59,8 +59,8 @@ class NavigateViewModel(
         NavigateUiState(
             route = initialRoute,
             currentLocation = LocationHelper.lastKnownLatLon(appContext)?.let { LatLng(it.first, it.second) },
-            currentStepIndex = 0,
-            distanceToManeuverMeters = 0.0,
+            currentStepIndex = firstManeuverIndex(initialRoute),
+            distanceToManeuverMeters = initialRoute.steps.firstOrNull()?.takeIf { firstManeuverIndex(initialRoute) == 1 }?.distanceMeters ?: 0.0,
             remainingDistanceMeters = initialRoute.distanceMeters,
             remainingDurationSeconds = initialRoute.durationSeconds
         )
@@ -283,7 +283,8 @@ class NavigateViewModel(
         announcedStep = -1
         _uiState.value = _uiState.value.copy(
             route = newRoute,
-            currentStepIndex = 0,
+            currentStepIndex = firstManeuverIndex(newRoute),
+            distanceToManeuverMeters = newRoute.steps.firstOrNull()?.takeIf { firstManeuverIndex(newRoute) == 1 }?.distanceMeters ?: 0.0,
             remainingDistanceMeters = newRoute.distanceMeters,
             remainingDurationSeconds = newRoute.durationSeconds
         )
@@ -390,6 +391,13 @@ class NavigateViewModel(
     }
 
     companion object {
+        /**
+         * "יציאה לדרך" הוא נקודת ההתחלה עצמה, ולא הוראה שימושית - מתחילים מהתמרון
+         * הראשון האמיתי ("בעוד 300 מ' פנה שמאלה").
+         */
+        fun firstManeuverIndex(route: DrivingRoute): Int =
+            if (route.steps.size > 1 && route.steps[0].type == "depart") 1 else 0
+
         private const val ARRIVAL_THRESHOLD_METERS = 25.0
         private const val REROUTE_THRESHOLD_METERS = 40.0
         private const val TRAFFIC_RECHECK_INTERVAL_MS = 90_000L

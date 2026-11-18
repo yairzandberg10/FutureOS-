@@ -53,7 +53,7 @@ class GeocodingRepository {
                 .mapNotNull { result ->
                     val lat = result.lat.toDoubleOrNull() ?: return@mapNotNull null
                     val lon = result.lon.toDoubleOrNull() ?: return@mapNotNull null
-                    GeocodeResult(label = result.display_name, location = LatLng(lat, lon))
+                    GeocodeResult(label = shortLabel(result.display_name), location = LatLng(lat, lon))
                 }
                 // Nominatim מחזיר לעיתים את אותו מקום פעמיים (רשומות OSM שונות
                 // לאותה כתובת). הרשימה משמשת כמפתחות ב-LazyColumn של מסך הבית,
@@ -70,6 +70,17 @@ class GeocodingRepository {
     }
 
     companion object {
+        /**
+         * הכתובת המלאה של Nominatim ארוכה ומגיעה עם שמות בערבית ושכבות מנהליות
+         * ("שטח C"). משאירים עד שלושה חלקים ראשונים שקריאים בעברית או באנגלית.
+         */
+        internal fun shortLabel(displayName: String): String {
+            val parts = displayName.split(",").map { it.trim() }.filter { part ->
+                part.isNotEmpty() && part.none { it in '؀'..'ۿ' } && part != "שטח C" && part != "ישראל"
+            }
+            return parts.take(3).joinToString(", ").ifBlank { displayName }
+        }
+
         private const val MIN_INTERVAL_MS = 1100L
         private const val MAX_CACHED_QUERIES = 50
         private const val USER_AGENT = "FutureOS-Navigation/1.0 (keys-only device app; no contact configured)"

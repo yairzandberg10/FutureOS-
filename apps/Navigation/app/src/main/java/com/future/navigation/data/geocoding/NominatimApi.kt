@@ -16,6 +16,8 @@ interface NominatimApi {
         @Query("q") query: String,
         @Query("format") format: String = "jsonv2",
         @Query("limit") limit: Int = 5,
-        @Query("accept-language") acceptLanguage: String = "he"
+        @Query("accept-language") acceptLanguage: String = "he",
+        // ישראל ויהודה ושומרון בלבד - קודם "אריאל" החזיר גם עיירה במקסיקו
+        @Query("countrycodes") countryCodes: String = "il,ps"
     ): List<NominatimResult>
 }

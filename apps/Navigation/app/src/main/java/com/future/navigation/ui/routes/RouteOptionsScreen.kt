@@ -100,14 +100,16 @@ fun RouteOptionsScreen(
 
     val avoidTolls by viewModel.avoidTolls.collectAsState()
     val departInMinutes by viewModel.departInMinutes.collectAsState()
+    val drivingOptions = androidx.compose.runtime.remember { com.future.navigation.data.backend.FutureServer.isAvailable }
 
     Column(
         modifier = Modifier.fillMaxSize().onPreviewKeyEvent { event ->
-            // אפשרויות נהיגה בסגנון Waze, במקשים: 1 הימנעות מאגרה, 3 שעת יציאה
-            if (mode != TravelMode.DRIVE || event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+            // במקשים: 1 הימנעות מאגרה (נהיגה, רק דרך HERE בשרת), 3 שעת יציאה.
+            // בלי שרת הנהיגה היא OSRM, שלא יודע להימנע מאגרה ולא מכיר שעת יציאה.
+            if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
             when (com.future.sharednav.nav.digitForKey(event.key)) {
-                "1" -> { viewModel.toggleAvoidTolls(); true }
-                "3" -> { viewModel.cycleDepartureTime(); true }
+                "1" -> if (mode == TravelMode.DRIVE && drivingOptions) { viewModel.toggleAvoidTolls(); true } else false
+                "3" -> if (mode == TravelMode.TRANSIT || drivingOptions) { viewModel.cycleDepartureTime(); true } else false
                 else -> false
             }
         }
@@ -132,10 +134,15 @@ fun RouteOptionsScreen(
             )
         }
 
-        if (mode == TravelMode.DRIVE) {
+        val departLabel = "3 " + (if (departInMinutes == 0) "יציאה עכשיו" else "יציאה בעוד $departInMinutes דק׳")
+        val optionsHint = when {
+            mode == TravelMode.TRANSIT -> departLabel
+            drivingOptions -> "1 " + (if (avoidTolls) "בלי כבישי אגרה ✓" else "כולל כבישי אגרה") + " · " + departLabel
+            else -> null
+        }
+        if (optionsHint != null) {
             Text(
-                text = "1 " + (if (avoidTolls) "בלי כבישי אגרה ✓" else "כולל כבישי אגרה") +
-                    " · 3 " + (if (departInMinutes == 0) "יציאה עכשיו" else "יציאה בעוד $departInMinutes דק׳"),
+                text = optionsHint,
                 color = theme.mutedTextColor,
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(horizontal = FutureDimens.screenPadding, vertical = FutureDimens.spacingSm),

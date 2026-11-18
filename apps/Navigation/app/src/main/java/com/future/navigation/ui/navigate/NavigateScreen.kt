@@ -41,6 +41,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.future.navigation.R
 import androidx.compose.ui.input.key.Key
@@ -94,6 +95,16 @@ fun NavigateScreen(viewModel: NavigateViewModel, onClose: () -> Unit = {}) {
         runCatching { gpsContext.startActivity(intent) }
     }
 
+    // קו המסלול ונקודת המיקום על המפה
+    val accentArgb = theme.accentColor.toArgb()
+    androidx.compose.runtime.LaunchedEffect(state.route, accentArgb) {
+        cameraController.setAccent(accentArgb)
+        cameraController.setRoute(state.route.polyline)
+    }
+    androidx.compose.runtime.LaunchedEffect(state.currentLocation) {
+        cameraController.setPosition(state.currentLocation)
+    }
+
     androidx.compose.runtime.LaunchedEffect(state.currentLocation, followMode) {
         val loc = state.currentLocation
         if (loc != null && followMode) {
@@ -141,7 +152,9 @@ fun NavigateScreen(viewModel: NavigateViewModel, onClose: () -> Unit = {}) {
             true
         }
     ) {
-        Box(modifier = Modifier.fillMaxWidth().height(420.dp)) {
+        // המפה ממלאת את מה שנשאר. בגובה קבוע של 420dp היא כיסתה את כל מסך ה-640×960
+        // (320×480dp), וכרטיס ההוראה ושורת הזמן נדחקו אל מחוץ למסך.
+        Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
             NavMapView(
                 cameraController = cameraController,
                 initialCenter = state.currentLocation,
@@ -189,7 +202,7 @@ fun NavigateScreen(viewModel: NavigateViewModel, onClose: () -> Unit = {}) {
             }
         }
 
-        Column(modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = FutureDimens.screenPadding, vertical = FutureDimens.spacingSm)) {
+        Column(modifier = Modifier.fillMaxWidth().offset(y = (-22).dp).padding(horizontal = FutureDimens.screenPadding)) {
             if (gpsOff && !state.ended) {
                 Text(
                     "GPS כבוי - הפעילו מיקום כדי שהמפה תראה איפה אתם",
