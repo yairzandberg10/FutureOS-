@@ -71,7 +71,7 @@ code { font-family: var(--f-num); font-size: 13px; direction: ltr; unicode-bidi:
 <div class="wrap">
   <header>
     <h1>מעצב מקש #</h1>
-    <p class="sub">המקש # של הגוף החלופי v3 ל-Qin F22 Pro יושב צמוד למצלמת הסלפי. בוחרים צורה (קשת, גלולה או עגול), מידות, עיגול שפה, גופן וסיבוב של הסימון, והשרטוט והבדיקות מתעדכנים בקנה מידה אמיתי, במ"מ. בסוף מעתיקים את ה-JSON לקובץ <code>hardware/blender/hash_key.json</code> או שולחים אותו בצ'אט, והסקריפט בונה את המקש לפיו.</p>
+    <p class="sub">המקש # של הגוף החלופי v3 ל-Qin F22 Pro יושב צמוד למצלמת הסלפי. בוחרים צורה (גלולה עם העדשה לפי הפיגמה, קשת, גלולה נפרדת או עגול), מידות, עיגול שפה, גופן וסיבוב של הסימון, והשרטוט והבדיקות מתעדכנים בקנה מידה אמיתי, במ"מ. בסוף מעתיקים את ה-JSON לקובץ <code>hardware/blender/hash_key.json</code> או שולחים אותו בצ'אט, והסקריפט בונה את המקש לפיו.</p>
   </header>
 
   <div class="main">
@@ -79,7 +79,8 @@ code { font-family: var(--f-num); font-size: 13px; direction: ltr; unicode-bidi:
       <div class="row">
         <p class="sec">צורה</p>
         <div class="seg" role="group" aria-label="צורת המקש">
-          <button id="m-arc" type="button" aria-pressed="true">קשת</button>
+          <button id="m-pill" type="button" aria-pressed="true">גלולה + עדשה</button>
+          <button id="m-arc" type="button" aria-pressed="false">קשת</button>
           <button id="m-rect" type="button" aria-pressed="false">גלולה</button>
           <button id="m-round" type="button" aria-pressed="false">עגול</button>
         </div>
@@ -123,7 +124,7 @@ code { font-family: var(--f-num); font-size: 13px; direction: ltr; unicode-bidi:
         <input id="ldx" type="range" min="-5" max="5" step="0.1"></div>
       <div class="row"><label for="ldy">הזזה אנכית <output id="o-ldy"></output></label>
         <input id="ldy" type="range" min="-2" max="2" step="0.1"></div>
-      <button class="btn ghost" id="reset" type="button">חזרה לעיצוב המקורי</button>
+      <button class="btn ghost" id="reset" type="button">חזרה לעיצוב מהפיגמה</button>
     </section>
 
     <section class="stage" aria-label="שרטוט">
@@ -154,21 +155,27 @@ code { font-family: var(--f-num); font-size: 13px; direction: ltr; unicode-bidi:
 // מידות מתוך qin_f22_pro_case_v3.py (מ"מ, מרכז הגוף = 0,0, Y למעלה)
 const G = {
   bodyW: 57.5, bodyL: 147, bodyR: 7.5,
-  keyW: 14.9333, keyH: 7.2, colX: [-17.7333, 0, 17.7333], rowY4: -55.2167, rowY5: -65.15,
-  selfie: [21.05, -64.5], lensD: 6.5, selfieWin: 7.3, clear: 0.4, nubD: 2.4,
-  dome: [13.3172, -64.75], keyRight: 25.2, hashBottomMin: -68.9
+  keyW: 14.9333, keyH: 7.2, colX: [-17.7333, 0, 17.7333], rowY4: -57.2167, rowY5: -66.75,
+  selfie: [21.05, -66.5], lensD: 6.5, selfieWin: 7.3, clear: 0.4, nubD: 2.4,
+  dome: [13.3172, -66.75], keyRight: 25.2, slot: 0.4
+};
+// בגלולה של # (פיגמה) כל המקשים מותאמים אליה: עמודות צרות יותר וסימטריות, והשורה התחתונה בגובה העדשה
+const GRIDS = {
+  pill: { keyW: 14.5667, colX: [-17.3667, 0, 17.3667], rowY4: -57.05, rowY5: -66.5 },
+  other: { keyW: 14.9333, colX: [-17.7333, 0, 17.7333], rowY4: -57.2167, rowY5: -66.75 }
 };
 const FONTS = { "Segoe UI Semibold": "'Segoe UI Semibold','Segoe UI',Heebo,Arial", "Segoe UI Bold": "'Segoe UI',Heebo,Arial",
   "Segoe UI Black": "'Segoe UI Black','Segoe UI',Heebo,Arial",
   "Arial Bold": "Arial,Helvetica,sans-serif", "Consolas Bold": "Consolas,'Roboto Mono',monospace", "Impact": "Impact,'Arial Black',sans-serif",
   "Segoe UI Symbol": "'Segoe UI Symbol','Segoe UI',Arial" };
 const FW = { "Segoe UI Semibold": 600, "Segoe UI Bold": 700, "Segoe UI Black": 900, "Arial Bold": 700, "Consolas Bold": 700, "Impact": 400, "Segoe UI Symbol": 400 };
-const DEF = { mode: "arc", web: 1.2, left_inset: 0, width: 7.7, height: 7.2, corner_r: 3.6, top_round: 0.8,
+const DEF = { mode: "pill", web: 1.2, left_inset: 0, width: 7.7, height: 7.2, corner_r: 3.6, top_round: 0.8,
   round_d: 6.0, round_dx: 0, round_dy: 0,
-  legend: "#", legend_font: "Segoe UI Semibold", legend_size: 5.2, legend_dx: -0.9, legend_dy: 0, legend_rot: 0 };
+  legend: "#", legend_font: "Segoe UI Semibold", legend_size: 5.2, legend_dx: 0, legend_dy: 0, legend_rot: 0 };
 const PRESETS = [
-  ["המקורי", {}],
-  ["קשת רחבה", { web: 0.9, left_inset: -0.6, legend_dx: -0.6 }],
+  ["פיגמה", {}],
+  ["קשת (הישנה)", { mode: "arc", legend_dx: -0.9 }],
+  ["קשת רחבה", { mode: "arc", web: 0.9, left_inset: -0.6, legend_dx: -0.6 }],
   ["גלולה קצרה", { mode: "rect", left_inset: -0.8, width: 6.6, height: 6.6, corner_r: 3.3, legend_dx: 0 }],
   ["מלבן חד", { mode: "rect", left_inset: -1.0, width: 6.8, height: 7.2, corner_r: 1.0, top_round: 0.4, legend_dx: 0, legend_font: "Arial Bold" }],
   ["כפתור עגול", { mode: "round", round_d: 6.2, round_dx: -0.4, round_dy: -0.3, legend_dx: 0, legend_size: 4.6 }],
@@ -176,7 +183,7 @@ const PRESETS = [
 ];
 let S = { ...DEF };
 try { const s = JSON.parse(localStorage.getItem("hash-key") || "null"); if (s) S = { ...DEF, ...s } } catch (e) {}
-if (!["arc", "rect", "round"].includes(S.mode)) S.mode = "arc";
+if (!["pill", "arc", "rect", "round"].includes(S.mode)) S.mode = "pill";
 if (!(S.legend_font in FONTS)) S.legend_font = DEF.legend_font;
 
 const $ = id => document.getElementById(id);
@@ -184,6 +191,11 @@ const f = (v, d = 2) => Number(v).toFixed(d);
 
 function hashKey() {
   const y = G.rowY5, x0c = G.colX[2] - G.keyW / 2;
+  if (S.mode === "pill") {     // כמו הסקריפט: הגלולה בגובה המקשים, הקצה הימני שלה הוא העדשה
+    const ph = G.keyH + 2 * G.clear, R = ph / 2 + G.clear, sx = G.selfie[0];
+    const x0 = G.colX[2] - G.keyW / 2, x1 = G.colX[2] + G.keyW / 2, xv = sx - R;
+    return { x0, x1, xv, y: G.selfie[1], kh: G.keyH, kr: G.keyH / 2, cx: (x0 + xv) / 2, R, pill: true };
+  }
   if (S.mode === "round") {
     const d = S.round_d, cx = G.dome[0] + S.round_dx, cy = G.dome[1] + S.round_dy;
     return { x0: cx - d / 2, x1: cx + d / 2, y: cy, kh: d, kr: d / 2, cx };
@@ -202,33 +214,42 @@ function hashKey() {
 function checks(k) {
   const out = [], c = G.clear;
   const add = (ok, text, val, warn) => out.push({ cls: ok ? "ok" : (warn ? "warn" : "bad"), text, val });
-  const w = k.x1 - k.x0;
+  const w = (k.pill ? k.xv : k.x1) - k.x0;
   const nubDx = G.dome[0] - k.cx, nubDy = G.dome[1] - k.y;
   add(w >= 6.0 - 1e-6, "רוחב המקש לפחות 6 מ\"מ", f(w) + " mm");
   const nm = Math.min(w / 2 - G.nubD / 2 - 0.4 - Math.abs(nubDx), k.kh / 2 - G.nubD / 2 - 0.4 - Math.abs(nubDy));
-  add(nm >= 0, "הפין מעל הכיפה נשאר בתוך המקש", f(nm) + " mm");
+  if (k.pill) {
+    const na = k.xv - G.dome[0] - G.nubD / 2 - 0.4;
+    add(na >= 0 && k.x0 + G.nubD / 2 + 0.4 <= G.dome[0], "הפין מעל הכיפה נשאר בתוך המקש", f(na) + " mm");
+  } else add(nm >= 0, "הפין מעל הכיפה נשאר בתוך המקש", f(nm) + " mm");
   add(k.kh <= G.keyH + 1e-6, "גובה לא עולה על השורה", f(k.kh) + " mm");
   let bridge;
-  if (S.mode === "arc") bridge = S.web;
+  if (k.pill) bridge = null;
+  else if (S.mode === "arc") bridge = S.web;
   else {
     const ww = w / 2 + c, wh = k.kh / 2 + c, wr = k.kr + c;
     const qx = Math.max(Math.abs(G.selfie[0] - k.cx) - (ww - wr), 0), qy = Math.max(Math.abs(G.selfie[1] - k.y) - (wh - wr), 0);
     bridge = Math.hypot(qx, qy) - wr - G.selfieWin / 2;
   }
-  add(bridge >= 0.8 - 1e-6, "גשר החזית לחלון הסלפי לפחות 0.8", f(bridge) + " mm");
+  if (bridge === null) add(G.keyH / 2 + c - G.lensD / 2 >= 0.3, "העדשה בתוך הקצה העגול של הגלולה", f(G.keyH / 2 + c - G.lensD / 2) + " mm");
+  else add(bridge >= 0.8 - 1e-6, "גשר החזית לחלון הסלפי לפחות 0.8", f(bridge) + " mm");
   const y0 = k.y - k.kh / 2, y1 = k.y + k.kh / 2;
   const g0 = k.x0 - (G.colX[1] + G.keyW / 2) - 2 * c;
   add(g0 >= 0.8 - 1e-6, "גשר החזית למקש 0 לפחות 0.8", f(g0) + " mm");
   const g9 = (G.rowY4 - G.keyH / 2) - y1 - 2 * c;
   add(g9 >= 0.8 - 1e-6, "גשר החזית למקש 9 לפחות 0.8", f(g9) + " mm");
   add(k.x1 <= G.keyRight + 1e-6, "לא יוצא מקצה המקלדת מימין", f(G.keyRight - k.x1) + " mm");
-  add(y0 >= G.hashBottomMin - 1e-6, "יש מקום לציר מתחת למקש (A1 mini)", f(y0 - G.hashBottomMin) + " mm");
+  // הציר של # למעלה (מתחת אין מקום אחרי הורדת המקלדת): רצועה + פס רשת, ועומס הכיפוף מתחת ל-1.2%
+  const space = (G.rowY4 - G.keyH / 2 - G.slot) - y1, hingeL = Math.min(1.5, Math.max(0.9, space - 0.5));
+  add(space - hingeL >= 0.4 - 1e-6, "יש מקום לציר מעל המקש (A1 mini)", f(space - hingeL) + " mm");
+  const strain = 100 * 0.4 * (0.25 / (y1 - G.dome[1])) / (2 * hingeL);
+  add(strain < 1.2, "עומס על הציר מתחת ל-1.2%", f(strain) + "%");
   const a = S.legend_rot * Math.PI / 180;
   const lw0 = Math.max(S.legend.length, 1) * S.legend_size * 0.62, lh0 = S.legend_size * 0.72;
   const lw = Math.abs(lw0 * Math.cos(a)) + Math.abs(lh0 * Math.sin(a)), lh = Math.abs(lw0 * Math.sin(a)) + Math.abs(lh0 * Math.cos(a));
   const lx = k.cx + S.legend_dx, ly = k.y + S.legend_dy;
   let right = k.x1 - 0.6;
-  if (S.mode === "arc") right = Math.min(right, G.selfie[0] - k.R - 0.4);
+  if (S.mode === "arc" || k.pill) right = Math.min(right, G.selfie[0] - k.R - 0.4);
   const fits = !S.legend || (lx - lw / 2 >= k.x0 + 0.6 && lx + lw / 2 <= right && Math.abs(ly - k.y) + lh / 2 <= k.kh / 2 - 0.5);
   add(fits, "הסימון בתוך המקש (הערכה)", S.legend ? f(lw, 1) + "×" + f(lh, 1) : "ללא", true);
   return out;
@@ -247,7 +268,9 @@ function draw() {
   const k = hashKey(), c = G.clear, sel = G.selfie;
   const full = `<rect x="0" y="0" width="320" height="260" fill="white"/>`;
   let defs;
-  if (S.mode === "arc") {
+  if (k.pill) {
+    defs = `<mask id="mk">${full}<g fill="black">${circ(sel[0], sel[1], k.R)}</g></mask><mask id="mw">${full}</mask>`;
+  } else if (S.mode === "arc") {
     defs = `<mask id="mk">${full}<g fill="black">${circ(sel[0], sel[1], k.R)}</g></mask>` +
            `<mask id="mw">${full}<g fill="black">${circ(sel[0], sel[1], k.R - c)}</g></mask>`;
   } else defs = `<mask id="mk">${full}</mask><mask id="mw">${full}</mask>`;
@@ -273,10 +296,10 @@ function draw() {
   s += `<g fill="var(--lens)" stroke="var(--text-40)" stroke-width="1">${circ(sel[0], sel[1], G.lensD / 2)}</g>`;
   s += `<g fill="none" stroke="var(--text-40)" stroke-width="1">${circ(sel[0], sel[1], 1.6)}</g>`;
   s += `<g fill="none" stroke="var(--dim)" stroke-width="2" stroke-dasharray="4 3">${circ(G.dome[0], G.dome[1], G.nubD / 2)}</g>`;
-  const dimY = k.y - k.kh / 2 - 1.9;
-  s += `<g stroke="var(--text-60)" stroke-width="1"><line x1="${X(k.x0)}" y1="${Y(dimY)}" x2="${X(k.x1)}" y2="${Y(dimY)}"/>` +
-       `<line x1="${X(k.x0)}" y1="${Y(dimY) - 5}" x2="${X(k.x0)}" y2="${Y(dimY) + 5}"/><line x1="${X(k.x1)}" y1="${Y(dimY) - 5}" x2="${X(k.x1)}" y2="${Y(dimY) + 5}"/></g>`;
-  s += `<text x="${X((k.x0 + k.x1) / 2)}" y="${Y(dimY) + 16}" font-size="12" fill="var(--text-60)" text-anchor="middle" font-family="Roboto Mono, monospace" direction="ltr">${f(k.x1 - k.x0)} × ${f(k.kh)} mm</text>`;
+  const dimY = k.y - k.kh / 2 - 1.5, dx0 = k.pill ? k.x0 - c : k.x0, dx1 = k.pill ? k.x1 + c : k.x1;
+  s += `<g stroke="var(--text-60)" stroke-width="1"><line x1="${X(dx0)}" y1="${Y(dimY)}" x2="${X(dx1)}" y2="${Y(dimY)}"/>` +
+       `<line x1="${X(dx0)}" y1="${Y(dimY) - 5}" x2="${X(dx0)}" y2="${Y(dimY) + 5}"/><line x1="${X(dx1)}" y1="${Y(dimY) - 5}" x2="${X(dx1)}" y2="${Y(dimY) + 5}"/></g>`;
+  s += `<text x="${X((dx0 + dx1) / 2)}" y="${Y(dimY) + 16}" font-size="12" fill="var(--text-60)" text-anchor="middle" font-family="Roboto Mono, monospace" direction="ltr">${f(dx1 - dx0)} × ${f(k.pill ? k.kh + 2 * c : k.kh)} mm</text>`;
   s += `<g fill="none" stroke="var(--text-40)" stroke-width="1">${rrect(-20, by0, bx1, -40, G.bodyR)}</g>`;
   s += `<text x="${X(bx1) - 6}" y="${Y(by0) - 8}" font-size="11" fill="var(--text-40)" text-anchor="end" font-family="Heebo, Arial">פינה ימנית-תחתונה של הגוף</text>`;
   $("svg").innerHTML = s;
@@ -285,12 +308,14 @@ function draw() {
 const SL = [["web", "web", 1], ["inset", "left_inset", 1], ["width", "width", 1], ["rd", "round_d", 2], ["rdx", "round_dx", 2], ["rdy", "round_dy", 2],
   ["height", "height", 1], ["corner", "corner_r", 1], ["topr", "top_round", 2], ["lsize", "legend_size", 1], ["ldx", "legend_dx", 1], ["ldy", "legend_dy", 1], ["lrot", "legend_rot", 0]];
 const HINTS = {
+  pill: "לפי הפיגמה: גלולה בגודל של שאר המקשים, והקצה הימני שלה הוא העדשה. אין גשר בין המקש לעדשה. כל המקלדת מותאמת אליה: עמודות סימטריות, ו-* 0 # בקו אחד עם העדשה.",
   arc: "מקש משמאל לעדשה. הצד הימני שלו קשת סביב חלון הסלפי, ובין שני החלונות נשאר גשר של החזית.",
   rect: "גלולה או מלבן חופשי: קובעים קצה שמאלי, רוחב, גובה ורדיוס. החלון של הסלפי נשאר עגול ונפרד.",
   round: "מקש עגול על הכיפה. אפשר להזיז אותו מעט, הפין נשאר במקום."
 };
 
 function sync() {
+  Object.assign(G, GRIDS[S.mode === "pill" ? "pill" : "other"]);
   const k = hashKey();
   $("corner").max = f(Math.min(S.height / 2, S.mode === "rect" ? S.width / 2 : 9), 1);
   for (const [id, key, d] of SL) {
@@ -299,12 +324,12 @@ function sync() {
   }
   if (document.activeElement !== $("legend")) $("legend").value = S.legend;
   $("font").value = S.legend_font;
-  for (const m of ["arc", "rect", "round"]) $("m-" + m).setAttribute("aria-pressed", S.mode === m);
+  for (const m of ["pill", "arc", "rect", "round"]) $("m-" + m).setAttribute("aria-pressed", S.mode === m);
   document.querySelectorAll(".panel .row").forEach(e => {
     const cl = e.classList;
-    if (cl.contains("arc-only") || cl.contains("rect-only") || cl.contains("round-only"))
+    if (cl.contains("pill-only") || cl.contains("arc-only") || cl.contains("rect-only") || cl.contains("round-only"))
       e.hidden = !cl.contains(S.mode + "-only");
-    if (cl.contains("not-round")) e.hidden = S.mode === "round";
+    if (cl.contains("not-round")) e.hidden = S.mode === "round" || S.mode === "pill";
   });
   $("mode-hint").textContent = HINTS[S.mode];
   $("checks").innerHTML = checks(k).map(c => `<li class="${c.cls}"><span class="dot"></span><span>${c.text}</span><span class="val">${c.val}</span></li>`).join("");
@@ -323,8 +348,8 @@ for (const [name, p] of PRESETS) {
 for (const [id, key] of SL) $(id).addEventListener("input", e => { S[key] = parseFloat(e.target.value); sync() });
 $("legend").addEventListener("input", e => { S.legend = e.target.value; sync() });
 $("font").addEventListener("change", e => { S.legend_font = e.target.value; sync() });
-for (const m of ["arc", "rect", "round"]) $("m-" + m).addEventListener("click", () => {
-  S.mode = m; if (m !== "arc" && S.legend_dx === DEF.legend_dx) S.legend_dx = 0; if (m === "rect" && S.left_inset === 0 && S.width === DEF.width) { S.left_inset = -0.8; S.width = 6.6 } sync() });
+for (const m of ["pill", "arc", "rect", "round"]) $("m-" + m).addEventListener("click", () => {
+  S.mode = m; if (m === "arc" && S.legend_dx === 0) S.legend_dx = -0.9; if (m !== "arc" && S.legend_dx === -0.9) S.legend_dx = 0; if (m === "rect" && S.left_inset === 0 && S.width === DEF.width) { S.left_inset = -0.8; S.width = 6.6 } sync() });
 $("reset").addEventListener("click", () => { S = { ...DEF }; sync() });
 $("copy").addEventListener("click", () => {
   const t = $("json").textContent;

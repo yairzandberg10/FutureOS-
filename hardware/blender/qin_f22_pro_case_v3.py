@@ -66,6 +66,9 @@ KEY_LABELS = [
     ["*", "0", "#"],
 ]
 SELFIE = dict(from_left=49.8, from_top=138.0, d=6.5)
+# 18.11 (המשתמש, תמונה של ערכת ההתאמה על הטלפון): המקשים וחור הסלפי יצאו גבוהים בכ-2 מ"מ מהמקשים
+# והעדשה האמיתיים. כל המקלדת (מקשים, כיפות, טבעת החצים) והסלפי יורדים יחד; המסך לא זז.
+KEYPAD_DROP = 2.0
 
 # ---------------------------------------------------------------------
 # 2. מבנה הגוף
@@ -126,7 +129,7 @@ USB_CHAMFER = 0.4          # #40: כניסת USB-C עם שיפוע שמנחה א
 REG_LABEL = dict(text="FutureOS  ·  MODEL F22P  ·  CE", size=1.6, from_top=139.5, depth=0.15)   # #33
 KEY_DISH = 0.2             # #1: מקשי המספרים קעורים 0.2 מ"מ
 KEY_DISH_R = 105.0
-BOTTOM_ROW_DROP = 0.4      # #5: שורת * 0 # יורדת 0.4 מ"מ (עוד מרווח נשימה; 0.4 כדי שהסלפי עוד נכנס בחלון)
+BOTTOM_ROW_DROP = 0.0      # 18.11: 0 (היה 0.4) - אחרי KEYPAD_DROP אין מקום מתחת לשורה התחתונה. #5: שורת * 0 # יורדת 0.4 מ"מ (עוד מרווח נשימה; 0.4 כדי שהסלפי עוד נכנס בחלון)
 
 # קירור בלי חורים גלויים: חריץ דק בקו החיבור בקצה התחתון ובקצה העליון. נראה כמו התפר עצמו;
 # האוויר נכנס למטה ויוצא למעלה (ארובה). PLA מתרכך ב-~55°C.
@@ -162,10 +165,13 @@ if A1MINI:
 #   mode "arc":   מקש משמאל לעדשה, הצד הימני קשת סביב חלון הסלפי (ברירת מחדל)
 #   mode "rect":  גלולה/מלבן חופשי: רוחב, קצה שמאלי, גובה, רדיוס
 #   mode "round": מקש עגול, ממורכז על הכיפה (אפשר להזיז)
+#   mode "pill":  לפי הפיגמה (18.11): גלולה אחת בגובה המקשים, והקצה הימני שלה הוא העדשה. החלון בחזית
+#                 הוא גלולה אחת בלי גשר, המקש הוא הצד השמאלי וקשת סביב העדשה. הגלולה בגודל של שאר
+#                 המקשים, ושאר המקשים מותאמים אליה (KEY_RIGHT, ROW5_Y).
 # הפין (מעל הכיפה) לא זז, בלי קשר לעיצוב. top_round = רדיוס הקצה העליון.
 # legend_font: אחד מ-HASH_FONTS (Bahnschrift הוצא: הרשת של # שלו לא סגורה), legend_rot במעלות.
 # ---------------------------------------------------------------------
-HASH = dict(mode="arc", web=1.2, left_inset=0.0, width=7.7, height=7.2, corner_r=3.6, top_round=0.8,
+HASH = dict(mode="pill", web=1.2, left_inset=0.0, width=7.7, height=7.2, corner_r=3.6, top_round=0.8,
             round_d=6.0, round_dx=0.0, round_dy=0.0,
             legend="#", legend_font="Segoe UI Semibold", legend_size=5.2, legend_dx=-0.9, legend_dy=0.0, legend_rot=0.0)
 HASH_FONTS = {"Segoe UI Semibold": "seguisb.ttf", "Segoe UI Bold": "segoeuib.ttf", "Segoe UI Black": "seguibl.ttf",
@@ -176,9 +182,11 @@ _hash_json = os.environ.get("V3_HASH_JSON") or os.path.join(_here0, "hash_key.js
 if os.path.exists(_hash_json):
     with open(_hash_json, encoding="utf-8") as _f:
         HASH.update({k: v for k, v in json.load(_f).items() if k in HASH})
-if HASH["mode"] not in ("arc", "rect", "round"):
-    HASH["mode"] = "arc"
-HASH_WEB = float(HASH["web"])
+if HASH["mode"] not in ("arc", "rect", "round", "pill"):
+    HASH["mode"] = "pill"
+PILL_H = KEY_H + 2 * KEY_WINDOW_CLEAR      # גובה חלון הגלולה = קוטר החלון של העדשה
+# בגלולה המקש עוטף את העדשה בלי גשר: הקשת היא החלון העגול (PILL_H/2) + מרווח
+HASH_WEB = PILL_H / 2 - SELFIE_WIN / 2 if HASH["mode"] == "pill" else float(HASH["web"])
 HASH_FONT = "C:/Windows/Fonts/" + HASH_FONTS.get(HASH["legend_font"], "seguisb.ttf")
 
 FONT_TEXT = os.environ.get("V3_FONT", "C:/Windows/Fonts/seguisb.ttf")
@@ -213,10 +221,10 @@ SKIRT_IN_L = SKIRT_OUT_L - 2 * SKIRT_T
 # 30.10 (המשתמש): בלי מסגרת מעל המסך - השקע נמשך עד הקיר העליון של המגש
 SCREEN_POCKET_TOP_MARGIN = SKIRT_IN_L / 2 - 0.3 - from_top(SCREEN_FROM_TOP)
 screen_cy = from_top(SCREEN_FROM_TOP) - SCREEN_H / 2
-keypad_top = from_top(SCREEN_FROM_TOP + SCREEN_H + SCREEN_GAP_TO_KEYS)
+keypad_top = from_top(SCREEN_FROM_TOP + SCREEN_H + SCREEN_GAP_TO_KEYS + KEYPAD_DROP)
 keypad_x0 = -KEY_COL_W[1] / 2 - KEY_COL_W[0]
 selfie_x = SELFIE["from_left"] - BODY_W / 2
-selfie_y = from_top(SELFIE["from_top"])
+selfie_y = from_top(SELFIE["from_top"] + KEYPAD_DROP)
 
 # קבוע לפי הסובלנות הנומינלית: גרסאות הסובלנות לא משנות את המקשים
 KEY_LIMIT_X = (IN_W - 2 * SKIRT_GAP_NOMINAL - 2 * SKIRT_T) / 2 - FLANGE_MARGIN / 2 - KEY_WINDOW_CLEAR - 0.2
@@ -230,16 +238,19 @@ def cell_cx(c):
     return keypad_x0 + sum(KEY_COL_W[:c]) + KEY_COL_W[c] / 2
 
 
-# עמודות: 3 מקשים ברוחב שווה, רווח KEY_GAP, הקצה החיצוני ב-KEY_LIMIT_X
-KEY_W = (KEY_LIMIT_X - KEY_GAP_X) / 1.5
+# עמודות: 3 מקשים ברוחב שווה, רווח KEY_GAP, הקצה החיצוני ב-KEY_RIGHT.
+# 18.11 (המשתמש): בגלולה של # (פיגמה) כל המקשים באותה מידה וסימטריים: הקצה הימני של העמודה הימנית
+# הוא הקצה העגול של # סביב העדשה, וכל העמודות מצטמצמות אליו (גם בצד שמאל).
+KEY_RIGHT = min(KEY_LIMIT_X, selfie_x + KEY_H / 2) if HASH["mode"] == "pill" else KEY_LIMIT_X
+KEY_W = (KEY_RIGHT - KEY_GAP_X) / 1.5
 COL_X = [-(KEY_W + KEY_GAP_X), 0.0, KEY_W + KEY_GAP_X]
 KEY_R = KEY_H / 2           # גלולה
-# בלוק המספרים: 4 שורות בפסיעה שווה, ממורכז על הכיפות
-PITCH = (cell_cy(2) - cell_cy(5)) / 3
+# בלוק המספרים: 4 שורות בפסיעה שווה, מהכיפות של 1-2-3 עד השורה התחתונה.
+# בגלולה של # השורה התחתונה בגובה העדשה, כדי ש-* 0 # יהיו בקו אחד.
+ROW5_Y = selfie_y if HASH["mode"] == "pill" else cell_cy(5) - BOTTOM_ROW_DROP
+PITCH = (cell_cy(2) - ROW5_Y) / 3
 KEY_GAP = PITCH - KEY_H     # רווח אנכי
-num_mid = (cell_cy(2) + cell_cy(5)) / 2
-ROW_Y = {r: num_mid + (3.5 - r) * PITCH for r in range(2, 6)}
-ROW_Y[5] -= BOTTOM_ROW_DROP
+ROW_Y = {r: cell_cy(2) - (r - 2) * PITCH for r in range(2, 6)}
 # אשכול הניווט: טבעת החצים ממורכזת על כיפת ה-D-pad, שני המקשים בכל צד מיושרים אליה
 dpad_y = keypad_top - KEY_ROW_H[0]
 DPAD_H = 2 * KEY_H + KEY_GAP
@@ -257,6 +268,7 @@ HASH_ARC = (HASH_ARC_R, SELFIE_WIN / 2 + 0.95, HASH_ARC_R - KEY_WINDOW_CLEAR, HA
 
 # [תווית, x, y, רוחב, גובה, רדיוס, סוג, (dx, dy) של הפין מול מרכז המקש]
 KEYS = []
+PILL_LEGEND_SHIFT = 0.0
 for r in range(6):
     for c in range(3):
         lab = KEY_LABELS[r][c]
@@ -279,8 +291,16 @@ for r in range(6):
             dome = ((x - kw / 2 + selfie_x - math.sqrt(max(r0 ** 2 - reach0 ** 2, 0.0))) / 2 - 0.8, cell_cy(r))
             kh = float(HASH["height"])
             kr = min(float(HASH["corner_r"]), kh / 2)
-            sw = SELFIE_WIN - 2 * KEY_WINDOW_CLEAR
+            sw = (PILL_H if HASH["mode"] == "pill" else SELFIE_WIN) - 2 * KEY_WINDOW_CLEAR
             KEYS.append(["selfie", selfie_x, selfie_y, sw, sw, sw / 2, "open", (0, 0)])
+            if HASH["mode"] == "pill":
+                # הרשומה היא כל הגלולה (החלון בחזית); המקש עצמו נחתך בקשת סביב העדשה (wrap)
+                # בדיוק בגודל ובמקום של שאר המקשים בעמודה (סימטרי); הקצה הימני מרוכז על העדשה
+                hx0, hx1 = x - kw / 2, x + kw / 2
+                hx = (hx0 + hx1) / 2
+                PILL_LEGEND_SHIFT = (hx0 + selfie_x - HASH_ARC_R) / 2 - hx
+                KEYS.append([lab, hx, selfie_y, hx1 - hx0, KEY_H, KEY_H / 2, "key", (dome[0] - hx, dome[1] - selfie_y)])
+                continue
             hx0 = x - kw / 2 + float(HASH["left_inset"])
             if HASH["mode"] == "rect":
                 hw = float(HASH["width"])
@@ -299,6 +319,9 @@ for r in range(6):
             KEYS.append([lab, hx, y, hw, kh, kr, "key", (dome[0] - hx, dome[1] - y)])
             continue
         KEYS.append([lab, x, y, kw, kh, kr, "key", nub])
+# ציר # למעלה: ארוך ככל שיש מקום עד החריץ של 9, ומשאיר פס רשת 0.5 (0.9-1.5 מ"מ)
+_hk, _k9 = next(k for k in KEYS if k[0] == "#"), next(k for k in KEYS if k[0] == "9")
+HASH_HINGE_L = min(1.5, max(0.9, (_k9[2] - _k9[4] / 2 - 0.4) - (_hk[2] + _hk[4] / 2) - 0.5))
 KEYS.append(["", 0.0, dpad_y, DPAD_D, DPAD_D, DPAD_R, "dpad", (0, 0)])
 KEYS.append(["", 0.0, dpad_y, OK_SIZE, OK_SIZE, OK_R, "ok", (0, 0)])
 
@@ -689,6 +712,8 @@ def build_front_housing():
     for lab, x, y, w, h, r, kind, _ in KEYS:
         if kind == "ok":
             continue        # ה-OK בולט דרך החלון של טבעת החצים
+        if kind == "open" and HASH["mode"] == "pill":
+            continue        # החלון של העדשה הוא הקצה הימני של חלון הגלולה של #
         c = KEY_WINDOW_CLEAR
         win = rr_prism(f"win_{kind}", w + 2 * c, h + 2 * c, r + c, SPLIT_Z - 1, BODY_T + 1, loc=(x, y, 0))
         # שיפוע 0.3 בשפת החלון: הגשרים בין המקשים נראים כמו מסגרת מדויקת ולא כמו חיתוך
@@ -732,7 +757,8 @@ def legend_parts(lab):
         return [(lab, 4.3, 0.0, 0.0, FONT_ICON)]
     if lab == "#":      # מעוצב בארטיפקט (hash_key.json)
         t = str(HASH["legend"])
-        return [(t, float(HASH["legend_size"]), float(HASH["legend_dx"]), float(HASH["legend_dy"]), HASH_FONT)] if t else []
+        return [(t, float(HASH["legend_size"]), float(HASH["legend_dx"]) + PILL_LEGEND_SHIFT, float(HASH["legend_dy"]),
+                 HASH_FONT)] if t else []
     if A1MINI and not A1_LETTERS:   # A1 mini: רק הספרה, במרכז (האותיות הקטנות לא יוצאות בפיה 0.4)
         return [(lab, 7.4 if lab == "*" else 5.8, 0.0, 0.0, FONT_TEXT)]
     if lab in KEY_LETTERS:
@@ -948,7 +974,7 @@ def build_keys_in_place():
             continue
         if kind == "key":
             is_hash = lab == "#"
-            wrap = (selfie_x - x, selfie_y - y) if is_hash and HASH["mode"] == "arc" else None
+            wrap = (selfie_x - x, selfie_y - y) if is_hash and HASH["mode"] in ("arc", "pill") else None
             cap = build_keycap(lab, w, h, r, nub, wrap)
         elif kind == "open":
             continue        # #: חלון גלולה פתוח מעל מצלמת הסלפי
@@ -1035,7 +1061,7 @@ def build_internals_preview():
     # תאורה אחורית: לוח לדים מתחת למקלדת (לתמונות בלבד)
     kb_top = max(k[2] + k[4] / 2 for k in KEYS if k[6] in ("key", "dpad"))
     kb_bot = min(k[2] - k[4] / 2 for k in KEYS if k[6] in ("key", "dpad"))
-    backlight = rr_prism("backlight", 2 * KEY_LIMIT_X, kb_top - kb_bot, 1.0,
+    backlight = rr_prism("backlight", 2 * KEY_RIGHT, kb_top - kb_bot, 1.0,
                          SPLIT_Z - FLANGE_H - KEY_NUB_H - 0.4, SPLIT_Z - FLANGE_H - KEY_NUB_H - 0.3,
                          loc=(0, (kb_top + kb_bot) / 2, 0))
     # מגש SIM לתמונות בלבד: להב שטוח עם שני שקעי nano-SIM, יושב בחריץ בצד שמאל
@@ -1110,7 +1136,14 @@ def check_design():
     if (y0 - TRAY_WALL) - nav_top < 0.1:
         issues.append(f"הקיר התחתון של המגש נוגע בפלנג'ים של שורת הניווט ({(y0 - TRAY_WALL) - nav_top:.2f})")
     h = next(k for k in KEYS if k[0] == "#")
-    if HASH["mode"] == "arc":
+    if HASH["mode"] == "pill":
+        hx_left = h[1] - h[3] / 2
+        vis = selfie_x - HASH_ARC_R - hx_left        # רוחב המקש בקו האמצע (עד הקשת)
+        if vis < 6.0:
+            issues.append(f"מקש # (הגלולה) קצר מדי ({vis:.2f})")
+        if selfie_x - HASH_ARC_R - (h[1] + h[7][0]) < HASH_NUB_D / 2 + 0.4:
+            issues.append("הפין של # קרוב מדי לקשת של העדשה")
+    elif HASH["mode"] == "arc":
         r_cap, r_fl, r_win, _ = HASH_ARC
         if r_win - SELFIE_WIN / 2 < 0.8:
             issues.append(f"הגשר בין חלון # לחלון הסלפי דק ({r_win - SELFIE_WIN / 2:.2f})")
@@ -1133,11 +1166,18 @@ def check_design():
         gy = max(k[2] - k[4] / 2 - hy1, hy0 - (k[2] + k[4] / 2)) - 2 * c
         if max(gx, gy) < 0.8:
             issues.append(f"הגשר בין # למקש {nb} דק ({max(gx, gy):.2f})")
-    if hx1 > KEY_LIMIT_X + 0.01:
-        issues.append(f"מקש # יוצא מימין לקצה המקלדת ({hx1:.2f} > {KEY_LIMIT_X:.2f})")
-    if hy0 < -SKIRT_IN_L / 2 + 0.25 + 1.5 + 0.5:     # רצועה 1.5 + פס רשת 0.5
-        issues.append(f"אין מקום לציר של # מתחת למקש ({hy0:.2f})")
-    if h[3] < 6.0 or abs(h[7][0]) > h[3] / 2 - HASH_NUB_D / 2 - 0.4 or abs(h[7][1]) > h[4] / 2 - HASH_NUB_D / 2 - 0.4:
+    if hx1 > KEY_RIGHT + 0.01:
+        issues.append(f"מקש # יוצא מימין לקצה המקלדת ({hx1:.2f} > {KEY_RIGHT:.2f})")
+    k9 = next(k for k in KEYS if k[0] == "9")      # ציר למעלה: רצועה + פס רשת 0.4 לפחות עד החריץ של 9
+    room = (k9[2] - k9[4] / 2 - WEB_SLOT) - (hy1 + HASH_HINGE_L)
+    if room < 0.4:
+        issues.append(f"אין מקום לציר של # מעל המקש ({room:.2f})")
+    hstrain = 100 * HINGE_T * (KEY_TRAVEL / (hy1 - (h[2] + h[7][1]))) / (2 * HASH_HINGE_L)
+    if hstrain >= 1.2:
+        issues.append(f"עומס על הציר של # ({hstrain:.2f}%)")
+    if HASH["mode"] != "pill" and h[3] < 6.0:
+        issues.append(f"מקש # צר מדי ({h[3]:.2f})")
+    if abs(h[7][0]) > h[3] / 2 - HASH_NUB_D / 2 - 0.4 or abs(h[7][1]) > h[4] / 2 - HASH_NUB_D / 2 - 0.4:
         issues.append(f"מקש # צר מדי ({h[3]:.2f}) או שהפין יוצא ממנו")
     if h[4] > KEY_H + 0.01:
         issues.append(f"מקש # גבוה מהשורה ({h[4]:.2f} > {KEY_H})")
@@ -1148,7 +1188,7 @@ def check_design():
 
 def grid_report():
     return dict(key=[round(KEY_W, 2), round(KEY_H, 2)], gap=KEY_GAP, pitch=round(PITCH, 3),
-                keypad_width=round(2 * KEY_LIMIT_X, 2), screen_pocket=[round(v, 2) for v in screen_pocket()],
+                keypad_width=round(2 * KEY_RIGHT, 2), screen_pocket=[round(v, 2) for v in screen_pocket()],
                 max_nub_offset=round(max(math.hypot(*k[7]) for k in KEYS), 2),
                 selfie_lens_margin=round(lens_margin(), 2))
 
@@ -1398,8 +1438,8 @@ def hinge_spec(lab, x):
     """(צד, אורך) של רצועת הציר. הרצועה ארוכה ככל שיש מקום, והרחק מהפין, כדי שהכיפוף יהיה קטן.
     עמודה שמאלית: ציר ימינה (משמאל אין מקום עד התקע ההיקפי). אמצעית ושמאלית-ימנית: ציר שמאלה.
     ניווט: ציר החוצה. #: ציר למטה (המקש צר, והקצה התחתון רחוק מהפין)."""
-    if lab == "#":
-        return "-y", 1.5
+    if lab == "#":      # אין מקום מתחת (KEYPAD_DROP) - ציר למעלה, לרשת שבין # ל-9
+        return "+y", HASH_HINGE_L
     if lab in NAV_LABELS:
         return ("-x", 1.2) if x < 0 else ("+x", 1.2)
     if x < -1:
@@ -1431,6 +1471,37 @@ def count_islands(obj):
     return n
 
 
+def drop_small_islands(obj, max_mm3):
+    """מוחק שבבי רשת קטנים שנשארו מנותקים בין החריצים (למשל בין טבעת החצים למקש ניווט).
+    הם לא מחוברים לשום דבר, ובהדפסה היו נופלים או נשארים כלכלוך על המשטח."""
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+    bm.faces.ensure_lookup_table()
+    seen, kill = set(), []
+    for f in bm.faces:
+        if f.index in seen:
+            continue
+        isl, stack = [], [f]
+        seen.add(f.index)
+        while stack:
+            g = stack.pop()
+            isl.append(g)
+            for e in g.edges:
+                for h in e.link_faces:
+                    if h.index not in seen:
+                        seen.add(h.index)
+                        stack.append(h)
+        vol = abs(sum(g.calc_center_median().dot(g.normal) * g.calc_area() for g in isl)) / 3
+        if vol < max_mm3:
+            kill += isl
+    if kill:
+        verts = {v for g in kill for v in g.verts}
+        bmesh.ops.delete(bm, geom=list(verts), context="VERTS")
+        bm.to_mesh(obj.data)
+        obj.data.update()
+    bm.free()
+
+
 def build_keymat(caps):
     """כל המקשים (מספרים, ניווט, #) גוף אחד: רשת בעובי WEB_T צמודה לתחתית החזית, וכל מקש
     מחובר אליה ברצועה אחת - ציר. המקש מסתובב סביב הרצועה כשלוחצים, והכיפה שמתחתיו דוחפת אותו חזרה.
@@ -1439,6 +1510,11 @@ def build_keymat(caps):
     z0, z1, zh = SPLIT_Z - WEB_T, SPLIT_Z, SPLIT_Z - HINGE_T
     x1 = SKIRT_IN_W / 2 - 0.25
     y_lo = -SKIRT_IN_L / 2 + 0.25
+    # השורה התחתונה קרובה לקצה (KEYPAD_DROP): אם החריצים משאירים מתחתיהם פס דק מ-0.6, הרשת
+    # נגמרת 0.3 מעל תחתית החריצים במקום להשאיר שבב
+    slot_bot = min(k[2] - k[4] / 2 - WEB_SLOT for k in KEYS if k[6] == "key")
+    if slot_bot - y_lo < 0.6:
+        y_lo = slot_bot + 0.3
     y_hi = tray_geom()[0] - TRAY_WALL - 0.25
     web = rr_prism("keymat", 2 * x1, y_hi - y_lo, max(IN_R - SKIRT_GAP_NOMINAL - SKIRT_T - 0.25, 0.5), z0, z1,
                    loc=(0, (y_lo + y_hi) / 2, 0))
@@ -1462,13 +1538,14 @@ def build_keymat(caps):
                 dist = abs(e - (y + nub[1]))
             # כיפוף הרצועה: זווית = מהלך / מרחק הפין מהציר; מתיחה = עובי × זווית / (2 × אורך)
             strain[lab] = round(100 * HINGE_T * (KEY_TRAVEL / dist) / (2 * L), 2)
-        elif kind == "open":
+        elif kind == "open" and HASH["mode"] != "pill":     # בגלולה החריץ של # כבר כולל את העדשה
             rr = SELFIE_WIN / 2 + s
             cutters.append(rr_prism("selfie_slot", 2 * rr, 2 * rr, rr, z0 - 1, z1 + 1, loc=(x, y, 0)))
         elif kind == "dpad":
             rr = DPAD_R + FLANGE_MARGIN / 2 + 0.3
             cutters.append(rr_prism("dpad_slot", 2 * rr, 2 * rr, rr, z0 - 1, z1 + 1, loc=(x, y, 0)))
     boolean(web, cutters, "DIFFERENCE")
+    drop_small_islands(web, 20.0)
     keys, loose, legends = [], [], []
     for c in caps:
         for ch in list(c.children):
