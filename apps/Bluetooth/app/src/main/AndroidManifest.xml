@@ -9,6 +9,9 @@
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
+    <!-- "קבצים שהתקבלו": שירות ה-OPP של המערכת שומר אותם ב-Download, והרשומות
+         שלו (שאינן מדיה) גלויות לאפליקציה אחרת רק עם גישה לכל הקבצים - כמו Files. -->
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" tools:ignore="ScopedStorage" />
 
     <!-- מאנדרואיד 11 (API 30) ומעלה, ContentResolver.query() על ספק תוכן של
          אפליקציה אחרת מוחזר ריק בשקט אלא אם היא מוצהרת כאן - נחוץ כדי לקרוא
@@ -17,6 +20,15 @@
         <package android:name="com.future.futureui" />
         <!-- "קבצים שהתקבלו" פותח את אפליקציית הקבצים של המערכת. -->
         <package android:name="com.future.files" />
+        <!-- "שלח קובץ" (בורר קבצים) ופתיחת קובץ שהתקבל, כשאין את Files. -->
+        <intent>
+            <action android:name="android.intent.action.GET_CONTENT" />
+            <data android:mimeType="*/*" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:mimeType="*/*" />
+        </intent>
     </queries>
 
     <uses-permission android:name="com.future.futureui.permission.SYSTEM_SETTINGS" />
@@ -31,6 +43,7 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:launchMode="singleTop"
             android:label="@string/app_name"
             android:theme="@style/Theme.Bluetooth">
             <intent-filter>
@@ -38,7 +51,28 @@
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- "שתף > בלוטוס" מכל אפליקציה: הקבצים נשלחים במסך בחירת המכשיר. -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="*/*" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND_MULTIPLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="*/*" />
+            </intent-filter>
         </activity>
+        <!-- פתיחה ושיתוף של קבצים שהתקבלו - הרשאת קריאה זמנית ל-Uri בלבד. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
     </application>
 
 </manifest>

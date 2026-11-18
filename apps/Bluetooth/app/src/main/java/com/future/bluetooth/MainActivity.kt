@@ -5,7 +5,9 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
-import android.os.Environment
+import android.webkit.MimeTypeMap
+import androidx.core.content.FileProvider
+import com.future.sharednav.i18n.tr
 import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -20,6 +22,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import com.future.bluetooth.data.BluetoothController
+import com.future.bluetooth.data.TransferManager
 import com.future.bluetooth.ui.BluetoothActions
 import com.future.bluetooth.ui.BluetoothApp
 import com.future.sharednav.theme.FutureAppTheme
@@ -42,6 +45,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        if (savedInstanceState == null) handleShare(intent)
 
         setContent {
             // הערכה מתעדכנת חי (ContentObserver) - גם כשמצב כהה/בהיר משתנה
@@ -59,6 +63,18 @@ class MainActivity : ComponentActivity() {
             val enableLauncher = rememberLauncherForActivityResult(
                 ActivityResultContracts.StartActivityForResult()
             ) { controller.refreshState() }
+            // תוצאת דיאלוג הנראות: resultCode הוא מספר השניות שאושרו (0 = בוטל).
+            val discoverableLauncher = rememberLauncherForActivityResult(
+                ActivityResultContracts.StartActivityForResult()
+            ) { controller.onDiscoverableResult(it.resultCode) }
+            val pickLauncher = rememberLauncherForActivityResult(
+                ActivityResultContracts.StartActivityForResult()
+            ) { result ->
+                val data = result.data
+                val uris = if (result.resultCode == android.app.Activity.RESULT_OK && data != null) urisOf(data) else emptyList()
+                if (uris.isEmpty()) TransferManager.setPickTarget(null, null)
+                else TransferManager.onFilesChosen(this@MainActivity, uris)
+            }
 
             // ההרשאות ומצב הבלוטות' יכולים להשתנות בזמן שהאפליקציה ברקע
             // (הגדרות, שורת המצב) - מרעננים בכל חזרה למסך.
@@ -98,8 +114,32 @@ class MainActivity : ComponentActivity() {
                     requestPermission = { permissionLauncher.launch(requiredPermissions) },
                     requestEnable = { enableLauncher.launch(controller.requestEnableIntent()) },
                     openSystemSettings = { openSystemBluetoothSettings() },
-                    openReceivedFiles = { openReceivedFiles() },
                     openAppSettings = { openAppDetails() },
+                    pickFiles = {
+                        val intent = Intent(Intent.ACTION_GET_CONTENT)
+                            .setType("*/*")
+                            .addCategory(Intent.CATEGORY_OPENABLE)
+                            .putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
+                        // אפליקציית הקבצים של המערכת עובדת עם המקשים; בלעדיה - כל בורר.
+                        val files = Intent(intent).setPackage(FILES_PACKAGE)
+                        val target = if (files.resolveActivity(packageManager) != null) files else intent
+                        try {
+                            pickLauncher.launch(target)
+                            true
+                        } catch (e: ActivityNotFoundException) {
+                            false
+                        }
+                    },
+                    requestDiscoverable = {
+                        try {
+                            discoverableLauncher.launch(controller.requestDiscoverableIntent(DISCOVERABLE_SECONDS))
+                        } catch (e: ActivityNotFoundException) {
+                            openSystemBluetoothSettings()
+                        }
+                    },
+                    openFile = { openFile(it) },
+                    shareFile = { shareFile(it) },
+                    grantFilesAccess = { openAllFilesAccess() },
                 )
             }
 
@@ -111,6 +151,80 @@ class MainActivity : ComponentActivity() {
                     actions = actions,
                 )
             }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleShare(intent)
+    }
+
+    /**
+     * "שתף > בלוטוס" מאפליקציה אחרת: הקבצים ממתינים, ונפתח מסך בחירת
+     * המכשיר. רק בהפעלה הראשונה של ה-Intent, לא אחרי יצירה מחדש של הפעילות.
+     */
+    private fun handleShare(intent: Intent?) {
+        intent ?: return
+        if (intent.action != Intent.ACTION_SEND && intent.action != Intent.ACTION_SEND_MULTIPLE) return
+        val uris = urisOf(intent)
+        if (uris.isEmpty()) return
+        TransferManager.setPickTarget(null, null)
+        TransferManager.onFilesChosen(this, uris)
+    }
+
+    /** הקבצים מ-Intent של שיתוף או של בורר: EXTRA_STREAM, ClipData או data. */
+    @Suppress("DEPRECATION")
+    private fun urisOf(intent: Intent): List<android.net.Uri> {
+        val out = ArrayList<android.net.Uri>()
+        runCatching { intent.getParcelableArrayListExtra<android.net.Uri>(Intent.EXTRA_STREAM)?.let { out.addAll(it) } }
+        runCatching { intent.getParcelableExtra<android.net.Uri>(Intent.EXTRA_STREAM)?.let { out.add(it) } }
+        intent.clipData?.let { clip -> for (i in 0 until clip.itemCount) clip.getItemAt(i).uri?.let { out.add(it) } }
+        intent.data?.let { out.add(it) }
+        return out.distinct()
+    }
+
+    /** פתיחת קובץ שהתקבל באפליקציה שמתאימה לסוג שלו. null כשנפתח. */
+    private fun openFile(file: File): String? {
+        return try {
+            val uri = FileProvider.getUriForFile(this, "$packageName.fileprovider", file)
+            val mime = MimeTypeMap.getSingleton().getMimeTypeFromExtension(file.extension.lowercase()) ?: "*/*"
+            startActivity(
+                Intent(Intent.ACTION_VIEW)
+                    .setDataAndType(uri, mime)
+                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            )
+            null
+        } catch (e: ActivityNotFoundException) {
+            tr("אין אפליקציה שפותחת את הקובץ")
+        } catch (e: IllegalArgumentException) {
+            tr("לא ניתן לפתוח את הקובץ")
+        }
+    }
+
+    private fun shareFile(file: File) {
+        try {
+            val uri = FileProvider.getUriForFile(this, "$packageName.fileprovider", file)
+            val mime = MimeTypeMap.getSingleton().getMimeTypeFromExtension(file.extension.lowercase()) ?: "*/*"
+            val send = Intent(Intent.ACTION_SEND)
+                .setType(mime)
+                .putExtra(Intent.EXTRA_STREAM, uri)
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            send.clipData = android.content.ClipData.newRawUri(file.name, uri)
+            com.future.sharednav.share.FutureShare.open(this, send, tr("שיתוף קובץ"))
+        } catch (e: Exception) {
+            // אין חלון שיתוף - אין מה לעשות.
+        }
+    }
+
+    /** "גישה לכל הקבצים" - בלעדיה קבצים שאינם מדיה שהתקבלו לא נראים. */
+    private fun openAllFilesAccess() {
+        try {
+            startActivity(
+                Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, android.net.Uri.fromParts("package", packageName, null))
+            )
+        } catch (e: ActivityNotFoundException) {
+            runCatching { startActivity(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)) }
         }
     }
 
@@ -136,26 +250,9 @@ class MainActivity : ComponentActivity() {
         false
     }
 
-    /**
-     * קבצים שהתקבלו בבלוטות' נשמרים ב-Download/Bluetooth (או bluetooth בשורש
-     * האחסון בחלק מהמכשירים). אם התיקייה קיימת נפתחת אפליקציית הקבצים; אם לא -
-     * false, ואין מה להראות.
-     */
-    /** null כשאפליקציית הקבצים נפתחה, אחרת ההודעה שמסבירה למה לא. */
-    private fun openReceivedFiles(): String? {
-        val root = Environment.getExternalStorageDirectory()
-        val folders = listOf(
-            File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Bluetooth"),
-            File(root, "bluetooth"),
-        )
-        // BT-10: אפליקציית קבצים חסרה היא לא "אין קבצים" - כל מצב מקבל הודעה משלו.
-        val launch = packageManager.getLaunchIntentForPackage(FILES_PACKAGE) ?: return "אפליקציית הקבצים לא מותקנת"
-        if (folders.none { it.isDirectory }) return "אין קבצים שהתקבלו"
-        startActivity(launch)
-        return null
-    }
-
     private companion object {
         const val FILES_PACKAGE = "com.future.files"
+        /** כמה זמן הטלפון גלוי אחרי אישור (כמו במסך הבלוטות' של אנדרואיד). */
+        const val DISCOVERABLE_SECONDS = 120
     }
 }

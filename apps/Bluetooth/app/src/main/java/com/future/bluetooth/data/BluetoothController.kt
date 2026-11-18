@@ -97,6 +97,14 @@ class BluetoothController(private val context: Context) {
     var adapterName by mutableStateOf(readAdapterName())
         private set
 
+    /** הטלפון גלוי למכשירים אחרים (חיפוש) - נדרש כדי שמכשיר חדש ימצא אותו וישלח אליו קבצים. */
+    var isDiscoverable by mutableStateOf(readDiscoverable())
+        private set
+
+    /** מתי הנראות נגמרת (millis), או 0 כשלא ידוע. */
+    var discoverableUntil by mutableStateOf(0L)
+        private set
+
     val pairedDevices = mutableStateListOf<BluetoothDeviceInfo>()
     val discoveredDevices = mutableStateListOf<BluetoothDeviceInfo>()
 
@@ -151,8 +159,29 @@ class BluetoothController(private val context: Context) {
     fun refreshState() {
         isEnabled = adapter?.isEnabled == true
         adapterName = readAdapterName()
+        isDiscoverable = readDiscoverable()
+        if (!isDiscoverable) discoverableUntil = 0L
         connectProfiles()
         refreshPairedDevices()
+    }
+
+    /** בקשת הנראות של המערכת (דיאלוג אישור). [seconds] - כמה זמן. */
+    fun requestDiscoverableIntent(seconds: Int): Intent =
+        Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE)
+            .putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, seconds)
+
+    /** תוצאת דיאלוג הנראות: resultCode הוא מספר השניות, או RESULT_CANCELED (0). */
+    fun onDiscoverableResult(seconds: Int) {
+        if (seconds > 0) {
+            discoverableUntil = System.currentTimeMillis() + seconds * 1000L
+            isDiscoverable = true
+        }
+    }
+
+    private fun readDiscoverable(): Boolean = try {
+        adapter?.scanMode == BluetoothAdapter.SCAN_MODE_CONNECTABLE_DISCOVERABLE
+    } catch (e: SecurityException) {
+        false
     }
 
     fun refreshPairedDevices() {
@@ -357,6 +386,7 @@ class BluetoothController(private val context: Context) {
             addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED)
             addAction(BluetoothAdapter.ACTION_STATE_CHANGED)
             addAction(BluetoothAdapter.ACTION_LOCAL_NAME_CHANGED)
+            addAction(BluetoothAdapter.ACTION_SCAN_MODE_CHANGED)
             addAction(BluetoothDevice.ACTION_BOND_STATE_CHANGED)
             addAction(BluetoothDevice.ACTION_ACL_CONNECTED)
             addAction(BluetoothDevice.ACTION_ACL_DISCONNECTED)
@@ -409,6 +439,11 @@ class BluetoothController(private val context: Context) {
                         }
                     }
                     BluetoothAdapter.ACTION_LOCAL_NAME_CHANGED -> adapterName = readAdapterName()
+                    BluetoothAdapter.ACTION_SCAN_MODE_CHANGED -> {
+                        val mode = intent.getIntExtra(BluetoothAdapter.EXTRA_SCAN_MODE, BluetoothAdapter.ERROR)
+                        isDiscoverable = mode == BluetoothAdapter.SCAN_MODE_CONNECTABLE_DISCOVERABLE
+                        if (!isDiscoverable) discoverableUntil = 0L
+                    }
                     BluetoothDevice.ACTION_BOND_STATE_CHANGED -> {
                         val state = intent.getIntExtra(BluetoothDevice.EXTRA_BOND_STATE, BluetoothDevice.ERROR)
                         val address = device?.address
@@ -444,12 +479,12 @@ class BluetoothController(private val context: Context) {
                             val stillTrying = connectingOn(headset, device) || connectingOn(a2dp, device)
                             if (state == BluetoothProfile.STATE_CONNECTED) {
                                 userConnecting.remove(address)
-                                onEvent?.invoke("מחובר · ${device.toInfo().name}")
+                                onEvent?.invoke(tr("מחובר · {0}", device.toInfo().name))
                             } else if (state == BluetoothProfile.STATE_DISCONNECTED && !stillTrying &&
                                 !connectedOn(headset, device) && !connectedOn(a2dp, device)
                             ) {
                                 userConnecting.remove(address)
-                                onEvent?.invoke("החיבור נכשל · ${device.toInfo().name}")
+                                onEvent?.invoke(tr("החיבור נכשל · {0}", device.toInfo().name))
                             }
                         }
                         refreshPairedDevices()
@@ -562,7 +597,7 @@ class BluetoothController(private val context: Context) {
         }
         val localName = aliases.getString(address, null)
         // BT-23: בלי שם מציגים "מכשיר לא מזוהה" והכתובת בשורת המשנה, לא ככתובת בשם הראשי.
-        val displayName = localName ?: systemName ?: UNKNOWN_NAME
+        val displayName = localName ?: systemName ?: tr(UNKNOWN_NAME)
         val bonded = bondState == BluetoothDevice.BOND_BONDED
         val bonding = bondState == BluetoothDevice.BOND_BONDING
         val cls = try {
@@ -581,6 +616,8 @@ class BluetoothController(private val context: Context) {
             ?: (cls?.majorDeviceClass == BluetoothClass.Device.Major.AUDIO_VIDEO)
         val supportsCalls = uuidList?.any { it in CALL_UUIDS }
             ?: (kind == DeviceKind.Headphones || kind == DeviceKind.Car)
+        val supportsFiles = uuidList?.any { it == OPP_UUID }
+            ?: (kind == DeviceKind.Phone || kind == DeviceKind.Computer || kind == DeviceKind.Other)
         val calls = connectedOn(headset, this)
         val media = connectedOn(a2dp, this)
         val connection = when {
@@ -599,6 +636,7 @@ class BluetoothController(private val context: Context) {
             supportsMedia = supportsMedia,
             callsConnected = calls,
             mediaConnected = media,
+            supportsFiles = supportsFiles,
             nameKnown = localName != null || systemName != null,
         )
     }
@@ -646,6 +684,8 @@ class BluetoothController(private val context: Context) {
             ParcelUuid.fromString("0000110B-0000-1000-8000-00805F9B34FB"), // A2DP sink
             ParcelUuid.fromString("0000110D-0000-1000-8000-00805F9B34FB"), // Advanced audio
         )
+        /** Object Push - קבלת קבצים. */
+        val OPP_UUID: ParcelUuid = ParcelUuid.fromString("00001105-0000-1000-8000-00805F9B34FB")
         val CALL_UUIDS = setOf(
             ParcelUuid.fromString("0000111E-0000-1000-8000-00805F9B34FB"), // Handsfree
             ParcelUuid.fromString("00001108-0000-1000-8000-00805F9B34FB"), // Headset

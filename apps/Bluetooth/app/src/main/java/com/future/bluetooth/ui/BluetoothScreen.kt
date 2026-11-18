@@ -41,6 +41,10 @@ import com.future.bluetooth.data.BluetoothController
 import com.future.bluetooth.data.BluetoothDeviceInfo
 import com.future.bluetooth.data.Connection
 import com.future.bluetooth.data.DeviceKind
+import com.future.bluetooth.data.ReceivedFile
+import com.future.bluetooth.data.ReceivedFiles
+import com.future.bluetooth.data.TransferManager
+import com.future.bluetooth.data.TransferNav
 import com.future.sharednav.components.AnimatedScreenHost
 import com.future.sharednav.components.ConfirmDialog
 import com.future.sharednav.components.EmptyState
@@ -82,8 +86,15 @@ class BluetoothActions(
     val requestEnable: () -> Unit,
     /** מסך הבלוטות' של המערכת - למה שהמכשיר לא מאפשר לעשות מכאן. false כשאין מסך כזה. */
     val openSystemSettings: () -> Boolean,
-    /** null כשנפתחה אפליקציית הקבצים, אחרת הודעה למשתמש. */
-    val openReceivedFiles: () -> String?,
+    /** בורר הקבצים (Files) - התוצאה מגיעה ל-TransferManager.onFilesChosen. */
+    val pickFiles: () -> Boolean,
+    /** דיאלוג הנראות של המערכת ("להפוך את הטלפון לגלוי"). */
+    val requestDiscoverable: () -> Unit,
+    /** פתיחת קובץ שהתקבל. null כשנפתח, אחרת הודעה למשתמש. */
+    val openFile: (java.io.File) -> String?,
+    val shareFile: (java.io.File) -> Unit,
+    /** מסך "גישה לכל הקבצים" של האפליקציה - בלעדיו רשימת הקבצים שהתקבלו חלקית. */
+    val grantFilesAccess: () -> Unit,
     /** מסך הגדרות האפליקציה - לאישור הרשאה שנדחתה לצמיתות (אחרי זה המערכת לא מציגה דיאלוג). */
     val openAppSettings: () -> Unit,
 )
@@ -94,6 +105,8 @@ private sealed interface Dialog {
     data object RenamePhone : Dialog
     data class RenameDevice(val device: BluetoothDeviceInfo) : Dialog
     data object DisconnectAll : Dialog
+    data class DeleteReceived(val file: ReceivedFile) : Dialog
+    data object ClearHistory : Dialog
 }
 
 /**
@@ -115,6 +128,39 @@ fun BluetoothApp(
     var menuOpen by rememberSaveable { mutableStateOf(false) }
     var dialog by remember { mutableStateOf<Dialog?>(null) }
     val snackbar = rememberFutureSnackbarState()
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    // מסכי העברת הקבצים - מחסנית מעל המסך הראשי / מסך המכשיר ("|" מפריד).
+    var routeStack by rememberSaveable { mutableStateOf("") }
+    val routes = if (routeStack.isEmpty()) emptyList() else routeStack.split('|')
+    val topRoute = routes.lastOrNull()
+    // קוראים את המחסנית העדכנית בכל קריאה, ולא את זו של הקומפוזיציה שבה נוצרה הפונקציה.
+    fun current() = if (routeStack.isEmpty()) emptyList() else routeStack.split('|')
+    fun push(route: String) { routeStack = (current() + route).joinToString("|") }
+    fun pop() { routeStack = current().dropLast(1).joinToString("|") }
+    fun replaceTop(route: String) { routeStack = (current().dropLast(1) + route).joinToString("|") }
+
+    // קבצים שהתקבלו: נטענים מחדש בכל כניסה למסכי ההעברה ובכל חזרה לאפליקציה
+    // (ייתכן שבינתיים התקבל קובץ, או שאושרה גישה לקבצים).
+    var received by remember { mutableStateOf<List<ReceivedFile>?>(null) }
+    var filesAccess by remember { mutableStateOf(ReceivedFiles.hasAccess()) }
+    var receivedVersion by remember { mutableStateOf(0) }
+    var focusedReceived by remember { mutableStateOf<ReceivedFile?>(null) }
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) receivedVersion++
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    val inTransfers = topRoute == ROUTE_TRANSFERS || topRoute == ROUTE_RECEIVED
+    LaunchedEffect(receivedVersion, inTransfers) {
+        if (!inTransfers) return@LaunchedEffect
+        filesAccess = ReceivedFiles.hasAccess()
+        received = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { ReceivedFiles.load(context) }
+    }
+    LaunchedEffect(Unit) { TransferManager.loadHistory(context) }
     // תוצאות שמגיעות מאוחר בשידור של המערכת (הותאם, מחובר, נכשל...).
     DisposableEffect(controller) {
         controller.onEvent = { snackbar.show(it) }
@@ -124,14 +170,58 @@ fun BluetoothApp(
     val ready = controller.isSupported() && hasPermission
     onOptionsKeyPress { if (ready && dialog == null) menuOpen = !menuOpen }
 
+    // שיתוף מאפליקציה אחרת / תוצאה מבורר הקבצים - פותחים את המסך המתאים.
+    val nav = TransferManager.nav
+    LaunchedEffect(nav, ready) {
+        if (nav == null || !ready) return@LaunchedEffect
+        TransferManager.consumeNav()
+        when (nav) {
+            TransferNav.PickDevice -> if (topRoute != ROUTE_PICK) push(ROUTE_PICK)
+            TransferNav.Progress -> if (topRoute == ROUTE_PICK || topRoute == ROUTE_PROGRESS) replaceTop(ROUTE_PROGRESS) else push(ROUTE_PROGRESS)
+        }
+    }
+
+    /** "שלח קובץ": בורר הקבצים, ואחריו מסך בחירת המכשיר (או ישר ליעד שנקבע). */
+    fun sendFile(address: String? = null, name: String? = null) {
+        if (TransferManager.transfer?.running == true) {
+            snackbar.show(tr("כבר יש שליחה פעילה"))
+            return
+        }
+        TransferManager.setPickTarget(address, name)
+        if (!actions.pickFiles()) {
+            TransferManager.setPickTarget(null, null)
+            snackbar.show(tr("אין אפליקציה לבחירת קבצים"))
+        }
+    }
+
+    fun toggleVisibility() {
+        when {
+            !controller.isEnabled -> snackbar.show(tr("הבלוטות' כבוי"))
+            controller.isDiscoverable -> snackbar.show(tr("הטלפון כבר גלוי למכשירים אחרים"))
+            else -> actions.requestDiscoverable()
+        }
+    }
+
+    fun openReceived(file: ReceivedFile) {
+        actions.openFile(file.file)?.let { snackbar.show(it) }
+    }
+
     val openDevice = openAddress?.let { address -> controller.pairedDevices.firstOrNull { it.address == address } }
     // מכשיר שנשכח (או שהרדיו כבה) - חוזרים לרשימה. BT-01: רק אחרי שהרשימה נטענה,
     // אחרת מכשיר פתוח לפני יצירה מחדש של הפעילות היה נסגר על רשימה ריקה.
     LaunchedEffect(openAddress, openDevice, controller.devicesLoaded) {
         if (controller.devicesLoaded && openAddress != null && openDevice == null) openAddress = null
     }
-    BackHandler(enabled = openAddress != null || showAllPaired) {
-        if (openAddress != null) openAddress = null else showAllPaired = false
+    BackHandler(enabled = routes.isNotEmpty() || openAddress != null || showAllPaired) {
+        when {
+            routes.isNotEmpty() -> {
+                if (topRoute == ROUTE_PROGRESS) TransferManager.dismissFinished()
+                if (topRoute == ROUTE_PICK) TransferManager.pending.clear()
+                pop()
+            }
+            openAddress != null -> openAddress = null
+            else -> showAllPaired = false
+        }
     }
 
     fun toggleRadio() {
@@ -149,7 +239,7 @@ fun BluetoothApp(
             snackbar.show(tr("הבלוטות' כבוי"))
             return
         }
-        snackbar.show(if (controller.startDiscovery()) tr("מחפש מכשירים") else "הסריקה לא התחילה")
+        snackbar.show(if (controller.startDiscovery()) tr("מחפש מכשירים") else tr("הסריקה לא התחילה"))
     }
 
     /** פעולה שהמכשיר לא מאפשר מכאן נפתחת במסך של המערכת, עם הסבר קצר. */
@@ -157,7 +247,7 @@ fun BluetoothApp(
         if (!ok) {
             // BT-11: ההודעה מתאימה למה שקרה בפועל - לא "פותח" כשהפתיחה נכשלה.
             if (actions.openSystemSettings()) snackbar.show(tr("פותח את הגדרות הבלוטות' של המערכת"))
-            else snackbar.show("אין מסך הגדרות בלוטות' במכשיר")
+            else snackbar.show(tr("אין מסך הגדרות בלוטות' במכשיר"))
         }
     }
 
@@ -168,17 +258,24 @@ fun BluetoothApp(
     fun waitForProfiles(ready: Boolean): Boolean {
         if (ready) return false
         controller.refreshState()
-        snackbar.show("מתחבר לשירותי הבלוטות', נסה שוב")
+        snackbar.show(tr("מתחבר לשירותי הבלוטות', נסה שוב"))
         return true
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
+        val baseDepth = when {
+            openDevice != null -> if (showAllPaired) 2 else 1
+            showAllPaired -> 1
+            else -> 0
+        }
         AnimatedScreenHost(
-            targetState = openDevice?.address ?: if (showAllPaired) ALL_PAIRED else null,
+            targetState = topRoute ?: openDevice?.address ?: if (showAllPaired) ALL_PAIRED else null,
             depthOf = {
-                when (it) {
-                    null -> 0
-                    ALL_PAIRED -> 1
+                val routeIndex = routes.indexOf(it)
+                when {
+                    routeIndex >= 0 -> baseDepth + routeIndex + 1
+                    it == null -> 0
+                    it == ALL_PAIRED -> 1
                     else -> if (showAllPaired) 2 else 1
                 }
             },
@@ -189,7 +286,66 @@ fun BluetoothApp(
                 controller.markUsed(it.address)
                 openAddress = it.address
             }
-            if (address == ALL_PAIRED) {
+            if (address == ROUTE_TRANSFERS) {
+                TransfersScreen(
+                    controller = controller,
+                    theme = theme,
+                    transfer = TransferManager.transfer,
+                    history = TransferManager.history,
+                    receivedCount = received?.size,
+                    onOpenProgress = { push(ROUTE_PROGRESS) },
+                    onSendFile = { sendFile() },
+                    onReceived = { push(ROUTE_RECEIVED) },
+                    onVisibility = ::toggleVisibility,
+                    onResend = { sendFile(it.address, it.deviceName) },
+                )
+            } else if (address == ROUTE_RECEIVED) {
+                ReceivedFilesScreen(
+                    theme = theme,
+                    files = received,
+                    hasAccess = filesAccess,
+                    focusPath = focusedReceived?.file?.absolutePath,
+                    onGrantAccess = actions.grantFilesAccess,
+                    onOpen = ::openReceived,
+                    onFocused = { focusedReceived = it },
+                )
+            } else if (address == ROUTE_PICK) {
+                ChooseDeviceScreen(
+                    controller = controller,
+                    theme = theme,
+                    files = TransferManager.pending,
+                    onToggleRadio = ::toggleRadio,
+                    onScan = ::scan,
+                    onPick = { target ->
+                        if (TransferManager.pending.isEmpty()) {
+                            pop()
+                        } else if (TransferManager.start(context, target.address, target.name, TransferManager.pending.toList())) {
+                            controller.markUsed(target.address)
+                            TransferManager.pending.clear()
+                            replaceTop(ROUTE_PROGRESS)
+                        } else {
+                            snackbar.show(tr("כבר יש שליחה פעילה"))
+                        }
+                    },
+                )
+            } else if (address == ROUTE_PROGRESS) {
+                TransferProgressScreen(
+                    theme = theme,
+                    transfer = TransferManager.transfer,
+                    onBack = {
+                        TransferManager.dismissFinished()
+                        pop()
+                    },
+                    onCancel = { TransferManager.cancel() },
+                    onRetry = { if (!TransferManager.retry(context)) snackbar.show(tr("לא ניתן לנסות שוב")) },
+                    onSendMore = {
+                        val t = TransferManager.transfer
+                        TransferManager.dismissFinished()
+                        pop()
+                        sendFile(t?.address, t?.deviceName)
+                    },
+                )
+            } else if (address == ALL_PAIRED) {
                 AllPairedScreen(
                     controller = controller,
                     theme = theme,
@@ -207,6 +363,8 @@ fun BluetoothApp(
                     onOpenAppSettings = actions.openAppSettings,
                     onToggleRadio = ::toggleRadio,
                     onRenamePhone = { dialog = Dialog.RenamePhone },
+                    onVisibility = ::toggleVisibility,
+                    onTransfers = { push(ROUTE_TRANSFERS) },
                     onOpenDevice = openFromList,
                     onShowAll = { lastOpened = SHOW_ALL_ROW; showAllPaired = true },
                     onScan = ::scan,
@@ -240,18 +398,19 @@ fun BluetoothApp(
                             val profilesReady = controller.profileReady(calls = true) || controller.profileReady(calls = false)
                             if (!waitForProfiles(profilesReady)) {
                                 val ok = controller.connect(device.address)
-                                if (ok) snackbar.show("מתחבר · ${device.name}")
+                                if (ok) snackbar.show(tr("מתחבר · {0}", device.name))
                                 orSystem(ok)
                             }
                         } else if (controller.isPairing(device.address)) {
                             // BT-07: התאמה בתהליך היא לא חיבור - אין מה לנתק.
-                            snackbar.show("ההתאמה עדיין בתהליך")
+                            snackbar.show(tr("ההתאמה עדיין בתהליך"))
                         } else {
                             val ok = controller.disconnect(device.address)
-                            if (ok) snackbar.show("נותק · ${device.name}") else orSystem(false)
+                            if (ok) snackbar.show(tr("נותק · {0}", device.name)) else orSystem(false)
                         }
                     },
                     onForget = { dialog = Dialog.Forget(device) },
+                    onSendFile = { sendFile(device.address, device.name) },
                 )
             }
         }
@@ -260,31 +419,96 @@ fun BluetoothApp(
     }
 
     if (menuOpen) {
+        val items = when (topRoute) {
+            ROUTE_TRANSFERS -> listOf(
+                MenuItem(tr("שלח קובץ"), FutureIcons.Send) { sendFile() },
+                MenuItem(tr("קבצים שהתקבלו"), FutureIcons.Download) { push(ROUTE_RECEIVED) },
+                MenuItem(tr("גלוי למכשירים אחרים"), FutureIcons.Visibility) { toggleVisibility() },
+            ) + if (TransferManager.history.isNotEmpty()) {
+                listOf(MenuItem(tr("נקה היסטוריה"), FutureIcons.Delete, destructive = true) { dialog = Dialog.ClearHistory })
+            } else emptyList()
+            ROUTE_RECEIVED -> {
+                val file = focusedReceived?.takeIf { f -> received?.any { it.file == f.file } == true }
+                (if (file != null) listOf(
+                    MenuItem(tr("פתח"), FutureIcons.Description) { openReceived(file) },
+                    MenuItem(tr("שתף"), FutureIcons.Share) { actions.shareFile(file.file) },
+                ) else emptyList()) + listOf(
+                    MenuItem(tr("רענן"), FutureIcons.Refresh) { receivedVersion++ },
+                ) + (if (file != null) listOf(
+                    MenuItem(tr("מחק"), FutureIcons.Delete, destructive = true) { dialog = Dialog.DeleteReceived(file) },
+                ) else emptyList())
+            }
+            ROUTE_PICK -> listOf(
+                MenuItem(tr("חפש מכשירים"), FutureIcons.Refresh) { scan() },
+            )
+            ROUTE_PROGRESS -> if (TransferManager.transfer?.running == true) {
+                listOf(MenuItem(tr("בטל שליחה"), FutureIcons.Close, destructive = true) { TransferManager.cancel() })
+            } else listOf(MenuItem(tr("שלח קובץ"), FutureIcons.Send) { sendFile() })
+            else -> listOf(
+                MenuItem(tr("רענן"), FutureIcons.Refresh) {
+                    controller.refreshState()
+                    scan()
+                },
+                MenuItem(tr("שלח קובץ"), FutureIcons.Send) { sendFile() },
+                MenuItem(tr("העברת קבצים"), FutureIcons.SwapVert) { push(ROUTE_TRANSFERS) },
+                MenuItem(tr("קבצים שהתקבלו"), FutureIcons.Folder) { push(ROUTE_RECEIVED) },
+                MenuItem(tr("גלוי למכשירים אחרים"), FutureIcons.Visibility) { toggleVisibility() },
+                MenuItem(tr("שם המכשיר"), FutureIcons.Edit) { dialog = Dialog.RenamePhone },
+                MenuItem(tr("הגדרות"), FutureIcons.Settings) { orSystem(false) },
+                // BT-08: ניתוק כל המכשירים מבקש אישור קודם.
+                MenuItem(tr("נתק הכל"), FutureIcons.LinkOff, destructive = true) { dialog = Dialog.DisconnectAll },
+            )
+        }
         BluetoothMenu(
             theme = theme,
-            onDismiss = { menuOpen = false },
-            onRefresh = {
-                controller.refreshState()
-                scan()
+            header = when (topRoute) {
+                ROUTE_TRANSFERS -> tr("העברת קבצים")
+                ROUTE_RECEIVED -> focusedReceived?.name ?: tr("קבצים שהתקבלו")
+                ROUTE_PICK -> tr("שלח אל")
+                ROUTE_PROGRESS -> tr("שליחת קובץ")
+                else -> tr("בלוטות'")
             },
-            onRenamePhone = { dialog = Dialog.RenamePhone },
-            onReceivedFiles = { actions.openReceivedFiles()?.let { snackbar.show(it) } },
-            onSettings = { orSystem(false) },
-            // BT-08: ניתוק כל המכשירים מבקש אישור קודם.
-            onDisconnectAll = { dialog = Dialog.DisconnectAll },
+            items = items,
+            onDismiss = { menuOpen = false },
         )
     }
 
     when (val d = dialog) {
+        is Dialog.DeleteReceived -> ConfirmDialog(
+            message = tr("למחוק את {0}?", d.file.name),
+            theme = theme,
+            confirmLabel = tr("מחק"),
+            onCancel = { dialog = null },
+            onConfirm = {
+                dialog = null
+                if (ReceivedFiles.delete(d.file, context)) {
+                    snackbar.show(tr("הקובץ נמחק"))
+                    focusedReceived = null
+                    receivedVersion++
+                } else {
+                    snackbar.show(tr("לא ניתן למחוק"))
+                }
+            },
+        )
+        Dialog.ClearHistory -> ConfirmDialog(
+            message = tr("לנקות את היסטוריית השליחה?"),
+            theme = theme,
+            confirmLabel = tr("נקה"),
+            onCancel = { dialog = null },
+            onConfirm = {
+                dialog = null
+                TransferManager.clearHistory(context)
+            },
+        )
         Dialog.DisconnectAll -> ConfirmDialog(
-            message = "לנתק את כל המכשירים המחוברים?",
+            message = tr("לנתק את כל המכשירים המחוברים?"),
             theme = theme,
             confirmLabel = tr("נתק הכל"),
             onCancel = { dialog = null },
             onConfirm = {
                 dialog = null
                 when (controller.disconnectAll()) {
-                    null -> snackbar.show("אין מכשירים מחוברים")
+                    null -> snackbar.show(tr("אין מכשירים מחוברים"))
                     0 -> orSystem(false)
                     else -> snackbar.show(tr("כל המכשירים נותקו"))
                 }
@@ -298,7 +522,7 @@ fun BluetoothApp(
             onCancel = { dialog = null },
             onConfirm = {
                 dialog = null
-                if (controller.pair(d.device.address)) snackbar.show("מתאים · ${d.device.name}")
+                if (controller.pair(d.device.address)) snackbar.show(tr("מתאים · {0}", d.device.name))
                 else snackbar.show(tr("ההתאמה לא התחילה"))
             },
         )
@@ -363,6 +587,8 @@ private fun RootScreen(
     onOpenAppSettings: () -> Unit,
     onToggleRadio: () -> Unit,
     onRenamePhone: () -> Unit,
+    onVisibility: () -> Unit,
+    onTransfers: () -> Unit,
     onOpenDevice: (BluetoothDeviceInfo) -> Unit,
     onShowAll: () -> Unit,
     onScan: () -> Unit,
@@ -382,7 +608,7 @@ private fun RootScreen(
                 textColor = theme.textColor,
             )
             !hasPermission -> PermissionPrompt(theme, onRequestPermission, onOpenAppSettings)
-            else -> DeviceLists(controller, theme, focusAddress, onToggleRadio, onRenamePhone, onOpenDevice, onShowAll, onScan, onPair)
+            else -> DeviceLists(controller, theme, focusAddress, onToggleRadio, onRenamePhone, onVisibility, onTransfers, onOpenDevice, onShowAll, onScan, onPair)
         }
     }
 }
@@ -394,6 +620,8 @@ private fun DeviceLists(
     focusAddress: String?,
     onToggleRadio: () -> Unit,
     onRenamePhone: () -> Unit,
+    onVisibility: () -> Unit,
+    onTransfers: () -> Unit,
     onOpenDevice: (BluetoothDeviceInfo) -> Unit,
     onShowAll: () -> Unit,
     onScan: () -> Unit,
@@ -433,7 +661,7 @@ private fun DeviceLists(
                 title = tr("בלוטות'"),
                 // BT-25: בזמן ההדלקה (שנייה-שתיים) מראים שהבלוטות' בדרך.
                 summary = when {
-                    controller.isTurningOn -> "מופעל..."
+                    controller.isTurningOn -> tr("מופעל...")
                     on -> tr("מופעל")
                     else -> tr("כבוי")
                 },
@@ -451,6 +679,30 @@ private fun DeviceLists(
                 icon = FutureIcons.Badge,
                 theme = theme,
                 onClick = onRenamePhone,
+            )
+            if (on) {
+                FutureDivider(theme = theme)
+                FutureSettingItem(
+                    title = tr("גלוי למכשירים אחרים"),
+                    summary = visibilitySummary(controller),
+                    icon = if (controller.isDiscoverable) FutureIcons.Visibility else FutureIcons.VisibilityOff,
+                    theme = theme,
+                    showChevron = false,
+                    onClick = onVisibility,
+                )
+            }
+            FutureDivider(theme = theme)
+            val transfer = TransferManager.transfer
+            FutureSettingItem(
+                title = tr("העברת קבצים"),
+                summary = if (transfer?.running == true) {
+                    statusLabel(transfer) + " · " + (transfer.fraction * 100).toInt() + "%"
+                } else {
+                    tr("שליחה וקבלה של קבצים")
+                },
+                icon = FutureIcons.SwapVert,
+                theme = theme,
+                onClick = onTransfers,
             )
         }
 
@@ -557,7 +809,7 @@ private fun AllPairedScreen(
 
 /** עמודת כרטיסים: 16dp מדפנות המסך ו-8dp ביניהם. */
 @Composable
-private fun CardStack(content: @Composable () -> Unit) {
+internal fun CardStack(content: @Composable () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -571,7 +823,7 @@ private fun CardStack(content: @Composable () -> Unit) {
  * יעד הפוקוס (FutureFocusCard) ולא שורה בתוך כרטיס משותף.
  */
 @Composable
-private fun DeviceCard(
+internal fun DeviceCard(
     device: BluetoothDeviceInfo,
     theme: FutureTheme,
     onClick: () -> Unit,
@@ -650,9 +902,15 @@ private fun ShowMoreCard(hidden: Int, theme: FutureTheme, focusRequester: FocusR
 
 /** חיפוש מכשירים: "מחפש" עם פס התקדמות בזמן סריקה, אחרת "חפש מכשירים". */
 @Composable
-private fun ScanCard(scanning: Boolean, found: Int, theme: FutureTheme, onClick: () -> Unit) {
+internal fun ScanCard(
+    scanning: Boolean,
+    found: Int,
+    theme: FutureTheme,
+    onClick: () -> Unit,
+    focusRequester: FocusRequester? = null,
+) {
     val type = rememberFutureType()
-    FutureFocusCard(theme = theme, onClick = onClick, minHeight = FutureDimens.rowHeightSetting) {
+    FutureFocusCard(theme = theme, onClick = onClick, focusRequester = focusRequester, minHeight = FutureDimens.rowHeightSetting) {
         Icon(
             if (scanning) FutureIcons.Bluetooth else FutureIcons.Refresh,
             contentDescription = null,
@@ -669,7 +927,7 @@ private fun ScanCard(scanning: Boolean, found: Int, theme: FutureTheme, onClick:
             if (scanning) {
                 FutureIndeterminateProgressBar(theme = theme, modifier = Modifier.padding(top = 6.dp))
             } else if (found > 0) {
-                Text("נמצאו $found", color = theme.mutedTextColor, fontSize = type.summary)
+                Text(tr("נמצאו {0}", found), color = theme.mutedTextColor, fontSize = type.summary)
             }
         }
     }
@@ -686,14 +944,14 @@ private fun PermissionPrompt(theme: FutureTheme, onRequest: () -> Unit, onOpenAp
         EmptyState(
             icon = FutureIcons.Bluetooth,
             title = tr("אין הרשאה לבלוטות'"),
-            subtitle = "לחץ על אישור כדי לאשר. אם ההרשאה נדחתה לצמיתות - פתח את הגדרות האפליקציה",
+            subtitle = tr("לחץ על אישור כדי לאשר. אם ההרשאה נדחתה לצמיתות - פתח את הגדרות האפליקציה"),
             textColor = theme.textColor,
             modifier = Modifier.weight(1f),
         )
         // "הגדרות" תמיד זמין כאן: אחרי דחייה לצמיתות אישור לא מציג דיאלוג, והמשתמש צריך דרך לתקן.
         FutureButton(tr("אשר"), theme, onRequest, focusRequester = focus)
         Spacer(modifier = Modifier.height(FutureDimens.spacingSm))
-        FutureButton("הגדרות האפליקציה", theme, onOpenAppSettings, variant = FutureButtonVariant.Secondary)
+        FutureButton(tr("הגדרות האפליקציה"), theme, onOpenAppSettings, variant = FutureButtonVariant.Secondary)
     }
 }
 
@@ -710,6 +968,7 @@ private fun DeviceScreen(
     onRename: () -> Unit,
     onConnect: () -> Unit,
     onForget: () -> Unit,
+    onSendFile: () -> Unit,
 ) {
     val type = rememberFutureType()
     val first = remember { FocusRequester() }
@@ -770,7 +1029,7 @@ private fun DeviceScreen(
                 }
             }
 
-            if (device.supportsCalls || device.supportsMedia) {
+            if (device.supportsCalls || device.supportsMedia || device.supportsFiles) {
                 FutureSectionHeader(tr("שימוש"), theme)
             }
             FutureCard(theme = theme) {
@@ -799,6 +1058,18 @@ private fun DeviceScreen(
                         focusRequester = if (rows == 0) first else null,
                         onClick = onMedia,
                         trailing = { FutureSwitch(checked = device.mediaConnected, theme = theme) },
+                    )
+                    rows++
+                }
+                if (device.supportsFiles) {
+                    if (rows > 0) FutureDivider(theme = theme)
+                    FutureSettingItem(
+                        title = tr("שלח קובץ"),
+                        summary = tr("שליחת קובץ אל {0}", device.name),
+                        icon = FutureIcons.Send,
+                        theme = theme,
+                        focusRequester = if (rows == 0) first else null,
+                        onClick = onSendFile,
                     )
                     rows++
                 }
@@ -841,23 +1112,25 @@ private fun DeviceScreen(
 
 // ---------------------------------------------------------------- תפריט
 
+private class MenuItem(
+    val label: String,
+    val icon: ImageVector,
+    val destructive: Boolean = false,
+    val action: () -> Unit,
+)
+
+/** תפריט האפשרויות - השורות תלויות במסך הפתוח. */
 @Composable
 private fun BluetoothMenu(
     theme: FutureTheme,
+    header: String,
+    items: List<MenuItem>,
     onDismiss: () -> Unit,
-    onRefresh: () -> Unit,
-    onRenamePhone: () -> Unit,
-    onReceivedFiles: () -> Unit,
-    onSettings: () -> Unit,
-    onDisconnectAll: () -> Unit,
 ) {
-    fun pick(action: () -> Unit): () -> Unit = { onDismiss(); action() }
-    FutureOptionsMenu(theme = theme, onDismissRequest = onDismiss, header = tr("בלוטות'")) {
-        FutureMenuRow(tr("רענן"), FutureIcons.Refresh, theme, pick(onRefresh))
-        FutureMenuRow(tr("שם המכשיר"), FutureIcons.Edit, theme, pick(onRenamePhone))
-        FutureMenuRow(tr("קבצים שהתקבלו"), FutureIcons.Folder, theme, pick(onReceivedFiles))
-        FutureMenuRow(tr("הגדרות"), FutureIcons.Settings, theme, pick(onSettings))
-        FutureMenuRow(tr("נתק הכל"), FutureIcons.LinkOff, theme, pick(onDisconnectAll), destructive = true)
+    FutureOptionsMenu(theme = theme, onDismissRequest = onDismiss, header = header) {
+        items.forEach { item ->
+            FutureMenuRow(item.label, item.icon, theme, { onDismiss(); item.action() }, destructive = item.destructive)
+        }
     }
 }
 
@@ -875,11 +1148,17 @@ private const val PAIRED_ON_ROOT = 3
 /** מסלול "כל המותאמים" - לא כתובת MAC חוקית, ולכן לא מתנגש בכתובת של מכשיר. */
 private const val ALL_PAIRED = "#all-paired"
 
+/** מסכי העברת הקבצים במחסנית - מחרוזות שאינן כתובת MAC. */
+private const val ROUTE_TRANSFERS = "#transfers"
+private const val ROUTE_RECEIVED = "#received"
+private const val ROUTE_PICK = "#pick"
+private const val ROUTE_PROGRESS = "#progress"
+
 /** מפתח הפוקוס של כרטיס "הצג עוד", כדי לחזור אליו מהמסך המלא. */
 private const val SHOW_ALL_ROW = "#show-all"
 
 @Composable
-private fun accentOf(theme: FutureTheme): Color = LocalFutureAccent.current ?: theme.readableAccentColor
+internal fun accentOf(theme: FutureTheme): Color = LocalFutureAccent.current ?: theme.readableAccentColor
 
 private fun iconOf(kind: DeviceKind): ImageVector = when (kind) {
     DeviceKind.Headphones -> FutureIcons.Headphones
