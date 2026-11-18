@@ -149,7 +149,8 @@ A1_BED = 180.0
 A1_MARGIN = 3.0             # מכל צד של המגש
 A1_SPACING = 2.5            # בין החלקים
 LEGEND_BLIND = 0.4          # הספרות חרוטות 0.4 מ"מ (לא חורים עד החלל): בלי איים שנופלים, ושתי שכבות ראשונות לצבע שני
-WEB_T = 0.4                 # עובי רשת המקלדת (מתחת לחזית, במקום הפלנג'ים)
+WEB_T = 0.8                 # עובי הרשת (פסים בין המקשים), במקום הפלנג'ים: מספיק קשיח להסרת תמיכות
+HINGE_T = 0.4               # עובי רצועת הציר: דק, כדי שיתכופף
 WEB_SLOT = 0.4              # מרווח בין מקש לרשת בצדדים שאין בהם ציר
 HINGE_W = 3.0               # רוחב רצועת הציר
 if A1MINI:
@@ -158,18 +159,27 @@ if A1MINI:
 
 # ---------------------------------------------------------------------
 # עיצוב המקש # (ליד מצלמת הסלפי). נקרא מ-hash_key.json (מהארטיפקט "מעצב מקש #").
-#   mode "arc":  מקש צר משמאל לעדשה, הצד הימני קשת סביב חלון הסלפי (ברירת מחדל)
-#   mode "tile": מקש ברוחב מלא עם חור לעדשה בתוכו - המצלמה רואה דרך המקש
-# הפין (מעל הכיפה) לא זז, בלי קשר לעיצוב.
+#   mode "arc":   מקש משמאל לעדשה, הצד הימני קשת סביב חלון הסלפי (ברירת מחדל)
+#   mode "rect":  גלולה/מלבן חופשי: רוחב, קצה שמאלי, גובה, רדיוס
+#   mode "round": מקש עגול, ממורכז על הכיפה (אפשר להזיז)
+# הפין (מעל הכיפה) לא זז, בלי קשר לעיצוב. top_round = רדיוס הקצה העליון.
+# legend_font: אחד מ-HASH_FONTS (Bahnschrift הוצא: הרשת של # שלו לא סגורה), legend_rot במעלות.
 # ---------------------------------------------------------------------
-HASH = dict(mode="arc", web=1.2, left_inset=0.0, height=7.2, corner_r=3.6,
-            legend="#", legend_size=5.2, legend_dx=-0.9, legend_dy=0.0, hole_d=7.1)
+HASH = dict(mode="arc", web=1.2, left_inset=0.0, width=7.7, height=7.2, corner_r=3.6, top_round=0.8,
+            round_d=6.0, round_dx=0.0, round_dy=0.0,
+            legend="#", legend_font="Segoe UI Semibold", legend_size=5.2, legend_dx=-0.9, legend_dy=0.0, legend_rot=0.0)
+HASH_FONTS = {"Segoe UI Semibold": "seguisb.ttf", "Segoe UI Bold": "segoeuib.ttf", "Segoe UI Black": "seguibl.ttf",
+              "Arial Bold": "arialbd.ttf", "Consolas Bold": "consolab.ttf",
+              "Impact": "impact.ttf", "Segoe UI Symbol": "seguisym.ttf"}
 _here0 = os.path.dirname(os.path.abspath(__file__)) if "__file__" in globals() and __file__ else os.getcwd()
 _hash_json = os.environ.get("V3_HASH_JSON") or os.path.join(_here0, "hash_key.json")
 if os.path.exists(_hash_json):
     with open(_hash_json, encoding="utf-8") as _f:
         HASH.update({k: v for k, v in json.load(_f).items() if k in HASH})
+if HASH["mode"] not in ("arc", "rect", "round"):
+    HASH["mode"] = "arc"
 HASH_WEB = float(HASH["web"])
+HASH_FONT = "C:/Windows/Fonts/" + HASH_FONTS.get(HASH["legend_font"], "seguisb.ttf")
 
 FONT_TEXT = os.environ.get("V3_FONT", "C:/Windows/Fonts/seguisb.ttf")
 FONT_ICON = "C:/Windows/Fonts/SegoeIcons.ttf"
@@ -269,12 +279,19 @@ for r in range(6):
             dome = ((x - kw / 2 + selfie_x - math.sqrt(max(r0 ** 2 - reach0 ** 2, 0.0))) / 2 - 0.8, cell_cy(r))
             kh = float(HASH["height"])
             kr = min(float(HASH["corner_r"]), kh / 2)
-            if HASH["mode"] == "tile":
-                KEYS.append([lab, x, y, kw, kh, kr, "key", (dome[0] - x, dome[1] - y)])
-                continue
             sw = SELFIE_WIN - 2 * KEY_WINDOW_CLEAR
             KEYS.append(["selfie", selfie_x, selfie_y, sw, sw, sw / 2, "open", (0, 0)])
             hx0 = x - kw / 2 + float(HASH["left_inset"])
+            if HASH["mode"] == "rect":
+                hw = float(HASH["width"])
+                hx = hx0 + hw / 2
+                KEYS.append([lab, hx, y, hw, kh, min(kr, hw / 2), "key", (dome[0] - hx, dome[1] - y)])
+                continue
+            if HASH["mode"] == "round":
+                d = float(HASH["round_d"])
+                cx, cy = dome[0] + float(HASH["round_dx"]), dome[1] + float(HASH["round_dy"])
+                KEYS.append([lab, cx, cy, d, d, d / 2, "key", (dome[0] - cx, dome[1] - cy)])
+                continue
             reach = kh / 2 + abs(y - selfie_y)
             hx1 = selfie_x - math.sqrt(max(HASH_ARC_R ** 2 - reach ** 2, 0.0))
             hw, hx = hx1 - hx0, (hx0 + hx1) / 2
@@ -336,15 +353,24 @@ def rr_prism(name, w, l, r, z0, z1, loc=(0, 0, 0)):
 
 def rounded_body(name):
     """מסגרת שטוחה (כמו iPhone / Galaxy): צד ישר, עיגול קטן בגב ובחזית."""
+    # A1 mini: הגב והחזית מודפסים על המשטח. עיגול שפוגש את המשטח כמעט אופקית יוצא מרושל,
+    # ולכן החלק התחתון של כל עיגול (עד 45°) הופך לשיפוע 45° - בלי שכבה שבולטת מעל הקודמת.
+    t0 = 45 if A1MINI else 0
     prof = []
     n, R = 8, BACK_EDGE_R
+    if t0:
+        c = R * (1 - math.sin(math.radians(t0)))
+        prof.append((2 * c, 0.0))
     for i in range(n + 1):
-        t = math.radians(90 * i / n)
+        t = math.radians(t0 + (90 - t0) * i / n)
         prof.append((R - R * math.sin(t), R - R * math.cos(t)))
     n, R = 6, FRONT_EDGE_R
     for i in range(n, -1, -1):
-        t = math.radians(90 * i / n)
+        t = math.radians(t0 + (90 - t0) * i / n)
         prof.append((R - R * math.sin(t), BODY_T - (R - R * math.cos(t))))
+    if t0:
+        c = R * (1 - math.sin(math.radians(t0)))
+        prof.append((2 * c, BODY_T))
     rings = [rr_ring(BODY_W - 2 * a, BODY_L - 2 * a, BODY_R - a, z, segs=16) for a, z in prof]
     return loft_rings(name, rings)
 
@@ -706,7 +732,7 @@ def legend_parts(lab):
         return [(lab, 4.3, 0.0, 0.0, FONT_ICON)]
     if lab == "#":      # מעוצב בארטיפקט (hash_key.json)
         t = str(HASH["legend"])
-        return [(t, float(HASH["legend_size"]), float(HASH["legend_dx"]), float(HASH["legend_dy"]), FONT_TEXT)] if t else []
+        return [(t, float(HASH["legend_size"]), float(HASH["legend_dx"]), float(HASH["legend_dy"]), HASH_FONT)] if t else []
     if A1MINI and not A1_LETTERS:   # A1 mini: רק הספרה, במרכז (האותיות הקטנות לא יוצאות בפיה 0.4)
         return [(lab, 7.4 if lab == "*" else 5.8, 0.0, 0.0, FONT_TEXT)]
     if lab in KEY_LETTERS:
@@ -774,6 +800,11 @@ def legend_meshes(lab, z0, z1, name):
             xs = [v.co.x for v in o.data.vertices]
             ys = [v.co.y for v in o.data.vertices]
             o.data.transform(Matrix.Translation((-(min(xs) + max(xs)) / 2, -(min(ys) + max(ys)) / 2, 0)))
+        if lab == "#" and fp != "GEO":
+            # בחלק מהגופנים הסימן # בנוי מקווים חופפים: איחוד עצמי לפני הבוליאני
+            self_fix(o)
+        if lab == "#" and float(HASH["legend_rot"]):
+            o.rotation_euler = (0, 0, math.radians(float(HASH["legend_rot"])))
         o.location.x, o.location.y = o.location.x + dx, o.location.y + dy
         if lab in NAV_LABELS:   # האייקון זז קצת החוצה, הרחק מהקשת
             o.location.x += legend_nav_shift
@@ -810,18 +841,18 @@ def nav_arc_radii():
     return r_cap, DPAD_R + FLANGE_MARGIN / 2 + 0.4, r_cap - KEY_WINDOW_CLEAR, r_cap - KEY_WINDOW_CLEAR - 0.3
 
 
-def build_keycap(lab, w, h, r, nub_xy, wrap=None, hole=None):
+def build_keycap(lab, w, h, r, nub_xy, wrap=None):
     """מקש במקור (0,0); תחתית הפין ב-z=0 (על הכיפה), הפלנג' נוגע בתחתית החזית.
     wrap = (dx, dy) של מרכז העיגול שהמקש עוטף (מקש # סביב חלון הסלפי).
-    hole = (dx, dy, d): חור עגול דרך המקש (מקש # במצב tile - העדשה רואה דרכו).
     ב-A1 mini אין פלנג' רחב: המקש מוחזק ברצועת הציר לרשת המקלדת (build_keymat)."""
     global legend_nav_shift
     zf, zb, zt = key_heights()
     fm = 0.0 if A1MINI else FLANGE_MARGIN
-    cap = chamfered_cap(f"key_{ord(lab[0]):x}", w, h, r, zb - 0.01, zt)
+    tc = min(float(HASH["top_round"]), min(w, h) / 2 - 0.3, zt - zb - 0.1) if lab == "#" else KEY_TOP_CHAMFER
+    cap = chamfered_cap(f"key_{ord(lab[0]):x}", w, h, r, zb - 0.01, zt, c=tc)
     flange = rr_prism("flange", w + fm, h + fm, r + fm / 2, zf - 0.01, zb)
     # הפין חודר 0.2 לתוך הפלנג': חפיפה של 0.01 בלבד השאירה צלעות פתוחות במקש # (שם הפין חוצה את דופן החלל)
-    nd = HASH_NUB_D if (wrap or hole) else 3.0
+    nd = HASH_NUB_D if lab == "#" else 3.0
     nub = rr_prism("nub", nd, nd, nd / 2, 0.0, zf + 0.2, loc=(nub_xy[0], nub_xy[1], 0))
     adds = [flange, nub]
     boolean(cap, adds, "UNION")
@@ -840,18 +871,9 @@ def build_keycap(lab, w, h, r, nub_xy, wrap=None, hole=None):
         rp = HASH_ARC[0] + 0.9
         boolean(pocket, [rr_prism("arc_pocket", 2 * rp, 2 * rp, rp, zf - 2, zt + 1, loc=(wrap[0], wrap[1], 0))],
                 "DIFFERENCE")
-    if hole:            # דופן 0.9 סביב חור העדשה
-        rp = hole[2] / 2 + 0.9
-        boolean(pocket, [rr_prism("hole_pocket", 2 * rp, 2 * rp, rp, zf - 2, zt + 1, loc=(hole[0], hole[1], 0))],
-                "DIFFERENCE")
     boolean(cap, [pocket], "DIFFERENCE")
     boolean(cap, [rr_prism("nub_post", nd, nd, nd / 2, 0.0, zt - KEY_TOP_SKIN + 0.01, loc=(nub_xy[0], nub_xy[1], 0))],
             "UNION")
-    if hole:
-        hd = hole[2]
-        boolean(cap, [rr_prism("lens_hole", hd, hd, hd / 2, -1, zt + 1, loc=(hole[0], hole[1], 0)),
-                      chamfer_cutter("lens_hole_ch", hd, hd, hd / 2, zt, -1, 0.3, loc=(hole[0], hole[1], 0))],
-                "DIFFERENCE")
     dished = not is_icon(lab) and KEY_DISH > 0
     if dished:
         boolean(cap, [dish_cutter(zt, "dish")], "DIFFERENCE")
@@ -927,8 +949,7 @@ def build_keys_in_place():
         if kind == "key":
             is_hash = lab == "#"
             wrap = (selfie_x - x, selfie_y - y) if is_hash and HASH["mode"] == "arc" else None
-            hole = (selfie_x - x, selfie_y - y, float(HASH["hole_d"])) if is_hash and HASH["mode"] == "tile" else None
-            cap = build_keycap(lab, w, h, r, nub, wrap, hole)
+            cap = build_keycap(lab, w, h, r, nub, wrap)
         elif kind == "open":
             continue        # #: חלון גלולה פתוח מעל מצלמת הסלפי
         elif kind == "dpad":
@@ -1095,13 +1116,27 @@ def check_design():
             issues.append(f"הגשר בין חלון # לחלון הסלפי דק ({r_win - SELFIE_WIN / 2:.2f})")
         if r_fl - (SELFIE_WIN / 2 - KEY_WINDOW_CLEAR + 2.5 / 2) < 0.0:
             issues.append("הפלנג' של # נכנס לאזור מודול הסלפי")
-    else:
-        wall = (h[1] + h[3] / 2) - (selfie_x + HASH["hole_d"] / 2)
-        if wall < 0.5:
-            issues.append(f"הדופן בין חור העדשה לקצה מקש # דקה ({wall:.2f})")
-        nub_gap = math.hypot(h[1] + h[7][0] - selfie_x, h[2] + h[7][1] - selfie_y) - HASH["hole_d"] / 2 - HASH_NUB_D / 2
-        if nub_gap < 0.9:
-            issues.append(f"הפין של # קרוב מדי לחור העדשה ({nub_gap:.2f})")
+    else:   # rect / round: גשר החזית בין חלון # לחלון הסלפי
+        c = KEY_WINDOW_CLEAR
+        ww, wh, wr = h[3] / 2 + c, h[4] / 2 + c, h[5] + c
+        qx = max(abs(selfie_x - h[1]) - (ww - wr), 0.0)
+        qy = max(abs(selfie_y - h[2]) - (wh - wr), 0.0)
+        bridge = math.hypot(qx, qy) - wr - SELFIE_WIN / 2
+        if bridge < 0.8:
+            issues.append(f"הגשר בין חלון # לחלון הסלפי דק ({bridge:.2f})")
+    # שכנים: 0 משמאל, 9 מעל, קצה המקלדת מימין, ומקום לציר של # מתחת (A1 mini)
+    c = KEY_WINDOW_CLEAR
+    hx0, hx1, hy0, hy1 = h[1] - h[3] / 2, h[1] + h[3] / 2, h[2] - h[4] / 2, h[2] + h[4] / 2
+    for nb in ("0", "9"):
+        k = next(k for k in KEYS if k[0] == nb)
+        gx = max(k[1] - k[3] / 2 - hx1, hx0 - (k[1] + k[3] / 2)) - 2 * c
+        gy = max(k[2] - k[4] / 2 - hy1, hy0 - (k[2] + k[4] / 2)) - 2 * c
+        if max(gx, gy) < 0.8:
+            issues.append(f"הגשר בין # למקש {nb} דק ({max(gx, gy):.2f})")
+    if hx1 > KEY_LIMIT_X + 0.01:
+        issues.append(f"מקש # יוצא מימין לקצה המקלדת ({hx1:.2f} > {KEY_LIMIT_X:.2f})")
+    if hy0 < -SKIRT_IN_L / 2 + 0.25 + 1.5 + 0.5:     # רצועה 1.5 + פס רשת 0.5
+        issues.append(f"אין מקום לציר של # מתחת למקש ({hy0:.2f})")
     if h[3] < 6.0 or abs(h[7][0]) > h[3] / 2 - HASH_NUB_D / 2 - 0.4 or abs(h[7][1]) > h[4] / 2 - HASH_NUB_D / 2 - 0.4:
         issues.append(f"מקש # צר מדי ({h[3]:.2f}) או שהפין יוצא ממנו")
     if h[4] > KEY_H + 0.01:
@@ -1120,8 +1155,6 @@ def grid_report():
 
 def lens_margin():
     """כמה מרווח יש בין עדשת הסלפי לשפת החלון העגול שלה."""
-    if HASH["mode"] == "tile":
-        return HASH["hole_d"] / 2 - SELFIE["d"] / 2
     k = next(k for k in KEYS if k[6] == "open")
     rr = (k[3] + 2 * KEY_WINDOW_CLEAR) / 2
     return rr - math.hypot(selfie_x - k[1], selfie_y - k[2]) - SELFIE["d"] / 2
@@ -1403,7 +1436,7 @@ def build_keymat(caps):
     מחובר אליה ברצועה אחת - ציר. המקש מסתובב סביב הרצועה כשלוחצים, והכיפה שמתחתיו דוחפת אותו חזרה.
     טבעת החצים, OK ומקש העוצמה נשארים נפרדים: הטבעת צריכה להתנדנד ל-4 כיוונים, ה-OK יושב בתוכה,
     ומקש העוצמה בדופן הצד. מחזיר (מקלדת, ספרות, [נפרדים], עומסים)."""
-    z0, z1 = SPLIT_Z - WEB_T, SPLIT_Z
+    z0, z1, zh = SPLIT_Z - WEB_T, SPLIT_Z, SPLIT_Z - HINGE_T
     x1 = SKIRT_IN_W / 2 - 0.25
     y_lo = -SKIRT_IN_L / 2 + 0.25
     y_hi = tray_geom()[0] - TRAY_WALL - 0.25
@@ -1419,16 +1452,16 @@ def build_keymat(caps):
             if side[1] == "x":
                 e = x + sg * w / 2
                 cutters.append(rr_prism(f"strip{i}", L, h + 2 * s, 0.05, z0 - 1, z1 + 1, loc=(e + sg * L / 2, y, 0)))
-                tabs.append(rr_prism(f"hinge{i}", L + 0.6, HINGE_W, 0.3, z0, z1, loc=(e + sg * L / 2, y, 0)))
+                tabs.append(rr_prism(f"hinge{i}", L + 0.6, HINGE_W, 0.3, zh, z1, loc=(e + sg * L / 2, y, 0)))
                 dist = abs(e - (x + nub[0]))
             else:
                 e = y + sg * h / 2
                 tx = min(max(x + nub[0], x - w / 2 + HINGE_W / 2 + 0.6), x + w / 2 - HINGE_W / 2 - 0.6)
                 cutters.append(rr_prism(f"strip{i}", w + 2 * s, L, 0.05, z0 - 1, z1 + 1, loc=(x, e + sg * L / 2, 0)))
-                tabs.append(rr_prism(f"hinge{i}", HINGE_W, L + 0.6, 0.3, z0, z1, loc=(tx, e + sg * L / 2, 0)))
+                tabs.append(rr_prism(f"hinge{i}", HINGE_W, L + 0.6, 0.3, zh, z1, loc=(tx, e + sg * L / 2, 0)))
                 dist = abs(e - (y + nub[1]))
             # כיפוף הרצועה: זווית = מהלך / מרחק הפין מהציר; מתיחה = עובי × זווית / (2 × אורך)
-            strain[lab] = round(100 * WEB_T * (KEY_TRAVEL / dist) / (2 * L), 2)
+            strain[lab] = round(100 * HINGE_T * (KEY_TRAVEL / dist) / (2 * L), 2)
         elif kind == "open":
             rr = SELFIE_WIN / 2 + s
             cutters.append(rr_prism("selfie_slot", 2 * rr, 2 * rr, rr, z0 - 1, z1 + 1, loc=(x, y, 0)))

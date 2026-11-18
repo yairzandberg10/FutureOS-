@@ -2,11 +2,17 @@
   "mode": "arc",
   "web": 1.2,
   "left_inset": 0,
+  "width": 7.7,
   "height": 7.2,
   "corner_r": 3.6,
+  "top_round": 0.8,
+  "round_d": 6.0,
+  "round_dx": 0,
+  "round_dy": 0,
   "legend": "#",
+  "legend_font": "Segoe UI Semibold",
   "legend_size": 5.2,
   "legend_dx": -0.9,
   "legend_dy": 0,
-  "hole_d": 7.1
+  "legend_rot": 0
 }
