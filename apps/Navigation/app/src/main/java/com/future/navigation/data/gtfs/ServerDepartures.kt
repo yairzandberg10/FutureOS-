@@ -67,9 +67,13 @@ class ServerDepartures {
                 .mapNotNull { it as? JsonObject }
                 .firstOrNull { it.bool("default") }
                 ?.text("name")
+            val lat = match.number("lat") ?: return@mapNotNull null
+            val lon = match.number("lon") ?: return@mapNotNull null
+            // Transitous מכסה את כל העולם - "Ariel" החזיר תחנות בצרפת ובמקסיקו
+            if (lat !in 29.4..33.4 || lon !in 34.2..35.95) return@mapNotNull null
             StationHit(
                 name = if (city != null && city != name) "$name, $city" else name,
-                location = LatLng(match.number("lat") ?: return@mapNotNull null, match.number("lon") ?: return@mapNotNull null),
+                location = LatLng(lat, lon),
                 lines = emptyList(),
             )
         }.distinctBy { it.name to it.location }
