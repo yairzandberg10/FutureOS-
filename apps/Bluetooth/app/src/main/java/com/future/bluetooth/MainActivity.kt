@@ -67,6 +67,20 @@ class MainActivity : ComponentActivity() {
             val discoverableLauncher = rememberLauncherForActivityResult(
                 ActivityResultContracts.StartActivityForResult()
             ) { controller.onDiscoverableResult(it.resultCode) }
+            fun launchDiscoverable() {
+                try {
+                    discoverableLauncher.launch(controller.requestDiscoverableIntent(DISCOVERABLE_SECONDS))
+                } catch (e: ActivityNotFoundException) {
+                    openSystemBluetoothSettings()
+                } catch (e: SecurityException) {
+                    openSystemBluetoothSettings()
+                }
+            }
+            // ההרשאה מבוקשת רק כשלוחצים על "גלוי" - היא באותה קבוצה ("מכשירים בקרבת
+            // מקום") כמו SCAN/CONNECT, ולכן בדרך כלל מאושרת בלי דיאלוג.
+            val advertiseLauncher = rememberLauncherForActivityResult(
+                ActivityResultContracts.RequestPermission()
+            ) { granted -> if (granted) launchDiscoverable() else openSystemBluetoothSettings() }
             val pickLauncher = rememberLauncherForActivityResult(
                 ActivityResultContracts.StartActivityForResult()
             ) { result ->
@@ -131,10 +145,10 @@ class MainActivity : ComponentActivity() {
                         }
                     },
                     requestDiscoverable = {
-                        try {
-                            discoverableLauncher.launch(controller.requestDiscoverableIntent(DISCOVERABLE_SECONDS))
-                        } catch (e: ActivityNotFoundException) {
-                            openSystemBluetoothSettings()
+                        if (checkSelfPermission(Manifest.permission.BLUETOOTH_ADVERTISE) == PackageManager.PERMISSION_GRANTED) {
+                            launchDiscoverable()
+                        } else {
+                            advertiseLauncher.launch(Manifest.permission.BLUETOOTH_ADVERTISE)
                         }
                     },
                     openFile = { openFile(it) },

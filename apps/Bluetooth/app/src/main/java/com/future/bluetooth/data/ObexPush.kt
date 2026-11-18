@@ -59,7 +59,15 @@ class ObexPush(private val input: InputStream, private val output: OutputStream)
         writePacket(OP_PUT, headers.toByteArray())
         var response = readResponse()
         if (response.code != RESP_CONTINUE && response.code != RESP_SUCCESS) throw ObexRefused(response.code)
-        onAccepted()
+        // חלק מהמקבלים שואלים את המשתמש רק כשמגיע תוכן, ולא על חבילת הכותרות -
+        // לכן "אושר" רק אחרי שחבילת התוכן הראשונה קיבלה תשובה.
+        var accepted = false
+        fun acknowledged() {
+            if (!accepted) {
+                accepted = true
+                onAccepted()
+            }
+        }
 
         val chunk = maxPacket - 3 - 3
         val buffer = ByteArray(chunk)
@@ -72,6 +80,7 @@ class ObexPush(private val input: InputStream, private val output: OutputStream)
                 sent += read
                 response = readResponse()
                 if (response.code != RESP_SUCCESS) throw ObexRefused(response.code)
+                acknowledged()
                 onProgress(sent)
                 return
             }
@@ -79,6 +88,7 @@ class ObexPush(private val input: InputStream, private val output: OutputStream)
             sent += read
             response = readResponse()
             if (response.code != RESP_CONTINUE) throw ObexRefused(response.code)
+            acknowledged()
             onProgress(sent)
         }
     }

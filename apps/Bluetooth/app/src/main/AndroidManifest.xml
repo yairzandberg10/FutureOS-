@@ -8,6 +8,8 @@
          פיזי מתוצאות הסריקה (ר' Fitness/AndroidManifest.xml, אותו דפוס). -->
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <!-- "גלוי למכשירים אחרים": ACTION_REQUEST_DISCOVERABLE דורש אותה מ-targetSdk 31. -->
+    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
     <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
     <!-- "קבצים שהתקבלו": שירות ה-OPP של המערכת שומר אותם ב-Download, והרשומות
          שלו (שאינן מדיה) גלויות לאפליקציה אחרת רק עם גישה לכל הקבצים - כמו Files. -->
