@@ -53,13 +53,20 @@ object LocationHelper {
         // נסיעה בלי קליטת לוויין לא הגיע שום מיקום. מיקום רשת מתקבל רק כשאין
         // קיבוע GPS טרי, כדי שלא "יקפיץ" את הסמן אחורה.
         var lastGpsFixAt = 0L
+        var lastGps: Location? = null
         var lastSent: Location? = null
+        // GPS שעומד במקום לא שולח עדכונים (minDistance), אז "טרי" נמדד ביחס למרווח הבקשה
+        val gpsStaleMs = maxOf(GPS_STALE_MS, minIntervalMs * 3)
         val merging = object : LocationListener by listener {
             override fun onLocationChanged(location: Location) {
                 val now = android.os.SystemClock.elapsedRealtime()
                 if (location.provider == LocationManager.GPS_PROVIDER) {
                     lastGpsFixAt = now
-                } else if (now - lastGpsFixAt <= GPS_STALE_MS || addsNothing(location, lastSent)) {
+                    lastGps = location
+                } else if (now - lastGpsFixAt <= gpsStaleMs ||
+                    addsNothing(location, lastSent) ||
+                    impossibleJump(location, lastGps)
+                ) {
                     return
                 }
                 lastSent = location
@@ -76,7 +83,11 @@ object LocationHelper {
 
         try {
             providers.forEach { manager.requestLocationUpdates(it, minIntervalMs, minDistanceMeters, merging, android.os.Looper.getMainLooper()) }
-            bestLastKnown(manager, providers)?.let { lastSent = it; trySend(it) }
+            bestLastKnown(manager, providers)?.let {
+                lastSent = it
+                if (it.provider == LocationManager.GPS_PROVIDER) lastGps = it
+                trySend(it)
+            }
         } catch (e: SecurityException) {
             close(e)
         }
@@ -106,6 +117,18 @@ object LocationHelper {
         if (ageMs(previous) > COARSE_IGNORE_MS) return false
         return coarse.distanceTo(previous) <= coarse.accuracy
     }
+
+    /**
+     * מיקום רשת שמחייב מהירות בלתי אפשרית מאז קיבוע ה-GPS האחרון (יותר מ-180 קמ"ש)
+     * הוא מיקום רשת שגוי (אנטנה/Wi-Fi רחוקים) - בטלפון הוא הקפיץ את המיקום 2 ק"מ הלוך ושוב.
+     */
+    private fun impossibleJump(network: Location, gps: Location?): Boolean {
+        if (gps == null) return false
+        val seconds = ((network.elapsedRealtimeNanos - gps.elapsedRealtimeNanos) / 1_000_000_000.0).coerceAtLeast(1.0)
+        return network.distanceTo(gps) / seconds > MAX_PLAUSIBLE_SPEED_MPS
+    }
+
+    private const val MAX_PLAUSIBLE_SPEED_MPS = 50.0
 
     private fun ageMs(loc: Location): Long =
         (android.os.SystemClock.elapsedRealtimeNanos() - loc.elapsedRealtimeNanos) / 1_000_000L

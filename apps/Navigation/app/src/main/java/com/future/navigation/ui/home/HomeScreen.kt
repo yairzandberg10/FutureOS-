@@ -291,7 +291,16 @@ fun HomeScreen(
             firstItemFocusRequester = modeTabsFocusRequester,
         )
 
+        // פתיחת קטגוריה גוללת את שורת הצ'יפים לראש הרשימה, כדי שהתוצאות שמתחתיה ייראו
+        // (בלי זה הן נשארו מתחת למסך, ו"מחפש..." לא ממוקד ולכן גם לא גולל אליו)
+        val homeListState = androidx.compose.foundation.lazy.rememberLazyListState()
+        LaunchedEffect(poi.category) {
+            if (poi.category == null) return@LaunchedEffect
+            val chipsIndex = homeListState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == "poi-chips" }?.index
+            if (chipsIndex != null) runCatching { homeListState.animateScrollToItem(chipsIndex) }
+        }
         LazyColumn(
+            state = homeListState,
             modifier = Modifier.weight(1f).fillMaxWidth(),
             contentPadding = PaddingValues(horizontal = FutureDimens.screenPadding, vertical = FutureDimens.spacingSm),
             verticalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm)
@@ -410,7 +419,7 @@ fun HomeScreen(
 
                 // קטגוריות בקרבת מקום: לחיצה על צ'יפ מחפשת מקומות סביב המשתמש.
                 item { FutureSectionHeader(text = tr("קרוב אליי"), theme = theme, inset = false) }
-                item {
+                item(key = "poi-chips") {
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm)) {
                         items(PoiCategory.entries, key = { it.name }) { category ->
                             FutureChip(
