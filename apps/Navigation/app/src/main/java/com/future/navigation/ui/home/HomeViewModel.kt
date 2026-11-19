@@ -11,7 +11,9 @@ import com.future.navigation.data.geocoding.GeocodingRepository
 import com.future.navigation.data.gtfs.GtfsDao
 import com.future.navigation.data.gtfs.SavedPlaceEntity
 import com.future.navigation.data.gtfs.ServerDepartures
+import com.future.navigation.data.gtfs.StationHit
 import com.future.navigation.data.gtfs.StopEntity
+import com.future.navigation.data.gtfs.isStationCodeQuery
 import com.future.navigation.data.location.LocationHelper
 import com.future.navigation.data.places.RecentPlace
 import com.future.navigation.data.places.RecentPlaceRepository
@@ -37,7 +39,13 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /** departures: "5 בעוד 3 דק׳ · 18 בעוד 7 דק׳" כשהתחנה הגיעה מהשרת עם זמני יציאה חיים. */
-data class NearbyStopUi(val stop: StopEntity, val distanceMeters: Double, val departures: String? = null)
+data class NearbyStopUi(
+    val stop: StopEntity,
+    val distanceMeters: Double,
+    val departures: String? = null,
+    /** מספר התחנה הרשמי ("תחנה מס׳ 63273"), null כשלא ידוע (למשל תחנות מקומיות). */
+    val stopCode: String? = null,
+)
 
 /** תוצאת חיפוש עם המרחק מהמשתמש (null = המיקום עדיין לא ידוע). */
 data class SearchHit(val result: GeocodeResult, val distanceMeters: Double?)
@@ -165,6 +173,7 @@ class HomeViewModel(
                     departures = board.departures.take(3).joinToString(" · ") { d ->
                         if (d.minutesAway == 0) "${d.line} עכשיו" else "${d.line} בעוד ${d.minutesAway} דק׳"
                     }.ifBlank { null },
+                    stopCode = board.stopCode,
                 )
             }.sortedBy { it.distanceMeters }.distinctBy { it.stop.name }
         }
@@ -226,16 +235,60 @@ class HomeViewModel(
                 }
                 _searchResults.value = outcome.first
                 _searchFailed.value = outcome.second
+                // מספר תחנה (3-6 ספרות) - התחנה עצמה ראשונה ברשימה
+                val text = query.trim()
+                val byCode = if (isStationCodeQuery(text)) {
+                    findStationByCode(text)
+                } else {
+                    null
+                }
                 // במצב תחבורה ציבורית מחפשים גם תחנה בשם הזה (כמו באגד/Moovit)
                 val around = _currentLocation.value
-                _stationResults.value = if (_mode.value == TravelMode.TRANSIT && around != null && query.trim().length >= 2) {
-                    serverDepartures.searchStations(around, query.trim()).orEmpty()
+                val byName = if (byCode == null && _mode.value == TravelMode.TRANSIT && around != null && text.length >= 2) {
+                    serverDepartures.searchStations(around, text).orEmpty()
                 } else {
                     emptyList()
                 }
+                _stationResults.value = (listOfNotNull(byCode) + byName.filter { it.location != byCode?.location })
+                    .map { withStationNumber(it) }
             } finally {
                 if (_searchQuery.value == query) _searching.value = false
             }
+        }
+    }
+
+    /**
+     * תחנה לפי מספר התחנה. קודם התחנות הקרובות שכבר נטענו (בלי רשת), ואחר כך חיפוש
+     * ברשת שמאמת את המספר בלוח היציאות של כל מועמדת (ר' ServerDepartures.findStopByCode).
+     */
+    private suspend fun findStationByCode(code: String): StationHit? {
+        _serverStops.value?.firstOrNull { it.stopCode == code }?.let { nearby ->
+            return StationHit(nearby.stop.name, LatLng(nearby.stop.lat, nearby.stop.lon), emptyList(), code)
+        }
+        return serverDepartures.findStopByCode(code, _currentLocation.value ?: DEFAULT_CENTER)
+    }
+
+    /**
+     * מספר התחנה לתחנה שנמצאה בשם: לוקחים אותו מהתחנה הקרובה שכבר נטענה (באותו
+     * מקום, עד 80 מ'). בלי תשובה מהרשת - בלי מספר, והשורה נשארת כמו שהיא.
+     */
+    private fun withStationNumber(hit: StationHit): StationHit {
+        if (hit.stopCode != null) return hit
+        val code = _serverStops.value
+            ?.firstOrNull { it.stopCode != null && LatLng(it.stop.lat, it.stop.lon).distanceMetersTo(hit.location) < SAME_PLACE_METERS }
+            ?.stopCode
+        return if (code != null) hit.copy(stopCode = code) else hit
+    }
+
+    /** שמירת מקום שנבחר בחיפוש כמועדף (בלי כפילות לאותה כתובת - ר' SavedPlaceRepository). */
+    fun addFavoritePlace(result: GeocodeResult) {
+        viewModelScope.launch {
+            savedPlaceRepository.addFavorite(
+                label = result.label.substringBefore(","),
+                address = result.label,
+                lat = result.location.lat,
+                lon = result.location.lon,
+            )
         }
     }
 
@@ -330,5 +383,9 @@ class HomeViewModel(
         private const val SEARCH_DEBOUNCE_MS = 500L
         private const val SERVER_STOPS_REFRESH_MS = 60_000L
         private const val SERVER_STOPS_MOVE_METERS = 150.0
+        /** תחנה "באותו מקום" כשמחברים מספר לשם: עד 80 מ' */
+        private const val SAME_PLACE_METERS = 80.0
+        /** מרכז ישראל - מוצא לחיפוש מספר תחנה כשאין מיקום עדיין */
+        private val DEFAULT_CENTER = LatLng(31.5, 34.9)
     }
 }

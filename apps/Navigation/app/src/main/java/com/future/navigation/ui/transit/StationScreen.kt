@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -28,6 +29,7 @@ import androidx.compose.ui.platform.LocalContext
 import com.future.navigation.data.gtfs.ServerDepartures
 import com.future.navigation.data.gtfs.StationBoard
 import com.future.navigation.data.gtfs.StationDeparture
+import com.future.navigation.data.gtfs.nextDepartureOfSameLine
 import com.future.navigation.data.transit.FavoriteStation
 import com.future.navigation.data.transit.FavoriteStations
 import com.future.navigation.ui.navigation.Destination
@@ -38,8 +40,10 @@ import com.future.sharednav.nav.digitForKey
 import com.future.sharednav.nav.onPoundKeyPress
 import com.future.sharednav.nav.onStarKeyPress
 import com.future.sharednav.theme.FutureDimens
+import com.future.sharednav.theme.FutureTheme
 import com.future.sharednav.theme.LocalFutureTheme
 import com.future.sharednav.theme.mutedTextColor
+import com.future.sharednav.theme.secondaryTextColor
 import kotlinx.coroutines.delay
 
 /**
@@ -104,6 +108,16 @@ fun StationScreen(
             FutureButton("נווט לתחנה", theme, onRouteHere, fillMaxWidth = true, focusRequester = routeFocus)
         }
 
+        // מספר התחנה הרשמי, מתחת לשם התחנה
+        board?.stopCode?.let { code ->
+            Text(
+                text = "תחנה מס׳ $code",
+                style = MaterialTheme.typography.labelSmall,
+                color = theme.mutedTextColor,
+                modifier = Modifier.padding(horizontal = FutureDimens.screenPadding),
+            )
+        }
+
         // שורת מצב: סינון הקו הנוכחי ואם התחנה שמורה
         Text(
             text = listOfNotNull(
@@ -126,13 +140,18 @@ fun StationScreen(
                 verticalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm),
             ) {
                 items(shown) { departure ->
+                    // היציאה הבאה של אותו קו ואותו כיוון, מתוך הלוח המלא (לא המסונן)
+                    val next = nextDepartureOfSameLine(departures, departures.indexOf(departure))
                     FutureListItem(
                         title = "קו ${departure.line}" + (departure.headsign.takeIf { it.isNotBlank() }?.let { " · $it" } ?: ""),
-                        summary = summaryOf(departure),
+                        summary = summaryOf(departure, next),
+                        summaryMaxLines = 2,
                         theme = theme,
                         onClick = {
                             departure.tripId?.let { onOpenTrip(it, departure.line, station.name) }
                         },
+                        // סמן זמן אמת: כשהשעה מגיעה מהמיקום החי של הנסיעה ולא מהלו"ז
+                        trailing = if (departure.realtime) realtimeMarker(theme) else null,
                     )
                 }
             }
@@ -140,13 +159,25 @@ fun StationScreen(
     }
 }
 
-/** שורת פירוט ליציאה: שעה, בעוד כמה דקות, זמן אמת ורציף (כשיש). */
-private fun summaryOf(departure: StationDeparture): String = listOfNotNull(
+/**
+ * שורת פירוט ליציאה: שעה, בעוד כמה דקות, היציאה הבאה של הקו ("ואחריו 06:53") ורציף.
+ * זמן אמת מוצג בנפרד, בסוף השורה (ר' [realtimeMarker]).
+ */
+private fun summaryOf(departure: StationDeparture, next: StationDeparture?): String = listOfNotNull(
     departure.departsAtSeconds?.let { clock(it) },
     if (departure.minutesAway == 0) "מגיע עכשיו" else "בעוד ${departure.minutesAway} דק׳",
-    if (departure.realtime) "זמן אמת" else null,
+    next?.departsAtSeconds?.let { "ואחריו ${clock(it)}" },
     departure.platform?.let { "רציף $it" },
 ).joinToString(" · ")
+
+/** סמן "זמן אמת" בסוף השורה: בצבע טקסט משני (לא בהדגשה - ההדגשה היא לפוקוס בלבד). */
+private fun realtimeMarker(theme: FutureTheme): @Composable RowScope.() -> Unit = {
+    Text(
+        text = "זמן אמת",
+        style = MaterialTheme.typography.labelSmall,
+        color = theme.secondaryTextColor,
+    )
+}
 
 private fun clock(seconds: Int): String = "%02d:%02d".format((seconds / 3600) % 24, (seconds % 3600) / 60)
 

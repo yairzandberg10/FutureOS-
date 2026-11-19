@@ -33,13 +33,21 @@ object OpenApis {
     private fun coord(p: LatLng) = String.format(Locale.US, "%.6f,%.6f", p.lat, p.lon)
 
     /** MOTIS plan: מסלולי תחבורה ציבורית ממוצא ליעד. time = ISO-8601, null = עכשיו. */
-    suspend fun transitPlanJson(from: LatLng, to: LatLng, time: String? = null): String? {
+    suspend fun transitPlanJson(
+        from: LatLng,
+        to: LatLng,
+        time: String? = null,
+        arriveBy: Boolean = false,
+        extra: Map<String, String> = emptyMap(),
+    ): String? {
         val url = "$TRANSITOUS/api/v5/plan".toHttpUrl().newBuilder()
             .addQueryParameter("fromPlace", coord(from))
             .addQueryParameter("toPlace", coord(to))
             .addQueryParameter("numItineraries", "5")
             .addQueryParameter("language", "he")
             .apply { if (time != null) addQueryParameter("time", time) }
+            .apply { if (arriveBy) addQueryParameter("arriveBy", "true") }
+            .apply { extra.forEach { (k, v) -> addQueryParameter(k, v) } }
             .build()
         return get(url, "plan")
     }

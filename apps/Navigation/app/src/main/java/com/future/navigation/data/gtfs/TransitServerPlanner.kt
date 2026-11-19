@@ -17,8 +17,28 @@ import java.time.ZoneId
 class TransitServerPlanner {
 
     /** departAt: שעת יציאה ISO-8601, null = עכשיו. */
-    suspend fun findJourneys(from: LatLng, to: LatLng, departAt: String? = null): List<TransitItinerary>? {
-        val body = OpenApis.transitPlanJson(from, to, departAt) ?: return null
+    suspend fun findJourneys(
+        from: LatLng,
+        to: LatLng,
+        departAt: String? = null,
+        arriveBy: Boolean = false,
+        extra: Map<String, String> = emptyMap(),
+    ): List<TransitItinerary>? {
+        if (extra.isNotEmpty()) {
+            findJourneysRaw(from, to, departAt, arriveBy, extra)?.let { return it }
+            // שרת שדחה פרמטר (או ערך לא מוכר): מנסים שוב בלי ההעדפות, כדי שלא ייראה "אין חיבור"
+        }
+        return findJourneysRaw(from, to, departAt, arriveBy, emptyMap())
+    }
+
+    private suspend fun findJourneysRaw(
+        from: LatLng,
+        to: LatLng,
+        departAt: String?,
+        arriveBy: Boolean,
+        extra: Map<String, String>,
+    ): List<TransitItinerary>? {
+        val body = OpenApis.transitPlanJson(from, to, departAt, arriveBy, extra) ?: return null
         return try {
             parse(NetworkModule.json.parseToJsonElement(body) as? JsonObject ?: return null)
         } catch (e: Exception) {
@@ -80,6 +100,7 @@ class TransitServerPlanner {
                     fromStopId = from.text("stopCode"),
                     isRealtime = realtime,
                     delaySeconds = delay,
+                    fromLocation = from.location(),
                     toLocation = to.location(),
                     tripId = leg.text("tripId")?.takeIf { it.isNotBlank() },
                 )

@@ -72,7 +72,7 @@ fun LocationPreviewMap(location: LatLng?, modifier: Modifier = Modifier) {
             mapView.descendantFocusability = android.view.ViewGroup.FOCUS_BLOCK_DESCENDANTS
             mapView.getMapAsync { map ->
                 map.uiSettings.setAllGesturesEnabled(false)
-                map.setStyle(MapConfig.STYLE_URL)
+                map.setStyle(MapConfig.styleUrl(mapView.context))
                 mapLibreMap = map
             }
             mapView

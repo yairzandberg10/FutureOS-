@@ -1,5 +1,6 @@
 package com.future.navigation.ui.transit
 
+import androidx.activity.compose.BackHandler
 import com.future.sharednav.i18n.tr
 import com.future.sharednav.theme.FutureDimens
 import com.future.sharednav.theme.LocalFutureTheme
@@ -45,6 +46,7 @@ import com.future.navigation.data.common.distanceMetersTo
 import com.future.navigation.data.gtfs.LegType
 import com.future.navigation.data.gtfs.TransitItinerary
 import com.future.navigation.data.gtfs.TransitLeg
+import com.future.navigation.data.transit.TransitPlanning
 import com.future.sharednav.components.ScreenTopBar
 import com.future.sharednav.focus.FocusableItem
 
@@ -60,6 +62,9 @@ fun TransitScreen(
     onOpenTrip: (tripId: String, line: String, boardingStop: String) -> Unit = { _, _, _ -> },
 ) {
     var expandedLeg by remember { mutableStateOf(-1) }
+    // מצב LIVE: ניווט בשלבים (מקש 1). המיקום החי משותף לשני המצבים (מרחק לתחנה).
+    var live by remember { mutableStateOf(false) }
+    var myLocation by remember { mutableStateOf<com.future.navigation.data.common.LatLng?>(null) }
     val firstRideFocusRequester = remember { FocusRequester() }
     val firstRideIndex = remember(itinerary) { itinerary.legs.indexOfFirst { it.type == LegType.RIDE } }
 
@@ -88,12 +93,12 @@ fun TransitScreen(
     }
     LaunchedEffect(itinerary) {
         val targets = itinerary.legs.filter { it.type == LegType.RIDE && it.toLocation != null }
-        if (targets.isEmpty()) return@LaunchedEffect
         val alerted = HashSet<Int>()
         runCatching {
             com.future.navigation.data.location.LocationHelper.observeLocation(context, minIntervalMs = 5_000L, minDistanceMeters = 20f)
                 .collect { location ->
                     val here = com.future.navigation.data.common.LatLng(location.latitude, location.longitude)
+                    myLocation = here
                     targets.forEachIndexed { index, leg ->
                         val distance = here.distanceMetersTo(leg.toLocation!!)
                         if (distance <= GET_OFF_ALERT_METERS && alerted.add(index)) {
@@ -107,7 +112,16 @@ fun TransitScreen(
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(
+        modifier = Modifier.fillMaxSize().onPreviewKeyEvent { event ->
+            if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+            when (com.future.sharednav.nav.digitForKey(event.key)) {
+                "1" -> if (!live) { live = true; true } else false
+                "9" -> if (live) { shareItinerary(context, itinerary); true } else false
+                else -> false
+            }
+        }
+    ) {
         ScreenTopBar(
             title = stringResource(R.string.transit_itinerary_title),
             textColor = MaterialTheme.colorScheme.onBackground,
@@ -115,7 +129,10 @@ fun TransitScreen(
             onBack = onBack
         )
 
-        Surface(
+        // BACK ביציאה ממצב LIVE חוזר לרשימה (נרשם אחרי ScreenTopBar, כך שהוא קודם)
+        BackHandler(enabled = live) { live = false }
+
+        if (live) Unit else Surface(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
             shape = FutureShapes.lg,
             color = MaterialTheme.colorScheme.surface
@@ -146,7 +163,18 @@ fun TransitScreen(
             )
         }
 
-        LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth(), contentPadding = PaddingValues(16.dp)) {
+        if (!live) {
+            Text(
+                text = tr("1: ניווט LIVE בשלבים"),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                modifier = Modifier.padding(horizontal = 16.dp),
+            )
+        }
+
+        if (live) {
+            LiveSteps(itinerary = itinerary, here = myLocation, modifier = Modifier.weight(1f))
+        } else LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth(), contentPadding = PaddingValues(16.dp)) {
             itemsIndexed(itinerary.legs) { index, leg ->
                 LegRow(
                     leg = leg,
@@ -164,6 +192,118 @@ fun TransitScreen(
             }
         }
     }
+}
+
+/**
+ * ניווט LIVE: שלב אחד בכל רגע (רגל = הליכה לנקודה, קטע נסיעה = עלייה + ירידה).
+ * שמאל = הבא, ימין = הקודם (כיוון הקריאה של העברית). מרחק חי מ-myLocation.
+ * לוח היציאות הבאות נטען פעם בשלב, לא בכל עדכון מיקום.
+ */
+@Composable
+private fun LiveSteps(itinerary: TransitItinerary, here: com.future.navigation.data.common.LatLng?, modifier: Modifier = Modifier) {
+    val theme = LocalFutureTheme.current
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val legs = itinerary.legs
+    var step by remember { mutableStateOf(0) }
+    var boardInfo by remember { mutableStateOf<List<String>>(emptyList()) }
+    val focus = remember { FocusRequester() }
+    val leg = legs.getOrNull(step)
+
+    LaunchedEffect(step) { runCatching { focus.requestFocus() } }
+    LaunchedEffect(step) {
+        boardInfo = emptyList()
+        val ride = leg
+        val from = ride?.fromLocation
+        if (ride != null && ride.type == LegType.RIDE && from != null) {
+            val board = runCatching { com.future.navigation.data.gtfs.ServerDepartures().boardAt(from, ride.fromStopName) }.getOrNull()
+            boardInfo = board?.departures
+                .orEmpty()
+                .filter { it.line == ride.routeShortName }
+                .take(3)
+                .map { tr("%s בעוד %d דק׳").format(it.headsign, it.minutesAway) }
+        }
+    }
+
+    Column(
+        modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp).onPreviewKeyEvent { event ->
+            if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+            when (event.key) {
+                Key.DirectionLeft -> { step = (step + 1).coerceAtMost(legs.size - 1); true }
+                Key.DirectionRight -> { step = (step - 1).coerceAtLeast(0); true }
+                else -> false
+            }
+        },
+    ) {
+        Text(
+            text = tr("שלב %d מתוך %d").format(step + 1, legs.size),
+            style = MaterialTheme.typography.labelMedium,
+            color = theme.mutedTextColor,
+        )
+        Spacer(modifier = Modifier.height(FutureDimens.spacingXs))
+        FocusableItem(
+            onClick = { step = (step + 1).coerceAtMost(legs.size - 1) },
+            accentColor = MaterialTheme.colorScheme.primary,
+            focusRequester = focus,
+        ) {
+            Column(modifier = Modifier.fillMaxWidth().padding(FutureDimens.spacingSm)) {
+                if (leg != null) {
+                    if (leg.type == LegType.WALK) {
+                        Text(tr("לך אל %s").format(leg.toStopName), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            tr("%d דק׳ · %d מ׳").format((leg.walkDurationSeconds ?: 0) / 60, (leg.walkDistanceMeters ?: 0.0).toInt()),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                        val target = leg.toLocation
+                        if (here != null && target != null) {
+                            Text(
+                                tr("מרחק עכשיו: %d מ׳").format(here.distanceMetersTo(target).toInt()),
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
+                    } else {
+                        Text(
+                            tr("עלו על קו %s לכיוון %s").format(leg.routeShortName.orEmpty(), leg.routeLongName.orEmpty()),
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                        leg.departureSeconds?.let {
+                            Text(
+                                tr("יציאה %s מתחנה %s").format(TransitPlanning.clock(it), leg.fromStopName),
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
+                        boardInfo.forEach { line ->
+                            Text(line, style = MaterialTheme.typography.bodySmall, color = theme.mutedTextColor)
+                        }
+                        Spacer(modifier = Modifier.height(FutureDimens.spacingXs))
+                        Text(
+                            tr("לאחר %d תחנות · רדו בתחנת %s בשעה %s").format(
+                                leg.intermediateStopNames.size + 1,
+                                leg.toStopName,
+                                leg.arrivalSeconds?.let { TransitPlanning.clock(it) }.orEmpty(),
+                            ),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(FutureDimens.spacingSm))
+        Text(
+            text = tr("← הבא · → הקודם · 9 שיתוף ב-SMS · BACK חזרה לרשימה"),
+            style = MaterialTheme.typography.labelSmall,
+            color = theme.mutedTextColor,
+        )
+    }
+}
+
+/** שליחת סיכום המסלול ב-SMS. פותח את מסך ההודעה בלבד - השליחה בידי המשתמש. */
+private fun shareItinerary(context: android.content.Context, itinerary: TransitItinerary) {
+    val intent = android.content.Intent(android.content.Intent.ACTION_SENDTO, android.net.Uri.parse("smsto:"))
+        .putExtra("sms_body", TransitPlanning.shareText(itinerary))
+    runCatching { context.startActivity(intent) }
 }
 
 @Composable

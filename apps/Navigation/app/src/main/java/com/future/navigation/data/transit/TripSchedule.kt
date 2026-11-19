@@ -24,6 +24,8 @@ data class TripSchedule(
     val line: String,
     val headsign: String,
     val stops: List<TripStop>,
+    /** שם המפעיל (למשל "מטרופולין"), null אם השרת לא סיפק. */
+    val agency: String? = null,
 )
 
 /**
@@ -63,6 +65,7 @@ object TripScheduleSource {
             line = leg.text("routeShortName")?.takeIf { it.isNotBlank() } ?: leg.text("displayName").orEmpty(),
             headsign = leg.text("headsign")?.replace('_', ' ')?.trim().orEmpty(),
             stops = stops,
+            agency = leg.text("agencyName")?.takeIf { it.isNotBlank() },
         )
     }
 

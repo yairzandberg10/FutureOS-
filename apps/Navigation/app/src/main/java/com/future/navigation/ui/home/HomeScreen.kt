@@ -89,10 +89,19 @@ fun HomeScreen(
     onOpenSavedPlaces: () -> Unit,
     onOpenGtfsSetup: () -> Unit,
     /** פתיחת לוח היציאות של תחנה (שם, מיקום). */
-    onOpenStation: (String, LatLng) -> Unit = { _, _ -> }
+    onOpenStation: (String, LatLng) -> Unit = { _, _ -> },
+    /** "הוספת מקום מועדף": מסך חיפוש שבוחרים בו מקום לשמירה (ר' ui/home/AddFavoritePlaceScreen). */
+    onOpenAddFavorite: () -> Unit = {},
+    /** "הגדרות מפה": תצוגה אוטומטי / בהירה / כהה (ר' ui/settings/MapSettingsScreen). */
+    onOpenMapSettings: () -> Unit = {},
+    /** "קווים": חיפוש קו לפי מספר, קווים אחרונים ומועדפים (ר' ui/lines/LineSearchScreen). */
+    onOpenLines: () -> Unit = {},
 ) {
     val stationResults by viewModel.stationResults.collectAsState()
     val theme = LocalFutureTheme.current
+    // טוענים את בחירת תצוגת המפה מההגדרות (נשמרת, ו-MapConfig.styleUrl() קורא ממנה)
+    val mapThemeStore = com.future.navigation.ui.settings.MapThemeStore.get(androidx.compose.ui.platform.LocalContext.current)
+    val mapTheme by mapThemeStore.themeFlow.collectAsState()
     val type = rememberFutureType()
     val mode by viewModel.mode.collectAsState()
     val query by viewModel.searchQuery.collectAsState()
@@ -310,7 +319,11 @@ fun HomeScreen(
                 items(stationResults, key = { "station|${it.location.lat},${it.location.lon}|${it.name}" }) { station ->
                     FutureListItem(
                         title = station.name,
-                        summary = station.lines.takeIf { it.isNotEmpty() }?.take(8)?.joinToString(" · ", prefix = tr("קווים: ")),
+                        // מספר התחנה הרשמי (תחנה מס׳ 63273) לפני הקווים
+                        summary = listOfNotNull(
+                            station.stopCode?.let { "תחנה מס׳ $it" },
+                            station.lines.takeIf { it.isNotEmpty() }?.take(8)?.joinToString(" · ", prefix = tr("קווים: ")),
+                        ).joinToString(" · ").ifBlank { null },
                         theme = theme,
                         onClick = { onOpenStation(station.name, station.location) },
                         leading = { RowIcon(FutureIcons.LocationOn, theme) },
@@ -376,8 +389,8 @@ fun HomeScreen(
                     }
                 }
 
+                item { FutureSectionHeader(text = tr("מועדפים"), theme = theme, inset = false) }
                 if (favorites.isNotEmpty()) {
-                    item { FutureSectionHeader(text = tr("מועדפים"), theme = theme, inset = false) }
                     // מפתח לפי מזהה: אותו מקום יכול להופיע גם במועדפים וגם באחרונים
                     items(favorites, key = { "fav|${it.id}" }) { fav ->
                         val target = PlaceTarget(
@@ -395,6 +408,15 @@ fun HomeScreen(
                             modifier = trackFocus(target),
                         )
                     }
+                }
+                // "+" להוספת מקום מועדף: מסך חיפוש ששומר את הבחירה כמועדף
+                item(key = "add-favorite") {
+                    FutureListItem(
+                        title = tr("הוספת מקום מועדף"),
+                        theme = theme,
+                        onClick = onOpenAddFavorite,
+                        leading = { RowIcon(FutureIcons.Add, theme) },
+                    )
                 }
 
                 if (recents.isNotEmpty()) {
@@ -457,6 +479,16 @@ fun HomeScreen(
 
                 // תחנות קרובות רק כשאין קטגוריה פתוחה, ובמצב תחבורה ציבורית
                 if (poi.category == null && mode == TravelMode.TRANSIT) {
+                    // "קווים" (כמו באגד): חיפוש קו לפי מספר, אחרונים ומועדפים
+                    item(key = "lines-entry") {
+                        FutureListItem(
+                            title = "קווים",
+                            summary = "חיפוש קו לפי מספר, קווים אחרונים ומועדפים",
+                            theme = theme,
+                            onClick = onOpenLines,
+                            leading = { RowIcon(FutureIcons.Search, theme) },
+                        )
+                    }
                     // תחנות מועדפות (נשמרות בכוכבית בלוח התחנה) לפני התחנות הקרובות
                     if (favoriteStations.isNotEmpty()) {
                         item(key = "fav-stations-header") {
@@ -479,7 +511,15 @@ fun HomeScreen(
                     items(nearbyStops, key = { "stop:" + it.stop.name }) { nearby ->
                         FutureListItem(
                             title = nearby.stop.name,
-                            summary = tr("%.0f מ׳").format(nearby.distanceMeters) + (nearby.departures?.let { " · $it" } ?: ""),
+                            // שורה ראשונה: "תחנה מס׳ 63273 · 120 מ׳", שנייה: היציאות הבאות
+                            summary = listOfNotNull(
+                                listOfNotNull(
+                                    nearby.stopCode?.let { "תחנה מס׳ $it" },
+                                    tr("%.0f מ׳").format(nearby.distanceMeters),
+                                ).joinToString(" · "),
+                                nearby.departures,
+                            ).joinToString("\n"),
+                            summaryMaxLines = 2,
                             theme = theme,
                             onClick = {
                                 onOpenStation(nearby.stop.name, LatLng(nearby.stop.lat, nearby.stop.lon))
@@ -487,6 +527,23 @@ fun HomeScreen(
                             leading = { RowIcon(FutureIcons.LocationOn, theme) },
                         )
                     }
+                }
+            }
+
+            // הגדרות מפה: בסוף הרשימה במסך הבית הרגיל (לא בזמן חיפוש או קטגוריה פתוחה)
+            if (poi.category == null && query.isBlank()) {
+                item(key = "map-settings") {
+                    FutureListItem(
+                        title = tr("הגדרות מפה"),
+                        summary = when (mapTheme) {
+                            com.future.navigation.ui.map.MapTheme.AUTO -> tr("תצוגה: אוטומטי")
+                            com.future.navigation.ui.map.MapTheme.LIGHT -> tr("תצוגה: בהירה")
+                            com.future.navigation.ui.map.MapTheme.DARK -> tr("תצוגה: כהה")
+                        },
+                        theme = theme,
+                        onClick = onOpenMapSettings,
+                        leading = { RowIcon(FutureIcons.Settings, theme) },
+                    )
                 }
             }
         }

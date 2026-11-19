@@ -26,15 +26,48 @@ data class StationDeparture(
     val platform: String? = null,
 )
 
-/** תחנה שנמצאה בחיפוש לפי שם, עם הקווים שעוברים בה (אם ידועים). */
-data class StationHit(val name: String, val location: LatLng, val lines: List<String>)
+/**
+ * תחנה שנמצאה בחיפוש לפי שם, עם הקווים שעוברים בה (אם ידועים).
+ * [stopCode] = "מספר התחנה" (תחנה מס׳ 63273), null אם לא ידוע.
+ */
+data class StationHit(
+    val name: String,
+    val location: LatLng,
+    val lines: List<String>,
+    val stopCode: String? = null,
+)
 
-/** תחנה קרובה עם היציאות הבאות ממנה - מסך הבית במצב תחבורה ציבורית (בסגנון Moovit). */
+/**
+ * תחנה קרובה עם היציאות הבאות ממנה - מסך הבית במצב תחבורה ציבורית (בסגנון Moovit).
+ * [stopCode] = מספר התחנה הרשמי של משרד התחבורה (השדה stopCode ב-MOTIS), או null.
+ */
 data class StationBoard(
     val name: String,
     val location: LatLng,
     val departures: List<StationDeparture>,
+    val stopCode: String? = null,
 )
+
+/**
+ * האם הטקסט בחיפוש הוא מספר תחנה (3-6 ספרות, כמו 63273). מספר כזה מחפשים לפי
+ * הקוד של התחנה ולא לפי שם.
+ */
+fun isStationCodeQuery(text: String): Boolean {
+    val trimmed = text.trim()
+    return trimmed.length in 3..6 && trimmed.all { it in '0'..'9' }
+}
+
+/**
+ * היציאה הבאה של אותו קו ואותו כיוון אחרי היציאה במקום [index] בלוח (הלוח ממוין
+ * לפי זמן). null אם אין יציאה כזו בלוח. מציגים אותה כ"ואחריו 06:53".
+ */
+fun nextDepartureOfSameLine(departures: List<StationDeparture>, index: Int): StationDeparture? {
+    val current = departures.getOrNull(index) ?: return null
+    return departures.drop(index + 1).firstOrNull {
+        it.line == current.line && it.headsign == current.headsign &&
+            (it.departsAtSeconds ?: 0) > (current.departsAtSeconds ?: 0)
+    }
+}
 
 /**
  * תחנות קרובות, לוח יציאות וחיפוש תחנות ברשת (Transitous, ר' OpenApis), בלי
@@ -79,6 +112,32 @@ class ServerDepartures {
         }
     }
 
+    /**
+     * חיפוש תחנה לפי מספר התחנה (63273). קודם בודקים את התחנות שכבר נטענו (ר' HomeViewModel),
+     * ואז מבקשים מ-MOTIS חיפוש לפי הטקסט, ומאמתים כל מועמדת: רק תחנה שבלוח היציאות שלה
+     * מופיע stopCode זהה נחשבת. null = לא נמצאה (או אין רשת).
+     */
+    suspend fun findStopByCode(code: String, around: LatLng): StationHit? {
+        if (!isStationCodeQuery(code)) return null
+        val candidates = searchStations(around, code.trim()) ?: return null
+        for (candidate in candidates.take(MAX_CODE_CANDIDATES)) {
+            val body = OpenApis.stopTimesNearJson(candidate.location, SAME_STATION_METERS, BOARD_COUNT) ?: continue
+            val root = try {
+                NetworkModule.json.parseToJsonElement(body) as? JsonObject
+            } catch (e: Exception) {
+                null
+            } ?: continue
+            if (hasStopCode(root, code.trim())) return candidate.copy(stopCode = code.trim())
+        }
+        return null
+    }
+
+    internal fun hasStopCode(root: JsonObject, code: String): Boolean =
+        (root["stopTimes"] as? JsonArray).orEmpty().any { element ->
+            val place = (element as? JsonObject)?.get("place") as? JsonObject
+            place?.text("stopCode") == code
+        }
+
     internal fun parseStations(matches: JsonArray): List<StationHit> =
         matches.mapNotNull { element ->
             val match = element as? JsonObject ?: return@mapNotNull null
@@ -106,11 +165,14 @@ class ServerDepartures {
     internal fun parse(root: JsonObject, nowMillis: Long): List<StationBoard> {
         val rows = (root["stopTimes"] as? JsonArray).orEmpty().mapNotNull { it as? JsonObject }
         val byStation = LinkedHashMap<String, Pair<LatLng, MutableList<StationDeparture>>>()
+        // מספר התחנה (stopCode) של השם: שני צדי הרחוב מציגים את אותו מספר, לוקחים את הראשון שיש
+        val codes = HashMap<String, String>()
         for (row in rows) {
             if (row.bool("cancelled") || row.bool("tripCancelled")) continue
             val place = row["place"] as? JsonObject ?: continue
             val name = place.text("name") ?: continue
             val location = LatLng(place.number("lat") ?: continue, place.number("lon") ?: continue)
+            place.text("stopCode")?.takeIf { it.isNotBlank() }?.let { codes.putIfAbsent(name, it.trim()) }
             val departure = departure(row, place, nowMillis) ?: continue
             byStation.getOrPut(name) { location to mutableListOf() }.second += departure
         }
@@ -119,6 +181,7 @@ class ServerDepartures {
                 name = name,
                 location = entry.first,
                 departures = entry.second.sortedBy { it.minutesAway }.distinct(),
+                stopCode = codes[name],
             )
         }
     }
@@ -149,6 +212,8 @@ class ServerDepartures {
         const val NEAR_COUNT = 60
         const val SAME_STATION_METERS = 150
         const val BOARD_COUNT = 80
+        // כל מועמדת בחיפוש לפי מספר עולה בקריאה נוספת לרשת - מגבילים
+        const val MAX_CODE_CANDIDATES = 3
     }
 
     private fun JsonObject.text(key: String): String? =

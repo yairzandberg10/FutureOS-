@@ -114,7 +114,7 @@ fun NavMapView(
             factory = {
                 mapView.getMapAsync { map ->
                     cameraController.attach(map)
-                    map.setStyle(MapConfig.styleUrl()) { style -> cameraController.onStyleLoaded(style) }
+                    map.setStyle(MapConfig.styleUrl(mapView.context)) { style -> cameraController.onStyleLoaded(style) }
                     if (initialCenter != null) {
                         cameraController.animateTo(initialCenter, durationMs = 0)
                     }

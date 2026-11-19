@@ -41,6 +41,17 @@ import androidx.compose.ui.unit.dp
 import com.future.navigation.R
 import com.future.navigation.data.gtfs.LegType
 import com.future.navigation.data.gtfs.TransitItinerary
+import com.future.navigation.data.transit.TransitPlanning
+import com.future.navigation.data.transit.TransitPrefs
+import com.future.navigation.data.transit.TripWhen
+import com.future.navigation.data.transit.TripWhenKind
+import com.future.sharednav.components.FutureListItem
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
+import androidx.compose.foundation.lazy.item
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.input.key.Key
 import com.future.navigation.data.routing.DrivingRoute
 import com.future.navigation.ui.navigation.Destination
 import com.future.navigation.ui.navigation.TravelMode
@@ -111,6 +122,32 @@ fun RouteOptionsScreen(
     val alternatives by viewModel.alternatives.collectAsState()
     val selectedIndex by viewModel.selectedIndex.collectAsState()
     val drivingOptions = androidx.compose.runtime.remember { com.future.navigation.data.backend.FutureServer.isAvailable }
+    val tripWhen by viewModel.tripWhen.collectAsState()
+    val transitPrefs by viewModel.transitPrefs.collectAsState()
+    // פאנל פתוח מעל המסך (מתי / העדפות). null = מסך התוצאות הרגיל.
+    val panelState = remember { mutableStateOf<RoutePanel?>(null) }
+    val panel = panelState.value
+    // סגירת פאנל מחזירה את הפוקוס לשורה הראשונה של התוצאות
+    LaunchedEffect(panel) {
+        if (panel == null) runCatching { actionFocusRequester.requestFocus() }
+    }
+    if (panel != null) {
+        when (panel) {
+            RoutePanel.WHEN -> TransitWhenPanel(
+                onPick = { choice ->
+                    viewModel.setTripWhen(choice)
+                    panelState.value = null
+                },
+                onClose = { panelState.value = null },
+            )
+            RoutePanel.PREFS -> TransitPrefsPanel(
+                prefs = transitPrefs,
+                onChange = viewModel::setTransitPrefs,
+                onClose = { panelState.value = null },
+            )
+        }
+        return
+    }
 
     Column(
         modifier = Modifier.fillMaxSize().onPreviewKeyEvent { event ->
@@ -120,7 +157,15 @@ fun RouteOptionsScreen(
             when (com.future.sharednav.nav.digitForKey(event.key)) {
                 "7" -> { onSwap(); true }
                 "1" -> if (mode == TravelMode.DRIVE && drivingOptions) { viewModel.toggleAvoidTolls(); true } else false
-                "3" -> if (mode == TravelMode.TRANSIT || (mode == TravelMode.DRIVE && drivingOptions)) { viewModel.cycleDepartureTime(); true } else false
+                // תחבורה: 2 העדפות, 3 מתי, 4/6 הזזה של ±10 דק'. בנהיגה 3 נשאר מחזור שעת היציאה.
+                "2" -> if (mode == TravelMode.TRANSIT) { panelState.value = RoutePanel.PREFS; true } else false
+                "3" -> when {
+                    mode == TravelMode.TRANSIT -> { panelState.value = RoutePanel.WHEN; true }
+                    mode == TravelMode.DRIVE && drivingOptions -> { viewModel.cycleDepartureTime(); true }
+                    else -> false
+                }
+                "4" -> if (mode == TravelMode.TRANSIT) { viewModel.shiftTripTime(-TransitPlanning.SHIFT_STEP_MINUTES); true } else false
+                "6" -> if (mode == TravelMode.TRANSIT) { viewModel.shiftTripTime(TransitPlanning.SHIFT_STEP_MINUTES); true } else false
                 else -> false
             }
         }
@@ -163,7 +208,7 @@ fun RouteOptionsScreen(
 
         val departLabel = "3 " + (if (departInMinutes == 0) "יציאה עכשיו" else "יציאה בעוד $departInMinutes דק׳")
         val optionsHint = when {
-            mode == TravelMode.TRANSIT -> departLabel
+            mode == TravelMode.TRANSIT -> "3 " + TransitPlanning.whenLabel(tripWhen) + " · 4/6 ±10 דק׳ · 2 העדפות"
             mode == TravelMode.DRIVE && drivingOptions -> "1 " + (if (avoidTolls) "בלי כבישי אגרה ✓" else "כולל כבישי אגרה") + " · " + departLabel
             else -> null
         }
@@ -316,11 +361,187 @@ private fun ItineraryCard(itinerary: TransitItinerary, onClick: () -> Unit, focu
                 text = itinerary.legs.filter { it.type == LegType.RIDE }.joinToString(" + ") { it.routeShortName ?: it.routeLongName ?: "" },
                 style = MaterialTheme.typography.bodyMedium
             )
+            // כמה זמן עד היציאה הראשונה, ומאיזו תחנה
+            val firstRide = itinerary.legs.firstOrNull { it.type == LegType.RIDE }
+            val departure = firstRide?.departureSeconds
+            if (firstRide != null && departure != null) {
+                val now = TransitPlanning.secondsOfDay(java.time.ZonedDateTime.now(com.future.navigation.data.transit.ISRAEL_ZONE))
+                Text(
+                    text = tr("בעוד %d דק׳ מתחנה %s").format(TransitPlanning.minutesUntil(departure, now), firstRide.fromStopName),
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+            Text(
+                text = tr("מחיר משוער: %s").format(TransitPlanning.formatShekel(TransitPlanning.estimatedFare(itinerary))),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             Text(
                 text = stringResource(R.string.schedule_disclaimer),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
             )
+        }
+    }
+}
+
+private enum class RoutePanel { WHEN, PREFS }
+
+/**
+ * פאנל "מתי" (תחבורה ציבורית): יציאה עכשיו / בזמן / הגעה עד / קווים אחרונים.
+ * לשעה מקלידים 4 ספרות (למשל 0830) ו-OK. BACK חוזר לבחירה או סוגר.
+ */
+@Composable
+private fun TransitWhenPanel(onPick: (TripWhen) -> Unit, onClose: () -> Unit) {
+    val theme = LocalFutureTheme.current
+    var entryKind by remember { mutableStateOf<TripWhenKind?>(null) }
+    var digits by remember { mutableStateOf("") }
+    val firstFocus = remember { FocusRequester() }
+    BackHandler {
+        if (entryKind != null) {
+            entryKind = null
+            digits = ""
+        } else {
+            onClose()
+        }
+    }
+    LaunchedEffect(entryKind) { runCatching { firstFocus.requestFocus() } }
+
+    val kind = entryKind
+    Column(modifier = Modifier.fillMaxSize().background(theme.surfaceColor).padding(FutureDimens.screenPadding)) {
+        Text(
+            text = when (kind) {
+                null -> "מתי לנסוע?"
+                TripWhenKind.ARRIVE_BY -> "שעת הגעה"
+                else -> "שעת יציאה"
+            },
+            color = theme.textColor,
+            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.titleMedium,
+        )
+        Spacer(modifier = Modifier.height(FutureDimens.spacingMd))
+        if (kind == null) {
+            Column(verticalArrangement = Arrangement.spacedBy(FutureDimens.itemSpacing)) {
+                FutureListItem("יציאה עכשיו", theme, onClick = { onPick(TripWhen(TripWhenKind.NOW)) }, focusRequester = firstFocus)
+                FutureListItem("בחירת זמן יציאה", theme, onClick = {
+                    entryKind = TripWhenKind.DEPART_AT
+                    digits = ""
+                })
+                FutureListItem("בחירת זמן הגעה", theme, onClick = {
+                    entryKind = TripWhenKind.ARRIVE_BY
+                    digits = ""
+                })
+                FutureListItem(
+                    "קווים אחרונים להיום",
+                    theme,
+                    onClick = { onPick(TripWhen(TripWhenKind.LAST_LINES)) },
+                    summary = "הנסיעות שיוצאות מ-${TransitPlanning.LAST_LINES_HOUR}:00 והלאה",
+                )
+            }
+        } else {
+            val valid = digits.length == 4 && digits.take(2).toInt() < 24 && digits.takeLast(2).toInt() < 60
+            val shown = digits.padEnd(4, '_')
+            Column(
+                modifier = Modifier.fillMaxWidth().onPreviewKeyEvent { event ->
+                    if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                    val digit = com.future.sharednav.nav.digitForKey(event.key)
+                    when {
+                        digit != null -> {
+                            if (digits.length < 4) digits += digit
+                            true
+                        }
+                        event.key == Key.Backspace -> {
+                            digits = digits.dropLast(1)
+                            true
+                        }
+                        else -> false
+                    }
+                },
+            ) {
+                Text(
+                    text = shown.take(2) + ":" + shown.drop(2),
+                    color = theme.textColor,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.headlineMedium,
+                )
+                Spacer(modifier = Modifier.height(FutureDimens.spacingSm))
+                Text(
+                    text = "הקלד 4 ספרות (למשל 0830), ואז OK. BACK = ביטול",
+                    color = theme.mutedTextColor,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Spacer(modifier = Modifier.height(FutureDimens.spacingMd))
+                FutureButton(
+                    text = "אישור",
+                    theme = theme,
+                    onClick = {
+                        onPick(TripWhen(kind, digits.take(2).toInt(), digits.takeLast(2).toInt()))
+                    },
+                    fillMaxWidth = true,
+                    focusRequester = firstFocus,
+                    enabled = valid,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * העדפות תחבורה: מסלול (מומלץ / פחות הליכה / פחות החלפות / נגישות) ואמצעים
+ * (אוטובוס, רכבת, רכבת קלה, שאטל/מונית). נשמר מיד, והחיפוש מתחדש.
+ */
+@Composable
+private fun TransitPrefsPanel(prefs: TransitPrefs, onChange: (TransitPrefs) -> Unit, onClose: () -> Unit) {
+    val theme = LocalFutureTheme.current
+    val firstFocus = remember { FocusRequester() }
+    BackHandler(onBack = onClose)
+    LaunchedEffect(Unit) { runCatching { firstFocus.requestFocus() } }
+
+    fun status(on: Boolean) = if (on) "פעיל" else "כבוי"
+    // לפחות אמצעי אחד חייב להישאר פעיל, אחרת הבקשה לא מוגבלת לכלום
+    fun setMode(next: TransitPrefs) {
+        if (next.bus || next.rail || next.lightRail) onChange(next)
+    }
+
+    Column(modifier = Modifier.fillMaxSize().background(theme.surfaceColor).padding(FutureDimens.screenPadding)) {
+        Text(
+            text = "העדפות מסלול",
+            color = theme.textColor,
+            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.titleMedium,
+        )
+        Spacer(modifier = Modifier.height(FutureDimens.spacingSm))
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(FutureDimens.itemSpacing)) {
+            item {
+                FutureListItem(
+                    title = "מסלול: " + prefs.preference.label,
+                    theme = theme,
+                    onClick = { onChange(prefs.copy(preference = prefs.preference.next())) },
+                    focusRequester = firstFocus,
+                    summary = "OK להחלפה",
+                )
+            }
+            item {
+                FutureListItem("אוטובוס: " + status(prefs.bus), theme, onClick = { setMode(prefs.copy(bus = !prefs.bus)) })
+            }
+            item {
+                FutureListItem("רכבת: " + status(prefs.rail), theme, onClick = { setMode(prefs.copy(rail = !prefs.rail)) })
+            }
+            item {
+                FutureListItem("רכבת קלה: " + status(prefs.lightRail), theme, onClick = { setMode(prefs.copy(lightRail = !prefs.lightRail)) })
+            }
+            item {
+                FutureListItem(
+                    "שאטל / מונית שירות: " + status(prefs.shareTaxi),
+                    theme,
+                    onClick = { onChange(prefs.copy(shareTaxi = !prefs.shareTaxi)) },
+                    summary = "נשמר להעדפה בלבד",
+                )
+            }
+            item {
+                FutureButton("סיום", theme, onClick = onClose, fillMaxWidth = true)
+            }
         }
     }
 }

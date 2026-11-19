@@ -21,6 +21,11 @@ import com.future.navigation.data.routing.OsrmRouting
 import com.future.navigation.data.routing.RoutingProfile
 import com.future.navigation.data.routing.RoutingRepository
 import com.future.navigation.data.siri.TransitRealtimeEnricher
+import com.future.navigation.data.transit.ISRAEL_ZONE
+import com.future.navigation.data.transit.TransitPlanning
+import com.future.navigation.data.transit.TransitPrefs
+import com.future.navigation.data.transit.TransitPrefsStore
+import com.future.navigation.data.transit.TripWhen
 import kotlin.math.abs
 import com.future.navigation.ui.navigation.Destination
 import com.future.navigation.ui.navigation.TravelMode
@@ -69,6 +74,31 @@ class RouteOptionsViewModel(
     /** "מתי לצאת": בעוד כמה דקות (0 = עכשיו) - מקש 3 עובר בין 0/15/30/60/120. */
     private val _departInMinutes = MutableStateFlow(0)
     val departInMinutes = _departInMinutes.asStateFlow()
+
+    /** "מתי" לתחבורה ציבורית (מסך המתי + הזזה של ±10 דק'). נפרד מ-departInMinutes של הנהיגה. */
+    private val _tripWhen = MutableStateFlow(TripWhen())
+    val tripWhen = _tripWhen.asStateFlow()
+
+    /** העדפות תחבורה (מסלול ואמצעים), נשמרות ב-SharedPreferences. */
+    private val _transitPrefs = MutableStateFlow(TransitPrefsStore.load(appContext))
+    val transitPrefs = _transitPrefs.asStateFlow()
+
+    fun setTripWhen(choice: TripWhen) {
+        _tripWhen.value = choice
+        retry()
+    }
+
+    fun shiftTripTime(minutes: Int) {
+        val current = _tripWhen.value
+        _tripWhen.value = current.copy(shiftMinutes = current.shiftMinutes + minutes)
+        retry()
+    }
+
+    fun setTransitPrefs(value: TransitPrefs) {
+        _transitPrefs.value = value
+        TransitPrefsStore.save(appContext, value)
+        retry()
+    }
 
     fun toggleAvoidTolls() {
         val next = !_avoidTolls.value
@@ -187,7 +217,14 @@ class RouteOptionsViewModel(
                     TravelMode.TRANSIT -> {
                         // המסלול מחושב ברשת (Transitous), בלי להוריד את קובץ ה-GTFS הארצי.
                         // נתונים מקומיים משמשים רק אם כבר יובאו בעבר ומכסים את האזור.
-                        val online = transitServerPlanner.findJourneys(origin, destination.location, departAtIso())
+                        val planTime = TransitPlanning.planTime(_tripWhen.value, java.time.ZonedDateTime.now(ISRAEL_ZONE))
+                        val online = transitServerPlanner.findJourneys(
+                            origin,
+                            destination.location,
+                            planTime.iso,
+                            planTime.arriveBy,
+                            TransitPlanning.planParams(_transitPrefs.value),
+                        )
                         val localCovers = !transitDownloadNeeded(origin, destination.location)
                         val results = when {
                             !online.isNullOrEmpty() -> online

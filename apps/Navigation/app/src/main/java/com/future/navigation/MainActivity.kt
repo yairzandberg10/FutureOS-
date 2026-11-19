@@ -369,8 +369,33 @@ private fun AppNavHost(
                 onOpenStation = { name, location ->
                     navSessionViewModel.setSelectedStation(Destination(name = name, address = name, location = location))
                     navController.navigate(Screen.Station.route)
-                }
+                },
+                onOpenAddFavorite = { navController.navigate(Screen.AddFavorite.route) },
+                onOpenMapSettings = { navController.navigate(Screen.MapSettings.route) },
+                onOpenLines = { navController.navigate(Screen.LineSearch.route) },
             )
+        }
+
+        composable(Screen.LineSearch.route) {
+            com.future.navigation.ui.lines.LineSearchScreen(
+                onBack = { navController.popBackStack() },
+                onOpenLine = { tripId, line, stop ->
+                    navController.navigate(Screen.Trip.path(tripId, line, stop))
+                },
+            )
+        }
+
+        composable(Screen.AddFavorite.route) {
+            com.future.navigation.ui.home.AddFavoritePlaceScreen(
+                onBack = { navController.popBackStack() },
+                onPicked = { result ->
+                    homeViewModel.addFavoritePlace(result)
+                    navController.popBackStack()
+                },
+            )
+        }
+        composable(Screen.MapSettings.route) {
+            com.future.navigation.ui.settings.MapSettingsScreen(onBack = { navController.popBackStack() })
         }
 
         composable(Screen.RouteOptions.route) {
