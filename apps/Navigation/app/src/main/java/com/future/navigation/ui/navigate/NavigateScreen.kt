@@ -13,6 +13,7 @@ import com.future.sharednav.theme.onStatusColor
 
 import com.future.sharednav.theme.FutureShapes
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -106,8 +107,13 @@ fun NavigateScreen(viewModel: NavigateViewModel, onClose: () -> Unit = {}) {
         cameraController.setAccent(accentArgb)
         cameraController.setRoute(state.route.polyline)
     }
-    androidx.compose.runtime.LaunchedEffect(state.currentLocation) {
-        cameraController.setPosition(state.currentLocation)
+    androidx.compose.runtime.LaunchedEffect(state.currentLocation, state.bearing) {
+        cameraController.setPosition(state.currentLocation, state.bearing)
+    }
+    // חץ כיוון במקום נקודה, החלק שנסענו באפור, וזום ניווט - רק במסך הזה
+    androidx.compose.runtime.DisposableEffect(cameraController) {
+        cameraController.setNavigationMode(true)
+        onDispose { cameraController.setNavigationMode(false) }
     }
 
     // מעקב במצב "הכיוון שלי למעלה"; בתצוגת מסלול מלא המעקב מושבת
@@ -177,50 +183,59 @@ fun NavigateScreen(viewModel: NavigateViewModel, onClose: () -> Unit = {}) {
             onRecenterRequested = {
                 overview = false
                 followMode = true
-                state.currentLocation?.let { cameraController.recenter(it) }
+                cameraController.resetNavZoom()
+                state.currentLocation?.let { cameraController.followHeading(it, state.bearing) }
             },
             onManualPan = { followMode = false }
         )
 
-        // כרטיס הפנייה הבאה - למעלה, קומפקטי: חץ, מרחק גדול, שם הרחוב, ו"ואז"
+        // כרטיס הפנייה הבאה (כמו Waze): פס בצבע ההדגשה למעלה עם חץ גדול, מרחק
+        // גדול ושם הרחוב, ומתחתיו תווית קטנה "ואז" כשהפנייה קרובה
         val next = state.nextStep
         val showThen = next != null && state.distanceToManeuverMeters < THEN_PREVIEW_METERS
         if (!state.ended) {
-            Surface(
-                modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth().padding(6.dp),
-                shape = FutureShapes.lg,
-                color = MaterialTheme.colorScheme.surface,
-                shadowElevation = FutureElevation.card(theme.isDarkMode)
-            ) {
-                Row(modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier.size(56.dp).clip(FutureShapes.md).background(theme.elevatedSurfaceColor),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        ManeuverIcon(state.currentStep)
-                    }
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = state.distanceToManeuverMeters.let { if (it >= 1000) tr("%.1f ק״מ").format(it / 1000) else "${((it / 10).toInt() * 10)} מ׳" },
-                            fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.headlineMedium,
-                            color = theme.textColor,
-                            maxLines = 1
-                        )
-                        Text(
-                            text = state.currentStep.streetName.takeIf { it.isNotBlank() } ?: maneuverText(state.currentStep),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = theme.textColor,
-                            maxLines = 1
-                        )
-                        if (showThen && next != null) {
+            val onAccent = theme.onStatusColor(theme.accentColor)
+            Column(modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth().padding(6.dp)) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = FutureShapes.lg,
+                    color = theme.accentColor,
+                    shadowElevation = FutureElevation.card(theme.isDarkMode)
+                ) {
+                    Row(modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        ManeuverIcon(state.currentStep, tint = onAccent, size = 52.dp)
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "ואז " + maneuverText(next),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = theme.mutedTextColor,
+                                text = formatManeuverDistance(state.distanceToManeuverMeters),
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.headlineLarge,
+                                color = onAccent,
                                 maxLines = 1
                             )
+                            Text(
+                                text = state.currentStep.streetName.takeIf { it.isNotBlank() } ?: maneuverText(state.currentStep),
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.SemiBold,
+                                color = onAccent,
+                                maxLines = 1
+                            )
+                        }
+                    }
+                }
+                if (showThen && next != null) {
+                    Surface(
+                        modifier = Modifier.padding(top = 4.dp),
+                        shape = FutureShapes.md,
+                        color = MaterialTheme.colorScheme.surface,
+                        shadowElevation = FutureElevation.card(theme.isDarkMode)
+                    ) {
+                        Row(modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text("ואז", style = MaterialTheme.typography.bodyMedium, color = theme.mutedTextColor)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            ManeuverIcon(next, tint = theme.textColor, size = 22.dp)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(maneuverText(next), style = MaterialTheme.typography.bodyMedium, color = theme.textColor, maxLines = 1)
                         }
                     }
                 }
@@ -251,24 +266,33 @@ fun NavigateScreen(viewModel: NavigateViewModel, onClose: () -> Unit = {}) {
                     else -> "5 מסלול מלא"
                 }
                 if (notice.isNotEmpty()) {
-                    Text(
-                        text = notice,
-                        color = when {
-                            reportMenu -> theme.textColor
-                            report != null && state.reportMessage == null -> theme.dangerColor
-                            else -> theme.mutedTextColor
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                        maxLines = 1,
+                    // על גבי המפה הטקסט יושב על תווית, כדי שיהיה קריא מעל הכבישים
+                    Surface(
+                        shape = FutureShapes.md,
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
                         modifier = Modifier.padding(bottom = 4.dp),
-                    )
+                    ) {
+                        Text(
+                            text = notice,
+                            color = when {
+                                reportMenu -> theme.textColor
+                                report != null && state.reportMessage == null -> theme.dangerColor
+                                else -> theme.mutedTextColor
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            maxLines = 1,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                        )
+                    }
                 }
 
                 // מהירות בעיגול בפינה, מעל השורה התחתונה, על גבי המפה
                 val speed = state.speedKmh
                 if (showSpeed && speed != null) {
                     Box(
-                        modifier = Modifier.padding(bottom = 6.dp).size(56.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surface),
+                        modifier = Modifier.padding(bottom = 6.dp).size(58.dp).clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surface)
+                            .border(3.dp, theme.textColor.copy(alpha = 0.25f), CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
@@ -280,24 +304,36 @@ fun NavigateScreen(viewModel: NavigateViewModel, onClose: () -> Unit = {}) {
                     }
                 }
 
-                // שורה תחתונה דקה: שעת הגעה, דקות, ק"מ, עם השתק וסיום בצדדים
-                Surface(shape = FutureShapes.lg, color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxWidth()) {
-                    Row(modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                // שורה תחתונה (כמו Waze): שעת הגעה גדולה במרכז, ומתחת דקות וק"מ שנותרו;
+                // השתק וסיום בצדדים
+                Surface(
+                    shape = FutureShapes.lg,
+                    color = MaterialTheme.colorScheme.surface,
+                    shadowElevation = FutureElevation.card(theme.isDarkMode),
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp)
+                ) {
+                    Row(modifier = Modifier.padding(horizontal = 6.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                         TopBarIconButton(if (state.muted) FutureIcons.AutoMirrored.VolumeOff else FutureIcons.AutoMirrored.VolumeUp, tr("השתק"), theme.textColor, theme.accentColor, viewModel::toggleMute)
-                        Row(
-                            modifier = Modifier.weight(1f),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(arrivalClock(state.remainingDurationSeconds), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge, maxLines = 1, softWrap = false)
-                            Text("  ·  ", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f))
-                            Text(tr("%d דק׳").format(kotlin.math.ceil(state.remainingDurationSeconds / 60).toInt()), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge, maxLines = 1, softWrap = false)
-                            Text("  ·  ", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f))
-                            Text(tr("%.1f ק״מ").format(state.remainingDistanceMeters / 1000.0), style = MaterialTheme.typography.titleMedium, maxLines = 1, softWrap = false)
+                        Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                arrivalClock(state.remainingDurationSeconds),
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.headlineSmall,
+                                color = theme.textColor,
+                                maxLines = 1,
+                                softWrap = false
+                            )
+                            Text(
+                                formatRemainingTime(state.remainingDurationSeconds) + "  ·  " +
+                                    tr("%.1f ק״מ").format(state.remainingDistanceMeters / 1000.0),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = theme.mutedTextColor,
+                                maxLines = 1,
+                                softWrap = false
+                            )
                         }
                         TopBarIconButton(FutureIcons.Close, tr("סיים ניווט"), theme.dangerColor, theme.accentColor, onClick = {
-                            // הכפתור הזה משמעו "בטל/צא מהניווט" - לא רק לסמן ended=true (זה
-                            // קורה גם אוטומטית בהגעה בפועל ליעד) אלא גם לצאת בפועל מהמסך.
+                            // "בטל/צא מהניווט": לא רק לסמן ended=true אלא גם לצאת מהמסך.
                             // לפני כן מבקשים אישור (F18), והברירה הבטוחה היא "ביטול".
                             confirmEnd = true
                         })
@@ -339,8 +375,21 @@ private fun isGpsEnabled(context: android.content.Context): Boolean =
 /** "ואז" מוצג כשהפנייה הנוכחית קרובה מ-150 מ'. */
 private const val THEN_PREVIEW_METERS = 150.0
 
+/** מרחק לפנייה: מטרים בעיגול ל-10 (ול-50 מעל 300 מ'), ומעל ק"מ - בעשיריות. */
+private fun formatManeuverDistance(meters: Double): String = when {
+    meters >= 1000 -> tr("%.1f ק״מ").format(meters / 1000)
+    meters >= 300 -> "${((meters / 50).toInt() * 50)} מ׳"
+    else -> "${((meters / 10).toInt() * 10)} מ׳"
+}
+
+/** זמן שנותר: "12 דק׳", ומעל שעה "1:05 שע׳". */
+private fun formatRemainingTime(seconds: Double): String {
+    val minutes = kotlin.math.ceil(seconds / 60).toInt()
+    return if (minutes >= 60) "%d:%02d שע׳".format(minutes / 60, minutes % 60) else tr("%d דק׳").format(minutes)
+}
+
 @Composable
-private fun ManeuverIcon(step: Maneuver) {
+private fun ManeuverIcon(step: Maneuver, tint: androidx.compose.ui.graphics.Color, size: androidx.compose.ui.unit.Dp) {
     val angle = when (step.modifier) {
         "left" -> -90f
         "slight left" -> -45f
@@ -351,11 +400,12 @@ private fun ManeuverIcon(step: Maneuver) {
         "uturn" -> 180f
         else -> 0f
     }
+    val arrive = step.type == "arrive"
     Icon(
-        FutureIcons.ArrowUpward,
+        if (arrive) FutureIcons.LocationOn else FutureIcons.ArrowUpward,
         contentDescription = null,
-        tint = MaterialTheme.colorScheme.onSurface,
-        modifier = Modifier.rotate(angle)
+        tint = tint,
+        modifier = Modifier.size(size).rotate(if (arrive) 0f else angle)
     )
 }
 
