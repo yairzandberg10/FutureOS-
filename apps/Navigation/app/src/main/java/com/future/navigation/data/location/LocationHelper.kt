@@ -99,12 +99,21 @@ object LocationHelper {
      * המיקום האחרון הכי מדויק מבין הספקים (ולא פשוט של הספק הראשון ברשימה): מיקום
      * רשת יכול לסטות בקילומטרים, ובחירה לפי סדר הספקים הקפיצה את המיקום בין שתי נקודות.
      */
-    private fun bestLastKnown(manager: LocationManager, providers: List<String>): Location? =
-        providers
+    private fun bestLastKnown(manager: LocationManager, providers: List<String>): Location? {
+        val fixes = providers
             .mapNotNull { runCatching { manager.getLastKnownLocation(it) }.getOrNull() }
             // מיקום ישן (מכמה שעות אחורה) לא מתאים כנקודת מוצא של מסלול - מדלגים עליו.
             .filter { ageMs(it) <= MAX_LAST_KNOWN_AGE_MS }
+        val freshest = fixes.minByOrNull { ageMs(it) } ?: return null
+        // מיקום מדויק יותר מנצח רק אם הוא כמעט טרי באותה מידה. בטלפון קיבוע GPS מלפני
+        // רבע שעה (מעלה לבונה) ניצח מיקום טרי (עלי), והמסלול התחיל 2 ק"מ מהמשתמש.
+        return fixes
+            .filter { ageMs(it) - ageMs(freshest) <= SAME_TIME_WINDOW_MS }
             .minByOrNull { if (it.hasAccuracy()) it.accuracy else Float.MAX_VALUE }
+            ?: freshest
+    }
+
+    private const val SAME_TIME_WINDOW_MS = 2 * 60 * 1000L
 
     /**
      * מיקום רשת גס שהמיקום המדויק הקודם נמצא בתוך עיגול הדיוק שלו לא מוסיף מידע -

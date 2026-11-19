@@ -217,9 +217,11 @@ private fun LiveSteps(itinerary: TransitItinerary, here: com.future.navigation.d
         val from = ride?.fromLocation
         if (ride != null && ride.type == LegType.RIDE && from != null) {
             val board = runCatching { com.future.navigation.data.gtfs.ServerDepartures().boardAt(from, ride.fromStopName) }.getOrNull()
-            boardInfo = board?.departures
-                .orEmpty()
-                .filter { it.line == ride.routeShortName }
+            val sameLine = board?.departures.orEmpty().filter { it.line == ride.routeShortName }
+            // רק באותו כיוון: בטלפון הופיע גם 462 לכיוון ההפוך ("אריאל קניון אריאל")
+            val direction = ride.routeLongName.orEmpty()
+            val sameDirection = sameLine.filter { direction.isNotBlank() && (it.headsign == direction || direction.contains(it.headsign) || it.headsign.contains(direction)) }
+            boardInfo = (sameDirection.ifEmpty { sameLine })
                 .take(3)
                 .map { tr("%s בעוד %d דק׳").format(it.headsign, it.minutesAway) }
         }
