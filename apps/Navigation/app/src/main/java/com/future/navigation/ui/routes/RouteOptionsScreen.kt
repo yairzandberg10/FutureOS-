@@ -48,7 +48,6 @@ import com.future.navigation.data.transit.TripWhenKind
 import com.future.sharednav.components.FutureListItem
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
-import androidx.compose.foundation.lazy.item
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.input.key.Key

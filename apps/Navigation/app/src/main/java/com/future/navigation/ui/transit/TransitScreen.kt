@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import com.future.sharednav.i18n.tr
 import com.future.sharednav.theme.FutureDimens
 import com.future.sharednav.theme.LocalFutureTheme
+import com.future.sharednav.theme.mutedTextColor
 
 import com.future.sharednav.theme.FutureShapes
 import androidx.compose.foundation.background
