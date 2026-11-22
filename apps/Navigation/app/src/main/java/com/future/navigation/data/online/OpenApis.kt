@@ -43,7 +43,7 @@ object OpenApis {
         val url = "$TRANSITOUS/api/v5/plan".toHttpUrl().newBuilder()
             .addQueryParameter("fromPlace", coord(from))
             .addQueryParameter("toPlace", coord(to))
-            .addQueryParameter("numItineraries", "5")
+            .addQueryParameter("numItineraries", "8")
             .addQueryParameter("language", "he")
             .apply { if (time != null) addQueryParameter("time", time) }
             .apply { if (arriveBy) addQueryParameter("arriveBy", "true") }

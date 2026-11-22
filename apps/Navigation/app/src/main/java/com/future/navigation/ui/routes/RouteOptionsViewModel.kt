@@ -161,6 +161,9 @@ class RouteOptionsViewModel(
     fun search(mode: TravelMode, destination: Destination, allowCellularDownload: Boolean = false, from: LatLng? = chosenOrigin) {
         val id = ++searchId
         chosenOrigin = from
+        // יעד חדש מתחיל תמיד מ"עכשיו" - שעה/קווים אחרונים מחיפוש קודם לא נגררים אליו
+        val previous = lastSearch?.second
+        if (previous != null && previous.location != destination.location) _tripWhen.value = TripWhen()
         lastSearch = Triple(mode, destination, allowCellularDownload)
         _serverError.value = false
         searchJob?.cancel()
@@ -226,8 +229,16 @@ class RouteOptionsViewModel(
                             TransitPlanning.planParams(_transitPrefs.value),
                         )
                         val localCovers = !transitDownloadNeeded(origin, destination.location)
+                        // MOTIS מחזיר גם מסלולים שיוצאים לפני הזמן, איטיים ונשלטים - מסננים וממיינים
+                        val requestedSeconds = planTime.iso
+                            ?.let { runCatching { java.time.ZonedDateTime.parse(it) }.getOrNull() }
+                            ?.let { TransitPlanning.secondsOfDay(it) }
+                            ?: TransitPlanning.secondsOfDay(java.time.ZonedDateTime.now(ISRAEL_ZONE))
+                        val ranked = online?.let {
+                            com.future.navigation.data.transit.TransitRanking.rank(it, requestedSeconds, planTime.arriveBy)
+                        }
                         val results = when {
-                            !online.isNullOrEmpty() -> online
+                            !ranked.isNullOrEmpty() -> ranked
                             localCovers -> transitJourneyPlanner.findJourneys(origin, destination.location, System.currentTimeMillis() / 1000)
                             online == null -> {
                                 _error.value = "אין חיבור לשירות התחבורה הציבורית – נסה שוב"
