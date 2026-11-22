@@ -240,7 +240,14 @@ class RouteOptionsViewModel(
                         // שכבת זמן אמת (SIRI) - "best effort" בעיצוב (ר' TransitRealtimeEnricher),
                         // אף פעם לא זורקת ולא יכולה להפוך תוצאה תקינה לריקה.
                         _itineraries.value = transitRealtimeEnricher.enrich(results)
-                        if (results.isEmpty()) _error.value = tr("לא נמצא מסלול תחבורה ציבורית ליעד הזה")
+                        if (results.isEmpty()) {
+                            val p = _transitPrefs.value
+                            // אוטובוס כבוי (או העדפה אחרת) הוא לרוב הסיבה - אומרים את זה במקום "אין מסלול"
+                            val filtered = !p.bus || !p.rail || !p.lightRail ||
+                                p.preference != com.future.navigation.data.transit.RoutePreference.RECOMMENDED
+                            _error.value = if (filtered) tr("לא נמצא מסלול בהעדפות שבחרת - מקש 2 לשינוי ההעדפות")
+                                else tr("לא נמצא מסלול תחבורה ציבורית ליעד הזה")
+                        }
                     }
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
