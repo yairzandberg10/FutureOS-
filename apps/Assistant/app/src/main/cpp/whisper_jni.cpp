@@ -27,7 +27,7 @@ static jbyteArray toBytes(JNIEnv *env, const std::string &s) {
 extern "C" JNIEXPORT jbyteArray JNICALL
 Java_com_future_assistant_asr_WhisperCpp_nativeTranscribe(JNIEnv *env, jobject /*thiz*/, jlong ctxPtr,
                                                            jfloatArray samples, jstring language,
-                                                           jstring prompt) {
+                                                           jstring prompt, jboolean fast) {
     auto *ctx = reinterpret_cast<struct whisper_context *>(ctxPtr);
     if (ctx == nullptr) return toBytes(env, "");
 
@@ -52,7 +52,8 @@ Java_com_future_assistant_asr_WhisperCpp_nativeTranscribe(JNIEnv *env, jobject /
     wparams.suppress_nst = true;
     // תקרת טוקנים לפי אורך ההקלטה: עברית היא בערך 3-4 טוקנים לשנייה של
     // דיבור, אז פי 3 מזה + מרווח לא קוטע משפט אמיתי אבל עוצר חזרה אינסופית.
-    wparams.max_tokens = static_cast<int>(static_cast<long long>(n) * 10 / 16000) + 24;
+    wparams.max_tokens = fast ? static_cast<int>(static_cast<long long>(n) * 6 / 16000) + 8
+                              : static_cast<int>(static_cast<long long>(n) * 10 / 16000) + 24;
     // בלי "temperature fallback": כשהמודל לא בטוח (קורה הרבה בעברית) ברירת
     // המחדל מפענחת מחדש עד 5 פעמים בטמפרטורות עולות, עם 5 מפענחים בכל פעם -
     // זה מה שהפך תמלול של משפט קצר לשניות ארוכות. פענוח greedy יחיד מספיק.
@@ -70,6 +71,12 @@ Java_com_future_assistant_asr_WhisperCpp_nativeTranscribe(JNIEnv *env, jobject /
     // 64 פריימים (~1.3 שניות) התמלול בעברית יצא גרוע. רצפה של 768 פריימים
     // (~15 שניות) ומרווח של 256 מחזירים את רוב הדיוק, בעלות של שנייה בערך.
     wparams.audio_ctx = std::min(1500, std::max(768, static_cast<int>(static_cast<long long>(n) * 50 / 16000) + 256));
+    // מצב מהיר (מילת ההפעלה): קטע של 1-3 שניות, וצריך רק לזהות "היי פיוטר" /
+    // "עוזר" - לא תמלול מדויק. חלון קצר חוסך את רוב זמן ה-encoder (5-7 שניות
+    // במודל small עם הרצפה של 768 -> בערך שנייה וחצי).
+    if (fast) {
+        wparams.audio_ctx = std::min(1500, static_cast<int>(static_cast<long long>(n) * 50 / 16000) + 128);
+    }
     // הקשר עברי קצר: מכוון את המודל לכתיב עברי ולמילים של פקודות, במקום
     // לתעתיק או לאנגלית. רק כשהשפה היא עברית.
     if (customPrompt != nullptr && customPrompt[0] != '\0') {

@@ -106,11 +106,18 @@ class WakeWordListener(private val context: Context) {
                         var o = 0
                         for (s in segment) { s.copyInto(samples, o); o += s.size }
                         val t0 = System.currentTimeMillis()
-                        val text = runCatching { LocalSpeechEngine.transcribeSamples(context, samples, PROMPT) }.getOrDefault("")
-                        val rest = WakeWord.match(text)
-                        Log.i(TAG, "heard='$text' wake=${rest != null} in ${System.currentTimeMillis() - t0}ms")
+                        val text = runCatching { LocalSpeechEngine.transcribeSamples(context, samples, PROMPT, fast = true) }.getOrDefault("")
+                        var rest = WakeWord.match(text)
+                        Log.i(TAG, "heard='$text' wake=${rest != null} in ${System.currentTimeMillis() - t0}ms (${samples.size / 16}ms audio)")
                         if (rest != null && generation == gen) {
-                            onWake(rest)
+                            // נאמרה גם פקודה ("היי פיוטר מה השעה") - התמלול המהיר לא מדויק
+                            // מספיק לפקודה, אז מתמללים את הקטע שוב במלואו.
+                            if (rest.isNotBlank()) {
+                                val full = runCatching { LocalSpeechEngine.transcribeSamples(context, samples, null) }.getOrDefault("")
+                                rest = WakeWord.match(full) ?: rest
+                                Log.i(TAG, "command='$full'")
+                            }
+                            if (generation == gen) onWake(rest)
                             break
                         }
                     }
@@ -136,7 +143,7 @@ class WakeWordListener(private val context: Context) {
         const val PRE_ROLL_FRAMES = 15 // 300ms לפני תחילת הדיבור
         const val END_SILENCE_FRAMES = 30 // 600ms שקט = סוף הקטע
         const val MIN_SPEECH_FRAMES = 10 // לפחות 200ms של דיבור
-        const val MAX_SEGMENT_FRAMES = 200 // 4 שניות
+        const val MAX_SEGMENT_FRAMES = 175 // 3.5 שניות
         // הקשר ניטרלי ולא מילת ההפעלה עצמה: Whisper נוטה "לחזור" על ההקשר כשהוא
         // שומע רעש, וזה היה מפעיל את העוזר לבד.
         const val PROMPT = "דיבור קצר בעברית."

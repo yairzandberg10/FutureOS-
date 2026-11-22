@@ -4,6 +4,10 @@ This repo has no carried-over git history (see root [README](README.md)), so thi
 
 ## Unreleased
 
+### Assistant: faster wake word (2026-11-22)
+
+- The wake word was heard but took 5-7 s to transcribe (device log: `heard='היי future' wake=true in 7083ms`), so it looked like it did not work. Wake segments now go through a fast Whisper mode (`fast = true`: audio window sized to the clip + 128 frames instead of the 768-frame floor, and few tokens). When a command follows the wake word, that segment is transcribed again in full mode for accuracy. Wake segments are capped at 3.5 s, and the log shows the clip length next to the time.
+
 ### Assistant: wake word, end-of-speech detection, faster chat matching (2026-11-17)
 
 - No more listening again on its own after a reply. Instead, while the assistant window is open and idle it waits for a wake word: "היי פיוטר", "פיוטר", "עוזר", "היי עוזר" (`WakeWordListener` + `WakeWord`). Detection is on the device: an energy VAD cuts short speech segments (up to 4 s) and the shared Whisper model transcribes them; only the start of the sentence is checked, so "זה עוזר לי" does not wake it. "היי פיוטר מה השעה" runs the command right away; the wake word alone opens listening, with a short vibration. The mic is released before listening to a command, while speaking, and when the window closes. Raw wake transcripts are logged under `Assistant/Wake` so the spelling list can be tuned.

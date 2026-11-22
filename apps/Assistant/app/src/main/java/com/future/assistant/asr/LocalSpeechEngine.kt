@@ -118,11 +118,11 @@ class LocalSpeechEngine(private val context: Context) {
          * מתמלל דגימות שכבר הוקלטו (16kHz, -1..1) - בשביל זיהוי מילת ההפעלה
          * (WakeWordListener), שמקליט בעצמו. חוסם, מ-thread ברקע.
          */
-        fun transcribeSamples(context: Context, raw: FloatArray, prompt: String? = null): String {
+        fun transcribeSamples(context: Context, raw: FloatArray, prompt: String? = null, fast: Boolean = false): String {
             val samples = trimSilence(raw)
             if (samples.isEmpty()) return ""
             val whisper = sharedWhisper ?: runCatching { preload(context); sharedWhisper }.getOrNull() ?: return ""
-            val text = synchronized(lock) { whisper.transcribe(samples, "he", prompt) }
+            val text = synchronized(lock) { whisper.transcribe(samples, "he", prompt, fast) }
             return RepetitionFilter.collapse(text)
         }
 
