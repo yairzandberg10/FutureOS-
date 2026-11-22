@@ -80,7 +80,11 @@ import com.future.sfarim.data.LibrarySegment
 import com.future.sfarim.ui.components.ScreenTopBar
 import com.future.sharednav.theme.FutureTheme
 import com.future.sfarim.util.HebrewNumerals
-import com.future.sfarim.util.stripHtmlTags
+import com.future.sfarim.util.formatBookText
+import com.future.sfarim.util.plainBookText
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDirection
 import com.future.sfarim.util.requestFocusWhenReady
 import kotlinx.coroutines.launch
 import com.future.sharednav.focus.animateFocusColor
@@ -268,13 +272,15 @@ fun ReaderScreen(
                             .padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp),
                     ) {
-                        val cleanedSegments = remember(segments) { segments.map { stripHtmlTags(it.textHe) } }
+                        val cleanedSegments = remember(segments) { segments.map { formatBookText(it.textHe) } }
                         cleanedSegments.forEach { cleaned ->
                             Text(
                                 cleaned,
                                 color = theme.textColor,
                                 fontSize = fontSize.sp,
                                 lineHeight = (fontSize * 1.6f).sp,
+                                style = BOOK_TEXT_STYLE,
+                                modifier = Modifier.fillMaxWidth(),
                             )
                         }
                     }
@@ -291,7 +297,7 @@ fun ReaderScreen(
                     onToggleBookmark = { menuSegment = null; onToggleBookmark(segment) },
                     onShare = {
                         menuSegment = null
-                        shareText(context, "${segment.refDisplay}\n\n${stripHtmlTags(segment.textHe)}")
+                        shareText(context, "${segment.refDisplay}\n\n${plainBookText(segment.textHe)}")
                     },
                     onShowCommentaries = { menuSegment = null; commentaryPrefix = segment.path },
                     onIncreaseFont = { fontSize = (fontSize + 2f).coerceAtMost(32f) },
@@ -310,7 +316,7 @@ fun ReaderScreen(
                     onToggleBookmark = { showPageMenu = false; anchor?.let(onToggleBookmark) },
                     onShare = {
                         showPageMenu = false
-                        val fullText = segments.joinToString("\n\n") { stripHtmlTags(it.textHe) }
+                        val fullText = segments.joinToString("\n\n") { plainBookText(it.textHe) }
                         shareText(context, "${book.displayTitle} · $displayChapterLabel\n\n$fullText")
                     },
                     onShowCommentaries = {
@@ -342,6 +348,9 @@ fun ReaderScreen(
     }
 }
 
+// כיוון RTL מפורש לפסקה: בלי זה סימנים ניטרליים בקצה (#, *, סוגריים, נקודה) מתהפכים לצד הלא נכון
+private val BOOK_TEXT_STYLE = TextStyle(textDirection = TextDirection.Rtl, textAlign = TextAlign.Start)
+
 private fun shareText(context: android.content.Context, text: String) {
     com.future.sharednav.share.FutureShare.text(context, text)
 }
@@ -358,7 +367,7 @@ private fun SegmentRow(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    val cleanedText = remember(segment.id) { stripHtmlTags(segment.textHe) }
+    val cleanedText = remember(segment.id) { formatBookText(segment.textHe) }
     // בורדר + scale בפוקוס, כמו בשאר האפליקציה (FocusableItem המשותף) - בלי זה
     // דווקא מסך הקריאה, המרכזי ביותר, נראה שונה מכל שאר המסכים.
     val scale by animateFloatAsState(
@@ -398,7 +407,7 @@ private fun SegmentRow(
         }
         Column {
             Text(segment.refDisplay, color = theme.subtleTextColor, fontSize = FutureTypography.caption)
-            Text(cleanedText, color = theme.textColor, fontSize = fontSize.sp, lineHeight = (fontSize * 1.5f).sp)
+            Text(cleanedText, color = theme.textColor, fontSize = fontSize.sp, lineHeight = (fontSize * 1.5f).sp, style = BOOK_TEXT_STYLE, modifier = Modifier.fillMaxWidth())
         }
     }
 }
