@@ -11,6 +11,9 @@ import androidx.compose.ui.unit.em
 private val TAG_REGEX = Regex("<(/?)([a-zA-Z][a-zA-Z0-9]*)([^>]*)>")
 private val IMG_REGEX = Regex("<img[^>]*>", RegexOption.IGNORE_CASE)
 private val INVISIBLE_REGEX = Regex("[\\u200b\\u200c\\u200e\\u200f\\u202a-\\u202e\\u2060-\\u2069\\ufeff\\u00ad]")
+// טעמי מקרא (ומה שאין בפונט הספרים): הפונט Frank Ruhl Libre לא כולל אותם, ולפי בחירת
+// המשתמש עדיף פונט אחיד על פני טעמים. הניקוד נשאר.
+private val TEAMIM_REGEX = Regex("[\u0591-\u05af\u05c4-\u05c6\u034f]")
 private val ENTITY_REGEX = Regex("&(#x?[0-9a-fA-F]+|[a-zA-Z]+);")
 private val WS_REGEX = Regex("[ \\t\\r\\n\\u00a0\\u2009]+")
 // קודי עריכה שנשארו בטקסט המקורי (@11, @77...), סימן "ציור כאן" (#) וסוגריים ריקים
@@ -38,7 +41,7 @@ private fun decodeEntities(s: String): String {
 }
 
 private fun cleanChunk(raw: String): String =
-    JUNK_REGEX.replace(INVISIBLE_REGEX.replace(decodeEntities(raw), ""), "")
+    JUNK_REGEX.replace(TEAMIM_REGEX.replace(INVISIBLE_REGEX.replace(decodeEntities(raw), ""), ""), "")
 
 /**
  * ממיר את ה-HTML הקל של ספריא לטקסט מעוצב: כותרות (<b>/<strong>) מודגשות, <big> גדול ומודגש,

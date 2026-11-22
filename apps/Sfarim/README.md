@@ -22,4 +22,4 @@ The ~390 titles in the table of contents with no Hebrew text here are not a bug 
 
 (`tools/output/reassemble_sefaria_db.sh` documents an earlier, abandoned plan to split/reassemble a pre-existing dump — no longer needed now that the DB is built directly from Sefaria's public sources.)
 
-**Book font.** Reader text uses Frank Ruhl Libre (SIL Open Font License 1.1, Google Fonts), `app/src/main/res/font/frank_ruhl_libre_{regular,bold}.ttf` - static 400/700 instances made with fontTools from the variable Hebrew+Latin subsets in `marketing/landing/fonts/`. It has no cantillation marks, so segments with teamim stay in the system font.
+**Book font.** Reader text uses Frank Ruhl Libre (SIL Open Font License 1.1, Google Fonts), `app/src/main/res/font/frank_ruhl_libre_{regular,bold}.ttf` - static 400/700 instances made with fontTools from the variable Hebrew+Latin subsets in `marketing/landing/fonts/`. It has no cantillation marks, so teamim (U+0591-05AF, U+05C4-05C6) are stripped for display (nikud is kept) and all text, Tanakh included, renders in this one font.

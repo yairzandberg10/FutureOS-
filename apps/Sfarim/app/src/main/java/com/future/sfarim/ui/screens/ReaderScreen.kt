@@ -281,7 +281,7 @@ fun ReaderScreen(
                                 fontSize = fontSize.sp,
                                 lineHeight = (fontSize * 1.6f).sp,
                                 style = BOOK_TEXT_STYLE,
-                                fontFamily = bookFontFor(cleaned),
+                                fontFamily = FrankRuhlLibre,
                                 modifier = Modifier.fillMaxWidth(),
                             )
                         }
@@ -353,15 +353,12 @@ fun ReaderScreen(
 // כיוון RTL מפורש לפסקה: בלי זה סימנים ניטרליים בקצה (#, *, סוגריים, נקודה) מתהפכים לצד הלא נכון
 private val BOOK_TEXT_STYLE = TextStyle(textDirection = TextDirection.Rtl, textAlign = TextAlign.Start)
 
-// פונט הספרים: Frank Ruhl Libre (OFL). אין בו טעמי מקרא, ולכן קטע עם טעמים
-// (U+0591-U+05AF) נשאר בפונט המערכת - אחרת הטעמים נופלים לפונט אחר ונראים שבורים.
+// פונט הספרים: Frank Ruhl Libre (OFL). טעמי המקרא מוסרים בתצוגה (ר' TEAMIM_REGEX) כי אין אותם בפונט.
 private val FrankRuhlLibre = androidx.compose.ui.text.font.FontFamily(
     androidx.compose.ui.text.font.Font(com.future.sfarim.R.font.frank_ruhl_libre_regular, androidx.compose.ui.text.font.FontWeight.Normal),
     androidx.compose.ui.text.font.Font(com.future.sfarim.R.font.frank_ruhl_libre_bold, androidx.compose.ui.text.font.FontWeight.Bold),
 )
 
-private fun bookFontFor(text: CharSequence): androidx.compose.ui.text.font.FontFamily =
-    if (text.any { it in '֑'..'֯' }) androidx.compose.ui.text.font.FontFamily.Default else FrankRuhlLibre
 
 private fun shareText(context: android.content.Context, text: String) {
     com.future.sharednav.share.FutureShare.text(context, text)
@@ -419,7 +416,7 @@ private fun SegmentRow(
         }
         Column {
             Text(segment.refDisplay, color = theme.subtleTextColor, fontSize = FutureTypography.caption)
-            Text(cleanedText, color = theme.textColor, fontSize = fontSize.sp, lineHeight = (fontSize * 1.5f).sp, style = BOOK_TEXT_STYLE, fontFamily = bookFontFor(cleanedText), modifier = Modifier.fillMaxWidth())
+            Text(cleanedText, color = theme.textColor, fontSize = fontSize.sp, lineHeight = (fontSize * 1.5f).sp, style = BOOK_TEXT_STYLE, fontFamily = FrankRuhlLibre, modifier = Modifier.fillMaxWidth())
         }
     }
 }
