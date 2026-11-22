@@ -365,8 +365,12 @@ private fun ItineraryCard(itinerary: TransitItinerary, onClick: () -> Unit, focu
             val departure = firstRide?.departureSeconds
             if (firstRide != null && departure != null) {
                 val now = TransitPlanning.secondsOfDay(java.time.ZonedDateTime.now(com.future.navigation.data.transit.ISRAEL_ZONE))
+                val minutes = TransitPlanning.minutesUntil(departure, now)
+                // יציאה רחוקה ("בעוד 611 דק׳") לא קריאה - מעל שעה מציגים את השעה
+                val whenText = if (minutes <= 60) tr("בעוד %d דק׳").format(minutes)
+                    else "יציאה ב-" + "%02d:%02d".format((departure / 3600) % 24, (departure / 60) % 60)
                 Text(
-                    text = tr("בעוד %d דק׳ מתחנה %s").format(TransitPlanning.minutesUntil(departure, now), firstRide.fromStopName),
+                    text = tr("%s מתחנה %s").format(whenText, firstRide.fromStopName),
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.Bold,
                 )
