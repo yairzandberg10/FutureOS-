@@ -1,6 +1,5 @@
 package com.future.futureui.statusbar.ui
 
-import com.future.sharednav.theme.FutureTypography
 import android.app.AlarmManager
 import android.app.NotificationManager
 import android.bluetooth.BluetoothAdapter
@@ -11,9 +10,10 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.database.ContentObserver
-import android.location.LocationManager
 import android.media.AudioManager
 import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
 import android.net.wifi.WifiManager
 import android.os.BatteryManager
 import android.os.Handler
@@ -21,21 +21,21 @@ import android.os.Looper
 import android.os.PowerManager
 import android.os.SystemClock
 import android.provider.Settings
+import android.telephony.ServiceState
+import android.telephony.SignalStrength
+import android.telephony.TelephonyCallback
+import android.telephony.TelephonyManager
 import android.telecom.TelecomManager
 import android.util.Log
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -43,25 +43,29 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.core.graphics.drawable.toBitmap
 import com.future.futureui.controlcenter.logic.ControlManager
 import com.future.futureui.controlcenter.service.MediaControlService
 import com.future.futureui.statusbar.logic.PrivacyIndicators
 import com.future.futureui.statusbar.logic.StatusBarLayoutManager
 import com.future.futureui.utils.FutureUIState
 import com.future.sharednav.icons.FutureIcons
+import com.future.sharednav.theme.FutureAccents
 import com.future.sharednav.theme.FutureTheme
-import androidx.core.graphics.drawable.toBitmap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -69,44 +73,30 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 /**
- * שורת המצב הקבועה (Status Bar) - מוצגת תמיד בראש המסך, לא רק לפי דרישה.
+ * שורת המצב של FutureOS, בפריסה של אנדרואיד רגיל:
  *
- * בסגנון One UI: שורה שמתחלפת בין שקופה (טקסט ואייקונים שחורים, מעל תוכן בהיר) לכהה (לבנים)
- * לפי מה שמוצג מתחתיה ([lightTone] - השירות דוגם אותו מצילום המסך), עם אייקונים
- * גדולים וצפופים וסוללה מצוירת. כל האינדיקטורים מתעדכנים מאירועי מערכת ולא מסקר,
- * והגופן קבוע (בלי הגדלת גופן של המערכת) כדי שהשורה לא תידחס ותתעוות.
+ *   [שעה] [אייקוני התראות ...]                [מערכת] [Wi-Fi] [קליטה] [סוללה]
+ *
+ * בעברית (RTL) השורה מתהפכת, בדיוק כמו באנדרואיד. רקע שחור אטום וטקסט לבן -
+ * תמיד, בלי לדגום את המסך ובלי סגנונות: שורת המערכת של אנדרואיד עדיין מצוירת
+ * מתחת לשלנו (policy_control לא עובד ב-Android 12), אז רקע שקוף/צבעוני היה
+ * חושף אותה. מעל השכבות של FutureUI שמכסות את כל המסך (נעילה, מרכז בקרה,
+ * התראות, אחרונות, תפריט כיבוי) הרקע שקוף, כי הן מציירות את הרקע בעצמן.
+ *
+ * כל המצבים מגיעים מאירועי מערכת (broadcast, ContentObserver, TelephonyCallback,
+ * NetworkCallback); הסקר היחיד הוא בדיקת שיחה פעילה, שאין לה אירוע נגיש.
  */
 @Composable
 fun StatusBarScreen(
     modifier: Modifier = Modifier,
     controlManager: ControlManager? = null,
     layoutManager: StatusBarLayoutManager? = null,
-    accentColor: Color = StatusBarAccent,
-    lightTone: Boolean = false,
-    /** הצבע השולט מתחת לשורה, אם יש (השירות דוגם אותו יחד עם [lightTone]). */
-    sampledColor: Color? = null,
 ) {
     val context = LocalContext.current
     val manager = controlManager ?: remember { ControlManager(context) }
     val layout = layoutManager ?: remember { StatusBarLayoutManager(context) }
 
-    var currentTime by remember { mutableStateOf("") }
-    // הערכים ההתחלתיים מהעותק האחרון: החלון מוסר ונוסף מחדש כדי לעלות לחזית
-    // (bringStatusBarToFront), וההרכבה מתחילה מאפס - בלי זה האינדיקטורים מבהבים.
-    var batteryPercent by remember { mutableIntStateOf(BarMemory.batteryPercent) }
-    var isCharging by remember { mutableStateOf(BarMemory.isCharging) }
-    var notificationCount by remember { mutableIntStateOf(BarMemory.notificationCount) }
-    var isCallActive by remember { mutableStateOf(BarMemory.isCallActive) }
-    var ringerMode by remember { mutableIntStateOf(AudioManager.RINGER_MODE_NORMAL) }
-    var hasAlarm by remember { mutableStateOf(false) }
-    // האפליקציות שיש להן התראה, החדשה ביותר ראשונה, כל אפליקציה פעם אחת
-    var notifApps by remember { mutableStateOf(BarMemory.notifApps) }
-    var callSeconds by remember { mutableIntStateOf(0) }
-    // אייקון ההתראה הקטן של אפליקציה שאין לה סמל במיפוי - נטען פעם אחת לכל חבילה
-    val smallIconCache = remember { HashMap<String, ImageBitmap?>() }
-
-    // ההגדרות נכתבות מאפליקציית ההגדרות דרך SystemUiSettingsProvider לאותם prefs,
-    // באותו תהליך - אז מאזין אחד מספיק כדי שהחלפת סגנון תחול מיד ולא בדקה הבאה.
+    // ההגדרות נכתבות מאפליקציית ההגדרות לאותם prefs - מאזין אחד כדי שיחולו מיד
     var prefsTick by remember { mutableIntStateOf(0) }
     DisposableEffect(layout) {
         val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> prefsTick++ }
@@ -114,52 +104,71 @@ fun StatusBarScreen(
         onDispose { layout.unregisterListener(listener) }
     }
     @Suppress("UNUSED_VARIABLE") val tick = prefsTick
-
-    val barStyle = layout.getBarStyle()
-    val barTone = layout.getBarTone()
-    val showBattery = layout.getShowBattery()
+    val showPercent = layout.getShowBattery()
     val showBluetooth = layout.getShowBluetooth()
     val use24Hour = layout.getUse24HourClock()
 
-    // כל מה שמשתנה במערכת מגיע כאירוע (broadcast / ContentObserver) ומרענן את המצב
-    // מיד - קודם רק השעון והסוללה היו כאלה, וכל השאר חיכה עד 15 שניות לסקר.
-    // registerReceiver מחזיר מיד את ה-BATTERY_CHANGED האחרון (sticky), אז הסוללה
-    // מוצגת כבר בפריים הראשון.
+    // הערכים ההתחלתיים מהעותק האחרון: החלון מוסר ונוסף מחדש כדי לעלות לחזית
+    // (bringStatusBarToFront), וההרכבה מתחילה מאפס - בלי זה האינדיקטורים מבהבים.
+    var time by remember { mutableStateOf("") }
+    var battery by remember { mutableIntStateOf(BarMemory.battery) }
+    var charging by remember { mutableStateOf(BarMemory.charging) }
+    var ringerMode by remember { mutableIntStateOf(AudioManager.RINGER_MODE_NORMAL) }
+    var hasAlarm by remember { mutableStateOf(false) }
+    var notifApps by remember { mutableStateOf(BarMemory.notifApps) }
+    var cellLevel by remember { mutableIntStateOf(BarMemory.cellLevel) }
+    var inService by remember { mutableStateOf(BarMemory.inService) }
+    var simReady by remember { mutableStateOf(BarMemory.simReady) }
+    var wifiConnected by remember { mutableStateOf(BarMemory.wifiConnected) }
+    var wifiLevel by remember { mutableIntStateOf(BarMemory.wifiLevel) }
+    var callActive by remember { mutableStateOf(BarMemory.callActive) }
+    var callSeconds by remember { mutableIntStateOf(0) }
+    val smallIconCache = remember { HashMap<String, ImageBitmap?>() }
+
+    // ---- שעון, סוללה, צלצול, מנורה, ומצבי הרדיו (Wi-Fi/Bluetooth/טיסה) ----
     DisposableEffect(use24Hour) {
-        val pattern = if (use24Hour) "HH:mm" else "h:mm a"
-        val timeFormat = SimpleDateFormat(pattern, Locale.getDefault())
+        val timeFormat = SimpleDateFormat(if (use24Hour) "HH:mm" else "h:mm", Locale.getDefault())
         val audio = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
         val alarms = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager
-        fun refreshTime() {
-            currentTime = timeFormat.format(Date())
-        }
-        fun refreshRingerAndAlarm() {
+        val wifi = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
+        val telephony = context.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager
+
+        fun refreshTime() { time = timeFormat.format(Date()) }
+        fun refreshRinger() {
             ringerMode = audio?.ringerMode ?: AudioManager.RINGER_MODE_NORMAL
-            hasAlarm = try { alarms?.nextAlarmClock != null } catch (e: Exception) { false }
+            hasAlarm = runCatching { alarms?.nextAlarmClock != null }.getOrDefault(false)
+        }
+        fun refreshWifiLevel() {
+            @Suppress("DEPRECATION")
+            val rssi = runCatching { wifi?.connectionInfo?.rssi }.getOrNull() ?: return
+            wifiLevel = runCatching { wifi?.calculateSignalLevel(rssi) ?: 0 }.getOrDefault(0)
+                .let { lvl -> (lvl * 4 / ((wifi?.maxSignalLevel ?: 4).coerceAtLeast(1))).coerceIn(0, 4) }
+            BarMemory.wifiLevel = wifiLevel
+        }
+        fun refreshSim() {
+            simReady = runCatching { telephony?.simState == TelephonyManager.SIM_STATE_READY }.getOrDefault(false)
+            BarMemory.simReady = simReady
         }
         fun applyBattery(intent: Intent?) {
             if (intent == null) return
             val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
             val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
-            if (level >= 0 && scale > 0) batteryPercent = (level * 100) / scale
-            val status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
-            isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL
-            BarMemory.batteryPercent = batteryPercent
-            BarMemory.isCharging = isCharging
+            if (level >= 0 && scale > 0) battery = level * 100 / scale
+            val st = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
+            charging = st == BatteryManager.BATTERY_STATUS_CHARGING || st == BatteryManager.BATTERY_STATUS_FULL
+            BarMemory.battery = battery
+            BarMemory.charging = charging
         }
+
         val receiver = object : BroadcastReceiver() {
-            override fun onReceive(receiverContext: Context?, intent: Intent?) {
+            override fun onReceive(c: Context?, intent: Intent?) {
                 when (intent?.action) {
                     Intent.ACTION_BATTERY_CHANGED -> applyBattery(intent)
-                    Intent.ACTION_TIMEZONE_CHANGED -> {
-                        timeFormat.timeZone = TimeZone.getDefault()
-                        refreshTime()
-                    }
+                    Intent.ACTION_TIMEZONE_CHANGED -> { timeFormat.timeZone = TimeZone.getDefault(); refreshTime() }
                     Intent.ACTION_TIME_TICK, Intent.ACTION_TIME_CHANGED -> refreshTime()
-                    else -> {
-                        refreshRingerAndAlarm()
-                        manager.updateStates()
-                    }
+                    WifiManager.RSSI_CHANGED_ACTION -> refreshWifiLevel()
+                    TelephonyManager.ACTION_SIM_CARD_STATE_CHANGED, "android.intent.action.SIM_STATE_CHANGED" -> refreshSim()
+                    else -> { refreshRinger(); manager.updateStates() }
                 }
             }
         }
@@ -174,253 +183,226 @@ fun StatusBarScreen(
             addAction(NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED)
             addAction(PowerManager.ACTION_POWER_SAVE_MODE_CHANGED)
             addAction(WifiManager.WIFI_STATE_CHANGED_ACTION)
-            addAction(WifiManager.NETWORK_STATE_CHANGED_ACTION)
-            @Suppress("DEPRECATION")
-            addAction(ConnectivityManager.CONNECTIVITY_ACTION)
-            addAction(LocationManager.MODE_CHANGED_ACTION)
+            addAction(WifiManager.RSSI_CHANGED_ACTION)
+            addAction(TelephonyManager.ACTION_SIM_CARD_STATE_CHANGED)
+            addAction("android.intent.action.SIM_STATE_CHANGED")
             addAction(BluetoothAdapter.ACTION_STATE_CHANGED)
             addAction(BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED)
             addAction(BluetoothDevice.ACTION_ACL_CONNECTED)
             addAction(BluetoothDevice.ACTION_ACL_DISCONNECTED)
         }
-        // נתונים סלולריים ומצב טיסה משתנים גם דרך ההגדרות עצמן, בלי שידור אמין.
         val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
-            override fun onChange(selfChange: Boolean) {
-                manager.updateStates()
-            }
+            override fun onChange(selfChange: Boolean) { manager.updateStates() }
         }
+
         refreshTime()
-        refreshRingerAndAlarm()
+        refreshRinger()
+        refreshWifiLevel()
+        refreshSim()
+        manager.updateStates()
         applyBattery(context.registerReceiver(receiver, filter))
-        try {
+        runCatching {
             context.contentResolver.registerContentObserver(Settings.Global.getUriFor("mobile_data"), false, observer)
             context.contentResolver.registerContentObserver(Settings.Global.getUriFor(Settings.Global.AIRPLANE_MODE_ON), false, observer)
-        } catch (e: Exception) {
-            Log.w("StatusBarScreen", "settings observers failed", e)
-        }
+        }.onFailure { Log.w(TAG, "settings observers failed", it) }
+
         onDispose {
-            try {
-                context.unregisterReceiver(receiver)
-            } catch (e: IllegalArgumentException) {
-                Log.w("StatusBarScreen", "receiver already unregistered", e)
-            }
+            runCatching { context.unregisterReceiver(receiver) }
             runCatching { context.contentResolver.unregisterContentObserver(observer) }
         }
     }
 
-    // חיווי מצלמה/מיקרופון - אירועי מערכת, בלי סקר (ר' PrivacyIndicators)
+    // ---- קליטה סלולרית: עוצמה אמיתית (0-4) ומצב שירות, מ-TelephonyCallback ----
+    DisposableEffect(Unit) {
+        val telephony = context.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager
+        val callback = object : TelephonyCallback(),
+            TelephonyCallback.SignalStrengthsListener,
+            TelephonyCallback.ServiceStateListener {
+            override fun onSignalStrengthsChanged(signalStrength: SignalStrength) {
+                cellLevel = signalStrength.level.coerceIn(0, 4)
+                BarMemory.cellLevel = cellLevel
+            }
+            override fun onServiceStateChanged(serviceState: ServiceState) {
+                inService = serviceState.state == ServiceState.STATE_IN_SERVICE
+                BarMemory.inService = inService
+            }
+        }
+        val registered = runCatching {
+            telephony?.registerTelephonyCallback(context.mainExecutor, callback)
+            telephony != null
+        }.onFailure { Log.w(TAG, "telephony callback failed", it) }.getOrDefault(false)
+        onDispose { if (registered) runCatching { telephony?.unregisterTelephonyCallback(callback) } }
+    }
+
+    // ---- Wi-Fi מחובר (ולא רק דלוק) - כמו באנדרואיד, האייקון מופיע רק כשיש חיבור ----
+    DisposableEffect(Unit) {
+        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+        fun refresh() {
+            val caps = runCatching { cm?.getNetworkCapabilities(cm.activeNetwork) }.getOrNull()
+            // כל רשת Wi-Fi פעילה, לא רק ברירת המחדל (בזמן מעבר בין רשתות)
+            val anyWifi = caps?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true ||
+                runCatching {
+                    @Suppress("DEPRECATION")
+                    cm?.allNetworks?.any { cm.getNetworkCapabilities(it)?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true }
+                }.getOrNull() == true
+            Handler(Looper.getMainLooper()).post {
+                wifiConnected = anyWifi
+                BarMemory.wifiConnected = anyWifi
+            }
+        }
+        val callback = object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) = refresh()
+            override fun onLost(network: Network) = refresh()
+            override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) = refresh()
+        }
+        val ok = runCatching { cm?.registerDefaultNetworkCallback(callback); cm != null }
+            .onFailure { Log.w(TAG, "network callback failed", it) }.getOrDefault(false)
+        refresh()
+        onDispose { if (ok) runCatching { cm?.unregisterNetworkCallback(callback) } }
+    }
+
+    // ---- חיווי מצלמה/מיקרופון ----
     DisposableEffect(Unit) {
         PrivacyIndicators.start(context)
         onDispose { PrivacyIndicators.stop() }
     }
 
-    // ההתראות מתעדכנות בכל הוספה/הסרה של התראה (notificationTick, ר' MediaControlService),
-    // והקריאות רצות ב-thread רקע: קודם כולן רצו על ה-main thread של FutureUI, שהוא גם זה
-    // שמסנן את כל לחיצות המקשים בטלפון.
+    // ---- אייקוני ההתראות (thread רקע; מתרענן בכל הוספה/הסרה) ----
     val notificationTick = FutureUIState.notificationTick.intValue
     LaunchedEffect(notificationTick) {
-        val (count, apps) = withContext(Dispatchers.IO) {
+        val apps = withContext(Dispatchers.IO) {
             val active = if (MediaControlService.isEnabled(context)) {
-                try {
-                    MediaControlService.instance?.activeNotifications ?: emptyArray()
-                } catch (e: Exception) {
-                    Log.w("StatusBarScreen", "activeNotifications failed", e)
-                    emptyArray()
-                }
+                runCatching { MediaControlService.instance?.activeNotifications }.getOrNull() ?: emptyArray()
             } else emptyArray()
-            // התראות מתמשכות (נגן פעיל, שירותי רקע) הן מצב ולא משהו שמחכה למשתמש
-            val apps = active
+            active
                 .filter { !it.isOngoing && it.packageName != context.packageName }
                 .sortedByDescending { it.postTime }
                 .distinctBy { it.packageName }
                 .map { sbn ->
                     val pkg = sbn.packageName
-                    val icon = if (appGlyph(pkg) != null) null else {
-                        if (!smallIconCache.containsKey(pkg)) {
-                            smallIconCache[pkg] = try {
-                                sbn.notification.smallIcon?.loadDrawable(context)?.toBitmap(48, 48)?.asImageBitmap()
-                            } catch (e: Exception) {
-                                Log.w("StatusBarScreen", "small icon failed for $pkg", e)
-                                null
-                            }
-                        }
-                        smallIconCache[pkg]
+                    val icon = if (appGlyph(pkg) != null) null else smallIconCache.getOrPut(pkg) {
+                        runCatching {
+                            sbn.notification.smallIcon?.loadDrawable(context)?.toBitmap(48, 48)?.asImageBitmap()
+                        }.getOrNull()
                     }
                     NotifApp(pkg, icon)
                 }
-            active.size to apps
         }
-        notificationCount = count
         notifApps = apps
-        BarMemory.notificationCount = count
         BarMemory.notifApps = apps
     }
 
-    // שיחה פעילה אין לה broadcast נגיש (dialer שומר את מצב השיחה בתהליך שלו בלבד), אז היא
-    // נבדקת בסקר קצר של 2 שניות ב-thread רקע; יחד איתו רשת ביטחון לרענון שאר המצבים
-    // למקרה שאירוע מערכת הוחמץ.
+    // ---- שיחה פעילה: אין לה אירוע נגיש, נבדקת כל 2 שניות ב-thread רקע ----
     LaunchedEffect(Unit) {
-        var round = 0
         while (true) {
-            val call = withContext(Dispatchers.IO) {
-                try {
-                    (context.getSystemService(Context.TELECOM_SERVICE) as? TelecomManager)?.isInCall == true
-                } catch (e: SecurityException) {
-                    Log.w("StatusBarScreen", "missing READ_PHONE_STATE, hiding call indicator", e)
-                    false
-                }
+            val inCall = withContext(Dispatchers.IO) {
+                runCatching { (context.getSystemService(Context.TELECOM_SERVICE) as? TelecomManager)?.isInCall == true }
+                    .getOrDefault(false)
             }
-            isCallActive = call
-            BarMemory.isCallActive = call
-            if (round++ % 3 == 0) manager.updateStates()
+            callActive = inCall
+            BarMemory.callActive = inCall
             delay(2_000)
         }
     }
-
-    // משך השיחה נספר מהרגע שהשורה זיהתה אותה - אין ערוץ מה-dialer לזמן ההתחלה המדויק
-    LaunchedEffect(isCallActive) {
+    LaunchedEffect(callActive) {
         callSeconds = 0
-        if (isCallActive) {
-            // אחרי הרכבה מחדש ממשיכים מאותה נקודת התחלה ולא מאפסים את הספירה
-            if (BarMemory.callStart == 0L) BarMemory.callStart = SystemClock.elapsedRealtime()
-            val start = BarMemory.callStart
-            while (true) {
-                callSeconds = ((SystemClock.elapsedRealtime() - start) / 1000).toInt()
-                delay(1_000)
-            }
-        } else {
-            BarMemory.callStart = 0L
+        if (!callActive) { BarMemory.callStart = 0L; return@LaunchedEffect }
+        if (BarMemory.callStart == 0L) BarMemory.callStart = SystemClock.elapsedRealtime()
+        while (true) {
+            callSeconds = ((SystemClock.elapsedRealtime() - BarMemory.callStart) / 1000).toInt()
+            delay(1_000)
         }
     }
 
-    val status = BarStatus(
-        time = currentTime,
-        batteryPercent = batteryPercent,
-        isCharging = isCharging,
-        showBattery = showBattery,
-        showBluetooth = showBluetooth,
-        notificationCount = notificationCount,
-        apps = notifApps,
-        callDuration = if (isCallActive) "%d:%02d".format(callSeconds / 60, callSeconds % 60) else null,
-        ringerMode = ringerMode,
-        hasAlarm = hasAlarm
-    )
+    // מעל שכבות מסך-מלא של FutureUI השורה שקופה; בכל מקום אחר - שחורה אטומה.
+    val overOverlay = FutureUIState.isLocked ||
+        FutureUIState.controlCenterOpen.value ||
+        FutureUIState.notificationCenterOpen.value ||
+        FutureUIState.recentsOpen.value ||
+        FutureUIState.powerMenuOpen.value
+    val background = if (overOverlay) Color.Transparent else Color.Black
+    val colors = remember { FutureTheme(isDarkMode = true) }
 
-    // אוטומטי/שקוף: השורה נראית כהמשך של מה שמתחתיה - מעל אפליקציה היא מקבלת
-    // את הצבע שנדגם מתחתיה (לבן, שחור או צבע הכותרת של האפליקציה), ומעל שכבות
-    // המערכת שמכסות את כל המסך (נעילה, מרכז בקרה...) היא שקופה. הטקסט נגזר
-    // מהצבע הזה. כהה: תמיד רקע שחור וטקסט לבן.
-    //
-    // קודם "אוטומטי" מעל תוכן כהה היה תמיד שחור ומעל תוכן בהיר תמיד לבן-תמה,
-    // כך שמעל אפליקציה צבעונית (או אפורה, או בצבע ההדגשה) השורה הייתה פס
-    // בצבע אחר משל האפליקציה, ומעל מסך הנעילה הכהה - פס שחור במקום שקוף.
-    val darkBar = barTone == StatusBarLayoutManager.TONE_DARK
-    val inkLight = lightTone && !darkBar
-    // N-01: מעל אפליקציה רגילה (גם מסך הבית) שורת המערכת של אנדרואיד עדיין מצוירת
-    // מתחת לשלנו (policy_control לא עובד ב-Android 12), ורקע שקוף חושף אותה - שעה
-    // ואייקונים כפולים. לכן שם "שקוף" הופך לרקע אטום בגוון הבהיר. נעילה, מרכז בקרה,
-    // מרכז התראות, אחרונות ותפריט כיבוי מכסים את כל המסך בעצמם, ושם השקיפות נשארת.
-    val opaque = !FutureUIState.isLocked &&
-        !FutureUIState.controlCenterOpen.value &&
-        !FutureUIState.notificationCenterOpen.value &&
-        !FutureUIState.recentsOpen.value &&
-        !FutureUIState.powerMenuOpen.value
-    val colors = remember(inkLight) { FutureTheme(isDarkMode = !inkLight) }
-    val bgTarget = when {
-        darkBar -> Color.Black
-        opaque -> sampledColor ?: if (inkLight) colors.backgroundColor else Color.Black
-        else -> Color.Transparent
-    }
-    // המעבר מונפש כדי שלא ייקרא כהבהוב - 200ms, מעבר מסך של המערכת, כך שהשורה
-    // מחליפה צבע יחד עם האפליקציה ולא אחריה.
-    val bg by animateColorAsState(bgTarget, tween(com.future.sharednav.theme.FutureMotion.DurationStandard), label = "barBg")
-    val ink by animateColorAsState(if (inkLight) Color(0xFF111113) else Color.White, tween(com.future.sharednav.theme.FutureMotion.DurationStandard), label = "barInk")
-    val glass by animateColorAsState(if (inkLight) Color(0xFFE5E5EA) else Color(0xFF2C2C2E), tween(com.future.sharednav.theme.FutureMotion.DurationStandard), label = "barGlass")
-    val palette = BarPalette(
-        background = bg,
-        text = ink,
-        glass = glass,
-        success = colors.successColor,
-        danger = colors.dangerColor,
-        warning = colors.warningColor
-    )
-
-    // גודל הטקסט של שורת המצב קבוע: גופן מוגדל במערכת היה דוחס את השעון והאחוזים
-    // לתוך 28dp ומעוות אותם.
+    val airplane = manager.isAirplaneOn
     val density = LocalDensity.current
     CompositionLocalProvider(
         LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection,
+        // גודל קבוע: גופן מוגדל במערכת היה דוחס את השורה
         LocalDensity provides Density(density.density, fontScale = 1f),
-        LocalBar provides palette
     ) {
-        when (barStyle) {
-            StatusBarLayoutManager.STYLE_QUIET -> QuietBar(modifier, manager, status)
-            StatusBarLayoutManager.STYLE_CAPSULES -> CapsulesBar(modifier, manager, status)
-            StatusBarLayoutManager.STYLE_CENTERED -> CenteredBar(modifier, manager, status)
-            else -> ClassicBar(modifier, manager, status, accentColor)
+        Row(
+            modifier = modifier.fillMaxWidth().background(background).padding(horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            // ---- צד ההתחלה: שעה, שיחה, התראות ----
+            Row(
+                modifier = Modifier.weight(1f).clipToBounds(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                BarText(time, 15.sp, FontWeight.Medium)
+                if (callActive) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(FutureIcons.Call, null, tint = colors.successColor, modifier = Modifier.size(IconSize))
+                        BarText("%d:%02d".format(callSeconds / 60, callSeconds % 60), 12.sp, FontWeight.Medium, colors.successColor)
+                    }
+                }
+                NotificationIcons(notifApps)
+            }
+
+            // ---- צד הסוף: מצב המכשיר וסוללה ----
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (PrivacyIndicators.cameraInUse.value) SysIcon(FutureIcons.Videocam, FutureAccents.Green)
+                if (PrivacyIndicators.micInUse.value) SysIcon(FutureIcons.Mic, FutureAccents.Orange)
+                if (hasAlarm) SysIcon(FutureIcons.Alarm)
+                when (ringerMode) {
+                    AudioManager.RINGER_MODE_SILENT -> SysIcon(FutureIcons.VolumeOff)
+                    AudioManager.RINGER_MODE_VIBRATE -> SysIcon(FutureIcons.Vibration)
+                }
+                if (manager.isDndOn) SysIcon(FutureIcons.DoNotDisturbOn)
+                if (showBluetooth && manager.isBluetoothOn) {
+                    SysIcon(FutureIcons.Bluetooth, if (manager.isBluetoothDeviceConnected) Color.White else Dim)
+                }
+                if (airplane) {
+                    SysIcon(FutureIcons.AirplanemodeActive)
+                } else {
+                    if (wifiConnected) WifiIcon(wifiLevel)
+                    CellIcon(
+                        level = if (inService) cellLevel else 0,
+                        noSim = !simReady,
+                        dataActive = manager.isDataOn && inService && !wifiConnected,
+                    )
+                }
+                Battery(battery, charging, manager.isBatterySaverOn, showPercent, colors)
+            }
         }
     }
 }
 
+private const val TAG = "StatusBarScreen"
+private val IconSize = 15.dp
+private val Dim = Color.White.copy(alpha = 0.3f)
+
 /** העותק האחרון של מצב השורה (בתהליך), כדי שהרכבה מחדש לא תתחיל מאפס. */
 private object BarMemory {
-    @Volatile var batteryPercent = 100
-    @Volatile var isCharging = false
-    @Volatile var notificationCount = 0
-    @Volatile var isCallActive = false
+    @Volatile var battery = 100
+    @Volatile var charging = false
     @Volatile var notifApps: List<NotifApp> = emptyList()
+    @Volatile var cellLevel = 0
+    @Volatile var inService = true
+    @Volatile var simReady = true
+    @Volatile var wifiConnected = false
+    @Volatile var wifiLevel = 4
+    @Volatile var callActive = false
     @Volatile var callStart = 0L
 }
 
-/** ברירת מחדל כשאין עדיין צבע הדגשה משותף זמין (למשל בתצוגה מקדימה). */
-private val StatusBarAccent = Color(0xFF5AC8FA)
-
-/** הצבעים של שורת המצב - מתחלפים (מונפשים) בין לבן לשחור. */
-@Immutable
-private class BarPalette(
-    val background: Color,
-    val text: Color,
-    val glass: Color,
-    val success: Color,
-    val danger: Color,
-    val warning: Color
-) {
-    val text70: Color = text.copy(alpha = 0.7f)
-    val text60: Color = text.copy(alpha = 0.6f)
-}
-
-private val LocalBar = compositionLocalOf {
-    val dark = FutureTheme(isDarkMode = true)
-    BarPalette(Color.Black, Color.White, Color(0xFF2C2C2E), dark.successColor, dark.dangerColor, dark.warningColor)
-}
-
-// ---------------- המרכיבים המשותפים לכל הסגנונות ----------------
-// האייקונים 16dp (היו 13-14) והרווח ביניהם 3dp (היה 6-7): בשורה בגובה 28dp זה ההבדל
-// בין סמלים שנראים וסמלים שנבלעים. כל המידות הן dp ולכן לא מושפעות מגודל הגופן.
-
-private val GlyphSize = 16.dp
-private val GlyphGap = 3.dp
-
-/** כמה אייקוני אפליקציות מוצגים לפני שהם הופכים למונה +N. */
-private const val MAX_APP_GLYPHS = 2
-
-/** אפליקציה עם התראה: סמל Future Glyphs לפי שם החבילה, או אייקון ההתראה של האפליקציה עצמה. */
 private data class NotifApp(val packageName: String, val smallIcon: ImageBitmap?)
 
-private data class BarStatus(
-    val time: String,
-    val batteryPercent: Int,
-    val isCharging: Boolean,
-    val showBattery: Boolean,
-    val showBluetooth: Boolean,
-    val notificationCount: Int,
-    val apps: List<NotifApp>,
-    val callDuration: String?,
-    val ringerMode: Int,
-    val hasAlarm: Boolean
-)
-
-/** סמל פשוט בקו אחד לכל אפליקציה מוכרת. null - משתמשים באייקון ההתראה שהאפליקציה שולחת. */
+/** סמל בקו אחד לכל אפליקציה מוכרת. null - משתמשים באייקון ההתראה שהאפליקציה שולחת. */
 internal fun appGlyph(pkg: String): ImageVector? = when (pkg) {
     "com.future.messages", "com.google.android.apps.messaging", "com.whatsapp", "org.telegram.messenger" -> FutureIcons.Chat
     "com.future.dialer", "com.android.server.telecom", "com.google.android.dialer" -> FutureIcons.CallMissed
@@ -444,354 +426,162 @@ internal fun appGlyph(pkg: String): ImageVector? = when (pkg) {
 }
 
 @Composable
-private fun BarText(text: String, color: Color, fontSize: TextUnit, weight: FontWeight) {
+private fun BarText(text: String, size: androidx.compose.ui.unit.TextUnit, weight: FontWeight, color: Color = Color.White) {
     Text(
         text = text,
         color = color,
-        fontSize = fontSize,
-        lineHeight = fontSize * 1.15f,
+        fontSize = size,
+        lineHeight = size * 1.15f,
         fontWeight = weight,
         maxLines = 1,
         softWrap = false,
-        style = androidx.compose.ui.text.TextStyle(fontFeatureSettings = "tnum")
+        style = TextStyle(fontFeatureSettings = "tnum"),
     )
 }
 
-/** אייקוני האפליקציות עם ההתראות; נחתכים (ולא דוחסים את השעון) כשחסר מקום. */
 @Composable
-private fun AppGlyphs(apps: List<NotifApp>) {
-    val bar = LocalBar.current
-    Row(
-        modifier = Modifier.clipToBounds(),
-        horizontalArrangement = Arrangement.spacedBy(GlyphGap),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        apps.take(MAX_APP_GLYPHS).forEach { app ->
+private fun SysIcon(icon: ImageVector, tint: Color = Color.White) {
+    Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(IconSize))
+}
+
+/** כמו אנדרואיד: עד 4 אייקונים, ואם יש עוד - נקודה. */
+@Composable
+private fun NotificationIcons(apps: List<NotifApp>) {
+    if (apps.isEmpty()) return
+    Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+        apps.take(MAX_NOTIF_ICONS).forEach { app ->
             val glyph = appGlyph(app.packageName)
             val icon = app.smallIcon
             when {
-                glyph != null -> Icon(glyph, contentDescription = null, tint = bar.text, modifier = Modifier.size(GlyphSize))
-                icon != null -> Image(
-                    bitmap = icon,
-                    contentDescription = null,
-                    colorFilter = ColorFilter.tint(bar.text),
-                    modifier = Modifier.size(GlyphSize)
-                )
-                else -> Icon(FutureIcons.Notifications, contentDescription = null, tint = bar.text, modifier = Modifier.size(GlyphSize))
+                glyph != null -> SysIcon(glyph)
+                icon != null -> Image(icon, null, colorFilter = ColorFilter.tint(Color.White), modifier = Modifier.size(IconSize))
+                else -> SysIcon(FutureIcons.Notifications)
             }
         }
-        if (apps.size > MAX_APP_GLYPHS) BarText("+${apps.size - MAX_APP_GLYPHS}", bar.text70, FutureTypography.label, FontWeight.SemiBold)
+        if (apps.size > MAX_NOTIF_ICONS) {
+            Canvas(Modifier.size(5.dp)) { drawCircle(Color.White) }
+        }
     }
 }
 
-@Composable
-private fun StatusGlyph(icon: ImageVector, tint: Color = LocalBar.current.text) {
-    Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(GlyphSize))
-}
+private const val MAX_NOTIF_ICONS = 4
 
-/**
- * מצלמה / מיקרופון בשימוש עכשיו - הצבעים של אנדרואיד ו-iOS (ירוק למצלמה,
- * כתום למיקרופון) כדי שיזוהו מיד. סמל ולא רק נקודה: במסך 640×960 נקודה של
- * 6dp לא מספרת מה בדיוק פועל.
- */
+/** Wi-Fi: מניפה מלאה בשקיפות, והחלק המלא לפי עוצמת הקליטה (0-4). */
 @Composable
-private fun PrivacyDots() {
-    if (PrivacyIndicators.cameraInUse.value) {
-        Icon(FutureIcons.Videocam, contentDescription = "המצלמה פעילה", tint = PrivacyCamera, modifier = Modifier.size(GlyphSize))
+private fun WifiIcon(level: Int) {
+    Canvas(Modifier.size(width = 17.dp, height = IconSize)) {
+        val cx = size.width / 2f
+        val bottom = size.height * 0.92f
+        val r = minOf(size.width / 2f / 0.75f, bottom)
+        fun fan(radius: Float, color: Color) {
+            drawArc(
+                color = color,
+                startAngle = -135f,
+                sweepAngle = 90f,
+                useCenter = true,
+                topLeft = Offset(cx - radius, bottom - radius),
+                size = Size(radius * 2, radius * 2),
+            )
+        }
+        fan(r, Dim)
+        if (level > 0) fan(r * (0.28f + 0.72f * level.coerceIn(0, 4) / 4f), Color.White)
     }
-    if (PrivacyIndicators.micInUse.value) {
-        Icon(FutureIcons.Mic, contentDescription = "המיקרופון פעיל", tint = PrivacyMic, modifier = Modifier.size(GlyphSize))
-    }
-}
-
-private val PrivacyCamera = com.future.sharednav.theme.FutureAccents.Green
-private val PrivacyMic = com.future.sharednav.theme.FutureAccents.Orange
-
-/** כל אינדיקטורי מצב המכשיר: מנורה, צלצול, DND, טיסה, פנס, מיקום, Bluetooth, Wi-Fi, נתונים, חיסכון. */
-@Composable
-private fun DeviceGlyphs(manager: ControlManager, status: BarStatus) {
-    val bar = LocalBar.current
-    PrivacyDots()
-    if (status.hasAlarm) StatusGlyph(FutureIcons.Alarm)
-    when (status.ringerMode) {
-        AudioManager.RINGER_MODE_SILENT -> StatusGlyph(FutureIcons.VolumeOff)
-        AudioManager.RINGER_MODE_VIBRATE -> StatusGlyph(FutureIcons.Vibration)
-    }
-    if (manager.isDndOn) StatusGlyph(FutureIcons.DoNotDisturbOn)
-    if (manager.isAirplaneOn) StatusGlyph(FutureIcons.AirplanemodeActive)
-    if (status.showBluetooth && manager.isBluetoothOn) {
-        StatusGlyph(FutureIcons.Bluetooth, if (manager.isBluetoothDeviceConnected) bar.text else bar.text70)
-    }
-    if (manager.isWifiOn && !manager.isAirplaneOn) StatusGlyph(FutureIcons.Wifi)
-    if (manager.isDataOn && !manager.isAirplaneOn) StatusGlyph(FutureIcons.SignalCellularAlt)
-    if (manager.isBatterySaverOn) StatusGlyph(FutureIcons.BatterySaver, bar.warning)
 }
 
 /**
- * הסוללה: גוף במסגרת טקסט 70%, מילוי בצבע הטקסט. טעינה - הצלחה וברק,
- * חלשה - סכנה, חיסכון - מסגרת בצבע האזהרה. 25×12dp, פינה 3.5dp.
+ * קליטה סלולרית: משולש בשקיפות, והחלק המלא לפי העוצמה (0-4). בלי SIM -
+ * משולש עמום עם קו אלכסוני. "▲▼" קטן כשהנתונים הסלולריים פעילים.
  */
 @Composable
-private fun FosBattery(percent: Int, isCharging: Boolean, isSaver: Boolean) {
-    val bar = LocalBar.current
+private fun CellIcon(level: Int, noSim: Boolean, dataActive: Boolean) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(1.dp)) {
+        if (dataActive && !noSim) {
+            Canvas(Modifier.size(width = 5.dp, height = 11.dp)) {
+                val w = size.width
+                val h = size.height
+                val up = Path().apply { moveTo(w / 2, 0f); lineTo(w, h * 0.42f); lineTo(0f, h * 0.42f); close() }
+                val down = Path().apply { moveTo(0f, h * 0.58f); lineTo(w, h * 0.58f); lineTo(w / 2, h); close() }
+                drawPath(up, Color.White)
+                drawPath(down, Color.White)
+            }
+        }
+        Canvas(Modifier.size(IconSize)) {
+            val w = size.width
+            val h = size.height
+            val tri = Path().apply { moveTo(w, 0f); lineTo(w, h); lineTo(0f, h); close() }
+            drawPath(tri, Dim)
+            if (!noSim && level > 0) {
+                clipRect(right = w * level.coerceIn(0, 4) / 4f) { drawPath(tri, Color.White) }
+            }
+            if (noSim) {
+                drawLine(Color.White, Offset(w * 0.2f, h * 0.2f), Offset(w * 0.8f, h * 0.8f), strokeWidth = 1.5.dp.toPx())
+            }
+        }
+    }
+}
+
+/**
+ * סוללה עומדת כמו באנדרואיד 12: מסגרת, פין למעלה ומילוי מלמטה. טעינה - ירוק
+ * וברק, חלשה (15% ומטה) - אדום, חיסכון - מסגרת כתומה. אחוזים לפי ההגדרה.
+ */
+@Composable
+private fun Battery(percent: Int, charging: Boolean, saver: Boolean, showPercent: Boolean, colors: FutureTheme) {
+    val low = percent <= 15 && !charging
     val fill = when {
-        isCharging -> bar.success
-        percent <= 15 -> bar.danger
-        else -> bar.text
+        charging -> colors.successColor
+        low -> colors.dangerColor
+        else -> Color.White
     }
-    val frame = if (isSaver) bar.warning else bar.text70
-    Row(horizontalArrangement = Arrangement.spacedBy(GlyphGap), verticalAlignment = Alignment.CenterVertically) {
-        if (isCharging) Icon(FutureIcons.Bolt, contentDescription = null, tint = bar.success, modifier = Modifier.size(13.dp))
-        // הפין תמיד מימין, גם בשורה מימין לשמאל - כמו סוללה אמיתית
-        Canvas(modifier = Modifier.size(width = 25.dp, height = 12.dp)) {
-            val stroke = 1.dp.toPx()
-            val nubW = 1.5.dp.toPx()
-            val bodyW = size.width - nubW
-            drawRoundRect(
-                color = frame,
-                topLeft = Offset(stroke / 2, stroke / 2),
-                size = Size(bodyW - stroke, size.height - stroke),
-                cornerRadius = CornerRadius(3.5.dp.toPx()),
-                style = Stroke(width = stroke)
-            )
-            drawRoundRect(
-                color = frame,
-                topLeft = Offset(bodyW, size.height / 2f - 2.5.dp.toPx()),
-                size = Size(nubW, 5.dp.toPx()),
-                cornerRadius = CornerRadius(1.dp.toPx())
-            )
-            val inset = stroke + 1.5.dp.toPx()
-            // coerceAtLeast: כשהאייקון צר מה-inset (למשל באמצע אנימציה) הרוחב יוצא שלילי,
-            // ו-coerceIn(0f, שלילי) הפיל את FutureUI בשלב הציור ("maximum -13.0").
-            val maxW = (bodyW - inset * 2).coerceAtLeast(0f)
-            val w = (maxW * percent / 100f).coerceIn(0f, maxW)
-            if (w > 0f) {
+    val frame = if (saver) colors.warningColor else Color.White
+    Row(horizontalArrangement = Arrangement.spacedBy(3.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (showPercent) BarText("$percent%", 13.sp, FontWeight.Medium, if (low) colors.dangerColor else Color.White)
+        // הסוללה לא מתהפכת ב-RTL
+        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+            Canvas(Modifier.size(width = 9.dp, height = 15.dp)) {
+                val stroke = 1.2.dp.toPx()
+                val nubH = 1.8.dp.toPx()
+                val nubW = size.width * 0.45f
                 drawRoundRect(
-                    color = fill,
-                    topLeft = Offset(inset, inset),
-                    size = Size(w, (size.height - inset * 2).coerceAtLeast(0f)),
-                    cornerRadius = CornerRadius(1.5.dp.toPx())
+                    color = frame,
+                    topLeft = Offset((size.width - nubW) / 2f, 0f),
+                    size = Size(nubW, nubH + 0.5f),
+                    cornerRadius = CornerRadius(0.6.dp.toPx()),
                 )
-            }
-        }
-    }
-}
-
-@Composable
-private fun BatteryPercent(status: BarStatus, withSign: Boolean) {
-    val bar = LocalBar.current
-    val low = status.batteryPercent <= 15 && !status.isCharging
-    BarText(
-        if (withSign) "${status.batteryPercent}%" else "${status.batteryPercent}",
-        if (low) bar.danger else bar.text,
-        FutureTypography.label,
-        FontWeight.Medium
-    )
-}
-
-@Composable
-private fun CallPill(duration: String, showIcon: Boolean) {
-    val bar = LocalBar.current
-    Row(
-        modifier = Modifier.height(22.dp).clip(CircleShape).background(bar.success).padding(horizontal = 9.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        if (showIcon) Icon(FutureIcons.Call, contentDescription = null, tint = Color.Black, modifier = Modifier.size(12.dp))
-        BarText(duration, Color.Black, FutureTypography.label, FontWeight.Bold)
-    }
-}
-
-/**
- * הצד של השעון וההתראות: השעון קבוע, ואייקוני ההתראות מקבלים את המקום שנשאר ונחתכים
- * אם הוא קטן - לעולם לא השעון ולא אינדיקטורי המערכת שבצד השני.
- */
-@Composable
-private fun RowScope.LeadingGroup(spacing: Int, content: @Composable RowScope.() -> Unit) {
-    Row(
-        modifier = Modifier.weight(1f).fillMaxHeight(),
-        horizontalArrangement = Arrangement.spacedBy(spacing.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        content = content
-    )
-}
-
-/** הסגנון הקלאסי: שורה אטומה לבנה/שחורה, שעון ואייקוני התראות מימין, מצב המכשיר משמאל. */
-@Composable
-private fun ClassicBar(modifier: Modifier, manager: ControlManager, status: BarStatus, accentColor: Color) {
-    val bar = LocalBar.current
-    Row(
-        modifier = modifier.fillMaxWidth().background(bar.background).padding(horizontal = 10.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        LeadingGroup(spacing = 6) {
-            status.callDuration?.let { CallPill(it, showIcon = true) }
-            BarText(status.time, bar.text, FutureTypography.body, FontWeight.SemiBold)
-            if (status.apps.isNotEmpty()) {
-                Box(modifier = Modifier.weight(1f, fill = false).clipToBounds()) { AppGlyphs(status.apps) }
-            }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(GlyphGap), verticalAlignment = Alignment.CenterVertically) {
-            DeviceGlyphs(manager, status)
-            if (status.showBattery) {
-                BarText("${status.batteryPercent}%", if (status.batteryPercent <= 15 && !status.isCharging) bar.danger else bar.text, FutureTypography.label, FontWeight.Medium)
-                BatteryPill(status.batteryPercent, status.isCharging, accentColor)
-            }
-        }
-    }
-}
-
-/**
- * גלולת סוללה מצוירת בעצמנו (גוף מעוגל + פין קטן + מילוי פרופורציונלי) בסגנון
- * One UI, במקום האייקונים המדורגים (Battery1Bar/2Bar/...) של Material - אלה
- * נראים כמו וידג'ט גנרי ולא כמו סוללה אמיתית של מכשיר.
- */
-@Composable
-private fun BatteryPill(percent: Int, isCharging: Boolean, accentColor: Color) {
-    val bar = LocalBar.current
-    val fillColor = when {
-        isCharging -> bar.success
-        percent <= 15 -> bar.danger
-        else -> bar.text
-    }
-    Row(horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.CenterVertically) {
-        if (isCharging) Icon(FutureIcons.Bolt, contentDescription = null, tint = bar.success, modifier = Modifier.size(13.dp))
-        Canvas(modifier = Modifier.size(width = 25.dp, height = 12.dp)) {
-            val nubWidth = 1.8.dp.toPx()
-            val bodyWidth = size.width - nubWidth
-            val strokeWidth = 1.2.dp.toPx()
-            val body = bar.text.copy(alpha = 0.85f)
-
-            drawRoundRect(
-                color = body,
-                topLeft = Offset(strokeWidth / 2f, strokeWidth / 2f),
-                size = Size(bodyWidth - strokeWidth, size.height - strokeWidth),
-                cornerRadius = CornerRadius(3.dp.toPx()),
-                style = Stroke(width = strokeWidth)
-            )
-            drawRoundRect(
-                color = body,
-                topLeft = Offset(bodyWidth, size.height / 2f - 2.2.dp.toPx()),
-                size = Size(nubWidth, 4.4.dp.toPx()),
-                cornerRadius = CornerRadius(0.9.dp.toPx())
-            )
-
-            val inset = strokeWidth + 1.3.dp.toPx()
-            // coerceAtLeast: כשהאייקון צר מה-inset (למשל באמצע אנימציה) הרוחב יוצא שלילי,
-            // ו-coerceIn(0f, שלילי) הפיל את FutureUI בשלב הציור ("maximum -13.0").
-            val fillMaxWidth = (bodyWidth - inset * 2).coerceAtLeast(0f)
-            val fillWidth = (fillMaxWidth * (percent / 100f)).coerceIn(0f, fillMaxWidth)
-            if (fillWidth > 0f) {
+                val bodyTop = nubH
                 drawRoundRect(
-                    color = fillColor,
-                    topLeft = Offset(inset, inset),
-                    size = Size(fillWidth, (size.height - inset * 2).coerceAtLeast(0f)),
-                    cornerRadius = CornerRadius(1.5.dp.toPx())
+                    color = frame,
+                    topLeft = Offset(stroke / 2, bodyTop + stroke / 2),
+                    size = Size(size.width - stroke, size.height - bodyTop - stroke),
+                    cornerRadius = CornerRadius(1.8.dp.toPx()),
+                    style = Stroke(width = stroke),
                 )
-            }
-        }
-    }
-}
-
-/** כיוון א - שקט: שעה ואייקוני האפליקציות מימין, מצב המכשיר משמאל. */
-@Composable
-private fun QuietBar(modifier: Modifier, manager: ControlManager, status: BarStatus) {
-    val bar = LocalBar.current
-    Row(
-        modifier = modifier.fillMaxWidth().background(bar.background).padding(horizontal = 12.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        LeadingGroup(spacing = 8) {
-            status.callDuration?.let { CallPill(it, showIcon = true) }
-            BarText(status.time, bar.text, FutureTypography.body, FontWeight.SemiBold)
-            if (status.apps.isNotEmpty()) {
-                Box(modifier = Modifier.weight(1f, fill = false).clipToBounds()) { AppGlyphs(status.apps) }
-            }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(GlyphGap), verticalAlignment = Alignment.CenterVertically) {
-            DeviceGlyphs(manager, status)
-            if (status.showBattery) {
-                BatteryPercent(status, withSign = true)
-                FosBattery(status.batteryPercent, status.isCharging, manager.isBatterySaverOn)
-            }
-        }
-    }
-}
-
-/** כיוון ב - כמוסות: שעה ואייקוני אפליקציות בכמוסה אחת, מצב המכשיר בשנייה. */
-@Composable
-private fun CapsulesBar(modifier: Modifier, manager: ControlManager, status: BarStatus) {
-    val bar = LocalBar.current
-    Row(
-        modifier = modifier.fillMaxWidth().background(bar.background).padding(horizontal = 6.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        LeadingGroup(spacing = 4) {
-            Row(
-                modifier = Modifier.weight(1f, fill = false).height(22.dp).clip(CircleShape).background(bar.glass).padding(horizontal = 9.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                BarText(status.time, bar.text, FutureTypography.body, FontWeight.SemiBold)
-                if (status.apps.isNotEmpty()) {
-                    Box(modifier = Modifier.weight(1f, fill = false).clipToBounds()) { AppGlyphs(status.apps) }
+                val inset = stroke + 1.dp.toPx()
+                val maxH = (size.height - bodyTop - inset * 2).coerceAtLeast(0f)
+                val h = (maxH * percent.coerceIn(0, 100) / 100f).coerceIn(0f, maxH)
+                if (h > 0f) {
+                    drawRoundRect(
+                        color = fill,
+                        topLeft = Offset(inset, size.height - inset - h),
+                        size = Size((size.width - inset * 2).coerceAtLeast(0f), h),
+                        cornerRadius = CornerRadius(0.8.dp.toPx()),
+                    )
                 }
-            }
-            status.callDuration?.let { CallPill(it, showIcon = false) }
-        }
-        Row(
-            modifier = Modifier.height(22.dp).clip(CircleShape).background(bar.glass).padding(horizontal = 9.dp),
-            horizontalArrangement = Arrangement.spacedBy(GlyphGap),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            DeviceGlyphs(manager, status)
-            if (status.showBattery) {
-                BatteryPercent(status, withSign = true)
-                FosBattery(status.batteryPercent, status.isCharging, manager.isBatterySaverOn)
-            }
-        }
-    }
-}
-
-/** כיוון ג - שעון במרכז: תאריך והתראות מימין, השעה באמצע, מצב המכשיר משמאל. */
-@Composable
-private fun CenteredBar(modifier: Modifier, manager: ControlManager, status: BarStatus) {
-    val bar = LocalBar.current
-    val date = remember(status.time) {
-        val locale = Locale("iw")
-        SimpleDateFormat(android.text.format.DateFormat.getBestDateTimePattern(locale, "EEEdMMM"), locale).format(Date())
-    }
-    Box(modifier = modifier.fillMaxWidth().background(bar.background).padding(horizontal = 12.dp)) {
-        Row(
-            modifier = Modifier.fillMaxSize(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                if (status.callDuration != null) {
-                    Icon(FutureIcons.Call, contentDescription = null, tint = bar.success, modifier = Modifier.size(GlyphSize))
-                }
-                BarText(date, bar.text60, FutureTypography.label, FontWeight.Normal)
-                if (status.notificationCount > 0) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(FutureIcons.Notifications, contentDescription = null, tint = bar.text70, modifier = Modifier.size(GlyphSize))
-                        BarText("${status.notificationCount}", bar.text70, FutureTypography.label, FontWeight.Medium)
+                if (charging) {
+                    val w = size.width
+                    val top = bodyTop
+                    val bh = size.height - bodyTop
+                    val bolt = Path().apply {
+                        moveTo(w * 0.62f, top + bh * 0.12f)
+                        lineTo(w * 0.22f, top + bh * 0.56f)
+                        lineTo(w * 0.48f, top + bh * 0.56f)
+                        lineTo(w * 0.38f, top + bh * 0.90f)
+                        lineTo(w * 0.78f, top + bh * 0.44f)
+                        lineTo(w * 0.52f, top + bh * 0.44f)
+                        close()
                     }
+                    drawPath(bolt, Color.Black)
                 }
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(GlyphGap), verticalAlignment = Alignment.CenterVertically) {
-                DeviceGlyphs(manager, status)
-                if (status.showBattery) {
-                    FosBattery(status.batteryPercent, status.isCharging, manager.isBatterySaverOn)
-                    BatteryPercent(status, withSign = false)
-                }
-            }
-        }
-        Box(modifier = Modifier.align(Alignment.Center)) {
-            BarText(status.time, bar.text, FutureTypography.dialog, FontWeight.Bold)
         }
     }
 }
