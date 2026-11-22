@@ -6,6 +6,7 @@ import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Bundle
+import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
@@ -62,7 +63,7 @@ object LocationHelper {
         var network: Location? = null
         val gps = kotlinx.coroutines.coroutineScope {
             val net = if (LocationManager.NETWORK_PROVIDER in enabled) {
-                kotlinx.coroutines.async { requestOne(context, manager, LocationManager.NETWORK_PROVIDER, gpsTimeoutMs) }
+                async { requestOne(context, manager, LocationManager.NETWORK_PROVIDER, gpsTimeoutMs) }
             } else null
             val g = if (LocationManager.GPS_PROVIDER in enabled) {
                 requestOne(context, manager, LocationManager.GPS_PROVIDER, gpsTimeoutMs)
