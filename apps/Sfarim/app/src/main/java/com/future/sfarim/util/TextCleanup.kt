@@ -120,10 +120,17 @@ fun formatBookText(html: String): AnnotatedString {
                 if (attrs.trimEnd().endsWith("/")) continue
                 val isFootnote = name == "i" && attrs.contains("footnote") && !attrs.contains("footnote-marker")
                 val isMarker = name == "sup" && attrs.contains("footnote-marker")
+                // דיבור המתחיל/כותרת = הדגשה רק בתחילת פסקה. <b> באמצע משפט (מילה מצוטטת,
+                // הדגשה של המו"ל) מוצג כטקסט רגיל - אחרת חצי עמוד מודגש סתם.
+                val atParagraphStart = run {
+                    val last = lastChar()
+                    last == null || last == '\n'
+                }
                 val style: SpanStyle? = when {
-                    isFootnote -> SpanStyle(fontSize = 0.82.em, fontStyle = FontStyle.Italic)
+                    isFootnote -> SpanStyle(fontSize = 0.68.em, fontStyle = FontStyle.Italic)
                     isMarker -> null
-                    name == "b" || name == "strong" -> SpanStyle(fontWeight = FontWeight.Bold)
+                    name == "b" || name == "strong" ->
+                        if (atParagraphStart && footnoteDepth == 0) SpanStyle(fontWeight = FontWeight.Bold) else SpanStyle()
                     name == "big" -> SpanStyle(fontSize = 1.15.em, fontWeight = FontWeight.Bold)
                     name == "small" -> SpanStyle(fontSize = 0.82.em)
                     name == "i" || name == "em" -> SpanStyle(fontStyle = FontStyle.Italic)

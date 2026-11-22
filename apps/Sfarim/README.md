@@ -21,3 +21,5 @@ Until 2026-09 the importer dropped every complex book on the floor (it only walk
 The ~390 titles in the table of contents with no Hebrew text here are not a bug either: most are English- or German-only works, and 124 (the Koren Steinsaltz Tanakh and Mishneh Torah, Urim titles) are copyrighted and deliberately left out of Sefaria's public export — the importer does not go around that. `Chovat HaTalmidim` is the one Hebrew title whose export files 404.
 
 (`tools/output/reassemble_sefaria_db.sh` documents an earlier, abandoned plan to split/reassemble a pre-existing dump — no longer needed now that the DB is built directly from Sefaria's public sources.)
+
+**Book font.** Reader text uses Frank Ruhl Libre (SIL Open Font License 1.1, Google Fonts), `app/src/main/res/font/frank_ruhl_libre_{regular,bold}.ttf` - static 400/700 instances made with fontTools from the variable Hebrew+Latin subsets in `marketing/landing/fonts/`. It has no cantillation marks, so segments with teamim stay in the system font.

@@ -58,10 +58,20 @@ fun BookmarksScreen(
     onBack: () -> Unit,
     onOpenBookmark: (LibraryBookmark) -> Unit,
     onDeleteBookmark: (LibraryBookmark) -> Unit,
+    // הסימניה שנפתחה לאחרונה - אחרי BACK הפוקוס חוזר אליה
+    lastSelectedId: Long? = null,
+    onSelected: (Long) -> Unit = {},
 ) {
-    val firstFocusRequester = remember(bookmarks.firstOrNull()) { FocusRequester() }
-    LaunchedEffect(bookmarks.firstOrNull()) {
-        if (bookmarks.isNotEmpty()) firstFocusRequester.requestFocusWhenReady()
+    val rowFocus = remember { mutableMapOf<Long, FocusRequester>() }
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    LaunchedEffect(bookmarks.map { it.id }) {
+        if (bookmarks.isEmpty()) return@LaunchedEffect
+        val index = bookmarks.indexOfFirst { it.id == lastSelectedId }.coerceAtLeast(0)
+        if (index > 0) {
+            listState.scrollToItem(index)
+            androidx.compose.runtime.withFrameNanos { }
+        }
+        rowFocus.getOrPut(bookmarks[index].id) { FocusRequester() }.requestFocusWhenReady()
     }
     // לפני התיקון, מקש Menu על שורת סימניה מחק אותה מיידית בלי שום אישור -
     // לחיצה אחת בטעות ואיבדת סימניה שמורה לצמיתות.
@@ -79,14 +89,15 @@ fun BookmarksScreen(
                     )
                 } else {
                     LazyColumn(
+                        state = listState,
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                         verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp),
                     ) {
                         itemsIndexed(bookmarks, key = { _, it -> it.id }) { index, bookmark ->
                             BookmarkRow(
                                 bookmark, theme,
-                                focusRequester = if (index == 0) firstFocusRequester else null,
-                                onClick = { onOpenBookmark(bookmark) },
+                                focusRequester = rowFocus.getOrPut(bookmark.id) { FocusRequester() },
+                                onClick = { onSelected(bookmark.id); onOpenBookmark(bookmark) },
                                 onDelete = { pendingDelete = bookmark },
                             )
                         }

@@ -50,15 +50,37 @@ fun HomeScreen(
     onOpenSearch: () -> Unit,
     onOpenBookmarks: () -> Unit,
     onContinueReading: (ReadingProgressEntry) -> Unit,
+    // הפריט שממנו יצאנו (continue / search / bookmarks / cat<id>) - אחרי BACK הפוקוס חוזר אליו
+    lastSelectedKey: String? = null,
+    onSelected: (String) -> Unit = {},
 ) {
     val firstFocusRequester = remember { FocusRequester() }
+    val searchFocus = remember { FocusRequester() }
+    val bookmarksFocus = remember { FocusRequester() }
+    val categoryFocus = remember { mutableMapOf<Long, FocusRequester>() }
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
     // "המשך קריאה" נטען אחרי הפתיחה ומופיע מעל "חיפוש" - מבקשים פוקוס שוב כשהוא
     // מופיע, אחרת הפוקוס נשאר על "חיפוש" ו-↓ הראשון דילג עליו (SF1).
     // N03: בכניסה הראשונה הבקשה נבלעת באנימציית המעבר - מנסים שוב עד שהטבעת מופיעה.
-    LaunchedEffect(continueReading != null) { firstFocusRequester.requestFocusWhenReady() }
+    LaunchedEffect(continueReading != null, categories.size) {
+        val offset = if (continueReading != null) 1 else 0
+        val catId = lastSelectedKey?.removePrefix("cat")?.takeIf { lastSelectedKey.startsWith("cat") }?.toLongOrNull()
+        val catIndex = categories.indexOfFirst { it.id == catId }
+        when {
+            catIndex >= 0 -> {
+                listState.scrollToItem(3 + offset + catIndex)
+                androidx.compose.runtime.withFrameNanos { }
+                categoryFocus.getOrPut(categories[catIndex].id) { FocusRequester() }.requestFocusWhenReady()
+            }
+            lastSelectedKey == "bookmarks" -> bookmarksFocus.requestFocusWhenReady()
+            lastSelectedKey == "search" && continueReading != null -> searchFocus.requestFocusWhenReady()
+            else -> firstFocusRequester.requestFocusWhenReady()
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
         LazyColumn(
+            state = listState,
             contentPadding = PaddingValues(horizontal = FutureDimens.screenPadding, vertical = FutureDimens.spacingMd),
             verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(FutureDimens.itemSpacing),
         ) {
@@ -79,7 +101,7 @@ fun HomeScreen(
                         else "${continueReading.bookTitle} · ${continueReading.segmentRef}",
                         summary = tr("המשך קריאה"),
                         theme = theme,
-                        onClick = { onContinueReading(continueReading) },
+                        onClick = { onSelected("continue"); onContinueReading(continueReading) },
                         focusRequester = firstFocusRequester,
                         leading = { RowIcon(FutureIcons.AutoStories, theme) },
                     )
@@ -89,10 +111,10 @@ fun HomeScreen(
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
                     HomeShortcut(
                         FutureIcons.Search, tr("חיפוש"), theme, Modifier.weight(1f),
-                        focusRequester = if (continueReading == null) firstFocusRequester else null,
-                        onClick = onOpenSearch,
+                        focusRequester = if (continueReading == null) firstFocusRequester else searchFocus,
+                        onClick = { onSelected("search"); onOpenSearch() },
                     )
-                    HomeShortcut(FutureIcons.Bookmark, tr("סימניות"), theme, Modifier.weight(1f), onClick = onOpenBookmarks)
+                    HomeShortcut(FutureIcons.Bookmark, tr("סימניות"), theme, Modifier.weight(1f), focusRequester = bookmarksFocus, onClick = { onSelected("bookmarks"); onOpenBookmarks() })
                 }
             }
             item {
@@ -102,7 +124,8 @@ fun HomeScreen(
                 FutureListItem(
                     title = category.nameHe?.takeIf { it.isNotBlank() } ?: category.nameEn,
                     theme = theme,
-                    onClick = { onOpenCategory(category) },
+                    onClick = { onSelected("cat${category.id}"); onOpenCategory(category) },
+                    focusRequester = categoryFocus.getOrPut(category.id) { FocusRequester() },
                     leading = { RowIcon(FutureIcons.BookShelf, theme) },
                 )
             }

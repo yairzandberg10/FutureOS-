@@ -132,8 +132,9 @@ fun ReaderScreen(
     // KEYCODE_POUND ב-onKeyEvent למטה נשארים רק לאמולטור/מקלדת בלי FutureUI.
     // כשתפריט/חלון מפרשים פתוח, הלחיצה לא מחליפה את הפרק שמתחתיו.
     val overlayOpen = showPageMenu || menuSegment != null
-    com.future.sharednav.nav.onStarKeyPress { if (hasPrevChapter && !overlayOpen) onPrevChapter() }
-    com.future.sharednav.nav.onPoundKeyPress { if (hasNextChapter && !overlayOpen) onNextChapter() }
+    // # (ימין המקלדת) = הפרק הקודם, * (שמאל) = הפרק הבא - כמו כיוון הקריאה מימין לשמאל
+    com.future.sharednav.nav.onPoundKeyPress { if (hasPrevChapter && !overlayOpen) onPrevChapter() }
+    com.future.sharednav.nav.onStarKeyPress { if (hasNextChapter && !overlayOpen) onNextChapter() }
     var commentaryPrefix by remember { mutableStateOf<List<Int>?>(null) }
     var commentaryResults by remember { mutableStateOf<List<CommentaryEntry>?>(null) }
     val listState = rememberLazyListState()
@@ -182,10 +183,10 @@ fun ReaderScreen(
                 .onKeyEvent { event ->
                     if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
                     when (event.nativeKeyEvent.keyCode) {
-                        android.view.KeyEvent.KEYCODE_STAR -> {
+                        android.view.KeyEvent.KEYCODE_POUND -> {
                             if (hasPrevChapter) { onPrevChapter(); true } else false
                         }
-                        android.view.KeyEvent.KEYCODE_POUND -> {
+                        android.view.KeyEvent.KEYCODE_STAR -> {
                             if (hasNextChapter) { onNextChapter(); true } else false
                         }
                         android.view.KeyEvent.KEYCODE_DPAD_DOWN -> {
@@ -205,7 +206,7 @@ fun ReaderScreen(
                     horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween,
                 ) {
                     Text(
-                        if (hasPrevChapter) tr("* לפרק קודם") else "",
+                        if (hasPrevChapter) tr("# לפרק קודם") else "",
                         color = theme.textColor.copy(alpha = 0.4f),
                         fontSize = FutureTypography.caption,
                     )
@@ -220,7 +221,7 @@ fun ReaderScreen(
                         modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
                     )
                     Text(
-                        if (hasNextChapter) tr("לפרק הבא #") else "",
+                        if (hasNextChapter) tr("לפרק הבא *") else "",
                         color = theme.textColor.copy(alpha = 0.4f),
                         fontSize = FutureTypography.caption,
                     )
@@ -280,6 +281,7 @@ fun ReaderScreen(
                                 fontSize = fontSize.sp,
                                 lineHeight = (fontSize * 1.6f).sp,
                                 style = BOOK_TEXT_STYLE,
+                                fontFamily = bookFontFor(cleaned),
                                 modifier = Modifier.fillMaxWidth(),
                             )
                         }
@@ -351,6 +353,16 @@ fun ReaderScreen(
 // כיוון RTL מפורש לפסקה: בלי זה סימנים ניטרליים בקצה (#, *, סוגריים, נקודה) מתהפכים לצד הלא נכון
 private val BOOK_TEXT_STYLE = TextStyle(textDirection = TextDirection.Rtl, textAlign = TextAlign.Start)
 
+// פונט הספרים: Frank Ruhl Libre (OFL). אין בו טעמי מקרא, ולכן קטע עם טעמים
+// (U+0591-U+05AF) נשאר בפונט המערכת - אחרת הטעמים נופלים לפונט אחר ונראים שבורים.
+private val FrankRuhlLibre = androidx.compose.ui.text.font.FontFamily(
+    androidx.compose.ui.text.font.Font(com.future.sfarim.R.font.frank_ruhl_libre_regular, androidx.compose.ui.text.font.FontWeight.Normal),
+    androidx.compose.ui.text.font.Font(com.future.sfarim.R.font.frank_ruhl_libre_bold, androidx.compose.ui.text.font.FontWeight.Bold),
+)
+
+private fun bookFontFor(text: CharSequence): androidx.compose.ui.text.font.FontFamily =
+    if (text.any { it in '֑'..'֯' }) androidx.compose.ui.text.font.FontFamily.Default else FrankRuhlLibre
+
 private fun shareText(context: android.content.Context, text: String) {
     com.future.sharednav.share.FutureShare.text(context, text)
 }
@@ -407,7 +419,7 @@ private fun SegmentRow(
         }
         Column {
             Text(segment.refDisplay, color = theme.subtleTextColor, fontSize = FutureTypography.caption)
-            Text(cleanedText, color = theme.textColor, fontSize = fontSize.sp, lineHeight = (fontSize * 1.5f).sp, style = BOOK_TEXT_STYLE, modifier = Modifier.fillMaxWidth())
+            Text(cleanedText, color = theme.textColor, fontSize = fontSize.sp, lineHeight = (fontSize * 1.5f).sp, style = BOOK_TEXT_STYLE, fontFamily = bookFontFor(cleanedText), modifier = Modifier.fillMaxWidth())
         }
     }
 }

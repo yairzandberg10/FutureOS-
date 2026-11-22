@@ -43,6 +43,7 @@ import com.future.sfarim.ui.components.ScreenTopBar
 import com.future.sharednav.focus.escapeTextFieldFocusTrap
 import com.future.sharednav.theme.FutureTheme
 import com.future.sfarim.util.stripHtmlTags
+import com.future.sfarim.util.requestFocusWhenReady
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -55,15 +56,35 @@ fun SearchScreen(
     onSearchSegments: suspend (String) -> List<SegmentSearchResult>,
     onOpenBook: (BookSearchEntry) -> Unit,
     onOpenSegment: (SegmentSearchResult) -> Unit,
+    // השאילתה והתוצאה שנפתחה נשמרות ב-NavHost: אחרי BACK מהספר/הקטע חוזרים לאותן
+    // תוצאות, והפוקוס על התוצאה שממנה יצאנו (book<id> / seg<id>).
+    initialQuery: String = "",
+    onQueryChange: (String) -> Unit = {},
+    lastSelectedKey: String? = null,
+    onSelected: (String) -> Unit = {},
 ) {
-    var query by remember { mutableStateOf("") }
+    var query by remember { mutableStateOf(initialQuery) }
+    val resultFocus = remember { mutableMapOf<String, FocusRequester>() }
+    val resultsListState = androidx.compose.foundation.lazy.rememberLazyListState()
+    var restored by remember { mutableStateOf(lastSelectedKey == null) }
     var bookResults by remember { mutableStateOf<List<BookSearchEntry>>(emptyList()) }
     var segmentResults by remember { mutableStateOf<List<SegmentSearchResult>>(emptyList()) }
-    var searching by remember { mutableStateOf(false) }
+    var searching by remember { mutableStateOf(initialQuery.isNotBlank()) }
     var failed by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
 
-    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+    LaunchedEffect(Unit) { if (restored) focusRequester.requestFocus() }
+    LaunchedEffect(searching, bookResults, segmentResults) {
+        if (restored || searching) return@LaunchedEffect
+        restored = true
+        val keys = (if (bookResults.isNotEmpty()) listOf("hdr-books") else emptyList()) + bookResults.map { "book${it.id}" } +
+            (if (segmentResults.isNotEmpty()) listOf("hdr-segs") else emptyList()) + segmentResults.map { "seg${it.segmentId}" }
+        val index = keys.indexOf(lastSelectedKey)
+        if (index < 0) { runCatching { focusRequester.requestFocus() }; return@LaunchedEffect }
+        resultsListState.scrollToItem(index)
+        androidx.compose.runtime.withFrameNanos { }
+        resultFocus.getOrPut(lastSelectedKey!!) { FocusRequester() }.requestFocusWhenReady()
+    }
 
     LaunchedEffect(query) {
         if (query.isBlank()) {
@@ -121,7 +142,7 @@ fun SearchScreen(
                     }
                     BasicTextField(
                         value = query,
-                        onValueChange = { query = it },
+                        onValueChange = { query = it; onQueryChange(it) },
                         textStyle = TextStyle(color = theme.textColor, fontSize = FutureTypography.bodyLarge, textDirection = androidx.compose.ui.text.style.TextDirection.Rtl),
                         cursorBrush = SolidColor(theme.accentColor),
                         singleLine = true,
@@ -147,23 +168,25 @@ fun SearchScreen(
                     }
                 } else {
                     LazyColumn(
+                        state = resultsListState,
                         contentPadding = PaddingValues(horizontal = FutureDimens.screenPadding, vertical = FutureDimens.spacingSm),
                         verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(FutureDimens.itemSpacing),
                     ) {
                         if (bookResults.isNotEmpty()) {
-                            item {
+                            item(key = "hdr-books") {
                                 FutureSectionHeader(tr("ספרים"), theme, inset = false)
                             }
                             items(bookResults, key = { "book${it.id}" }) { entry ->
                                 FutureListItem(
                                     title = entry.displayTitle,
                                     theme = theme,
-                                    onClick = { onOpenBook(entry) },
+                                    onClick = { onSelected("book${entry.id}"); onOpenBook(entry) },
+                                    focusRequester = resultFocus.getOrPut("book${entry.id}") { FocusRequester() },
                                 )
                             }
                         }
                         if (segmentResults.isNotEmpty()) {
-                            item {
+                            item(key = "hdr-segs") {
                                 FutureSectionHeader(tr("פסוקים"), theme, inset = false)
                             }
                             items(segmentResults, key = { "seg${it.segmentId}" }) { result ->
@@ -174,7 +197,8 @@ fun SearchScreen(
                                     summary = stripHtmlTags(result.snippet),
                                     summaryMaxLines = 2,
                                     theme = theme,
-                                    onClick = { onOpenSegment(result) },
+                                    onClick = { onSelected("seg${result.segmentId}"); onOpenSegment(result) },
+                                    focusRequester = resultFocus.getOrPut("seg${result.segmentId}") { FocusRequester() },
                                 )
                             }
                         }

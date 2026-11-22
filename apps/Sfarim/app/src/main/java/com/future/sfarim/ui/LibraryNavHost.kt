@@ -44,6 +44,31 @@ fun LibraryNavHost(repository: LibraryRepository, theme: FutureTheme) {
     // כמו lastBrowseSelection: הפריט שנפתח לאחרונה בכל מסך פרקים (לפי ספר וחלק)
     var lastChapterSelection by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
 
+    // ובאותה שיטה: מסך הבית, הסימניות והחיפוש (כולל השאילתה עצמה)
+    var lastHomeSelection by remember { mutableStateOf<String?>(null) }
+    var lastBookmarkSelection by remember { mutableStateOf<Long?>(null) }
+    var lastSearchSelection by remember { mutableStateOf<String?>(null) }
+    var searchQuery by remember { mutableStateOf("") }
+    // הקטע האחרון שהפוקוס היה עליו בכל פרק ("book/topIndex") - כשחוזרים לקורא
+    // ממפרש, הוא נפתח על אותו קטע ולא בראש הפרק.
+    var readerPosition by remember { mutableStateOf<Map<String, Long>>(emptyMap()) }
+
+    /** מעבר פרק בקורא (* / #) מעדכן גם את מסכי הפרקים שמתחתיו במחסנית - כשחוזרים
+     * אחורה הפוקוס על הפרק שקראת בפועל, ובספר מורכב על החלק שמכיל אותו. */
+    fun syncChapterSelection(bookId: Long, topIndex: Int, chapters: List<com.future.sfarim.data.BookChapter>) {
+        val chapter = chapters.firstOrNull { it.topIndex == topIndex } ?: return
+        var updated = lastChapterSelection
+        for (r in backStack) {
+            if (r !is Route.BookChapters || r.bookId != bookId) continue
+            val gp = r.groupPath
+            if (chapter.groupPath.size < gp.size || chapter.groupPath.subList(0, gp.size) != gp) continue
+            val key = if (chapter.groupPath.size == gp.size) "c$topIndex"
+            else "p" + (gp + chapter.groupPath[gp.size]).joinToString("/")
+            updated = updated + ("$bookId/${gp.joinToString("/")}" to key)
+        }
+        lastChapterSelection = updated
+    }
+
     BackHandler(enabled = backStack.size > 1) { backStack.removeAt(backStack.lastIndex) }
 
     fun push(route: Route) = backStack.add(route)
@@ -102,9 +127,11 @@ fun LibraryNavHost(repository: LibraryRepository, theme: FutureTheme) {
                 continueReading = progress,
                 theme = theme,
                 onOpenCategory = { push(Route.Browse(it.id, it.nameHe?.takeIf { n -> n.isNotBlank() } ?: it.nameEn)) },
-                onOpenSearch = { push(Route.Search) },
-                onOpenBookmarks = { push(Route.Bookmarks) },
+                onOpenSearch = { searchQuery = ""; lastSearchSelection = null; push(Route.Search) },
+                onOpenBookmarks = { lastBookmarkSelection = null; push(Route.Bookmarks) },
                 onContinueReading = { openSegment(it.bookId, it.segmentId) },
+                lastSelectedKey = lastHomeSelection,
+                onSelected = { lastHomeSelection = it },
             )
         }
 
@@ -143,7 +170,11 @@ fun LibraryNavHost(repository: LibraryRepository, theme: FutureTheme) {
                     onBack = ::pop,
                     lastSelectedKey = lastChapterSelection["${route.bookId}/${route.groupPath.joinToString("/")}"],
                     onSelected = { key -> lastChapterSelection = lastChapterSelection + ("${route.bookId}/${route.groupPath.joinToString("/")}" to key) },
-                    onOpenChapter = { topIndex -> push(Route.Reader(route.bookId, topIndex)) },
+                    onOpenChapter = { topIndex ->
+                        lastChapterSelection = lastChapterSelection + ("${route.bookId}/${route.groupPath.joinToString("/")}" to "c$topIndex")
+                        readerPosition = readerPosition - "${route.bookId}/$topIndex"
+                        push(Route.Reader(route.bookId, topIndex))
+                    },
                     onOpenPart = { path -> push(Route.BookChapters(route.bookId, path)) },
                 )
             }
@@ -171,7 +202,7 @@ fun LibraryNavHost(repository: LibraryRepository, theme: FutureTheme) {
                     // הכותרת מציגה רק את שם הספר.
                     chapterLabel = allChapters.firstOrNull { it.topIndex == route.topIndex }?.fullLabel,
                     segments = segments,
-                    focusSegmentId = route.focusSegmentId,
+                    focusSegmentId = readerPosition["${route.bookId}/${route.topIndex}"] ?: route.focusSegmentId,
                     isLoading = segmentsState == null,
                     hasPrevChapter = currentPos > 0,
                     hasNextChapter = currentPos in 0 until allChapterIndices.lastIndex,
@@ -180,12 +211,16 @@ fun LibraryNavHost(repository: LibraryRepository, theme: FutureTheme) {
                     onBack = ::pop,
                     onPrevChapter = {
                         if (currentPos > 0) {
-                            backStack[backStack.lastIndex] = Route.Reader(route.bookId, allChapterIndices[currentPos - 1])
+                            val target = allChapterIndices[currentPos - 1]
+                            syncChapterSelection(route.bookId, target, allChapters)
+                            backStack[backStack.lastIndex] = Route.Reader(route.bookId, target)
                         }
                     },
                     onNextChapter = {
                         if (currentPos in 0 until allChapterIndices.lastIndex) {
-                            backStack[backStack.lastIndex] = Route.Reader(route.bookId, allChapterIndices[currentPos + 1])
+                            val target = allChapterIndices[currentPos + 1]
+                            syncChapterSelection(route.bookId, target, allChapters)
+                            backStack[backStack.lastIndex] = Route.Reader(route.bookId, target)
                         }
                     },
                     onToggleBookmark = { segment ->
@@ -201,6 +236,9 @@ fun LibraryNavHost(repository: LibraryRepository, theme: FutureTheme) {
                         }
                     },
                     onSegmentShown = { segment ->
+                        if (segment.topIndex == route.topIndex) {
+                            readerPosition = readerPosition + ("${route.bookId}/${route.topIndex}" to segment.id)
+                        }
                         scope.launch(Dispatchers.IO) {
                             repository.setReadingProgress(segment.bookId, segment.id, System.currentTimeMillis())
                         }
@@ -229,6 +267,10 @@ fun LibraryNavHost(repository: LibraryRepository, theme: FutureTheme) {
                 onSearchSegments = { query -> repository.searchSegments(query) },
                 onOpenBook = { openBook(it.id) },
                 onOpenSegment = { push(Route.Reader(it.bookId, it.topIndex, it.segmentId)) },
+                initialQuery = searchQuery,
+                onQueryChange = { searchQuery = it; lastSearchSelection = null },
+                lastSelectedKey = lastSearchSelection,
+                onSelected = { lastSearchSelection = it },
             )
         }
 
@@ -240,6 +282,8 @@ fun LibraryNavHost(repository: LibraryRepository, theme: FutureTheme) {
                 theme = theme,
                 onBack = ::pop,
                 onOpenBookmark = { openSegment(it.bookId, it.segmentId) },
+                lastSelectedId = lastBookmarkSelection,
+                onSelected = { lastBookmarkSelection = it },
                 onDeleteBookmark = { bookmark ->
                     scope.launch {
                         withContext(Dispatchers.IO) { repository.removeBookmark(bookmark.id) }
