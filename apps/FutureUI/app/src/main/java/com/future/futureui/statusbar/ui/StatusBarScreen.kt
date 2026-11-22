@@ -24,6 +24,7 @@ import android.provider.Settings
 import android.telephony.ServiceState
 import android.telephony.SignalStrength
 import android.telephony.TelephonyCallback
+import android.telephony.TelephonyDisplayInfo
 import android.telephony.TelephonyManager
 import android.telecom.TelecomManager
 import android.util.Log
@@ -99,6 +100,8 @@ fun StatusBarScreen(
     lightTone: Boolean = false,
     /** הצבע השולט מתחת לשורה, אם יש (השירות דוגם אותו יחד עם [lightTone]). */
     sampledColor: Color? = null,
+    /** מסך הבית בחזית - השורה שקופה מעל הטפט. */
+    onHome: Boolean = false,
 ) {
     val context = LocalContext.current
     val manager = controlManager ?: remember { ControlManager(context) }
@@ -127,6 +130,7 @@ fun StatusBarScreen(
     var cellLevel by remember { mutableIntStateOf(BarMemory.cellLevel) }
     var inService by remember { mutableStateOf(BarMemory.inService) }
     var simReady by remember { mutableStateOf(BarMemory.simReady) }
+    var networkType by remember { mutableStateOf(BarMemory.networkType) }
     var wifiConnected by remember { mutableStateOf(BarMemory.wifiConnected) }
     var wifiLevel by remember { mutableIntStateOf(BarMemory.wifiLevel) }
     var callActive by remember { mutableStateOf(BarMemory.callActive) }
@@ -239,7 +243,22 @@ fun StatusBarScreen(
             telephony?.registerTelephonyCallback(context.mainExecutor, callback)
             telephony != null
         }.onFailure { Log.w(TAG, "telephony callback failed", it) }.getOrDefault(false)
-        onDispose { if (registered) runCatching { telephony?.unregisterTelephonyCallback(callback) } }
+        // סוג הרשת (2G/3G/4G/5G) - callback נפרד, כי הוא דורש READ_PHONE_STATE, וכשל
+        // בו לא צריך להפיל גם את עוצמת הקליטה.
+        val typeCallback = object : TelephonyCallback(), TelephonyCallback.DisplayInfoListener {
+            override fun onDisplayInfoChanged(info: TelephonyDisplayInfo) {
+                networkType = networkLabel(info.networkType, info.overrideNetworkType)
+                BarMemory.networkType = networkType
+            }
+        }
+        val typeRegistered = runCatching {
+            telephony?.registerTelephonyCallback(context.mainExecutor, typeCallback)
+            telephony != null
+        }.onFailure { Log.w(TAG, "display info callback failed", it) }.getOrDefault(false)
+        onDispose {
+            if (registered) runCatching { telephony?.unregisterTelephonyCallback(callback) }
+            if (typeRegistered) runCatching { telephony?.unregisterTelephonyCallback(typeCallback) }
+        }
     }
 
     // ---- Wi-Fi מחובר (ולא רק דלוק) - כמו באנדרואיד, האייקון מופיע רק כשיש חיבור ----
@@ -330,11 +349,12 @@ fun StatusBarScreen(
         FutureUIState.powerMenuOpen.value
     val colors = remember(lightTone) { FutureTheme(isDarkMode = !lightTone) }
     val bgTarget = when {
-        overOverlay -> Color.Transparent
+        // מסך הבית מסתיר את שורת המערכת של אנדרואיד בעצמו, אז שקיפות לא חושפת אותה
+        overOverlay || onHome -> Color.Transparent
         else -> sampledColor ?: if (lightTone) colors.backgroundColor else Color.Black
     }
     // המעבר מונפש כדי שהשורה תחליף צבע יחד עם האפליקציה ולא תהבהב
-    val spec = tween<Color>(com.future.sharednav.theme.FutureMotion.DurationStandard)
+    val spec = tween<Color>(com.future.sharednav.theme.FutureMotion.DurationInstant)
     val background by animateColorAsState(bgTarget, spec, label = "barBg")
     val ink by animateColorAsState(if (lightTone) Color(0xFF111113) else Color.White, spec, label = "barInk")
 
@@ -381,7 +401,13 @@ fun StatusBarScreen(
                     SysIcon(FutureIcons.AirplanemodeActive)
                 } else {
                     if (wifiConnected) SysIcon(FutureIcons.Wifi, if (wifiLevel <= 1) LocalInk.current.copy(alpha = 0.7f) else LocalInk.current)
-                    if (simReady) LeveledIcon(FutureIcons.SignalCellularAlt, if (inService) cellLevel else 0)
+                    if (simReady) {
+                        // כמו באנדרואיד: סוג הרשת ליד הקליטה כשהנתונים הסלולריים בשימוש
+                        if (!wifiConnected && inService && manager.isDataOn && networkType.isNotEmpty()) {
+                            BarText(networkType, FutureTypography.caption, FontWeight.Bold)
+                        }
+                        LeveledIcon(FutureIcons.SignalCellularAlt, if (inService) cellLevel else 0)
+                    }
                 }
                 if (showPercent) {
                     val low = battery <= 15 && !charging
@@ -410,6 +436,7 @@ private object BarMemory {
     @Volatile var cellLevel = 0
     @Volatile var inService = true
     @Volatile var simReady = true
+    @Volatile var networkType = ""
     @Volatile var wifiConnected = false
     @Volatile var wifiLevel = 4
     @Volatile var callActive = false
@@ -565,4 +592,21 @@ private fun BatteryPill(percent: Int, charging: Boolean, saver: Boolean, colors:
             }
         }
     }
+}
+
+/** סוג הרשת כמו שאנדרואיד מציג אותו: 5G / 4G / 3G / 2G, או "" כשאין. */
+private fun networkLabel(type: Int, override: Int): String = when {
+    override == TelephonyDisplayInfo.OVERRIDE_NETWORK_TYPE_NR_NSA ||
+        override == TelephonyDisplayInfo.OVERRIDE_NETWORK_TYPE_NR_ADVANCED ||
+        type == TelephonyManager.NETWORK_TYPE_NR -> "5G"
+    type == TelephonyManager.NETWORK_TYPE_LTE || type == TelephonyManager.NETWORK_TYPE_IWLAN -> "4G"
+    type == TelephonyManager.NETWORK_TYPE_UMTS || type == TelephonyManager.NETWORK_TYPE_HSDPA ||
+        type == TelephonyManager.NETWORK_TYPE_HSUPA || type == TelephonyManager.NETWORK_TYPE_HSPA ||
+        type == TelephonyManager.NETWORK_TYPE_HSPAP || type == TelephonyManager.NETWORK_TYPE_TD_SCDMA ||
+        type == TelephonyManager.NETWORK_TYPE_EVDO_0 || type == TelephonyManager.NETWORK_TYPE_EVDO_A ||
+        type == TelephonyManager.NETWORK_TYPE_EVDO_B || type == TelephonyManager.NETWORK_TYPE_EHRPD -> "3G"
+    type == TelephonyManager.NETWORK_TYPE_GPRS || type == TelephonyManager.NETWORK_TYPE_EDGE ||
+        type == TelephonyManager.NETWORK_TYPE_GSM || type == TelephonyManager.NETWORK_TYPE_CDMA ||
+        type == TelephonyManager.NETWORK_TYPE_1xRTT || type == TelephonyManager.NETWORK_TYPE_IDEN -> "2G"
+    else -> ""
 }

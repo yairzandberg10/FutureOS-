@@ -74,6 +74,33 @@ class MainActivity : ComponentActivity() {
 
     private val viewModel: LauncherViewModel by viewModels()
 
+    /**
+     * שורת המצב של FutureUI שקופה מעל מסך הבית, אז שורת המערכת של אנדרואיד
+     * (שמצוירת מתחתיה) חייבת להיות מוסתרת כאן - אחרת השעה והאייקונים מופיעים
+     * פעמיים. המרווח העליון נשאר כמו קודם (גובה השורה המקורית גם כשהיא מוסתרת),
+     * כדי שתוכן מסך הבית לא יזוז.
+     */
+    private fun hideSystemStatusBar() {
+        val content = findViewById<android.view.View>(android.R.id.content) ?: return
+        window.setDecorFitsSystemWindows(false)
+        content.setOnApplyWindowInsetsListener { v, insets ->
+            val top = insets.getInsetsIgnoringVisibility(android.view.WindowInsets.Type.statusBars()).top
+            val bottom = insets.getInsetsIgnoringVisibility(android.view.WindowInsets.Type.navigationBars()).bottom
+            if (v.paddingTop != top || v.paddingBottom != bottom) v.setPadding(v.paddingLeft, top, v.paddingRight, bottom)
+            insets
+        }
+        window.insetsController?.let {
+            it.systemBarsBehavior = android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            it.hide(android.view.WindowInsets.Type.statusBars())
+        }
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        // המערכת מחזירה את השורה אחרי דיאלוגים/מעבר אפליקציות
+        if (hasFocus) window.insetsController?.hide(android.view.WindowInsets.Type.statusBars())
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
@@ -111,7 +138,8 @@ class MainActivity : ComponentActivity() {
         )
         window.addFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
         window.setBackgroundDrawableResource(android.R.color.transparent)
-        
+        hideSystemStatusBar()
+
         setContent {
             FutureLauncherTheme {
                 // כמו בכל אפליקציה אחרת - RTL כפוי, גם אם שפת המערכת אחרת.

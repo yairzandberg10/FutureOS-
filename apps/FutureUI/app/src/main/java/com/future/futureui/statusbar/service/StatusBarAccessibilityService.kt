@@ -91,6 +91,11 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
     private val toneExecutor by lazy { java.util.concurrent.Executors.newSingleThreadExecutor() }
     private var lastToneShotAt = 0L
     private val toneRunnable = Runnable { sampleBarTone() }
+    // דגימה שנייה אחרי שאנימציית המעבר בין החלונות נגמרה - הראשונה מוקדמת כדי
+    // שהשורה תחליף גוון מהר, והשנייה מתקנת אם היא תפסה פריים של המעבר.
+    private val toneFollowUpRunnable = Runnable { scheduleToneSample(0) }
+    // מסך הבית בחזית - השורה שקופה מעל הטפט
+    private val onHome = mutableStateOf(false)
 
     private fun scheduleToneSample(delayMs: Long) {
         mainHandler.removeCallbacks(toneRunnable)
@@ -106,7 +111,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
     private fun sampleBarTone() {
         val now = SystemClock.uptimeMillis()
         // המערכת מגבילה takeScreenshot (גם צילומי האחרונות והזכוכית משתמשים בו) - מנסים שוב מאוחר יותר.
-        if (now - lastToneShotAt < 500) { scheduleToneSample(550); return }
+        if (now - lastToneShotAt < MIN_SHOT_INTERVAL_MS) { scheduleToneSample(MIN_SHOT_INTERVAL_MS - (now - lastToneShotAt) + 10); return }
         lastToneShotAt = now
         try {
             takeScreenshot(android.view.Display.DEFAULT_DISPLAY, toneExecutor, object : TakeScreenshotCallback {
@@ -131,7 +136,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
 
                 override fun onFailure(errorCode: Int) {
                     // חלון מאובטח או הגבלת קצב - נשארים בגוון הקיים ומנסים שוב בקרוב.
-                    mainHandler.post { scheduleToneSample(900) }
+                    mainHandler.post { scheduleToneSample(400) }
                 }
             })
         } catch (e: Exception) {
@@ -343,7 +348,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
         }
         layoutManager?.registerListener(suppressListener)
         showStatusBar()
-        scheduleToneSample(400)
+        scheduleToneSample(150)
         exemptCallAppsFromBackgroundRestriction()
         if (lockController == null) {
             lockController = com.future.futureui.lockscreen.LockScreenController(
@@ -380,15 +385,18 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
             if (pkg != null && recentAppsManager.isTop(pkg)) recentSnapshots.schedule(pkg, 900, ::isSnapshotTarget)
             maybeReplaceSystemPowerMenu(pkg, event.className?.toString(), event)
             lockController?.onForegroundChanged(pkg, event.className?.toString())
-            // הגוון נדגם אחרי שהחלון החדש סיים להצטייר
-            scheduleToneSample(350)
+            if (pkg != null && pkg != packageName) onHome.value = pkg == HOME_PACKAGE
+            // הגוון נדגם מיד כשהחלון החדש התחיל להצטייר, ושוב אחרי שהמעבר נגמר
+            scheduleToneSample(120)
+            mainHandler.removeCallbacks(toneFollowUpRunnable)
+            mainHandler.postDelayed(toneFollowUpRunnable, 520)
         }
     }
     override fun onInterrupt() {}
 
     override fun onKeyEvent(event: KeyEvent): Boolean {
         val keyCode = event.keyCode
-        if (event.action == KeyEvent.ACTION_UP) scheduleToneSample(450)
+        if (event.action == KeyEvent.ACTION_UP) scheduleToneSample(160)
         // כשהמשתמש מפסיק ללחוץ - מצלמים שוב, כדי שכרטיס האחרונות יראה איפה עזבנו
         if (event.action == KeyEvent.ACTION_UP && !recentsVisible) {
             val fg = FutureUIState.foregroundPackage
@@ -552,6 +560,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
                             accentColor = recentsAccentColor.value,
                             lightTone = barLight.value,
                             sampledColor = barColor.value?.let { androidx.compose.ui.graphics.Color(it) },
+                            onHome = onHome.value,
                         )
                     }
                 }
@@ -923,6 +932,7 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
 
     override fun onDestroy() {
         mainHandler.removeCallbacks(toneRunnable)
+        mainHandler.removeCallbacks(toneFollowUpRunnable)
         if (com.future.futureui.utils.FrostedBackdrop.service === this) com.future.futureui.utils.FrostedBackdrop.service = null
         try {
             removeVolumeOverlayNow()
@@ -962,6 +972,8 @@ class StatusBarAccessibilityService : AccessibilityService(), LifecycleOwner, Sa
         private const val DIALER_PACKAGE = "com.future.dialer"
         private const val HOME_PACKAGE = "com.future.futurelauncher"
         private const val DOUBLE_CLICK_WINDOW_MS = 300L
+        /** Android 12 מתיר צילום מסך אחד לשירות נגישות כל 333ms. */
+        private const val MIN_SHOT_INTERVAL_MS = 340L
         const val ACTION_SHOW_POWER_MENU = "com.future.futureui.ACTION_SHOW_POWER_MENU"
         const val ACTION_LOCK_NOW = "com.future.futureui.ACTION_LOCK_NOW"
         private val POWER_MENU_CLASS_HINTS = listOf("globalactions", "ActionsDialog", "PowerMenu", "ShutdownDialog")
