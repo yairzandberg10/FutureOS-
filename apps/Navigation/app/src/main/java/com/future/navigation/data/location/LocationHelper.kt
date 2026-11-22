@@ -7,6 +7,8 @@ import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Bundle
 import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 
@@ -25,11 +27,68 @@ object LocationHelper {
         if (!hasPermission(context)) return null
         return try {
             val manager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-            bestLastKnown(manager, manager.getProviders(true))?.let { it.latitude to it.longitude }
+            val system = bestLastKnown(manager, manager.getProviders(true))
+            // מיקום חי שהאפליקציה עצמה קיבלה (מסך הבית/ניווט) טרי יותר מה-lastKnown של המערכת
+            val best = listOfNotNull(system, latest?.takeIf { ageMs(it) <= MAX_LAST_KNOWN_AGE_MS })
+                .minByOrNull { ageMs(it) }
+            best?.let { it.latitude to it.longitude }
         } catch (e: Exception) {
             null
         }
     }
+
+    /** המיקום האחרון שהאפליקציה קיבלה בפועל (זרם חי או בקשה טרייה). */
+    @Volatile
+    private var latest: Location? = null
+
+    private fun remember(location: Location) {
+        val prev = latest
+        if (prev == null || location.elapsedRealtimeNanos >= prev.elapsedRealtimeNanos) latest = location
+    }
+
+    /**
+     * מיקום אמיתי עכשיו - לנקודת המוצא של מסלול. ה-lastKnown של המערכת יכול להיות מלפני
+     * חצי שעה (ממקום אחר לגמרי) כי אף אחד לא ביקש מיקום מאז, ולכן מבקשים קיבוע טרי:
+     * GPS עד [gpsTimeoutMs], ואם אין לוויין - מיקום רשת, ורק אם אין כלום - lastKnown.
+     * מיקום חי טרי (עד 20 שנ') שכבר יש - מוחזר מיד.
+     */
+    suspend fun currentLatLon(context: Context, gpsTimeoutMs: Long = 8_000L): Pair<Double, Double>? {
+        if (!hasPermission(context)) return null
+        latest?.takeIf { ageMs(it) <= LIVE_FRESH_MS && it.provider == LocationManager.GPS_PROVIDER }
+            ?.let { return it.latitude to it.longitude }
+        val manager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        val enabled = listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)
+            .filter { runCatching { manager.isProviderEnabled(it) }.getOrDefault(false) }
+        var network: Location? = null
+        val gps = kotlinx.coroutines.coroutineScope {
+            val net = if (LocationManager.NETWORK_PROVIDER in enabled) {
+                kotlinx.coroutines.async { requestOne(context, manager, LocationManager.NETWORK_PROVIDER, gpsTimeoutMs) }
+            } else null
+            val g = if (LocationManager.GPS_PROVIDER in enabled) {
+                requestOne(context, manager, LocationManager.GPS_PROVIDER, gpsTimeoutMs)
+            } else null
+            network = net?.await()
+            g
+        }
+        val fresh = gps ?: network
+        fresh?.let { remember(it); return it.latitude to it.longitude }
+        return lastKnownLatLon(context)
+    }
+
+    private suspend fun requestOne(context: Context, manager: LocationManager, provider: String, timeoutMs: Long): Location? =
+        withTimeoutOrNull(timeoutMs) {
+            suspendCancellableCoroutine<Location?> { cont ->
+                val signal = android.os.CancellationSignal()
+                cont.invokeOnCancellation { runCatching { signal.cancel() } }
+                try {
+                    manager.getCurrentLocation(provider, signal, context.mainExecutor) { loc ->
+                        if (cont.isActive) cont.resumeWith(Result.success(loc))
+                    }
+                } catch (e: Exception) {
+                    if (cont.isActive) cont.resumeWith(Result.success(null))
+                }
+            }
+        }
 
     /** זרם מיקום חי, לשימוש במסך הניווט. דורש הרשאה שכבר אושרה (hasPermission). */
     fun observeLocation(context: Context, minIntervalMs: Long = 2000L, minDistanceMeters: Float = 5f): Flow<Location> = callbackFlow {
@@ -63,6 +122,8 @@ object LocationHelper {
                 if (location.provider == LocationManager.GPS_PROVIDER) {
                     lastGpsFixAt = now
                     lastGps = location
+                } else if (lastSent != null && ageMs(lastSent!!) > COARSE_IGNORE_MS) {
+                    // המיקום הקודם ישן (lastKnown ממקום אחר) - מיקום רשת טרי עדיף עליו
                 } else if (now - lastGpsFixAt <= gpsStaleMs ||
                     addsNothing(location, lastSent) ||
                     impossibleJump(location, lastGps)
@@ -70,6 +131,7 @@ object LocationHelper {
                     return
                 }
                 lastSent = location
+                remember(location)
                 trySend(location)
             }
         }
@@ -142,7 +204,8 @@ object LocationHelper {
     private fun ageMs(loc: Location): Long =
         (android.os.SystemClock.elapsedRealtimeNanos() - loc.elapsedRealtimeNanos) / 1_000_000L
 
-    private const val COARSE_IGNORE_MS = 30 * 60 * 1000L
+    private const val COARSE_IGNORE_MS = 2 * 60 * 1000L
+    private const val LIVE_FRESH_MS = 20_000L
     private const val GPS_STALE_MS = 10_000L
     private const val MAX_LAST_KNOWN_AGE_MS = 30 * 60 * 1000L
 }

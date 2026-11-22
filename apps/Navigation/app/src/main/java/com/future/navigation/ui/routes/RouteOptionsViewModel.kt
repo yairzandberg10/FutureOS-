@@ -173,17 +173,15 @@ class RouteOptionsViewModel(
         _error.value = null
         _alternatives.value = emptyList()
         _selectedIndex.value = 0
-        // המיקום הכי מדויק שיש (ר' LocationHelper.bestLastKnown) - נקודת המוצא של המסלול
-        val origin = from ?: LocationHelper.lastKnownLatLon(appContext)?.let { LatLng(it.first, it.second) }
-        if (origin == null) {
-            _loading.value = false
-            _error.value = tr("לא ניתן לאתר את המיקום הנוכחי")
-            return
-        }
-
         _loading.value = true
         searchJob = viewModelScope.launch {
             try {
+                // המיקום האמיתי עכשיו (קיבוע טרי, ר' LocationHelper.currentLatLon) - נקודת המוצא של המסלול
+                val origin = from ?: LocationHelper.currentLatLon(appContext)?.let { LatLng(it.first, it.second) }
+                if (origin == null) {
+                    _error.value = tr("לא ניתן לאתר את המיקום הנוכחי")
+                    return@launch
+                }
                 when (mode) {
                     TravelMode.DRIVE -> when (val lookup = routingRepository.getDrivingRoute(origin, destination.location, departAtIso())) {
                         is RouteLookup.Found -> {

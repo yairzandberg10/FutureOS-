@@ -188,6 +188,14 @@ class HomeViewModel(
     fun refreshLocation() {
         _currentLocation.value = LocationHelper.lastKnownLatLon(appContext)?.let { LatLng(it.first, it.second) }
         refreshServerStops()
+        // ה-lastKnown יכול להיות ממקום אחר - מבקשים מיקום אמיתי ומעדכנים כשהוא מגיע
+        viewModelScope.launch {
+            val fresh = LocationHelper.currentLatLon(appContext)?.let { LatLng(it.first, it.second) } ?: return@launch
+            if (fresh != _currentLocation.value) {
+                _currentLocation.value = fresh
+                refreshServerStops()
+            }
+        }
     }
 
     fun startLiveLocation() {

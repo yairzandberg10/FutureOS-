@@ -87,7 +87,7 @@ fun LineSearchScreen(
 
     LaunchedEffect(Unit) {
         runCatching { fieldFocus.requestFocus() }
-        val location = LocationHelper.lastKnownLatLon(context)?.let { LatLng(it.first, it.second) }
+        val location = LocationHelper.currentLatLon(context)?.let { LatLng(it.first, it.second) }
         here = location
         nearby = location?.let { LineTimes.nearby(it) }
         loading = false
