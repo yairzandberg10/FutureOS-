@@ -321,4 +321,81 @@ class FileRepository {
         // בייטים שלמים בלי ".0" (14 B, לא 14.0 B).
         return if (unitIndex == 0) "%d B".format(bytes) else "%.1f %s".format(value, units[unitIndex])
     }
+
+    /**
+     * כל הקבצים של המשתמש (בלי תיקיות), לקטגוריות ולקבצים האחרונים במסך הבית.
+     * מדלגים על תיקיות מוסתרות, תיקיות מערכת וקישורים, כמו ברשימת התיקייה.
+     * כבד - רק מחוץ ל-UI thread.
+     */
+    fun scanUserFiles(developer: Boolean = false): List<ScannedFile> {
+        val root = rootDirectory()
+        val out = ArrayList<ScannedFile>()
+        fun walk(dir: File, depth: Int) {
+            if (depth > 12) return
+            val children = dir.listFiles() ?: return
+            for (f in children) {
+                val name = f.name
+                if (name.startsWith(".")) continue
+                if (isLink(f)) continue
+                if (f.isDirectory) {
+                    if (depth == 0 && name in ROOT_HIDDEN_NAMES) continue
+                    if (!developer && isTechnical(f)) continue
+                    walk(f, depth + 1)
+                } else {
+                    if (!developer && isTechnical(f)) continue
+                    out += ScannedFile(FileEntry(f, false, f.length()), f.lastModified())
+                }
+            }
+        }
+        runCatching { walk(root, 0) }
+        return out
+    }
+
+    /** הקבצים של קטגוריה במסך הבית, ממוינים לפי [sort]. */
+    fun categoryEntries(scanned: List<ScannedFile>, category: HomeCategory, sort: SortOrder): List<FileEntry> {
+        val root = rootDirectory().absolutePath
+        val matching = scanned.filter { category.matches(it.entry.file, root) }
+        val collator = java.text.Collator.getInstance(java.util.Locale("he")).apply { strength = java.text.Collator.SECONDARY }
+        val sorted = when (sort) {
+            SortOrder.NAME -> matching.sortedWith { a, b -> collator.compare(a.entry.file.name, b.entry.file.name) }
+            SortOrder.DATE -> matching.sortedByDescending { it.modified }
+            SortOrder.SIZE -> matching.sortedByDescending { it.entry.sizeBytes }
+            SortOrder.TYPE -> matching.sortedWith(compareBy<ScannedFile> { it.entry.file.extension.lowercase() }.thenByDescending { it.modified })
+        }
+        return sorted.map { it.entry }
+    }
+
+    /** הקבצים שהשתנו לאחרונה - לקטע "אחרונים" במסך הבית. */
+    fun recentFiles(scanned: List<ScannedFile>, limit: Int = 4): List<ScannedFile> =
+        scanned.sortedByDescending { it.modified }.take(limit)
+
+    /** נפח האחסון הפנימי: תפוס ובסך הכול. */
+    fun storageUsage(): Pair<Long, Long>? = runCatching {
+        val stat = android.os.StatFs(rootDirectory().absolutePath)
+        (stat.totalBytes - stat.availableBytes) to stat.totalBytes
+    }.getOrNull()
+}
+
+/** קובץ מהסריקה, עם זמן השינוי שנקרא פעם אחת (למיון "אחרונים"). */
+class ScannedFile(val entry: FileEntry, val modified: Long)
+
+private val DOCUMENT_EXTENSIONS = setOf("pdf", "txt", "md", "doc", "docx", "odt", "rtf", "xls", "xlsx", "ods", "csv", "ppt", "pptx", "odp", "epub")
+
+/** הקטגוריות במסך הבית. */
+enum class HomeCategory(val label: String) {
+    IMAGES(tr("תמונות")),
+    VIDEOS(tr("סרטונים")),
+    AUDIO(tr("שמע")),
+    DOCUMENTS(tr("מסמכים")),
+    DOWNLOADS(tr("הורדות")),
+    SCREENSHOTS(tr("צילומי מסך"));
+
+    fun matches(file: File, rootPath: String): Boolean = when (this) {
+        IMAGES -> categorize(file) == FileCategory.IMAGE
+        VIDEOS -> categorize(file) == FileCategory.VIDEO
+        AUDIO -> categorize(file) == FileCategory.AUDIO
+        DOCUMENTS -> file.extension.lowercase() in DOCUMENT_EXTENSIONS
+        DOWNLOADS -> file.absolutePath.startsWith("$rootPath/Download/") || file.absolutePath.startsWith("$rootPath/Downloads/")
+        SCREENSHOTS -> file.parentFile?.name.equals("Screenshots", ignoreCase = true) && categorize(file) == FileCategory.IMAGE
+    }
 }

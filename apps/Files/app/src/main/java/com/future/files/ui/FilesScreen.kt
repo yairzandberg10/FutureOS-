@@ -41,8 +41,6 @@ import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
-import com.future.sharednav.components.FutureSectionHeader
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -127,6 +125,10 @@ fun FilesScreen(
     lastSelectedPath: String? = null,
     /** FL-N03: הפתיחה הגיעה מבקשת בחירת קובץ מאפליקציה אחרת - מסומן בשורה העליונה. */
     pickMode: Boolean = false,
+    /** כותרת במקום שם התיקייה - לרשימת קטגוריה ממסך הבית. */
+    titleOverride: String? = null,
+    /** רשימת קטגוריה (תמונות, מסמכים...) ולא תיקייה: אין "תיקייה חדשה" ו"הדבק כאן". */
+    categoryMode: Boolean = false,
 ) {
     val repository = remember { FileRepository() }
     // בזמן העתקה או מחיקה נחסמים כל המקשים, חוץ מ"ביטול" (ר' ההודעה בשכבת הפעולה).
@@ -166,20 +168,9 @@ fun FilesScreen(
     // מצב הגלילה לכל תיקייה בנפרד - כדי לגלול לשורה לפני בקשת הפוקוס.
     val listState = remember(currentDir) { androidx.compose.foundation.lazy.LazyListState() }
     val gridState = remember(currentDir) { androidx.compose.foundation.lazy.grid.LazyGridState() }
-    // One UI: לפני הפריטים יש פריטי כותרת שנגללים עם הרשימה - הכותרת הגדולה, ומתחתיה
-    // בשורש כרטיס האחסון וכותרת הקטע, ובתיקייה פנימית שורת הנתיב. הגלילה לפריט
-    // הממוקד מוסיפה את מספרם לאינדקס של הפריט.
-    val headerCount = if (isRoot) 3 else 2
-    // הכותרת הקטנה בסרגל העליון מופיעה רק כשהכותרת הגדולה נגללה החוצה.
-    val titleCollapsed by remember(currentDir, gridView) {
-        derivedStateOf {
-            if (gridView) gridState.firstVisibleItemIndex > 0 || gridState.firstVisibleItemScrollOffset > 120
-            else listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 120
-        }
-    }
     LaunchedEffect(currentDir, entries) {
         // רשימה ישנה מהתיקייה הקודמת (הטעינה אסינכרונית) - מחכים לרשימה של התיקייה הזו.
-        if (entries.isEmpty() || entries.first().file.parentFile?.absolutePath != currentDir.absolutePath) return@LaunchedEffect
+        if (entries.isEmpty() || (!categoryMode && entries.first().file.parentFile?.absolutePath != currentDir.absolutePath)) return@LaunchedEffect
         val wanted = pendingFocusPath ?: if (initialFocusDone) focusedEntry?.file?.absolutePath else lastSelectedPath
         val targetIndex = entries.indexOfFirst { it.file.absolutePath == wanted }.coerceAtLeast(0)
         val targetPath = entries[targetIndex].file.absolutePath
@@ -189,9 +180,7 @@ fun FilesScreen(
         // אחרי הצלחה בודקים שוב שהפוקוס לא נלקח (סגירת דיאלוג מחזירה פוקוס לכפתור שפתח אותו).
         var settledChecks = 0
         repeat(20) {
-            // הפריט הראשון - גוללים לראש הרשימה, כדי שהכותרת הגדולה תיראה מעליו.
-            val scrollIndex = if (targetIndex == 0) 0 else targetIndex + headerCount
-            runCatching { if (gridView) gridState.scrollToItem(scrollIndex) else listState.scrollToItem(scrollIndex) }
+            runCatching { if (gridView) gridState.scrollToItem(targetIndex) else listState.scrollToItem(targetIndex) }
             val requested = runCatching { rowFocusRequesters.getOrPut(targetPath) { FocusRequester() }.requestFocus() }.isSuccess
             repeat(3) { androidx.compose.runtime.withFrameNanos { } }
             if (requested && focusedEntry?.file?.absolutePath == targetPath) {
@@ -243,35 +232,6 @@ fun FilesScreen(
 
     fun displayNameOf(entry: FileEntry): String = entry.file.displayName(isRoot && entry.isDirectory)
 
-    val screenTitle = if (isRoot) tr("קבצים") else currentDir.displayName(currentDirIsTopLevelFolder)
-    // שורת המשנה מתחת לכותרת הגדולה: מספר הפריטים וסדר המיון (ובחירה לאפליקציה אחרת).
-    val heroSubtitle = buildString {
-        if (pickMode) append(tr("בחירת קובץ")).append(" · ")
-        append(if (entries.size == 1) tr("פריט אחד") else tr("{0} פריטים", entries.size))
-        append(" · ").append(tr("ממוין לפי {0}", sortOrder.label))
-    }
-    // הנתיב מהשורש: "אחסון פנימי › DCIM › Camera" (הראשונה בשם המתורגם של תיקיית השורש).
-    val pathSegments = remember(currentDir) {
-        val root = repository.rootDirectory()
-        val parts = mutableListOf<String>()
-        var dir: File? = currentDir
-        while (dir != null && dir.absolutePath != root.absolutePath) {
-            parts.add(0, dir.displayName(dir.parentFile?.absolutePath == root.absolutePath))
-            dir = dir.parentFile
-        }
-        listOf(tr("אחסון פנימי")) + parts
-    }
-    // נפח האחסון (בשורש בלבד), נקרא מחוץ ל-UI thread.
-    val storage by produceState<StorageInfo?>(null, isRoot, hasAccess) {
-        if (!isRoot) return@produceState
-        value = withContext(Dispatchers.IO) {
-            runCatching {
-                val stat = android.os.StatFs(repository.rootDirectory().absolutePath)
-                StorageInfo(totalBytes = stat.totalBytes, freeBytes = stat.availableBytes)
-            }.getOrNull()
-        }
-    }
-
     // סמן הפוקוס המשותף (Elastic Focus): המילוי של השורה הממוקדת גולש לשורה הבאה
     // במקום להיעלם ולהופיע - כמו בשאר הרשימות במערכת. המסך הזה לא בנוי על
     // ScreenScaffold, ולכן מארח את הסמן בעצמו.
@@ -297,9 +257,11 @@ fun FilesScreen(
                     // הכותרת, ובסופה שלושה כפתורי סרגל עליון: מיון, תצוגה (רשימה/רשת)
                     // ותיקייה חדשה. חזרה במקש BACK, ושאר הפעולות במקש Options.
                     FilesTopBar(
-                        title = screenTitle,
-                        showTitle = titleCollapsed && hasAccess && entries.isNotEmpty(),
+                        title = titleOverride ?: if (isRoot) tr("אחסון פנימי") else currentDir.displayName(currentDirIsTopLevelFolder),
+                        canCreateFolder = !categoryMode,
                         theme = theme,
+                        sortOrder = sortOrder,
+                        pickMode = pickMode,
                         gridView = gridView,
                         enabled = hasAccess,
                         onSort = onCycleSort,
@@ -336,9 +298,8 @@ fun FilesScreen(
                 }
 
                 if (!hasAccess) {
-                    FilesHero(screenTitle, null, theme)
                     Column(
-                        modifier = Modifier.fillMaxWidth().weight(1f).padding(horizontal = 32.dp),
+                        modifier = Modifier.fillMaxSize().padding(32.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
@@ -347,34 +308,20 @@ fun FilesScreen(
                         FutureButton(tr("אשר הרשאה"), theme, onRequestAccess)
                     }
                 } else if (entries.isEmpty()) {
-                    FilesHero(screenTitle, heroSubtitle, theme)
-                    if (!isRoot) PathBar(pathSegments, theme, FutureDimens.spacingXl)
-                    Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
-                        EmptyState(
-                            icon = FutureIcons.Folder,
-                            title = if (loadFailed) "לא ניתן לקרוא את התיקייה" else tr("התיקייה ריקה"),
-                            textColor = theme.textColor,
-                            subtitle = if (loadFailed) "לחזרה לתיקייה הקודמת לחץ BACK" else null,
-                        )
-                    }
+                    EmptyState(
+                        icon = FutureIcons.Folder,
+                        title = if (loadFailed) "לא ניתן לקרוא את התיקייה" else tr("התיקייה ריקה"),
+                        textColor = theme.textColor,
+                        subtitle = if (loadFailed) "לחזרה לתיקייה הקודמת לחץ BACK" else null,
+                    )
                 } else if (gridView) {
                     androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
                         columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(3),
                         state = gridState,
-                        contentPadding = PaddingValues(start = FutureDimens.spacingLg, end = FutureDimens.spacingLg, bottom = FutureDimens.spacingLg),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        // פריטי הכותרת תופסים שורה שלמה. מספרם = headerCount.
-                        val fullLine: (androidx.compose.foundation.lazy.grid.LazyGridItemSpanScope.() -> androidx.compose.foundation.lazy.grid.GridItemSpan) =
-                            { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }
-                        item(key = "hero", span = fullLine) { FilesHero(screenTitle, heroSubtitle, theme) }
-                        if (isRoot) {
-                            item(key = "storage", span = fullLine) { StorageCard(storage, repository, theme, horizontalInset = 0.dp) }
-                            item(key = "section", span = fullLine) { FutureSectionHeader(tr("תיקיות"), theme, inset = false, modifier = Modifier.padding(horizontal = FutureDimens.spacingSm)) }
-                        } else {
-                            item(key = "path", span = fullLine) { PathBar(pathSegments, theme, FutureDimens.spacingSm) }
-                        }
                         items(entries.size, key = { entries[it].file.absolutePath }) { index ->
                             val entry = entries[index]
                             FileTile(
@@ -395,20 +342,10 @@ fun FilesScreen(
                 } else {
                     LazyColumn(
                         state = listState,
-                        contentPadding = PaddingValues(bottom = FutureDimens.spacingLg),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        // פריטי הכותרת - מספרם = headerCount.
-                        item(key = "hero") { FilesHero(screenTitle, heroSubtitle, theme) }
-                        if (isRoot) {
-                            item(key = "storage") { StorageCard(storage, repository, theme, horizontalInset = FutureDimens.spacingLg) }
-                            item(key = "section") { FutureSectionHeader(tr("תיקיות"), theme) }
-                        } else {
-                            item(key = "path") { PathBar(pathSegments, theme, FutureDimens.spacingXl) }
-                        }
-                        // הפריטים בכרטיס אחד (One UI): כל פריט הוא פרוסה של הכרטיס - הראשון
-                        // עם הפינות העליונות, האחרון עם התחתונות, וקו שיער ביניהם.
-                        itemsIndexed(entries, key = { _, it -> it.file.absolutePath }) { index, entry ->
-                          CardSlice(theme, first = index == 0, last = index == entries.lastIndex) {
+                        items(entries, key = { it.file.absolutePath }) { entry ->
                             FileRow(
                                 entry,
                                 displayNameOf(entry),
@@ -424,7 +361,6 @@ fun FilesScreen(
                                 onFocusChanged = { isFocused -> if (isFocused) focusedEntry = entry else if (focusedEntry == entry) focusedEntry = null },
                                 focusRequester = rowFocusRequesters.getOrPut(entry.file.absolutePath) { FocusRequester() },
                             )
-                          }
                         }
                     }
                 }
@@ -447,17 +383,17 @@ fun FilesScreen(
                     onDelete = { menuEntry = null; deleteEntryState = entry },
                     onSelect = { menuEntry = null; toggleSelection(entry) },
                     folderRows = {
-                        FolderMenuRows(theme, hasClipboard, gridView, onDone = { menuEntry = null }, onNewFolder = { showNewFolder = true }, onPaste = onPaste, onToggleGridView = onToggleGridView)
+                        FolderMenuRows(theme, hasClipboard && !categoryMode, gridView, folderOps = !categoryMode, onDone = { menuEntry = null }, onNewFolder = { showNewFolder = true }, onPaste = onPaste, onToggleGridView = onToggleGridView)
                     },
                 )
             }
 
             if (generalMenu) {
-                FutureOptionsMenu(theme = theme, onDismissRequest = { generalMenu = false }, header = if (isRoot) tr("קבצים") else currentDir.name) {
+                FutureOptionsMenu(theme = theme, onDismissRequest = { generalMenu = false }, header = titleOverride ?: if (isRoot) tr("אחסון פנימי") else currentDir.name) {
                     if (entries.isNotEmpty()) {
                         FutureMenuRow(tr("בחר הכול"), FutureIcons.Checklist, theme, { generalMenu = false; selectAll() })
                     }
-                    FolderMenuRows(theme, hasClipboard, gridView, onDone = { generalMenu = false }, onNewFolder = { showNewFolder = true }, onPaste = onPaste, onToggleGridView = onToggleGridView)
+                    FolderMenuRows(theme, hasClipboard && !categoryMode, gridView, folderOps = !categoryMode, onDone = { generalMenu = false }, onNewFolder = { showNewFolder = true }, onPaste = onPaste, onToggleGridView = onToggleGridView)
                 }
             }
 
@@ -565,196 +501,48 @@ fun FilesScreen(
     }
 }
 
-/** נפח האחסון הפנימי - לכרטיס האחסון שבשורש. */
-private class StorageInfo(val totalBytes: Long, val freeBytes: Long) {
-    val usedBytes: Long get() = (totalBytes - freeBytes).coerceAtLeast(0L)
-    val fraction: Float get() = if (totalBytes > 0) usedBytes.toFloat() / totalBytes else 0f
-}
-
 /**
- * הסרגל העליון בסגנון One UI: שלושת כפתורי הסרגל (מיון, תצוגה, תיקייה חדשה)
- * תמיד במקום, והכותרת הקטנה מופיעה לידם רק כשהכותרת הגדולה נגללה החוצה.
+ * השורה העליונה של הקבצים: הכותרת (ScreenTopBar) ובסופה שלושה כפתורי סרגל
+ * עליון של המערכת (TopBarIconButton, 36dp): מיון - מחליף שם/תאריך/גודל/סוג,
+ * והסדר הנוכחי כתוב מתחת לכותרת; תצוגה - רשימה או רשת; תיקייה חדשה.
  */
 @Composable
 private fun FilesTopBar(
     title: String,
-    showTitle: Boolean,
     theme: FutureTheme,
+    sortOrder: com.future.files.data.SortOrder,
+    pickMode: Boolean,
     gridView: Boolean,
     enabled: Boolean,
+    canCreateFolder: Boolean = true,
     onSort: () -> Unit,
     onToggleView: () -> Unit,
     onNewFolder: () -> Unit,
 ) {
     val type = com.future.sharednav.theme.rememberFutureType()
-    val titleAlpha by animateFloatAsState(if (showTitle) 1f else 0f, label = "collapsedTitle")
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = FutureDimens.rowHeightTopBarButton + FutureDimens.spacingLg)
-            .padding(horizontal = FutureDimens.spacingLg, vertical = FutureDimens.spacingSm),
+            .padding(horizontal = FutureDimens.spacingLg, vertical = FutureDimens.spacingMd),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm),
     ) {
-        Text(
-            title,
-            color = theme.textColor,
-            fontSize = type.screenTitle,
-            fontWeight = FutureTypography.weightBold,
-            maxLines = 1,
-            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f).graphicsLayer { alpha = titleAlpha },
-        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                title,
+                color = theme.textColor,
+                fontSize = type.screenTitle,
+                fontWeight = FutureTypography.weightBold,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            )
+            if (enabled) Text((if (pickMode) "בחירת קובץ · " else "") + "ממוין לפי ${sortOrder.label}", color = theme.mutedTextColor, fontSize = type.summary, maxLines = 1)
+        }
         if (enabled) {
             FocusableIconButton(FutureIcons.AutoMirrored.Sort, "מיון", theme, onSort)
             FocusableIconButton(if (gridView) FutureIcons.AutoMirrored.ViewList else FutureIcons.GridView, if (gridView) tr("תצוגת רשימה") else tr("תצוגת רשת"), theme, onToggleView)
-            FocusableIconButton(FutureIcons.CreateNewFolder, tr("תיקייה חדשה"), theme, onNewFolder)
+            if (canCreateFolder) FocusableIconButton(FutureIcons.CreateNewFolder, tr("תיקייה חדשה"), theme, onNewFolder)
         }
-    }
-}
-
-/**
- * הכותרת הגדולה של One UI: שם התיקייה בגודל display במרכז אזור פתוח, ומתחתיו
- * שורת משנה מעומעמת. נגללת עם הרשימה, והסרגל העליון מקבל אז את הכותרת הקטנה.
- */
-@Composable
-private fun FilesHero(title: String, subtitle: String?, theme: FutureTheme) {
-    val type = com.future.sharednav.theme.rememberFutureType()
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(HeroHeight)
-            .padding(horizontal = FutureDimens.spacingXl),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Text(
-            title,
-            color = theme.textColor,
-            fontSize = type.display,
-            fontWeight = FutureTypography.weightBold,
-            maxLines = 1,
-            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-        )
-        if (subtitle != null) {
-            Spacer(modifier = Modifier.height(FutureDimens.spacingXs))
-            Text(
-                subtitle,
-                color = theme.mutedTextColor,
-                fontSize = type.summary,
-                maxLines = 1,
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-            )
-        }
-    }
-}
-
-/** 112dp - גובה אזור הכותרת הגדולה (כרבע מגובה המסך). */
-private val HeroHeight = 112.dp
-
-/**
- * שורת הנתיב (breadcrumb) של One UI: "אחסון פנימי › DCIM › Camera". התיקייה
- * הנוכחית בצבע הטקסט ובמשקל בינוני, הקודמות מעומעמות. כל שם מבודד בכיוון
- * שלו (FSI…PDI), כדי ששמות לטיניים לא יערבבו את סדר הנתיב.
- */
-@Composable
-private fun PathBar(segments: List<String>, theme: FutureTheme, horizontalInset: androidx.compose.ui.unit.Dp) {
-    val type = com.future.sharednav.theme.rememberFutureType()
-    val text = androidx.compose.ui.text.buildAnnotatedString {
-        segments.forEachIndexed { i, name ->
-            if (i > 0) {
-                pushStyle(androidx.compose.ui.text.SpanStyle(color = theme.mutedTextColor))
-                append("  ›  ")
-                pop()
-            }
-            val current = i == segments.lastIndex
-            pushStyle(
-                androidx.compose.ui.text.SpanStyle(
-                    color = if (current) theme.textColor else theme.mutedTextColor,
-                    fontWeight = if (current) FutureTypography.weightMedium else null,
-                )
-            )
-            append("⁨$name⁩")
-            pop()
-        }
-    }
-    Text(
-        text,
-        fontSize = type.summary,
-        maxLines = 1,
-        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = horizontalInset, end = horizontalInset, bottom = FutureDimens.spacingMd),
-    )
-}
-
-/**
- * כרטיס האחסון שבשורש (One UI "אחסון פנימי"): כמה תפוס מתוך הנפח, ופס
- * התקדמות. לא ממוקד - מידע בלבד.
- */
-@Composable
-private fun StorageCard(storage: StorageInfo?, repository: FileRepository, theme: FutureTheme, horizontalInset: androidx.compose.ui.unit.Dp) {
-    val type = com.future.sharednav.theme.rememberFutureType()
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = horizontalInset)
-            .clip(FutureShapes.xl)
-            .background(theme.surfaceColor)
-            .padding(horizontal = FutureDimens.spacingLg, vertical = FutureDimens.spacingMd),
-        verticalArrangement = Arrangement.spacedBy(FutureDimens.spacingSm),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(FutureDimens.spacingMd)) {
-            Icon(FutureIcons.Folder, contentDescription = null, tint = theme.readableAccentColor, modifier = Modifier.size(FutureDimens.iconSettingRow))
-            Text(tr("אחסון פנימי"), color = theme.textColor, fontSize = type.title, fontWeight = FutureTypography.weightMedium, modifier = Modifier.weight(1f))
-            if (storage != null) {
-                Text("${(storage.fraction * 100).toInt()}%", color = theme.mutedTextColor, fontSize = type.summary)
-            }
-        }
-        if (storage != null) {
-            com.future.sharednav.components.FutureProgressBar(progress = storage.fraction, theme = theme)
-            Text(
-                tr("{0} בשימוש מתוך {1}", "⁦${repository.formatSize(storage.usedBytes)}⁩", "⁦${repository.formatSize(storage.totalBytes)}⁩"),
-                color = theme.mutedTextColor,
-                fontSize = type.summary,
-            )
-        }
-    }
-}
-
-/**
- * פרוסה של כרטיס One UI בתוך LazyColumn: FutureCard הוא Column לא עצלה, ולכן
- * כל פריט מצייר את חלקו בכרטיס - הראשון עם הפינות העליונות, האחרון עם
- * התחתונות, וקו שיער מתחת לכל פריט חוץ מהאחרון. השורה בפנים מציירת את
- * הפוקוס שלה בעצמה (בלי הסמן המשותף, שהמילוי שלו היה מוסתר מאחורי הכרטיס).
- */
-@Composable
-private fun CardSlice(theme: FutureTheme, first: Boolean, last: Boolean, content: @Composable () -> Unit) {
-    val r = FutureShapes.radiusXl
-    val shape = RoundedCornerShape(
-        topStart = if (first) r else 0.dp,
-        topEnd = if (first) r else 0.dp,
-        bottomStart = if (last) r else 0.dp,
-        bottomEnd = if (last) r else 0.dp,
-    )
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = FutureDimens.spacingLg)
-            .clip(shape)
-            .background(theme.surfaceColor)
-            .padding(
-                start = FutureDimens.spacingXs,
-                end = FutureDimens.spacingXs,
-                top = if (first) FutureDimens.spacingXs else 0.dp,
-                bottom = if (last) FutureDimens.spacingXs else 0.dp,
-            ),
-    ) {
-        CompositionLocalProvider(com.future.sharednav.focus.LocalFocusGlide provides null) { content() }
-        if (!last) com.future.sharednav.components.FutureDivider(theme, modifier = Modifier.padding(horizontal = FutureDimens.spacingMd), inset = false)
     }
 }
 
@@ -790,8 +578,6 @@ private fun FileRow(
         onClick = onClick,
         accentColor = theme.accentColor,
         contentPadding = 0.dp,
-        // שורה בתוך כרטיס - כמו שורת הגדרה, בלי הגדלה בפוקוס (היא הייתה נחתכת בשפת הכרטיס).
-        scaleOnFocus = false,
         focusRequester = focusRequester,
         modifier = Modifier
             .fillMaxWidth()
@@ -827,10 +613,10 @@ private fun FileRow(
                     isFocused = focused,
                     style = androidx.compose.ui.text.TextStyle(fontSize = FutureTypography.title, fontWeight = FutureTypography.weightMedium),
                 )
-                // One UI: תאריך השינוי, ולקובץ גם הגודל. lastModified נקרא פעם אחת לפריט.
+                // תאריך השינוי, ולקובץ גם הגודל. lastModified נקרא פעם אחת לפריט.
                 val subtitle = remember(entry) {
-                    val date = "⁦" + android.text.format.DateFormat.format("dd/MM/yy HH:mm", entry.file.lastModified()) + "⁩"
-                    if (entry.isDirectory) date else "$date  ·  ⁦${repository.formatSize(entry.sizeBytes)}⁩"
+                    val date = ltr(android.text.format.DateFormat.format("dd/MM/yy HH:mm", entry.file.lastModified()))
+                    if (entry.isDirectory) date else "$date  ·  " + ltr(repository.formatSize(entry.sizeBytes))
                 }
                 Text(subtitle, color = theme.mutedTextColor, fontSize = FutureTypography.summary, maxLines = 1)
             }
@@ -934,6 +720,7 @@ private fun FolderMenuRows(
     theme: FutureTheme,
     hasClipboard: Boolean,
     gridView: Boolean,
+    folderOps: Boolean = true,
     onDone: () -> Unit,
     onNewFolder: () -> Unit,
     onPaste: () -> Unit,
@@ -941,7 +728,7 @@ private fun FolderMenuRows(
 ) {
     fun pick(action: () -> Unit): () -> Unit = { onDone(); action() }
     if (hasClipboard) FutureMenuRow(tr("הדבק כאן"), FutureIcons.ContentPaste, theme, pick(onPaste))
-    FutureMenuRow(tr("תיקייה חדשה"), FutureIcons.CreateNewFolder, theme, pick(onNewFolder))
+    if (folderOps) FutureMenuRow(tr("תיקייה חדשה"), FutureIcons.CreateNewFolder, theme, pick(onNewFolder))
     FutureMenuRow(
         if (gridView) tr("תצוגת רשימה") else tr("תצוגת רשת"),
         if (gridView) FutureIcons.AutoMirrored.ViewList else FutureIcons.GridView,
@@ -970,9 +757,8 @@ private fun FileTile(
     FocusableItem(
         onClick = onClick,
         accentColor = theme.accentColor,
-        cornerRadius = FutureShapes.radiusXl,
-        // אריח ברשת הוא כרטיס קטן (One UI) - משטח הכרטיס, לא צבע צ'יפ.
-        idleBackgroundColor = theme.surfaceColor,
+        cornerRadius = FutureShapes.radiusLg,
+        idleBackgroundColor = theme.idleChipColor,
         borderWidth = FutureDimens.focusBorderControl,
         contentPadding = 0.dp,
         focusRequester = focusRequester,

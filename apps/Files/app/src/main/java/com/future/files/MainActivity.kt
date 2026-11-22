@@ -32,6 +32,7 @@ import com.future.sharednav.components.FutureSnackbarHost
 import com.future.sharednav.theme.ThemeClient
 import com.future.files.ui.AudioPlayerScreen
 import com.future.files.ui.FilesScreen
+import com.future.files.ui.FilesHomeScreen
 import com.future.files.ui.ImageFileViewerScreen
 import com.future.files.ui.PdfViewerScreen
 import com.future.files.ui.TextViewerScreen
@@ -96,6 +97,14 @@ class MainActivity : ComponentActivity() {
             var hasAccess by remember { mutableStateOf(repository.hasAllFilesAccess()) }
             val root = remember { repository.rootDirectory() }
             var currentDir by rememberSaveable(stateSaver = FileSaver) { mutableStateOf(root) }
+            // מסך הבית (אחרונים, קטגוריות, אחסון). ממנו נכנסים לאחסון הפנימי או לקטגוריה.
+            var atHome by rememberSaveable { mutableStateOf(true) }
+            var categoryName by rememberSaveable { mutableStateOf<String?>(null) }
+            val category = categoryName?.let { n -> runCatching { com.future.files.data.HomeCategory.valueOf(n) }.getOrNull() }
+            // סריקת כל הקבצים (לקטגוריות ולאחרונים), ונפח האחסון.
+            var scanned by remember { mutableStateOf<List<com.future.files.data.ScannedFile>?>(null) }
+            var storage by remember { mutableStateOf<Pair<Long, Long>?>(null) }
+            var homeFocusKey by rememberSaveable { mutableStateOf<String?>(null) }
             var entries by remember { mutableStateOf(listOf<FileEntry>()) }
             // true כשקריאת התיקייה נכשלה - מוצג "לא ניתן לקרוא" במקום "התיקייה ריקה".
             var loadFailed by remember { mutableStateOf(false) }
@@ -156,14 +165,31 @@ class MainActivity : ComponentActivity() {
             val isCurrentDirTopLevel = currentDir.parentFile?.absolutePath == root.absolutePath
 
             // קריאת התיקייה מחוץ ל-UI thread. תיקייה שלא נקראת מציגה שגיאה ולא רשימה ריקה.
-            suspend fun reloadEntries() {
+            // rescan = false - קטגוריה מסוננת מהסריקה השמורה (מעבר אליה, שינוי מיון);
+            // אחרי מחיקה / שינוי שם / הדבקה סורקים מחדש.
+            suspend fun reloadEntries(rescan: Boolean = true) {
+                val cat = category
+                if (cat != null) {
+                    val cached = scanned
+                    val all = if (!rescan && cached != null) cached else withContext(Dispatchers.IO) { repository.scanUserFiles(developer) }
+                    scanned = all
+                    loadFailed = false
+                    entries = withContext(Dispatchers.Default) { repository.categoryEntries(all, cat, sortOrder) }
+                    return
+                }
                 val loaded = withContext(Dispatchers.IO) { repository.listDirectory(currentDir, isRootDir, sortOrder, developer) }
                 loadFailed = loaded == null
                 entries = loaded ?: emptyList()
             }
 
-            LaunchedEffect(hasAccess, currentDir, sortOrder, developer, resumeTick) {
-                if (hasAccess) reloadEntries()
+            LaunchedEffect(hasAccess, currentDir, sortOrder, developer, resumeTick, categoryName, atHome) {
+                if (hasAccess && !atHome) reloadEntries(rescan = false)
+            }
+            // מסך הבית: סריקה ונפח, בכל חזרה אליו.
+            LaunchedEffect(hasAccess, atHome, developer, resumeTick) {
+                if (!hasAccess || !atHome) return@LaunchedEffect
+                storage = withContext(Dispatchers.IO) { repository.storageUsage() }
+                scanned = withContext(Dispatchers.IO) { repository.scanUserFiles(developer) }
             }
 
             fun goUp() {
@@ -173,11 +199,41 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            BackHandler(enabled = viewingFile != null || currentDir.absolutePath != root.absolutePath) {
-                if (viewingFile != null) viewingFile = null else goUp()
+            fun listKey(): String = category?.let { "category:${it.name}" } ?: currentDir.absolutePath
+            fun openEntry(entry: FileEntry) {
+                        if (!atHome) lastSelectedPathByDir = lastSelectedPathByDir + (listKey() to entry.file.absolutePath)
+                        if (entry.isDirectory) {
+                            // תיקיות מערכת ונתוני אפליקציות לא נפתחים, גם דרך קישור.
+                            if (isInsideUserStorage(entry.file, root)) currentDir = entry.file
+                            else message(tr("אין גישה לתיקייה הזו"))
+                        } else if (pickRequest != null) {
+                            // במצב בחירה קובץ שנבחר מוחזר לאפליקציה הקוראת, בלי לפתוח אותו.
+                            if (pickRequest.accepts(entry.file)) returnPickedFile(entry.file)
+                            else message("הקובץ הזה לא מתאים לבחירה")
+                        } else {
+                            when (categorize(entry.file)) {
+                                // הקבצים לא מתקינים אפליקציות. וידאו נפתח באפליקציה חיצונית שמתאימה לו.
+                                FileCategory.APK -> message("התקנת אפליקציות לא נתמכת")
+                                FileCategory.VIDEO -> if (!openFile(entry.file)) message(tr("אין אפליקציה שפותחת את הקובץ"))
+                                // שירים וקבצי שמע נפתחים במוזיקה; בלעדיה - בנגן הפנימי.
+                                FileCategory.AUDIO -> if (!openInMusic(entry.file)) viewingFile = entry
+                                FileCategory.OTHER -> if (!openFile(entry.file)) message(tr("אין אפליקציה שפותחת את הקובץ"))
+                                else -> viewingFile = entry
+                            }
+                        }
+                    }
+
+            // BACK: מציג קובץ ← רשימה; קטגוריה ← בית; תיקייה ← התיקייה שמעליה; שורש האחסון ← בית.
+            BackHandler(enabled = viewingFile != null || (hasAccess && !atHome)) {
+                when {
+                    viewingFile != null -> viewingFile = null
+                    category != null -> { entries = emptyList(); categoryName = null; atHome = true }
+                    currentDir.absolutePath != root.absolutePath -> goUp()
+                    else -> { entries = emptyList(); atHome = true }
+                }
             }
-            // בחירה לאפליקציה אחרת: BACK בשורש מבטל את הבחירה.
-            BackHandler(enabled = pickRequest != null && viewingFile == null && currentDir.absolutePath == root.absolutePath) {
+            // בחירה לאפליקציה אחרת: BACK במסך הבית מבטל את הבחירה.
+            BackHandler(enabled = pickRequest != null && viewingFile == null && (atHome || !hasAccess)) {
                 setResult(RESULT_CANCELED)
                 finish()
             }
@@ -203,8 +259,31 @@ class MainActivity : ComponentActivity() {
                         FileCategory.PDF -> PdfViewerScreen(viewing.file, theme, onBack = { viewingFile = null })
                         else -> {}
                     }
-                } else FilesScreen(
-                    currentDir = currentDir,
+                } else if (hasAccess && atHome) FilesHomeScreen(
+                    theme = theme,
+                    repository = repository,
+                    recents = remember(scanned) { scanned?.let { repository.recentFiles(it) } },
+                    storage = storage,
+                    pickMode = pickRequest != null,
+                    lastFocusKey = homeFocusKey,
+                    onOpenRecent = { item -> homeFocusKey = item.entry.file.absolutePath; openEntry(item.entry) },
+                    onOpenCategory = { cat ->
+                        homeFocusKey = "cat:${cat.name}"
+                        // מהסריקה השמורה מיד - בלי מסך "ריק" עד שהרשימה נטענת.
+                        entries = scanned?.let { repository.categoryEntries(it, cat, sortOrder) } ?: emptyList()
+                        categoryName = cat.name
+                        atHome = false
+                    },
+                    onOpenStorage = {
+                        homeFocusKey = "storage"
+                        entries = emptyList()
+                        currentDir = root
+                        atHome = false
+                    },
+                ) else FilesScreen(
+                    currentDir = if (category != null) File(root, ".category-${category.name}") else currentDir,
+                    titleOverride = category?.label,
+                    categoryMode = category != null,
                     entries = entries,
                     loadFailed = loadFailed,
                     hasAccess = hasAccess,
@@ -223,28 +302,7 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                     },
-                    onOpenFile = { entry ->
-                        lastSelectedPathByDir = lastSelectedPathByDir + (currentDir.absolutePath to entry.file.absolutePath)
-                        if (entry.isDirectory) {
-                            // תיקיות מערכת ונתוני אפליקציות לא נפתחים, גם דרך קישור.
-                            if (isInsideUserStorage(entry.file, root)) currentDir = entry.file
-                            else message(tr("אין גישה לתיקייה הזו"))
-                        } else if (pickRequest != null) {
-                            // במצב בחירה קובץ שנבחר מוחזר לאפליקציה הקוראת, בלי לפתוח אותו.
-                            if (pickRequest.accepts(entry.file)) returnPickedFile(entry.file)
-                            else message("הקובץ הזה לא מתאים לבחירה")
-                        } else {
-                            when (categorize(entry.file)) {
-                                // הקבצים לא מתקינים אפליקציות. וידאו נפתח באפליקציה חיצונית שמתאימה לו.
-                                FileCategory.APK -> message("התקנת אפליקציות לא נתמכת")
-                                FileCategory.VIDEO -> if (!openFile(entry.file)) message(tr("אין אפליקציה שפותחת את הקובץ"))
-                                // שירים וקבצי שמע נפתחים במוזיקה; בלעדיה - בנגן הפנימי.
-                                FileCategory.AUDIO -> if (!openInMusic(entry.file)) viewingFile = entry
-                                FileCategory.OTHER -> if (!openFile(entry.file)) message(tr("אין אפליקציה שפותחת את הקובץ"))
-                                else -> viewingFile = entry
-                            }
-                        }
-                    },
+                    onOpenFile = { entry -> openEntry(entry) },
                     gridView = gridView,
                     sortOrder = sortOrder,
                     onCycleSort = {
@@ -258,7 +316,7 @@ class MainActivity : ComponentActivity() {
                         gridView = !gridView
                         uiPrefs.edit().putBoolean("grid", gridView).apply()
                     },
-                    lastSelectedPath = lastSelectedPathByDir[currentDir.absolutePath],
+                    lastSelectedPath = lastSelectedPathByDir[listKey()],
                     pickMode = pickRequest != null,
                     onBack = { goUp() },
                     onNewFolder = { name ->
