@@ -4,6 +4,10 @@ This repo has no carried-over git history (see root [README](README.md)), so thi
 
 ## Unreleased
 
+### CI: the Assistant release APK includes the speech model (2026-11-22)
+
+- `release-apks.yml` did not fetch Git LFS, so `Assistant-release.apk` contained a 134-byte pointer instead of Whisper small (264 MB). It worked on the phone only because an older copy was still in the app's storage; a clean install would have had no offline recognition. The Assistant build now runs `git lfs pull` (with `.git/lfs` cached so quota is not spent on every run), and fails if the model is still a pointer.
+
 ### Assistant: overall speed (2026-11-22)
 
 - Device timing showed three slow steps: the first answer waited ~6 s for the knowledge base to load, every general question scanned all ~100,000 trivia phrasings (~1.4 s), and the wake word ran Whisper small (2-5 s per segment).
