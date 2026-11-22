@@ -27,15 +27,19 @@ import android.telephony.TelephonyCallback
 import android.telephony.TelephonyManager
 import android.telecom.TelecomManager
 import android.util.Log
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -43,10 +47,8 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -56,7 +58,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
 import com.future.futureui.controlcenter.logic.ControlManager
 import com.future.futureui.controlcenter.service.MediaControlService
@@ -66,6 +67,7 @@ import com.future.futureui.utils.FutureUIState
 import com.future.sharednav.icons.FutureIcons
 import com.future.sharednav.theme.FutureAccents
 import com.future.sharednav.theme.FutureTheme
+import com.future.sharednav.theme.FutureTypography
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -77,11 +79,12 @@ import java.util.*
  *
  *   [שעה] [אייקוני התראות ...]                [מערכת] [Wi-Fi] [קליטה] [סוללה]
  *
- * בעברית (RTL) השורה מתהפכת, בדיוק כמו באנדרואיד. רקע שחור אטום וטקסט לבן -
- * תמיד, בלי לדגום את המסך ובלי סגנונות: שורת המערכת של אנדרואיד עדיין מצוירת
- * מתחת לשלנו (policy_control לא עובד ב-Android 12), אז רקע שקוף/צבעוני היה
- * חושף אותה. מעל השכבות של FutureUI שמכסות את כל המסך (נעילה, מרכז בקרה,
- * התראות, אחרונות, תפריט כיבוי) הרקע שקוף, כי הן מציירות את הרקע בעצמן.
+ * בעברית (RTL) השורה מתהפכת, בדיוק כמו באנדרואיד. השורה דינמית: מעל אפליקציה
+ * היא מקבלת את הצבע שנדגם מתחתיה ([sampledColor] - לבן, שחור או צבע הכותרת),
+ * והתוכן כהה או בהיר לפיו ([lightTone]). רקע אטום ולא שקוף, כי שורת המערכת של
+ * אנדרואיד עדיין מצוירת מתחת לשלנו (policy_control לא עובד ב-Android 12). מעל
+ * השכבות של FutureUI שמכסות את כל המסך (נעילה, מרכז בקרה, התראות, אחרונות,
+ * תפריט כיבוי) הרקע שקוף, כי הן מציירות את הרקע בעצמן.
  *
  * כל המצבים מגיעים מאירועי מערכת (broadcast, ContentObserver, TelephonyCallback,
  * NetworkCallback); הסקר היחיד הוא בדיקת שיחה פעילה, שאין לה אירוע נגיש.
@@ -91,6 +94,11 @@ fun StatusBarScreen(
     modifier: Modifier = Modifier,
     controlManager: ControlManager? = null,
     layoutManager: StatusBarLayoutManager? = null,
+    @Suppress("UNUSED_PARAMETER") accentColor: Color = Color.White,
+    /** התוכן שמתחת לשורה בהיר - הטקסט והאייקונים כהים. */
+    lightTone: Boolean = false,
+    /** הצבע השולט מתחת לשורה, אם יש (השירות דוגם אותו יחד עם [lightTone]). */
+    sampledColor: Color? = null,
 ) {
     val context = LocalContext.current
     val manager = controlManager ?: remember { ControlManager(context) }
@@ -320,8 +328,15 @@ fun StatusBarScreen(
         FutureUIState.notificationCenterOpen.value ||
         FutureUIState.recentsOpen.value ||
         FutureUIState.powerMenuOpen.value
-    val background = if (overOverlay) Color.Transparent else Color.Black
-    val colors = remember { FutureTheme(isDarkMode = true) }
+    val colors = remember(lightTone) { FutureTheme(isDarkMode = !lightTone) }
+    val bgTarget = when {
+        overOverlay -> Color.Transparent
+        else -> sampledColor ?: if (lightTone) colors.backgroundColor else Color.Black
+    }
+    // המעבר מונפש כדי שהשורה תחליף צבע יחד עם האפליקציה ולא תהבהב
+    val spec = tween<Color>(com.future.sharednav.theme.FutureMotion.DurationStandard)
+    val background by animateColorAsState(bgTarget, spec, label = "barBg")
+    val ink by animateColorAsState(if (lightTone) Color(0xFF111113) else Color.White, spec, label = "barInk")
 
     val airplane = manager.isAirplaneOn
     val density = LocalDensity.current
@@ -329,9 +344,10 @@ fun StatusBarScreen(
         LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection,
         // גודל קבוע: גופן מוגדל במערכת היה דוחס את השורה
         LocalDensity provides Density(density.density, fontScale = 1f),
+        LocalInk provides ink,
     ) {
         Row(
-            modifier = modifier.fillMaxWidth().background(background).padding(horizontal = 8.dp),
+            modifier = modifier.fillMaxWidth().background(background).padding(horizontal = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             // ---- צד ההתחלה: שעה, שיחה, התראות ----
@@ -340,19 +356,14 @@ fun StatusBarScreen(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                BarText(time, 15.sp, FontWeight.Medium)
-                if (callActive) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(FutureIcons.Call, null, tint = colors.successColor, modifier = Modifier.size(IconSize))
-                        BarText("%d:%02d".format(callSeconds / 60, callSeconds % 60), 12.sp, FontWeight.Medium, colors.successColor)
-                    }
-                }
+                if (callActive) CallPill("%d:%02d".format(callSeconds / 60, callSeconds % 60), colors.successColor)
+                BarText(time, FutureTypography.body, FontWeight.SemiBold)
                 NotificationIcons(notifApps)
             }
 
             // ---- צד הסוף: מצב המכשיר וסוללה ----
             Row(
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(GlyphGap),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 if (PrivacyIndicators.cameraInUse.value) SysIcon(FutureIcons.Videocam, FutureAccents.Green)
@@ -364,27 +375,32 @@ fun StatusBarScreen(
                 }
                 if (manager.isDndOn) SysIcon(FutureIcons.DoNotDisturbOn)
                 if (showBluetooth && manager.isBluetoothOn) {
-                    SysIcon(FutureIcons.Bluetooth, if (manager.isBluetoothDeviceConnected) Color.White else Dim)
+                    SysIcon(FutureIcons.Bluetooth, if (manager.isBluetoothDeviceConnected) ink else ink.copy(alpha = 0.7f))
                 }
                 if (airplane) {
                     SysIcon(FutureIcons.AirplanemodeActive)
                 } else {
-                    if (wifiConnected) WifiIcon(wifiLevel)
-                    CellIcon(
-                        level = if (inService) cellLevel else 0,
-                        noSim = !simReady,
-                        dataActive = manager.isDataOn && inService && !wifiConnected,
-                    )
+                    if (wifiConnected) SysIcon(FutureIcons.Wifi, if (wifiLevel <= 1) LocalInk.current.copy(alpha = 0.7f) else LocalInk.current)
+                    if (simReady) LeveledIcon(FutureIcons.SignalCellularAlt, if (inService) cellLevel else 0)
                 }
-                Battery(battery, charging, manager.isBatterySaverOn, showPercent, colors)
+                if (showPercent) {
+                    val low = battery <= 15 && !charging
+                    BarText("$battery%", FutureTypography.label, FontWeight.Medium, if (low) colors.dangerColor else ink)
+                }
+                BatteryPill(battery, charging, manager.isBatterySaverOn, colors)
             }
         }
     }
 }
 
 private const val TAG = "StatusBarScreen"
-private val IconSize = 15.dp
-private val Dim = Color.White.copy(alpha = 0.3f)
+// האייקונים 16dp והרווח ביניהם 3dp: בשורה בגובה 28dp זה ההבדל בין סמלים
+// שנראים לסמלים שנבלעים.
+private val IconSize = 16.dp
+private val GlyphGap = 3.dp
+
+/** צבע התוכן (טקסט ואייקונים) - מתחלף ומונפש בין לבן לכהה לפי הרקע. */
+private val LocalInk = compositionLocalOf { Color.White }
 
 /** העותק האחרון של מצב השורה (בתהליך), כדי שהרכבה מחדש לא תתחיל מאפס. */
 private object BarMemory {
@@ -426,7 +442,7 @@ internal fun appGlyph(pkg: String): ImageVector? = when (pkg) {
 }
 
 @Composable
-private fun BarText(text: String, size: androidx.compose.ui.unit.TextUnit, weight: FontWeight, color: Color = Color.White) {
+private fun BarText(text: String, size: androidx.compose.ui.unit.TextUnit, weight: FontWeight, color: Color = LocalInk.current) {
     Text(
         text = text,
         color = color,
@@ -440,7 +456,7 @@ private fun BarText(text: String, size: androidx.compose.ui.unit.TextUnit, weigh
 }
 
 @Composable
-private fun SysIcon(icon: ImageVector, tint: Color = Color.White) {
+private fun SysIcon(icon: ImageVector, tint: Color = LocalInk.current) {
     Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(IconSize))
 }
 
@@ -454,133 +470,98 @@ private fun NotificationIcons(apps: List<NotifApp>) {
             val icon = app.smallIcon
             when {
                 glyph != null -> SysIcon(glyph)
-                icon != null -> Image(icon, null, colorFilter = ColorFilter.tint(Color.White), modifier = Modifier.size(IconSize))
+                icon != null -> Image(icon, null, colorFilter = ColorFilter.tint(LocalInk.current), modifier = Modifier.size(IconSize))
                 else -> SysIcon(FutureIcons.Notifications)
             }
         }
         if (apps.size > MAX_NOTIF_ICONS) {
-            Canvas(Modifier.size(5.dp)) { drawCircle(Color.White) }
+            val dot = LocalInk.current
+            Canvas(Modifier.size(5.dp)) { drawCircle(dot) }
         }
     }
 }
 
 private const val MAX_NOTIF_ICONS = 4
 
-/** Wi-Fi: מניפה מלאה בשקיפות, והחלק המלא לפי עוצמת הקליטה (0-4). */
-@Composable
-private fun WifiIcon(level: Int) {
-    Canvas(Modifier.size(width = 17.dp, height = IconSize)) {
-        val cx = size.width / 2f
-        val bottom = size.height * 0.92f
-        val r = minOf(size.width / 2f / 0.75f, bottom)
-        fun fan(radius: Float, color: Color) {
-            drawArc(
-                color = color,
-                startAngle = -135f,
-                sweepAngle = 90f,
-                useCenter = true,
-                topLeft = Offset(cx - radius, bottom - radius),
-                size = Size(radius * 2, radius * 2),
-            )
-        }
-        fan(r, Dim)
-        if (level > 0) fan(r * (0.28f + 0.72f * level.coerceIn(0, 4) / 4f), Color.White)
-    }
-}
-
 /**
- * קליטה סלולרית: משולש בשקיפות, והחלק המלא לפי העוצמה (0-4). בלי SIM -
- * משולש עמום עם קו אלכסוני. "▲▼" קטן כשהנתונים הסלולריים פעילים.
+ * אייקון עם עוצמה (קליטה / Wi-Fi, 0-4): הסמל כולו בשקיפות, והחלק המלא נחשף
+ * משמאל לימין לפי העוצמה - כמו הפסים של אנדרואיד.
  */
 @Composable
-private fun CellIcon(level: Int, noSim: Boolean, dataActive: Boolean) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(1.dp)) {
-        if (dataActive && !noSim) {
-            Canvas(Modifier.size(width = 5.dp, height = 11.dp)) {
-                val w = size.width
-                val h = size.height
-                val up = Path().apply { moveTo(w / 2, 0f); lineTo(w, h * 0.42f); lineTo(0f, h * 0.42f); close() }
-                val down = Path().apply { moveTo(0f, h * 0.58f); lineTo(w, h * 0.58f); lineTo(w / 2, h); close() }
-                drawPath(up, Color.White)
-                drawPath(down, Color.White)
-            }
-        }
-        Canvas(Modifier.size(IconSize)) {
-            val w = size.width
-            val h = size.height
-            val tri = Path().apply { moveTo(w, 0f); lineTo(w, h); lineTo(0f, h); close() }
-            drawPath(tri, Dim)
-            if (!noSim && level > 0) {
-                clipRect(right = w * level.coerceIn(0, 4) / 4f) { drawPath(tri, Color.White) }
-            }
-            if (noSim) {
-                drawLine(Color.White, Offset(w * 0.2f, h * 0.2f), Offset(w * 0.8f, h * 0.8f), strokeWidth = 1.5.dp.toPx())
-            }
-        }
-    }
-}
-
-/**
- * סוללה עומדת כמו באנדרואיד 12: מסגרת, פין למעלה ומילוי מלמטה. טעינה - ירוק
- * וברק, חלשה (15% ומטה) - אדום, חיסכון - מסגרת כתומה. אחוזים לפי ההגדרה.
- */
-@Composable
-private fun Battery(percent: Int, charging: Boolean, saver: Boolean, showPercent: Boolean, colors: FutureTheme) {
-    val low = percent <= 15 && !charging
-    val fill = when {
-        charging -> colors.successColor
-        low -> colors.dangerColor
-        else -> Color.White
-    }
-    val frame = if (saver) colors.warningColor else Color.White
-    Row(horizontalArrangement = Arrangement.spacedBy(3.dp), verticalAlignment = Alignment.CenterVertically) {
-        if (showPercent) BarText("$percent%", 13.sp, FontWeight.Medium, if (low) colors.dangerColor else Color.White)
-        // הסוללה לא מתהפכת ב-RTL
-        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-            Canvas(Modifier.size(width = 9.dp, height = 15.dp)) {
-                val stroke = 1.2.dp.toPx()
-                val nubH = 1.8.dp.toPx()
-                val nubW = size.width * 0.45f
-                drawRoundRect(
-                    color = frame,
-                    topLeft = Offset((size.width - nubW) / 2f, 0f),
-                    size = Size(nubW, nubH + 0.5f),
-                    cornerRadius = CornerRadius(0.6.dp.toPx()),
-                )
-                val bodyTop = nubH
-                drawRoundRect(
-                    color = frame,
-                    topLeft = Offset(stroke / 2, bodyTop + stroke / 2),
-                    size = Size(size.width - stroke, size.height - bodyTop - stroke),
-                    cornerRadius = CornerRadius(1.8.dp.toPx()),
-                    style = Stroke(width = stroke),
-                )
-                val inset = stroke + 1.dp.toPx()
-                val maxH = (size.height - bodyTop - inset * 2).coerceAtLeast(0f)
-                val h = (maxH * percent.coerceIn(0, 100) / 100f).coerceIn(0f, maxH)
-                if (h > 0f) {
-                    drawRoundRect(
-                        color = fill,
-                        topLeft = Offset(inset, size.height - inset - h),
-                        size = Size((size.width - inset * 2).coerceAtLeast(0f), h),
-                        cornerRadius = CornerRadius(0.8.dp.toPx()),
+private fun LeveledIcon(icon: ImageVector, level: Int) {
+    val ink = LocalInk.current
+    val fraction = level.coerceIn(0, 4) / 4f
+    // הפסים עולים משמאל לימין גם בעברית
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+        Box(Modifier.size(IconSize)) {
+            Icon(icon, null, tint = ink.copy(alpha = 0.3f), modifier = Modifier.matchParentSize())
+            if (fraction > 0f) {
+                Box(Modifier.fillMaxHeight().fillMaxWidth(fraction).clipToBounds()) {
+                    Icon(
+                        icon, null, tint = ink,
+                        modifier = Modifier.wrapContentSize(Alignment.CenterStart, unbounded = true).requiredSize(IconSize),
                     )
                 }
-                if (charging) {
-                    val w = size.width
-                    val top = bodyTop
-                    val bh = size.height - bodyTop
-                    val bolt = Path().apply {
-                        moveTo(w * 0.62f, top + bh * 0.12f)
-                        lineTo(w * 0.22f, top + bh * 0.56f)
-                        lineTo(w * 0.48f, top + bh * 0.56f)
-                        lineTo(w * 0.38f, top + bh * 0.90f)
-                        lineTo(w * 0.78f, top + bh * 0.44f)
-                        lineTo(w * 0.52f, top + bh * 0.44f)
-                        close()
-                    }
-                    drawPath(bolt, Color.Black)
-                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CallPill(duration: String, green: Color) {
+    Row(
+        modifier = Modifier.height(22.dp).clip(CircleShape).background(green).padding(horizontal = 9.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(FutureIcons.Call, contentDescription = null, tint = Color.Black, modifier = Modifier.size(12.dp))
+        BarText(duration, FutureTypography.label, FontWeight.Bold, Color.Black)
+    }
+}
+
+/**
+ * גלולת סוללה (גוף מעוגל + פין + מילוי פרופורציונלי), כמו קודם. טעינה - ירוק
+ * וברק, חלשה - אדום, חיסכון - מסגרת כתומה. הפין תמיד מימין, גם בעברית.
+ */
+@Composable
+private fun BatteryPill(percent: Int, charging: Boolean, saver: Boolean, colors: FutureTheme) {
+    val ink = LocalInk.current
+    val fill = when {
+        charging -> colors.successColor
+        percent <= 15 -> colors.dangerColor
+        else -> ink
+    }
+    val body = if (saver) colors.warningColor else ink.copy(alpha = 0.85f)
+    Row(horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (charging) Icon(FutureIcons.Bolt, contentDescription = null, tint = colors.successColor, modifier = Modifier.size(13.dp))
+        Canvas(modifier = Modifier.size(width = 25.dp, height = 12.dp)) {
+            val nubWidth = 1.8.dp.toPx()
+            val bodyWidth = size.width - nubWidth
+            val strokeWidth = 1.2.dp.toPx()
+            drawRoundRect(
+                color = body,
+                topLeft = Offset(strokeWidth / 2f, strokeWidth / 2f),
+                size = Size(bodyWidth - strokeWidth, size.height - strokeWidth),
+                cornerRadius = CornerRadius(3.dp.toPx()),
+                style = Stroke(width = strokeWidth),
+            )
+            drawRoundRect(
+                color = body,
+                topLeft = Offset(bodyWidth, size.height / 2f - 2.2.dp.toPx()),
+                size = Size(nubWidth, 4.4.dp.toPx()),
+                cornerRadius = CornerRadius(0.9.dp.toPx()),
+            )
+            // coerceAtLeast: כשהאייקון צר מה-inset הרוחב יוצא שלילי ו-coerceIn קורס
+            val inset = strokeWidth + 1.3.dp.toPx()
+            val maxW = (bodyWidth - inset * 2).coerceAtLeast(0f)
+            val w = (maxW * (percent / 100f)).coerceIn(0f, maxW)
+            if (w > 0f) {
+                drawRoundRect(
+                    color = fill,
+                    topLeft = Offset(inset, inset),
+                    size = Size(w, (size.height - inset * 2).coerceAtLeast(0f)),
+                    cornerRadius = CornerRadius(1.5.dp.toPx()),
+                )
             }
         }
     }
