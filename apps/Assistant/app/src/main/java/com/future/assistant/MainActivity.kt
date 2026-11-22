@@ -30,6 +30,11 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         // טעינת מודל זיהוי הדיבור מתחילה לפני שהחלון בכלל מצויר, במקביל לפתיחה.
         LocalSpeechEngine.preloadAsync(this)
+        // גם מאגר הידע והשיחה (10MB טקסט, כמה שניות) - אחרת השאלה הראשונה מחכה להם
+        val app = applicationContext
+        Thread { com.future.assistant.data.KnowledgeBase.preload(app) }.start()
+        Thread { com.future.assistant.data.ChatBase.preload(app) }.start()
+        LocalSpeechEngine.preloadWakeAsync(this)
         enableEdgeToEdge()
 
         setContent {

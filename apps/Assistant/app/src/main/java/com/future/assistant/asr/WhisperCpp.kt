@@ -10,10 +10,10 @@ class WhisperCpp {
     }
 
     /** [fast]: חלון קצר ומעט טוקנים - לזיהוי מילת ההפעלה, פחות מדויק. */
-    fun transcribe(samples: FloatArray, language: String, prompt: String? = null, fast: Boolean = false): String {
+    fun transcribe(samples: FloatArray, language: String, prompt: String? = null, fast: Boolean = false, maxTokens: Int = 0): String {
         if (ctx == 0L) return ""
         // UTF-8 קטוע בסוף (תקרת הטוקנים) מתפענח לתו החלפה - מוסרים אותו.
-        return String(nativeTranscribe(ctx, samples, language, prompt, fast), Charsets.UTF_8).replace("�", "")
+        return String(nativeTranscribe(ctx, samples, language, prompt, fast, maxTokens), Charsets.UTF_8).replace("�", "")
     }
 
     fun release() {
@@ -24,7 +24,7 @@ class WhisperCpp {
     }
 
     private external fun nativeInit(modelPath: String): Long
-    private external fun nativeTranscribe(ctx: Long, samples: FloatArray, language: String, prompt: String?, fast: Boolean): ByteArray
+    private external fun nativeTranscribe(ctx: Long, samples: FloatArray, language: String, prompt: String?, fast: Boolean, maxTokens: Int): ByteArray
     private external fun nativeFree(ctx: Long)
 
     companion object {

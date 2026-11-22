@@ -85,7 +85,20 @@ object KnowledgeBase {
         val people: Map<String, Person>,
         val trivia: List<Trivia>,
         val commandCount: Int,
-    )
+    ) {
+        /**
+         * ניסוח -> שאלה, לפי המילה הראשונה של הניסוח. ניסוח יכול להופיע במשפט רק
+         * אם המילה הראשונה שלו נמצאת בו, אז בודקים רק את הניסוחים של מילות המשפט
+         * (במקום לסרוק את כל ~100,000 הניסוחים בכל שאלה - זה לקח יותר משנייה).
+         */
+        val triviaByFirstWord: Map<String, List<Pair<String, Trivia>>> = HashMap<String, MutableList<Pair<String, Trivia>>>().also { map ->
+            trivia.forEach { t ->
+                t.phrasings.forEach { p ->
+                    if (p.contains(' ')) map.getOrPut(p.substringBefore(' ')) { ArrayList(2) }.add(p to t)
+                }
+            }
+        }
+    }
 
     private fun rows(text: String, columns: Int): List<List<String>> =
         text.lineSequence()
@@ -473,9 +486,9 @@ object KnowledgeBase {
         val padded = " $text "
         var best: Trivia? = null
         var bestLength = 0
-        data.trivia.forEach { t ->
-            t.phrasings.forEach { p ->
-                if (p.length > bestLength && p.contains(' ') && padded.contains(" $p ")) { best = t; bestLength = p.length }
+        for (w in words(text).toSet()) {
+            data.triviaByFirstWord[w]?.forEach { (p, t) ->
+                if (p.length > bestLength && padded.contains(" $p ")) { best = t; bestLength = p.length }
             }
         }
         return best?.let { CommandResult(it.answer) }

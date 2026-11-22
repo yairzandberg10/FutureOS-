@@ -4,6 +4,13 @@ This repo has no carried-over git history (see root [README](README.md)), so thi
 
 ## Unreleased
 
+### Assistant: overall speed (2026-11-22)
+
+- Device timing showed three slow steps: the first answer waited ~6 s for the knowledge base to load, every general question scanned all ~100,000 trivia phrasings (~1.4 s), and the wake word ran Whisper small (2-5 s per segment).
+- Trivia phrasings are now indexed by their first word, so only phrasings that can appear in the sentence are checked.
+- The knowledge base and chat topics start loading in `MainActivity.onCreate`, alongside the speech model.
+- The wake word uses Whisper tiny (`ggml-tiny-q8_0.bin`, 43 MB, a regular git file because CI does not fetch LFS) with a 12-token cap. Small is used only when a command follows the wake word. If tiny cannot load, it falls back to small.
+
 ### Assistant: faster wake word (2026-11-22)
 
 - The wake word was heard but took 5-7 s to transcribe (device log: `heard='היי future' wake=true in 7083ms`), so it looked like it did not work. Wake segments now go through a fast Whisper mode (`fast = true`: audio window sized to the clip + 128 frames instead of the 768-frame floor, and few tokens). When a command follows the wake word, that segment is transcribed again in full mode for accuracy. Wake segments are capped at 3.5 s, and the log shows the clip length next to the time.

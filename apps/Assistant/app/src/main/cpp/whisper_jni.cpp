@@ -27,7 +27,7 @@ static jbyteArray toBytes(JNIEnv *env, const std::string &s) {
 extern "C" JNIEXPORT jbyteArray JNICALL
 Java_com_future_assistant_asr_WhisperCpp_nativeTranscribe(JNIEnv *env, jobject /*thiz*/, jlong ctxPtr,
                                                            jfloatArray samples, jstring language,
-                                                           jstring prompt, jboolean fast) {
+                                                           jstring prompt, jboolean fast, jint maxTokens) {
     auto *ctx = reinterpret_cast<struct whisper_context *>(ctxPtr);
     if (ctx == nullptr) return toBytes(env, "");
 
@@ -54,6 +54,8 @@ Java_com_future_assistant_asr_WhisperCpp_nativeTranscribe(JNIEnv *env, jobject /
     // דיבור, אז פי 3 מזה + מרווח לא קוטע משפט אמיתי אבל עוצר חזרה אינסופית.
     wparams.max_tokens = fast ? static_cast<int>(static_cast<long long>(n) * 6 / 16000) + 8
                               : static_cast<int>(static_cast<long long>(n) * 10 / 16000) + 24;
+    // תקרה מפורשת (מילת ההפעלה: "היי פיוטר" הם כמה טוקנים) - הפענוח הוא רוב הזמן.
+    if (maxTokens > 0) wparams.max_tokens = maxTokens;
     // בלי "temperature fallback": כשהמודל לא בטוח (קורה הרבה בעברית) ברירת
     // המחדל מפענחת מחדש עד 5 פעמים בטמפרטורות עולות, עם 5 מפענחים בכל פעם -
     // זה מה שהפך תמלול של משפט קצר לשניות ארוכות. פענוח greedy יחיד מספיק.

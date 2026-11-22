@@ -7,3 +7,5 @@ apps/Assistant/app/src/main/assets/*.bin filter=lfs diff=lfs merge=lfs -text
 security/malware-db/*.tsv -text
 security/malware-db/*.sig -text
 apps/*/app/src/main/assets/stalkerware.tsv -text
+# מודל מילת ההפעלה (43MB): קובץ רגיל ולא LFS, כי ה-CI לא מוריד קבצי LFS
+apps/Assistant/app/src/main/assets/ggml-tiny-q8_0.bin -filter -diff -merge binary
