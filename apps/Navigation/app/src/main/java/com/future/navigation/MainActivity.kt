@@ -78,6 +78,20 @@ class MainActivity : ComponentActivity() {
     // שההתנהגות תישאר תואמת לחומרה האמיתית, בדיוק כמו בשאר אפליקציות FutureOS.
     override fun dispatchTouchEvent(ev: android.view.MotionEvent): Boolean = true
 
+    // * ו-# כאירועי מקש (כשהמערכת לא צורכת אותם) עוברים לתפריטי * ולניקוי # במסכים,
+    // באותו מסלול כמו השידור מ-FutureUI (ר' ui/common/StarPoundKeys).
+    override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
+        val code = event.keyCode
+        if (code == android.view.KeyEvent.KEYCODE_STAR || code == android.view.KeyEvent.KEYCODE_POUND) {
+            if (event.action == android.view.KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                if (code == android.view.KeyEvent.KEYCODE_STAR) com.future.navigation.ui.common.StarPoundKeys.emitStar()
+                else com.future.navigation.ui.common.StarPoundKeys.emitPound()
+            }
+            return true
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
     private val gtfsDatabase by lazy { GtfsDatabase.getInstance(this) }
     private val savedPlaceRepository by lazy { SavedPlaceRepository(gtfsDatabase.savedPlaceDao()) }
     private val geocodingRepository by lazy { GeocodingRepository() }

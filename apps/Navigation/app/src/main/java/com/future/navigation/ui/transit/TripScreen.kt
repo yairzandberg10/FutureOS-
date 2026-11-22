@@ -341,7 +341,7 @@ private fun TripStopsList(
     val theme = LocalFutureTheme.current
     val focus = rememberFocusListState(itemCount = stops.size, initialIndex = boardingIndex)
     // * על תחנה פותח את התפריט שלה (לוח יומי, תזכורת, שיתוף)
-    onStarKeyPress { onStar(focus.focusedIndex) }
+    com.future.navigation.ui.common.onStarKey { onStar(focus.focusedIndex) }
     KeypadLazyColumn(
         items = stops,
         focusState = focus,

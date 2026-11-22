@@ -79,8 +79,8 @@ fun NavMapView(
 
     // FutureUI צורך את * ו-# בכל המערכת ומעביר לחיצה קצרה רק כשידור - Key.Pound
     // ו-Key.Multiply למטה לא רצים במכשיר, והזום במקשים לא עבד.
-    com.future.sharednav.nav.onStarKeyPress { cameraController.zoomOut() }
-    com.future.sharednav.nav.onPoundKeyPress { cameraController.zoomIn() }
+    com.future.navigation.ui.common.onStarKey { cameraController.zoomOut() }
+    com.future.navigation.ui.common.onPoundKey { cameraController.zoomIn() }
 
     Box(
         modifier = modifier

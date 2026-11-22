@@ -71,8 +71,8 @@ fun StationScreen(
     val routeFocus = remember { FocusRequester() }
 
     // * ו-# נצרכים במערכת (FutureUI) ומגיעים לאפליקציה כשידור בלחיצה קצרה
-    onStarKeyPress { favorites.toggle(FavoriteStation(station.name, station.location)) }
-    onPoundKeyPress { lineFilter = "" }
+    com.future.navigation.ui.common.onStarKey { favorites.toggle(FavoriteStation(station.name, station.location)) }
+    com.future.navigation.ui.common.onPoundKey { lineFilter = "" }
 
     LaunchedEffect(station) {
         runCatching { routeFocus.requestFocus() }

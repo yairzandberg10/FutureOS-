@@ -105,7 +105,7 @@ fun LineSearchScreen(
     }
 
     // * מגיע כשידור (לא כ-KeyEvent). תפריט רק כשיש שורה בפוקוס, לא מתוך שדה החיפוש.
-    onStarKeyPress {
+    com.future.navigation.ui.common.onStarKey {
         if (menuFor == null) focusedRow?.let { menuFor = it.saved }
     }
 

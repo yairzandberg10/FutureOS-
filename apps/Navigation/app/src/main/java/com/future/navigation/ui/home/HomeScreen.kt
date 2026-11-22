@@ -132,7 +132,7 @@ fun HomeScreen(
     // אחרי הסרה השורה נעלמת יחד עם הפוקוס שלה, ולכן הפוקוס חוזר ללשוניות
     var refocusTabs by remember { mutableStateOf(false) }
     // * מגיע מהמערכת רק כשידור (לא כ-KeyEvent), ר' onStarKeyPress.
-    onStarKeyPress {
+    com.future.navigation.ui.common.onStarKey {
         val slot = focusedSlot
         if (slot != null) {
             onOpenSavedPlaces()
