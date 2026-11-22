@@ -237,7 +237,7 @@ fun TripScreen(
                         )
                     }
                     Text(
-                        "7 - החלפת כיוון · * - אפשרויות לתחנה",
+                        "7 - החלפת כיוון · Options - אפשרויות לתחנה",
                         color = theme.mutedTextColor,
                         fontSize = type.label,
                         modifier = Modifier.fillMaxWidth().padding(horizontal = FutureDimens.screenPadding),
@@ -341,7 +341,7 @@ private fun TripStopsList(
     val theme = LocalFutureTheme.current
     val focus = rememberFocusListState(itemCount = stops.size, initialIndex = boardingIndex)
     // * על תחנה פותח את התפריט שלה (לוח יומי, תזכורת, שיתוף)
-    com.future.navigation.ui.common.onStarKey { onStar(focus.focusedIndex) }
+    com.future.sharednav.nav.onOptionsKeyPress { onStar(focus.focusedIndex) }
     KeypadLazyColumn(
         items = stops,
         focusState = focus,

@@ -71,7 +71,7 @@ fun StationScreen(
     val routeFocus = remember { FocusRequester() }
 
     // * ו-# נצרכים במערכת (FutureUI) ומגיעים לאפליקציה כשידור בלחיצה קצרה
-    com.future.navigation.ui.common.onStarKey { favorites.toggle(FavoriteStation(station.name, station.location)) }
+    com.future.sharednav.nav.onOptionsKeyPress { favorites.toggle(FavoriteStation(station.name, station.location)) }
     com.future.navigation.ui.common.onPoundKey { lineFilter = "" }
 
     LaunchedEffect(station) {
@@ -122,7 +122,7 @@ fun StationScreen(
         Text(
             text = listOfNotNull(
                 if (lineFilter.isNotEmpty()) "סינון קו: $lineFilter (# לניקוי)" else null,
-                if (saved) "שמורה במועדפים (* להסרה)" else "* לשמירה במועדפים",
+                if (saved) "שמורה במועדפים (Options להסרה)" else "Options לשמירה במועדפים",
             ).joinToString(" · "),
             style = MaterialTheme.typography.labelSmall,
             color = theme.mutedTextColor,

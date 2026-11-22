@@ -131,8 +131,8 @@ fun HomeScreen(
     var focusedSlot by remember { mutableStateOf<HomeSlot?>(null) }
     // אחרי הסרה השורה נעלמת יחד עם הפוקוס שלה, ולכן הפוקוס חוזר ללשוניות
     var refocusTabs by remember { mutableStateOf(false) }
-    // * מגיע מהמערכת רק כשידור (לא כ-KeyEvent), ר' onStarKeyPress.
-    com.future.navigation.ui.common.onStarKey {
+    // מקש Options פותח את התפריט של השורה בפוקוס, כמו בכל המערכת
+    com.future.sharednav.nav.onOptionsKeyPress {
         val slot = focusedSlot
         if (slot != null) {
             onOpenSavedPlaces()

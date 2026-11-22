@@ -105,7 +105,7 @@ fun LineSearchScreen(
     }
 
     // * מגיע כשידור (לא כ-KeyEvent). תפריט רק כשיש שורה בפוקוס, לא מתוך שדה החיפוש.
-    com.future.navigation.ui.common.onStarKey {
+    com.future.sharednav.nav.onOptionsKeyPress {
         if (menuFor == null) focusedRow?.let { menuFor = it.saved }
     }
 
@@ -136,12 +136,12 @@ fun LineSearchScreen(
     val status = when {
         notice != null -> notice.orEmpty()
         query.isBlank() && rows.isEmpty() -> "אין קווים אחרונים או מועדפים. הקלידו מספר קו לחיפוש"
-        query.isBlank() -> "* על קו לאפשרויות · OK לפתיחה"
+        query.isBlank() -> "Options על קו לאפשרויות · OK לפתיחה"
         here == null -> "אין מיקום - חיפוש קו לפי מספר דורש את המיקום שלך"
         loading -> "מחפש קווים ליד מיקומך…"
         nearby == null -> "אין חיבור לשרת - לא ניתן לחפש קו עכשיו"
         rows.isEmpty() -> "אין קו $query ביציאות הקרובות ליד מיקומך"
-        else -> "* על קו לאפשרויות · OK לפתיחה"
+        else -> "Options על קו לאפשרויות · OK לפתיחה"
     }
 
     Column(
