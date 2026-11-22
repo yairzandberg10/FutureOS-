@@ -167,7 +167,7 @@ fun StatusBarScreen(
                     Intent.ACTION_TIMEZONE_CHANGED -> { timeFormat.timeZone = TimeZone.getDefault(); refreshTime() }
                     Intent.ACTION_TIME_TICK, Intent.ACTION_TIME_CHANGED -> refreshTime()
                     WifiManager.RSSI_CHANGED_ACTION -> refreshWifiLevel()
-                    TelephonyManager.ACTION_SIM_CARD_STATE_CHANGED, "android.intent.action.SIM_STATE_CHANGED" -> refreshSim()
+                    "android.telephony.action.SIM_CARD_STATE_CHANGED", "android.intent.action.SIM_STATE_CHANGED" -> refreshSim()
                     else -> { refreshRinger(); manager.updateStates() }
                 }
             }
@@ -184,7 +184,7 @@ fun StatusBarScreen(
             addAction(PowerManager.ACTION_POWER_SAVE_MODE_CHANGED)
             addAction(WifiManager.WIFI_STATE_CHANGED_ACTION)
             addAction(WifiManager.RSSI_CHANGED_ACTION)
-            addAction(TelephonyManager.ACTION_SIM_CARD_STATE_CHANGED)
+            addAction("android.telephony.action.SIM_CARD_STATE_CHANGED")
             addAction("android.intent.action.SIM_STATE_CHANGED")
             addAction(BluetoothAdapter.ACTION_STATE_CHANGED)
             addAction(BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED)
