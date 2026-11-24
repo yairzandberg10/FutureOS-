@@ -151,6 +151,8 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
     // מילת ההפעלה ("היי פיוטר", "עוזר") - מקשיבה כל עוד החלון פתוח ובמנוחה.
     val wake = remember { com.future.assistant.asr.WakeWordListener(context) }
     var resumed by remember { mutableStateOf(true) }
+    /** מילת ההפעלה זוהתה ומחכים לתמלול הפקודה שאחריה (המסך כבר ב"מתמלל"). */
+    var wakePending by remember { mutableStateOf(false) }
 
     fun speak(text: String, spoken: String = text, action: AssistantAction? = null) {
         state = AssistantState.SPEAKING
@@ -301,18 +303,31 @@ fun AssistantScreen(theme: FutureTheme, onExit: () -> Unit) {
         }
         // רגע אחרי ההקראה, שהמיקרופון לא יקלוט את סוף המשפט של העוזר
         delay(300)
-        wake.start { rest ->
-            scope.launch(Dispatchers.Main) {
-                if (state != AssistantState.IDLE) return@launch
-                vibrateShort(context)
-                if (rest.isBlank()) {
-                    onMicClick()
-                } else {
+        wake.start(
+            // משוב מיד כשמילת ההפעלה זוהתה, עוד לפני התמלול המלא של הפקודה
+            onDetected = {
+                scope.launch(Dispatchers.Main) {
+                    if (state != AssistantState.IDLE) return@launch
+                    vibrateShort(context)
+                    wakePending = true
                     state = AssistantState.THINKING
-                    handleRecognizedText(rest)
+                    level = 0f
                 }
-            }
-        }
+            },
+            onWake = { rest ->
+                scope.launch(Dispatchers.Main) {
+                    if (!wakePending || state != AssistantState.THINKING) return@launch
+                    wakePending = false
+                    if (rest.isBlank()) {
+                        state = AssistantState.IDLE
+                        // יצאו מהעוזר בינתיים - לא פותחים מיקרופון ברקע
+                        if (resumed) onMicClick()
+                    } else {
+                        handleRecognizedText(rest)
+                    }
+                }
+            },
+        )
     }
 
     // הטקסט שמוצג באזור התשובה - נקבע לפי המצב

@@ -19,8 +19,13 @@ private const val TAG = "Assistant/Wake"
  * לפקודה. הכול על המכשיר: זיהוי קטעי דיבור לפי עוצמה (VAD), וכל קטע קצר מתומלל
  * ב-Whisper המשותף ונבדק ב-[WakeWord]. קטעים ארוכים (שיחה ברקע) לא מתומללים.
  *
+ * ההקלטה והתמלול רצים ב-threads נפרדים: בזמן שקטע אחד מתומלל (1-2 שניות
+ * ב-small) המיקרופון ממשיך לקלוט, כך שניסיון שני של "היי פיוטר" לא הולך לאיבוד.
+ * כשהתמלול עסוק, רק הקטע האחרון מחכה בתור - קטעים ישנים יותר לא רלוונטיים.
+ *
  * רק הקלטה אחת בכל פעם: [stop] סוגר את המיקרופון לפני שההאזנה לפקודה מתחילה.
- * [onWake] נקרא מ-thread ברקע עם מה שנאמר אחרי מילת ההפעלה (ריק אם כלום).
+ * כשמילת ההפעלה מזוהה המיקרופון נסגר מיד, [onDetected] נקרא (משוב מיידי), ואז
+ * [onWake] עם מה שנאמר אחריה (ריק אם כלום). שניהם מ-thread ברקע.
  */
 class WakeWordListener(private val context: Context) {
     private val lock = Any()
@@ -28,15 +33,19 @@ class WakeWordListener(private val context: Context) {
     private var record: AudioRecord? = null
     /** עולה בכל start/stop - קטע שתומלל אחרי stop לא מפעיל כלום. */
     @Volatile private var generation = 0
+    /** הקטע הבא לתמלול (רק האחרון), וה-generation של ה-thread שמתמלל עכשיו. */
+    private var pending: FloatArray? = null
+    private var workerGen = -1
 
     val isRunning: Boolean get() = synchronized(lock) { thread != null }
 
-    fun start(onWake: (rest: String) -> Unit) {
+    fun start(onDetected: () -> Unit = {}, onWake: (rest: String) -> Unit) {
         synchronized(lock) {
             if (thread != null) return
             if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) return
             val gen = ++generation
-            thread = Thread({ loop(gen, onWake) }, "wake-word").apply { start() }
+            pending = null
+            thread = Thread({ loop(gen, onDetected, onWake) }, "wake-word").apply { start() }
         }
     }
 
@@ -44,13 +53,14 @@ class WakeWordListener(private val context: Context) {
     fun stop() {
         synchronized(lock) {
             generation++
+            pending = null
             runCatching { record?.stop() }
             thread = null
         }
     }
 
     @SuppressLint("MissingPermission")
-    private fun loop(gen: Int, onWake: (String) -> Unit) {
+    private fun loop(gen: Int, onDetected: () -> Unit, onWake: (String) -> Unit) {
         val minBuf = AudioRecord.getMinBufferSize(RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
         val rec = runCatching {
             AudioRecord(MediaRecorder.AudioSource.VOICE_RECOGNITION, RATE, AudioFormat.CHANNEL_IN_MONO,
@@ -102,25 +112,12 @@ class WakeWordListener(private val context: Context) {
                     inSpeech = false
                     // דיבור ארוך (שיחה, טלוויזיה) - לא מילת הפעלה, לא מבזבזים עליו תמלול
                     if (!tooLong && speechFrames >= MIN_SPEECH_FRAMES) {
-                        val samples = FloatArray(segment.sumOf { it.size })
+                        // בלי השקט שבסוף: הוא רק מאריך את ה-encoder
+                        val keep = segment.size - (silentFrames - TAIL_FRAMES).coerceAtLeast(0)
+                        val samples = FloatArray(segment.take(keep).sumOf { it.size })
                         var o = 0
-                        for (s in segment) { s.copyInto(samples, o); o += s.size }
-                        val t0 = System.currentTimeMillis()
-                        val text = runCatching { LocalSpeechEngine.transcribeSamples(context, samples, PROMPT, fast = true, maxTokens = WAKE_TOKENS) }.getOrDefault("")
-                        var rest = WakeWord.match(text)
-                        Log.i(TAG, "heard='$text' wake=${rest != null} in ${System.currentTimeMillis() - t0}ms (${samples.size / 16}ms audio)")
-                        if (rest != null && generation == gen) {
-                            // נאמרה גם פקודה ("היי פיוטר מה השעה") - הבדיקה נעצרה אחרי כמה
-                            // טוקנים, אז הקטע הזה מתומלל שוב עד הסוף.
-                            if (rest.isNotBlank()) {
-                                val t1 = System.currentTimeMillis()
-                                val full = runCatching { LocalSpeechEngine.transcribeSamples(context, samples, null, fast = true) }.getOrDefault("")
-                                rest = WakeWord.match(full) ?: ""
-                                Log.i(TAG, "command='$full' in ${System.currentTimeMillis() - t1}ms")
-                            }
-                            if (generation == gen) onWake(rest)
-                            break
-                        }
+                        for (s in segment.take(keep)) { s.copyInto(samples, o); o += s.size }
+                        submit(gen, samples, onDetected, onWake)
                     }
                     segment.clear()
                 }
@@ -137,14 +134,72 @@ class WakeWordListener(private val context: Context) {
         }
     }
 
+    /** מעביר קטע לתמלול. thread תמלול אחד לכל generation; קטע חדש מחליף את הממתין. */
+    private fun submit(gen: Int, samples: FloatArray, onDetected: () -> Unit, onWake: (String) -> Unit) {
+        synchronized(lock) {
+            if (generation != gen) return
+            pending = samples
+            if (workerGen == gen) return
+            workerGen = gen
+        }
+        Thread({ work(gen, onDetected, onWake) }, "wake-asr").start()
+    }
+
+    private fun work(gen: Int, onDetected: () -> Unit, onWake: (String) -> Unit) {
+        while (true) {
+            val samples = synchronized(lock) {
+                if (generation != gen) {
+                    if (workerGen == gen) workerGen = -1
+                    return
+                }
+                val p = pending
+                pending = null
+                if (p == null) { workerGen = -1; return }
+                p
+            }
+            val t0 = System.currentTimeMillis()
+            val text = runCatching { LocalSpeechEngine.transcribeSamples(context, samples, PROMPT, fast = true, maxTokens = WAKE_TOKENS) }.getOrDefault("")
+            var rest = WakeWord.match(text)
+            Log.i(TAG, "heard='$text' wake=${rest != null} in ${System.currentTimeMillis() - t0}ms (${samples.size / 16}ms audio)")
+            if (rest == null) continue
+            // נמצאה מילת הפעלה: סוגרים את המיקרופון (כמו stop) ונותנים משוב מיד,
+            // עוד לפני התמלול המלא של הפקודה (אם נאמרה).
+            synchronized(lock) {
+                if (generation != gen) {
+                    if (workerGen == gen) workerGen = -1
+                    return
+                }
+                generation++
+                pending = null
+                runCatching { record?.stop() }
+                thread = null
+                workerGen = -1
+            }
+            onDetected()
+            // נאמרה גם פקודה ("היי פיוטר מה השעה") - הבדיקה נעצרה אחרי כמה
+            // טוקנים, אז הקטע הזה מתומלל שוב עד הסוף.
+            if (rest.isNotBlank()) {
+                val t1 = System.currentTimeMillis()
+                val full = runCatching { LocalSpeechEngine.transcribeSamples(context, samples, null, fast = true) }.getOrDefault("")
+                rest = WakeWord.match(full) ?: ""
+                Log.i(TAG, "command='$full' in ${System.currentTimeMillis() - t1}ms")
+            }
+            onWake(rest)
+            return
+        }
+    }
+
     private companion object {
         const val RATE = 16000
         const val FRAME = 320 // 20ms
         const val MIN_RMS = 0.012f
         const val PRE_ROLL_FRAMES = 15 // 300ms לפני תחילת הדיבור
-        const val END_SILENCE_FRAMES = 30 // 600ms שקט = סוף הקטע
+        // 400ms שקט = סוף הקטע. היה 600ms - כל זה זמן המתנה לפני שהבדיקה בכלל מתחילה.
+        const val END_SILENCE_FRAMES = 20
+        const val TAIL_FRAMES = 5 // 100ms שקט נשארים בסוף הקטע
         const val MIN_SPEECH_FRAMES = 10 // לפחות 200ms של דיבור
-        const val MAX_SEGMENT_FRAMES = 175 // 3.5 שניות
+        // 5 שניות: "היי פיוטר" + פקודה קצרה נכנסים בקטע אחד (ב-3.5 שניות פקודה כזו נזרקה)
+        const val MAX_SEGMENT_FRAMES = 250
         // הקשר ניטרלי ולא מילת ההפעלה עצמה: Whisper נוטה "לחזור" על ההקשר כשהוא
         // שומע רעש, וזה היה מפעיל את העוזר לבד.
         const val PROMPT = "דיבור קצר בעברית."

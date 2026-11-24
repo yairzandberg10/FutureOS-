@@ -4,6 +4,14 @@ This repo has no carried-over git history (see root [README](README.md)), so thi
 
 ## Unreleased
 
+### Assistant: faster wake-word response (2026-11-24)
+
+- On the device the wake word did fire ("היי סיוצר", "עוזר"), but only after 0.6 s of silence plus a 1.7-2.3 s Whisper check, and the mic stopped listening during the check, so a second try was lost.
+- Capture and transcription now run on separate threads. The mic keeps listening while a segment is checked, and only the latest segment waits in the queue.
+- End of segment is 400 ms of silence instead of 600 ms, and trailing silence is trimmed before the check (shorter encoder window).
+- As soon as the wake word is found: vibrate and show "מתמלל" right away, before the command after it is fully transcribed.
+- A segment can be up to 5 s long instead of 3.5 s, so "היי פיוטר" plus a short command is no longer thrown away.
+
 ### Camera: advanced settings, BACK exits directly (2026-11-24)
 
 - New "מתקדם" section in camera settings: exposure compensation (-2..+2 EV), JPEG quality (70/85/95), burst length (3/5/10), shutter sound on/off, AE/AWB lock, and a reset row.
