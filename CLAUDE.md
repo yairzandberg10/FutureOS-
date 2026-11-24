@@ -26,6 +26,6 @@
 - צריך לשמור משהו בצד? commit זמני על `main` שאחר כך מתקנים, לא ענף ולא stash.
 
 ## מבנה הריפו
-- כל האפליקציות (וגם המודול המשותף `SharedKeypadNav`) נמצאות ב-`apps/<App>/`, למשל `apps/Settings`, `apps/Notes`, `apps/Dialer`. בונים מתוך התיקייה של האפליקציה: `cd apps/<App> && ./gradlew installRelease`.
+- כל האפליקציות (וגם המודול המשותף `SharedKeypadNav`) נמצאות ב-`apps/<App>/`, למשל `apps/Settings`, `apps/Notes`, `apps/Dialer`. כל אפליקציה נבנית ב-GitHub Actions מתוך התיקייה שלה (לא במחשב).
 - תיעוד ב-`docs/` (DEVICE_SETUP, AI-GUIDELINES, QA-REPORT), שיווק ב-`marketing/`, בדיקת האבטחה ב-`security/security-check.py` (מריצים מהשורש: `python security/security-check.py`).
 - בשורש נשארים רק README, CLAUDE, DESIGN, PRODUCT, CHANGELOG ו-build-all.sh. לא ליצור תיקיות אפליקציה חדשות בשורש, ולא שמות בעברית בתוך הריפו (Gradle נכשל בנתיב לא-ASCII ב-Windows).
