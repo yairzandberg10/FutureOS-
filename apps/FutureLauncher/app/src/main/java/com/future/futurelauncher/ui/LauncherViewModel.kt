@@ -161,7 +161,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                         val obj = jsonArray.optJSONObject(i) ?: continue
                         if (!obj.has("id") || obj.isNull("id")) continue
                         val id = obj.optString("id")
-                        val type = obj.optString("type", "app")
+                        val rawType = obj.optString("type", "app")
+                        val type = if (rawType == "widget" && obj.has("builtin") && !obj.isNull("builtin")) "builtin_widget" else rawType
                         val label = obj.optString("label", "")
                         val customLabel = if (obj.isNull("customLabel")) null else obj.optString("customLabel")
 
@@ -192,6 +193,24 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                                     }
                                 }
                                 folder
+                            }
+                            // ווידג'ט מובנה (שעון, אירועים, סוללה) - אין לו widgetId ואין
+                            // מה לבדוק מול AppWidgetManager. סוג לא מוכר (גרסה עתידית
+                            // שהוחזרה אחורה) נטען כתא ריק.
+                            "builtin_widget" -> {
+                                val kind = BuiltinWidget.fromKey(obj.optString("builtin"))
+                                if (kind == null) {
+                                    LauncherItem.Empty(id = id)
+                                } else {
+                                    LauncherItem.Widget(
+                                        id = id,
+                                        widgetId = -1,
+                                        label = label.ifBlank { kind.title },
+                                        spanX = obj.optInt("spanX", kind.defaultSpanX).coerceIn(kind.minSpanX, GRID_COLUMNS),
+                                        spanY = obj.optInt("spanY", kind.defaultSpanY).coerceIn(1, GRID_ROWS),
+                                        builtin = kind.key,
+                                    ).apply { this.customLabel = customLabel }
+                                }
                             }
                             "widget" -> {
                                 val widgetId = obj.optInt("widgetId", -1)
@@ -314,6 +333,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                         obj.put("widgetId", item.widgetId)
                         obj.put("spanX", item.spanX)
                         obj.put("spanY", item.spanY)
+                        // גרסה ישנה של הלאנצ'ר רואה widgetId=-1 וטוענת תא ריק - לא קורסת
+                        if (item.builtin != null) obj.put("builtin", item.builtin)
                     }
                     is LauncherItem.Empty -> {
                         obj.put("type", "empty")
@@ -360,6 +381,37 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         val appWidgetManager = AppWidgetManager.getInstance(context)
         val widgetInfo = appWidgetManager.getAppWidgetInfo(widgetId) ?: return false
         val (spanX, spanY) = spanFor(widgetInfo)
+        return placeWidget(currentPage, spanX, spanY, minSpanX = 1) { sx, sy ->
+            LauncherItem.Widget(
+                id = "widget:${UUID.randomUUID()}",
+                widgetId = widgetId,
+                label = widgetInfo.loadLabel(pm) ?: context.getString(com.future.futurelauncher.R.string.widget_default_label),
+                spanX = sx,
+                spanY = sy,
+            )
+        }
+    }
+
+    /** ווידג'ט מובנה (שעון, אירועים, סוללה) - בלי AppWidgetHost. false אם אין מקום. */
+    fun addBuiltinWidget(kind: BuiltinWidget, currentPage: Int): Boolean =
+        placeWidget(currentPage, kind.defaultSpanX, kind.defaultSpanY, minSpanX = kind.minSpanX) { sx, sy ->
+            LauncherItem.Widget(
+                id = "widget:${UUID.randomUUID()}",
+                widgetId = -1,
+                label = kind.title,
+                spanX = sx,
+                spanY = sy,
+                builtin = kind.key,
+            )
+        }
+
+    private fun placeWidget(
+        currentPage: Int,
+        spanX: Int,
+        spanY: Int,
+        minSpanX: Int,
+        create: (Int, Int) -> LauncherItem.Widget,
+    ): Boolean {
         val page = currentPage.coerceIn(0, (pages.size - 1).coerceAtLeast(0))
 
         val newPages = pages.toMutableList()
@@ -370,19 +422,13 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         var sx = spanX
         var sy = spanY
         var targetIndex = findPlacement(currentPageItems, sx, sy, preferred)
-        while (targetIndex == -1 && (sx > 1 || sy > 1)) {
+        while (targetIndex == -1 && (sx > minSpanX || sy > 1)) {
             if (sy > 1) sy-- else sx--
             targetIndex = findPlacement(currentPageItems, sx, sy, preferred)
         }
         if (targetIndex == -1) return false
 
-        val newWidget = LauncherItem.Widget(
-            id = "widget:${UUID.randomUUID()}",
-            widgetId = widgetId,
-            label = widgetInfo.loadLabel(pm) ?: context.getString(com.future.futurelauncher.R.string.widget_default_label),
-            spanX = sx,
-            spanY = sy,
-        )
+        val newWidget = create(sx, sy)
         currentPageItems[targetIndex] = newWidget
         recalculateOccupiedSlots(currentPageItems)
         newPages[page] = currentPageItems
@@ -460,7 +506,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         }
 
         if (item is LauncherItem.Widget) {
-            onWidgetRemoved?.invoke(item.widgetId)
+            if (item.builtin == null) onWidgetRemoved?.invoke(item.widgetId)
             // Remove all associated occupied slots
             pageItems.forEachIndexed { idx, it ->
                 if (it is LauncherItem.Empty && it.isOccupiedBy == item.id) {
@@ -558,7 +604,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                     else -> {}
                 }
             }
-            pages[index].forEach { if (it is LauncherItem.Widget) onWidgetRemoved?.invoke(it.widgetId) }
+            pages[index].forEach { if (it is LauncherItem.Widget && it.builtin == null) onWidgetRemoved?.invoke(it.widgetId) }
             val newPages = pages.toMutableList()
             newPages.removeAt(index)
             pages = newPages

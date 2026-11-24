@@ -138,6 +138,8 @@ sealed class Screen(val route: String) {
     object AppTimers : Screen("app_timers")
     object Diagnostics : Screen("diagnostics")
     object Sos : Screen("sos")
+    object Wifi : Screen("wifi")
+    object TimeZone : Screen("time_zone")
 }
 
 /** רשימת אפליקציות FutureOS האמיתיות המוצהרות ב-<queries> של המניפסט - אלו היחידות
@@ -280,6 +282,8 @@ fun SettingsApp(
             composable(Screen.AppTimers.route) { AppTimersScreen(navController, theme, viewModel) }
             composable(Screen.Diagnostics.route) { DiagnosticsScreen(navController, theme, viewModel) }
             composable(Screen.Sos.route) { SosScreen(navController, theme, viewModel) }
+            composable(Screen.Wifi.route) { WifiScreen(navController, theme, viewModel) }
+            composable(Screen.TimeZone.route) { TimeZoneScreen(navController, theme, viewModel) }
             com.future.settings.utils.ExtraSystemSettings.ALL_SCREENS.forEach { extra ->
                 composable(extra.route) { ExtraSettingsScreen(navController, theme, viewModel, extra) }
             }
@@ -294,6 +298,10 @@ private data class SearchableSetting(val title: String, val keywords: String, va
 
 private val SEARCHABLE_SETTINGS = listOf(
     SearchableSetting(tr("חיבורים"), tr("bluetooth בלוטות' מצב טיסה נתונים סלולריים sim מיקום location airplane"), FutureIcons.Hub, Screen.Connections.route),
+    SearchableSetting("Wi-Fi", tr("wifi וויפיי רשת אלחוטית אינטרנט סיסמה רשתות שמורות"), FutureIcons.Wifi, Screen.Wifi.route),
+    SearchableSetting(tr("פרטיות והרשאות"), tr("privacy פרטיות הרשאות permissions מצלמה מיקום מיקרופון"), FutureIcons.PrivacyTip, Screen.Privacy.route),
+    SearchableSetting(tr("אזור זמן"), tr("time zone אזור זמן שעון gmt"), FutureIcons.Public, Screen.TimeZone.route),
+    SearchableSetting(tr("תאריך ושעה"), tr("date time תאריך שעה הגדרת שעה ידנית"), FutureIcons.Schedule, Screen.General.route),
     SearchableSetting(tr("צלילים"), tr("עוצמת שמע צליל רינגטון volume sound ringtone"), FutureIcons.AutoMirrored.VolumeUp, Screen.Sound.route),
     SearchableSetting(tr("תצוגה"), tr("בהירות מסך עיצוב brightness display"), FutureIcons.Brightness6, Screen.Display.route),
     SearchableSetting(tr("שורת מצב ורקע"), tr("שורת מצב סטטוס בר שעון status bar clock טפט wallpaper"), FutureIcons.Widgets, Screen.SystemUi.route),
@@ -410,6 +418,8 @@ fun MainMenu(navController: NavController, theme: ThemeConfig, viewModel: Settin
                     SettingsCard(theme) {
                         SettingItem(tr("חיבורים"), tr("Bluetooth, נתונים, SIM ומיקום"), FutureIcons.Hub, theme, modifier = menuFocus(Screen.Connections.route)) { navController.navigate(Screen.Connections.route) }
                         SettingDivider(theme)
+                        SettingItem("Wi-Fi", tr("רשתות אלחוטיות וסיסמאות"), FutureIcons.Wifi, theme, modifier = menuFocus(Screen.Wifi.route)) { navController.navigate(Screen.Wifi.route) }
+                        SettingDivider(theme)
                         SettingItem(tr("צלילים"), tr("עוצמה, רינגטון ורטט"), FutureIcons.AutoMirrored.VolumeUp, theme, modifier = menuFocus(Screen.Sound.route)) { navController.navigate(Screen.Sound.route) }
                         SettingDivider(theme)
                         SettingItem(tr("תצוגה"), tr("בהירות, מצב כהה וגודל טקסט"), FutureIcons.Brightness6, theme, modifier = menuFocus(Screen.Display.route)) { navController.navigate(Screen.Display.route) }
@@ -433,6 +443,8 @@ fun MainMenu(navController: NavController, theme: ThemeConfig, viewModel: Settin
                 item {
                     SettingsCard(theme) {
                         SettingItem(tr("אבטחה"), "בדיקת אבטחה, מסך נעילה וקוד", FutureIcons.Security, theme, modifier = menuFocus(Screen.Security.route)) { navController.navigate(Screen.Security.route) }
+                        SettingDivider(theme)
+                        SettingItem(tr("פרטיות והרשאות"), tr("למי מותר מצלמה, מיקום ומיקרופון"), FutureIcons.PrivacyTip, theme, modifier = menuFocus(Screen.Privacy.route)) { navController.navigate(Screen.Privacy.route) }
                     }
                 }
 
@@ -532,6 +544,8 @@ fun ConnectionsScreen(navController: NavController, theme: ThemeConfig, viewMode
             LazyColumn {
                 item {
                     SettingsCard(theme) {
+                        SettingItem("Wi-Fi", tr("רשתות זמינות, חיבור ורשתות שמורות"), FutureIcons.Wifi, theme) { navController.navigate(Screen.Wifi.route) }
+                        SettingDivider(theme)
                         SettingItem("Bluetooth", if (viewModel.bluetoothEnabled.value) tr("מופעל") else tr("כבוי"), FutureIcons.Bluetooth, theme) { openBluetoothApp(context, navController) }
                         SettingDivider(theme)
                         SettingSwitch(tr("מצב טיסה"), tr("מנתק שיחות, נתונים ו-Bluetooth בבת אחת"), viewModel.airplaneMode.value, { viewModel.toggleAirplaneMode() }, theme)
@@ -791,7 +805,8 @@ fun SoundScreen(navController: NavController, theme: ThemeConfig, viewModel: Set
                         SettingDivider(theme)
                         VolumeSlider(tr("מערכת"), viewModel.systemVolume.value, theme, tr("צלילי מקשים ותפריטים")) { viewModel.setVolume(AudioManager.STREAM_SYSTEM, it) }
                         SettingDivider(theme)
-                        VolumeSlider(tr("התראות"), viewModel.notificationVolume.value, theme, tr("הודעות והתראות מאפליקציות")) { viewModel.setNotificationVolume(it) }
+                        // באנדרואיד 12 בטלפון, זרם ההתראות מקושר לזרם הצלצול - סליידר אחד שולט בשניהם.
+                        VolumeSlider(tr("צלצול והתראות"), viewModel.notificationVolume.value, theme, tr("שיחות נכנסות, הודעות והתראות")) { viewModel.setNotificationVolume(it) }
                         SettingDivider(theme)
                         VolumeSlider(tr("אזעקה"), viewModel.alarmVolume.value, theme, tr("השעון המעורר והטיימרים")) { viewModel.setAlarmVolume(it) }
                         SettingDivider(theme)
@@ -1281,6 +1296,8 @@ fun StorageScreen(navController: NavController, theme: ThemeConfig, viewModel: S
                         }
                     }
                 }
+                item { StorageBreakdownCard(theme, viewModel, info.usedBytes) }
+                item { Spacer(modifier = Modifier.height(24.dp)) }
             }
         }
         storageMessage?.let { msg -> EasterEggMessage("💾", tr("סטטוס אחסון"), msg) { storageMessage = null } }
@@ -1350,6 +1367,12 @@ fun GeneralScreen(navController: NavController, theme: ThemeConfig, viewModel: S
                         SettingSwitch(tr("שעה ותאריך אוטומטיים"), tr("נלקחים מהרשת הסלולרית"), viewModel.autoTime.value, { viewModel.toggleAutoTime() }, theme)
                         SettingDivider(theme)
                         SettingSwitch(tr("אזור זמן אוטומטי"), tr("מתעדכן לבד כשעוברים מדינה"), viewModel.autoTimeZone.value, { viewModel.toggleAutoTimeZone() }, theme)
+                        SettingDivider(theme)
+                        SettingItem(tr("אזור זמן"), java.util.TimeZone.getDefault().id + " · " + com.future.settings.utils.MoreSystemSettings.gmtOffsetLabel(java.util.TimeZone.getDefault().id), FutureIcons.Public, theme) {
+                            navController.navigate(Screen.TimeZone.route)
+                        }
+                        SettingDivider(theme)
+                        ManualDateTimeRows(theme, viewModel)
                     }
                 }
                 item { SettingHeader(tr("שפה ונגישות"), theme) }
@@ -2148,6 +2171,11 @@ fun AppsScreen(navController: NavController, theme: ThemeConfig) {
         val interactor = com.future.settings.utils.SystemInteractor(context)
         FUTURE_OS_APPS.associate { it.packageName to interactor.isAppInstalled(it.packageName) }
     }
+    val otherApps = remember {
+        val futurePkgs = FUTURE_OS_APPS.map { it.packageName }.toSet()
+        com.future.settings.utils.MoreSystemSettings.launcherApps(context)
+            .filter { it.packageName !in futurePkgs && it.packageName != context.packageName }
+    }
     var leetBuffer by remember { mutableStateOf(listOf<Int>()) }
     var leetMessage by remember { mutableStateOf<String?>(null) }
 
@@ -2177,8 +2205,13 @@ fun AppsScreen(navController: NavController, theme: ThemeConfig) {
                         SettingItem(tr("ברירות מחדל"), "טלפון, הודעות ומסך הבית", FutureIcons.Tune, theme) {
                             navController.navigate(Screen.DefaultApps.route)
                         }
+                        SettingDivider(theme)
+                        SettingItem(tr("הרשאות אפליקציות"), tr("מצלמה, מיקום, מיקרופון ואנשי קשר"), FutureIcons.PrivacyTip, theme) {
+                            navController.navigate(Screen.Privacy.route)
+                        }
                     }
                 }
+                item { SettingHeader("FutureOS", theme) }
                 item {
                     SettingsCard(theme) {
                         FUTURE_OS_APPS.forEachIndexed { index, app ->
@@ -2193,6 +2226,24 @@ fun AppsScreen(navController: NavController, theme: ThemeConfig) {
                         }
                     }
                 }
+                // כל שאר האפליקציות שמופיעות במסך הבית (גם שאינן של FutureOS).
+                if (otherApps.isNotEmpty()) {
+                    item { SettingHeader(tr("אפליקציות נוספות ({0})", otherApps.size), theme) }
+                    item {
+                        SettingsCard(theme) {
+                            otherApps.forEachIndexed { index, app ->
+                                SettingItem(
+                                    app.label,
+                                    if (app.isSystem) tr("אפליקציית מערכת") else tr("הותקנה על ידך"),
+                                    FutureIcons.Android,
+                                    theme
+                                ) { navController.navigate(Screen.AppDetail.route(app.packageName)) }
+                                if (index < otherApps.lastIndex) SettingDivider(theme)
+                            }
+                        }
+                    }
+                }
+                item { Spacer(modifier = Modifier.height(24.dp)) }
             }
         }
         leetMessage?.let { msg -> EasterEggMessage("🐛", tr("מצב מפתח סמוי"), msg) { leetMessage = null } }
@@ -2203,8 +2254,42 @@ fun AppsScreen(navController: NavController, theme: ThemeConfig) {
 fun AppDetailScreen(navController: NavController, theme: ThemeConfig, viewModel: SettingsViewModel, packageName: String) {
     val context = LocalContext.current
     val interactor = remember { com.future.settings.utils.SystemInteractor(context) }
-    val app = remember(packageName) { FUTURE_OS_APPS.find { it.packageName == packageName } }
+    val app = remember(packageName) {
+        FUTURE_OS_APPS.find { it.packageName == packageName }
+            ?: com.future.settings.utils.MoreSystemSettings.appLabel(context, packageName)?.let { FutureApp(packageName, it, FutureIcons.Android) }
+    }
     val installed = remember(packageName) { interactor.isAppInstalled(packageName) }
+    val canUninstall = remember(packageName) { installed && com.future.settings.utils.MoreSystemSettings.canUninstall(context, packageName) }
+    var showUninstallConfirm by remember { mutableStateOf(false) }
+    var storage by remember(packageName) { mutableStateOf<com.future.settings.utils.MoreSystemSettings.AppStorage?>(null) }
+    var storageLoaded by remember(packageName) { mutableStateOf(false) }
+    val detailScope = rememberCoroutineScope()
+    fun loadStorage() {
+        detailScope.launch {
+            storage = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.future.settings.utils.MoreSystemSettings.appStorage(context, packageName) }
+            storageLoaded = true
+        }
+    }
+    LaunchedEffect(packageName, installed) { if (installed) loadStorage() }
+    if (showUninstallConfirm) {
+        ConfirmDialog(
+            theme = theme,
+            title = tr("הסרת אפליקציה"),
+            message = tr("להסיר את {0} מהמכשיר? כל הנתונים שלה יימחקו.", app?.displayName ?: packageName),
+            confirmLabel = tr("הסר"),
+            onConfirm = {
+                showUninstallConfirm = false
+                detailScope.launch {
+                    val ok = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        com.future.settings.utils.MoreSystemSettings.uninstallApp(interactor, packageName)
+                    }
+                    viewModel.showToast(if (ok) tr("האפליקציה הוסרה") else tr("ההסרה נכשלה - נדרשת הרשאת root"))
+                    if (ok) navController.popBackStack()
+                }
+            },
+            onDismiss = { showUninstallConfirm = false }
+        )
+    }
     val versionName = remember(packageName) { if (installed) interactor.getAppVersionName(packageName) else null }
     var showClearDataConfirm by remember { mutableStateOf(false) }
     // הקריאה ל-root (appops) רצה ברקע - לא בתוך ההרכבה, כדי שהמסך לא ייתקע בפתיחה.
@@ -2250,6 +2335,32 @@ fun AppDetailScreen(navController: NavController, theme: ThemeConfig, viewModel:
                     }
                 }
                 if (installed) {
+                    item { SettingHeader(tr("אחסון"), theme) }
+                    item {
+                        SettingsCard(theme) {
+                            val s = storage
+                            val fmt = com.future.settings.utils.MoreSystemSettings::formatBytes
+                            SettingItem(
+                                tr("נפח כולל"),
+                                when {
+                                    s != null -> tr("{0} (אפליקציה {1}, נתונים {2})", fmt(s.total), fmt(s.appBytes), fmt(s.dataBytes))
+                                    storageLoaded -> tr("לא זמין - צריך גישה לנתוני שימוש")
+                                    else -> tr("מחשב...")
+                                },
+                                FutureIcons.Storage, theme, showChevron = false, infoFocusable = true
+                            )
+                            SettingDivider(theme)
+                            SettingItem(tr("ניקוי מטמון"), s?.let { tr("מטמון: {0}", fmt(it.cacheBytes)) } ?: tr("קבצים זמניים שהאפליקציה יוצרת מחדש"), FutureIcons.CleaningServices, theme, showChevron = false) {
+                                detailScope.launch {
+                                    val ok = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                                        com.future.settings.utils.MoreSystemSettings.clearAppCache(interactor, packageName)
+                                    }
+                                    viewModel.showToast(if (ok) tr("המטמון נוקה") else tr("לא ניתן לנקות - נדרשת הרשאת root"))
+                                    loadStorage()
+                                }
+                            }
+                        }
+                    }
                     item { SettingHeader(tr("סאונד"), theme) }
                     item {
                         SettingsCard(theme) {
@@ -2283,6 +2394,16 @@ fun AppDetailScreen(navController: NavController, theme: ThemeConfig, viewModel:
                             SettingDivider(theme)
                             SettingItem(tr("מחיקת נתונים"), tr("מוחק לצמיתות את כל המידע השמור"), FutureIcons.Delete, theme, showChevron = false) {
                                 showClearDataConfirm = true
+                            }
+                            SettingDivider(theme)
+                            SettingItem(tr("הרשאות"), tr("מה האפליקציה רשאית לעשות"), FutureIcons.PrivacyTip, theme) {
+                                navController.navigate(Screen.AppPermissions.route(packageName))
+                            }
+                            if (canUninstall) {
+                                SettingDivider(theme)
+                                SettingItem(tr("הסרת התקנה"), tr("מוחק את האפליקציה מהמכשיר"), FutureIcons.Delete, theme, showChevron = false) {
+                                    showUninstallConfirm = true
+                                }
                             }
                         }
                     }
@@ -2551,9 +2672,14 @@ fun DefaultAppsScreen(navController: NavController, theme: ThemeConfig, viewMode
 @Composable
 fun PrivacyScreen(navController: NavController, theme: ThemeConfig) {
     val context = LocalContext.current
+    val otherApps = remember {
+        val futurePkgs = FUTURE_OS_APPS.map { it.packageName }.toSet()
+        com.future.settings.utils.MoreSystemSettings.launcherApps(context)
+            .filter { it.packageName !in futurePkgs && it.packageName != context.packageName }
+    }
     Box(modifier = Modifier.fillMaxSize().background(theme.backgroundColor)) {
         Column {
-            SmallHeader(tr("פרטיות"), theme) { navController.popBackStack() }
+            SmallHeader(tr("פרטיות והרשאות"), theme) { navController.popBackStack() }
             LazyColumn {
                 item { SettingHeader(tr("הרשאות לפי אפליקציה"), theme) }
                 item {
@@ -2566,6 +2692,20 @@ fun PrivacyScreen(navController: NavController, theme: ThemeConfig) {
                         }
                     }
                 }
+                if (otherApps.isNotEmpty()) {
+                    item { SettingHeader(tr("אפליקציות נוספות"), theme) }
+                    item {
+                        SettingsCard(theme) {
+                            otherApps.forEachIndexed { index, app ->
+                                SettingItem(app.label, null, FutureIcons.Android, theme) {
+                                    navController.navigate(Screen.AppPermissions.route(app.packageName))
+                                }
+                                if (index < otherApps.lastIndex) SettingDivider(theme)
+                            }
+                        }
+                    }
+                }
+                item { Spacer(modifier = Modifier.height(24.dp)) }
             }
         }
     }
@@ -2573,7 +2713,11 @@ fun PrivacyScreen(navController: NavController, theme: ThemeConfig) {
 
 @Composable
 fun AppPermissionsScreen(navController: NavController, theme: ThemeConfig, viewModel: SettingsViewModel, packageName: String) {
-    val app = remember(packageName) { FUTURE_OS_APPS.find { it.packageName == packageName } }
+    val permContext = LocalContext.current
+    val app = remember(packageName) {
+        FUTURE_OS_APPS.find { it.packageName == packageName }
+            ?: com.future.settings.utils.MoreSystemSettings.appLabel(permContext, packageName)?.let { FutureApp(packageName, it, FutureIcons.Android) }
+    }
     var permissions by remember(packageName) { mutableStateOf(viewModel.getSystemInteractor().getAppPermissions(packageName)) }
     // SET-36: ביטול הרשאה מבקש אישור - האפליקציה עלולה להפסיק לעבוד כראוי.
     var pendingRevoke by remember { mutableStateOf<com.future.settings.utils.SystemInteractor.PermissionEntry?>(null) }
@@ -2754,6 +2898,18 @@ fun AboutScreen(navController: NavController, theme: ThemeConfig, viewModel: Set
                         }
                         SettingDivider(theme)
                         SettingItem(tr("גרסת קרנל"), kernel, null, theme, showChevron = false, infoFocusable = true)
+                    }
+                }
+                item { SettingHeader(tr("תוכנה"), theme) }
+                item {
+                    SettingsCard(theme) {
+                        SettingItem(tr("גרסת אנדרואיד"), "${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})", FutureIcons.Android, theme, showChevron = false, infoFocusable = true)
+                        SettingDivider(theme)
+                        SettingItem(tr("עדכון אבטחה"), Build.VERSION.SECURITY_PATCH.ifBlank { tr("לא ידוע") }, FutureIcons.Security, theme, showChevron = false, infoFocusable = true)
+                        SettingDivider(theme)
+                        SettingItem(tr("גרסת פס בסיס"), Build.getRadioVersion()?.takeIf { it.isNotBlank() } ?: tr("לא ידוע"), FutureIcons.SignalCellularAlt, theme, showChevron = false, infoFocusable = true)
+                        SettingDivider(theme)
+                        SettingItem(tr("אחסון פנימי"), remember { com.future.settings.utils.MoreSystemSettings.formatBytes(interactor.getStorageInfo().totalBytes) }, FutureIcons.Storage, theme, showChevron = false, infoFocusable = true)
                     }
                 }
                 item { SettingHeader(tr("סטטוס"), theme) }

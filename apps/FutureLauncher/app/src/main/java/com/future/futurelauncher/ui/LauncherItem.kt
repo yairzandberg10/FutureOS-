@@ -46,8 +46,15 @@ sealed class LauncherItem {
         var spanX: Int = 1,
         var spanY: Int = 1,
         override var customLabel: String? = null,
-        override var customIconPath: String? = null
-    ) : LauncherItem()
+        override var customIconPath: String? = null,
+        /**
+         * ווידג'ט מובנה של הלאנצ'ר (BuiltinWidget.key) - מצויר ב-Compose ולא דרך
+         * AppWidgetHost, ואז [widgetId] הוא -1. null = ווידג'ט רגיל של ספק.
+         */
+        val builtin: String? = null,
+    ) : LauncherItem() {
+        val builtinKind: BuiltinWidget? get() = BuiltinWidget.fromKey(builtin)
+    }
 
     data class Empty(
         override val id: String = "empty:${UUID.randomUUID()}",

@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.core.graphics.drawable.toBitmap
@@ -169,12 +170,20 @@ fun FixedLauncherGrid(
         val paddingTop = contentPadding.calculateTopPadding().roundToPx()
         val paddingStart = contentPadding.calculateStartPadding(layoutDirection).roundToPx()
 
+        val paddingBottom = contentPadding.calculateBottomPadding().roundToPx()
         val totalWidth = constraints.maxWidth
         val cellWidth = (totalWidth - paddingStart - contentPadding.calculateEndPadding(layoutDirection).roundToPx() - spacingX * (columns - 1)) / columns
-        
-        // Dynamic cell height based on the items' natural size in the original layout
-        val isEditMode = spacingY < 10.dp.roundToPx() // Heuristic to detect edit mode parameters
-        val cellHeight = (if (isEditMode) 70.dp else 78.dp).roundToPx()
+
+        // גובה התא נגזר מהגובה הזמין, כך שארבע השורות ממלאות את המסך באופן
+        // שווה. קודם הגובה היה קבוע (78dp, או 70dp לפי "ניחוש" של מצב עריכה
+        // מהריווח): הרשת נדחסה למעלה עם ~30dp ריקים מתחתיה, ווידג'ט בשורה אחת
+        // (74dp) חתך את שורת המשנה של תבנית הווידג'ט (~85dp).
+        val cellHeight = if (constraints.hasBoundedHeight) {
+            ((constraints.maxHeight - paddingTop - paddingBottom - spacingY * (rows - 1)) / rows)
+                .coerceAtLeast(56.dp.roundToPx())
+        } else {
+            88.dp.roundToPx()
+        }
 
         var measurableIndex = 0
         val placeables = items.mapIndexedNotNull { index, item ->
@@ -193,12 +202,15 @@ fun FixedLauncherGrid(
             val row = index / columns
             val col = index % columns
             val x = paddingStart + col * (cellWidth + spacingX)
-            val y = paddingTop + row * (cellHeight + spacingY)
+            // אייקון ושם ממורכזים אנכית בתא; ווידג'ט ממלא את התאים שלו
+            val y = paddingTop + row * (cellHeight + spacingY) + ((itemHeight - placeable.height) / 2).coerceAtLeast(0)
 
             Triple(placeable, x, y)
         }
 
-        layout(totalWidth, constraints.maxHeight) {
+        val totalHeight = if (constraints.hasBoundedHeight) constraints.maxHeight
+            else paddingTop + paddingBottom + cellHeight * rows + spacingY * (rows - 1)
+        layout(totalWidth, totalHeight) {
             placeables.forEach { (placeable, x, y) ->
                 placeable.placeRelative(x, y)
             }
@@ -221,7 +233,9 @@ fun ItemPanel(
     largeLabel: Boolean = false,
 ) {
     val baseIcon = when (iconSizeStep) { 0 -> 40.dp; 2 -> 56.dp; else -> 48.dp }
-    val iconSize = if (isEditMode) baseIcon - 8.dp else baseIcon
+    // במצב עריכה הרשת קטנה יותר (מסגרת, "+" בצדדים) - האייקון קטן ב-20% כדי
+    // שגם הגודל "גדול" עם שם יכנס בתא בלי להיחתך
+    val iconSize = if (isEditMode) baseIcon * 0.8f else baseIcon
     // ווידג'ט הוא משטח גדול - הגדלה של 15% הייתה מוציאה אותו מהמסך ומעל שכניו.
     val focusScale = if (item is LauncherItem.Widget) 1.03f else 1.15f
     // האייקון "קופץ" לפוקוס בקפיץ lift (overshoot קטן) במקום קפיץ ברירת המחדל,
@@ -321,7 +335,7 @@ fun ItemPanel(
                 )
                 // האייקון הממוקד מדווח איפה הוא - משם האפליקציה תיפתח (Icon Bloom)
                 .then(
-                    if (isFocused && item !is LauncherItem.Widget) {
+                    if (isFocused && (item !is LauncherItem.Widget || item.builtin != null)) {
                         Modifier.onGloballyPositioned { LaunchMotion.updateFocusedIcon(it.boundsInWindow()) }
                     } else Modifier
                 )
@@ -357,7 +371,15 @@ fun ItemPanel(
                     }
                 }
                 is LauncherItem.Widget -> {
-                    if (appWidgetHost != null) {
+                    val builtinKind = item.builtinKind
+                    if (builtinKind != null) {
+                        BuiltinWidgetContent(builtinKind, item.spanX, item.spanY, theme)
+                    } else if (item.builtin != null) {
+                        // סוג מובנה לא מוכר - לא מנסים createView עם widgetId=-1
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Icon(FutureIcons.Widgets, contentDescription = null, tint = OnWallpaperColor.copy(alpha = 0.6f), modifier = Modifier.size(24.dp))
+                        }
+                    } else if (appWidgetHost != null) {
                         val density = androidx.compose.ui.platform.LocalDensity.current
                         AndroidView(
                             factory = { ctx ->
@@ -399,7 +421,7 @@ fun ItemPanel(
             }
         }
         if ((item !is LauncherItem.Widget || isEditMode) && (showLabel || isEditMode)) {
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(4.dp))
             // L7: שם ארוך ("ניווט ותחבורה") נגלל כשהאייקון ממוקד - MarqueeText של
             // הספרייה המשותפת. בלי פוקוס הוא נחתך עם "..." כמו קודם.
             com.future.sharednav.components.MarqueeText(
@@ -409,7 +431,10 @@ fun ItemPanel(
                 style = MaterialTheme.typography.labelSmall.copy(
                     shadow = OnWallpaperShadow,
                     textAlign = TextAlign.Center,
-                    fontSize = if (largeLabel) FutureTypography.summary else FutureTypography.caption,
+                    // 12sp הוא גודל שם האפליקציה בדיזיין סיסטם (--fos-size-label); "טקסט
+                    // גדול" עולה דרגה ל-14sp. קודם 11sp/13sp - מתחת לסקאלה של שם אפליקציה.
+                    fontSize = if (largeLabel) FutureTypography.body else FutureTypography.label,
+                    lineHeight = 1.3.em,
                 ),
             )
         }

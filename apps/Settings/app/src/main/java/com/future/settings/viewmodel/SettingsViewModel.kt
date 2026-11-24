@@ -590,6 +590,10 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     fun toggleAutoTimeZone() = applyRootToggle(_autoTimeZone, systemInteractor::setAutoTimeZoneEnabled)
 
+    /** אחרי בחירת אזור זמן / שעה ידנית (שמכבים את האוטומטי) - מסנכרנים את המתגים במסך כללי. */
+    fun refreshAutoTimeZone() { _autoTimeZone.value = systemInteractor.isAutoTimeZoneEnabled() }
+    fun refreshAutoTime() { _autoTime.value = systemInteractor.isAutoTimeEnabled() }
+
     fun setLowBatteryWarningLevel(percent: Int) {
         viewModelScope.launch(Dispatchers.IO) {
             val success = systemInteractor.setLowBatteryWarningLevel(percent)

@@ -429,6 +429,7 @@ fun WidgetPickerScreen(
     pm: PackageManager,
     restrictToDefaultApps: Boolean,
     onPick: (AppWidgetProviderInfo) -> Unit,
+    onPickBuiltin: (BuiltinWidget) -> Unit,
 ) {
     val context = LocalContext.current
     var options by remember { mutableStateOf<List<WidgetOption>?>(null) }
@@ -457,15 +458,38 @@ fun WidgetPickerScreen(
                 .sortedWith(compareBy({ it.appLabel.lowercase() }, { it.widgetLabel.lowercase() }))
         } }.getOrDefault(emptyList())
     }
-    LaunchedEffect(options?.size) { if (!options.isNullOrEmpty()) runCatching { first.requestFocus() } }
+    // הווידג'טים המובנים מוצגים מיד, בלי לחכות לרשימת הספקים - הפוקוס עליהם
+    LaunchedEffect(Unit) { delay(30); runCatching { first.requestFocus() } }
+    val builtins = BuiltinWidget.entries
 
     LauncherOverlay(theme, tr("ווידג'טים")) {
         val list = options
-        when {
-            list == null -> EmptyState(icon = FutureIcons.Widgets, title = tr("טוען"), textColor = theme.textColor)
-            list.isEmpty() -> EmptyState(icon = FutureIcons.Widgets, title = tr("אין ווידג'טים"), subtitle = tr("אף אפליקציה מותקנת לא מציעה ווידג'ט"), textColor = theme.textColor)
-            else -> LazyColumn(contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)) {
-                itemsIndexed(list, key = { _, o -> o.info.provider.flattenToString() }) { index, option ->
+        LazyColumn(contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)) {
+            item(key = "builtin_header") {
+                Text(tr("מובנים במסך הבית"), color = theme.mutedTextColor, fontSize = FutureTypography.summary, modifier = Modifier.padding(start = 12.dp, top = 10.dp, bottom = 4.dp))
+            }
+            itemsIndexed(builtins, key = { _, b -> "builtin:" + b.key }) { index, kind ->
+                FutureListItem(
+                    title = tr(kind.title),
+                    summary = tr(kind.description) + " · " + "${kind.defaultSpanX}×${kind.defaultSpanY}",
+                    theme = theme,
+                    onClick = { onPickBuiltin(kind) },
+                    focusRequester = if (index == 0) first else null,
+                    leading = {
+                        val icon = rememberPackageIcon(kind.appPackage)
+                        if (icon != null) Image(icon, contentDescription = null, modifier = Modifier.size(36.dp).clip(RoundedCornerShape(percent = 28)))
+                        else androidx.compose.material3.Icon(kind.fallbackIcon, contentDescription = null, tint = theme.textColor, modifier = Modifier.size(28.dp))
+                    },
+                )
+            }
+            when {
+                list == null -> item(key = "loading") {
+                    Text(tr("טוען…"), color = theme.mutedTextColor, fontSize = FutureTypography.body, modifier = Modifier.padding(horizontal = 12.dp, vertical = 16.dp))
+                }
+                list.isEmpty() -> item(key = "none") {
+                    Text(tr("אף אפליקציה מותקנת לא מציעה ווידג'ט"), color = theme.mutedTextColor, fontSize = FutureTypography.body, modifier = Modifier.padding(horizontal = 12.dp, vertical = 16.dp))
+                }
+                else -> itemsIndexed(list, key = { _, o -> o.info.provider.flattenToString() }) { index, option ->
                     val showHeader = index == 0 || list[index - 1].appLabel != option.appLabel
                     if (showHeader) {
                         Text(option.appLabel, color = theme.mutedTextColor, fontSize = FutureTypography.summary, modifier = Modifier.padding(start = 12.dp, top = 10.dp, bottom = 4.dp))
@@ -475,7 +499,6 @@ fun WidgetPickerScreen(
                         summary = option.cells,
                         theme = theme,
                         onClick = { onPick(option.info) },
-                        focusRequester = if (index == 0) first else null,
                         leading = {
                             val preview = option.preview
                             if (preview != null) Image(preview, contentDescription = null, modifier = Modifier.size(36.dp))
@@ -485,4 +508,17 @@ fun WidgetPickerScreen(
             }
         }
     }
+}
+
+/** אייקון ההפעלה של חבילה (לשורות של הווידג'טים המובנים), נטען ברקע. */
+@Composable
+private fun rememberPackageIcon(packageName: String): androidx.compose.ui.graphics.ImageBitmap? {
+    val context = LocalContext.current
+    var icon by remember(packageName) { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
+    LaunchedEffect(packageName) {
+        icon = withContext(Dispatchers.IO) {
+            runCatching { context.packageManager.getApplicationIcon(packageName).toBitmap(96, 96).asImageBitmap() }.getOrNull()
+        }
+    }
+    return icon
 }

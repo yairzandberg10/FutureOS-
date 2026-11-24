@@ -71,6 +71,7 @@ class MainActivity : ComponentActivity() {
 
     private lateinit var pickWidgetLauncher: ActivityResultLauncher<Intent>
     private lateinit var configWidgetLauncher: ActivityResultLauncher<Intent>
+    private lateinit var calendarPermissionLauncher: ActivityResultLauncher<String>
 
     private val viewModel: LauncherViewModel by viewModels()
 
@@ -132,6 +133,16 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+        // ווידג'ט "אירועים קרובים" קורא את היומן של המערכת - ההרשאה מתבקשת רק
+        // כשהמשתמש לוחץ OK על הווידג'ט, ואחרי אישור הוא נטען מחדש מיד.
+        calendarPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            if (granted) {
+                BuiltinWidgetSignals.refresh++
+            } else {
+                Toast.makeText(this, tr("אין גישה ליומן"), Toast.LENGTH_SHORT).show()
+            }
+        }
+
         window.setFlags(
             WindowManager.LayoutParams.FLAG_SHOW_WALLPAPER,
             WindowManager.LayoutParams.FLAG_SHOW_WALLPAPER
@@ -172,6 +183,38 @@ class MainActivity : ComponentActivity() {
                     .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
                     .putExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER, info.provider)
             )
+        }
+    }
+
+    /**
+     * OK על ווידג'ט מובנה: פותח את האפליקציה שמזינה אותו (שעון, יומן, הגדרות).
+     * ווידג'ט האירועים בלי הרשאה ליומן מבקש אותה קודם ("פתח כדי לאשר גישה").
+     */
+    fun activateBuiltinWidget(kind: BuiltinWidget) {
+        if (kind == BuiltinWidget.AGENDA &&
+            checkSelfPermission(android.Manifest.permission.READ_CALENDAR) != PackageManager.PERMISSION_GRANTED
+        ) {
+            runCatching { calendarPermissionLauncher.launch(android.Manifest.permission.READ_CALENDAR) }
+            return
+        }
+        val launch = packageManager.getLaunchIntentForPackage(kind.appPackage)
+        if (launch == null) {
+            Toast.makeText(this, getString(R.string.app_no_longer_installed), Toast.LENGTH_SHORT).show()
+            return
+        }
+        try {
+            LaunchMotion.start(this, launch)
+        } catch (e: android.content.ActivityNotFoundException) {
+            Toast.makeText(this, getString(R.string.app_no_longer_installed), Toast.LENGTH_SHORT).show()
+        } catch (e: SecurityException) {
+            Toast.makeText(this, getString(R.string.app_no_longer_installed), Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    /** ווידג'ט מובנה שנבחר בבורר - נכנס לדף המוצג, בלי AppWidgetHost. */
+    fun addBuiltinWidget(kind: BuiltinWidget) {
+        if (!viewModel.addBuiltinWidget(kind, viewModel.visiblePage)) {
+            Toast.makeText(this, tr("אין מספיק מקום פנוי בדף הזה לווידג'ט"), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -539,7 +582,11 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                                     }
                                     // ווידג'ט במכשיר בלי מגע: OK לוחץ על הפריט הלחיץ הראשון בו
                                     // (בדרך כלל הווידג'ט כולו פותח את האפליקציה שלו).
-                                    is LauncherItem.Widget -> com.future.futurelauncher.ui.WidgetViews.activate(item.widgetId)
+                                    is LauncherItem.Widget -> {
+                                        val kind = item.builtinKind
+                                        if (kind != null) activity.activateBuiltinWidget(kind)
+                                        else if (item.builtin == null) com.future.futurelauncher.ui.WidgetViews.activate(item.widgetId)
+                                    }
                                     else -> {}
                                 }
                             }
@@ -822,12 +869,15 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
         if (prefs.dimWallpaper > 0) {
             Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = prefs.dimWallpaper / 100f)))
         }
-        Column(modifier = Modifier.fillMaxSize()) {
+        // שורת המצב של FutureUI (28dp) היא חלון overlay מעל מסך הבית, שמצויר עד
+        // הקצה - כל התוכן מתחיל מתחתיה. קודם הרשת התחילה 2dp מתחתיה, ובמצב עריכה
+        // הבית והפח (8dp מלמעלה) ישבו מתחת לשורת המצב עצמה.
+        Column(modifier = Modifier.fillMaxSize().padding(top = com.future.sharednav.systemui.StatusBarInset.HEIGHT_DP.dp)) {
             if (viewModel.isEditMode) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 8.dp),
+                        .padding(top = 4.dp),
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -909,14 +959,17 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
 
                         FixedLauncherGrid(
                             items = pageItems,
+                            // 320x480dp: שוליים 12dp ורווח 8dp -> תא 68dp רוחב; הגובה
+                            // נגזר מהמקום שנשאר (~97dp), כך שהשורות מתפרסות על כל המסך
+                            // ווידג'ט בשורה אחת מקבל את מלוא הגובה של התבנית שלו.
                             contentPadding = PaddingValues(
-                                top = if (viewModel.isEditMode) 7.dp else 30.dp,
-                                start = if (viewModel.isEditMode) 4.dp else 16.dp,
-                                end = if (viewModel.isEditMode) 4.dp else 16.dp,
-                                bottom = if (viewModel.isEditMode) 4.dp else 30.dp
+                                top = if (viewModel.isEditMode) 6.dp else 8.dp,
+                                start = if (viewModel.isEditMode) 4.dp else 12.dp,
+                                end = if (viewModel.isEditMode) 4.dp else 12.dp,
+                                bottom = if (viewModel.isEditMode) 4.dp else 4.dp
                             ),
                             horizontalArrangement = Arrangement.spacedBy((if (viewModel.isEditMode) 2.dp else 8.dp)),
-                            verticalArrangement = Arrangement.spacedBy(if (viewModel.isEditMode) 7.dp else 20.dp),
+                            verticalArrangement = Arrangement.spacedBy(if (viewModel.isEditMode) 6.dp else 8.dp),
                             modifier = Modifier.fillMaxSize()
                         ) { indexInPage, item ->
                             ItemPanel(
@@ -950,7 +1003,9 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(if (viewModel.isEditMode) 80.dp else 50.dp),
+                    // מחוון העמודים: נקודות של 7dp צריכות פס של 28dp, לא 50dp
+                    // ריקים שדחקו את הרשת למעלה
+                    .height(if (viewModel.isEditMode) 80.dp else 28.dp),
                 contentAlignment = Alignment.Center
             ) {
                 if (viewModel.isEditMode) {
@@ -1039,7 +1094,9 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                         val newPages = viewModel.pages.toMutableList()
                         val currentPageItems = newPages[currentPage].toMutableList()
                         val itemIndex = currentPageItems.indexOf(dialog.item)
-                        val widgetItem = dialog.item as? LauncherItem.Widget
+                        val widgetItem = (dialog.item as? LauncherItem.Widget)
+                            // ווידג'ט מובנה לא מצטמצם מתחת לשתי עמודות - אין מקום לטקסט
+                            ?.takeUnless { it.builtinKind != null && spanX < it.builtinKind!!.minSpanX }
                         // הגודל החדש חייב להיכנס בתוך השורה (4 עמודות) ולהיות פנוי - או תא של הווידג'ט עצמו.
                         // אחרת הוא דורס אפליקציות/תיקיות שמתחתיו
                         val fits = widgetItem != null && itemIndex != -1 && (itemIndex % 4) + spanX <= 4 &&
@@ -1132,6 +1189,10 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
                     onPick = { info ->
                         viewModel.dialogState = LauncherDialog.None
                         activity.bindWidget(info)
+                    },
+                    onPickBuiltin = { kind ->
+                        viewModel.dialogState = LauncherDialog.None
+                        activity.addBuiltinWidget(kind)
                     },
                 )
             }
