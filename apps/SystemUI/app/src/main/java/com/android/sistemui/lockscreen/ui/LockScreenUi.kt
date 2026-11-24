@@ -1,5 +1,6 @@
 package com.android.sistemui.lockscreen.ui
 
+import com.android.sistemui.utils.rememberScreenInteractive
 import com.future.sharednav.i18n.tr
 
 import android.icu.util.ULocale
@@ -99,7 +100,10 @@ private val Glass = Surface.copy(alpha = 0.72f)
 fun LockScreenUi(state: LockUiState, accent: Color) {
     val context = LocalContext.current
     var now by remember { mutableStateOf(Date()) }
-    LaunchedEffect(Unit) {
+    // השעון מתקתק רק כשהמסך דולק - מסך הנעילה מורכב גם כשהמסך כבוי
+    val screenOn by rememberScreenInteractive()
+    LaunchedEffect(screenOn) {
+        if (!screenOn) return@LaunchedEffect
         while (true) {
             now = Date()
             delay(1000L - System.currentTimeMillis() % 1000L)

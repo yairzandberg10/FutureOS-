@@ -57,6 +57,7 @@ import androidx.compose.ui.unit.dp
 import com.android.sistemui.controlcenter.logic.ControlManager
 import com.android.sistemui.controlcenter.service.MediaControlService
 import com.android.sistemui.statusbar.logic.PrivacyIndicators
+import com.android.sistemui.utils.rememberScreenInteractive
 import com.android.sistemui.statusbar.logic.StatusBarLayoutManager
 import com.android.sistemui.utils.FutureUIState
 import com.future.sharednav.icons.FutureIcons
@@ -259,7 +260,11 @@ fun StatusBarScreen(
     // שיחה פעילה אין לה broadcast נגיש (dialer שומר את מצב השיחה בתהליך שלו בלבד), אז היא
     // נבדקת בסקר קצר של 2 שניות ב-thread רקע; יחד איתו רשת ביטחון לרענון שאר המצבים
     // למקרה שאירוע מערכת הוחמץ.
-    LaunchedEffect(Unit) {
+    // רק כשהמסך דולק: כשהוא כבוי אין מי שיראה את השורה, והסקר רק היה מבזבז סוללה בכל
+    // פעם שמשהו אחר מעיר את המעבד. בהדלקה הלולאה מתחילה מחדש ומרעננת מיד.
+    val screenOn by rememberScreenInteractive()
+    LaunchedEffect(screenOn) {
+        if (!screenOn) return@LaunchedEffect
         var round = 0
         while (true) {
             val call = withContext(Dispatchers.IO) {
@@ -278,8 +283,9 @@ fun StatusBarScreen(
     }
 
     // משך השיחה נספר מהרגע שהשורה זיהתה אותה - אין ערוץ מה-dialer לזמן ההתחלה המדויק
-    LaunchedEffect(isCallActive) {
+    LaunchedEffect(isCallActive, screenOn) {
         callSeconds = 0
+        if (isCallActive && !screenOn) return@LaunchedEffect
         if (isCallActive) {
             // אחרי הרכבה מחדש ממשיכים מאותה נקודת התחלה ולא מאפסים את הספירה
             if (BarMemory.callStart == 0L) BarMemory.callStart = SystemClock.elapsedRealtime()

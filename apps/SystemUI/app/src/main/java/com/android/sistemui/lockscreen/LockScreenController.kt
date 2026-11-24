@@ -94,6 +94,8 @@ class LockScreenController(
     private val ticker = object : Runnable {
         override fun run() {
             if (view == null) return
+            // מסך כבוי: לא מרעננים ולא מתזמנים שוב. onScreenOn מפעיל את הטיימר מחדש.
+            if (service.getSystemService(PowerManager::class.java)?.isInteractive == false) return
             refreshDynamic()
             main.postDelayed(this, 3_000)
         }
@@ -169,6 +171,10 @@ class LockScreenController(
         }
         if (locked && !suspended) {
             refreshDynamic()
+            if (view != null) {
+                main.removeCallbacks(ticker)
+                main.postDelayed(ticker, 3_000)
+            }
             startFaceScan()
         }
     }

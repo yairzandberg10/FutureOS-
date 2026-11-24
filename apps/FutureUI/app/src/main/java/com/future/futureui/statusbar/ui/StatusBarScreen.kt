@@ -63,6 +63,7 @@ import androidx.core.graphics.drawable.toBitmap
 import com.future.futureui.controlcenter.logic.ControlManager
 import com.future.futureui.controlcenter.service.MediaControlService
 import com.future.futureui.statusbar.logic.PrivacyIndicators
+import com.future.futureui.utils.rememberScreenInteractive
 import com.future.futureui.statusbar.logic.StatusBarLayoutManager
 import com.future.futureui.utils.FutureUIState
 import com.future.sharednav.icons.FutureIcons
@@ -320,7 +321,11 @@ fun StatusBarScreen(
     }
 
     // ---- שיחה פעילה: אין לה אירוע נגיש, נבדקת כל 2 שניות ב-thread רקע ----
-    LaunchedEffect(Unit) {
+    // רק כשהמסך דולק: כשהוא כבוי אין מי שיראה את השורה, והסקר רק היה מבזבז סוללה בכל
+    // פעם שמשהו אחר מעיר את המעבד. בהדלקה הלולאה מתחילה מחדש ומרעננת מיד.
+    val screenOn by rememberScreenInteractive()
+    LaunchedEffect(screenOn) {
+        if (!screenOn) return@LaunchedEffect
         while (true) {
             val inCall = withContext(Dispatchers.IO) {
                 runCatching { (context.getSystemService(Context.TELECOM_SERVICE) as? TelecomManager)?.isInCall == true }
@@ -331,10 +336,11 @@ fun StatusBarScreen(
             delay(2_000)
         }
     }
-    LaunchedEffect(callActive) {
+    LaunchedEffect(callActive, screenOn) {
         callSeconds = 0
         if (!callActive) { BarMemory.callStart = 0L; return@LaunchedEffect }
         if (BarMemory.callStart == 0L) BarMemory.callStart = SystemClock.elapsedRealtime()
+        if (!screenOn) return@LaunchedEffect
         while (true) {
             callSeconds = ((SystemClock.elapsedRealtime() - BarMemory.callStart) / 1000).toInt()
             delay(1_000)
