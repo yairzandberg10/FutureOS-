@@ -4,6 +4,12 @@ This repo has no carried-over git history (see root [README](README.md)), so thi
 
 ## Unreleased
 
+### Camera: advanced settings, BACK exits directly (2026-11-24)
+
+- New "מתקדם" section in camera settings: exposure compensation (-2..+2 EV), JPEG quality (70/85/95), burst length (3/5/10), shutter sound on/off, AE/AWB lock, and a reset row.
+- BACK no longer needs an extra press after a manual focus point: it closes settings/viewer/filters, cancels a countdown, stops a recording, otherwise exits.
+- Flashlight already uses the design-system round capsule (`FutureRoundCapsule`, Capsule.jsx `round`); no code change.
+
 ### Assistant: wake word back on Whisper small, fuzzy "היי פיוטר" (2026-11-24)
 
 - Whisper tiny was fast (~0.6 s) but garbled Hebrew: on the device "היי פיוטר" came out as "היף יוצא", so the wake word never fired. Tiny is removed (the APK is 43 MB smaller, and any leftover copy is deleted from app storage). The wake check runs on small again, in fast mode with an 8-token cap.

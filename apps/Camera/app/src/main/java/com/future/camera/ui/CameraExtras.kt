@@ -145,6 +145,70 @@ fun CameraSettingsScreen(
                         onClick = { onChange(options.copy(videoQuality = VideoQualityOption.entries.after(options.videoQuality))) },
                     )
                 }
+                FutureSectionHeader(tr("מתקדם"), theme)
+                FutureCard(theme = theme) {
+                    FutureSettingItem(
+                        title = tr("פיצוי חשיפה"),
+                        summary = evLabel(options.exposureHalfStops),
+                        icon = FutureIcons.Brightness6,
+                        theme = theme,
+                        showChevron = false,
+                        onClick = {
+                            val next = if (options.exposureHalfStops >= 4) -4 else options.exposureHalfStops + 1
+                            onChange(options.copy(exposureHalfStops = next))
+                        },
+                    )
+                    FutureDivider(theme = theme)
+                    FutureSettingItem(
+                        title = tr("איכות JPEG"),
+                        summary = "${options.jpegQuality}%",
+                        icon = FutureIcons.HighQuality,
+                        theme = theme,
+                        showChevron = false,
+                        onClick = { onChange(options.copy(jpegQuality = listOf(70, 85, 95).after(options.jpegQuality.takeIf { it in listOf(70, 85, 95) } ?: 95))) },
+                    )
+                    FutureDivider(theme = theme)
+                    FutureSettingItem(
+                        title = tr("תמונות ברצף"),
+                        summary = options.burstCount.toString(),
+                        icon = FutureIcons.Camera,
+                        theme = theme,
+                        showChevron = false,
+                        onClick = { onChange(options.copy(burstCount = listOf(3, 5, 10).after(options.burstCount.takeIf { it in listOf(3, 5, 10) } ?: 5))) },
+                    )
+                    FutureDivider(theme = theme)
+                    FutureSettingItem(
+                        title = tr("צליל תריס"),
+                        summary = if (options.shutterSound) tr("פעיל") else tr("כבוי"),
+                        icon = FutureIcons.Camera,
+                        theme = theme,
+                        showChevron = false,
+                        onClick = { onChange(options.copy(shutterSound = !options.shutterSound)) },
+                        trailing = { FutureSwitch(checked = options.shutterSound, theme = theme) },
+                    )
+                    FutureDivider(theme = theme)
+                    FutureSettingItem(
+                        title = tr("נעילת חשיפה ואיזון לבן"),
+                        summary = if (options.lockAeAwb) tr("פעילה") else tr("כבויה"),
+                        icon = FutureIcons.AutoAwesome,
+                        theme = theme,
+                        showChevron = false,
+                        onClick = { onChange(options.copy(lockAeAwb = !options.lockAeAwb)) },
+                        trailing = { FutureSwitch(checked = options.lockAeAwb, theme = theme) },
+                    )
+                    FutureDivider(theme = theme)
+                    FutureSettingItem(
+                        title = tr("איפוס הגדרות מתקדמות"),
+                        summary = tr("חשיפה, איכות, רצף, צליל ונעילה"),
+                        icon = FutureIcons.Settings,
+                        theme = theme,
+                        showChevron = false,
+                        onClick = {
+                            val d = CameraOptions()
+                            onChange(options.copy(exposureHalfStops = d.exposureHalfStops, jpegQuality = d.jpegQuality, burstCount = d.burstCount, shutterSound = d.shutterSound, lockAeAwb = d.lockAeAwb))
+                        },
+                    )
+                }
                 FutureSectionHeader(tr("מקשים"), theme)
                 FutureCard(theme = theme) {
                     KeyHintRow("Options", tr("החלפת מצלמה"), theme)
@@ -160,6 +224,12 @@ fun CameraSettingsScreen(
             }
         }
     }
+}
+
+private fun evLabel(halfStops: Int): String {
+    if (halfStops == 0) return "0"
+    val v = halfStops / 2f
+    return (if (v > 0) "+" else "") + (if (halfStops % 2 == 0) "%.0f" else "%.1f").format(v) + " EV"
 }
 
 /** שורת מידע (בלי פוקוס) - מקש ומה הוא עושה במצלמה. */

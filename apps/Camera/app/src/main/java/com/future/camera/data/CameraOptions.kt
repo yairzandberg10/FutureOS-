@@ -37,6 +37,15 @@ data class CameraOptions(
     val timerSeconds: Int = 0,
     val showGrid: Boolean = false,
     val filter: CameraFilter = CameraFilter.NONE,
+    // הגדרות מתקדמות
+    /** פיצוי חשיפה בחצאי עצירה (-4..+4 = -2EV..+2EV). */
+    val exposureHalfStops: Int = 0,
+    /** איכות ה-JPEG (1-100). */
+    val jpegQuality: Int = 95,
+    val shutterSound: Boolean = true,
+    val burstCount: Int = 5,
+    /** נעילת איזון הלבן והחשיפה האוטומטית בזמן הצילום (מונע קפיצות בין תמונות ברצף). */
+    val lockAeAwb: Boolean = false,
 ) {
     companion object {
         private const val PREFS = "camera_options"
@@ -54,6 +63,11 @@ data class CameraOptions(
                 timerSeconds = p.getInt("timer", 0),
                 showGrid = p.getBoolean("grid", false),
                 filter = read("filter", CameraFilter.entries.toTypedArray(), CameraFilter.NONE),
+                exposureHalfStops = p.getInt("ev_half", 0).coerceIn(-4, 4),
+                jpegQuality = p.getInt("jpeg_quality", 95).coerceIn(1, 100),
+                shutterSound = p.getBoolean("shutter_sound", true),
+                burstCount = p.getInt("burst_count", 5).coerceIn(2, 10),
+                lockAeAwb = p.getBoolean("lock_ae_awb", false),
             )
         }
     }
@@ -68,6 +82,11 @@ data class CameraOptions(
             .putInt("timer", timerSeconds)
             .putBoolean("grid", showGrid)
             .putString("filter", filter.name)
+            .putInt("ev_half", exposureHalfStops)
+            .putInt("jpeg_quality", jpegQuality)
+            .putBoolean("shutter_sound", shutterSound)
+            .putInt("burst_count", burstCount)
+            .putBoolean("lock_ae_awb", lockAeAwb)
             .apply()
     }
 }

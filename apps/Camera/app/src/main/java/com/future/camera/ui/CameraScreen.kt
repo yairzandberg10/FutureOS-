@@ -138,9 +138,6 @@ private enum class CaptureMode(val label: String) {
 /** קפיצת הזום בכל חזרה של מקש מוחזק - בערך שנייה וחצי מ-1x עד הזום המרבי. */
 private const val ZOOM_STEP = 0.035f
 
-/** כמה תמונות במצב רצף. */
-private const val BURST_COUNT = 5
-
 /**
  * מסך המצלמה - תצוגה חיה במסך מלא, הכול מהמקשים:
  *
@@ -217,8 +214,9 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
     var focusReturn by remember { mutableStateOf<FocusRequester?>(null) }
     val isVideo = captureMode == CaptureMode.VIDEO
 
-    val imageCapture = remember(options.aspect, options.photoQuality) {
+    val imageCapture = remember(options.aspect, options.photoQuality, options.jpegQuality) {
         ImageCapture.Builder()
+            .setJpegQuality(options.jpegQuality)
             .setResolutionSelector(resolutionFor(options.aspect))
             .setCaptureMode(
                 if (options.photoQuality == PhotoQualityOption.QUALITY) ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY
@@ -286,6 +284,17 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
     }
 
     LaunchedEffect(options.flashMode, imageCapture) { imageCapture.flashMode = options.flashMode }
+    // פיצוי חשיפה - נקבע מחדש בכל קישור (הקישור מאפס אותו) ובכל שינוי בהגדרה
+    LaunchedEffect(camera, options.exposureHalfStops) {
+        val cam = camera ?: return@LaunchedEffect
+        val state = cam.cameraInfo.exposureState
+        if (!state.isExposureCompensationSupported) return@LaunchedEffect
+        val step = state.exposureCompensationStep.toFloat().takeIf { it > 0f } ?: return@LaunchedEffect
+        val index = Math.round(options.exposureHalfStops * 0.5f / step)
+            .coerceIn(state.exposureCompensationRange.lower, state.exposureCompensationRange.upper)
+        runCatching { cam.cameraControl.setExposureCompensationIndex(index) }
+    }
+    LaunchedEffect(camera, options.lockAeAwb) { camera?.let { setAeAwbLock(it, options.lockAeAwb) } }
     LaunchedEffect(linearZoom, camera) {
         val cam = camera ?: return@LaunchedEffect
         val future = cam.cameraControl.setLinearZoom(linearZoom)
@@ -339,7 +348,7 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
         val square = captureMode == CaptureMode.SQUARE
         val matrix = if (captureMode == CaptureMode.DOCUMENT) CameraFilter.DOCUMENT else options.filter.matrix()
         // משוב מיידי, ברגע הלחיצה ולא אחרי השמירה: צליל תריס והבהוב.
-        sound.play(MediaActionSound.SHUTTER_CLICK)
+        if (options.shutterSound) sound.play(MediaActionSound.SHUTTER_CLICK)
         flashFeedback = true
         if (!square && matrix == null) {
             PhotoStorage.capture(
@@ -363,12 +372,12 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
     fun takeBurst(shot: Int = 1) {
         burstShot = shot
         takePhoto { ok ->
-            if (ok && shot < BURST_COUNT) {
+            if (ok && shot < options.burstCount) {
                 takeBurst(shot + 1)
             } else {
                 burstShot = null
                 busy = false
-                if (ok) snackbar.show("$BURST_COUNT תמונות נשמרו")
+                if (ok) snackbar.show("${options.burstCount} תמונות נשמרו")
             }
         }
     }
@@ -440,7 +449,7 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
 
     // BACK בזמן ספירה מבטל אותה, ובזמן הקלטה עוצר ושומר את הסרטון ויוצא מהמסך
     // (היציאה אחרי השמירה, ר' onFinished). (מוגדר אחרי startCapture/onShutterPressed כי הוא קורא להם.)
-    BackHandler(enabled = showSettings || showViewer || showFilters || focusPoint != null || countdownRemaining != null || isRecording) {
+    BackHandler(enabled = showSettings || showViewer || showFilters || countdownRemaining != null || isRecording) {
         when {
             showViewer -> showViewer = false
             showSettings -> showSettings = false
@@ -449,11 +458,6 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
             isRecording -> {
                 exitAfterRecording = true
                 startCapture()
-            }
-            else -> {
-                focusPoint = null
-                camera?.cameraControl?.cancelFocusAndMetering()
-                snackbar.show(tr("מיקוד אוטומטי"))
             }
         }
     }
@@ -701,7 +705,7 @@ fun CameraScreen(theme: FutureTheme, onExit: () -> Unit) {
             }
             burstShot?.let { shot ->
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    OverlayChip("$shot/$BURST_COUNT")
+                    OverlayChip("$shot/${options.burstCount}")
                 }
             }
 
@@ -785,6 +789,18 @@ private suspend fun <T> com.google.common.util.concurrent.ListenableFuture<T>.aw
     suspendCancellableCoroutine { cont ->
         addListener({ cont.resume(runCatching { get() }.getOrNull()) }, Runnable::run)
     }
+
+@androidx.annotation.OptIn(androidx.camera.camera2.interop.ExperimentalCamera2Interop::class)
+private fun setAeAwbLock(camera: Camera, locked: Boolean) {
+    runCatching {
+        val control = androidx.camera.camera2.interop.Camera2CameraControl.from(camera.cameraControl)
+        val opts = androidx.camera.camera2.interop.CaptureRequestOptions.Builder()
+            .setCaptureRequestOption(android.hardware.camera2.CaptureRequest.CONTROL_AE_LOCK, locked)
+            .setCaptureRequestOption(android.hardware.camera2.CaptureRequest.CONTROL_AWB_LOCK, locked)
+            .build()
+        control.setCaptureRequestOptions(opts)
+    }
+}
 
 private fun nextFlash(mode: Int): Int = when (mode) {
     ImageCapture.FLASH_MODE_OFF -> ImageCapture.FLASH_MODE_AUTO
