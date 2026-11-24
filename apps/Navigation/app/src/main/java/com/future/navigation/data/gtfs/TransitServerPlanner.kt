@@ -1,12 +1,14 @@
 package com.future.navigation.data.gtfs
 
 import com.future.navigation.data.common.LatLng
+import com.future.navigation.data.common.distanceMetersTo
 import com.future.navigation.data.network.NetworkModule
 import com.future.navigation.data.online.OpenApis
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import java.time.OffsetDateTime
+import java.time.format.DateTimeFormatter
 import java.time.ZoneId
 
 /**
@@ -24,11 +26,98 @@ class TransitServerPlanner {
         arriveBy: Boolean = false,
         extra: Map<String, String> = emptyMap(),
     ): List<TransitItinerary>? {
+        val direct = withPrefs(from, to, departAt, arriveBy, extra) ?: return null
+        if (direct.isNotEmpty()) return direct
+        // MOTIS לא מחבר נקודה שמחוץ לרשת הרחובות (שדה, מיקום רשת לא מדויק, בית בקצה
+        // היישוב): בבדיקה נקודה 600 מ' מתחנה במעלה לבונה החזירה 0 מסלולים. כמו Moovit -
+        // מתכננים מהתחנה הקרובה (ואל התחנה הקרובה ליעד) ומוסיפים הליכה אליה.
+        val fromStop = nearestStop(from)
+        val toStop = nearestStop(to)
+        if (fromStop == null && toStop == null) return direct
+        val access = fromStop?.let { walkSeconds(from, it) } ?: 0
+        val egress = toStop?.let { walkSeconds(it, to) } ?: 0
+        val base = departAt?.let { runCatching { OffsetDateTime.parse(it) }.getOrNull() }
+            ?: OffsetDateTime.now(ISRAEL)
+        val shifted = if (arriveBy) base.minusSeconds(egress.toLong()) else base.plusSeconds(access.toLong())
+        val snapped = withPrefs(
+            fromStop ?: from,
+            toStop ?: to,
+            shifted.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME),
+            arriveBy,
+            extra,
+        ) ?: return direct
+        return snapped.map { withAccessWalks(it, from, fromStop, access, to, toStop, egress) }
+    }
+
+    private suspend fun withPrefs(
+        from: LatLng,
+        to: LatLng,
+        departAt: String?,
+        arriveBy: Boolean,
+        extra: Map<String, String>,
+    ): List<TransitItinerary>? {
         if (extra.isNotEmpty()) {
             findJourneysRaw(from, to, departAt, arriveBy, extra)?.let { return it }
             // שרת שדחה פרמטר (או ערך לא מוכר): מנסים שוב בלי ההעדפות, כדי שלא ייראה "אין חיבור"
         }
         return findJourneysRaw(from, to, departAt, arriveBy, emptyMap())
+    }
+
+    /** התחנה הקרובה (עד 2.5 ק"מ) - null אם אין, או אם הנקודה כבר כמעט בתחנה. */
+    private suspend fun nearestStop(at: LatLng): LatLng? {
+        val body = OpenApis.stopTimesNearJson(at, SNAP_RADIUS_METERS, SNAP_COUNT) ?: return null
+        val root = runCatching { NetworkModule.json.parseToJsonElement(body) as? JsonObject }.getOrNull() ?: return null
+        val nearest = (root["stopTimes"] as? JsonArray).orEmpty()
+            .mapNotNull { ((it as? JsonObject)?.get("place") as? JsonObject)?.location() }
+            .minByOrNull { it.distanceMetersTo(at) } ?: return null
+        return nearest.takeIf { it.distanceMetersTo(at) > AT_STOP_METERS }
+    }
+
+    /** הליכה בקו אוויר x1.3 (הרחובות לא ישרים), 1.2 מ' לשנייה. */
+    private fun walkSeconds(a: LatLng, b: LatLng): Int = (a.distanceMetersTo(b) * 1.3 / 1.2).toInt()
+
+    private fun withAccessWalks(
+        it: TransitItinerary,
+        from: LatLng, fromStop: LatLng?, access: Int,
+        to: LatLng, toStop: LatLng?, egress: Int,
+    ): TransitItinerary {
+        val legs = it.legs.toMutableList()
+        var dep = it.departureSeconds
+        var arr = it.arrivalSeconds
+        if (fromStop != null) {
+            val firstStop = legs.firstOrNull { l -> l.type == LegType.RIDE }?.fromStopName ?: "התחנה"
+            val walk = TransitLeg(
+                type = LegType.WALK,
+                fromStopName = "המיקום שלך",
+                toStopName = firstStop,
+                departureSeconds = dep - access,
+                arrivalSeconds = dep,
+                walkDistanceMeters = from.distanceMetersTo(fromStop) * 1.3,
+                walkDurationSeconds = access,
+                fromLocation = from,
+                toLocation = fromStop,
+            )
+            // רגל ההליכה הקצרה מנקודת ההצמדה לתחנה מוחלפת בהליכה האמיתית
+            if (legs.firstOrNull()?.type == LegType.WALK) legs[0] = walk else legs.add(0, walk)
+            dep -= access
+        }
+        if (toStop != null) {
+            val lastStop = legs.lastOrNull { l -> l.type == LegType.RIDE }?.toStopName ?: "התחנה"
+            val walk = TransitLeg(
+                type = LegType.WALK,
+                fromStopName = lastStop,
+                toStopName = "היעד",
+                departureSeconds = arr,
+                arrivalSeconds = arr + egress,
+                walkDistanceMeters = toStop.distanceMetersTo(to) * 1.3,
+                walkDurationSeconds = egress,
+                fromLocation = toStop,
+                toLocation = to,
+            )
+            if (legs.lastOrNull()?.type == LegType.WALK) legs[legs.size - 1] = walk else legs.add(walk)
+            arr += egress
+        }
+        return TransitItinerary(legs, dep, arr)
     }
 
     private suspend fun findJourneysRaw(
@@ -153,6 +242,9 @@ class TransitServerPlanner {
     private companion object {
         val ISRAEL: ZoneId = ZoneId.of("Asia/Jerusalem")
         const val DAY = 24 * 3600
+        const val SNAP_RADIUS_METERS = 2500
+        const val SNAP_COUNT = 40
+        const val AT_STOP_METERS = 40.0
         val MODE_NAMES = mapOf(
             "BUS" to "אוטובוס",
             "COACH" to "אוטובוס",

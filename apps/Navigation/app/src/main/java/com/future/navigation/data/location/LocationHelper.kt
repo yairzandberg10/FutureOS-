@@ -53,7 +53,7 @@ object LocationHelper {
      * GPS עד [gpsTimeoutMs], ואם אין לוויין - מיקום רשת, ורק אם אין כלום - lastKnown.
      * מיקום חי טרי (עד 20 שנ') שכבר יש - מוחזר מיד.
      */
-    suspend fun currentLatLon(context: Context, gpsTimeoutMs: Long = 8_000L): Pair<Double, Double>? {
+    suspend fun currentLatLon(context: Context, gpsTimeoutMs: Long = 5_000L): Pair<Double, Double>? {
         if (!hasPermission(context)) return null
         latest?.takeIf { ageMs(it) <= LIVE_FRESH_MS && it.provider == LocationManager.GPS_PROVIDER }
             ?.let { return it.latitude to it.longitude }

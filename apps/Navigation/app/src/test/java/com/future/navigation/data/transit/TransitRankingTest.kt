@@ -59,4 +59,16 @@ class TransitRankingTest {
         val out = TransitRanking.rank(input, requestedSeconds = t(12, 0))
         assertEquals(2, out.size)
     }
+
+    @Test
+    fun `same departure with an extra transfer for a few minutes is dropped`() {
+        // MOTIS לתל אביב: 17:31 עם 2 החלפות (126 דק') ו-17:31 עם 3 (120 דק')
+        val input = listOf(
+            trip(t(17, 31), t(19, 37), "462", "110", "1"),
+            trip(t(17, 31), t(19, 31), "462", "110", "2", "1"),
+            trip(t(18, 31), t(20, 38), "462", "110", "1"),
+        )
+        val out = TransitRanking.rank(input, requestedSeconds = t(17, 20))
+        assertEquals(listOf(3, 3), out.map { it.legs.size })
+    }
 }

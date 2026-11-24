@@ -92,7 +92,7 @@ class TransitPlanningTest {
     @Test
     fun disabledBusSendsOnlyRailModes() {
         assertEquals(
-            mapOf("transitModes" to "SUBURBAN,TRAM,SUBWAY"),
+            mapOf("transitModes" to "RAIL,TRAM,SUBWAY"),
             TransitPlanning.planParams(TransitPrefs(bus = false)),
         )
     }

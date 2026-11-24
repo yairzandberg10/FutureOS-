@@ -22,6 +22,8 @@ object TransitRanking {
     private const val ARRIVE_GAIN_S = 60
     private const val SLOW_FACTOR = 2.5
     private const val SLOW_MIN_EXTRA_S = 90 * 60
+    private const val SAME_DEPART_S = 10 * 60
+    private const val TRANSFER_WORTH_S = 15 * 60
     const val MAX_RESULTS = 6
 
     /** requestedSeconds: הזמן המבוקש בשניות מחצות (שעון ישראל), null = לא ידוע. */
@@ -39,6 +41,8 @@ object TransitRanking {
             kept = kept.filter { it.dep >= ref - EARLY_TOLERANCE_S }
         }
         kept = kept.filter { b -> kept.none { a -> a !== b && dominates(a, b) } }
+        // אותה יציאה בערך, עוד החלפה בשביל כמה דקות - מבלבל ולא שווה: נשאר הפשוט
+        kept = kept.filter { b -> kept.none { a -> a !== b && simplerAlmostAsFast(a, b) } }
         val fastest = kept.minOfOrNull { it.duration }
         if (fastest != null) {
             val limit = maxOf((fastest * SLOW_FACTOR).toInt(), fastest + SLOW_MIN_EXTRA_S)
@@ -50,6 +54,9 @@ object TransitRanking {
         else kept.sortedWith(compareBy<Item> { it.dep }.thenBy { it.arr })
         return sorted.take(MAX_RESULTS).map { it.source }
     }
+
+    private fun simplerAlmostAsFast(a: Item, b: Item): Boolean =
+        a.rides < b.rides && kotlin.math.abs(a.dep - b.dep) <= SAME_DEPART_S && a.arr <= b.arr + TRANSFER_WORTH_S
 
     private fun dominates(a: Item, b: Item): Boolean =
         a.arr <= b.arr - ARRIVE_GAIN_S && a.dep >= b.dep - DEPART_SLACK_S && a.rides <= b.rides

@@ -110,7 +110,7 @@ object TransitPlanning {
         if (!(prefs.bus && prefs.rail && prefs.lightRail)) {
             val modes = buildList {
                 if (prefs.bus) add("BUS")
-                if (prefs.rail) add("SUBURBAN")
+                if (prefs.rail) add("RAIL")
                 if (prefs.lightRail) {
                     add("TRAM")
                     add("SUBWAY")
