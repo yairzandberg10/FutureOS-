@@ -106,12 +106,12 @@ class WakeWordListener(private val context: Context) {
                         var o = 0
                         for (s in segment) { s.copyInto(samples, o); o += s.size }
                         val t0 = System.currentTimeMillis()
-                        val text = runCatching { LocalSpeechEngine.transcribeWake(context, samples, PROMPT, WAKE_TOKENS) }.getOrDefault("")
+                        val text = runCatching { LocalSpeechEngine.transcribeSamples(context, samples, PROMPT, fast = true, maxTokens = WAKE_TOKENS) }.getOrDefault("")
                         var rest = WakeWord.match(text)
                         Log.i(TAG, "heard='$text' wake=${rest != null} in ${System.currentTimeMillis() - t0}ms (${samples.size / 16}ms audio)")
                         if (rest != null && generation == gen) {
-                            // נאמרה גם פקודה ("היי פיוטר מה השעה") - tiny לא מדויק מספיק
-                            // לפקודה, אז רק הקטע הזה מתומלל שוב ב-small (מצב מהיר).
+                            // נאמרה גם פקודה ("היי פיוטר מה השעה") - הבדיקה נעצרה אחרי כמה
+                            // טוקנים, אז הקטע הזה מתומלל שוב עד הסוף.
                             if (rest.isNotBlank()) {
                                 val t1 = System.currentTimeMillis()
                                 val full = runCatching { LocalSpeechEngine.transcribeSamples(context, samples, null, fast = true) }.getOrDefault("")
@@ -148,7 +148,8 @@ class WakeWordListener(private val context: Context) {
         // הקשר ניטרלי ולא מילת ההפעלה עצמה: Whisper נוטה "לחזור" על ההקשר כשהוא
         // שומע רעש, וזה היה מפעיל את העוזר לבד.
         const val PROMPT = "דיבור קצר בעברית."
-        // "היי פיוטר" + מילה או שתיים: מספיק כדי לדעת אם נאמרה גם פקודה
-        const val WAKE_TOKENS = 12
+        // "היי פיוטר" + מילה: מספיק כדי לדעת אם נאמרה גם פקודה. הפענוח הוא רוב
+        // הזמן (כ-80ms לטוקן ב-small), אז התקרה קובעת את המהירות.
+        const val WAKE_TOKENS = 8
     }
 }

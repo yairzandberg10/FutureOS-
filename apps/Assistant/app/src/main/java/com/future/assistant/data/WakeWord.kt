@@ -32,7 +32,39 @@ object WakeWord {
         val w = words.getOrNull(i) ?: return null
         val isName = w in NAMES || (greeted && w in NAMES_AFTER_GREETING) || (w.startsWith("פיו") && w.length in 4..7)
         val isAssistant = w in ASSISTANT && (greeted || words.getOrNull(i + 1) !in NOT_A_CALL)
-        if (!isName && !isAssistant) return null
-        return words.drop(i + 1).joinToString(" ")
+        if (isName || isAssistant) return words.drop(i + 1).joinToString(" ")
+        return fuzzy(words)
+    }
+
+    /**
+     * "היי פיוטר" כשהתמלול שיבש אותו ("היף יוצא", "הייפ יוטר"): מחברים את שתי
+     * המילים הראשונות ומשווים במרחק עריכה ל-"היפיוטר". רק בתחילת המשפט, ורק
+     * לצירוף הארוך - מילה קצרה לבד דומה מדי למילים רגילות.
+     */
+    private fun fuzzy(words: List<String>): String? {
+        for (k in 1..2) {
+            if (words.size < k) continue
+            val joined = words.take(k).joinToString("") { finals(it) }
+            if (joined.length < 6) continue
+            if (FUZZY_TARGETS.any { distance(joined, it) <= 2 }) return words.drop(k).joinToString(" ")
+        }
+        return null
+    }
+
+    private val FUZZY_TARGETS = listOf("היפיוטר", "הייפיוטר", "היפיוצר", "הייפיוצר")
+
+    private fun finals(w: String) = w.replace('ף', 'פ').replace('ץ', 'צ').replace('ך', 'כ').replace('ם', 'מ').replace('ן', 'נ')
+
+    private fun distance(a: String, b: String): Int {
+        val prev = IntArray(b.length + 1) { it }
+        val cur = IntArray(b.length + 1)
+        for (i in 1..a.length) {
+            cur[0] = i
+            for (j in 1..b.length) {
+                cur[j] = minOf(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + if (a[i - 1] == b[j - 1]) 0 else 1)
+            }
+            cur.copyInto(prev)
+        }
+        return prev[b.length]
     }
 }

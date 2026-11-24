@@ -4,6 +4,12 @@ This repo has no carried-over git history (see root [README](README.md)), so thi
 
 ## Unreleased
 
+### Assistant: wake word back on Whisper small, fuzzy "היי פיוטר" (2026-11-24)
+
+- Whisper tiny was fast (~0.6 s) but garbled Hebrew: on the device "היי פיוטר" came out as "היף יוצא", so the wake word never fired. Tiny is removed (the APK is 43 MB smaller, and any leftover copy is deleted from app storage). The wake check runs on small again, in fast mode with an 8-token cap.
+- `WakeWord` also accepts near-misses at the start of the sentence: the first one or two words joined are compared with "היפיוטר" by edit distance (≤ 2). Ordinary phrases ("היום יוצא", "היא יוצאת", "זה עוזר לי") still do not wake it, and tests cover both.
+- The "google result … after end of speech" timing log no longer prints a stale value.
+
 ### CI: the Assistant release APK includes the speech model (2026-11-22)
 
 - `release-apks.yml` did not fetch Git LFS, so `Assistant-release.apk` contained a 134-byte pointer instead of Whisper small (264 MB). It worked on the phone only because an older copy was still in the app's storage; a clean install would have had no offline recognition. The Assistant build now runs `git lfs pull` (with `.git/lfs` cached so quota is not spent on every run), and fails if the model is still a pointer.

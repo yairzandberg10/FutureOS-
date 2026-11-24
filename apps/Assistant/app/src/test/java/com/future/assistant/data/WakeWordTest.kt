@@ -16,6 +16,10 @@ class WakeWordTest {
         assertEquals("", WakeWord.match("היי פיטר"))
         assertEquals("מה השעה", WakeWord.match("היי פיוטר, מה השעה?"))
         assertEquals("תפתח את המצלמה", WakeWord.match("עוזר תפתח את המצלמה"))
+        // שיבושים אמיתיים מהמכשיר
+        assertEquals("", WakeWord.match("היף יוצא."))
+        assertEquals("", WakeWord.match("הייפ יוטר"))
+        assertEquals("מה נשמע", WakeWord.match("היפיוטר מה נשמע"))
     }
 
     @Test
@@ -25,6 +29,9 @@ class WakeWordTest {
         assertNull(WakeWord.match("פיטר הלך הביתה"))
         assertNull(WakeWord.match("מה השעה"))
         assertNull(WakeWord.match("הוא עוזר"))
+        assertNull(WakeWord.match("היום יוצא לטיול"))
+        assertNull(WakeWord.match("היא יוצאת"))
+        assertNull(WakeWord.match("היפה והחיה"))
         assertNull(WakeWord.match(""))
     }
 }

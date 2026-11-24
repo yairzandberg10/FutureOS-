@@ -153,7 +153,8 @@ class HybridSpeech(private val context: Context, private val whisper: LocalSpeec
             override fun onEvent(eventType: Int, params: Bundle?) {}
             override fun onResults(results: Bundle?) {
                 val text = firstResult(results).orEmpty().ifBlank { lastPartial }
-                Log.i(TAG, "google result ${System.currentTimeMillis() - endOfSpeechAt}ms after end of speech")
+                if (endOfSpeechAt > 0) Log.i(TAG, "google result ${System.currentTimeMillis() - endOfSpeechAt}ms after end of speech")
+                endOfSpeechAt = 0L
                 deferred.complete(text)
                 // סיים לבד (שקט אחרי משפט) לפני שהמשתמש לחץ OK.
                 if (!stopRequested) {

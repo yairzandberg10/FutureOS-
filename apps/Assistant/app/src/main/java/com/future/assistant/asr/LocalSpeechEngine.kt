@@ -118,54 +118,11 @@ class LocalSpeechEngine(private val context: Context) {
          * מתמלל דגימות שכבר הוקלטו (16kHz, -1..1) - בשביל זיהוי מילת ההפעלה
          * (WakeWordListener), שמקליט בעצמו. חוסם, מ-thread ברקע.
          */
-        fun transcribeSamples(context: Context, raw: FloatArray, prompt: String? = null, fast: Boolean = false): String {
+        fun transcribeSamples(context: Context, raw: FloatArray, prompt: String? = null, fast: Boolean = false, maxTokens: Int = 0): String {
             val samples = trimSilence(raw)
             if (samples.isEmpty()) return ""
             val whisper = sharedWhisper ?: runCatching { preload(context); sharedWhisper }.getOrNull() ?: return ""
-            val text = synchronized(lock) { whisper.transcribe(samples, "he", prompt, fast) }
-            return RepetitionFilter.collapse(text)
-        }
-
-        // מודל קטן נפרד למילת ההפעלה: small לוקח 2-5 שניות על כל קטע דיבור קצר,
-        // tiny (43MB) בערך פי 5 מהר יותר. מספיק טוב כדי לזהות "היי פיוטר" / "עוזר";
-        // הפקודה עצמה עדיין מתומללת ב-small.
-        private const val WAKE_MODEL_FILE = "ggml-tiny-q8_0.bin"
-        private val wakeLock = Any()
-        @Volatile private var wakeWhisper: WhisperCpp? = null
-        @Volatile private var wakeFailed = false
-
-        private fun wakeModel(context: Context): WhisperCpp? {
-            wakeWhisper?.let { return it }
-            if (wakeFailed) return null
-            return synchronized(wakeLock) {
-                wakeWhisper ?: runCatching {
-                    val file = copyAssetIfNeeded(context, WAKE_MODEL_FILE)
-                    WhisperCpp().also { check(it.init(file.absolutePath)) }
-                }.onFailure { wakeFailed = true }.getOrNull()?.also { wakeWhisper = it }
-            }
-        }
-
-        /** טעינת מודל מילת ההפעלה ברקע (נקרא כשהחלון נפתח). */
-        fun preloadWakeAsync(context: Context) {
-            val app = context.applicationContext
-            if (wakeWhisper != null) return
-            Thread { wakeModel(app) }.start()
-        }
-
-        /**
-         * בדיקת מילת ההפעלה: tiny, חלון קצר ותקרה של [maxTokens] טוקנים. אם tiny
-         * לא נטען - נופלים ל-small באותו מצב מהיר.
-         */
-        fun transcribeWake(context: Context, raw: FloatArray, prompt: String, maxTokens: Int): String {
-            val samples = trimSilence(raw)
-            if (samples.isEmpty()) return ""
-            val tiny = wakeModel(context.applicationContext)
-            val text = if (tiny != null) {
-                synchronized(wakeLock) { tiny.transcribe(samples, "he", prompt, fast = true, maxTokens = maxTokens) }
-            } else {
-                val whisper = sharedWhisper ?: runCatching { preload(context); sharedWhisper }.getOrNull() ?: return ""
-                synchronized(lock) { whisper.transcribe(samples, "he", prompt, fast = true, maxTokens = maxTokens) }
-            }
+            val text = synchronized(lock) { whisper.transcribe(samples, "he", prompt, fast, maxTokens) }
             return RepetitionFilter.collapse(text)
         }
 
@@ -187,6 +144,9 @@ class LocalSpeechEngine(private val context: Context) {
         fun preload(context: Context) {
             synchronized(lock) {
                 if (sharedWhisper != null) return
+                // מודל tiny ישן (מילת ההפעלה ניסתה אותו - חלש מדי בעברית) - לא ב-assets
+                // יותר, אבל עותק שלו אולי נשאר באחסון הפנימי.
+                File(context.filesDir, "ggml-tiny-q8_0.bin").delete()
                 val modelFile = copyAssetIfNeeded(context, MODEL_FILE)
                 val whisper = WhisperCpp()
                 check(whisper.init(modelFile.absolutePath)) { "whisper_init_from_file_with_params failed" }

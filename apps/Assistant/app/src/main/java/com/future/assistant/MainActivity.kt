@@ -34,7 +34,6 @@ class MainActivity : ComponentActivity() {
         val app = applicationContext
         Thread { com.future.assistant.data.KnowledgeBase.preload(app) }.start()
         Thread { com.future.assistant.data.ChatBase.preload(app) }.start()
-        LocalSpeechEngine.preloadWakeAsync(this)
         enableEdgeToEdge()
 
         setContent {
