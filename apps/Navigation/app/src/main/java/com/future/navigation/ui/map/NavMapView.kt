@@ -123,5 +123,6 @@ fun NavMapView(
             },
             modifier = Modifier.fillMaxSize()
         )
+        MapAttribution()
     }
 }

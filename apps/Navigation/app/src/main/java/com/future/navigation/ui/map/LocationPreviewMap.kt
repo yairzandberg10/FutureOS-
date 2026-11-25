@@ -1,5 +1,6 @@
 package com.future.navigation.ui.map
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -64,21 +65,24 @@ fun LocationPreviewMap(location: LatLng?, modifier: Modifier = Modifier) {
         }
     }
 
-    AndroidView(
-        factory = {
-            // NT-D03: התצוגה המקדימה לא ממוקדת בחצים (אין לה טבעת פוקוס), כך שהפוקוס לא "נעלם" עליה.
-            mapView.isFocusable = false
-            mapView.isFocusableInTouchMode = false
-            mapView.descendantFocusability = android.view.ViewGroup.FOCUS_BLOCK_DESCENDANTS
-            mapView.getMapAsync { map ->
-                map.uiSettings.setAllGesturesEnabled(false)
-                map.setStyle(MapConfig.styleUrl(mapView.context))
-                mapLibreMap = map
-            }
-            mapView
-        },
-        modifier = modifier.fillMaxSize()
-    )
+    Box(modifier = modifier.fillMaxSize()) {
+        AndroidView(
+            factory = {
+                // NT-D03: התצוגה המקדימה לא ממוקדת בחצים (אין לה טבעת פוקוס), כך שהפוקוס לא "נעלם" עליה.
+                mapView.isFocusable = false
+                mapView.isFocusableInTouchMode = false
+                mapView.descendantFocusability = android.view.ViewGroup.FOCUS_BLOCK_DESCENDANTS
+                mapView.getMapAsync { map ->
+                    map.uiSettings.setAllGesturesEnabled(false)
+                    map.setStyle(MapConfig.styleUrl(mapView.context))
+                    mapLibreMap = map
+                }
+                mapView
+            },
+            modifier = Modifier.fillMaxSize()
+        )
+        MapAttribution()
+    }
 }
 
 private const val PREVIEW_ZOOM = 14.0

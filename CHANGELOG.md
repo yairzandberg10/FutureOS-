@@ -4,6 +4,14 @@ This repo has no carried-over git history (see root [README](README.md)), so thi
 
 ## Unreleased
 
+### Legal review fixes (2026-11-25)
+
+- **Navigation**: both maps (live navigation and the home preview) now always show "© OpenStreetMap · OpenFreeMap". The ODbL license requires visible attribution, and MapLibre's "i" button can't be pressed on a keypad device.
+- **Remote**: the comments in `ElectraEncoder.kt` / `AcProtocols.kt` named IRremoteESP8266 as MIT. It is LGPL-2.1. The comments are corrected and say no code may be copied from it.
+- **Promo video** (`S09Privacy`): the "בלי שירותי Google" claim is removed. It was false, because Messages, Navigation, Tools and Translate use Firebase / ML Kit.
+- **Landing page**: the signup form needs an explicit opt-in checkbox before it sends (Communications Law §30A). `server.py` rejects signups without consent and records it in `signups.csv`. `fonts/OFL.txt` is added for Heebo and Frank Ruhl Libre.
+- Still open, not code: licenses for the Piper "shaul" voice (CC BY-NC), renikud and the knowledge TSVs, the Hspell (AGPL) derived keyboard dictionary, a root LICENSE, a privacy policy and terms of use, and Open-Meteo / HERE / Nominatim commercial terms.
+
 ### Assistant: faster wake-word response (2026-11-24)
 
 - On the device the wake word did fire ("היי סיוצר", "עוזר"), but only after 0.6 s of silence plus a 1.7-2.3 s Whisper check, and the mic stopped listening during the check, so a second try was lost.

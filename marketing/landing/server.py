@@ -40,8 +40,9 @@ def save(name, contact, ip):
         with open(CSV, "a", encoding="utf-8-sig", newline="") as f:
             w = csv.writer(f)
             if new:
-                w.writerow(["זמן", "שם", "טלפון או מייל", "כתובת"])
-            w.writerow([time.strftime("%Y-%m-%d %H:%M:%S"), name, contact, ip])
+                w.writerow(["זמן", "שם", "טלפון או מייל", "כתובת", "הסכמה לדיוור"])
+            # עמודת ההסכמה היא הראיה לכך שהנרשם הסכים לקבל עדכונים
+            w.writerow([time.strftime("%Y-%m-%d %H:%M:%S"), name, contact, ip, "כן"])
     return "ok"
 
 
@@ -82,6 +83,9 @@ class Handler(SimpleHTTPRequestHandler):
         name, contact = clean(data.get("name"), 80), clean(data.get("contact"), 120)
         if not (EMAIL.match(contact) or PHONE.match(contact)):
             return self.send_json(422, {"error": "invalid_contact"})
+        # חוק התקשורת, סעיף 30א: דיוור רק למי שהסכים במפורש מראש
+        if data.get("consent") is not True:
+            return self.send_json(422, {"error": "no_consent"})
         ip = self.client_address[0]
         now = time.time()
         hits = [t for t in HITS.get(ip, []) if now - t < WINDOW]

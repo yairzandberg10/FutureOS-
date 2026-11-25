@@ -1,7 +1,19 @@
 package com.future.navigation.ui.map
 
 import android.content.Context
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import com.future.navigation.ui.settings.MapThemeStore
+import com.future.sharednav.theme.FutureDimens
+import com.future.sharednav.theme.FutureShapes
+import com.future.sharednav.theme.LocalFutureTheme
+import com.future.sharednav.theme.rememberFutureType
 import java.util.Calendar
 
 /** תצוגת המפה שהמשתמש בחר בהגדרות מפה: אוטומטי (לפי השעה), בהירה או כהה. */
@@ -50,4 +62,27 @@ object MapConfig {
      * MapThemeStore.get נקרא לראשונה (מסך הבית קורא לו), לפני כן - AUTO.
      */
     fun styleUrl(): String = styleUrl(MapThemeStore.currentTheme())
+
+    /**
+     * ייחוס חובה: נתוני המפה של OpenStreetMap ברישיון ODbL, שמחייב ייחוס
+     * גלוי על כל מפה שמוצגת. כפתור ה-"i" של MapLibre לא נלחץ במכשיר מקשים,
+     * ולכן הטקסט מוצג תמיד.
+     */
+    const val ATTRIBUTION = "© OpenStreetMap · OpenFreeMap"
+}
+
+/** שורת הייחוס בפינת המפה. חייבת להופיע מעל כל MapView. */
+@Composable
+fun BoxScope.MapAttribution() {
+    val theme = LocalFutureTheme.current
+    val type = rememberFutureType()
+    Box(
+        modifier = Modifier
+            .align(Alignment.BottomStart)
+            .padding(FutureDimens.spacingXs)
+            .background(theme.surfaceColor.copy(alpha = 0.75f), FutureShapes.xs)
+            .padding(horizontal = FutureDimens.spacingXs, vertical = FutureDimens.spacingXxs)
+    ) {
+        Text(text = MapConfig.ATTRIBUTION, color = theme.textColor, fontSize = type.caption)
+    }
 }

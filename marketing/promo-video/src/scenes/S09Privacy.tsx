@@ -2,9 +2,11 @@ import React from "react";
 import { AbsoluteFill, Easing, Interactive, interpolate, useCurrentFrame } from "remotion";
 import { heebo } from "../fonts";
 
-// Facts from the repo: no Google Play Services on the device, on-device
-// Whisper.cpp speech recognition in Assistant, no INTERNET permission in Music.
-const PILLS = ["בלי שירותי Google", "זיהוי דיבור על המכשיר", "מוזיקה בלי אינטרנט"];
+// Facts from the repo: on-device Whisper.cpp speech recognition in Assistant,
+// an offline Sfarim library, no INTERNET permission in Music.
+// Do NOT claim "no Google services": Messages, Navigation, Tools and Translate
+// use Firebase / ML Kit (misleading-advertising risk, see PRODUCT.md).
+const PILLS = ["ספרים בלי אינטרנט", "זיהוי דיבור על המכשיר", "מוזיקה בלי אינטרנט"];
 
 export const S09Privacy: React.FC = () => {
   const frame = useCurrentFrame();
