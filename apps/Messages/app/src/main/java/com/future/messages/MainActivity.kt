@@ -127,6 +127,7 @@ class MainActivity : ComponentActivity() {
         com.future.messages.rcs.RcsService.start(this)
         // צ'אט FutureOS - מעדכן מפתחות/טוקן ומושך מה שהצטבר. לא עושה כלום בלי Firebase.
         com.future.messages.chat.FutureChat.refreshRegistration(this)
+        com.future.messages.chat.ChatService.start(this)
         setContent {
             var sharedTheme by remember { mutableStateOf(ThemeClient.getTheme(this)) }
             val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current

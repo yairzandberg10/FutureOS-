@@ -2,6 +2,7 @@ package com.future.messages.chat
 
 import com.future.messages.BuildConfig
 import com.google.firebase.Timestamp
+import com.google.firebase.firestore.Blob
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
@@ -11,8 +12,6 @@ import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.Source
 import com.google.firebase.firestore.firestoreSettings
 import com.google.firebase.firestore.memoryCacheSettings
-import com.google.firebase.storage.FirebaseStorage
-import com.google.firebase.storage.StorageMetadata
 import kotlinx.coroutines.tasks.await
 import java.util.Date
 
@@ -22,7 +21,7 @@ import java.util.Date
  *  phones/{e164}                - {uid}. ספר הכתובות: מי רשום לצ'אט.
  *  private/{uid}                - טוקן ה-FCM. רק ל-Cloud Function.
  *  inbox/{uid}/messages/{id}    - תור הודעות מוצפנות לנמען. הנמען קורא ומוחק.
- *  storage: media/{uid}/{id}    - תמונות מוצפנות לנמען.
+ *  media/{uid}/parts/{id}_{n}  - תמונות מוצפנות לנמען, בחלקים של עד 700KB.
  * השרת מחזיק רק צופן: אחרי שהנמען מקבל הודעה היא נמחקת מהתור.
  */
 internal object ChatBackend {
@@ -35,9 +34,6 @@ internal object ChatBackend {
             // התור הוא זמני ומוצפן - אין סיבה לשמור עותק בדיסק.
             firestoreSettings = firestoreSettings { setLocalCacheSettings(memoryCacheSettings {}) }
         }
-    }
-    private val storage: FirebaseStorage by lazy {
-        FirebaseStorage.getInstance().apply { maxUploadRetryTimeMillis = 30_000; maxDownloadRetryTimeMillis = 30_000 }
     }
 
     fun uid(): String? = if (configured) auth.currentUser?.uid else null
@@ -116,23 +112,56 @@ internal object ChatBackend {
         doc.reference.delete().await()
     }
 
+    // ---------------------------------------------------------------- תמונות
+    // תמונות מוצפנות נשמרות ב-Firestore עצמו, מחולקות לחלקים של עד 700KB
+    // (מסמך מוגבל ל-1MB): media/{נמען}/parts/{id}_{n}. כך לא צריך Firebase
+    // Storage, שבפרויקט החינמי (Spark) לא זמין.
+
     suspend fun upload(toUid: String, id: String, data: ByteArray): String {
         val uid = uid() ?: error("Not signed in")
-        val path = "media/$toUid/$id"
-        storage.reference.child(path).putBytes(
-            data, StorageMetadata.Builder().setContentType("application/octet-stream").setCustomMetadata("from", uid).build()
-        ).await()
-        return path
+        val total = (data.size + MEDIA_CHUNK - 1) / MEDIA_CHUNK
+        require(total in 1..MEDIA_MAX_PARTS) { "Image too large" }
+        val expireAt = Timestamp(Date(System.currentTimeMillis() + TTL_MS))
+        for (n in 0 until total) {
+            val part = data.copyOfRange(n * MEDIA_CHUNK, minOf(data.size, (n + 1) * MEDIA_CHUNK))
+            db.document("media/$toUid/parts/${id}_$n").set(mapOf(
+                "from" to uid, "n" to n, "total" to total, "data" to Blob.fromBytes(part), "expireAt" to expireAt,
+            )).await()
+        }
+        return "media/$toUid/$id"
     }
 
     /** מוריד בלי למחוק - המחיקה (deleteMedia) רק אחרי שההודעה נשמרה אצלנו, אחרת כשל באמצע מאבד את התמונה. */
     suspend fun download(path: String): ByteArray {
-        // כמו מגבלת ההעלאה ב-storage.rules (25MB) - לא יותר מזה בזיכרון בבת אחת
-        return storage.reference.child(path).getBytes(25L * 1024 * 1024).await()
+        val (folder, id) = mediaRef(path)
+        val first = db.document("$folder/${id}_0").get(Source.SERVER).await()
+        val total = (first.getLong("total") ?: error("Missing image")).toInt()
+        require(total in 1..MEDIA_MAX_PARTS) { "Bad image" }
+        val out = java.io.ByteArrayOutputStream()
+        out.write(first.getBlob("data")?.toBytes() ?: error("Missing image"))
+        for (n in 1 until total) {
+            val doc = db.document("$folder/${id}_$n").get(Source.SERVER).await()
+            out.write(doc.getBlob("data")?.toBytes() ?: error("Missing image part"))
+        }
+        return out.toByteArray()
     }
 
     /** הקובץ המוצפן לא נשאר בשרת אחרי שהנמען קיבל ושמר אותו. */
     suspend fun deleteMedia(path: String) {
-        runCatching { storage.reference.child(path).delete().await() }
+        runCatching {
+            val (folder, id) = mediaRef(path)
+            val total = db.document("$folder/${id}_0").get(Source.SERVER).await().getLong("total")?.toInt() ?: 1
+            for (n in 0 until total.coerceIn(1, MEDIA_MAX_PARTS)) db.document("$folder/${id}_$n").delete().await()
+        }
     }
+
+    /** "media/{uid}/{id}" -> ("media/{uid}/parts", id) */
+    private fun mediaRef(path: String): Pair<String, String> {
+        val parts = path.split('/')
+        require(parts.size == 3 && parts[0] == "media") { "Bad media path" }
+        return "media/${parts[1]}/parts" to parts[2]
+    }
+
+    private const val MEDIA_CHUNK = 700 * 1024
+    private const val MEDIA_MAX_PARTS = 40
 }

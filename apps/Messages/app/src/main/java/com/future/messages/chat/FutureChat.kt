@@ -151,6 +151,7 @@ object FutureChat {
         val token = runCatching { FirebaseMessaging.getInstance().token.await() }.getOrNull()
         ChatBackend.publishIdentity(agree, sign, token)
         _state.value = State.ACTIVE
+        ChatService.start(appContext)
         sync(appContext)
     }
 
@@ -166,6 +167,8 @@ object FutureChat {
     }
 
     fun signOut(context: Context) {
+        ChatService.stop(context)
+        keepListening = false
         detach()
         ChatBackend.signOut()
         ChatStore.get(context).clearAll()
@@ -363,7 +366,11 @@ object FutureChat {
         listener = ChatBackend.listenInbox { docs -> if (docs.isNotEmpty()) scope.launch { process(appContext, docs) } }
     }
 
+    /** ChatService רץ: ההאזנה נשארת פתוחה גם כשהמסך נסגר (ON_PAUSE). */
+    @Volatile var keepListening = false
+
     fun detach() {
+        if (keepListening) return
         listener?.remove()
         listener = null
     }

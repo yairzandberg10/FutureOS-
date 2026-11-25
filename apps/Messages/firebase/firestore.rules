@@ -72,5 +72,22 @@ service cloud.firestore {
         && request.resource.data.expireAt <= request.time + duration.value(31, 'd');
       allow update: if false;
     }
+
+    // Encrypted chat images (Firestore, not Storage - the free Spark plan has no
+    // Storage). media/{recipient}/parts/{id}_{n}, up to 700KB per part. Only the
+    // recipient reads and deletes; senders create stamped with their identity.
+    match /media/{uid}/parts/{part} {
+      allow get, delete: if request.auth != null && request.auth.uid == uid;
+      allow list, update: if false;
+      allow create: if verified()
+        && request.resource.data.keys().hasOnly(['from', 'n', 'total', 'data', 'expireAt'])
+        && request.resource.data.from == request.auth.uid
+        && request.resource.data.data is bytes && request.resource.data.data.size() <= 720000
+        && request.resource.data.n is int && request.resource.data.total is int
+        && request.resource.data.n >= 0 && request.resource.data.n < request.resource.data.total
+        && request.resource.data.total <= 40
+        && request.resource.data.expireAt is timestamp
+        && request.resource.data.expireAt <= request.time + duration.value(31, 'd');
+    }
   }
 }

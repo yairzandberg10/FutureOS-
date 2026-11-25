@@ -11,7 +11,9 @@
 - הצ'אט רץ על פרויקט ה-Firebase של הניווט, `futureos-navigation` (תוכנית Spark, חינם). האפליקציה `com.future.messages` רשומה בו עם טביעות SHA-1/SHA-256 של מפתח ה-debug.
 - Authentication: Phone פעיל. Firestore: `(default)` ב-`europe-west1`, עם `firestore.rules` מכאן ועוד שני חוקי קריאה של הניווט בסופם (קובץ חוקים אחד לפרויקט).
 - `google-services.json` נכנס לבניית ה-release מהסוד `MESSAGES_GOOGLE_SERVICES_JSON` בריפו (ר' `.github/workflows/release-apks.yml`).
-- עוד לא: Storage (תמונות בצ'אט) ו-Cloud Function של ה-Push - שניהם דורשים תוכנית Blaze. בלי Push הודעות צ'אט נקלטות כשהאפליקציה רצה.
+- בלי תוכנית Blaze (בתשלום), ולכן בלי Storage ובלי Cloud Function:
+  - תמונות בצ'אט נשמרות מוצפנות ב-Firestore עצמו, בחלקים של עד 700KB (`media/{נמען}/parts/{id}_{n}`), ונמחקות אחרי שהנמען שמר אותן.
+  - במקום Push, `ChatService` (שירות קדמי עם התראה שקטה) מחזיק את ההאזנה לתור פתוחה גם כש-Messages סגורה, ועולה גם אחרי אתחול.
 
 ## הקמה (פעם אחת)
 1. ב-https://console.firebase.google.com יוצרים פרויקט חדש. **מומלץ פרויקט נפרד מהניווט**, כי חוקי ה-Firestore של כל פרויקט הם קובץ אחד.

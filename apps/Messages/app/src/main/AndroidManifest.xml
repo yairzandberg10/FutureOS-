@@ -168,6 +168,19 @@
             </intent-filter>
         </service>
 
+        <!-- צ'אט FutureOS: מחזיק את ההאזנה לתור פתוחה גם כש-Messages סגורה (אין Push בפרויקט החינמי). -->
+        <service
+            android:name=".chat.ChatService"
+            android:exported="false" />
+
+        <receiver
+            android:name=".chat.ChatService$BootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
         <!-- RCS: מחזיק את ה-SipDelegate פתוח כדי שהודעות נכנסות יגיעו. -->
         <service
             android:name=".rcs.RcsService"
