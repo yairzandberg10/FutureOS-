@@ -77,7 +77,7 @@ class SmsRepository(appContext: Context) {
                 "${Telephony.Sms.TYPE} = ? AND ${Telephony.Sms.DATE} > ?",
                 arrayOf(Telephony.Sms.MESSAGE_TYPE_INBOX.toString(), (now + 60_000L).toString()), null
             )?.use { c ->
-                buildList { while (c.moveToNext()) add(c.getLong(0) to c.getLong(1)) }
+                buildList<Pair<Long, Long>> { while (c.moveToNext()) add(c.getLong(0) to c.getLong(1)) }
             } ?: return
             for ((id, date) in fixes) {
                 val hours = (date - now + hour - 1) / hour

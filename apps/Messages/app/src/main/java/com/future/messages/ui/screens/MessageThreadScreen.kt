@@ -33,7 +33,6 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
@@ -55,6 +54,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -160,13 +160,13 @@ fun MessageThreadScreen(
             }
 
             val messageListState = rememberLazyListState()
+            val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
             val messageListScope = rememberCoroutineScope()
             LazyColumn(
                 state = messageListState,
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .focusable().bringIntoViewOnFocus()
                     .onKeyEvent { event ->
                         if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
                         when (event.key) {
@@ -175,14 +175,18 @@ fun MessageThreadScreen(
                             // מקש שלא יכול עוד לגלול בכיוון הזה (כבר בקצה) לא נבלע -
                             // אחרת אין דרך להזיז את הפוקוס אל מחוץ לרשימה (למשל חזרה
                             // לשדה כתיבת ההודעה למטה, אחרי שגללו למעלה להודעות ישנות).
+                            // קודם מעבירים פוקוס להודעה הבאה; גלילה רק כשאין הודעה לעבור
+                            // אליה. קודם הגלילה בלעה את החצים ואי אפשר היה לעמוד על הודעה.
                             Key.DirectionUp -> {
-                                if (messageListState.canScrollForward) {
+                                if (focusManager.moveFocus(FocusDirection.Up)) true
+                                else if (messageListState.canScrollForward) {
                                     messageListScope.launch { messageListState.animateScrollBy(150f) }
                                     true
                                 } else false
                             }
                             Key.DirectionDown -> {
-                                if (messageListState.canScrollBackward) {
+                                if (focusManager.moveFocus(FocusDirection.Down)) true
+                                else if (messageListState.canScrollBackward) {
                                     messageListScope.launch { messageListState.animateScrollBy(-150f) }
                                     true
                                 } else false
