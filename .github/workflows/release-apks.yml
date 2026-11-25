@@ -113,6 +113,16 @@ jobs:
         run: |
           mkdir -p ~/.android
           echo "$KEY" | base64 -d > ~/.android/debug.keystore
+      # צ'אט FutureOS: google-services.json של Messages (פרויקט Firebase futureos-navigation)
+      # שמור בסוד MESSAGES_GOOGLE_SERVICES_JSON. בלעדיו Messages נבנית בלי הצ'אט (SMS/MMS בלבד).
+      - name: Firebase config for Messages
+        if: matrix.app == 'Messages'
+        env:
+          JSON: ${{ secrets.MESSAGES_GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -n "$JSON" ]; then printf '%s' "$JSON" > apps/Messages/app/google-services.json; else
+            echo "::warning::MESSAGES_GOOGLE_SERVICES_JSON is not set - FutureOS chat is off in this build."
+          fi
       # כתובת שרת FutureOS (משתנה הריפו FUTURE_API_BASE) נכנסת ל-BuildConfig של האפליקציה
       - name: Point the app at the FutureOS server
         env:

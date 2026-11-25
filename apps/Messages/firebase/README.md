@@ -7,6 +7,12 @@
 ## מה השרת רואה
 רק מי שלח למי ומתי. התוכן מוצפן במכשיר השולח למפתח של הנמען (P-256 ECDH, מפתח זמני לכל הודעה, AES-256-GCM) וחתום במפתח החתימה של השולח. המפתחות הפרטיים יושבים ב-AndroidKeyStore ולא יוצאים מהמכשיר. אחרי שהנמען מקבל הודעה, היא נמחקת מהשרת. מה שלא נאסף נמחק אוטומטית אחרי 30 יום (Firestore TTL).
 
+## מה מוגדר בפועל (נובמבר 2026)
+- הצ'אט רץ על פרויקט ה-Firebase של הניווט, `futureos-navigation` (תוכנית Spark, חינם). האפליקציה `com.future.messages` רשומה בו עם טביעות SHA-1/SHA-256 של מפתח ה-debug.
+- Authentication: Phone פעיל. Firestore: `(default)` ב-`europe-west1`, עם `firestore.rules` מכאן ועוד שני חוקי קריאה של הניווט בסופם (קובץ חוקים אחד לפרויקט).
+- `google-services.json` נכנס לבניית ה-release מהסוד `MESSAGES_GOOGLE_SERVICES_JSON` בריפו (ר' `.github/workflows/release-apks.yml`).
+- עוד לא: Storage (תמונות בצ'אט) ו-Cloud Function של ה-Push - שניהם דורשים תוכנית Blaze. בלי Push הודעות צ'אט נקלטות כשהאפליקציה רצה.
+
 ## הקמה (פעם אחת)
 1. ב-https://console.firebase.google.com יוצרים פרויקט חדש. **מומלץ פרויקט נפרד מהניווט**, כי חוקי ה-Firestore של כל פרויקט הם קובץ אחד.
 2. מוסיפים אפליקציית Android עם השם `com.future.messages`, ומוסיפים לה את טביעות ה-SHA-1 וה-SHA-256 של מפתח החתימה:
