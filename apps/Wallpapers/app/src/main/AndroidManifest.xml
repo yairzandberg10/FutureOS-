@@ -35,6 +35,28 @@
             android:exported="true"
             android:readPermission="com.future.futureui.permission.SYSTEM_SETTINGS"
             android:writePermission="com.future.futureui.permission.SYSTEM_SETTINGS" />
+        <receiver
+            android:name=".WallpapersCountWidgetProvider"
+            android:label="@string/widget_wallpapers_count_label"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/wallpapers_count_widget_info" />
+        </receiver>
+        <receiver
+            android:name=".WallpapersCategoryWidgetProvider"
+            android:label="@string/widget_wallpapers_category_label"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/wallpapers_category_widget_info" />
+        </receiver>
     </application>
 
 </manifest>

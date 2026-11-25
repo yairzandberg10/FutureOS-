@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">מצלמה</string>
+    <string name="widget_photos_label">מצלמה - תמונות</string>
+    <string name="widget_photos_desc">מספר התמונות שצולמו ומתי צולמה האחרונה</string>
+    <string name="widget_videos_label">מצלמה - סרטונים</string>
+    <string name="widget_videos_desc">מספר הסרטונים שהוקלטו ומתי הוקלט האחרון</string>
 </resources>

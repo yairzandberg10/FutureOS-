@@ -36,6 +36,28 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <receiver
+            android:name=".RemoteDevicesWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_remote_devices_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/remote_devices_widget_info" />
+        </receiver>
+        <receiver
+            android:name=".RemoteButtonsWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_remote_buttons_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/remote_buttons_widget_info" />
+        </receiver>
     </application>
 
 </manifest>

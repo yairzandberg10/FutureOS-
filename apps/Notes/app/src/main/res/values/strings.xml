@@ -22,4 +22,9 @@
     <string name="delete_note_confirm_message">למחוק את הפתק?</string>
     <string name="delete_confirm">מחק</string>
     <string name="cancel">ביטול</string>
+    <!-- ווידג'טים -->
+    <string name="widget_notes_latest_label">פתקים - אחרון</string>
+    <string name="widget_notes_count_label">פתקים - מספר</string>
+    <string name="widget_notes_latest_desc">הפתק העליון: נעוץ או האחרון שנערך</string>
+    <string name="widget_notes_count_desc">מספר הפתקים ומה מתוכם נעוץ</string>
 </resources>

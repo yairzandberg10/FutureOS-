@@ -460,7 +460,8 @@ fun WidgetPickerScreen(
     }
     // הווידג'טים המובנים מוצגים מיד, בלי לחכות לרשימת הספקים - הפוקוס עליהם
     LaunchedEffect(Unit) { delay(30); runCatching { first.requestFocus() } }
-    val builtins = BuiltinWidget.entries
+    // ווידג'ט שהמכשיר לא תומך בו (צעדים בלי חיישן) לא מוצע
+    val builtins = remember { BuiltinWidget.entries.filter { it.isSupported(context) } }
 
     LauncherOverlay(theme, tr("ווידג'טים")) {
         val list = options

@@ -135,12 +135,14 @@ class MainActivity : ComponentActivity() {
 
         // ווידג'ט "אירועים קרובים" קורא את היומן של המערכת - ההרשאה מתבקשת רק
         // כשהמשתמש לוחץ OK על הווידג'ט, ואחרי אישור הוא נטען מחדש מיד.
+        // אותו מנגנון לכל ווידג'ט מובנה שצריך הרשאה (יומן, אנשי קשר, צעדים).
         calendarPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
             if (granted) {
                 BuiltinWidgetSignals.refresh++
             } else {
-                Toast.makeText(this, tr("אין גישה ליומן"), Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, tr(pendingPermissionWidget?.permissionDeniedText ?: "לא ניתנה הרשאה"), Toast.LENGTH_SHORT).show()
             }
+            pendingPermissionWidget = null
         }
 
         window.setFlags(
@@ -186,17 +188,21 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private var pendingPermissionWidget: BuiltinWidget? = null
+
     /**
      * OK על ווידג'ט מובנה: פותח את האפליקציה שמזינה אותו (שעון, יומן, הגדרות).
-     * ווידג'ט האירועים בלי הרשאה ליומן מבקש אותה קודם ("פתח כדי לאשר גישה").
+     * ווידג'ט שצריך הרשאה (יומן, אנשי קשר, צעדים) ועוד לא קיבל אותה מבקש
+     * אותה קודם ("פתח כדי לאשר גישה"); ווידג'ט עם פעולה משלו (צליל) מבצע אותה.
      */
     fun activateBuiltinWidget(kind: BuiltinWidget) {
-        if (kind == BuiltinWidget.AGENDA &&
-            checkSelfPermission(android.Manifest.permission.READ_CALENDAR) != PackageManager.PERMISSION_GRANTED
-        ) {
-            runCatching { calendarPermissionLauncher.launch(android.Manifest.permission.READ_CALENDAR) }
+        val permission = kind.permission
+        if (permission != null && checkSelfPermission(permission) != PackageManager.PERMISSION_GRANTED) {
+            pendingPermissionWidget = kind
+            runCatching { calendarPermissionLauncher.launch(permission) }
             return
         }
+        if (com.future.futurelauncher.ui.performBuiltinWidgetAction(this, kind)) return
         val launch = packageManager.getLaunchIntentForPackage(kind.appPackage)
         if (launch == null) {
             Toast.makeText(this, getString(R.string.app_no_longer_installed), Toast.LENGTH_SHORT).show()
@@ -869,15 +875,12 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
         if (prefs.dimWallpaper > 0) {
             Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = prefs.dimWallpaper / 100f)))
         }
-        // שורת המצב של FutureUI (28dp) היא חלון overlay מעל מסך הבית, שמצויר עד
-        // הקצה - כל התוכן מתחיל מתחתיה. קודם הרשת התחילה 2dp מתחתיה, ובמצב עריכה
-        // הבית והפח (8dp מלמעלה) ישבו מתחת לשורת המצב עצמה.
-        Column(modifier = Modifier.fillMaxSize().padding(top = com.future.sharednav.systemui.StatusBarInset.HEIGHT_DP.dp)) {
+        Column(modifier = Modifier.fillMaxSize()) {
             if (viewModel.isEditMode) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 4.dp),
+                        .padding(top = 8.dp),
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -959,17 +962,14 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
 
                         FixedLauncherGrid(
                             items = pageItems,
-                            // 320x480dp: שוליים 12dp ורווח 8dp -> תא 68dp רוחב; הגובה
-                            // נגזר מהמקום שנשאר (~97dp), כך שהשורות מתפרסות על כל המסך
-                            // ווידג'ט בשורה אחת מקבל את מלוא הגובה של התבנית שלו.
                             contentPadding = PaddingValues(
-                                top = if (viewModel.isEditMode) 6.dp else 8.dp,
-                                start = if (viewModel.isEditMode) 4.dp else 12.dp,
-                                end = if (viewModel.isEditMode) 4.dp else 12.dp,
-                                bottom = if (viewModel.isEditMode) 4.dp else 4.dp
+                                top = if (viewModel.isEditMode) 7.dp else 30.dp,
+                                start = if (viewModel.isEditMode) 4.dp else 16.dp,
+                                end = if (viewModel.isEditMode) 4.dp else 16.dp,
+                                bottom = if (viewModel.isEditMode) 4.dp else 30.dp
                             ),
                             horizontalArrangement = Arrangement.spacedBy((if (viewModel.isEditMode) 2.dp else 8.dp)),
-                            verticalArrangement = Arrangement.spacedBy(if (viewModel.isEditMode) 6.dp else 8.dp),
+                            verticalArrangement = Arrangement.spacedBy(if (viewModel.isEditMode) 7.dp else 20.dp),
                             modifier = Modifier.fillMaxSize()
                         ) { indexInPage, item ->
                             ItemPanel(
@@ -1003,9 +1003,7 @@ fun LauncherScreen(viewModel: LauncherViewModel, onSelectWidget: () -> Unit) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    // מחוון העמודים: נקודות של 7dp צריכות פס של 28dp, לא 50dp
-                    // ריקים שדחקו את הרשת למעלה
-                    .height(if (viewModel.isEditMode) 80.dp else 28.dp),
+                    .height(if (viewModel.isEditMode) 80.dp else 50.dp),
                 contentAlignment = Alignment.Center
             ) {
                 if (viewModel.isEditMode) {

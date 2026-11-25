@@ -132,13 +132,26 @@
         </receiver>
         <receiver
             android:name=".SettingsWidgetProvider"
-            android:exported="true">
+            android:exported="true"
+            android:label="@string/widget_battery_label">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/app_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".SettingsUpdatesWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_updates_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/settings_updates_widget_info" />
         </receiver>
 
         <!-- תוצאת התקנת עדכון מ-PackageInstaller (PendingIntent מפורש). לא חשוף -->

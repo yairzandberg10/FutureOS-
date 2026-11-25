@@ -75,6 +75,28 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+        <receiver
+            android:name=".widget.BluetoothStatusWidgetProvider"
+            android:label="@string/bt_status_widget_label"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/bluetooth_status_widget_info" />
+        </receiver>
+        <receiver
+            android:name=".widget.ReceivedFilesWidgetProvider"
+            android:label="@string/bt_files_widget_label"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/bluetooth_files_widget_info" />
+        </receiver>
     </application>
 
 </manifest>

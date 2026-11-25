@@ -65,13 +65,25 @@
         </activity>
         <receiver
             android:name=".GuideWidgetProvider"
-            android:exported="true">
+            android:exported="true"
+            android:label="@string/widget_tip_label">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/app_widget_info" />
+        </receiver>
+        <receiver
+            android:name=".GuideTopicsWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_topics_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/guide_topics_widget_info" />
         </receiver>
     </application>
 

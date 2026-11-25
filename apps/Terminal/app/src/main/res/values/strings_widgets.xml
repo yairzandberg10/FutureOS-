@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_uptime_label">טרמינל - זמן פעולה</string>
+    <string name="widget_uptime_description">כמה זמן המכשיר פועל מאז האתחול, ואם יש root</string>
+    <string name="widget_storage_label">טרמינל - אחסון</string>
+    <string name="widget_storage_description">שטח האחסון הפנוי במכשיר ואחוז השימוש</string>
+</resources>

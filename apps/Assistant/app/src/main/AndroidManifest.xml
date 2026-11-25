@@ -77,6 +77,28 @@
                 <action android:name="com.future.assistant.action.WARM_UP_ASR" />
             </intent-filter>
         </receiver>
+        <receiver
+            android:name=".widget.AssistantModelWidgetProvider"
+            android:label="@string/assistant_model_widget_label"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/assistant_model_widget_info" />
+        </receiver>
+        <receiver
+            android:name=".widget.AssistantAgendaWidgetProvider"
+            android:label="@string/assistant_agenda_widget_label"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/assistant_agenda_widget_info" />
+        </receiver>
     </application>
 
 </manifest>

@@ -40,6 +40,7 @@
 
         <receiver
             android:name=".CalculatorWidgetProvider"
+            android:label="@string/calc_widget_last_label"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -47,6 +48,17 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/app_widget_info" />
+        </receiver>
+        <receiver
+            android:name=".CalculatorHistoryWidgetProvider"
+            android:label="@string/calc_widget_history_label"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/calculator_history_widget_info" />
         </receiver>
     </application>
 

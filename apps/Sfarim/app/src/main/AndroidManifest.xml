@@ -35,13 +35,25 @@
         </activity>
         <receiver
             android:name=".SfarimWidgetProvider"
-            android:exported="true">
+            android:exported="true"
+            android:label="@string/widget_tehillim_label">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/app_widget_info" />
+        </receiver>
+        <receiver
+            android:name=".SfarimContinueWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_continue_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/sfarim_continue_widget_info" />
         </receiver>
     </application>
 

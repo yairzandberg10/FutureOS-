@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">שלט</string>
+    <string name="widget_remote_devices_label">שלט - מכשירים</string>
+    <string name="widget_remote_buttons_label">שלט - כפתורים</string>
+    <string name="widget_remote_devices_desc">מספר המכשירים השמורים בשלט</string>
+    <string name="widget_remote_buttons_desc">סך הכפתורים המוגדרים בכל המכשירים</string>
 </resources>

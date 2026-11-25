@@ -58,6 +58,28 @@
                 <data android:mimeType="text/plain" />
             </intent-filter>
         </activity>
+        <receiver
+            android:name=".TranslateLastWidgetProvider"
+            android:label="@string/widget_translate_last_label"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/translate_last_widget_info" />
+        </receiver>
+        <receiver
+            android:name=".TranslateSavedWidgetProvider"
+            android:label="@string/widget_translate_saved_label"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/translate_saved_widget_info" />
+        </receiver>
     </application>
 
 </manifest>

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_battery_label">הגדרות - סוללה</string>
+    <string name="widget_battery_description">אחוז הסוללה, מצב טעינה, ומצב Wi-Fi ובלוטות\'</string>
+    <string name="widget_updates_label">הגדרות - עדכונים</string>
+    <string name="widget_updates_description">מספר עדכוני המערכת הזמינים ומועד הבדיקה האחרונה</string>
+</resources>

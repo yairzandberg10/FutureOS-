@@ -1,6 +1,9 @@
 package com.future.fitness.data
 
 import android.content.Context
+import com.future.fitness.widget.FitnessLastWorkoutWidgetProvider
+import com.future.fitness.widget.FitnessTodayWidgetProvider
+import com.future.sharednav.widget.FutureContentWidget
 import org.json.JSONArray
 import org.json.JSONObject
 import java.text.SimpleDateFormat
@@ -30,6 +33,7 @@ data class PairedDevice(val address: String, val name: String)
  * משתמש, ומכשיר Bluetooth משויך - הכל JSON ב-SharedPreferences, באותה שיטה
  * בדיוק כמו PlaylistStore ב-Music (אין DB מקומי בסוויטה לנתונים כאלה). */
 class WorkoutStore(context: Context) {
+    private val appContext = context.applicationContext
     private val prefs = context.getSharedPreferences("fitness_store", Context.MODE_PRIVATE)
     private val dayFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
 
@@ -156,6 +160,10 @@ class WorkoutStore(context: Context) {
             .putString(KEY_LAST_DAY, today)
             .putString(KEY_LAST_WORKOUT_DAY, today)
             .apply()
+
+        // ווידג'טים של כושר מתעדכנים מיד אחרי אימון שנשמר
+        FutureContentWidget.refresh(appContext, FitnessTodayWidgetProvider::class.java)
+        FutureContentWidget.refresh(appContext, FitnessLastWorkoutWidgetProvider::class.java)
 
         return DailyStats(calToday, minToday, streak)
     }

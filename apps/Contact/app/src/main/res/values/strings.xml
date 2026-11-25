@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">אנשי קשר</string>
+    <string name="widget_favorites_label">אנשי קשר - מועדפים</string>
+    <string name="widget_favorites_desc">שלושה מהמועדפים ומספר אנשי הקשר</string>
+    <string name="widget_blocked_label">אנשי קשר - חסומים</string>
+    <string name="widget_blocked_desc">מספר אנשי הקשר החסומים</string>
 </resources>

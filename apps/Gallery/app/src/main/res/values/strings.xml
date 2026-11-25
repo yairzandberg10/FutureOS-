@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">גלריה</string>
+
+    <!-- ווידג'טים למסך הבית -->
+    <string name="widget_photos_label">גלריה - תמונות</string>
+    <string name="widget_albums_label">גלריה - אלבומים</string>
+    <string name="widget_albums_desc">כמה אלבומים יש במכשיר ואיזה הכי גדול</string>
 </resources>

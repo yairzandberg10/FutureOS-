@@ -120,13 +120,26 @@
 
         <receiver
             android:name=".MessagesWidgetProvider"
-            android:exported="true">
+            android:exported="true"
+            android:label="@string/widget_unread_label">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/app_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".MessagesTodayWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_today_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/messages_today_widget_info" />
         </receiver>
 
         <!-- מקבל את תוצאת שליחת ה-MMS מ-SmsManager.sendMultimediaMessage; לא צריך

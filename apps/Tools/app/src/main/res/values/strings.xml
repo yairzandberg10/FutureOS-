@@ -17,4 +17,8 @@
     <string name="tool_random_number">מספר אקראי</string>
     <string name="tool_text_scanner">סורק טקסט</string>
     <string name="tool_guitar_tuner">מכוון גיטרה</string>
+    <string name="widget_tools_count_label">כלים - מספר</string>
+    <string name="widget_tools_count_desc">כמה כלים יש, וכמה מהם נעוצים במסך הבית</string>
+    <string name="widget_tools_pinned_label">כלים - נעוצים</string>
+    <string name="widget_tools_pinned_desc">שמות הכלים שנעוצים במסך הבית</string>
 </resources>

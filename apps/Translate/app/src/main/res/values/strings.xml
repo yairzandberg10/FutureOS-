@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">תרגום</string>
+    <string name="widget_translate_last_label">תרגום - אחרון</string>
+    <string name="widget_translate_last_desc">התרגום האחרון שבוצע, וזוג השפות שלו</string>
+    <string name="widget_translate_saved_label">תרגום - שמורים</string>
+    <string name="widget_translate_saved_desc">כמה תרגומים שמורים, וזוג השפות הנוכחי</string>
 </resources>

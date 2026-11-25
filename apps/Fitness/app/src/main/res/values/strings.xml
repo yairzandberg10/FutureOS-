@@ -1,3 +1,9 @@
 <resources>
     <string name="app_name">כושר</string>
+
+    <!-- ווידג'טים למסך הבית -->
+    <string name="widget_today_label">כושר - היום</string>
+    <string name="widget_today_desc">דקות האימון והקלוריות של היום והרצף</string>
+    <string name="widget_last_label">כושר - אימון אחרון</string>
+    <string name="widget_last_desc">האימון האחרון שהושלם ומתי היה</string>
 </resources>

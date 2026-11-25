@@ -15,4 +15,10 @@
     <string name="torch_notif_title">הפנס דלוק</string>
     <string name="torch_notif_text">לחץ כדי לכבות</string>
     <string name="torch_notif_action_off">כבה</string>
+
+    <!-- ווידג'טים למסך הבית -->
+    <string name="widget_state_label">פנס - מצב</string>
+    <string name="widget_state_desc">הפנס דלוק או כבוי, ומתי השתנה לאחרונה</string>
+    <string name="widget_time_label">פנס - זמן היום</string>
+    <string name="widget_time_desc">כמה זמן הפנס היה דלוק היום וכמה פעמים הודלק</string>
 </resources>

@@ -276,6 +276,7 @@
 
         <receiver
             android:name=".ToolsWidgetProvider"
+            android:label="@string/widget_tools_count_label"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -283,6 +284,17 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/app_widget_info" />
+        </receiver>
+        <receiver
+            android:name=".ToolsPinnedWidgetProvider"
+            android:label="@string/widget_tools_pinned_label"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/tools_pinned_widget_info" />
         </receiver>
     </application>
 

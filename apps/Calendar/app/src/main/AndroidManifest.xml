@@ -52,6 +52,7 @@
         </activity>
         <receiver
             android:name=".CalendarWidgetProvider"
+            android:label="@string/cal_widget_date_label"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -59,6 +60,17 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/app_widget_info" />
+        </receiver>
+        <receiver
+            android:name=".DafYomiWidgetProvider"
+            android:label="@string/cal_widget_daf_label"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/daf_yomi_widget_info" />
         </receiver>
     </application>
 

@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">רקעים</string>
+    <string name="widget_wallpapers_count_label">רקעים - מספר</string>
+    <string name="widget_wallpapers_count_desc">כמה רקעים יש בקטלוג, ומאיפה נטענו</string>
+    <string name="widget_wallpapers_category_label">רקעים - קטגוריה</string>
+    <string name="widget_wallpapers_category_desc">הקטגוריה הגדולה ביותר בקטלוג ומספר הרקעים בה</string>
 </resources>

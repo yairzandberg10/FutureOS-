@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">מוזיקה</string>
+    <string name="widget_last_played_label">מוזיקה - אחרון שהושמע</string>
+    <string name="widget_last_played_description">השיר האחרון שהושמע</string>
+    <string name="widget_library_label">מוזיקה - ספרייה</string>
+    <string name="widget_library_description">כמה שירים, פלייליסטים ומועדפים יש במוזיקה</string>
 </resources>

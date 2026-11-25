@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">מדריך למשתמש</string>
+    <string name="widget_tip_label">מדריך - טיפ היום</string>
+    <string name="widget_tip_description">טיפ אחר בכל יום מתוך המדריך</string>
+    <string name="widget_topics_label">מדריך - נושאים</string>
+    <string name="widget_topics_description">כמה נושאים וטיפים יש במדריך, ושמות הנושאים הראשונים</string>
 </resources>

@@ -50,6 +50,28 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+        <receiver
+            android:name=".RecordingsCountWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_rec_count_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/recordings_count_widget_info" />
+        </receiver>
+        <receiver
+            android:name=".LatestRecordingWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_rec_latest_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/latest_recording_widget_info" />
+        </receiver>
     </application>
 
 </manifest>

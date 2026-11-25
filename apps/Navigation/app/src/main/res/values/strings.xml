@@ -58,4 +58,8 @@
     <string name="gtfs_parsing">מעבד נתוני תחנות וקווים</string>
     <string name="gtfs_done">הנתונים עודכנו</string>
     <string name="gtfs_wifi_hint">מומלץ להתחבר לרשת Wi-Fi - זהו קובץ גדול</string>
+    <string name="widget_nav_recent_label">ניווט - יעד אחרון</string>
+    <string name="widget_nav_saved_label">ניווט - מקומות שמורים</string>
+    <string name="widget_nav_recent_desc">היעד האחרון שנבחר לניווט</string>
+    <string name="widget_nav_saved_desc">מספר המקומות השמורים וכתובת הבית</string>
 </resources>

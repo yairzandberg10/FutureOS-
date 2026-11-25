@@ -8,4 +8,5 @@
     android:initialLayout="@layout/future_widget"
     android:previewLayout="@layout/future_widget"
     android:resizeMode="none"
+    android:description="@string/widget_battery_description"
     android:widgetCategory="home_screen" />

@@ -2,4 +2,8 @@
     <string name="app_name">שעון</string>
     <string name="clock_stopwatch">שעון עצר</string>
     <string name="clock_timer">טיימר</string>
+    <string name="widget_timer_label">שעון - טיימר</string>
+    <string name="widget_timer_desc">הזמן שנשאר בטיימר ושעת הסיום</string>
+    <string name="widget_world_clock_label">שעון - שעון עולמי</string>
+    <string name="widget_world_clock_desc">השעה בערים השמורות בשעון העולמי</string>
 </resources>

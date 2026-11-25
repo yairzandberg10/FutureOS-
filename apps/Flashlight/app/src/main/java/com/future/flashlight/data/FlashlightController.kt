@@ -15,6 +15,7 @@ import android.util.Log
  */
 class FlashlightController(context: Context) {
     private val cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
+    private val appContext = context.applicationContext
 
     // מזהה המצלמה נמצא פעם אחת לכל התהליך (FL-10), לא בכל מופע
     private val cameraId: String? = cachedCameraId ?: resolveCameraId(cameraManager)?.also { cachedCameraId = it }
@@ -25,6 +26,7 @@ class FlashlightController(context: Context) {
         val id = cameraId ?: return false
         return try {
             cameraManager.setTorchMode(id, on)
+            TorchStateStore.record(appContext, on)
             true
         } catch (e: CameraAccessException) {
             Log.w(TAG, "setTorchMode($on) נכשל: ${e.reason}", e)
@@ -44,11 +46,17 @@ class FlashlightController(context: Context) {
         }
         val callback = object : CameraManager.TorchCallback() {
             override fun onTorchModeChanged(cameraId: String, enabled: Boolean) {
-                if (cameraId == id) onChange(enabled, true)
+                if (cameraId == id) {
+                    TorchStateStore.record(appContext, enabled)
+                    onChange(enabled, true)
+                }
             }
 
             override fun onTorchModeUnavailable(cameraId: String) {
-                if (cameraId == id) onChange(false, false)
+                if (cameraId == id) {
+                    TorchStateStore.record(appContext, false)
+                    onChange(false, false)
+                }
             }
         }
         cameraManager.registerTorchCallback(callback, Handler(Looper.getMainLooper()))

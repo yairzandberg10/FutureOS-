@@ -170,20 +170,13 @@ fun FixedLauncherGrid(
         val paddingTop = contentPadding.calculateTopPadding().roundToPx()
         val paddingStart = contentPadding.calculateStartPadding(layoutDirection).roundToPx()
 
-        val paddingBottom = contentPadding.calculateBottomPadding().roundToPx()
         val totalWidth = constraints.maxWidth
         val cellWidth = (totalWidth - paddingStart - contentPadding.calculateEndPadding(layoutDirection).roundToPx() - spacingX * (columns - 1)) / columns
 
-        // גובה התא נגזר מהגובה הזמין, כך שארבע השורות ממלאות את המסך באופן
-        // שווה. קודם הגובה היה קבוע (78dp, או 70dp לפי "ניחוש" של מצב עריכה
-        // מהריווח): הרשת נדחסה למעלה עם ~30dp ריקים מתחתיה, ווידג'ט בשורה אחת
-        // (74dp) חתך את שורת המשנה של תבנית הווידג'ט (~85dp).
-        val cellHeight = if (constraints.hasBoundedHeight) {
-            ((constraints.maxHeight - paddingTop - paddingBottom - spacingY * (rows - 1)) / rows)
-                .coerceAtLeast(56.dp.roundToPx())
-        } else {
-            88.dp.roundToPx()
-        }
+        // Dynamic cell height based on the items' natural size in the original layout
+        // (+2dp מהמקור בשביל האייקונים שהוגדלו ב-4dp)
+        val isEditMode = spacingY < 10.dp.roundToPx() // Heuristic to detect edit mode parameters
+        val cellHeight = (if (isEditMode) 72.dp else 80.dp).roundToPx()
 
         var measurableIndex = 0
         val placeables = items.mapIndexedNotNull { index, item ->
@@ -202,15 +195,12 @@ fun FixedLauncherGrid(
             val row = index / columns
             val col = index % columns
             val x = paddingStart + col * (cellWidth + spacingX)
-            // אייקון ושם ממורכזים אנכית בתא; ווידג'ט ממלא את התאים שלו
-            val y = paddingTop + row * (cellHeight + spacingY) + ((itemHeight - placeable.height) / 2).coerceAtLeast(0)
+            val y = paddingTop + row * (cellHeight + spacingY)
 
             Triple(placeable, x, y)
         }
 
-        val totalHeight = if (constraints.hasBoundedHeight) constraints.maxHeight
-            else paddingTop + paddingBottom + cellHeight * rows + spacingY * (rows - 1)
-        layout(totalWidth, totalHeight) {
+        layout(totalWidth, constraints.maxHeight) {
             placeables.forEach { (placeable, x, y) ->
                 placeable.placeRelative(x, y)
             }
@@ -232,10 +222,8 @@ fun ItemPanel(
     showLabel: Boolean = true,
     largeLabel: Boolean = false,
 ) {
-    val baseIcon = when (iconSizeStep) { 0 -> 40.dp; 2 -> 56.dp; else -> 48.dp }
-    // במצב עריכה הרשת קטנה יותר (מסגרת, "+" בצדדים) - האייקון קטן ב-20% כדי
-    // שגם הגודל "גדול" עם שם יכנס בתא בלי להיחתך
-    val iconSize = if (isEditMode) baseIcon * 0.8f else baseIcon
+    val baseIcon = when (iconSizeStep) { 0 -> 44.dp; 2 -> 58.dp; else -> 52.dp }
+    val iconSize = if (isEditMode) baseIcon - 8.dp else baseIcon
     // ווידג'ט הוא משטח גדול - הגדלה של 15% הייתה מוציאה אותו מהמסך ומעל שכניו.
     val focusScale = if (item is LauncherItem.Widget) 1.03f else 1.15f
     // האייקון "קופץ" לפוקוס בקפיץ lift (overshoot קטן) במקום קפיץ ברירת המחדל,
@@ -421,7 +409,7 @@ fun ItemPanel(
             }
         }
         if ((item !is LauncherItem.Widget || isEditMode) && (showLabel || isEditMode)) {
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(6.dp))
             // L7: שם ארוך ("ניווט ותחבורה") נגלל כשהאייקון ממוקד - MarqueeText של
             // הספרייה המשותפת. בלי פוקוס הוא נחתך עם "..." כמו קודם.
             com.future.sharednav.components.MarqueeText(
@@ -431,10 +419,7 @@ fun ItemPanel(
                 style = MaterialTheme.typography.labelSmall.copy(
                     shadow = OnWallpaperShadow,
                     textAlign = TextAlign.Center,
-                    // 12sp הוא גודל שם האפליקציה בדיזיין סיסטם (--fos-size-label); "טקסט
-                    // גדול" עולה דרגה ל-14sp. קודם 11sp/13sp - מתחת לסקאלה של שם אפליקציה.
-                    fontSize = if (largeLabel) FutureTypography.body else FutureTypography.label,
-                    lineHeight = 1.3.em,
+                    fontSize = if (largeLabel) FutureTypography.summary else FutureTypography.caption,
                 ),
             )
         }

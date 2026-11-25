@@ -13,4 +13,8 @@
     <string name="voice_listening">מקשיב</string>
     <string name="voice_permission_missing">יש לאשר גישה למיקרופון באפליקציית המקלדת כדי לתמלל</string>
     <string name="voice_unavailable">תמלול קולי אינו זמין במכשיר זה</string>
+    <string name="widget_status_label">מקלדת - סטטוס</string>
+    <string name="widget_status_description">האם המקלדת של FutureOS היא שיטת הקלט הפעילה</string>
+    <string name="widget_languages_label">מקלדת - שפות</string>
+    <string name="widget_languages_description">השפות שהופעלו במקלדת, ובכמה מהן יש חיזוי מילים</string>
 </resources>

@@ -66,13 +66,25 @@
         </service>
         <receiver
             android:name=".MusicWidgetProvider"
-            android:exported="true">
+            android:exported="true"
+            android:label="@string/widget_last_played_label">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/app_widget_info" />
+        </receiver>
+        <receiver
+            android:name=".MusicLibraryWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_library_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/music_library_widget_info" />
         </receiver>
     </application>
 

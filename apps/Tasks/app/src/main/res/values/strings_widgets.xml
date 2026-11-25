@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_tasks_open_label">משימות - פתוחות</string>
+    <string name="widget_tasks_open_description">מספר המשימות הפתוחות והחשובה ביניהן</string>
+    <string name="widget_tasks_reminder_label">משימות - תזכורת הבאה</string>
+    <string name="widget_tasks_reminder_description">התזכורת הקרובה של משימה פתוחה</string>
+</resources>

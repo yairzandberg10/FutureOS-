@@ -32,4 +32,8 @@
     <string name="minimize_call">מזער שיחה</string>
     <string name="ongoing_call">שיחה מתקיימת</string>
     <string name="tap_to_return">חזרה לשיחה</string>
+    <string name="widget_last_call_label">טלפון - שיחה אחרונה</string>
+    <string name="widget_last_call_desc">השיחה האחרונה: מי, סוג, ומתי</string>
+    <string name="widget_missed_label">טלפון - שיחות שלא נענו</string>
+    <string name="widget_missed_desc">שיחות שלא נענו ב-24 השעות האחרונות</string>
 </resources>

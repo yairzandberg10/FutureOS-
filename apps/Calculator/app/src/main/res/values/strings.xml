@@ -17,4 +17,7 @@
     <string name="calc_menu_clear_history">נקה היסטוריה</string>
     <string name="calc_copied">הועתק</string>
     <string name="calc_nothing_to_copy">אין תוצאה להעתקה</string>
+    <string name="calc_widget_last_label">מחשבון - תוצאה אחרונה</string>
+    <string name="calc_widget_history_label">מחשבון - היסטוריה</string>
+    <string name="calc_history_widget_desc">מספר החישובים בהיסטוריה והביטוי האחרון</string>
 </resources>

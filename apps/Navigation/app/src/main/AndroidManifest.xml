@@ -47,6 +47,28 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <receiver
+            android:name=".RecentDestinationWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_nav_recent_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/recent_destination_widget_info" />
+        </receiver>
+        <receiver
+            android:name=".SavedPlacesWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_nav_saved_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/saved_places_widget_info" />
+        </receiver>
     </application>
 
 </manifest>

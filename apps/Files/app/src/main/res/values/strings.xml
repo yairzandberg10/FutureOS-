@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">קבצים</string>
+
+    <!-- ווידג'טים למסך הבית -->
+    <string name="widget_storage_label">קבצים - מקום פנוי</string>
+    <string name="widget_downloads_label">קבצים - הורדות</string>
+    <string name="widget_downloads_desc">מספר הקבצים בתיקיית ההורדות והקובץ האחרון שנוסף</string>
 </resources>

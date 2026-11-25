@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">עוזרי</string>
+    <string name="assistant_model_widget_label">עוזרי - מודל דיבור</string>
+    <string name="assistant_agenda_widget_label">עוזרי - יומן היום</string>
+    <string name="assistant_model_widget_desc">האם מודל הדיבור המקומי מוכן לשימוש</string>
+    <string name="assistant_agenda_widget_desc">מספר האירועים של היום ביומן</string>
 </resources>

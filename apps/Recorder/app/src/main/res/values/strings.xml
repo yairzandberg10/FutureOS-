@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">רשמקול</string>
+    <string name="widget_rec_count_label">רשמקול - מספר</string>
+    <string name="widget_rec_latest_label">רשמקול - אחרונה</string>
+    <string name="widget_rec_count_desc">מספר ההקלטות וסך משכן</string>
+    <string name="widget_rec_latest_desc">ההקלטה האחרונה שנשמרה</string>
 </resources>

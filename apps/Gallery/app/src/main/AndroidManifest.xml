@@ -64,13 +64,25 @@
         </activity>
         <receiver
             android:name=".GalleryWidgetProvider"
-            android:exported="true">
+            android:exported="true"
+            android:label="@string/widget_photos_label">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/app_widget_info" />
+        </receiver>
+        <receiver
+            android:name=".GalleryAlbumsWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_albums_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/gallery_albums_widget_info" />
         </receiver>
     </application>
 

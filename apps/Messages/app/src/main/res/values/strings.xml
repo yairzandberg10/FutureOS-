@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">הודעות</string>
+    <string name="widget_unread_label">הודעות - חדשות</string>
+    <string name="widget_unread_description">הודעות SMS שלא נקראו, והאחרונה שהתקבלה</string>
+    <string name="widget_today_label">הודעות - היום</string>
+    <string name="widget_today_description">כמה הודעות נכנסו ונשלחו מאז חצות</string>
 </resources>

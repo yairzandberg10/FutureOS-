@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="140dp"
+    android:minHeight="50dp"
+    android:targetCellWidth="3"
+    android:targetCellHeight="1"
+    android:updatePeriodMillis="1800000"
+    android:initialLayout="@layout/future_widget"
+    android:previewLayout="@layout/future_widget"
+    android:resizeMode="none"
+    android:description="@string/daf_yomi_widget_desc"
+    android:widgetCategory="home_screen" />

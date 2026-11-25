@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">בלוטוס</string>
+    <string name="bt_status_widget_label">בלוטוס - מצב</string>
+    <string name="bt_files_widget_label">בלוטוס - קבצים שהתקבלו</string>
+    <string name="bt_status_widget_desc">מצב הבלוטוס ומספר המכשירים המותאמים</string>
+    <string name="bt_files_widget_desc">מספר הקבצים שהתקבלו בבלוטוס והקובץ האחרון</string>
 </resources>
