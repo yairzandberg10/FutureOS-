@@ -29,12 +29,16 @@ class SmsDeliverReceiver : BroadcastReceiver() {
 
         val address = messages[0].originatingAddress ?: return
         val body = messages.joinToString("") { it.messageBody ?: "" }
-        val timestamp = messages[0].timestampMillis
+        // DATE הוא זמן הקבלה במכשיר, והזמן מהמרכזייה נשמר ב-DATE_SENT (כמו ב-AOSP).
+        // השעון של המרכזייה אצל חלק מהמפעילים זז בשעתיים (שעון מקומי שנשלח כ-UTC),
+        // ואז הודעה נכנסת קפצה מעל התשובה שנשלחה אחריה.
+        val sentAt = messages[0].timestampMillis
 
         val values = ContentValues().apply {
             put(Telephony.Sms.ADDRESS, address)
             put(Telephony.Sms.BODY, body)
-            put(Telephony.Sms.DATE, timestamp)
+            put(Telephony.Sms.DATE, System.currentTimeMillis())
+            put(Telephony.Sms.DATE_SENT, sentAt)
             put(Telephony.Sms.READ, 0)
             put(Telephony.Sms.TYPE, Telephony.Sms.MESSAGE_TYPE_INBOX)
         }

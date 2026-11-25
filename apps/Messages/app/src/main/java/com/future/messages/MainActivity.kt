@@ -224,10 +224,13 @@ fun MessagesApp(theme: FutureTheme) {
     var archivedThreadIds by remember { mutableStateOf(archiveStore.archivedIds()) }
     var showingArchive by remember { mutableStateOf(false) }
 
-    fun refreshConversations() {
+    var conversationsJob by remember { mutableStateOf<Job?>(null) }
+    // silent: רענון ברקע (הודעה חדשה הגיעה) - בלי מצב "טוען" שמהבהב על הרשימה.
+    fun refreshConversations(silent: Boolean = false) {
         if (!hasPermissions) return
-        ioScope.launch {
-            isLoadingConversations = true
+        conversationsJob?.cancel()
+        conversationsJob = ioScope.launch {
+            if (!silent) isLoadingConversations = true
             conversations = withContext(Dispatchers.IO) { repository.getConversations() }
             conversationsLoadFailed = repository.lastConversationsFailed
             isLoadingConversations = false
@@ -309,7 +312,19 @@ fun MessagesApp(theme: FutureTheme) {
             depthOf = { if (it is MessagesScreen.List) 0 else 1 },
             contentKey = { it::class },
         ) { current -> when (current) {
-            is MessagesScreen.List -> ConversationListScreen(
+            is MessagesScreen.List -> {
+                // הודעה שמגיעה (SMS, MMS או צ'אט) בזמן שהרשימה פתוחה: הרשימה נטענת מחדש
+                // והשיחה קופצת לראש. בלי זה הרשימה התעדכנה רק אחרי יציאה וכניסה.
+                DisposableEffect(Unit) {
+                    val handler = android.os.Handler(android.os.Looper.getMainLooper())
+                    val observer = object : android.database.ContentObserver(handler) {
+                        override fun onChange(selfChange: Boolean) = refreshConversations(silent = true)
+                    }
+                    context.contentResolver.registerContentObserver(Telephony.Sms.CONTENT_URI, true, observer)
+                    context.contentResolver.registerContentObserver(Telephony.Mms.CONTENT_URI, true, observer)
+                    onDispose { context.contentResolver.unregisterContentObserver(observer) }
+                }
+                ConversationListScreen(
                 conversations = conversations,
                 theme = theme,
                 isLoading = isLoadingConversations,
@@ -373,6 +388,7 @@ fun MessagesApp(theme: FutureTheme) {
                     }
                 },
             )
+            }
             is MessagesScreen.Thread -> {
                 // סטטוס השליחה (SENDING/SENT/FAILED) מתעדכן אסינכרונית ע"י
                 // SmsSentReceiver/MmsSentReceiver אחרי שהמסך הזה כבר נטען, והודעה
