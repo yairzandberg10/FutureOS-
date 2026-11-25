@@ -40,6 +40,22 @@ abstract class FutureContentWidget : AppWidgetProvider() {
     /** התוכן. רץ מחוץ ל-thread הראשי. */
     abstract fun content(context: Context): WidgetContent
 
+    /**
+     * APPWIDGET_UPDATE הוא שידור מוגן - רק המערכת יכולה לשלוח אותו, ומאפליקציה
+     * (הלאנצ'ר או [refresh]) הוא נזרק ב-SecurityException. לכן הרענון עובר
+     * בפעולה משלנו, בשידור מפורש לרכיב (לא צריך intent-filter).
+     */
+    override fun onReceive(context: Context, intent: Intent) {
+        if (intent.action == ACTION_REFRESH) {
+            val manager = AppWidgetManager.getInstance(context)
+            val ids = intent.getIntArrayExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS)
+                ?: runCatching { manager.getAppWidgetIds(ComponentName(context, javaClass)) }.getOrNull()
+            if (ids != null && ids.isNotEmpty()) onUpdate(context, manager, ids)
+            return
+        }
+        super.onReceive(context, intent)
+    }
+
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
         val pending = goAsync()
         val app = context.applicationContext
@@ -94,13 +110,16 @@ abstract class FutureContentWidget : AppWidgetProvider() {
         /** מהגובה הזה (dp) - פריסת iOS המלאה; שורה אחת בלאנצ'ר היא ~76dp. */
         private const val TALL_MIN_HEIGHT_DP = 110f
 
+        /** רענון ווידג'ט מבחוץ (הלאנצ'ר, האפליקציה עצמה) - ר' [onReceive]. */
+        const val ACTION_REFRESH = "com.future.sharednav.action.WIDGET_REFRESH"
+
         /** מבקש מהווידג'טים של [provider] להתעדכן עכשיו (אחרי שינוי בנתונים). */
         fun refresh(context: Context, provider: Class<out AppWidgetProvider>) {
             val component = ComponentName(context, provider)
             val ids = runCatching { AppWidgetManager.getInstance(context).getAppWidgetIds(component) }.getOrNull()
             if (ids == null || ids.isEmpty()) return
             context.sendBroadcast(
-                Intent(AppWidgetManager.ACTION_APPWIDGET_UPDATE)
+                Intent(ACTION_REFRESH)
                     .setComponent(component)
                     .putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids)
             )

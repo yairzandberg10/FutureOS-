@@ -315,15 +315,22 @@ class MainActivity : ComponentActivity() {
         val now = android.os.SystemClock.elapsedRealtime()
         if (now - lastWidgetRefresh < 60_000L) return
         lastWidgetRefresh = now
-        appWidgetHost.appWidgetIds.forEach { id ->
-            val provider = runCatching { appWidgetManager.getAppWidgetInfo(id)?.provider }.getOrNull() ?: return@forEach
-            runCatching {
-                sendBroadcast(
-                    Intent(AppWidgetManager.ACTION_APPWIDGET_UPDATE)
-                        .setComponent(provider)
-                        .putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, intArrayOf(id))
-                )
-            }
+        appWidgetHost.appWidgetIds.forEach { requestWidgetRefresh(it) }
+    }
+
+    /**
+     * APPWIDGET_UPDATE מוגן (רק המערכת שולחת אותו; מכאן הוא נזרק ב-SecurityException
+     * ואף ווידג'ט לא התעדכן). ווידג'טי FutureOS מקבלים פעולת רענון משלהם
+     * (FutureContentWidget.ACTION_REFRESH) בשידור מפורש לרכיב.
+     */
+    private fun requestWidgetRefresh(id: Int) {
+        val provider = runCatching { appWidgetManager.getAppWidgetInfo(id)?.provider }.getOrNull() ?: return
+        runCatching {
+            sendBroadcast(
+                Intent(com.future.sharednav.widget.FutureContentWidget.ACTION_REFRESH)
+                    .setComponent(provider)
+                    .putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, intArrayOf(id))
+            )
         }
     }
 
@@ -375,6 +382,9 @@ class MainActivity : ComponentActivity() {
         if (!viewModel.addWidget(appWidgetId, viewModel.visiblePage)) {
             appWidgetHost.deleteAppWidgetId(appWidgetId)
             Toast.makeText(this, tr("אין מספיק מקום פנוי בדף הזה לווידג'ט"), Toast.LENGTH_SHORT).show()
+        } else {
+            // העדכון של המערכת בקישור לא תמיד מגיע (ראינו ווידג'ט ריק) - מבקשים תוכן מיד
+            requestWidgetRefresh(appWidgetId)
         }
     }
 }

@@ -431,8 +431,12 @@ private fun ProviderWidgetMock(option: WidgetOption) {
             }
         }
         Spacer(Modifier.weight(1f))
+        // התוויות בנויות "אפליקציה - מה מוצג" ושם האפליקציה כבר בכותרת - הערך
+        // הגדול מציג רק את החלק השני (קודם: "מוזיקה - א...").
+        val value = option.widgetLabel.substringAfter(" - ", option.widgetLabel).trim()
+            .ifEmpty { option.widgetLabel }
         Text(
-            option.widgetLabel,
+            value,
             color = ShellInk,
             style = ws(20.sp, FontWeight.Bold),
             maxLines = if (option.rows > 1) 2 else 1,
