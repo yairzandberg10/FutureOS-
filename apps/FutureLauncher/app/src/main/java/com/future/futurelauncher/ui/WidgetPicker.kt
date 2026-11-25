@@ -116,7 +116,7 @@ private val PreviewMaxH = 104.dp
  * מוסיף, BACK סוגר את האפליקציה הפתוחה (ובלי אפליקציה פתוחה - את הבורר).
  *
  * הווידג'טים המובנים מקובצים עם האפליקציה שמזינה אותם (שעון, יומן...) ומוצגים
- * חיים, בגודל אמיתי ומוקטנים. לווידג'ט של ספק מוצגת תבנית iOS שלו (אין דרך
+ * חיים, בגודל אמיתי ומוקטנים. לווידג'ט של ספק מוצגת תבנית הדיזיין סיסטם שלו (אין דרך
  * לצייר RemoteViews לפני שהווידג'ט קיים). רק אפליקציות מותקנות ופעילות עם מסך
  * הפעלה, ובהגבלה - רק של אפליקציות FutureOS.
  */
@@ -405,32 +405,36 @@ private fun WidgetPreviewTile(
     }
 }
 
-/** תבנית iOS של ווידג'ט ספק - כמו layout/future_widget: כותרת בגוון, אייקון בפינה, השם בגדול למטה. */
+/**
+ * תבנית ווידג'ט ספק לפי הדיזיין סיסטם (Widget / layout/future_widget): משטח
+ * ההתראה הצפה (#1C1C1E ב-90%, קו שיער 0.5dp לבן 15%), אייקון האפליקציה 18dp
+ * ושם 12sp ב-60% לבן, והערך 20sp מודגש לבן.
+ */
 @Composable
 private fun ProviderWidgetMock(option: WidgetOption) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .clip(FutureShapes.xl)
-            .background(WidgetSurface)
-            .padding(horizontal = 16.dp, vertical = if (option.rows > 1) 14.dp else 10.dp),
+            .background(ShellSurface)
+            .border(0.5.dp, ShellInk15Line, FutureShapes.xl)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.Center,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-            Text(
-                option.appLabel,
-                color = option.tint,
-                style = ws(FutureTypography.label, FontWeight.SemiBold),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f),
-            )
             val icon = option.icon
             if (icon != null) {
-                Spacer(Modifier.width(8.dp))
                 Image(icon, contentDescription = null, modifier = Modifier.size(18.dp).clip(RoundedCornerShape(percent = 28)))
+                Spacer(Modifier.width(6.dp))
             }
+            Text(
+                option.appLabel,
+                color = ShellInk60,
+                style = ws(FutureTypography.label),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
-        Spacer(Modifier.weight(1f))
         // התוויות בנויות "אפליקציה - מה מוצג" ושם האפליקציה כבר בכותרת - הערך
         // הגדול מציג רק את החלק השני (קודם: "מוזיקה - א...").
         val value = option.widgetLabel.substringAfter(" - ", option.widgetLabel).trim()
@@ -441,9 +445,14 @@ private fun ProviderWidgetMock(option: WidgetOption) {
             style = ws(20.sp, FontWeight.Bold),
             maxLines = if (option.rows > 1) 2 else 1,
             overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(top = 4.dp),
         )
     }
 }
+
+/** המשטח וקו השיער של ווידג'ט על הטפט - תמיד כהה (--fos-widget-bg / --fos-hairline-dark). */
+private val ShellSurface = Color(0xFF1C1C1E).copy(alpha = 0.90f)
+private val ShellInk15Line = Color.White.copy(alpha = 0.15f)
 
 /** הקבוצות: כל חבילה שיש לה ווידג'ט מובנה או ספק, ממוינות לפי שם. רץ ברקע. */
 private fun loadGroups(context: android.content.Context, pm: PackageManager, restrictToDefaultApps: Boolean): List<WidgetGroup> {

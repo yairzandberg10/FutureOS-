@@ -24,10 +24,10 @@ data class WidgetContent(
  * אייקון ושם האפליקציה בלבד, ו-updatePeriodMillis=0 - כלומר לא התעדכנו אף פעם.
  *
  * כל אפליקציה מממשת [content] (רץ ב-thread רקע, אז מותר לקרוא בו ContentProvider
- * או מסד נתונים), והתבנית אחידה בסגנון iOS (layout/future_widget): משטח
- * #1C1C1E אטום, כותרת בגוון האפליקציה ([WidgetTint]) עם האייקון בפינה, ערך
- * גדול מעוגן לתחתית ושורת משנה באפור המשני של iOS. בשורה אחת -
- * layout/future_widget_compact. OK פותח את האפליקציה.
+ * או מסד נתונים), והתבנית אחידה לפי רכיב Widget של הדיזיין סיסטם
+ * (layout/future_widget): משטח ההתראה הצפה (#1C1C1E ב-90%, קו שיער 0.5dp),
+ * אייקון האפליקציה 18dp ושם 12sp ב-60% לבן, ערך 20sp מודגש (28sp לשעון) ושורת
+ * משנה 13sp ב-60%. בשורה אחת - layout/future_widget_compact. OK פותח את האפליקציה.
  *
  * מתעדכן כשהלאנצ'ר חוזר למסך הבית (FutureLauncher שולח APPWIDGET_UPDATE לכל
  * ווידג'ט שמוצג), וכשהאפליקציה עצמה קוראת ל-[refresh] אחרי שינוי.
@@ -76,15 +76,12 @@ abstract class FutureContentWidget : AppWidgetProvider() {
             Log.w(TAG, "widget content failed", it)
             WidgetContent(label)
         }
-        val tint = runCatching { WidgetTint.fromDrawable(context.packageManager.getApplicationIcon(context.packageName)) }
-            .getOrDefault(WidgetTint.DEFAULT)
         val launch = context.packageManager.getLaunchIntentForPackage(context.packageName)?.let {
             PendingIntent.getActivity(context, 0, it, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         }
         fun build(layout: Int) = RemoteViews(context.packageName, layout).also { views ->
             views.setImageViewResource(R.id.future_widget_icon, context.applicationInfo.icon)
             views.setTextViewText(R.id.future_widget_title, content.title ?: label)
-            views.setTextColor(R.id.future_widget_title, tint)
             if (!liveClock) views.setTextViewText(R.id.future_widget_value, content.value)
             if (content.subtitle.isNullOrBlank()) {
                 views.setViewVisibility(R.id.future_widget_subtitle, View.GONE)
@@ -95,7 +92,7 @@ abstract class FutureContentWidget : AppWidgetProvider() {
             launch?.let { views.setOnClickPendingIntent(R.id.future_widget_root, it) }
         }
         // פריסה רספונסיבית (API 31): בשורה אחת - הערך ליד שורת המשנה; משתי
-        // שורות - פריסת iOS המלאה, הערך מעוגן לתחתית.
+        // שורות - התבנית המלאה, שלוש שורות.
         val views = RemoteViews(
             mapOf(
                 SizeF(1f, 1f) to build(if (liveClock) R.layout.future_widget_clock_compact else R.layout.future_widget_compact),
@@ -107,7 +104,7 @@ abstract class FutureContentWidget : AppWidgetProvider() {
 
     companion object {
         private const val TAG = "FutureWidget"
-        /** מהגובה הזה (dp) - פריסת iOS המלאה; שורה אחת בלאנצ'ר היא ~76dp. */
+        /** מהגובה הזה (dp) - התבנית המלאה; שורה אחת בלאנצ'ר היא ~76dp. */
         private const val TALL_MIN_HEIGHT_DP = 110f
 
         /** רענון ווידג'ט מבחוץ (הלאנצ'ר, האפליקציה עצמה) - ר' [onReceive]. */
