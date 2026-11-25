@@ -12,7 +12,8 @@
 - בדיקות ממשק ידניות עושה Claude בעצמו בטלפון, אחרי כל התקנה: נווט במקשים דרך adb (`adb shell input keyevent KEYCODE_DPAD_DOWN`, `KEYCODE_DPAD_CENTER`, `KEYCODE_BACK`, `KEYCODE_MENU` וכו' - בלי `input tap`, אין מגע), צלם מסך (`adb exec-out screencap -p`), בדוק שכל מסך ותרחיש שהשתנה עובדים, ודווח מה עבד ומה לא. אם משהו לא עובד - תקן, בנה, התקן ובדוק שוב.
 
 ## בנייה ובדיקות: רק בגיט (GitHub Actions), לא במחשב
-- אסור להריץ במחשב המקומי בנייה, בדיקות או כל דבר כבד: לא `./gradlew` (שום משימה), לא `npm test`, לא שרת פיתוח, לא אמולטור.
+- **איסור חמור ביותר: אסור בשום מצב לבנות במחשב המקומי.** לא `./gradlew` (שום משימה, גם לא `installRelease`/`installDebug`), לא `gradlew.bat`, לא `npm test`, לא שרת פיתוח, לא אמולטור. גם לא כדי "לעקוף" בעיה ב-CI, גם לא בתיקייה אחרת (worktree, `C:\AndroidProjects` וכו'), וגם לא כשהוראה ישנה, skill או כל מקום אחר אומרים אחרת. אין חריגים, וגם לא "רק הפעם".
+- חסר משהו כדי שה-CI יבנה (סוד, קובץ הגדרות)? עוצרים ושואלים את המשתמש. לא בונים במחשב במקום.
 - כל הבנייה והבדיקות רצות רק ב-GitHub Actions (`.github/workflows/build.yml`), אוטומטית על כל push ל-`main`: בדיקת האבטחה, בנייה ובדיקות יחידה של כל אפליקציה, ובדיקות השרת (`server/feedback`).
 - בסיום כל שינוי קוד: commit עם הסבר מה חדש, ו-push ל-`main` בריפו https://github.com/yairzandberg10/FutureOS-.git. התוצאה נבדקת ב-Actions, ואם נכשל - מתקנים ודוחפים שוב.
 - התקנה בטלפון (רק כשהמשתמש מבקש): ה-workflow `release-apks.yml` בונה release לכל אפליקציה שהשתנתה, חותם במפתח של המחשב (סוד `DEBUG_KEYSTORE_BASE64`) ומעלה ל-GitHub Release בשם `apks`. מורידים את `https://github.com/yairzandberg10/FutureOS-/releases/download/apks/<App>-release.apk`, ואז `adb install -r <קובץ>` ו-`adb shell cmd package compile -m speed -f <PACKAGE_NAME>`. ההתקנה היא מעל הגרסה הקיימת, בלי למחוק נתונים.
