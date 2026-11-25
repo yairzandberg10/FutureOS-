@@ -231,7 +231,10 @@ fun MessagesApp(theme: FutureTheme) {
         conversationsJob?.cancel()
         conversationsJob = ioScope.launch {
             if (!silent) isLoadingConversations = true
-            conversations = withContext(Dispatchers.IO) { repository.getConversations() }
+            conversations = withContext(Dispatchers.IO) {
+                if (!silent) repository.repairFutureIncomingDates()
+                repository.getConversations()
+            }
             conversationsLoadFailed = repository.lastConversationsFailed
             isLoadingConversations = false
         }

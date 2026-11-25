@@ -62,6 +62,35 @@ class SmsRepository(appContext: Context) {
      * View ישן ולא אמין בהרבה מכשירים (לפעמים ריק גם כשיש הודעות אמיתיות).
      * שאילתה אחת בלבד, לא שאילתה נפרדת לכל שיחה.
      */
+    /**
+     * הודעות נכנסות שנשמרו לפני התיקון עם השעון של המרכזייה (שזז בשעות שלמות
+     * קדימה אצל חלק מהמפעילים) - עדיין "בעתיד" ולכן ממוינות מעל תשובות שנשלחו אחריהן.
+     * מורידים מהן את מספר השעות השלמות שבהן הן בעתיד. רץ רק על שורות בעתיד, אז
+     * אחרי התיקון הראשון זו שאילתה ריקה.
+     */
+    fun repairFutureIncomingDates() {
+        val now = System.currentTimeMillis()
+        val hour = 3_600_000L
+        try {
+            val fixes = context.contentResolver.query(
+                Telephony.Sms.CONTENT_URI, arrayOf(Telephony.Sms._ID, Telephony.Sms.DATE),
+                "${Telephony.Sms.TYPE} = ? AND ${Telephony.Sms.DATE} > ?",
+                arrayOf(Telephony.Sms.MESSAGE_TYPE_INBOX.toString(), (now + 60_000L).toString()), null
+            )?.use { c ->
+                buildList { while (c.moveToNext()) add(c.getLong(0) to c.getLong(1)) }
+            } ?: return
+            for ((id, date) in fixes) {
+                val hours = (date - now + hour - 1) / hour
+                context.contentResolver.update(
+                    ContentUris.withAppendedId(Telephony.Sms.CONTENT_URI, id),
+                    ContentValues().apply { put(Telephony.Sms.DATE, date - hours * hour) }, null, null
+                )
+            }
+        } catch (e: Exception) {
+            Log.e("SmsRepository", "Cannot repair future dates", e)
+        }
+    }
+
     fun getConversations(): List<Conversation> {
         lastConversationsFailed = false
         data class ThreadAccumulator(
