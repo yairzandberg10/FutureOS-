@@ -490,7 +490,14 @@ object WidgetViews {
     @Suppress("DEPRECATION")
     fun updateSize(widgetId: Int, widthDp: Int, heightDp: Int) {
         val view = views[widgetId]?.get() ?: return
-        runCatching { view.updateAppWidgetSize(android.os.Bundle(), widthDp, heightDp, widthDp, heightDp) }
+        runCatching {
+            // רשימת הגדלים (API 31) - ממנה RemoteViews רספונסיבי בוחר פריסה
+            if (android.os.Build.VERSION.SDK_INT >= 31) {
+                view.updateAppWidgetSize(android.os.Bundle(), listOf(android.util.SizeF(widthDp.toFloat(), heightDp.toFloat())))
+            } else {
+                view.updateAppWidgetSize(android.os.Bundle(), widthDp, heightDp, widthDp, heightDp)
+            }
+        }
     }
 
     /** לוחץ על הצאצא הלחיץ הראשון (בסדר קריאה), או על הווידג'ט כולו. */

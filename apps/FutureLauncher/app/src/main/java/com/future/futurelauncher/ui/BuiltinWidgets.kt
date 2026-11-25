@@ -82,10 +82,9 @@ import java.util.Locale
  * מתעדכנים חי ונשמרים בפריסה כ-LauncherItem.Widget עם [key] בשדה builtin
  * ו-widgetId = -1. ה-[key] הוא מה שנשמר - אסור לשנות מפתח קיים.
  *
- * המראה הוא תבנית הווידג'ט של הדיזיין סיסטם (Widget.prompt.md /
- * FutureContentWidget): משטח ההתראה הצפה (#1C1C1E ב-90%, קו שיער 0.5dp לבן
- * 15%), רדיוס 22dp, ריפוד 16/10, אייקון האפליקציה שמזינה אותו 18dp + כותרת
- * 12sp ב-60%, ערך מודגש 20sp (28sp לשעון), שורת משנה 13sp ב-60%. תמיד כהה -
+ * המראה בסגנון ווידג'טי iOS (כמו FutureContentWidget): משטח #1C1C1E אטום בלי
+ * מסגרת, רדיוס 22dp, ריפוד 16/12, תוכן מיושר למעלה, כותרת וסמל בגוון של
+ * הווידג'ט ([tint]), ערך מודגש לבן ושורות משנה באפור המשני של iOS. תמיד כהה -
  * הוא יושב על הטפט. אין לו מצב פוקוס משלו (הסמן של הרשת), ו-OK פותח את
  * האפליקציה שמזינה אותו (או מבצע את הפעולה של הווידג'ט, ראו
  * [performBuiltinWidgetAction]).
@@ -187,18 +186,43 @@ fun performBuiltinWidgetAction(context: Context, kind: BuiltinWidget): Boolean {
 
 /** 28sp - ערך השעון בווידג'ט (--fos-size-widget-clock). */
 internal val WidgetClockSize: TextUnit = 28.sp
-/** הלבן של המעטפת ו-60%/15% שלו (--fos-shell-ink / -60 / קו שיער). */
+/**
+ * צבעי iOS במצב כהה: הלבן של הטקסט הראשי, האפור המשני (secondaryLabel,
+ * #EBEBF5 ב-60%) ומילוי משני (#767680 ב-24%) לטבעות, פסים ועיגולים.
+ */
 internal val ShellInk = Color.White
-internal val ShellInk60 = Color.White.copy(alpha = 0.6f)
-internal val ShellInk15 = Color.White.copy(alpha = 0.15f)
-/** צבעי הסטטוס של המצב הכהה - המשטח של הווידג'ט תמיד כהה. */
-private val DarkTokens = FutureTheme(isDarkMode = true)
-internal val WidgetDanger: Color = DarkTokens.dangerColor
-internal val WidgetSuccess: Color = DarkTokens.successColor
+internal val ShellInk60 = Color(0x99EBEBF5)
+internal val ShellInk15 = Color(0x3D767680)
+/** המשטח של ווידג'ט iOS כהה - אטום, בלי קו מסגרת. */
+internal val WidgetSurface = Color(0xFF1C1C1E)
+/** צבעי הסטטוס של iOS (systemRed / systemGreen כהים). */
+internal val WidgetDanger: Color = Color(0xFFFF453A)
+internal val WidgetSuccess: Color = Color(0xFF30D158)
 
-/** ההדגשה של המשתמש, בגוון שקריא על המשטח הכהה של הווידג'ט. */
-internal fun widgetAccent(theme: FutureTheme): Color =
-    FutureContrast.readableAccent(theme.accentColor, Color(0xFF1C1C1E), Color.White)
+/**
+ * הגוון של כל ווידג'ט - כמו ב-iOS, הכותרת וההדגשות (טבעת, היום בלוח, מחוג
+ * השניות) בצבע של האפליקציה שמזינה אותו: כתום לשעון, אדום ליומן וכו'.
+ */
+internal val BuiltinWidget.tint: Color
+    get() = when (this) {
+        BuiltinWidget.CLOCK, BuiltinWidget.BIG_CLOCK, BuiltinWidget.ANALOG_CLOCK,
+        BuiltinWidget.WORLD_CLOCK, BuiltinWidget.NEXT_ALARM -> Color(0xFFFF9F0A)
+        BuiltinWidget.HEBREW_DATE, BuiltinWidget.MONTH_CALENDAR, BuiltinWidget.AGENDA -> Color(0xFFFF453A)
+        BuiltinWidget.SUN_TIMES -> Color(0xFFFFD60A)
+        BuiltinWidget.DEVICE, BuiltinWidget.BATTERY_RING -> Color(0xFF30D158)
+        BuiltinWidget.STORAGE, BuiltinWidget.CONNECTIVITY -> Color(0xFF0A84FF)
+        BuiltinWidget.SOUND -> Color(0xFFBF5AF2)
+        BuiltinWidget.STEPS -> Color(0xFFFF375F)
+        BuiltinWidget.FAVORITES -> Color(0xFF64D2FF)
+        BuiltinWidget.AVOT -> Color(0xFFD4A373)
+    }
+
+/** הגוון של הווידג'ט שמצויר עכשיו (ר' [BuiltinWidgetContent]). */
+internal val LocalWidgetTint = androidx.compose.runtime.staticCompositionLocalOf { Color(0xFF0A84FF) }
+
+/** ההדגשה בתוך הווידג'ט - הגוון שלו, כמו ב-iOS (לא ההדגשה הכללית של המשתמש). */
+@Composable
+internal fun widgetAccent(@Suppress("UNUSED_PARAMETER") theme: FutureTheme): Color = LocalWidgetTint.current
 
 /** גובה שורה 1.3 של הדיזיין סיסטם (--fos-line-height) - בלי זה Text יורש 24sp מ-Material ושורת 12sp תופסת 24dp. */
 internal fun ws(size: TextUnit, weight: FontWeight = FontWeight.Normal, tabular: Boolean = false) = TextStyle(
@@ -226,18 +250,19 @@ internal fun lineHeightOf(size: TextUnit): Dp = with(LocalDensity.current) { (si
 @Composable
 fun BuiltinWidgetContent(kind: BuiltinWidget, spanX: Int, spanY: Int, theme: FutureTheme) {
     val tick = rememberWidgetTick()
+    androidx.compose.runtime.CompositionLocalProvider(LocalWidgetTint provides kind.tint) {
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
             .clip(FutureShapes.xl)
-            .background(theme.headsUpSurfaceColor)
-            .border(0.5.dp, theme.headsUpBorderColor, FutureShapes.xl)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+            .background(WidgetSurface)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
     ) {
         val box = WidgetBox(maxWidth, maxHeight)
+        // iOS: התוכן מתחיל מלמעלה; בשורה אחת אין מקום לרווח - ממורכז
         Column(
             modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.Center,
+            verticalArrangement = if (box.compact) Arrangement.Center else Arrangement.Top,
         ) {
             when (kind) {
                 BuiltinWidget.CLOCK -> ClockWidget(kind, tick, box)
@@ -259,6 +284,7 @@ fun BuiltinWidgetContent(kind: BuiltinWidget, spanX: Int, spanY: Int, theme: Fut
                 BuiltinWidget.AVOT -> AvotWidget(kind, tick, box)
             }
         }
+    }
     }
 }
 
@@ -503,26 +529,17 @@ internal fun ValueLine(
     }
 }
 
-/** אייקון האפליקציה שמזינה (18dp, כפי שהוא - בלי צביעה) ושם 12sp ב-60%. */
+/**
+ * כותרת בסגנון iOS: סמל קווי בגוון של הווידג'ט ושם מודגש-למחצה באותו גוון
+ * (כמו "יום רביעי" האדום של ווידג'ט היומן ב-iOS). בלי אייקון האפליקציה.
+ */
 @Composable
 internal fun WidgetHeader(kind: BuiltinWidget, title: String) {
-    val context = LocalContext.current
-    val icon by produceState<ImageBitmap?>(null, kind.appPackage) {
-        value = withContext(Dispatchers.IO) {
-            runCatching { context.packageManager.getApplicationIcon(kind.appPackage).toBitmap(48, 48).asImageBitmap() }.getOrNull()
-        }
-    }
+    val tint = LocalWidgetTint.current
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.height(18.dp)) {
-        Box(Modifier.size(18.dp), contentAlignment = Alignment.Center) {
-            val bmp = icon
-            if (bmp != null) {
-                Image(bmp, contentDescription = null, modifier = Modifier.size(18.dp).clip(RoundedCornerShape(percent = 28)))
-            } else {
-                Icon(kind.fallbackIcon, contentDescription = null, tint = ShellInk60, modifier = Modifier.size(16.dp))
-            }
-        }
-        Spacer(Modifier.width(6.dp))
-        Text(title, color = ShellInk60, style = ws(FutureTypography.label), maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Icon(kind.fallbackIcon, contentDescription = null, tint = tint, modifier = Modifier.size(15.dp))
+        Spacer(Modifier.width(5.dp))
+        Text(title, color = tint, style = ws(FutureTypography.label, FontWeight.SemiBold), maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
