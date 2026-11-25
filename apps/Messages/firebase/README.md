@@ -9,7 +9,7 @@
 
 ## מה מוגדר בפועל (נובמבר 2026)
 - הצ'אט רץ על פרויקט ה-Firebase של הניווט, `futureos-navigation` (תוכנית Spark, חינם). האפליקציה `com.future.messages` רשומה בו עם טביעות SHA-1/SHA-256 של מפתח ה-debug.
-- Authentication: Phone פעיל. Firestore: `(default)` ב-`europe-west1`, עם `firestore.rules` מכאן ועוד שני חוקי קריאה של הניווט בסופם (קובץ חוקים אחד לפרויקט).
+- Authentication: כניסה אנונימית (Phone של Firebase דורש תוכנית בתשלום ולא בשימוש). המספרים מאומתים במכשירים ב-SMS: אימות עצמי (SMS אחד לעצמך בהפעלה) ולחיצת יד עם כל איש קשר (ר' FutureChat.kt). Firestore: `(default)` ב-`europe-west1`, עם `firestore.rules` מכאן ועוד שני חוקי קריאה של הניווט בסופם (קובץ חוקים אחד לפרויקט).
 - `google-services.json` נכנס לבניית ה-release מהסוד `MESSAGES_GOOGLE_SERVICES_JSON` בריפו (ר' `.github/workflows/release-apks.yml`).
 - בלי תוכנית Blaze (בתשלום), ולכן בלי Storage ובלי Cloud Function:
   - תמונות בצ'אט נשמרות מוצפנות ב-Firestore עצמו, בחלקים של עד 700KB (`media/{נמען}/parts/{id}_{n}`), ונמחקות אחרי שהנמען שמר אותן.

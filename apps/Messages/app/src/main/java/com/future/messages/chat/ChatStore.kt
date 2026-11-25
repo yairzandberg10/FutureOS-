@@ -12,7 +12,7 @@ import android.database.sqlite.SQLiteOpenHelper
  * וספר הכתובות של מי שרשום לצ'אט, כולל המפתחות המוצמדים שלו (TOFU).
  */
 internal class ChatStore private constructor(context: Context) :
-    SQLiteOpenHelper(context.applicationContext, "chat.db", null, 1) {
+    SQLiteOpenHelper(context.applicationContext, "chat.db", null, 2) {
 
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL(
@@ -38,9 +38,37 @@ internal class ChatStore private constructor(context: Context) :
                 checked_at INTEGER NOT NULL
             )"""
         )
+        createHandshakeTables(db)
     }
 
-    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) = Unit
+    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+        if (oldVersion < 2) {
+            createHandshakeTables(db)
+            // v1 זיהה אנשי קשר לפי המספר שבחשבון Firebase. עכשיו רק לחיצת יד ב-SMS
+            // מוכיחה מספר, אז מה שנשמר קודם לא נחשב מאומת.
+            db.delete("peers", null, null)
+        }
+    }
+
+    /**
+     * לחיצת יד ב-SMS (FutureChat):
+     *  hs_out - שלחנו "שלום" למספר הזה עם nonce, ומחכים לתשובה שמחזירה אותו.
+     *  hs_in  - קיבלנו "שלום" מהמספר הזה וענינו עם nonce משלנו. השולח מאומת רק
+     *           כשהוא מחזיר את ה-nonce שלנו בהודעת צ'אט חתומה.
+     */
+    private fun createHandshakeTables(db: SQLiteDatabase) {
+        db.execSQL("CREATE TABLE IF NOT EXISTS hs_out (phone TEXT PRIMARY KEY, nonce TEXT NOT NULL, sent_at INTEGER NOT NULL)")
+        db.execSQL(
+            """CREATE TABLE IF NOT EXISTS hs_in (
+                phone TEXT PRIMARY KEY,
+                nonce TEXT NOT NULL,
+                uid TEXT NOT NULL,
+                agree_key TEXT NOT NULL,
+                sign_key TEXT NOT NULL,
+                at INTEGER NOT NULL
+            )"""
+        )
+    }
 
     // ---------------------------------------------------------------- הודעות
 
@@ -139,6 +167,49 @@ internal class ChatStore private constructor(context: Context) :
 
     fun clearAll() {
         writableDatabase.delete("peers", null, null)
+        writableDatabase.delete("hs_out", null, null)
+        writableDatabase.delete("hs_in", null, null)
+    }
+
+    fun removePeer(phone: String) {
+        writableDatabase.delete("peers", "phone = ?", arrayOf(phone))
+    }
+
+    // ---------------------------------------------------------------- לחיצת יד
+
+    /** מתי נשלח "שלום" אחרון למספר (0 = אף פעם). */
+    fun handshakeSentAt(phone: String): Long =
+        readableDatabase.rawQuery("SELECT sent_at FROM hs_out WHERE phone = ?", arrayOf(phone)).use { if (it.moveToFirst()) it.getLong(0) else 0L }
+
+    fun putHandshakeOut(phone: String, nonce: String) {
+        writableDatabase.insertWithOnConflict("hs_out", null, ContentValues().apply {
+            put("phone", phone); put("nonce", nonce); put("sent_at", System.currentTimeMillis())
+        }, SQLiteDatabase.CONFLICT_REPLACE)
+    }
+
+    fun handshakeOutNonce(phone: String): String? =
+        readableDatabase.rawQuery("SELECT nonce FROM hs_out WHERE phone = ?", arrayOf(phone)).use { if (it.moveToFirst()) it.getString(0) else null }
+
+    fun removeHandshakeOut(phone: String) {
+        writableDatabase.delete("hs_out", "phone = ?", arrayOf(phone))
+    }
+
+    class Incoming(val phone: String, val nonce: String, val uid: String, val agreeKey: String, val signKey: String)
+
+    fun putHandshakeIn(h: Incoming) {
+        writableDatabase.insertWithOnConflict("hs_in", null, ContentValues().apply {
+            put("phone", h.phone); put("nonce", h.nonce); put("uid", h.uid)
+            put("agree_key", h.agreeKey); put("sign_key", h.signKey); put("at", System.currentTimeMillis())
+        }, SQLiteDatabase.CONFLICT_REPLACE)
+    }
+
+    fun handshakeInByUid(uid: String): Incoming? =
+        readableDatabase.rawQuery("SELECT phone, nonce, agree_key, sign_key FROM hs_in WHERE uid = ?", arrayOf(uid)).use {
+            if (it.moveToFirst()) Incoming(it.getString(0), it.getString(1), uid, it.getString(2), it.getString(3)) else null
+        }
+
+    fun removeHandshakeIn(phone: String) {
+        writableDatabase.delete("hs_in", "phone = ?", arrayOf(phone))
     }
 
     companion object {

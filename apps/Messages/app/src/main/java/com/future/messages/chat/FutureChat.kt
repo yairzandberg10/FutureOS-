@@ -16,16 +16,12 @@ import android.telephony.PhoneNumberUtils
 import android.telephony.TelephonyManager
 import android.util.Log
 import com.future.messages.receiver.SmsDeliverReceiver
-import com.google.firebase.FirebaseException
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.PhoneAuthCredential
-import com.google.firebase.auth.PhoneAuthOptions
-import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -43,7 +39,6 @@ import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.util.UUID
-import java.util.concurrent.TimeUnit
 
 /**
  * צ'אט FutureOS: הודעות באינטרנט בין מכשירי FutureOS, מוצפנות מקצה לקצה,
@@ -51,10 +46,9 @@ import java.util.concurrent.TimeUnit
  * שאין רשת, ההודעה יוצאת כ-SMS/MMS כרגיל. ההודעות נשמרות ב-content://sms ולכן
  * מופיעות באותה שיחה לצד ה-SMS.
  *
- * זרימה: השולח מצפין לנמען (ChatCrypto) וכותב ל-inbox/{uid} של הנמען.
- * Cloud Function שולחת Push (FCM), והנמען מושך, מאמת, מפענח, שומר, מוחק
- * מהשרת ושולח קבלת "נמסר". כשהאפליקציה פתוחה יש גם האזנה חיה, לכן "מקליד..."
- * וקבלות מגיעים מיד.
+ * זרימה: אנשי קשר מאומתים בלחיצת יד ב-SMS (ר' למטה). השולח מצפין לנמען
+ * (ChatCrypto) וכותב ל-inbox/{uid} של הנמען. ChatService מחזיק האזנה פתוחה,
+ * והנמען מאמת, מפענח, שומר, מוחק מהשרת ושולח קבלת "נמסר".
  */
 object FutureChat {
     private const val TAG = "FutureChat"
@@ -85,14 +79,22 @@ object FutureChat {
     fun init(context: Context) {
         appContext = context.applicationContext
         if (!ChatBackend.configured) return
-        _state.value = if (ChatBackend.uid() != null && ChatBackend.phone() != null) State.ACTIVE else State.SIGNED_OUT
+        _state.value = if (ChatBackend.uid() != null && myPhone() != null) State.ACTIVE else State.SIGNED_OUT
     }
 
     val isActive: Boolean get() = _state.value == State.ACTIVE
 
-    fun myPhone(): String? = ChatBackend.phone()
+    private fun prefs(context: Context = appContext) = context.getSharedPreferences("future_chat", Context.MODE_PRIVATE)
+
+    /** המספר שלנו, אחרי שאומת ב-SMS לעצמנו. */
+    fun myPhone(): String? = if (::appContext.isInitialized) prefs().getString("my_phone", null) else null
 
     // ---------------------------------------------------------------- הרשמה
+    //
+    // אין קוד אימות מ-Firebase (SMS של Firebase דורש תוכנית בתשלום). במקום זה:
+    //  1. כניסה אנונימית ל-Firebase ויצירת מפתחות במכשיר.
+    //  2. אימות המספר שלנו: SMS אחד לעצמנו עם nonce. אם הוא חוזר אלינו - המספר שלנו.
+    //  3. כל איש קשר מאומת בלחיצת יד ב-SMS (ר' "לחיצת יד" למטה), לא דרך השרת.
 
     interface VerificationListener {
         fun onCodeSent()
@@ -100,56 +102,49 @@ object FutureChat {
         fun onError(message: String)
     }
 
-    private var verificationId: String? = null
+    private var setupListener: VerificationListener? = null
+    private var setupTimeout: Job? = null
 
-    /** שולח קוד אימות ב-SMS. אם Play Services קולט את הקוד לבד, onVerified
-     * נקרא בלי שהמשתמש מקליד כלום. */
+    /** שולח SMS אחד למספר שהוקלד, ומחכה שיחזור אלינו (onControlSms "V"). */
     fun startVerification(activity: Activity, rawPhone: String, listener: VerificationListener) {
         init(activity)
         val phone = e164(activity, rawPhone) ?: return listener.onError(tr("מספר לא תקין"))
-        val options = PhoneAuthOptions.newBuilder(FirebaseAuth.getInstance())
-            .setPhoneNumber(phone)
-            .setTimeout(60L, TimeUnit.SECONDS)
-            .setActivity(activity)
-            .setCallbacks(object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
-                override fun onVerificationCompleted(credential: PhoneAuthCredential) = signIn(credential, listener)
-                override fun onVerificationFailed(e: FirebaseException) {
-                    Log.w(TAG, "Verification failed", e)
-                    listener.onError(e.localizedMessage ?: tr("האימות נכשל"))
-                }
-                override fun onCodeSent(id: String, token: PhoneAuthProvider.ForceResendingToken) {
-                    verificationId = id
-                    listener.onCodeSent()
-                }
-            })
-            .build()
-        PhoneAuthProvider.verifyPhoneNumber(options)
-    }
-
-    fun submitCode(code: String, listener: VerificationListener) {
-        val id = verificationId ?: return listener.onError(tr("צריך לשלוח קוד קודם"))
-        signIn(PhoneAuthProvider.getCredential(id, code.trim()), listener)
-    }
-
-    private fun signIn(credential: PhoneAuthCredential, listener: VerificationListener) {
+        setupListener = listener
         scope.launch {
             try {
-                FirebaseAuth.getInstance().signInWithCredential(credential).await()
-                register()
-                launch(Dispatchers.Main) { listener.onVerified() }
+                ChatBackend.signIn()
+                ChatCrypto.ensureIdentity()
+                val nonce = newNonce()
+                prefs().edit().putString("pending_phone", phone).putString("pending_nonce", nonce).commit()
+                sendControlSms(appContext, phone, "$PREFIX V $nonce")
+                launch(Dispatchers.Main) { listener.onCodeSent() }
+                setupTimeout?.cancel()
+                setupTimeout = scope.launch {
+                    delay(SETUP_TIMEOUT_MS)
+                    if (!this@FutureChat.isActive) finishSetup(error = tr("ה-SMS לא חזר. בדוק שהמספר נכון ושיש קליטה, ונסה שוב."))
+                }
             } catch (e: Exception) {
-                Log.w(TAG, "Sign-in failed", e)
-                launch(Dispatchers.Main) { listener.onError(e.localizedMessage ?: tr("ההתחברות נכשלה")) }
+                Log.w(TAG, "Setup failed", e)
+                finishSetup(error = e.localizedMessage ?: tr("ההתחברות נכשלה"))
             }
         }
     }
 
-    /** מפרסם את המפתחות הציבוריים ואת טוקן ה-Push. נקרא אחרי אימות ובכל
-     * פתיחה, כדי שמפתח חדש (למשל אחרי התקנה מחדש) יתעדכן. */
+    private fun finishSetup(error: String?) {
+        setupTimeout?.cancel()
+        val listener = setupListener ?: return
+        setupListener = null
+        scope.launch(Dispatchers.Main) { if (error == null) listener.onVerified() else listener.onError(error) }
+    }
+
+    /** מפרסם את המפתחות הציבוריים, הרמז בספר הכתובות וטוקן ה-Push. נקרא אחרי
+     * אימות ובכל פתיחה, כדי שמפתח או uid חדשים (למשל אחרי התקנה מחדש) יתעדכנו. */
     private suspend fun register() {
+        val phone = myPhone() ?: return
+        ChatBackend.signIn()
         val (agree, sign) = ChatCrypto.ensureIdentity()
         val token = runCatching { FirebaseMessaging.getInstance().token.await() }.getOrNull()
-        ChatBackend.publishIdentity(agree, sign, token)
+        ChatBackend.publishIdentity(agree, sign, token, phoneHash(phone))
         _state.value = State.ACTIVE
         ChatService.start(appContext)
         sync(appContext)
@@ -172,8 +167,121 @@ object FutureChat {
         detach()
         ChatBackend.signOut()
         ChatStore.get(context).clearAll()
+        prefs(context).edit().clear().commit()
         _state.value = State.SIGNED_OUT
     }
+
+    // ---------------------------------------------------------------- לחיצת יד ב-SMS
+    //
+    // הדבר היחיד שמוכיח מספר הוא SMS שמגיע אליו וחוזר. השרת (Firebase, כניסה
+    // אנונימית) לא יודע מי מחזיק איזה מספר.
+    //
+    //  א' → ב' (SMS):  FOS1 H <uid-א> <טביעת מפתחות-א> <nonce-א>
+    //  ב' → א' (SMS):  FOS1 A <uid-ב> <טביעת מפתחות-ב> <nonce-א> <nonce-ב>
+    //  א' → ב' (צ'אט): הודעה חתומה מסוג "v" שמחזירה את nonce-ב.
+    //
+    // א' מאמת את ב' רק אם nonce-א חזר בתשובה מהמספר שאליו שלח - כלומר מי שענה
+    // קיבל את ה-SMS במספר הזה. ב' מאמת את א' רק כשהודעה חתומה במפתח של א' מחזירה
+    // את nonce-ב, שנשלח רק ב-SMS למספר של א'. טביעות המפתחות ב-SMS נבדקות מול
+    // המפתחות בשרת, כך שהשרת לא יכול להחליף מפתח. מה שזה מוכיח: שליטה במספר בזמן
+    // לחיצת היד.
+    //
+    // לחיצת יד נשלחת רק למספר שיש לו רמז בספר הכתובות (מישהו טוען שהוא משתמש
+    // FutureOS), ולכל היותר פעם ביום למספר - כך מי שאין לו FutureOS לא מקבל SMS מוזר.
+
+    private const val PREFIX = "FOS1"
+    private val CONTROL_SMS = Regex(
+        "^FOS1 (?:H [A-Za-z0-9]{10,64} [0-9a-f]{32} [0-9a-f]{16}|A [A-Za-z0-9]{10,64} [0-9a-f]{32} [0-9a-f]{16} [0-9a-f]{16}|V [0-9a-f]{16})$"
+    )
+    private const val HANDSHAKE_INTERVAL_MS = 24 * 60 * 60 * 1000L
+    private const val SETUP_TIMEOUT_MS = 90_000L
+
+    /** הודעת בקרה של הצ'אט (לא מוצגת בשיחות). פירוש קפדני: הודעה רגילה שמתחילה ב-"FOS1" לא נבלעת. */
+    fun isControlSms(body: String): Boolean = CONTROL_SMS.matches(body.trim())
+
+    /** נקרא מ-SmsDeliverReceiver (ב-thread רקע) על הודעת בקרה. */
+    suspend fun onControlSms(context: Context, address: String, body: String) {
+        init(context)
+        if (!ChatBackend.configured) return
+        val parts = body.trim().split(' ')
+        val from = e164(context, address) ?: return
+        try {
+            when (parts[1]) {
+                "V" -> {
+                    val p = prefs(context)
+                    if (from != p.getString("pending_phone", null) || parts[2] != p.getString("pending_nonce", null)) return
+                    p.edit().putString("my_phone", from).remove("pending_phone").remove("pending_nonce").commit()
+                    // לא בתוך זמן ה-receiver: ההרשמה בשרת יכולה לקחת יותר מכמה שניות
+                    scope.launch {
+                        try {
+                            register()
+                            finishSetup(error = null)
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Register after verification failed", e)
+                            finishSetup(error = e.localizedMessage ?: tr("ההתחברות נכשלה"))
+                        }
+                    }
+                }
+                "H" -> onHello(context, from, uid = parts[2], fp = parts[3], theirNonce = parts[4])
+                "A" -> onAnswer(context, from, uid = parts[2], fp = parts[3], echoed = parts[4], theirNonce = parts[5])
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Control SMS ${parts.getOrNull(1)} failed", e)
+            if (parts.getOrNull(1) == "V") finishSetup(error = e.localizedMessage ?: tr("ההתחברות נכשלה"))
+        }
+    }
+
+    /** קיבלנו "שלום": עונים עם nonce משלנו. השולח עוד לא מאומת (ר' handle, סוג "v"). */
+    private suspend fun onHello(context: Context, from: String, uid: String, fp: String, theirNonce: String) {
+        if (!isActive || uid == ChatBackend.uid()) return
+        val keys = ChatBackend.lookupKeys(uid) ?: return
+        if (keysFingerprint(keys.agreeKey, keys.signKey) != fp) return
+        val nonce = newNonce()
+        ChatStore.get(context).putHandshakeIn(ChatStore.Incoming(from, nonce, uid, keys.agreeKey, keys.signKey))
+        val (agree, sign) = ChatCrypto.ensureIdentity()
+        val me = ChatBackend.uid() ?: return
+        sendControlSms(context, from, "$PREFIX A $me ${keysFingerprint(agree, sign)} $theirNonce $nonce")
+    }
+
+    /** קיבלנו תשובה: אם היא מחזירה את ה-nonce ששלחנו למספר הזה - המספר מאומת. */
+    private suspend fun onAnswer(context: Context, from: String, uid: String, fp: String, echoed: String, theirNonce: String) {
+        if (!isActive) return
+        val store = ChatStore.get(context)
+        if (store.handshakeOutNonce(from) != echoed) return
+        val keys = ChatBackend.lookupKeys(uid) ?: return
+        if (keysFingerprint(keys.agreeKey, keys.signKey) != fp) return
+        store.removeHandshakeOut(from)
+        checkPinnedKey(context, from, keys.signKey)
+        store.putPeer(from, uid, keys.agreeKey, keys.signKey)
+        // סוגר את הלחיצה אצל הצד השני: הודעה חתומה שמחזירה את ה-nonce שלו
+        sendPayload(Peer(uid, from, keys.agreeKey), UUID.randomUUID().toString(), "v", JSONObject().put("t", "v").put("n", theirNonce))
+    }
+
+    /** שולח "שלום" למספר שיש לו רמז בספר הכתובות - לכל היותר פעם ביום. */
+    private suspend fun startHandshake(context: Context, phone: String) {
+        val store = ChatStore.get(context)
+        if (System.currentTimeMillis() - store.handshakeSentAt(phone) < HANDSHAKE_INTERVAL_MS) return
+        val me = ChatBackend.uid() ?: return
+        val (agree, sign) = ChatCrypto.ensureIdentity()
+        val nonce = newNonce()
+        store.putHandshakeOut(phone, nonce)
+        sendControlSms(context, phone, "$PREFIX H $me ${keysFingerprint(agree, sign)} $nonce")
+    }
+
+    /** SMS בקרה: לא נרשם בשיחות (האפליקציה היא אפליקציית ה-SMS, והמערכת לא רושמת בעצמה). */
+    private fun sendControlSms(context: Context, phone: String, text: String) {
+        context.getSystemService(android.telephony.SmsManager::class.java).sendTextMessage(phone, null, text, null, null)
+    }
+
+    private fun newNonce(): String = ByteArray(8).also(java.security.SecureRandom()::nextBytes).joinToString("") { "%02x".format(it) }
+
+    private fun sha256Hex(text: String): String =
+        java.security.MessageDigest.getInstance("SHA-256").digest(text.toByteArray()).joinToString("") { "%02x".format(it) }
+
+    /** 16 הבתים הראשונים של SHA-256 על שני המפתחות הציבוריים - נכנס ל-SMS אחד. */
+    private fun keysFingerprint(agreeKey: String, signKey: String): String = sha256Hex("$agreeKey|$signKey").take(32)
+
+    private fun phoneHash(phone: String): String = sha256Hex("futureos-chat|$phone")
 
     // ---------------------------------------------------------------- שליחה
 
@@ -321,21 +429,29 @@ object FutureChat {
         return !cached.registered && System.currentTimeMillis() - cached.checkedAt < NOT_REGISTERED_TTL_MS
     }
 
-    /** מי רשום לצ'אט - מהמטמון, או מהשרת פעם ביום. null = לא רשום. */
+    /**
+     * איש קשר מאומת (לחיצת יד ב-SMS), או null - ואז ההודעה הזו יוצאת כ-SMS רגיל.
+     * פעם ביום בודקים את הרמז בספר הכתובות: uid אחר (התקנה מחדש אצלו) או רמז
+     * שנעלם מבטלים את האימות, כדי שלא נכתוב לתור מת. בלי אימות ועם רמז - לחיצת יד.
+     */
     private suspend fun resolvePeer(context: Context, phone: String): Peer? {
         val store = ChatStore.get(context)
         val cached = store.peer(phone)
-        if (cached != null && System.currentTimeMillis() - cached.checkedAt < PEER_TTL_MS) {
-            return if (cached.registered) Peer(cached.uid!!, phone, cached.agreeKey!!) else null
-        }
-        val identity = withTimeout(8_000) { ChatBackend.lookupPhone(phone) }
-        if (identity == null || identity.uid == ChatBackend.uid()) {
+        val fresh = cached != null && System.currentTimeMillis() - cached.checkedAt < PEER_TTL_MS
+        if (fresh && cached!!.registered) return Peer(cached.uid!!, phone, cached.agreeKey!!)
+        if (fresh) return null
+        val hint = withTimeout(8_000) { ChatBackend.lookupHint(phoneHash(phone)) }
+        if (hint == null || hint == ChatBackend.uid()) {
             store.putPeer(phone, null, null, null)
             return null
         }
-        checkPinnedKey(context, phone, identity.signKey)
-        store.putPeer(phone, identity.uid, identity.agreeKey, identity.signKey)
-        return Peer(identity.uid, phone, identity.agreeKey)
+        if (cached != null && cached.registered && cached.uid == hint) {
+            store.putPeer(phone, cached.uid, cached.agreeKey, cached.signKey)
+            return Peer(cached.uid!!, phone, cached.agreeKey!!)
+        }
+        store.removePeer(phone)
+        startHandshake(context, phone)
+        return null
     }
 
     private suspend fun sendPayload(peer: Peer, id: String, kind: String, payload: JSONObject): Boolean {
@@ -388,7 +504,8 @@ object FutureChat {
     private suspend fun process(context: Context, docs: List<DocumentSnapshot>) = inboxLock.withLock {
         val me = ChatBackend.uid() ?: return@withLock
         val delivered = HashMap<String, MutableList<String>>()
-        for (doc in docs) {
+        // סגירות לחיצת יד קודם, כדי שהודעה ראשונה מאיש קשר חדש לא תיזרק כ"לא מוכר"
+        for (doc in docs.sortedBy { if (it.getString("kind") == "v") 0 else 1 }) {
             try {
                 handle(context, me, doc, delivered)
             } catch (e: kotlinx.coroutines.CancellationException) {
@@ -415,20 +532,20 @@ object FutureChat {
         )
         val contextString = "$from>$me|${doc.id}"
         val store = ChatStore.get(context)
-        var peer = store.peerByUid(from)?.takeIf { it.registered }
-        val plaintext = try {
-            ChatCrypto.open(sealed, peer?.signKey ?: throw IllegalStateException("unknown sender"), contextString)
-        } catch (e: Exception) {
-            // שולח חדש, או שהשולח התקין מחדש והמפתחות שלו התחלפו - שולפים
-            // מהשרת ומנסים שוב.
-            val identity = ChatBackend.lookupUid(from) ?: throw e
-            checkPinnedKey(context, identity.phone, identity.signKey)
-            store.putPeer(identity.phone, identity.uid, identity.agreeKey, identity.signKey)
-            peer = store.peerByUid(from)
-            ChatCrypto.open(sealed, identity.signKey, contextString)
+        val peer = store.peerByUid(from)?.takeIf { it.registered }
+        if (peer == null) {
+            // לא מאומת: רק סגירת לחיצת יד ("v") ממי שענינו לו ב-SMS. כל השאר נזרק -
+            // המספר של השולח מגיע רק מלחיצת יד, אף פעם לא מהשרת.
+            val pending = store.handshakeInByUid(from) ?: return
+            val json = JSONObject(String(ChatCrypto.open(sealed, pending.signKey, contextString)))
+            if (json.optString("t") != "v" || json.optString("n") != pending.nonce) return
+            store.removeHandshakeIn(pending.phone)
+            checkPinnedKey(context, pending.phone, pending.signKey)
+            store.putPeer(pending.phone, from, pending.agreeKey, pending.signKey)
+            return
         }
-        // peer יכול להיות null רק אם השמירה למסד נכשלה - ההודעה נזרקת ולא מפילה את הסנכרון.
-        val phone = peer?.phone ?: return
+        val plaintext = ChatCrypto.open(sealed, peer.signKey!!, contextString)
+        val phone = peer.phone
         val json = JSONObject(String(plaintext))
         // המזהה מגיע מהשולח ונכנס לשם קובץ (mediaFile) - רק תווים בטוחים, בלי "../".
         val id = json.optString("id", doc.id).takeIf { SAFE_ID.matches(it) } ?: doc.id

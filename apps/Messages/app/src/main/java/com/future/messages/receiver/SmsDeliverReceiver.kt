@@ -34,6 +34,23 @@ class SmsDeliverReceiver : BroadcastReceiver() {
         // ואז הודעה נכנסת קפצה מעל התשובה שנשלחה אחריה.
         val sentAt = messages[0].timestampMillis
 
+        // הודעת בקרה של צ'אט FutureOS (אימות מספר / לחיצת יד) - לא נשמרת ולא מתריעה
+        if (com.future.messages.chat.FutureChat.isControlSms(body)) {
+            val pending = goAsync()
+            Thread {
+                try {
+                    kotlinx.coroutines.runBlocking {
+                        kotlinx.coroutines.withTimeoutOrNull(9_000) {
+                            com.future.messages.chat.FutureChat.onControlSms(context, address, body)
+                        }
+                    }
+                } finally {
+                    pending.finish()
+                }
+            }.start()
+            return
+        }
+
         val values = ContentValues().apply {
             put(Telephony.Sms.ADDRESS, address)
             put(Telephony.Sms.BODY, body)

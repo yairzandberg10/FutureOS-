@@ -1,16 +1,14 @@
 rules_version = '2';
 
-// FutureOS chat. Only users who proved a phone number (Firebase phone auth)
-// can do anything. Message bodies are end-to-end encrypted on the device;
-// these rules make sure nobody can impersonate a sender or read someone
-// else's inbox.
+// FutureOS chat. Sign-in is anonymous: the server does not know who owns which
+// phone number. Numbers are proven on the devices by an SMS round trip
+// (FutureChat "handshake"), never by anything stored here. Message bodies are
+// end-to-end encrypted and signed on the device; these rules make sure nobody
+// can write as someone else's uid or read someone else's inbox.
 service cloud.firestore {
   match /databases/{database}/documents {
-    function phone() {
-      return request.auth != null ? request.auth.token.get('phone_number', null) : null;
-    }
-    function verified() {
-      return phone() != null;
+    function signedIn() {
+      return request.auth != null;
     }
     // Base64 public key / signature / IV with a sane upper bound, so nobody can
     // park megabytes of junk in someone else's inbox or in the key directory.
@@ -18,56 +16,57 @@ service cloud.firestore {
       return v is string && v.size() > 0 && v.size() <= max;
     }
 
-    // Public keys. Anyone verified can read them (needed to encrypt to a user),
-    // only the owner can publish, and only for their own verified number.
-    // `get` only: `list` would hand any verified user the phone number of every
-    // FutureChat user in one query (the phones directory below is get-only for
-    // the same reason).
+    // Public keys. Anyone signed in can read them (needed to encrypt to a user
+    // and to check the key fingerprint sent in the handshake SMS); only the
+    // owner can publish. `get` only, no listing.
     match /users/{uid} {
-      allow get: if verified();
+      allow get: if signedIn();
       allow list: if false;
-      allow delete: if verified() && request.auth.uid == uid;
-      allow create, update: if verified() && request.auth.uid == uid
-        && request.resource.data.phone == phone()
-        && request.resource.data.keys().hasOnly(['phone', 'agreeKey', 'signKey', 'updatedAt'])
+      allow delete: if signedIn() && request.auth.uid == uid;
+      allow create, update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['agreeKey', 'signKey', 'updatedAt'])
         && b64(request.resource.data.agreeKey, 256)
         && b64(request.resource.data.signKey, 256);
     }
 
-    // Directory: phone number -> uid. Nobody can claim a number they did not verify.
-    match /phones/{number} {
-      allow get: if verified();
+    // Directory HINT: sha256("futureos-chat|" + number) -> uid. Not proof of
+    // anything - anyone can point any hash at their own uid. It only tells a
+    // sender "this number may run FutureOS, try the SMS handshake", so plain
+    // phones never get handshake SMS. Overwritable, so a reinstall (new uid)
+    // can claim the number again.
+    match /phones/{hash} {
+      allow get: if signedIn();
       allow list: if false;
-      allow write: if verified() && number == phone()
+      allow create, update: if signedIn() && hash.matches('^[0-9a-f]{64}$')
         && request.resource.data.keys().hasOnly(['uid'])
         && request.resource.data.uid == request.auth.uid;
+      allow delete: if signedIn() && resource.data.uid == request.auth.uid;
     }
 
-    // Push token. Written by the owner, read only by the Cloud Function (admin).
+    // Push token (for a future Cloud Function). Written by the owner only.
     match /private/{uid} {
       allow read: if false;
-      allow delete: if verified() && request.auth.uid == uid;
-      allow create, update: if verified() && request.auth.uid == uid
+      allow delete: if signedIn() && request.auth.uid == uid;
+      allow create, update: if signedIn() && request.auth.uid == uid
         && request.resource.data.keys().hasOnly(['fcmToken'])
         && b64(request.resource.data.fcmToken, 4096);
     }
 
-    // Encrypted inbox. Senders can only create, stamped with their real identity.
+    // Encrypted inbox. Senders can only create, stamped with their own uid.
     // Only the recipient can read and delete.
     match /inbox/{uid}/messages/{id} {
-      allow read, delete: if request.auth != null && request.auth.uid == uid;
-      allow create: if verified()
-        && request.resource.data.keys().hasOnly(['from', 'fromPhone', 'kind', 'eph', 'iv', 'ct', 'sig', 'sentAt', 'expireAt'])
+      allow read, delete: if signedIn() && request.auth.uid == uid;
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['from', 'kind', 'eph', 'iv', 'ct', 'sig', 'sentAt', 'expireAt'])
         && request.resource.data.from == request.auth.uid
-        && request.resource.data.fromPhone == phone()
-        && request.resource.data.kind in ['m', 'r', 't']
+        && request.resource.data.kind in ['m', 'r', 't', 'v']
         && request.resource.data.ct is string && request.resource.data.ct.size() < 20000
         && b64(request.resource.data.eph, 256)
         && b64(request.resource.data.iv, 32)
         && b64(request.resource.data.sig, 160)
         && request.resource.data.sentAt == request.time
-        // The TTL policy deletes on expireAt; a sender must not be able to pin a
-        // message in the recipient's inbox forever (30 days + clock skew).
+        // A sender must not be able to pin a message in the recipient's inbox
+        // forever (30 days + clock skew), once a TTL policy on expireAt exists.
         && request.resource.data.expireAt is timestamp
         && request.resource.data.expireAt <= request.time + duration.value(31, 'd');
       allow update: if false;
@@ -75,11 +74,11 @@ service cloud.firestore {
 
     // Encrypted chat images (Firestore, not Storage - the free Spark plan has no
     // Storage). media/{recipient}/parts/{id}_{n}, up to 700KB per part. Only the
-    // recipient reads and deletes; senders create stamped with their identity.
+    // recipient reads and deletes; senders create stamped with their own uid.
     match /media/{uid}/parts/{part} {
-      allow get, delete: if request.auth != null && request.auth.uid == uid;
+      allow get, delete: if signedIn() && request.auth.uid == uid;
       allow list, update: if false;
-      allow create: if verified()
+      allow create: if signedIn()
         && request.resource.data.keys().hasOnly(['from', 'n', 'total', 'data', 'expireAt'])
         && request.resource.data.from == request.auth.uid
         && request.resource.data.data is bytes && request.resource.data.data.size() <= 720000

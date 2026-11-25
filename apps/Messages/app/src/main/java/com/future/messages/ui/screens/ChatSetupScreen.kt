@@ -42,8 +42,8 @@ import com.future.sharednav.theme.FutureTypography
 import com.future.sharednav.theme.mutedTextColor
 
 /**
- * הפעלת צ'אט FutureOS: אימות מספר הטלפון ב-SMS. Play Services קולט את הקוד
- * לבד, ואם לא - מקלידים אותו במקשים. אחרי האימות נוצרים מפתחות ההצפנה במכשיר.
+ * הפעלת צ'אט FutureOS: אימות מספר הטלפון ב-SMS אחד שהמכשיר שולח לעצמו וקולט
+ * לבד - בלי קוד להקליד ובלי דפדפן. מפתחות ההצפנה נוצרים במכשיר.
  */
 @Composable
 fun ChatSetupScreen(theme: FutureTheme, onBack: () -> Unit) {
@@ -51,7 +51,6 @@ fun ChatSetupScreen(theme: FutureTheme, onBack: () -> Unit) {
     val state by FutureChat.state.collectAsState()
 
     var phone by remember { mutableStateOf(simNumber(context)) }
-    var code by remember { mutableStateOf("") }
     var codeSent by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -63,12 +62,12 @@ fun ChatSetupScreen(theme: FutureTheme, onBack: () -> Unit) {
         object : FutureChat.VerificationListener {
             override fun onCodeSent() { busy = false; codeSent = true; error = null }
             override fun onVerified() { busy = false; error = null }
-            override fun onError(message: String) { busy = false; error = message }
+            override fun onError(message: String) { busy = false; codeSent = false; error = message }
         }
     }
 
     LaunchedEffect(state, codeSent) {
-        runCatching { if (state == FutureChat.State.ACTIVE) buttonFocus.requestFocus() else fieldFocus.requestFocus() }
+        runCatching { if (state == FutureChat.State.ACTIVE || codeSent) buttonFocus.requestFocus() else fieldFocus.requestFocus() }
     }
 
     CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
@@ -96,33 +95,23 @@ fun ChatSetupScreen(theme: FutureTheme, onBack: () -> Unit) {
                     }
                     FutureChat.State.SIGNED_OUT -> {
                         if (!codeSent) {
-                            Body(tr("הקלד את המספר שלך. יישלח אליו קוד אימות ב-SMS."), theme)
+                            Body(tr("הקלד את המספר שלך. יישלח אליו SMS אחד לאימות, והאפליקציה תקלוט אותו לבד."), theme)
                             FutureTextField(
                                 phone, { phone = it }, theme,
                                 placeholder = tr("מספר טלפון"),
                                 focusRequester = fieldFocus,
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                             )
-                            FutureButton(tr("שלח קוד"), theme, {
+                            FutureButton(tr("אמת מספר"), theme, {
                                 busy = true; error = null
                                 FutureChat.startVerification(context as Activity, phone, listener)
                             }, fillMaxWidth = true, enabled = !busy && phone.isNotBlank())
                         } else {
-                            Body(tr("הקלד את הקוד שקיבלת ב-SMS."), theme)
-                            FutureTextField(
-                                code, { code = it.filter(Char::isDigit).take(6) }, theme,
-                                placeholder = tr("קוד אימות"),
-                                focusRequester = fieldFocus,
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                            )
-                            FutureButton(tr("אמת"), theme, {
-                                busy = true; error = null
-                                FutureChat.submitCode(code, listener)
-                            }, fillMaxWidth = true, enabled = !busy && code.length == 6)
-                            FutureButton(tr("שנה מספר"), theme, { codeSent = false; code = "" },
-                                variant = FutureButtonVariant.Secondary, fillMaxWidth = true)
+                            Body(tr("נשלח SMS למספר שלך. מחכה שיגיע…"), theme)
+                            FutureButton(tr("שנה מספר"), theme, { codeSent = false; busy = false },
+                                variant = FutureButtonVariant.Secondary, fillMaxWidth = true, focusRequester = buttonFocus)
                         }
-                        if (busy) FutureSpinner(theme, label = tr("מתחבר…"))
+                        if (busy) FutureSpinner(theme, label = tr("מאמת…"))
                     }
                 }
                 error?.let { Text(it, color = theme.dangerColor, fontSize = FutureTypography.caption) }

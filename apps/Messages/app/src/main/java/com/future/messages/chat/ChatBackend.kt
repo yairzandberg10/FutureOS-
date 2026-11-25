@@ -17,8 +17,8 @@ import java.util.Date
 
 /**
  * הגישה ל-Firebase. מבנה הנתונים (ראו firebase/firestore.rules):
- *  users/{uid}                  - מספר ומפתחות ציבוריים. קריא לכל משתמש מאומת.
- *  phones/{e164}                - {uid}. ספר הכתובות: מי רשום לצ'אט.
+ *  users/{uid}                  - מפתחות ציבוריים. קריא לכל משתמש מחובר.
+ *  phones/{sha256}              - {uid}. רמז בלבד: "כדאי לנסות לחיצת יד ב-SMS".
  *  private/{uid}                - טוקן ה-FCM. רק ל-Cloud Function.
  *  inbox/{uid}/messages/{id}    - תור הודעות מוצפנות לנמען. הנמען קורא ומוחק.
  *  media/{uid}/parts/{id}_{n}  - תמונות מוצפנות לנמען, בחלקים של עד 700KB.
@@ -37,20 +37,25 @@ internal object ChatBackend {
     }
 
     fun uid(): String? = if (configured) auth.currentUser?.uid else null
-    fun phone(): String? = if (configured) auth.currentUser?.phoneNumber else null
 
     fun signOut() {
         if (configured) auth.signOut()
     }
 
-    suspend fun publishIdentity(agreeKey: String, signKey: String, fcmToken: String?) {
+    /** כניסה אנונימית: הזהות בצ'אט היא המפתחות שבמכשיר, והמספר מאומת ב-SMS (FutureChat). */
+    suspend fun signIn(): String = uid() ?: auth.signInAnonymously().await().user?.uid ?: error("Sign-in failed")
+
+    /**
+     * מפרסם מפתחות ציבוריים ורמז בספר הכתובות: hash של המספר → uid. הרמז לא מוכיח
+     * כלום (כל אחד יכול לכתוב כל hash); הוא רק אומר "כדאי לנסות לחיצת יד ב-SMS".
+     */
+    suspend fun publishIdentity(agreeKey: String, signKey: String, fcmToken: String?, phoneHash: String) {
         val uid = uid() ?: error("Not signed in")
-        val phone = phone() ?: error("No verified phone")
         db.runBatch { batch ->
             batch.set(db.document("users/$uid"), mapOf(
-                "phone" to phone, "agreeKey" to agreeKey, "signKey" to signKey, "updatedAt" to FieldValue.serverTimestamp()
+                "agreeKey" to agreeKey, "signKey" to signKey, "updatedAt" to FieldValue.serverTimestamp()
             ))
-            batch.set(db.document("phones/$phone"), mapOf("uid" to uid))
+            batch.set(db.document("phones/$phoneHash"), mapOf("uid" to uid))
             if (fcmToken != null) batch.set(db.document("private/$uid"), mapOf("fcmToken" to fcmToken))
         }.await()
     }
@@ -60,22 +65,15 @@ internal object ChatBackend {
         db.document("private/$uid").set(mapOf("fcmToken" to token), SetOptions.merge()).await()
     }
 
-    class Identity(val uid: String, val phone: String, val agreeKey: String, val signKey: String)
+    class Keys(val agreeKey: String, val signKey: String)
 
-    /** null = המספר לא רשום לצ'אט. חריגה = אין רשת. */
-    suspend fun lookupPhone(phone: String): Identity? {
-        val uid = db.document("phones/$phone").get(Source.SERVER).await().getString("uid") ?: return null
-        return lookupUid(uid)?.takeIf { it.phone == phone }
-    }
+    /** רמז מספר הכתובות: ה-uid שטוען למספר הזה, או null. לא אמין - ר' publishIdentity. */
+    suspend fun lookupHint(phoneHash: String): String? =
+        db.document("phones/$phoneHash").get(Source.SERVER).await().getString("uid")
 
-    suspend fun lookupUid(uid: String): Identity? {
+    suspend fun lookupKeys(uid: String): Keys? {
         val doc = db.document("users/$uid").get(Source.SERVER).await()
-        return Identity(
-            uid,
-            doc.getString("phone") ?: return null,
-            doc.getString("agreeKey") ?: return null,
-            doc.getString("signKey") ?: return null,
-        )
+        return Keys(doc.getString("agreeKey") ?: return null, doc.getString("signKey") ?: return null)
     }
 
     /**
@@ -86,7 +84,7 @@ internal object ChatBackend {
         val uid = uid() ?: error("Not signed in")
         val ref = db.document("inbox/$toUid/messages/$id")
         val data = mapOf(
-            "from" to uid, "fromPhone" to phone(), "kind" to kind,
+            "from" to uid, "kind" to kind,
             "eph" to sealed.eph, "iv" to sealed.iv, "ct" to sealed.ct, "sig" to sealed.sig,
             "sentAt" to FieldValue.serverTimestamp(),
             "expireAt" to Timestamp(Date(System.currentTimeMillis() + TTL_MS)),
