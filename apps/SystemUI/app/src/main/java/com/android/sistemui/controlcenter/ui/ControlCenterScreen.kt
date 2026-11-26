@@ -153,7 +153,10 @@ fun ControlCenterScreen(
     val clockColor = if (isDarkBackground) Color.White else Color.Black
     val dateColor = if (isDarkBackground) Color.LightGray else Color.Gray
 
-    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
+    CompositionLocalProvider(
+        LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection,
+        com.android.sistemui.controlcenter.ui.components.LocalOverlayIsDark provides isDarkBackground,
+    ) {
         // השכבה נופלת מהקצה העליון בקפיץ (או נכנסת מהצד, במעבר ממרכז
         // ההתראות), והקבוצות שבה נכנסות בגל (cascadeIn). העיצוב לא השתנה.
         val overlay = motion ?: remember { com.android.sistemui.utils.OverlayMotion().also { it.enter() } }

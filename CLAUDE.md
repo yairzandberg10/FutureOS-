@@ -19,6 +19,8 @@
 - התקנה בטלפון (רק כשהמשתמש מבקש): ה-workflow `release-apks.yml` בונה release לכל אפליקציה שהשתנתה, חותם במפתח של המחשב (סוד `DEBUG_KEYSTORE_BASE64`) ומעלה ל-GitHub Release בשם `apks`. מורידים את `https://github.com/yairzandberg10/FutureOS-/releases/download/apks/<App>-release.apk`, ואז `adb install -r <קובץ>` ו-`adb shell cmd package compile -m speed -f <PACKAGE_NAME>`. ההתקנה היא מעל הגרסה הקיימת, בלי למחוק נתונים.
 - מותר במחשב רק פעולות קלות: קריאה ועריכה של קבצים, git, וחיפוש.
 
+- **גרסת הצריבה מתעדכנת עם כל אפליקציה:** אחרי כל בנייה של אפליקציה (assembleRelease/installRelease) מריצים `bash aosp/rom-repack/update_rom.sh`. הסקריפט לוקח את הבנייה החדשה ביותר של כל אפליקציה (מהריפו או מהטלפון), בונה מחדש את `system_a`, מוודא אותו ומעדכן את `D:\futureos-rom\FutureOS-flash` (כולל `VERSION.txt`). `build-all.sh` כבר עושה את זה בסוף. לא צורבים בלי אישור מפורש של המשתמש.
+
 ## ענף אחד בלבד: main (Git)
 - בריפו יש ענף אחד בלבד: `main`. כל commit וכל push הולכים אליו (`git push origin main`).
 - אסור לפתוח ענפים חדשים (feature, fix, wip, qa וכו') ואסור לדחוף ענפים אחרים ל-GitHub.

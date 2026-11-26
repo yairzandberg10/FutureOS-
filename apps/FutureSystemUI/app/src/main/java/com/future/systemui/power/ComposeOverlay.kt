@@ -80,6 +80,9 @@ internal class ComposeOverlay(
     private val root = KeyRootLayout(context, onKey)
     private val compose = ComposeView(context)
     private var windowManager: WindowManager? = null
+    /** The params the window was added with (the type that worked). */
+    var lastParams: WindowManager.LayoutParams? = null
+        private set
 
     init {
         val size = if (fullScreen) ViewGroup.LayoutParams.MATCH_PARENT else ViewGroup.LayoutParams.WRAP_CONTENT
@@ -100,7 +103,9 @@ internal class ComposeOverlay(
     fun show(wm: WindowManager, types: IntArray, params: (Int) -> WindowManager.LayoutParams): Boolean {
         for (type in types) {
             try {
-                wm.addView(root, params(type))
+                val lp = params(type)
+                wm.addView(root, lp)
+                lastParams = lp
                 windowManager = wm
                 owner.start()
                 return true
@@ -110,6 +115,16 @@ internal class ComposeOverlay(
         }
         Log.e(LOG_TAG, "could not add overlay window")
         return false
+    }
+
+    /** Updates the layout params of the live window (for example to toggle focusability). */
+    fun updateLayout(params: WindowManager.LayoutParams) {
+        val wm = windowManager ?: return
+        try {
+            wm.updateViewLayout(root, params)
+        } catch (t: Throwable) {
+            Log.w(LOG_TAG, "updateViewLayout failed", t)
+        }
     }
 
     fun dismiss() {

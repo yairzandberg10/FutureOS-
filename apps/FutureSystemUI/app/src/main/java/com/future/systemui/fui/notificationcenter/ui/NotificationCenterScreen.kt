@@ -1,0 +1,642 @@
+package com.future.systemui.fui.notificationcenter.ui
+
+import com.future.sharednav.i18n.tr
+import com.future.systemui.fui.utils.safeText
+import com.future.sharednav.theme.FutureMotion
+import com.future.sharednav.theme.FutureTypography
+import com.future.sharednav.theme.FutureShapes
+import com.future.sharednav.focus.bringIntoViewOnFocus
+
+import android.app.Notification
+import android.app.PendingIntent
+import android.content.Context
+import android.graphics.drawable.Drawable
+import android.service.notification.StatusBarNotification
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.*
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.key.*
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.core.graphics.drawable.toBitmap
+import com.future.systemui.notifications.NotificationRepository
+import com.future.systemui.fui.controlcenter.ui.components.focusEffect
+import com.future.systemui.fui.notificationcenter.logic.NotificationCenterManager
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.*
+import com.future.sharednav.focus.animateFocusColor
+import androidx.compose.runtime.getValue
+
+/**
+ * מסך מרכז ההתראות הראשי - מציג רשימת התראות, שעון, תאריך וכפתורי פעולה בתחתית.
+ */
+@Composable
+fun NotificationCenterScreen(
+    modifier: Modifier = Modifier,
+    wallpaper: ImageBitmap? = null,
+    manager: NotificationCenterManager? = null,
+    onSwitchToControlCenter: () -> Unit = {},
+    /** פתיחה/סגירה בשליטת השירות - כך היציאה רצה לפני שהחלון מוסר. */
+    motion: com.future.systemui.fui.utils.OverlayMotion? = null,
+    onExitFinished: () -> Unit = {},
+) {
+    val context = LocalContext.current
+    val ncManager = manager ?: remember { NotificationCenterManager(context) }
+
+    var currentTime by remember { mutableStateOf("") }
+    var currentDate by remember { mutableStateOf("") }
+
+    val hebrewDateFormat = remember {
+        android.icu.text.DateFormat.getDateInstance(
+            android.icu.text.DateFormat.FULL,
+            android.icu.util.ULocale.forLanguageTag("he-IL-u-ca-hebrew")
+        )
+    }
+
+    // עדכון זמן ותאריך ורענון התראות כל 30 שניות
+    // פורמט השעה לפי הגדרת 12/24 של המערכת (F18)
+    val timePattern = if (android.text.format.DateFormat.is24HourFormat(context)) "HH:mm" else "h:mm"
+    LaunchedEffect(timePattern) {
+        while (true) {
+            val now = Calendar.getInstance().time
+            currentTime = SimpleDateFormat(timePattern, Locale.getDefault()).format(now)
+            currentDate = hebrewDateFormat.format(now)
+            // השעון מתעדכן בגבול הדקה ולא עם פיגור של עד חצי דקה
+            delay(60_000L - System.currentTimeMillis() % 60_000L + 50L)
+        }
+    }
+
+    // התראה שנוספה/הוסרה מרעננת את הרשימה מיד (F30 / SU-08); בנוסף רענון כל 30 שניות כגיבוי
+    LaunchedEffect(NotificationRepository.changeTick.intValue) {
+        ncManager.updateNotifications()
+    }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(1000 * 30)
+            ncManager.updateNotifications()
+        }
+    }
+
+    val isDarkBackground = wallpaper != null
+    val textColor = if (isDarkBackground) Color.White else Color.Black
+    val subTextColor = if (isDarkBackground) Color.LightGray else Color.Gray
+
+    var isVisible by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { isVisible = true }
+
+    // בלי בקשת פוקוס ראשונית, אף התראה לא ממוקדת כשהמסך נפתח - ואז מקשי השלט
+    // (מחיקה, פתיחה, מעבר ל-Control Center) לא מגיעים לשום מקום.
+    val initialFocusRequester = remember { FocusRequester() }
+    // כשאין התראות בכלל, אין פריט ראשון לממקד - וכתוצאה מכך גם כפתורי הפעולה
+    // התחתונים ("נקה הכל"/"השתק") נשארים בלתי-נגישים לחלוטין. ממקדים את הראשון
+    // מביניהם באופן מפורש במקרה הזה.
+    val clearAllFocusRequester = remember { FocusRequester() }
+    var clearArmed by remember { mutableStateOf(false) }
+    LaunchedEffect(clearArmed) {
+        if (clearArmed) {
+            delay(4000)
+            clearArmed = false
+        }
+    }
+    // המפתח הוא "האם הרשימה ריקה" ולא גודלה: הוספה/הסרה של התראה לא מקפיצה את
+    // הפוקוס לראש הרשימה (SU-07)
+    val hasNotifications = ncManager.notifications.isNotEmpty()
+    LaunchedEffect(isVisible, hasNotifications) {
+        if (isVisible && hasNotifications) {
+            delay(150)
+            try { initialFocusRequester.requestFocus() } catch (e: Exception) {
+                android.util.Log.w("NotificationCenterScree", "NotificationCenterScreen failed", e)
+            }
+        }
+    }
+    LaunchedEffect(isVisible, hasNotifications) {
+        if (isVisible && !hasNotifications) {
+            delay(150)
+            try { clearAllFocusRequester.requestFocus() } catch (e: Exception) {
+                android.util.Log.w("NotificationCenterScree", "NotificationCenterScreen failed", e)
+            }
+        }
+    }
+
+    CompositionLocalProvider(
+        LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection,
+        com.future.systemui.fui.controlcenter.ui.components.LocalOverlayIsDark provides isDarkBackground,
+    ) {
+        // אותה שכבה כמו מרכז הבקרה: נופלת מהקצה העליון בקפיץ layer, או נכנסת
+        // מהצד כשעוברים אליה ממרכז הבקרה. קודם זה היה קפיץ LowBouncy איטי
+        // שלא מהטוקנים, והיציאה לא רצה בכלל (החלון הוסר מיד).
+        val overlay = motion ?: remember { com.future.systemui.fui.utils.OverlayMotion().also { it.enter() } }
+        if (motion != null) com.future.systemui.fui.utils.OverlayExitWatcher(motion, onExitFinished)
+        AnimatedVisibility(
+            visibleState = overlay.visible,
+            enter = overlay.enterTransition(),
+            exit = overlay.exitTransition(),
+        ) {
+            Box(modifier = modifier.fillMaxSize()) {
+                // רקע עם טשטוש (Blur) אם קיימת תמונת רקע
+                if (wallpaper != null) {
+                    Image(
+                        bitmap = wallpaper,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize().blur(40.dp),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+
+                // שכבת כיסוי חצי שקופה
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            if (wallpaper != null) Color.White.copy(alpha = 0.2f)
+                            else Color(0xCCFFFFFF)
+                        )
+                )
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .statusBarsPadding()
+                        .padding(top = com.future.systemui.fui.statusbar.logic.StatusBarLayoutManager.HEIGHT_DP.dp)
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    // כותרת עליונה: שעון ותאריך
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Column(horizontalAlignment = Alignment.Start) {
+                            Text(
+                                text = currentTime,
+                                fontSize = FutureTypography.display,
+                                fontWeight = FontWeight.Bold,
+                                color = textColor,
+                                style = androidx.compose.ui.text.TextStyle(
+                                    shadow = androidx.compose.ui.graphics.Shadow(color = Color.Black.copy(alpha = 0.3f), blurRadius = 8f)
+                                )
+                            )
+                            Text(
+                                text = currentDate,
+                                fontSize = FutureTypography.label,
+                                color = subTextColor,
+                                style = androidx.compose.ui.text.TextStyle(
+                                    shadow = androidx.compose.ui.graphics.Shadow(color = Color.Black.copy(alpha = 0.3f), blurRadius = 8f)
+                                )
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // רשימת התראות נגללת
+                    LazyColumn(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        contentPadding = PaddingValues(bottom = 16.dp)
+                    ) {
+                        if (ncManager.notifications.isEmpty()) {
+                            // תצוגה כשאין התראות
+                            item {
+                                Box(
+                                    modifier = Modifier.fillParentMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = tr("אין התראות חדשות"),
+                                        color = subTextColor,
+                                        fontSize = FutureTypography.bodyLarge
+                                    )
+                                }
+                            }
+                        } else {
+                            // הצגת כל התראה ברשימה - כניסה מדורגת (stagger לפי אינדקס) כדי
+                            // שההתראות "יזרמו" פנימה אחת אחרי השנייה במקום לקפוץ כולן ביחד.
+                        itemsIndexed(ncManager.notifications, key = { _, sbn -> sbn.key }) { index, sbn ->
+                            // גל רק ב-4 ההתראות הראשונות ורק בפתיחה. התראה שגוללים אליה
+                            // מופיעה מיד - אחרת כל גלילה הייתה מריצה את הגל מחדש.
+                            val visibleState = remember {
+                                MutableTransitionState(index >= 4)
+                            }
+                            var isDismissing by remember { mutableStateOf(false) }
+
+                            LaunchedEffect(Unit) {
+                                if (!visibleState.targetState) {
+                                    delay(60L + index * 30L)
+                                    visibleState.targetState = true
+                                }
+                            }
+                            LaunchedEffect(isDismissing) {
+                                if (isDismissing) {
+                                    visibleState.targetState = false
+                                    delay(260)
+                                    ncManager.dismissNotification(sbn)
+                                }
+                            }
+
+                            AnimatedVisibility(
+                                visibleState = visibleState,
+                                // כניסה: נופלת ומתנפחת בקפיץ dialog - transform בלבד, בלי
+                                // expandVertically שמדד מחדש את כל הרשימה בכל פריים.
+                                // מחיקה: ההתראה עפה הצידה עד הסוף, והמקום שלה נסגר, כך
+                                // שההתראות שמתחת עולות אליו.
+                                enter = fadeIn(animationSpec = FutureMotion.enter()) +
+                                    slideInVertically(FutureMotion.Springs.dialogOffset) { -it / 2 } +
+                                    scaleIn(FutureMotion.Springs.dialog(), initialScale = 0.85f),
+                                exit = fadeOut(animationSpec = FutureMotion.exit()) +
+                                    slideOutHorizontally(FutureMotion.Springs.layerOffset) { it } +
+                                    shrinkVertically(animationSpec = tween(FutureMotion.DurationStandard, delayMillis = 60, easing = FutureMotion.EasingStandard))
+                            ) {
+                                NotificationItem(
+                                    sbn = sbn,
+                                    onSwitchToControlCenter = onSwitchToControlCenter,
+                                    onDismiss = { isDismissing = true },
+                                    onOpen = { ncManager.launchApp(sbn.packageName) },
+                                    onMuteApp = { ncManager.openNotificationSettings(sbn.packageName) },
+                                    textColor = textColor,
+                                    subTextColor = subTextColor,
+                                    isDarkBackground = isDarkBackground,
+                                    focusRequester = if (index == 0) initialFocusRequester else null
+                                )
+                            }
+                        }
+                        }
+                    }
+
+                    // כפתורי פעולה בתחתית (נקה הכל והשתק)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .navigationBarsPadding()
+                            .padding(bottom = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        NotificationCenterButton(
+                            text = if (clearArmed) "לחצו OK שוב" else tr("נקה הכל"),
+                            icon = Icons.Rounded.DeleteSweep,
+                            // OK ראשון רק מזהיר, שני (תוך 4 שניות) מנקה - כמו בתפריט הכיבוי (F29)
+                            onClick = {
+                                if (clearArmed || !hasNotifications) {
+                                    clearArmed = false
+                                    ncManager.clearAll()
+                                } else {
+                                    clearArmed = true
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                            color = Color.Black.copy(alpha = 0.3f),
+                            focusRequester = clearAllFocusRequester
+                        )
+                        NotificationCenterButton(
+                            text = tr("השתק"),
+                            icon = if (ncManager.controlManager.isDndOn) Icons.Rounded.NotificationsOff else Icons.Rounded.NotificationsActive,
+                            onClick = { ncManager.toggleDnd() },
+                            modifier = Modifier.weight(1f),
+                            color = Color.Black.copy(alpha = 0.3f)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * פריט התראה בודד ברשימה
+ */
+@Composable
+fun NotificationItem(
+    sbn: StatusBarNotification,
+    onSwitchToControlCenter: () -> Unit,
+    onDismiss: () -> Unit,
+    onOpen: () -> Unit,
+    onMuteApp: () -> Unit,
+    textColor: Color,
+    subTextColor: Color,
+    isDarkBackground: Boolean = false,
+    focusRequester: FocusRequester? = null
+) {
+    val context = LocalContext.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
+    var isExpanded by remember { mutableStateOf(false) }
+    var showOptions by remember { mutableStateOf(false) }
+    var selectedOptionIndex by remember { mutableStateOf(0) }
+
+    val n = sbn.notification
+    val title = n.safeText(Notification.EXTRA_TITLE)?.toString() ?: ""
+    val text = n.safeText(Notification.EXTRA_TEXT)?.toString() ?: ""
+
+    // הפעולות האמיתיות שההתראה הביאה איתה מהאפליקציה המקורית (למשל "ענה"/"דחה"
+    // בהתראת שיחה, או "סמן כנקרא") - בלי RemoteInput כי אין מקלדת מגע להקליד תשובה.
+    data class NotificationOption(val label: String, val isDestructive: Boolean = false, val action: () -> Unit)
+    val notificationActions = remember(sbn.key) {
+        n.actions?.filter { it.remoteInputs.isNullOrEmpty() }?.take(2) ?: emptyList()
+    }
+    val options = remember(notificationActions) {
+        buildList {
+            notificationActions.forEach { act ->
+                add(NotificationOption(label = act.title?.toString() ?: "") {
+                    try { act.actionIntent?.send() } catch (e: PendingIntent.CanceledException) {
+                        android.util.Log.w("NotificationCenterScree", "NotificationItem failed", e)
+                    }
+                })
+            }
+            // פותח את הגדרות ההתראות של האפליקציה (לא משתיק בעצמו) - התווית תואמת (SU-35)
+            add(NotificationOption(label = "הגדרות התראות", isDestructive = true) { onMuteApp() })
+            add(NotificationOption(label = tr("חזור")) { })
+        }
+    }
+    LaunchedEffect(showOptions) { if (showOptions) selectedOptionIndex = 0 }
+
+    // מקש Options הפיזי נחסם ברמת המערכת (StatusBarAccessibilityService) ולעולם לא
+    // מגיע כ-Key.Menu לכאן - זו הדרך האמיתית שהוא פותח/סוגר את תפריט האפשרויות של
+    // ההתראה הממוקדת. משודר גלובלית, אז כל שורה בודקת את הפוקוס שלה בעצמה.
+    com.future.sharednav.nav.onOptionsKeyPress {
+        if (isFocused) showOptions = if (showOptions) false else true
+    }
+
+    // שליפת שם האפליקציה לפי Package Name
+    val appName = remember(sbn.packageName) {
+        try {
+            val ai = context.packageManager.getApplicationInfo(sbn.packageName, 0)
+            context.packageManager.getApplicationLabel(ai).toString()
+        } catch (e: Exception) {
+            sbn.packageName.substringAfterLast(".")
+        }
+    }
+
+    // טעינת אייקון האפליקציה
+    var appIcon by remember { mutableStateOf<ImageBitmap?>(null) }
+    LaunchedEffect(sbn.packageName) {
+        try {
+            val icon = context.packageManager.getApplicationIcon(sbn.packageName)
+            appIcon = icon.toBitmap(width = 64, height = 64).asImageBitmap()
+        } catch (e: Exception) {
+            android.util.Log.w("NotificationCenterScree", "NotificationItem failed", e)
+        }
+    }
+
+    val shape = FutureShapes.xxl
+    // הרקע של הכרטיס נגזר מכיוון הטקסט (isDarkBackground) ולא מהטפט עצמו, כדי
+    // שהניגודיות טקסט-מול-כרטיס תישמר גם כשהטפט שמתחת בהיר או כהה באופן בלתי צפוי.
+    val cardBackground by if (isDarkBackground) {
+        animateFocusColor(isFocused, Color.Black.copy(alpha = 0.45f), Color.Black.copy(alpha = 0.38f))
+    } else {
+        animateFocusColor(isFocused, Color.White.copy(alpha = 0.55f), Color.White.copy(alpha = 0.42f))
+    }
+    val legibilityShadow = androidx.compose.ui.graphics.Shadow(color = Color.Black.copy(alpha = 0.35f), blurRadius = 6f)
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .animateContentSize(animationSpec = tween(FutureMotion.DurationStandard))
+            .focusEffect(isFocused, shape, focusedScale = 1.02f)
+            .clip(shape)
+            // סימון אחד בלבד: הטבעת של focusEffect. קודם נוספה עליה עוד מסגרת אפורה
+            // של 2dp, כך שכרטיס ממוקד קיבל שתי טבעות זו בתוך זו.
+            .background(cardBackground)
+            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
+            .onKeyEvent { event ->
+                if (!isFocused) return@onKeyEvent false
+                if (showOptions) {
+                    when (event.key) {
+                        // ניווט בין הפעולות הזמינות בתפריט
+                        Key.DirectionLeft -> {
+                            if (event.type == KeyEventType.KeyDown) {
+                                selectedOptionIndex = (selectedOptionIndex - 1 + options.size) % options.size
+                            }
+                            true
+                        }
+                        Key.DirectionRight -> {
+                            if (event.type == KeyEventType.KeyDown) {
+                                selectedOptionIndex = (selectedOptionIndex + 1) % options.size
+                            }
+                            true
+                        }
+                        // OK קצר - הפעלת הפעולה המסומנת (למשל "ענה" בהתראת שיחה)
+                        Key.DirectionCenter, Key.Enter -> {
+                            if (event.type == KeyEventType.KeyUp && event.nativeKeyEvent.repeatCount == 0) {
+                                options.getOrNull(selectedOptionIndex)?.action?.invoke()
+                                showOptions = false
+                            }
+                            true
+                        }
+                        Key.Menu -> {
+                            if (event.type == KeyEventType.KeyUp) showOptions = false
+                            true
+                        }
+                        else -> false
+                    }
+                } else {
+                    when (event.key) {
+                        // כפתור OK ארוך - פתיחת האפליקציה שמקורה בהתראה
+                        Key.DirectionCenter, Key.Enter -> {
+                            if (event.type == KeyEventType.KeyDown && event.nativeKeyEvent.repeatCount > 8) {
+                                onOpen()
+                                return@onKeyEvent true
+                            }
+                            false
+                        }
+                        // חץ שמאל ארוך - מעבר למרכז הבקרה
+                        Key.DirectionLeft -> {
+                            if (event.type == KeyEventType.KeyDown && event.nativeKeyEvent.repeatCount > 8) {
+                                onSwitchToControlCenter()
+                                return@onKeyEvent true
+                            }
+                            false
+                        }
+                        // חץ ימין ארוך - מחיקת ההתראה הזו. בכוונה לא מגיבים ללחיצה קצרה/בודדת:
+                        // חץ ימין הוא גם מקש ניווט רגיל, ולחיצה קצרה בטעות לא אמורה למחוק
+                        // התראה בלי אפשרות ביטול. דורשים החזקה (כמו יתר הפעולות הארוכות כאן).
+                        Key.DirectionRight -> {
+                            if (event.type == KeyEventType.KeyDown && event.nativeKeyEvent.repeatCount > 8) {
+                                onDismiss()
+                                return@onKeyEvent true
+                            }
+                            false
+                        }
+                        // מקש Options (Menu) - פתיחת תפריט אפשרויות/פעולות
+                        Key.Menu -> {
+                            if (event.type == KeyEventType.KeyUp) {
+                                showOptions = true
+                            }
+                            true
+                        }
+                        else -> false
+                    }
+                }
+            }
+            // לחיצה רגילה - הרחבה/צמצום של פרטי ההתראה
+            .clickable(interactionSource = interactionSource, indication = null, onClick = {
+                if (showOptions) showOptions = false else isExpanded = !isExpanded
+            })
+            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus()
+            // כרטיס מעט "שמן" יותר (8dp -> 13dp, אייקון 32 -> 38, תקציר בשתי שורות).
+            .padding(horizontal = 14.dp, vertical = 13.dp)
+    ) {
+        // מעבר חלק (fade צולב) בין תוכן ההתראה הרגיל לתפריט האפשרויות, במקום
+        // חיתוך קשה - כך שפתיחת/סגירת התפריט מרגישה כמו טרנזישן מכוון ולא כמו
+        // "קפיצה" של הממשק.
+        Crossfade(targetState = showOptions, animationSpec = tween(FutureMotion.DurationStandard), label = "notificationItemContent") { optionsVisible ->
+            if (optionsVisible) {
+                // תפריט אפשרויות (Overlay) - פעולות אמיתיות מההתראה + השתקה/חזרה,
+                // ניתנות לניווט בין הכפתורים עם חצי כיוון ובחירה עם OK.
+                Row(
+                    modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    options.forEachIndexed { index, option ->
+                        val isSelected = index == selectedOptionIndex
+                        val baseColor = if (option.isDestructive) Color.Red.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.2f)
+                        Text(
+                            text = option.label,
+                            color = textColor,
+                            fontSize = FutureTypography.summary,
+                            fontWeight = FontWeight.Bold,
+                            style = androidx.compose.ui.text.TextStyle(shadow = legibilityShadow),
+                            modifier = Modifier
+                                .clip(CircleShape)
+                                .background(baseColor)
+                                .then(
+                                    if (isSelected) Modifier.border(1.5.dp, Color.White, CircleShape) else Modifier
+                                )
+                                .clickable {
+                                    option.action()
+                                    showOptions = false
+                                }
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                        )
+                    }
+                }
+            } else {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    // אייקון האפליקציה (בצד ימין ב-RTL)
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.2f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (appIcon != null) {
+                            Image(
+                                bitmap = appIcon!!,
+                                contentDescription = null,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        } else {
+                            Icon(Icons.Rounded.Notifications, contentDescription = null, tint = subTextColor, modifier = Modifier.size(18.dp))
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.width(14.dp))
+
+                    // תוכן ההתראה: שם אפליקציה ותקציר הודעה
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            // שם האפליקציה פעם אחת: כותרת זהה לשם (או שמתחילה בו) לא מוכפלת (N-03)
+                            text = when {
+                                title.isBlank() -> appName
+                                title.equals(appName, ignoreCase = true) -> appName
+                                title.startsWith("$appName:", ignoreCase = true) -> title
+                                else -> "$appName: $title"
+                            },
+                            fontSize = FutureTypography.body,
+                            fontWeight = FontWeight.Bold,
+                            color = textColor,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            style = androidx.compose.ui.text.TextStyle(shadow = legibilityShadow)
+                        )
+                        Text(
+                            text = text,
+                            fontSize = FutureTypography.summary,
+                            color = subTextColor,
+                            maxLines = if (isExpanded) Int.MAX_VALUE else 2,
+                            overflow = TextOverflow.Ellipsis,
+                            style = androidx.compose.ui.text.TextStyle(shadow = legibilityShadow)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * כפתור מעוצב עבור מרכז ההתראות (בסגנון Pill שקוף חצי-כהה)
+ */
+@Composable
+fun NotificationCenterButton(
+    text: String,
+    icon: ImageVector,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    color: Color,
+    focusRequester: FocusRequester? = null
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
+    val shape = CircleShape
+
+    Box(
+        modifier = modifier
+            .height(38.dp)
+            .focusEffect(isFocused, shape)
+            .clip(shape)
+            .background(animateFocusColor(isFocused, Color.White.copy(alpha = 0.25f), color).value)
+            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
+            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
+            .focusable(interactionSource = interactionSource).bringIntoViewOnFocus(),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(text = text, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = FutureTypography.label)
+        }
+    }
+}

@@ -116,18 +116,10 @@ class MainActivity : ComponentActivity() {
                             text = tr("הפעל שירותי נגישות"),
                             theme = theme,
                             onClick = { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) },
-                            modifier = Modifier.focusProperties { up = FocusRequester.Cancel },
+                            modifier = Modifier.focusProperties { up = FocusRequester.Cancel; down = FocusRequester.Cancel },
                             focusRequester = firstButton,
                         )
 
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        FutureButton(
-                            text = tr("התאמה אישית"),
-                            theme = theme,
-                            onClick = { startActivity(Intent(this@MainActivity, SettingsActivity::class.java)) },
-                            modifier = Modifier.focusProperties { down = FocusRequester.Cancel },
-                        )
 
                         Spacer(modifier = Modifier.height(24.dp))
                         

@@ -91,6 +91,12 @@ Not compiled here (the session has no Android SDK) and not tested on the device.
 ### Assistant: ~11,100 more offline commands (2026-11-15)
 
 - Added by Haiku agents, data only (no code change): ~7,000 trivia Q&A (`trivia.tsv`, 26 topics: Israel, Judaism, science, geography, history, tech, sports, arts, food, vehicles, civics and more), ~1,580 Hebrew-English dictionary words, ~240 opposite pairs, ~430 people. Rows were validated and de-duplicated against existing data. Facts were written from model memory and not independently verified.
+### All settings in the Settings app; one focus ring (2026-11-13, afternoon)
+
+- **Control Center / Notification Center focus ring**: a single 2dp line in the accent color (`--fos-focus-border-control`) instead of a dark band plus a white line. When the accent would not show on the panel (white on the light glass) the ring uses the text color.
+- **Status bar settings**: "Hide the original Android status bar" moved to Settings > Status bar and wallpaper. FutureUI's own "Customize" screen (`SettingsActivity`) and the Settings row that opened it were removed.
+- **Lock screen settings moved to Settings** (`Settings/.../ui/LockScreenSettings.kt`): code, auto-lock, face unlock, notifications, clock, widgets, shortcuts, owner message and "Lock now". Values are still stored in FutureUI (the code and face template are under its Keystore key) and reached through `SystemUiSettingsProvider.call` (`LockRemote`), which checks the signature permission. When a code is set, the current code is needed first; it returns a short-lived in-memory token, and leaving Settings ends it.
+- Only face capture still opens in FutureUI (camera and template belong to it): `LockSettingsActivity` now shows enrollment only and requires a valid token.
 
 ### Round of UI fixes from the user's notes (2026-11-13)
 

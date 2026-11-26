@@ -105,3 +105,10 @@ if [[ ${#FAILED[@]} -gt 0 ]]; then
     exit 1
 fi
 echo "כל האפליקציות נבנו בהצלחה."
+
+# כל עדכון של אפליקציה מעדכן גם את גרסת הצריבה (system_a ב-D:\futureos-rom\FutureOS-flash).
+# SKIP_ROM=1 מדלג. לא נוגע בטלפון.
+if [[ "${SKIP_ROM:-0}" != 1 ]] && [[ -d /d/futureos-rom/FutureOS-flash ]]; then
+    echo ""; echo "=== עדכון גרסת הצריבה ==="
+    bash "$(dirname "$0")/aosp/rom-repack/update_rom.sh" || echo "!! עדכון גרסת הצריבה נכשל - האפליקציות עצמן נבנו"
+fi

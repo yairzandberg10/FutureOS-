@@ -52,36 +52,74 @@ fun Modifier.focusEffect(
     focusedScale: Float = 1.04f,
 ): Modifier {
     val ring = animateFocusFloat(isFocused, 1f, 0f)
+    val accent = rememberSystemAccent()
+    val dark = LocalOverlayIsDark.current
+    // ההדגשה כמו שהיא, אלא אם היא לא נראית על הרקע (לבן על הזכוכית הבהירה,
+    // כהה על הכהה) - אז צבע הטקסט, כמו readableAccentColor בשאר המערכת.
+    val ringColor = remember(accent, dark) {
+        com.future.sharednav.theme.FutureContrast.readableAccent(
+            accent,
+            if (dark) Color(0xFF1C1C1E) else Color(0xFFF2F2F7),
+            if (dark) Color.White else Color.Black,
+        )
+    }
     return this
         .zIndex(if (isFocused || ring.value > 0f) 1f else 0f)
         .focusScale(isFocused, focusedScale)
-        .controlFocusRing(shape) { ring.value }
+        .controlFocusRing(shape, ringColor) { ring.value }
 }
 
+/** האם השכבה (מרכז הבקרה / ההתראות) כהה - קובע את צבע טבעת הפוקוס. ברירת מחדל: כהה. */
+val LocalOverlayIsDark = staticCompositionLocalOf { true }
+
 /**
- * טבעת הפוקוס של מרכז הבקרה: פס כהה של 3dp ובתוכו קו לבן דק. הטבעת הקודמת
- * (2dp אפור-בהיר) לא נראתה על הזכוכית הבהירה (UI1, ‏SY3), ואחת כהה בלבד הייתה
- * נעלמת על עיגולי האייקונים הכהים - שני הצבעים יחד נראים על שניהם.
+ * טבעת הפוקוס של מרכז הבקרה ושאר חלונות המערכת - כמו בכל המערכת
+ * (--fos-focus-border-control): קו אחד של 2dp בצבע ההדגשה, שנצבע פנימה.
  *
- * הטבעת מצוירת כולה בתוך גבולות הפקד (כמו animatedFocusSurface של המערכת):
- * קודם חצי ממנה יצא החוצה, ובכל פקד שנחתך (clip) לפני הטבעת - הגלולות
- * העליונות, כרטיסי ההתראות - נראה רק חצי טבעת, עבה בפינות ונעלמת בצדדים.
+ * הטבעת מצוירת כולה בתוך גבולות הפקד, כך שגם פקד שנחתך (clip) לפני הטבעת -
+ * הגלולות העליונות, כרטיסי ההתראות - מקבל טבעת שלמה ואחידה. קודם היו כאן
+ * פס כהה של 3dp וקו לבן בתוכו, ונראו כמו מסגרת כפולה וכבדה.
  */
-fun Modifier.controlFocusRing(shape: androidx.compose.ui.graphics.Shape, alpha: () -> Float = { 1f }): Modifier = this.drawWithContent {
+fun Modifier.controlFocusRing(
+    shape: androidx.compose.ui.graphics.Shape,
+    color: Color = Color.White,
+    alpha: () -> Float = { 1f },
+): Modifier = this.drawWithContent {
     drawContent()
     val a = alpha()
     if (a <= 0f) return@drawWithContent
-    val band = 3.dp.toPx()
-    val inner = 1.5.dp.toPx()
-    val half = band / 2f
-    if (size.width <= band || size.height <= band) return@drawWithContent
+    val stroke = 2.dp.toPx()
+    val half = stroke / 2f
+    if (size.width <= stroke || size.height <= stroke) return@drawWithContent
     val outline = shape.createOutline(
-        androidx.compose.ui.geometry.Size(size.width - band, size.height - band),
+        androidx.compose.ui.geometry.Size(size.width - stroke, size.height - stroke),
         layoutDirection,
         this,
     )
     translate(half, half) {
-        drawOutline(outline, Color(0xFF111114), alpha = a, style = androidx.compose.ui.graphics.drawscope.Stroke(width = band))
-        drawOutline(outline, Color.White, alpha = a, style = androidx.compose.ui.graphics.drawscope.Stroke(width = inner))
+        drawOutline(outline, color, alpha = a, style = androidx.compose.ui.graphics.drawscope.Stroke(width = stroke))
     }
+}
+
+/**
+ * צבע ההדגשה של המערכת (ערכת הנושא, ThemeProvider) - מתעדכן כשהוא משתנה
+ * בהגדרות. FutureUI הוא הספק של ערכת הנושא, ולכן קורא את ההעדפות ישירות.
+ */
+@Composable
+fun rememberSystemAccent(): Color {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val prefs = remember { context.getSharedPreferences("shared_theme_prefs", android.content.Context.MODE_PRIVATE) }
+    fun read() = Color(prefs.getInt(com.android.sistemui.theme.ThemeProvider.COL_PRIMARY_COLOR, android.graphics.Color.WHITE))
+    var accent by remember { mutableStateOf(read()) }
+    // המאזין נשמר ב-remember: SharedPreferences מחזיק מאזינים בהפניה חלשה בלבד.
+    val listener = remember {
+        android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == com.android.sistemui.theme.ThemeProvider.COL_PRIMARY_COLOR) accent = read()
+        }
+    }
+    DisposableEffect(prefs) {
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        onDispose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+    }
+    return accent
 }

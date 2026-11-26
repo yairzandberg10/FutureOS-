@@ -1,96 +1,155 @@
 package com.future.systemui.power
 
 import android.content.Context
-import android.content.Intent
 import android.graphics.PixelFormat
+import android.media.AudioManager
+import android.os.Handler
+import android.os.Looper
 import android.os.PowerManager
 import android.provider.Settings
 import android.util.Log
 import android.view.KeyEvent
 import android.view.WindowManager
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import com.future.sharednav.i18n.tr
-import com.future.sharednav.theme.FutureAppTheme
+import com.future.sharednav.root.RootShell
+import com.future.sharednav.theme.FutureTypography
 import com.future.systemui.CommandQueue
 import com.future.systemui.Feature
+import com.future.systemui.controlcenter.SYSTEM_DIALOG_TYPES
+import com.future.systemui.fui.controlcenter.logic.ControlManager
+import com.future.systemui.fui.controlcenter.ui.PowerMenuScreen
+import com.future.systemui.fui.ui.theme.FutureUITheme
+import com.future.systemui.fui.utils.FutureUIState
 
 /**
  * Power menu (global actions) and shutdown screen for FutureSystemUI.
  *
- * The menu is a focusable full-screen window; the D-pad moves the focus, OK/CENTER activates,
- * BACK closes. It opens with the focus on "ביטול" so a stray OK does not power the phone off.
+ * The menu is FutureUI's PowerMenuScreen (focus starts on "ביטול", power off / restart ask for a
+ * confirmation that also starts on "ביטול"), in a focusable full-screen window driven by the keypad.
  */
 class PowerMenuFeature : Feature, CommandQueue.Callbacks {
     private var ctx: Context? = null
+    private val main = Handler(Looper.getMainLooper())
     private var menuOverlay: ComposeOverlay? = null
-    private var menuState: PowerMenuState? = null
     private var shutdownOverlay: ComposeOverlay? = null
+    private var controlManager: ControlManager? = null
+
+    private val airplaneState = mutableStateOf(false)
+    private val silentState = mutableStateOf(false)
 
     override fun start(context: Context, commandQueue: CommandQueue) {
         ctx = context
+        instance = this
         commandQueue.addCallback(this)
     }
 
     override fun showGlobalActionsMenu() {
+        main.post { showMenu() }
+    }
+
+    private fun showMenu() {
         val c = ctx ?: return
         if (menuOverlay != null) return
         try {
-            val state = PowerMenuState(
-                initialFocus = PowerAction.CANCEL.ordinal,
-                airplaneOn = isAirplaneOn(c),
-            )
+            val audio = c.getSystemService(AudioManager::class.java)
+            airplaneState.value = isAirplaneOn(c)
+            silentState.value = audio?.ringerMode == AudioManager.RINGER_MODE_SILENT
+            val cm = ControlManager(c).also { controlManager = it }
+
             val overlay = ComposeOverlay(c, fullScreen = true, onKey = { onMenuKey(it) })
             overlay.setContent {
-                FutureAppTheme { PowerMenuContent(state) }
+                FutureUITheme {
+                    PowerMenuScreen(
+                        onPowerOff = {
+                            hideMenu()
+                            powerOff(c)
+                        },
+                        onRestart = {
+                            hideMenu()
+                            restart(c)
+                        },
+                        onCancel = { hideMenu() },
+                        airplaneOn = airplaneState.value,
+                        onAirplane = onAirplane@{
+                            // Airplane mode on a locked device lets a thief cut the phone off the network.
+                            if (FutureUIState.isSecured) return@onAirplane
+                            val next = !airplaneState.value
+                            airplaneState.value = next
+                            cm.isAirplaneOn = next
+                            cm.toggleAirplane()
+                        },
+                        silentOn = silentState.value,
+                        onSilent = {
+                            val next = !silentState.value
+                            val mode = if (next) AudioManager.RINGER_MODE_SILENT else AudioManager.RINGER_MODE_NORMAL
+                            if (runCatching { audio?.ringerMode = mode }.isSuccess) silentState.value = next
+                        },
+                        onScreenshot = {
+                            hideMenu()
+                            // After the menu left the screen, otherwise it ends up in the picture.
+                            main.postDelayed({ takeScreenshot() }, 600)
+                        },
+                    )
+                }
             }
-            menuState = state
-            menuOverlay = overlay
             val wm = c.getSystemService(WindowManager::class.java)
-            val shown = overlay.show(
-                wm,
-                intArrayOf(WindowManager.LayoutParams.TYPE_SYSTEM_DIALOG, WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY),
-            ) { type ->
+            val shown = overlay.show(wm, SYSTEM_DIALOG_TYPES) { type ->
                 // Focusable on purpose: the window must receive the D-pad and BACK keys.
                 WindowManager.LayoutParams(
                     WindowManager.LayoutParams.MATCH_PARENT,
                     WindowManager.LayoutParams.MATCH_PARENT,
                     type,
-                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
                     PixelFormat.TRANSLUCENT,
-                )
+                ).apply { title = "FuturePowerMenu" }
             }
-            if (!shown) {
-                menuState = null
-                menuOverlay = null
+            if (shown) {
+                menuOverlay = overlay
+                FutureUIState.powerMenuOpen.value = true
+            } else {
+                controlManager?.dispose()
+                controlManager = null
             }
         } catch (t: Throwable) {
             Log.e(LOG_TAG, "showGlobalActionsMenu failed", t)
-            menuState = null
             menuOverlay = null
         }
     }
 
     override fun showShutdownUi(isReboot: Boolean, reason: String?) {
+        main.post { showShutdown(isReboot) }
+    }
+
+    private fun showShutdown(isReboot: Boolean) {
         val c = ctx ?: return
         try {
-            dismissMenu()
+            hideMenu()
             if (shutdownOverlay != null) return
             val text = if (isReboot) tr("מפעיל מחדש...") else tr("מכבה...")
             val overlay = ComposeOverlay(c, fullScreen = true, onKey = { true })
             overlay.setContent {
-                FutureAppTheme { ShutdownContent(text) }
+                FutureUITheme { ShutdownContent(text) }
             }
             val wm = c.getSystemService(WindowManager::class.java)
-            val shown = overlay.show(
-                wm,
-                intArrayOf(WindowManager.LayoutParams.TYPE_SYSTEM_DIALOG, WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY),
-            ) { type ->
+            val shown = overlay.show(wm, SYSTEM_DIALOG_TYPES) { type ->
                 WindowManager.LayoutParams(
                     WindowManager.LayoutParams.MATCH_PARENT,
                     WindowManager.LayoutParams.MATCH_PARENT,
                     type,
-                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
                     PixelFormat.OPAQUE,
-                )
+                ).apply { title = "FutureShutdown" }
             }
             if (shown) shutdownOverlay = overlay
         } catch (t: Throwable) {
@@ -98,52 +157,30 @@ class PowerMenuFeature : Feature, CommandQueue.Callbacks {
         }
     }
 
-    /** Returns true if the key was handled by the menu (so nothing underneath gets it). */
+    /** BACK closes the whole menu (as FutureUI did); everything else goes to the screen's focus handling. */
     private fun onMenuKey(event: KeyEvent): Boolean {
-        val state = menuState ?: return false
-        when (event.keyCode) {
-            KeyEvent.KEYCODE_DPAD_UP,
-            KeyEvent.KEYCODE_DPAD_DOWN,
-            KeyEvent.KEYCODE_DPAD_CENTER,
-            KeyEvent.KEYCODE_ENTER,
-            KeyEvent.KEYCODE_BACK -> Unit
-            else -> return false
-        }
-        if (event.action == KeyEvent.ACTION_DOWN) {
-            when (event.keyCode) {
-                KeyEvent.KEYCODE_DPAD_UP -> state.focus = (state.focus - 1).coerceAtLeast(0)
-                KeyEvent.KEYCODE_DPAD_DOWN -> state.focus = (state.focus + 1).coerceAtMost(PowerAction.values().lastIndex)
-                KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
-                    if (event.repeatCount == 0) activate(PowerAction.values()[state.focus])
-                }
-                KeyEvent.KEYCODE_BACK -> dismissMenu()
+        try {
+            if (event.keyCode == KeyEvent.KEYCODE_BACK) {
+                if (event.action == KeyEvent.ACTION_UP) main.post { hideMenu() }
+                return true
             }
+        } catch (t: Throwable) {
+            Log.e(LOG_TAG, "power menu key failed", t)
         }
-        // Consume key-up too, so the app underneath does not see half a key press.
-        return true
+        return false
     }
 
-    private fun activate(action: PowerAction) {
-        val c = ctx ?: return
-        when (action) {
-            PowerAction.POWER_OFF -> {
-                dismissMenu()
-                powerOff(c)
-            }
-            PowerAction.RESTART -> {
-                dismissMenu()
-                restart(c)
-            }
-            PowerAction.AIRPLANE -> toggleAirplane(c)
-            PowerAction.CANCEL -> dismissMenu()
-        }
-    }
-
-    private fun dismissMenu() {
+    private fun hideMenu() {
         val overlay = menuOverlay ?: return
         menuOverlay = null
-        menuState = null
-        overlay.dismiss()
+        try {
+            overlay.dismiss()
+        } catch (t: Throwable) {
+            Log.w(LOG_TAG, "dismissing the power menu failed", t)
+        }
+        controlManager?.dispose()
+        controlManager = null
+        FutureUIState.powerMenuOpen.value = false
     }
 
     /** Hidden PowerManager.shutdown(confirm, reason, wait) - no confirmation dialog, does not wait. */
@@ -170,17 +207,20 @@ class PowerMenuFeature : Feature, CommandQueue.Callbacks {
         }
     }
 
-    /** Needs WRITE_SECURE_SETTINGS. The menu stays open and shows the new state. */
-    private fun toggleAirplane(c: Context) {
-        val state = menuState ?: return
-        val next = !state.airplaneOn
-        try {
-            Settings.Global.putInt(c.contentResolver, Settings.Global.AIRPLANE_MODE_ON, if (next) 1 else 0)
-            c.sendBroadcast(Intent(Intent.ACTION_AIRPLANE_MODE_CHANGED).putExtra("state", next))
-            state.airplaneOn = next
-        } catch (t: Throwable) {
-            Log.e(LOG_TAG, "airplane mode toggle failed", t)
-        }
+    /** screencap straight from this (system) process; root only as a fallback. */
+    private fun takeScreenshot() {
+        Thread {
+            val cmd = "d=/sdcard/Pictures/Screenshots; mkdir -p \$d; " +
+                "f=\$d/Screenshot_\$(date +%Y%m%d-%H%M%S).png; screencap -p \$f && " +
+                "am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file://\$f"
+            try {
+                val code = ProcessBuilder("sh", "-c", cmd).redirectErrorStream(true).start().waitFor()
+                if (code != 0) RootShell.run(cmd)
+            } catch (t: Throwable) {
+                Log.w(LOG_TAG, "screenshot failed", t)
+                runCatching { RootShell.run(cmd) }
+            }
+        }.start()
     }
 
     private fun isAirplaneOn(c: Context): Boolean = try {
@@ -188,5 +228,30 @@ class PowerMenuFeature : Feature, CommandQueue.Callbacks {
     } catch (t: Throwable) {
         Log.w(LOG_TAG, "could not read airplane mode", t)
         false
+    }
+
+    companion object {
+        @Volatile
+        var instance: PowerMenuFeature? = null
+            private set
+    }
+}
+
+/** Full-screen black screen shown while the device powers off or restarts, in the FutureUI type scale. */
+@Composable
+internal fun ShutdownContent(text: String) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = text,
+            color = Color.White,
+            fontSize = FutureTypography.title,
+            fontWeight = FontWeight.Medium,
+            textAlign = TextAlign.Center,
+        )
     }
 }

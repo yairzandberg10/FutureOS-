@@ -1,57 +1,66 @@
 package com.future.systemui.notifications
 
-import android.app.Notification
+import android.content.ComponentName
+import android.content.Context
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
+import androidx.compose.runtime.mutableIntStateOf
+import com.future.systemui.fui.utils.FutureUIState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 private const val TAG = "FutureSystemUI"
 
 /**
- * In-process store of the active notifications. The listener service writes to it, the shade UI reads it.
- * Same process, so a plain object + StateFlow is enough (no IPC).
+ * In-process store of the active notifications. [FutureNotificationListener] writes to it; the FutureUI notification
+ * center (NotificationCenterManager) and the heads-up read it. Same process, so a plain object is enough.
+ * All writes happen on the main thread (listener callbacks).
+ *
+ * Replaces FutureUI's MediaControlService.instance?.activeNotifications.
  */
 object NotificationRepository {
-    private val _notifications = MutableStateFlow<List<StatusBarNotification>>(emptyList())
-    val notifications: StateFlow<List<StatusBarNotification>> = _notifications
+    private val _active = MutableStateFlow<List<StatusBarNotification>>(emptyList())
 
-    /** The bound listener (null while not connected). Used to cancel notifications. */
+    /** Every active notification, in the listener's order (exactly what FutureUI's notification center used). */
+    val active: StateFlow<List<StatusBarNotification>> = _active
+
+    /** Rises on every add/remove/update; the notification center refreshes from it at once (FutureUI's changeTick). */
+    val changeTick = mutableIntStateOf(0)
+
+    /** The bound listener (null while not connected). */
     @Volatile
     var listener: NotificationListenerService? = null
 
-    /** Called on the main thread for every posted notification: (sbn, isNew, importance). */
+    /** Main thread: a notification was posted or updated. */
     @Volatile
-    var onPosted: ((StatusBarNotification, Boolean, Int) -> Unit)? = null
+    var onPosted: ((StatusBarNotification) -> Unit)? = null
 
-    /** Re-read the active notifications from [l], filter and sort them (importance desc, then newest first). */
+    /** Main thread: a notification was removed. */
+    @Volatile
+    var onRemoved: ((StatusBarNotification) -> Unit)? = null
+
     fun refresh(l: NotificationListenerService) {
         try {
-            val active: Array<StatusBarNotification> = l.activeNotifications ?: emptyArray()
-            val ranking = try { l.currentRanking } catch (t: Throwable) { null }
-            val importance = HashMap<String, Int>()
-            val r = NotificationListenerService.Ranking()
-            for (sbn in active) {
-                val imp = if (ranking != null && ranking.getRanking(sbn.key, r)) r.importance else 3
-                importance[sbn.key] = imp
-            }
-            val groupsWithChildren = active
-                .filter { (it.notification.flags and Notification.FLAG_GROUP_SUMMARY) == 0 }
-                .mapNotNull { it.groupKey }
-                .toSet()
-            val list = active
-                // A group summary next to its children is just noise on a list-style shade.
-                .filterNot {
-                    (it.notification.flags and Notification.FLAG_GROUP_SUMMARY) != 0 && it.groupKey in groupsWithChildren
-                }
-                .sortedWith(
-                    compareByDescending<StatusBarNotification> { importance[it.key] ?: 3 }
-                        .thenByDescending { it.postTime },
-                )
-            _notifications.value = list
+            _active.value = (l.activeNotifications ?: emptyArray()).toList()
         } catch (t: Throwable) {
             Log.e(TAG, "NotificationRepository.refresh failed", t)
+        }
+        bump()
+    }
+
+    fun clear() {
+        _active.value = emptyList()
+        bump()
+    }
+
+    private fun bump() {
+        try {
+            changeTick.intValue++
+            // The status bar icons refresh from this (FutureUI's MediaControlService.bumpTick).
+            FutureUIState.notificationTick.intValue++
+        } catch (t: Throwable) {
+            Log.e(TAG, "bump failed", t)
         }
     }
 
@@ -61,5 +70,13 @@ object NotificationRepository {
 
     fun cancelAll() {
         try { listener?.cancelAllNotifications() } catch (t: Throwable) { Log.e(TAG, "cancelAll failed", t) }
+    }
+
+    fun requestRebind(context: Context) {
+        try {
+            NotificationListenerService.requestRebind(ComponentName(context.packageName, FutureNotificationListener::class.java.name))
+        } catch (t: Throwable) {
+            Log.w(TAG, "requestRebind failed", t)
+        }
     }
 }

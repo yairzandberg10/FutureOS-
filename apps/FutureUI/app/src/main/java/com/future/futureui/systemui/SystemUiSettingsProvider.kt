@@ -19,6 +19,7 @@ class SystemUiSettingsProvider : ContentProvider() {
 
     companion object {
         const val AUTHORITY = "com.future.futureui.systemui"
+        const val PERMISSION = "com.future.futureui.permission.SYSTEM_SETTINGS"
         val CONTENT_URI: Uri = Uri.parse("content://$AUTHORITY/settings")
 
         const val COL_SHOW_BATTERY = "show_battery"
@@ -166,6 +167,7 @@ class SystemUiSettingsProvider : ContentProvider() {
     }
 
     override fun call(method: String, arg: String?, extras: android.os.Bundle?): android.os.Bundle? {
+        if (method.startsWith("lock_")) return lockCall(method, arg, extras)
         enforceSecurityCaller()
         val ctx = context!!
         val guard = com.future.futureui.security.ThreatGuard
@@ -203,6 +205,23 @@ class SystemUiSettingsProvider : ContentProvider() {
     private fun systemLocked(): Boolean = runCatching {
         (context?.getSystemService(Context.KEYGUARD_SERVICE) as? android.app.KeyguardManager)?.isDeviceLocked == true
     }.getOrDefault(false)
+
+    /**
+     * הגדרות מסך הנעילה מאפליקציית ההגדרות (LockRemote). ל-call אין בדיקת הרשאה
+     * אוטומטית כמו ל-query/update, אז בודקים כאן במפורש את הרשאת החתימה.
+     */
+    private fun lockCall(method: String, arg: String?, extras: android.os.Bundle?): android.os.Bundle? {
+        val ctx = context ?: return null
+        if (ctx.checkCallingPermission(PERMISSION) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            throw SecurityException("lock settings require $PERMISSION")
+        }
+        val identity = android.os.Binder.clearCallingIdentity()
+        try {
+            return com.future.futureui.lockscreen.settings.LockRemote.handle(ctx, method, arg, extras)
+        } finally {
+            android.os.Binder.restoreCallingIdentity(identity)
+        }
+    }
 
     override fun insert(uri: Uri, values: ContentValues?): Uri? = null
     override fun delete(uri: Uri, selection: String?, selectionArgs: Array<out String>?): Int = 0

@@ -21,31 +21,29 @@ class FutureNotificationListener : NotificationListenerService() {
 
     override fun onListenerDisconnected() {
         try {
-            if (NotificationRepository.listener === this) NotificationRepository.listener = null
+            if (NotificationRepository.listener === this) {
+                NotificationRepository.listener = null
+                NotificationRepository.clear()
+            }
         } catch (t: Throwable) {
             Log.e(TAG, "onListenerDisconnected failed", t)
         }
     }
 
-    override fun onNotificationPosted(sbn: StatusBarNotification?, rankingMap: RankingMap?) {
+    override fun onNotificationPosted(sbn: StatusBarNotification?) {
         try {
             if (sbn == null) return
-            val wasKnown = NotificationRepository.notifications.value.any { it.key == sbn.key }
             NotificationRepository.refresh(this)
-            var importance = IMPORTANCE_DEFAULT_FALLBACK
-            if (rankingMap != null) {
-                val r = Ranking()
-                if (rankingMap.getRanking(sbn.key, r)) importance = r.importance
-            }
-            NotificationRepository.onPosted?.invoke(sbn, !wasKnown, importance)
+            NotificationRepository.onPosted?.invoke(sbn)
         } catch (t: Throwable) {
             Log.e(TAG, "onNotificationPosted failed", t)
         }
     }
 
-    override fun onNotificationRemoved(sbn: StatusBarNotification?, rankingMap: RankingMap?) {
+    override fun onNotificationRemoved(sbn: StatusBarNotification?) {
         try {
             NotificationRepository.refresh(this)
+            if (sbn != null) NotificationRepository.onRemoved?.invoke(sbn)
         } catch (t: Throwable) {
             Log.e(TAG, "onNotificationRemoved failed", t)
         }
@@ -57,10 +55,5 @@ class FutureNotificationListener : NotificationListenerService() {
         } catch (t: Throwable) {
             Log.e(TAG, "onNotificationRankingUpdate failed", t)
         }
-    }
-
-    private companion object {
-        /** android.app.NotificationManager.IMPORTANCE_DEFAULT */
-        const val IMPORTANCE_DEFAULT_FALLBACK = 3
     }
 }

@@ -146,27 +146,20 @@
             </intent-filter>
         </activity>
 
-        <!-- הגדרות מסך הנעילה - נפתח רק מאפליקציית ההגדרות (אבטחה) ב-ACTION_LOCK_SETTINGS.
-             דורש את הקוד הנוכחי לפני כל שינוי. -->
+        <!-- רישום פנים למסך הנעילה - נפתח רק מאפליקציית ההגדרות ב-ACTION_LOCK_SETTINGS,
+             עם אסימון מ-LockRemote (אחרי הזנת הקוד). שאר ההגדרות באפליקציית ההגדרות. -->
         <activity
             android:name=".lockscreen.settings.LockSettingsActivity"
             android:exported="true"
             android:permission="com.future.futureui.permission.SYSTEM_SETTINGS"
             android:excludeFromRecents="true"
-            android:label="מסך נעילה"
+            android:label="רישום פנים"
             android:theme="@style/Theme.FutureUI">
             <intent-filter>
                 <action android:name="com.future.futureui.ACTION_LOCK_SETTINGS" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
-
-        <activity
-            android:name=".SettingsActivity"
-            android:exported="true"
-            android:permission="com.future.futureui.permission.SYSTEM_SETTINGS"
-            android:label="התאמה אישית"
-            android:theme="@style/Theme.FutureUI" />
 
         <!-- בכוונה בלי CATEGORY_LAUNCHER: FutureUI הוא SystemUI, לא אפליקציה שהמשתמש
              פותח ישירות - אין לו אייקון ברשימת האפליקציות. ACTION_MAIN נשאר כדי

@@ -20,11 +20,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.Text
-import com.future.sharednav.theme.FutureAppTheme
+import androidx.compose.foundation.border
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import com.future.systemui.fui.ui.theme.FutureUITheme
 import com.future.sharednav.theme.FutureShapes
 import com.future.sharednav.theme.FutureTypography
-import com.future.sharednav.theme.LocalFutureTheme
-import com.future.sharednav.theme.elevatedSurfaceColor
 import com.future.systemui.CommandQueue
 import com.future.systemui.Feature
 
@@ -62,7 +63,7 @@ class ToastFeature : Feature, CommandQueue.Callbacks {
             val message = text?.toString().orEmpty()
             val overlay = ComposeOverlay(c, fullScreen = false, onKey = { false })
             overlay.setContent {
-                FutureAppTheme { ToastContent(message) }
+                FutureUITheme { ToastContent(message) }
             }
             val bottomGap = (BOTTOM_GAP_DP * c.resources.displayMetrics.density).toInt()
             val wm = c.getSystemService(WindowManager::class.java)
@@ -147,22 +148,23 @@ class ToastFeature : Feature, CommandQueue.Callbacks {
     }
 }
 
-/** Toast text on the same card surface as the other overlays. */
+/** Toast text on the same surface as FutureUI's power menu card: dark glass, hairline border, xxl corners. */
 @Composable
 internal fun ToastContent(message: String) {
-    val theme = LocalFutureTheme.current
     Box(
         modifier = Modifier
             .padding(horizontal = 16.dp)
-            .clip(FutureShapes.lg)
-            .background(theme.elevatedSurfaceColor)
+            .clip(FutureShapes.xxl)
+            .background(Color(0xEE1C1C1E))
+            .border(0.5.dp, Color.White.copy(alpha = 0.15f), FutureShapes.xxl)
             .padding(horizontal = 18.dp, vertical = 10.dp),
         contentAlignment = Alignment.Center,
     ) {
         Text(
             text = message,
-            color = theme.textColor,
+            color = Color.White,
             fontSize = FutureTypography.bodyLarge,
+            fontWeight = FontWeight.Medium,
             textAlign = TextAlign.Center,
         )
     }

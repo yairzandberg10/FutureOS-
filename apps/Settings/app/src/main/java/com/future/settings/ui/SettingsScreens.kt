@@ -118,6 +118,7 @@ sealed class Screen(val route: String) {
     object KeyboardLanguages : Screen("keyboard_languages")
     object Security : Screen("security")
     object SecurityHistory : Screen("security_history")
+    object LockScreen : Screen("lock_screen")
     object Apps : Screen("apps")
     object AppDetail : Screen("app_detail/{pkg}") {
         fun route(pkg: String) = "app_detail/$pkg"
@@ -162,10 +163,6 @@ val FUTURE_OS_APPS = listOf(
     FutureApp("com.future.mikdash", tr("מקדש"), FutureIcons.Apps),
     FutureApp("com.future.sfarim", tr("ספרים"), FutureIcons.AutoMirrored.MenuBook)
 )
-
-/** חבילת האפליקציה של FutureUI (מרכז בקרה/שורת מצב) - להתאמה אישית שלהם. */
-private const val FUTURE_UI_PACKAGE = "com.future.futureui"
-private const val FUTURE_UI_LOCK_SETTINGS_ACTION = "com.future.futureui.ACTION_LOCK_SETTINGS"
 
 /**
  * מפעיל Intent בבטחה: תופס ActivityNotFoundException/SecurityException (שאחרת
@@ -260,6 +257,7 @@ fun SettingsApp(
             composable(Screen.KeyboardLanguages.route) { KeyboardLanguagesScreen(navController, theme) }
             composable(Screen.Security.route) { SecurityScreen(navController, theme) }
             composable(Screen.SecurityHistory.route) { SecurityHistoryScreen(navController, theme) }
+            composable(Screen.LockScreen.route) { LockScreenSettingsScreen(navController, theme) }
             composable(Screen.Apps.route) { AppsScreen(navController, theme) }
             composable(Screen.AppDetail.route) { backStackEntry ->
                 val pkg = backStackEntry.arguments?.getString("pkg") ?: ""
@@ -1592,13 +1590,7 @@ fun SecurityScreen(navController: NavController, theme: ThemeConfig) {
         scanning = false
     }
     val debugSigned = remember { isDebugSigned(context) }
-    val openLockSettings: () -> Unit = {
-        safeStartActivity(
-            context,
-            Intent(FUTURE_UI_LOCK_SETTINGS_ACTION).setPackage(FUTURE_UI_PACKAGE),
-            tr("לא ניתן לפתוח את הגדרות מסך הנעילה")
-        )
-    }
+    val openLockSettings: () -> Unit = { navController.navigate(Screen.LockScreen.route) }
     val openDeveloperOptions: () -> Unit = {
         safeStartActivity(
             context,
@@ -1866,8 +1858,8 @@ fun SecurityScreen(navController: NavController, theme: ThemeConfig) {
                     }
                 }
 
-                // מסך הנעילה של FutureOS. ההגדרות עצמן רצות בתוך FutureUI, כי הקוד
-                // ונתוני הפנים מוצפנים במפתח Keystore של FutureUI בלבד; המסך שם
+                // מסך הנעילה של FutureOS - המסך כאן (LockScreenSettingsScreen), והשמירה
+                // ב-FutureUI, כי הקוד ונתוני הפנים מוצפנים במפתח Keystore שלו בלבד.
                 // דורש את הקוד הנוכחי לפני כל שינוי.
                 item { SettingHeader(tr("מסך נעילה"), theme) }
                 item {

@@ -33,7 +33,7 @@
 
     <permission
         android:name="com.future.futureui.permission.SYSTEM_SETTINGS"
-        android:protectionLevel="signature" />
+        android:protectionLevel="signature|privileged" />
 
     <uses-permission android:name="com.future.keyboard.permission.SETTINGS" />
     <!-- שידורי המערכת ל-dialer (מקשי CALL/ENDCALL, שיחה) דורשים את ההרשאה הזו
@@ -145,14 +145,14 @@
             </intent-filter>
         </activity>
 
-        <!-- הגדרות מסך הנעילה - נפתח רק מאפליקציית ההגדרות (אבטחה) ב-ACTION_LOCK_SETTINGS.
-             דורש את הקוד הנוכחי לפני כל שינוי. -->
+        <!-- רישום פנים למסך הנעילה - נפתח רק מאפליקציית ההגדרות ב-ACTION_LOCK_SETTINGS,
+             עם אסימון מ-LockRemote (אחרי הזנת הקוד). שאר ההגדרות באפליקציית ההגדרות. -->
         <activity
             android:name=".lockscreen.settings.LockSettingsActivity"
             android:exported="true"
             android:permission="com.future.futureui.permission.SYSTEM_SETTINGS"
             android:excludeFromRecents="true"
-            android:label="מסך נעילה"
+            android:label="רישום פנים"
             android:theme="@style/Theme.FutureUI">
             <intent-filter>
                 <action android:name="com.future.futureui.ACTION_LOCK_SETTINGS" />

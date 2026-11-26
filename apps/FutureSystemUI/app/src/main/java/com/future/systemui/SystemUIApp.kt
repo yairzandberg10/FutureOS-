@@ -13,7 +13,11 @@ class SystemUIApp : Application() {
     /** Every feature, in start order. Agents add their feature here (one line each). */
     val features: List<Feature> by lazy {
         listOf<Feature>(
+            com.future.systemui.HandoverFeature(),
+            com.future.systemui.lockscreen.LockScreenFeature(),
             com.future.systemui.statusbar.StatusBarFeature(),
+            com.future.systemui.controlcenter.ControlCenterFeature(),
+            com.future.systemui.controlcenter.RecentsFeature(),
             com.future.systemui.notifications.NotificationShadeFeature(),
             com.future.systemui.volume.VolumeFeature(),
             com.future.systemui.power.PowerMenuFeature(),

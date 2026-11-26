@@ -1,0 +1,75 @@
+package com.future.systemui.fui.theme
+
+import android.content.ContentProvider
+import android.content.ContentValues
+import android.content.Context
+import android.content.SharedPreferences
+import android.database.Cursor
+import android.database.MatrixCursor
+import android.net.Uri
+
+/**
+ * מקור אמת יחיד לעיצוב (מצב כהה/בהיר, צבע הדגשה) שמשותף בין כל אפליקציות
+ * FutureOS - כל אפליקציה היא UID נפרד, אז SharedPreferences רגילות לא
+ * משותפות ביניהן. ContentProvider הוא הדרך הסטנדרטית של אנדרואיד לשתף
+ * נתונים כאלה בין אפליקציות שונות.
+ *
+ * שימוש מאפליקציה אחרת: ThemeClient(context).getTheme() / setTheme(...)
+ */
+class ThemeProvider : ContentProvider() {
+
+    companion object {
+        const val AUTHORITY = "com.future.futureui.theme"
+        val CONTENT_URI: Uri = Uri.parse("content://$AUTHORITY/theme")
+
+        const val COL_IS_DARK_MODE = "is_dark_mode"
+        const val COL_PRIMARY_COLOR = "primary_color"
+
+        /** מכפיל גודל הגופן שהמשתמש בחר בהגדרות. עד שהוא עבר לכאן, המחוון
+         *  בהגדרות השפיע רק על מסך ההגדרות עצמו (ראו FutureType). */
+        const val COL_FONT_SIZE_MULTIPLIER = "font_size_multiplier"
+    }
+
+    private lateinit var prefs: SharedPreferences
+
+    override fun onCreate(): Boolean {
+        prefs = context!!.getSharedPreferences("shared_theme_prefs", Context.MODE_PRIVATE)
+        return true
+    }
+
+    override fun query(
+        uri: Uri, projection: Array<out String>?, selection: String?,
+        selectionArgs: Array<out String>?, sortOrder: String?
+    ): Cursor {
+        com.future.sharednav.security.CallerCheck.enforce(context!!)
+        val cursor = MatrixCursor(arrayOf(COL_IS_DARK_MODE, COL_PRIMARY_COLOR, COL_FONT_SIZE_MULTIPLIER))
+        val isDark = if (prefs.getBoolean(COL_IS_DARK_MODE, true)) 1 else 0
+        val color = prefs.getInt(COL_PRIMARY_COLOR, android.graphics.Color.WHITE)
+        val fontMultiplier = prefs.getFloat(COL_FONT_SIZE_MULTIPLIER, 1.0f)
+        cursor.addRow(arrayOf(isDark, color, fontMultiplier))
+        return cursor
+    }
+
+    override fun update(uri: Uri, values: ContentValues?, selection: String?, selectionArgs: Array<out String>?): Int {
+        com.future.sharednav.security.CallerCheck.enforce(context!!)
+        if (values == null) return 0
+        val editor = prefs.edit()
+        if (values.containsKey(COL_IS_DARK_MODE)) {
+            editor.putBoolean(COL_IS_DARK_MODE, values.getAsInteger(COL_IS_DARK_MODE) == 1)
+        }
+        // ערך לא תקין (null / NaN / ענק) היה מפיל את התהליך של FutureUI - ואיתו את
+        // שירותי הנגישות ומסך הנעילה - או שובר את הטקסט בכל האפליקציות.
+        values.getAsInteger(COL_PRIMARY_COLOR)?.let { editor.putInt(COL_PRIMARY_COLOR, it) }
+        values.getAsFloat(COL_FONT_SIZE_MULTIPLIER)?.takeIf { it.isFinite() }?.let {
+            editor.putFloat(COL_FONT_SIZE_MULTIPLIER, it.coerceIn(0.7f, 2.0f))
+        }
+        editor.apply()
+        // מודיע לכל מי שרשום כ"צופה" ב-Uri הזה (למשל ContentObserver) שהעיצוב השתנה
+        context?.contentResolver?.notifyChange(CONTENT_URI, null)
+        return 1
+    }
+
+    override fun insert(uri: Uri, values: ContentValues?): Uri? = null
+    override fun delete(uri: Uri, selection: String?, selectionArgs: Array<out String>?): Int = 0
+    override fun getType(uri: Uri): String? = "vnd.android.cursor.item/vnd.$AUTHORITY.theme"
+}

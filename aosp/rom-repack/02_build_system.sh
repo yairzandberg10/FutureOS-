@@ -59,6 +59,7 @@ for pdir in "$APPS"/*/; do
     com.android.sistemui) name=SistemUI ;;
     com.future.futurelauncher) name=FutureLauncher ;;
     com.future.futureui) name=FutureUI ;;
+    com.future.systemui) name=FutureSystemUI ;;
     *) name="Future$(echo "${last:0:1}" | tr a-z A-Z)${last:1}" ;;
   esac
   d="/system/priv-app/$name"

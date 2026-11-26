@@ -153,7 +153,10 @@ fun NotificationCenterScreen(
         }
     }
 
-    CompositionLocalProvider(LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection) {
+    CompositionLocalProvider(
+        LocalLayoutDirection provides com.future.sharednav.i18n.Tr.layoutDirection,
+        com.android.sistemui.controlcenter.ui.components.LocalOverlayIsDark provides isDarkBackground,
+    ) {
         // אותה שכבה כמו מרכז הבקרה: נופלת מהקצה העליון בקפיץ layer, או נכנסת
         // מהצד כשעוברים אליה ממרכז הבקרה. קודם זה היה קפיץ LowBouncy איטי
         // שלא מהטוקנים, והיציאה לא רצה בכלל (החלון הוסר מיד).
