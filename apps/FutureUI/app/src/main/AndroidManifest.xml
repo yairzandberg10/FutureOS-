@@ -33,7 +33,7 @@
 
     <permission
         android:name="com.future.futureui.permission.SYSTEM_SETTINGS"
-        android:protectionLevel="signature|privileged" />
+        android:protectionLevel="signature" />
 
     <uses-permission android:name="com.future.keyboard.permission.SETTINGS" />
     <!-- שידורי המערכת ל-dialer (מקשי CALL/ENDCALL, שיחה) דורשים את ההרשאה הזו

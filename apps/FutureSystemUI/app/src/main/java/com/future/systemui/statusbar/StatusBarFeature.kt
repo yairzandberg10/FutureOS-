@@ -274,7 +274,7 @@ class StatusBarFeature : Feature, CommandQueue.Callbacks {
      */
     private fun watchNotifications(context: Context) {
         scope.launch {
-            NotificationRepository.notifications.collectLatest { list ->
+            NotificationRepository.active.collectLatest { list ->
                 val waiting = list.filter { !it.isOngoing && it.packageName != context.packageName }
                 val apps = withContext(Dispatchers.Default) {
                     waiting.sortedByDescending { it.postTime }
